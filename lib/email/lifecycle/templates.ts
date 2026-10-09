@@ -56,8 +56,12 @@ export type TopRecommendation = { title: string; description: string; engines: s
 export type PlanOffer = {
   planName: string;
   price: number;
-  /** Present only while the launch promo can really be redeemed at checkout. */
-  promo: { price: number; months: number; endsLabel: string } | null;
+  /**
+   * Present only while the founder price can really be redeemed at checkout
+   * (FOUNDER-PRICE-1, log §237): forever, for the first `total` subscriptions,
+   * `remaining` of which are still free.
+   */
+  promo: { price: number; remaining: number; total: number } | null;
 };
 
 const dateLong = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
@@ -123,12 +127,12 @@ export function priceBox(offer: PlanOffer): string {
   const off = Math.round(((offer.price - offer.promo.price) / offer.price) * 100);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:2px solid #2563EB;border-radius:16px;"><tr><td style="padding:20px 22px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio de lanzamiento · ${H(offer.planName)}</td>
+      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio fundador · ${H(offer.planName)}</td>
       <td align="right"><span style="display:inline-block;background:#E7F6EE;color:#15915A;font-weight:800;font-size:12.5px;padding:4px 10px;border-radius:999px;">−${off}%</span></td>
     </tr></table>
-    <div style="margin-top:10px;"><span style="font-size:18px;color:#94A1B5;text-decoration:line-through;font-weight:700;">${offer.price} €</span><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;padding-left:10px;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
-    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Durante ${offer.promo.months} meses. Después, ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
-    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Disponible hasta el ${offer.promo.endsLabel}</div>
+    <div style="margin-top:10px;"><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
+    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Para siempre, mientras mantengas tu suscripción. Precio normal: ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
+    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} de ${offer.promo.total} plazas</div>
   </td></tr></table>`;
 }
 
@@ -333,7 +337,7 @@ export async function sendTrialD3Email(
 /**
  * D5 · quedan 2 días. Fulfils the welcome email's promise of a warning before
  * the trial ends. The table and the prices come from the caller (`PLANS`,
- * live promo) — the loss is what really happens on the end date.
+ * live founder offer) — the loss is what really happens on the end date.
  */
 export async function sendTrialD5Email(
   to: string,
@@ -353,7 +357,7 @@ export async function sendTrialD5Email(
   const endDate = formatDateLong(input.trialEndsAt);
   const who = input.domain ? `<b style="color:#0B1426;">${H(input.domain)}</b>` : "tu dominio";
   const starterPrice = input.starter.promo
-    ? `${input.starter.promo.price} €/mes (antes ${input.starter.price} €) durante ${input.starter.promo.months} meses`
+    ? `${input.starter.promo.price} €/mes para siempre (precio fundador)`
     : `${input.starter.price} €/mes`;
 
   const html = wrap(
@@ -369,7 +373,7 @@ export async function sendTrialD5Email(
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Mantén Pro por ${input.pro.promo.price} €/mes (antes ${input.pro.price} €). Precio de lanzamiento hasta el ${input.pro.promo.endsLabel}.`
+        ? `Mantén Pro por ${input.pro.promo.price} €/mes para siempre. Precio fundador: quedan ${input.pro.promo.remaining} plazas.`
         : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`
     }
   );
@@ -382,9 +386,9 @@ const dateWithMonth = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
 
 function starterLine(starter: PlanOffer, campaign: string, lead: string): string {
   const price = starter.promo ? `${starter.promo.price} €/mes` : `${starter.price} €/mes`;
-  const months = starter.promo ? ` durante ${starter.promo.months} meses` : "";
+  const forever = starter.promo ? " para siempre (precio fundador)" : "";
   return subtext(
-    `${lead} <a href="${url("/dashboard/settings?openPlan=starter", campaign)}" style="${FOOTER_LINK_STYLE}">Starter por ${price}</a>${months}.`
+    `${lead} <a href="${url("/dashboard/settings?openPlan=starter", campaign)}" style="${FOOTER_LINK_STYLE}">Starter por ${price}</a>${forever}.`
   );
 }
 
@@ -401,7 +405,7 @@ function lastScanBlock(snap: RunSnapshot | null): string {
 
 /**
  * D7 · fin de prueba, and its «tardía» version (LIFECYCLE-WINBACK-1, log
- * §236). Account news plus an offer, so it carries the lifecycle unsubscribe
+ * §238). Account news plus an offer, so it carries the lifecycle unsubscribe
  * (log §232); whoever opted out gets the plain `sendTrialEndedEmail`
  * instead — the runner decides, not this template.
  */
@@ -434,7 +438,7 @@ export async function sendTrialEndedOfferEmail(
 
   const bridge = input.late
     ? input.pro.promo
-      ? "Si quieres retomarlo donde lo dejaste, el precio de lanzamiento sigue disponible unas semanas más:"
+      ? "Si quieres retomarlo donde lo dejaste, el precio fundador sigue disponible mientras queden plazas:"
       : "Si quieres retomarlo donde lo dejaste, puedes volver a Pro cuando quieras:"
     : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea a diario. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
 
@@ -450,7 +454,7 @@ export async function sendTrialEndedOfferEmail(
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Tu cuenta ha pasado a Free. Vuelve a Pro por ${input.pro.promo.price} €/mes hasta el ${input.pro.promo.endsLabel}.`
+        ? `Tu cuenta ha pasado a Free. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} plazas de precio fundador.`
         : "Tu cuenta ha pasado a Free. Tus datos siguen intactos."
     }
   );
@@ -511,41 +515,38 @@ export async function sendWinbackD3Email(
 }
 
 /**
- * D+10 · últimos días del precio. Only with a live promo — its whole content
- * is the deadline; without one this returns `false` and nothing is sent.
- * "Últimos días" is only said when the promo really ends within 14 days.
+ * D+10 · el precio fundador. Only while founder slots remain — its whole
+ * content is that offer, and the scarcity it quotes is the real count read
+ * from Stripe (`getFounderOffer`, FOUNDER-PRICE-1, log §237). Without an
+ * offer this returns `false` and nothing is sent. The design's calendar
+ * deadline ("Últimos días… hasta el 31 de octubre") no longer exists.
  */
-export const WINBACK_D10_LAST_DAYS = 14;
-
 export async function sendWinbackD10Email(
   to: string,
   userId: string,
-  input: { domain: string | null; pro: PlanOffer; promoEndsAt: Date; now: Date }
+  input: { domain: string | null; pro: PlanOffer }
 ): Promise<boolean> {
   const promo = input.pro.promo;
   if (!promo) return false;
   const envelope = lifecycleEnvelope(userId);
   if (!envelope) return false;
 
-  const daysToEnd = (input.promoEndsAt.getTime() - input.now.getTime()) / (24 * 60 * 60 * 1000);
-  const lastDays = daysToEnd <= WINBACK_D10_LAST_DAYS;
-  const subject = lastDays
-    ? `Últimos días: ${input.pro.planName} a ${promo.price} €/mes hasta el ${promo.endsLabel}`
-    : `${input.pro.planName} a ${promo.price} €/mes hasta el ${promo.endsLabel}`;
+  const plan = H(input.pro.planName);
+  const slots = `${promo.remaining} ${promo.remaining === 1 ? "plaza" : "plazas"}`;
   const follow = input.domain ? `seguir <b style="color:#0B1426;">${H(input.domain)}</b> a diario` : "seguir tu dominio a diario";
 
   const html = wrap(
     `
-    ${eyebrow(lastDays ? "Precio de lanzamiento · últimos días" : "Precio de lanzamiento", "#A8660B")}
-    ${heading(`El ${promo.endsLabel} ${H(input.pro.planName)} vuelve a ${input.pro.price} €/mes`)}
-    ${paragraph(`Hasta entonces puedes contratarlo a <b style="color:#0B1426;">${promo.price} €/mes durante ${promo.months} meses</b> y ${follow} en las respuestas de la IA. Es el último email que te enviamos sobre esto.`)}
+    ${eyebrow("Precio fundador", "#A8660B")}
+    ${heading(`Quedan ${slots} a ${promo.price} €/mes para siempre`)}
+    ${paragraph(`Las primeras ${promo.total} suscripciones a ${plan} pagan <b style="color:#0B1426;">${promo.price} €/mes para siempre</b>, en lugar de ${input.pro.price} €, y pueden ${follow} en las respuestas de la IA. Cuando se ocupen las plazas, se aplica el precio normal. Es el último email que te enviamos sobre esto.`)}
     ${priceBox(input.pro)}
-    ${button(url("/dashboard/settings?openPlan=pro", "winback_d10"), `Contratar ${H(input.pro.planName)} por ${promo.price} €/mes`)}
+    ${button(url("/dashboard/settings?openPlan=pro", "winback_d10"), `Contratar ${plan} por ${promo.price} €/mes`)}
     `,
     {
       footerHtml: envelope.footerHtml,
-      preheader: `Después vuelve a ${input.pro.price} €/mes. Es el último email que te enviamos sobre esto.`
+      preheader: `Precio fundador para siempre: quedan ${slots}. Es el último email que te enviamos sobre esto.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmail(to, `Quedan ${slots}: ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
 }

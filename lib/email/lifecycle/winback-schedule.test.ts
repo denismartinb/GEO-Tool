@@ -12,7 +12,7 @@ import {
 } from "./schedule";
 
 /**
- * LIFECYCLE-WINBACK-1 (log §236). The post-trial rules, one by one — the
+ * LIFECYCLE-WINBACK-1 (log §238). The post-trial rules, one by one — the
  * silences as much as the sends.
  */
 

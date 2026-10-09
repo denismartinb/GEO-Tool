@@ -33,7 +33,7 @@ export type UsageSummary = {
   /** Set when a Portal-driven cancellation is scheduled (Stripe's cancel_at_period_end) — the real date the plan stops, not yet reflected as a downgrade since the account keeps access until then. */
   cancelAt: string | null;
   /** PRICING-PROMO-1: set when the real Stripe subscription is currently under one of our promo coupons — read from Stripe itself, see `getActiveSubscriptionPromo`. Null for a plain subscription, a trial, or Free. */
-  subscriptionPromo: { promoPrice: number; endsAt: string } | null;
+  subscriptionPromo: { promoPrice: number } | null;
 };
 
 type TrialFields = {
@@ -99,7 +99,7 @@ async function applyTrialExpiry(userId: string, row: TrialFields | null | undefi
 
   if (row.email) {
     if (isLifecycleEmailEnabled() && row.trial_ends_at) {
-      // LIFECYCLE-WINBACK-1 (log §236): the lifecycle sequence owns the
+      // LIFECYCLE-WINBACK-1 (log §238): the lifecycle sequence owns the
       // end-of-trial email — sent once, recorded, and the anchor of D+3/D+10.
       // If the daily cron already sent it, this is a no-op; loaded on demand
       // so reading a plan never depends on the email templates.

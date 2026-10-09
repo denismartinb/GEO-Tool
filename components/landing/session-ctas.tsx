@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { showsPromoStrip } from "@/lib/account-chip";
 import { useSessionUser } from "@/lib/use-session-user";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
-import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans-data";
+import { PLANS } from "@/app/pricing/plans-data";
 
 /**
  * Three small client islands, one per session-aware fragment — kept
@@ -66,7 +67,7 @@ import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans
  * PROMO-CONSOLE-PARITY-1 (log §170) ya encontró y arregló para la consola:
  * un precio real, correcto el día que se escribió, con nada que lo ate a
  * `plans-data.ts` si el cupón de Stripe cambia. Ahora se leen de `PLANS` (el
- * `price`/`promoPrice` de cada plan) y de `PROMO_ENDS_AT` — la misma
+ * `price`/`promoPrice` de cada plan) y de la fecha de corte de entonces — la misma
  * constante que ya gobierna el cupón real y la consola — así que esta tira
  * no puede quedarse desincronizada de las otras dos superficies sin que las
  * tres cambien a la vez. El porcentaje de descuento se calcula, no se copia:
@@ -75,49 +76,70 @@ import { PLANS, PROMO_DURATION_MONTHS, PROMO_ENDS_AT } from "@/app/pricing/plans
  * ser una constante tampoco.
  */
 const PRO_PLAN = PLANS.find((p) => p.id === "pro")!;
-const STARTER_PLAN = PLANS.find((p) => p.id === "starter")!;
+
+/**
+ * FOUNDER-PRICE-1 (log §237) — supersedes the launch-promo copy described
+ * above: no struck-through price and no cut-off date. The founder price is
+ * forever and limited by slots, so the strip says that, and only once
+ * `/api/founder-offer` (the same `getFounderOffer()` checkout uses) confirms
+ * Stripe really applies it. Until that answer arrives — or if there is no
+ * offer — only the trial row shows, still and alone: a cycle with two empty
+ * rows would blank the strip two thirds of the time.
+ */
+type FounderOfferAnswer = { planIds: string[]; remaining: number; total: number };
+
+let founderOfferRequest: Promise<FounderOfferAnswer | null> | null = null;
+
+function fetchFounderOffer(): Promise<FounderOfferAnswer | null> {
+  founderOfferRequest ??= fetch("/api/founder-offer")
+    .then((res) => (res.ok ? (res.json() as Promise<FounderOfferAnswer>) : null))
+    .catch(() => null);
+  return founderOfferRequest;
+}
 
 function promoDiscountLabel(plan: { price: number; promoPrice?: number }): string {
   if (plan.promoPrice === undefined) return "";
   return `−${Math.round(((plan.price - plan.promoPrice) / plan.price) * 100)}%`;
 }
 
-// `timeZone` explícito: PROMO_ENDS_AT lleva su propio offset (+02:00,
-// Madrid), y sin fijarlo aquí `Intl.DateTimeFormat` cae al huso del
-// servidor — en Vercel, UTC — que corre la fecha un día hacia atrás ("31
-// ago" en vez de "1 sept") para cualquier hora de corte antes del mediodía
-// peninsular. Es la misma clase de fallo que esta fase existe para quitar,
-// sólo que en la zona horaria en vez de en el precio.
-const PROMO_ENDS_LABEL = new Intl.DateTimeFormat("es-ES", {
-  day: "numeric",
-  month: "short",
-  timeZone: "Europe/Madrid"
-}).format(new Date(PROMO_ENDS_AT));
-
 export function PromoStrip() {
   const user = useSessionUser();
+  const [founder, setFounder] = useState<FounderOfferAnswer | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchFounderOffer().then((answer) => {
+      if (!cancelled) setFounder(answer);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   if (!showsPromoStrip(user?.planId)) return null;
+  const showFounder = founder !== null && founder.planIds.includes("pro") && founder.remaining > 0;
   return (
     <div className="lp-promo">
       <span className="lp-promo-track">
-        <span className="lp-promo-row a">
+        <span className={"lp-promo-row a" + (showFounder ? "" : " solo")}>
           <span className="lp-promo-pill">Gratis</span>
           <span>7 días de Pro</span>
         </span>
-        <span className="lp-promo-row b">
-          <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
-          <span>
-            Pro <s>{PRO_PLAN.price}&nbsp;€</s> <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b>, {PROMO_DURATION_MONTHS} meses
-            · hasta {PROMO_ENDS_LABEL}.
-          </span>
-        </span>
-        <span className="lp-promo-row c">
-          <span className="lp-promo-pill">{promoDiscountLabel(STARTER_PLAN)}</span>
-          <span>
-            Starter <s>{STARTER_PLAN.price}&nbsp;€</s> <b>{STARTER_PLAN.promoPrice}&nbsp;€/mes</b>,{" "}
-            {PROMO_DURATION_MONTHS} meses · hasta {PROMO_ENDS_LABEL}.
-          </span>
-        </span>
+        {showFounder ? (
+          <>
+            <span className="lp-promo-row b">
+              <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
+              <span>
+                Pro a <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b> para siempre
+              </span>
+            </span>
+            <span className="lp-promo-row c">
+              <span className="lp-promo-pill">Fundador</span>
+              <span>
+                Quedan <b>{founder.remaining} de {founder.total}</b> plazas
+              </span>
+            </span>
+          </>
+        ) : null}
       </span>
     </div>
   );

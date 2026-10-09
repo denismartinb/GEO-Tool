@@ -9,7 +9,7 @@ vi.mock("@/lib/email/resend", () => ({
 import { sendTrialEndedOfferEmail, sendWinbackD10Email, sendWinbackD3Email, type PlanOffer, type RunSnapshot } from "./templates";
 
 /**
- * LIFECYCLE-WINBACK-1 (log §236). The post-trial emails: no way out means
+ * LIFECYCLE-WINBACK-1 (log §238). The post-trial emails: no way out means
  * no email, prices follow the plan data, the account's own figures or none,
  * and outside text never reaches the HTML unescaped.
  */
@@ -28,9 +28,9 @@ const snapshot: RunSnapshot = {
   topCompetitor: { name: "Clínica Sonrisa Norte", mentions: 19 },
   activeRecommendations: 6
 };
-const proWithPromo: PlanOffer = { planName: "Pro", price: 179, promo: { price: 59, months: 6, endsLabel: "31 de octubre" } };
-const proNoPromo: PlanOffer = { planName: "Pro", price: 179, promo: null };
-const starter: PlanOffer = { planName: "Starter", price: 45, promo: null };
+const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 47, total: 50 } };
+const proNoPromo: PlanOffer = { planName: "Pro", price: 99, promo: null };
+const starter: PlanOffer = { planName: "Starter", price: 29, promo: null };
 const END = new Date("2026-10-05T10:00:00Z");
 
 beforeEach(() => {
@@ -53,7 +53,9 @@ describe("fin de prueba", () => {
     const mail = last();
     expect(mail.subject).toBe("Tu prueba ha terminado. Tus datos de clinicaaurora.es siguen aquí");
     expect(mail.html).toContain("6 de 45");
-    expect(mail.html).toContain("Volver a Pro por 59 €/mes");
+    expect(mail.html).toContain("Volver a Pro por 69 €/mes");
+    expect(mail.html).toContain("Quedan 47 de 50 plazas");
+    expect(mail.html).not.toMatch(/Disponible hasta|durante \d+ meses|line-through/i);
     expect(mail.html).toContain("openPlan=pro");
     expect(mail.headers?.["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
   });
@@ -62,13 +64,14 @@ describe("fin de prueba", () => {
     await sendTrialEndedOfferEmail(TO, USER, { late: true, trialEndsAt: END, snapshot, pro: proWithPromo, starter });
     expect(last().subject).toBe("Tu prueba de Pro terminó el 5 de octubre (y no te avisamos)");
     expect(last().html).toContain("no lo hicimos");
+    expect(last().html).toContain("mientras queden plazas");
   });
 
-  it("without a promo: plain price, no strikethrough, no deadline", async () => {
+  it("without a founder offer: plain price, no slots", async () => {
     await sendTrialEndedOfferEmail(TO, USER, { late: true, trialEndsAt: END, snapshot, pro: proNoPromo, starter });
-    expect(last().html).toContain("Volver a Pro por 179 €/mes");
-    expect(last().html).not.toContain("line-through");
-    expect(last().html).not.toContain("unas semanas más");
+    expect(last().html).toContain("Volver a Pro por 99 €/mes");
+    expect(last().html).not.toContain("Precio fundador");
+    expect(last().html).not.toContain("plazas");
   });
 
   it("without a scan: no figures at all", async () => {
@@ -105,16 +108,15 @@ describe("D+3", () => {
 });
 
 describe("D+10", () => {
-  it("is never sent without a live promo", async () => {
-    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo, promoEndsAt: END, now: END })).toBe(false);
+  it("is never sent without a founder offer", async () => {
+    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo })).toBe(false);
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("only says «últimos días» inside the last 14 days", async () => {
-    const promoEndsAt = new Date("2026-10-31T23:59:59+01:00");
-    await sendWinbackD10Email(TO, USER, { domain: null, pro: proWithPromo, promoEndsAt, now: new Date("2026-10-10T07:45:00Z") });
-    expect(last().subject).toBe("Pro a 59 €/mes hasta el 31 de octubre");
-    await sendWinbackD10Email(TO, USER, { domain: null, pro: proWithPromo, promoEndsAt, now: new Date("2026-10-20T07:45:00Z") });
-    expect(last().subject).toBe("Últimos días: Pro a 59 €/mes hasta el 31 de octubre");
+  it("quotes the founder price as forever and the real slots left, with no calendar deadline", async () => {
+    await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proWithPromo });
+    expect(last().subject).toBe("Quedan 47 plazas: Pro a 69 €/mes para siempre");
+    expect(last().html).toContain("en lugar de 99 €");
+    expect(last().html).not.toMatch(/Últimos días|hasta el \d/);
   });
 });

@@ -131,7 +131,7 @@ export function shouldRemindConfirmation(
 /* ------------------------------------------------- fin de prueba y recuperación */
 
 /**
- * LIFECYCLE-WINBACK-1 (Fase D, log §236). What happens after the trial ends,
+ * LIFECYCLE-WINBACK-1 (Fase D, log §238). What happens after the trial ends,
  * as the founder approved it on 2026-09-28
  * (`docs/design-reference/lifecycle-emails-1/`, "Después de la prueba"):
  *
@@ -142,11 +142,11 @@ export function shouldRemindConfirmation(
  *   trial that ended more than 48 h ago and was never told. It says so.
  * - D+3 (`winback_d3`): the competitor gap of the last scan, 3 days after
  *   either of the two above.
- * - D+10 (`winback_d10`): the launch price's deadline, 7 days after D+3.
- *   Only while the promo can really be redeemed: the no-promo variant of the
+ * - D+10 (`winback_d10`): the founder price (FOUNDER-PRICE-1, log §237), 7
+ *   days after D+3. Only while founder slots remain: the no-offer variant of the
  *   approved design (a personal "¿qué te faltó?" signed by the founder) is
  *   deliberately not built — the founder asked on 2026-10-09 to avoid
- *   personal contact, and with no promo there is nothing else to say.
+ *   personal contact, and with no offer there is nothing else to say.
  */
 export const TRIAL_END_KINDS = ["trial_ended", "trial_ended_late"] as const;
 export type TrialEndKind = (typeof TRIAL_END_KINDS)[number];

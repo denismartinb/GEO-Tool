@@ -1,7 +1,7 @@
 -- 0038_email_sends_winback_kinds.sql
 --
 -- Phase: LIFECYCLE-WINBACK-1 (Fase D of the lifecycle-email plan,
--- founder-approved design 2026-09-28, docs/brand/design-decisions-log.md §236)
+-- founder-approved design 2026-09-28, docs/brand/design-decisions-log.md §238)
 --
 -- Purpose: let `email_sends` record the four post-trial emails, so each goes
 -- out at most once per account and D+3/D+10 can anchor on the end-of-trial

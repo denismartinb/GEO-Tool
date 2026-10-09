@@ -80,12 +80,12 @@ igual.
   `applyTrialExpiry` comparten `sendTrialEndEmailOnce`, que decide y anota en
   `email_sends`; con el interruptor encendido, la consola ya no manda su
   plantilla antigua. Antes sólo salía cuando la persona volvía, y quien no
-  volvía no recibía nada (§236).
+  volvía no recibía nada (§238).
 - **La recuperación (D+3, D+10) se ancla al envío del fin de prueba, nunca a
-  `trial_ends_at`**, que la consola borra al degradar (§236).
+  `trial_ends_at`**, que la consola borra al degradar (§238).
 - **Nada personal en la secuencia automática.** La variante del D+10 firmada
   por el fundador no existe a propósito (fundador, 2026-10-09: evitar el
-  contacto personal, §236). Sin promo activa, no hay D+10.
+  contacto personal, §238). Sin plazas de precio fundador, no hay D+10.
 - **Un tipo nuevo en `email_sends` necesita migración**: 0037 fija `kind` con
-  un `check` (0038 lo amplió, §236). El test de `winback-schedule.test.ts`
+  un `check` (0038 lo amplió, §238). El test de `winback-schedule.test.ts`
   comprueba que la migración permite todos los tipos que se anotan.

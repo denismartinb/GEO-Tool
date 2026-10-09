@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 /**
  * LIFECYCLE-TRIAL-1 (log §233). Daily at 07:45 UTC (09:45 Madrid in summer,
  * 08:45 in winter): the trial emails D1, D3 and D5; (LIFECYCLE-WINBACK-1,
- * §236) the end-of-trial email and the win-back emails D+3 and D+10; and
+ * §238) the end-of-trial email and the win-back emails D+3 and D+10; and
  * (CONFIRM-REMINDER-1, §234) one reminder to sign-ups that never confirmed
  * their email. All passes share one deadline inside the 60 s invocation. Same auth as every other
  * cron (Vercel sends `CRON_SECRET`); the kill switch is
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   const service = createServiceClient();
   const deadline = lifecycleDeadline();
   const trial = await runLifecycleEmails({ service, deadline });
-  // LIFECYCLE-WINBACK-1 (log §236): end of trial first, so D+3 can anchor on it.
+  // LIFECYCLE-WINBACK-1 (log §238): end of trial first, so D+3 can anchor on it.
   const trialEnd = await runTrialEndEmails({ service, deadline });
   const winback = await runWinbackEmails({ service, deadline });
   // CONFIRM-REMINDER-1 (log §234): sign-ups that never confirmed their email.

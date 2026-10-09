@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import {
   PLANS,
-  PROMO_DURATION_MONTHS,
-  PROMO_ENDS_AT,
   resolveShownPromoPrice,
   type Plan
 } from "@/app/pricing/plans-data";
@@ -154,11 +152,6 @@ export function PlanBillingSection({
   // shown — `planId` can move locally (downgrade to Free, see `applyChange`)
   // without a refetch, and Free never carries a promo anyway.
   const activePromo = planId === currentPlanId ? usage.subscriptionPromo : null;
-  const promoEndsDate = activePromo
-    ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
-        new Date(activePromo.endsAt)
-      )
-    : null;
 
   /**
    * PROMO-CONSOLE-PARITY-1 (2026-08-27) — the launch price a NON-subscriber
@@ -179,9 +172,9 @@ export function PlanBillingSection({
    * a trial user they are already paying 59 €, which is the fake-metric
    * failure mode this codebase keeps writing rules about.
    *
-   * Gated on `promoPlanIds`, not on `isPromoActive()` alone: that helper
-   * requires the date AND a configured Stripe coupon, so the screen can never
-   * advertise a discount checkout would fail to apply.
+   * Gated on `promoPlanIds` (FOUNDER-PRICE-1: the real Stripe coupons and the
+   * founder slots left), so the screen can never advertise a discount
+   * checkout would fail to apply.
    */
   const shownPromo = resolveShownPromoPrice({
     plan: current,
@@ -189,10 +182,6 @@ export function PlanBillingSection({
     promoPlanIds
   });
   const offeredPromoPrice = shownPromo?.kind === "offered" ? shownPromo.price : null;
-  const promoCampaignEndsDate = new Intl.DateTimeFormat("es-ES", {
-    day: "numeric",
-    month: "long"
-  }).format(new Date(PROMO_ENDS_AT));
 
   return (
     <>
@@ -287,20 +276,17 @@ export function PlanBillingSection({
             {activePromo && (
               <p className="sub mt-1">
                 <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio de lanzamiento hasta el <b>{promoEndsDate}</b> — después vuelve a {current.price}&nbsp;€/
-                {current.period}.
+                Precio fundador <b>para siempre</b>, mientras mantengas tu suscripción.
               </p>
             )}
             {offeredPromoPrice !== null && (
-              /* Futuro, no presente: quien lee esto todavía no paga nada. Los
-                 dos datos son reales — la fecha es `PROMO_ENDS_AT`, el mismo
-                 `redeem_by` del cupón de Stripe, y los meses son su
-                 `duration_in_months`. */
+              /* Futuro, no presente: quien lee esto todavía no paga nada. El
+                 descuento es el cupón `forever` de Stripe (FOUNDER-PRICE-1),
+                 y sólo se ofrece mientras queden plazas. */
               <p className="sub mt-1">
                 <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio de lanzamiento si contratas antes del <b>{promoCampaignEndsDate}</b>:{" "}
-                {offeredPromoPrice}&nbsp;€/{current.period} durante {PROMO_DURATION_MONTHS} meses, después{" "}
-                {current.price}&nbsp;€/{current.period}.
+                Precio fundador si contratas ahora: {offeredPromoPrice}&nbsp;€/{current.period}{" "}
+                <b>para siempre</b>, mientras queden plazas. Precio normal: {current.price}&nbsp;€/{current.period}.
               </p>
             )}
           </CardHeader>

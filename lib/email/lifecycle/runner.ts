@@ -17,7 +17,6 @@ import {
   trialDaysLeft,
   type TrialEmailDecision
 } from "@/lib/email/lifecycle/schedule";
-import { PROMO_ENDS_AT } from "@/app/pricing/plans-data";
 import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { getSiteUrl } from "@/lib/site-url";
 import { proVsFreeRows, resolvePlanOffer } from "@/lib/email/lifecycle/offers";
@@ -352,8 +351,8 @@ async function sendDecision(
   return sendTrialD5Email(ctx.email, ctx.userId, {
     trialEndsAt: ctx.trialEndsAt,
     domain: ctx.project?.domain ?? null,
-    pro: resolvePlanOffer("pro"),
-    starter: resolvePlanOffer("starter"),
+    pro: await resolvePlanOffer("pro"),
+    starter: await resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
   });
 }
@@ -395,7 +394,7 @@ type TrialEndTarget = {
 };
 
 /**
- * LIFECYCLE-WINBACK-1 (log §236). Sends the end-of-trial email once, either
+ * LIFECYCLE-WINBACK-1 (log §238). Sends the end-of-trial email once, either
  * version, and records it — which is what anchors D+3 and D+10. Shared by
  * the daily cron and by `applyTrialExpiry` (the customer opening the console
  * after the end), so whichever gets there first sends it and the other sees
@@ -429,8 +428,8 @@ export async function sendTrialEndEmailOnce(
         late: decision.kind === "trial_ended_late",
         trialEndsAt: target.trialEndsAt,
         snapshot: await loadMainSnapshot(service, target.userId),
-        pro: resolvePlanOffer("pro"),
-        starter: resolvePlanOffer("starter")
+        pro: await resolvePlanOffer("pro"),
+        starter: await resolvePlanOffer("starter")
       })
     : await sendTrialEndedEmail(target.email);
   if (delivered) await recordSend(service, target.userId, decision.kind);
@@ -557,8 +556,7 @@ export async function runWinbackEmails({
     return { status: "query_failed" };
   }
 
-  const pro = resolvePlanOffer("pro");
-  const starter = resolvePlanOffer("starter");
+  const [pro, starter] = await Promise.all([resolvePlanOffer("pro"), resolvePlanOffer("starter")]);
   let sent = 0;
   let failed = 0;
   let deferred = 0;
@@ -595,12 +593,7 @@ export async function runWinbackEmails({
       if (!snapshot) continue;
       delivered = await sendWinbackD3Email(profile.email, profile.id, { snapshot, pro, starter });
     } else {
-      delivered = await sendWinbackD10Email(profile.email, profile.id, {
-        domain: snapshot?.domain ?? null,
-        pro,
-        promoEndsAt: new Date(PROMO_ENDS_AT),
-        now
-      });
+      delivered = await sendWinbackD10Email(profile.email, profile.id, { domain: snapshot?.domain ?? null, pro });
     }
 
     if (delivered) {

@@ -12,12 +12,12 @@ vi.mock("@/lib/email/lifecycle/templates", () => ({
 }));
 vi.mock("@/lib/email/transactional", () => ({ sendTrialEndedEmail: (...a: unknown[]) => sendTrialEndedEmail(...a) }));
 let promoPlans: string[] = ["pro", "starter"];
-vi.mock("@/lib/stripe", () => ({ getActivePromoPlanIds: () => promoPlans }));
+vi.mock("@/lib/stripe", () => ({ getFounderOffer: async () => ({ planIds: promoPlans, remaining: 47, total: 50 }) }));
 
 import { notifyTrialEndedOnDowngrade, runTrialEndEmails, runWinbackEmails } from "./runner";
 
 /**
- * LIFECYCLE-WINBACK-1 (log §236). The runner's contract over a fake
+ * LIFECYCLE-WINBACK-1 (log §238). The runner's contract over a fake
  * database: who is considered, which version goes out, and that a send is
  * recorded only when it happened. The rules themselves are
  * winback-schedule.test.ts's.
@@ -156,7 +156,7 @@ describe("runWinbackEmails", () => {
     expect(upserts).toEqual([]);
   });
 
-  it("sends D+10 with the live promo, and records it", async () => {
+  it("sends D+10 while founder slots remain, and records it", async () => {
     const { service, upserts } = fakeService({
       profiles: { data: [winbackProfile] },
       email_sends: {
@@ -171,7 +171,7 @@ describe("runWinbackEmails", () => {
     expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "winback_d10" } }]);
   });
 
-  it("sends no D+10 once the promo is over", async () => {
+  it("sends no D+10 once the founder slots are gone", async () => {
     promoPlans = [];
     const { service } = fakeService({
       profiles: { data: [winbackProfile] },
