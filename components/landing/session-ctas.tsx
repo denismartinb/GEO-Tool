@@ -129,7 +129,7 @@ export function PromoStrip() {
             <span className="lp-promo-row b">
               <span className="lp-promo-pill">{promoDiscountLabel(PRO_PLAN)}</span>
               <span>
-                Pro a <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b> para siempre
+                Pro a <s>{PRO_PLAN.price}&nbsp;€</s> <b>{PRO_PLAN.promoPrice}&nbsp;€/mes</b> para siempre
               </span>
             </span>
             <span className="lp-promo-row c">

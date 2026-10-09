@@ -21583,3 +21583,12 @@ contratar.
   lectura sin aviso propio; la banda se lo explica al entrar.
 - La consola de operador sigue llamando «Free» a ese estado.
 - Ninguna migración: `free` sigue en el `check` de la columna.
+
+**Adenda (2026-10-09, mismo PR): vuelve el tachado.** El fundador pide que el
+precio sin promoción aparezca tachado mientras dure el cupón. Corrige la parte
+de §237 que lo quitaba («sin tachado»). Mismas condiciones que el precio
+fundador: sólo se tacha cuando `getFounderOffer` confirma cupón y plazas, y lo
+tachado es el precio real de `PLANS` (29 € y 99 €), no uno inflado como el
+179 € de antes. Afecta a la tarjeta y la matriz de /precios, la tira pública
+y el bloque de precio de los correos (D5 y fin de prueba). La consola ya lo
+tachaba.

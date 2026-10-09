@@ -140,8 +140,10 @@ describe("D5 prices", () => {
     expect(html).toContain("Para siempre, mientras mantengas tu suscripción. Precio normal: 99 €/mes.");
     expect(html).toContain("Quedan 35 cuentas con precio fundador");
     expect(html).toContain("−30%");
-    // FOUNDER-PRICE-1: no struck-through list price, no deadline (log §237).
-    expect(html).not.toContain("line-through");
+    // The real list price is struck through next to the founder price while
+    // the coupon lasts (founder, 2026-10-09, log §243, superseding §237's
+    // "no struck-through price"). Still no deadline.
+    expect(html).toMatch(/line-through[^>]*>99 €</);
     expect(html).not.toMatch(/Disponible hasta|durante \d+ meses/i);
     // No testimonial in any email: the one that was here was invented (founder, 2026-10-08).
     expect(html).not.toMatch(/Nordika|Nerea|128\s?%/);

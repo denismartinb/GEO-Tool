@@ -41,10 +41,13 @@ function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly s
                 el precio normal es real y se dice en palabras, en su propia
                 línea por la misma razón que la duración antes (fundador,
                 2026-08-27: partía en la tarjeta recomendada). */}
+            {/* Tachado de vuelta (fundador, 2026-10-09, log §243): el precio
+                normal se tacha mientras el cupón fundador exista y queden
+                plazas. Es el precio real sin descuento, no uno inflado. */}
+            <span className="price-was">{plan.price}&nbsp;€</span>
             <span className="price-amount">{plan.promoPrice}&nbsp;€</span>
             <span className="price-per">/{plan.period}</span>
             <span className="price-term">Precio fundador para siempre</span>
-            <span className="price-term price-term-soft">Precio normal: {plan.price}&nbsp;€/{plan.period}</span>
           </>
         ) : (
           <>
@@ -103,7 +106,9 @@ function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
                   <div className="price-mx-planname">{p.name}</div>
                   <div className="price-mx-planprice">
                     {showPromo ? (
-                      <>{p.promoPrice}&nbsp;€</>
+                      <>
+                        <s className="price-mx-was">{p.price}&nbsp;€</s> {p.promoPrice}&nbsp;€
+                      </>
                     ) : (
                       p.priceLabel ?? (p.price === 0 ? "0 €" : p.price + " €")
                     )}

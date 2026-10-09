@@ -8005,6 +8005,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
    `components/pricing/pricing-page.tsx`. `--ink-3` y no el `--ink-4` de sus
    vecinas: es texto nuevo, y sobre el blanco de la tarjeta da 4,76:1 (AA)
    frente al 2,5:1 de `--ink-4`. */
+.price-mx-was { color: var(--ink-3); font-weight: 600; }
 .price-term { display: block; margin-top: 2px; font-size: 13px; font-weight: 600; color: var(--ink-3); }
 /* FOUNDER-PRICE-1 (log §237): precio normal en palabras bajo el fundador, y
    la cuenta real de plazas sobre las tarjetas. */
