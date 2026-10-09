@@ -47,7 +47,10 @@ export async function captureFunnelEvent(
         api_key: apiKey,
         event,
         distinct_id: distinctId,
-        properties: { ...properties, source: "server" },
+        // `$geoip_disable`: the request comes from Vercel, so PostHog would
+        // otherwise stamp the server's region (Dublin) on the person as their
+        // location and skew every per-country breakdown.
+        properties: { ...properties, source: "server", $geoip_disable: true },
         timestamp: new Date().toISOString(),
         // PostHog drops a second event with the same uuid, so a retried
         // webhook does not count one payment twice.

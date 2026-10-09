@@ -29,7 +29,7 @@ describe("captureFunnelEvent", () => {
       api_key: "phc_test",
       event: "checkout_started",
       distinct_id: "user-1",
-      properties: { plan_id: "pro", source: "server" }
+      properties: { plan_id: "pro", source: "server", $geoip_disable: true }
     });
     expect(body.uuid).toBeUndefined();
   });

@@ -21477,6 +21477,13 @@ haber cookies de analítica.
   guardar `utm_*` en el alta (fase aparte).
 - «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
   cada persona, filtro nativo de los embudos de PostHog.
+
+**Adenda (2026-10-09, antes del merge).** Cada evento lleva
+`$geoip_disable: true`. El primer `signup_submitted` real del preview llegó
+con la ubicación de Vercel (Dublín, Irlanda) puesta en la persona, porque la
+petición sale del servidor; sin esto todo desglose por país en PostHog
+contaría a cada cliente como irlandés.
+
 ## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
 
 **De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
