@@ -11,6 +11,10 @@
  * corroboran. Los precios y límites de GenScore vienen de
  * app/pricing/plans-data.ts, la misma fuente que usa /pricing.
  */
+import { PLANS } from "@/app/pricing/plans-data";
+
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
+
 export const PEEC_RESEARCH_DATE = "3 de agosto de 2026";
 
 export const COMPARISON_ROWS: {
@@ -22,8 +26,8 @@ export const COMPARISON_ROWS: {
 }[] = [
   {
     label: "Precio de entrada",
-    genscore: "Gratis (escaneo permanente, sin tarjeta)",
-    peec: "Desde ~95 $/mes — sin plan gratuito (cifra pública, confírmala en peec.ai antes de decidir)",
+    genscore: `Desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta para probar`,
+    peec: "Desde ~95 $/mes (cifra pública, confírmala en peec.ai antes de decidir)",
     genscoreWins: true
   },
   {

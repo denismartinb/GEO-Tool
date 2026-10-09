@@ -6,12 +6,16 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
-import { PLANS, isPromoActive } from "@/app/pricing/plans-data";
+import { PLANS } from "@/app/pricing/plans-data";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import {
+  getActivePromoPlanIds,
   getStripeClient,
   getPriceIdForPlan,
   getPromoCouponIdForPlan,
+  invalidateFounderOfferCache,
   isSelfServePlan,
+  stripePriceMatchesPlan,
   type SelfServePlanId
 } from "@/lib/stripe";
 
@@ -200,13 +204,26 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   const siteUrl = await getRequestSiteUrl();
   const existingCustomerId = profileRow?.stripe_customer_id as string | null | undefined;
 
-  // PRICING-PROMO-1: only applied when the promo window is open AND Stripe
-  // actually has a coupon configured for this plan — never just because the
-  // date allows it. This is the one place that determines what a customer is
-  // really charged; app/pricing (display) and lib/stripe.ts's
-  // getActivePromoPlanIds share the exact same two conditions so the shown
-  // price and the charged price can't drift apart.
-  const promoCouponId = isPromoActive() ? getPromoCouponIdForPlan(planId) : null;
+  // FOUNDER-PRICE-1: the Stripe Price behind the env var must charge exactly
+  // what PLANS shows. A deploy that ships new prices before the env points at
+  // the matching Price would otherwise show one amount and charge another.
+  try {
+    if (!(await stripePriceMatchesPlan(stripe, priceId, planId))) {
+      console.error("[geo:billing] Stripe price does not match the catalog, refusing checkout", { planId, priceId });
+      return { success: false, error: "La facturación todavía no está disponible. Vuelve a intentarlo más tarde." };
+    }
+  } catch (priceError) {
+    console.error("[geo:billing] failed to verify Stripe price against the catalog", {
+      planId,
+      message: priceError instanceof Error ? priceError.message : String(priceError)
+    });
+    return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
+  }
+
+  // FOUNDER-PRICE-1: the founder coupon only when getActivePromoPlanIds says
+  // so — the same source /pricing, the console and the emails read, so the
+  // shown price and the charged price cannot drift apart.
+  const promoCouponId = (await getActivePromoPlanIds()).includes(planId) ? getPromoCouponIdForPlan(planId) : null;
 
   // Arrow function expressions (not hoisted `function` declarations) so
   // TypeScript retains the `priceId` non-null narrowing from the early
@@ -257,8 +274,12 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
       return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
     }
 
+    await captureFunnelEvent("checkout_started", user.id, { plan_id: planId });
     return { success: true, url: session.url };
   } catch (stripeError) {
+    // A founder coupon that ran out of slots between the cached read and
+    // this call fails the session; the next attempt must re-read Stripe.
+    if (promoCouponId) invalidateFounderOfferCache();
     console.error("[geo:billing] failed to create Stripe checkout session", {
       userId: user.id,
       planId,

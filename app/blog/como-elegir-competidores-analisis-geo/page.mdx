@@ -2,7 +2,7 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Stat,
@@ -12,10 +12,9 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  ShareOfVoice,
-  PostMeta
+  ShareOfVoice
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-elegir-competidores-analisis-geo");
 
@@ -32,13 +31,7 @@ export const sovBrands = [
 
 <BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -143,12 +136,6 @@ Por eso no tiene sentido definir una lista de competidores una vez y olvidarse d
 Un buen análisis GEO no consiste en vencer a cualquier empresa del mercado. Consiste en entender contra quién compites realmente cuando un potencial cliente hace una pregunta relevante.
 
 Cuanto más precisa sea esa comparación, más útiles serán las conclusiones. Y cuanto más útiles sean las conclusiones, más fácil será priorizar acciones que tengan un impacto real en tu visibilidad.
-
-<div className="blog-cta">
-<p>¿Quieres descubrir qué marcas compiten contigo dentro de ChatGPT, Gemini o Claude?</p>
-<a href="/signup" className="btn btn-primary">Prueba gratis</a>
-</div>
-
 
 ## Errores que invalidan el análisis
 

@@ -576,6 +576,15 @@ explícitamente que no hay cifra fiable para eso.
 **Con N5 se cierra la tanda completa de los 5 artículos aprobados por Task
 Intake el 2026-09-19.**
 
+## Estudios con dato propio (SECTOR-STUDY-1)
+
+Mediciones reales hechas con `/admin/estudio` (log §246). Sólo porcentajes y
+ratios, nunca recuentos absolutos (fundador, 2026-10-09).
+
+| # | Pieza | Cluster | Keyword primaria | Estado | PR |
+| --- | --- | --- | --- | --- | --- |
+| ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | 🟡 En PR | #(este) |
+
 ---
 
 ## Capa E — Observatorio

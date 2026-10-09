@@ -85,6 +85,7 @@ const BLOG_SLUGS = [
   "geo-negocios-locales-servicios-profesionales",
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que",
+  "que-software-de-facturacion-recomienda-la-ia",
   // W5 (2026-10-09).
   "la-ia-te-menciona-pero-recomienda-a-otro"
 ];

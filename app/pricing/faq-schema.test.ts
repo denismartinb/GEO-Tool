@@ -29,4 +29,13 @@ describe("FAQ schema de /pricing", () => {
       expect(json.mainEntity[i].acceptedAnswer.text).toBe(faq.a);
     }
   });
+
+  // PRICING-FAQ-LIVE-1 (log §236): con Stripe en real, el FAQ decía que
+  // todavía no cobrábamos y que la prueba de Pro no caducaba. Ambas cosas eran
+  // falsas (0017_reverse_trial.sql: `interval '7 days'`) y frenaban la compra.
+  it("no anuncia que la facturación está pendiente ni una prueba sin fin", () => {
+    const text = PLAN_FAQ.map((f) => f.a).join(" ");
+    expect(text).not.toMatch(/facturación real|lancemos la facturación|límite de tiempo automático/);
+    expect(text).toMatch(/7 días/);
+  });
 });

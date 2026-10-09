@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import {
   PLANS,
-  PROMO_DURATION_MONTHS,
-  PROMO_ENDS_AT,
   resolveShownPromoPrice,
   type Plan
 } from "@/app/pricing/plans-data";
@@ -103,7 +101,11 @@ export function PlanBillingSection({
   // plan's domain cap — the webhook that syncs `current_plan` deliberately
   // does not auto-archive anything (founder's choice: always let the owner
   // pick which domains to keep, never decide for them).
-  const isOverCapacity = projects.length > current.caps.projects;
+  //
+  // TRIAL-ONLY-1: never for `free`. Without a plan the account is read-only —
+  // nothing scans, so extra domains cost nothing and asking the owner to
+  // archive them would only take their own data away.
+  const isOverCapacity = planId !== "free" && projects.length > current.caps.projects;
 
   const trialDaysLeft = usage.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -154,11 +156,6 @@ export function PlanBillingSection({
   // shown — `planId` can move locally (downgrade to Free, see `applyChange`)
   // without a refetch, and Free never carries a promo anyway.
   const activePromo = planId === currentPlanId ? usage.subscriptionPromo : null;
-  const promoEndsDate = activePromo
-    ? new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" }).format(
-        new Date(activePromo.endsAt)
-      )
-    : null;
 
   /**
    * PROMO-CONSOLE-PARITY-1 (2026-08-27) — the launch price a NON-subscriber
@@ -179,9 +176,9 @@ export function PlanBillingSection({
    * a trial user they are already paying 59 €, which is the fake-metric
    * failure mode this codebase keeps writing rules about.
    *
-   * Gated on `promoPlanIds`, not on `isPromoActive()` alone: that helper
-   * requires the date AND a configured Stripe coupon, so the screen can never
-   * advertise a discount checkout would fail to apply.
+   * Gated on `promoPlanIds` (FOUNDER-PRICE-1: the real Stripe coupons and the
+   * founder slots left), so the screen can never advertise a discount
+   * checkout would fail to apply.
    */
   const shownPromo = resolveShownPromoPrice({
     plan: current,
@@ -189,10 +186,6 @@ export function PlanBillingSection({
     promoPlanIds
   });
   const offeredPromoPrice = shownPromo?.kind === "offered" ? shownPromo.price : null;
-  const promoCampaignEndsDate = new Intl.DateTimeFormat("es-ES", {
-    day: "numeric",
-    month: "long"
-  }).format(new Date(PROMO_ENDS_AT));
 
   return (
     <>
@@ -208,7 +201,7 @@ export function PlanBillingSection({
           </div>
           <p className="order-2 flex-1 text-sm font-medium text-[var(--warn-ink)]">
             Estás probando <b>Pro</b> gratis — te quedan <b>{trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}</b>.
-            Cuando termine, bajarás a Free si no contratas antes.
+            Cuando termine, tu cuenta pasará a solo lectura si no contratas antes.
           </p>
           <Button
             type="button"
@@ -245,7 +238,12 @@ export function PlanBillingSection({
           <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
           <p className="sub">Facturación mensual</p>
         </div>
-        {cancelAtDate ? (
+        {planId === "free" ? (
+          <span className="badge badge-warn">
+            <Icon name="alertCircle" size={11} />
+            Solo lectura: sin escaneos nuevos
+          </span>
+        ) : cancelAtDate ? (
           <span className="badge badge-warn">
             <Icon name="alertCircle" size={11} />
             Cancelada — activa hasta el {cancelAtDate}
@@ -287,20 +285,17 @@ export function PlanBillingSection({
             {activePromo && (
               <p className="sub mt-1">
                 <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio de lanzamiento hasta el <b>{promoEndsDate}</b> — después vuelve a {current.price}&nbsp;€/
-                {current.period}.
+                Precio fundador <b>para siempre</b>, mientras mantengas tu suscripción.
               </p>
             )}
             {offeredPromoPrice !== null && (
-              /* Futuro, no presente: quien lee esto todavía no paga nada. Los
-                 dos datos son reales — la fecha es `PROMO_ENDS_AT`, el mismo
-                 `redeem_by` del cupón de Stripe, y los meses son su
-                 `duration_in_months`. */
+              /* Futuro, no presente: quien lee esto todavía no paga nada. El
+                 descuento es el cupón `forever` de Stripe (FOUNDER-PRICE-1),
+                 y sólo se ofrece mientras queden plazas. */
               <p className="sub mt-1">
                 <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio de lanzamiento si contratas antes del <b>{promoCampaignEndsDate}</b>:{" "}
-                {offeredPromoPrice}&nbsp;€/{current.period} durante {PROMO_DURATION_MONTHS} meses, después{" "}
-                {current.price}&nbsp;€/{current.period}.
+                Precio fundador si contratas ahora: {offeredPromoPrice}&nbsp;€/{current.period}{" "}
+                <b>para siempre</b>, mientras queden plazas. Precio normal: {current.price}&nbsp;€/{current.period}.
               </p>
             )}
           </CardHeader>
@@ -317,7 +312,7 @@ export function PlanBillingSection({
               <div className="space-y-3 border-t border-[var(--line-soft)] pt-4">
                 <p className="sub">
                   Tu suscripción está cancelada. Mantienes acceso a {current.name} hasta el{" "}
-                  <b>{cancelAtDate}</b>; después bajarás a Free. ¿Cambiaste de idea? Puedes reactivarla en el
+                  <b>{cancelAtDate}</b>; después tu cuenta pasará a solo lectura. ¿Cambiaste de idea? Puedes reactivarla en el
                   portal de Stripe.
                 </p>
                 <Button type="button" disabled={isPortalPending} onClick={handleManageBilling}>
@@ -328,7 +323,7 @@ export function PlanBillingSection({
               <div className="flex flex-col gap-2 border-t border-[var(--line-soft)] pt-4 sm:flex-row sm:flex-wrap">
                 <Button type="button" className="w-full sm:w-auto" onClick={() => setModal({})}>
                   <Icon name="arrUp" size={14} />
-                  Cambiar de plan
+                  {planId === "free" ? "Elegir plan" : "Cambiar de plan"}
                 </Button>
                 {/* Moved here from the block at the foot of the section, which
                     became generic support (founder, 2026-08-06). Without this

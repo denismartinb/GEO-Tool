@@ -65,6 +65,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "geo-negocios-locales-servicios-profesionales": "sectores",
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
+  // SECTOR-STUDY-1 (2026-10-09, log §246).
+  "que-software-de-facturacion-recomienda-la-ia": "sectores",
   // W5 (2026-10-09).
   "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
 };

@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Verdict,
@@ -13,10 +13,9 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  AnswerSample,
-  PostMeta
+  AnswerSample
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("chatgpt-informacion-incorrecta-de-tu-empresa");
 
@@ -51,13 +50,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -223,16 +216,16 @@ Y si quieres entender primero qué mide exactamente cada motor antes de
 perseguir un dato concreto, empieza por
 <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber si tu marca aparece en ChatGPT, Gemini y Claude</a>.
 
-<ArticleCta
-  title="¿Sabes qué está diciendo la IA de tu empresa ahora mismo?"
-  text="GenScore escanea con preguntas reales en Gemini, Claude y ChatGPT, y te enseña la respuesta completa — para que un dato mal puesto no tarde meses en llegarte."
-/>
-
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="¿Sabes qué está diciendo la IA de tu empresa ahora mismo?"
+  text="GenScore escanea con preguntas reales en Gemini, Claude y ChatGPT, y te enseña la respuesta completa — para que un dato mal puesto no tarde meses en llegarte."
+/>
 
 </div>
 

@@ -582,3 +582,17 @@
     border-bottom: 1px solid var(--line);
   }
 }
+
+/* SECTOR-STUDY-1: the study form's fields had no visible box, and its buttons
+   read as plain text ("Lanzar (0 respuestas)" looked like a label). */
+.adm-study input:not([type="checkbox"]):not([type="radio"]),
+.adm-study select,
+.adm-study textarea {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  padding: 6px 9px;
+  font: inherit;
+}
+.adm-study textarea { display: block; margin-top: 4px; }
+.adm-study .btn:disabled { opacity: .55; cursor: not-allowed; }

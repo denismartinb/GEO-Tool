@@ -1,5 +1,10 @@
 # PDF-EXPORT-PLAN-1 — diseño aprobado
 
+> **Superseded (2026-10-09, log §250).** GEO-REPORT-1 Fase 2 sustituyó este
+> informe por el de `docs/design-reference/geo-report-1/`. Los ficheros
+> `export-report.*` que se citan abajo ya no existen. Esta carpeta se
+> conserva como histórico.
+
 Referencia de diseño para el informe que sustituye al `.md` de "Exportar
 plan" en Recomendaciones. El fundador vio tres plantillas en un canvas
 (Ejecutiva, Checklist operativa, Informe de consultoría) y aprobó la

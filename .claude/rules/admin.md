@@ -201,3 +201,20 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   both read the EFFECTIVE plan (`resolveSystemPlanId`), never the raw
   `current_plan` (`docs/brand/design-decisions-log.md` §229, §230). A change
   to what the watchdog alerts on changes this column with it, in the same PR.
+- **`/admin/estudio` gasta llamadas a los motores, no escribe filas, y tiene
+  que seguir así.** Cada paso es una server action con `requireOperator()` como
+  primera línea, valida sector o estudio de una marca (`buildCustomStudy`,
+  rehecho en cada paso: nunca la copia del navegador), motores (subconjunto
+  de los tres), pregunta y repeticiones (≤3) antes de llamar a nadie, y devuelve los resultados al
+  navegador para descargarlos. «Preparar con IA» y la auditoría técnica del
+  prospecto son acciones aparte con la misma puerta y tampoco escriben; la
+  auditoría lee la portada, robots/llms/sitemap y, como mucho, las páginas
+  propias que ya salieron en los datos del estudio (cobertura y citas),
+  elegidas con `selectCandidateUrls` del producto —nunca sigue enlaces: si
+  algún día recorre el sitio, es un crawler y necesita aprobación—. La
+  cobertura de contenido sí gasta LLM (una búsqueda con grounding por
+  pregunta) y decide «contenido propio» con el mismo `verifyOwnDomainPages`
+  que el producto, importado, nunca copiado.
+  Si algún día persiste el estudio, eso es una
+  escritura y necesita su Task Intake y su correo a `OPS_ALERT_EMAIL` como
+  cualquier otra (`docs/brand/design-decisions-log.md` §246).

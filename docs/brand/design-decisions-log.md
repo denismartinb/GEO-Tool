@@ -16351,6 +16351,8 @@ la que ya esté en `main`) y con ella todas sus referencias
 
 ## 169. BLOG-INDEX-CARDS-2026-08: el índice de /blog deja las portadas por tarjetas de color por clúster, Comparativas pasa a carril de primer nivel (2026-08-25)
 
+> **Superseded en parte por §247 (Fase 2, 2026-10-09):** las tarjetas de color por clúster pasan a blancas con borde fino y el carril se identifica por su número.
+
 **Propuesta del fundador** (referencia: el listado de blog de Semrush —
 tarjetas de color plano, sin portada, título + subtítulo), iterada en un
 artefacto de diseño antes de tocar código y aprobada con Task Intake Report
@@ -21349,7 +21351,881 @@ revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
 
-## 236. W5: «La IA te menciona pero recomienda a otro», anclado en casos reales de nuestras propias pruebas (2026-10-09)
+## 240. MODEL-PIN: Gemini pasa de gemini-2.5-flash a gemini-3.6-flash (2026-10-09, ADR 0042)
+
+**Qué se decidió.** El modelo fijado por defecto pasa a `gemini-3.6-flash`
+(`lib/llm/gemini-client.ts`). Las cinco llamadas a Gemini (generación del
+escaneo, extracción, JSON con y sin búsqueda, auditoría web) dejan de
+escribir su `generationConfig` a mano y lo piden a
+`geminiGenerationTuning(model)`: familia 2.x conserva `temperature: 0` y
+`thinkingBudget: 0` (ADR 0009); familia 3.x usa la temperatura por defecto y
+`thinkingLevel: "minimal"` (o `"low"` donde no existe `minimal`).
+
+**Por qué.** La fecha del 16-10 que motivó la tarea ya no figura en la página
+de Google (comprobado el 09-10: "No shutdown date announced"), pero la misma
+página limita el acceso a 2.5 a quien ya lo usaba y el 09-07 hubo 404 sin
+aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
+
+**Pendiente / conocido.**
+- Si `GEMINI_MODEL` sigue puesto en Vercel (ADR 0009 dice que se fijó a
+  `gemini-2.5-flash` el 2026-06-11), manda sobre el código: el fundador tiene
+  que borrarlo o cambiarlo. Desde el repo no se ve.
+- Prueba real hecha el 09-10 en el preview: el piloto de escritura añadió un
+  prompt a mozilla.org y el escaneo terminó con Gemini respondiendo. Latencias
+  sin medir (el preview no guarda logs en Vercel).
+- Ese mismo día, en el asistente de alta, carrefour.es se quedó sin
+  competidores sugeridos. Causa probable, no confirmada (sin logs): la llamada
+  con búsqueda no puede pedir `responseMimeType: "application/json"` y Gemini 3
+  a temperatura 1.0 envuelve a veces el JSON en una frase. `parseLenientJson`
+  ahora cae al tramo `{…}` más externo antes de rendirse.
+  Y `firstCandidateText` une las partes sin separador: una respuesta con
+  búsqueda puede llegar en varias partes, y un `\n` metido dentro de una cadena
+  rompe el JSON. De paso, el asistente deja de sembrar una fila vacía de
+  competidor cuando no hay sugerencias: cerrada, se pintaba como una tarjeta
+  «Sin nombre / sin dominio» bajo «0 competidores».
+- **Causa real, encontrada después:** con `google_search`, Gemini 3.5/3.6
+  Flash pierde el PRINCIPIO del texto de la respuesta, cortado en una frontera
+  de cita (`finishReason: STOP`, sin error), con o sin `responseMimeType`. El
+  `{` inicial del JSON no llega nunca, así que ningún parser lo recupera. Está
+  reportado en el foro de Google ("Google Search grounding drops the beginning
+  of the response text", 4 de 5 pasadas en 3.6) y no lo hace 2.5. Arreglo en
+  `generateGroundedGeminiJson`: con Gemini 3, una llamada con búsqueda que
+  responde en prosa y una segunda sin búsqueda que la estructura con
+  `responseMimeType`. Si el corte cae en la prosa se pierde una línea, no la
+  lista entera. Cuesta una llamada más (sin búsqueda) por sugerencia.
+- Con ese arreglo carrefour.es SIGUIÓ sin competidores en el preview, y el
+  preview no guarda logs en Vercel. Para poder ver la causa, el asistente
+  enseña ahora el motivo en el aviso, sólo en previews (`VERCEL_ENV=preview`;
+  producción nunca recibe el campo): la categoría del error (`timeout`,
+  `quota`, `http`…), `schema` si el JSON no tiene la forma pedida, `no_items`
+  si la lista llega vacía o `filtered` si todas las filas se descartan aquí.
+  De paso se acepta un array suelto en vez de `{ competitors }`, y un objeto sin
+  la clave `competitors` deja de leerse como «sin competidores».
+- **El mismo corte afecta a las respuestas del escaneo** (`lib/llm/gemini.ts`)
+  y a la auditoría (`lib/web-audit/audit-domain-content.ts`), que también usan
+  `google_search`. Ahí la respuesta es prosa y no rompe nada visible, pero puede
+  perder la primera frase, y con ella una mención de marca. Sin medir; mirar si
+  las menciones de Gemini caen frente a 2.5 en la primera semana.
+- Las puntuaciones cambiarán algo con el modelo nuevo y la varianza entre
+  escaneos sube al quitar `temperature: 0`; se acepta frente al riesgo de
+  bucles (fallos de escaneo). Revisar con datos tras una semana.
+- Coste: tokens ~2,5× y búsqueda con 5.000 consultas gratis/mes en vez de
+  1.500/día. Con el volumen medido seguimos dentro del gratuito (ADR 0042).
+
+**Rollback.** `GEMINI_MODEL=gemini-2.5-flash` en Vercel, sin tocar código.
+
+## 241. SITE-URL-SLASH-1: las auto-llamadas del escaneo iban a "//api/..." y Vercel las rechazaba con 508 (2026-10-09)
+
+**Qué se vio.** Logs de producción del 07 al 09-10 (Vercel, proyecto
+`geo-tool`): `[scan-runner] scan continuation was rejected { status: 508,
+url: 'https://www.genscore.es//api/scan/continue' }` y lo mismo para
+`//api/cron/run-audit` desde `audit-after-scan`, incluso en `chainIndex: 0`.
+`NEXT_PUBLIC_SITE_URL` acaba en "/" (el propio `billing/actions.ts` ya lo
+decía en un comentario y lo esquivaba en local) y `getSiteUrl()` lo devolvía
+tal cual.
+
+**Qué se decidió.** `getSiteUrl()` recorta espacios y barras finales. Arregla
+de una vez las tres auto-llamadas (`/api/scan/continue`,
+`/api/cron/sweep-continue`, `/api/cron/run-audit`) y el `emailRedirectTo` del
+recordatorio de confirmación (`lib/email/lifecycle/runner.ts`). Test en
+`lib/site-url.test.ts`.
+
+**Lo que NO se tocó, a propósito.** `app/{signup,login,forgot-password}/
+actions.ts` concatenan `NEXT_PUBLIC_SITE_URL` a mano y hoy mandan a Supabase
+`https://www.genscore.es//auth/callback`. Cambiarlo toca auth (Task Intake
+obligatorio) y depende de qué URLs tenga permitidas Supabase, que desde el
+repo no se ve. Pendiente: comprobar la lista de Redirect URLs en Supabase y
+unificarlos con `getSiteUrl()` en su propio PR. Alternativa sin código: quitar
+la barra final de `NEXT_PUBLIC_SITE_URL` en Vercel.
+
+**Abierto, no resuelto aquí: los timeouts de 60 s.** Los mismos logs muestran
+`Task timed out after 60 seconds` en `/api/scan/continue`,
+`/api/cron/sweep-continue` y `/api/cron/weekly-scans`. Causa probable (leída
+del código, no medida): `triggerScanContinuation` hace `await fetch` y la ruta
+`/api/scan/continue` no responde hasta terminar `executePendingScan`, así que
+cada eslabón espera el lote entero del siguiente dentro de su propio
+presupuesto y muere a los 60 s. El siguiente eslabón sigue vivo (es otra
+invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
+consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
+ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
+pipeline con su propio Task Intake (agente `reliability`).
+
+## 242. FUNNEL-EVENTS-1: cuatro hitos del embudo en PostHog, desde el servidor (2026-10-09)
+
+**Qué se decidió.** `lib/analytics/funnel-events.ts` envía a PostHog EU, por
+HTTP y desde el servidor: `signup_submitted` (alta con contraseña enviada,
+antes de confirmar), `signup_completed` (primera sesión real: callback de
+auth o alta sin confirmación), `scan_completed` (cada run completado, en
+`after()`), `checkout_started` (sesión de Stripe creada) y
+`payment_completed` (webhook `checkout.session.completed`, tras guardar el
+plan, con `uuid` derivado del id del evento de Stripe para que un reintento
+no cuente dos pagos). `distinct_id` = id de usuario de Supabase; nunca email,
+nombre ni dominio. Un intento, 2 s de tope, nunca lanza.
+
+**Por qué en servidor.** El SDK del navegador corre sin cookies
+(`persistence: "memory"`): cada carga es un id anónimo nuevo, así que con
+eventos de navegador el embudo registro → pago no se podía unir nunca. Se
+necesitaba antes de lanzar anuncios.
+
+**Privacidad.** `/privacidad` decía que PostHog «no te identifica entre
+sesiones ni dispositivos». Con estos hitos eso ya no es cierto para quien
+tiene cuenta, así que el texto se corrige en el mismo PR. **Es texto legal:
+lo valida el fundador en el Human Gate.** `/cookies` no cambia: sigue sin
+haber cookies de analítica.
+
+**Pendiente / conocido.**
+- El primer paso del embudo (visita anónima → alta) no se une a los demás:
+  la visita no tiene id persistente. Para atribuir anuncios hará falta
+  guardar `utm_*` en el alta (fase aparte).
+- «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
+  cada persona, filtro nativo de los embudos de PostHog.
+
+**Adenda (2026-10-09, antes del merge).** Cada evento lleva
+`$geoip_disable: true`. El primer `signup_submitted` real del preview llegó
+con la ubicación de Vercel (Dublín, Irlanda) puesta en la persona, porque la
+petición sale del servidor; sin esto todo desglose por país en PostHog
+contaría a cada cliente como irlandés.
+
+## 238. LIFECYCLE-WINBACK-1: el fin de prueba lo envía el servidor, y las pruebas caducadas reciben su aviso «tardío», D+3 y D+10 (Fase D de LIFECYCLE-EMAILS-1, 2026-10-09)
+
+**De dónde viene.** Fase D del plan aprobado el 2026-09-28 (§232), con las
+plantillas de «Después de la prueba» de
+`docs/design-reference/lifecycle-emails-1/`. El fundador delegó el 2026-10-09
+el plan de primera venta en el proyecto, con la condición de evitar el
+contacto personal.
+
+**Qué pasaba.** El correo de fin de prueba sólo salía en `applyTrialExpiry`
+(`lib/billing.ts`), es decir, cuando la persona **volvía** a abrir la consola
+tras caducar. Quien no volvía —justo a quien había que recuperar— no recibía
+nada, y las pruebas ya caducadas tampoco.
+
+**Qué se decide.**
+
+- **Fin de prueba (`trial_ended`) lo envía el cron diario** el día que caduca,
+  con la última foto real del escaneo (Puntuación GEO, respuestas con mención,
+  recomendaciones abiertas) o sin cifras si no hay escaneo, y la oferta de
+  `resolvePlanOffer` (`PLANS` + precio fundador sólo si `getFounderOffer()`
+  dice que el checkout lo aplica, §237).
+- **Versión «tardía» (`trial_ended_late`)**, una vez, para una prueba que
+  caducó hace más de 48 h sin aviso. Se detecta sola: `current_plan` sigue sin
+  ser `free`, porque la consola, al degradar, pone `free` y borra
+  `trial_ends_at`; una cuenta que sigue así nunca pasó por ese camino ni, por
+  tanto, por su correo.
+- **Un solo envío, gane quien gane.** `sendTrialEndEmailOnce` lo comparten el
+  cron y `applyTrialExpiry` (que, con el interruptor encendido, ya no manda la
+  plantilla antigua): el primero que llega envía y anota en `email_sends`, el
+  otro lo ve y no repite.
+- **Quien se dio de baja de «consejos y ofertas»** recibe el aviso de servicio
+  de siempre (`sendTrialEndedEmail`, sin oferta), también anotado, y no entra
+  en la recuperación (§232).
+- **D+3 (`winback_d3`)**, 72 h después del fin de prueba: la distancia real con
+  el competidor más mencionado del último escaneo, o «vas por delante» si la
+  marca lidera. Nunca dice «N veces más» si la marca tiene 0 menciones. Sin
+  escaneo con ranking, no sale.
+- **D+10 (`winback_d10`)**, 7 días después de D+3 (o 10 desde el fin si D+3
+  no salió), **sólo mientras queden plazas de precio fundador** (§237). El
+  diseño aprobado lo planteaba como «Últimos días… hasta el 31 de octubre»;
+  esa fecha ya no existe, así que el D+10 cuenta las plazas reales que quedan,
+  leídas de Stripe, y nunca una fecha.
+- **La variante sin oferta del D+10 («¿Qué te faltó?», firmada por el
+  fundador) no se construye**: es contacto personal, que el fundador pidió
+  evitar el 2026-10-09, y sin oferta no hay nada más que decir. Si algún día se
+  quiere, es un cambio de `decideWinbackEmail` y una plantilla.
+- Reglas puras en `decideTrialEndEmail` y `decideWinbackEmail`
+  (`lib/email/lifecycle/schedule.ts`): una vez por tipo, 48 h entre correos de
+  ciclo de vida, ni lunes (salvo el fin de prueba, que es aviso de cuenta), ni
+  suscriptores, comped, internas o bajas, y nada pasados 30 días.
+- **Precios nunca escritos a mano**, y sobre el modelo de FOUNDER-PRICE-1
+  (§237, PR #556): «precio fundador para siempre», «quedan N cuentas con precio fundador» (N leído de Stripe, sin mostrar el cupo total, como pide la adenda de §237),
+  sin tachado ni fecha. Cuando se agoten las plazas, los correos pasan solos
+  al precio normal y el D+10 deja de salir. **Este PR va encima de #556 y se
+  mergea después.**
+- **El fin de prueba no promete un plan Free.** Dice «tu prueba de Pro ha
+  terminado», «ya no se escanea a diario» y «tus datos siguen intactos», que
+  es cierto tanto con el plan Free de hoy como con la cuenta de solo lectura
+  que Denis aprobó el 2026-10-09 (hilo «Revisión de precios y oferta»). Así
+  no importa cuál de los dos PR se mergee antes. **Pendiente fuera de este
+  PR:** `sendTrialEndedEmail` (`lib/email/transactional.ts`, para quien se dio
+  de baja de ofertas) y la tabla del D5 («Free, desde el…») siguen nombrando
+  Free; los corrige el PR de solo lectura.
+- **Un único plazo para todo el cron** (`lifecycleDeadline`): las tres pasadas
+  comparten la invocación de 60 s; ninguna se da sus propios 45 s.
+
+**Corrección al plan.** El plan decía «sin migración nueva», pero 0037 fija
+`kind` con un `check`. Hace falta **0038**, que sólo amplía los valores
+permitidos (sin tablas, columnas ni políticas). Se aplica a mano **antes** de
+encender `LIFECYCLE_EMAILS_ENABLED`: sin ella el correo sale pero no se anota,
+y la pasada siguiente lo repetiría.
+
+**Pendiente.** Fase E (medición en `/admin`). Fuera del repo: aplicar 0036,
+0037 y 0038, y encender el interruptor (requisito legal de §232 aún sin
+validar). Las cuentas que ya abrieron la consola tras caducar recibieron el
+aviso antiguo y no entran en la recuperación (no hay registro de cuándo).
+
+**Trazabilidad.** `lib/email/lifecycle/{schedule,templates,runner}.ts`
+(+`winback-*.test.ts`), `lib/billing.ts`, `lib/email/transactional.ts`,
+`app/api/cron/lifecycle-emails/route.ts`,
+`supabase/migrations/0038_email_sends_winback_kinds.sql`,
+`.claude/rules/email.md`.
+
+## 236. PRICING-FAQ-LIVE-1: el FAQ de /precios deja de decir que todavía no cobramos (2026-10-09)
+
+**Qué.** Dos respuestas de `PLAN_FAQ` (`app/pricing/plans-data.ts`) seguían
+escritas para la beta sin cobro: «Mientras no activemos la facturación real,
+cambiar de plan no tiene coste» y «Mientras no lancemos la facturación no hay
+límite de tiempo automático». Con el checkout de Stripe ya en real (sesión
+`cs_live_` vista por el fundador el 2026-10-09), las dos eran falsas: la prueba
+de Pro dura 7 días (`0017_reverse_trial.sql`) y pasa sola a Free, y la
+cancelación del Portal es a fin de periodo (`cancel_at`, `lib/billing.ts`).
+
+**Por qué.** Un visitante que lee en la página de precios que todavía no se
+cobra no tiene motivo para pagar, y la prueba «sin límite» contradice los
+correos D1/D3/D5 (§233). Mismo texto en el JSON-LD `FAQPage`, así que también
+llegaba a buscadores y motores generativos.
+
+**Cómo.** Sólo copy. Test nuevo en `app/pricing/faq-schema.test.ts` que impide
+que vuelvan esas frases y exige que el FAQ diga «7 días».
+
+**Pendiente.** La revisión completa de precios y de la oferta de lanzamiento
+(propuesta del 2026-10-09: precios reales sin tachar y precio fundador) espera
+la aprobación del fundador. Este cambio no la anticipa.
+
+## 237. FOUNDER-PRICE-1: precios reales sin tachado y precio fundador para siempre en lugar de la promo de 6 meses (2026-10-09)
+
+**Qué.** Starter pasa de 45 € (promo 19 € durante 6 meses) a **29 €/mes**, y
+Pro de 179 € (promo 59 € durante 6 meses) a **99 €/mes**, ambos con IVA incluido (decisión del fundador, 2026-10-09: la cifra anunciada es la que se paga; con el IVA dentro, el margen baja en torno a un 17 %). La
+promo de lanzamiento de PRICING-PROMO-1 (§152, prorrogada en §206 y §231) se
+retira y la sustituye un **precio fundador para siempre**: 20 € en Starter y
+69 € en Pro, para las primeras 50 suscripciones (`FOUNDER_SLOTS`), contadas
+desde `times_redeemed` de los cupones de Stripe. Free, Agencia, topes y
+prueba de 7 días no cambian. Superseded: §152 (cupón de 6 meses con
+`redeem_by`), §206 y §231 (ampliaciones de fecha), y el texto de la tira de
+promoción de §159.
+
+**Por qué.** Decisión del fundador (2026-10-09) sobre la revisión de pricing
+del hilo «Revisión de precios». En una marca sin clientes, «179 € tachado,
+ahora 59 €» se leía como precio inflado (nadie ha pagado nunca 179 €), y una
+fecha de corte prorrogada dos veces deja de crear urgencia. Además, 59 € casi
+no deja margen con un Pro que use su cupo entero (~56 € de LLM al mes,
+`docs/llm-cost-analysis-2026-08.md` §7). Referencia de mercado (agosto de
+2026): Otterly 29 $/189 $, Peec 95 $/245 $ y Semrush AI Toolkit 99 $.
+
+**Cómo.**
+- `getFounderOffer()` (`lib/stripe.ts`) es la única fuente de «se puede
+  mostrar y cobrar el precio fundador, y cuántas plazas quedan». Lee los
+  cupones de Stripe (`STRIPE_COUPON_ID_{STARTER,PRO}_FOUNDER`) y sólo da la
+  oferta por buena si cada cupón tiene exactamente la forma anunciada:
+  `forever`, `eur` y `amount_off = price − promoPrice`. Así un cupón viejo de
+  6 meses o un porcentaje no pueden anunciarse como «para siempre». Caché de
+  5 minutos, y de 60 s si hay error. Falla cerrado: sin oferta.
+- Se usa `amount_off` y no `percent_off` porque un 30 % sobre 29 € son
+  20,30 €, no los 20 € que enseña la pantalla.
+- Variables de cupón **nuevas**: las `_PROMO` ya no se leen.
+- `getActivePromoPlanIds()` pasa a ser asíncrona y la leen `/pricing`, la
+  consola, los correos D5 y el checkout.
+- Checkout comprueba con `stripePriceMatchesPlan` que el Price del entorno
+  cobra lo que dice `PLANS` y que lleva el IVA incluido
+  (`tax_behavior: inclusive`). Si no, rechaza. Es lo que impide que un deploy
+  con precios nuevos y el entorno viejo enseñe 99 € y cobre 179 €.
+- `/pricing` deja el tachado, dice «Precio fundador para siempre» y
+  «Precio normal: 99 €/mes», y enseña la franja «quedan N de 50 plazas».
+  Revalida cada 10 minutos, antes cada hora.
+- La tira pública pide la oferta a `/api/founder-offer` (estático,
+  revalidación de 10 minutos). Sin oferta, sólo queda la fila de la prueba,
+  quieta.
+- La consola y el correo D5 dicen «para siempre», sin fecha.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+**Pendiente o conocido.**
+- El fundador tiene que crear en Stripe (modo real) los dos Prices y los dos
+  cupones, y apuntar las cuatro variables de Vercel **antes del merge**. Si
+  no lo hace, el checkout rechaza (Price) o no aplica descuento (cupón), pero
+  nunca cobra algo distinto de lo que enseña.
+- Una suscripción real con el cupón viejo de 6 meses (si existiera) dejaría
+  de mostrarse como rebajada en la consola, aunque Stripe se lo siga
+  aplicando.
+- La consola mantiene el tachado del precio normal real en «Tu plan» y en el
+  modal; sólo las superficies de captación lo pierden.
+- `lib/admin/users.ts` calcula el MRR con el precio normal, no con el de
+  fundador.
+- Fases propuestas y no incluidas aquí: plan anual (2 meses gratis), Agencia
+  en autoservicio desde 299 € y Free con un escaneo al mes.
+
+**Adenda (2026-10-09, mismo día, tras el despliegue).** El contador deja de
+decir «quedan N de 50 plazas» y pasa a «quedan N cuentas con precio especial»
+(tira pública y /precios) y «quedan N cuentas con precio fundador» (correo D5).
+Decisión del fundador: «50 de 50» lee como que nadie lo ha comprado. La cifra
+sigue saliendo de `times_redeemed` en Stripe; no se muestra un número inventado.
+Si se quiere enseñar 48, la forma honesta es bajar `max_redemptions` del cupón
+y `FOUNDER_SLOTS`, no restar en pantalla. También se aprendió al desplegar:
+un cupón con duración «Una vez» y un Price con comportamiento fiscal
+«Predeterminado» (que la API devuelve como `unspecified`) se rechazan, como
+estaba previsto; los dos se corrigieron en Stripe, sin tocar código.
+
+**Segunda adenda (2026-10-09).** El fundador fija las plazas en **38**, no 50:
+creó los cupones con `max_redemptions` 38 y `FOUNDER_SLOTS` pasa a 38, así que
+la web enseña «quedan 38» y la cifra baja con cada canje real. No es un número
+de pantalla: es el límite real de los cupones en Stripe.
+
+## 243. TRIAL-ONLY-1: sin plan Free — 7 días de Pro y, al terminar, cuenta en solo lectura (2026-10-09)
+
+**Decisión del fundador** (2026-10-09, «el plan free no aporta nada, solo
+complica el modelo… cuando se termine, se apaga el escaneo automático y se
+puede acceder solo en lectura»). Aprobó la propuesta con un «sí».
+
+**Qué cambia.**
+- `free` deja de venderse. Sigue existiendo como id interno (tipo `Plan`,
+  `check` de `profiles.current_plan`, webhook al cancelar), porque es el
+  estado de una cuenta sin plan: prueba terminada sin contratar o suscripción
+  cancelada. `SELLABLE_PLANS` (`app/pricing/plans-data.ts`) es lo que se
+  enseña: /precios (tarjetas a 3 columnas, matriz sin columna Free), el modal
+  «Cambiar de plan», `/docs/planes-y-limites`, el kit off-site y el
+  `?openPlan=` de Ajustes. Su ficha pasa a «Sin plan · Solo lectura».
+- **Solo lectura**: `createPendingScanRunCore` rechaza todo escaneo de una
+  cuenta `free` (antes dejaba uno completado), manual, reintento o cron, con el
+  plan EFECTIVO de `resolveSystemPlanId`; `createProjectCore` no crea
+  dominios; `suggestProjectSetup` no gasta llamadas de Gemini; la banda
+  superior (`kind: "free"`) sale siempre, sin X y sin que la calle el switch
+  de `/debug`, con «Elegir plan» directo al modal; el botón de escanear
+  explica el motivo en vez de «inténtalo de nuevo».
+- **El bloqueo por exceso de dominios no se aplica a `free`**
+  (`getDomainOverage`, `plan-billing-section`, borrado de dominios). Antes
+  cerraba la consola entera a toda prueba que terminara con 2+ dominios, que es
+  justo lo contrario de «puedes ver tus datos». Sigue para Pro → Starter.
+- **La prueba se queda en 7 días**, no 14: es lo que usan Otterly, Peec,
+  Semrush y Scrunch, la duración mueve poco la conversión, y 14 días empujaría
+  la primera venta más allá del objetivo del 24-10.
+- El comprobador anónimo `/gratis/aparece-mi-marca-en-chatgpt` queda como
+  único «gratis» sin registro.
+- Copy: FAQ de /precios y de la portada, correo de fin de prueba, D5
+  (tabla «Pro, hoy» frente a «Sin plan»: escaneos ninguno, datos en solo
+  lectura), recuperación D+3/D+10 («no se escanea», no «no se escanea a
+  diario»), aviso de fin de prueba en la consola, docs, blog, comparativas,
+  `/que-es-genscore`, `llms.txt`, el `SoftwareApplication` (la oferta de 0 €
+  pasa a «desde Starter») y los términos. Las comparativas pierden la ventaja
+  «única con plan gratuito permanente» y no reclaman exclusividad de la prueba.
+- Se retira la idea de «Free con un escaneo al mes» (pendiente en §237).
+
+**Regla de premisa (se retira un camino).** Se retira el escaneo único del
+plan Free. Premisa: toda alta nace con 7 días de Pro (`handle_new_user`,
+`0017_reverse_trial.sql`), así que el primer escaneo siempre ocurre en la
+prueba. Lo verifica hoy esa migración y los tests de `run-creation.test.ts`.
+Si la premisa fallara (una alta sin prueba), esa cuenta vería la banda de
+solo lectura y el modal de planes, nunca un callejón sin salida: la salida es
+contratar.
+
+**Pendiente o conocido.**
+- Las cuentas que ya están en `free` hoy (pruebas viejas) pasan a solo
+  lectura sin aviso propio; la banda se lo explica al entrar.
+- La consola de operador sigue llamando «Free» a ese estado.
+- Ninguna migración: `free` sigue en el `check` de la columna.
+
+**Adenda (2026-10-09, mismo PR): vuelve el tachado.** El fundador pide que el
+precio sin promoción aparezca tachado mientras dure el cupón. Corrige la parte
+de §237 que lo quitaba («sin tachado»). Mismas condiciones que el precio
+fundador: sólo se tacha cuando `getFounderOffer` confirma cupón y plazas, y lo
+tachado es el precio real de `PLANS` (29 € y 99 €), no uno inflado como el
+179 € de antes. Afecta a la tarjeta y la matriz de /precios, la tira pública
+y el bloque de precio de los correos (D5 y fin de prueba). La consola ya lo
+tachaba.
+
+## 244. PAID-ADS-1: consentimiento de cookies publicitarias y conversiones de Google Ads y LinkedIn, dormido hasta activarlo (2026-10-09)
+
+**Contexto.** Frente 4 del plan de primera venta: preparar Google Ads de
+búsqueda y LinkedIn Ads (unos 100 €/día) con conversiones medidas. El sitio no
+tenía ni banner de cookies ni etiquetas publicitarias, y `/cookies` prometía
+"sin cookies de analítica ni publicitarias" — una promesa que no se puede
+romper en silencio.
+
+**Decisión.**
+- **Todo depende de dos variables.** Sin `NEXT_PUBLIC_GOOGLE_ADS_ID` ni
+  `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` no hay banner, ni sección nueva en
+  `/cookies` y `/privacidad`, ni petición a terceros: el sitio se comporta
+  igual que antes. Ponerlas en Vercel enciende las tres cosas a la vez, en el
+  mismo deploy, para que la política nunca describa algo distinto de lo que
+  hace la web (`lib/ads/config.ts`).
+- **Consent Mode "básico": ninguna etiqueta antes de aceptar.** Más simple y
+  defendible que el modo avanzado (pings sin cookies antes del consentimiento),
+  a cambio de perder el modelado de conversiones de quien rechaza.
+- **Dos finalidades con consentimiento separado** (fundador, 2026-10-09, tras
+  revisar la primera versión, que juntaba las dos en un solo «Aceptar»):
+  *medir de qué anuncio vienes* (conversiones de Google Ads) y *mostrarte
+  anuncios de GenScore después* (remarketing en Google y LinkedIn). La AEPD
+  pide consentimiento por finalidad, y separadas mucha gente acepta medir y
+  rechaza el remarketing — y medir es lo que necesitan las reglas de corte.
+  La etiqueta de LinkedIn mide y hace retargeting con la misma cookie, así que
+  **sólo se carga bajo remarketing**, y sus conversiones sólo cuentan a quien
+  aceptó ambas. Google se carga con cualquiera de las dos;
+  `ad_personalization` sigue a la respuesta de remarketing y las conversiones
+  sólo se envían con medición. No hay categoría de analítica porque PostHog
+  sigue sin cookies.
+- **Primera capa: Rechazar todo, Configurar y Aceptar todo, con el mismo peso,
+  sin ✕** (cerrar no es consentir; guía de cookies de la AEPD, 2023).
+  Configurar abre un interruptor por finalidad, los dos apagados. Desde
+  `/cookies` el banner se reabre directamente en los interruptores, con la
+  respuesta actual. Retirar cualquiera de las dos borra las cookies
+  publicitarias de nuestro dominio y recarga la página.
+- **La decisión vive en `gs_ads_consent` 180 días**, versionada (`v2:m1r0`):
+  un cambio del texto del banner sube la versión y vuelve a preguntar. La `v1`
+  (una sola finalidad) nunca llegó a mostrarse a nadie: estaba dormida.
+- **Tres conversiones**: `free_check` (comprobación gratuita *completada*, no
+  fallida ni degradada), `sign_up` (`/signup/confirm`; los registros con Google
+  se marcan en `/auth/callback` con la cookie `gs_pending_conversion` sólo si ya
+  había consentimiento) y `purchase` (`?checkout=success`). Una conversión que
+  ocurre con el banner sin contestar se guarda en memoria y sólo se envía si se
+  acepta en esa misma vista; nunca se persiste.
+- Excluidas `/admin`, `/mfa` y `/debug`.
+
+**Pendiente / conocido.**
+- `purchase` se envía sin valor: el plan contratado lo confirma el webhook, no
+  la URL de vuelta. Si hace falta valor para pujar, la vía es la conversión
+  offline/API desde el webhook de Stripe — fase propia.
+- Un registro con contraseña con la confirmación de email desactivada va
+  directo a `/dashboard` y no se cuenta. Hoy la confirmación está activa.
+- Las campañas (estructura, palabras clave, anuncios, reglas de corte) viven
+  fuera del repo, en la carpeta del proyecto; nada se lanza sin el sí del
+  fundador.
+
+**Trazabilidad.** `lib/ads/{config,consent,track,tags,pending-conversion}.ts`
+(+tests), `components/ads/*`, `app/cookies/page.tsx`, `app/privacidad/page.tsx`,
+`app/auth/callback/route.ts`, `docs/environment-contract.md`.
+
+## 245. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer una comprobación de 20 segundos que su campo no hace (2026-10-09)
+
+**Qué pasaba.** La banda de cierre de la portada (`HomeCtaBand`) decía «Una
+comprobación real contra ChatGPT, en 20 segundos» y, hasta hoy, «Sin
+registro». Pero su campo es `HeroDomainField`, que guarda el dominio y lleva a
+`/signup` desde §159: prometía el comprobador y entregaba el registro.
+
+**Decisión.** Sólo copy. La banda describe lo que hace su campo: el primer
+escaneo completo en ChatGPT, Gemini y Claude, con los 7 días de Pro gratis de
+toda cuenta nueva. No promete nada gratis después de la prueba, coherente con
+TRIAL-ONLY-1 (§243: sin plan Free, la cuenta queda en solo lectura). La FAQ del
+comprobador que atribuía tres motores «al plan Free» ya la corrigió
+TRIAL-ONLY-1; este PR la dejó como está en `main`.
+
+**Pendiente.** El comprobador sigue sin enlace desde el hero ni el menú y sin
+captura de correo (propuesto aparte, necesita su propio Task Intake).
+
+**Trazabilidad.** `components/landing/session-ctas.tsx`.
+
+## 246. SECTOR-STUDY-1: estudio sectorial «¿qué marcas recomienda la IA?» con datos medidos, desde script o desde /admin/estudio (2026-10-09)
+
+**Para qué.** Contenido de captación (artículo del blog + dos posts de
+LinkedIn) basado en un dato propio: preguntar a los motores lo que pregunta un
+comprador de un sector y contar qué marcas nombran. La regla de siempre: ni
+una cifra que no salga de una medición.
+
+**Decisión.** La medición es la de un escaneo, no una imitación: la misma
+instrucción neutral de generación (ADR 0007), el mismo extractor de cada motor
+y la misma verificación literal de menciones (ADR 0021). Como no hay marca
+cliente, las candidatas del sector entran como lista vigilada (dan mención
+verificada y posición) y `other_brands_mentioned` recoge las demás (máximo 5
+por respuesta, así que su presencia es un mínimo y el informe lo dice). Una
+respuesta fallida se cuenta como fallo y sale del denominador, nunca como una
+respuesta que no nombró a nadie; con cero respuestas válidas el informe se
+niega a publicar ranking, y con más del 20% de fallos lo avisa.
+
+- `lib/studies/sector-study.ts`: sectores, conteo e informe. Puro, sin
+  `server-only`, para que el navegador agregue.
+- `lib/studies/run-sector-answer.ts`: una respuesta (generar + extraer +
+  verificar), con `server-only`.
+- `scripts/sector-study.ts` (`pnpm study:sector`): con las claves locales.
+- `/admin/estudio`: la misma medición con las claves de Vercel, porque el
+  fundador no tiene `ANTHROPIC_API_KEY` en local. El navegador lanza pasos de
+  una pregunta × motores elegidos (dos en vuelo), cada paso es una server
+  action con `requireOperator()` dentro y su propio presupuesto de 45 s en una
+  función de 60 s. **No escribe en la base de datos**: el informe y las
+  respuestas crudas se descargan. Por eso no lleva correo a `OPS_ALERT_EMAIL`,
+  que la regla de `/admin` exige para escrituras.
+- Modo «una marca» en la misma página: dominio + preguntas del operador
+  (≤20) + competidores (≤15). La marca va al hueco de marca del extractor,
+  verificada literalmente como en un escaneo, y el informe abre con su
+  presencia. `buildCustomStudy` valida en el navegador y otra vez en la
+  acción en cada paso, y el informe avisa de que las preguntas las escribió
+  el operador. Sirve para sacar datos de un dominio concreto sin crear un
+  proyecto ni consumir cupo de nadie.
+- Informe de prospecto (petición del fundador, 2026-10-09: «que el sistema
+  calcule los competidores… 15 o 20 prompts… insights de auditoría técnica;
+  nos va a servir para más informes»). «Preparar con IA» hace las mismas
+  tres llamadas que el alta de un proyecto —perfil desde la portada,
+  competidores con grounding, preguntas neutras de marca— y las deja en el
+  formulario para revisar; nunca lanza el estudio sola ni guarda nada.
+  `suggestPrompts` tiene tope 15, así que de 16 a 20 salen de
+  `generateAddedPrompts` en modo `auto`, deduplicadas contra la primera
+  tanda. Si la web no se puede identificar, lo dice y no inventa un perfil
+  (ADR 0020). La auditoría técnica (`lib/studies/prospect-audit.ts`) mira
+  sólo cuatro URLs fijas —portada, robots.txt, llms.txt, sitemap.xml— con
+  los mismos fetchers protegidos contra SSRF y las mismas comprobaciones que
+  la Auditoría web; no sigue enlaces (no es un crawler) y el informe dice
+  que no cubre el sitio entero. Lo que no se pudo leer sale como «sin
+  dato», nunca como aprobado.
+  Segunda pasada, con lo que pidió el hilo de outreach: zona opcional para
+  que un tercio de las preguntas sean locales; cada respuesta guarda sus
+  fuentes (redirecciones de Gemini resueltas con el mismo resolvedor del
+  escaneo; las no resueltas se cuentan aparte, sin dominio) y el sentimiento
+  sólo cuando nombra a la marca; las «otras marcas» pasan por la higiene de
+  entidades (ningún asistente de IA cuenta como marca). El informe añade
+  tasa por motor, puesto medio, sentimiento, dominios citados, el detalle de
+  cada consulta y motor (los fallos, como fallos), y una tabla de evidencia
+  por comprobación: robots para GPTBot/ClaudeBot/Google-Extended, tipos
+  JSON-LD, título, descripción, un solo h1 y palabras visibles sin JS.
+  Tercera pasada («¿vas a sacar la misma info de auditoría técnica que la
+  herramienta? incluso más si puedes», fundador): con la casilla de
+  auditoría marcada, tras el estudio corre lo mismo que la Auditoría web.
+  (1) Cobertura de contenido por consulta con `auditDomainContent` y el
+  mismo `verifyOwnDomainPages` del producto (exportado para esto, no
+  copiado): sólo cuenta una página que resuelve al propio dominio; una
+  llamada fallida o sin tiempo es «sin dato» y sale del denominador. Es
+  gasto LLM real —una búsqueda de Gemini con grounding por pregunta, ≤20 por
+  informe— y el informe dice cuántas hizo. Cada consulta lleva clase
+  (contenido y la IA la nombra/cita · contenido sin que la nombre · sin
+  contenido) y el resultado de la matriz con las reglas de
+  `opportunity-matrix.ts`, con la ventana en las respuestas del estudio en
+  vez de escaneos y sólo Gemini/ChatGPT como motores que citan. (2) Páginas:
+  portada más las páginas propias que ya salieron en los datos (cobertura y
+  citas de los motores), elegidas con el propio `selectCandidateUrls` —tope
+  `MAX_AUDIT_PAGES`, mismo presupuesto `TECH_AUDIT_TOTAL_BUDGET_MS`, una
+  página sin tiempo sale «sin tiempo», no desaparece—; ninguna se descubre
+  siguiendo enlaces. Evidencia por página. (3) La nota global con
+  `buildGlobalScore`, sin persistir; un componente sin dato se queda fuera y
+  se dice. (4) Comparativa técnica de portada con los tres competidores más
+  nombrados del estudio, sólo los que tienen dominio del sugeridor; los
+  escritos a mano sin dominio se nombran como no comparados. Todo va también
+  al `.json` (`globalScore`, `coverage`, `audit.pages`, `competitorAudits`).
+- `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
+  de la web, con las mismas dependencias que su ruta, en lote, para responder
+  a un post de «déjame tu dominio». Local, sin fila en `public_checks`.
+
+**Pendiente.** El gasto de `/admin/estudio` no tiene techo más allá de lo que
+valida la acción (un sector, hasta 3 motores, hasta 3 repeticiones: como
+mucho ~108 respuestas por pasada en un sector, ~180 en una marca con 20
+preguntas, más ≤20 búsquedas de cobertura) y del propio acceso de operador. Si pasa a
+usarse a menudo, merece un registro del coste.
+
+**Primera publicación (2026-10-09).** El estudio de «software de facturación»
+se publica como artículo del blog, `/blog/que-software-de-facturacion-recomienda-la-ia`
+(cluster `sectores`): es el primer dato propio real que publica GenScore, cosa
+que `.claude/rules/growth-content.md` reserva para el Observatorio «con
+aprobación aparte» — esa aprobación es la del fundador, que encargó el estudio
+para publicarlo. Reglas suyas que el artículo cumple: **sólo porcentajes y
+ratios, nunca recuentos absolutos** de preguntas o respuestas; las marcas se
+nombran (información pública) y en LinkedIn no se etiqueta a las empresas. Del
+ranking se excluyen organismos, hojas de cálculo y pasarelas de pago, y se dice.
+Se retiró antes de publicar la afirmación de que Debitoor es hoy SumUp Facturas
+(no verificada; fundador, 2026-10-09). La explicación de por qué Claude difiere
+(responde sin buscar) va marcada como inferencia. Segunda pasada, mismo día (fundador): fuera también el número de preguntas
+y de repeticiones —«nada de cifras absolutas, y menos si son tan bajas, quita
+credibilidad»— y las versiones de los modelos y la referencia a la
+instrucción de los escaneos —«tampoco quiero dar info tan concreta del
+producto»—. Queda como norma en `.claude/rules/growth-content.md`; las
+preguntas se publican como muestra de cinco, no completas. Fuente de cada cifra:
+`/mnt/project-files/estudios/estudio-facturacion-pymes-2026-10-09.{md,json}`,
+fuera del repo. Portada dibujada en HTML y rasterizada a WebP, verificada en
+los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
+
+**Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
+`scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
+`.claude/rules/admin.md`.
+
+---
+
+## 247. BLOG-REDESIGN-1: el artículo del blog con la estética del estudio PDF «De buscar a preguntar» (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que "al ver un post en el blog se
+parezca lo máximo posible" al estudio PDF «De buscar a preguntar», y que se
+remaqueten todos los posts. Aprobó la maqueta y el plan el mismo día
+(`docs/design-reference/blog-redesign-1/`). Los 22 artículos cambian a la vez
+porque todos se componen con la misma librería de bloques:
+
+- **Portada oscura** (`components/blog/article-hero.tsx`): migas, antetítulo
+  (clúster), titular Bricolage grande, entradilla (`description`), fecha,
+  actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
+  + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
+- **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
+  con fuente obligatoria (ver revisión de coherencia abajo). Un post
+  sin cifra con fuente sale sin cifra: elegir una para rellenar sería una métrica
+  falsa.
+- **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
+  hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
+  como las tarjetas del PDF con la primera en oscuro, cita con barra azul,
+  autor en línea fina, cierre oscuro con resplandor y relacionados en
+  tarjetas. Las etiquetas pasan de monoespaciada a Figtree, como el PDF.
+
+**Por qué con ámbito.** `/comparativas`, `/docs` y `/glosario` usan los mismos
+bloques `.art-*`; nadie pidió cambiarlos. `BlogPageShell` sólo añade
+`lp-article` cuando recibe `hero`, y todo el CSS nuevo cuelga de ahí o de
+`.art-hero`.
+
+**La ilustración de portada sale del artículo** (fundador: "entiendo que con
+esto ya no hacen falta las imágenes de los posts"). Supera la regla de §73
+(SEO-POS-1 S6, "el artículo enseña la portada que declara"): `covers.test.ts`
+ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
+MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
+tarjeta social de LinkedIn y el schema.
+
+**Pendiente.** Páginas de clúster con el mismo lenguaje (el índice se hizo
+en Fase 2, abajo), e imagen social generada automáticamente con este estilo, que
+es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
+Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
+contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Revisión de coherencia de los 22 posts (mismo día, a petición del
+fundador: "revisar absolutamente todos los posts del blog para que
+estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
+375 px y se corrigió lo que desentonaba:
+
+- `heroStat` deja de ser sólo dato propio: vale una cifra **que el post ya
+  publica** con fuente de terceros citable. Así entran GA4 (71 %, Attrifast),
+  agencias (1,08 %, Conductor), ecommerce (43 %, Capital One Shopping) y SaaS
+  B2B (51 %, G2). El antetítulo dice «Estudio GenScore» sólo con fuente
+  nuestra. Los demás posts siguen sin cifra: no tienen ninguna con fuente.
+- Cierre en un solo orden en todos: autor → cierre oscuro → relacionados
+  (diez posts lo tenían al revés). Fuera el CTA claro suelto (`.blog-cta`)
+  de «cómo elegir competidores», que duplicaba el cierre.
+- Una paleta: cifras secundarias en tinta (antes ámbar/verde/rojo),
+  «Acción rápida» en azul (antes verde), respuesta citada y checks de
+  «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
+  borde fino como el resto. El rojo de «Evitar» se queda.
+
+**Fase 2: índice `/blog` (mismo día; el fundador: "échale una revisión a
+la portada del blog… mira específicamente los botones de ver más posts,
+que… queda un poco rarillo").**
+
+- Portada oscura igual que la del artículo (`.art-hero`), a ancho de
+  `.lp-inner`, con el último artículo como tarjeta destacada dentro; si el
+  destacado tiene `heroStat`, su cifra va al lado con la fuente.
+- Carriles numerados 01, 02… con el mismo contador y titular Bricolage que
+  las secciones del artículo; la descripción del carril en su propia línea.
+- Tarjetas blancas con borde fino, como las figuras del artículo. Los
+  colores pastel por clúster de BLOG-COVERS-2026-08 (§169) quedan
+  superseded: el número del carril identifica el clúster.
+- «Ver más →» era un enlace suelto alineado a la izquierda bajo la
+  rejilla. Pasa a botón con borde, centrado (ancho completo en móvil), que
+  dice «Ver más artículos» («Ver más comparativas» en ese carril). La
+  primera versión decía cuántos cargaba («Ver 1 artículo más»); el fundador
+  prefirió el genérico porque el número delata poco contenido, en línea con
+  su regla de no enseñar cifras absolutas pequeñas. Sigue cargando in situ,
+  como decidió el 2026-09-19.
+- El cierre «¿Aparece tu marca en ChatGPT?» toma el estilo del cierre del
+  artículo (fondo #081223 con resplandor cian); fuera el anillo decorativo.
+
+Capturas antes/después en `docs/design-reference/blog-redesign-1/`. Las
+páginas de clúster (`/blog/<clúster>`) no se han tocado: siguen pendientes.
+
+**Trazabilidad.** `components/blog/article-hero.tsx`,
+`components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
+BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`,
+`app/blog/page.tsx`, `components/blog/blog-cluster-rail.tsx`,
+`components/blog/comparativas-rail.tsx`.
+
+---
+
+## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
+
+**Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
+La Fábrica del SEO (estudio de `/admin/estudio`, §246) y lo prefirió al PDF de
+«Exportar plan» (§215–§219): «me gusta mucho más que el que ahora sale en la
+herramienta». Task Intake aprobado el 2026-10-09 («Sí a todo»), con cuatro
+decisiones: **sustituye** a «Exportar plan» con un solo botón «Descargar
+informe» en Visión general y Recomendaciones; los hallazgos se escriben con
+**plantillas sobre datos**, no los redacta una IA; la comparación técnica con
+un competidor queda **fuera** (traer webs de terceros amplía la superficie de
+descarga, zona de crawler según `CLAUDE.md`); lo tienen **todos los planes de
+pago y la prueba**. Diseño de la versión producto aprobado el mismo día
+(«Sí»), guardado en `docs/design-reference/geo-report-1/`.
+
+**Qué entra en esta fase.** Sólo el modelo: `lib/report/report-model.ts`,
+una función pura que convierte el último escaneo completado en todo lo que
+pintan las ocho páginas, con sus tests. No hay cambios visibles todavía; el
+componente de impresión y el cargador de datos son la Fase 2, y la reutilización
+desde `/admin/estudio` para prospección es la Fase 3.
+
+**Normas de contenido que fija el modelo** (fundador, 2026-10-09): sólo
+porcentajes y proporciones —toda cifra sale como fracción y se formatea con
+`formatShare`—; motores por su nombre, sin versiones; la lista de preguntas se
+llama «preguntas principales de búsqueda»; un bloque sin datos se omite. El
+test recorre el modelo entero buscando cifras absolutas y versiones.
+
+**Pendiente.** Fase 2 (cargador + componente de impresión con el aprendizaje
+de §217–§219, y retirada del informe de PDF-EXPORT-PLAN-1), Fase 3
+(`/admin/estudio` pinta el mismo componente). Sin aprobar: comparación técnica
+con un competidor y marca blanca para agencias.
+
+**Trazabilidad.** `lib/report/report-model.ts` (+test),
+`docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.
+
+## 249. FREE-REPORT-1 Fase 1: «Pide tu informe GEO gratis», formulario con entrega manual en 48 h laborables (2026-10-09)
+
+**Qué.** Landing pública `/gratis/informe-geo` con un formulario de tres
+campos (web, email de trabajo, qué vendes) y una casilla opcional de
+comunicaciones. Al enviarlo, un correo al operador (`OPS_ALERT_EMAIL`) con la
+petición y un correo de confirmación al solicitante. Ninguna llamada a un LLM
+y ninguna migración: el operador lanza `/admin/estudio` (§246), el hilo de
+outreach cura el informe con la plantilla de prospecto y se envía a mano.
+Diseño aprobado por el fundador en `docs/design-reference/free-report-1/`.
+
+**Por qué.** El informe de prospecto de 8 páginas (La Fábrica del SEO,
+2026-10-09) le pareció al fundador mejor que todo lo que enseña el producto
+hoy, y pidió explotarlo como gancho para anuncios de pago y outreach. El
+comprobador gratuito da una respuesta de un motor; esto da el diagnóstico
+completo. Task Intake en el hilo «Outreach a empresas objetivo»: Fase 1 manual
+para validar demanda antes de automatizar nada.
+
+**Decisiones.**
+
+- **El éxito depende del correo al operador.** Si Resend no lo acepta, el
+  visitante ve un error y no recibe confirmación: decirle «recibido» de una
+  petición que nadie ha recibido es un éxito falso. El fallo sólo de la
+  confirmación no deshace nada, porque el operador ya tiene la petición.
+- **Límite por instancia, dicho como tal.** `createRequestLimiter`: una
+  petición por dominio y día, dos por email, tres por IP (hash con
+  `PUBLIC_CHECK_IP_SALT`; sin sal se omite la IP). Vive en memoria y Vercel
+  reparte peticiones entre instancias, así que frena al que pulsa veinte
+  veces, no a un atacante. Proporcionado para una fase en la que un abuso
+  cuesta dos correos y ningún LLM. Fase 3 (automática, con gasto) necesita
+  tabla y el conteo que falla cerrado de `lib/free-checker/rate-limit.ts`.
+- **Bots:** un campo trampa relleno se contesta como a una persona y no se
+  envía nada. Un envío antes de 1,5 s desde que se pintó el formulario (o
+  antes de hidratar) NO se contesta con «recibido»: puede ser una persona con
+  autocompletado, así que se le pide pulsar otra vez (hallazgo de QA).
+- **El límite se anota sólo tras entregar al operador.** Si se anotara antes,
+  el reintento tras un fallo de Resend recibiría «ya hemos recibido tu
+  petición» de algo que nadie recibió (hallazgo de QA).
+- **Tres vías de consentimiento, sin consentimiento implícito** (fundador,
+  2026-10-09, tras proponer quitar la casilla porque «nadie va a clicar»). Se
+  descartó dar el consentimiento por aceptado al enviar o premarcar la casilla:
+  no vale para correo comercial (art. 21.1 LSSI; TJUE Planet49). Lo que sí se
+  hace: (1) la casilla ofrece algo concreto que existe, los estudios de
+  GenScore sobre qué marcas recomienda la IA (§246), en vez de «consejos y
+  novedades»; (2) seguimiento sobre el propio informe, como mucho entrega y
+  dos recordatorios, que responde a la petición (art. 6.1.b) y no es marketing;
+  (3) el correo de entrega pide un «sí» por respuesta, que queda como prueba
+  en Gmail. Plantillas de (2) y (3) fuera del repo, en
+  `/mnt/project-files/estudios/informes/plantilla/correos-entrega-y-seguimiento.md`.
+  `/privacidad` describe las tres.
+- **Correos temporales** (lista corta en `DISPOSABLE_EMAIL_DOMAINS`) se
+  rechazan con su propio mensaje: el informe no llegaría a nadie.
+- **Consentimiento comercial:** casilla sin marcar, separada de la aceptación
+  de la política. Petición del fundador: texto genérico y que sirva de base
+  para nutrir leads; la casilla es lo que lo hace legal para quien no es
+  cliente (art. 21.1 LSSI; un consentimiento metido en las condiciones no vale,
+  `.claude/rules/email.md`). Nueva sección «Si pides un informe gratuito» en
+  `/privacidad`: base 6.1.b para el informe, 6.1.a para lo comercial,
+  conservación de un año sin cuenta.
+- **Copy público:** sin cifras absolutas, «preguntas principales de
+  búsqueda», motores sin versiones, «48 h laborables» (§246 y regla de
+  `growth-content.md`). Lo vigila `lib/free-report/emails.test.ts` en el
+  correo al solicitante.
+- **Bajo `/gratis/`** para que el matcher del middleware ya la salte: la
+  página no lee sesión.
+
+**Pendiente o roto conocido.**
+
+- **El consentimiento sólo queda registrado en el correo al operador.** No hay
+  tabla en esta fase. Antes de enviar el primer correo comercial a estos
+  contactos hace falta una tabla de solicitudes con su consentimiento y una
+  baja que funcione sin cuenta: eso es Fase 2/3 y necesita migración.
+- **La conservación de un año es un compromiso sin mecanismo**: los datos sólo
+  viven en el buzón del operador y en Resend; borrarlos al año es manual.
+- **Cualquiera puede bloquear 24 h el dominio de otro** pidiendo su informe
+  (límite de uno por dominio). Aceptable en esta fase: el operador ve todas
+  las peticiones.
+- **Sin conversión de anuncios.** `ConversionKind` no tiene un tipo para esta
+  petición; el hilo de anuncios de pago lo añade si quiere medirla.
+- **Las respuestas del solicitante van a `soporte@genscore.es`** (Reply-To).
+  Si ese buzón no se lee, esas respuestas se pierden.
+- Nadie enlaza aún a la página salvo el sitemap: los enlaces desde el blog
+  (tarjeta por tiempo de lectura, idea del fundador) van aparte, con su UX.
+
+**Regla de premisa (paso 4 del cierre).** No aplica: no se retira ningún
+camino de recuperación.
+
+**Trazabilidad.** `app/gratis/informe-geo/{page.tsx,actions.ts}`,
+`components/free-report/free-report-form.tsx`, `lib/free-report/*` (+tests),
+`app/privacidad/page.tsx`, `app/sitemap.ts`, `app/globals.css` (bloque `fr-`),
+`public/informe-gratis/portada-ejemplo.webp`,
+`docs/design-reference/free-report-1/`.
+
+## 250. GEO-REPORT-1 Fase 2: «Descargar informe» sustituye a «Exportar plan» — el informe de GenScore con los datos del último escaneo (2026-10-09)
+
+> Supersede a §215–§219 en lo que toca a «Exportar plan»: `export-report.tsx`/
+> `.css`, `ExportPlanModal` y el markdown de respaldo se borran. Sus
+> aprendizajes de impresión (§217–§219) se conservan y pasan al informe nuevo.
+
+**Qué se hizo.** El informe aprobado en §248 ya se genera con datos reales:
+- **Página propia, `/informe/[projectId]`, fuera del layout de la consola.**
+  Sin barra lateral ni cabecera fija ni contenedor de scroll alrededor, que
+  fue lo que deformó la portada de §217. Arriba hay una barra con «Volver a la
+  consola» y «Descargar PDF» (`window.print()`); la barra no se imprime.
+- **Cargador** `lib/report/report-data.ts`: lee el último escaneo completado
+  con el cliente del usuario (RLS) y cada cifra la toma de su dueño:
+  - la Puntuación GEO, de `resolveGeoScore` con el mismo histórico;
+  - la nota técnica y las comprobaciones, de `buildTechnicalIssuesReport`;
+  - el plan, de `selectPlan` sobre los mismos puntos potenciales que calcula
+    Recomendaciones (las tres acciones del informe son las de la pantalla);
+  - la columna «¿Página tuya?», del mapa de cobertura de ese mismo escaneo.
+
+  Las respuestas sin extracción se excluyen: no cuentan como «no te nombra».
+- **Componente** `components/report/geo-report.tsx` + `geo-report.css` (clases
+  `gr-`). Tiene ocho páginas como máximo, numeradas sobre las que de verdad
+  salen: un bloque sin datos se omite y las demás se renumeran. La matriz
+  pregunta a pregunta se reparte en varias páginas
+  (`lib/report/report-pages.ts`) estimando el alto de cada fila. Nunca se
+  recorta una pregunta.
+- **Botones.** En Recomendaciones, «Descargar informe» ocupa el sitio de
+  «Exportar plan». En la cabecera de Visión general (sólo con un escaneo
+  completado) la colocación la eligió el fundador sobre maquetas
+  (`docs/design-reference/geo-report-1/boton-informe.html`), después de
+  rechazar la primera versión, que bajo 900px dejaba un icono de flecha suelto
+  en medio de la cabecera («cutrísima»):
+  - desde 900px, un botón con texto junto a la píldora de la fecha (opción B);
+  - bajo 900px no hay botón. La píldora «Escaneado <fecha>» lleva una flechita
+    y abre una hoja inferior (`<dialog>` nativo) con el escaneo y el botón de
+    descarga (opción 2 de móvil). Motivo del fundador: un elemento permanente
+    y grande no tiene sentido para algo que no se descarga a diario.
+
+  Mientras corre un escaneo, la píldora vuelve a ser sólo de estado. Los
+  enlaces abren el informe en una pestaña nueva
+  (`app/dashboard/projects/[projectId]/scan-report-control.tsx`).
+- **Plan.** Lo tienen la prueba y los planes de pago (decisión 4 de §248). Una
+  cuenta `free` ve un aviso con su salida a elegir plan. `/informe` entra en el
+  `disallow` de `robots.ts`.
+- **Tipografía.** El informe carga sus propias Bricolage (600–800) y Figtree
+  (400–800) con `next/font`, porque el layout raíz carga menos pesos y
+  ampliarlos cambiaría el peso del texto en todo el sitio.
+
+**Regla de premisa (Cierre de fase, punto 4).** Esta fase retira un camino de
+recuperación: el `ExportPlanModal` con el markdown copiable, que salía cuando
+no existía `window.print`.
+- *Premisa*: el informe ya no es una capa oculta que sólo se ve al imprimir,
+  sino una página que se lee entera en pantalla. Si la impresión falla, el
+  contenido sigue delante del usuario, que puede leerlo, guardarlo desde el
+  menú del navegador o hacer capturas.
+- *Qué la verifica hoy*: el journey de lectura
+  `recommendations-interactions.spec.ts` (paso 6) abre el enlace y exige una
+  `.gr-page` visible, y `--journeys actions` hace lo mismo con veredicto.
+- *Qué se queda sin salida si falla*: un navegador sin `window.print` en el
+  que además no se pueda leer la página (por ejemplo, un visor incrustado que
+  bloquee las pestañas nuevas). Ahí el usuario sólo tiene «Volver a la
+  consola».
+
+**Verificado.** El PDF se generó con Playwright a partir de los datos reales
+del estudio de La Fábrica del SEO y salieron nueve páginas, una por sección, sin
+página en blanco al final. Con el escenario `safari-like` de §219 (márgenes de
+página impuestos) siguen saliendo nueve páginas, sin desbordar.
+
+**Pendiente.** Fase 3: `/admin/estudio` reutiliza el mismo componente para
+los informes de prospección.
+
+**Trazabilidad.** `app/informe/[projectId]/page.tsx`,
+`components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
+`lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
+`.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+
+## 251. W5: «La IA te menciona pero recomienda a otro», anclado en casos reales de nuestras propias pruebas (2026-10-09)
 
 **Qué se decidió.** Escribir la pieza W5 de la cola semanal
 (`la-ia-te-menciona-pero-recomienda-a-otro`, clúster `playbooks`) a partir de
@@ -21400,3 +22276,12 @@ recomienda-a-otro/page.mdx`, `public/blog/la-ia-te-menciona-pero-recomienda-a-
 otro/cover.webp` y su SVG fuente en `docs/design-reference/blog-covers/`,
 `tests/pilot/fixtures/server.mjs`, `tests/pilot/journeys/public-pages.spec.ts`,
 `docs/content-calendar.md`.
+
+**Actualización (2026-10-09, mismo PR).** Renumerada de §236 a §251 porque
+§236 ya estaba ocupada en `main`. El artículo pasa al encabezado de
+BLOG-REDESIGN-1 (`ArticleHero`, sin `BlogCover` ni `# {post.title}`) para
+cumplir `covers.test.ts`. También se quitan las cuentas absolutas del texto,
+por la regla de contenido público de sólo porcentajes: «7 de 10» pasa a
+«70%», «una decena de marcas» y «nueve rivales» se reformulan sin número, y
+el caso del proyecto de prueba ya no dice cuántos prompts, motores o
+respuestas tenía ni las cifras exactas de la puntuación.

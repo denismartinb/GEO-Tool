@@ -733,6 +733,45 @@
   .wa2-hdr-audit-compact { display: inline; }
 }
 
+/* "Descargar informe" in the Visión general sticky header (GEO-REPORT-1
+   Fase 2, log §250; layout chosen by the founder on 2026-10-09).
+   From 900px up it is a labelled button beside the scan pill. Below 900px
+   there is no button: the "Escaneado <fecha>" pill opens a bottom sheet with
+   the download inside. 900px is the same breakpoint as the audit line
+   above, for the same reason: `.ov-sticky-right` never shrinks, so anything
+   wide there starves the project name on the left. */
+.ov-scan-ctl { display: flex; align-items: center; gap: 10px; }
+.ov-scan-pill-btn { display: none; cursor: pointer; border: 0; font-family: inherit; align-items: center; gap: 5px; }
+.ov-scan-pill-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ov-scan-pill-chev {
+  width: 5px; height: 5px;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(45deg);
+}
+@media (max-width: 899px) {
+  .ov-report-btn,
+  .ov-scan-pill-static { display: none; }
+  .ov-scan-pill-btn { display: inline-flex; }
+}
+
+/* The sheet itself: a native <dialog> pinned to the bottom edge. */
+.ov-scan-sheet {
+  margin: auto 0 0; width: 100%; max-width: 100%;
+  border: 0; padding: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--surface); color: var(--ink);
+}
+.ov-scan-sheet::backdrop { background: rgba(11, 20, 38, .42); }
+.ov-scan-sheet-body {
+  display: grid; gap: 12px;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+.ov-scan-sheet-grab { width: 36px; height: 4px; border-radius: 4px; background: var(--line); justify-self: center; }
+.ov-scan-sheet-title { margin: 4px 0 0; font-size: 17px; font-weight: 750; letter-spacing: -.01em; }
+.ov-scan-sheet-text { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.ov-scan-sheet-cta,
+.ov-scan-sheet-close { width: 100%; justify-content: center; gap: 8px; }
+
 /* Audit toolbar: freshness state on the left, the single action on the right.
    Before this the button floated alone, right-aligned, and its confirmation
    rendered as a right-aligned paragraph whose leading icon broke onto its own

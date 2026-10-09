@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Verdict,
@@ -14,10 +14,9 @@ import {
   Pill,
   AuthorBio,
   ArticleCta,
-  Figure,
-  PostMeta
+  Figure
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("la-ia-te-menciona-pero-recomienda-a-otro");
 
@@ -52,13 +51,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -97,7 +90,7 @@ arreglan distinto.
 ## Primero, lee la respuesta entera
 
 Es un consejo aburrido y es el que más se salta. Un contador que dice "te
-mencionaron en 7 de 10 respuestas" no te cuenta si saliste como primera
+mencionaron en el 70% de las respuestas" no te cuenta si saliste como primera
 opción, como alternativa de relleno o como contraste ("a diferencia de X...").
 Para saberlo hay que leer. Cuando abras una respuesta donde sales, fíjate en
 cuatro cosas:
@@ -118,11 +111,11 @@ verdad.
 
 ## Segundo, no todo el que aparece a tu lado es competencia
 
-En aquella misma prueba, la respuesta de ChatGPT nombraba casi una decena de
+En aquella misma prueba, la respuesta de ChatGPT nombraba muchas
 marcas. Unas pocas competían de verdad por el mismo cliente. El resto eran
 servicios que la marca comprobada incluye dentro de su propia oferta. Si
-cuentas todas como "las marcas que te quitan el sitio", sales con una lista de
-nueve rivales. No lo eran.
+cuentas todas como "las marcas que te quitan el sitio", sales con una lista larga
+de rivales. No lo eran.
 
 <Figure
   label="Figura 1."
@@ -170,13 +163,12 @@ medida. Para convertirla en algo más hay que repetirla.
 
 <Verdict title="Una respuesta no es un diagnóstico">
 
-También lo vimos al revés. En un proyecto de prueba con un único prompt
-repartido en tres motores, la puntuación de un escaneo a otro saltó de 30 a 74
-sin que hubiéramos cambiado nada. No era un error de cálculo: con tres
-respuestas en total, que una o dos respuestas más mencionaran la marca bastaba para
-mover el resultado entero. Si te menciona un 33 % o un 100 % de tres
-respuestas, no has aprendido casi nada. Lo mismo vale para el orden de una
-respuesta: antes de preocuparte, comprueba si se repite.
+También lo vimos al revés. En un proyecto de prueba con muy pocas preguntas,
+la puntuación de un escaneo a otro llegó a duplicarse sin que hubiéramos
+cambiado nada. No era un error de cálculo: con tan pocas respuestas, que una
+o dos más mencionaran la marca bastaba para mover el resultado entero. Con
+una muestra así no has aprendido casi nada. Lo mismo vale para el orden de
+una respuesta: antes de preocuparte, comprueba si se repite.
 
 </Verdict>
 
@@ -211,7 +203,7 @@ sostener es el material que le falta.
 
 Cuando una respuesta cita fuentes, esas fuentes son una pista de dónde se
 forma la recomendación: comparadores, medios, foros, directorios. Si tu rival
-está en cinco y tú en ninguna, ahí hay una diferencia concreta que se puede
+está en varias y tú en ninguna, ahí hay una diferencia concreta que se puede
 trabajar. No todas son alcanzables ni todas pesan lo mismo, pero ver cuáles
 cita el motor te evita adivinar. Lo desarrollamos en
 <a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
@@ -251,7 +243,7 @@ dice algo incorrecto de tu empresa</a>.
 
 Es la reacción más natural, y la que menos conviene. En una prueba interna del
 generador de contenido de GenScore, el borrador que salió afirmaba que la
-marca mantenía "un alto estándar de calidad" frente a cinco competidores
+marca mantenía "un alto estándar de calidad" frente a varios competidores
 nombrados, sin un solo dato detrás. No lo publicamos, pero nos sirvió para ver el problema:
 es texto que suena bien y no demuestra nada.
 
