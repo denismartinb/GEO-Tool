@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import type { Metadata } from "next";
+import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
 
 /**
  * SEO-POS-1 (T10). Pantalla de acceso: contenido fino, sin valor de búsqueda y
@@ -25,6 +26,9 @@ export default async function SignupConfirmPage({
 
   return (
     <main className="auth-bg">
+      {/* PAID-ADS-1: the account exists from here on (unconfirmed); this is
+          the sign-up conversion. No-op without ad tags and consent. */}
+      <ConversionOnMount kind="sign_up" dedupeKey="sign_up" />
       <div className="auth-card">
         <div className="auth-logo">
           <BrandLogo size={24} />

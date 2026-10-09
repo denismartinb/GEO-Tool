@@ -7,6 +7,7 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
 import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-checker/api-contract";
 import { FreeCheckerResult } from "@/components/free-checker/free-checker-result";
+import { trackConversion } from "@/lib/ads/track";
 
 /**
  * FREE-CHECKER-1 — el formulario y los cuatro estados de la comprobación.
@@ -129,6 +130,10 @@ export function FreeCheckerForm({
         return;
       }
       setState({ kind: "done", response });
+      // PAID-ADS-1: only a real answer counts as a checker conversion — a
+      // failed or degraded check is not a lead, and counting it would teach
+      // the ad platforms to buy more of the traffic that hits our ceiling.
+      if (response.status === "completed") trackConversion("free_check");
     } catch {
       setState({ kind: "done", response: { status: "failed", error: "engine_unavailable" } });
     } finally {

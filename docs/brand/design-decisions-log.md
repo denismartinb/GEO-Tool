@@ -21593,7 +21593,68 @@ tachado es el precio real de `PLANS` (29 € y 99 €), no uno inflado como el
 y el bloque de precio de los correos (D5 y fin de prueba). La consola ya lo
 tachaba.
 
-## 244. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer una comprobación de 20 segundos que su campo no hace (2026-10-09)
+## 244. PAID-ADS-1: consentimiento de cookies publicitarias y conversiones de Google Ads y LinkedIn, dormido hasta activarlo (2026-10-09)
+
+**Contexto.** Frente 4 del plan de primera venta: preparar Google Ads de
+búsqueda y LinkedIn Ads (unos 100 €/día) con conversiones medidas. El sitio no
+tenía ni banner de cookies ni etiquetas publicitarias, y `/cookies` prometía
+"sin cookies de analítica ni publicitarias" — una promesa que no se puede
+romper en silencio.
+
+**Decisión.**
+- **Todo depende de dos variables.** Sin `NEXT_PUBLIC_GOOGLE_ADS_ID` ni
+  `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` no hay banner, ni sección nueva en
+  `/cookies` y `/privacidad`, ni petición a terceros: el sitio se comporta
+  igual que antes. Ponerlas en Vercel enciende las tres cosas a la vez, en el
+  mismo deploy, para que la política nunca describa algo distinto de lo que
+  hace la web (`lib/ads/config.ts`).
+- **Consent Mode "básico": ninguna etiqueta antes de aceptar.** Más simple y
+  defendible que el modo avanzado (pings sin cookies antes del consentimiento),
+  a cambio de perder el modelado de conversiones de quien rechaza.
+- **Dos finalidades con consentimiento separado** (fundador, 2026-10-09, tras
+  revisar la primera versión, que juntaba las dos en un solo «Aceptar»):
+  *medir de qué anuncio vienes* (conversiones de Google Ads) y *mostrarte
+  anuncios de GenScore después* (remarketing en Google y LinkedIn). La AEPD
+  pide consentimiento por finalidad, y separadas mucha gente acepta medir y
+  rechaza el remarketing — y medir es lo que necesitan las reglas de corte.
+  La etiqueta de LinkedIn mide y hace retargeting con la misma cookie, así que
+  **sólo se carga bajo remarketing**, y sus conversiones sólo cuentan a quien
+  aceptó ambas. Google se carga con cualquiera de las dos;
+  `ad_personalization` sigue a la respuesta de remarketing y las conversiones
+  sólo se envían con medición. No hay categoría de analítica porque PostHog
+  sigue sin cookies.
+- **Primera capa: Rechazar todo, Configurar y Aceptar todo, con el mismo peso,
+  sin ✕** (cerrar no es consentir; guía de cookies de la AEPD, 2023).
+  Configurar abre un interruptor por finalidad, los dos apagados. Desde
+  `/cookies` el banner se reabre directamente en los interruptores, con la
+  respuesta actual. Retirar cualquiera de las dos borra las cookies
+  publicitarias de nuestro dominio y recarga la página.
+- **La decisión vive en `gs_ads_consent` 180 días**, versionada (`v2:m1r0`):
+  un cambio del texto del banner sube la versión y vuelve a preguntar. La `v1`
+  (una sola finalidad) nunca llegó a mostrarse a nadie: estaba dormida.
+- **Tres conversiones**: `free_check` (comprobación gratuita *completada*, no
+  fallida ni degradada), `sign_up` (`/signup/confirm`; los registros con Google
+  se marcan en `/auth/callback` con la cookie `gs_pending_conversion` sólo si ya
+  había consentimiento) y `purchase` (`?checkout=success`). Una conversión que
+  ocurre con el banner sin contestar se guarda en memoria y sólo se envía si se
+  acepta en esa misma vista; nunca se persiste.
+- Excluidas `/admin`, `/mfa` y `/debug`.
+
+**Pendiente / conocido.**
+- `purchase` se envía sin valor: el plan contratado lo confirma el webhook, no
+  la URL de vuelta. Si hace falta valor para pujar, la vía es la conversión
+  offline/API desde el webhook de Stripe — fase propia.
+- Un registro con contraseña con la confirmación de email desactivada va
+  directo a `/dashboard` y no se cuenta. Hoy la confirmación está activa.
+- Las campañas (estructura, palabras clave, anuncios, reglas de corte) viven
+  fuera del repo, en la carpeta del proyecto; nada se lanza sin el sí del
+  fundador.
+
+**Trazabilidad.** `lib/ads/{config,consent,track,tags,pending-conversion}.ts`
+(+tests), `components/ads/*`, `app/cookies/page.tsx`, `app/privacidad/page.tsx`,
+`app/auth/callback/route.ts`, `docs/environment-contract.md`.
+
+## 245. CHECKER-HOME-TRUTH-1: la banda de cierre deja de prometer una comprobación de 20 segundos que su campo no hace (2026-10-09)
 
 **Qué pasaba.** La banda de cierre de la portada (`HomeCtaBand`) decía «Una
 comprobación real contra ChatGPT, en 20 segundos» y, hasta hoy, «Sin
