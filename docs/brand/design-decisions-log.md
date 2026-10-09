@@ -21400,6 +21400,16 @@ niega a publicar ranking, y con más del 20% de fallos lo avisa.
   la Auditoría web; no sigue enlaces (no es un crawler) y el informe dice
   que no cubre el sitio entero. Lo que no se pudo leer sale como «sin
   dato», nunca como aprobado.
+  Segunda pasada, con lo que pidió el hilo de outreach: zona opcional para
+  que un tercio de las preguntas sean locales; cada respuesta guarda sus
+  fuentes (redirecciones de Gemini resueltas con el mismo resolvedor del
+  escaneo; las no resueltas se cuentan aparte, sin dominio) y el sentimiento
+  sólo cuando nombra a la marca; las «otras marcas» pasan por la higiene de
+  entidades (ningún asistente de IA cuenta como marca). El informe añade
+  tasa por motor, puesto medio, sentimiento, dominios citados, el detalle de
+  cada consulta y motor (los fallos, como fallos), y una tabla de evidencia
+  por comprobación: robots para GPTBot/ClaudeBot/Google-Extended, tipos
+  JSON-LD, título, descripción, un solo h1 y palabras visibles sin JS.
 - `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
   de la web, con las mismas dependencias que su ruta, en lote, para responder
   a un post de «déjame tu dominio». Local, sin fila en `public_checks`.

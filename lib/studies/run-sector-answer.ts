@@ -3,6 +3,8 @@ import { extractClaudeStructuredData, generateClaudeVisibilityAnswer } from "@/l
 import { extractGeminiStructuredData, generateGeminiVisibilityAnswer } from "@/lib/llm/gemini";
 import { extractOpenAIStructuredData, generateOpenAIVisibilityAnswer } from "@/lib/llm/openai";
 import { verifyExtractedMentions } from "@/lib/scan/extraction";
+import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { STUDY_SENTINEL_BRAND, type AnswerRecord, type Engine, type SectorConfig } from "@/lib/studies/sector-study";
 
 /**
@@ -41,13 +43,19 @@ export async function runSectorAnswer(input: {
         : engine === "openai"
           ? extractOpenAIStructuredData
           : extractClaudeStructuredData;
-    const extracted = await extract({
-      brand: sector.brand ?? STUDY_SENTINEL_BRAND,
-      competitors: sector.seedBrands,
-      rawResponseText: answer.text,
-      promptText: prompt,
-      deadlineAt
-    });
+    // Same rule as the scan (lib/scan/extraction.ts): Gemini's grounding URIs
+    // are Google redirect wrappers and get resolved through the SSRF-guarded
+    // resolver; OpenAI's are already final. Runs alongside the extraction.
+    const [extracted, citations] = await Promise.all([
+      extract({
+        brand: sector.brand ?? STUDY_SENTINEL_BRAND,
+        competitors: sector.seedBrands,
+        rawResponseText: answer.text,
+        promptText: prompt,
+        deadlineAt
+      }),
+      resolveCitations(engine, answer.groundingChunks ?? [])
+    ]);
     const verified = verifyExtractedMentions(extracted.data, answer.text, sector.brand ?? STUDY_SENTINEL_BRAND);
     // A custom study's own brand is counted like any seed, from the
     // extractor's verified brand slot.
@@ -64,7 +72,9 @@ export async function runSectorAnswer(input: {
           .filter((competitor) => competitor.mentioned)
           .map((competitor) => ({ name: competitor.name, position: competitor.position }))
       ],
-      otherBrands: verified.other_brands_mentioned
+      otherBrands: verified.other_brands_mentioned.filter((name) => !isGenericEntityName(name)),
+      sentiment: sector.brand && verified.brand.mentioned ? verified.sentiment : null,
+      citations
     };
   } catch (error) {
     const kind = error instanceof Error ? error.name : "UnknownError";
@@ -72,4 +82,24 @@ export async function runSectorAnswer(input: {
     const category = typeof detail === "string" ? `${kind}:${detail}` : kind;
     return { ...base, model: null, error: category, rawText: null, seedMentions: [], otherBrands: [] };
   }
+}
+
+function domainOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.toLowerCase().replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
+
+async function resolveCitations(engine: Engine, chunks: Array<{ uri?: string }>): Promise<Array<{ url: string; domain: string | null }>> {
+  const uris = [...new Set(chunks.map((chunk) => chunk.uri).filter((uri): uri is string => Boolean(uri)))];
+  if (uris.length === 0) return [];
+  if (engine !== "gemini") return uris.map((url) => ({ url, domain: domainOf(url) }));
+  const resolved = await resolveGroundingRedirects(uris);
+  return uris.map((uri) => {
+    const url = resolved.get(uri)?.resolvedUrl ?? null;
+    // Unresolved: keep the wrapper for traceability, never its host as a domain.
+    return url ? { url, domain: domainOf(url) } : { url: uri, domain: null };
+  });
 }

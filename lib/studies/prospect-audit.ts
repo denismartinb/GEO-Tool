@@ -5,7 +5,9 @@ import { buildPageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport } from "@/lib/web-audit/robots";
 import { buildTechnicalIssuesReport } from "@/lib/web-audit/issues";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
-import type { ProspectAudit } from "@/lib/studies/prospect-audit-format";
+import { collectJsonLdTypes, extractTitle, type ProspectAudit } from "@/lib/studies/prospect-audit-format";
+
+const KEY_BOTS = ["GPTBot", "ClaudeBot", "Google-Extended"];
 
 /**
  * SECTOR-STUDY-1 (prospect report) — the technical half of the web audit for
@@ -48,6 +50,20 @@ export async function runProspectAudit(domain: string): Promise<ProspectAudit> {
     llmsTxt: bots.probes?.llmsTxt ?? (bots.llmsTxtFound ? "found" : "absent"),
     sitemap: bots.probes?.sitemap ?? (bots.sitemapFound ? "found" : "absent"),
     sitemapLocs: bots.sitemap && bots.sitemap.kind !== "invalid" ? bots.sitemap.locCount : null,
-    sitemapInvalid: bots.sitemap?.kind === "invalid"
+    sitemapInvalid: bots.sitemap?.kind === "invalid",
+    keyBots: bots.bots.filter((bot) => KEY_BOTS.includes(bot.agent)).map((bot) => ({ agent: bot.agent, allowed: bot.allowed })),
+    evidence:
+      fetched.status === "analyzed" && page.check
+        ? {
+            finalUrl: fetched.finalUrl,
+            title: extractTitle(fetched.html),
+            titleLength: page.check.metadata.titleLength,
+            descriptionLength: page.check.metadata.descriptionLength,
+            jsonLdTypes: collectJsonLdTypes(fetched.html),
+            wordCount: page.check.citability?.wordCount ?? 0,
+            contentOk: page.check.citability?.contentOk ?? false,
+            h1Count: page.check.answerFormat.h1Count
+          }
+        : null
   };
 }

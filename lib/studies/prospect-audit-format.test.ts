@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAuditSection, type ProspectAudit } from "./prospect-audit-format";
+import { collectJsonLdTypes, extractTitle, formatAuditSection, type ProspectAudit } from "./prospect-audit-format";
 
 const base: ProspectAudit = {
   domain: "acme.es",
@@ -13,7 +13,9 @@ const base: ProspectAudit = {
   llmsTxt: "absent",
   sitemap: "found",
   sitemapLocs: 40,
-  sitemapInvalid: false
+  sitemapInvalid: false,
+  keyBots: [],
+  evidence: null
 };
 
 describe("formatAuditSection", () => {
@@ -48,5 +50,40 @@ describe("formatAuditSection", () => {
   it("a soft-404 sitemap is not reported as present", () => {
     const text = formatAuditSection({ ...base, sitemapLocs: null, sitemapInvalid: true });
     expect(text).toContain("no contiene un sitemap válido");
+  });
+});
+
+describe("evidence", () => {
+  it("collects every JSON-LD type, nested and @graph, and skips malformed blocks", () => {
+    const html = `<script type="application/ld+json">{"@graph":[{"@type":"ProfessionalService","address":{"@type":"PostalAddress"}},{"@type":["WebSite"]}]}</script><script type="application/ld+json">{bad</script>`;
+    expect(collectJsonLdTypes(html)).toEqual(["PostalAddress", "ProfessionalService", "WebSite"]);
+    expect(extractTitle("<title>\n Agencia | SEO </title>")).toBe("Agencia / SEO");
+    expect(extractTitle("<p>sin título</p>")).toBeNull();
+  });
+
+  it("prints one row per requested check, with the measured value", () => {
+    const text = formatAuditSection({
+      ...base,
+      keyBots: [
+        { agent: "GPTBot", allowed: false },
+        { agent: "Google-Extended", allowed: true },
+        { agent: "ClaudeBot", allowed: true }
+      ],
+      evidence: {
+        finalUrl: "https://acme.es/",
+        title: "Acme",
+        titleLength: 4,
+        descriptionLength: 0,
+        jsonLdTypes: ["LocalBusiness"],
+        wordCount: 12,
+        contentOk: false,
+        h1Count: 1
+      }
+    });
+    expect(text).toContain("| robots.txt para GPTBot, ClaudeBot, Google-Extended | Mejorar | GPTBot: bloqueado");
+    expect(text).toContain("| Schema Organization / LocalBusiness | Bien | tipos JSON-LD encontrados: LocalBusiness |");
+    expect(text).toContain("| Título | Mejorar | «Acme» (4 caracteres");
+    expect(text).toContain("| Meta description | Mejorar | no tiene");
+    expect(text).toContain("muestra 12 palabras visibles");
   });
 });

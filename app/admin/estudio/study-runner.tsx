@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   aggregateBrands,
+  aggregateCitedDomains,
   buildCustomStudy,
   CUSTOM_STUDY_LIMITS,
   ENGINE_LABEL,
@@ -58,6 +59,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   const [engines, setEngines] = useState<Engine[]>([...ENGINES]);
   const [samples, setSamples] = useState(2);
   const [promptCount, setPromptCount] = useState(15);
+  const [zone, setZone] = useState("");
   const [preparing, setPreparing] = useState(false);
   const [prepareNote, setPrepareNote] = useState<string | null>(null);
   const [includeAudit, setIncludeAudit] = useState(true);
@@ -83,7 +85,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     setPreparing(true);
     setPrepareNote(null);
     try {
-      const prepared = await prepareBrandStudy({ domain, brand, promptCount });
+      const prepared = await prepareBrandStudy({ domain, brand, promptCount, zone });
       if (!prepared.ok) {
         setPrepareNote(PREPARE_ERRORS[prepared.error] ?? prepared.error);
         return;
@@ -150,7 +152,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       date,
       slug: config.id,
       report: formatReport({ sector: config, records, rows, samples, date, engines }) + auditSection,
-      json: `${JSON.stringify({ sector: config, samples, engines, date, rows, records, audit }, null, 2)}\n`
+      json: `${JSON.stringify({ sector: config, samples, engines, date, rows, citedDomains: aggregateCitedDomains(records), records, audit }, null, 2)}\n`
     });
     setRunning(false);
   }
@@ -198,6 +200,10 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
                   </option>
                 ))}
               </select>
+            </label>
+            <label>
+              Zona para consultas locales (opcional){" "}
+              <input value={zone} onChange={(event) => setZone(event.target.value)} placeholder="Alicante" disabled={running || preparing} />
             </label>
             <label>
               <input type="checkbox" checked={includeAudit} onChange={(event) => setIncludeAudit(event.target.checked)} disabled={running} />{" "}

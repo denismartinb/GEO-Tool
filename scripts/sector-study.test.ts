@@ -3,6 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   aggregateBrands,
+  aggregateCitedDomains,
   brandKey,
   buildCustomStudy,
   formatReport,
@@ -186,6 +187,40 @@ describe("buildCustomStudy", () => {
     expect(report).toContain("# ¿Recomienda la IA a Acme (acme.es)?");
     expect(report).toContain("**Acme** aparece en el 50% de las respuestas válidas (1 de 2) y es la primera marca nombrada en 1.");
     expect(report).toContain("Las preguntas las eligió el operador");
+  });
+});
+
+describe("one-brand detail", () => {
+  it("reports per-engine rate, average position, sentiment, cited domains and every answer, failures included", () => {
+    const built = buildCustomStudy({ domain: "acme.es", brand: "Acme", prompts: ["¿Qué agencia me recomiendas?", "¿Agencias en Alicante?"], competitors: ["Rival"] });
+    if (!built.ok) throw new Error("expected ok");
+    const records = [
+      record({
+        seedMentions: [{ name: "Acme", position: 2 }, { name: "Rival", position: 1 }],
+        sentiment: "positive",
+        citations: [{ url: "https://www.acme.es/a", domain: "acme.es" }, { url: "https://g.co/x", domain: null }]
+      }),
+      record({ engine: "openai", promptIndex: 1, otherBrands: ["Otra"], citations: [{ url: "https://foro.es/b", domain: "foro.es" }] }),
+      record({ engine: "claude", promptIndex: 1, error: "ExtractionError:timeout" })
+    ];
+    const report = formatReport({ sector: built.sector, records, rows: aggregateBrands(records, studySeeds(built.sector)), samples: 1, date: "d" });
+    expect(report).toContain("Gemini 100% (1/1) · ChatGPT 0% (0/1) · Claude sin respuestas válidas");
+    expect(report).toContain("**Puesto medio cuando aparece:** 2.0");
+    expect(report).toContain("**Sentimiento cuando se la nombra:** positivo 1");
+    expect(report).toContain("**Su propia web citada como fuente:** en 1 respuestas (Gemini)");
+    expect(report).toContain("| foro.es | 1 | ChatGPT | #2 |");
+    expect(report).toContain("Citas cuyo destino no se pudo resolver (excluidas de la tabla): 1.");
+    expect(report).toContain("- Gemini: nombra a Acme en el puesto 2 · otras marcas: Rival · fuentes: acme.es, sin resolver.");
+    expect(report).toContain("- Claude: **fallo** (ExtractionError:timeout).");
+    expect(report).toContain("| Otra · |");
+  });
+
+  it("cited domains ignore failed answers and count a domain once per answer", () => {
+    const { rows } = aggregateCitedDomains([
+      record({ citations: [{ url: "a", domain: "www.x.es" }, { url: "b", domain: "x.es" }] }),
+      record({ error: "x", citations: [{ url: "c", domain: "x.es" }] })
+    ]);
+    expect(rows).toEqual([{ domain: "x.es", answers: 1, engines: ["gemini"], prompts: [0] }]);
   });
 });
 

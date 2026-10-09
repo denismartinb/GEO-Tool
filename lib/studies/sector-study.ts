@@ -176,8 +176,12 @@ export type AnswerRecord = {
   rawText: string | null;
   /** Seed brands with a verified mention, with their 1-based position in the answer. */
   seedMentions: Array<{ name: string; position: number | null }>;
-  /** Non-seed brands the extractor surfaced (max 5 per answer). */
+  /** Non-seed brands the extractor surfaced (max 5 per answer), AI assistants and GEO jargon removed. */
   otherBrands: string[];
+  /** Sentiment about the analysed brand — only set when the answer names it. */
+  sentiment?: string | null;
+  /** Pages the engine grounded its answer on (Gemini redirects resolved; `domain` null when resolution failed). */
+  citations?: Array<{ url: string; domain: string | null }>;
 };
 
 export type BrandRow = {
@@ -191,6 +195,8 @@ export type BrandRow = {
   firstPlace: number;
   /** Distinct prompts in which it appeared at least once. */
   promptsCovered: number;
+  /** Those prompts, 0-based, ascending. */
+  promptIndexes: number[];
 };
 
 /**
@@ -230,6 +236,7 @@ export function aggregateBrands(records: AnswerRecord[], seedBrands: string[]): 
         ) as BrandRow["perEngine"],
         firstPlace: 0,
         promptsCovered: 0,
+        promptIndexes: [],
         prompts: new Set<number>()
       };
       rows.set(key, row);
@@ -267,12 +274,137 @@ export function aggregateBrands(records: AnswerRecord[], seedBrands: string[]): 
     .map(({ prompts, ...row }) => ({
       ...row,
       rate: valid.length === 0 ? 0 : row.mentions / valid.length,
-      promptsCovered: prompts.size
+      promptsCovered: prompts.size,
+      promptIndexes: [...prompts].sort((a, b) => a - b)
     }))
     .sort((a, b) => b.mentions - a.mentions || b.firstPlace - a.firstPlace || a.name.localeCompare(b.name, "es"));
 }
 
 const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+export type CitedDomainRow = { domain: string; answers: number; engines: Engine[]; prompts: number[] };
+
+/** Grounded domains across valid answers; one count per answer per domain. Unresolved citations (domain null) are counted apart, never guessed. */
+export function aggregateCitedDomains(records: AnswerRecord[]): { rows: CitedDomainRow[]; unresolved: number } {
+  const rows = new Map<string, { answers: number; engines: Set<Engine>; prompts: Set<number> }>();
+  let unresolved = 0;
+  for (const record of records) {
+    if (record.error !== null) continue;
+    const seen = new Set<string>();
+    for (const citation of record.citations ?? []) {
+      if (!citation.domain) {
+        unresolved += 1;
+        continue;
+      }
+      const domain = citation.domain.replace(/^www\./, "");
+      if (seen.has(domain)) continue;
+      seen.add(domain);
+      const row = rows.get(domain) ?? { answers: 0, engines: new Set<Engine>(), prompts: new Set<number>() };
+      row.answers += 1;
+      row.engines.add(record.engine);
+      row.prompts.add(record.promptIndex);
+      rows.set(domain, row);
+    }
+  }
+  return {
+    unresolved,
+    rows: [...rows.entries()]
+      .map(([domain, row]) => ({
+        domain,
+        answers: row.answers,
+        engines: ENGINES.filter((engine) => row.engines.has(engine)),
+        prompts: [...row.prompts].sort((a, b) => a - b)
+      }))
+      .sort((a, b) => b.answers - a.answers || a.domain.localeCompare(b.domain))
+  };
+}
+
+const SENTIMENT_LABEL: Record<string, string> = {
+  positive: "positivo",
+  neutral: "neutro",
+  negative: "negativo",
+  mixed: "mixto",
+  unknown: "sin determinar"
+};
+
+const promptRefs = (indexes: number[]) => indexes.map((index) => `#${index + 1}`).join(", ");
+
+/** The one-brand part of the report: per-engine rate, average position, sentiment, cited domains and the per-question detail. */
+function brandDetail(sector: SectorConfig, records: AnswerRecord[], engines: readonly Engine[], brandRow: BrandRow | undefined): string[] {
+  const brand = sector.brand ?? "";
+  const key = brandKey(brand);
+  const valid = records.filter((record) => record.error === null);
+  const named = valid.filter((record) => record.seedMentions.some((mention) => brandKey(mention.name) === key));
+  const positions = named
+    .map((record) => record.seedMentions.find((mention) => brandKey(mention.name) === key)?.position ?? null)
+    .filter((position): position is number => position !== null);
+  const sentiments = new Map<string, number>();
+  for (const record of named) {
+    const label = SENTIMENT_LABEL[record.sentiment ?? "unknown"] ?? "sin determinar";
+    sentiments.set(label, (sentiments.get(label) ?? 0) + 1);
+  }
+  const cited = aggregateCitedDomains(records);
+  const ownDomain = sector.label;
+  const ownCited = cited.rows.find((row) => row.domain === ownDomain || row.domain.endsWith(`.${ownDomain}`));
+
+  const out = [
+    "## Detalle de la marca",
+    "",
+    `- **Por motor:** ${engines
+      .map((engine) => {
+        const cell = brandRow?.perEngine[engine];
+        return !cell || cell.valid === 0 ? `${ENGINE_LABEL[engine]} sin respuestas válidas` : `${ENGINE_LABEL[engine]} ${pct(cell.mentions / cell.valid)} (${cell.mentions}/${cell.valid})`;
+      })
+      .join(" · ")}.`,
+    `- **Puesto medio cuando aparece:** ${
+      positions.length ? `${(positions.reduce((sum, value) => sum + value, 0) / positions.length).toFixed(1)} (sobre ${positions.length} respuestas con posición)` : "sin dato (no aparece o sin posición)"
+    }.`,
+    `- **Sentimiento cuando se la nombra:** ${
+      named.length ? [...sentiments.entries()].map(([label, count]) => `${label} ${count}`).join(" · ") : "no aplica (no se la nombra)"
+    }.`,
+    `- **Consultas en que aparece:** ${brandRow && brandRow.promptIndexes.length ? promptRefs(brandRow.promptIndexes) : "ninguna"}.`,
+    `- **Su propia web citada como fuente:** ${ownCited ? `en ${ownCited.answers} respuestas (${ownCited.engines.map((engine) => ENGINE_LABEL[engine]).join(", ")})` : "en ninguna respuesta"}.`,
+    "",
+    "## Dominios citados",
+    "",
+    "Páginas en las que los motores con búsqueda (Gemini, ChatGPT) apoyaron su respuesta; Claude responde sin búsqueda y no cita.",
+    ""
+  ];
+  if (cited.rows.length === 0) {
+    out.push("Ninguna respuesta válida citó fuentes.", "");
+  } else {
+    out.push("| Dominio | Respuestas | Motores | Consultas |", "|---|---|---|---|");
+    for (const row of cited.rows.slice(0, 20)) {
+      out.push(`| ${row.domain} | ${row.answers} | ${row.engines.map((engine) => ENGINE_LABEL[engine]).join(", ")} | ${promptRefs(row.prompts)} |`);
+    }
+    out.push("");
+  }
+  if (cited.unresolved > 0) out.push(`Citas cuyo destino no se pudo resolver (excluidas de la tabla): ${cited.unresolved}.`, "");
+
+  out.push("## Detalle por consulta", "", "El texto completo de cada respuesta está en el .json (`records[].rawText`).", "");
+  sector.prompts.forEach((prompt, index) => {
+    out.push(`**#${index + 1}. ${prompt}**`, "");
+    for (const record of records.filter((candidate) => candidate.promptIndex === index)) {
+      const who = `${ENGINE_LABEL[record.engine]}${record.sample > 1 ? ` (muestra ${record.sample})` : ""}`;
+      if (record.error !== null) {
+        out.push(`- ${who}: **fallo** (${record.error}).`);
+        continue;
+      }
+      const mention = record.seedMentions.find((candidate) => brandKey(candidate.name) === key);
+      const brandText = mention ? `nombra a ${brand}${mention.position ? ` en el puesto ${mention.position}` : ""}` : `no nombra a ${brand}`;
+      const others = [
+        ...record.seedMentions.filter((candidate) => brandKey(candidate.name) !== key).map((candidate) => candidate.name),
+        ...record.otherBrands
+      ];
+      const domains = [...new Set((record.citations ?? []).map((citation) => citation.domain ?? "sin resolver"))];
+      out.push(
+        `- ${who}: ${brandText} · otras marcas: ${others.length ? others.join(", ") : "ninguna"} · fuentes: ${domains.length ? domains.join(", ") : "ninguna"}.`
+      );
+    }
+    out.push("");
+  });
+  return out;
+}
 
 export function formatReport(input: {
   sector: SectorConfig;
@@ -332,7 +464,8 @@ export function formatReport(input: {
         return cell.valid === 0 ? "—" : `${pct(cell.mentions / cell.valid)} (${cell.mentions}/${cell.valid})`;
       });
       const first = row.seed ? String(row.firstPlace) : "n/d";
-      return `| ${index + 1} | ${row.name}${row.seed ? "" : " ·"} | ${pct(row.rate)} (${row.mentions}/${valid.length}) | ${perEngine.join(" | ")} | ${first} | ${row.promptsCovered} |`;
+      const promptsCell = sector.custom ? `${row.promptsCovered} (${promptRefs(row.promptIndexes)})` : String(row.promptsCovered);
+      return `| ${index + 1} | ${row.name}${row.seed ? "" : " ·"} | ${pct(row.rate)} (${row.mentions}/${valid.length}) | ${perEngine.join(" | ")} | ${first} | ${promptsCell} |`;
     }),
     "",
     "`·` = marca que no estaba en la lista inicial de candidatas y que los motores nombraron por su cuenta. Para estas no se mide la posición (n/d), y el extractor recoge como máximo 5 por respuesta, así que su presencia es un mínimo.",
@@ -343,6 +476,7 @@ export function formatReport(input: {
       ? `Candidatas que ningún motor nombró: ${neverNamed.join(", ")}.`
       : "Todas las candidatas aparecieron al menos una vez.",
     "",
+    ...(sector.brand ? brandDetail(sector, records, engines, brandRow) : []),
     "## Metodología",
     "",
     sector.custom
@@ -350,6 +484,7 @@ export function formatReport(input: {
       : "- Las preguntas no nombran ninguna marca. Son las que haría un comprador real.",
     "- Cada motor recibe la misma instrucción neutral que usa un escaneo de GenScore: responder como a un usuario normal, sin favorecer ni evitar marcas.",
     "- Una mención solo cuenta si el nombre aparece literalmente en la respuesta (verificación de GenScore, no una inferencia del modelo).",
+    "- Asistentes de IA (ChatGPT, Gemini…) y términos genéricos del sector no cuentan como marcas.",
     "- Las respuestas de la IA varían entre ejecuciones. Esto es una foto de una fecha, no una clasificación permanente.",
     "",
     "## Preguntas",

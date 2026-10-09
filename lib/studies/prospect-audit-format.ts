@@ -30,7 +30,56 @@ export type ProspectAudit = {
   sitemapLocs: number | null;
   /** Reachable but not a sitemap (usually a soft 404 served with 200). */
   sitemapInvalid: boolean;
+  /** The bots a prospect asks about first, read from robots.txt. Meaningless when `robots` is "unknown". */
+  keyBots: Array<{ agent: string; allowed: boolean }>;
+  /** What was measured on the homepage, so every verdict carries its evidence. Null when it could not be read. */
+  evidence: {
+    finalUrl: string;
+    title: string | null;
+    titleLength: number;
+    descriptionLength: number;
+    /** Every JSON-LD @type on the page, not only the ones the score counts. */
+    jsonLdTypes: string[];
+    /** Visible words in the HTML as served, i.e. without running JavaScript. */
+    wordCount: number;
+    contentOk: boolean;
+    h1Count: number;
+  } | null;
 };
+
+const LD_JSON_RE = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+
+/** All `@type` values in the page's JSON-LD, including nested and `@graph` nodes. Malformed blocks are skipped. */
+export function collectJsonLdTypes(html: string): string[] {
+  const types = new Set<string>();
+  const visit = (node: unknown, depth: number) => {
+    if (depth > 6 || !node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, depth + 1);
+      return;
+    }
+    const record = node as Record<string, unknown>;
+    const type = record["@type"];
+    for (const value of Array.isArray(type) ? type : [type]) if (typeof value === "string" && value.length <= 60) types.add(value);
+    for (const value of Object.values(record)) if (value && typeof value === "object") visit(value, depth + 1);
+  };
+  for (const match of html.matchAll(LD_JSON_RE)) {
+    try {
+      visit(JSON.parse(match[1]), 0);
+    } catch {
+      // malformed JSON-LD: same as the audit, ignored
+    }
+  }
+  return [...types].sort();
+}
+
+/** The <title> text, whitespace-collapsed, tags and table pipes stripped, capped. */
+export function extractTitle(html: string): string | null {
+  const match = /<title[^>]*>([\s\S]*?)<\/title>/i.exec(html);
+  if (!match) return null;
+  const text = match[1].replace(/<[^>]*>/g, "").replace(/\s+/g, " ").replace(/\|/g, "/").trim();
+  return text ? text.slice(0, 160) : null;
+}
 
 const LABEL: Partial<Record<IssueCheckKey, { label: string; fix: string }>> = {
   structured_data: { label: "Datos estructurados (JSON-LD)", fix: "añadir JSON-LD con un @type reconocido (Organization, Product, FAQPage…)" },
@@ -108,8 +157,48 @@ export function formatAuditSection(audit: ProspectAudit): string {
     out.push("No hay problemas técnicos en lo medido.", "");
   }
 
+  if (audit.evidence) out.push(...evidenceTable(audit));
+
   const passing = audit.passing.filter((check) => check.passedCount === check.applicableCount).map((check) => label(check.check));
   if (passing.length > 0) out.push(`**Ya está bien:** ${passing.join(", ")}.`, "");
 
   return out.join("\n");
+}
+
+const LOCAL_SCHEMA = /^(Organization|LocalBusiness|ProfessionalService|Corporation)$|Business$|Agency$/;
+
+function evidenceTable(audit: ProspectAudit): string[] {
+  const evidence = audit.evidence;
+  if (!evidence) return [];
+  const ok = (pass: boolean) => (pass ? "Bien" : "Mejorar");
+  const orgTypes = evidence.jsonLdTypes.filter((type) => LOCAL_SCHEMA.test(type));
+  const rows: string[] = [];
+  if (audit.robots === "unknown") {
+    rows.push("| robots.txt para GPTBot, ClaudeBot, Google-Extended | Sin dato | robots.txt no se pudo leer |");
+  } else {
+    const blocked = audit.keyBots.filter((bot) => !bot.allowed);
+    rows.push(
+      `| robots.txt para GPTBot, ClaudeBot, Google-Extended | ${ok(blocked.length === 0)} | ${audit.keyBots
+        .map((bot) => `${bot.agent}: ${bot.allowed ? "permitido" : "bloqueado"}`)
+        .join(" · ")}${audit.robots === "absent" ? " (no hay robots.txt: todo permitido)" : ""} |`
+    );
+  }
+  rows.push(
+    `| Schema Organization / LocalBusiness | ${ok(orgTypes.length > 0)} | ${
+      evidence.jsonLdTypes.length ? `tipos JSON-LD encontrados: ${evidence.jsonLdTypes.join(", ")}` : "la portada no tiene JSON-LD"
+    } |`
+  );
+  rows.push(
+    `| Título | ${ok(evidence.titleLength >= 15 && evidence.titleLength <= 70)} | ${evidence.title ? `«${evidence.title}»` : "sin <title>"} (${evidence.titleLength} caracteres; recomendado 15–70) |`
+  );
+  rows.push(
+    `| Meta description | ${ok(evidence.descriptionLength >= 50 && evidence.descriptionLength <= 160)} | ${
+      evidence.descriptionLength ? `${evidence.descriptionLength} caracteres` : "no tiene"
+    } (recomendado 50–160) |`
+  );
+  rows.push(`| Un solo <h1> | ${ok(evidence.h1Count === 1)} | ${evidence.h1Count} <h1> en la portada |`);
+  rows.push(
+    `| Se lee sin JavaScript | ${ok(evidence.contentOk)} | el HTML servido, sin ejecutar JavaScript, muestra ${evidence.wordCount} palabras visibles |`
+  );
+  return ["### Evidencia por comprobación", "", `Portada leída: ${evidence.finalUrl}`, "", "| Comprobación | Resultado | Evidencia |", "|---|---|---|", ...rows, ""];
 }

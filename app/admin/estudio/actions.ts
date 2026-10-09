@@ -4,6 +4,7 @@ import { requireOperator } from "@/lib/admin/operator";
 import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import { generateAddedPrompts, suggestPrompts } from "@/lib/projects/prompt-suggestions-llm";
 import { suggestCompetitors } from "@/lib/competitors/competitor-suggestions-llm";
+import { isGenericEntity } from "@/lib/entity-hygiene/generic-entities";
 import { runProspectAudit } from "@/lib/studies/prospect-audit";
 import type { ProspectAudit } from "@/lib/studies/prospect-audit-format";
 import { runSectorAnswer } from "@/lib/studies/run-sector-answer";
@@ -84,16 +85,25 @@ export type PreparedBrandStudy =
  * makes in onboarding (business profile from the homepage, grounded
  * competitors, brand-neutral prompts), returned to the form for the operator
  * to review — never run straight into a study, and never persisted.
- * `suggestPrompts` caps at 15, so above that the rest come from the "auto"
- * generator, deduplicated against the first batch.
+ * With a `zone` ("Alicante"), about a third of the questions are local
+ * ("keywords" mode seeded with the zone); the rest are by service and sector.
+ * `suggestPrompts` caps at 15, so any shortfall is filled by the "auto"
+ * generator, always deduplicated against what is already there.
  */
-export async function prepareBrandStudy(input: { domain: string; brand?: string; promptCount: number }): Promise<PreparedBrandStudy> {
+export async function prepareBrandStudy(input: {
+  domain: string;
+  brand?: string;
+  promptCount: number;
+  zone?: string;
+}): Promise<PreparedBrandStudy> {
   await requireOperator("/admin/estudio");
 
   const domain = normalizeStudyDomain(String(input.domain ?? ""));
   if (!domain) return { ok: false, error: "bad_domain" };
   const brand = (String(input.brand ?? "").trim() || brandFromDomain(domain)).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
   const promptCount = Math.min(Math.max(Math.trunc(Number(input.promptCount) || 15), 5), CUSTOM_STUDY_LIMITS.maxPrompts);
+  const zone = String(input.zone ?? "").trim().slice(0, 60);
+  const localCount = zone ? Math.min(Math.round(promptCount / 3), 10) : 0;
   const country = "ES";
   const language = "es";
 
@@ -104,24 +114,34 @@ export async function prepareBrandStudy(input: { domain: string; brand?: string;
   const profile = context.profile;
 
   const [competitors, prompts] = await Promise.all([
-    suggestCompetitors({ brand, domain, country, language, profile, limit: 8 }).catch(() => []),
+    suggestCompetitors({ brand, domain, country, language, profile, limit: 8 })
+      .then((rows) => rows.filter((row) => !isGenericEntity(row)))
+      .catch(() => []),
     (async () => {
-      const first = (await suggestPrompts({ brand, domain, country, language, profile, limit: Math.min(promptCount, 15) }).catch(() => [])).map(
+      const service = (await suggestPrompts({ brand, domain, country, language, profile, limit: Math.min(promptCount - localCount, 15) }).catch(() => [])).map(
         (prompt) => prompt.text
       );
-      if (promptCount <= first.length) return first.slice(0, promptCount);
-      const more = await generateAddedPrompts({
-        mode: "auto",
-        brand,
-        domain,
-        country,
-        language,
-        existingPromptTexts: first,
-        existingCategories: [],
-        limit: promptCount - first.length,
-        profile
-      }).catch(() => []);
-      return [...first, ...more.map((prompt) => prompt.text)].slice(0, promptCount);
+      const more = async (existing: string[], limit: number, keywords?: string[]) =>
+        limit <= 0
+          ? []
+          : (
+              await generateAddedPrompts({
+                mode: keywords ? "keywords" : "auto",
+                keywords,
+                brand,
+                domain,
+                country,
+                language,
+                existingPromptTexts: existing,
+                existingCategories: [],
+                limit: Math.min(limit, 10),
+                profile
+              }).catch(() => [])
+            ).map((prompt) => prompt.text);
+      const local = await more(service, localCount, [zone]);
+      let all = [...service, ...local];
+      if (all.length < promptCount) all = [...all, ...(await more(all, promptCount - all.length))];
+      return all.slice(0, promptCount);
     })()
   ]);
 
