@@ -25,7 +25,7 @@ export default function PrimerEscaneoPage() {
         ]}
       />
       <h1>{page.title}</h1>
-      <p className="docs-updated">Actualizado el 2 de agosto de 2026</p>
+      <p className="docs-updated">Actualizado el 9 de octubre de 2026</p>
 
       <p>
         Registrar un dominio en GenScore dispara una secuencia fija de pasos, siempre en el mismo orden.
@@ -42,8 +42,8 @@ export default function PrimerEscaneoPage() {
         </li>
         <li>
           <strong>Prompts sugeridos.</strong> Igual que con los competidores: Gemini propone las preguntas
-          reales que un cliente haría a un asistente de IA sobre tu categoría. El plan Free incluye ~10
-          prompts; los planes de pago, más (ver <Link href="/docs/planes-y-limites">Planes y límites</Link>).
+          reales que un cliente haría a un asistente de IA sobre tu categoría. Cuántos puedes monitorizar
+          depende de tu plan (ver <Link href="/docs/planes-y-limites">Planes y límites</Link>).
         </li>
         <li>
           <strong>Primer escaneo.</strong> GenScore lanza cada prompt contra los motores de IA de tu plan y
@@ -61,11 +61,12 @@ export default function PrimerEscaneoPage() {
         </li>
       </ol>
 
-      <h2>Qué incluye el escaneo gratuito</h2>
+      <h2>Qué incluye la prueba gratuita</h2>
       <p>
-        El plan Free ejecuta un único escaneo instantáneo, sin tarjeta: 1 dominio, ~10 prompts, 1 motor de
-        IA. Es suficiente para ver un GEO Score creíble y tres acciones concretas, pero no incluye
-        tendencia histórica ni monitorización continua — eso empieza en el plan Starter.
+        Toda cuenta nueva empieza con 7 días de Pro completo, sin tarjeta: hasta 5 dominios, los tres
+        motores de IA y escaneo diario, así que al acabar la prueba ya tienes varios escaneos y la
+        tendencia de tu visibilidad. Si al terminar no contratas un plan, no se te cobra nada: tu cuenta
+        pasa a solo lectura, sigues viendo tus datos y vuelves a escanear en cuanto elijas un plan.
       </p>
 
       <h2>Preguntas frecuentes</h2>

@@ -154,6 +154,14 @@ export async function createProjectCore(input: {
   const { input: values, plan, supabase, user, extraProjectColumns = {} } = input;
   const { domain, country, brand, name, language } = values;
 
+  // TRIAL-ONLY-1: `free` is no longer an offer — it is the read-only state of
+  // an account whose Pro trial ended (or whose subscription was cancelled).
+  // It keeps the domains it already has, but cannot add one: a new domain
+  // could never be scanned.
+  if (plan.id === "free") {
+    return { status: "project_limit_reached" };
+  }
+
   const { count: activeProjectCount, error: activeProjectsError } = await supabase
     .from("projects")
     .select("id", { count: "exact", head: true })

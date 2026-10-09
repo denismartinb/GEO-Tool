@@ -684,7 +684,7 @@ describe("createPendingScanRunCore — engine override (ENGINE-DEBUG-TOGGLE-1)",
   });
 });
 
-describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", () => {
+describe("createPendingScanRunCore — read-only account (TRIAL-ONLY-1, supersedes PRICING-TRUTH-1)", () => {
   beforeEach(() => {
     nextId = 1;
   });
@@ -714,7 +714,10 @@ describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", 
     ).rejects.toMatchObject({ code: "free_plan_scan_limit_reached" });
   });
 
-  it("allows a free-plan project's first scan (no completed run yet)", async () => {
+  // TRIAL-ONLY-1: `free` is the read-only state after the Pro trial — it
+  // creates no scan at all, not even a first one (every signup's first scan
+  // happens during the trial).
+  it("blocks even the first scan of a read-only (free) account", async () => {
     const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
 
     const { client, tables } = makeFakeDb(
@@ -724,19 +727,19 @@ describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", 
       })
     );
 
-    const runId = await createPendingScanRunCore({
-      projectId: PROJECT_ID,
-      readClient: client as unknown as SupabaseClient,
-      service: client as unknown as ServiceClient,
-      triggeredByUserId: "user-1",
-      triggerSource: "user"
-    });
-
-    expect(runId).toBeTruthy();
-    expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
+    await expect(
+      createPendingScanRunCore({
+        projectId: PROJECT_ID,
+        readClient: client as unknown as SupabaseClient,
+        service: client as unknown as ServiceClient,
+        triggeredByUserId: "user-1",
+        triggerSource: "user"
+      })
+    ).rejects.toMatchObject({ code: "free_plan_scan_limit_reached" });
+    expect(tables.scan_runs ?? []).toHaveLength(0);
   });
 
-  it("does not block a free-plan project whose only prior run failed (SCAN-ROBUST-1 auto-retry must still get its one real scan)", async () => {
+  it("blocks the automatic retry too once the account is read-only", async () => {
     const { createPendingScanRunCore } = await import("@/lib/scan/run-creation");
 
     const failedRun = { id: "run-failed", project_id: PROJECT_ID, status: "failed", created_at: "2026-01-01T00:00:00.000Z" };
@@ -750,16 +753,16 @@ describe("createPendingScanRunCore — free plan scan limit (PRICING-TRUTH-1)", 
 
     // Mirrors reconcileStuckScanRuns' internal auto-retry call shape:
     // no authenticated user, trigger_source='cron'.
-    const runId = await createPendingScanRunCore({
-      projectId: PROJECT_ID,
-      readClient: client as unknown as SupabaseClient,
-      service: client as unknown as ServiceClient,
-      triggeredByUserId: null,
-      triggerSource: "cron"
-    });
-
-    expect(runId).toBeTruthy();
-    expect(tables.scan_runs.some((r) => r.id === runId)).toBe(true);
+    await expect(
+      createPendingScanRunCore({
+        projectId: PROJECT_ID,
+        readClient: client as unknown as SupabaseClient,
+        service: client as unknown as ServiceClient,
+        triggeredByUserId: null,
+        triggerSource: "cron"
+      })
+    ).rejects.toMatchObject({ code: "free_plan_scan_limit_reached" });
+    expect(tables.scan_runs).toHaveLength(1);
   });
 
   it("does not apply the free-plan limit to paid plans", async () => {

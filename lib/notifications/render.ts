@@ -290,7 +290,7 @@ export function renderNotification(
       const daysLeft = num(payload.daysLeft) ?? 0;
       return {
         title: "Tu prueba termina pronto",
-        body: `Quedan ${daysLeft} ${plural(daysLeft, "día", "días")}. Después pasarás al plan Free.`,
+        body: `Quedan ${daysLeft} ${plural(daysLeft, "día", "días")}. Después tu cuenta pasará a solo lectura si no contratas.`,
         targetLabel: null,
         href: "/dashboard/settings/billing",
         icon: "card",

@@ -37,10 +37,14 @@ revisa nunca.
 
 | Plan | Precio | Dominios | Prompts | Motores | Frecuencia |
 |---|---|---|---|---|---|
-| Free / Scan | 0 € | 1 | 10 | 1 | Puntual |
-| Starter | 45 € | 1 | 25 | 3 | Semanal |
-| Pro | 179 € | 5 | 100 | 3 | Diario |
+| Starter | 29 € | 1 | 25 | 3 | Semanal |
+| Pro | 99 € | 5 | 100 | 3 | Diario |
 | Agencia | Plan a medida | A medida | 300 | 3 | Diario |
+
+No hay plan gratuito (TRIAL-ONLY-1, 2026-10-09): toda cuenta empieza con
+**7 días de Pro gratis, sin tarjeta**, y al terminar sin contratar queda en
+solo lectura. Lo único gratis y sin registro es el comprobador
+`/gratis/aparece-mi-marca-en-chatgpt`.
 
 **Los tres motores son ChatGPT, Gemini y Claude** (`lib/brand/canonical-definition.ts`).
 
@@ -64,7 +68,7 @@ las comparativas (`alternativas-a-otterly.test.ts` lo exige por nombre):
 - **No ejecutamos Perplexity ni Copilot.** Tres motores: ChatGPT, Gemini,
   Claude.
 - **No hay desglose por país.**
-- **El plan Free es un escaneo puntual**, no monitorización continua.
+- **No hay plan gratuito permanente**: la prueba de Pro dura 7 días.
 
 Se dicen **situados**, no en titular: en la respuesta donde vengan a cuento, no
 como advertencia previa contra uno mismo (log §67).
@@ -122,8 +126,8 @@ se responde entera sin producto:
 > Nosotros hacemos exactamente eso (aviso: soy de GenScore). Ejecutamos
 > ChatGPT, Gemini y Claude, en castellano y con el mercado español como foco.
 > Lo que **no** tenemos: Perplexity, Copilot, ni desglose por país — si
-> necesitas cualquiera de esas tres, mira otra. Hay un plan gratis con un
-> escaneo real y sin tarjeta para que lo compruebes antes de creerme.
+> necesitas cualquiera de esas tres, mira otra. Tienes 7 días de Pro gratis,
+> sin tarjeta, para que lo compruebes antes de creerme.
 
 ---
 
@@ -177,7 +181,7 @@ sale de §2.**
 - **Descripción larga:** la definición canónica de §2 + los dos párrafos de
   `/que-es-genscore`. No reescribirla: el objetivo de la Fase E es que sea
   **literalmente la misma cadena** en todas partes.
-- **Precio de partida:** 0 € (plan gratuito permanente, sin tarjeta).
+- **Precio de partida:** desde el plan Starter (ver tabla), con 7 días de Pro gratis y sin tarjeta.
 - **Idiomas:** castellano.
 - **Limitaciones declaradas:** las tres de §3.
 

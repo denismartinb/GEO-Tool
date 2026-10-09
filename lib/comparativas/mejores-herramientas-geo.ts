@@ -71,13 +71,13 @@ export const TOOLS: ToolProfile[] = [
     name: "GenScore",
     url: "https://www.genscore.es",
     oneLiner:
-      "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con plan gratuito permanente.",
+      "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con 7 días de Pro gratis, sin tarjeta.",
     distinctiveFeature:
       "La única de esta lista que no se detiene en el diagnóstico: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
-    pricingNote: `Gratis (escaneo permanente, sin tarjeta); planes de pago desde ${STARTER_PRICE} €/mes.`,
+    pricingNote: `Planes desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     bestFor:
-      "Equipos hispanohablantes que quieren empezar gratis y que la herramienta no solo señale el problema, sino que proponga la solución."
+      "Equipos hispanohablantes que quieren probar sin tarjeta y que la herramienta no solo señale el problema, sino que proponga la solución."
   },
   {
     slug: "otterly",
@@ -86,7 +86,7 @@ export const TOOLS: ToolProfile[] = [
     oneLiner: "Monitorización y auditoría GEO con cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados.",
     distinctiveFeature:
       "Cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados, con usuarios ilimitados ya en su plan de entrada.",
-    pricingNote: "Desde 29 $/mes — sin plan gratuito; Gemini y Google AI Mode son add-ons con coste extra.",
+    pricingNote: "Desde 29 $/mes ; Gemini y Google AI Mode son add-ons con coste extra.",
     spanishSupport: "No — interfaz en inglés.",
     bestFor:
       "Equipos con presupuesto ajustado que necesitan cobertura amplia de mercados y no les importa pagar add-ons por motor a medida que crecen.",
@@ -100,12 +100,12 @@ export const TOOLS: ToolProfile[] = [
       "Monitorización de visibilidad en IA construida para el mercado hispanohablante: prompts en español, competidores regionales y fuentes en dominios locales (.es, .mx, .ar, .cl, .co).",
     distinctiveFeature:
       "Es la otra herramienta de esta lista pensada para el mercado en español desde el principio, con foco declarado en LATAM. Cubre ChatGPT, Perplexity y AI Overviews, un conjunto de motores distinto del de GenScore: nosotros ejecutamos Gemini y Claude, que ella no lista, y no ejecutamos Perplexity ni AI Overviews.",
-    pricingNote: "Desde unos 29 $/mes según su comunicación pública — sin plan gratuito permanente. Confírmalo en crecerank.com.",
+    pricingNote: "Desde unos 29 $/mes según su comunicación pública. Confírmalo en crecerank.com.",
     spanishSupport: "Sí — producto en español, con foco declarado en LATAM.",
     bestFor:
       "Equipos con foco en LATAM que necesiten seguimiento por dominios locales país a país y prioricen la cobertura de Perplexity y AI Overviews sobre la de Gemini y Claude.",
     context:
-      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es Perplexity y AI Overviews (CreceRank) frente a Gemini y Claude (GenScore), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y GenScore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, GenScore es la única de las dos con escaneo gratuito permanente y sin tarjeta."
+      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es Perplexity y AI Overviews (CreceRank) frente a Gemini y Claude (GenScore), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y GenScore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, GenScore se puede probar 7 días con Pro y sin tarjeta, además de la comprobación anónima de ChatGPT sin registro."
   },
   {
     slug: "mentio",

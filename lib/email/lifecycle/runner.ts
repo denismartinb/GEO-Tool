@@ -8,11 +8,16 @@ import { recommendationEngineLabels } from "@/lib/recommendations/export-plan";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import {
   decideTrialEmail,
+  decideTrialEndEmail,
+  decideWinbackEmail,
+  LIFECYCLE_SPACED_KINDS,
   shouldRemindConfirmation,
+  TRIAL_END_KINDS,
   TRIAL_KINDS,
   trialDaysLeft,
   type TrialEmailDecision
 } from "@/lib/email/lifecycle/schedule";
+import { sendTrialEndedEmail } from "@/lib/email/transactional";
 import { getSiteUrl } from "@/lib/site-url";
 import { proVsFreeRows, resolvePlanOffer } from "@/lib/email/lifecycle/offers";
 import {
@@ -20,6 +25,9 @@ import {
   sendTrialD1Email,
   sendTrialD3Email,
   sendTrialD5Email,
+  sendTrialEndedOfferEmail,
+  sendWinbackD3Email,
+  sendWinbackD10Email,
   type RunSnapshot,
   type TopRecommendation
 } from "@/lib/email/lifecycle/templates";
@@ -37,7 +45,16 @@ import {
 
 type Service = ReturnType<typeof createServiceClient>;
 
+/**
+ * The whole cron shares ONE deadline (`lifecycleDeadline`): the trial pass,
+ * the end-of-trial pass and the win-back pass run in the same 60 s
+ * invocation, so none of them may give itself its own 45 s.
+ */
 const RUN_BUDGET_MS = 45_000;
+
+export function lifecycleDeadline(startedAt: number = Date.now()): number {
+  return startedAt + RUN_BUDGET_MS;
+}
 
 type RankingEntry = { name?: string; is_brand?: boolean; mention_count?: number; prompt_count?: number };
 
@@ -211,13 +228,14 @@ export type LifecycleRunResult =
 
 export async function runLifecycleEmails({
   service,
-  now = new Date()
+  now = new Date(),
+  deadline = lifecycleDeadline()
 }: {
   service: Service;
   now?: Date;
+  deadline?: number;
 }): Promise<LifecycleRunResult> {
   if (!isLifecycleEmailEnabled()) return { status: "disabled" };
-  const startedAt = Date.now();
 
   // Only accounts still inside their trial: the trial end is in the future.
   // (ALERTS-SCOPE-1 leaves `trial_ends_at` in place when a trial lapses
@@ -256,18 +274,14 @@ export async function runLifecycleEmails({
   let deferred = 0;
 
   for (const profile of candidates) {
-    if (Date.now() - startedAt > RUN_BUDGET_MS) {
+    if (Date.now() > deadline) {
       // Not a loss: every account left out is still eligible tomorrow.
       deferred += 1;
       continue;
     }
 
     const ownSends = (sends ?? []).filter((s) => s.owner_user_id === profile.id);
-    const lifecycleSends = ownSends.filter((s) => (TRIAL_KINDS as readonly string[]).includes(s.kind as string));
-    const lastLifecycleSentAt = lifecycleSends.reduce<Date | null>((latest, s) => {
-      const at = new Date(s.sent_at as string);
-      return !latest || at > latest ? at : latest;
-    }, null);
+    const lastLifecycleSentAt = latestSentAt(ownSends, TRIAL_KINDS);
 
     const ownProjects = (projects ?? []).filter((p) => p.owner_user_id === profile.id);
     const scannedProject = ownProjects.find((p) => scannedProjects.has(p.id as string));
@@ -337,11 +351,262 @@ async function sendDecision(
   return sendTrialD5Email(ctx.email, ctx.userId, {
     trialEndsAt: ctx.trialEndsAt,
     domain: ctx.project?.domain ?? null,
-    pro: resolvePlanOffer("pro"),
-    starter: resolvePlanOffer("starter"),
+    pro: await resolvePlanOffer("pro"),
+    starter: await resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
   });
 }
+
+type SendRow = { owner_user_id: string; kind: string; sent_at: string };
+
+function latestSentAt(rows: ReadonlyArray<{ kind: unknown; sent_at: unknown }>, kinds: readonly string[]): Date | null {
+  return rows
+    .filter((row) => kinds.includes(row.kind as string))
+    .reduce<Date | null>((latest, row) => {
+      const at = new Date(row.sent_at as string);
+      return !latest || at > latest ? at : latest;
+    }, null);
+}
+
+/* ------------------------------------------- fin de prueba y recuperación */
+
+/** The project the post-trial emails talk about: the newest one with a completed scan, else none. */
+async function loadMainSnapshot(service: Service, ownerUserId: string): Promise<RunSnapshot | null> {
+  const { data: projects } = await service
+    .from("projects")
+    .select("id, domain, created_at")
+    .eq("owner_user_id", ownerUserId)
+    .eq("is_archived", false)
+    .order("created_at", { ascending: false });
+  for (const project of projects ?? []) {
+    const snapshot = await loadRunSnapshot(service, project.id as string, project.domain as string);
+    if (snapshot) return snapshot;
+  }
+  return null;
+}
+
+type TrialEndTarget = {
+  userId: string;
+  email: string;
+  trialEndsAt: Date;
+  hasSubscription: boolean;
+  lifecycleOptIn: boolean;
+};
+
+/**
+ * LIFECYCLE-WINBACK-1 (log §238). Sends the end-of-trial email once, either
+ * version, and records it — which is what anchors D+3 and D+10. Shared by
+ * the daily cron and by `applyTrialExpiry` (the customer opening the console
+ * after the end), so whichever gets there first sends it and the other sees
+ * the `email_sends` row. Whoever opted out of "consejos y ofertas" gets the
+ * plain service email without an offer (log §232), recorded the same way so
+ * it is not repeated; the win-back emails then skip them.
+ *
+ * Returns whether an email went out.
+ */
+export async function sendTrialEndEmailOnce(
+  service: Service,
+  target: TrialEndTarget,
+  now: Date = new Date()
+): Promise<boolean> {
+  if (!isLifecycleEmailEnabled()) return false;
+
+  const { data: sends } = await service
+    .from("email_sends")
+    .select("kind")
+    .eq("owner_user_id", target.userId)
+    .in("kind", [...TRIAL_END_KINDS]);
+  const decision = decideTrialEndEmail(
+    { trialEndsAt: target.trialEndsAt, hasSubscription: target.hasSubscription, isExcluded: isExcludedAccount(target.email) },
+    new Set((sends ?? []).map((row) => row.kind as string)),
+    now
+  );
+  if (!decision) return false;
+
+  const delivered = target.lifecycleOptIn
+    ? await sendTrialEndedOfferEmail(target.email, target.userId, {
+        late: decision.kind === "trial_ended_late",
+        trialEndsAt: target.trialEndsAt,
+        snapshot: await loadMainSnapshot(service, target.userId),
+        pro: await resolvePlanOffer("pro"),
+        starter: await resolvePlanOffer("starter")
+      })
+    : await sendTrialEndedEmail(target.email);
+  if (delivered) await recordSend(service, target.userId, decision.kind);
+  return delivered;
+}
+
+/**
+ * The console half: `applyTrialExpiry` (lib/billing.ts) calls this when the
+ * customer opens the console after the end and the account is downgraded.
+ * Reads the customer's own opt-out, then defers to `sendTrialEndEmailOnce`.
+ */
+export async function notifyTrialEndedOnDowngrade(
+  service: Service,
+  input: { userId: string; email: string; trialEndsAt: Date },
+  now: Date = new Date()
+): Promise<boolean> {
+  if (!isLifecycleEmailEnabled()) return false;
+  const { data: profile } = await service
+    .from("profiles")
+    .select("notify_lifecycle")
+    .eq("id", input.userId)
+    .maybeSingle();
+  return sendTrialEndEmailOnce(
+    service,
+    { ...input, hasSubscription: false, lifecycleOptIn: profile?.notify_lifecycle !== false },
+    now
+  );
+}
+
+export type PassResult = { status: "disabled" } | { status: "query_failed" } | { status: "ok"; sent: number; failed: number; deferred: number };
+
+/**
+ * The cron half of the end-of-trial email: trials whose end is in the past
+ * and were never downgraded (`current_plan` is still the trial's). The
+ * console downgrades lazily on the next visit and clears `trial_ends_at`, so
+ * an account still matching here is, by construction, one nobody told.
+ */
+export async function runTrialEndEmails({
+  service,
+  now = new Date(),
+  deadline = lifecycleDeadline()
+}: {
+  service: Service;
+  now?: Date;
+  deadline?: number;
+}): Promise<PassResult> {
+  if (!isLifecycleEmailEnabled()) return { status: "disabled" };
+
+  const { data: profiles, error } = await service
+    .from("profiles")
+    .select("id, email, trial_ends_at, stripe_subscription_id, notify_lifecycle, current_plan")
+    .lt("trial_ends_at", now.toISOString())
+    .is("stripe_subscription_id", null);
+  if (error) {
+    console.error("[geo:lifecycle] failed to load ended trials", { message: error.message });
+    return { status: "query_failed" };
+  }
+
+  let sent = 0;
+  let failed = 0;
+  let deferred = 0;
+  for (const profile of (profiles ?? []) as Array<ProfileRow & { current_plan: string | null }>) {
+    if (!profile.email || !profile.trial_ends_at || profile.current_plan === "free") continue;
+    if (Date.now() > deadline) {
+      deferred += 1;
+      continue;
+    }
+    try {
+      const delivered = await sendTrialEndEmailOnce(
+        service,
+        {
+          userId: profile.id,
+          email: profile.email,
+          trialEndsAt: new Date(profile.trial_ends_at),
+          hasSubscription: Boolean(profile.stripe_subscription_id),
+          lifecycleOptIn: profile.notify_lifecycle !== false
+        },
+        now
+      );
+      if (delivered) sent += 1;
+    } catch (sendError) {
+      failed += 1;
+      console.error("[geo:lifecycle] end-of-trial email failed", {
+        message: sendError instanceof Error ? sendError.message : "unknown"
+      });
+    }
+  }
+  return { status: "ok", sent, failed, deferred };
+}
+
+/**
+ * D+3 and D+10. Candidates are the accounts with an end-of-trial email on
+ * record (that send is the anchor, not `trial_ends_at`, which the console
+ * clears on downgrade). Stops at a subscription, an opt-out, or 30 days.
+ */
+export async function runWinbackEmails({
+  service,
+  now = new Date(),
+  deadline = lifecycleDeadline()
+}: {
+  service: Service;
+  now?: Date;
+  deadline?: number;
+}): Promise<PassResult> {
+  if (!isLifecycleEmailEnabled()) return { status: "disabled" };
+
+  const { data: anchors, error } = await service
+    .from("email_sends")
+    .select("owner_user_id, kind, sent_at")
+    .in("kind", [...TRIAL_END_KINDS]);
+  if (error) {
+    console.error("[geo:lifecycle] failed to load end-of-trial sends", { message: error.message });
+    return { status: "query_failed" };
+  }
+  const ownerIds = [...new Set(((anchors ?? []) as SendRow[]).map((row) => row.owner_user_id))];
+  if (ownerIds.length === 0) return { status: "ok", sent: 0, failed: 0, deferred: 0 };
+
+  const [{ data: profiles, error: profilesError }, { data: sends }] = await Promise.all([
+    service.from("profiles").select("id, email, stripe_subscription_id, notify_lifecycle").in("id", ownerIds),
+    service.from("email_sends").select("owner_user_id, kind, sent_at").in("owner_user_id", ownerIds)
+  ]);
+  if (profilesError) {
+    console.error("[geo:lifecycle] failed to load win-back accounts", { message: profilesError.message });
+    return { status: "query_failed" };
+  }
+
+  const [pro, starter] = await Promise.all([resolvePlanOffer("pro"), resolvePlanOffer("starter")]);
+  let sent = 0;
+  let failed = 0;
+  let deferred = 0;
+
+  for (const profile of (profiles ?? []) as Array<Pick<ProfileRow, "id" | "email" | "stripe_subscription_id" | "notify_lifecycle">>) {
+    if (!profile.email || isExcludedAccount(profile.email)) continue;
+    if (Date.now() > deadline) {
+      deferred += 1;
+      continue;
+    }
+
+    const own = ((sends ?? []) as SendRow[]).filter((row) => row.owner_user_id === profile.id);
+    const decision = decideWinbackEmail(
+      {
+        hasSubscription: Boolean(profile.stripe_subscription_id),
+        isExcluded: false,
+        lifecycleOptIn: profile.notify_lifecycle !== false,
+        endEmailSentAt: latestSentAt(own, TRIAL_END_KINDS)
+      },
+      {
+        kinds: new Set(own.map((row) => row.kind)),
+        d3SentAt: latestSentAt(own, ["winback_d3"]),
+        lastLifecycleSentAt: latestSentAt(own, LIFECYCLE_SPACED_KINDS)
+      },
+      pro.promo !== null,
+      now
+    );
+    if (!decision) continue;
+
+    const snapshot = await loadMainSnapshot(service, profile.id);
+    let delivered = false;
+    if (decision.kind === "winback_d3") {
+      // Its whole content is the last scan's ranking; without one, nothing to say.
+      if (!snapshot) continue;
+      delivered = await sendWinbackD3Email(profile.email, profile.id, { snapshot, pro, starter });
+    } else {
+      delivered = await sendWinbackD10Email(profile.email, profile.id, { domain: snapshot?.domain ?? null, pro });
+    }
+
+    if (delivered) {
+      await recordSend(service, profile.id, decision.kind);
+      sent += 1;
+    } else {
+      failed += 1;
+    }
+  }
+
+  return { status: "ok", sent, failed, deferred };
+}
+
 
 /* ------------------------------------------- recordatorio de confirmación */
 

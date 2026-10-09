@@ -2,25 +2,19 @@
 // Ejes de valor: bucle de acción + credibilidad — no el volumen de datos.
 
 /**
- * PRICING-PROMO-1 (Task Intake aprobado 2026-08-24). El cupón de Stripe que
- * de verdad aplica el descuento (`STRIPE_COUPON_ID_STARTER_PROMO`/`_PRO_PROMO`,
- * ver `lib/stripe.ts`) lleva su propio `redeem_by` a esta misma fecha — es la
- * aplicación real. Esta constante es sólo lo que decide qué muestra la
- * pantalla, para que ambas cosas dejen de anunciar la promo el mismo instante
- * en vez de depender de que alguien recuerde apagar dos sitios.
+ * FOUNDER-PRICE-1 (fundador, 2026-10-09, log §237). Sustituye a la promo de
+ * lanzamiento de PRICING-PROMO-1 (−58 %/−67 % durante 6 meses con fecha de
+ * corte, prorrogada dos veces): un precio tachado del 67 % en una marca sin
+ * clientes se leía como precio inflado, y una fecha que se mueve deja de
+ * crear urgencia en cuanto alguien lo nota.
+ *
+ * Ahora: precio normal real (`price`) y un precio fundador (`promoPrice`)
+ * PARA SIEMPRE para las primeras `FOUNDER_SLOTS` suscripciones. La escasez es
+ * real y comprobable: la cuenta sale de `times_redeemed` de los cupones de
+ * Stripe (`getFounderOffer`, `lib/stripe.ts`), y cuando se agotan la oferta
+ * desaparece sola de todas las pantallas sin que nadie tenga que acordarse.
  */
-// PROMO-EXTEND-OCT-1 (fundador, 2026-09-28, log §231): hasta el final del
-// 31 de octubre. +01:00 porque el 25 de octubre España ya ha vuelto a horario
-// de invierno; 23:59:59 para que el día anunciado ("31 oct") sea válido entero.
-export const PROMO_ENDS_AT = "2026-10-31T23:59:59+01:00";
-
-/**
- * Duración real del descuento en los cupones de Stripe (`duration: repeating`,
- * `duration_in_months: 6`) — no es un adorno de copy, es lo que Stripe factura
- * de verdad cada mes hasta que se cumplen los 6, así que cualquier pantalla
- * que muestre el precio promo tiene que decir esto junto a él.
- */
-export const PROMO_DURATION_MONTHS = 6;
+export const FOUNDER_SLOTS = 38;
 
 /**
  * PROMO-CONSOLE-PARITY-1 (2026-08-27) — qué precio promocional enseña una
@@ -31,18 +25,20 @@ export const PROMO_DURATION_MONTHS = 6;
  * - la **contratada**: un cupón vivo en una suscripción real de Stripe, con su
  *   fecha de fin leída de la propia suscripción (`getActiveSubscriptionPromo`,
  *   §152). Es lo que el cliente YA paga.
- * - la **ofrecida**: la campaña abierta, para quien todavía no tiene
- *   suscripción. Es lo que pagaría si contrata antes de `PROMO_ENDS_AT`.
+ * - la **ofrecida**: el precio fundador, para quien todavía no tiene
+ *   suscripción, mientras queden plazas.
  *
  * Quien está probando Pro gratis no tiene suscripción, así que no tenía la
- * primera — y la consola le cotizaba 179 €/mes mientras `/precios` y el modal
- * de cambio de plan, a dos clics, le decían 59 € (fundador, 2026-08-27).
+ * primera — y la consola le cotizaba el precio normal mientras `/precios` y el
+ * modal de cambio de plan, a dos clics, le decían el rebajado (fundador,
+ * 2026-08-27).
  *
  * Devuelve el precio y CUÁL de las dos es, porque el copy no puede ser el
- * mismo: confundirlas le diría a alguien en prueba que ya está pagando 59 €.
- * `promoPlanIds` viene de `getActivePromoPlanIds()`, que exige fecha **y**
- * cupón configurado en Stripe — así ninguna pantalla anuncia un descuento que
- * el checkout no aplicaría.
+ * mismo: confundirlas le diría a alguien en prueba que ya está pagando el
+ * precio fundador. `promoPlanIds` viene de `getActivePromoPlanIds()`, que
+ * exige un cupón de Stripe con la forma exacta del precio mostrado y plazas
+ * libres — así ninguna pantalla anuncia un descuento que el checkout no
+ * aplicaría.
  */
 export function resolveShownPromoPrice({
   plan,
@@ -58,10 +54,6 @@ export function resolveShownPromoPrice({
   if (!plan || plan.promoPrice === undefined) return null;
   if (!promoPlanIds.includes(plan.id)) return null;
   return { price: plan.promoPrice, kind: "offered" };
-}
-
-export function isPromoActive(now: Date = new Date()): boolean {
-  return now.getTime() < new Date(PROMO_ENDS_AT).getTime();
 }
 
 export type PlanCell = boolean | string;
@@ -93,11 +85,10 @@ export type Plan = {
    */
   priceLabel?: string;
   /**
-   * PRICING-PROMO-1: precio mientras `isPromoActive()` sea cierto y Stripe
-   * tenga configurado el cupón correspondiente (`lib/stripe.ts`,
-   * `getActivePromoPlanIds`) — nunca se muestra solo porque la fecha lo
-   * permita, para que la pantalla no prometa un descuento que el checkout no
-   * puede dar.
+   * FOUNDER-PRICE-1: precio fundador, para siempre, mientras queden plazas y
+   * Stripe tenga un cupón `forever` de exactamente `price − promoPrice`
+   * (`lib/stripe.ts`, `getFounderOffer`) — nunca se muestra sin él, para que
+   * la pantalla no prometa un descuento que el checkout no puede dar.
    */
   promoPrice?: number;
   period: string;
@@ -113,28 +104,31 @@ export type Plan = {
 
 export const PLANS: Plan[] = [
   {
+    // TRIAL-ONLY-1: no se vende (ver `SELLABLE_PLANS`). Es el estado de una
+    // cuenta cuya prueba de Pro terminó sin contratar, o cuya suscripción se
+    // canceló: entra y ve sus datos, pero no escanea.
     id: "free",
-    name: "Free / Scan",
+    name: "Sin plan",
     price: 0,
-    period: "siempre",
-    tagline: "Tu primer escaneo, gratis",
-    who: "Pruébalo sin tarjeta",
-    cta: "Escanear gratis",
+    priceLabel: "Solo lectura",
+    period: "mes",
+    tagline: "Ves tus datos, sin escaneos nuevos",
+    who: "Cuenta sin plan activo",
+    cta: "Elegir plan",
     ctaStyle: "ghost",
     highlights: [
-      "1 escaneo instantáneo, 1 dominio",
-      "~10 prompts · 1 motor de IA",
-      "GEO Score creíble + 3 acciones",
-      "Sin tendencia ni monitorización"
+      "Tus dominios, escaneos y recomendaciones siguen aquí",
+      "Sin escaneos nuevos ni seguimiento automático",
+      "Elige un plan para volver a escanear"
     ],
-    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Puntual" },
+    meter: { projects: "1", prompts: 10, engines: 1, refresh: "Sin escaneos" },
     caps: { projects: 1, prompts: 10, engines: 1 }
   },
   {
     id: "starter",
     name: "Starter",
-    price: 45,
-    promoPrice: 19,
+    price: 29,
+    promoPrice: 20,
     period: "mes",
     tagline: "Empieza a monitorizar",
     who: "Consultor o marca pequeña",
@@ -153,8 +147,8 @@ export const PLANS: Plan[] = [
   {
     id: "pro",
     name: "Pro",
-    price: 179,
-    promoPrice: 59,
+    price: 99,
+    promoPrice: 69,
     period: "mes",
     tagline: "El bucle de acción completo",
     who: "Equipo in-house o consultor avanzado",
@@ -192,45 +186,54 @@ export const PLANS: Plan[] = [
   }
 ];
 
+/**
+ * TRIAL-ONLY-1: los planes que se venden. `free` sigue en `PLANS` porque es
+ * el estado interno de una cuenta cuya prueba de Pro terminó sin contratar
+ * (modo solo lectura: ve sus datos, no escanea) y el que escribe el webhook
+ * al cancelar — pero ya no es una oferta, así que no aparece en /precios ni
+ * en el modal de cambio de plan.
+ */
+export const SELLABLE_PLANS: Plan[] = PLANS.filter((p) => p.id !== "free");
+
 // Matriz de comparación, agrupada por bloque de valor.
 // Celdas: true = incluido · false = no · string = detalle/límite.
-// Orden de columnas: free, starter, pro, agency.
+// Orden de columnas: el de `SELLABLE_PLANS` — starter, pro, agency.
 export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; vals: PlanCell[] }> }> = [
   {
     group: "Medición",
     rows: [
-      { label: "Dominios", vals: ["1", "1", "5", "A medida"] },
-      { label: "Prompts monitorizados", vals: ["~10", "~25", "~100", "~300"] },
-      { label: "Motores de IA", vals: ["1", "3", "3", "3"] },
-      { label: "Frecuencia de escaneo", vals: ["Puntual", "Semanal", "Diario", "Diario"] },
-      { label: "Tendencia temporal", vals: [false, true, true, true] }
+      { label: "Dominios", vals: ["1", "5", "A medida"] },
+      { label: "Prompts monitorizados", vals: ["~25", "~100", "~300"] },
+      { label: "Motores de IA", vals: ["3", "3", "3"] },
+      { label: "Frecuencia de escaneo", vals: ["Semanal", "Diario", "Diario"] },
+      { label: "Tendencia temporal", vals: [true, true, true] }
     ]
   },
   {
     group: "Análisis",
     rows: [
-      { label: "Panorámica competitiva y cuota de voz", vals: [true, true, true, true] },
-      { label: "Distribución por motor de IA", vals: ["1 motor", true, true, true] },
-      { label: "Sentimiento y análisis de temas", vals: [false, false, true, true] },
-      { label: "Citas y fuentes profundas", vals: [false, "Básico", true, true] },
-      { label: "Detección de oportunidades de prompt", vals: [false, true, true, true] }
+      { label: "Panorámica competitiva y cuota de voz", vals: [true, true, true] },
+      { label: "Distribución por motor de IA", vals: [true, true, true] },
+      { label: "Sentimiento y análisis de temas", vals: [false, true, true] },
+      { label: "Citas y fuentes profundas", vals: ["Básico", true, true] },
+      { label: "Detección de oportunidades de prompt", vals: [true, true, true] }
     ]
   },
   {
     group: "Acción",
     rows: [
-      { label: "Bucle de acción priorizado", vals: ["3 acciones", true, true, true] },
-      { label: "Recomendaciones basadas en evidencia", vals: [false, true, true, true] },
-      { label: "Generador de soluciones", vals: [false, false, true, true] },
-      { label: "Credibilidad de medición visible", vals: [true, true, true, true] }
+      { label: "Bucle de acción priorizado", vals: [true, true, true] },
+      { label: "Recomendaciones basadas en evidencia", vals: [true, true, true] },
+      { label: "Generador de soluciones", vals: [false, true, true] },
+      { label: "Credibilidad de medición visible", vals: [true, true, true] }
     ]
   }
 ];
 
 export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   {
-    q: "¿Qué es el escaneo gratuito?",
-    a: "Un análisis instantáneo de tu dominio: tu GEO Score, tu brecha frente a competidores y 3 acciones específicas. No pedimos tarjeta. Es la mejor forma de ver el diferenciador de GenScore antes de pagar nada."
+    q: "¿Hay un plan gratuito?",
+    a: "No hay plan gratis para siempre: al registrarte tienes 7 días de Pro completo, sin tarjeta, que es la mejor forma de ver GenScore con tus propios datos. Si sólo quieres saber si ChatGPT menciona tu marca, el comprobador gratuito lo responde al momento y sin registro."
   },
   {
     q: "¿Por qué cobráis por prompts y motores?",
@@ -238,11 +241,15 @@ export const PLAN_FAQ: Array<{ q: string; a: string }> = [
   },
   {
     q: "¿Puedo cambiar de plan en cualquier momento?",
-    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. Mientras no activemos la facturación real, cambiar de plan no tiene coste ni compromiso de permanencia."
+    a: "Sí, desde \"Plan y facturación\" en tu cuenta, sin esperar a nadie. No hay permanencia: si cancelas, mantienes tu plan hasta el final del periodo ya pagado y no se te vuelve a cobrar."
   },
   {
     q: "¿Qué incluye la prueba de Pro?",
-    a: "Actualmente puedes activar Pro completo eligiendo ese plan al registrarte, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Mientras no lancemos la facturación no hay límite de tiempo automático — te avisaremos con antelación razonable antes de introducir el cobro."
+    a: "Al registrarte tienes 7 días de Pro completo, sin tarjeta: el bucle de acción completo, el generador de soluciones y los motores de IA disponibles hoy. Si al terminar no contratas, no se te cobra nada: tu cuenta pasa a solo lectura, sigues viendo tus datos y vuelves a escanear en cuanto elijas un plan."
+  },
+  {
+    q: "¿Qué es el precio fundador?",
+    a: `Las primeras ${FOUNDER_SLOTS} suscripciones pagan un precio rebajado para siempre, no durante unos meses: mientras mantengas tu suscripción, tu precio no sube. Cuando se ocupan las ${FOUNDER_SLOTS} plazas, la oferta desaparece y se aplica el precio normal.`
   },
   {
     q: "¿Qué incluye el plan Agencia?",

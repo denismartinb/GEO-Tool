@@ -19,7 +19,7 @@ describe("resolveShownPromoPrice", () => {
     // No Stripe subscription yet, so no `subscriptionPromo`. The console showed
     // 179 €/mes while `/precios` and the change-plan modal showed 59 €.
     expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: undefined, promoPlanIds })).toEqual({
-      price: 59,
+      price: pro.promoPrice,
       kind: "offered"
     });
   });
@@ -27,7 +27,7 @@ describe("resolveShownPromoPrice", () => {
   it("prefers the CONTRACTED price, and says which it is", () => {
     // A real subscriber's own coupon wins over the campaign: it is what they
     // are actually being charged, and its end date is read off the
-    // subscription itself (§152), not off `PROMO_ENDS_AT`.
+    // subscription itself (§152), not off the open offer.
     expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: 59, promoPlanIds })).toEqual({
       price: 59,
       kind: "contracted"
@@ -42,8 +42,8 @@ describe("resolveShownPromoPrice", () => {
   });
 
   it("stays silent when the campaign is closed or the Stripe coupon is missing", () => {
-    // `promoPlanIds` comes from `getActivePromoPlanIds()`, which demands the
-    // date AND a configured coupon — so an empty list is the one signal that
+    // `promoPlanIds` comes from `getActivePromoPlanIds()`, which demands a
+    // matching Stripe coupon AND slots left — so an empty list is the one signal that
     // must silence every screen at once.
     expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: undefined, promoPlanIds: [] })).toBeNull();
   });
@@ -54,8 +54,8 @@ describe("resolveShownPromoPrice", () => {
   });
 
   it("still honours a contracted coupon after the campaign has closed", () => {
-    // A subscriber who redeemed before `PROMO_ENDS_AT` keeps their 6 months
-    // running well past it (`getActiveSubscriptionPromo`). An empty
+    // A founder subscriber keeps the price forever, also after the last slot
+    // is taken (`getActiveSubscriptionPromo`, FOUNDER-PRICE-1). An empty
     // `promoPlanIds` must not wipe the price they are really paying.
     expect(resolveShownPromoPrice({ plan: pro, activePromoPrice: 59, promoPlanIds: [] })).toEqual({
       price: 59,

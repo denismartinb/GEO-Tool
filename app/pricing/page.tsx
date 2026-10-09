@@ -8,18 +8,14 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 /**
- * PRICING-PROMO-1. `/pricing` is otherwise fully static — prerendered once
- * at build time — which means `getActivePromoPlanIds()` (date + Stripe
- * coupon check) would only ever be re-evaluated on the next deploy. Without
- * this, the promo band and struck-through price would keep showing forever
- * after `PROMO_ENDS_AT` passes: the Stripe coupon itself stops working at
- * `redeem_by` (checkout correctly reverts to the real price, since that path
- * is a Server Action and always runs fresh), but the static page would go on
- * advertising a discount nobody could actually get. An hour of staleness in
- * either direction is an acceptable trade for not needing a deploy to keep
- * the promo honest.
+ * FOUNDER-PRICE-1 (log §237; replaces PRICING-PROMO-1's date window).
+ * `/pricing` is otherwise fully static, so `getFounderOffer()` — the Stripe
+ * coupons and the founder slots left — would only be re-read on the next
+ * deploy. Ten minutes keeps the "quedan N plazas" count honest and stops the
+ * page advertising the founder price long after the last slot is taken
+ * (checkout itself always re-checks, since it runs as a Server Action).
  */
-export const revalidate = 3600;
+export const revalidate = 600;
 
 /**
  * SEO-POS-1 (T1). Mismo caso que la home: `/pricing` era cliente entero, sin
@@ -38,7 +34,7 @@ export const revalidate = 3600;
  */
 export const metadata: Metadata = contentMetadata({
   title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
-  description: `Empieza gratis con un escaneo puntual y sube a Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
+  description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
   path: "/pricing"
 });
 
