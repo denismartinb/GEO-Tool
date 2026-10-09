@@ -81,7 +81,7 @@ export function AdsConsent() {
   return (
     <div className="ads-consent" role="dialog" aria-modal="false" aria-labelledby="ads-consent-title">
       <p id="ads-consent-title" className="ads-consent-title">
-        {configuring ? "Elige qué cookies publicitarias aceptas" : "¿Nos dejas usar un par de cookies?"}
+        {configuring ? "Elige qué cookies publicitarias aceptas" : "¿Nos dejas usar cookies?"}
       </p>
       {configuring ? (
         <div className="ads-consent-options">
