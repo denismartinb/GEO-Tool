@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { NextResponse } from "next/server";
 import { parseConsentCookie } from "@/lib/ads/consent";
 import { PENDING_CONVERSION_COOKIE } from "@/lib/ads/pending-conversion";
@@ -78,6 +79,7 @@ export async function GET(request: Request) {
       { id: data.user.id, email: data.user.email, created_at: data.user.created_at },
       method
     );
+    await captureFunnelEvent("signup_completed", data.user.id, { method });
     // PAID-ADS-1: a password sign-up is counted on /signup/confirm; a Google
     // one never sees that page, so it is flagged here for the next page to
     // count — and only when the visitor already accepted ad cookies, which
