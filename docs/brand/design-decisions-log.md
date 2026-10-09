@@ -21432,3 +21432,19 @@ no deja margen con un Pro que use su cupo entero (~56 € de LLM al mes,
   fundador.
 - Fases propuestas y no incluidas aquí: plan anual (2 meses gratis), Agencia
   en autoservicio desde 299 € y Free con un escaneo al mes.
+
+**Adenda (2026-10-09, mismo día, tras el despliegue).** El contador deja de
+decir «quedan N de 50 plazas» y pasa a «quedan N cuentas con precio especial»
+(tira pública y /precios) y «quedan N cuentas con precio fundador» (correo D5).
+Decisión del fundador: «50 de 50» lee como que nadie lo ha comprado. La cifra
+sigue saliendo de `times_redeemed` en Stripe; no se muestra un número inventado.
+Si se quiere enseñar 48, la forma honesta es bajar `max_redemptions` del cupón
+y `FOUNDER_SLOTS`, no restar en pantalla. También se aprendió al desplegar:
+un cupón con duración «Una vez» y un Price con comportamiento fiscal
+«Predeterminado» (que la API devuelve como `unspecified`) se rechazan, como
+estaba previsto; los dos se corrigieron en Stripe, sin tocar código.
+
+**Segunda adenda (2026-10-09).** El fundador fija las plazas en **38**, no 50:
+creó los cupones con `max_redemptions` 38 y `FOUNDER_SLOTS` pasa a 38, así que
+la web enseña «quedan 38» y la cifra baja con cada canje real. No es un número
+de pantalla: es el límite real de los cupones en Stripe.

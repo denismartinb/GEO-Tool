@@ -204,7 +204,7 @@ export async function PricingPage() {
             // de revalidación de la página.
             <p className="price-founder-band">
               <Icon name="spark" size={14} />
-              Precio fundador para siempre: quedan <b>{founder.remaining} de {founder.total}</b> plazas
+              Precio fundador para siempre: quedan <b>{founder.remaining}</b> cuentas con precio especial
             </p>
           ) : null}
           <div className="price-cards">

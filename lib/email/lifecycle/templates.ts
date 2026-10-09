@@ -129,7 +129,7 @@ export function priceBox(offer: PlanOffer): string {
     </tr></table>
     <div style="margin-top:10px;"><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
     <div style="font-size:13px;color:#3B4759;margin-top:4px;">Para siempre, mientras mantengas tu suscripción. Precio normal: ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
-    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} de ${offer.promo.total} plazas</div>
+    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} cuentas con precio fundador</div>
   </td></tr></table>`;
 }
 
