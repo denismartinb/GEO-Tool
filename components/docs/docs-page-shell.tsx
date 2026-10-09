@@ -72,7 +72,7 @@ export function DocsPageShell({
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}

@@ -16,7 +16,7 @@
  * orientativas y la página lo dice: son escalones de precio, no un contrato.
  *
  * Los datos de GenScore vienen de `app/pricing/plans-data.ts`, la misma fuente
- * que usa /pricing — no se reescriben a mano.
+ * que usa /precios — no se reescriben a mano.
  *
  * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): esa última
  * frase no era cierta todavía — `pricingNote` de GenScore era el literal

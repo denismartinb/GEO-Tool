@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
-import { BLOG_CLUSTERS, BLOG_POSTS, type BlogCluster } from "@/lib/blog/posts";
+import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
+import { latestPostDate, postLastModified } from "@/lib/seo/sitemap-dates";
 
 const SITE_URL = "https://www.genscore.es";
 const DOCS_LAST_MODIFIED = "2026-08-02";
@@ -10,7 +11,7 @@ const DOCS_LAST_MODIFIED = "2026-08-02";
  * que elegir entre dejar rancia la que cambió o subir la fecha de las cinco —
  * y lo segundo le dice al rastreador que cambiaron todas, que es la señal de
  * frescura falsa que este fichero existe para no dar (mismo razonamiento que
- * `PILLAR_LAST_MODIFIED`, SEO-POS-1 T15).
+ * el antiguo `PILLAR_LAST_MODIFIED`, SEO-POS-1 T15).
  */
 const DOCS_LAST_MODIFIED_BY_SLUG: Record<string, string> = {
   // Se retiró la tabla de pesos del compuesto (log §75).
@@ -25,24 +26,9 @@ const DOCS_LAST_MODIFIED_BY_SLUG: Record<string, string> = {
  * son una señal de frescura que se contradice a sí misma.
  */
 const GLOSSARY_LAST_MODIFIED = "2026-08-15";
-/**
- * GROWTH-2 Fase 2.9: date each `/blog/<cluster>` pillar page got its real
- * `pillarIntro` and started shipping to the sitemap. Per cluster, not a
- * single shared date: `fundamentos`/`medicion`/`playbooks` earned theirs
- * together on 2026-08-03, but `sectores` stayed empty until its first article
- * on 2026-08-05 — a single constant left `sectores` two days stale from the
- * moment it entered the sitemap (SEO-POS-1, T15).
- */
-const PILLAR_LAST_MODIFIED: Record<BlogCluster["key"], string> = {
-  fundamentos: "2026-08-03",
-  // 2026-08-14 (S8): la página pilar lista los artículos de su cluster, así
-  // que publicar uno nuevo la cambia de verdad. S6 añadió `metricas-geo-que-
-  // medir` sin tocar esta fecha y la dejó anunciando una frescura de once días
-  // antes — el mismo tipo de rancio que T15 vino a corregir.
-  medicion: "2026-08-14",
-  playbooks: "2026-08-03",
-  sectores: "2026-08-05"
-};
+
+/** Fallback for a list with no posts — the date the blog shipped (GROWTH-1). */
+const BLOG_FIRST_PUBLISHED = "2026-07-12";
 
 /**
  * Real last-meaningful-change date per static route (GROWTH-2 Fase 2.1) —
@@ -54,7 +40,7 @@ const PILLAR_LAST_MODIFIED: Record<BlogCluster["key"], string> = {
 const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   // HOME-SEO-AUDIT-1: la home venía declarando 2026-07-23 mientras HOME-2026-08
   // la reescribía entera entre el 22 y el 25-08 (log §141-§159) — una fecha de
-  // frescura contradicha por el propio trabajo del PR. `/pricing` igual, con
+  // frescura contradicha por el propio trabajo del PR. `/precios` igual, con
   // PRICING-PROMO-1 encima el 24 y el 25-08 (log §148, §149, §152). `/geo` no
   // se toca: sin cambios de contenido reales desde HEADER-FLAT-1 (sólo
   // cabecera compartida), subirla ahí sería la misma frescura falsa que este
@@ -64,8 +50,9 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/gratis/aparece-mi-marca-en-chatgpt", lastModified: "2026-08-15" },
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
-  { path: "/pricing", lastModified: "2026-08-25" },
-  { path: "/blog", lastModified: "2026-07-12" },
+  { path: "/sobre-genscore", lastModified: "2026-10-09" },
+  { path: "/precios", lastModified: "2026-08-25" },
+  { path: "/blog", lastModified: latestPostDate(BLOG_POSTS) ?? BLOG_FIRST_PUBLISHED },
   { path: "/docs", lastModified: DOCS_LAST_MODIFIED },
   { path: "/glosario", lastModified: GLOSSARY_LAST_MODIFIED },
   { path: "/comparativas", lastModified: "2026-08-03" },
@@ -87,7 +74,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const blogRoutes = BLOG_POSTS.map((post) => ({
     url: `${SITE_URL}/blog/${post.slug}`,
-    lastModified: new Date(post.datePublished)
+    lastModified: new Date(postLastModified(post))
   }));
 
   const docsRoutes = DOCS_NAV.flatMap((section) =>
@@ -110,7 +97,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // first article, and nothing here had to change for it to happen.
   const pillarRoutes = BLOG_CLUSTERS.filter((c) => c.pillarIntro).map((c) => ({
     url: `${SITE_URL}/blog/${c.key}`,
-    lastModified: new Date(PILLAR_LAST_MODIFIED[c.key])
+    lastModified: new Date(
+      latestPostDate(BLOG_POSTS.filter((p) => p.cluster === c.key)) ?? BLOG_FIRST_PUBLISHED
+    )
   }));
 
   return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes, ...pillarRoutes];

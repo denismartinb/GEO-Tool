@@ -2,14 +2,14 @@ import type { Metadata } from "next";
 import { PricingPage } from "@/components/pricing/pricing-page";
 import { contentMetadata } from "@/lib/seo/metadata";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
-import { PLAN_FAQ, PLANS } from "./plans-data";
+import { PLAN_FAQ, PLANS } from "@/app/pricing/plans-data";
 
 const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 /**
  * FOUNDER-PRICE-1 (log §237; replaces PRICING-PROMO-1's date window).
- * `/pricing` is otherwise fully static, so `getFounderOffer()` — the Stripe
+ * `/precios` is otherwise fully static, so `getFounderOffer()` — the Stripe
  * coupons and the founder slots left — would only be re-read on the next
  * deploy. Ten minutes keeps the "quedan N plazas" count honest and stops the
  * page advertising the founder price long after the last slot is taken
@@ -18,7 +18,7 @@ const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 export const revalidate = 600;
 
 /**
- * SEO-POS-1 (T1). Mismo caso que la home: `/pricing` era cliente entero, sin
+ * SEO-POS-1 (T1). Mismo caso que la home: `/precios` era cliente entero, sin
  * título ni descripción ni canonical propios pese a ser la segunda URL
  * comercial del sitio y una consulta con intención de compra
  * ("cuánto cuesta el posicionamiento GEO" aparece entre las preguntas reales
@@ -35,7 +35,7 @@ export const revalidate = 600;
 export const metadata: Metadata = contentMetadata({
   title: "Precios de GenScore — planes de posicionamiento GEO desde 0 €",
   description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini y Claude. Sin permanencia.`,
-  path: "/pricing"
+  path: "/precios"
 });
 
 /**

@@ -133,7 +133,7 @@ describe("stripePriceMatchesPlan", () => {
     priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 17900, tax_behavior: "inclusive" });
     expect(await stripePriceMatchesPlan(stripe, "price_pro_old", "pro")).toBe(false);
 
-    // /pricing shows IVA-inclusive prices: a tax-exclusive Price would add 21 % at checkout.
+    // /precios shows IVA-inclusive prices: a tax-exclusive Price would add 21 % at checkout.
     priceRetrieve.mockResolvedValue({ currency: "eur", unit_amount: 9900, tax_behavior: "exclusive" });
     expect(await stripePriceMatchesPlan(stripe, "price_pro_excl", "pro")).toBe(false);
 

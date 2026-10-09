@@ -8,7 +8,7 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
  * GROWTH-1 blog shell — deliberately mirrors components/legal-page-shell.tsx
- * (same nav/footer pattern as /privacidad, /terminos, /pricing) rather than
+ * (same nav/footer pattern as /privacidad, /terminos, /precios) rather than
  * introducing a new layout system for what is, visually, the same marketing
  * chrome around different body content.
  */
@@ -79,7 +79,7 @@ export function BlogPageShell({
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}

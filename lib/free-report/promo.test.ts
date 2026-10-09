@@ -31,7 +31,7 @@ describe("isPromoPath", () => {
   });
 
   it("never shows on the home, pricing, signup, console or the landing itself", () => {
-    for (const path of ["/", "/pricing", "/signup", "/login", "/dashboard", "/gratis/informe-geo", "/geo", "/blogger"]) {
+    for (const path of ["/", "/precios", "/signup", "/login", "/dashboard", "/gratis/informe-geo", "/geo", "/blogger"]) {
       expect(isPromoPath(path)).toBe(false);
     }
     expect(isPromoPath(null)).toBe(false);

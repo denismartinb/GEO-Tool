@@ -132,7 +132,7 @@ export async function getFounderOffer(now: number = Date.now()): Promise<Founder
 
 /**
  * Los planes cuyo precio fundador se puede mostrar de verdad ahora mismo.
- * Fuente única para `/pricing`, la consola, los correos y el checkout, así
+ * Fuente única para `/precios`, la consola, los correos y el checkout, así
  * que ninguna pantalla puede divergir de lo que se cobra.
  */
 export async function getActivePromoPlanIds(): Promise<SelfServePlanId[]> {
@@ -144,7 +144,7 @@ export async function getActivePromoPlanIds(): Promise<SelfServePlanId[]> {
  * ids live in env vars, so a deploy that ships new `PLANS` prices before the
  * env points at the matching Stripe Price would show one amount and charge
  * another. Checkout refuses instead (`createCheckoutSession`). The Price must
- * also be tax-inclusive: `/pricing` shows final prices with IVA.
+ * also be tax-inclusive: `/precios` shows final prices with IVA.
  */
 export async function stripePriceMatchesPlan(
   stripe: Stripe,
