@@ -212,6 +212,16 @@ paths:
   (`--journeys actions`) contra un preview real — mismo principio que ya
   protege el chip de control y la insignia de estado del artefacto más
   arriba en este fichero.
+- **SUPERSEDED por log §250 (GEO-REPORT-1 Fase 2): «Exportar plan» ya no
+  existe.** Ahora hay un enlace «Descargar informe» que abre
+  `/informe/<proyecto>`.
+  - Se borraron `export-report.tsx`/`.css`, `ExportPlanModal`, `handleExport`
+    y el markdown.
+  - De `lib/recommendations/export-plan.ts` sólo queda
+    `recommendationEngineLabels`, que usan los correos de ciclo de vida.
+  - Las viñetas de abajo, hasta la del resplandor en PNG, se guardan como
+    histórico. Sus lecciones de impresión rigen ahora en
+    `.claude/rules/report.md`, y no aplican a ningún fichero de esta pantalla.
 - **"Exportar plan" es la primera acción puramente de cliente que entra a
   este contrato** (ACTIONS-OBSERVABLE-1 slice 4b.1, log §210) — todas las
   anteriores eran server actions. `handleExport` se envuelve en un `async`
