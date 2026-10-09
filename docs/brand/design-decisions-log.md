@@ -21443,3 +21443,8 @@ y `FOUNDER_SLOTS`, no restar en pantalla. También se aprendió al desplegar:
 un cupón con duración «Una vez» y un Price con comportamiento fiscal
 «Predeterminado» (que la API devuelve como `unspecified`) se rechazan, como
 estaba previsto; los dos se corrigieron en Stripe, sin tocar código.
+
+**Segunda adenda (2026-10-09).** El fundador fija las plazas en **38**, no 50:
+creó los cupones con `max_redemptions` 38 y `FOUNDER_SLOTS` pasa a 38, así que
+la web enseña «quedan 38» y la cifra baja con cada canje real. No es un número
+de pantalla: es el límite real de los cupones en Stripe.

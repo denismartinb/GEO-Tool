@@ -72,7 +72,7 @@ describe("getFounderOffer", () => {
     );
     const { getFounderOffer } = await import("./stripe");
 
-    expect(await getFounderOffer()).toEqual({ planIds: ["starter", "pro"], remaining: 47, total: 50 });
+    expect(await getFounderOffer()).toEqual({ planIds: ["starter", "pro"], remaining: 35, total: 38 });
   });
 
   it("drops a plan whose coupon does not match its advertised price (old 6-month promo, percentage, wrong amount)", async () => {
@@ -90,11 +90,11 @@ describe("getFounderOffer", () => {
   it("closes the offer once the slots are gone", async () => {
     configureFounder();
     couponRetrieve.mockImplementation(async (id: string) =>
-      id === "c_starter" ? founderCoupon(900, 30) : founderCoupon(3000, 20)
+      id === "c_starter" ? founderCoupon(900, 20) : founderCoupon(3000, 18)
     );
     const { getFounderOffer } = await import("./stripe");
 
-    expect(await getFounderOffer()).toEqual({ planIds: [], remaining: 0, total: 50 });
+    expect(await getFounderOffer()).toEqual({ planIds: [], remaining: 0, total: 38 });
   });
 
   it("fails closed when Stripe cannot be read, and caches only briefly", async () => {

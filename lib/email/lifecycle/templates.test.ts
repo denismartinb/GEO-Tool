@@ -38,9 +38,9 @@ const snapshot: RunSnapshot = {
   activeRecommendations: 6
 };
 
-const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 47, total: 50 } };
+const proWithPromo: PlanOffer = { planName: "Pro", price: 99, promo: { price: 69, remaining: 35, total: 38 } };
 const proNoPromo: PlanOffer = { planName: "Pro", price: 99, promo: null };
-const starter: PlanOffer = { planName: "Starter", price: 29, promo: { price: 20, remaining: 47, total: 50 } };
+const starter: PlanOffer = { planName: "Starter", price: 29, promo: { price: 20, remaining: 35, total: 38 } };
 const lossRows = [{ label: "Motores de IA", pro: "3", free: "1" }];
 
 beforeEach(() => {
@@ -138,7 +138,7 @@ describe("D5 prices", () => {
     expect(subject).toBe("Tu prueba de Pro termina el lunes");
     expect(html).toContain("Mantener Pro por 69 €/mes");
     expect(html).toContain("Para siempre, mientras mantengas tu suscripción. Precio normal: 99 €/mes.");
-    expect(html).toContain("Quedan 47 cuentas con precio fundador");
+    expect(html).toContain("Quedan 35 cuentas con precio fundador");
     expect(html).toContain("−30%");
     // FOUNDER-PRICE-1: no struck-through list price, no deadline (log §237).
     expect(html).not.toContain("line-through");
