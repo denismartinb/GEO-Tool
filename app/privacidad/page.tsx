@@ -60,7 +60,7 @@ export default function PrivacidadPage() {
         <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Resend</strong> — envía los correos de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba), los avisos que tengas activados y las comunicaciones comerciales descritas arriba.</li>
         <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
-        <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Funciona sin cookies (no te identifica entre sesiones ni dispositivos).</li>
+        <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Las visitas se miden sin cookies y sin identificarte entre sesiones ni dispositivos. Si tienes cuenta, además registramos cuatro hitos (alta, escaneo completado, inicio de pago y pago) asociados a tu identificador interno de cuenta, nunca a tu email, para saber cuántas personas completan cada paso.</li>
         <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>
       </ul>
       <p>

@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { NextResponse } from "next/server";
 
 const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténtalo de nuevo.";
@@ -75,6 +76,7 @@ export async function GET(request: Request) {
       { id: data.user.id, email: data.user.email, created_at: data.user.created_at },
       method
     );
+    await captureFunnelEvent("signup_completed", data.user.id, { method });
   }
 
   return NextResponse.redirect(new URL(next, url.origin));

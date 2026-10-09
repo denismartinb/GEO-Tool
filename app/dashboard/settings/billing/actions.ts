@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLANS, isPromoActive } from "@/app/pricing/plans-data";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import {
   getStripeClient,
   getPriceIdForPlan,
@@ -257,6 +258,7 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
       return { success: false, error: "No se pudo iniciar el pago. Inténtalo de nuevo." };
     }
 
+    await captureFunnelEvent("checkout_started", user.id, { plan_id: planId });
     return { success: true, url: session.url };
   } catch (stripeError) {
     console.error("[geo:billing] failed to create Stripe checkout session", {

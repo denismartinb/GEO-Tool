@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 
 const EMAIL_RATE_LIMIT_ERROR =
   "Se han enviado demasiados emails de confirmación en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
@@ -67,6 +68,10 @@ export async function signup(formData: FormData) {
   // or a /dashboard redirect here would be wrong (no account access yet).
   // app/auth/callback/route.ts sends the welcome email itself once the link
   // is clicked and a real first session exists.
+  if (data.user) {
+    await captureFunnelEvent("signup_submitted", data.user.id, { method: "password" });
+  }
+
   if (!data.session) {
     redirect(`/signup/confirm?email=${encodeURIComponent(parsed.data.email)}`);
   }
@@ -74,6 +79,7 @@ export async function signup(formData: FormData) {
   await sendWelcomeEmail(parsed.data.email);
   if (data.user) {
     await sendNewSignupOpsAlert(supabase, { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at }, "password");
+    await captureFunnelEvent("signup_completed", data.user.id, { method: "password" });
   }
 
   redirect("/dashboard");

@@ -21413,3 +21413,33 @@ invocación), por eso los escaneos avanzan igualmente, pero cada eslabón
 consume una invocación de 60 s y el `response.ok` nunca llega a leerse. Que la
 ruta responda en cuanto acepta el lote y trabaje en `after()` es un cambio de
 pipeline con su propio Task Intake (agente `reliability`).
+
+## 242. FUNNEL-EVENTS-1: cuatro hitos del embudo en PostHog, desde el servidor (2026-10-09)
+
+**Qué se decidió.** `lib/analytics/funnel-events.ts` envía a PostHog EU, por
+HTTP y desde el servidor: `signup_submitted` (alta con contraseña enviada,
+antes de confirmar), `signup_completed` (primera sesión real: callback de
+auth o alta sin confirmación), `scan_completed` (cada run completado, en
+`after()`), `checkout_started` (sesión de Stripe creada) y
+`payment_completed` (webhook `checkout.session.completed`, tras guardar el
+plan, con `uuid` derivado del id del evento de Stripe para que un reintento
+no cuente dos pagos). `distinct_id` = id de usuario de Supabase; nunca email,
+nombre ni dominio. Un intento, 2 s de tope, nunca lanza.
+
+**Por qué en servidor.** El SDK del navegador corre sin cookies
+(`persistence: "memory"`): cada carga es un id anónimo nuevo, así que con
+eventos de navegador el embudo registro → pago no se podía unir nunca. Se
+necesitaba antes de lanzar anuncios.
+
+**Privacidad.** `/privacidad` decía que PostHog «no te identifica entre
+sesiones ni dispositivos». Con estos hitos eso ya no es cierto para quien
+tiene cuenta, así que el texto se corrige en el mismo PR. **Es texto legal:
+lo valida el fundador en el Human Gate.** `/cookies` no cambia: sigue sin
+haber cookies de analítica.
+
+**Pendiente / conocido.**
+- El primer paso del embudo (visita anónima → alta) no se une a los demás:
+  la visita no tiene id persistente. Para atribuir anuncios hará falta
+  guardar `utm_*` en el alta (fase aparte).
+- «Primer escaneo» no es un evento propio: es el primer `scan_completed` de
+  cada persona, filtro nativo de los embudos de PostHog.
