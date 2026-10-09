@@ -95,9 +95,10 @@ export type BlogPost = {
   /** Which BLOG_CLUSTERS entry this post belongs to — GROWTH-2 Fase 2.5. */
   cluster: BlogCluster["key"];
   /**
-   * BLOG-REDESIGN-1: big figure on the article's dark hero. Only for a post
-   * whose own measured data backs it, and `source` is mandatory — a post
-   * without one renders no figure rather than an invented one (log §247).
+   * BLOG-REDESIGN-1: big figure on the article's dark hero. Only a figure the
+   * post already publishes with a citable source (our own study or a third
+   * party's), and `source` is mandatory — a post without one renders no
+   * figure rather than one picked to fill the space (log §247).
    */
   heroStat?: { value: string; label: string; source: string };
 };
@@ -248,7 +249,12 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "trendUp",
     coverImage: "/blog/como-medir-trafico-chatgpt-ga4/cover.webp",
     primaryKeyword: "medir tráfico chatgpt ga4",
-    cluster: "medicion"
+    cluster: "medicion",
+    heroStat: {
+      value: "71%",
+      label: "de las visitas que llegan desde ChatGPT acaban clasificadas como «Directo» en GA4.",
+      source: "Attrifast, análisis de 41,2 M de sesiones (2026)"
+    }
   },
   {
     slug: "como-hacer-que-chatgpt-recomiende-tu-negocio",
@@ -331,7 +337,12 @@ export const BLOG_POSTS: BlogPost[] = [
     coverImage: "/blog/geo-para-ecommerce/cover.webp",
     coverIcon: "target",
     primaryKeyword: "geo para ecommerce",
-    cluster: "sectores"
+    cluster: "sectores",
+    heroStat: {
+      value: "43%",
+      label: "de los compradores online en EE. UU. usó un asistente de IA para investigar un producto en los últimos 90 días.",
+      source: "Capital One Shopping Research, 2026"
+    }
   },
   {
     slug: "geo-para-saas-b2b",
@@ -342,7 +353,12 @@ export const BLOG_POSTS: BlogPost[] = [
     coverImage: "/blog/geo-para-saas-b2b/cover.webp",
     coverIcon: "building",
     primaryKeyword: "geo para saas b2b",
-    cluster: "sectores"
+    cluster: "sectores",
+    heroStat: {
+      value: "51%",
+      label: "de los compradores de software B2B empieza a investigar en un chatbot de IA más a menudo que en Google.",
+      source: "G2, 2026 Buyer Behavior Report"
+    }
   },
   {
     slug: "geo-para-agencias",
@@ -353,7 +369,12 @@ export const BLOG_POSTS: BlogPost[] = [
     coverImage: "/blog/geo-para-agencias/cover.webp",
     coverIcon: "users",
     primaryKeyword: "geo para agencias",
-    cluster: "sectores"
+    cluster: "sectores",
+    heroStat: {
+      value: "1,08%",
+      label: "del tráfico web total llega hoy desde chats de IA.",
+      source: "Conductor, 2026 AEO/GEO Benchmarks Report"
+    }
   },
   {
     slug: "que-software-de-facturacion-recomienda-la-ia",

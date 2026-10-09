@@ -19,4 +19,9 @@ tipografía. Lo que NO toma, a propósito:
 - "Lectura: 6 minutos": no existe un cálculo real del tiempo de lectura, y no
   se escribe a mano.
 
+Tras la aprobación se revisaron los 22 posts para que se parezcan a éste:
+cifra de portada también con fuente de terceros que el post ya publica, un
+solo orden de cierre (autor, cierre oscuro, relacionados) y una sola paleta
+(tinta, azul, cian; rojo sólo en «Evitar»).
+
 Histórico: `docs/brand/design-decisions-log.md` §247.

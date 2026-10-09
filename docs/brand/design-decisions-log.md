@@ -21905,8 +21905,8 @@ porque todos se componen con la misma librería de bloques:
   actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
   + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
 - **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
-  con fuente obligatoria. Hoy sólo la lleva el estudio de facturación. Un post
-  sin dato propio sale sin cifra: elegir una para rellenar sería una métrica
+  con fuente obligatoria (ver revisión de coherencia abajo). Un post
+  sin cifra con fuente sale sin cifra: elegir una para rellenar sería una métrica
   falsa.
 - **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
   hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
@@ -21931,6 +21931,24 @@ mismo lenguaje, e imagen social generada automáticamente con este estilo, que
 es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
 Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
 contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Revisión de coherencia de los 22 posts (mismo día, a petición del
+fundador: "revisar absolutamente todos los posts del blog para que
+estéticamente se parezcan al nuevo post").** Se capturaron los 22 a 1280 y
+375 px y se corrigió lo que desentonaba:
+
+- `heroStat` deja de ser sólo dato propio: vale una cifra **que el post ya
+  publica** con fuente de terceros citable. Así entran GA4 (71 %, Attrifast),
+  agencias (1,08 %, Conductor), ecommerce (43 %, Capital One Shopping) y SaaS
+  B2B (51 %, G2). El antetítulo dice «Estudio GenScore» sólo con fuente
+  nuestra. Los demás posts siguen sin cifra: no tienen ninguna con fuente.
+- Cierre en un solo orden en todos: autor → cierre oscuro → relacionados
+  (diez posts lo tenían al revés). Fuera el CTA claro suelto (`.blog-cta`)
+  de «cómo elegir competidores», que duplicaba el cierre.
+- Una paleta: cifras secundarias en tinta (antes ámbar/verde/rojo),
+  «Acción rápida» en azul (antes verde), respuesta citada y checks de
+  «Hacer» en azul. El veredicto y el diagrama de pasos pasan a oscuro y a
+  borde fino como el resto. El rojo de «Evitar» se queda.
 
 **Trazabilidad.** `components/blog/article-hero.tsx`,
 `components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque

@@ -12,9 +12,11 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
  * tarjeta social; dentro del artículo ya no se pinta (fundador, 2026-10-09).
  *
  * La cifra grande SOLO sale si el post declara `heroStat` en
- * `lib/blog/posts.ts`, con su fuente. Un post sin dato propio sale sin cifra:
- * inventar una para rellenar la portada sería exactamente la métrica falsa que
- * el producto no publica.
+ * `lib/blog/posts.ts`: una cifra que el propio post ya publica, con su fuente
+ * citable (estudio propio o de terceros). Un post sin ella sale sin cifra:
+ * elegir una para rellenar la portada sería la métrica falsa que el producto
+ * no publica. El antetítulo sólo dice «Estudio GenScore» cuando la cifra es
+ * nuestra.
  */
 export function ArticleHero({ post }: { post: BlogPost }) {
   const cluster = getBlogCluster(post.cluster);
@@ -35,7 +37,7 @@ export function ArticleHero({ post }: { post: BlogPost }) {
         </nav>
 
         <div className="art-hero-eyebrow">
-          {stat ? "Estudio GenScore" : "Blog GenScore"}
+          {stat?.source.startsWith("Estudio GenScore") ? "Estudio GenScore" : "Blog GenScore"}
           {cluster ? ` · ${cluster.title}` : null}
         </div>
         <h1>{post.title}</h1>

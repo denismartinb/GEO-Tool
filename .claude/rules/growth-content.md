@@ -173,10 +173,18 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   la tarjeta social y el schema. Lo vigila `covers.test.ts`, igual que vigilaba
   la regla anterior (log §73): un post nuevo copiado de uno viejo arrastraría
   la cabecera vieja sin que nada lo dijera.
-- **La cifra grande de la portada (`heroStat`) sólo con dato propio y fuente.**
-  Un post sin dato medido sale sin cifra; no se busca una para rellenar el
-  hueco, porque una cifra elegida por diseño y no por evidencia es una
-  métrica inventada (CLAUDE.md, "fake metrics"; log §247).
+- **La cifra grande de la portada (`heroStat`) sólo con una cifra que el
+  post YA publica, con su fuente citable** —estudio propio o de terceros con
+  nombre y año—. Un post sin cifra con fuente sale sin cifra; no se busca una
+  para rellenar el hueco, porque una cifra elegida por diseño y no por
+  evidencia es una métrica inventada (CLAUDE.md, "fake metrics"; log §247). El
+  antetítulo sólo dice «Estudio GenScore» cuando la fuente es nuestra.
+- **Un solo cierre y en un solo orden: `AuthorBio` → `ArticleCta` →
+  `RelatedPosts`.** Nada de CTAs sueltos (`.blog-cta`) a mitad de artículo: el
+  cierre oscuro ya lo es (log §247, revisión de coherencia).
+- **Paleta del artículo: tinta, azul y cian.** El rojo sólo donde dice algo
+  («Evitar», «Sin evidencia»); el verde de «Confirmada» igual. Nada de
+  colores por decoración (log §247).
 - **El estilo del artículo vive bajo `.art-hero` y `.lp-article`.**
   `/comparativas`, `/docs` y `/glosario` comparten los bloques `.art-*` y no
   cambiaron; tocar `.art-*` sin ese ámbito los cambia a la vez (log §247).

@@ -9468,7 +9468,18 @@ select.set-field {
 /* Secciones de playbook, veredicto, acción rápida. */
 .lp-article .art-numsec-n { background: none; width: auto; height: auto; font-size: 17px; transform: none; }
 .lp-article .art-numsec-h h3 { font-size: 19px; font-weight: 800; margin: 0; }
-.lp-article .art-verdict { border-radius: 14px; }
+/* Veredicto: el recuadro oscuro «Lectura» del PDF. Antes era ámbar; en el
+   PDF el ámbar sólo marca huecos dentro de tablas, nunca un bloque entero. */
+.lp-article .art-verdict { background: var(--brand-ink); border: 0; border-radius: 14px; padding: 20px 22px; }
+.lp-article .art-verdict-badge { background: none; color: var(--brand-cyan); padding: 2px 0 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.lp-article .art-verdict-body h4 { font-family: inherit; color: #fff; font-size: 16.5px; font-weight: 800; }
+.lp-article .blog-body .art-verdict-body p,
+.lp-article .blog-body .art-verdict-body li { color: #d5dbe6; font-size: 15px; }
+.lp-article .blog-body .art-verdict-body strong { color: #fff; }
+.lp-article .blog-body .art-verdict-body a:not(.btn) { color: var(--brand-cyan); }
+/* Diagrama de pasos: mismo borde fino y radio que las figuras. */
+.lp-article .process-flow { border: 1px solid #e7eaf0; border-radius: 14px; background: #fff; }
+.lp-article .process-flow-icon { background: var(--brand-ink); color: var(--brand-cyan); }
 .lp-article .art-verdict-badge,
 .lp-article .art-quick-lbl,
 .lp-article .art-pill,
@@ -9479,6 +9490,16 @@ select.set-field {
 .lp-article .art-rec-pri,
 .lp-article .art-rec-conf { font-family: inherit; }
 .lp-article .art-quick { background: #f7f8fb; border: 0; border-radius: 14px; }
+
+/* Una sola paleta, la del PDF: tinta, azul y cian. El verde/ámbar de las cifras
+   secundarias, la «Acción rápida» y la respuesta citada desentonaban. El rojo
+   de «Evitar» se queda: ahí el color dice algo. */
+.lp-article .art-stats > .art-stat:not(:first-child) .art-stat-n { color: var(--brand-ink); }
+.lp-article .art-quick-lbl { color: var(--brand-blue); background: #eef3ff; letter-spacing: .06em; }
+.lp-article .art-ans-cited { background: #fff; border-color: var(--brand-blue); }
+.lp-article .art-ans-cited .art-ans-h,
+.lp-article .art-ans-src { color: var(--brand-blue); }
+.lp-article .art-check-hacer li svg { color: var(--brand-blue); }
 
 /* Figuras y tablas: borde fino, radio 14, sin sombra — como las del PDF. */
 .lp-article .art-frame,
