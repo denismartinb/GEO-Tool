@@ -21349,7 +21349,7 @@ revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
 
-## 238. SECTOR-STUDY-1: estudio sectorial «¿qué marcas recomienda la IA?» con datos medidos, desde script o desde /admin/estudio (2026-10-09)
+## 246. SECTOR-STUDY-1: estudio sectorial «¿qué marcas recomienda la IA?» con datos medidos, desde script o desde /admin/estudio (2026-10-09)
 
 **Para qué.** Contenido de captación (artículo del blog + dos posts de
 LinkedIn) basado en un dato propio: preguntar a los motores lo que pregunta un
@@ -21410,6 +21410,29 @@ niega a publicar ranking, y con más del 20% de fallos lo avisa.
   cada consulta y motor (los fallos, como fallos), y una tabla de evidencia
   por comprobación: robots para GPTBot/ClaudeBot/Google-Extended, tipos
   JSON-LD, título, descripción, un solo h1 y palabras visibles sin JS.
+  Tercera pasada («¿vas a sacar la misma info de auditoría técnica que la
+  herramienta? incluso más si puedes», fundador): con la casilla de
+  auditoría marcada, tras el estudio corre lo mismo que la Auditoría web.
+  (1) Cobertura de contenido por consulta con `auditDomainContent` y el
+  mismo `verifyOwnDomainPages` del producto (exportado para esto, no
+  copiado): sólo cuenta una página que resuelve al propio dominio; una
+  llamada fallida o sin tiempo es «sin dato» y sale del denominador. Es
+  gasto LLM real —una búsqueda de Gemini con grounding por pregunta, ≤20 por
+  informe— y el informe dice cuántas hizo. Cada consulta lleva clase
+  (contenido y la IA la nombra/cita · contenido sin que la nombre · sin
+  contenido) y el resultado de la matriz con las reglas de
+  `opportunity-matrix.ts`, con la ventana en las respuestas del estudio en
+  vez de escaneos y sólo Gemini/ChatGPT como motores que citan. (2) Páginas:
+  portada más las páginas propias que ya salieron en los datos (cobertura y
+  citas de los motores), elegidas con el propio `selectCandidateUrls` —tope
+  `MAX_AUDIT_PAGES`, mismo presupuesto `TECH_AUDIT_TOTAL_BUDGET_MS`, una
+  página sin tiempo sale «sin tiempo», no desaparece—; ninguna se descubre
+  siguiendo enlaces. Evidencia por página. (3) La nota global con
+  `buildGlobalScore`, sin persistir; un componente sin dato se queda fuera y
+  se dice. (4) Comparativa técnica de portada con los tres competidores más
+  nombrados del estudio, sólo los que tienen dominio del sugeridor; los
+  escritos a mano sin dominio se nombran como no comparados. Todo va también
+  al `.json` (`globalScore`, `coverage`, `audit.pages`, `competitorAudits`).
 - `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
   de la web, con las mismas dependencias que su ruta, en lote, para responder
   a un post de «déjame tu dominio». Local, sin fila en `public_checks`.
@@ -21417,7 +21440,7 @@ niega a publicar ranking, y con más del 20% de fallos lo avisa.
 **Pendiente.** El gasto de `/admin/estudio` no tiene techo más allá de lo que
 valida la acción (un sector, hasta 3 motores, hasta 3 repeticiones: como
 mucho ~108 respuestas por pasada en un sector, ~180 en una marca con 20
-preguntas) y del propio acceso de operador. Si pasa a
+preguntas, más ≤20 búsquedas de cobertura) y del propio acceso de operador. Si pasa a
 usarse a menudo, merece un registro del coste.
 
 **Trazabilidad.** `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,

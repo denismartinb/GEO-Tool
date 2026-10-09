@@ -87,3 +87,31 @@ describe("evidence", () => {
     expect(text).toContain("muestra 12 palabras visibles");
   });
 });
+
+describe("multi-page audit", () => {
+  it("lists every audited page with why it was picked, and never hides a skipped one", () => {
+    const text = formatAuditSection({
+      ...base,
+      readinessScore: 58,
+      issues: [{ check: "single_h1", severity: "warning", affectedCount: 2, applicableCount: 3, pointDelta: 4, affectedLabels: [] }],
+      pages: [
+        { url: "https://acme.es/", source: "homepage", contextLabel: "portada", status: "analyzed", pageScore: 62, evidence: null },
+        {
+          url: "https://acme.es/seo",
+          source: "grounding_citation",
+          contextLabel: "citada en 2 prompts",
+          status: "analyzed",
+          pageScore: 54,
+          evidence: { finalUrl: "https://acme.es/seo", title: "SEO", titleLength: 3, descriptionLength: 80, jsonLdTypes: [], wordCount: 300, contentOk: true, h1Count: 2 }
+        },
+        { url: "https://acme.es/x", source: "coverage_page", contextLabel: "verificada", status: "skipped_budget", pageScore: null, evidence: null }
+      ]
+    });
+    expect(text).toContain("2 páginas propias que ya salían en los datos");
+    expect(text).toContain("No se ha recorrido el sitio");
+    expect(text).toContain("media de 2 de 3 páginas analizadas):** 58/100");
+    expect(text).toContain("Un solo <h1> (2 de 3 páginas)");
+    expect(text).toContain("| https://acme.es/seo | citada por un motor | analizada | 54 | «SEO» (3)");
+    expect(text).toContain("| https://acme.es/x | encontrada en la cobertura | sin tiempo (no se pidió) | — | — |");
+  });
+});

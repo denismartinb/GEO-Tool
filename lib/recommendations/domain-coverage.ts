@@ -270,8 +270,11 @@ type OwnDomainDiag = {
  * subdomain, label-boundary matched. Also returns a sanitized per-stage
  * diagnostic (WEB-AUDIT-DQ) — the returned `pages` and the coverage result are
  * byte-for-byte unchanged; `diag` is observability only.
+ *
+ * Exported so the operator's prospect report (`lib/studies/prospect-coverage.ts`)
+ * decides "verified own content" with this exact function, never a copy.
  */
-async function verifyOwnDomainPages(
+export async function verifyOwnDomainPages(
   chunks: Array<{ uri: string; title?: string }>,
   projectDomainNormalized: string
 ): Promise<{ pages: DomainCoveragePage[]; diag: OwnDomainDiag }> {

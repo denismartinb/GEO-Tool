@@ -4,24 +4,46 @@ import { useState } from "react";
 import {
   aggregateBrands,
   aggregateCitedDomains,
+  brandKey,
   buildCustomStudy,
   CUSTOM_STUDY_LIMITS,
   ENGINE_LABEL,
   ENGINES,
   formatReport,
+  normalizeStudyDomain,
   SECTORS,
   studySeeds,
   type AnswerRecord,
   type Engine,
   type SectorConfig
 } from "@/lib/studies/sector-study";
-import { formatAuditSection, type ProspectAudit } from "@/lib/studies/prospect-audit-format";
-import { computeBrandCompetitors, prepareBrandStudy, runProspectAuditAction, runSectorStudyStep, type StudySpec } from "./actions";
+import { formatAuditSection } from "@/lib/studies/prospect-audit-format";
+import {
+  formatCompetitorComparison,
+  formatCoverageSection,
+  formatGlobalScoreSection,
+  isOwnDomain,
+  prospectGlobalScore,
+  summarizeCoverage,
+  type CoverageTopicResult
+} from "@/lib/studies/prospect-scorecard";
+import {
+  computeBrandCompetitors,
+  prepareBrandStudy,
+  runProspectAuditAction,
+  runProspectCoverageStep,
+  runSectorStudyStep,
+  type StudySpec
+} from "./actions";
 
 type SectorOption = { id: string; label: string; promptCount: number };
 
 /** Two steps in flight at a time: ~6 provider calls, never a whole batch on one tick (.claude/rules/scan.md). */
 const STEP_CONCURRENCY = 2;
+/** Must match COVERAGE_TOPICS_PER_STEP in actions.ts (the server caps it anyway). */
+const COVERAGE_BATCH = 2;
+/** Competitors compared side by side in the technical audit. */
+const COMPARED_COMPETITORS = 3;
 
 const CUSTOM_ERRORS: Record<string, string> = {
   bad_domain: "El dominio no parece válido.",
@@ -63,6 +85,8 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   const [brand, setBrand] = useState("");
   const [promptsText, setPromptsText] = useState("");
   const [competitorsText, setCompetitorsText] = useState("");
+  const [competitorDomains, setCompetitorDomains] = useState<Record<string, string>>({});
+  const [phase, setPhase] = useState<string | null>(null);
   const [engines, setEngines] = useState<Engine[]>([...ENGINES]);
   const [samples, setSamples] = useState(2);
   const [promptCount, setPromptCount] = useState(15);
@@ -101,6 +125,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       setBrand(prepared.brand);
       setPromptsText(prepared.prompts.join("\n"));
       setCompetitorsText(prepared.competitors.join("\n"));
+      setCompetitorDomains(prepared.competitorDomains);
       setPrepareNote(
         `Perfil detectado: ${prepared.profile}. ${prepared.prompts.length} preguntas sugeridas. ${COMPETITOR_NOTE[prepared.competitorsStatus](prepared.competitors.length)} Revísalo antes de lanzar.`
       );
@@ -111,16 +136,78 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     }
   }
 
+  /**
+   * After the study: content coverage per question, then the technical audit
+   * of the brand (homepage + the own pages the data surfaced) and of the most
+   * named competitors, then the global score. Every failure stays visible as
+   * "sin dato" in the report, never as a clean result.
+   */
+  async function runDeepAudit(
+    study: SectorConfig,
+    records: AnswerRecord[],
+    rows: ReturnType<typeof aggregateBrands>,
+    domains: Record<string, string>
+  ) {
+    const root = normalizeStudyDomain(domain) ?? domain;
+    const coverage: CoverageTopicResult[] = [];
+    for (let start = 0; start < study.prompts.length; start += COVERAGE_BATCH) {
+      setPhase(`Comprobando contenido de la web: ${start} de ${study.prompts.length} preguntas…`);
+      const topics = study.prompts.slice(start, start + COVERAGE_BATCH).map((text, offset) => ({ promptIndex: start + offset, text }));
+      try {
+        coverage.push(...(await runProspectCoverageStep({ domain: root, brand: study.brand, topics })));
+      } catch {
+        coverage.push(...topics.map((topic) => ({ promptIndex: topic.promptIndex, status: "failed" as const, pages: [], aiNote: null })));
+      }
+    }
+    const summary = summarizeCoverage({ domain: root, brand: study.brand ?? "", promptCount: study.prompts.length, records, coverage });
+
+    const cited = new Map<string, Set<number>>();
+    for (const record of records) {
+      for (const citation of record.citations ?? []) {
+        if (!isOwnDomain(citation.domain, root)) continue;
+        cited.set(citation.url, (cited.get(citation.url) ?? new Set()).add(record.promptIndex));
+      }
+    }
+    const citedUrls = [...cited].sort((a, b) => b[1].size - a[1].size).map(([url, prompts]) => ({ url, promptCount: prompts.size }));
+    const coveragePages = summary.rows.flatMap((row) => row.pages.map((page) => ({ url: page.url, topic: study.prompts[row.promptIndex] })));
+
+    const brand = brandKey(study.brand ?? "");
+    const top = rows.filter((row) => row.seed && brandKey(row.name) !== brand && row.mentions > 0).slice(0, COMPARED_COMPETITORS);
+    const omitted = top.filter((row) => !domains[row.name]).map((row) => row.name);
+    const compared = top.filter((row) => domains[row.name]).map((row) => ({ name: row.name, domain: domains[row.name] }));
+
+    setPhase("Auditando la web y la de los competidores más nombrados…");
+    const [audit, ...competitorAudits] = await Promise.all([
+      runProspectAuditAction({ domain: root, coveragePages, citedUrls }).catch(() => null),
+      ...compared.map((competitor) => runProspectAuditAction({ domain: competitor.domain }).catch(() => null))
+    ]);
+    const competitors = compared.map((competitor, index) => ({ ...competitor, audit: competitorAudits[index] ?? null }));
+    const globalScore = prospectGlobalScore(summary, audit);
+
+    return {
+      report: [
+        formatGlobalScoreSection(globalScore),
+        formatCoverageSection(summary, study.prompts),
+        audit ? formatAuditSection(audit) : "## Auditoría técnica\n\nNo se pudo ejecutar (tiempo agotado o error).\n",
+        formatCompetitorComparison({ brand: study.brand ?? root, target: audit, competitors, omitted })
+      ].join("\n"),
+      json: { globalScore, coverage: { summary, results: coverage }, audit, competitorAudits: { compared: competitors, omitted } }
+    };
+  }
+
   async function run() {
     if (!config || engines.length === 0) return;
     setRunning(true);
     let study = config;
+    let domains = competitorDomains;
     if (mode === "custom" && study.seedBrands.length === 0) {
       // Same as the product: competitors are computed, not left to the operator.
       setPrepareNote("Calculando competidores…");
       const computed = await computeBrandCompetitors({ domain, brand }).catch(() => null);
       if (computed?.ok && computed.competitors.length > 0) {
         setCompetitorsText(computed.competitors.join("\n"));
+        domains = computed.competitorDomains;
+        setCompetitorDomains(domains);
         const rebuilt = buildCustomStudy({ domain, brand, prompts: lines(promptsText), competitors: computed.competitors });
         if (rebuilt.ok) study = rebuilt.sector;
         setPrepareNote(COMPETITOR_NOTE.ok(computed.competitors.length));
@@ -142,8 +229,6 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     }
     setTotal(steps.length);
 
-    const auditPromise: Promise<ProspectAudit | null> =
-      mode === "custom" && includeAudit ? runProspectAuditAction({ domain }).catch(() => null) : Promise.resolve(null);
     const records: AnswerRecord[] = [];
     let cursor = 0;
     await Promise.all(
@@ -168,16 +253,17 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     records.sort((a, b) => a.sample - b.sample || a.promptIndex - b.promptIndex || a.engine.localeCompare(b.engine));
     const rows = aggregateBrands(records, studySeeds(study));
     const date = new Date().toISOString().slice(0, 10);
-    const audit = await auditPromise;
-    const auditSection =
-      mode === "custom" && includeAudit
-        ? `\n${audit ? formatAuditSection(audit) : "## Auditoría técnica\n\nNo se pudo ejecutar (tiempo agotado o error).\n"}`
-        : "";
+    const deep = mode === "custom" && includeAudit ? await runDeepAudit(study, records, rows, domains) : null;
+    setPhase(null);
     setResult({
       date,
       slug: study.id,
-      report: formatReport({ sector: study, records, rows, samples, date, engines }) + auditSection,
-      json: `${JSON.stringify({ sector: study, samples, engines, date, rows, citedDomains: aggregateCitedDomains(records), records, audit }, null, 2)}\n`
+      report: formatReport({ sector: study, records, rows, samples, date, engines }) + (deep ? `\n${deep.report}` : ""),
+      json: `${JSON.stringify(
+        { sector: study, samples, engines, date, rows, citedDomains: aggregateCitedDomains(records), records, ...(deep?.json ?? {}) },
+        null,
+        2
+      )}\n`
     });
     setRunning(false);
   }
@@ -232,7 +318,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             </label>
             <label>
               <input type="checkbox" checked={includeAudit} onChange={(event) => setIncludeAudit(event.target.checked)} disabled={running} />{" "}
-              Incluir auditoría técnica
+              Incluir auditoría web (técnica y de contenido: 1 búsqueda de Gemini por pregunta)
             </label>
           </div>
           {prepareNote ? <p className="adm-note">{prepareNote}</p> : null}
@@ -284,6 +370,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
           {done} de {total} preguntas completadas
           {stepErrors > 0 ? ` · ${stepErrors} con error (cuentan como respuestas fallidas)` : ""}. No cierres esta pestaña
           mientras se ejecuta: es la que lanza cada paso.
+          {phase ? ` ${phase}` : ""}
         </p>
       ) : null}
 

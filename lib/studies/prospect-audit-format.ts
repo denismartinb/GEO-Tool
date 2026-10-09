@@ -13,6 +13,31 @@ import type { IssueCheckKey, IssueSeverity, TechnicalIssue, TechnicalPassingChec
 
 export type ProbeState = "found" | "absent" | "unknown";
 
+/** What was measured on one page, so every verdict carries its evidence. */
+export type PageEvidence = {
+  finalUrl: string;
+  title: string | null;
+  titleLength: number;
+  descriptionLength: number;
+  /** Every JSON-LD @type on the page, not only the ones the score counts. */
+  jsonLdTypes: string[];
+  /** Visible words in the HTML as served, i.e. without running JavaScript. */
+  wordCount: number;
+  contentOk: boolean;
+  h1Count: number;
+};
+
+/** One audited page. `source` says why it was picked: never discovered by following links. */
+export type ProspectPage = {
+  url: string;
+  source: "homepage" | "coverage_page" | "grounding_citation";
+  contextLabel: string;
+  /** "analyzed", one of fetch-page's skip reasons, or "skipped_budget". */
+  status: string;
+  pageScore: number | null;
+  evidence: PageEvidence | null;
+};
+
 export type ProspectAudit = {
   domain: string;
   /** Status of the homepage fetch: "analyzed" or one of fetch-page's skip reasons. */
@@ -32,19 +57,12 @@ export type ProspectAudit = {
   sitemapInvalid: boolean;
   /** The bots a prospect asks about first, read from robots.txt. Meaningless when `robots` is "unknown". */
   keyBots: Array<{ agent: string; allowed: boolean }>;
-  /** What was measured on the homepage, so every verdict carries its evidence. Null when it could not be read. */
-  evidence: {
-    finalUrl: string;
-    title: string | null;
-    titleLength: number;
-    descriptionLength: number;
-    /** Every JSON-LD @type on the page, not only the ones the score counts. */
-    jsonLdTypes: string[];
-    /** Visible words in the HTML as served, i.e. without running JavaScript. */
-    wordCount: number;
-    contentOk: boolean;
-    h1Count: number;
-  } | null;
+  /** What was measured on the homepage. Null when it could not be read. */
+  evidence: PageEvidence | null;
+  /** Every page audited, homepage first (homepage only for a competitor). Optional: older .json files have none. */
+  pages?: ProspectPage[];
+  /** Mean pageScore over the analysed pages — the product's readiness score. Null when none was analysed. */
+  readinessScore?: number | null;
 };
 
 const LD_JSON_RE = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -111,15 +129,42 @@ const HOMEPAGE_FAILURE: Record<string, string> = {
   skipped_error: "la portada devolvió un error"
 };
 
+const PAGE_STATUS: Record<string, string> = {
+  analyzed: "analizada",
+  skipped_timeout: "tardó demasiado",
+  skipped_not_html: "no es HTML",
+  skipped_offsite: "redirige fuera del dominio",
+  skipped_unsafe_ip: "IP no pública",
+  skipped_error: "devolvió un error",
+  skipped_budget: "sin tiempo (no se pidió)"
+};
+
+const SOURCE: Record<ProspectPage["source"], string> = {
+  homepage: "portada",
+  coverage_page: "encontrada en la cobertura",
+  grounding_citation: "citada por un motor"
+};
+
 const label = (check: IssueCheckKey) => LABEL[check]?.label ?? check;
 
 export function formatAuditSection(audit: ProspectAudit): string {
   const out: string[] = [`## Auditoría técnica (${audit.domain})`, ""];
+  const extraPages = (audit.pages ?? []).filter((page) => page.source !== "homepage");
   out.push(
-    "Qué se ha medido: la portada y los ficheros robots.txt, llms.txt y sitemap.xml, con las mismas comprobaciones que la Auditoría web de GenScore. No es una auditoría del sitio entero: el resto de páginas no se ha mirado.",
+    extraPages.length > 0
+      ? `Qué se ha medido: la portada, ${extraPages.length === 1 ? "1 página propia" : `${extraPages.length} páginas propias`} que ya salían en los datos (citadas por un motor o encontradas por la cobertura de contenido) y los ficheros robots.txt, llms.txt y sitemap.xml, con las mismas comprobaciones que la Auditoría web de GenScore. No se ha recorrido el sitio ni seguido enlaces: el resto de páginas no se ha mirado.`
+      : "Qué se ha medido: la portada y los ficheros robots.txt, llms.txt y sitemap.xml, con las mismas comprobaciones que la Auditoría web de GenScore. No es una auditoría del sitio entero: el resto de páginas no se ha mirado.",
     ""
   );
 
+  if (extraPages.length > 0) {
+    const analyzed = (audit.pages ?? []).filter((page) => page.status === "analyzed").length;
+    out.push(
+      audit.readinessScore !== null && audit.readinessScore !== undefined
+        ? `- **Preparación técnica (media de ${analyzed} de ${(audit.pages ?? []).length} páginas analizadas):** ${audit.readinessScore}/100.`
+        : "- **Preparación técnica:** sin dato (no se pudo analizar ninguna página)."
+    );
+  }
   if (audit.homepageStatus === "analyzed" && audit.homepageScore !== null) {
     out.push(`- **Preparación técnica de la portada:** ${audit.homepageScore}/100.`);
   } else {
@@ -149,7 +194,12 @@ export function formatAuditSection(audit: ProspectAudit): string {
   if (audit.issues.length > 0) {
     out.push("### Qué mejorar", "", "| Prioridad | Comprobación | Arreglo |", "|---|---|---|");
     for (const issue of audit.issues) {
-      const detail = issue.check === "bot_blocked" ? ` (${issue.affectedLabels.join(", ")})` : "";
+      const detail =
+        issue.check === "bot_blocked"
+          ? ` (${issue.affectedLabels.join(", ")})`
+          : issue.applicableCount > 1
+            ? ` (${issue.affectedCount} de ${issue.applicableCount} páginas)`
+            : "";
       out.push(`| ${SEVERITY[issue.severity]} | ${label(issue.check)}${detail} | ${LABEL[issue.check]?.fix ?? "—"} |`);
     }
     out.push("");
@@ -158,6 +208,7 @@ export function formatAuditSection(audit: ProspectAudit): string {
   }
 
   if (audit.evidence) out.push(...evidenceTable(audit));
+  if (extraPages.length > 0) out.push(...pagesTable(audit.pages ?? []));
 
   const passing = audit.passing.filter((check) => check.passedCount === check.applicableCount).map((check) => label(check.check));
   if (passing.length > 0) out.push(`**Ya está bien:** ${passing.join(", ")}.`, "");
@@ -165,7 +216,7 @@ export function formatAuditSection(audit: ProspectAudit): string {
   return out.join("\n");
 }
 
-const LOCAL_SCHEMA = /^(Organization|LocalBusiness|ProfessionalService|Corporation)$|Business$|Agency$/;
+export const LOCAL_SCHEMA = /^(Organization|LocalBusiness|ProfessionalService|Corporation)$|Business$|Agency$/;
 
 function evidenceTable(audit: ProspectAudit): string[] {
   const evidence = audit.evidence;
@@ -201,4 +252,18 @@ function evidenceTable(audit: ProspectAudit): string[] {
     `| Se lee sin JavaScript | ${ok(evidence.contentOk)} | el HTML servido, sin ejecutar JavaScript, muestra ${evidence.wordCount} palabras visibles |`
   );
   return ["### Evidencia por comprobación", "", `Portada leída: ${evidence.finalUrl}`, "", "| Comprobación | Resultado | Evidencia |", "|---|---|---|", ...rows, ""];
+}
+
+const cell = (text: string) => text.replace(/\|/g, "/");
+
+/** One row per audited page with its own evidence, so a verdict on any page can be checked. */
+function pagesTable(pages: ProspectPage[]): string[] {
+  const rows = pages.map((page) => {
+    const evidence = page.evidence;
+    const measured = evidence
+      ? `${evidence.title ? `«${cell(evidence.title)}» (${evidence.titleLength})` : "sin <title>"} · descripción ${evidence.descriptionLength} · ${evidence.h1Count} <h1> · ${evidence.wordCount} palabras sin JS · JSON-LD: ${evidence.jsonLdTypes.length ? evidence.jsonLdTypes.join(", ") : "ninguno"}`
+      : "—";
+    return `| ${cell(page.url)} | ${SOURCE[page.source]} | ${PAGE_STATUS[page.status] ?? page.status} | ${page.pageScore ?? "—"} | ${measured} |`;
+  });
+  return ["### Páginas analizadas", "", "| Página | Por qué se miró | Estado | Nota | Evidencia (título, descripción, h1, palabras, JSON-LD) |", "|---|---|---|---|---|", ...rows, ""];
 }
