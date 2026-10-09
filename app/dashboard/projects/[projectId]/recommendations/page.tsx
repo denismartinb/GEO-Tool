@@ -33,7 +33,6 @@ import {
 import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore } from "@/lib/metrics/run-metrics";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
@@ -568,7 +567,7 @@ export default async function RecommendationsPage({
    * null for non-quantifiable types or a low-confidence run, in which case
    * the card shows a qualitative impact instead of an invented number.
    */
-  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }, { data: geoScoreLookbackRows }] =
+  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }] =
     latestCompletedRun
       ? await Promise.all([
           supabase
@@ -594,26 +593,10 @@ export default async function RecommendationsPage({
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
-          // PDF-EXPORT-PLAN-1 — la Puntuación GEO de la portada del informe
-          // exportable tiene que ser la MISMA cifra que el medidor de Visión
-          // general para el mismo proyecto (TRUST-METRICS-1: lib/metrics/
-          // run-metrics.ts es su único dueño). Se lee aquí, no se recalcula:
-          // mismo GEO_SCORE_LOOKBACK_ROWS que todo consumidor de
-          // resolveGeoScore usa para que la respuesta no dependa de qué
-          // pantalla preguntó.
-          supabase
-            .from("run_scores")
-            .select("run_id, created_at, visibility_score, details_json")
-            .eq("project_id", projectId)
-            .order("created_at", { ascending: false })
-            .limit(GEO_SCORE_LOOKBACK_ROWS),
         ])
-      : [{ data: null }, { data: null }, { data: null }, { data: null }];
+      : [{ data: null }, { data: null }, { data: null }];
 
   const pillars = readPillars((runScoreRow as { details_json?: unknown } | null)?.details_json);
-
-  const geoScore =
-    geoScoreLookbackRows && geoScoreLookbackRows.length > 0 ? resolveGeoScore(geoScoreLookbackRows).value : null;
 
   const scoreInputRows: ScoreInputRow[] = ((allPromptResults ?? []) as ScoreInputRow[]).map((r) => ({
     id: r.id,
@@ -951,10 +934,7 @@ export default async function RecommendationsPage({
               jointPointsByType={jointPointsByType}
               planIds={planIds}
               planPoints={planPoints}
-              domain={project.domain}
               latestCompletedRunId={latestCompletedRun.id}
-              geoScore={geoScore}
-              scanDateLabel={lastScanDate}
             />
           )}
         </div>

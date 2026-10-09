@@ -733,6 +733,14 @@
   .wa2-hdr-audit-compact { display: inline; }
 }
 
+/* "Descargar informe" in the Visión general sticky header (GEO-REPORT-1
+   Fase 2, log §250). Same constraint as the audit line above: the right block
+   never shrinks, so below 900px the button keeps only its icon (the link
+   carries an aria-label) instead of starving the project name on the left. */
+@media (max-width: 899px) {
+  .ov-hdr-report-label { display: none; }
+}
+
 /* Audit toolbar: freshness state on the left, the single action on the right.
    Before this the button floated alone, right-aligned, and its confirmation
    rendered as a right-aligned paragraph whose leading icon broke onto its own

@@ -799,6 +799,21 @@ export default async function ProjectDetailPage({
             </div>
           </div>
           <div className="ov-sticky-right">
+            {/* GEO-REPORT-1 Fase 2 (log §250): el informe de GenScore del último
+                escaneo completado, en su propia página. */}
+            {latestCompletedRun ? (
+              <a
+                href={`/informe/${projectId}`}
+                target="_blank"
+                rel="noopener"
+                className="btn btn-ghost btn-sm ov-hdr-report"
+                style={{ padding: "5px 11px", fontSize: 12 }}
+                aria-label="Descargar informe"
+              >
+                <Icon name="download" size={13} />
+                <span className="ov-hdr-report-label">Descargar informe</span>
+              </a>
+            ) : null}
             <ScanStatePill
               activeRun={activeRun}
               lastScanLabel={
