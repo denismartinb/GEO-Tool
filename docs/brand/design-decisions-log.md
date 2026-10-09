@@ -22427,3 +22427,134 @@ React que lo haga (§202).
 - `requireUser` sigue redirigiendo a `/login` sin `next`. Un enlace a otra
   página protegida que no pase por `/login?next=` sigue aterrizando en el
   panel.
+
+## 256. GEO-SELF-1 Fase 1: que los motores de IA puedan leer, verificar y describir a GenScore — frente técnico y frente de entidad (2026-10-09)
+
+> Plan aprobado por el fundador el 2026-10-09 («que GenScore salga citado por
+> los motores de IA»). Esta fase son los frentes F1 (técnico) y F2 (entidad);
+> los demás frentes del plan van en PRs propios. El número §251 lo tienen
+> reclamado cuatro ramas abiertas a la vez; por eso esta entrada es la §256.
+
+**Qué se hizo — F1, técnico.**
+- **`robots.ts` nombra a los rastreadores de IA** (`GPTBot`, `OAI-SearchBot`,
+  `ChatGPT-User`, `ClaudeBot`, `Claude-SearchBot`, `Claude-User`,
+  `PerplexityBot`, `Google-Extended`, `Bingbot`, `Applebot-Extended`) con
+  `Allow: /`. El grupo `*` ya los dejaba pasar; nombrarlos quita la
+  ambigüedad para quien lee el fichero buscando su user-agent. **Cada grupo
+  con nombre repite la lista de `disallow` entera**: según RFC 9309, un
+  rastreador que encaja en un grupo con nombre ignora el de `*`, así que un
+  grupo con sólo `allow` le habría abierto `/dashboard` y `/api`. Lo fija
+  `app/robots.test.ts`. Las constantes viven en `lib/seo/robots-rules.ts`.
+- **`llms.txt` describía el GEO Score con los cuatro componentes de v3**
+  («presencia, prominencia, cuota de voz y autoridad»), sin el componente
+  técnico que GEO-SCORE-V4 añadió el 2026-08-05 (ADR 0033). Ahora abre con
+  `CANONICAL_DEFINITION` y enumera las cinco cosas que mira el score —sin
+  decir cuántas son ni cómo se combinan (log §75, §76)—. Enlaza además
+  `/sobre-genscore` y `/llms-full.txt`. «Precios» apunta a `/precios` (ver abajo).
+- **`/llms-full.txt`, nuevo.** El índice dice qué páginas hay; éste da el
+  contenido en un solo documento: preguntas de `/que-es-genscore`, «Quiénes
+  somos», la definición del GEO Score, los planes que se venden
+  (`SELLABLE_PLANS`), las cinco comparativas con todas sus filas y
+  ventajas de los dos lados, el glosario con sus definiciones largas, `/docs`
+  y el blog (título, fecha, descripción y URL; los cuerpos MDX no se extraen,
+  porque eso sería una segunda redacción que se queda rancia). Se genera de
+  las SSOT como `llms.txt` (log §47) y se revalida cada hora. Para poder
+  importarlas sin copiarlas, dos cosas salieron de sus páginas a datos:
+  el FAQ de `/que-es-genscore` (`lib/brand/que-es-genscore-faq.ts`) y el texto
+  de la página nueva (`lib/brand/about.ts`).
+- **Sitemap.** Los artículos declaran `dateUpdated ?? datePublished` (antes,
+  siempre la de publicación, así que un refresco real no se anunciaba).
+  `/blog` y las cuatro páginas pilar declaran la fecha más reciente de sus
+  propios artículos (`lib/seo/sitemap-dates.ts`) en vez de una fecha a mano:
+  `/blog` declaraba 2026-07-12 con artículos publicados hasta el 2026-10-09, y
+  `PILLAR_LAST_MODIFIED` ya se había quedado rancio una vez (SEO-POS-1 S8, 2026-08-14).
+  Desaparece `PILLAR_LAST_MODIFIED`.
+- ~~**`/precios` → `/pricing`, redirección permanente** en `next.config.ts`.
+  Así llama el equipo a la página y así la escribe cualquiera en castellano;
+  era un 404.~~ Superado en este mismo PR por el párrafo siguiente.
+- **`/precios` es la URL canónica de la página de precios; `/pricing` hace
+  308 → `/precios`** (decisión del fundador, 2026-10-09, en esta misma rama
+  antes del merge). Se invierte la redirección del primer commit: la página
+  se sirve en `app/precios/page.tsx` (con `pricing-metadata.test.ts`), y
+  canonical, `og:url`, sitemap, `llms.txt`/`llms-full.txt`, el menú, los
+  pies, los CTA, las comparativas, docs, la 404, la consola y el piloto
+  enlazan directamente a `/precios`, sin salto de redirección. Los módulos
+  siguen donde estaban (`app/pricing/plans-data.ts`,
+  `app/pricing/faq-schema.test.ts`, `components/pricing/**`): sólo cambió la
+  URL, no los imports. `next.config.ts` redirige `/pricing` y
+  `/pricing/:path*`; la query se conserva (`/pricing?openPlan=pro` →
+  `/precios?openPlan=pro`), lo fija `next-config.test.ts`. Las URLs de
+  vuelta de Stripe nunca apuntaron a la página de precios (van a
+  `/dashboard/settings/billing`), así que no cambian. No es la redirección
+  apex → www, que sigue en Vercel (`docs/environment-contract.md`).
+- **IndexNow.** Ruta `/indexnow-key.txt` (404 sin `INDEXNOW_KEY`), helper
+  `lib/seo/indexnow.ts` (no hace nada sin clave, y un no-2xx cuenta como
+  fallo) y `pnpm indexnow:ping`, que envía todas las URLs del sitemap. **No
+  está enganchado al build**: se lanza a mano tras publicar.
+- **`BING_SITE_VERIFICATION`** emite `msvalidate.01` como hace
+  `GOOGLE_SITE_VERIFICATION`. Las dos variables nuevas están en
+  `lib/env-schema.ts` y en `docs/environment-contract.md`.
+- El middleware deja fuera también `/sobre-genscore`, `/llms-full.txt` y
+  `/indexnow-key.txt`, con la misma comprobación que VERCEL-COST-1 Fase 3-b
+  (no leen sesión).
+
+**Qué se hizo — F2, entidad.**
+- **`/sobre-genscore` («Quiénes somos»).** Página de servidor con el mismo
+  shell que `/que-es-genscore`: qué es GenScore («herramienta GEO hecha en
+  España»), que nació en 2026, qué mide (ChatGPT, Gemini y Claude, y los
+  motores que no), cómo mide (con enlace a la metodología), independencia
+  (las comparativas las escribimos nosotros y lo decimos) y contacto
+  (`soporte@genscore.es`, LinkedIn, G2). Metadata con `contentMetadata`,
+  `BreadcrumbList` y `AboutPage` con `about`/`mainEntity` apuntando por `@id`
+  al `Organization`. Entra en el sitemap, en `llms.txt` y en los pies de
+  marketing por `MARKETING_ENTITY_LINKS`, la misma vía que `/que-es-genscore`.
+  **Reglas del fundador para esta página:** no se nombra a ninguna persona,
+  no hay fotos de personas, no se menciona ningún empleador ni trayectoria, y
+  no hay recuentos absolutos ni versiones de modelos (log §246).
+- **`Organization`** gana `description` (`CANONICAL_DEFINITION`, importada y
+  no redactada otra vez), `foundingDate: "2026"` (el nombre se decidió el
+  2026-07-09, `docs/launch-plan.md` Fase 0), `areaServed` España, `knowsAbout`,
+  `email` y un logo PNG (`/brand/icon-512.png`, 512×512): Google no acepta
+  SVG como logo de organización, y era `genscore-tile.svg`. Sin `founder` y
+  sin `slogan`: los documentos de marca no definen ninguno.
+- **`Article`**: `author` y `publisher` eran dos `Organization` incrustados
+  por artículo, sin relación con el del layout. Ahora apuntan a él por `@id`
+  (regla «Un nodo de schema.org se referencia por `@id`», log §100), y
+  `publisher` lleva el logo PNG. Sin `Person`.
+- Perfiles, contacto, año y logo viven en `lib/brand/canonical-definition.ts`
+  (`ORGANIZATION_SAME_AS`, `CONTACT_EMAIL`, `FOUNDING_YEAR`,
+  `ORGANIZATION_LOGO`): la página y el schema no pueden divergir.
+
+**Pendiente o roto conocido.**
+- **`INDEXNOW_KEY` en Vercel (fundador).** Hasta entonces la ruta da 404 y el
+  ping no envía nada. Runbook en `docs/environment-contract.md`.
+- **Verificación de Bing.** `docs/environment-contract.md` registra la
+  propiedad verificada por importación desde Search Console el 2026-08-11. La
+  variable `BING_SITE_VERIFICATION` sólo hace falta si Bing pide re-verificar;
+  el fundador tiene que confirmar en Bing Webmaster Tools que la propiedad
+  sigue verificada.
+- **Autor con nombre en los artículos: decisión abierta.** Esta fase deja
+  todo a nombre de la organización, sin `Person`, por decisión del fundador.
+  Si algún día se firma con nombre, es una fase propia.
+- **El piloto sólo comprueba que `/sobre-genscore` carga y declara su
+  canonical** (`tests/pilot/journeys/public-pages.spec.ts` + su entrada en
+  `tests/pilot/fixtures/server.mjs`, igual que `/que-es-genscore`). Ni
+  `/llms-full.txt` ni `/indexnow-key.txt` tienen journey: son texto plano y
+  los cubren los tests unitarios.
+- El logo PNG es el icono cuadrado, no el logotipo horizontal: no hay PNG del
+  logotipo en `public/brand/`.
+
+**Trazabilidad.** `app/robots.ts` (+test), `lib/seo/robots-rules.ts`,
+`lib/seo/llms-txt.ts` (+test), `lib/seo/llms-full-txt.ts` (+test),
+`app/llms-full.txt/route.ts`, `app/sitemap.ts` (+test),
+`lib/seo/sitemap-dates.ts`, `next.config.ts` (+`next-config.test.ts`),
+`app/precios/page.tsx` (+`pricing-metadata.test.ts`, antes en `app/pricing/`),
+`lib/seo/indexnow.ts` (+test), `app/indexnow-key.txt/route.ts`,
+`scripts/indexnow-ping.ts`, `app/layout.tsx`, `lib/env-schema.ts`,
+`middleware.ts`, `app/sobre-genscore/page.tsx`, `lib/brand/about.ts`,
+`lib/brand/que-es-genscore-faq.ts`, `lib/brand/canonical-definition.ts`,
+`components/seo/organization-schema.tsx` (+test),
+`components/blog/article-schema.tsx` (+test),
+`components/marketing-content-links.ts` (+test),
+`tests/pilot/journeys/public-pages.spec.ts`, `tests/pilot/fixtures/server.mjs`,
+`docs/environment-contract.md`.

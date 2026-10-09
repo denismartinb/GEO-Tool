@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { ArticleSchema } from "./article-schema";
+import { ORGANIZATION_ID } from "@/lib/brand/canonical-definition";
 
 /**
  * SEO-POS-1 (T9). `dateModified` debía valer siempre `datePublished` porque
@@ -44,5 +45,23 @@ describe("ArticleSchema", () => {
       renderToStaticMarkup(ArticleSchema({ ...base, coverImage: "/blog/titulo/cover.webp" }))
     );
     expect(json.image).toBe("https://www.genscore.es/blog/titulo/cover.webp");
+  });
+
+  it("author y publisher apuntan al Organization del sitio por @id, sin Person (GEO-SELF-1)", () => {
+    const json = jsonFrom(renderToStaticMarkup(ArticleSchema(base)));
+    const author = json.author as Record<string, unknown>;
+    const publisher = json.publisher as Record<string, unknown>;
+    expect(author["@id"]).toBe(ORGANIZATION_ID);
+    expect(author["@type"]).toBeUndefined();
+    expect(publisher["@id"]).toBe(ORGANIZATION_ID);
+    expect(JSON.stringify(json)).not.toContain('"Person"');
+  });
+
+  it("publisher lleva un logo raster con medidas", () => {
+    const json = jsonFrom(renderToStaticMarkup(ArticleSchema(base)));
+    const logo = (json.publisher as Record<string, Record<string, unknown>>).logo;
+    expect(logo["@type"]).toBe("ImageObject");
+    expect(String(logo.url)).toMatch(/^https:\/\/www\.genscore\.es\/.+\.png$/);
+    expect(logo.width).toBe(512);
   });
 });

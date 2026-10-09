@@ -14,7 +14,7 @@ import { assertPageIsHealthy, captureInteraction, visitAsUser } from "../support
  * public page and is exactly what would surface a real bug if one of these
  * routes ever started bouncing a logged-in visitor to /login unexpectedly.
  *
- * Does NOT cover `/` or `/pricing`: both are client components that cannot
+ * Does NOT cover `/` or `/precios`: both are client components that cannot
  * export per-page `metadata` yet (see docs/launch-plan.md, Fase 7b ledger) —
  * add them here once a future phase gives them their own canonical.
  */
@@ -159,6 +159,13 @@ test("/que-es-genscore renders and has its own canonical", async ({ page }, test
   const findings = await visitAsUser(page, testInfo, "/que-es-genscore", "que-es-genscore");
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/que-es-genscore");
+});
+
+// GEO-SELF-1 Fase 1 (log §256): la página «Quiénes somos».
+test("/sobre-genscore renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/sobre-genscore", "sobre-genscore");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/sobre-genscore");
 });
 
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
