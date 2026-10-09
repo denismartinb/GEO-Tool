@@ -24,6 +24,19 @@ import {
   OTTERLY_STRENGTHS,
   RESEARCH_DATE as ALTERNATIVAS_RESEARCH_DATE
 } from "@/lib/comparativas/alternativas-a-otterly";
+import {
+  COMPARISON_ROWS as THREE_WAY_ROWS,
+  GENSCORE_NOTE as THREE_WAY_GENSCORE_NOTE,
+  RESEARCH_DATE as THREE_WAY_RESEARCH_DATE,
+  VENDORS as THREE_WAY_VENDORS
+} from "@/lib/comparativas/profound-vs-peec-ai-vs-otterly";
+import {
+  ALTERNATIVES as PEEC_ALTERNATIVES,
+  LEAVE_REASONS as PEEC_LEAVE_REASONS,
+  PEEC_PLANS,
+  PEEC_STRENGTHS,
+  RESEARCH_DATE as PEEC_ALTERNATIVAS_RESEARCH_DATE
+} from "@/lib/comparativas/alternativas-a-peec-ai";
 import { SITE_URL } from "./metadata";
 
 /**
@@ -32,7 +45,7 @@ import { SITE_URL } from "./metadata";
  * `/llms.txt` es el índice: un enlace y una línea por página. Esto es el
  * contenido: lo que un asistente necesita para responder sobre GenScore sin
  * tener que rastrear treinta URLs —qué es, quiénes somos, el GEO Score, las
- * cinco comparativas con sus datos, el glosario entero y el catálogo del
+ * siete comparativas con sus datos, el glosario entero y el catálogo del
  * blog—, en un solo documento de texto.
  *
  * Mismo principio que `llms-txt.ts` (log §47): **se genera de las SSOT, nunca
@@ -120,6 +133,49 @@ ${ALTERNATIVES.map(
   - Lo que no resuelve: ${a.tradeoff}`
 ).join("\n")}`;
 
+  const threeWay = COMPARATIVAS_INDEX.find((c) => c.href === "/comparativas/profound-vs-peec-ai-vs-otterly")!;
+  const threeWayBlock = `### ${threeWay.title}
+
+URL: ${url(threeWay.href)}
+${threeWay.blurb}
+Comparativa neutral publicada por GenScore: GenScore no está en la tabla. Datos consultados el ${THREE_WAY_RESEARCH_DATE}; los precios que el fabricante no publica proceden de terceros y son orientativos.
+
+${THREE_WAY_VENDORS.map((v) => `- ${v.name} (${v.url}): ${v.oneLiner}`).join("\n")}
+
+${THREE_WAY_ROWS.map(
+  (row) => `- ${row.label}
+  - Profound: ${row.profound}
+  - Peec AI: ${row.peec}
+  - Otterly: ${row.otterly}
+  - Lectura: ${row.takeaway}`
+).join("\n")}
+
+${THREE_WAY_GENSCORE_NOTE.label}: ${THREE_WAY_GENSCORE_NOTE.body} ${THREE_WAY_GENSCORE_NOTE.limits}`;
+
+  const peecAlternativas = COMPARATIVAS_INDEX.find((c) => c.href === "/comparativas/alternativas-a-peec-ai")!;
+  const peecAlternativasBlock = `### ${peecAlternativas.title}
+
+URL: ${url(peecAlternativas.href)}
+${peecAlternativas.blurb}
+Comparativa publicada por GenScore. Datos consultados el ${PEEC_ALTERNATIVAS_RESEARCH_DATE}; los importes de Peec AI proceden de un tercero (PricingSaaS) y son orientativos.
+
+Planes de Peec AI:
+${PEEC_PLANS.map((p) => `- ${p.plan}: ${p.price}, ${p.prompts}, ${p.models} modelos, ${p.markets}`).join("\n")}
+
+Lo que Peec AI hace bien:
+${PEEC_STRENGTHS.map((s) => `- ${s.claim} ${s.context}`).join("\n")}
+
+Motivos para buscar una alternativa:
+${PEEC_LEAVE_REASONS.map((r) => `- ${r.title}. ${r.detail}`).join("\n")}
+
+Alternativas:
+${PEEC_ALTERNATIVES.map(
+  (a) => `- ${a.name}${a.ours ? " (herramienta de GenScore)" : ""} (${a.url}): ${a.oneLiner}
+  - Precio: ${a.pricingNote}
+  - Castellano: ${a.spanishSupport}
+  - Lo que no resuelve: ${a.tradeoff}`
+).join("\n")}`;
+
   return `## Comparativas
 
 Índice: ${url("/comparativas")}
@@ -132,7 +188,11 @@ ${headToHead("/comparativas/genscore-vs-peec-ai", "Peec AI", PEEC_RESEARCH_DATE,
 
 ${headToHead("/comparativas/genscore-vs-profound", "Profound", PROFOUND_RESEARCH_DATE, PROFOUND_ROWS, "profound", "profoundWins")}
 
-${alternativasBlock}`;
+${alternativasBlock}
+
+${threeWayBlock}
+
+${peecAlternativasBlock}`;
 }
 
 function planPrice(plan: (typeof SELLABLE_PLANS)[number]): string {

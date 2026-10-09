@@ -43,6 +43,8 @@ Task Intake de Fase 2.6).
 | C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
 | C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | ✅ Hecho | #306 |
+| C4 | `/comparativas/profound-vs-peec-ai-vs-otterly` (neutral a tres, GEO-SELF-1 Fase 2, log §257) | profound vs peec ai vs otterly | 🟡 En PR | #(este) |
+| C5 | `/comparativas/alternativas-a-peec-ai` (GEO-SELF-1 Fase 2, log §257) | alternativas a peec ai | 🟡 En PR | #(este) |
 
 ## Capa D — Glosario (Fase 2.4 / 2.6b)
 

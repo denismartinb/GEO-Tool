@@ -43,6 +43,16 @@ export const COMPARATIVAS = [
     path: "/comparativas/alternativas-a-otterly",
     title: "Alternativas a Otterly en 2026",
     note: "cinco alternativas ordenadas por el límite que te hace buscarlas, con lo que cada una no resuelve."
+  },
+  {
+    path: "/comparativas/profound-vs-peec-ai-vs-otterly",
+    title: "Profound vs Peec AI vs Otterly",
+    note: "comparativa neutral a tres, con fuentes fechadas en cada fila."
+  },
+  {
+    path: "/comparativas/alternativas-a-peec-ai",
+    title: "Alternativas a Peec AI en 2026",
+    note: "siete alternativas ordenadas por el límite que te hace buscarlas, con lo que cada una no resuelve."
   }
 ] as const;
 

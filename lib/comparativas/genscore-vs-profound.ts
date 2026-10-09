@@ -3,9 +3,13 @@
  *
  * Fuente de los datos de Profound: información pública de terceros (reseñas,
  * cobertura de prensa de su financiación, agregadores de reviews) consultada
- * el 10 de agosto de 2026 — ver la nota de fecha en la propia página. Los
- * precios y límites de GenScore vienen de app/pricing/plans-data.ts, la misma
- * fuente que usa /precios — no se reescriben a mano.
+ * el 10 de agosto de 2026, y refrescada el 9 de octubre de 2026 contra su
+ * propia web (tryprofound.com/pricing, su página principal y su centro de
+ * ayuda) en GEO-SELF-1 Fase 2 (log §257): precio, motores, gestión de
+ * clientes y bucle de acción. Las reseñas (G2) y la financiación siguen
+ * siendo de la investigación de agosto. Los precios y límites de GenScore
+ * vienen de app/pricing/plans-data.ts, la misma fuente que usa /precios — no
+ * se reescriben a mano.
  *
  * **El precio de Profound no se declara con una cifra fija a propósito.**
  * Su página de precios pública ha pasado a exigir una demo — no publican
@@ -15,12 +19,17 @@
  * ha cambiado más de una vez. Publicar aquí una cifra concreta sería
  * exactamente el tipo de dato desactualizado que esta página advierte de
  * confirmar en destino.
+ *
+ * 2026-10-09: su web enseña hoy una prueba gratuita de 7 días y un plan
+ * Enterprise a medida. Según un tercero (GEO Toolbox, competidor, comprobado
+ * el 28-09-2026), los planes de marca de entrada se retiraron a mediados de
+ * septiembre de 2026; se cita con su fuente y su fecha, no como hecho propio.
  */
 import { PLANS } from "@/app/pricing/plans-data";
 
 const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 
-export const PROFOUND_RESEARCH_DATE = "10 de agosto de 2026";
+export const PROFOUND_RESEARCH_DATE = "9 de octubre de 2026";
 
 export const COMPARISON_ROWS: {
   label: string;
@@ -32,13 +41,15 @@ export const COMPARISON_ROWS: {
   {
     label: "Precio de entrada",
     genscore: `Precio público desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta para probar`,
-    profound: "Sin precio público — su web pide una demo. Terceros citan cifras muy distintas según la fecha, entre 99 y 499 $/mes",
+    profound:
+      "Sin precio público: su web ofrece una prueba gratuita de 7 días y un plan Enterprise a medida. Según GEO Toolbox (tercero, comprobado el 28-09-2026), los planes de entrada de 99 y 399 $/mes que aún citan muchas reseñas se retiraron a mediados de septiembre de 2026",
     genscoreWins: true
   },
   {
     label: "Motores de IA cubiertos",
     genscore: "3 (Gemini, Claude, ChatGPT), los mismos en todos los planes de pago y en la prueba de Pro",
-    profound: "Hasta 9 motores nominalmente (incluidos Perplexity y Grok), pero los planes de entrada solo cubren ChatGPT o 3 motores — la cobertura amplia parece reservada a Enterprise",
+    profound:
+      "Hasta 9 motores en Enterprise (entre ellos Perplexity, Microsoft Copilot, Google AI Mode y Claude); la prueba gratuita cubre 3: ChatGPT, Gemini y AI Overviews",
     profoundWins: true
   },
   {
@@ -48,10 +59,14 @@ export const COMPARISON_ROWS: {
     profoundWins: true
   },
   {
+    // Sin insignia desde el 2026-10-09 (log §257): la fila decía que Profound
+    // exigía una cuenta por cliente, y su centro de ayuda documenta hoy un
+    // «Agency Mode» con espacios de cliente. Ninguna de las dos ofrece marca
+    // blanca documentada, así que no hay victoria clara de ningún lado.
     label: "Varios clientes/dominios bajo una cuenta",
     genscore: "Una cuenta de Agencia sigue varios dominios de cliente a la vez, sin credenciales separadas por cliente — aunque todavía sin paneles white-label ni permisos por rol",
-    profound: "Reseñas de usuarios señalan que gestionar 5 clientes exige 5 cuentas separadas, sin panel ni permisos compartidos",
-    genscoreWins: true
+    profound:
+      "«Agency Mode»: espacios de cliente y espacios de «pitch» para prospectos (caducan a los 30 días salvo extensión), según su centro de ayuda — que no menciona marca blanca"
   },
   {
     label: "Idioma del producto",
@@ -62,7 +77,8 @@ export const COMPARISON_ROWS: {
   {
     label: "Bucle de acción",
     genscore: "Recomendaciones basadas en evidencia + generador de soluciones (FAQ, schema, briefs) incluido desde Pro",
-    profound: "Centrado en analítica e insights (menciones, citas, tráfico de agentes de IA, volumen de prompts) — sin generador de acciones/soluciones documentado públicamente",
+    profound:
+      "«AI Marketer» lleva del dato al brief y al contenido terminado, pero según su propia documentación es una función del plan Enterprise, a medida y previa demo",
     genscoreWins: true
   },
   {

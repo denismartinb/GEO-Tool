@@ -22,6 +22,16 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
 
 /**
+ * GEO-SELF-1 Fase 2 (log §257): Otterly, Peec AI y Profound se revisaron en
+ * sus propias webs en esta fecha — motores de Otterly (4 incluidos y 3 como
+ * complemento), escalera y precio orientativo de Peec AI (PricingSaaS, su web
+ * no publica importes), retirada de los planes de entrada de Profound (según
+ * un tercero, GEO Toolbox) y su «AI Marketer» de Enterprise. El resto de la
+ * lista sigue con la fecha de `PILLAR_RESEARCH_DATE`; la página dice las dos.
+ */
+export const PILLAR_REFRESH_DATE = "9 de octubre de 2026";
+
+/**
  * SEO-POS-1 Fase C, S4 (2026-08-12) — refresco del pilar.
  *
  * El plan pedía añadir tres rivales del mercado español: CreceRank,
@@ -73,7 +83,7 @@ export const TOOLS: ToolProfile[] = [
     oneLiner:
       "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con 7 días de Pro gratis, sin tarjeta.",
     distinctiveFeature:
-      "La única de esta lista que no se detiene en el diagnóstico: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
+      "La única de esta lista que redacta el borrador de la solución sin un contrato Enterprise: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
     pricingNote: `Planes desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     bestFor:
@@ -83,11 +93,12 @@ export const TOOLS: ToolProfile[] = [
     slug: "otterly",
     name: "Otterly",
     url: "https://otterly.ai",
-    oneLiner: "Monitorización y auditoría GEO con cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados.",
+    oneLiner:
+      "Monitorización y auditoría GEO con 4 motores incluidos (ChatGPT, AI Overviews, Perplexity y Copilot), 3 más como complemento y seguimiento en más de 50 mercados.",
     distinctiveFeature:
-      "Cobertura nominal de hasta 6 motores y seguimiento en más de 50 mercados, con usuarios ilimitados ya en su plan de entrada.",
-    pricingNote: "Desde 29 $/mes ; Gemini y Google AI Mode son add-ons con coste extra.",
-    spanishSupport: "No — interfaz en inglés.",
+      "Cuatro motores incluidos en todos los planes —Google AI Mode, Gemini y Claude se cobran aparte— y seguimiento en más de 50 mercados, con usuarios ilimitados ya en su plan de entrada.",
+    pricingNote: "Desde 29 $/mes, según su página de precios; Google AI Mode, Gemini y Claude son add-ons con coste extra.",
+    spanishSupport: "No consta — la interfaz que hemos visto está en inglés.",
     bestFor:
       "Equipos con presupuesto ajustado que necesitan cobertura amplia de mercados y no les importa pagar add-ons por motor a medida que crecen.",
     comparisonHref: "/comparativas/genscore-vs-otterly"
@@ -127,13 +138,15 @@ export const TOOLS: ToolProfile[] = [
     slug: "peec-ai",
     name: "Peec AI",
     url: "https://peec.ai",
-    oneLiner: "Monitorización GEO con cobertura multi-idioma y multi-país al mismo precio, sin coste adicional por región.",
+    oneLiner:
+      "Monitorización GEO con usuarios ilimitados, 3 modelos a elegir en sus planes de autoservicio y varios países e idiomas desde su plan Pro.",
     distinctiveFeature:
       "Su función \"Actions\" prioriza oportunidades y sugiere qué publicar u optimizar, aunque no genera el contenido en sí — la creación queda en tus manos.",
-    pricingNote: "Desde ~95 $/mes — cifra pública, confírmala en peec.ai antes de decidir.",
-    spanishSupport: "No confirmado — documentación e interfaz observadas en inglés.",
+    pricingNote:
+      "Su web no publica importes. Orientativo, según PricingSaaS (último visto el 14-09-2026): desde unos 80 $/mes con facturación anual. Confírmalo en peec.ai.",
+    spanishSupport: "No consta — su web no menciona idiomas de interfaz; la que hemos visto está en inglés.",
     bestFor:
-      "Equipos que ya saben que van a lanzar prompts en varios idiomas o países desde el primer día y quieren ese coste incluido sin sorpresas de add-on.",
+      "Equipos que miden la misma marca en dos o tres mercados (desde su plan Pro) y quieren que todo el equipo entre en el panel.",
     comparisonHref: "/comparativas/genscore-vs-peec-ai"
   },
   {
@@ -145,11 +158,11 @@ export const TOOLS: ToolProfile[] = [
     distinctiveFeature:
       "Especialización 100% en visibilidad de IA (no es un módulo añadido a una suite de SEO más amplia), con un dashboard dedicado de fuentes de citación.",
     pricingNote:
-      "Cifras de agregadores de terceros, no confirmadas en su web oficial (bloqueada al intentar consultarla directamente) — orientativamente desde unos 99 $/mes en el plan self-serve, con niveles enterprise muy por encima. Confírmalo en tryprofound.com.",
-    spanishSupport: "No encontrado con confianza — no verificado en fuente primaria.",
+      "Sin precio público: su web ofrece una prueba gratuita de 7 días y un plan Enterprise a medida. Según GEO Toolbox (tercero, comprobado el 28-09-2026), sus planes de entrada se retiraron a mediados de septiembre de 2026. Confírmalo en tryprofound.com.",
+    spanishSupport: "No consta — anuncia su interfaz en más de 30 idiomas sin listarlos.",
     bestFor: "Equipos enterprise que ya operan a la escala que justifica un plan a medida y priorizan el benchmarking competitivo.",
     context:
-      "Su producto central es \"Answer Engine Insights\": un desglose de qué fuentes citan los motores generativos al hablar de tu categoría, cruzado con benchmarking directo contra tus competidores en el mismo panel. Es de las opciones de esta lista más orientada a marcas que ya tienen un equipo dedicado a la categoría, no a quien empieza a medir su visibilidad en IA por primera vez."
+      "Su producto central es \"Answer Engine Insights\": un desglose de qué fuentes citan los motores generativos al hablar de tu categoría, cruzado con benchmarking directo contra tus competidores en el mismo panel. Es de las opciones de esta lista más orientada a marcas que ya tienen un equipo dedicado a la categoría, no a quien empieza a medir su visibilidad en IA por primera vez. Su plan Enterprise suma además «AI Marketer», que lleva del dato al brief y al contenido terminado."
   },
   {
     slug: "scrunch-ai",

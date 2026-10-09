@@ -19,6 +19,15 @@ const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";
 
+/**
+ * GEO-SELF-1 Fase 2 (log §257): precios, motores y mercados revisados en
+ * otterly.ai/pricing en esta fecha. La fila de motores decía «hasta 6» y hoy
+ * son 4 incluidos (ChatGPT, AI Overviews, Perplexity y Copilot) y 3 como
+ * complemento (Google AI Mode, Gemini y Claude). El resto de filas sigue con
+ * la investigación de `OTTERLY_RESEARCH_DATE`.
+ */
+export const OTTERLY_REFRESH_DATE = "9 de octubre de 2026";
+
 export const COMPARISON_ROWS: {
   label: string;
   genscore: string;
@@ -40,7 +49,8 @@ export const COMPARISON_ROWS: {
   {
     label: "Motores de IA cubiertos",
     genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), todos incluidos sin add-ons",
-    otterly: "Hasta 6 motores nominalmente — pero Gemini y Google AI Mode son add-ons con coste extra, no incluidos en el precio base",
+    otterly:
+      "4 incluidos en todos los planes (ChatGPT, AI Overviews, Perplexity y Microsoft Copilot); Google AI Mode, Gemini y Claude son add-ons con coste extra, no incluidos en el precio base",
     otterlyWins: true
   },
   {
@@ -52,7 +62,7 @@ export const COMPARISON_ROWS: {
   {
     label: "Idioma de la interfaz y del producto",
     genscore: "Castellano nativo",
-    otterly: "Inglés",
+    otterly: "No consta una versión en castellano — la interfaz que hemos visto está en inglés",
     genscoreWins: true
   },
   {

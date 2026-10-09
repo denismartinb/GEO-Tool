@@ -321,6 +321,29 @@ test("/comparativas/alternativas-a-otterly renders and has its own canonical", a
   await assertCanonical(page, "/comparativas/alternativas-a-otterly");
 });
 
+// GEO-SELF-1 Fase 2 (log §257).
+test("/comparativas/profound-vs-peec-ai-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/profound-vs-peec-ai-vs-otterly",
+    "comparativas-profound-vs-peec-ai-vs-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/profound-vs-peec-ai-vs-otterly");
+});
+
+test("/comparativas/alternativas-a-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/alternativas-a-peec-ai",
+    "comparativas-alternativas-a-peec-ai"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/alternativas-a-peec-ai");
+});
+
 test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/comparativas", "comparativas-index");
   assertPageIsHealthy(findings);

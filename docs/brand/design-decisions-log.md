@@ -22558,3 +22558,103 @@ React que lo haga (§202).
 `components/marketing-content-links.ts` (+test),
 `tests/pilot/journeys/public-pages.spec.ts`, `tests/pilot/fixtures/server.mjs`,
 `docs/environment-contract.md`.
+
+## 257. GEO-SELF-1 Fase 2: comparativas Profound vs Peec vs Otterly y Alternativas a Peec AI (2026-10-09)
+
+> Frente F3 del plan GEO-SELF-1, aprobado por el fundador el 2026-10-09 (§256
+> recoge F1 y F2). Investigación del 2026-10-09 contra las webs oficiales de
+> los fabricantes; los importes que ellos no publican, de terceros con fecha.
+
+**Qué se hizo.**
+- **`/comparativas/profound-vs-peec-ai-vs-otterly`, nueva.** Comparativa
+  NEUTRAL a tres: tabla de cuatro columnas sin insignias de «Gana aquí»
+  (nadie nuestro compite en ella), una lectura por fila («Qué decide cada
+  fila») en lista bajo la tabla —no dentro de ella, para que se lea en
+  móvil—, «Cómo elegir» y una nota etiquetada «Si buscas una opción en
+  español» antes de la FAQ, en `KeyTakeaway` y **no en `Verdict`**, con los
+  límites de GenScore (Perplexity, Copilot y AI Overviews no se ejecutan, no
+  hay desglose por país, Agencia sin marca blanca). Lo fija
+  `profound-vs-peec-ai-vs-otterly.test.ts` (GenScore fuera de la tabla, toda
+  fila con fuente, importes de terceros marcados «orientativo» con la fuente
+  nombrada, metadata sin motores).
+- **`/comparativas/alternativas-a-peec-ai`, nueva.** Mismo modelo que
+  `alternativas-a-otterly`: cinco motivos para buscar alternativa, siete
+  alternativas con `tradeoff` obligatorio (GenScore incluida, marcada
+  `ours`), `PEEC_STRENGTHS` con `{claim, context, sources}` y la escalera de
+  Peec AI con precio orientativo de PricingSaaS. Test hermano del de Otterly.
+- **Fuentes en los datos.** Las dos piezas nuevas guardan cada fuente como
+  `{label, url, consulted, primary}` (`lib/comparativas/sources.ts`) y la
+  página las pinta en una sección «Fuentes» tras la metodología
+  (`components/comparativas/sources-list.tsx`); la de terceros lleva «dato
+  orientativo». Las comparativas antiguas no se migran a este modelo: sus
+  correcciones citan la fuente en el texto o en la metodología.
+- **Cableado.** `COMPARATIVAS_INDEX` (blurb = recorte literal de la
+  `metaDescription`), `COMPARATIVAS` de `llms.txt`, bloques propios en
+  `llms-full.txt` (+test), sitemap, `PRICE_QUOTING_FILES` de
+  `promise-parity.test.ts`, journey en `public-pages.spec.ts` y entrada en el
+  fixture del piloto (regla de §62).
+- **Contradicciones corregidas en lo ya publicado.**
+  - `genscore-vs-profound`: la fila «Bucle de acción» decía que Profound no
+    documentaba generador de soluciones; hoy anuncia «AI Marketer», que según
+    su ayuda es de Enterprise. La fila de precio citaba 99-499 $; ahora: prueba
+    de 7 días + Enterprise a medida en su web, y la retirada de los planes de
+    entrada a mediados de septiembre de 2026 citada a GEO Toolbox (tercero y
+    competidor, 28-09-2026). Motores: hasta 9 en Enterprise, 3 en la prueba
+    (se quita Grok, que su web no lista). La fila de varios clientes decía «5
+    clientes = 5 cuentas»; su ayuda documenta «Agency Mode» con espacios de
+    cliente, así que **la fila pierde la insignia de GenScore** y el `Verdict`
+    de GenScore deja de usar ese argumento. Fecha: 9-10-2026.
+  - `genscore-vs-peec-ai`: precio «desde ~95 $» → orientativo de PricingSaaS
+    (~80 $/mes anual); «multi-país al mismo precio» era falso → países e
+    idiomas por plan (Starter 1 y 1); motores → 3 a elegir, Claude en
+    Enterprise. Resumen, `Verdict` del competidor, CTA y metodología, a juego.
+    Fecha: 9-10-2026.
+  - `alternativas-a-otterly`: Otterly pasa de «hasta 6 motores» a 4
+    incluidos + 3 complementos (Claude ahora es complemento); la escalera y
+    la ampliación de prompts salen de su página de precios (ya carga); la
+    ficha de Peec AI se corrige igual que su 1:1 y pasa a resolver «prompts»
+    en vez de «addons»; Profound y Scrunch, con su web. Fecha: 9-10-2026.
+  - `mejores-herramientas-geo`: Otterly, Peec AI y Profound, igual; GenScore
+    deja de llamarse «la única que no se detiene en el diagnóstico» (Profound
+    tiene AI Marketer) y pasa a «la única que redacta la solución sin
+    contrato Enterprise». La página dice las dos fechas
+    (`PILLAR_REFRESH_DATE`), porque el resto de la lista no se revisó.
+  - `genscore-vs-otterly`: fila de motores igual que arriba; fecha de
+    refresco aparte (`OTTERLY_REFRESH_DATE`) por la misma razón.
+- **«No consta», nunca «no tiene».** Donde una herramienta ajena no
+  confirma interfaz en castellano, el texto dice «no consta» (y que la vista
+  está en inglés), no que carezca de ella: en las páginas nuevas y en las
+  corregidas («Inglés» → «No consta…» en Otterly; «producto solo en inglés»
+  → «producto en inglés» en la metadescripción de `alternativas-a-otterly`).
+
+**Qué se suavizó o se quitó del borrador.**
+- GEO Metrics: fuera «startup granadina» y la nota de prensa que lo sugería
+  (ni su web ni su ficha legal lo dicen). Queda «web en español» y «no consta
+  que la aplicación también lo esté».
+- Ahrefs Brand Radar: fuera el «índice desde 199 $/mes»; el precio se
+  presenta como lo que es, una página contradictoria («desde 50 $» y a la vez
+  incluido desde Lite).
+- Otterly 25/160/422 $: «posiblemente el pago anual», sin el «15 %» del
+  borrador, porque la cuenta no cuadra exacta.
+
+**Pendiente o roto conocido.**
+- Los importes de Peec AI siguen sin fuente primaria; puede que cobre en €.
+- Duración de la prueba de Peec AI y planes en que entran sentimiento y citas
+  en Profound y Peec AI: sin publicar por los fabricantes.
+- `mejores-herramientas-geo-en-espanol` arrastra frases de cuando tenía seis
+  herramientas («la única de las seis», «cualquiera de las seis») — previo a
+  esta fase; sólo se corrigió la del idioma.
+- Usuarios por plan de Otterly: sigue siendo dato de terceros de agosto.
+
+**Trazabilidad.** `lib/comparativas/profound-vs-peec-ai-vs-otterly.ts`
+(+test), `lib/comparativas/alternativas-a-peec-ai.ts` (+test),
+`lib/comparativas/sources.ts` (+test),
+`components/comparativas/sources-list.tsx`,
+`app/comparativas/profound-vs-peec-ai-vs-otterly/page.tsx`,
+`app/comparativas/alternativas-a-peec-ai/page.tsx`,
+`lib/comparativas/{genscore-vs-profound,genscore-vs-peec-ai,genscore-vs-otterly,alternativas-a-otterly,mejores-herramientas-geo,index}.ts`,
+sus páginas en `app/comparativas/`, `lib/seo/llms-txt.ts`,
+`lib/seo/llms-full-txt.ts` (+test), `app/sitemap.ts`,
+`tests/promise-parity.test.ts`, `tests/pilot/journeys/public-pages.spec.ts`,
+`tests/pilot/fixtures/server.mjs`, `docs/content-calendar.md`,
+`.claude/rules/growth-content.md`.
