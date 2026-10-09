@@ -22740,3 +22740,47 @@ sus páginas en `app/comparativas/`, `lib/seo/llms-txt.ts`,
 `tests/promise-parity.test.ts`, `tests/pilot/journeys/public-pages.spec.ts`,
 `tests/pilot/fixtures/server.mjs`, `docs/content-calendar.md`,
 `.claude/rules/growth-content.md`.
+
+## 260. AUDIT-CRON-DRAIN-1: el worker de auditoría corre cada 10 minutos, porque Vercel corta las cadenas de auto-llamadas (2026-10-09)
+
+> Plan aprobado por el fundador el 2026-10-09 («Si»), hilo «Producto a prueba
+> de fallos». Nace de la prueba real en producción de ese día (alta nueva →
+> dominio → primer escaneo → checkout).
+
+**Qué se vio.** El escaneo terminó y despachó la auditoría tras escanear
+(`triggerWebAuditRun`, `chainIndex: 0`). La cadena atendió primero trabajos
+pendientes de otros tres proyectos y, en el cuarto salto, Vercel rechazó la
+auto-llamada: `worker dispatch was rejected { chainIndex: 3, status: 508, url:
+'https://www.genscore.es/api/cron/run-audit' }`. La URL ya estaba limpia
+(SITE-URL-SLASH-1, §241), y esa misma mañana la cadena se había cortado igual
+en los saltos 3 y 5 con la URL vieja. Conclusión: el 508 no era sólo la barra
+doble; Vercel trata una cadena de llamadas de la web a sí misma como bucle a
+los pocos saltos. No documenta el umbral, así que se trata como tope fijo y
+bajo. El proyecto de la prueba se quedó sin auditoría, en cola hasta el cron
+de las 07:00 del día siguiente — que también se corta a los pocos saltos, así
+que con la cola larga ni siquiera ese la garantizaba.
+
+**Qué se decidió.** `/api/cron/run-audit` pasa de `0 7 * * *` a
+`*/10 * * * *`. Un disparo del cron no es una auto-llamada: cada uno arranca
+una cadena nueva con el contador a cero, así que la cola se vacía en minutos
+aunque cada cadena muera al tercer salto. La cadena se queda como acelerador
+(sus primeros saltos sí entregan). Sin migración y sin código de producto:
+`vercel.json`, comentarios, `environment-contract.md`, la regla de
+`web-audit.md` y otra en `scan.md`. `vercel-crons.test.ts` fija el
+horario nuevo, así que volver al diario tiene que ser una decisión explícita.
+
+**Coste.** ~144 invocaciones al día. Una pasada sin trabajo son dos lecturas
+(backfill acotado a `BACKFILL_LIMIT × 10` runs recientes, y el claim); no
+gasta LLM. Los reclamos son UPDATE atómicos condicionales, así que solapar el
+cron con una cadena en curso no duplica auditorías.
+
+**Pendiente.**
+- **La cadena del escaneo (`/api/scan/continue`) puede tener el mismo tope.**
+  En la prueba no se vio porque el navegador también empujaba el escaneo.
+  Fase siguiente del plan: leer los registros del barrido de las 06:00 UTC
+  del 2026-10-10; si aparecen 508 en `scan continuation was rejected` con URL
+  limpia, el mismo arreglo (un cron que retome runs con trabajo pendiente),
+  con su propio PR. Hoy la red es el vigilante de 15 min con hasta 3
+  reanudaciones (§227, §228).
+- **Fuera de alcance:** sustituir las auto-llamadas por una cola de Vercel.
+  Más limpio, obra mayor, no hace falta todavía.

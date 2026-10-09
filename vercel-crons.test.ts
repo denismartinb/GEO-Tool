@@ -45,11 +45,13 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
   },
   {
     path: "/api/cron/run-audit",
-    schedule: "0 7 * * *",
-    // The hour gap is load-bearing, not cosmetic: the sweep is the safety net
-    // for audits queued by the day's automatic scans, so it has to run after
-    // those scans have finished queueing them.
-    why: "post-scan web audit queue, one hour after the scan sweep — ADR 0027"
+    schedule: "*/10 * * * *",
+    // Every 10 minutes, not daily (AUDIT-CRON-DRAIN-1, log §260): Vercel
+    // rejects a chain of self-calls with 508 after a few hops, so the worker's
+    // own self-chain cannot drain the queue. Each cron firing starts a fresh
+    // chain; back on a daily schedule, every audit past the first few hops
+    // waits until the next morning.
+    why: "post-scan web audit queue, drained every 10 min — ADR 0027, log §260"
   },
   {
     path: "/api/cron/lifecycle-emails",

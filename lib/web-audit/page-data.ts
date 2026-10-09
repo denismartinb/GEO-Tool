@@ -329,7 +329,7 @@ export async function loadWebAuditPageData({
 
   // Wake the worker when this project has an audit owed to it. Until WEB-AUDIT-
   // DRIVE-1 the only things that could start one were the `after()` dispatch at
-  // the end of a scan and the 07:00 daily cron, so a lost dispatch meant the
+  // the end of a scan and the 07:00 daily cron (every 10 minutes since log §260), so a lost dispatch meant the
   // screen sat on "Auditando…" until the next morning — and on a preview
   // deployment, where Vercel runs no crons at all, forever (2026-08-07).
   //
