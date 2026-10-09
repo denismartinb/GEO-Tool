@@ -322,8 +322,8 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
   );
 }
 
-export async function sendTrialEndedEmail(to: string): Promise<void> {
-  await sendEmail(
+export async function sendTrialEndedEmail(to: string): Promise<boolean> {
+  return sendEmail(
     to,
     "Tu prueba de Pro ha terminado",
     wrap(
