@@ -192,8 +192,8 @@ describe("createCheckoutSession", () => {
         // the internal `host` Vercel rewrites requests to, and not
         // NEXT_PUBLIC_SITE_URL (production) — both previously sent a Preview
         // deployment's checkout back to the wrong origin after payment.
-        success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=success",
-        cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=cancelled",
+        success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings?checkout=success#plan",
+        cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings?checkout=cancelled#plan",
         mode: "subscription",
         client_reference_id: USER_ID,
         line_items: [{ price: "price_pro_test", quantity: 1 }],
@@ -309,8 +309,8 @@ describe("createCheckoutSession", () => {
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        success_url: "https://www.genscore.es/dashboard/settings/billing?checkout=success",
-        cancel_url: "https://www.genscore.es/dashboard/settings/billing?checkout=cancelled"
+        success_url: "https://www.genscore.es/dashboard/settings?checkout=success#plan",
+        cancel_url: "https://www.genscore.es/dashboard/settings?checkout=cancelled#plan"
       })
     );
 
