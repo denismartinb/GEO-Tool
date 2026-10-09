@@ -16,7 +16,7 @@ import {
   type SectorConfig
 } from "@/lib/studies/sector-study";
 import { formatAuditSection, type ProspectAudit } from "@/lib/studies/prospect-audit-format";
-import { prepareBrandStudy, runProspectAuditAction, runSectorStudyStep, type StudySpec } from "./actions";
+import { computeBrandCompetitors, prepareBrandStudy, runProspectAuditAction, runSectorStudyStep, type StudySpec } from "./actions";
 
 type SectorOption = { id: string; label: string; promptCount: number };
 
@@ -29,6 +29,13 @@ const CUSTOM_ERRORS: Record<string, string> = {
   bad_prompt_length: `Cada pregunta debe tener entre 5 y ${CUSTOM_STUDY_LIMITS.maxPromptChars} caracteres.`,
   too_many_competitors: `Como mucho ${CUSTOM_STUDY_LIMITS.maxCompetitors} competidores.`,
   bad_competitor: `Cada competidor, como mucho ${CUSTOM_STUDY_LIMITS.maxNameChars} caracteres.`
+};
+
+const COMPETITOR_NOTE: Record<"ok" | "empty" | "failed", (count: number) => string> = {
+  ok: (count) => `${count} competidores calculados como en el alta de un proyecto.`,
+  empty: () =>
+    "El sugeridor de competidores no devolvió ninguno: escribe alguno a mano o lanza igual (el informe ya ordena las marcas que nombran los motores).",
+  failed: () => "El sugeridor de competidores falló (proveedor): prueba otra vez o escríbelos a mano."
 };
 
 const PREPARE_ERRORS: Record<string, string> = {
@@ -95,7 +102,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
       setPromptsText(prepared.prompts.join("\n"));
       setCompetitorsText(prepared.competitors.join("\n"));
       setPrepareNote(
-        `Perfil detectado: ${prepared.profile}. ${prepared.prompts.length} preguntas y ${prepared.competitors.length} competidores sugeridos; revísalos antes de lanzar.`
+        `Perfil detectado: ${prepared.profile}. ${prepared.prompts.length} preguntas sugeridas. ${COMPETITOR_NOTE[prepared.competitorsStatus](prepared.competitors.length)} Revísalo antes de lanzar.`
       );
     } catch {
       setPrepareNote("La preparación falló (tiempo agotado o error). Prueba otra vez.");
@@ -107,13 +114,31 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   async function run() {
     if (!config || engines.length === 0) return;
     setRunning(true);
+    let study = config;
+    if (mode === "custom" && study.seedBrands.length === 0) {
+      // Same as the product: competitors are computed, not left to the operator.
+      setPrepareNote("Calculando competidores…");
+      const computed = await computeBrandCompetitors({ domain, brand }).catch(() => null);
+      if (computed?.ok && computed.competitors.length > 0) {
+        setCompetitorsText(computed.competitors.join("\n"));
+        const rebuilt = buildCustomStudy({ domain, brand, prompts: lines(promptsText), competitors: computed.competitors });
+        if (rebuilt.ok) study = rebuilt.sector;
+        setPrepareNote(COMPETITOR_NOTE.ok(computed.competitors.length));
+      } else {
+        setPrepareNote(
+          computed?.ok ? COMPETITOR_NOTE[computed.status](0) : `No se pudieron calcular competidores (${computed ? PREPARE_ERRORS[computed.error] ?? computed.error : "error"}). El estudio sigue sin ellos.`
+        );
+      }
+    }
+    const specToRun: StudySpec =
+      mode === "custom" ? { kind: "custom", domain, brand, prompts: study.prompts, competitors: study.seedBrands } : spec;
     setResult(null);
     setDone(0);
     setStepErrors(0);
 
     const steps: Array<{ promptIndex: number; sample: number }> = [];
     for (let sample = 1; sample <= samples; sample += 1) {
-      for (let promptIndex = 0; promptIndex < config.prompts.length; promptIndex += 1) steps.push({ promptIndex, sample });
+      for (let promptIndex = 0; promptIndex < study.prompts.length; promptIndex += 1) steps.push({ promptIndex, sample });
     }
     setTotal(steps.length);
 
@@ -126,7 +151,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
         while (cursor < steps.length) {
           const step = steps[cursor++];
           try {
-            records.push(...(await runSectorStudyStep({ spec, engines, ...step })));
+            records.push(...(await runSectorStudyStep({ spec: specToRun, engines, ...step })));
           } catch {
             // A step that died (timeout, deploy) still counts: its answers are
             // failures, never answers that named nobody.
@@ -141,7 +166,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
     );
 
     records.sort((a, b) => a.sample - b.sample || a.promptIndex - b.promptIndex || a.engine.localeCompare(b.engine));
-    const rows = aggregateBrands(records, studySeeds(config));
+    const rows = aggregateBrands(records, studySeeds(study));
     const date = new Date().toISOString().slice(0, 10);
     const audit = await auditPromise;
     const auditSection =
@@ -150,9 +175,9 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
         : "";
     setResult({
       date,
-      slug: config.id,
-      report: formatReport({ sector: config, records, rows, samples, date, engines }) + auditSection,
-      json: `${JSON.stringify({ sector: config, samples, engines, date, rows, citedDomains: aggregateCitedDomains(records), records, audit }, null, 2)}\n`
+      slug: study.id,
+      report: formatReport({ sector: study, records, rows, samples, date, engines }) + auditSection,
+      json: `${JSON.stringify({ sector: study, samples, engines, date, rows, citedDomains: aggregateCitedDomains(records), records, audit }, null, 2)}\n`
     });
     setRunning(false);
   }
@@ -216,7 +241,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
             <textarea rows={10} value={promptsText} onChange={(event) => setPromptsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
           </label>
           <label>
-            Competidores, uno por línea (opcional)
+            Competidores, uno por línea (si lo dejas vacío, se calculan al lanzar)
             <textarea rows={6} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
           </label>
           {custom && !custom.ok && (domain || promptsText) ? <p className="adm-note">{CUSTOM_ERRORS[custom.error] ?? custom.error}</p> : null}

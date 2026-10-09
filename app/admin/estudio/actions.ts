@@ -77,7 +77,16 @@ export async function runSectorStudyStep(input: {
 }
 
 export type PreparedBrandStudy =
-  | { ok: true; domain: string; brand: string; profile: string; competitors: string[]; prompts: string[] }
+  | {
+      ok: true;
+      domain: string;
+      brand: string;
+      profile: string;
+      competitors: string[];
+      /** "failed" = the suggester threw; "empty" = it answered with nobody. Both are said on screen, never a silent empty box. */
+      competitorsStatus: "ok" | "empty" | "failed";
+      prompts: string[];
+    }
   | { ok: false; error: string };
 
 /**
@@ -114,9 +123,7 @@ export async function prepareBrandStudy(input: {
   const profile = context.profile;
 
   const [competitors, prompts] = await Promise.all([
-    suggestCompetitors({ brand, domain, country, language, profile, limit: 8 })
-      .then((rows) => rows.filter((row) => !isGenericEntity(row)))
-      .catch(() => []),
+    suggestStudyCompetitors({ brand, domain, country, language, profile }),
     (async () => {
       const service = (await suggestPrompts({ brand, domain, country, language, profile, limit: Math.min(promptCount - localCount, 15) }).catch(() => [])).map(
         (prompt) => prompt.text
@@ -150,9 +157,50 @@ export async function prepareBrandStudy(input: {
     domain,
     brand,
     profile: `${profile.whatItSells} · ${profile.sector} / ${profile.subSector} · ${profile.geographicScope}`,
-    competitors: competitors.map((competitor) => competitor.name).slice(0, CUSTOM_STUDY_LIMITS.maxCompetitors),
+    competitors: competitors.names,
+    competitorsStatus: competitors.status,
     prompts: prompts.filter((prompt) => prompt.length >= 5 && prompt.length <= CUSTOM_STUDY_LIMITS.maxPromptChars)
   };
+}
+
+/**
+ * Competitors exactly as onboarding computes them: `suggestCompetitors` over
+ * the business profile (grounded), then entity hygiene. That suggester
+ * swallows provider errors and answers [] (it reports the incident itself),
+ * so "failed" here only covers a throw; an empty answer is reported as
+ * "empty" and the screen says so.
+ */
+async function suggestStudyCompetitors(input: {
+  brand: string;
+  domain: string;
+  country: string;
+  language: string;
+  profile: Parameters<typeof suggestCompetitors>[0]["profile"];
+}): Promise<{ names: string[]; status: "ok" | "empty" | "failed" }> {
+  try {
+    const rows = (await suggestCompetitors({ ...input, limit: 8 })).filter((row) => !isGenericEntity(row));
+    const names = rows.map((row) => row.name).slice(0, CUSTOM_STUDY_LIMITS.maxCompetitors);
+    return { names, status: names.length ? "ok" : "empty" };
+  } catch {
+    return { names: [], status: "failed" };
+  }
+}
+
+/** Competitors only — what "Lanzar" calls when the operator left the box empty, so a study never runs without them by accident. */
+export async function computeBrandCompetitors(input: {
+  domain: string;
+  brand?: string;
+}): Promise<{ ok: true; competitors: string[]; status: "ok" | "empty" | "failed" } | { ok: false; error: string }> {
+  await requireOperator("/admin/estudio");
+  const domain = normalizeStudyDomain(String(input.domain ?? ""));
+  if (!domain) return { ok: false, error: "bad_domain" };
+  const brand = (String(input.brand ?? "").trim() || brandFromDomain(domain)).slice(0, CUSTOM_STUDY_LIMITS.maxNameChars);
+  const context = await resolveBusinessContext({ domain, country: "ES", language: "es" }).catch(
+    () => ({ status: "unidentified", reason: "profile_failed" }) as const
+  );
+  if (context.status === "unidentified") return { ok: false, error: context.reason };
+  const result = await suggestStudyCompetitors({ brand, domain, country: "ES", language: "es", profile: context.profile });
+  return { ok: true, competitors: result.names, status: result.status };
 }
 
 /** Technical audit of the domain's homepage + robots/llms/sitemap. No LLM, no rows written. */
