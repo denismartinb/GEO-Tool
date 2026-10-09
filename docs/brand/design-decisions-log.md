@@ -21530,3 +21530,56 @@ estaba previsto; los dos se corrigieron en Stripe, sin tocar código.
 creó los cupones con `max_redemptions` 38 y `FOUNDER_SLOTS` pasa a 38, así que
 la web enseña «quedan 38» y la cifra baja con cada canje real. No es un número
 de pantalla: es el límite real de los cupones en Stripe.
+
+## 243. TRIAL-ONLY-1: sin plan Free — 7 días de Pro y, al terminar, cuenta en solo lectura (2026-10-09)
+
+**Decisión del fundador** (2026-10-09, «el plan free no aporta nada, solo
+complica el modelo… cuando se termine, se apaga el escaneo automático y se
+puede acceder solo en lectura»). Aprobó la propuesta con un «sí».
+
+**Qué cambia.**
+- `free` deja de venderse. Sigue existiendo como id interno (tipo `Plan`,
+  `check` de `profiles.current_plan`, webhook al cancelar), porque es el
+  estado de una cuenta sin plan: prueba terminada sin contratar o suscripción
+  cancelada. `SELLABLE_PLANS` (`app/pricing/plans-data.ts`) es lo que se
+  enseña: /precios (tarjetas a 3 columnas, matriz sin columna Free), el modal
+  «Cambiar de plan», `/docs/planes-y-limites`, el kit off-site y el
+  `?openPlan=` de Ajustes. Su ficha pasa a «Sin plan · Solo lectura».
+- **Solo lectura**: `createPendingScanRunCore` rechaza todo escaneo de una
+  cuenta `free` (antes dejaba uno completado), manual, reintento o cron, con el
+  plan EFECTIVO de `resolveSystemPlanId`; `createProjectCore` no crea
+  dominios; `suggestProjectSetup` no gasta llamadas de Gemini; la banda
+  superior (`kind: "free"`) sale siempre, sin X y sin que la calle el switch
+  de `/debug`, con «Elegir plan» directo al modal; el botón de escanear
+  explica el motivo en vez de «inténtalo de nuevo».
+- **El bloqueo por exceso de dominios no se aplica a `free`**
+  (`getDomainOverage`, `plan-billing-section`, borrado de dominios). Antes
+  cerraba la consola entera a toda prueba que terminara con 2+ dominios, que es
+  justo lo contrario de «puedes ver tus datos». Sigue para Pro → Starter.
+- **La prueba se queda en 7 días**, no 14: es lo que usan Otterly, Peec,
+  Semrush y Scrunch, la duración mueve poco la conversión, y 14 días empujaría
+  la primera venta más allá del objetivo del 24-10.
+- El comprobador anónimo `/gratis/aparece-mi-marca-en-chatgpt` queda como
+  único «gratis» sin registro.
+- Copy: FAQ de /precios y de la portada, correo de fin de prueba, D5
+  (tabla «Pro, hoy» frente a «Sin plan»: escaneos ninguno, datos en solo
+  lectura), recuperación D+3/D+10 («no se escanea», no «no se escanea a
+  diario»), aviso de fin de prueba en la consola, docs, blog, comparativas,
+  `/que-es-genscore`, `llms.txt`, el `SoftwareApplication` (la oferta de 0 €
+  pasa a «desde Starter») y los términos. Las comparativas pierden la ventaja
+  «única con plan gratuito permanente» y no reclaman exclusividad de la prueba.
+- Se retira la idea de «Free con un escaneo al mes» (pendiente en §237).
+
+**Regla de premisa (se retira un camino).** Se retira el escaneo único del
+plan Free. Premisa: toda alta nace con 7 días de Pro (`handle_new_user`,
+`0017_reverse_trial.sql`), así que el primer escaneo siempre ocurre en la
+prueba. Lo verifica hoy esa migración y los tests de `run-creation.test.ts`.
+Si la premisa fallara (una alta sin prueba), esa cuenta vería la banda de
+solo lectura y el modal de planes, nunca un callejón sin salida: la salida es
+contratar.
+
+**Pendiente o conocido.**
+- Las cuentas que ya están en `free` hoy (pruebas viejas) pasan a solo
+  lectura sin aviso propio; la banda se lo explica al entrar.
+- La consola de operador sigue llamando «Free» a ese estado.
+- Ninguna migración: `free` sigue en el `check` de la columna.

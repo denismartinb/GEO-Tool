@@ -440,7 +440,7 @@ export async function sendTrialEndedOfferEmail(
     ? input.pro.promo
       ? "Si quieres retomarlo donde lo dejaste, el precio fundador sigue disponible mientras queden plazas:"
       : "Si quieres retomarlo donde lo dejaste, puedes volver a Pro cuando quieras:"
-    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea a diario. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
+    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea: tus datos siguen aquí, pero no se actualizan. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
 
   const html = wrap(
     `
@@ -499,8 +499,8 @@ export async function sendWinbackD3Email(
     ${versusBars(rows, `Respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
     ${paragraph(
       behind
-        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
-        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea a diario, así que no sabes si alguien te ha adelantado desde entonces.`
+        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
+        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si alguien te ha adelantado desde entonces.`
     )}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "winback_d3"), "Volver a medir a diario")}
