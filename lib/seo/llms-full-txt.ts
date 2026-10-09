@@ -179,7 +179,7 @@ ${GEO_SCORE_DEFINITION}`);
 
   sections.push(`## Precios
 
-URL: ${url("/pricing")}
+URL: ${url("/precios")}
 
 Todas las cuentas nuevas empiezan con 7 días de Pro gratis, sin tarjeta.
 

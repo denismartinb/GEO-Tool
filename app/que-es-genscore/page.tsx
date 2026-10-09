@@ -203,7 +203,7 @@ export default function QueEsGenScorePage() {
           al respecto: desde autónomos y pymes —la prueba de 7 días no pide tarjeta ni pasar por ventas—
           hasta agencias que siguen varios dominios de cliente a la vez. El producto está en castellano,
           interfaz y soporte, que en esta categoría es la excepción y no la norma. Puedes ver los planes
-          y sus límites reales en <Link href="/pricing">Precios</Link>, y cómo se compara con otras
+          y sus límites reales en <Link href="/precios">Precios</Link>, y cómo se compara con otras
           herramientas en <Link href="/comparativas">Comparativas</Link>.
         </p>
 

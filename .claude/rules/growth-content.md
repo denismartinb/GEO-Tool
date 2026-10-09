@@ -255,8 +255,8 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
   exportar `metadata`, y la página se queda sin título, sin descripción y sin
   canonical propios sin que nada falle: es exactamente lo que les pasó a la
-  home y a `/pricing`. El patrón es página de servidor con la metadata +
-  componente cliente aparte (log §46; `app/pricing/pricing-metadata.test.ts`).
+  home y a `/precios`. El patrón es página de servidor con la metadata +
+  componente cliente aparte (log §46; `app/precios/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
@@ -269,7 +269,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `openGraph` de una página **reemplaza** el del layout raíz en vez de
   fusionarse campo a campo, así que declarar solo `title`/`description` le quita
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
-  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
+  enteras, sin ningún error visible. Pasó en la home y en `/precios` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
   renderiza SVG: la tarjeta sale en blanco, y `ogImageFor()` filtra por `RASTER`
   justo por eso (log §47). **Desde el 2026-08-20 ninguna portada del blog es

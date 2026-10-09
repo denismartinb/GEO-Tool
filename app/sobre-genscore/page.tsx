@@ -88,7 +88,7 @@ export default function SobreGenScorePage() {
         <p>
           Si quieres ver el producto antes de escribirnos, empieza por{" "}
           <Link href="/que-es-genscore">qué es GenScore</Link> o mira los planes en{" "}
-          <Link href="/pricing">Precios</Link>.
+          <Link href="/precios">Precios</Link>.
         </p>
 
         <ArticleCta

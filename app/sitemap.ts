@@ -40,7 +40,7 @@ const BLOG_FIRST_PUBLISHED = "2026-07-12";
 const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   // HOME-SEO-AUDIT-1: la home venía declarando 2026-07-23 mientras HOME-2026-08
   // la reescribía entera entre el 22 y el 25-08 (log §141-§159) — una fecha de
-  // frescura contradicha por el propio trabajo del PR. `/pricing` igual, con
+  // frescura contradicha por el propio trabajo del PR. `/precios` igual, con
   // PRICING-PROMO-1 encima el 24 y el 25-08 (log §148, §149, §152). `/geo` no
   // se toca: sin cambios de contenido reales desde HEADER-FLAT-1 (sólo
   // cabecera compartida), subirla ahí sería la misma frescura falsa que este
@@ -51,7 +51,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/sobre-genscore", lastModified: "2026-10-09" },
-  { path: "/pricing", lastModified: "2026-08-25" },
+  { path: "/precios", lastModified: "2026-08-25" },
   { path: "/blog", lastModified: latestPostDate(BLOG_POSTS) ?? BLOG_FIRST_PUBLISHED },
   { path: "/docs", lastModified: DOCS_LAST_MODIFIED },
   { path: "/glosario", lastModified: GLOSSARY_LAST_MODIFIED },

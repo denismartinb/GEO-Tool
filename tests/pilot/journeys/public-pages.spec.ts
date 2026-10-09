@@ -14,7 +14,7 @@ import { assertPageIsHealthy, captureInteraction, visitAsUser } from "../support
  * public page and is exactly what would surface a real bug if one of these
  * routes ever started bouncing a logged-in visitor to /login unexpectedly.
  *
- * Does NOT cover `/` or `/pricing`: both are client components that cannot
+ * Does NOT cover `/` or `/precios`: both are client components that cannot
  * export per-page `metadata` yet (see docs/launch-plan.md, Fase 7b ledger) —
  * add them here once a future phase gives them their own canonical.
  */

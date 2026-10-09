@@ -32,7 +32,7 @@ const NAV_LINKS = [
   { href: "/geo", label: "Qué es GEO" },
   { href: "/blog", label: "Blog" },
   { href: "/comparativas", label: "Comparativas" },
-  { href: "/pricing", label: "Precios" }
+  { href: "/precios", label: "Precios" }
 ];
 
 /**
@@ -43,7 +43,7 @@ const NAV_LINKS = [
 const SHORTCUTS = [
   ...MARKETING_CONTENT_LINKS.filter((l) => l.href !== "/blog"),
   { href: "/geo", label: "Qué es el GEO" },
-  { href: "/pricing", label: "Precios" }
+  { href: "/precios", label: "Precios" }
 ];
 
 export function NotFoundMission() {
@@ -123,7 +123,7 @@ export function NotFoundMission() {
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}

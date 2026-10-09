@@ -75,7 +75,7 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
             <Link href="/gratis/aparece-mi-marca-en-chatgpt" className="fr-btn">
               Mientras, prueba el comprobador gratis
             </Link>
-            <Link href="/pricing" className="fr-btn fr-btn--ghost">
+            <Link href="/precios" className="fr-btn fr-btn--ghost">
               Ver precios
             </Link>
           </div>

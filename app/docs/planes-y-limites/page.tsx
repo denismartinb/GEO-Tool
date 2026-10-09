@@ -71,7 +71,7 @@ export default function PlanesYLimitesPage() {
       </ul>
 
       <p>
-        Precios y comparativa completa de funciones en <Link href="/pricing">Precios</Link>.
+        Precios y comparativa completa de funciones en <Link href="/precios">Precios</Link>.
       </p>
     </DocsPageShell>
   );

@@ -11,14 +11,19 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "1mb"
     }
   },
-  // GEO-SELF-1 Fase 1: the team, the docs and the code comments call the
-  // pricing page "/precios" (e.g. log §236, §243), but the route is `/pricing`,
-  // so anyone — or any AI answer — that guessed the Spanish URL got a 404. A permanent
-  // redirect keeps `/pricing` as the one canonical URL. This is NOT the
+  // GEO-SELF-1 Fase 1 (log §252): the public pricing page lives at the
+  // Spanish URL `/precios` (founder decision 2026-10-09) — the one canonical
+  // URL, the one every internal link and the menu point to. `/pricing`, its
+  // old route, answers with a permanent redirect so old links, bookmarks,
+  // search results and AI answers still land; Next keeps the query string
+  // (`/pricing?openPlan=pro` → `/precios?openPlan=pro`). This is NOT the
   // apex → www redirect `docs/environment-contract.md` says must stay in
   // Vercel's domain config; that one still lives there.
   async redirects() {
-    return [{ source: "/precios", destination: "/pricing", permanent: true }];
+    return [
+      { source: "/pricing", destination: "/precios", permanent: true },
+      { source: "/pricing/:path*", destination: "/precios/:path*", permanent: true }
+    ];
   }
 };
 

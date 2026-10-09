@@ -69,7 +69,7 @@ describe("buildLlmsTxt", () => {
   it("enlaza «Quiénes somos» y la versión completa (GEO-SELF-1)", () => {
     expect(content).toContain(`${SITE_URL}/sobre-genscore`);
     expect(content).toContain(`${SITE_URL}/llms-full.txt`);
-    expect(content).toContain(`${SITE_URL}/pricing`);
+    expect(content).toContain(`${SITE_URL}/precios`);
   });
 
   it("describe el GEO Score con la preparación técnica de la web, no con los cuatro componentes de v3", () => {

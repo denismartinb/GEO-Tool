@@ -59,7 +59,7 @@ export async function signup(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent(message)}`);
   }
 
-  // Every account starts on a 7-day Pro trial regardless of which /pricing
+  // Every account starts on a 7-day Pro trial regardless of which /precios
   // CTA was clicked (0017_reverse_trial.sql's handle_new_user) — there is no
   // per-plan signup choice anymore.
   //

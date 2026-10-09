@@ -67,7 +67,7 @@ export function LegalPageShell({
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}

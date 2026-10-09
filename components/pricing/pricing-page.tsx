@@ -145,7 +145,7 @@ function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
 }
 
 /**
- * `/pricing` es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
+ * `/precios` es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
  * V4), mismo caso que la landing: era cliente entera por el acordeón de
  * preguntas, que ahora vive aislado en `PricingFaq`.
  *
@@ -164,18 +164,18 @@ export async function PricingPage() {
   return (
     <div className="lp">
       {/* HOME-SEO-AUDIT-1 (fundador, 2026-08-25): se retira este banner
-          propio de `/pricing`. Desde PROMO-EVERYWHERE-1 (log §30 más abajo,
+          propio de `/precios`. Desde PROMO-EVERYWHERE-1 (log §30 más abajo,
           §159 en el mapa de zonas de CLAUDE.md) `PublicHeader` ya monta la
           tira de promoción común (`.lp-promo`) en TODAS las superficies
           públicas, incluida ésta. Con el cupón de Stripe real configurado en
-          el entorno, las dos se pintaban a la vez sobre `/pricing` — la común
+          el entorno, las dos se pintaban a la vez sobre `/precios` — la común
           y ésta, ambas anunciando el mismo descuento con textos distintos.
           El fundador la vio duplicada en el preview y pidió quitar ésta,
           quedándose con la común (`docs/brand/design-decisions-log.md` §31,
           "importante mantener la tira comun en /precios"). */}
 
       {/* NAV */}
-      <PublicHeader activeHref="/pricing" />
+      <PublicHeader activeHref="/precios" />
 
       {/* HERO */}
       <header className="lp-hero price-hero">
@@ -284,7 +284,7 @@ export async function PricingPage() {
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}

@@ -70,7 +70,7 @@ export function buildLlmsTxt(): string {
 ${line("Qué es GenScore", "/que-es-genscore", "qué es el producto, qué mide y en qué se diferencia del SEO.")}
 ${line("Quiénes somos", "/sobre-genscore", "quién hace GenScore, desde dónde, cómo mide y cómo contactar.")}
 ${line("Qué es el GEO", "/geo", "guía visual de Generative Engine Optimization.")}
-${line("Precios", "/pricing", "planes Starter, Pro y Agencia, con 7 días de Pro gratis.")}
+${line("Precios", "/precios", "planes Starter, Pro y Agencia, con 7 días de Pro gratis.")}
 ${line("¿Aparece tu marca en ChatGPT?", "/gratis/aparece-mi-marca-en-chatgpt", "comprobación real y anónima contra ChatGPT, sin registro.")}
 ${line("Prueba gratis", "/signup", "registro con 7 días de prueba de Pro.")}
 ${line("Versión completa de este fichero", "/llms-full.txt", "el contenido clave del sitio en texto plano, en un solo documento.")}`

@@ -221,7 +221,7 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   }
 
   // FOUNDER-PRICE-1: the founder coupon only when getActivePromoPlanIds says
-  // so — the same source /pricing, the console and the emails read, so the
+  // so — the same source /precios, the console and the emails read, so the
   // shown price and the charged price cannot drift apart.
   const promoCouponId = (await getActivePromoPlanIds()).includes(planId) ? getPromoCouponIdForPlan(planId) : null;
 

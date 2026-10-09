@@ -105,7 +105,7 @@ export const config = {
      *   Every request to this Edge Function is a billed Observability event
      *   regardless of what the handler does.
      *
-     *   Deliberately does NOT include `/`, `/blog` or `/pricing`:
+     *   Deliberately does NOT include `/`, `/blog` or `/precios`:
      *   `middleware.test.ts` (PRELAUNCH-HARDENING-1 Fase Q4) asserts those
      *   three stay covered, and that invariant isn't revisited here — this
      *   phase only takes the routes the existing test doesn't protect.

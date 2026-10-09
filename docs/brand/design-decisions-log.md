@@ -22246,7 +22246,7 @@ los informes de prospección.
   técnico que GEO-SCORE-V4 añadió el 2026-08-05 (ADR 0033). Ahora abre con
   `CANONICAL_DEFINITION` y enumera las cinco cosas que mira el score —sin
   decir cuántas son ni cómo se combinan (log §75, §76)—. Enlaza además
-  `/sobre-genscore` y `/llms-full.txt`. «Precios» sigue en `/pricing`.
+  `/sobre-genscore` y `/llms-full.txt`. «Precios» apunta a `/precios` (ver abajo).
 - **`/llms-full.txt`, nuevo.** El índice dice qué páginas hay; éste da el
   contenido en un solo documento: preguntas de `/que-es-genscore`, «Quiénes
   somos», la definición del GEO Score, los planes que se venden
@@ -22265,10 +22265,24 @@ los informes de prospección.
   `/blog` declaraba 2026-07-12 con artículos publicados hasta el 2026-10-09, y
   `PILLAR_LAST_MODIFIED` ya se había quedado rancio una vez (SEO-POS-1 S8, 2026-08-14).
   Desaparece `PILLAR_LAST_MODIFIED`.
-- **`/precios` → `/pricing`, redirección permanente** en `next.config.ts`.
+- ~~**`/precios` → `/pricing`, redirección permanente** en `next.config.ts`.
   Así llama el equipo a la página y así la escribe cualquiera en castellano;
-  era un 404. No es la redirección apex → www, que sigue en Vercel
-  (`docs/environment-contract.md`).
+  era un 404.~~ Superado en este mismo PR por el párrafo siguiente.
+- **`/precios` es la URL canónica de la página de precios; `/pricing` hace
+  308 → `/precios`** (decisión del fundador, 2026-10-09, en esta misma rama
+  antes del merge). Se invierte la redirección del primer commit: la página
+  se sirve en `app/precios/page.tsx` (con `pricing-metadata.test.ts`), y
+  canonical, `og:url`, sitemap, `llms.txt`/`llms-full.txt`, el menú, los
+  pies, los CTA, las comparativas, docs, la 404, la consola y el piloto
+  enlazan directamente a `/precios`, sin salto de redirección. Los módulos
+  siguen donde estaban (`app/pricing/plans-data.ts`,
+  `app/pricing/faq-schema.test.ts`, `components/pricing/**`): sólo cambió la
+  URL, no los imports. `next.config.ts` redirige `/pricing` y
+  `/pricing/:path*`; la query se conserva (`/pricing?openPlan=pro` →
+  `/precios?openPlan=pro`), lo fija `next-config.test.ts`. Las URLs de
+  vuelta de Stripe nunca apuntaron a la página de precios (van a
+  `/dashboard/settings/billing`), así que no cambian. No es la redirección
+  apex → www, que sigue en Vercel (`docs/environment-contract.md`).
 - **IndexNow.** Ruta `/indexnow-key.txt` (404 sin `INDEXNOW_KEY`), helper
   `lib/seo/indexnow.ts` (no hace nada sin clave, y un no-2xx cuenta como
   fallo) y `pnpm indexnow:ping`, que envía todas las URLs del sitemap. **No
@@ -22330,6 +22344,7 @@ los informes de prospección.
 `lib/seo/llms-txt.ts` (+test), `lib/seo/llms-full-txt.ts` (+test),
 `app/llms-full.txt/route.ts`, `app/sitemap.ts` (+test),
 `lib/seo/sitemap-dates.ts`, `next.config.ts` (+`next-config.test.ts`),
+`app/precios/page.tsx` (+`pricing-metadata.test.ts`, antes en `app/pricing/`),
 `lib/seo/indexnow.ts` (+test), `app/indexnow-key.txt/route.ts`,
 `scripts/indexnow-ping.ts`, `app/layout.tsx`, `lib/env-schema.ts`,
 `middleware.ts`, `app/sobre-genscore/page.tsx`, `lib/brand/about.ts`,

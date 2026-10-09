@@ -733,7 +733,7 @@ rel="canonical">` matches its expected absolute URL, and the blog pages'
 XML content type, and a well-formed `<rss version="2.0">` body linking back
 to at least one post.
 
-Does not cover `/` or `/pricing` — both are client components that cannot
+Does not cover `/` or `/precios` — both are client components that cannot
 export per-page `metadata` yet (see `docs/launch-plan.md`, Fase 7b ledger).
 Add them here once a future phase gives them their own canonical.
 
@@ -777,7 +777,7 @@ follow`) so the self-check keeps exercising these two journeys instead of
 Does not cover the plan's original description of "reset-password confirm
 step" — that screen needs a valid reset token to reach, which the pilot has no
 way to mint without a mailbox; stays a manual founder smoke, same limit as
-signup email confirmation below. `/pricing` and the settings billing fold,
+signup email confirmation below. `/precios` and the settings billing fold,
 also named in the original PRELAUNCH-HARDENING-1 Fase A plan text, turned out
 to already be covered by `landing.spec.ts` and `settings.spec.ts` respectively
 — found stale during this phase's Task Intake, not new coverage added here.

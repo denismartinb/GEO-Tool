@@ -9,7 +9,7 @@
  * exacto de motores adicionales, duración del trial) — esas cifras NO se
  * publican como hechos, solo lo que dos o más fuentes independientes
  * corroboran. Los precios y límites de GenScore vienen de
- * app/pricing/plans-data.ts, la misma fuente que usa /pricing.
+ * app/pricing/plans-data.ts, la misma fuente que usa /precios.
  */
 import { PLANS } from "@/app/pricing/plans-data";
 
