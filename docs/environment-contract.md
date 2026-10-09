@@ -97,6 +97,7 @@ the model family on their own (`geminiGenerationTuning`).
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
 | `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
+| `SCAN_EXTRACTION_CLAUDE_MODEL` | No — **unset keeps each answer extracted by its own provider** | Vercel Production, optional | A cheap Claude model id (intended: `claude-haiku-5-5`). When set, every scan row's structured extraction goes to that one model; generation is untouched. Set only after `pnpm bench:extraction` agrees with production; unset to roll back (EXTRACTION-SINGLE-MODEL-1, log §253) |
 
 ### OpenAI (active scan engine since 2026-07-18, ENGINES-2a)
 

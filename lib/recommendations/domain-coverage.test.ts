@@ -350,6 +350,62 @@ describe("auditDomainCoverageCore", () => {
     expect(deps._service.inserted).toHaveLength(1);
   });
 
+  describe("weekly refresh of the automatic audit (COVERAGE-WEEKLY-1)", () => {
+    const recentMap = () => ({
+      scanId: "old-scan",
+      generatedAt: new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString(),
+      topics: [{ promptId: "p1", topic: "x", found: true, pages: [{ url: "https://acme.com/a", title: "A" }], note: "n" }]
+    });
+
+    it("carries a recent map onto the new scan without calling Gemini when triggered automatically", async () => {
+      const map = recentMap();
+      const deps = makeDeps({
+        cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(map), raw_content: "{}" }
+      });
+      const result = await auditDomainCoverageCore({ ...deps, trigger: "automatic" });
+      expect(mockedGemini).not.toHaveBeenCalled();
+      expect(mockedRateLimit).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.coverage.scanId).toBe("scan-1");
+        expect(result.status).toBe("completed");
+      }
+      expect(deps._service.inserted).toHaveLength(1);
+      const row = deps._service.inserted[0];
+      expect(row.status).toBe("completed");
+      expect((row.evidence_json as Record<string, unknown>).carried_from_scan_id).toBe("old-scan");
+      const persisted = JSON.parse(row.sanitized_content as string);
+      expect(persisted.scanId).toBe("scan-1");
+      expect(persisted.verifiedAt).toBe(map.generatedAt);
+    });
+
+    it("never carries for a human-triggered audit", async () => {
+      const deps = makeDeps({
+        cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(recentMap()), raw_content: "{}" }
+      });
+      await auditDomainCoverageCore(deps);
+      expect(mockedGemini).toHaveBeenCalled();
+    });
+
+    it("runs a real campaign once the evidence is a week old", async () => {
+      const stale = { ...recentMap(), generatedAt: new Date(Date.now() - 7 * 24 * 60 * 60_000).toISOString() };
+      const deps = makeDeps({
+        cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(stale), raw_content: "{}" }
+      });
+      await auditDomainCoverageCore({ ...deps, trigger: "automatic" });
+      expect(mockedGemini).toHaveBeenCalled();
+    });
+
+    it("falls back to a real campaign when persisting the carried map fails", async () => {
+      const deps = makeDeps({
+        cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(recentMap()), raw_content: "{}" },
+        insertError: { message: "boom" }
+      });
+      await runFast({ ...deps, trigger: "automatic" } as never);
+      expect(mockedGemini).toHaveBeenCalled();
+    });
+  });
+
   it("returns a sanitized rate-limit message and never calls Gemini when over the daily quota", async () => {
     mockedRateLimit.mockResolvedValue({ allowed: false, reason: "rate_limit_exceeded" } as never);
     const deps = makeDeps();

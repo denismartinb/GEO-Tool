@@ -22224,3 +22224,65 @@ los informes de prospección.
 `components/report/{geo-report.tsx,geo-report.css,report-toolbar.tsx}` (+test),
 `lib/report/{report-data,report-pages,report-tech}.ts` (+tests),
 `.claude/rules/report.md`, `.claude/rules/recommendations.md`.
+## 253. COVERAGE-WEEKLY-1 y EXTRACTION-SINGLE-MODEL-1: bajar el coste por escaneo sin tocar la nota (2026-10-09)
+
+**Contexto.** El fundador abrió una línea de optimización de costes. El análisis
+está en `docs/llm-cost-analysis-2026-08.md` §8, la adenda del 2026-10. Desde
+`gemini-3.6-flash` (ADR 0042), Google cobra cada búsqueda que lanza el modelo.
+Fuera del tramo gratis, un Pro típico cuesta unos $68/mes de LLM frente a 69 €
+de precio. El fundador aprobó estas dos palancas porque ninguna cambia la
+respuesta que se mide ni la cifra publicada. Una tercera (repetir prompts sólo
+en el primer escaneo) se descartó a su pregunta: la ventana es la mediana de
+puntuaciones por run, así que runs de menos respuestas harían la nota más
+inestable.
+
+**Decisión 1. COVERAGE-WEEKLY-1: la auditoría automática de cobertura busca la
+web propia una vez por semana.**
+- **Qué hace.** Tras cada escaneo, `auditDomainCoverageCore` con
+  `trigger: "automatic"` reutiliza el último mapa completado si se buscó hace
+  menos de `COVERAGE_REFRESH_INTERVAL_MS`: siete días menos doce horas, para que
+  la deriva del cron no lo empuje al día 8. El mapa se adjunta al escaneo nuevo
+  como fila propia de `generated_solutions`, así que todo lo que lee la
+  cobertura por escaneo sigue igual sin tocarlo: estado de auditoría de cada
+  run, informe, ventana de citación, tendencia y alertas.
+- **Qué fecha lleva el mapa.**
+  - `generatedAt` es el momento en que se adjunta. La ventana de citación y la
+    tendencia hablan del escaneo, y una fecha vieja dejaría fuera las citas del
+    escaneo actual.
+  - `verifiedAt` guarda cuándo se buscó de verdad. Las copias encadenadas
+    heredan ese campo, de modo que la renovación semanal llega igualmente.
+- **Cuándo no se reutiliza:** un prompt activo sin tema en el mapa (añadido
+  después), un tema inconcluso (un fallo se reintenta, no se esconde una
+  semana), un fallo al guardar la copia (se hace la campaña real) o una
+  auditoría pedida por una persona.
+- **Qué NO cambia.** La mitad técnica sigue corriendo tras cada escaneo: no
+  gasta LLM y es un componente de la nota (ADR 0033).
+
+**Decisión 2. EXTRACTION-SINGLE-MODEL-1: un único modelo de extracción,
+apagado hasta medirlo.**
+- **Qué hace.** `SCAN_EXTRACTION_CLAUDE_MODEL` envía la extracción de todas las
+  filas a ese modelo de Claude; el modelo previsto es `claude-haiku-5-5`, a
+  $0,10/$0,50 por millón frente a $1/$5 de Haiku 4.5. La decisión vive en un
+  único sitio puro: `lib/scan/extraction-routing.ts`.
+- **Por qué sale apagado.** La extracción decide la mención, el recuento de
+  competidores y el sentimiento, así que alimenta la nota. Sin la variable,
+  cada fila se sigue extrayendo con su propio proveedor. Se enciende después de
+  que `pnpm bench:extraction` (que ya incluye el candidato) dé acuerdo alto con
+  producción en las tres procedencias, y quitarla es la marcha atrás. La
+  generación y las citas no se tocan.
+
+**Pendiente o roto conocido.**
+- **Nadie registra cuántas búsquedas lanza Gemini por llamada**
+  (`webSearchQueries`). Todas las cifras de coste de Gemini 3 son un supuesto
+  hasta que se guarde o se lea en la facturación de Google.
+- **La pantalla de Auditoría web no dice la fecha de la última búsqueda real**
+  (`verifiedAt`). Una página publicada hoy puede tardar hasta una semana en
+  aparecer.
+- **`lib/admin/cost-model.ts` sigue con las tarifas de Gemini 2.5.**
+
+**Trazabilidad.**
+- `lib/web-audit/coverage-map.ts` (+test), `lib/recommendations/domain-coverage.ts` (+test).
+- `lib/scan/extraction-routing.ts` (+test), `lib/scan/extraction.ts`, `lib/llm/claude.ts`.
+- `scripts/extraction-bench.ts`, `docs/environment-contract.md`,
+  `docs/llm-cost-analysis-2026-08.md` §8.
+- `.claude/rules/web-audit.md`, `.claude/rules/scan.md`.
