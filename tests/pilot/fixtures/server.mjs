@@ -87,7 +87,9 @@ const BLOG_SLUGS = [
   "mi-marca-no-aparece-en-chatgpt-por-que",
   "que-software-de-facturacion-recomienda-la-ia",
   // STUDY-HOME-1 (2026-10-09, log §251).
-  "de-buscar-a-preguntar"
+  "de-buscar-a-preguntar",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

@@ -43,8 +43,8 @@ Task Intake de Fase 2.6).
 | C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
 | C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | ✅ Hecho | #306 |
-| C4 | `/comparativas/profound-vs-peec-ai-vs-otterly` (neutral a tres, GEO-SELF-1 Fase 2, log §257) | profound vs peec ai vs otterly | 🟡 En PR | #(este) |
-| C5 | `/comparativas/alternativas-a-peec-ai` (GEO-SELF-1 Fase 2, log §257) | alternativas a peec ai | 🟡 En PR | #(este) |
+| C4 | `/comparativas/profound-vs-peec-ai-vs-otterly` (neutral a tres, GEO-SELF-1 Fase 2, log §258) | profound vs peec ai vs otterly | 🟡 En PR | #(este) |
+| C5 | `/comparativas/alternativas-a-peec-ai` (GEO-SELF-1 Fase 2, log §258) | alternativas a peec ai | 🟡 En PR | #(este) |
 
 ## Capa D — Glosario (Fase 2.4 / 2.6b)
 
@@ -168,7 +168,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | ✅ Publicado | #346 |
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | ✅ Publicado | #349 |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
-| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🔲 Pendiente | — |
+| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🟡 En PR (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo

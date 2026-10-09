@@ -22,7 +22,7 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 export const PILLAR_RESEARCH_DATE = "12 de agosto de 2026";
 
 /**
- * GEO-SELF-1 Fase 2 (log §257): Otterly, Peec AI y Profound se revisaron en
+ * GEO-SELF-1 Fase 2 (log §258): Otterly, Peec AI y Profound se revisaron en
  * sus propias webs en esta fecha — motores de Otterly (4 incluidos y 3 como
  * complemento), escalera y precio orientativo de Peec AI (PricingSaaS, su web
  * no publica importes), retirada de los planes de entrada de Profound (según

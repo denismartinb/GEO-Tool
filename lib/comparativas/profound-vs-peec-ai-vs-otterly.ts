@@ -5,7 +5,7 @@
  * ranking. Aparece sólo al final, en una nota corta y etiquetada ("Si buscas
  * una opción en español"), con sus límites declarados igual que en
  * `alternativas-a-otterly.ts` — y la página la pinta como bloque aparte, nunca
- * como `Verdict` (log §257).
+ * como `Verdict` (log §258).
  *
  * Fuentes: cada fila lleva sus `sources` con URL y fecha de consulta, y la
  * página las pinta en una sección «Fuentes». Regla de esta pieza: lo que la

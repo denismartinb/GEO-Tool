@@ -1,0 +1,306 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  Pill,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("la-ia-te-menciona-pero-recomienda-a-otro");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Que ChatGPT me mencione significa que me recomienda?",
+    answer:
+      "No. Una mención dice que tu marca aparece en la respuesta; una recomendación es que el modelo la presenta como la opción que conviene. Puedes salir en una lista de cinco, en último lugar o como contraste de otra marca, y en los tres casos cuenta como mención. Para saber qué hay de recomendación hay que leer la respuesta entera, no solo comprobar si tu nombre sale."
+  },
+  {
+    question: "¿Cualquier marca que aparece junto a la mía es un competidor?",
+    answer:
+      "No. Una respuesta puede mezclar marcas que compiten de verdad contigo con otras que solo comparten la frase: herramientas que se usan junto a tu producto, plataformas que van incluidas en tu oferta o servicios de una categoría vecina. Las segundas aparecen en la respuesta, pero no se disputan tu cliente. Antes de actuar, separa quién compite contigo por la misma decisión de compra de quién solo comparte la frase."
+  },
+  {
+    question: "¿Sirve de algo escribir una página que diga que somos mejores que el competidor?",
+    answer:
+      "Casi nunca, y puede salirte cara. Sin datos verificables detrás, es publicidad comparativa, y en España la comparación tiene que ser objetiva y verificable sobre características esenciales (art. 10 de la Ley de Competencia Desleal). Una comparación honesta, con criterios claros y datos que puedas enseñar, sí es contenido útil, y los modelos tienen de dónde citar."
+  },
+  {
+    question: "¿Una sola respuesta me dice a quién recomienda la IA?",
+    answer:
+      "No. La misma pregunta puede darte un orden distinto en otra ejecución, en otro motor o con otra formulación. Una respuesta es un ejemplo, no un diagnóstico. Para ver un patrón hacen falta varias preguntas, varios motores y repetirlo en el tiempo."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Si la IA te menciona pero recomienda antes a otro, el problema ya no es que no
+te conozca: es que no eres la opción que presenta primero. Antes de tocar nada,
+mira tres cosas. Qué dice la respuesta entera, no solo si sales. Quién de los
+que aparecen compite contigo de verdad. Y si ese orden se repite en otras
+preguntas y motores, o es un resultado suelto. Lo que sirve después es
+trabajo de fondo: ser fácil de comparar en tu propia web y estar presente en
+las fuentes que el modelo ya cita. Lo que no sirve es escribir que eres mejor
+que el otro sin datos.
+
+</KeyTakeaway>
+
+## Salir en la respuesta no es salir como respuesta
+
+Cuando alguien comprueba si su marca aparece en ChatGPT y ve su nombre, suele
+respirar. Y es comprensible: el escenario contrario, no aparecer en absoluto, es el
+que más preocupa, y de ese caso hablamos en
+<a href="/blog/mi-marca-no-aparece-en-chatgpt-por-que">por qué tu marca no
+aparece en ChatGPT</a>. Pero hay un segundo escenario, menos comentado: tu
+marca aparece y aun así la IA se la acaba recomendando a otro.
+
+Nos pasó en nuestras propias pruebas. Probando el comprobador gratuito de
+GenScore con una marca conocida, ChatGPT respondió y la nombró. Con eso, la
+casilla de "¿aparece?" quedaba en sí. Pero al leer la respuesta entera, el
+primer nombre que daba era el de su competidor directo, y la marca que
+comprobábamos venía después.
+
+Esa diferencia es toda la historia de este artículo. Una mención es un dato de
+presencia. Una recomendación es un dato de preferencia. Se miden distinto y se
+arreglan distinto.
+
+## Primero, lee la respuesta entera
+
+Es un consejo aburrido y es el que más se salta. Un contador que dice "te
+mencionaron en el 70% de las respuestas" no te cuenta si saliste como primera
+opción, como alternativa de relleno o como contraste ("a diferencia de X...").
+Para saberlo hay que leer. Cuando abras una respuesta donde sales, fíjate en
+cuatro cosas:
+
+<Checklist
+  items={[
+    "Qué posición ocupas en el texto: si eres lo primero que se nombra, una de varias o una nota al final.",
+    "Cómo se te describe: con un motivo concreto para elegirte, o solo como un nombre más en la lista.",
+    "Quién aparece antes que tú y con qué argumento: es lo más útil de la respuesta.",
+    "Si la respuesta enlaza o cita alguna fuente, y cuál: ahí está el material del que el modelo ha tirado."
+  ]}
+/>
+
+Esto vale también para la herramienta que uses: GenScore registra si tu marca
+se menciona, en qué posición, qué competidores aparecen y qué fuentes cita el
+motor, pero ninguna cifra sustituye a leer de vez en cuando una respuesta de
+verdad.
+
+## Segundo, no todo el que aparece a tu lado es competencia
+
+En aquella misma prueba, la respuesta de ChatGPT nombraba muchas
+marcas. Unas pocas competían de verdad por el mismo cliente. El resto eran
+servicios que la marca comprobada incluye dentro de su propia oferta. Si
+cuentas todas como "las marcas que te quitan el sitio", sales con una lista larga
+de rivales. No lo eran.
+
+<Figure
+  label="Figura 1."
+  wide
+  caption="Ejemplo ilustrativo, no una respuesta real: cómo separar las marcas que nombra una respuesta. La clasificación la haces tú al leerla; el motor no la da."
+>
+
+| Marca nombrada en la respuesta | Qué es para ti |
+|---|---|
+| Otras empresas que venden lo mismo que tú | Competencia: se disputan la misma decisión de compra |
+| Herramientas o servicios que tu cliente usa junto a tu producto | Complementos: aparecen, pero no te quitan el cliente |
+| Marcas que van incluidas dentro de tu propia oferta | Parte de tu propuesta: si salen, en cierto modo hablan de ti |
+
+</Figure>
+
+Esta separación cambia lo que haces. Si tratas como competidor a un servicio
+que va dentro de tu propia oferta, acabas escribiendo comparativas que no
+tienen sentido. Si la lista de
+"rivales" es tan larga que no puedes actuar sobre ella, es que la lista está
+mal hecha. Nosotros mismos lo vivimos: la primera versión de nuestro
+comprobador presentaba esa lista entera como "quién apareció en tu lugar".
+Lo retiramos porque no teníamos forma de distinguir una plataforma incluida
+en el paquete de una marca que compite, y no íbamos a afirmar lo que no
+sabíamos. Ahora dice que alguna de esas marcas puede no ser competencia.
+
+Si quieres elegir bien a quién vigilas, la guía está en
+<a href="/blog/como-elegir-competidores-analisis-geo">cómo elegir los
+competidores de tu análisis GEO</a>.
+
+## Tercero, desconfía de una posición que sale de una sola respuesta
+
+Aquí también nos equivocamos nosotros, y por eso lo contamos. Esa primera
+versión del comprobador enseñaba "tu marca, en el puesto 1". Parecía un
+buen resultado. Era falso en un sentido sutil: el comprobador solo analizaba
+la marca que le habías dado, así que el puesto 1 salía por construcción, no
+porque ChatGPT la hubiera puesto primera. Y en la respuesta real, ya hemos
+visto que el competidor iba delante.
+
+No retocamos la cifra: eliminamos el dato de la pantalla. Un número que se
+puede mostrar mal vuelve a mostrarse mal, así que preferimos que no exista.
+
+La lección general no es sobre nuestra herramienta. Es esta: el orden en que
+un modelo nombra las marcas en una respuesta es una observación, no una
+medida. Para convertirla en algo más hay que repetirla.
+
+<Verdict title="Una respuesta no es un diagnóstico">
+
+También lo vimos al revés. En un proyecto de prueba con muy pocas preguntas,
+la puntuación de un escaneo a otro llegó a duplicarse sin que hubiéramos
+cambiado nada. No era un error de cálculo: con tan pocas respuestas, que una
+o dos más mencionaran la marca bastaba para mover el resultado entero. Con
+una muestra así no has aprendido casi nada. Lo mismo vale para el orden de
+una respuesta: antes de preocuparte, comprueba si se repite.
+
+</Verdict>
+
+La forma práctica de comprobarlo: varias preguntas del mismo tipo, en varios
+motores, repetidas con unas semanas de diferencia. Si en la mayoría tu rival
+va primero, tienes un patrón. Si cambia de una respuesta a otra, tienes
+ruido. Cómo elegir esas preguntas lo desarrollamos en
+<a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los
+prompts para monitorizar tu marca</a>, y por qué las métricas sueltas
+engañan, en
+<a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>.
+
+## Qué hacer cuando el patrón sí se repite
+
+Aquí no hay atajo ni plazo que prometer. Lo que sigue son palancas honestas,
+ordenadas de más a menos bajo tu control.
+
+<NumberedSection n={1} title="Haz que tu web sea fácil de comparar">
+
+Cuando alguien pregunta "X o Y" o "alternativas a X", el modelo
+necesita material para comparar. Si en tu web no queda claro qué ofreces, a
+quién, a qué precio y en qué te distingues con hechos, el modelo rellena con lo
+que encuentra fuera, que es lo que dicen otros. Una página con
+criterios claros (qué incluye, qué no, para quién es) y datos que puedas
+sostener es el material que le falta.
+
+<QuickAction>Busca en tu web una página que responda "en qué me diferencio de X" con hechos que puedas enseñar. Si no existe, empieza por ahí.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Mira de dónde saca el motor lo que dice de tu rival">
+
+Cuando una respuesta cita fuentes, esas fuentes son una pista de dónde se
+forma la recomendación: comparadores, medios, foros, directorios. Si tu rival
+está en varias y tú en ninguna, ahí hay una diferencia concreta que se puede
+trabajar. No todas son alcanzables ni todas pesan lo mismo, pero ver cuáles
+cita el motor te evita adivinar. Lo desarrollamos en
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
+te cite</a>, y en el glosario tienes qué es una
+<a href="/glosario/citacion-en-ia">citación en IA</a>.
+
+<QuickAction>Anota las fuentes que aparecen en las respuestas donde tu rival va primero. Elige una que puedas conseguir de forma legítima.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Cubre las preguntas de comparación y alternativas">
+
+Si el modelo recomienda a otro, muchas veces es porque la pregunta que lo
+provoca es de tipo "mejor opción para..." o "alternativas a...". Esas son las
+preguntas que conviene vigilar de forma explícita y las que conviene responder
+en tu web con honestidad: para quién eres buena opción y para quién no.
+Decirlo con claridad te hace más fácil de recomendar en el caso que sí
+te corresponde, que es el que importa.
+
+<QuickAction>Añade a tu seguimiento al menos una pregunta de comparación y una de alternativas con el nombre del rival que te supera.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Revisa lo que ya se dice de ti">
+
+A veces no te recomiendan porque lo que hay sobre ti está desactualizado, es
+incompleto o contradictorio. Antes de producir contenido nuevo, comprueba que
+tu información básica es coherente en tu web y en los sitios donde apareces.
+Si lo que la IA dice de ti es directamente falso, tienes otro problema, que
+tratamos en
+<a href="/blog/chatgpt-informacion-incorrecta-de-tu-empresa">cuando ChatGPT
+dice algo incorrecto de tu empresa</a>.
+
+</NumberedSection>
+
+## Lo que no funciona: escribir "somos mejores que X"
+
+Es la reacción más natural, y la que menos conviene. En una prueba interna del
+generador de contenido de GenScore, el borrador que salió afirmaba que la
+marca mantenía "un alto estándar de calidad" frente a varios competidores
+nombrados, sin un solo dato detrás. No lo publicamos, pero nos sirvió para ver el problema:
+es texto que suena bien y no demuestra nada.
+
+Ese tipo de afirmación es un riesgo, no una táctica. En España la publicidad
+comparativa debe ser objetiva y verificable sobre características esenciales
+(art. 10 de la Ley de Competencia Desleal). Y desde el punto de vista
+de la IA, tampoco aporta: una página que dice "somos los mejores" sin datos
+da al modelo muy poco que citar con confianza. Después de aquello, el
+generador rechaza ya los textos que nombran a un competidor junto a un juicio
+de valor. Es una red, no una garantía, y el criterio sigue siendo tuyo: si
+no puedes enseñar el dato, no lo escribas.
+
+<Verdict title="Qué sí y qué no con tus competidores">
+
+Compara con criterios que puedas enseñar (precio publicado, qué incluye, a
+quién va dirigido, fecha de la comparación) y reconoce dónde el otro es mejor
+opción. Evita adjetivos sin respaldo ("mejor", "líder", "excelente") junto a
+un nombre propio. Si dudas sobre el límite legal en tu caso, consulta con un
+profesional: esto no es asesoramiento jurídico.
+
+</Verdict>
+
+## Cómo saber si algo está cambiando
+
+Sin prometer plazos: lo que se puede medir es si, en las mismas preguntas y
+los mismos motores, tu posición relativa a ese rival se mueve con el tiempo.
+Mide a intervalos de semanas, no de días, guarda cada resultado y no saques
+conclusiones de un solo escaneo. Si quieres ver el proceso completo de
+construir presencia desde un negocio con datos reales, tienes
+<a href="/blog/como-hacer-que-chatgpt-recomiende-tu-negocio">cómo hacer que
+ChatGPT recomiende tu negocio</a>; y si todavía no sabes si apareces,
+<a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber si tu
+marca aparece en ChatGPT</a>.
+
+<CompareTable>
+
+| Lo que ves | Lo que puedes concluir | Lo que no |
+|---|---|---|
+| Sales en una respuesta, detrás de otro | Existe al menos un contexto donde te prefieren a ti menos | Que siempre pase, ni que pase en todos los motores |
+| Sales detrás del mismo rival en muchas preguntas y motores | <Pill tone="si">Patrón</Pill> Merece una acción concreta | Cuánto tardará en cambiar |
+| Tu posición cambia de una ejecución a otra | <Pill tone="neutral">Ruido</Pill> Falta muestra | Que hayas mejorado o empeorado |
+
+</CompareTable>
+
+<ArticleCta
+  title="Mira quién va delante de ti, y en cuántas preguntas"
+  text="GenScore lanza tus preguntas en Gemini, Claude y ChatGPT, y te enseña si te mencionan, en qué posición, qué competidores aparecen y qué fuentes citan, para distinguir un patrón de una respuesta suelta."
+/>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

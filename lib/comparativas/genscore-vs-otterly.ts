@@ -20,7 +20,7 @@ const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";
 
 /**
- * GEO-SELF-1 Fase 2 (log §257): precios, motores y mercados revisados en
+ * GEO-SELF-1 Fase 2 (log §258): precios, motores y mercados revisados en
  * otterly.ai/pricing en esta fecha. La fila de motores decía «hasta 6» y hoy
  * son 4 incluidos (ChatGPT, AI Overviews, Perplexity y Copilot) y 3 como
  * complemento (Google AI Mode, Gemini y Claude). El resto de filas sigue con

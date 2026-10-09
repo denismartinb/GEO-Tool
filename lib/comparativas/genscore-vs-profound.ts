@@ -5,7 +5,7 @@
  * cobertura de prensa de su financiación, agregadores de reviews) consultada
  * el 10 de agosto de 2026, y refrescada el 9 de octubre de 2026 contra su
  * propia web (tryprofound.com/pricing, su página principal y su centro de
- * ayuda) en GEO-SELF-1 Fase 2 (log §257): precio, motores, gestión de
+ * ayuda) en GEO-SELF-1 Fase 2 (log §258): precio, motores, gestión de
  * clientes y bucle de acción. Las reseñas (G2) y la financiación siguen
  * siendo de la investigación de agosto. Los precios y límites de GenScore
  * vienen de app/pricing/plans-data.ts, la misma fuente que usa /precios — no
@@ -59,7 +59,7 @@ export const COMPARISON_ROWS: {
     profoundWins: true
   },
   {
-    // Sin insignia desde el 2026-10-09 (log §257): la fila decía que Profound
+    // Sin insignia desde el 2026-10-09 (log §258): la fila decía que Profound
     // exigía una cuenta por cliente, y su centro de ayuda documenta hoy un
     // «Agency Mode» con espacios de cliente. Ninguna de las dos ofrece marca
     // blanca documentada, así que no hay victoria clara de ningún lado.

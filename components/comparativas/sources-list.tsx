@@ -1,7 +1,7 @@
 import { formatIsoDateEs, uniqueSources, type Source } from "@/lib/comparativas/sources";
 
 /**
- * Sección «Fuentes» de una comparativa (GEO-SELF-1 Fase 2, log §257): cada
+ * Sección «Fuentes» de una comparativa (GEO-SELF-1 Fase 2, log §258): cada
  * fuente con su enlace y su fecha de consulta. Las de terceros se marcan como
  * orientativas, porque es así como la página las presenta en el texto.
  */

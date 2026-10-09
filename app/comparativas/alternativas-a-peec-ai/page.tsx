@@ -45,7 +45,7 @@ function reasonLabel(id: string): string {
   return LEAVE_REASONS.find((r) => r.id === id)?.shortLabel ?? id;
 }
 
-/** GEO-SELF-1 Fase 2 (log §257). Misma estructura que `alternativas-a-otterly`. */
+/** GEO-SELF-1 Fase 2 (log §258). Misma estructura que `alternativas-a-otterly`. */
 export default function AlternativasAPeecAiPage() {
   return (
     <BlogPageShell breadcrumb={COMPARATIVAS_BREADCRUMB}>

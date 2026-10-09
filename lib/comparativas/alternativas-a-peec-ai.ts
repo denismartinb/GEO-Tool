@@ -18,7 +18,7 @@
  * `price`, nunca `promoPrice` (el precio fundador depende de Stripe). Está en
  * `PRICE_QUOTING_FILES` de `tests/promise-parity.test.ts`.
  *
- * Lo que NO se afirma, por no estar verificado (log §257): la ciudad de GEO
+ * Lo que NO se afirma, por no estar verificado (log §258): la ciudad de GEO
  * Metrics (sólo la sugiere una nota de prensa) ni que su aplicación —no sólo
  * su web— esté en castellano; los idiomas de interfaz de Peec AI, Otterly,
  * Ahrefs y Scrunch («no consta», nunca «no tiene»).

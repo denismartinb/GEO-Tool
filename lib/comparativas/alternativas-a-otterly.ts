@@ -18,7 +18,7 @@
  * Los datos de GenScore vienen de `app/pricing/plans-data.ts`, la misma fuente
  * que usa /precios — no se reescriben a mano.
  *
- * Refresco del 2026-10-09 (GEO-SELF-1 Fase 2, log §257): `otterly.ai/pricing`
+ * Refresco del 2026-10-09 (GEO-SELF-1 Fase 2, log §258): `otterly.ai/pricing`
  * ya carga, y de ahí salen ahora los precios de la escalera (29/189/489 $), la
  * ampliación de prompts y los motores: 4 incluidos (ChatGPT, AI Overviews,
  * Perplexity y Copilot) y 3 como complemento (Google AI Mode, Gemini y

@@ -11,7 +11,7 @@
  * corroboran. Los precios y límites de GenScore vienen de
  * app/pricing/plans-data.ts, la misma fuente que usa /precios.
  *
- * Refresco del 2026-10-09 (GEO-SELF-1 Fase 2, log §257): peec.ai/pricing ya
+ * Refresco del 2026-10-09 (GEO-SELF-1 Fase 2, log §258): peec.ai/pricing ya
  * carga, aunque sigue sin mostrar importes. De ahí salen los modelos (3 a
  * elegir en los planes de autoservicio), los países e idiomas por plan y los
  * usuarios ilimitados; el importe de entrada es de PricingSaaS (último visto

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { COMPARISON_ROWS, FAQ_ITEMS, GENSCORE_NOTE, PAGE, SOURCES, VENDORS } from "./profound-vs-peec-ai-vs-otterly";
 
 /**
- * GEO-SELF-1 Fase 2 (log §257). La comparativa a tres es NEUTRAL: GenScore no
+ * GEO-SELF-1 Fase 2 (log §258). La comparativa a tres es NEUTRAL: GenScore no
  * compite en la tabla, sólo aparece en una nota etiquetada y con sus límites.
  */
 describe("profound-vs-peec-ai-vs-otterly", () => {

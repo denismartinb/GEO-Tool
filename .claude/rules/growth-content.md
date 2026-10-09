@@ -387,16 +387,16 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **Una comparativa a tres (o más) entre competidores es neutral: GenScore no
   entra en la tabla ni lleva `Verdict`.** Aparece sólo en un bloque
   etiquetado antes de la FAQ, declarado como nuestro y con sus límites
-  (`profound-vs-peec-ai-vs-otterly`, log §257). Meterla en la tabla de una
+  (`profound-vs-peec-ai-vs-otterly`, log §258). Meterla en la tabla de una
   pieza que se presenta como neutral sería un anuncio con otro nombre.
 - **Un importe que el fabricante no publica se cita a un tercero, con su
   nombre y su fecha, y se marca «orientativo».** Las comparativas nuevas
   guardan sus fuentes en los datos (`lib/comparativas/sources.ts`) y las
-  pintan en una sección «Fuentes» (log §257).
+  pintan en una sección «Fuentes» (log §258).
 - **De una herramienta ajena se dice «no consta» una interfaz en castellano,
   nunca que no la tenga**, salvo que esté verificado. Lo mismo para cualquier
   dato que sólo sugiere una nota de prensa (la ciudad de GEO Metrics, log
-  §257): si no se ha podido verificar, no se publica.
+  §258): si no se ha podido verificar, no se publica.
 - **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
   sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
   tabla con las pantallas que toca el diff es trabajo del Director y no lo

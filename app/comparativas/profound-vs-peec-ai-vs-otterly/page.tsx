@@ -41,7 +41,7 @@ function itemListSchema() {
 }
 
 /**
- * GEO-SELF-1 Fase 2 (log §257). Comparativa NEUTRAL a tres: la tabla no lleva
+ * GEO-SELF-1 Fase 2 (log §258). Comparativa NEUTRAL a tres: la tabla no lleva
  * insignias de «Gana aquí» porque no compite nadie nuestro en ella, y GenScore
  * sólo aparece en un bloque etiquetado antes de la FAQ — nunca en un
  * `Verdict`, que le daría peso de veredicto.

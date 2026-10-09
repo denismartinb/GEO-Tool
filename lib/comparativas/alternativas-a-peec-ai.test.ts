@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { ALTERNATIVES, LEAVE_REASONS, PEEC_PLANS, PEEC_STRENGTHS, SOURCES } from "./alternativas-a-peec-ai";
 
 /**
- * GEO-SELF-1 Fase 2 (log §257). Mismas reglas que `alternativas-a-otterly.test.ts`:
+ * GEO-SELF-1 Fase 2 (log §258). Mismas reglas que `alternativas-a-otterly.test.ts`:
  * cada alternativa declara qué resuelve y qué no, GenScore incluida, y las
  * ventajas del competidor se declaran enteras y con su contexto.
  */

@@ -68,7 +68,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // SECTOR-STUDY-1 (2026-10-09, log §246).
   "que-software-de-facturacion-recomienda-la-ia": "sectores",
   // STUDY-HOME-1 (2026-10-09, log §251).
-  "de-buscar-a-preguntar": "fundamentos"
+  "de-buscar-a-preguntar": "fundamentos",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
@@ -321,7 +323,7 @@ test("/comparativas/alternativas-a-otterly renders and has its own canonical", a
   await assertCanonical(page, "/comparativas/alternativas-a-otterly");
 });
 
-// GEO-SELF-1 Fase 2 (log §257).
+// GEO-SELF-1 Fase 2 (log §258).
 test("/comparativas/profound-vs-peec-ai-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(
     page,
