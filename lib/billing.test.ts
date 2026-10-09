@@ -11,6 +11,13 @@ vi.mock("@/lib/email/transactional", () => ({
   sendTrialEndedEmail: (...args: unknown[]) => sendTrialEndedEmail(...args)
 }));
 
+const notifyTrialEndedOnDowngrade = vi.fn(async (..._args: unknown[]) => true);
+vi.mock("@/lib/email/lifecycle/runner", () => ({
+  notifyTrialEndedOnDowngrade: (...args: unknown[]) => notifyTrialEndedOnDowngrade(...args)
+}));
+let lifecycleOn = false;
+vi.mock("@/lib/email/lifecycle/flag", () => ({ isLifecycleEmailEnabled: () => lifecycleOn }));
+
 const getActiveSubscriptionPromo = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   getActiveSubscriptionPromo: (...args: unknown[]) => getActiveSubscriptionPromo(...args)
@@ -104,6 +111,8 @@ beforeEach(() => {
   createServiceClient.mockReset();
   requireUser.mockReset();
   sendTrialEndedEmail.mockReset();
+  notifyTrialEndedOnDowngrade.mockClear();
+  lifecycleOn = false;
   getActiveSubscriptionPromo.mockReset();
   getActiveSubscriptionPromo.mockResolvedValue(null);
 });
@@ -133,6 +142,28 @@ describe("getPlanForUser — reverse trial expiry", () => {
     expect(plan.id).toBe("free");
     expect(updates).toEqual([{ patch: { current_plan: "free", trial_ends_at: null }, id: "user-1" }]);
     expect(sendTrialEndedEmail).toHaveBeenCalledWith("founder@example.com");
+  });
+
+  it("hands the end-of-trial email to the lifecycle sequence when its switch is on (LIFECYCLE-WINBACK-1)", async () => {
+    lifecycleOn = true;
+    const supabase = fakeProfileClient({
+      current_plan: "pro",
+      trial_ends_at: PAST,
+      stripe_subscription_id: null,
+      email: "founder@example.com"
+    });
+    const { client } = fakeServiceClient();
+    createServiceClient.mockReturnValue(client);
+
+    const plan = await getPlanForUser(supabase as never, "user-1");
+
+    expect(plan.id).toBe("free");
+    expect(sendTrialEndedEmail).not.toHaveBeenCalled();
+    expect(notifyTrialEndedOnDowngrade).toHaveBeenCalledWith(client, {
+      userId: "user-1",
+      email: "founder@example.com",
+      trialEndsAt: new Date(PAST)
+    });
   });
 
   it("doesn't send a trial-ended email when the downgrade write fails", async () => {
@@ -391,5 +422,55 @@ describe("resolveSystemPlanId (ALERTS-SCOPE-1)", () => {
 
   it("passes a plain plan through", () => {
     expect(resolveSystemPlanId({ current_plan: "starter", trial_ends_at: null, email: "a@example.com" })).toBe("starter");
+  });
+});
+
+/**
+ * TRIAL-ONLY-1: the domain-overage gate locked the whole console of any trial
+ * that ended with 2+ domains. Without a plan the account is read-only, so the
+ * gate has nothing to protect — it keeps its job only for a real paid
+ * downgrade.
+ */
+describe("getDomainOverage", () => {
+  function fakeOverageSupabase(plan: string, activeCount: number) {
+    return {
+      from(table: string) {
+        if (table === "profiles") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { current_plan: plan, stripe_subscription_id: null, email: "a@b.es" },
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        const rows = Array.from({ length: activeCount }, (_, i) => ({ id: `p${i}`, name: `p${i}`, domain: `p${i}.es` }));
+        return {
+          select: (_cols: string, opts?: { head?: boolean }) => ({
+            eq: () =>
+              opts?.head
+                ? Promise.resolve({ count: activeCount, error: null })
+                : { order: async () => ({ data: rows, error: null }) }
+          })
+        };
+      }
+    };
+  }
+
+  it("never gates a read-only (free) account, whatever its domain count", async () => {
+    const { getDomainOverage } = await import("./billing");
+    requireUser.mockResolvedValue({ supabase: fakeOverageSupabase("free", 4), user: { id: "user-1" } });
+    expect((await getDomainOverage()).isOverCapacity).toBe(false);
+  });
+
+  it("still gates a paid plan over its cap", async () => {
+    const { getDomainOverage } = await import("./billing");
+    requireUser.mockResolvedValue({ supabase: fakeOverageSupabase("starter", 3), user: { id: "user-1" } });
+    const overage = await getDomainOverage();
+    expect(overage.isOverCapacity).toBe(true);
+    expect(overage.requiredRemoveCount).toBe(2);
   });
 });

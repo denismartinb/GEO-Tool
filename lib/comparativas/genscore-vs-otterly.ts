@@ -14,6 +14,7 @@ import { PLANS } from "@/app/pricing/plans-data";
  * precio de abajo era el literal "179 €/mes", no una lectura de `PLANS`.
  * Ahora sí lo es.
  */
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";
@@ -27,18 +28,18 @@ export const COMPARISON_ROWS: {
 }[] = [
   {
     label: "Precio de entrada",
-    genscore: "Gratis (escaneo permanente, sin tarjeta)",
-    otterly: "Desde 29 $/mes — sin plan gratuito",
-    genscoreWins: true
+    genscore: `Desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta para probar`,
+    otterly: "Desde 29 $/mes"
   },
   {
     label: "Precio equivalente a ~100 prompts",
     genscore: `${PRO_PRICE} €/mes (plan Pro)`,
-    otterly: "189 $/mes (plan Standard)"
+    otterly: "189 $/mes (plan Standard)",
+    genscoreWins: true
   },
   {
     label: "Motores de IA cubiertos",
-    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), 1 en Free",
+    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), todos incluidos sin add-ons",
     otterly: "Hasta 6 motores nominalmente — pero Gemini y Google AI Mode son add-ons con coste extra, no incluidos en el precio base",
     otterlyWins: true
   },

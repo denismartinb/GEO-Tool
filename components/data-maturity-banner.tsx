@@ -33,7 +33,7 @@ function dismissedKey(projectId: string): string {
  * **La ausencia de valor significa OCULTO** (PROJECT-DEFAULTS-BY-ACCOUNT-1,
  * §173, tras la prueba del fundador con una cuenta nueva): sólo un `"0"`
  * explícito revela los avisos. `free` es la única excepción y nunca se calla —
- * vende un plan y lleva su propia X, no pide esperar (ver `NEVER_SILENCED` en
+ * explica por qué no hay escaneos nuevos (TRIAL-ONLY-1: sin X) (ver `NEVER_SILENCED` en
  * `lib/data-maturity.ts`).
  *
  * **La clave de `localStorage` conserva su nombre viejo a propósito.**
@@ -114,17 +114,15 @@ export function DataMaturityBanner({
           </svg>
         </span>
         <span className="dmb-txt">
-          El plan Free incluye <b>un solo escaneo</b>: tienes tu foto actual, pero no evolución ni tendencias.
+          Tu prueba de Pro ha terminado. <b>Tus datos siguen aquí</b>, pero no se hacen escaneos nuevos hasta que
+          elijas un plan.
         </span>
         <span className="dmb-sp" />
-        <a className="dmb-cta ghost" href="/pricing">
-          Ver planes
+        {/* TRIAL-ONLY-1: sin «Descartar». Es el único aviso que explica por qué
+            no hay escaneos nuevos, y la salida va directa al modal de planes. */}
+        <a className="dmb-cta" href="/dashboard/settings?openPlan=pro#plan">
+          Elegir plan
         </a>
-        <button type="button" className="dmb-x" aria-label="Descartar" onClick={dismiss}>
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
       </div>
     );
   }

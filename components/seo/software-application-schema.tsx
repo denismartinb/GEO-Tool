@@ -1,3 +1,4 @@
+import { PLANS } from "@/app/pricing/plans-data";
 import {
   APPLICATION_CATEGORY,
   CANONICAL_DEFINITION_LONG,
@@ -5,6 +6,8 @@ import {
   SITE_ORIGIN,
   SOFTWARE_APPLICATION_ID
 } from "@/lib/brand/canonical-definition";
+
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 
 /**
  * schema.org `SoftwareApplication` para GenScore — SEO-POS-1 Fase E, E3.
@@ -49,9 +52,9 @@ export function SoftwareApplicationSchema() {
     publisher: { "@id": ORGANIZATION_ID },
     offers: {
       "@type": "Offer",
-      price: "0",
+      price: String(STARTER_PRICE),
       priceCurrency: "EUR",
-      description: "Plan gratuito permanente, sin tarjeta."
+      description: "Desde el plan Starter, mensual. Todas las cuentas empiezan con 7 días de Pro gratis, sin tarjeta."
     }
   };
 

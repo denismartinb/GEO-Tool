@@ -56,6 +56,11 @@ export function computeDataMaturity({
   recurringEnabled: boolean;
   planId: string;
 }): DataMaturityState {
+  // TRIAL-ONLY-1: without a plan the account is read-only, and that is the
+  // one thing it must always be told — whatever the scan history looks like,
+  // zero scans included. Checked first so no other branch can hide it.
+  if (planId === "free") return { kind: "free" };
+
   const hasActiveRun = latestStatus === "pending" || latestStatus === "running";
   if (hasActiveRun) return { kind: "hidden" };
 
@@ -66,8 +71,6 @@ export function computeDataMaturity({
   if (completedScans <= 0) return { kind: "hidden" };
 
   if (completedScans >= DATA_MATURITY_TARGET_SCANS) return { kind: "hidden" };
-
-  if (planId === "free") return { kind: "free" };
 
   // ACTIONS-OBSERVABLE-1 slice 4b.2 shipped a "no_tracking" CTA here
   // ("Activar seguimiento diario"), then the founder retired it the same
@@ -136,7 +139,11 @@ export function visibleDataMaturityState({
   hidden: boolean;
 }): VisibleDataMaturityState | null {
   if (!state || state.kind === "hidden") return null;
+  // TRIAL-ONLY-1: `free` (read-only account) ignores both — its band has no
+  // X any more, and an old dismissal from the one-scan era must not hide the
+  // only thing that explains why nothing scans.
+  if (NEVER_SILENCED.has(state.kind)) return state;
   if (dismissed) return null;
-  if (hidden && !NEVER_SILENCED.has(state.kind)) return null;
+  if (hidden) return null;
   return state;
 }

@@ -33,11 +33,14 @@ import {
 
 const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Pinned per docs/adr/0009-gemini-2.5-flash-model-pin.md — gemini-2.0-flash-001
-// was shut down by Google on 2026-06-01. gemini-2.5-flash is the recommended
-// replacement and has its own cutover date of 2026-10-16 to watch.
-const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-2.5-flash.";
+// Pinned per docs/adr/0042-gemini-3.6-flash-model-pin.md. History: ADR 0002
+// pinned gemini-2.0-flash-001 (shut down 2026-06-01), ADR 0009 re-pinned to
+// gemini-2.5-flash, whose access Google now restricts to existing users and
+// which returned unannounced 404s on 2026-07-09. gemini-3.6-flash is Google's
+// listed replacement for the 2.5 Flash line and the newest Flash that still
+// accepts thinkingLevel "minimal" (see geminiGenerationTuning).
+const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
+const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-3.6-flash.";
 
 /**
  * Hard per-call timeout shared by every direct Gemini `fetch`.
@@ -67,6 +70,31 @@ export function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
   return `Gemini API request failed with status ${status}.`;
+}
+
+/**
+ * Model-family tuning shared by every Gemini call (ADR 0042).
+ *
+ * Gemini 2.x: `temperature: 0` (ADR 0009 addendum 2026-06-19) and
+ * `thinkingBudget: 0` (ADR 0009 addendum 2026-06-14) — kept for a
+ * `GEMINI_MODEL` override back to 2.5 as the rollback path.
+ *
+ * Gemini 3.x+: Google strongly recommends the default temperature (1.0) —
+ * lower values "may lead to looping or degraded performance", and a looping
+ * grounded call is a GeminiTimeoutError, i.e. a failed prompt. Thinking
+ * cannot be turned off; the lowest level is "minimal" on 3.5/3.6 Flash and
+ * 3.1 Flash-Lite, "low" elsewhere. `thinkingBudget` and `thinkingLevel` in
+ * the same request are a 400, so exactly one is ever sent.
+ */
+export function geminiGenerationTuning(model: string): {
+  temperature?: number;
+  thinkingConfig: { thinkingBudget: number } | { thinkingLevel: "minimal" | "low" };
+} {
+  if (isGemini2Model(model)) {
+    return { temperature: 0, thinkingConfig: { thinkingBudget: 0 } };
+  }
+  const acceptsMinimal = /^gemini-3\.(?:[56]-flash|1-flash-lite)/i.test(model);
+  return { thinkingConfig: { thinkingLevel: acceptsMinimal ? "minimal" : "low" } };
 }
 
 export function getGeminiModel() {
@@ -147,10 +175,22 @@ function generateContentEndpoint(apiKey: string): string {
   return `${GEMINI_API_URL}/${getGeminiModel()}:generateContent?key=${apiKey}`;
 }
 
-function firstCandidateText(data: {
-  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+/**
+ * Both callers parse the result as JSON, so parts are concatenated with no
+ * separator: a grounded Gemini 3 answer can arrive split across several text
+ * parts, and a "\n" inserted mid-string is invalid JSON. Thought parts are
+ * skipped in case a model returns them without being asked (ADR 0042).
+ */
+export function firstCandidateText(data: {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string; thought?: boolean }> } }>;
 }): string {
-  return data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+  return (
+    data.candidates?.[0]?.content?.parts
+      ?.filter((part) => part.thought !== true)
+      .map((part) => part.text ?? "")
+      .join("")
+      .trim() ?? ""
+  );
 }
 
 export async function generateGeminiJson(promptBlock: string): Promise<unknown> {
@@ -161,8 +201,7 @@ export async function generateGeminiJson(promptBlock: string): Promise<unknown> 
     generateContentEndpoint(apiKey),
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
-      // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-      generationConfig: { temperature: 0, responseMimeType: "application/json", thinkingConfig: { thinkingBudget: 0 } }
+      generationConfig: { ...geminiGenerationTuning(getGeminiModel()), responseMimeType: "application/json" }
     })
   );
 
@@ -189,7 +228,17 @@ export function parseLenientJson(text: string): unknown {
   const trimmed = text.trim();
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const candidate = (fenced ? fenced[1] : trimmed).trim();
-  return JSON.parse(candidate);
+  try {
+    return JSON.parse(candidate);
+  } catch (error) {
+    // Gemini 3 at its default temperature (ADR 0042) sometimes wraps the
+    // grounded JSON in a sentence of prose instead of a fence. Fall back to
+    // the outermost {...} span; if that is not JSON either, rethrow.
+    const start = candidate.indexOf("{");
+    const end = candidate.lastIndexOf("}");
+    if (start === -1 || end <= start) throw error;
+    return JSON.parse(candidate.slice(start, end + 1));
+  }
 }
 
 /**
@@ -210,12 +259,27 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
 
+  const model = getGeminiModel();
+  if (!isGemini2Model(model)) {
+    // Gemini 3.5/3.6 Flash with google_search drops the START of the answer
+    // text at a citation-segment boundary (finishReason STOP, no error), with
+    // or without responseMimeType — so the opening `{` of a JSON reply never
+    // arrives and no parser can recover it. Reported upstream on
+    // discuss.ai.google.dev ("Google Search grounding drops the beginning of
+    // the response text", 4/5 runs on 3.6). Workaround: search in prose, then
+    // structure the findings in a second, ungrounded call that can use
+    // responseMimeType. A truncated prose answer loses one item, not all of
+    // them (ADR 0042, log §240).
+    const findings = await generateGroundedGeminiText(apiKey, groundedResearchPrompt(promptBlock));
+    return generateGeminiJson(structureFindingsPrompt(promptBlock, findings));
+  }
+
   const response = await fetchGeminiWithRetry(
     generateContentEndpoint(apiKey),
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       tools: [{ google_search: {} }],
-      generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+      generationConfig: geminiGenerationTuning(model)
     })
   );
 
@@ -229,6 +293,50 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
   } catch {
     throw new ExtractionError("invalid_json", "Gemini suggestion returned invalid JSON.");
   }
+}
+
+function isGemini2Model(model: string): boolean {
+  return /^gemini-[12]\./i.test(model);
+}
+
+async function generateGroundedGeminiText(apiKey: string, promptBlock: string): Promise<string> {
+  const response = await fetchGeminiWithRetry(
+    generateContentEndpoint(apiKey),
+    JSON.stringify({
+      contents: [{ parts: [{ text: promptBlock }] }],
+      tools: [{ google_search: {} }],
+      generationConfig: geminiGenerationTuning(getGeminiModel())
+    })
+  );
+
+  const text = firstCandidateText(await response.json());
+  if (!text) {
+    throw new ExtractionError("empty", "Gemini grounded research returned empty text.");
+  }
+  return text;
+}
+
+/** Step 1 of the Gemini 3 grounded flow: the same task, answered as prose. */
+export function groundedResearchPrompt(promptBlock: string): string {
+  return [
+    "Use Google Search to research the task below.",
+    "Answer in plain prose, one finding per line, including every name and root domain you find.",
+    "Do NOT format the answer as JSON — a later step will structure it.",
+    "",
+    "--- TASK ---",
+    promptBlock
+  ].join("\n");
+}
+
+/** Step 2: the original task, answered as JSON from step 1's findings only. */
+export function structureFindingsPrompt(promptBlock: string, findings: string): string {
+  return [
+    promptBlock,
+    "",
+    "Base your answer ONLY on these web research findings. Do not add anything they do not support. If the first line looks cut off, use what is readable.",
+    "--- FINDINGS ---",
+    findings
+  ].join("\n");
 }
 
 export { GEMINI_API_URL, GEMINI_CALL_TIMEOUT_MS };
