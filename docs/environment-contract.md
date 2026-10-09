@@ -457,7 +457,7 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 |---|---|---|---|
 | `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
-| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price. FOUNDER-PRICE-1: its `unit_amount` must equal `PLANS` (29 €, EUR, monthly, tax exclusive) — checkout refuses otherwise (`stripePriceMatchesPlan`) |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price. FOUNDER-PRICE-1: its `unit_amount` must equal `PLANS` (29 €, EUR, monthly, **tax inclusive** — IVA incluido, founder 2026-10-09) — checkout refuses otherwise (`stripePriceMatchesPlan`) |
 | `STRIPE_PRICE_ID_PRO` | No | Vercel | Same, for Pro (99 €) |
 | `STRIPE_COUPON_ID_STARTER_FOUNDER` | No | Vercel | FOUNDER-PRICE-1 (log §237): Stripe Coupon id, `amount_off` = 900 (9 €), `currency: eur`, `duration: forever`, `max_redemptions: 50`. Shown and applied only while it has exactly that shape and the founder slots (50, summed across both coupons) are not used up (`getFounderOffer`) |
 | `STRIPE_COUPON_ID_PRO_FOUNDER` | No | Vercel | Same, for Pro: `amount_off` = 3000 (30 €) |

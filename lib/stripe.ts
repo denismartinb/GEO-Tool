@@ -143,7 +143,8 @@ export async function getActivePromoPlanIds(): Promise<SelfServePlanId[]> {
  * FOUNDER-PRICE-1: guard against the catalog and Stripe disagreeing. Price
  * ids live in env vars, so a deploy that ships new `PLANS` prices before the
  * env points at the matching Stripe Price would show one amount and charge
- * another. Checkout refuses instead (`createCheckoutSession`).
+ * another. Checkout refuses instead (`createCheckoutSession`). The Price must
+ * also be tax-inclusive: `/pricing` shows final prices with IVA.
  */
 export async function stripePriceMatchesPlan(
   stripe: Stripe,
@@ -153,7 +154,13 @@ export async function stripePriceMatchesPlan(
   const plan = PLANS.find((p) => p.id === planId);
   if (!plan) return false;
   const price = await stripe.prices.retrieve(priceId);
-  return price.currency === "eur" && price.unit_amount === Math.round(plan.price * 100);
+  // IVA incluido (founder, 2026-10-09): the shown price is the final price,
+  // so a tax-exclusive Price would add 21 % on top at checkout.
+  return (
+    price.currency === "eur" &&
+    price.unit_amount === Math.round(plan.price * 100) &&
+    price.tax_behavior === "inclusive"
+  );
 }
 
 /**

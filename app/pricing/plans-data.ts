@@ -14,7 +14,7 @@
  * Stripe (`getFounderOffer`, `lib/stripe.ts`), y cuando se agotan la oferta
  * desaparece sola de todas las pantallas sin que nadie tenga que acordarse.
  */
-export const FOUNDER_SLOTS = 50;
+export const FOUNDER_SLOTS = 38;
 
 /**
  * PROMO-CONSOLE-PARITY-1 (2026-08-27) — qué precio promocional enseña una
