@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Stat,
@@ -11,9 +11,15 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  PostMeta
+  PullQuote,
+  BarChart,
+  ColumnChart,
+  ChartPair,
+  EngineChart,
+  InsightPanel,
+  Insight
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("de-buscar-a-preguntar");
 
@@ -43,13 +49,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -72,65 +72,157 @@ Cada estudio usa su propia muestra y su propia metodología, así que estas cifr
 
 ## España ya pregunta a la IA
 
-Navegantes en la Red, la encuesta de referencia de AIMC sobre internautas en España (unas 15.000 respuestas válidas, trabajo de campo de octubre a diciembre de 2025), muestra el cruce:
+Navegantes en la Red, la encuesta de referencia de AIMC sobre internautas en España (unas 15.000 respuestas válidas, trabajo de campo de octubre a diciembre de 2025), muestra el cruce: el buscador sigue siendo mayoritario, pero pierde uso diario mientras la IA y las redes sociales ganan terreno como forma de buscar.
 
 <Figure
   label="Figura 1"
   caption="Internautas en España que usan cada vía a diario para buscar, y variación en puntos frente a la edición anterior. Fuente: AIMC, Navegantes en la Red, 28.ª edición (unas 15.000 respuestas, octubre a diciembre de 2025)."
-  wide
 >
-
-| Para buscar, cada día | Internautas | En un año |
-| --- | --- | --- |
-| Buscadores tradicionales | 85% | −8 puntos |
-| Redes sociales (TikTok, Instagram…) | 58% | +8 puntos |
-| Herramientas de IA | 33% | +15 puntos |
-
+<BarChart
+  title="Uso diario para buscar · internautas en España"
+  rows={[
+    { label: "Buscadores tradicionales", value: 85, delta: "−8 pts" },
+    { label: "Redes sociales (TikTok, Instagram…)", value: 58, delta: "+8 pts" },
+    { label: "Herramientas de IA", value: 33, delta: "+15 pts", highlight: true }
+  ]}
+/>
 </Figure>
 
 Google lo sigue usando el 94% de los internautas, así que no ha desaparecido, pero es su nivel más bajo en al menos 15 años. Y en un año la IA ha ganado como forma de buscar casi el doble de lo que ha perdido el buscador.
 
-El dato europeo va en la misma dirección. En la Gen AI Consumer Survey de Bain & Company (septiembre de 2025, cinco países europeos y 1.440 encuestados en España), el 22% de los españoles ya usa sobre todo un chatbot de IA en lugar del buscador tradicional. Es la tasa más alta de Europa, por delante de Reino Unido, Francia, Alemania y Portugal.
+<InsightPanel>
+<Insight title="El primer país de Europa en cambiar el buscador por la IA">
+
+En la Gen AI Consumer Survey de Bain & Company (septiembre de 2025, 1.440 encuestados en España), el **22% de los españoles** ya usa sobre todo un chatbot de IA en lugar del buscador tradicional. Es la tasa más alta de los cinco países europeos del estudio, por delante de Reino Unido, Francia, Alemania y Portugal.
+
+</Insight>
+<Insight title="Google sigue, pero en mínimos">
+
+El **94%** de los internautas españoles sigue usando Google, el nivel más bajo en al menos 15 años (AIMC). No es una sustitución de golpe: es una segunda puerta que crece cada año.
+
+</Insight>
+</InsightPanel>
 
 ## La IA ya está dentro del buscador
 
-Aunque alguien siga usando Google, cada vez ve antes una respuesta escrita por IA que cualquier enlace. McKinsey estima que alrededor de la mitad de las búsquedas de Google ya muestran un resumen de IA, y prevé que serán más del 75% en 2028. El Modo IA de Google superó los 1.000 millones de usuarios mensuales en menos de un año (Alphabet, julio de 2026), y ChatGPT tiene más de 900 millones de usuarios semanales (OpenAI, febrero de 2026).
+Aunque alguien siga usando Google, cada vez ve antes una respuesta escrita por IA que cualquier enlace. Y los asistentes conversacionales ya tienen audiencias a la escala de los grandes buscadores.
+
+<StatGrid label="La búsqueda con IA a escala mundial, cada cifra con su fuente">
+  <Stat value="~50%" label="De las búsquedas de Google ya muestran un resumen de IA; más del 75% en 2028, según su previsión" source="McKinsey & Company, oct. 2025" tone="blue" />
+  <Stat value="+1.000 M" label="Usuarios mensuales del Modo IA de Google en menos de un año desde su lanzamiento" source="Alphabet, julio de 2026" tone="cyan" />
+  <Stat value="+900 M" label="Usuarios semanales de ChatGPT" source="OpenAI, febrero de 2026" tone="cyan" />
+</StatGrid>
+
+<PullQuote cite="GenScore, estudio «De buscar a preguntar» (2026)">
 
 La búsqueda con IA no es un canal aparte que se pueda vigilar más adelante. Ya forma parte de la búsqueda.
 
+</PullQuote>
+
 ## La respuesta se ha convertido en el destino
 
-El SEO se construyó sobre una promesa: si apareces arriba, te visitan. Pew Research siguió durante marzo de 2025 la navegación real de 900 adultos en Estados Unidos y comparó qué pasa con y sin resumen de IA:
+El SEO se construyó sobre una promesa: si apareces arriba, te visitan. Pew Research siguió durante marzo de 2025 la navegación real de 900 adultos en Estados Unidos y comparó qué pasa cuando Google muestra un resumen de IA y cuando no.
 
-- Sin resumen, el 15% de las visitas acaba en un clic a un resultado. Con resumen, el 8%.
-- Solo el 1% de las visitas pulsa un enlace del propio resumen.
-- Con resumen, el 26% de las visitas termina sin seguir navegando, frente al 16% sin él.
+<Figure
+  label="Figura 2"
+  caption="Visitas a Google con y sin resumen de IA. Fuente: Pew Research Center, julio de 2025, a partir de la navegación real de 900 adultos en EE. UU. durante marzo de 2025."
+>
+<ChartPair>
+<ColumnChart
+  title="Visitas que acaban en un clic a un resultado"
+  columns={[
+    { label: "Sin resumen de IA", value: 15 },
+    { label: "Con resumen de IA", value: 8, highlight: true },
+    { label: "Clic en un enlace del resumen", value: 1, highlight: true }
+  ]}
+/>
+<ColumnChart
+  title="Visitas en las que se deja de navegar"
+  columns={[
+    { label: "Sin resumen de IA", value: 16 },
+    { label: "Con resumen de IA", value: 26, highlight: true }
+  ]}
+/>
+</ChartPair>
+</Figure>
+
+Con resumen, los clics a resultados caen casi a la mitad, solo el 1% de las visitas pulsa un enlace del propio resumen, y una de cada cuatro termina ahí, sin seguir navegando.
+
+<PullQuote cite="GenScore, estudio «De buscar a preguntar» (2026)">
 
 Si tu marca no está dentro de la respuesta, para ese usuario no existe. Estar en ella es la nueva primera posición.
 
+</PullQuote>
+
 ## La IA ya influye en la compra, pero no decide sola
 
-El primer estudio anual de inteligencia artificial de IAB Spain y Elogia (encuesta a 1.081 internautas de 16 a 75 años, mayo y junio de 2026) mide por primera vez su papel en la compra en España:
+El primer estudio anual de inteligencia artificial de IAB Spain y Elogia (encuesta a 1.081 internautas de 16 a 75 años, mayo y junio de 2026) mide por primera vez su papel en la compra en España.
 
-- El 45% de quienes usan IA la ha usado para ayudarse en una compra.
-- Tres de cada diez empiezan a buscar un producto en la IA.
-- La usan sobre todo para comparar productos (66%) e investigar (57%).
+<StatGrid label="La IA en el proceso de compra en España, IAB Spain y Elogia, 2026">
+  <Stat value="45%" label="De quienes usan IA la ha usado para ayudarse en una compra" source="IAB Spain y Elogia, 2026" tone="blue" />
+  <Stat value="3 de 10" label="Empiezan a buscar un producto en la IA" source="IAB Spain y Elogia, 2026" tone="cyan" />
+  <Stat value="66%" label="La usan en la compra para comparar productos; el 57%, para investigar" source="IAB Spain y Elogia, 2026" tone="cyan" />
+</StatGrid>
 
-El mismo estudio da el matiz importante: el 95% contrasta de algún modo lo que le dice la IA, el 68% lo hace con un buscador, y solo el 16% la cita entre los factores principales de su decisión.
+El mismo estudio da el matiz importante: la IA abre la búsqueda, pero todavía no la cierra.
 
-Para una marca, esto significa que la IA decide quién entra en la lista corta, y Google, las reseñas y las webs de terceros deciden quién la supera. Hay que estar en los dos sitios. Y no basta con la propia web: según McKinsey, la web de la marca solo aporta entre el 5% y el 10% de las fuentes que usa la búsqueda con IA para responder. El resto es lo que otros dicen de ti.
+<Figure
+  label="Figura 3"
+  caption="Qué hacen con lo que les dice la IA quienes la usan en España. Fuente: IAB Spain y Elogia, I Estudio Anual de Inteligencia Artificial (2026), 1.081 internautas de 16 a 75 años."
+>
+<BarChart
+  title="Pero todavía no decide sola"
+  rows={[
+    { label: "Contrasta de algún modo lo que le dice la IA", value: 95 },
+    { label: "Lo verifica con un buscador", value: 68 },
+    { label: "Cita la IA entre los factores principales de su decisión", value: 16, highlight: true }
+  ]}
+/>
+</Figure>
+
+<InsightPanel>
+<Insight title="Qué significa para una marca">
+
+La IA decide quién entra en la lista corta, y Google, las reseñas y las webs de terceros deciden quién la supera. **Hay que estar en los dos sitios.**
+
+</Insight>
+<Insight title="Por qué no basta con tu web">
+
+Según McKinsey, la web de la propia marca solo aporta **entre el 5% y el 10%** de las fuentes que usa la búsqueda con IA para responder. El resto es lo que otros dicen de ti: medios, comparadores, directorios, foros y reseñas.
+
+</Insight>
+</InsightPanel>
 
 ## Cada motor responde distinto, y casi nadie lo mide
 
-En GenScore medimos qué marcas nombra la IA cuando alguien le pide una recomendación. El 9 de octubre de 2026 hicimos a ChatGPT, Gemini y Claude las preguntas principales de búsqueda de quien busca software de facturación en España, múltiples veces y en distintos momentos:
+En GenScore medimos qué marcas nombra la IA cuando alguien le pide una recomendación. El 9 de octubre de 2026 hicimos a ChatGPT, Gemini y Claude las preguntas principales de búsqueda de quien busca software de facturación en España, múltiples veces y en distintos momentos.
 
-- Menos del 2% de las respuestas no nombró ninguna marca. Quien pregunta siempre recibe una lista corta.
-- Una misma marca apareció en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Otra, al revés: el 74% en Claude y nunca en los otros dos.
-- Algunos nombres clásicos del sector apenas aparecieron.
+<Figure
+  label="Figura 4"
+  caption="Porcentaje de respuestas válidas de cada motor que nombran la marca al menos una vez. Fuente: Estudio GenScore, software de facturación en España, 9 de octubre de 2026. Es una foto de esa fecha: repetido otro día, el orden puede moverse."
+>
+<EngineChart
+  title="La misma marca, tres motores, tres respuestas"
+  rows={[
+    { brand: "Holded", gemini: 96, chatgpt: 57, claude: 65 },
+    { brand: "Contasimple", gemini: 78, chatgpt: 57, claude: 0 },
+    { brand: "Quipu", gemini: 83, chatgpt: 13, claude: 0 },
+    { brand: "Debitoor", gemini: 0, chatgpt: 0, claude: 74 }
+  ]}
+/>
+</Figure>
+
+- **La IA siempre da nombres.** Menos del 2% de las respuestas no nombró ninguna marca: quien pregunta recibe una lista corta, no diez enlaces.
+- **Los motores no se ponen de acuerdo.** Contasimple sale en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Con Debitoor pasa al revés.
+- **Ser líder no garantiza nada.** Algunos nombres clásicos del sector apenas aparecieron. Y medir un solo motor, una sola vez, da una foto incompleta.
 
 El detalle, marca a marca y motor a motor, está en <a href="/blog/que-software-de-facturacion-recomienda-la-ia">qué programa de facturación recomienda la IA</a>.
 
-Ninguna herramienta de analítica web enseña esto. Search Console dice cómo te va en Google, pero no si ChatGPT te recomienda ni a quién recomienda en tu lugar. Según McKinsey, solo el 16% de las marcas sigue de forma sistemática cómo aparece en la búsqueda con IA.
+<PullQuote cite="Solo el 16% de las marcas lo sigue de forma sistemática, según McKinsey (oct. 2025)">
+
+Ninguna herramienta de analítica web enseña esto. Search Console dice cómo te va en Google, pero no si ChatGPT te recomienda, ni a quién recomienda en tu lugar.
+
+</PullQuote>
 
 ## Qué hacer: GEO en cinco pasos
 

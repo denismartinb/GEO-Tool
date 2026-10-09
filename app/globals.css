@@ -6646,6 +6646,12 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
   .lp-study { margin-bottom: 48px; }
   .lp-study-card { grid-template-columns: 1fr; gap: 12px; padding: 22px 20px; }
   .lp-study-num { font-size: 56px; justify-self: start; }
+  /* En móvil el rótulo va ENCIMA de la cifra: entre el 22% y su frase partía
+     la lectura (fundador, 2026-10-09). `display: contents` deja ordenar los
+     tres textos como hijos de la tarjeta sin tocar el marcado de escritorio. */
+  .lp-study-txt { display: contents; }
+  .lp-study-eye { order: -1; margin-bottom: -2px; }
+  .lp-study-src { margin-top: -4px; }
   .lp-study-q { font-size: 15.5px; }
   .lp-study-go { justify-self: start; margin-top: 6px; }
 }
@@ -9581,6 +9587,85 @@ select.set-field {
   .lp-article .art-cta h3 { font-size: 24px; }
   .lp-article .blog-related ul { grid-template-columns: minmax(0, 1fr); }
   .lp-article .art-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* --- Gráficos del estudio (STUDY-HOME-1, log §250) -------------------------
+   Los gráficos del PDF «De buscar a preguntar» como bloques de artículo
+   (`components/blog/article/charts.tsx`). Cada barra lleva su cifra escrita:
+   el dibujo acompaña al número, nunca lo sustituye. Degradado azul→cian sólo
+   en la fila de la IA; el resto en gris claro. */
+.art-chart-t {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--brand-ink-3); margin-bottom: 16px;
+}
+.art-bars ul, .art-cols ul, .art-eng ul { list-style: none; margin: 0; padding: 0; }
+.art-bars ul { display: grid; gap: 14px; }
+.art-bars-row { display: grid; grid-template-columns: minmax(120px, 210px) minmax(0, 1fr) 92px; gap: 14px; align-items: center; margin: 0; }
+.lp-article .blog-body .art-bars-row { font-size: 14px; line-height: 1.35; color: var(--brand-ink-2); }
+.art-bars-track { height: 14px; border-radius: 7px; background: #eef1f6; overflow: hidden; }
+.art-bars-fill { display: block; height: 100%; border-radius: 7px; background: #cbd3e1; }
+.art-bars-row.is-hl .art-bars-fill { background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)); }
+.art-bars-v { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 17px; font-weight: 800; color: var(--brand-ink); white-space: nowrap; }
+.art-bars-v em {
+  margin-left: 8px; font-family: var(--font-body), "Figtree", sans-serif; font-style: normal;
+  font-size: 11px; font-weight: 700; color: var(--brand-ink-3);
+}
+.art-bars-row.is-hl .art-bars-l { color: var(--brand-ink); font-weight: 700; }
+.art-bars-row.is-hl .art-bars-v em { color: var(--brand-blue); }
+@media (max-width: 640px) {
+  .art-bars-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+  .art-bars-track { grid-column: 1 / -1; grid-row: 2; height: 12px; }
+}
+
+.art-chartpair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+@media (max-width: 640px) {
+  .art-chartpair { grid-template-columns: minmax(0, 1fr); gap: 32px; }
+}
+.art-cols ul { display: flex; align-items: flex-end; gap: 14px; height: 210px; border-bottom: 1px solid #e7eaf0; }
+.art-cols-c {
+  position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  height: 100%; margin: 0; min-width: 0;
+}
+.art-cols-v { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 24px; font-weight: 800; color: var(--brand-ink); margin-bottom: 8px; }
+.art-cols-bar { display: block; width: 100%; max-width: 92px; border-radius: 8px 8px 0 0; background: #cbd3e1; }
+.art-cols-c.is-hl .art-cols-bar { background: linear-gradient(180deg, var(--brand-cyan), var(--brand-blue)); }
+.lp-article .blog-body .art-cols-l { font-size: 12.5px; line-height: 1.35; color: var(--brand-ink-3); text-align: center; }
+.art-cols-l { position: absolute; top: calc(100% + 10px); left: 0; right: 0; }
+.art-cols { padding-bottom: 46px; }
+
+.art-eng-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: -4px 0 18px; }
+.art-eng-k { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 700; color: var(--brand-ink-2); }
+.art-eng-k::before { content: ""; width: 12px; height: 12px; border-radius: 3px; background: var(--eng-c); }
+.art-eng-gemini { --eng-c: var(--brand-blue); }
+.art-eng-chatgpt { --eng-c: var(--brand-ink); }
+.art-eng-claude { --eng-c: var(--brand-cyan); }
+.art-eng-row { display: grid; grid-template-columns: 116px minmax(0, 1fr); gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid #eef1f6; }
+.art-eng-row:first-of-type { border-top: 0; }
+.art-eng-b { font-size: 15px; font-weight: 800; color: var(--brand-ink); }
+.art-eng-row ul { display: grid; gap: 5px; }
+.art-eng-row li { display: grid; grid-template-columns: 62px minmax(0, 1fr) 42px; gap: 10px; align-items: center; margin: 0; }
+.lp-article .blog-body .art-eng-row li { font-size: 12px; line-height: 1.2; color: var(--brand-ink-3); }
+.art-eng-track { height: 9px; border-radius: 5px; background: #eef1f6; overflow: hidden; }
+.art-eng-fill { display: block; height: 100%; border-radius: 5px; background: var(--eng-c); }
+.art-eng-v { text-align: right; font-weight: 800; color: var(--brand-ink); font-variant-numeric: tabular-nums; }
+@media (max-width: 640px) {
+  .art-eng-row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+}
+
+.art-insights {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 32px;
+  margin: 36px 0; padding: 28px 30px; border-radius: 18px; background: #081223;
+}
+.art-insights::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(60% 90% at 100% 0%, rgba(9, 197, 214, .22), transparent 70%);
+}
+.art-insight { position: relative; }
+.art-insight-t { font-size: 15px; font-weight: 800; line-height: 1.3; color: var(--brand-cyan); margin-bottom: 8px; }
+.lp-article .blog-body .art-insight p { margin: 0; font-size: 14.5px; line-height: 1.65; color: #d5dbe6; }
+.lp-article .blog-body .art-insight strong { color: #fff; }
+@media (max-width: 640px) {
+  .art-insights { grid-template-columns: minmax(0, 1fr); padding: 24px 22px; }
 }
 
 /* --- Índice /blog (BLOG-REDESIGN-1 Fase 2) --------------------------------
