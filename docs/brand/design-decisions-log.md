@@ -22428,6 +22428,27 @@ React que lo haga (§202).
   página protegida que no pase por `/login?next=` sigue aterrizando en el
   panel.
 
+## 255. CHECKOUT-RETURN-1: quien paga vuelve a ver la confirmación (2026-10-09)
+
+**Qué se arregló.** Stripe Checkout devolvía al usuario a
+`/dashboard/settings/billing?checkout=success` (y `?checkout=cancelled` al
+cancelar). Esa ruta sólo hace `redirect("/dashboard/settings#plan")`, y la
+redirección pierde la query. Por eso, tras un pago real:
+
+- no salía el aviso de pago correcto;
+- no aparecía la espera hasta que el webhook activa el plan
+  (`CheckoutSuccessPoller`);
+- no se disparaba la conversión «purchase» de PAID-ADS-1 (§244), que
+  `app/dashboard/settings/page.tsx` sólo monta con `checkout === "success"`.
+
+Lo encontró la revisión del camino al pago del hilo «Conversión automática»,
+leyendo el código. No se reprodujo con un pago real. Ahora `success_url` y
+`cancel_url` apuntan directamente a `/dashboard/settings?checkout=…#plan`.
+
+**Pendiente.** La revisión propuso dos ajustes menores que no van aquí:
+`billing_address_collection: "auto"` en lugar de `"required"`, y que se pueda
+meter el NIF en el propio pago. Siguen sin decidir.
+
 ## 256. GEO-SELF-1 Fase 1: que los motores de IA puedan leer, verificar y describir a GenScore — frente técnico y frente de entidad (2026-10-09)
 
 > Plan aprobado por el fundador el 2026-10-09 («que GenScore salga citado por
