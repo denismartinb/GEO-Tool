@@ -348,6 +348,19 @@ export const BLOG_POSTS: BlogPost[] = [
     coverIcon: "users",
     primaryKeyword: "geo para agencias",
     cluster: "sectores"
+  },
+  {
+    slug: "que-software-de-facturacion-recomienda-la-ia",
+    title: "¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? Lo hemos medido",
+    description:
+      "Preguntamos a ChatGPT, Gemini y Claude qué software de facturación recomiendan en España. Holded aparece en el 72% de las respuestas. Ranking por motor y metodología.",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/que-software-de-facturacion-recomienda-la-ia/cover.webp",
+    coverIcon: "trendUp",
+    // First own-data study (SECTOR-STUDY-1, log §246): real answers measured
+    // with /admin/estudio, published as percentages only (founder rule).
+    primaryKeyword: "qué software de facturación recomienda la ia",
+    cluster: "sectores"
   }
 ];
 

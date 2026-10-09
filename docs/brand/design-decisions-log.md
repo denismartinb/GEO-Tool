@@ -21800,3 +21800,156 @@ TRIAL-ONLY-1; este PR la dejó como está en `main`.
 captura de correo (propuesto aparte, necesita su propio Task Intake).
 
 **Trazabilidad.** `components/landing/session-ctas.tsx`.
+
+## 246. SECTOR-STUDY-1: estudio sectorial «¿qué marcas recomienda la IA?» con datos medidos, desde script o desde /admin/estudio (2026-10-09)
+
+**Para qué.** Contenido de captación (artículo del blog + dos posts de
+LinkedIn) basado en un dato propio: preguntar a los motores lo que pregunta un
+comprador de un sector y contar qué marcas nombran. La regla de siempre: ni
+una cifra que no salga de una medición.
+
+**Decisión.** La medición es la de un escaneo, no una imitación: la misma
+instrucción neutral de generación (ADR 0007), el mismo extractor de cada motor
+y la misma verificación literal de menciones (ADR 0021). Como no hay marca
+cliente, las candidatas del sector entran como lista vigilada (dan mención
+verificada y posición) y `other_brands_mentioned` recoge las demás (máximo 5
+por respuesta, así que su presencia es un mínimo y el informe lo dice). Una
+respuesta fallida se cuenta como fallo y sale del denominador, nunca como una
+respuesta que no nombró a nadie; con cero respuestas válidas el informe se
+niega a publicar ranking, y con más del 20% de fallos lo avisa.
+
+- `lib/studies/sector-study.ts`: sectores, conteo e informe. Puro, sin
+  `server-only`, para que el navegador agregue.
+- `lib/studies/run-sector-answer.ts`: una respuesta (generar + extraer +
+  verificar), con `server-only`.
+- `scripts/sector-study.ts` (`pnpm study:sector`): con las claves locales.
+- `/admin/estudio`: la misma medición con las claves de Vercel, porque el
+  fundador no tiene `ANTHROPIC_API_KEY` en local. El navegador lanza pasos de
+  una pregunta × motores elegidos (dos en vuelo), cada paso es una server
+  action con `requireOperator()` dentro y su propio presupuesto de 45 s en una
+  función de 60 s. **No escribe en la base de datos**: el informe y las
+  respuestas crudas se descargan. Por eso no lleva correo a `OPS_ALERT_EMAIL`,
+  que la regla de `/admin` exige para escrituras.
+- Modo «una marca» en la misma página: dominio + preguntas del operador
+  (≤20) + competidores (≤15). La marca va al hueco de marca del extractor,
+  verificada literalmente como en un escaneo, y el informe abre con su
+  presencia. `buildCustomStudy` valida en el navegador y otra vez en la
+  acción en cada paso, y el informe avisa de que las preguntas las escribió
+  el operador. Sirve para sacar datos de un dominio concreto sin crear un
+  proyecto ni consumir cupo de nadie.
+- Informe de prospecto (petición del fundador, 2026-10-09: «que el sistema
+  calcule los competidores… 15 o 20 prompts… insights de auditoría técnica;
+  nos va a servir para más informes»). «Preparar con IA» hace las mismas
+  tres llamadas que el alta de un proyecto —perfil desde la portada,
+  competidores con grounding, preguntas neutras de marca— y las deja en el
+  formulario para revisar; nunca lanza el estudio sola ni guarda nada.
+  `suggestPrompts` tiene tope 15, así que de 16 a 20 salen de
+  `generateAddedPrompts` en modo `auto`, deduplicadas contra la primera
+  tanda. Si la web no se puede identificar, lo dice y no inventa un perfil
+  (ADR 0020). La auditoría técnica (`lib/studies/prospect-audit.ts`) mira
+  sólo cuatro URLs fijas —portada, robots.txt, llms.txt, sitemap.xml— con
+  los mismos fetchers protegidos contra SSRF y las mismas comprobaciones que
+  la Auditoría web; no sigue enlaces (no es un crawler) y el informe dice
+  que no cubre el sitio entero. Lo que no se pudo leer sale como «sin
+  dato», nunca como aprobado.
+  Segunda pasada, con lo que pidió el hilo de outreach: zona opcional para
+  que un tercio de las preguntas sean locales; cada respuesta guarda sus
+  fuentes (redirecciones de Gemini resueltas con el mismo resolvedor del
+  escaneo; las no resueltas se cuentan aparte, sin dominio) y el sentimiento
+  sólo cuando nombra a la marca; las «otras marcas» pasan por la higiene de
+  entidades (ningún asistente de IA cuenta como marca). El informe añade
+  tasa por motor, puesto medio, sentimiento, dominios citados, el detalle de
+  cada consulta y motor (los fallos, como fallos), y una tabla de evidencia
+  por comprobación: robots para GPTBot/ClaudeBot/Google-Extended, tipos
+  JSON-LD, título, descripción, un solo h1 y palabras visibles sin JS.
+  Tercera pasada («¿vas a sacar la misma info de auditoría técnica que la
+  herramienta? incluso más si puedes», fundador): con la casilla de
+  auditoría marcada, tras el estudio corre lo mismo que la Auditoría web.
+  (1) Cobertura de contenido por consulta con `auditDomainContent` y el
+  mismo `verifyOwnDomainPages` del producto (exportado para esto, no
+  copiado): sólo cuenta una página que resuelve al propio dominio; una
+  llamada fallida o sin tiempo es «sin dato» y sale del denominador. Es
+  gasto LLM real —una búsqueda de Gemini con grounding por pregunta, ≤20 por
+  informe— y el informe dice cuántas hizo. Cada consulta lleva clase
+  (contenido y la IA la nombra/cita · contenido sin que la nombre · sin
+  contenido) y el resultado de la matriz con las reglas de
+  `opportunity-matrix.ts`, con la ventana en las respuestas del estudio en
+  vez de escaneos y sólo Gemini/ChatGPT como motores que citan. (2) Páginas:
+  portada más las páginas propias que ya salieron en los datos (cobertura y
+  citas de los motores), elegidas con el propio `selectCandidateUrls` —tope
+  `MAX_AUDIT_PAGES`, mismo presupuesto `TECH_AUDIT_TOTAL_BUDGET_MS`, una
+  página sin tiempo sale «sin tiempo», no desaparece—; ninguna se descubre
+  siguiendo enlaces. Evidencia por página. (3) La nota global con
+  `buildGlobalScore`, sin persistir; un componente sin dato se queda fuera y
+  se dice. (4) Comparativa técnica de portada con los tres competidores más
+  nombrados del estudio, sólo los que tienen dominio del sugeridor; los
+  escritos a mano sin dominio se nombran como no comparados. Todo va también
+  al `.json` (`globalScore`, `coverage`, `audit.pages`, `competitorAudits`).
+- `scripts/domain-check.ts` (`pnpm check:domains`): la comprobación gratuita
+  de la web, con las mismas dependencias que su ruta, en lote, para responder
+  a un post de «déjame tu dominio». Local, sin fila en `public_checks`.
+
+**Pendiente.** El gasto de `/admin/estudio` no tiene techo más allá de lo que
+valida la acción (un sector, hasta 3 motores, hasta 3 repeticiones: como
+mucho ~108 respuestas por pasada en un sector, ~180 en una marca con 20
+preguntas, más ≤20 búsquedas de cobertura) y del propio acceso de operador. Si pasa a
+usarse a menudo, merece un registro del coste.
+
+**Primera publicación (2026-10-09).** El estudio de «software de facturación»
+se publica como artículo del blog, `/blog/que-software-de-facturacion-recomienda-la-ia`
+(cluster `sectores`): es el primer dato propio real que publica GenScore, cosa
+que `.claude/rules/growth-content.md` reserva para el Observatorio «con
+aprobación aparte» — esa aprobación es la del fundador, que encargó el estudio
+para publicarlo. Reglas suyas que el artículo cumple: **sólo porcentajes y
+ratios, nunca recuentos absolutos** de preguntas o respuestas; las marcas se
+nombran (información pública) y en LinkedIn no se etiqueta a las empresas. Del
+ranking se excluyen organismos, hojas de cálculo y pasarelas de pago, y se dice.
+Se retiró antes de publicar la afirmación de que Debitoor es hoy SumUp Facturas
+(no verificada; fundador, 2026-10-09). La explicación de por qué Claude difiere
+(responde sin buscar) va marcada como inferencia. Segunda pasada, mismo día (fundador): fuera también el número de preguntas
+y de repeticiones —«nada de cifras absolutas, y menos si son tan bajas, quita
+credibilidad»— y las versiones de los modelos y la referencia a la
+instrucción de los escaneos —«tampoco quiero dar info tan concreta del
+producto»—. Queda como norma en `.claude/rules/growth-content.md`; las
+preguntas se publican como muestra de cinco, no completas. Fuente de cada cifra:
+`/mnt/project-files/estudios/estudio-facturacion-pymes-2026-10-09.{md,json}`,
+fuera del repo. Portada dibujada en HTML y rasterizada a WebP, verificada en
+los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
+
+**Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
+`scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
+`.claude/rules/admin.md`.
+
+## 248. GEO-REPORT-1 Fase 1: el informe de prospecto pasa a ser el informe de GenScore — diseño aprobado y modelo de datos (2026-10-09)
+
+**Qué se decidió.** El fundador vio el informe de prospecto hecho a mano para
+La Fábrica del SEO (estudio de `/admin/estudio`, §246) y lo prefirió al PDF de
+«Exportar plan» (§215–§219): «me gusta mucho más que el que ahora sale en la
+herramienta». Task Intake aprobado el 2026-10-09 («Sí a todo»), con cuatro
+decisiones: **sustituye** a «Exportar plan» con un solo botón «Descargar
+informe» en Visión general y Recomendaciones; los hallazgos se escriben con
+**plantillas sobre datos**, no los redacta una IA; la comparación técnica con
+un competidor queda **fuera** (traer webs de terceros amplía la superficie de
+descarga, zona de crawler según `CLAUDE.md`); lo tienen **todos los planes de
+pago y la prueba**. Diseño de la versión producto aprobado el mismo día
+(«Sí»), guardado en `docs/design-reference/geo-report-1/`.
+
+**Qué entra en esta fase.** Sólo el modelo: `lib/report/report-model.ts`,
+una función pura que convierte el último escaneo completado en todo lo que
+pintan las ocho páginas, con sus tests. No hay cambios visibles todavía; el
+componente de impresión y el cargador de datos son la Fase 2, y la reutilización
+desde `/admin/estudio` para prospección es la Fase 3.
+
+**Normas de contenido que fija el modelo** (fundador, 2026-10-09): sólo
+porcentajes y proporciones —toda cifra sale como fracción y se formatea con
+`formatShare`—; motores por su nombre, sin versiones; la lista de preguntas se
+llama «preguntas principales de búsqueda»; un bloque sin datos se omite. El
+test recorre el modelo entero buscando cifras absolutas y versiones.
+
+**Pendiente.** Fase 2 (cargador + componente de impresión con el aprendizaje
+de §217–§219, y retirada del informe de PDF-EXPORT-PLAN-1), Fase 3
+(`/admin/estudio` pinta el mismo componente). Sin aprobar: comparación técnica
+con un competidor y marca blanca para agencias.
+
+**Trazabilidad.** `lib/report/report-model.ts` (+test),
+`docs/design-reference/geo-report-1/`, `.claude/rules/report.md`.

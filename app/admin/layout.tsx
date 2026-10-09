@@ -20,6 +20,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         </div>
         <nav className="adm-opbar-links">
           <Link href="/admin/users">Usuarios</Link>
+          <Link href="/admin/estudio">Estudio</Link>
           <Link href="/dashboard">Salir a la consola</Link>
         </nav>
       </div>
