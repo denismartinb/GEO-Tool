@@ -1,0 +1,344 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  Pill,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-aparecer-en-gemini-y-vistas-creadas-con-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Hay que hacer algo especial para salir en las Vistas creadas con IA de Google?",
+    answer:
+      "No, según la propia Google. Su documentación para webmasters dice que no hay requisitos adicionales ni optimizaciones especiales: la página tiene que estar indexada y ser apta para mostrarse en la Búsqueda con un fragmento. Tampoco hace falta un marcado de datos estructurados especial ni ningún fichero nuevo pensado para la IA. Lo que decide si te usa como fuente es lo mismo que decide si eres un buen resultado: contenido útil, rastreable y fácil de entender."
+  },
+  {
+    question: "¿Están disponibles las Vistas creadas con IA y el Modo IA en España?",
+    answer:
+      "Sí. Google llevó las Vistas creadas con IA a España, en español y en inglés, en marzo de 2025, y anunció la llegada del Modo IA a España el 8 de octubre de 2025, con un despliegue gradual a todos los usuarios."
+  },
+  {
+    question: "¿Bloquear Google-Extended me saca de las Vistas creadas con IA?",
+    answer:
+      "Según cómo lo describe Google, no. Google-Extended controla el uso de tu contenido para entrenar sus modelos Gemini y para el grounding de las apps de Gemini y de Vertex AI, y Google dice que no afecta a tu inclusión en la Búsqueda. Las Vistas creadas con IA y el Modo IA son funciones de la Búsqueda, y se controlan con las mismas directivas que un resultado normal: nosnippet, data-nosnippet, max-snippet o noindex."
+  },
+  {
+    question: "¿Puedo ver en Search Console el tráfico que llega desde las Vistas creadas con IA?",
+    answer:
+      "Está incluido en el informe de Rendimiento, dentro del tipo de búsqueda Web, pero mezclado con el resto. Un clic en un enlace de una Vista creada con IA o del Modo IA cuenta como un clic normal. Google ha empezado a desplegar informes específicos de IA generativa en Search Console de forma gradual; según fuentes de terceros, muestran impresiones pero no clics."
+  },
+  {
+    question: "¿GenScore mide las Vistas creadas con IA o el Modo IA?",
+    answer:
+      "No. GenScore lanza tus preguntas principales de búsqueda a Gemini, ChatGPT y Claude, varias veces a cada motor, y mide si te nombran, en qué posición y qué fuentes citan. Las Vistas creadas con IA y el Modo IA viven dentro de la página de resultados de Google y hoy no las medimos."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Google tiene hoy tres sitios donde su IA responde con fuentes: las Vistas
+creadas con IA (el resumen que sale encima de los resultados), el Modo IA
+(una pestaña de búsqueda conversacional) y la app de Gemini. Para las dos
+primeras, Google dice oficialmente que no hay ningún requisito extra: basta con
+que tu página esté indexada y pueda mostrarse con un fragmento. No existe un
+marcado especial ni un fichero mágico. Lo que sí cambia es cómo busca: el Modo
+IA parte cada pregunta en varias sub-preguntas y busca cada una por separado,
+así que gana quien responde bien a las preguntas concretas que rodean a la
+grande, no solo a la grande.
+
+</KeyTakeaway>
+
+## Tres superficies de Google con IA, y en qué se diferencian
+
+Cuando alguien dice "salir en la IA de Google" puede estar hablando de tres
+cosas distintas. Conviene separarlas porque no se comportan igual ni se miden
+igual.
+
+<CompareTable>
+
+| | Vistas creadas con IA | Modo IA | App de Gemini |
+|---|---|---|---|
+| **Dónde aparece** | Encima de los resultados normales de Google | Pestaña propia dentro de la Búsqueda | Aplicación y web de Gemini, aparte de la Búsqueda |
+| **En España desde** | Marzo de 2025 | Octubre de 2025 | Disponible antes que las dos anteriores |
+| **De dónde saca la información** | Índice de la Búsqueda de Google | Índice de la Búsqueda, con varias búsquedas por pregunta | Modelo Gemini, con apoyo del índice de Google cuando busca |
+| **¿Enseña fuentes?** | Sí, enlaces dentro del resumen | Sí, enlaces junto a la respuesta | A veces: Google avisa de que no todas las respuestas las incluyen |
+| **Cómo controlas si te usa** | Directivas normales de la Búsqueda | Directivas normales de la Búsqueda | Google-Extended |
+
+</CompareTable>
+
+Las Vistas creadas con IA (Google las llama así en español; en inglés son las
+*AI Overviews*) no salen en todas las búsquedas. Google dice que solo las
+muestra cuando su sistema considera que aportan algo frente a los resultados
+clásicos. Si quieres entender en qué se diferencian de un chat como ChatGPT,
+lo explicamos en
+<a href="/blog/ai-overviews-vs-chatgpt-diferencia">AI Overviews frente a
+ChatGPT</a>.
+
+El Modo IA es la novedad que más cambia el juego. Al anunciar su llegada a
+España, Google contó que quienes lo usan hacen preguntas dos o tres veces más
+largas que en una búsqueda tradicional. Y explicó cómo responde: lo llama
+"descomposición de consultas". Desglosa tu pregunta en subtemas y lanza una
+ráfaga de búsquedas simultáneas antes de redactar la respuesta.
+
+## Lo que Google dice oficialmente: no hay truco técnico
+
+La documentación de Google para webmasters sobre funciones de IA en la
+Búsqueda (actualizada en diciembre de 2025) es más tajante de lo que suele
+contarse:
+
+<Checklist
+  items={[
+    "Aparecer en las Vistas creadas con IA o en el Modo IA no exige requisitos adicionales ni optimizaciones especiales.",
+    "Para ser elegible como enlace de apoyo, la página tiene que estar indexada y ser apta para mostrarse en la Búsqueda con un fragmento.",
+    "Los datos estructurados de schema.org que ya uses bastan: Google no pide ninguno especial.",
+    "Los ficheros de texto pensados para la IA tampoco son necesarios."
+  ]}
+/>
+
+<Verdict title="Desconfía de quien te venda el atajo">
+
+Si alguien te ofrece un marcado secreto, una etiqueta nueva o un fichero que
+"activa" tu web en las Vistas creadas con IA, contrástalo con la
+documentación de Google: dice exactamente lo contrario. Esto incluye
+<a href="/blog/llms-txt-guia-practica">llms.txt</a>. Puede servirte para
+otros asistentes, pero Google no lo pide para sus funciones de IA en la
+Búsqueda.
+
+</Verdict>
+
+Que no haya truco técnico no significa que no haya nada que hacer. Significa
+que el trabajo es el de siempre, con un matiz nuevo en qué preguntas
+respondes.
+
+## Primero, comprueba que Google puede usarte
+
+Antes de pensar en contenido, descarta los bloqueos. Son los fallos más
+baratos de arreglar y los que más a menudo te dejan fuera sin que nadie se dé
+cuenta. Esta lista sale de las buenas prácticas que Google recomienda para
+sus funciones de IA:
+
+<Checklist
+  items={[
+    "Tu robots.txt permite rastrear las páginas importantes, y tu CDN o tu hosting no bloquean a Googlebot.",
+    "Las páginas que quieres que se citen están indexadas: compruébalo con la herramienta de inspección de URLs de Search Console.",
+    "No llevan nosnippet ni un max-snippet muy corto en el contenido que quieres que se use.",
+    "Lo importante está en texto, no solo dentro de una imagen o un PDF escaneado.",
+    "Se llega a ellas con enlaces internos desde otras páginas de tu web.",
+    "Tus datos estructurados dicen lo mismo que el texto visible de la página.",
+    "Si eres un negocio local o vendes productos, tu Perfil de Empresa en Google y tu Merchant Center están al día."
+  ]}
+/>
+
+Si quieres limitar lo que Google enseña de ti, las herramientas son las de
+cualquier resultado: `nosnippet`, `data-nosnippet`, `max-snippet` o
+`noindex`. Ten en cuenta que Google tarda en volver a rastrear: un cambio
+puede tardar de días a meses en notarse.
+
+## Después, responde a las preguntas que rodean a la tuya
+
+Aquí está la diferencia real con el SEO de toda la vida. Si el Modo IA
+convierte "¿qué software de facturación me conviene si soy autónomo?" en
+varias búsquedas sobre precio, obligaciones fiscales, integraciones y
+opiniones, la respuesta final se arma con las páginas que mejor contestan
+cada una de esas piezas. Google dice que esta forma de buscar saca a la luz un
+conjunto de enlaces más amplio y variado que una búsqueda normal.
+
+<NumberedSection n={1} title="Haz un mapa de las sub-preguntas">
+
+Coge las preguntas principales de búsqueda de tu cliente y, para cada una,
+escribe las cuatro o cinco dudas concretas que alguien necesita resolver para
+decidirse: cuánto cuesta, para quién es, qué alternativas hay, qué riesgos
+tiene, cómo se empieza. Esas son las búsquedas que el Modo IA va a lanzar por
+su cuenta.
+
+<QuickAction>Elige tu pregunta de negocio más importante y apunta debajo cinco sub-preguntas. Marca cuáles responde ya tu web, y con qué página.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Contesta cada una en una página o sección propia">
+
+Una página que responde a una duda concreta en su primer párrafo es más fácil
+de usar como fuente que una página genérica que lo toca todo de pasada. No
+hace falta una URL por sub-pregunta, pero sí un apartado con su propio
+encabezado y una respuesta directa al principio.
+
+<QuickAction>En tu página más visitada, revisa si cada encabezado es una pregunta que alguien haría y si el párrafo siguiente la contesta en la primera frase.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Aporta algo que no esté en todas partes">
+
+Google insiste en el contenido útil, fiable y pensado para personas. En la
+práctica, la IA tiene donde elegir para las respuestas genéricas. Donde
+tienes ventaja es en lo que solo tú puedes decir: tus precios reales, tus
+condiciones, tus casos, tus datos. Un dato propio con su fecha y su método es
+de lo poco que nadie más puede publicar.
+
+<QuickAction>Busca un dato que solo tenga tu empresa (un precio, un plazo, una cifra de tu sector) y publícalo con su fecha en la página que responde a esa duda.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Acompaña el texto con imágenes y vídeo de calidad">
+
+Es otra de las recomendaciones explícitas de Google para sus funciones de IA.
+Una tabla comparativa, una captura real del producto o un vídeo corto que
+enseña cómo se hace algo ayudan a que la página sea la mejor respuesta, no
+solo una más.
+
+</NumberedSection>
+
+## La app de Gemini y Google-Extended
+
+La app de Gemini funciona distinto: es un chat. Cuando necesita información
+actual, Google le pasa contenido de su índice de búsqueda en el momento de
+responder, lo que Google llama *grounding* (lo explicamos en el
+<a href="/glosario/grounding">glosario</a>). Y a veces enseña las fuentes
+dentro de la respuesta o debajo, aunque Google avisa de que no todas las
+respuestas las incluyen.
+
+El control aquí es Google-Extended, una instrucción que pones en tu
+robots.txt. Según Google, sirve para dos cosas: que tu contenido no se use
+para entrenar futuros modelos Gemini y que no se use para el grounding de las
+apps de Gemini y de Vertex AI. Google añade que no afecta a tu inclusión en
+la Búsqueda ni es una señal de posicionamiento.
+
+<Figure
+  label="Figura 1."
+  wide
+  caption="Qué controla cada directiva, según la documentación de Google. Que Google-Extended no afecte a las Vistas creadas con IA ni al Modo IA es nuestra lectura de esa documentación: Google lo describe como un control para «otros sistemas» distintos de la Búsqueda."
+>
+
+| Si haces esto... | En la Búsqueda | En las Vistas y el Modo IA | En la app de Gemini |
+|---|---|---|---|
+| Bloqueas Google-Extended | Sigues saliendo | Sigues pudiendo salir | Tu contenido deja de usarse para responder |
+| Pones `nosnippet` en una página | Sale sin fragmento | No se usa como fuente | No lo controla esta directiva |
+| Pones `noindex` en una página | Desaparece | Desaparece | No lo controla esta directiva |
+
+</Figure>
+
+Si tu objetivo es que la IA te cite, bloquear Google-Extended va en contra:
+pierdes la app de Gemini y no ganas nada en la Búsqueda. Tiene sentido si lo
+que te preocupa es el uso de tu contenido para entrenar modelos, y es una
+decisión legítima, pero hay que tomarla sabiendo lo que cuesta.
+
+## Cómo saber si está funcionando
+
+Aquí hay menos de lo que nos gustaría, y conviene saberlo antes de prometer
+nada a nadie.
+
+**Search Console.** El tráfico que llega desde las Vistas creadas con IA y el
+Modo IA está incluido en el informe de Rendimiento, con el tipo de búsqueda
+Web, pero mezclado con el resto. Un clic en uno de sus enlaces cuenta como un
+clic normal. En las Vistas, todo el resumen ocupa una única posición y todos
+sus enlaces reciben esa misma posición. En el Modo IA, una pregunta de
+seguimiento cuenta como una consulta nueva.
+
+**Informes específicos de IA.** Google empezó a desplegar en junio de 2026
+informes de rendimiento de IA generativa en Search Console. Según fuentes de
+terceros, muestran impresiones pero no clics, y llegan a las webs de forma
+gradual. Si todavía no lo ves en tu cuenta, es normal.
+
+**Los clics, con las dos versiones.** Un estudio de Pew Research en Estados
+Unidos encontró que, cuando aparece un resumen de IA, la gente hace clic en un
+resultado tradicional en el 8% de las visitas, frente al 15% cuando no
+aparece. Google, por su parte, afirma que el volumen total de clics orgánicos
+se ha mantenido relativamente estable y que los clics que llegan desde estas
+funciones son de más calidad, pero no publica el método. Lo honesto es medir
+lo tuyo en lugar de elegir la cifra que más te convenga.
+
+<CompareTable>
+
+| Lo que quieres saber | Dónde mirarlo | Qué limitación tiene |
+|---|---|---|
+| Si tus páginas son elegibles | Inspección de URLs en Search Console | <Pill tone="si">Fiable</Pill> Indexada y apta para fragmento |
+| Cuánto tráfico te llega de la IA de Google | Rendimiento, tipo de búsqueda Web | <Pill tone="neutral">Mezclado</Pill> No separa la IA del resto |
+| Si Gemini te nombra cuando le preguntan por lo tuyo | Preguntas repetidas en Gemini, varias veces | <Pill tone="neutral">Variable</Pill> Una respuesta sola no es un dato |
+
+</CompareTable>
+
+En GenScore medimos la tercera fila: lanzamos tus preguntas principales de
+búsqueda a Gemini, ChatGPT y Claude, varias veces a cada motor, y vemos si te
+nombran, en qué posición y qué fuentes citan. Las Vistas creadas con IA y el
+Modo IA no las medimos hoy, porque viven dentro de la página de resultados de
+Google y no se pueden repetir de forma controlada con el mismo método. Si
+quieres medir también el tráfico que te llega desde los asistentes, tienes
+<a href="/blog/como-medir-trafico-chatgpt-ga4">cómo medir el tráfico de
+ChatGPT en GA4</a>.
+
+## Lo que no funciona
+
+<Verdict title="Tres errores frecuentes">
+
+**Buscar un marcado especial.** Google dice que no existe. Los datos
+estructurados ayudan a que te entienda, como siempre, pero tienen que
+coincidir con lo que se ve en la página.
+
+**Bloquear Google-Extended "para proteger" tu tráfico.** No te saca de la
+Búsqueda, pero sí te saca de las respuestas de la app de Gemini.
+
+**Escribir una página enorme que lo intenta responder todo.** Con la
+descomposición de consultas, gana la página que contesta bien una pregunta
+concreta, no la que menciona muchas.
+
+</Verdict>
+
+Si vienes de ChatGPT, mucho de lo que funciona allí sirve también aquí:
+contenido citable, datos con procedencia y presencia en las fuentes que los
+modelos consultan. Lo contamos en
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
+te cite</a>.
+
+## Fuentes
+
+- Google Search Central, *AI features and your website* (actualizada el 10 de diciembre de 2025). Requisitos, controles, descomposición de consultas y recuento en Search Console.
+- Google Search Central, *Google's common crawlers*, apartado Google-Extended.
+- Google España, *La Búsqueda de Google: el Modo IA llega a España* (8 de octubre de 2025).
+- Google, anuncio de la llegada de las Vistas creadas con IA a más países de Europa, España incluida (25 de marzo de 2025).
+- Ayuda de Google, *Vistas creadas con IA en la Búsqueda de Google* y *Fuentes en las apps de Gemini*.
+- Ayuda de Search Console, *Informe de rendimiento*: cómo se cuentan clics, impresiones y posición en las funciones de IA.
+- Pew Research Center, *Google users are less likely to click on links when an AI summary appears* (julio de 2025). Navegación de 900 adultos en EE. UU., marzo de 2025.
+- Google, *AI in Search is driving more queries and higher quality clicks* (agosto de 2025).
+- PPC Land y TechWyse sobre los informes de IA generativa de Search Console (junio de 2026).
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de mediciones reales hechas con nuestra propia herramienta y de la documentación oficial de cada motor. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Te nombra Gemini cuando alguien pregunta por lo que vendes?"
+  text="GenScore lanza tus preguntas principales de búsqueda a Gemini, ChatGPT y Claude, varias veces a cada motor, y te enseña si te nombran, en qué posición y qué fuentes citan."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>
