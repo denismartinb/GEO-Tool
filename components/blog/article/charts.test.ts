@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { BarChart, ColumnChart, EngineChart } from "./charts";
 
 /**
- * STUDY-HOME-1 (log §250). La barra acompaña a la cifra, nunca la sustituye:
+ * STUDY-HOME-1 (log §251). La barra acompaña a la cifra, nunca la sustituye:
  * cada valor tiene que estar escrito en el HTML, y una marca a 0% en un motor
  * tiene que decir «0%», no desaparecer.
  */

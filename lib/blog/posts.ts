@@ -402,7 +402,7 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-10-09",
     coverImage: "/blog/de-buscar-a-preguntar/cover.webp",
     coverIcon: "trendUp",
-    // STUDY-HOME-1 (log §250): blog version of the «De buscar a preguntar»
+    // STUDY-HOME-1 (log §251): blog version of the «De buscar a preguntar»
     // PDF study. Third-party figures carry source and sample size; own data
     // is percentages only.
     primaryKeyword: "búsqueda con ia en españa",

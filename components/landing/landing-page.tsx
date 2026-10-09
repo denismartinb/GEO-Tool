@@ -548,7 +548,7 @@ export function LandingPage() {
           a partir de 70. */}
       <section className="lp-section lp-prod" id="pantallas">
         <div className="lp-inner">
-          {/* STUDY-HOME-1 (founder-approved 2026-10-09, log §250). A sourced
+          {/* STUDY-HOME-1 (founder-approved 2026-10-09, log §251). A sourced
               third-party figure, never a quote: this slot's predecessor was an
               invented testimonial (log §146 rectified). The copy says exactly
               what the sources measure — Bain counts people who MAINLY use a

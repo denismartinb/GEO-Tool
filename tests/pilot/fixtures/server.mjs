@@ -86,7 +86,7 @@ const BLOG_SLUGS = [
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que",
   "que-software-de-facturacion-recomienda-la-ia",
-  // STUDY-HOME-1 (2026-10-09, log §250).
+  // STUDY-HOME-1 (2026-10-09, log §251).
   "de-buscar-a-preguntar"
 ];
 

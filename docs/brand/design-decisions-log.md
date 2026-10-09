@@ -22149,7 +22149,7 @@ camino de recuperación.
 `public/informe-gratis/portada-ejemplo.webp`,
 `docs/design-reference/free-report-1/`.
 
-## 250. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
+## 251. STUDY-HOME-1: el estudio «De buscar a preguntar» llega al blog y a la portada como una cifra con su fuente (2026-10-09)
 
 **Qué se decidió.** El fundador pidió valorar una cita del estudio público «De
 buscar a preguntar» (PDF de 2026-10-09) en la portada, en el hueco del
@@ -22192,13 +22192,41 @@ Seer +120%).
 **Dato propio.** Sólo porcentajes del estudio de facturación (§246), con
 enlace a él; ningún recuento, ninguna versión de modelo.
 
-**Pendiente / conocido.** El rediseño del blog (§247, rama sin mergear)
-rechaza la cabecera antigua: este artículo usa la plantilla actual y tendrá
-que convertirse a `ArticleHero` en el mismo PR que mergee segundo (avisado ese
-hilo). Si alguna de las dos cifras de la tarjeta se actualiza en su fuente,
-la tarjeta y el artículo cambian juntos.
+**Segunda pasada (fundador, 2026-10-09).** Dos correcciones tras ver el
+preview:
+
+1. *En móvil el rótulo partía la lectura.* «Estudio · De buscar a preguntar»
+   quedaba entre el 22% y su frase. Bajo 640px `.lp-study-txt` pasa a
+   `display: contents` y el rótulo a `order: -1`: rótulo, cifra, frase, fuentes
+   y botón, sin tocar el marcado de escritorio.
+2. *El artículo tenía que estar en la plantilla nueva y tener el efecto del
+   PDF*, porque la portada enlaza a él. Usa `ArticleHero` (§247, ya en main)
+   con `heroStat` 22% · Bain & Company, 2025 (cifra que el artículo publica
+   con su muestra; el antetítulo dice «Blog GenScore», no «Estudio
+   GenScore», porque la fuente no es nuestra). Y llegan los gráficos del PDF
+   como bloques de artículo en `components/blog/article/charts.tsx`:
+   `BarChart` (AIMC y la verificación de IAB), `ColumnChart` + `ChartPair`
+   (Pew), `EngineChart` (presencia de cuatro marcas motor a motor, del
+   estudio de facturación §246) e `InsightPanel`/`Insight` (los recuadros
+   oscuros «Qué significa» del PDF). Cada barra lleva su cifra escrita —el
+   dibujo acompaña al número, nunca lo sustituye— y un 0% se escribe, no
+   desaparece (`charts.test.ts`). Paleta del artículo (tinta, azul, cian):
+   el degradado azul→cian sólo marca la fila de la IA. Las cifras de los
+   gráficos son las que ya estaban verificadas en el artículo; no entra
+   ninguna del PDF que no lo estuviera (p. ej. el 70% de IAB sobre
+   información errónea, o los usuarios únicos de GfK DAM).
+
+**Numeración.** Nació como §250 y pasó a §251 antes de abrir el PR: la rama
+de FREE-REPORT-2 (PR #568) ya había reclamado §250.
+
+**Pendiente / conocido.** Si alguna de las dos cifras de la tarjeta se
+actualiza en su fuente, la tarjeta, el `heroStat` y el artículo cambian
+juntos. Los gráficos nuevos sólo los usa este artículo; están en el barril
+para quien los necesite, con la misma regla de fuente que `Stat`.
 
 **Trazabilidad.** `components/landing/landing-page.tsx` (`.lp-study`),
-`app/globals.css`, `app/blog/de-buscar-a-preguntar/page.mdx`,
+`app/globals.css` (`.lp-study*` y bloque «Gráficos del estudio»),
+`components/blog/article/charts.tsx` (+test), `components/blog/article/index.ts`,
+`app/blog/de-buscar-a-preguntar/page.mdx`,
 `public/blog/de-buscar-a-preguntar/cover.webp`, `lib/blog/posts.ts`, listas del
-piloto.
+piloto, `docs/design-reference/study-home-1/`.

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
 /**
- * STUDY-HOME-1 — gráficos del estudio «De buscar a preguntar» (log §250).
+ * STUDY-HOME-1 — gráficos del estudio «De buscar a preguntar» (log §251).
  *
  * Son los gráficos del PDF del estudio pasados a componentes de servidor:
  * barras horizontales, columnas y comparación por motor. La misma regla que el

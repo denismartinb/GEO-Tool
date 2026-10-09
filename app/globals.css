@@ -6623,7 +6623,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .lp-prod .lp-kicker { color: var(--ink-4); font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
 .lp-prod .lp-h2 { font-size: 42px; font-weight: 700; letter-spacing: -.03em; line-height: 1.08; margin-top: 22px; }
 
-/* STUDY-HOME-1 (log §250): sourced figure from «De buscar a preguntar»,
+/* STUDY-HOME-1 (log §251): sourced figure from «De buscar a preguntar»,
    above the «El producto» head. One card, one button; the whole card is the
    link. */
 .lp-study { max-width: 880px; margin: 0 auto 72px; }
@@ -9589,7 +9589,7 @@ select.set-field {
   .lp-article .art-stats { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* --- Gráficos del estudio (STUDY-HOME-1, log §250) -------------------------
+/* --- Gráficos del estudio (STUDY-HOME-1, log §251) -------------------------
    Los gráficos del PDF «De buscar a preguntar» como bloques de artículo
    (`components/blog/article/charts.tsx`). Cada barra lleva su cifra escrita:
    el dibujo acompaña al número, nunca lo sustituye. Degradado azul→cian sólo
