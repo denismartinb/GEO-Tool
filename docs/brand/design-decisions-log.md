@@ -21403,6 +21403,14 @@ nada, y las pruebas ya caducadas tampoco.
   sin tachado ni fecha. Cuando se agoten las plazas, los correos pasan solos
   al precio normal y el D+10 deja de salir. **Este PR va encima de #556 y se
   mergea después.**
+- **El fin de prueba no promete un plan Free.** Dice «tu prueba de Pro ha
+  terminado», «ya no se escanea a diario» y «tus datos siguen intactos», que
+  es cierto tanto con el plan Free de hoy como con la cuenta de solo lectura
+  que Denis aprobó el 2026-10-09 (hilo «Revisión de precios y oferta»). Así
+  no importa cuál de los dos PR se mergee antes. **Pendiente fuera de este
+  PR:** `sendTrialEndedEmail` (`lib/email/transactional.ts`, para quien se dio
+  de baja de ofertas) y la tabla del D5 («Free, desde el…») siguen nombrando
+  Free; los corrige el PR de solo lectura.
 - **Un único plazo para todo el cron** (`lifecycleDeadline`): las tres pasadas
   comparten la invocación de 60 s; ninguna se da sus propios 45 s.
 

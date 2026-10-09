@@ -431,9 +431,9 @@ export async function sendTrialEndedOfferEmail(
   const opening = input.late
     ? `${eyebrow("Un aviso que llega tarde", "#5B6B82")}
     ${heading(`Tu prueba de Pro terminó el ${endDate}`)}
-    ${paragraph(`Tendríamos que haberte escrito ese día y no lo hicimos. Perdona. Tu cuenta es ahora <b style="color:#0B1426;">Free</b> y ${intact}.`)}`
-    : `${eyebrow("Tu prueba ha terminado", "#5B6B82")}
-    ${heading("Tu cuenta ha pasado a Free")}
+    ${paragraph(`Tendríamos que haberte escrito ese día y no lo hicimos. Perdona. Tu cuenta ya no tiene Pro, pero ${intact}.`)}`
+    : `${eyebrow("Fin de la prueba", "#5B6B82")}
+    ${heading("Tu prueba de Pro ha terminado")}
     ${paragraph(`Tus 7 días de <b style="color:#0B1426;">Pro</b> han terminado. Tus dominios, escaneos y recomendaciones siguen intactos: no hemos borrado nada.`)}`;
 
   const bridge = input.late
@@ -454,8 +454,8 @@ export async function sendTrialEndedOfferEmail(
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Tu cuenta ha pasado a Free. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} cuentas con precio fundador.`
-        : "Tu cuenta ha pasado a Free. Tus datos siguen intactos."
+        ? `Tu prueba de Pro ha terminado. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} cuentas con precio fundador.`
+        : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
     }
   );
   return sendEmail(to, subject, html, envelope.headers);
