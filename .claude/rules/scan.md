@@ -132,7 +132,7 @@ worse than no rule, because a future session will obey it anyway.
   auto-llamadas del pipeline iban a `https://www.genscore.es//api/...`, que
   Vercel rechazaba con 508 — lo vio el `response.ok` de la regla anterior,
   pero sólo en un log que nadie leía (`docs/brand/design-decisions-log.md`
-  §237). Concatenar `process.env.NEXT_PUBLIC_SITE_URL` a mano reabre el fallo.
+  §241). Concatenar `process.env.NEXT_PUBLIC_SITE_URL` a mano reabre el fallo.
 - **El barrido tiene sus propios fallos, y también tienen que llegar al
   operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
   y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como

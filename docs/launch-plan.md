@@ -1766,7 +1766,7 @@ escaneos fallan (ya ocurrió con `gemini-2.0-flash-001` el 2026-06-01).
 Programar la migración de pin (nuevo ADR + smoke) como muy tarde **la
 semana del 2026-10-01**, en cualquier punto del plan en que se esté.
 
-**2026-10-09:** migración hecha en código (ADR 0042, log §236) a
+**2026-10-09:** migración hecha en código (ADR 0042, log §240) a
 `gemini-3.6-flash`. La página de deprecaciones de Google ya no da fecha de
 cierre para 2.5, pero limita el acceso a usuarios previos; se migra igual.
 

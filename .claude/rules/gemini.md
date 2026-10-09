@@ -18,7 +18,7 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   `thinkingLevel` es un 400 y Google desaconseja `temperature` por debajo de
   1.0 (bucles); Gemini 2.x necesita lo contrario (ADR 0009). Cinco copias
   escritas a mano habrían fallado todas a la vez con el primer cambio de
-  modelo (ADR 0042, log §236). Llamada nueva → usa la función.
+  modelo (ADR 0042, log §240). Llamada nueva → usa la función.
 - **No new providers** (OpenAI, Perplexity) without explicit approval.
 - **No crawler** without explicit approval.
 - **Never fake Gemini results**, and never hide a provider failure behind a

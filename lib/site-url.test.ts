@@ -4,7 +4,7 @@ import { getSiteUrl } from "@/lib/site-url";
 
 const ORIGINAL_ENV = { ...process.env };
 
-// log §237: production's NEXT_PUBLIC_SITE_URL ends in "/" and every
+// log §241: production's NEXT_PUBLIC_SITE_URL ends in "/" and every
 // self-dispatch (`${getSiteUrl()}/api/...`) went to "//api/..." → Vercel 508.
 describe("getSiteUrl", () => {
   afterEach(() => {

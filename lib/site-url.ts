@@ -20,7 +20,7 @@ export function getSiteUrl(): string {
     process.env.NEXT_PUBLIC_SITE_URL ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
   // Production's NEXT_PUBLIC_SITE_URL ends in "/", so every `${getSiteUrl()}/api/...`
   // self-dispatch went to `https://www.genscore.es//api/...` and Vercel answered
-  // 508: the scan continuation and the post-scan audit never ran (log §237).
+  // 508: the scan continuation and the post-scan audit never ran (log §241).
   // Callers always append "/path", so the base must never end in a slash.
   return base.trim().replace(/\/+$/, "");
 }

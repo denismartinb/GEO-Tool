@@ -21349,7 +21349,7 @@ revisado en esta fase.
 
 **Trazabilidad.** `app/dashboard/projects/[projectId]/prompts/page.tsx`.
 
-## 236. MODEL-PIN: Gemini pasa de gemini-2.5-flash a gemini-3.6-flash (2026-10-09, ADR 0042)
+## 240. MODEL-PIN: Gemini pasa de gemini-2.5-flash a gemini-3.6-flash (2026-10-09, ADR 0042)
 
 **Qué se decidió.** El modelo fijado por defecto pasa a `gemini-3.6-flash`
 (`lib/llm/gemini-client.ts`). Las cinco llamadas a Gemini (generación del
@@ -21378,7 +21378,7 @@ aviso. Un modelo así no es un pin fiable para el lanzamiento de pago.
 
 **Rollback.** `GEMINI_MODEL=gemini-2.5-flash` en Vercel, sin tocar código.
 
-## 237. SITE-URL-SLASH-1: las auto-llamadas del escaneo iban a "//api/..." y Vercel las rechazaba con 508 (2026-10-09)
+## 241. SITE-URL-SLASH-1: las auto-llamadas del escaneo iban a "//api/..." y Vercel las rechazaba con 508 (2026-10-09)
 
 **Qué se vio.** Logs de producción del 07 al 09-10 (Vercel, proyecto
 `geo-tool`): `[scan-runner] scan continuation was rejected { status: 508,
