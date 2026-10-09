@@ -16,6 +16,10 @@
  * exactamente el tipo de dato desactualizado que esta página advierte de
  * confirmar en destino.
  */
+import { PLANS } from "@/app/pricing/plans-data";
+
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
+
 export const PROFOUND_RESEARCH_DATE = "10 de agosto de 2026";
 
 export const COMPARISON_ROWS: {
@@ -27,19 +31,19 @@ export const COMPARISON_ROWS: {
 }[] = [
   {
     label: "Precio de entrada",
-    genscore: "Gratis (escaneo permanente, sin tarjeta)",
+    genscore: `Precio público desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta para probar`,
     profound: "Sin precio público — su web pide una demo. Terceros citan cifras muy distintas según la fecha, entre 99 y 499 $/mes",
     genscoreWins: true
   },
   {
     label: "Motores de IA cubiertos",
-    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), 1 en Free — los mismos en todos los planes de pago",
+    genscore: "3 (Gemini, Claude, ChatGPT), los mismos en todos los planes de pago y en la prueba de Pro",
     profound: "Hasta 9 motores nominalmente (incluidos Perplexity y Grok), pero los planes de entrada solo cubren ChatGPT o 3 motores — la cobertura amplia parece reservada a Enterprise",
     profoundWins: true
   },
   {
     label: "A quién se dirige",
-    genscore: "Desde autónomos y pymes hasta agencias — el plan gratuito no exige ni tarjeta ni contacto con ventas",
+    genscore: "Desde autónomos y pymes hasta agencias — la prueba de 7 días no exige ni tarjeta ni contacto con ventas",
     profound: "Explícitamente mid-market y enterprise (50-1.000+ empleados); reseñas independientes señalan que \"el coste por cliente rara vez sale a cuenta\" para agencias pequeñas o pymes",
     profoundWins: true
   },

@@ -393,3 +393,53 @@ describe("resolveSystemPlanId (ALERTS-SCOPE-1)", () => {
     expect(resolveSystemPlanId({ current_plan: "starter", trial_ends_at: null, email: "a@example.com" })).toBe("starter");
   });
 });
+
+/**
+ * TRIAL-ONLY-1: the domain-overage gate locked the whole console of any trial
+ * that ended with 2+ domains. Without a plan the account is read-only, so the
+ * gate has nothing to protect — it keeps its job only for a real paid
+ * downgrade.
+ */
+describe("getDomainOverage", () => {
+  function fakeOverageSupabase(plan: string, activeCount: number) {
+    return {
+      from(table: string) {
+        if (table === "profiles") {
+          return {
+            select: () => ({
+              eq: () => ({
+                maybeSingle: async () => ({
+                  data: { current_plan: plan, stripe_subscription_id: null, email: "a@b.es" },
+                  error: null
+                })
+              })
+            })
+          };
+        }
+        const rows = Array.from({ length: activeCount }, (_, i) => ({ id: `p${i}`, name: `p${i}`, domain: `p${i}.es` }));
+        return {
+          select: (_cols: string, opts?: { head?: boolean }) => ({
+            eq: () =>
+              opts?.head
+                ? Promise.resolve({ count: activeCount, error: null })
+                : { order: async () => ({ data: rows, error: null }) }
+          })
+        };
+      }
+    };
+  }
+
+  it("never gates a read-only (free) account, whatever its domain count", async () => {
+    const { getDomainOverage } = await import("./billing");
+    requireUser.mockResolvedValue({ supabase: fakeOverageSupabase("free", 4), user: { id: "user-1" } });
+    expect((await getDomainOverage()).isOverCapacity).toBe(false);
+  });
+
+  it("still gates a paid plan over its cap", async () => {
+    const { getDomainOverage } = await import("./billing");
+    requireUser.mockResolvedValue({ supabase: fakeOverageSupabase("starter", 3), user: { id: "user-1" } });
+    const overage = await getDomainOverage();
+    expect(overage.isOverCapacity).toBe(true);
+    expect(overage.requiredRemoveCount).toBe(2);
+  });
+});

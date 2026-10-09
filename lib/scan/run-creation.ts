@@ -241,34 +241,16 @@ export async function createPendingScanRunCore({
   const plan = resolvePlan(resolveSystemPlanId(profileRow) as string | undefined);
   const campaignCap = plan.caps.prompts;
 
-  // PRICING-TRUTH-1 (PR b): Free is "1 escaneo puntual" (see /pricing) — a
-  // free-plan project gets exactly one real, *completed* scan, ever. Gated
-  // on a prior COMPLETED run rather than "any run exists" so this never
-  // fights SCAN-ROBUST-1's auto-retry: a timed-out/failed first attempt
-  // doesn't count, and reconcileStuckScanRuns' internal retry (also routed
-  // through this function, trigger_source='cron') is free to create the
-  // replacement run that gives the user their one real result. Once a
-  // completed run exists, this also transitively blocks the recurring-cron
-  // path (which independently already requires a completed scan to enable,
-  // and is filtered out for free-plan owners in cron.ts) and a repeat
-  // manual click, matching "sin tendencia ni monitorización" in the Free
-  // plan's own marketing copy.
+  // TRIAL-ONLY-1 (supersedes PRICING-TRUTH-1 PR b's "one completed scan,
+  // ever"): `free` is no longer sold. It is the read-only state of an account
+  // whose Pro trial ended without subscribing, or whose subscription was
+  // cancelled — it keeps every scan it already has and creates none, manual
+  // or automatic. Every signup starts on the Pro trial, so the first scan
+  // always happens there. Checked against the EFFECTIVE plan
+  // (`resolveSystemPlanId` above), so a trial that expired but was never
+  // written down lazily is read-only here too.
   if (plan.id === "free") {
-    const { data: priorCompletedRun, error: priorRunError } = await service
-      .from("scan_runs")
-      .select("id")
-      .eq("project_id", projectId)
-      .eq("status", "completed")
-      .limit(1)
-      .maybeSingle();
-
-    if (priorRunError) {
-      throw new ProjectActionError("unexpected_error");
-    }
-
-    if (priorCompletedRun) {
-      throw new ProjectActionError("free_plan_scan_limit_reached");
-    }
+    throw new ProjectActionError("free_plan_scan_limit_reached");
   }
 
   // Reconcile any stuck pending/running runs before checking for an active

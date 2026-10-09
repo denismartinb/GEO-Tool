@@ -27,12 +27,12 @@ const faqItems = [
   {
     question: "¿Cuál es la más barata para empezar?",
     answer:
-      "GenScore, y es la única de las ocho con plan gratuito permanente y sin tarjeta: puedes escanear antes de decidir si pagas algo. Entre las de pago, Otterly y CreceRank arrancan alrededor de 29 $/mes, aunque en Otterly Gemini y Google AI Mode son add-ons con coste extra sobre ese precio base, así que ese número no es el que acabas pagando si necesitas esos motores."
+      "GenScore, que además se puede probar 7 días con Pro y sin tarjeta antes de pagar nada. Entre las de pago, Otterly y CreceRank arrancan alrededor de 29 $/mes, aunque en Otterly Gemini y Google AI Mode son add-ons con coste extra sobre ese precio base, así que ese número no es el que acabas pagando si necesitas esos motores."
   },
   {
     question: "¿Alguna de estas herramientas tiene interfaz en español?",
     answer:
-      "Dos de las ocho: GenScore y CreceRank. Otterly confirma interfaz en inglés, y para Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no se ha podido confirmar soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: GenScore ejecuta Gemini y Claude además de ChatGPT, y es la única de las dos que genera el borrador de la solución además de medir, con escaneo gratuito permanente para probarlo sin tarjeta."
+      "Dos de las ocho: GenScore y CreceRank. Otterly confirma interfaz en inglés, y para Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no se ha podido confirmar soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: GenScore ejecuta Gemini y Claude además de ChatGPT, y es la única de las dos que genera el borrador de la solución además de medir, con 7 días de Pro gratis, sin tarjeta, para probarlo."
   }
 ];
 
@@ -159,8 +159,8 @@ export default function MejoresHerramientasGeoPage() {
           </li>
         </ul>
         <p>
-          Y hay una tercera diferencia que no necesita argumentación: <strong>GenScore es la única de
-          las ocho con escaneo gratuito permanente y sin tarjeta</strong>. Puedes comprobar las dos
+          Y hay una tercera diferencia que no necesita argumentación: <strong>GenScore se puede probar
+          7 días con Pro y sin tarjeta</strong>, además de la comprobación anónima de ChatGPT sin registro. Puedes comprobar las dos
           respuestas de arriba con tus propios prompts, sobre tu propio dominio, antes de pagar nada a
           nadie.
         </p>
@@ -221,7 +221,7 @@ export default function MejoresHerramientasGeoPage() {
 
         <ArticleCta
           title="¿Quieres ver tu GEO Score real antes de decidir?"
-          text="Lanza tu escaneo gratuito con GenScore y compara con datos propios, no solo con esta tabla. Sin tarjeta."
+          text="Prueba Pro 7 días gratis con GenScore y compara con datos propios, no solo con esta tabla. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

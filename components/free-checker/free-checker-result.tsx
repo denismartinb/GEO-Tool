@@ -69,7 +69,7 @@ export function FreeCheckerResult({
         </div>
         <div className="lp-hero-actions">
           <button type="button" className="lp-cta" onClick={onSignup}>
-            Escanear con una cuenta gratis
+            Probar Pro 7 días gratis
           </button>
           <button type="button" className="lp-cta-soft" onClick={onRetry}>
             Probar otro dominio
@@ -186,7 +186,7 @@ export function FreeCheckerResult({
         </ul>
         <div className="lp-hero-actions">
           <button type="button" className="lp-cta" onClick={onSignup}>
-            Escanear {domain} gratis
+            Escanear {domain} con Pro 7 días gratis
           </button>
           <button type="button" className="lp-cta-soft" onClick={onRetry}>
             Probar otro dominio

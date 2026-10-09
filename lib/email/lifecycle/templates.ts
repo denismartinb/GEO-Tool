@@ -139,7 +139,7 @@ function offerPriceLabel(offer: PlanOffer): string {
 
 /**
  * What changes when the trial ends, from `PLANS` via the caller: the rows
- * are the real Pro vs Free caps, never a marketing list typed here.
+ * are the real Pro caps against the read-only state (TRIAL-ONLY-1), never a marketing list typed here.
  */
 export function lossTable(rows: Array<{ label: string; pro: string; free: string }>, freeFromLabel: string): string {
   const head = (text: string, color: string) =>
@@ -150,7 +150,7 @@ export function lossTable(rows: Array<{ label: string; pro: string; free: string
         `<tr><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#3B4759;">${r.label}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#0B1426;font-weight:700;">${r.pro}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#5B6B82;">${r.free}</td></tr>`
     )
     .join("");
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Free, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Sin plan, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
 }
 
 /*
@@ -361,7 +361,7 @@ export async function sendTrialD5Email(
     `
     ${eyebrow("Quedan 2 días", "#D23B48")}
     ${heading(`Tu prueba de Pro termina el ${endDay} ${endDate}`)}
-    ${paragraph(`Desde ese día, ${who} dejará de escanearse a diario. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+    ${paragraph(`Desde ese día, ${who} dejará de escanearse: verás tus datos, pero no se actualizan. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
     ${lossTable(input.lossRows, endDate)}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}

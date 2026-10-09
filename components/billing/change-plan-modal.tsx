@@ -83,7 +83,12 @@ export function ChangePlanModal({
   overageOnly?: boolean;
 }) {
   const current = PLANS.find((p) => p.id === currentId)!;
-  const [sel, setSel] = useState<Plan["id"]>(overageOnly ? currentId : (initialTargetId ?? currentId));
+  // TRIAL-ONLY-1: `free` ya no es una opción del modal — es el estado de una
+  // cuenta sin plan (prueba terminada o suscripción cancelada). Desde ahí la
+  // selección arranca en Pro, el plan de la prueba.
+  const [sel, setSel] = useState<Plan["id"]>(
+    overageOnly ? currentId : (initialTargetId ?? (currentId === "free" ? "pro" : currentId))
+  );
   const [step, setStep] = useState<"select" | "confirm" | "overage" | "done">(overageOnly ? "overage" : "select");
   const [error, setError] = useState<string | null>(null);
   const [archiveIds, setArchiveIds] = useState<Set<string>>(new Set());
@@ -140,7 +145,7 @@ export function ChangePlanModal({
   // something they could not have. It now renders as its own cell with a real
   // way out (SUPPORT_EMAIL), and `sel` can never hold it.
   const agencyPlan = PLANS.find((p) => p.id === "agency")!;
-  const selectablePlans = PLANS.filter((p) => p.id !== "agency");
+  const selectablePlans = PLANS.filter((p) => p.id !== "agency" && p.id !== "free");
 
   const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
 
