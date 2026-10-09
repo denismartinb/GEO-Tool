@@ -94,6 +94,12 @@ export type BlogPost = {
   primaryKeyword?: string;
   /** Which BLOG_CLUSTERS entry this post belongs to — GROWTH-2 Fase 2.5. */
   cluster: BlogCluster["key"];
+  /**
+   * BLOG-REDESIGN-1: big figure on the article's dark hero. Only for a post
+   * whose own measured data backs it, and `source` is mandatory — a post
+   * without one renders no figure rather than an invented one (log §247).
+   */
+  heroStat?: { value: string; label: string; source: string };
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -360,7 +366,12 @@ export const BLOG_POSTS: BlogPost[] = [
     // First own-data study (SECTOR-STUDY-1, log §246): real answers measured
     // with /admin/estudio, published as percentages only (founder rule).
     primaryKeyword: "qué software de facturación recomienda la ia",
-    cluster: "sectores"
+    cluster: "sectores",
+    heroStat: {
+      value: "72%",
+      label: "de las respuestas de ChatGPT, Gemini y Claude nombran a Holded, la marca más presente.",
+      source: "Estudio GenScore, 9 oct 2026"
+    }
   }
 ];
 

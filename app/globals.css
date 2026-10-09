@@ -9345,6 +9345,196 @@ select.set-field {
 }
 .art-btn:hover { background: #f0f3f9; }
 
+/* ==========================================================================
+   BLOG-REDESIGN-1 — el artículo del blog con la estética del estudio PDF
+   «De buscar a preguntar» (fundador, 2026-10-09: "que al ver un post en el
+   blog se parezca lo máximo posible"). Diseño aprobado en
+   `docs/design-reference/blog-redesign-1/`; log §247.
+
+   Todo va bajo `.art-hero` (la portada) o `.lp-article` (el cuerpo), que
+   sólo pone `BlogPageShell` cuando recibe `hero`. /comparativas, /docs y
+   /glosario usan los mismos bloques `.art-*` y NO cambian: el ámbito existe
+   para que este rediseño no se derrame sobre superficies que nadie pidió.
+
+   Paleta y tipografía del PDF: tokens de marca existentes (`--brand-*`),
+   Bricolage para titulares y cifras, Figtree para todo lo demás. El PDF no
+   usa monoespaciada en ningún sitio, así que aquí las etiquetas pasan a
+   Figtree; el código (`pre`) la conserva.
+   ========================================================================== */
+
+/* --- Portada oscura ------------------------------------------------------ */
+.art-hero {
+  position: relative; overflow: hidden; background: #081223; color: #fff;
+  font-family: var(--font-body), "Figtree", -apple-system, sans-serif;
+}
+.art-hero::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background:
+    radial-gradient(60% 55% at 88% 0%, rgba(9, 197, 214, .28), transparent 70%),
+    radial-gradient(55% 60% at 0% 100%, rgba(79, 123, 255, .22), transparent 70%);
+}
+.art-hero-inner { position: relative; max-width: 816px; margin: 0 auto; padding: 30px 28px 0; }
+.art-hero-crumbs { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600; }
+.art-hero-crumbs > span { display: inline-flex; gap: 8px; color: var(--brand-ink-4); }
+.art-hero-crumbs a { color: #c7cedb; }
+.art-hero-crumbs a:hover { color: #fff; text-decoration: underline; }
+.art-hero-eyebrow {
+  margin-top: 52px; font-size: 12px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--brand-cyan);
+}
+.art-hero h1 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(34px, 5.6vw, 52px); font-weight: 800; line-height: 1.06; letter-spacing: -.025em;
+  margin: 16px 0 0; color: #fff; text-wrap: balance;
+}
+.art-hero-sub { font-size: 17px; line-height: 1.6; color: #c7cedb; margin: 20px 0 0; max-width: 620px; }
+.art-hero-stat { margin-top: 36px; display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 24px; }
+.art-hero-big {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: clamp(84px, 15vw, 128px); font-weight: 800; line-height: .85; letter-spacing: -.04em;
+  background: linear-gradient(120deg, var(--brand-blue-2), var(--brand-cyan));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.art-hero-big small { font-size: .55em; margin-left: 2px; }
+.art-hero-stat p { margin: 0 0 6px; max-width: 320px; font-size: 15px; line-height: 1.5; color: #e5e9f2; }
+.art-hero-stat p span { display: block; margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--brand-ink-4); }
+.art-hero-meta {
+  margin: 44px 0 0; padding: 22px 0 32px; display: flex; flex-wrap: wrap; gap: 18px 40px;
+  border-top: 1px solid rgba(255, 255, 255, .1);
+}
+.art-hero-meta dt { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #6b7c94; }
+.art-hero-meta dd { margin: 6px 0 0; font-size: 14.5px; font-weight: 700; color: #fff; }
+@media (max-width: 640px) {
+  .art-hero-inner { padding-top: 22px; }
+  .art-hero-eyebrow { margin-top: 36px; }
+  .art-hero-sub { font-size: 16px; }
+  .art-hero-meta { gap: 16px 28px; }
+}
+
+/* --- Cuerpo -------------------------------------------------------------- */
+.lp-section.lp-article { padding: 44px 0 72px; counter-reset: art-sec; }
+.lp-article .blog-body { font-family: var(--font-body), "Figtree", -apple-system, sans-serif; }
+.lp-article .blog-body p,
+.lp-article .blog-body li { font-size: 16.5px; line-height: 1.75; color: var(--brand-ink-2); }
+.lp-article .blog-body strong { color: var(--brand-ink); font-weight: 700; }
+.lp-article .blog-body a:not(.btn):not(.art-btn) { color: var(--brand-blue); }
+
+/* Secciones numeradas 01, 02… como en el PDF. Sólo los h2 que cuelgan
+   directamente del cuerpo: "Sigue leyendo" y los h2 de bloques no cuentan. */
+.lp-article .blog-body > h2 {
+  counter-increment: art-sec; display: flex; align-items: baseline; gap: 12px;
+  margin: 56px 0 14px; font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 30px; font-weight: 800; letter-spacing: -.015em; line-height: 1.15; color: var(--brand-ink);
+  text-wrap: balance;
+}
+.lp-article .blog-body > h2::before {
+  content: counter(art-sec, decimal-leading-zero); flex: none;
+  font-size: 15px; font-weight: 800; color: var(--brand-blue);
+}
+.lp-article .blog-body > h2:first-child { margin-top: 0; }
+.lp-article .blog-body h3 { font-size: 18.5px; font-weight: 800; letter-spacing: -.005em; color: var(--brand-ink); margin: 32px 0 10px; }
+.lp-article .blog-body blockquote { border-left: 4px solid var(--brand-blue); padding-left: 18px; color: var(--brand-ink-2); font-style: normal; }
+.lp-article .blog-body table th {
+  background: none; font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--brand-ink-4);
+}
+.lp-article .blog-body table td { border-bottom-color: #eef1f6; }
+
+/* Respuesta rápida: el arranque del PDF (lede grande), en panel suave. */
+.lp-article .art-takeaway {
+  background: #f7f8fb; border: 0; border-left: 4px solid var(--brand-blue);
+  border-radius: 0 14px 14px 0; box-shadow: none; padding: 22px 26px; margin: 0 0 36px;
+}
+.lp-article .art-takeaway-lbl {
+  font-family: inherit; font-size: 11px; font-weight: 800; letter-spacing: .08em; color: var(--brand-blue);
+}
+.lp-article .art-takeaway p { font-size: 18px; line-height: 1.65; color: var(--brand-ink); }
+
+/* Cifras: tarjetas del PDF, la primera en oscuro. */
+.lp-article .art-stats { gap: 12px; margin: 32px 0; }
+.lp-article .art-stat { border: 1px solid #e7eaf0; border-radius: 14px; padding: 20px 18px 18px; box-shadow: none; background: #fff; }
+.lp-article .art-stat-n { font-size: 38px; }
+.lp-article .art-stat-l { font-size: 13px; line-height: 1.45; color: var(--brand-ink-3); margin-top: 10px; }
+.lp-article .art-stat-src { font-family: inherit; font-size: 11px; font-weight: 600; color: var(--brand-ink-4); border-top: 0; padding-top: 0; margin-top: 10px; }
+.lp-article .art-stats > .art-stat:first-child { background: var(--brand-ink); border-color: var(--brand-ink); }
+.lp-article .art-stats > .art-stat:first-child .art-stat-n { color: var(--brand-cyan); }
+.lp-article .art-stats > .art-stat:first-child .art-stat-l { color: #c7cedb; }
+.lp-article .art-stats > .art-stat:first-child .art-stat-src { color: #6b7c94; }
+
+/* Cita: la frase con barra azul del PDF. */
+.lp-article .art-pull { background: none; border-left: 4px solid var(--brand-blue); border-radius: 0; padding: 4px 0 4px 20px; margin: 40px 0; }
+.lp-article .art-pull-text { font-size: 23px; font-weight: 700; line-height: 1.35; }
+.lp-article .art-pull cite { font-family: inherit; font-size: 12px; font-weight: 600; color: var(--brand-ink-4); }
+
+/* Secciones de playbook, veredicto, acción rápida. */
+.lp-article .art-numsec-n { background: none; width: auto; height: auto; font-size: 17px; transform: none; }
+.lp-article .art-numsec-h h3 { font-size: 19px; font-weight: 800; margin: 0; }
+.lp-article .art-verdict { border-radius: 14px; }
+.lp-article .art-verdict-badge,
+.lp-article .art-quick-lbl,
+.lp-article .art-pill,
+.lp-article .art-prompt-i,
+.lp-article .art-sov-h,
+.lp-article .art-sov-n em,
+.lp-article .art-ans-h,
+.lp-article .art-rec-pri,
+.lp-article .art-rec-conf { font-family: inherit; }
+.lp-article .art-quick { background: #f7f8fb; border: 0; border-radius: 14px; }
+
+/* Figuras y tablas: borde fino, radio 14, sin sombra — como las del PDF. */
+.lp-article .art-frame,
+.lp-article .art-tablewrap,
+.lp-article .art-code { border: 1px solid #e7eaf0; border-radius: 14px; box-shadow: none; }
+.lp-article .art-caption { font-family: inherit; font-size: 12.5px; color: var(--brand-ink-3); }
+.lp-article .art-tablewrap thead th { font-family: inherit; background: none; color: var(--brand-ink-4); }
+.lp-article .art-tablewrap::before,
+.lp-article .art-frame-wide::before { font-family: inherit; }
+.lp-article .art-check li { border-color: #e7eaf0; border-radius: 12px; font-size: 15.5px; }
+.lp-article .art-prompt-row { background: #f7f8fb; border: 0; border-radius: 10px; }
+.lp-article .art-prompt-q { font-style: normal; color: var(--brand-ink); }
+
+/* Autor: línea fina en vez de tarjeta. */
+.lp-article .art-bio { background: none; border: 0; border-top: 1px solid #e7eaf0; border-radius: 0; box-shadow: none; padding: 24px 0 0; margin-top: 48px; align-items: center; }
+.lp-article .art-avatar { width: 44px; height: 44px; border-radius: 12px; background: var(--brand-ink); font-size: 20px; }
+.lp-article .art-bio h4 { font-family: inherit; font-size: 14.5px; font-weight: 800; margin-bottom: 2px; }
+
+/* Cierre oscuro con resplandor, como la contraportada del PDF. */
+.lp-article .art-cta { background: #081223; border-radius: 18px; padding: 32px 30px; text-align: left; margin-top: 36px; }
+.lp-article .art-cta-glow {
+  width: auto; height: auto; inset: 0; border-radius: 0; top: 0; right: 0;
+  background: radial-gradient(70% 90% at 100% 0%, rgba(9, 197, 214, .25), transparent 70%);
+}
+/* `.lp-article .blog-body h3` pinta los h3 en tinta; el del cierre va sobre fondo oscuro. */
+.lp-article .blog-body .art-cta h3 { color: #fff; }
+.lp-article .art-cta h3 { font-size: 28px; line-height: 1.12; margin: 0 0 12px; text-wrap: balance; }
+.lp-article .art-cta p { font-size: 15.5px; line-height: 1.6; color: #d5dbe6; max-width: 540px; margin: 0 0 22px; }
+.lp-article .art-btn { font-weight: 800; border-radius: 10px; padding: 12px 20px; }
+
+/* Relacionados: tarjetas en vez de lista. */
+.lp-article .blog-related { border-top: 0; margin-top: 48px; padding-top: 0; }
+.lp-article .blog-related h2 {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink-4); margin: 0 0 12px;
+}
+.lp-article .blog-related ul { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.lp-article .blog-related li { margin: 0; font-size: 15px; line-height: 1.4; min-width: 0; }
+.lp-article .blog-related li a {
+  display: block; height: 100%; padding: 16px 18px; border: 1px solid #e7eaf0; border-radius: 14px;
+  font-weight: 700; text-decoration: none;
+}
+.lp-article .blog-body .blog-related li a:not(.btn) { color: var(--brand-ink); }
+.lp-article .blog-related li a:hover,
+.lp-article .blog-related li a:focus-visible { border-color: var(--brand-blue); }
+@media (max-width: 640px) {
+  .lp-section.lp-article { padding: 32px 0 56px; }
+  .lp-article .blog-body > h2 { font-size: 25px; margin-top: 44px; }
+  .lp-article .art-pull-text { font-size: 20px; }
+  .lp-article .art-takeaway { padding: 18px 20px; }
+  .lp-article .art-takeaway p { font-size: 17px; }
+  .lp-article .art-cta { padding: 26px 22px; }
+  .lp-article .art-cta h3 { font-size: 24px; }
+  .lp-article .blog-related ul { grid-template-columns: minmax(0, 1fr); }
+  .lp-article .art-stats { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* ============================================================
    DOMAINS-REDESIGN-1 — «Dominios» (.dm2-*)
 

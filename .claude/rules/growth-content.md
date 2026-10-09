@@ -165,13 +165,21 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   copiar lo que no se ve** y la pista "Desliza →" sólo aparece bajo 640 px, así
   que en escritorio se ve cortada y sin aviso. El ajuste es visual: un salto
   blando no mete ningún `\n` en el portapapeles (log §85).
-- **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
-  recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
-  de los artículos *sin* portada — "un icono de algo que no carga bien", el
-  fundador. Cuatro artículos estuvieron así: portada correcta en `/blog`, en la
-  tarjeta social y en el schema, y degradado en su propia cabecera, porque los
-  tests de portada miraban `BLOG_POSTS` y el disco, nunca el MDX
-  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §73).
+- **Superseded por BLOG-REDESIGN-1 (log §247): el artículo ya no pinta su
+  ilustración.** La cabecera de todo post es `<BlogPageShell hero={<ArticleHero
+  post={post} />}>` —portada oscura con la estética del estudio PDF—, sin
+  `<BlogCover>`, sin `# {post.title}` (el h1 lo pinta `ArticleHero`) y sin
+  `<PostMeta>`. `coverImage` sigue siendo obligatorio porque lo usan el índice,
+  la tarjeta social y el schema. Lo vigila `covers.test.ts`, igual que vigilaba
+  la regla anterior (log §73): un post nuevo copiado de uno viejo arrastraría
+  la cabecera vieja sin que nada lo dijera.
+- **La cifra grande de la portada (`heroStat`) sólo con dato propio y fuente.**
+  Un post sin dato medido sale sin cifra; no se busca una para rellenar el
+  hueco, porque una cifra elegida por diseño y no por evidencia es una
+  métrica inventada (CLAUDE.md, "fake metrics"; log §247).
+- **El estilo del artículo vive bajo `.art-hero` y `.lp-article`.**
+  `/comparativas`, `/docs` y `/glosario` comparten los bloques `.art-*` y no
+  cambiaron; tocar `.art-*` sin ese ámbito los cambia a la vez (log §247).
 
 ## Redacción
 

@@ -21889,3 +21889,50 @@ los dos recortes (tira de 96 px y caja móvil de ~3,35:1).
 **Trazabilidad.** `app/blog/que-software-de-facturacion-recomienda-la-ia/`, `lib/studies/*` (incl. `prospect-audit*.ts`), `app/admin/estudio/*`,
 `scripts/sector-study.ts`, `scripts/domain-check.ts` (+tests),
 `.claude/rules/admin.md`.
+
+---
+
+## 247. BLOG-REDESIGN-1: el artículo del blog con la estética del estudio PDF «De buscar a preguntar» (2026-10-09)
+
+**Qué se decidió.** El fundador pidió que "al ver un post en el blog se
+parezca lo máximo posible" al estudio PDF «De buscar a preguntar», y que se
+remaqueten todos los posts. Aprobó la maqueta y el plan el mismo día
+(`docs/design-reference/blog-redesign-1/`). Los 22 artículos cambian a la vez
+porque todos se componen con la misma librería de bloques:
+
+- **Portada oscura** (`components/blog/article-hero.tsx`): migas, antetítulo
+  (clúster), titular Bricolage grande, entradilla (`description`), fecha,
+  actualización si la hay y tema. Sustituye a `<BlogCover>` + `# {post.title}`
+  + `<PostMeta>` en cada MDX, vía la nueva prop `hero` de `BlogPageShell`.
+- **Cifra grande en degradado sólo con `heroStat`** (`lib/blog/posts.ts`),
+  con fuente obligatoria. Hoy sólo la lleva el estudio de facturación. Un post
+  sin dato propio sale sin cifra: elegir una para rellenar sería una métrica
+  falsa.
+- **Cuerpo** bajo `.lp-article`: h2 numerados 01, 02… (contador CSS, sólo h2
+  hijos directos de `.blog-body`), respuesta rápida en panel suave, cifras
+  como las tarjetas del PDF con la primera en oscuro, cita con barra azul,
+  autor en línea fina, cierre oscuro con resplandor y relacionados en
+  tarjetas. Las etiquetas pasan de monoespaciada a Figtree, como el PDF.
+
+**Por qué con ámbito.** `/comparativas`, `/docs` y `/glosario` usan los mismos
+bloques `.art-*`; nadie pidió cambiarlos. `BlogPageShell` sólo añade
+`lp-article` cuando recibe `hero`, y todo el CSS nuevo cuelga de ahí o de
+`.art-hero`.
+
+**La ilustración de portada sale del artículo** (fundador: "entiendo que con
+esto ya no hacen falta las imágenes de los posts"). Supera la regla de §73
+(SEO-POS-1 S6, "el artículo enseña la portada que declara"): `covers.test.ts`
+ahora exige `ArticleHero` y prohíbe `<BlogCover>` y `# {post.title}` en el
+MDX. `coverImage` **sigue siendo obligatorio**: lo usan el índice `/blog`, la
+tarjeta social de LinkedIn y el schema.
+
+**Pendiente (Fase 2, PR aparte).** Índice `/blog` y páginas de clúster con el
+mismo lenguaje, e imagen social generada automáticamente con este estilo, que
+es lo que de verdad haría innecesarias las ilustraciones en posts nuevos.
+Ningún post se ha reescrito: la figura de barras por motor de la maqueta es
+contenido, no plantilla, y el post de facturación sigue con su tabla.
+
+**Trazabilidad.** `components/blog/article-hero.tsx`,
+`components/blog/blog-page-shell.tsx`, `app/globals.css` (bloque
+BLOG-REDESIGN-1), `app/blog/*/page.mdx`, `lib/blog/posts.ts`,
+`lib/blog/covers.test.ts`, `.claude/rules/growth-content.md`.
