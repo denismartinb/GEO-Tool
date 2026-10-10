@@ -23074,7 +23074,104 @@ comped cuyo `current_plan` crudo sea `free` no puede usar el flujo de sólo
 archivar con su plan efectivo; riesgo aceptado (el cupo de Agencia hace
 improbable el exceso).
 
-## 266. SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1: `changePlan` ya no concede planes de pago, y el webhook de Stripe tiene memoria (2026-10-08)
+## 265. GEO-SELF-1 Fase 8: línea base de medición y arreglos de título, descripción e idioma (2026-10-10)
+
+**Qué se decidió.** La medición de F8 no usa un proyecto de la consola sino el
+estudio de `/admin/estudio` («Una marca», genscore.es) con 15 preguntas
+principales de búsqueda y 7 competidores fijos, relanzado cada lunes por el
+fundador. Los resultados y la comparación semanal viven fuera del repo, en la
+carpeta compartida del proyecto (`geo-propio/medicion/`). La línea base del
+2026-10-10 sirvió para tres arreglos baratos que entran aquí:
+
+- **Idioma declarado.** `contentMetadata` emite `alternates.languages` con
+  `es-ES` y `x-default` sobre la propia URL. La auditoría marcaba como crítico
+  que ninguna página declarara idioma; el sitio sólo tiene castellano, así que
+  la declaración honesta es «este idioma, esta URL».
+- **Títulos y descripciones que caben en el resultado.** 20 artículos tenían un
+  `<title>` de más de 70 caracteres y 9 una descripción de más de 160. Se
+  arreglan con `seoTitle` y `metaDescription`, que ya existían, sin tocar el
+  título visible del artículo. La portada pasa de 218 a 146 caracteres de
+  descripción, y `/que-es-genscore` usa la definición canónica corta en vez de
+  la larga (357). `posts.test.ts` fija los dos límites para todo artículo.
+- **`/comparativas` deja de ser una lista de enlaces** (120 palabras): explica
+  qué se compara, con qué criterios y cómo tratamos nuestra propia herramienta,
+  y enseña la entradilla de cada comparativa.
+
+**Por qué el índice de comparativas dice «GEO quiere decir posicionamiento en
+motores de IA».** En la línea base, a «¿Cuáles son las mejores herramientas
+GEO?» y «¿Cuánto cuesta una herramienta de GEO?» Claude y ChatGPT respondieron
+con herramientas de mapas y de GPS; sólo Gemini entendió GEO como
+posicionamiento en IA. Una página que quiere que la citen en esa pregunta tiene
+que deshacer la ambigüedad en su propio texto.
+
+**Pendiente o conocido.** Los títulos de las páginas que no son artículos
+(glosario, docs) no se han revisado. La medición es de una muestra por motor y
+pregunta: sirve para ver tendencia, no para afirmar un porcentaje.
+
+## 266. SECTOR-STUDY-2: estudio de clínicas dentales, «¿Qué clínicas dentales recomienda la IA?» (2026-10-10)
+
+**Qué se publica.** `/blog/que-clinicas-dentales-recomienda-la-ia`, segundo
+estudio con dato propio (tras §246), medido con `/admin/estudio` el
+2026-10-10 en Madrid y Valencia con las mismas preguntas principales de
+búsqueda, cambiando sólo la ciudad. Se añade a `STUDY_ENTRIES` del hub
+`/estudios` (§260). Portada en
+`docs/design-reference/blog-covers/que-clinicas-dentales-recomienda-la-ia-cover.svg`,
+exportada a WebP 1200×300 (§125).
+
+**Decisiones del fundador (2026-10-10).**
+- Título general, sin ciudad; el cuerpo habla de grandes ciudades de España
+  y dice explícitamente que esta primera edición cubre Madrid y Valencia
+  (no se afirma «las principales ciudades» sin haberlas medido).
+- Sección propia que explica por qué Gemini recomienda clínicas
+  independientes y Claude cadenas. Los dos datos son medidos (fuentes que
+  cita Gemini); los cuatro motivos se presentan como **interpretación
+  nuestra**, no como hallazgo. El comportamiento de los resúmenes con IA de
+  Google se declara probable y **no medido**.
+- El mismo contenido sirve de artículo, de PDF para las clínicas que lo
+  pidan y de post de LinkedIn. Más ciudades
+  (`captacion-clinicas/estudios/bloques-mas-ciudades.md`) sólo si el post y
+  los correos 1:1 funcionan.
+
+**Reglas aplicadas.** Sólo porcentajes y ratios, nunca recuentos (§246);
+motores sin versión; frase de método canónica. Al ser publicidad sanitaria
+(RD 1907/1996): sin testimonios ni casos de éxito ni promesa de resultados.
+Sólo se nombran clínicas que aparecen; las ausentes, sólo en agregado
+(«77% de las independientes bien valoradas»). Asensio se cuenta como
+«Asensio Odontología Avanzada», el nombre con que la nombra la IA, no el de
+su dominio. «Clínica Dental Milenium» es la red de clínicas de Sanitas
+(sanitas.es/dental/clinicas-dentales-milenium), así que se cuenta dentro de
+Sanitas Dental como cadena: eso la pone primera en Madrid (19%) y deja la
+cifra de Claude en «2 de cada 3» respuestas con cadena. Las tablas se
+recalcularon sobre las respuestas guardadas (texto + marcas extraídas,
+contando «Ferrús» con tilde), no sobre el resumen de la herramienta.
+
+**Pendiente.** Nada roto conocido. Las cifras son una foto del 2026-10-10;
+si se reescanea, la tabla se actualiza con `dateUpdated`.
+
+## 267. CREATE-PROJECT-RACE-1: una alta duplicada por carrera se lee como «dominio ya activo», no como fallo (2026-10-08)
+
+**Qué pasaba.** `createProjectCore` comprueba si el dominio ya existe (lectura) y
+después inserta. Las dos operaciones no son atómicas: un doble clic o dos
+pestañas pasan ambas la lectura, y la segunda choca con la restricción
+`projects_owner_domain_country_lang_uniq` (migración 0001). El proyecto no se
+duplicaba —la base lo impedía—, pero el usuario veía «no se pudo crear el
+proyecto, inténtalo de nuevo» cuando el proyecto sí existía.
+
+**Decisión.** Un error de insert con SQLSTATE `23505` devuelve
+`already_active`, la misma variante que ya usa el camino de lectura. La acción
+no cambia: su tabla de traducción ya cubre esa variante. Cualquier otro código
+sigue siendo `insert_failed`. No se añade token de idempotencia ni migración.
+
+**Pendiente.** La segunda petición aterriza en `/dashboard/projects/new` con el
+aviso de «ya existe» en vez de en el proyecto recién creado; redirigir al
+existente sería mejor, pero cambia la acción y no es de esta fase. Los trabajos
+huérfanos (escaneo creado y proyecto no) no se pueden producir por este
+camino: el escaneo se crea después del insert del proyecto.
+
+**Trazabilidad.** `lib/projects/create-project.ts`,
+`lib/projects/create-project.test.ts`.
+
+## 268. SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1: `changePlan` ya no concede planes de pago, y el webhook de Stripe tiene memoria (2026-10-08)
 
 **Nota (2026-10-10).** La mitad SEC-CHANGEPLAN-1 de esta sección ya se mergeó sola como §264 (PR #572). Este PR añade el registro de eventos del webhook. Su migración nació como 0038 y pasó a 0039 porque main ya tenía una 0038 (`email_sends_winback_kinds`).
 

@@ -1,7 +1,7 @@
 -- 0039_stripe_webhook_events.sql
 --
 -- Phase: SEC-WEBHOOK-REGISTRY-1 (PR de seguridad de facturación, founder-
--- approved 2026-10-08, docs/brand/design-decisions-log.md §266)
+-- approved 2026-10-08, docs/brand/design-decisions-log.md §268)
 --
 -- Purpose: Stripe delivers webhooks at-least-once and not in order. Until now
 -- the handler relied on "every write is naturally idempotent", which is true

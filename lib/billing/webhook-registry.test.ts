@@ -477,7 +477,7 @@ describe("processStripeWebhookEvent — an old checkout never overwrites the cur
  * guard only prevents OVERWRITING an already-linked subscription; it cannot
  * know which of two paid subscriptions is the "right" one, and the loser is
  * left billing a customer our data doesn't link to. Mitigation proposed in
- * log §266 (reconciliation + operator alert); nothing here cancels or creates
+ * log §268 (reconciliation + operator alert); nothing here cancels or creates
  * a subscription.
  */
 describe("KNOWN LIMITATIONS — checkout ordering is first-arrival-wins", () => {
