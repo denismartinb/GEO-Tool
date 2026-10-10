@@ -547,7 +547,7 @@ Vercel Pro, founder registered as autónomo (or fiscal vehicle chosen),
 VeriFactu/facturación decision made and applied, then swap `sk_test_...` /
 test-mode price ids for their live-mode equivalents.
 
-**Webhook registry (SEC-WEBHOOK-REGISTRY-1, log §236)**: `/api/webhooks/stripe`
+**Webhook registry (SEC-WEBHOOK-REGISTRY-1, log §266)**: `/api/webhooks/stripe`
 records every event in `public.stripe_webhook_events` and serializes events of
 one subscription through `public.stripe_subscription_locks` (migration 0039,
 applied by hand, service role only, RLS without policies). No new env var.
