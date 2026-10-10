@@ -218,3 +218,13 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   Si algún día persiste el estudio, eso es una
   escritura y necesita su Task Intake y su correo a `OPS_ALERT_EMAIL` como
   cualquier otra (`docs/brand/design-decisions-log.md` §246).
+- **`/admin/comparar-modelos` tampoco escribe filas, y sólo llama a modelos
+  del catálogo.** Los ids salen de `lib/model-compare/catalogue.ts`
+  (`isAllowedGenerationModel`, `findExtractionOption`), comprobados en el
+  servidor en cada paso, para que una petición forjada no pueda apuntar las
+  claves del operador a un modelo arbitrario. Proyecto, preguntas y
+  competidores se releen con el cliente de `requireOperator()`, nunca se
+  toman del navegador. La pasada «hoy» usa siempre la generación y la
+  extracción de producción; sólo el candidato cambia. Su nota es la fórmula de
+  la Puntuación GEO sin la parte técnica, y la página no la llama
+  «Puntuación GEO» (`docs/brand/design-decisions-log.md` §263).

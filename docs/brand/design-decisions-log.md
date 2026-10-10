@@ -22990,3 +22990,75 @@ modos.
 - Ese mismo 2026-10-10 todas las extracciones de OpenAI devolvieron 429 desde
   las 06:00 UTC. Es un tema de cuenta del proveedor y no de esta fase: avisado
   al fundador.
+
+---
+
+## 263. MODEL-COMPARE-1: `/admin/comparar-modelos`, para probar modelos más baratos contra los de hoy antes de cambiar nada (2026-10-10)
+
+**Por qué.** Tras COVERAGE-WEEKLY-1 y EXTRACTION-SINGLE-MODEL-1 (§253), la
+siguiente palanca de coste es generar las respuestas con modelos más baratos
+(gemini-3.1-flash-lite, gpt-6-luna o gpt-4.1-nano, Haiku 5.5). Esto mueve lo
+que el cliente ve, así que no se toca sin medirlo antes. El fundador lo pidió
+así: «montar algo en preview para hacer esas pruebas de usar modelos más
+baratos de claude, gemini y openai y contrastar información en todo el
+producto». Aprobó la maqueta con «sí».
+
+**Qué se decidió.** Una página de operador, `/admin/comparar-modelos`, con la
+misma forma que `/admin/estudio` (§246). Usa `requireOperator()` en cada
+action y las claves de Vercel, y no escribe nada en la base de datos. El
+navegador lanza pasos de una pregunta × motores × una repetición, dos a la
+vez. Cada respuesta se compara en tres pasadas:
+
+- **A, hoy:** generación y extracción de producción (`resolveExtractionRoute`).
+  Es la línea base de verdad, también en coste.
+- **A2, ruido** (opcional, activado por defecto): A otra vez. Dos pasadas del
+  mismo modelo nunca coinciden al 100 %, y sin esta referencia no se distingue
+  el efecto del modelo barato del azar de siempre.
+- **B, candidato:** el modelo de generación y la extracción que elija el
+  operador.
+
+La maqueta decía que la extracción elegida se aplicaba «en las dos pasadas».
+Se cambió para que A no se mueva y siga siendo la referencia.
+
+**Paridad con el escaneo, que es lo que hace válida la comparación.** La
+generación usa las funciones del escaneo con un `model?` opcional.
+`generate*VisibilityAnswer` y `extract*StructuredData` de los tres motores
+aceptan ahora ese parámetro, y sin él hacen exactamente lo de antes. La
+extracción convierte las respuestas con `buildExtractionUpdate`
+(`lib/scan/extraction.ts`), extraído de `extractAndPersistRow` para que el
+escaneo y la comparación usen el mismo código. La nota sale de
+`computeRunScoresFromResults` y `getEffectiveGeoScore`, sin el componente
+técnico. Esa nota sirve para comparar pasadas y la página dice que no es la
+Puntuación GEO del cliente.
+
+**Coste.** Se mide con los tokens reales que devuelve cada proveedor (los
+extractores devuelven ahora `tokensIn`/`tokensOut`) y con las búsquedas
+reales: `webSearchQueries` de Gemini 3 a 0,014 $ y las llamadas
+`web_search_call` de OpenAI a 0,01 $. Los precios por token están en
+`lib/model-compare/catalogue.ts`. El coste por escaneo se proyecta con las
+preguntas del proyecto × las repeticiones de `computeSampleCount`. El
+estimado previo dice «estimado». La prueba se para al llegar a 10 $ medidos.
+
+**Veredicto por motor.** Se miden cuatro coincidencias entre A y B:
+
+- mención sí/no;
+- Jaccard de marcas nombradas;
+- sentimiento cuando las dos nombran la marca;
+- Jaccard de dominios citados, salvo en Claude, que no cita.
+
+Con A2, «Equivalente» si cada coincidencia queda a ≤5 puntos de la de A frente
+a A2 y la nota se mueve ≤ el ruido (mínimo 2). «Distinto» si alguna pasa del
+doble, y «Revisar» en medio. Sin A2 se aplican umbrales fijos (85 % / 70 %,
+3 / 6 puntos), y la página lo dice. Una respuesta fallida no entra en ningún
+denominador.
+
+**Límites.** El catálogo de modelos es cerrado: el servidor rechaza cualquier
+id que no esté. La comparación usa como mucho 20 preguntas y 3 repeticiones, y
+el proyecto, sus preguntas y sus competidores se releen en el servidor en cada
+paso.
+
+**Regla de premisa.** No aplica: no se retira ningún camino de recuperación.
+
+**Pendiente.** Nada cambia en producción por esta fase. Si un candidato sale
+«Equivalente», cambiar el modelo de un motor es una decisión del fundador y
+va como su propio cambio: variable de entorno o ADR si es Gemini (ADR 0042).

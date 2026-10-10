@@ -79,3 +79,8 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   the lifecycle state machine in `docs/scan-lifecycle.md` and the timeout
   decision in `docs/adr/0003-sync-scan-execution-and-maxduration.md`.
 - Persist raw responses when expected; keep status transitions correct.
+- **El `model?` de `generate*VisibilityAnswer` y `extract*StructuredData` es
+  para comparar, no para elegir modelo en producción.** Lo usa sólo
+  `/admin/comparar-modelos` (`lib/model-compare/`). El escaneo no lo pasa y
+  sigue leyendo `GEMINI_MODEL`/`OPENAI_MODEL`/`ANTHROPIC_MODEL`, que es donde
+  se cambia un modelo de verdad, con su ADR si es Gemini (log §263).

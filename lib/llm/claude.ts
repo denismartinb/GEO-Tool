@@ -81,11 +81,13 @@ export async function generateClaudeVisibilityAnswer(input: {
   prompt: string;
   country: string;
   language: string;
+  /** Overrides `ANTHROPIC_MODEL` for this call only — the operator's model comparison (MODEL-COMPARE-1). The scan never passes it. */
+  model?: string;
 }): Promise<GeminiVisibilityResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new ClaudeConfigError("Missing ANTHROPIC_API_KEY");
 
-  const model = getClaudeModel();
+  const model = input.model || getClaudeModel();
 
   const system = [
     "You are a helpful AI assistant answering a real user's question. Answer",
@@ -255,6 +257,8 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   return {
     data: parsed.data,
-    model: data.model
+    model: data.model,
+    tokensIn: data.usage?.input_tokens ?? null,
+    tokensOut: data.usage?.output_tokens ?? null
   };
 }
