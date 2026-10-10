@@ -23170,6 +23170,7 @@ camino: el escaneo se crea después del insert del proyecto.
 
 **Trazabilidad.** `lib/projects/create-project.ts`,
 `lib/projects/create-project.test.ts`.
+
 ## 269. SEARCH-SEO-1 Fase 1a: «Posicionamiento en buscadores» en el menú, Auditoría SEO y la franja de prioridad en Visión general (2026-10-10)
 
 **Qué se decidió.** GenScore suma una parte de SEO sin pagar a terceros. El
