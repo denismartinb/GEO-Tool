@@ -1,4 +1,12 @@
-import { ORGANIZATION_ID, SITE_ORIGIN } from "@/lib/brand/canonical-definition";
+import {
+  CANONICAL_DEFINITION,
+  CONTACT_EMAIL,
+  FOUNDING_YEAR,
+  ORGANIZATION_ID,
+  ORGANIZATION_LOGO,
+  ORGANIZATION_SAME_AS,
+  SITE_ORIGIN
+} from "@/lib/brand/canonical-definition";
 
 /**
  * schema.org Organization structured data (GROWTH-2 Fase 2.1) — mounted once
@@ -12,6 +20,15 @@ import { ORGANIZATION_ID, SITE_ORIGIN } from "@/lib/brand/canonical-definition";
  * Two nodes called "GenScore" with no shared identifier are two entities as
  * far as a parser is concerned, which is the exact ambiguity Fase E exists to
  * remove.
+ *
+ * GEO-SELF-1 Fase 1: the node gains what an engine needs to describe the
+ * company in one breath — `description` (the canonical sentence, imported, never
+ * re-worded: `.claude/rules/growth-content.md`, "La descripción de GenScore se
+ * importa, no se redacta"), `foundingDate`, `areaServed` and `knowsAbout` — and
+ * a raster `logo`, because Google rejects SVG as an organization logo. No
+ * `founder` and no `Person` anywhere, by founder decision: the entity is the
+ * company. No `slogan` either: the brand docs define none, and inventing one
+ * here would be the only place it exists.
  */
 export function OrganizationSchema() {
   const json = {
@@ -20,8 +37,13 @@ export function OrganizationSchema() {
     "@id": ORGANIZATION_ID,
     name: "GenScore",
     url: SITE_ORIGIN,
-    logo: `${SITE_ORIGIN}/brand/genscore-tile.svg`,
-    sameAs: ["https://www.linkedin.com/company/genscore/", "https://www.g2.com/sellers/genscore"]
+    description: CANONICAL_DEFINITION,
+    logo: { "@type": "ImageObject", ...ORGANIZATION_LOGO },
+    foundingDate: FOUNDING_YEAR,
+    areaServed: { "@type": "Country", name: "España" },
+    knowsAbout: ["GEO", "Generative Engine Optimization", "visibilidad en IA", "AEO"],
+    email: CONTACT_EMAIL,
+    sameAs: [ORGANIZATION_SAME_AS.linkedin, ORGANIZATION_SAME_AS.g2]
   };
 
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(json) }} />;

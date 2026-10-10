@@ -18,15 +18,17 @@ de marca va incrustada como data URI, así que se abre sin red.
 | Apartado «Comunicaciones comerciales» de /privacidad | B | #544 |
 | Pie de baja + cabeceras `List-Unsubscribe` en los avisos | B | #544 |
 | Bienvenida ajustada, Primer escaneo listo, D1, D3, D5 | C · LIFECYCLE-TRIAL-1 | log §233 |
-| Fin de prueba (y variante «tardía»), D+3, D+10 (dos variantes) | D · LIFECYCLE-WINBACK-1 | pendiente |
+| Fin de prueba (y variante «tardía»), D+3, D+10 con precio fundador (la variante sin oferta, personal, no se construye) | D · LIFECYCLE-WINBACK-1 | log §238 |
 
 ## Invariantes de diseño que el piloto debe comprobar
 
 - Las cifras de las plantillas son de ejemplo (`clinicaaurora.es`). En
   producción cada número se lee del escaneo real, o la plantilla cae a su
   variante sin cifra. Nunca una cifra inventada.
-- Precios y fecha de la promo salen de `PLANS` y `PROMO_ENDS_AT`
+- Precios y fecha de la promo salen de `PLANS` y `PROMO_ENDS_AT` (superseded por FOUNDER-PRICE-1, log §237: precio fundador para siempre, plazas leídas de Stripe con `getFounderOffer`)
   (`app/pricing/plans-data.ts`), nunca escritos a mano.
-- El único testimonio permitido es el de Nordika Home (real, log §146).
+- **No hay ningún testimonio permitido** (rectificado 2026-10-08): el de «Nordika Home» que aquí se daba por real
+  (log §146) era **inventado**, según el fundador. Los correos no llevan testimonio; la plantilla de este diseño
+  (`plantillas-y-baja.html`) lo conserva solo como artefacto histórico y no es fuente de contenido.
 - Un solo enlace de baja por email, en el pie.
 - Remitente del D+10 personal: `soporte@genscore.es` (fundador, 2026-09-28).

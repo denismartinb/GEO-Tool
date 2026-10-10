@@ -1,0 +1,363 @@
+/*
+ * GEO-REPORT-1 Fase 2 — the printable GenScore report
+ * (docs/design-reference/geo-report-1/informe-geo.html, founder-approved
+ * 2026-10-09). Everything below the "design" marker is that file's CSS with
+ * every class prefixed `gr-` (generic names such as `page`, `card`, `pill`,
+ * `dot` already exist in globals.css and would clash both ways).
+ *
+ * How it prints, keeping what PDF-EXPORT-PLAN-1 learned (log §217–§219):
+ *  - every page is mounted with `createPortal` as a DIRECT child of `body`
+ *    (components/report/geo-report.tsx), so no ancestor's overflow or
+ *    transform constrains it;
+ *  - in print each page is `height: 100%` of a `body` that is `height: 100%`,
+ *    never a fixed A4 height: Safari on iOS ignores `@page { margin: 0 }`
+ *    and keeps room for its own header and footer, so a fixed 297mm box
+ *    spills onto a second sheet;
+ *  - `box-sizing: border-box` everywhere, or the padding makes a page taller
+ *    than the sheet.
+ * On screen the same pages show at A4 size, one under another, so the report
+ * can be read without printing it.
+ */
+
+.gr-page,
+.gr-page *,
+.gr-page *::before,
+.gr-page *::after {
+  box-sizing: border-box;
+}
+
+.gr-page {
+  font-family: var(--gr-font-body), "Figtree", sans-serif;
+  color: #0b1426;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.gr-page img {
+  max-width: none;
+}
+
+/* ---- design (informe-geo.html) ---- */
+.gr-page { width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always; break-after: page;
+  padding: 46px 58px 0; display: flex; flex-direction: column; background: #fff; }
+.gr-page:last-child { page-break-after: auto; break-after: auto; }
+.gr-disp { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; }
+.gr-hd { display: flex; align-items: center; justify-content: space-between; padding-bottom: 14px; border-bottom: 1px solid #e7eaf0; }
+.gr-hd .gr-lg { height: 18px; }
+.gr-hd span { font-size: 10.5px; font-weight: 600; color: #98a2b3; }
+.gr-ft { margin-top: auto; display: flex; justify-content: space-between; padding: 16px 0 24px; border-top: 1px solid #eef1f6; font-size: 9.5px; color: #98a2b3; font-weight: 600; }
+.gr-sec { display: flex; align-items: baseline; gap: 10px; margin-top: 26px; }
+.gr-sec .gr-num { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 13px; font-weight: 800; color: #2563eb; }
+.gr-sec h2 { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 25px; font-weight: 800; letter-spacing: -.015em; margin: 0; line-height: 1.15; }
+.gr-lede { font-size: 13.5px; line-height: 1.6; color: #3b4759; margin: 10px 0 0; max-width: 610px; }
+.gr-lede b { color: #0b1426; }
+.gr-eng { vertical-align: -2px; }
+
+/* cover */
+.gr-cover { background: #081223; color: #fff; padding: 52px 60px 0; }
+.gr-glow { position: absolute; inset: 0; pointer-events: none; }
+.gr-cover .gr-top { position: relative; display: flex; justify-content: space-between; align-items: center; }
+.gr-cover .gr-top img { height: 24px; }
+.gr-cover .gr-top span { font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #98a2b3; }
+.gr-cover .gr-mid { position: relative; margin-top: auto; }
+.gr-cover .gr-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #09c5d6; }
+.gr-cover h1 { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 56px; font-weight: 800; line-height: 1.04; letter-spacing: -.025em; margin: 18px 0 0; max-width: 600px; }
+.gr-cover .gr-sub { font-size: 15px; line-height: 1.6; color: #c7cedb; margin-top: 22px; max-width: 520px; }
+.gr-cover .gr-hero { position: relative; margin-top: 40px; display: flex; align-items: flex-end; gap: 26px; }
+.gr-cover .gr-big { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 132px; font-weight: 800; line-height: .85; letter-spacing: -.04em;
+  background: linear-gradient(120deg, #4f7bff, #09c5d6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.gr-cover .gr-big small { font-size: 72px; margin-left: 2px; }
+.gr-cover .gr-hero p { font-size: 15px; line-height: 1.5; color: #e5e9f2; margin: 0 0 6px; max-width: 290px; }
+.gr-cover .gr-meta { position: relative; margin-top: 60px; display: flex; gap: 44px; padding: 26px 0 46px; border-top: 1px solid rgba(255,255,255,.1); }
+.gr-cover .gr-meta div div:first-child { font-size: 9.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: #5b6b82; }
+.gr-cover .gr-meta div div:last-child { font-size: 14.5px; font-weight: 700; margin-top: 6px; }
+.gr-cover .gr-engs { display: flex; gap: 10px; align-items: center; }
+.gr-cover .gr-engs img { background: #fff; border-radius: 6px; padding: 3px; width: 22px; height: 22px; }
+
+/* stats */
+.gr-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 22px; }
+.gr-stat { border: 1px solid #e7eaf0; border-radius: 14px; padding: 20px 18px 18px; }
+.gr-stat .gr-v { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.gr-stat .gr-v small { font-size: 17px; color: #98a2b3; font-weight: 700; }
+.gr-stat .gr-l { font-size: 11.5px; line-height: 1.45; color: #5b6b82; margin-top: 9px; }
+.gr-stat.gr-hot { background: #0b1426; border-color: #0b1426; color: #fff; }
+.gr-stat.gr-hot .gr-l { color: #c7cedb; }
+.gr-stat.gr-hot .gr-v { color: #09c5d6; }
+.gr-finds { margin-top: 30px; display: flex; flex-direction: column; gap: 22px; }
+.gr-find { display: grid; grid-template-columns: 34px 1fr; gap: 4px; }
+.gr-find .gr-k { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 15px; font-weight: 800; color: #2563eb; padding-top: 1px; }
+.gr-find h3 { margin: 0; font-size: 15.5px; font-weight: 800; letter-spacing: -.005em; }
+.gr-find p { margin: 5px 0 0; font-size: 13px; line-height: 1.6; color: #3b4759; }
+.gr-find.gr-pos .gr-k { color: #15915a; } .gr-find.gr-neg .gr-k { color: #d23b48; }
+
+/* matrix */
+table.gr-mx { width: 100%; border-collapse: collapse; margin-top: 16px; font-size: 11px; }
+.gr-mx th { font-size: 9.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #98a2b3; text-align: center; padding: 0 4px 7px; }
+.gr-mx th.gr-q { text-align: left; }
+.gr-mx th img { display: block; margin: 0 auto 4px; }
+.gr-mx td { padding: 5px 4px; border-bottom: 1px solid #eef1f6; vertical-align: middle; }
+.gr-mx tr.gr-grp td { padding: 11px 0 5px; border-bottom: 1px solid #d9dee8; font-size: 10px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: #2563eb; }
+.gr-mx td.gr-n { width: 22px; color: #98a2b3; font-weight: 700; font-size: 10px; }
+.gr-mx td.gr-q { line-height: 1.35; color: #0b1426; padding-right: 12px; }
+.gr-mx td.gr-c { width: 66px; text-align: center; }
+.gr-mx td.gr-w { width: 82px; text-align: center; }
+.gr-dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.gr-dot.gr-ag { background: #ffb020; }
+.gr-dot.gr-no { border: 1.5px solid #d9dee8; }
+.gr-pill { display: inline-block; font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 20px; }
+.gr-pill.gr-you { background: #2563eb; color: #fff; }
+.gr-tag { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 20px; }
+.gr-tag.gr-ok { background: #e7f6ee; color: #15915a; }
+.gr-tag.gr-gap { background: #fff4dc; color: #a26700; }
+.gr-tag.gr-mute { color: #98a2b3; }
+.gr-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 10.5px; color: #5b6b82; align-items: center; }
+.gr-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.gr-note { font-size: 10.5px; line-height: 1.55; color: #5b6b82; margin-top: 12px; }
+
+/* bars */
+.gr-bars { margin-top: 20px; display: flex; flex-direction: column; gap: 9px; }
+.gr-bar { display: grid; grid-template-columns: 150px 1fr 34px; gap: 12px; align-items: center; }
+.gr-bar .gr-bn { font-size: 12px; font-weight: 600; color: #3b4759; text-align: right; }
+.gr-bar .gr-bt { height: 16px; background: #f3f5f9; border-radius: 5px; display: flex; overflow: hidden; }
+.gr-bar .gr-seg { height: 100%; }
+.gr-seg.gr-g { background: #4f7bff; } .gr-seg.gr-o { background: #0b1426; } .gr-seg.gr-c { background: #d97757; }
+.gr-bar .gr-bv { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 14px; }
+.gr-bar.gr-me .gr-bn { color: #2563eb; font-weight: 800; }
+.gr-bar.gr-me .gr-bt { outline: 2px solid #2563eb; outline-offset: 2px; }
+.gr-cards2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 22px; }
+.gr-card { border: 1px solid #e7eaf0; border-radius: 14px; padding: 16px 18px; }
+.gr-card .gr-ey { font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.gr-card h4 { margin: 6px 0 0; font-size: 14.5px; font-weight: 800; }
+.gr-card p { font-size: 12px; line-height: 1.58; color: #3b4759; margin: 7px 0 0; }
+.gr-quote { margin-top: 10px; padding: 10px 12px; background: #f7f8fb; border-left: 3px solid #4f7bff; border-radius: 0 8px 8px 0; font-size: 11.5px; line-height: 1.55; color: #0b1426; }
+.gr-quote .gr-src { display: block; margin-top: 5px; font-size: 9.5px; color: #98a2b3; font-weight: 600; }
+.gr-quote.gr-o { border-left-color: #0b1426; }
+
+/* sources */
+.gr-srcgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 18px; }
+.gr-srccol { border: 1px solid #e7eaf0; border-radius: 14px; padding: 14px 14px 10px; }
+.gr-srccol h4 { margin: 0 0 8px; font-size: 11.5px; font-weight: 800; }
+.gr-srccol .gr-r { display: flex; justify-content: space-between; font-size: 11px; padding: 4px 0; border-top: 1px solid #f1f3f7; color: #3b4759; }
+.gr-srccol .gr-r b { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; color: #0b1426; }
+.gr-srccol .gr-r.gr-me { color: #2563eb; font-weight: 800; }
+.gr-callout { margin-top: 18px; background: #0b1426; color: #fff; border-radius: 14px; padding: 18px 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+.gr-callout h4 { margin: 0; font-size: 14px; font-weight: 800; color: #09c5d6; }
+.gr-callout p { margin: 6px 0 0; font-size: 12px; line-height: 1.58; color: #d5dbe6; }
+.gr-callout code { font-family: var(--gr-font-body), "Figtree", sans-serif; font-weight: 700; color: #fff; }
+
+/* tech table */
+table.gr-tt { width: 100%; border-collapse: collapse; margin-top: 18px; font-size: 11.5px; }
+.gr-tt th { text-align: left; font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em; color: #98a2b3; padding: 0 8px 8px; }
+.gr-tt th.gr-me { color: #2563eb; }
+.gr-tt td { padding: 8px; border-top: 1px solid #eef1f6; vertical-align: top; line-height: 1.4; }
+.gr-tt td.gr-k { font-weight: 700; width: 30%; }
+.gr-tt td.gr-k small { display: block; font-weight: 500; color: #98a2b3; font-size: 10px; margin-top: 2px; }
+.gr-tt td.gr-me { background: #f5f8ff; }
+.gr-ok, .gr-bad, .gr-warn { font-weight: 800; }
+.gr-ok::before { content: "✓ "; color: #15915a; } .gr-bad::before { content: "✕ "; color: #d23b48; } .gr-warn::before { content: "! "; color: #d58a00; }
+.gr-scorebox { display: flex; gap: 14px; margin-top: 18px; }
+.gr-scorebox .gr-s { flex: 1; border: 1px solid #e7eaf0; border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 14px; }
+.gr-scorebox .gr-s.gr-me { border-color: #2563eb; background: #f5f8ff; }
+.gr-scorebox .gr-v { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -.03em; }
+.gr-scorebox .gr-v small { font-size: 15px; color: #98a2b3; }
+.gr-scorebox .gr-l { font-size: 11.5px; line-height: 1.45; color: #5b6b82; }
+.gr-scorebox .gr-l b { color: #0b1426; display: block; font-size: 13px; }
+
+/* plan */
+.gr-acts { margin-top: 18px; display: flex; flex-direction: column; gap: 14px; }
+.gr-act { border: 1px solid #e7eaf0; border-radius: 14px; padding: 16px 18px; display: grid; grid-template-columns: 44px 1fr; gap: 6px; }
+.gr-act .gr-k { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 30px; font-weight: 800; color: #2563eb; line-height: 1; }
+.gr-act h3 { margin: 0; font-size: 15.5px; font-weight: 800; }
+.gr-act p { margin: 6px 0 0; font-size: 12px; line-height: 1.58; color: #3b4759; }
+.gr-act .gr-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.gr-chip { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: #eef3ff; color: #2563eb; }
+.gr-chip.gr-g { background: #e7f6ee; color: #15915a; }
+.gr-quick { margin-top: 14px; background: #f7f8fb; border-radius: 14px; padding: 14px 18px; }
+.gr-quick h4 { margin: 0; font-size: 12.5px; font-weight: 800; }
+.gr-quick ul { margin: 8px 0 0; padding-left: 18px; font-size: 11.5px; line-height: 1.6; color: #3b4759; }
+
+/* method */
+.gr-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 16px; }
+.gr-cols h4 { margin: 0 0 6px; font-size: 12.5px; font-weight: 800; }
+.gr-cols p, .gr-cols li { font-size: 11.5px; line-height: 1.6; color: #3b4759; }
+.gr-cols ul { margin: 0; padding-left: 16px; }
+.gr-cols p { margin: 0 0 10px; }
+.gr-next { margin-top: 26px; border-radius: 18px; padding: 26px 28px; color: #fff; background: #081223; position: relative; overflow: hidden; }
+.gr-next h3 { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 0; position: relative; }
+.gr-next p { position: relative; font-size: 13px; line-height: 1.6; color: #d5dbe6; margin: 10px 0 0; max-width: 560px; }
+.gr-next .gr-sig { position: relative; margin-top: 18px; display: flex; align-items: center; gap: 14px; }
+.gr-next .gr-sig img { height: 20px; }
+.gr-next .gr-sig span { font-size: 12px; color: #98a2b3; font-weight: 600; }
+
+.gr-cgrid { position: relative; margin-top: 70px; }
+.gr-cgr { display: grid; grid-template-columns: 70px 1fr 44px; align-items: center; gap: 12px; margin-bottom: 12px; }
+.gr-cgr b { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 15px; font-weight: 800; color: #fff; }
+.gr-cbar { height: 14px; border-radius: 7px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); overflow: hidden; }
+.gr-cbar i { display: block; height: 100%; border-radius: 7px; background: linear-gradient(90deg,#4f7bff,#09c5d6); box-shadow: 0 0 18px rgba(9,197,214,.55); }
+.gr-cgr span { font-size: 11px; font-weight: 700; color: #98a2b3; text-align: right; }
+.gr-cgc { display: grid; grid-template-columns: repeat(20, 1fr); gap: 6px; }
+.gr-cgc i, .gr-cgl i { display: block; aspect-ratio: 1; border-radius: 5px; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.08); }
+.gr-cgc i.gr-on, .gr-cgl i.gr-on { background: linear-gradient(135deg,#4f7bff,#09c5d6); border-color: transparent; box-shadow: 0 0 18px rgba(9,197,214,.55); }
+.gr-cgl { display: flex; justify-content: space-between; margin: 12px 0 0 82px; font-size: 10.5px; color: #5b6b82; }
+.gr-cgl .gr-k { display: inline-flex; align-items: center; gap: 7px; color: #c7cedb; font-weight: 700; }
+.gr-cgl i { width: 12px; height: 12px; border-radius: 3px; }
+.gr-engp { margin-top: 34px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 22px; border-top: 1px solid #e7eaf0; }
+.gr-engp .gr-eh { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 800; }
+.gr-engp .gr-ev { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -.03em; margin-top: 8px; }
+.gr-engp .gr-ev small { font-size: 14px; color: #98a2b3; }
+.gr-engp .gr-el { font-size: 11.5px; line-height: 1.5; color: #5b6b82; margin-top: 4px; }
+.gr-cloud { margin-top: 16px; border-top: 1px solid #e7eaf0; padding-top: 18px; }
+.gr-cloud h4 { margin: 0; font-size: 13px; font-weight: 800; }
+.gr-cloud p { margin: 4px 0 10px; font-size: 11.5px; color: #5b6b82; }
+.gr-cloud .gr-cs { display: flex; flex-wrap: wrap; gap: 5px; }
+.gr-cloud .gr-cs span { font-size: 10px; font-weight: 600; color: #3b4759; background: #f3f5f9; padding: 3px 8px; border-radius: 20px; }
+.gr-cloud .gr-cs span.gr-me { background: #2563eb; color: #fff; font-weight: 800; }
+.gr-dots { padding: 4px; display: grid; grid-template-columns: repeat(46, 1fr); gap: 3px; margin-top: 18px; }
+.gr-dots i { aspect-ratio: 1; border-radius: 2px; background: #e3e8f0; }
+.gr-dots i.gr-me { background: #2563eb; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #2563eb; }
+.gr-dotsl { display: flex; justify-content: space-between; font-size: 10.5px; color: #5b6b82; margin-top: 8px; }
+.gr-dotsl b { color: #2563eb; }
+.gr-ey2 { margin-top: 18px; font-size: 9.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.gr-read { margin-top: 18px; border-radius: 14px; background: #0b1426; color: #d5dbe6; padding: 16px 20px; font-size: 12px; line-height: 1.6; }
+.gr-read b { color: #09c5d6; }
+.gr-back { background: #081223; color: #fff; }
+.gr-back .gr-hd { border-bottom-color: rgba(255,255,255,.1); }
+.gr-back .gr-ft { margin-top: 0; border-top-color: rgba(255,255,255,.08); color: #5b6b82; }
+.gr-back .gr-bigq { position: relative; margin-top: 120px; }
+.gr-back .gr-bigq .gr-eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #09c5d6; }
+.gr-back .gr-bigq h2 { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-size: 48px; font-weight: 800; letter-spacing: -.025em; line-height: 1.05; margin: 16px 0 0; max-width: 560px; }
+.gr-back .gr-bigq p { font-size: 14.5px; line-height: 1.65; color: #c7cedb; margin: 18px 0 0; max-width: 560px; }
+.gr-back .gr-bigq .gr-sig { margin-top: 26px; display: flex; align-items: center; gap: 14px; }
+.gr-back .gr-bigq .gr-sig img { height: 22px; } .gr-back .gr-bigq .gr-sig span { font-size: 12.5px; color: #98a2b3; font-weight: 600; }
+.gr-back .gr-meth { position: relative; margin-top: auto; margin-bottom: 26px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,.1); }
+.gr-back .gr-meth h4 { margin: 0 0 4px; font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #98a2b3; }
+.gr-back .gr-meth p { margin: 0 0 12px; font-size: 10.5px; line-height: 1.6; color: #98a2b3; }
+.gr-tt td { padding: 10px 8px; font-size: 12.5px; }
+.gr-act p { font-size: 12.5px; }
+.gr-quick ul { font-size: 12.5px; line-height: 1.75; }
+.gr-scorebox.gr-one{grid-template-columns:1fr 1fr}
+/* ---- screen and print, after the design so they win ---- */
+
+@media screen {
+  body:has(.gr-page) {
+    background: #e9edf3;
+  }
+  .gr-page {
+    margin: 0 auto 24px;
+    box-shadow: 0 6px 28px rgba(11, 20, 38, 0.14);
+  }
+}
+
+/* Below A4 width the page keeps its proportions and scales down, so a phone
+   sees the same layout it will print instead of a reflowed one. */
+@media screen and (max-width: 820px) {
+  .gr-page { zoom: 0.8; }
+}
+@media screen and (max-width: 660px) {
+  .gr-page { zoom: 0.62; }
+}
+@media screen and (max-width: 520px) {
+  .gr-page { zoom: 0.5; }
+}
+@media screen and (max-width: 420px) {
+  .gr-page { zoom: 0.45; }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    overflow: visible;
+  }
+  body > *:not(.gr-page) {
+    display: none !important;
+  }
+  .gr-page {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    box-shadow: none;
+  }
+  .gr-page.gr-last {
+    page-break-after: auto;
+    break-after: auto;
+  }
+}
+
+
+/* ---- the bar above the on-screen report, and the empty / no-plan notice ---- */
+
+.gr-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  max-width: 794px;
+  margin: 0 auto 16px;
+  padding: 14px 16px;
+  background: #e9edf3;
+  font-family: var(--font-body), "Figtree", sans-serif;
+}
+.gr-toolbar-back {
+  color: #3b4759;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.gr-toolbar-print {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 18px;
+  background: #2563eb;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.gr-notice {
+  max-width: 520px;
+  margin: 96px auto;
+  padding: 0 16px;
+  font-family: var(--font-body), "Figtree", sans-serif;
+  color: #0b1426;
+}
+.gr-notice h1 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 28px;
+  margin: 0 0 12px;
+}
+.gr-notice p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #3b4759;
+}
+.gr-notice a {
+  color: #2563eb;
+  font-weight: 600;
+}
+.gr-notice a.gr-notice-action {
+  display: inline-block;
+  margin-right: 20px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  background: #2563eb;
+  color: #fff;
+  text-decoration: none;
+}
+
+@media print {
+  .gr-toolbar {
+    display: none !important;
+  }
+}

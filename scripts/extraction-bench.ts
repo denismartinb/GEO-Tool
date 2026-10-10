@@ -50,6 +50,7 @@
 import { createServiceClient } from "../lib/supabase/service";
 import { extractGeminiStructuredData } from "../lib/llm/gemini";
 import { extractOpenAIStructuredData } from "../lib/llm/openai";
+import { extractClaudeStructuredData } from "../lib/llm/claude";
 import { verifyExtractedMentions, reconcileExtractedCompetitors } from "../lib/scan/extraction";
 import { EXTRACTION_VERSION } from "../lib/scan/constants";
 import { existsSync, readFileSync } from "node:fs";
@@ -163,9 +164,10 @@ export function parseLimitArg(argv: string[], defaultLimit: number): number {
 
 type CandidateDef = {
   key: string;
-  provider: "gemini" | "openai";
+  provider: "gemini" | "openai" | "claude";
   model: string;
-  envVar: "GEMINI_MODEL" | "OPENAI_MODEL";
+  /** Gemini/OpenAI read their model from env; Claude takes it as an argument (EXTRACTION-SINGLE-MODEL-1). */
+  envVar?: "GEMINI_MODEL" | "OPENAI_MODEL";
   pricePerMillionInputUsd: number;
   pricePerMillionOutputUsd: number;
 };
@@ -202,6 +204,16 @@ const CANDIDATES: readonly CandidateDef[] = [
     envVar: "OPENAI_MODEL",
     pricePerMillionInputUsd: 0.15,
     pricePerMillionOutputUsd: 0.6
+  },
+  // EXTRACTION-SINGLE-MODEL-1 (log §253): the candidate for
+  // SCAN_EXTRACTION_CLAUDE_MODEL. Public rate checked 2026-10-09. Needs
+  // ANTHROPIC_API_KEY in .env.local.
+  {
+    key: "claude-haiku-5-5",
+    provider: "claude",
+    model: "claude-haiku-5-5",
+    pricePerMillionInputUsd: 0.1,
+    pricePerMillionOutputUsd: 0.5
   }
 ];
 
@@ -268,15 +280,20 @@ async function runCandidateExtraction(
   candidate: CandidateDef,
   args: { brand: string; competitors: string[]; rawResponseText: string; promptText: string }
 ) {
-  const previous = process.env[candidate.envVar];
-  process.env[candidate.envVar] = candidate.model;
+  if (candidate.provider === "claude") {
+    return extractClaudeStructuredData({ ...args, model: candidate.model });
+  }
+  const envVar = candidate.envVar;
+  if (!envVar) throw new Error(`Candidate ${candidate.key} has no model env var.`);
+  const previous = process.env[envVar];
+  process.env[envVar] = candidate.model;
   try {
     return candidate.provider === "gemini"
       ? await extractGeminiStructuredData(args)
       : await extractOpenAIStructuredData(args);
   } finally {
-    if (previous === undefined) delete process.env[candidate.envVar];
-    else process.env[candidate.envVar] = previous;
+    if (previous === undefined) delete process.env[envVar];
+    else process.env[envVar] = previous;
   }
 }
 

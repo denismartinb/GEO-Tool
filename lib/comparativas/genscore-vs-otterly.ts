@@ -7,16 +7,26 @@ import { PLANS } from "@/app/pricing/plans-data";
  * y páginas de precios independientes) consultada el 2 de agosto de 2026 —
  * ver la nota de fecha en la propia página. Los precios y límites de
  * GenScore vienen de app/pricing/plans-data.ts, la misma fuente que usa
- * /pricing — no se reescriben a mano.
+ * /precios — no se reescriben a mano.
  *
  * TRUST-PROMISES-1 (docs/external-audit-2026-08.md, Fase 2): ese último
  * párrafo era una promesa que el fichero no cumplía todavía — la fila de
  * precio de abajo era el literal "179 €/mes", no una lectura de `PLANS`.
  * Ahora sí lo es.
  */
+const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 const PRO_PRICE = PLANS.find((p) => p.id === "pro")!.price;
 
 export const OTTERLY_RESEARCH_DATE = "2 de agosto de 2026";
+
+/**
+ * GEO-SELF-1 Fase 2 (log §258): precios, motores y mercados revisados en
+ * otterly.ai/pricing en esta fecha. La fila de motores decía «hasta 6» y hoy
+ * son 4 incluidos (ChatGPT, AI Overviews, Perplexity y Copilot) y 3 como
+ * complemento (Google AI Mode, Gemini y Claude). El resto de filas sigue con
+ * la investigación de `OTTERLY_RESEARCH_DATE`.
+ */
+export const OTTERLY_REFRESH_DATE = "9 de octubre de 2026";
 
 export const COMPARISON_ROWS: {
   label: string;
@@ -27,19 +37,20 @@ export const COMPARISON_ROWS: {
 }[] = [
   {
     label: "Precio de entrada",
-    genscore: "Gratis (escaneo permanente, sin tarjeta)",
-    otterly: "Desde 29 $/mes — sin plan gratuito",
-    genscoreWins: true
+    genscore: `Desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta para probar`,
+    otterly: "Desde 29 $/mes"
   },
   {
     label: "Precio equivalente a ~100 prompts",
     genscore: `${PRO_PRICE} €/mes (plan Pro)`,
-    otterly: "189 $/mes (plan Standard)"
+    otterly: "189 $/mes (plan Standard)",
+    genscoreWins: true
   },
   {
     label: "Motores de IA cubiertos",
-    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), 1 en Free",
-    otterly: "Hasta 6 motores nominalmente — pero Gemini y Google AI Mode son add-ons con coste extra, no incluidos en el precio base",
+    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), todos incluidos sin add-ons",
+    otterly:
+      "4 incluidos en todos los planes (ChatGPT, AI Overviews, Perplexity y Microsoft Copilot); Google AI Mode, Gemini y Claude son add-ons con coste extra, no incluidos en el precio base",
     otterlyWins: true
   },
   {
@@ -51,7 +62,7 @@ export const COMPARISON_ROWS: {
   {
     label: "Idioma de la interfaz y del producto",
     genscore: "Castellano nativo",
-    otterly: "Inglés",
+    otterly: "No consta una versión en castellano — la interfaz que hemos visto está en inglés",
     genscoreWins: true
   },
   {

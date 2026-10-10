@@ -57,7 +57,7 @@ export function BlogClusterRail({
       )}
       {hasMore && (
         <button type="button" className="blog-rail-more" onClick={() => setVisibleCount((count) => count + LOAD_MORE_STEP)}>
-          Ver más →
+          Ver más artículos
         </button>
       )}
     </section>

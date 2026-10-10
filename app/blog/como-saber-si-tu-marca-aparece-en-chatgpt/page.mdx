@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   NumberedSection,
@@ -12,10 +12,9 @@ import {
   ArticleCta,
   Figure,
   AnswerSample,
-  AnswerPair,
-  PostMeta
+  AnswerPair
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-saber-si-tu-marca-aparece-en-chatgpt");
 
@@ -45,13 +44,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -138,9 +131,9 @@ un conjunto de prompts reales de tu categoría contra Gemini, ChatGPT y
 Claude, y mide —motor a motor— tu tasa de mención, si citan tu web como
 <a href="/glosario/citacion-en-ia">fuente</a>, y con qué sentimiento hablan
 de tu marca. Puedes ver esa comparación por motor directamente en tu
-Overview, sin tener que adivinar. El escaneo gratuito hace exactamente esto una vez, sin tarjeta.
+Overview, sin tener que adivinar. La prueba de Pro de 7 días hace exactamente esto sobre tu dominio, sin tarjeta.
 
-<QuickAction>Lanza tu escaneo gratuito y mira la comparativa por motor en tu Overview — te dice en qué motor te va peor sin que tengas que probarlo a mano.</QuickAction>
+<QuickAction>Lanza tu escaneo durante la prueba de Pro y mira la comparativa por motor en tu Overview — te dice en qué motor te va peor sin que tengas que probarlo a mano.</QuickAction>
 
 </NumberedSection>
 
@@ -185,7 +178,7 @@ Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos 
 
 <ArticleCta
   title="¿Sabes de verdad si ChatGPT, Gemini y Claude te mencionan?"
-  text="Lanza un escaneo gratuito y mira la comparativa por motor, sin adivinar. Sin tarjeta."
+  text="Prueba Pro 7 días gratis y mira la comparativa por motor, sin adivinar. Sin tarjeta."
 />
 
 <RelatedPosts cluster="playbooks" currentSlug={post.slug} />

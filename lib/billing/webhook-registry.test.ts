@@ -261,7 +261,7 @@ describe("processStripeWebhookEvent — idempotency", () => {
     expect(errorSpy).toHaveBeenCalled();
   });
 
-  it("FAILS CLOSED when migration 0038 isn't applied: throws a retryable error and writes nothing", async () => {
+  it("FAILS CLOSED when migration 0039 isn't applied: throws a retryable error and writes nothing", async () => {
     const { processStripeWebhookEvent, WebhookRegistryUnavailableError } = await import("./webhook-registry");
     const { client, profileWrites } = fakeDb({ registryMissing: true });
 

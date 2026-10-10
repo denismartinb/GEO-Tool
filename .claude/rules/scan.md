@@ -105,6 +105,18 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/adr/0037`). A lease must also be **bounded** — a stale job with no
   attempts left is failed, not reclaimed again, or one poison job consumes
   every pass forever.
+- **La cadena de `/api/scan/continue` es un acelerador; el motor es el cron
+  `/api/cron/scan-continue`, cada 5 minutos.** Vercel corta con 508 una cadena
+  de auto-llamadas a los pocos saltos aunque la URL esté bien: el 2026-10-10
+  la del barrido de las 06:00 murió hacia el quinto salto y el run esperó once
+  minutos al vigilante, que sólo reanuda `SCAN_RESUME_CAP` veces
+  (`docs/brand/design-decisions-log.md` §262). El pase de `lib/scan/drain.ts`
+  re-despacha todo run joven, parado al menos lo que dura un lease y con
+  trabajo reclamable, y **no escribe nada**: ni marca de reanudación, ni
+  `updated_at`, ni jobs. Así un re-despacho que no avanza deja el run igual de
+  parado y el camino de reanudar/fallar del vigilante sigue viéndolo. Si se le
+  añade una escritura, ese contrato se rompe y un run muerto puede no fallar
+  nunca. Lo vigila `vercel-crons.test.ts`.
 - **Never let a browser be the only thing driving a scan.** Work that continues
   after a response is sent must be dispatched server-side; a client-side loop
   is an accelerator, never the engine. A phone that locks its screen suspends
@@ -127,6 +139,20 @@ worse than no rule, because a future session will obey it anyway.
   `continuationScheduled: true` en el log de resumen de todas formas
   (`docs/brand/design-decisions-log.md` §192). **Toda** auto-llamada del
   pipeline, no sólo la que motivó la regla.
+- **Toda auto-llamada construye su URL con `getSiteUrl()`, que nunca acaba en
+  "/".** `NEXT_PUBLIC_SITE_URL` de producción lleva barra final y las tres
+  auto-llamadas del pipeline iban a `https://www.genscore.es//api/...`, que
+  Vercel rechazaba con 508 — lo vio el `response.ok` de la regla anterior,
+  pero sólo en un log que nadie leía (`docs/brand/design-decisions-log.md`
+  §241). Concatenar `process.env.NEXT_PUBLIC_SITE_URL` a mano reabre el fallo.
+- **Una cadena de auto-llamadas no llega lejos: Vercel la corta con 508 a los
+  pocos saltos**, aunque la URL esté bien (3 y 5 saltos en la cadena de la
+  auditoría el 2026-10-09, `docs/brand/design-decisions-log.md` §261). Ningún
+  trabajo puede depender de que una cadena así complete: el motor tiene que
+  ser algo que arranque desde cero (un cron), y la cadena, un acelerador. La
+  auditoría ya va así, y la cadena de `/api/scan/continue` también, desde que
+  se confirmó el mismo tope (§262, regla de arriba). Queda la del barrido
+  diario (`/api/cron/sweep-continue`), sin 508 visto todavía.
 - **El barrido tiene sus propios fallos, y también tienen que llegar al
   operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
   y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como
@@ -273,3 +299,21 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/brand/design-decisions-log.md` §188). No unique constraint on
   `(project_id, run_id, dedupe_key)` exists yet to close this at the schema
   level — accepted residual risk, not this phase's scope.
+- **Una cuenta `free` no escanea, ni siquiera la primera vez.** Desde
+  TRIAL-ONLY-1 `free` no es un plan que se venda sino el estado de una cuenta
+  sin plan (prueba terminada o suscripción cancelada), en solo lectura:
+  `createPendingScanRunCore` rechaza todo run suyo —manual, reintento o cron—
+  con `free_plan_scan_limit_reached`, leyendo el plan efectivo. El primer
+  escaneo de toda alta ocurre en la prueba de Pro (`0017_reverse_trial.sql`).
+  Si algún día vuelve un plan gratuito que escanee, tendrá otro id, no éste
+  (`docs/brand/design-decisions-log.md` §243).
+- **Qué modelo extrae lo decide `resolveExtractionRoute`
+  (`lib/scan/extraction-routing.ts`), y nada más.** Sin
+  `SCAN_EXTRACTION_CLAUDE_MODEL`, cada fila se extrae con el proveedor que la
+  generó, como siempre. Con la variable puesta, todas van a ese modelo de
+  Claude. Lo que depende de quién GENERÓ la fila sigue leyendo
+  `row.provider`, nunca la ruta de extracción: `groundingUrlsAreFinal`, las
+  citas y la generación. Encender la variable mueve la mención, los
+  competidores y el sentimiento, así que se hace después de
+  `pnpm bench:extraction`, nunca a ciegas
+  (`docs/brand/design-decisions-log.md` §253).

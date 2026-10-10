@@ -59,7 +59,7 @@ export default function TerminosPage() {
       <h2>Planes y precios</h2>
       <p>
         Los planes disponibles, sus características y precios se describen en nuestra{" "}
-        <Link href="/pricing">página de precios</Link>. Podemos modificar los precios o las
+        <Link href="/precios">página de precios</Link>. Podemos modificar los precios o las
         características de los planes; si el cambio te afecta de forma sustancial y ya eres
         cliente, te avisaremos con antelación razonable antes de que te sea aplicado.
       </p>
@@ -92,8 +92,8 @@ export default function TerminosPage() {
       <h2>Cancelación</h2>
       <p>
         Puedes eliminar tu cuenta y tus proyectos en cualquier momento desde la propia aplicación.
-        La eliminación de un proyecto es permanente. En el plan gratuito no existe compromiso de
-        permanencia.
+        La eliminación de un proyecto es permanente. Ni durante la prueba gratuita ni en los planes
+        mensuales existe compromiso de permanencia.
       </p>
 
       <h2>Limitación de responsabilidad</h2>

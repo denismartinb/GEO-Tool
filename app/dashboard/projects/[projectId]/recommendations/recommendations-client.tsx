@@ -21,9 +21,6 @@ import {
   rankGroupMembers,
   selectPlan
 } from "@/lib/recommendations/plan";
-import { buildExportPlanMarkdown } from "@/lib/recommendations/export-plan";
-import { ExportReport } from "./export-report";
-import "./export-report.css";
 import {
   CONTROL_LABEL,
   classifySolutionReadiness,
@@ -375,69 +372,6 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
       <Icon name={copied ? "check" : "copy"} size={12} />
       {copied ? "Copiado" : label ?? "Copiar"}
     </button>
-  );
-}
-
-/**
- * ACTIONS-OBSERVABLE-1 slice 4b.1, adaptado por PDF-EXPORT-PLAN-1 — salida
- * alternativa de "Exportar informe" cuando `window.print()` no está
- * disponible (un navegador sin soporte, un visor incrustado, un sandbox). El
- * propio botón que la abre ya viene de un fallo detectado por `handleExport`,
- * así que aparecer en pantalla es en sí mismo el acuse de que algo pasó; el
- * mensaje propio ("Plan copiado al portapapeles.") es el segundo hecho
- * distinto, anunciado sólo tras el clic.
- */
-function ExportPlanModal({ markdown, onClose }: { markdown: string; onClose: () => void }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    try {
-      await navigator.clipboard.writeText(markdown);
-      setCopied(true);
-    } catch {
-      // Portapapeles no disponible (contexto sin HTTPS, navegador antiguo) —
-      // el texto sigue seleccionable a mano en el propio cuadro.
-    }
-  }
-
-  return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="export-plan-modal-title" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
-        <h2 id="export-plan-modal-title" className="modal-title">
-          Copia el plan
-        </h2>
-        <p className="modal-body">
-          El informe no se ha podido generar en este navegador. Copia el plan entero desde aquí.
-        </p>
-        <textarea
-          readOnly
-          value={markdown}
-          onFocus={(e) => e.currentTarget.select()}
-          style={{
-            width: "100%",
-            minHeight: 240,
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: 12,
-            padding: 10,
-            border: "1px solid var(--line-1, #d8dde3)",
-            borderRadius: "var(--r-sm, 6px)",
-            resize: "vertical",
-          }}
-        />
-        <p role="status" aria-live="polite" style={{ minHeight: 16, margin: "8px 0 0", fontSize: 12, color: "var(--pos-ink, #1a7a49)" }}>
-          {copied ? "Plan copiado al portapapeles." : ""}
-        </p>
-        <div className="modal-actions">
-          <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            Cerrar
-          </button>
-          <button type="button" className="btn btn-primary btn-sm" onClick={handleCopy}>
-            <Icon name="copy" size={13} />
-            Copiar al portapapeles
-          </button>
-        </div>
-      </div>
-    </div>
   );
 }
 
@@ -1425,10 +1359,7 @@ export function RecommendationsClient({
   jointPointsByType,
   planIds = [],
   planPoints = null,
-  domain = "",
   latestCompletedRunId = null,
-  geoScore = null,
-  scanDateLabel = null,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
@@ -1441,16 +1372,6 @@ export function RecommendationsClient({
   planIds?: string[];
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
-  domain?: string;
-  /** PDF-EXPORT-PLAN-1 — Puntuación GEO para la portada del informe
-   *  exportable, resuelta en el servidor por `resolveGeoScore`
-   *  (lib/metrics/run-metrics.ts, único dueño). `null` cuando no se pudo
-   *  resolver: la portada omite la cifra, nunca inventa una. */
-  geoScore?: number | null;
-  /** Fecha del escaneo vigente, ya formateada `es-ES` — la misma que pinta
-   *  `ScanStatePill` en esta pantalla, para que el informe y la consola
-   *  nunca digan fechas distintas. */
-  scanDateLabel?: string | null;
   /** Gates "Deshacer" on a dismissed row in "Resueltas" — see
    * ResolvedHistoryItem.run_id's doc comment. Null on any host screen that
    * doesn't pass it (e.g. web-audit's embedded RecCard usage never renders
@@ -1468,43 +1389,6 @@ export function RecommendationsClient({
   const plan = planIds.length > 0
     ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
     : selectPlan(recommendations);
-  const planIdSet = new Set(plan.map((r) => r.id));
-  const rest = recommendations.filter((r) => !planIdSet.has(r.id));
-
-  // PDF-EXPORT-PLAN-1 (aprobado 2026-09-11) — "Exportar plan" deja de
-  // descargar un `.md` y pasa a abrir el diálogo de impresión del navegador
-  // sobre el informe con marca (`ExportReport`, montado más abajo y oculto
-  // fuera de impresión por export-report.css). El fundador aprobó
-  // explícitamente sustituir el `.md`, no hacerlo convivir con el PDF — pero
-  // la regla de premisa de CLAUDE.md exige que ningún camino de recuperación
-  // desaparezca sin sustituto: si `window.print` no existe en este entorno
-  // (un visor incrustado, un navegador sin soporte), ExportPlanModal sigue
-  // ahí con el markdown de siempre como respaldo copiable. La premisa que
-  // sostiene retirar la descarga de fichero es que `window.print()` es una
-  // API nativa del navegador, no un `<a download>` sintético — no tiene el
-  // modo de fallo silencioso (política de descargas bloqueada sin excepción
-  // capturable) que motivó el modal en ACTIONS-OBSERVABLE-1 slice 4b.1; el
-  // modo de fallo que sí puede tener (entorno sin `window.print`) es
-  // detectable en código, a diferencia de aquél.
-  const exportFeedback = useActionFeedback();
-  const [exportFallbackMarkdown, setExportFallbackMarkdown] = useState<string | null>(null);
-
-  function handleExport() {
-    exportFeedback.run(
-      async () => {
-        if (typeof window === "undefined" || typeof window.print !== "function") {
-          setExportFallbackMarkdown(buildExportPlanMarkdown({ domain, plan, rest }));
-          return {
-            success: false,
-            error: "Este navegador no puede generar el informe. Copia el plan desde el cuadro que se ha abierto.",
-          };
-        }
-        window.print();
-        return { success: true };
-      },
-      { successMessage: "Informe listo para guardar como PDF." }
-    );
-  }
 
   // "Todas" is exactly that: every active recommendation, including the ones
   // already shown above as priority actions.
@@ -1591,24 +1475,20 @@ export function RecommendationsClient({
       {/* 5 · Filters, directly under the priority actions. */}
       <div className="rec2-sec">
         <span className="rec2-sec-t">Todas las recomendaciones</span>
-        <button
-          type="button"
-          onClick={handleExport}
+        {/* GEO-REPORT-1 Fase 2 (log §250): el informe de GenScore sustituye a
+            "Exportar plan". Es navegación, no una acción: abre el informe en su
+            propia página, legible en pantalla aunque el navegador no imprima. */}
+        <a
+          href={`/informe/${projectId}`}
+          target="_blank"
+          rel="noopener"
           className="btn btn-ghost btn-sm"
           style={{ padding: "5px 11px", fontSize: 12 }}
-          disabled={exportFeedback.isPending}
         >
           <Icon name="download" size={13} />
-          {exportFeedback.isPending ? "Exportando…" : "Exportar plan"}
-        </button>
+          Descargar informe
+        </a>
       </div>
-      <div style={{ margin: "-6px 0 10px" }}>
-        <ActionAnnouncement state={exportFeedback.state} />
-      </div>
-      {exportFallbackMarkdown !== null && (
-        <ExportPlanModal markdown={exportFallbackMarkdown} onClose={() => setExportFallbackMarkdown(null)} />
-      )}
-      <ExportReport domain={domain} geoScore={geoScore} scanDateLabel={scanDateLabel} plan={plan} rest={rest} />
       <div className="filters">
         <div className="seg">
           {tabs.map(([key, label]) => (

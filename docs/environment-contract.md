@@ -81,12 +81,15 @@ MFA`) — worth doing once, calmly, before this is the only way in.
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GEMINI_API_KEY` | Yes | Vercel + local `.env.local` | `AIza...` |
-| `GEMINI_MODEL` | No (defaults to `gemini-2.5-flash`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
+| `GEMINI_MODEL` | No (defaults to `gemini-3.6-flash`) | Vercel optional | Valid model id matching `/^gemini-[a-z0-9][a-z0-9._-]*$/i` |
 
 See `docs/adr/0002-gemini-model-pinning.md` and
-`docs/adr/0009-gemini-2.5-flash-model-pin.md` — model is pinned to
-`gemini-2.5-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
-override is set in Vercel, it must also be updated to a served model id.
+`docs/adr/0042-gemini-3.6-flash-model-pin.md` — model is pinned to
+`gemini-3.6-flash`. Do not change without an ADR. If a `GEMINI_MODEL`
+override is set in Vercel, it wins over the code default: delete it (or set
+it to `gemini-3.6-flash`) for the pin to take effect. Setting it to
+`gemini-2.5-flash` is the documented rollback; temperature/thinking adapt to
+the model family on their own (`geminiGenerationTuning`).
 
 ### Claude (Anthropic)
 
@@ -94,6 +97,7 @@ override is set in Vercel, it must also be updated to a served model id.
 |---|---|---|---|
 | `ANTHROPIC_API_KEY` | Only if Claude is an active scan engine | Vercel + local `.env.local` | Anthropic API key |
 | `ANTHROPIC_MODEL` | No (defaults to `claude-haiku-4-5-20251001`) | Vercel optional | Valid Claude model id |
+| `SCAN_EXTRACTION_CLAUDE_MODEL` | No — **unset keeps each answer extracted by its own provider** | Vercel Production, optional | A cheap Claude model id (intended: `claude-haiku-5-5`). When set, every scan row's structured extraction goes to that one model; generation is untouched. Set only after `pnpm bench:extraction` agrees with production; unset to roll back (EXTRACTION-SINGLE-MODEL-1, log §253) |
 
 ### OpenAI (active scan engine since 2026-07-18, ENGINES-2a)
 
@@ -167,6 +171,17 @@ works. **Not** gated on `CRON_SCANS_ENABLED`: it mostly reads and alerts; the
 only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
 which any page view already does. A sub-daily schedule needs Vercel Pro (the
 account is Pro since 2026-08-04).
+
+**Scan continuation pass (SCAN-CRON-DRAIN-1, log §262).** `/api/cron/scan-continue`
+runs every 5 minutes (`*/5 * * * *`) and re-dispatches every scan run younger
+than 6h that has been idle ≥90s with work the executor can still claim. It
+exists because Vercel cuts a chain of self-calls to `/api/scan/continue` with
+508 after a few hops even with a correct URL (log §261), and a cron firing is
+what starts a fresh chain. No new variables: `CRON_SECRET` for its own auth,
+`SCAN_CONTINUE_SECRET` for the dispatch it makes. Writes nothing and does not
+count against the watchdog's resume cap. Not gated on `CRON_SCANS_ENABLED`,
+same reasoning as the watchdog. ~288 invocations/day, almost all of them two
+reads and no dispatch.
 
 ### Cuentas internas de prueba (PROJECT-DEFAULTS-BY-ACCOUNT-1)
 
@@ -250,10 +265,12 @@ and a feature that needs a variable set in three environments before it does
 anything is a feature that gets found broken later. `false` is the escape
 hatch for cost — each automatic audit spends real Gemini grounding calls.
 
-Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
-/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
-day's automatic scans have already queued their audits) and the worker's own
-`POST` self-chain. No new secret.
+Reuses `CRON_SECRET` for both entry points: Vercel's cron (`GET
+/api/cron/run-audit`, `*/10 * * * *` since AUDIT-CRON-DRAIN-1, log §261 —
+before that `0 7 * * *`) and the worker's own `POST` self-chain. No new
+secret. The cron is what drains the queue: Vercel rejects a chain of
+self-calls with 508 after a few hops, so the self-chain alone only ever
+advances a handful of jobs.
 
 `OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
 six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
@@ -371,11 +388,34 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+
+### Paid ads and conversion tracking (PAID-ADS-1)
+
+All optional. **Setting either platform id is what turns the feature on**: the
+advertising-cookie banner, the ads section of `/cookies` and `/privacidad`, and
+— only after a visitor accepts — the tags. With neither set the site behaves
+exactly as before (no banner, no third-party request). Set them in
+**Production only**; previews keep the feature off unless deliberately tested.
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `NEXT_PUBLIC_GOOGLE_ADS_ID` | No | Vercel | `AW-` + digits (Google Ads → Objetivos → Conversiones → etiqueta) |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_FREE_CHECK` | No | Vercel | Conversion label of "Comprobación gratuita" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_SIGN_UP` | No | Vercel | Conversion label of "Registro" |
+| `NEXT_PUBLIC_GOOGLE_ADS_LABEL_PURCHASE` | No | Vercel | Conversion label of "Contratación" |
+| `NEXT_PUBLIC_LINKEDIN_PARTNER_ID` | No | Vercel | Digits (Campaign Manager → Insight Tag) |
+| `NEXT_PUBLIC_LINKEDIN_CONV_FREE_CHECK` / `_SIGN_UP` / `_PURCHASE` | No | Vercel | Digits — id of each LinkedIn conversion (method "JavaScript / event-specific") |
+
+`lib/ads/config.ts` rejects malformed ids rather than loading a tag for
+nothing. A kind with no label simply is not sent to that platform.
+
 ### Search Console y Bing Webmaster Tools (GROWTH-2 Fase 2.1)
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GOOGLE_SITE_VERIFICATION` | No | Vercel + local `.env.local` | El token del `<meta name="google-site-verification" ...>`, **solo el valor del atributo `content`**, no la etiqueta completa |
+| `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §256). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
+| `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §256). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
 
 Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `<meta>` de verificación cuando la variable existe (`verification.google` en el
@@ -451,16 +491,39 @@ ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 "SEO clásico" — también alimenta la visibilidad en motores generativos
 (GROWTH-2, `docs/launch-plan.md` Fase 7).
 
+**`BING_SITE_VERIFICATION` (GEO-SELF-1 Fase 1, log §256).** Mismo patrón que
+`GOOGLE_SITE_VERIFICATION`: método de etiqueta HTML, opcional, sin la variable
+no se pinta nada. **La propiedad ya está verificada por importación desde
+Search Console (arriba)**, así que esta variable sólo hace falta si Bing pide
+re-verificar o si el fundador prefiere un método que no dependa de Google. No
+la configures "por si acaso" por la misma razón que la de Google.
+
+**IndexNow — `INDEXNOW_KEY` (GEO-SELF-1 Fase 1, log §256).** IndexNow avisa a
+Bing (y a los motores que se apoyan en su índice) de que una URL ha cambiado
+sin esperar al siguiente rastreo. Pasos:
+
+1. Genera una clave (un UUID vale: `uuidgen`).
+2. En Vercel, añade `INDEXNOW_KEY` con ese valor en Producción y redeploy.
+3. Comprueba que `https://www.genscore.es/indexnow-key.txt` devuelve la clave.
+4. Tras publicar contenido, desde local y con la misma clave en el entorno:
+   `INDEXNOW_KEY=<clave> pnpm indexnow:ping`. Envía todas las URLs del sitemap;
+   IndexNow descarga `/indexnow-key.txt` para verificar que la clave es nuestra,
+   así que el paso 3 tiene que estar hecho antes.
+
+**No está enganchado al build ni a ningún deploy, a propósito**: un ping por
+cada preview mandaría URLs de producción que no han cambiado. Se lanza a mano.
+
 ### Billing (BILLING-STRIPE-1)
 
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `STRIPE_SECRET_KEY` | No | Vercel + local `.env.local` | Stripe secret key — `sk_test_...` until the go-live checklist is done, then `sk_live_...` |
 | `STRIPE_WEBHOOK_SECRET` | No | Vercel | Signing secret for the `/api/webhooks/stripe` endpoint, from the Stripe Dashboard webhook config (`whsec_...`) |
-| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price |
-| `STRIPE_PRICE_ID_PRO` | No | Vercel | Stripe Price id for the Pro plan's recurring price |
-| `STRIPE_COUPON_ID_STARTER_PROMO` | No | Vercel | PRICING-PROMO-1: Stripe Coupon id (`amount_off`, `duration: repeating`, `duration_in_months: 6`, `redeem_by` = 2026-09-01T00:00:00+02:00) applied to Starter checkout while `isPromoActive()` (`app/pricing/plans-data.ts`) is true |
-| `STRIPE_COUPON_ID_PRO_PROMO` | No | Vercel | Same as above, for Pro |
+| `STRIPE_PRICE_ID_STARTER` | No | Vercel | Stripe Price id for the Starter plan's recurring price. FOUNDER-PRICE-1: its `unit_amount` must equal `PLANS` (29 €, EUR, monthly, **tax inclusive** — IVA incluido, founder 2026-10-09) — checkout refuses otherwise (`stripePriceMatchesPlan`) |
+| `STRIPE_PRICE_ID_PRO` | No | Vercel | Same, for Pro (99 €) |
+| `STRIPE_COUPON_ID_STARTER_FOUNDER` | No | Vercel | FOUNDER-PRICE-1 (log §237): Stripe Coupon id, `amount_off` = 900 (9 €), `currency: eur`, `duration: forever`, `max_redemptions: 50`. Shown and applied only while it has exactly that shape and the founder slots (50, summed across both coupons) are not used up (`getFounderOffer`) |
+| `STRIPE_COUPON_ID_PRO_FOUNDER` | No | Vercel | Same, for Pro: `amount_off` = 3000 (30 €) |
+| ~~`STRIPE_COUPON_ID_STARTER_PROMO` / `STRIPE_COUPON_ID_PRO_PROMO`~~ | — | — | Retired by FOUNDER-PRICE-1: the 6-month launch coupons of PRICING-PROMO-1. No longer read; safe to delete from Vercel |
 
 All four are optional by design: `lib/stripe.ts`'s `getStripeClient()` returns
 `null` when `STRIPE_SECRET_KEY` is unset, and every caller (`createCheckoutSession`,
@@ -486,9 +549,9 @@ test-mode price ids for their live-mode equivalents.
 
 **Webhook registry (SEC-WEBHOOK-REGISTRY-1, log §236)**: `/api/webhooks/stripe`
 records every event in `public.stripe_webhook_events` and serializes events of
-one subscription through `public.stripe_subscription_locks` (migration 0038,
+one subscription through `public.stripe_subscription_locks` (migration 0039,
 applied by hand, service role only, RLS without policies). No new env var.
-**Apply 0038 BEFORE deploying this code:** without the tables the route fails
+**Apply 0039 BEFORE deploying this code:** without the tables the route fails
 closed — `503` + `Retry-After: 60` — so no billing event is processed without
 idempotency/ordering. Stripe retries a 5xx ~3 days in live mode but only a few
 times over a few hours in test mode, so events can be lost if the code ships
@@ -510,7 +573,7 @@ actions.
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
 | `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
-| `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. LIFECYCLE-TRIAL-1 (log §233) |
+| `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5) and the post-trial one (end of trial, late version, D+3, D+10 — LIFECYCLE-WINBACK-1, log §238). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. Apply migrations 0036–0038 first. LIFECYCLE-TRIAL-1 (log §233) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`

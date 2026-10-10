@@ -399,7 +399,7 @@ describe("renderNotification", () => {
     );
 
     expect(r.title).toBe("Tu prueba termina pronto");
-    expect(r.body).toBe("Quedan 3 días. Después pasarás al plan Free.");
+    expect(r.body).toBe("Quedan 3 días. Después tu cuenta pasará a solo lectura si no contratas.");
     expect(r.targetLabel).toBeNull();
     expect(r.href).toBe("/dashboard/settings/billing");
   });

@@ -17,6 +17,7 @@ import {
   Figure
 } from "@/components/blog/article";
 import { CANONICAL_DEFINITION, CANONICAL_DEFINITION_LONG } from "@/lib/brand/canonical-definition";
+import { QUE_ES_GENSCORE_FAQ } from "@/lib/brand/que-es-genscore-faq";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
@@ -28,33 +29,6 @@ export const metadata: Metadata = contentMetadata({
   path: "/que-es-genscore"
 });
 
-const faqItems = [
-  {
-    question: "¿Qué es GenScore?",
-    answer: CANONICAL_DEFINITION_LONG
-  },
-  {
-    question: "¿Qué mide exactamente GenScore?",
-    answer:
-      "Cinco señales sobre las respuestas reales de ChatGPT, Gemini y Claude: si el modelo menciona tu marca, con qué prominencia dentro de la respuesta, en qué posición frente a tus competidores, si respalda la mención citando tu web, y si tu web está técnicamente preparada para que la extraigan. Todo eso se resume en el GEO Score, una puntuación de 0 a 100 por dominio."
-  },
-  {
-    question: "¿En qué se diferencia GenScore de una herramienta SEO?",
-    answer:
-      "Una herramienta SEO mide tu posición en una lista de resultados. GenScore mide si un modelo generativo te nombra dentro de una respuesta redactada, algo que no depende del ranking: puedes estar primero en Google y no aparecer nunca en la respuesta de ChatGPT, y al revés. Son señales distintas y se corrigen con acciones distintas."
-  },
-  {
-    question: "¿Dónde está GenScore y quién lo hace?",
-    answer:
-      "GenScore es la plataforma de Generative Engine Optimization disponible en genscore.es, desarrollada en España y en castellano. El nombre coincide con el de productos de otros sectores sin ninguna relación —bioinformática, salud mental, evaluación de riesgo entre empresas—: si has llegado buscando alguno de ésos, no es éste."
-  },
-  {
-    question: "¿Se puede probar sin pagar?",
-    answer:
-      "Sí. El plan gratuito escanea de verdad —no es una demo ni una prueba con caducidad— y no pide tarjeta. Cubre un dominio con unos 10 prompts sobre un motor; los planes de pago amplían prompts, dominios y llevan los tres motores."
-  }
-];
-
 export default function QueEsGenScorePage() {
   return (
     <BlogPageShell>
@@ -65,7 +39,7 @@ export default function QueEsGenScorePage() {
         ]}
       />
       <SoftwareApplicationSchema />
-      <FaqPageSchema items={faqItems} />
+      <FaqPageSchema items={QUE_ES_GENSCORE_FAQ} />
 
       <h1 className="lp-h2">Qué es GenScore</h1>
       <p className="legal-updated" style={{ marginBottom: 36 }}>
@@ -93,7 +67,7 @@ export default function QueEsGenScorePage() {
           />
           <AnswerSample
             verdict="Después: apareces y te citan"
-            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Tiene plan gratuito."
+            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Puedes probarlo 7 días gratis."
             source="genscore.es"
           />
         </AnswerPair>
@@ -226,15 +200,15 @@ export default function QueEsGenScorePage() {
         <h2>Para quién es</h2>
         <p>
           Para equipos hispanohablantes que necesitan saber si aparecen en respuestas de IA y qué hacer
-          al respecto: desde autónomos y pymes —el plan gratuito no pide tarjeta ni pasar por ventas—
+          al respecto: desde autónomos y pymes —la prueba de 7 días no pide tarjeta ni pasar por ventas—
           hasta agencias que siguen varios dominios de cliente a la vez. El producto está en castellano,
           interfaz y soporte, que en esta categoría es la excepción y no la norma. Puedes ver los planes
-          y sus límites reales en <Link href="/pricing">Precios</Link>, y cómo se compara con otras
+          y sus límites reales en <Link href="/precios">Precios</Link>, y cómo se compara con otras
           herramientas en <Link href="/comparativas">Comparativas</Link>.
         </p>
 
         <h2>Preguntas frecuentes</h2>
-        {faqItems.map((item) => (
+        {QUE_ES_GENSCORE_FAQ.map((item) => (
           <div key={item.question}>
             <h3>{item.question}</h3>
             <p>{item.answer}</p>
@@ -243,7 +217,7 @@ export default function QueEsGenScorePage() {
 
         <ArticleCta
           title="Mira dónde apareces hoy"
-          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Gratis, sin tarjeta."
+          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
         />
       </div>
     </BlogPageShell>

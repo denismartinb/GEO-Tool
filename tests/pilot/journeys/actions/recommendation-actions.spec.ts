@@ -152,40 +152,31 @@ test("las acciones de Recomendaciones producen (o no) un efecto observable", asy
     };
   });
 
-  await test.step("acción 2 — exportar plan", async () => {
-    const exportButton = page.getByRole("button", { name: /exportar plan/i });
-    await expect(exportButton).toBeVisible();
+  await test.step("acción 2 — descargar informe", async () => {
+    // GEO-REPORT-1 Fase 2 (log §250): "Exportar plan" se retiró y su sitio lo
+    // ocupa un enlace al informe. Ya no hay descarga que pueda bloquear el
+    // navegador headless: o el informe pinta páginas o no.
+    const reportLink = page.getByRole("link", { name: /descargar informe/i });
+    await expect(reportLink).toBeVisible();
+    const href = await reportLink.getAttribute("href");
 
     const start = Date.now();
-    const download = await Promise.race([
-      page.waitForEvent("download", { timeout: 10_000 }).then((d) => d),
-      exportButton.click().then(() => null)
-    ]).catch(() => null);
-    // Si `waitForEvent` gana la carrera antes de que el `click` resuelva,
-    // `download` ya está poblado; si pierde, esperamos el evento explícito
-    // tras el clic, con el mismo margen.
-    const resolved =
-      download ??
-      (await page.waitForEvent("download", { timeout: 10_000 }).catch(() => null));
+    const reportPage = await page.context().newPage();
+    await reportPage.goto(href ?? "/");
+    const rendered = await reportPage
+      .locator(".gr-page")
+      .first()
+      .waitFor({ state: "visible", timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    const pages = await reportPage.locator(".gr-page").count();
     const elapsedMs = Date.now() - start;
+    await reportPage.close();
 
-    if (resolved) {
-      verdicts["exportar plan"] = {
-        verdict: "real",
-        evidence: `descarga "${resolved.suggestedFilename()}" iniciada en ${elapsedMs}ms`
-      };
-    } else {
-      // El componente crea un blob y simula el clic en un <a download>. Si el
-      // navegador (headless, en un runner de Actions) lo bloquea en silencio,
-      // es EXACTAMENTE el caso 3 que la Fase 0 predijo: falso positivo del
-      // entorno de auditoría, real para cualquier usuario con el mismo
-      // bloqueo — así que no se descarta como "no aplica", se documenta.
-      verdicts["exportar plan"] = {
-        verdict: "entorno",
-        evidence: `ningún evento de descarga en ${elapsedMs}ms — o el botón no produce efecto, o el navegador headless bloquea la descarga silenciosamente; no se puede distinguir desde aquí`
-      };
-    }
-    await captureStep(page, "export-attempted");
+    verdicts["descargar informe"] = rendered
+      ? { verdict: "real", evidence: `el informe pintó ${pages} páginas en ${elapsedMs}ms (${href})` }
+      : { verdict: "invisible", evidence: `${href} no pintó ninguna página del informe en ${elapsedMs}ms` };
+    await captureStep(page, "report-opened");
   });
 
   await test.step("acción 3 — marcar como hecho (DESTRUCTIVO — decisión del fundador 2026-08-27)", async () => {

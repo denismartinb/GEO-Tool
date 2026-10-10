@@ -1,7 +1,7 @@
 # ADR 0009 — Re-pin Gemini Model to gemini-2.5-flash
 
 **Date:** 2026-06-14
-**Status:** Accepted
+**Status:** Superseded by ADR 0042 (pin). Its addenda still govern the 2.x tuning used on rollback.
 **Deciders:** Founder + Director
 
 ---

@@ -162,6 +162,12 @@ export async function extractClaudeStructuredData(input: {
   profile?: BusinessProfile;
   /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
   deadlineAt?: number;
+  /**
+   * Overrides `ANTHROPIC_MODEL` for this extraction only
+   * (EXTRACTION-SINGLE-MODEL-1, `lib/scan/extraction-routing.ts`). Generation
+   * keeps its own model.
+   */
+  model?: string;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   // Categorized rather than a ClaudeConfigError: at the extraction stage this
@@ -169,7 +175,7 @@ export async function extractClaudeStructuredData(input: {
   // missing key during *generation* triggers in the executor.
   if (!apiKey) throw new ExtractionError("config", "Missing ANTHROPIC_API_KEY");
 
-  const model = getClaudeModel();
+  const model = input.model || getClaudeModel();
 
   const schemaInstruction = `Return ONLY valid JSON with this exact shape — no markdown fences, no prose:
 {

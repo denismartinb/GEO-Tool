@@ -8,7 +8,7 @@ type Service = ReturnType<typeof createServiceClient>;
 
 /**
  * SEC-WEBHOOK-REGISTRY-1 — durable idempotency and per-subscription ordering
- * for Stripe webhooks (table: 0038_stripe_webhook_events.sql).
+ * for Stripe webhooks (table: 0039_stripe_webhook_events.sql).
  *
  * Stripe is at-least-once and unordered. The handler's writes were already
  * idempotent, but its emails were not (a retry re-sent them), and nothing
@@ -30,7 +30,7 @@ type Service = ReturnType<typeof createServiceClient>;
  *  - DB writes happen, the event is marked processed, and ONLY THEN do emails
  *    go out — at most once per event. A crash between the two loses an email;
  *    it can never duplicate one. A failed email does not fail the webhook;
- *  - FAILS CLOSED when the registry tables are missing (migration 0038 not
+ *  - FAILS CLOSED when the registry tables are missing (migration 0039 not
  *    applied): the route answers 503 and Stripe keeps retrying for days, so no
  *    event is processed without idempotency/ordering and none is lost.
  */
@@ -58,19 +58,19 @@ const EVENTS_TABLE = "stripe_webhook_events";
 const LOCKS_TABLE = "stripe_subscription_locks";
 
 /**
- * The registry tables don't exist (migration 0038 not applied) or are not
+ * The registry tables don't exist (migration 0039 not applied) or are not
  * reachable as tables. Retryable by design: the route turns it into a 503.
  */
 export class WebhookRegistryUnavailableError extends Error {
   constructor() {
-    super("stripe webhook registry unavailable (migration 0038 not applied?)");
+    super("stripe webhook registry unavailable (migration 0039 not applied?)");
     this.name = "WebhookRegistryUnavailableError";
   }
 }
 
 type DbError = { code?: string; message?: string } | null;
 
-/** The table doesn't exist yet (migration 0038 not applied). */
+/** The table doesn't exist yet (migration 0039 not applied). */
 function isRegistryMissing(error: DbError): boolean {
   return error?.code === "42P01" || error?.code === "PGRST205" || error?.code === "PGRST200";
 }

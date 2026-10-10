@@ -2,6 +2,7 @@ import "server-only";
 
 import type Stripe from "stripe";
 import type { createServiceClient } from "@/lib/supabase/service";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { getPlanIdForPriceId } from "@/lib/stripe";
 import { PLANS } from "@/app/pricing/plans-data";
 import { sendCancellationScheduledEmail, sendPaymentFailedEmail, sendPlanConfirmedEmail } from "@/lib/email/transactional";
@@ -145,6 +146,21 @@ export async function applyStripeWebhookEvent(event: Stripe.Event, service: Serv
         });
         return IGNORED;
       }
+
+      // FUNNEL-EVENTS-1: after the plan is durable, so the event never claims
+      // a payment the product has not recorded. Keyed by the Stripe event id
+      // so a retried webhook is the same PostHog event, not a second payment.
+      await captureFunnelEvent(
+        "payment_completed",
+        userId,
+        {
+          plan_id: planId,
+          amount_total_cents: session.amount_total ?? null,
+          currency: session.currency ?? null,
+          livemode: event.livemode
+        },
+        event.id
+      );
 
       const email = session.customer_details?.email;
       const afterCommit: WebhookApplyResult["afterCommit"] = [];

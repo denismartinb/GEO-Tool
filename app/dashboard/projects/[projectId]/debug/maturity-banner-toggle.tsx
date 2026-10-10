@@ -55,7 +55,7 @@ export function MaturityBannerToggle({ projectId }: { projectId: string }) {
         <small>
           Silencia en este navegador los avisos informativos de la consola: «Tu análisis de hoy no se
           repetirá», «Tu histórico se está construyendo» y cualquiera que se añada más adelante. El
-          aviso del plan Free no se calla nunca — ése tiene su propia X. No cambia ningún ajuste del
+          aviso de cuenta en solo lectura (prueba terminada) no se calla nunca. No cambia ningún ajuste del
           proyecto, sólo oculta los avisos. <b>Encendido por defecto.</b>
         </small>
       </div>

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { getDocPage } from "@/lib/docs/nav";
-import { PLANS } from "@/app/pricing/plans-data";
+import { SELLABLE_PLANS } from "@/app/pricing/plans-data";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SLUG = "planes-y-limites";
@@ -26,7 +26,7 @@ export default function PlanesYLimitesPage() {
         ]}
       />
       <h1>{page.title}</h1>
-      <p className="docs-updated">Actualizado el 2 de agosto de 2026</p>
+      <p className="docs-updated">Actualizado el 9 de octubre de 2026</p>
 
       <p>
         GenScore cobra por cuánto monitorizas — dominios, prompts y motores de IA. Tu factura depende
@@ -44,7 +44,7 @@ export default function PlanesYLimitesPage() {
             <th>Motores de IA</th>
             <th>Refresco</th>
           </tr>
-          {PLANS.map((plan) => (
+          {SELLABLE_PLANS.map((plan) => (
             <tr key={plan.id}>
               <td>{plan.name}</td>
               <td>{plan.meter.projects}</td>
@@ -57,15 +57,21 @@ export default function PlanesYLimitesPage() {
       </table>
       </div>
 
+      <h2>La prueba de 7 días</h2>
+      <p>
+        Toda cuenta nueva empieza con 7 días de Pro completo, sin tarjeta. Si al terminar no contratas,
+        no se te cobra nada: la cuenta pasa a solo lectura, con tus dominios, escaneos y recomendaciones
+        intactos, pero sin escaneos nuevos ni dominios nuevos hasta que elijas un plan.
+      </p>
+
       <h2>Qué cambia al subir de plan</h2>
       <ul>
-        <li><strong>Free → Starter</strong>: pasas de un escaneo puntual a monitorización con escaneo semanal y evolución histórica.</li>
         <li><strong>Starter → Pro</strong>: escaneo diario, más dominios y prompts, y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
         <li><strong>Pro → Agencia</strong>: volumen de dominios y prompts a medida de tu cartera de clientes, con las mismas condiciones de motores y frecuencia de escaneo que Pro.</li>
       </ul>
 
       <p>
-        Precios y comparativa completa de funciones en <Link href="/pricing">Precios</Link>.
+        Precios y comparativa completa de funciones en <Link href="/precios">Precios</Link>.
       </p>
     </DocsPageShell>
   );

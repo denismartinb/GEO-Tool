@@ -29,7 +29,7 @@ export async function BillingContent({
   /** BILLING-STRIPE-1: `?checkout=success|cancelled` from the Stripe Checkout redirect. */
   checkoutStatus?: string;
   /**
-   * PRECIO-BUTTONS-CONSOLE-1: `?openPlan=<id>` from a `/pricing` CTA clicked
+   * PRECIO-BUTTONS-CONSOLE-1: `?openPlan=<id>` from a `/precios` CTA clicked
    * while logged in — opens "Cambiar de plan" straight into that plan
    * instead of requiring a second click inside the console. Already
    * validated against `PLANS` by the caller (`app/dashboard/settings/page.tsx`).
@@ -37,11 +37,10 @@ export async function BillingContent({
   openPlanId?: Plan["id"];
 }) {
   const usage = await getUsageSummary();
-  // PRICING-PROMO-1: computed server-side (needs STRIPE_COUPON_ID_*, which
+  // FOUNDER-PRICE-1: computed server-side (reads the Stripe coupons, which
   // stays out of the client bundle) and passed down as data — ChangePlanModal
-  // only shows a promo price for a plan actually in this list, never just
-  // because the promo window's date allows it.
-  const promoPlanIds = getActivePromoPlanIds();
+  // only shows a founder price for a plan actually in this list.
+  const promoPlanIds = await getActivePromoPlanIds();
 
   return (
     <div className="set-pane">

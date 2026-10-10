@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       // Fail closed: never process a billing event without idempotency and
       // ordering. 503 is retried by Stripe, but only for a while: in LIVE mode
       // up to ~3 days (and a long outage can get the endpoint disabled); in
-      // TEST mode only a few attempts over a few hours. So migration 0038 must
+      // TEST mode only a few attempts over a few hours. So migration 0039 must
       // be applied BEFORE this code is deployed — otherwise events can be lost.
       console.error("[geo:billing:webhook] registry unavailable, refusing event (retryable)", {
         eventType: event.type,

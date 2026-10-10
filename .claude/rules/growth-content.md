@@ -21,6 +21,17 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 - **Toda afirmación sobre metodología, feature o capacidad del producto debe
   trazarse a un ADR o al código real.** Si no se puede trazar, no se publica
   (content-strategy §4.5).
+- **Un estudio con dato propio publica porcentajes y ratios, nunca cuántas
+  preguntas, repeticiones o respuestas lo componen, ni las versiones de los
+  modelos ni cómo está montada la medición** (fundador, 2026-10-09; log §246).
+  Un recuento bajo ("doce preguntas, dos veces") resta credibilidad, y la
+  versión del modelo o "la misma instrucción que usa un escaneo" es
+  información del producto que no se regala. Se dice qué motores (ChatGPT,
+  Gemini, Claude), la fecha, el criterio ("solo cuenta si el nombre aparece en
+  la respuesta") y que se repitió "múltiples veces en distintos momentos del
+  tiempo" —nunca "varias veces" (fundador, 2026-10-10; log §260)—; las marcas
+  van en texto normal, sin negrita ni cursiva; las preguntas se enseñan como
+  muestra, no completas, para que su número no se deduzca.
 - **Ninguna cifra de mercado de terceros se presenta como dato propio de
   Genscore.** Sólo el Observatorio (capa E, con aprobación aparte) genera dato
   propio real.
@@ -95,6 +106,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   fue mejor: retirar el dato, porque **lo que no se publica no se queda
   rancio** (log §75).
 
+- **El hub `/estudios` no tiene datos propios.** Título, fecha, cifra y fuente
+  de cada estudio se leen de `BLOG_POSTS`; la única lista a mano es
+  `STUDY_ENTRIES` en `lib/estudios/studies.ts` (slug + tipo). Un estudio nuevo
+  se publica como artículo con `heroStat` y fuente, y se añade ahí en el mismo
+  PR; una segunda redacción de su cifra en el hub divergiría al primer
+  refresco (log §260).
+
 ## Imágenes
 
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0028
@@ -155,13 +173,34 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   copiar lo que no se ve** y la pista "Desliza →" sólo aparece bajo 640 px, así
   que en escritorio se ve cortada y sin aviso. El ajuste es visual: un salto
   blando no mete ningún `\n` en el portapapeles (log §85).
-- **Declarar la portada no es enseñarla.** `BlogCover` sólo pinta la imagen si
-  recibe `image`; sin esa prop cae al degradado con icono, que es el respaldo
-  de los artículos *sin* portada — "un icono de algo que no carga bien", el
-  fundador. Cuatro artículos estuvieron así: portada correcta en `/blog`, en la
-  tarjeta social y en el schema, y degradado en su propia cabecera, porque los
-  tests de portada miraban `BLOG_POSTS` y el disco, nunca el MDX
-  (`covers.test.ts`, "el artículo enseña la portada que declara"; log §73).
+- **Superseded por BLOG-REDESIGN-1 (log §247): el artículo ya no pinta su
+  ilustración.** La cabecera de todo post es `<BlogPageShell hero={<ArticleHero
+  post={post} />}>` —portada oscura con la estética del estudio PDF—, sin
+  `<BlogCover>`, sin `# {post.title}` (el h1 lo pinta `ArticleHero`) y sin
+  `<PostMeta>`. `coverImage` sigue siendo obligatorio porque lo usan el índice,
+  la tarjeta social y el schema. Lo vigila `covers.test.ts`, igual que vigilaba
+  la regla anterior (log §73): un post nuevo copiado de uno viejo arrastraría
+  la cabecera vieja sin que nada lo dijera.
+- **La cifra grande de la portada (`heroStat`) sólo con una cifra que el
+  post YA publica, con su fuente citable** —estudio propio o de terceros con
+  nombre y año—. Un post sin cifra con fuente sale sin cifra; no se busca una
+  para rellenar el hueco, porque una cifra elegida por diseño y no por
+  evidencia es una métrica inventada (CLAUDE.md, "fake metrics"; log §247). El
+  antetítulo sólo dice «Estudio GenScore» cuando la fuente es nuestra.
+- **Un solo cierre y en un solo orden: `AuthorBio` → `ArticleCta` →
+  `RelatedPosts`.** Nada de CTAs sueltos (`.blog-cta`) a mitad de artículo: el
+  cierre oscuro ya lo es (log §247, revisión de coherencia).
+- **Paleta del artículo: tinta, azul y cian.** El rojo sólo donde dice algo
+  («Evitar», «Sin evidencia»); el verde de «Confirmada» igual. Nada de
+  colores por decoración (log §247).
+- **El índice `/blog` usa la misma portada y el mismo ámbito.** Pasa su
+  portada por la prop `hero` de `BlogPageShell`, así que su cuerpo también va
+  bajo `.lp-article`: carriles numerados con el contador de las secciones,
+  tarjetas blancas y «Ver más artículos» como botón genérico, sin decir cuántos quedan (un «Ver 1 artículo más» delata poco contenido; fundador) (log §247,
+  Fase 2).
+- **El estilo del artículo vive bajo `.art-hero` y `.lp-article`.**
+  `/comparativas`, `/docs` y `/glosario` comparten los bloques `.art-*` y no
+  cambiaron; tocar `.art-*` sin ese ámbito los cambia a la vez (log §247).
 
 ## Redacción
 
@@ -224,8 +263,8 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
   exportar `metadata`, y la página se queda sin título, sin descripción y sin
   canonical propios sin que nada falle: es exactamente lo que les pasó a la
-  home y a `/pricing`. El patrón es página de servidor con la metadata +
-  componente cliente aparte (log §46; `app/pricing/pricing-metadata.test.ts`).
+  home y a `/precios`. El patrón es página de servidor con la metadata +
+  componente cliente aparte (log §46; `app/precios/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
@@ -238,7 +277,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `openGraph` de una página **reemplaza** el del layout raíz en vez de
   fusionarse campo a campo, así que declarar solo `title`/`description` le quita
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
-  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
+  enteras, sin ningún error visible. Pasó en la home y en `/precios` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
   renderiza SVG: la tarjeta sale en blanco, y `ogImageFor()` filtra por `RASTER`
   justo por eso (log §47). **Desde el 2026-08-20 ninguna portada del blog es
@@ -262,6 +301,20 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
+  **Lo mismo vale para `/llms-full.txt`** (`lib/seo/llms-full-txt.ts`, log
+  §256): importa los datos que renderiza cada página —por eso el FAQ de
+  `/que-es-genscore` y el texto de `/sobre-genscore` viven en `lib/brand/`—,
+  nunca una segunda redacción. **Y la fecha de `/blog` y de cada pilar se
+  deriva de sus artículos** (`lib/seo/sitemap-dates.ts`), no se escribe a mano:
+  las dos fechas a mano que había se quedaron rancias (log §256).
+- **Un grupo con nombre en `robots.ts` repite la lista de `disallow` entera.**
+  Según RFC 9309 un rastreador que encaja en un grupo con nombre ignora el de
+  `*`: un `GPTBot` con sólo `allow: "/"` tendría abiertos `/dashboard` y
+  `/api` (`lib/seo/robots-rules.ts`, `app/robots.test.ts`; log §256).
+- **Ni `founder` ni `Person` en el schema, ni nombre de persona, foto o
+  empleador en `/sobre-genscore`** (fundador, 2026-10-09; log §256). La
+  entidad es la empresa; `author` y `publisher` de los artículos apuntan al
+  `Organization` por `@id`. Firmar con nombre sería una fase propia.
 - **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,
   follow: true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
@@ -339,6 +392,19 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   piloto llegara a abrirla** — incluido el del PR que la rediseñaba (log §62).
   Lo fijan los dos tests de `tests/pilot/fixtures/fixture-drift.test.ts` que
   contrastan `COMPARATIVAS` contra el spec y contra el fixture.
+- **Una comparativa a tres (o más) entre competidores es neutral: GenScore no
+  entra en la tabla ni lleva `Verdict`.** Aparece sólo en un bloque
+  etiquetado antes de la FAQ, declarado como nuestro y con sus límites
+  (`profound-vs-peec-ai-vs-otterly`, log §258). Meterla en la tabla de una
+  pieza que se presenta como neutral sería un anuncio con otro nombre.
+- **Un importe que el fabricante no publica se cita a un tercero, con su
+  nombre y su fecha, y se marca «orientativo».** Las comparativas nuevas
+  guardan sus fuentes en los datos (`lib/comparativas/sources.ts`) y las
+  pintan en una sección «Fuentes» (log §258).
+- **De una herramienta ajena se dice «no consta» una interfaz en castellano,
+  nunca que no la tenga**, salvo que esté verificado. Lo mismo para cualquier
+  dato que sólo sugiere una nota de prensa (la ciudad de GEO Metrics, log
+  §258): si no se ha podido verificar, no se publica.
 - **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
   sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
   tabla con las pantallas que toca el diff es trabajo del Director y no lo

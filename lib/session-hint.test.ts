@@ -67,7 +67,7 @@ describe("the pre-hydration session script", () => {
     }
     // Every surface that renders PublicHeader must still prefetch — including
     // paths that merely start with one of those words.
-    for (const path of ["/", "/blog", "/blog/que-es-geo", "/pricing", "/geo", "/docs", "/comparativas", "/loginfo"]) {
+    for (const path of ["/", "/blog", "/blog/que-es-geo", "/precios", "/geo", "/docs", "/comparativas", "/loginfo"]) {
       expect(nonPublic.test(path), path).toBe(false);
     }
   });

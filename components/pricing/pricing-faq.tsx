@@ -6,12 +6,12 @@ import { PLAN_FAQ } from "@/app/pricing/plans-data";
 
 /**
  * El acordeón de «Lo que suelen preguntarnos» (PRELAUNCH-HARDENING-1 Fase V,
- * V4). Es lo único de `/pricing` que necesita estado, y era el motivo de que
+ * V4). Es lo único de `/precios` que necesita estado, y era el motivo de que
  * la página entera —tres tarjetas de plan, la matriz de comparación, el pie—
  * se enviara al navegador para hidratarse.
  *
  * El texto sigue viniendo de `PLAN_FAQ`, la misma lista que
- * `app/pricing/page.tsx` marca como `FAQPage` para los buscadores. Son una
+ * `app/precios/page.tsx` marca como `FAQPage` para los buscadores. Son una
  * sola fuente a propósito: un schema que anuncia preguntas que la página no
  * muestra es exactamente lo que SEO-POS-1 (T8) evitó.
  *

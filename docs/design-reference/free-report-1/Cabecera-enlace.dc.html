@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Cabecera y pie · enlace al informe</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.grad{background:linear-gradient(90deg,#4f7bff 0%,#09c5d6 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+</style>
+</helmet>
+<div style="width:1280px;height:520px;box-sizing:border-box;overflow:hidden;font-family:Figtree,sans-serif;color:#0b1426;background:#f3f5f9;padding:32px;display:flex;flex-direction:column;gap:28px">
+<div style="background:#fff;border:1px solid #e1e6ef;border-radius:14px;height:68px;padding:0 28px;display:flex;align-items:center;justify-content:space-between">
+<span style="display:flex;align-items:center;gap:8px"><svg width="24" height="24" viewBox="0 0 28 28" aria-hidden="true"><rect width="28" height="28" rx="8" fill="#2563eb"></rect><path d="M8 18 L12 13 L15 16 L20 9" stroke="#ffffff" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path></svg><span style="font-family:'Bricolage Grotesque',sans-serif;font-weight:700;font-size:19px">GenScore</span></span>
+<nav style="display:flex;align-items:center;gap:26px;font-size:15px;font-weight:500;color:#34405a"><span>Producto</span><span>Cómo funciona</span><span>Qué es GEO</span><span>Precios</span><span>Blog</span><span style="display:inline-flex;align-items:center;gap:6px;color:#1d4ed8;font-weight:700">Informe gratis<span style="padding:2px 7px;border-radius:999px;background:#e6f9fb;color:#0e7490;font-size:11px;font-weight:700">Nuevo</span></span></nav>
+<span style="display:flex;gap:10px"><span style="padding:9px 14px;border-radius:9px;font-weight:600;font-size:14px">Iniciar sesión</span><span style="padding:9px 14px;border-radius:9px;background:#2563eb;color:#fff;font-weight:700;font-size:14px">Empezar gratis</span></span>
+</div>
+<div style="display:flex;gap:28px">
+<div style="width:300px;background:#fff;border:1px solid #e1e6ef;border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:14px;font-size:16px;font-weight:600">
+<div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#6b7689">Menú móvil</div>
+<span>Producto</span><span>Cómo funciona</span><span>Qué es GEO</span><span>Precios</span><span>Blog</span>
+<span style="color:#1d4ed8;font-weight:700">Informe gratis</span>
+</div>
+<div style="flex:1;background:#0b1426;color:#c9d3e6;border-radius:14px;padding:22px 26px;display:flex;flex-direction:column;gap:12px;font-size:14px">
+<div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#8fa0bd">Pie de página</div>
+<div style="display:flex;gap:22px;flex-wrap:wrap"><span>Producto</span><span>Precios</span><span>Blog</span><span style="color:#8fe9f1;font-weight:700">Informe gratis</span><span>Privacidad</span><span>Términos</span></div>
+</div>
+</div>
+<p style="margin:0;font-size:14px;color:#4a5670">El enlace va el último en la cabecera, en azul y con la etiqueta «Nuevo» las primeras semanas.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":520}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

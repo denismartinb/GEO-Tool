@@ -14,6 +14,7 @@ import {
   SCAN_INVOCATION_WORK_BUDGET_MS
 } from "@/lib/scan/constants";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { resolveExtractionRoute } from "@/lib/scan/extraction-routing";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { ScanPromptResultRow } from "@/lib/scan/types";
 import type { ExtractionOutput, GroundedCitation } from "@/lib/extraction/schema";
@@ -370,10 +371,14 @@ async function extractAndPersistRow(input: {
       profile,
       deadlineAt
     };
+    // EXTRACTION-SINGLE-MODEL-1: by default each row is still extracted by
+    // the provider that generated it; `SCAN_EXTRACTION_CLAUDE_MODEL` routes
+    // every row to one cheap model (lib/scan/extraction-routing.ts).
+    const route = resolveExtractionRoute(row.provider);
     const extracted =
-      row.provider === "claude"
-        ? await extractClaudeStructuredData(extractionArgs)
-        : row.provider === "openai"
+      route.provider === "claude"
+        ? await extractClaudeStructuredData({ ...extractionArgs, model: route.model })
+        : route.provider === "openai"
           ? await extractOpenAIStructuredData(extractionArgs)
           : await extractGeminiStructuredData(extractionArgs);
 
