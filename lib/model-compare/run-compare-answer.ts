@@ -2,6 +2,7 @@ import "server-only";
 import { CLAUDE_GENERATION_MAX_TOKENS, extractClaudeStructuredData, generateClaudeVisibilityAnswer } from "@/lib/llm/claude";
 import { extractGeminiStructuredData, generateGeminiVisibilityAnswer } from "@/lib/llm/gemini";
 import { extractOpenAIStructuredData, generateOpenAIVisibilityAnswer } from "@/lib/llm/openai";
+import { generatePerplexityVisibilityAnswer } from "@/lib/llm/perplexity";
 import { buildExtractionUpdate } from "@/lib/scan/extraction";
 import { resolveExtractionRoute } from "@/lib/scan/extraction-routing";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
@@ -52,7 +53,9 @@ export async function runCompareAnswer(input: {
         ? generateGeminiVisibilityAnswer
         : engine === "openai"
           ? generateOpenAIVisibilityAnswer
-          : generateClaudeVisibilityAnswer;
+          : engine === "perplexity"
+            ? generatePerplexityVisibilityAnswer
+            : generateClaudeVisibilityAnswer;
     const answer = await generate({ prompt: input.promptText, country: project.country, language: project.language, model });
 
     const extractionArgs = {
@@ -130,7 +133,7 @@ export async function runCompareAnswer(input: {
     // messages (getGeminiApiError & co.) — the useful part when a candidate
     // model id is not served. Anything else is reduced to its class name.
     const ownMessage =
-      error instanceof Error && /^(Gemini|OpenAI|Claude) (API|returned)/.test(error.message) ? error.message : null;
+      error instanceof Error && /^(Gemini|OpenAI|Claude|Perplexity) (API|returned)/.test(error.message) ? error.message : null;
     return { ...base, error: typeof detail === "string" ? `${kind}:${detail}` : (ownMessage ?? kind) };
   }
 }

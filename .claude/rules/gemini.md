@@ -19,7 +19,11 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   1.0 (bucles); Gemini 2.x necesita lo contrario (ADR 0009). Cinco copias
   escritas a mano habrían fallado todas a la vez con el primer cambio de
   modelo (ADR 0042, log §240). Llamada nueva → usa la función.
-- **No new providers** (OpenAI, Perplexity) without explicit approval.
+- **No new providers** without explicit approval. Perplexity is approved
+  (2026-10-10, log §274) for the operator's tools only: comparison and
+  studies. Making it a scan engine is its own phase (Fase 2), with the
+  mockup first. Its client uses the Agent API, not Sonar `/chat/completions`
+  (announced unsupported after 2026-09-27).
 - **No crawler** without explicit approval.
 - **Never fake Gemini results**, and never hide a provider failure behind a
   success UI.

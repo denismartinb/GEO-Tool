@@ -133,6 +133,18 @@ describe("answerCost", () => {
     expect(answerCost(answer({}))).toBeCloseTo(0.00525 + 0.028, 6);
   });
 
+  it("prices Perplexity's own model, its per-call search fee and Gemini's extraction", () => {
+    const perplexity = answer({ engine: "perplexity", generationModel: "perplexity/sonar" });
+    // 1000 in × 0.25 + 1000 out × 2.5 per M, + Gemini extraction 1000 in × 0.75 per M, + 2 × 0.0025
+    expect(answerCost(perplexity)).toBeCloseTo(0.00275 + 0.00075 + 0.005, 6);
+  });
+
+  it("estimates Perplexity's extraction at Gemini's price, the scan's routing", () => {
+    const estimate = estimateAnswerCost("perplexity", CURRENT, CURRENT);
+    // 300/900 tokens on sonar, 1800/400 on gemini-3.6-flash, 1 search
+    expect(estimate).toBeCloseTo((300 * 0.25 + 900 * 2.5 + 1800 * 0.75 + 400 * 3.75) / 1e6 + 0.0025, 6);
+  });
+
   it("is null when a model has no price", () => {
     expect(answerCost(answer({ generationModel: "mystery-model" }))).toBeNull();
   });

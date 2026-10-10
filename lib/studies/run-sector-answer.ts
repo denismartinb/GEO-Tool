@@ -2,6 +2,7 @@ import "server-only";
 import { extractClaudeStructuredData, generateClaudeVisibilityAnswer } from "@/lib/llm/claude";
 import { extractGeminiStructuredData, generateGeminiVisibilityAnswer } from "@/lib/llm/gemini";
 import { extractOpenAIStructuredData, generateOpenAIVisibilityAnswer } from "@/lib/llm/openai";
+import { generatePerplexityVisibilityAnswer } from "@/lib/llm/perplexity";
 import { verifyExtractedMentions } from "@/lib/scan/extraction";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
@@ -34,18 +35,22 @@ export async function runSectorAnswer(input: {
         ? generateGeminiVisibilityAnswer
         : engine === "openai"
           ? generateOpenAIVisibilityAnswer
-          : generateClaudeVisibilityAnswer;
+          : engine === "perplexity"
+            ? generatePerplexityVisibilityAnswer
+            : generateClaudeVisibilityAnswer;
     const answer = await generate({ prompt, country: sector.country, language: sector.language });
 
+    // Perplexity has no extractor of its own; Gemini reads it, as the scan's
+    // routing does for any provider without one (resolveExtractionRoute).
     const extract =
-      engine === "gemini"
+      engine === "gemini" || engine === "perplexity"
         ? extractGeminiStructuredData
         : engine === "openai"
           ? extractOpenAIStructuredData
           : extractClaudeStructuredData;
     // Same rule as the scan (lib/scan/extraction.ts): Gemini's grounding URIs
     // are Google redirect wrappers and get resolved through the SSRF-guarded
-    // resolver; OpenAI's are already final. Runs alongside the extraction.
+    // resolver; OpenAI's and Perplexity's are already final. Runs alongside the extraction.
     const [extracted, citations] = await Promise.all([
       extract({
         brand: sector.brand ?? STUDY_SENTINEL_BRAND,

@@ -7,6 +7,7 @@ import {
   brandKey,
   buildCustomStudy,
   CUSTOM_STUDY_LIMITS,
+  DEFAULT_ENGINES,
   ENGINE_LABEL,
   ENGINES,
   formatReport,
@@ -87,7 +88,7 @@ export function StudyRunner({ sectors }: { sectors: SectorOption[] }) {
   const [competitorsText, setCompetitorsText] = useState("");
   const [competitorDomains, setCompetitorDomains] = useState<Record<string, string>>({});
   const [phase, setPhase] = useState<string | null>(null);
-  const [engines, setEngines] = useState<Engine[]>([...ENGINES]);
+  const [engines, setEngines] = useState<Engine[]>([...DEFAULT_ENGINES]);
   const [samples, setSamples] = useState(2);
   const [promptCount, setPromptCount] = useState(15);
   const [zone, setZone] = useState("");

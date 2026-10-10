@@ -17,14 +17,22 @@
 
 import type { CompareAnswerOk } from "@/lib/model-compare/compare";
 
-export const COMPARE_ENGINES = ["gemini", "openai", "claude"] as const;
+export const COMPARE_ENGINES = ["gemini", "openai", "claude", "perplexity"] as const;
 export type CompareEngine = (typeof COMPARE_ENGINES)[number];
 
 export const COMPARE_ENGINE_LABEL: Record<CompareEngine, string> = {
   gemini: "Gemini",
   openai: "ChatGPT",
-  claude: "Claude"
+  claude: "Claude",
+  perplexity: "Perplexity"
 };
+
+/**
+ * Engines the page ticks by default: the three the scan runs. Perplexity is
+ * opt-in until it is a scan engine too (PERPLEXITY-ENGINE-1, log §274), so a
+ * comparison run the usual way keeps measuring what production does.
+ */
+export const DEFAULT_COMPARE_ENGINES: CompareEngine[] = ["gemini", "openai", "claude"];
 
 export type ModelPrice = { inPerM: number; outPerM: number };
 
@@ -47,7 +55,11 @@ export const GENERATION_MODELS: Record<CompareEngine, ModelOption[]> = {
   claude: [
     { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", price: { inPerM: 1, outPerM: 5 } },
     { id: "claude-haiku-5-5", label: "Haiku 5.5", price: { inPerM: 0.1, outPerM: 0.5 } }
-  ]
+  ],
+  // Perplexity's own model on the Agent API (docs.perplexity.ai, Agent API
+  // models, consulted 2026-10-10). Not a scan engine yet: "current" resolves
+  // to PERPLEXITY_MODEL or this default.
+  perplexity: [{ id: "perplexity/sonar", label: "perplexity/sonar", price: { inPerM: 0.25, outPerM: 2.5 } }]
 };
 
 /** Models offered only as extractors (no search needed), priced here so their cost is measured too. */
@@ -59,6 +71,8 @@ const EXTRACTION_ONLY_MODELS: ModelOption[] = [
 export const GEMINI_SEARCH_FEE_PER_QUERY = 0.014;
 /** OpenAI web_search: per tool call. */
 export const OPENAI_SEARCH_FEE_PER_CALL = 0.01;
+/** Perplexity Agent API web_search (search_type "web"): per invocation. */
+export const PERPLEXITY_SEARCH_FEE_PER_CALL = 0.0025;
 
 /**
  * How a pass extracts its answers. `native` is whatever the scan does today
@@ -110,7 +124,7 @@ export function findExtractionOption(id: string): ExtractionOption | null {
 /** Price of a model id the comparison actually called, or null when it is not in the catalogue (e.g. an env override). */
 export function priceOf(modelId: string | null | undefined): ModelPrice | null {
   if (!modelId) return null;
-  const all = [...GENERATION_MODELS.gemini, ...GENERATION_MODELS.openai, ...GENERATION_MODELS.claude, ...EXTRACTION_ONLY_MODELS];
+  const all = [...Object.values(GENERATION_MODELS).flat(), ...EXTRACTION_ONLY_MODELS];
   // Providers echo versioned ids ("gpt-4o-mini-2024-07-18", "claude-haiku-4-5-20251001"):
   // match the longest catalogue id the reported one starts with.
   const match = all
@@ -128,17 +142,20 @@ export function tokenCost(price: ModelPrice, tokensIn: number, tokensOut: number
  * figures replace them as soon as answers come back; the page labels this
  * number "estimado".
  */
-const ESTIMATE = { generationIn: 300, generationOut: 900, extractionIn: 1800, extractionOut: 400, geminiSearches: 2, openaiSearches: 1 };
+const ESTIMATE = { generationIn: 300, generationOut: 900, extractionIn: 1800, extractionOut: 400, geminiSearches: 2, openaiSearches: 1, perplexitySearches: 1 };
 
 export function estimateAnswerCost(engine: CompareEngine, generationModelId: string, extractionModelId: string): number {
   const generation = priceOf(generationModelId) ?? GENERATION_MODELS[engine][0].price;
-  const extraction = priceOf(extractionModelId) ?? GENERATION_MODELS[engine][0].price;
+  // Perplexity has no extractor of its own: the scan's routing sends its rows to Gemini.
+  const extraction = priceOf(extractionModelId) ?? GENERATION_MODELS[engine === "perplexity" ? "gemini" : engine][0].price;
   const searchFee =
     engine === "gemini"
       ? ESTIMATE.geminiSearches * GEMINI_SEARCH_FEE_PER_QUERY
       : engine === "openai"
         ? ESTIMATE.openaiSearches * OPENAI_SEARCH_FEE_PER_CALL
-        : 0;
+        : engine === "perplexity"
+          ? ESTIMATE.perplexitySearches * PERPLEXITY_SEARCH_FEE_PER_CALL
+          : 0;
   return (
     tokenCost(generation, ESTIMATE.generationIn, ESTIMATE.generationOut) +
     tokenCost(extraction, ESTIMATE.extractionIn, ESTIMATE.extractionOut) +
@@ -157,7 +174,9 @@ export function answerCost(answer: CompareAnswerOk): number | null {
       ? (usage.searches ?? 0) * GEMINI_SEARCH_FEE_PER_QUERY
       : answer.engine === "openai"
         ? (usage.searches ?? 0) * OPENAI_SEARCH_FEE_PER_CALL
-        : 0;
+        : answer.engine === "perplexity"
+          ? (usage.searches ?? 0) * PERPLEXITY_SEARCH_FEE_PER_CALL
+          : 0;
   return (
     tokenCost(generationPrice, usage.generationIn, usage.generationOut) +
     tokenCost(extractionPrice, usage.extractionIn, usage.extractionOut) +

@@ -23599,3 +23599,56 @@ pero dentro de `headers`, y esa cabecera no sobrevivió al envío de Resend.
 (buzón o reenvío en el proveedor del dominio). Desde este entorno no se puede
 consultar el MX de `genscore.es`. Si no existe, las respuestas rebotarán en vez
 de perderse en noreply.
+
+## 274. PERPLEXITY-ENGINE-1 Fase 1: Perplexity como motor de las herramientas del operador (2026-10-10)
+
+**Qué pasó.** El fundador pidió una línea de trabajo para incorporar
+Perplexity. Tras ver el plan
+(`/mnt/project-files/perplexity/plan-perplexity-2026-10-10.md`) decidió:
+«Fase 1 y luego en el producto para Pro y Agencia». Eso levanta, para este
+alcance, el «Perplexity runtime» de la lista de lo prohibido en `CLAUDE.md`.
+
+**Qué se decidió.**
+
+- `lib/llm/perplexity.ts` genera la respuesta con la misma instrucción neutra
+  que los otros tres motores (ADR 0007) y devuelve la misma forma.
+- **Usa la Agent API (`/v1/agent`), no Sonar `/chat/completions`.**
+  Perplexity anunció que Sonar Chat Completions solo tendría soporte hasta el
+  27-09-2026. El plan de la mañana todavía lo daba por bueno. El modelo por
+  defecto es `perplexity/sonar`, el propio de Perplexity (0,25/2,50 $ por
+  millón de tokens) y no uno de otro fabricante de los que sirve la misma API.
+  La búsqueda es `web_search` con `search_type: "web"` (2,50 $ por 1.000) y el
+  país del proyecto en `user_location` cuando es un código ISO.
+- **Fuentes:** cuentan los resultados que la respuesta cita con marcas
+  `[n]`/`[web:n]`. Si no hay ninguna marca, cuentan todos. Las marcas se
+  quitan del texto, porque el informe y la extracción citan frases literales.
+  Las URLs son finales: `buildExtractionUpdate` no las resuelve
+  (`groundingUrlsAreFinal`).
+- **No hay extractor de Perplexity.** Sus respuestas las extrae Gemini, igual
+  que hace `resolveExtractionRoute` con un proveedor sin extractor (o el
+  extractor único, cuando se encienda).
+- **Dónde aparece:** solo en `/admin/comparar-modelos` y `/admin/estudio` (y en
+  `pnpm study:sector --engines perplexity`). En las dos páginas sale
+  **desmarcado** por defecto: una comparación hecha como siempre sigue
+  midiendo lo que corre en producción, y los estudios públicos siguen
+  nombrando solo ChatGPT, Gemini y Claude.
+- **No es motor del escaneo.** `LLMScanProvider` no lo admite, así que ningún
+  cliente lo ve ni lo paga.
+
+**Coste estimado** (tarifa × tamaños, sin medir): unos 0,01 $ por respuesta
+con la extracción incluida. En un Pro de pago (17 preguntas, ~15 escaneos al
+mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
+
+**Pendiente.**
+
+- `PERPLEXITY_API_KEY` en Vercel: solo puede crearla el fundador.
+- Medir con datos reales cuánto difiere Perplexity de los otros tres, en
+  `/admin/estudio` con la casilla marcada.
+- **Fase 2 (aprobada en principio para Pro y Agencia):** antes, maqueta en
+  artefacto. Después:
+  - motor del escaneo limitado por plan (hoy `caps.engines` cuenta motores, no
+    elige cuáles);
+  - logos y filas en Visión general, Competidores, Prompts y el informe;
+  - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
+    al añadir un motor;
+  - los textos que dicen «3 motores», que siguen congelados.

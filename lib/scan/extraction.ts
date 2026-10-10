@@ -384,9 +384,10 @@ export async function buildExtractionUpdate(input: {
       domain: c.domain,
       label: c.label
     })),
-    // OpenAI's web_search citations are already final destination URLs
-    // (unlike Gemini's Google redirect wrappers) — skip live resolution.
-    groundingUrlsAreFinal: input.provider === "openai"
+    // OpenAI's web_search citations and Perplexity's search results are
+    // already final destination URLs (unlike Gemini's Google redirect
+    // wrappers) — skip live resolution.
+    groundingUrlsAreFinal: input.provider === "openai" || input.provider === "perplexity"
   });
 
   // Anti-fake invariant: citations_count / citation_found only reflect
