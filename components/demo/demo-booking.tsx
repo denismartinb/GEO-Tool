@@ -198,7 +198,9 @@ export function DemoBooking() {
           {errorFor("domain") && <span className="dm-err">{errorFor("domain")}</span>}
         </label>
         <label className="dm-field">
-          ¿Algo que quieras ver? <span className="dm-opt">(opcional)</span>
+          <span>
+            ¿Algo que quieras ver? <span className="dm-opt">(opcional)</span>
+          </span>
           <input
             type="text"
             name={DEMO_FIELDS.topic}
