@@ -341,7 +341,7 @@ async function buildGroundedCitations(input: {
  * What a successful extraction writes onto its `scan_prompt_results` row:
  * verified mentions, the tracked-set reconciliation, the grounded citations
  * and the counters the score reads. Shared by the scan and by the
- * operator's model comparison (MODEL-COMPARE-1, log §263), so the
+ * operator's model comparison (MODEL-COMPARE-1, log §269), so the
  * comparison scores exactly what a scan would have persisted and differs
  * from it only in the model.
  */

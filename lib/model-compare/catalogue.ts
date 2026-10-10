@@ -1,5 +1,5 @@
 /**
- * MODEL-COMPARE-1 (log §263) — the models the operator's comparison may call,
+ * MODEL-COMPARE-1 (log §269) — the models the operator's comparison may call,
  * and what each costs. Pure: no environment, no network.
  *
  * A closed list on purpose. The server action only ever calls an id from
@@ -40,7 +40,7 @@ export const GENERATION_MODELS: Record<CompareEngine, ModelOption[]> = {
     { id: "gpt-4o-mini", label: "gpt-4o-mini", price: { inPerM: 0.15, outPerM: 0.6 } }
     // No cheaper OpenAI generator is listed. gpt-4.1-nano does not take the
     // web_search tool, and OpenAI rejected every gpt-6-luna request with a
-    // 400 too (log §263). With gpt-4o-mini as the candidate as well, the
+    // 400 too (log §269). With gpt-4o-mini as the candidate as well, the
     // OpenAI B pass measures only the extraction change. nano stays an
     // extraction option, which needs no search.
   ],

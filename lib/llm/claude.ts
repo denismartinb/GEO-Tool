@@ -80,7 +80,7 @@ function extractText(data: AnthropicResponse): string {
 /**
  * Output cap of a scan answer. Exported so the model comparison can flag answers cut at it.
  * 2048, not 1024: Haiku 5.5 writes about twice as long as Haiku 4.5 and a quarter of its
- * answers were cut at 1024 (log §263). Haiku 4.5 stays well under either cap.
+ * answers were cut at 1024 (log §269). Haiku 4.5 stays well under either cap.
  */
 export const CLAUDE_GENERATION_MAX_TOKENS = 2048;
 
@@ -221,7 +221,7 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   // 4096, not 2048: Haiku 5.5 writes ~1,400–2,000 output tokens per
   // extraction (Haiku 4.5: ~700), and at 2048 a third of its extractions were
-  // cut mid-JSON and failed as invalid_json (MODEL-COMPARE-1, log §263). The
+  // cut mid-JSON and failed as invalid_json (MODEL-COMPARE-1, log §269). The
   // cap only bounds the worst case; a model that writes less pays for less.
   const requestBody = JSON.stringify({
     model,

@@ -32,6 +32,9 @@ import type { Plan } from "@/app/pricing/plans-data";
  */
 
 /** Qué pasó DESPUÉS de que el proyecto ya exista en la base de datos. */
+/** Código SQLSTATE de Postgres para `unique_violation`. */
+const UNIQUE_VIOLATION = "23505";
+
 export type CreatedProjectOutcome =
   /**
    * Sin ningún prompt activo no hay nada que escanear. Se dice honestamente en
@@ -241,6 +244,15 @@ export async function createProjectCore(input: {
     })
     .select("id")
     .single();
+
+  // La comprobación de duplicado de arriba y este insert no son atómicos: dos
+  // altas simultáneas del mismo dominio (doble clic, dos pestañas) pasan las dos
+  // la lectura y la segunda choca con `projects_owner_domain_country_lang_uniq`.
+  // Eso no es un fallo de creación —el proyecto existe, lo creó la primera—, así
+  // que se dice lo que es y no se manda al usuario a «inténtalo de nuevo».
+  if (error?.code === UNIQUE_VIOLATION) {
+    return { status: "already_active" };
+  }
 
   if (error || !data) {
     return { status: "insert_failed" };

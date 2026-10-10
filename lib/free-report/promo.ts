@@ -39,7 +39,9 @@ export const FREE_REPORT_ENTRY = {
   homeBand: "banda-portada",
   pricingLine: "linea-precios",
   // GEO-SELF-1 Fase 4 (log §260): the CTA closing /estudios.
-  studiesHub: "hub-estudios"
+  studiesHub: "hub-estudios",
+  // GEO-SELF-1 Fase 5 (log §263): the link card closing the free checker.
+  checker: "comprobador"
 } as const;
 
 export function freeReportHref(entry: (typeof FREE_REPORT_ENTRY)[keyof typeof FREE_REPORT_ENTRY]): string {

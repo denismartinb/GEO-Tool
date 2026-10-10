@@ -3,7 +3,7 @@ import { computeRunScoresFromResults, getEffectiveGeoScore, type ScoreInputRow }
 import { answerCost, COMPARE_ENGINES, type CompareEngine } from "@/lib/model-compare/catalogue";
 
 /**
- * MODEL-COMPARE-1 (log §263) — what the operator's model comparison measures
+ * MODEL-COMPARE-1 (log §269) — what the operator's model comparison measures
  * and how it decides "equivalent".
  *
  * Three passes over the same questions:

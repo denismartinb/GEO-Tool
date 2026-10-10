@@ -22,7 +22,7 @@ import {
 import { runCompareAnswer, type CompareProject } from "@/lib/model-compare/run-compare-answer";
 
 /**
- * MODEL-COMPARE-1 (log §263) — the operator's model comparison, one step at
+ * MODEL-COMPARE-1 (log §269) — the operator's model comparison, one step at
  * a time: one question × the chosen engines × one repetition × one pass,
  * engines in parallel. The browser drives the steps, same shape and same
  * reason as `/admin/estudio` (a whole comparison is minutes of provider

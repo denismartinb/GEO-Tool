@@ -22991,9 +22991,338 @@ modos.
   las 06:00 UTC. Es un tema de cuenta del proveedor y no de esta fase: avisado
   al fundador.
 
+## 263. GEO-SELF-1 Fase 5: el comprobador gratuito rehecho sobre el diseño aprobado (2026-10-10)
+
+**Qué.** `/gratis/aparece-mi-marca-en-chatgpt` pasa al diseño que el fundador
+aprobó el 2026-10-10 («Me vale», `docs/design-reference/geo-self-1-checker/`):
+
+- Portada oscura (la de los artículos, §247) con migas, antetítulo, H1, la
+  entradilla y el campo dentro. Campo y botón en fila en escritorio y
+  apilados en móvil; debajo, «Sin registro · Sin tarjeta · Respuesta real de
+  ChatGPT».
+- «01 · Así es un resultado»: un ejemplo con «Competidor A/B/C» y dominios
+  genéricos, etiquetado «Ejemplo ilustrativo con datos inventados». Cada
+  bloque del ejemplo existe en el resultado real (`FreeCheckerResult`):
+  pregunta, respuesta, marcas nombradas y fuentes.
+- «02 · Qué significa tu resultado» (tres tarjetas), «03 · Gratis frente a
+  completo» (tabla en escritorio, dos tarjetas en móvil, misma fuente
+  `COMPARISON`) con CTA a `/signup`, «04 · Preguntas frecuentes» (cinco) y
+  tres enlaces: `/estudios`, la guía S1 y el informe gratis
+  (`?desde=comprobador`, clave nueva `FREE_REPORT_ENTRY.checker`).
+- Schema `WebApplication` gratuito (`offers` a 0 EUR, `provider` por `@id`),
+  además de las migas y el `FAQPage` que ya había. Sitemap a 2026-10-10.
+
+**Por qué.** Fase 5 del plan de posicionamiento propio (F6 del plan): la
+página que debe captar la consulta transaccional «¿aparece mi marca en
+ChatGPT?» era una columna centrada sin ejemplo de lo que se obtiene ni
+comparación con el escaneo completo.
+
+**Qué cambia en el comportamiento.** Nada del flujo: `?d=` sigue rellenando
+sin lanzar, la espera, el resultado, el camino `degraded` al registro y la
+conversión `free_check` son los mismos. Cambia el sitio donde se pintan:
+`FreeCheckerForm` dibuja ahora la portada (`heading` + `note`) y envuelve la
+espera y el resultado en su propia `lp-section`; el contenido llega ya
+seccionado como `children`. `BlogPageShell` acepta no tener `children` y
+entonces no pinta la sección del cuerpo — la página entera va en `hero`,
+porque con resultado el formulario sustituye portada y contenido a la vez.
+
+**Copy.** La FAQ deja de decir «sobre diez preguntas reales» (una cifra absoluta,
+que la norma de §246–§248 retira) y usa «preguntas principales de búsqueda» y
+«múltiples veces en distintos momentos del tiempo».
+
+**El resultado real, con la forma del ejemplo** (pedido por el fundador sobre
+una captura del preview, 2026-10-10). `FreeCheckerResult` seguía con el
+aspecto antiguo —columna estrecha, etiquetas en monoespaciada— y con copy que
+la norma de §246–§248 ya no admite: «Has visto 1 pregunta en 1 motor»,
+«10 preguntas reales de tu categoría» y «varias preguntas repetidas en el
+tiempo». Ahora es la misma tarjeta que «Así es un resultado»: cabecera con el
+veredicto (cálida si no te nombra, verde si sí), la pregunta, la respuesta
+completa y, al lado, las marcas y las fuentes; debajo, el aviso de
+variabilidad y el paso al escaneo completo con las filas de la tabla «gratis
+frente a completo». El veredicto deja de contar marcas («nombró 4 marcas»
+pasa a «nombró otras marcas, pero no a X») y el remedio del aviso usa la
+fórmula del método (`lib/free-checker/result-copy.ts`, con su test).
+
+**Pendiente o conocido.** El piloto del comprobador sigue sin pulsar el botón
+(gasta una consulta real); su expectativa de contenido pasa a `.fc-hero-form`
+o `.fcp-example`. Compartir un resultado por enlace queda fuera: exige
+guardar resultados, es decir, esquema.
+## 264. SEC-CHANGEPLAN-1 (urgente, sin migración): `changePlan` ya no concede planes de pago (2026-10-09)
+
+**Qué pasaba.** La server action `changePlan` (`app/dashboard/settings/billing/actions.ts`)
+validaba sólo que el id de plan existiera en `PLANS` y escribía `current_plan`
+con el service role. La regla «los planes de pago van por Stripe Checkout»
+vivía únicamente en el cliente (`change-plan-modal`), así que cualquier
+usuario con sesión que llamara la action a mano con `pro` o `agency` obtenía
+ese plan sin pagar. Con Stripe en live desde el 2026-10-09 pasó a ser urgente.
+
+**Qué cambia.** La action decide sobre el estado leído en servidor y sólo
+acepta dos destinos: `free` (bajada: cancela primero la suscripción real en
+Stripe, falla cerrado si no puede, y después revoca derechos con un `UPDATE`
+acotado a esa suscripción que debe tocar exactamente una fila) o el plan que
+la cuenta ya tiene (sólo archivar dominios, sin escribir el plan). Cualquier
+otro destino se rechaza antes de archivar nada.
+
+**Por qué separado de #549.** Es la mitad de SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1
+(PR #549) que no necesita migración, extraída tal cual con sus tests para
+poder desplegarla ya. El registro de eventos del webhook (migración nueva que
+hay que aplicar a mano antes del deploy) sigue en #549.
+
+**Pendiente.** Comprobar en Supabase si alguna cuenta tiene plan de pago sin
+`stripe_subscription_id` (consulta dada al fundador en el hilo). Una cuenta
+comped cuyo `current_plan` crudo sea `free` no puede usar el flujo de sólo
+archivar con su plan efectivo; riesgo aceptado (el cupo de Agencia hace
+improbable el exceso).
+
+## 265. GEO-SELF-1 Fase 8: línea base de medición y arreglos de título, descripción e idioma (2026-10-10)
+
+**Qué se decidió.** La medición de F8 no usa un proyecto de la consola sino el
+estudio de `/admin/estudio` («Una marca», genscore.es) con 15 preguntas
+principales de búsqueda y 7 competidores fijos, relanzado cada lunes por el
+fundador. Los resultados y la comparación semanal viven fuera del repo, en la
+carpeta compartida del proyecto (`geo-propio/medicion/`). La línea base del
+2026-10-10 sirvió para tres arreglos baratos que entran aquí:
+
+- **Idioma declarado.** `contentMetadata` emite `alternates.languages` con
+  `es-ES` y `x-default` sobre la propia URL. La auditoría marcaba como crítico
+  que ninguna página declarara idioma; el sitio sólo tiene castellano, así que
+  la declaración honesta es «este idioma, esta URL».
+- **Títulos y descripciones que caben en el resultado.** 20 artículos tenían un
+  `<title>` de más de 70 caracteres y 9 una descripción de más de 160. Se
+  arreglan con `seoTitle` y `metaDescription`, que ya existían, sin tocar el
+  título visible del artículo. La portada pasa de 218 a 146 caracteres de
+  descripción, y `/que-es-genscore` usa la definición canónica corta en vez de
+  la larga (357). `posts.test.ts` fija los dos límites para todo artículo.
+- **`/comparativas` deja de ser una lista de enlaces** (120 palabras): explica
+  qué se compara, con qué criterios y cómo tratamos nuestra propia herramienta,
+  y enseña la entradilla de cada comparativa.
+
+**Por qué el índice de comparativas dice «GEO quiere decir posicionamiento en
+motores de IA».** En la línea base, a «¿Cuáles son las mejores herramientas
+GEO?» y «¿Cuánto cuesta una herramienta de GEO?» Claude y ChatGPT respondieron
+con herramientas de mapas y de GPS; sólo Gemini entendió GEO como
+posicionamiento en IA. Una página que quiere que la citen en esa pregunta tiene
+que deshacer la ambigüedad en su propio texto.
+
+**Pendiente o conocido.** Los títulos de las páginas que no son artículos
+(glosario, docs) no se han revisado. La medición es de una muestra por motor y
+pregunta: sirve para ver tendencia, no para afirmar un porcentaje.
+
+## 266. SECTOR-STUDY-2: estudio de clínicas dentales, «¿Qué clínicas dentales recomienda la IA?» (2026-10-10)
+
+**Qué se publica.** `/blog/que-clinicas-dentales-recomienda-la-ia`, segundo
+estudio con dato propio (tras §246), medido con `/admin/estudio` el
+2026-10-10 en Madrid y Valencia con las mismas preguntas principales de
+búsqueda, cambiando sólo la ciudad. Se añade a `STUDY_ENTRIES` del hub
+`/estudios` (§260). Portada en
+`docs/design-reference/blog-covers/que-clinicas-dentales-recomienda-la-ia-cover.svg`,
+exportada a WebP 1200×300 (§125).
+
+**Decisiones del fundador (2026-10-10).**
+- Título general, sin ciudad; el cuerpo habla de grandes ciudades de España
+  y dice explícitamente que esta primera edición cubre Madrid y Valencia
+  (no se afirma «las principales ciudades» sin haberlas medido).
+- Sección propia que explica por qué Gemini recomienda clínicas
+  independientes y Claude cadenas. Los dos datos son medidos (fuentes que
+  cita Gemini); los cuatro motivos se presentan como **interpretación
+  nuestra**, no como hallazgo. El comportamiento de los resúmenes con IA de
+  Google se declara probable y **no medido**.
+- El mismo contenido sirve de artículo, de PDF para las clínicas que lo
+  pidan y de post de LinkedIn. Más ciudades
+  (`captacion-clinicas/estudios/bloques-mas-ciudades.md`) sólo si el post y
+  los correos 1:1 funcionan.
+
+**Reglas aplicadas.** Sólo porcentajes y ratios, nunca recuentos (§246);
+motores sin versión; frase de método canónica. Al ser publicidad sanitaria
+(RD 1907/1996): sin testimonios ni casos de éxito ni promesa de resultados.
+Sólo se nombran clínicas que aparecen; las ausentes, sólo en agregado
+(«77% de las independientes bien valoradas»). Asensio se cuenta como
+«Asensio Odontología Avanzada», el nombre con que la nombra la IA, no el de
+su dominio. «Clínica Dental Milenium» es la red de clínicas de Sanitas
+(sanitas.es/dental/clinicas-dentales-milenium), así que se cuenta dentro de
+Sanitas Dental como cadena: eso la pone primera en Madrid (19%) y deja la
+cifra de Claude en «2 de cada 3» respuestas con cadena. Las tablas se
+recalcularon sobre las respuestas guardadas (texto + marcas extraídas,
+contando «Ferrús» con tilde), no sobre el resumen de la herramienta.
+
+**Pendiente.** Nada roto conocido. Las cifras son una foto del 2026-10-10;
+si se reescanea, la tabla se actualiza con `dateUpdated`.
+
+## 267. CREATE-PROJECT-RACE-1: una alta duplicada por carrera se lee como «dominio ya activo», no como fallo (2026-10-08)
+
+**Qué pasaba.** `createProjectCore` comprueba si el dominio ya existe (lectura) y
+después inserta. Las dos operaciones no son atómicas: un doble clic o dos
+pestañas pasan ambas la lectura, y la segunda choca con la restricción
+`projects_owner_domain_country_lang_uniq` (migración 0001). El proyecto no se
+duplicaba —la base lo impedía—, pero el usuario veía «no se pudo crear el
+proyecto, inténtalo de nuevo» cuando el proyecto sí existía.
+
+**Decisión.** Un error de insert con SQLSTATE `23505` devuelve
+`already_active`, la misma variante que ya usa el camino de lectura. La acción
+no cambia: su tabla de traducción ya cubre esa variante. Cualquier otro código
+sigue siendo `insert_failed`. No se añade token de idempotencia ni migración.
+
+**Pendiente.** La segunda petición aterriza en `/dashboard/projects/new` con el
+aviso de «ya existe» en vez de en el proyecto recién creado; redirigir al
+existente sería mejor, pero cambia la acción y no es de esta fase. Los trabajos
+huérfanos (escaneo creado y proyecto no) no se pueden producir por este
+camino: el escaneo se crea después del insert del proyecto.
+
+**Trazabilidad.** `lib/projects/create-project.ts`,
+`lib/projects/create-project.test.ts`.
+
+## 268. SEC-CHANGEPLAN-1 + SEC-WEBHOOK-REGISTRY-1: `changePlan` ya no concede planes de pago, y el webhook de Stripe tiene memoria (2026-10-08)
+
+**Nota (2026-10-10).** La mitad SEC-CHANGEPLAN-1 de esta sección ya se mergeó sola como §264 (PR #572). Este PR añade el registro de eventos del webhook. Su migración nació como 0038 y pasó a 0039 porque main ya tenía una 0038 (`email_sends_winback_kinds`).
+
+**Qué pasaba (reproducido con test antes de tocar nada).** La regla «los planes
+de pago se contratan solo por Checkout» vivía en el cliente
+(`change-plan-modal` enviaba Free→de pago a Checkout), mientras la server
+action `changePlan` validaba que el id de plan existiera y escribía
+`profiles.current_plan` con el service role **sin exigir pago**. Un usuario
+Free que llamase a la acción directamente (`changePlan("agency")`) obtenía el
+plan. Además, si había `stripe_subscription_id` y no había cliente de Stripe,
+se saltaba la cancelación y **se borraba** la suscripción de la BD: una
+suscripción viva que seguía cobrando sin rastro en nuestros datos.
+
+**Decisión (`changePlan`, fundador, 2026-10-08).**
+- La acción solo puede **bajar** derechos. Destinos admitidos, decididos con el
+  estado leído en servidor: `free` (bajada), el plan que ya tiene la cuenta
+  (solo archivar dominios — el flujo de exceso de dominios reenvía el plan
+  actual) y nada más. Cualquier otro se rechaza **antes** de archivar nada.
+- **Cancelar y cambiar derechos son dos pasos con dos fallos distintos.**
+  `cancelStripeSubscription` solo toca Stripe y exige que Stripe confirme
+  `status: "canceled"`; sin cliente de Stripe, con error de Stripe o con otra
+  respuesta, **falla y la BD queda intacta**. `revokePaidEntitlements` es la
+  escritura privilegiada: acotada a la suscripción exacta que se acaba de
+  cancelar (o a «sin suscripción») y debe tocar exactamente una fila; si el
+  perfil cambió entretanto (otra suscripción más nueva enlazada) no pisa nada.
+- Si Stripe canceló pero la escritura falla, el mensaje lo dice con honestidad
+  y el webhook `customer.subscription.deleted` (acotado por id) lo reconcilia.
+
+**Decisión (webhook).**
+- Registro de eventos `stripe_webhook_events` (migración 0039, **aplicar a
+  mano ANTES de desplegar el código que la necesita**): un reintento de un evento procesado es no-op (`duplicate`, 200);
+  uno en curso responde 409 para que Stripe reintente; uno `failed` o con
+  reclamo caducado (5 min) se reclama de forma atómica.
+- **Orden por suscripción**: un evento más antiguo que otro ya aplicado para la
+  misma suscripción se salta (`skipped_stale`); tras el `deleted` de una
+  suscripción no se aplica nada más sobre ella (`skipped_terminal`). El
+  `deleted` nunca se salta por «antiguo».
+- **Toda escritura se acota por la suscripción del evento**: un `deleted` o un
+  `updated(canceled)` viejo no puede bajar de plan a quien ya tiene una nueva, y
+  un `updated(active)` solo cambia el plan si el perfil sostiene esa
+  suscripción (un «active» rezagado no resucita un plan tras una bajada). Solo
+  `checkout.session.completed` enlaza una suscripción a un perfil.
+- **Derechos siguen al dinero**: `checkout.session.completed` no concede plan
+  salvo `payment_status` `paid` o `no_payment_required`.
+- **Los emails salen una sola vez por evento**: la BD se escribe, el evento se
+  marca procesado y solo entonces se envían. Un fallo de email no devuelve 500
+  (no repetiría nada útil). Coste aceptado: un fallo del proceso entre ambos
+  pasos pierde un email, nunca lo duplica.
+
+**Segunda ronda (fundador, 2026-10-08).**
+- **Serialización por suscripción**, no solo por id de evento: tabla
+  `stripe_subscription_locks` (lease de 5 min con toma por compare-and-set). Un
+  segundo evento de la misma suscripción mientras otro se aplica responde 409
+  y devuelve su reclamo (`subscription_busy`) para que el reintento de Stripe
+  lo tome enseguida. La comprobación de orden se hace con el lease tomado, así
+  que ya no compite con una aplicación concurrente. Test determinista (sin
+  temporizadores): una compuerta mantiene el primer evento dentro de su
+  escritura; se comprobó que el test falla si se desactiva el lease.
+- **Guardia de `checkout.session.completed`**: enlaza la suscripción solo si el
+  perfil no tiene ninguna o ya tiene esa misma, dentro del propio UPDATE. Un
+  checkout viejo tras uno nuevo no pisa la suscripción actual
+  (test «viejo tras nuevo»). Si la suscripción descartada está viva en Stripe,
+  está cobrando a alguien que no enlazamos: se registra como
+  `ORPHAN_SUBSCRIPTION_CANDIDATE` (error de log, sin alerta automática todavía).
+- **Sin tabla, falla cerrado**: el webhook responde 503 reintentable
+  (`Retry-After: 60`) en vez de procesar sin idempotencia ni orden; Stripe
+  reintenta un 5xx unos 3 días en live, **pero en modo test solo unas pocas veces
+  durante unas horas** (corrección tras la revisión de `data-guardian`: la
+  primera redacción decía «días» sin distinguir), así que desplegar antes de la
+  migración puede PERDER eventos de test. Sustituye a la degradación anterior. Consecuencia operativa: **la migración 0039 debe
+  estar aplicada antes del despliegue**, o los webhooks dan 503 hasta que lo esté.
+- **Migración verificada ejecutándola** en un Postgres 16 local (no Supabase ni
+  PostgREST; roles `anon`/`authenticated`/`service_role` creados a mano con los
+  privilegios por defecto de Supabase): corre dos veces sin error, RLS activo y
+  sin políticas, ningún grant para `anon`/`authenticated` (permission denied),
+  23505 en id duplicado y en lease ocupado, 23514 en estado inválido, y el
+  compare-and-set de toma solo afecta a la fila sin cambios.
+- Revisión independiente de esta ronda (`data-guardian`): sin bloqueantes. Se
+  aplicó `maxDuration = 60` en la ruta (margen de 5× frente al lease) y la
+  validación `^sub_[A-Za-z0-9]+$` antes de interpolar el id en `.or()`. Abiertos:
+  alerta de operador para `ORPHAN_SUBSCRIPTION_CANDIDATE`; y un
+  `subscription.updated` que llegue antes del `checkout` que enlaza queda
+  `ignored` para siempre (ya se perdía antes del registro; la corrección sería
+  leer el estado de la suscripción desde Stripe al enlazar).
+- **Tercera ronda (Director, 2026-10-08) — limitaciones que NO están resueltas,
+  fijadas con tests de lo que el código hace hoy** (`describe("KNOWN LIMITATIONS")`
+  en `webhook-registry.test.ts`):
+  1. *Checkout antiguo antes del nuevo:* gana el primero que llega. La guarda
+     solo impide PISAR un enlace existente; no sabe cuál de dos suscripciones
+     pagadas es la correcta, y la perdedora queda sin enlazar **y cobrando**.
+  2. *Dos checkouts pagados distintos:* igual; el segundo queda `ignored` y su
+     reentrega es `duplicate`, así que el conflicto nunca se reevalúa.
+  3. *Checkout antiguo tras borrarse el vínculo actual:* se acepta (nada dice que
+     esté muerta) y enlaza la antigua; se autocorrige solo si Stripe acaba
+     emitiendo su `deleted`. «Viejo tras nuevo» (enlace vigente) está cubierto;
+     esto otro no, y no se da por cerrado.
+  4. *`updated` antes del checkout que enlaza:* queda `ignored` para siempre
+     (la reentrega es `duplicate`); su estado, p. ej. `cancel_at`, se pierde.
+  5. *Empate de `event.created`* (resolución de 1 s): dos `updated` invertidos
+     con el mismo segundo se aplican los dos y gana el último en LLEGAR.
+- **Propuesta (no implementada) de reconciliación y alerta de operador**, sin
+  cancelar ni crear suscripciones reales: (a) registrar el desenlace
+  `orphan_candidate` en `stripe_webhook_events.outcome` en vez de `ignored`, para
+  poder consultarlo; el log ya lleva `unlinkedSubscriptionId` y
+  `heldSubscriptionId`; (b) un correo a `OPS_ALERT_EMAIL` (nunca al cliente), una
+  vez por evento y tras el commit, con ambos ids; (c) un job de reconciliación
+  de solo lectura que, para cada cliente con >1 suscripción viva en Stripe o con
+  una viva sin enlazar, liste el caso para decisión humana; (d) al enlazar,
+  leer el estado de la suscripción desde Stripe, lo que recupera el caso 4.
+  Decidir cuál es la «correcta» y cancelar la otra es siempre una acción humana.
+- **Sobre el 99 €:** según el Director es la oferta Agencia candidata de un
+  nuevo plan comercial, **no** un mapeo confirmado al Agency de 449 € actual. No
+  se renombra ni se cambia ninguna suscripción legacy. El IVA incluido afecta a
+  precios públicos y promos; la lista final y el mapeo de Prices son decisión del
+  dueño. Renovación y prorrateo siguen sin probar: una preview de alta sin cupón
+  no los demuestra.
+- `scripts/stripe-tax-audit.mjs`: auditoría fiscal de solo lectura en modo test
+  (rechaza claves que no sean de test). Sin ejecutar: este entorno no tiene
+  clave de Stripe.
+
+**Pendiente / conocido.**
+- `checkout.session.async_payment_succeeded` no se gestiona: un método de pago
+  retardado (SEPA) que llegue como `unpaid` no concede el plan hasta que se
+  añada ese evento. Hoy se registra en el log. Decisión para el dueño.
+- (Resuelto en la segunda ronda: eventos concurrentes de una misma suscripción
+  ya se serializan.) `event.created` sigue teniendo resolución de segundos: dos
+  `updated` del mismo segundo invertidos se aplican los dos, uno tras otro.
+- Revisión independiente (`data-guardian`): P1 corregido en este PR (un
+  `deleted` que llega antes que su checkout, registrado `ignored`, también
+  termina la suscripción — test incluido). P2 abierto: `event.created` tiene
+  resolución de segundos, así que dos `updated` del mismo segundo invertidos se
+  aplican los dos. P3 abierto: si Stripe ya canceló la suscripción que la BD
+  aún guarda, `cancel` falla y el usuario no puede bajar a Free sin operador.
+  P3 abierto previo a este PR: un checkout fallido durante horas permite una
+  segunda suscripción (doble cobro).
+- `resource_missing` al cancelar (suscripción borrada a mano en Stripe, o clave
+  de otro modo) falla cerrado: un caso así necesita intervención del operador.
+- El estado visible `past_due` (aviso + enlace al portal) y la política única
+  de prueba/promo son el PR 2: este PR no toca copy ni pantallas.
+- Verificado solo con tests locales (firmas generadas con
+  `generateTestHeaderString`); **no** se ha ejercitado Stripe sandbox ni la
+  migración contra una base real.
+
+**Trazabilidad.** `app/dashboard/settings/billing/actions.ts` (+test),
+`lib/billing/stripe-webhook.ts`, `lib/billing/webhook-registry.ts`,
+`app/api/webhooks/stripe/route.ts` (+tests),
+`supabase/migrations/0039_stripe_webhook_events.sql`.
+
 ---
 
-## 263. MODEL-COMPARE-1: `/admin/comparar-modelos`, para probar modelos más baratos contra los de hoy antes de cambiar nada (2026-10-10)
+## 269. MODEL-COMPARE-1: `/admin/comparar-modelos`, para probar modelos más baratos contra los de hoy antes de cambiar nada (2026-10-10)
 
 **Por qué.** Tras COVERAGE-WEEKLY-1 y EXTRACTION-SINGLE-MODEL-1 (§253), la
 siguiente palanca de coste es generar las respuestas con modelos más baratos

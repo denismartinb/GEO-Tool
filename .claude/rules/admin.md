@@ -227,4 +227,4 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   toman del navegador. La pasada «hoy» usa siempre la generación y la
   extracción de producción; sólo el candidato cambia. Su nota es la fórmula de
   la Puntuación GEO sin la parte técnica, y la página no la llama
-  «Puntuación GEO» (`docs/brand/design-decisions-log.md` §263).
+  «Puntuación GEO» (`docs/brand/design-decisions-log.md` §269).

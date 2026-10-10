@@ -57,11 +57,17 @@ const WAIT_STEPS = [
 
 export function FreeCheckerForm({
   heading,
+  note,
   children
 }: {
-  /** H1 + entradilla. Se retiran cuando hay resultado. */
+  /** Migas, antetítulo, H1 y entradilla, dentro de la portada oscura. Se retiran cuando hay resultado. */
   heading?: React.ReactNode;
-  /** Copy de venta. Se retira cuando hay resultado. */
+  /** Línea bajo el campo ("Sin registro · Sin tarjeta…"), también en la portada. */
+  note?: React.ReactNode;
+  /**
+   * Copy de venta, ya envuelto en sus propias secciones a ancho completo.
+   * Se retira cuando hay resultado y se queda cuando la comprobación falla.
+   */
   children?: React.ReactNode;
 }) {
   const router = useRouter();
@@ -143,6 +149,7 @@ export function FreeCheckerForm({
 
   if (state.kind === "checking") {
     return (
+      <FcSection>
       <div className="fc-wait" role="status" aria-live="polite">
         <span className="fc-wait-lbl">Comprobando en ChatGPT</span>
         <ul className="fc-steps">
@@ -155,6 +162,7 @@ export function FreeCheckerForm({
         </ul>
         <p className="fc-wait-note">Tarda unos segundos porque de verdad le estamos preguntando.</p>
       </div>
+      </FcSection>
     );
   }
 
@@ -168,56 +176,71 @@ export function FreeCheckerForm({
     const failed = state.response.status !== "completed";
     return (
       <>
-        <FreeCheckerResult
-          response={state.response}
-          domain={cleanDomain(domain)}
-          onRetry={() => setState({ kind: "idle" })}
-          onSignup={() => goToSignup(cleanDomain(domain))}
-        />
+        <FcSection>
+          <FreeCheckerResult
+            response={state.response}
+            domain={cleanDomain(domain)}
+            onRetry={() => setState({ kind: "idle" })}
+            onSignup={() => goToSignup(cleanDomain(domain))}
+          />
+        </FcSection>
         {failed && children}
       </>
     );
   }
 
+  // GEO-SELF-1 Fase 5: la portada oscura del artículo (`.art-hero`) con el
+  // campo dentro, como el diseño aprobado. El campo y el botón van en fila en
+  // escritorio y apilados en móvil; el botón sigue sin pintarse deshabilitado.
   return (
     <>
-      {heading}
-      <div className="lp-hero-form">
-        {/* HOME-SEO-AUDIT-1: `.fc-field` le da a `.lp-field` el borde/píldora
-            que en el hero de la home aporta `.lp-field-wrap` — aquí no se usa
-            ese envoltorio porque el botón va debajo, no dentro de la píldora. */}
-        <div className="lp-field fc-field">
-          <Icon name="globe" size={18} className="lp-field-ico" />
-          <input
-            ref={inputRef}
-            className="lp-field-input"
-            value={domain}
-            onChange={(e) => {
-              setDomain(e.target.value);
-              if (state.kind === "invalid") setState({ kind: "idle" });
-            }}
-            onKeyDown={(e) => e.key === "Enter" && start()}
-            placeholder="tudominio.com"
-            spellCheck={false}
-            aria-label="Tu dominio"
-            aria-describedby={state.kind === "invalid" ? "fc-hint" : undefined}
-          />
+      <section className="fc-hero">
+        <div className="fc-hero-inner">
+          {heading}
+          <div className="fc-hero-form">
+            <input
+              ref={inputRef}
+              className="fc-hero-input"
+              value={domain}
+              onChange={(e) => {
+                setDomain(e.target.value);
+                if (state.kind === "invalid") setState({ kind: "idle" });
+              }}
+              onKeyDown={(e) => e.key === "Enter" && start()}
+              placeholder="tuweb.es"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+              inputMode="url"
+              aria-label="Tu dominio"
+              aria-invalid={state.kind === "invalid" || undefined}
+              aria-describedby={state.kind === "invalid" ? "fc-hint" : undefined}
+            />
+            <button type="button" className="fc-hero-btn" onClick={start}>
+              Comprobar mi marca <Icon name="arrRight" size={16} />
+            </button>
+          </div>
+          {/* `role="alert"` para que un lector de pantalla anuncie la pista: sin
+              él, quien no ve el campo sólo percibe que no ha pasado nada. */}
+          {state.kind === "invalid" && (
+            <p className="fc-hint fc-hero-hint" id="fc-hint" role="alert">
+              Escribe un dominio completo, como <strong>tuweb.es</strong>.
+            </p>
+          )}
+          {note}
         </div>
-        <div className="lp-hero-actions">
-          <button type="button" className="lp-cta" onClick={start}>
-            Comprobar mi marca <Icon name="arrRight" size={16} />
-          </button>
-        </div>
-        {/* `role="alert"` para que un lector de pantalla anuncie la pista: sin
-            él, quien no ve el campo sólo percibe que no ha pasado nada. */}
-        {state.kind === "invalid" && (
-          <p className="fc-hint" id="fc-hint" role="alert">
-            Escribe un dominio completo, como <strong>tudominio.com</strong>.
-          </p>
-        )}
-      </div>
+      </section>
       {children}
     </>
+  );
+}
+
+/** La espera y el resultado ocupan la columna normal, fuera de la portada. */
+function FcSection({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="lp-section fc-state">
+      <div className="lp-inner">{children}</div>
+    </section>
   );
 }
 

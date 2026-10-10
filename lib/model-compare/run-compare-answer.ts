@@ -20,7 +20,7 @@ export type CompareProject = {
 };
 
 /**
- * MODEL-COMPARE-1 (log §263) — one answer of the operator's model
+ * MODEL-COMPARE-1 (log §269) — one answer of the operator's model
  * comparison: the scan's own generation call (same brand-blind instruction),
  * the chosen extractor, then `buildExtractionUpdate`, the exact code that
  * turns an extraction into the row a scan persists. So the two passes differ

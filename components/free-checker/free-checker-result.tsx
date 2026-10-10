@@ -40,6 +40,14 @@ import { variabilityNotice } from "@/lib/free-checker/result-copy";
  * El aviso de variabilidad va en bloque destacado, no en letra pequeña: es
  * parte del resultado, no una nota legal.
  *
+ * **GEO-SELF-1 Fase 5 (log §263): la misma tarjeta que el ejemplo de la
+ * página.** «Así es un resultado» enseña una forma; el resultado real tiene
+ * que tener esa misma forma, o el ejemplo promete algo que no llega. Cabecera
+ * con el veredicto (cálida si no te nombró, verde si sí), la pregunta, la
+ * respuesta completa y, al lado, las marcas y las fuentes. Debajo, el aviso y
+ * el paso al escaneo completo con las mismas filas que la tabla «gratis
+ * frente a completo» — sin cifras absolutas («1 pregunta», «10 preguntas»).
+ *
  * **`response.sources` (Fase D1) es un dato distinto de `citedOwnDomain`, y
  * los dos se enseñan por separado a propósito.** `citedOwnDomain` viene de lo
  * que el EXTRACTOR cree haber leído en el texto (Fase B); `sources` es la
@@ -62,16 +70,16 @@ export function FreeCheckerResult({
   if (response.status === "failed" || response.status === "degraded") {
     const key = response.status === "failed" ? response.error : response.reason;
     return (
-      <div className="fc-result">
-        <div className="fc-panel fc-panel-warn">
-          <span className="fc-lbl">No hemos podido comprobarlo</span>
+      <div className="fcr">
+        <div className="fcr-note">
+          <span className="fcp-lbl fcp-lbl-warn">No hemos podido comprobarlo</span>
           <p>{PUBLIC_CHECK_MESSAGES[key] || "Inténtalo de nuevo en un momento."}</p>
         </div>
-        <div className="lp-hero-actions">
-          <button type="button" className="lp-cta" onClick={onSignup}>
-            Probar Pro 7 días gratis
+        <div className="fcr-actions">
+          <button type="button" className="fcr-btn" onClick={onSignup}>
+            Empezar los 7 días de Pro
           </button>
-          <button type="button" className="lp-cta-soft" onClick={onRetry}>
+          <button type="button" className="fcr-btn fcr-btn-soft" onClick={onRetry}>
             Probar otro dominio
           </button>
         </div>
@@ -85,110 +93,108 @@ export function FreeCheckerResult({
   const notice = variabilityNotice({ engineLabel, brandMentioned });
 
   return (
-    <div className="fc-result">
-      <span className="fc-lbl fc-lbl-blue">Resultado de esta consulta</span>
-      <h2 className="fc-verdict">
-        {brandMentioned
-          ? `${engineLabel} sí nombró a ${brand} en esta respuesta.`
-          : otherBrands.length > 0
-            ? `${engineLabel} nombró ${otherBrands.length === 1 ? "otra marca" : `${otherBrands.length} marcas`}. Ninguna era ${brand}.`
-            : `${engineLabel} no nombró a ${brand} en esta respuesta.`}
-      </h2>
-
-      <div className="fc-panel">
-        <span className="fc-lbl">La pregunta que hicimos</span>
-        <p className="fc-prompt">{prompt}</p>
-      </div>
-
-      <div className="fc-panel">
-        <span className="fc-lbl">Respuesta completa de {engineLabel}</span>
-        <AnswerMarkdown text={answer} />
-      </div>
-
-      {/* Fase D1: la metadata de búsqueda real del proveedor, no lo que el
-          extractor cree haber leído. Coste cero — ya llegaba en la llamada de
-          generación y se tiraba antes de este cambio. Sólo se pinta si hay
-          algo que enseñar: una respuesta sin `web_search` no tiene fuentes. */}
-      {sources.length > 0 && (
-        <div className="fc-panel">
-          <span className="fc-lbl">De dónde sacó {engineLabel} esta respuesta</span>
-          <ul className="fc-sources">
-            {sources.map((source) => (
-              <li key={source.domain}>
-                <a href={source.url} target="_blank" rel="nofollow noopener noreferrer">
-                  {source.domain}
-                </a>
-                {isOwnSource(source.domain) && <span className="fc-source-own">tu web</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Sin números y sin la palabra "competidores": ver la cabecera. Se pintan
-          como etiquetas, no como una lista ordenada, porque una lista numerada
-          se lee como un ranking aunque el número no esté — y aquí no hay
-          ranking que enseñar. */}
-      {otherBrands.length > 0 && (
-        <div className="fc-panel">
-          <span className="fc-lbl">
+    <div className="fcr">
+      <p className="fcp-kicker">Tu resultado · {domain}</p>
+      <div className="fcp-example fcr-card">
+        <div className={brandMentioned ? "fcp-example-head fcr-head-pos" : "fcp-example-head"}>
+          <span className={brandMentioned ? "fcp-lbl fcr-lbl-pos" : "fcp-lbl fcp-lbl-warn"}>Resultado de esta consulta</span>
+          <h2 className="fcp-verdict">
             {brandMentioned
-              ? `Las demás marcas que ${engineLabel} nombró`
-              : `Las marcas que ${engineLabel} sí nombró`}
-          </span>
-          <ul className="fc-rivals">
-            {otherBrands.map((name, i) => (
-              <li key={`${name}-${i}`}>{name}</li>
-            ))}
-          </ul>
-          <p className="fc-rivals-note">
-            Tal cual las nombró, sin orden. Alguna puede no ser competencia tuya: son todas las
-            marcas que aparecen en la respuesta, no una selección nuestra.
-          </p>
+              ? `${engineLabel} sí nombró a ${brand} en esta respuesta`
+              : otherBrands.length > 0
+                ? `${engineLabel} nombró otras marcas, pero no a ${brand}, en esta respuesta`
+                : `${engineLabel} no nombró a ${brand} en esta respuesta`}
+          </h2>
         </div>
-      )}
 
-      {/* La cita del propio dominio se recoge siempre y sólo se enseña cuando
-          es verdad: es la señal más fuerte que puede dar una respuesta —que el
-          motor use TU web como fuente, no que te nombre de memoria— y decirlo
-          en negativo ("no te citó") en una sola consulta sería el mismo
-          veredicto prematuro que el aviso de abajo desmonta. */}
-      {citedOwnDomain && (
-        <div className="fc-panel">
-          <span className="fc-lbl fc-lbl-pos">Además</span>
-          <p>
-            {engineLabel} citó tu web como fuente de la respuesta. Es la señal más fuerte que puede
-            dar una consulta: no te nombró de memoria, fue a leerte.
-          </p>
+        <div className="fcr-prompt-row">
+          <span className="fcp-lbl">La pregunta que hicimos</span>
+          <p className="fcp-prompt">«{prompt}»</p>
         </div>
-      )}
+
+        <div className="fcr-grid">
+          <div>
+            <span className="fcp-lbl">Respuesta completa de {engineLabel}</span>
+            <div className="fcr-answer">
+              <AnswerMarkdown text={answer} />
+            </div>
+          </div>
+
+          <div className="fcr-side">
+            {/* Sin números y sin la palabra "competidores": ver la cabecera. Se
+                pintan como etiquetas, no como una lista ordenada, porque una
+                lista numerada se lee como un ranking aunque el número no esté. */}
+            {otherBrands.length > 0 && (
+              <div>
+                <span className="fcp-lbl">
+                  {brandMentioned ? "Otras marcas que nombró" : "Marcas que sí nombró"}
+                </span>
+                <ul className="fcp-chips">
+                  {otherBrands.map((name, i) => (
+                    <li key={`${name}-${i}`}>{name}</li>
+                  ))}
+                </ul>
+                <p className="fcr-small">
+                  Tal cual las nombró, sin orden. Alguna puede no ser competencia tuya.
+                </p>
+              </div>
+            )}
+
+            {/* Fase D1: la metadata de búsqueda real del proveedor, no lo que el
+                extractor cree haber leído. Sólo se pinta si hay algo que
+                enseñar: una respuesta sin búsqueda no tiene fuentes. */}
+            {sources.length > 0 && (
+              <div>
+                <span className="fcp-lbl">De dónde lo sacó</span>
+                <ul className="fcr-sources">
+                  {sources.map((source) => (
+                    <li key={source.domain}>
+                      <a href={source.url} target="_blank" rel="nofollow noopener noreferrer">
+                        {source.domain}
+                      </a>
+                      {isOwnSource(source.domain) && <span className="fc-source-own">tu web</span>}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* La cita del propio dominio sólo se enseña cuando es verdad:
+                decirlo en negativo en una sola consulta sería un veredicto
+                prematuro. */}
+            {citedOwnDomain && (
+              <div className="fcr-cited">
+                <span className="fcp-lbl fcr-lbl-pos">Además</span>
+                <p>
+                  {engineLabel} citó tu web como fuente. No te nombró de memoria: fue a leerte.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* No es letra pequeña: con una sola respuesta esto es la mitad del
-          resultado. El producto no da una banda de confianza por debajo de
-          diez respuestas, así que aquí tampoco se insinúa una.
-
-          CHECKER-COPY-1: el texto se elige por el resultado. Hasta el
-          2026-08-27 era uno solo, escrito para un "no apareciste", y cerraba
-          también los resultados positivos contradiciendo al titular. El
-          razonamiento de las dos variantes vive junto a ellas, en
-          `lib/free-checker/result-copy.ts`. */}
-      <div className="fc-panel fc-panel-warn">
-        <span className="fc-lbl">{notice.label}</span>
+          resultado. El texto se elige por el resultado (CHECKER-COPY-1,
+          `lib/free-checker/result-copy.ts`). */}
+      <div className="fcr-note">
+        <span className="fcp-lbl fcp-lbl-warn">{notice.label}</span>
         <p>{notice.body}</p>
       </div>
 
-      <div className="fc-upsell">
-        <h3>Has visto 1 pregunta en 1 motor. Tus clientes hacen decenas.</h3>
+      <div className="fcr-upsell">
+        <h3>Esto es una pregunta en un motor. El escaneo completo mide el resto.</h3>
         <ul>
-          <li>10 preguntas reales de tu categoría, no una</li>
-          <li>ChatGPT, Gemini y Claude — cada motor responde distinto</li>
-          <li>Repetido en el tiempo, para ver si mejoras</li>
+          <li>Las preguntas principales de búsqueda de tu sector</li>
+          <li>ChatGPT, Gemini y Claude</li>
+          <li>Múltiples veces en distintos momentos del tiempo</li>
+          <li>Puntuación GEO, competidores, fuentes citadas, auditoría de tu web y plan de acción</li>
         </ul>
-        <div className="lp-hero-actions">
-          <button type="button" className="lp-cta" onClick={onSignup}>
-            Escanear {domain} con Pro 7 días gratis
+        <div className="fcr-actions">
+          <button type="button" className="fcr-btn" onClick={onSignup}>
+            Escanear {domain} con 7 días de Pro gratis
           </button>
-          <button type="button" className="lp-cta-soft" onClick={onRetry}>
+          <button type="button" className="fcr-btn fcr-btn-soft" onClick={onRetry}>
             Probar otro dominio
           </button>
         </div>

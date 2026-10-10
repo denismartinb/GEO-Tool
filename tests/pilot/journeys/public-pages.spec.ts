@@ -67,6 +67,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
   // SECTOR-STUDY-1 (2026-10-09, log §246).
   "que-software-de-facturacion-recomienda-la-ia": "sectores",
+  // SECTOR-STUDY-2 (2026-10-10, log §266).
+  "que-clinicas-dentales-recomienda-la-ia": "sectores",
   // STUDY-HOME-1 (2026-10-09, log §251).
   "de-buscar-a-preguntar": "fundamentos",
   // W5 (2026-10-09).
@@ -198,8 +200,8 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
  */
 test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
-    describedAs: "el formulario de dominio y la explicación de qué obtiene el visitante",
-    anyOf: [{ selector: ".lp-hero-form" }]
+    describedAs: "el formulario de dominio y el resultado de ejemplo",
+    anyOf: [{ selector: ".fc-hero-form" }, { selector: ".fcp-example" }]
   });
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/gratis/aparece-mi-marca-en-chatgpt");

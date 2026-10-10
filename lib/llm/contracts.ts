@@ -43,7 +43,7 @@ export type GeminiVisibilityResponse = {
    * them (Gemini `webSearchQueries`, OpenAI `web_search_call` items). Only
    * the operator's model comparison reads it, to price Gemini 3's per-query
    * grounding fee and OpenAI's per-call search fee from real counts
-   * (MODEL-COMPARE-1, log §263). Absent when the provider says nothing.
+   * (MODEL-COMPARE-1, log §269). Absent when the provider says nothing.
    */
   searchQueries?: number;
 };

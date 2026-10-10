@@ -333,6 +333,15 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `assertPageIsHealthy` falla si el `<title>` es exactamente «GenScore»—, porque
   un título **no sale en una captura** y su verde no dice nada sobre él si nadie
   se lo pregunta (log §103).
+- **Un `<title>` de artículo cabe en 70 caracteres con « — GenScore», y su
+  descripción en 160.** Si el título visible necesita más, se pone `seoTitle`
+  o `metaDescription`, nunca se recorta el visible. Y cada página declara su
+  idioma (`es-ES` + `x-default`) desde `contentMetadata`: el sitio sólo tiene
+  castellano (`posts.test.ts`, `metadata.test.ts`; log §265).
+- **«GEO» a secas se lee como geolocalización.** En la medición del
+  2026-10-10, Claude y ChatGPT respondieron a «herramientas GEO» con mapas y
+  GPS. Un texto que quiera ser citado en esa pregunta dice en su primer
+  párrafo que GEO es posicionamiento en motores de IA (log §265).
 - **El `title` del layout raíz no se convierte en `{ default, template }` sin
   limpiar antes los 33 títulos públicos que ya escriben «— GenScore» a mano.**
   La plantilla se lo añadiría otra vez a todos («Blog — GenScore — GenScore»), y
