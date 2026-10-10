@@ -37,11 +37,12 @@ export const GENERATION_MODELS: Record<CompareEngine, ModelOption[]> = {
     { id: "gemini-3.1-flash-lite", label: "gemini-3.1-flash-lite", price: { inPerM: 0.25, outPerM: 1.5 } }
   ],
   openai: [
-    { id: "gpt-4o-mini", label: "gpt-4o-mini", price: { inPerM: 0.15, outPerM: 0.6 } },
-    { id: "gpt-6-luna", label: "gpt-6-luna", price: { inPerM: 0.1, outPerM: 0.5 } }
-    // gpt-4.1-nano is not here: it does not take the web_search tool, so every
-    // generation request is rejected (all 10 in the first real run, log §263).
-    // It stays an extraction option, which needs no search.
+    { id: "gpt-4o-mini", label: "gpt-4o-mini", price: { inPerM: 0.15, outPerM: 0.6 } }
+    // No cheaper OpenAI generator is listed. gpt-4.1-nano does not take the
+    // web_search tool, and OpenAI rejected every gpt-6-luna request with a
+    // 400 too (log §263). With gpt-4o-mini as the candidate as well, the
+    // OpenAI B pass measures only the extraction change. nano stays an
+    // extraction option, which needs no search.
   ],
   claude: [
     { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", price: { inPerM: 1, outPerM: 5 } },

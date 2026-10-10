@@ -23090,3 +23090,21 @@ Lo medido, sin decidir nada todavía:
   modelos de hoy es alto: 45–54 % de competidores en común, y una nota que
   se mueve 2–7 puntos. Hacen falta más preguntas o más repeticiones antes de
   dar un veredicto.
+
+**Segunda pasada real (2026-10-10, otro proyecto interno, 8 preguntas × 3
+motores, una repetición, extracción del candidato con Haiku 5.5).**
+
+- **gpt-6-luna también sale de la generación.** OpenAI rechazó con un 400 las
+  8 peticiones, igual que con nano. OpenAI se queda sin un generador más
+  barato en el catálogo. Su pasada B usa gpt-4o-mini y mide sólo el cambio de
+  extracción.
+- **Claude con Haiku 5.5 (generación y extracción) salió «Equivalente».**
+  Mención 100 % frente a 87,5 % de ruido, competidores 35 % frente a 39 %,
+  sentimiento 100 %, y la misma nota que la pasada de hoy. El coste por
+  respuesta baja un 79 %. No hubo cortes ni fallos de extracción con el tope
+  de 4096.
+- **gemini-3.1-flash-lite salió «Distinto».** No hizo ni una búsqueda, así
+  que perdió todas las fuentes. Que no busque es la razón de que sea barato.
+- **El ruido sigue siendo muy alto.** La nota global de dos pasadas de los
+  modelos de hoy se movió de 48,6 a 29,6. Ningún veredicto con una sola
+  repetición basta para cambiar producción.

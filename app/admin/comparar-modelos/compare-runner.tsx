@@ -57,9 +57,9 @@ export function CompareRunner({ projects }: { projects: CompareProjectOption[] }
   const [samples, setSamples] = useState(1);
   const [engines, setEngines] = useState<CompareEngine[]>([...COMPARE_ENGINES]);
   const [candidate, setCandidate] = useState<PassModels>({
-    gemini: GENERATION_MODELS.gemini[1].id,
-    openai: GENERATION_MODELS.openai[1].id,
-    claude: GENERATION_MODELS.claude[1].id
+    gemini: (GENERATION_MODELS.gemini[1] ?? GENERATION_MODELS.gemini[0]).id,
+    openai: (GENERATION_MODELS.openai[1] ?? GENERATION_MODELS.openai[0]).id,
+    claude: (GENERATION_MODELS.claude[1] ?? GENERATION_MODELS.claude[0]).id
   });
   const [extractionId, setExtractionId] = useState(EXTRACTION_OPTIONS[1].id);
   const [measureNoise, setMeasureNoise] = useState(true);
