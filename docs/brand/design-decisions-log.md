@@ -23074,7 +23074,41 @@ comped cuyo `current_plan` crudo sea `free` no puede usar el flujo de sólo
 archivar con su plan efectivo; riesgo aceptado (el cupo de Agencia hace
 improbable el exceso).
 
-## 265. SECTOR-STUDY-2: estudio de clínicas dentales, «¿Qué clínicas dentales recomienda la IA?» (2026-10-10)
+## 265. GEO-SELF-1 Fase 8: línea base de medición y arreglos de título, descripción e idioma (2026-10-10)
+
+**Qué se decidió.** La medición de F8 no usa un proyecto de la consola sino el
+estudio de `/admin/estudio` («Una marca», genscore.es) con 15 preguntas
+principales de búsqueda y 7 competidores fijos, relanzado cada lunes por el
+fundador. Los resultados y la comparación semanal viven fuera del repo, en la
+carpeta compartida del proyecto (`geo-propio/medicion/`). La línea base del
+2026-10-10 sirvió para tres arreglos baratos que entran aquí:
+
+- **Idioma declarado.** `contentMetadata` emite `alternates.languages` con
+  `es-ES` y `x-default` sobre la propia URL. La auditoría marcaba como crítico
+  que ninguna página declarara idioma; el sitio sólo tiene castellano, así que
+  la declaración honesta es «este idioma, esta URL».
+- **Títulos y descripciones que caben en el resultado.** 20 artículos tenían un
+  `<title>` de más de 70 caracteres y 9 una descripción de más de 160. Se
+  arreglan con `seoTitle` y `metaDescription`, que ya existían, sin tocar el
+  título visible del artículo. La portada pasa de 218 a 146 caracteres de
+  descripción, y `/que-es-genscore` usa la definición canónica corta en vez de
+  la larga (357). `posts.test.ts` fija los dos límites para todo artículo.
+- **`/comparativas` deja de ser una lista de enlaces** (120 palabras): explica
+  qué se compara, con qué criterios y cómo tratamos nuestra propia herramienta,
+  y enseña la entradilla de cada comparativa.
+
+**Por qué el índice de comparativas dice «GEO quiere decir posicionamiento en
+motores de IA».** En la línea base, a «¿Cuáles son las mejores herramientas
+GEO?» y «¿Cuánto cuesta una herramienta de GEO?» Claude y ChatGPT respondieron
+con herramientas de mapas y de GPS; sólo Gemini entendió GEO como
+posicionamiento en IA. Una página que quiere que la citen en esa pregunta tiene
+que deshacer la ambigüedad en su propio texto.
+
+**Pendiente o conocido.** Los títulos de las páginas que no son artículos
+(glosario, docs) no se han revisado. La medición es de una muestra por motor y
+pregunta: sirve para ver tendencia, no para afirmar un porcentaje.
+
+## 266. SECTOR-STUDY-2: estudio de clínicas dentales, «¿Qué clínicas dentales recomienda la IA?» (2026-10-10)
 
 **Qué se publica.** `/blog/que-clinicas-dentales-recomienda-la-ia`, segundo
 estudio con dato propio (tras §246), medido con `/admin/estudio` el

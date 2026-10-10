@@ -23,7 +23,7 @@ export const STUDY_KIND_LABEL: Record<StudyKind, string> = {
 const STUDY_ENTRIES: ReadonlyArray<{ slug: string; kind: StudyKind }> = [
   // SECTOR-STUDY-1 (log §246): real answers measured with /admin/estudio.
   { slug: "que-software-de-facturacion-recomienda-la-ia", kind: "propio" },
-  // SECTOR-STUDY-2 (log §265): dental clinics, Madrid and Valencia.
+  // SECTOR-STUDY-2 (log §266): dental clinics, Madrid and Valencia.
   { slug: "que-clinicas-dentales-recomienda-la-ia", kind: "propio" },
   // STUDY-HOME-1 (log §251): third-party figures with source and sample.
   { slug: "de-buscar-a-preguntar", kind: "recopilacion" }

@@ -107,6 +107,8 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "que-es-el-geo-score",
     title: "Qué es el GEO Score y qué mide",
+    metaDescription:
+      "Qué mide el GEO Score de GenScore (presencia, prominencia, posición competitiva, autoridad y preparación técnica) y cómo leerlo sin engañarte.",
     description:
       "Qué mide el GEO Score de GenScore —presencia, prominencia, posición competitiva, autoridad y preparación técnica— y cómo leerlo sin engañarte para saber cómo aparece tu marca en respuestas de IA.",
     datePublished: "2026-07-12",
@@ -124,6 +126,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "que-es-geo-generative-engine-optimization",
     title: "Qué es GEO (Generative Engine Optimization) y por qué no es lo mismo que SEO",
+    seoTitle: "Qué es GEO: el posicionamiento en IA frente al SEO",
     description:
       "Descubre qué es el GEO, cómo funciona y por qué las marcas necesitan optimizar su presencia en ChatGPT, Gemini y Claude.",
     datePublished: "2026-07-13",
@@ -138,6 +141,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-elegir-prompts-monitorizar-marca-ia",
     title: "Cómo elegir los prompts correctos para monitorizar tu marca en IA",
+    seoTitle: "Cómo elegir los prompts para monitorizar tu marca en IA",
     description:
       "Aprende una metodología práctica para seleccionar los prompts que realmente reflejan cómo tus clientes preguntan a ChatGPT y Gemini.",
     datePublished: "2026-07-13",
@@ -149,6 +153,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-elegir-competidores-analisis-geo",
     title: "Cómo seleccionar los competidores adecuados para un análisis GEO",
+    seoTitle: "Cómo elegir competidores para un análisis GEO",
     description:
       "Elegir mal a tus competidores puede distorsionar todo tu análisis GEO. Aprende una metodología para compararte con las marcas correctas.",
     datePublished: "2026-07-13",
@@ -160,6 +165,8 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "geo-vs-aeo-vs-seo",
     title: "GEO vs AEO vs SEO: qué significa cada sigla (y cuál usar)",
+    metaDescription:
+      "GEO, AEO, SEO y LLMO se usan como sinónimos. Qué significa cada sigla, quién usa cada término y cuál conviene según lo que quieras medir.",
     description:
       "GEO, AEO, SEO y LLMO se usan a menudo como sinónimos y el sector no se ha puesto de acuerdo en un nombre único. Qué significa cada sigla, quién usa cada término y cuál conviene según lo que quieras medir.",
     datePublished: "2026-08-23",
@@ -171,6 +178,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "genscore-vs-herramientas-geo",
     title: "GenScore frente a las herramientas GEO tradicionales: la diferencia entre medir y mejorar",
+    seoTitle: "GenScore frente a otras herramientas GEO: medir y mejorar",
     description:
       "Muchas herramientas GEO muestran qué ocurre. GenScore busca ayudarte a decidir qué hacer después. Descubre en qué se diferencian.",
     datePublished: "2026-07-13",
@@ -182,6 +190,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "llms-txt-guia-practica",
     title: "llms.txt: guía práctica para crearlo (y qué esperar de verdad)",
+    seoTitle: "llms.txt: guía práctica para crearlo y qué esperar",
     description:
       "Qué es llms.txt, cómo crear el tuyo paso a paso, y una respuesta honesta a la pregunta que importa: ¿mejora realmente cuánto te citan los motores de IA?",
     datePublished: "2026-08-03",
@@ -193,6 +202,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-conseguir-que-chatgpt-te-cite",
     title: "Cómo conseguir que ChatGPT (y otros motores de IA) citen tu web",
+    seoTitle: "Cómo conseguir que ChatGPT y otros motores citen tu web",
     description:
       "Checklist práctico de lo que de verdad influye en si un motor generativo cita tu contenido como fuente: estructura, datos estructurados, autoridad y grounding.",
     datePublished: "2026-08-03",
@@ -204,6 +214,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "que-es-una-auditoria-geo",
     title: "Qué es una auditoría GEO (y el checklist para hacerla tú mismo)",
+    seoTitle: "Qué es una auditoría GEO y checklist para hacerla tú",
+    metaDescription:
+      "Una auditoría SEO pregunta si puedes posicionar; una GEO, si te pueden citar. Las seis dimensiones, sus umbrales y un checklist de trece puntos.",
     description:
       "Una auditoría SEO pregunta si puedes posicionar; una GEO, si te pueden citar. Las seis dimensiones que se revisan, con sus umbrales exactos, y un checklist de trece puntos para pasarlo a mano.",
     datePublished: "2026-08-13",
@@ -228,6 +241,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-aparecer-en-perplexity",
     title: "Cómo aparecer en Perplexity (y en qué se diferencia de otros motores)",
+    seoTitle: "Cómo aparecer en Perplexity y en qué se diferencia",
     description:
       "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que GenScore mide hoy.",
     metaDescription:
@@ -259,6 +273,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-hacer-que-chatgpt-recomiende-tu-negocio",
     title: "Cómo hacer que ChatGPT recomiende tu negocio (guía para pymes)",
+    seoTitle: "Cómo hacer que ChatGPT recomiende tu negocio",
     description:
       "Un negocio local compite por dos o tres puestos, no por veinte. Qué mueve de verdad esa recomendación: datos consistentes, reseñas recientes, contenido específico — y qué atajos no funcionan.",
     metaDescription:
@@ -272,6 +287,8 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
     title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
+    metaDescription:
+      "Tres formas de comprobarlo: qué preguntas probar tú mismo, qué mirar en tu analítica y cuándo hace falta una herramienta de monitorización.",
     description:
       "Tres formas reales de comprobarlo, de la manual y gratuita a la sistemática: qué prompts probar tú mismo, qué mirar en tu analítica, y cuándo hace falta una herramienta de monitorización.",
     datePublished: "2026-08-10",
@@ -283,6 +300,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "chatgpt-informacion-incorrecta-de-tu-empresa",
     title: "Cuando ChatGPT dice algo falso o desactualizado de tu empresa: cómo corregirlo",
+    seoTitle: "ChatGPT dice algo falso de tu empresa: cómo corregirlo",
     description:
       "Un precio viejo, un producto que ya no vendes, una dirección equivocada: sí apareces, pero con un dato mal. Qué hacer cuando la IA te menciona con información incorrecta.",
     metaDescription:
@@ -296,6 +314,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "ai-overviews-vs-chatgpt-diferencia",
     title: "AI Overviews de Google vs. ChatGPT, Gemini y Claude: qué mide GenScore y qué no",
+    seoTitle: "AI Overviews frente a ChatGPT: qué mide GenScore y qué no",
     description:
       "AI Overviews es una función de los resultados de Google; ChatGPT, Gemini y Claude son productos conversacionales aparte. Qué mide GenScore hoy, y qué queda fuera.",
     metaDescription:
@@ -309,6 +328,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "geo-negocios-locales-servicios-profesionales",
     title: "GEO para negocios locales y servicios profesionales: cómo aparecer cuando te buscan por ciudad",
+    seoTitle: "GEO local: cómo aparecer cuando la IA busca por ciudad",
+    metaDescription:
+      "Un motor generativo no usa la proximidad como un mapa: cita entidades verificables. Qué mover si eres una clínica, una asesoría o un servicio local.",
     description:
       "Un motor generativo no usa proximidad como un mapa: cita entidades verificables. Qué mover si eres una clínica, una asesoría o cualquier servicio que se busca por zona.",
     datePublished: "2026-09-19",
@@ -320,6 +342,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "la-ia-te-menciona-pero-recomienda-a-otro",
     title: "La IA te menciona pero recomienda a otro: qué hacer cuando sales y no eres la respuesta",
+    seoTitle: "La IA te menciona pero recomienda a otro: qué hacer",
+    metaDescription:
+      "Aparecer en ChatGPT no es ser su recomendación. Un caso real, cómo leer una respuesta sin engañarte y qué palancas sí mueven algo.",
     description:
       "Aparecer en ChatGPT no es ser su recomendación. Un caso real de nuestras pruebas, cómo leer una respuesta sin engañarte y qué palancas sí mueven algo (y cuál no).",
     datePublished: "2026-10-09",
@@ -331,6 +356,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "como-aparecer-en-gemini-y-vistas-creadas-con-ia",
     title: "Cómo aparecer en Gemini, las Vistas creadas con IA (AI Overviews) y el Modo IA de Google",
+    seoTitle: "Cómo aparecer en Gemini, AI Overviews y el Modo IA",
     description:
       "Qué dice Google oficialmente sobre sus funciones de IA, qué comprobar para que pueda usarte como fuente, cómo cambia el Modo IA la forma de buscar y qué controla de verdad Google-Extended.",
     metaDescription:
@@ -349,6 +375,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "mi-marca-no-aparece-en-chatgpt-por-que",
     title: "Tu marca es nueva y la IA no la conoce todavía: por dónde empezar con GEO",
+    seoTitle: "Mi marca no aparece en ChatGPT: por dónde empezar",
+    metaDescription:
+      "Cero menciones no es un fallo, es el punto de partida. Los pasos para que un motor de IA empiece a reconocer tu marca, y por qué tarda.",
     description:
       "Cero menciones no es un fallo, es el punto de partida. Los pasos reales para que un motor generativo empiece a reconocer tu marca: entidad, primeras fuentes, y por qué tarda.",
     datePublished: "2026-09-19",
@@ -360,6 +389,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "geo-para-ecommerce",
     title: "GEO para ecommerce: cómo aparecer cuando la IA recomienda productos",
+    seoTitle: "GEO para ecommerce: cuando la IA recomienda productos",
     description:
       "Una respuesta de IA solo nombra dos o tres tiendas. Qué mover primero si vendes online, y qué no sabemos todavía.",
     datePublished: "2026-08-05",
@@ -376,6 +406,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "geo-para-saas-b2b",
     title: "GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo",
+    seoTitle: "GEO para SaaS B2B: lo que pregunta un comprador a la IA",
     description:
       "Tu lista corta se decide antes de que nadie rellene el formulario. Qué pregunta a la IA un comprador B2B en esa fase, y qué hacer con ello.",
     datePublished: "2026-08-05",
@@ -392,6 +423,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "geo-para-agencias",
     title: "GEO para agencias: cómo vender un servicio de visibilidad en IA",
+    seoTitle: "GEO para agencias: vender un servicio de visibilidad en IA",
     description:
       "Los chats de IA mandan ~1% de las visitas. Qué se puede vender de verdad, qué no prometer nunca, y cómo se mide.",
     datePublished: "2026-08-05",
@@ -408,6 +440,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "que-software-de-facturacion-recomienda-la-ia",
     title: "¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles?",
+    seoTitle: "¿Qué programa de facturación recomienda la IA en España?",
+    metaDescription:
+      "Preguntamos a ChatGPT, Gemini y Claude qué software de facturación recomiendan en España. Holded sale en el 72% de las respuestas. Ranking y método.",
     description:
       "Preguntamos a ChatGPT, Gemini y Claude qué software de facturación recomiendan en España. Holded aparece en el 72% de las respuestas. Ranking por motor y metodología.",
     datePublished: "2026-10-09",
@@ -428,10 +463,12 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "¿Qué clínicas dentales recomienda la IA?",
     description:
       "Preguntamos a ChatGPT, Gemini y Claude a qué dentista ir en grandes ciudades de España. El 77% de las clínicas independientes bien valoradas no aparece nunca. Ranking por motor y por qué Gemini prefiere las independientes.",
+    metaDescription:
+      "Qué clínicas dentales recomiendan ChatGPT, Gemini y Claude. El 77% de las independientes bien valoradas no aparece nunca. Ranking por motor y ciudad.",
     datePublished: "2026-10-10",
     coverImage: "/blog/que-clinicas-dentales-recomienda-la-ia/cover.webp",
     coverIcon: "trendUp",
-    // SECTOR-STUDY-2 (log §265): second own-data study, dental clinics in
+    // SECTOR-STUDY-2 (log §266): second own-data study, dental clinics in
     // Madrid and Valencia, measured with /admin/estudio. Percentages only;
     // only clinics that appear are named, absent ones only in aggregate.
     primaryKeyword: "qué clínicas dentales recomienda la ia",
@@ -445,6 +482,9 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "de-buscar-a-preguntar",
     title: "De buscar a preguntar: cómo la IA está cambiando la búsqueda en España",
+    seoTitle: "De buscar a preguntar: la IA cambia la búsqueda en España",
+    metaDescription:
+      "El 22% de los españoles ya usa la IA en lugar del buscador y casi la mitad de quienes la usan se apoya en ella para comprar. Datos de AIMC, IAB, Bain y Pew.",
     description:
       "El 22% de los españoles ya usa la IA en lugar del buscador y casi la mitad de quienes la usan se apoya en ella para comprar. Los datos de AIMC, IAB Spain, Bain y Pew, con sus fuentes.",
     datePublished: "2026-10-09",
