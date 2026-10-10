@@ -253,10 +253,12 @@ and a feature that needs a variable set in three environments before it does
 anything is a feature that gets found broken later. `false` is the escape
 hatch for cost — each automatic audit spends real Gemini grounding calls.
 
-Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
-/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
-day's automatic scans have already queued their audits) and the worker's own
-`POST` self-chain. No new secret.
+Reuses `CRON_SECRET` for both entry points: Vercel's cron (`GET
+/api/cron/run-audit`, `*/10 * * * *` since AUDIT-CRON-DRAIN-1, log §261 —
+before that `0 7 * * *`) and the worker's own `POST` self-chain. No new
+secret. The cron is what drains the queue: Vercel rejects a chain of
+self-calls with 508 after a few hops, so the self-chain alone only ever
+advances a handful of jobs.
 
 `OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
 six attempts (~12.5 h of backoff). It goes to the **operator**, never to the

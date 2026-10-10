@@ -271,6 +271,14 @@ Consecuencias, y son reglas, no matices:
   claim es un UPDATE atómico condicional: un despacho duplicado es un no-op.
   El job se lee con el cliente de usuario (RLS `jobs_select_owner`), no con
   service-role — un render no necesita más privilegio del que ya tiene.
+- **La cadena de auto-llamadas tampoco es el motor: lo es el cron.** Vercel
+  rechaza con 508 una cadena de llamadas de la web a sí misma a los pocos
+  saltos (3 y 5 el 2026-10-09, con la URL ya limpia de §241), así que
+  `triggerWebAuditRun` sólo avanza un puñado de trabajos por cadena. Por eso
+  `/api/cron/run-audit` corre cada 10 minutos (AUDIT-CRON-DRAIN-1, log §261):
+  cada disparo del cron no es una auto-llamada y arranca una cadena nueva.
+  Volver a un horario diario devuelve la cola a vaciarse al día siguiente;
+  lo vigila `vercel-crons.test.ts`.
 
 ### Una etiqueta de estado se mide contra el reloj
 
