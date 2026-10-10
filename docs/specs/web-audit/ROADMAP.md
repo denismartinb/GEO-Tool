@@ -17,6 +17,7 @@ orden — el orden lo fija la columna `#`.
 | 6a | Auditoría automática tras cada escaneo | AUDIT-AFTER-SCAN-1 | ADR 0027 · log §18 | ✅ Implementada (PR #322) — migración 0027 aplicada 2026-08-04 | Cron adicional + rol de servicio en ambos núcleos | Aprobada por el fundador 2026-08-04 |
 | 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §22 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
 | 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ✅ Implementada (2026-08-05) | Ninguno | Petición directa del fundador |
+| 7 | Auditoría SEO: rediseño y cobertura a Páginas citadas | SEARCH-SEO-1 Fase 1b | log §274 | ✅ Implementada (2026-10-10). **Retirados:** las pestañas de la pantalla, el «Diagnóstico general» (promedio de cobertura y nota técnica) y el banner de nota proyectada. El mapa de cobertura no se retira: se pinta en Páginas citadas | Ninguno (sólo datos ya persistidos) | Diseño aprobado por el fundador |
 
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 

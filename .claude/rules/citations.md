@@ -46,3 +46,13 @@ es peor que ninguna, porque una sesión futura la obedecerá igual.
   mencionó..." (favorable/adverse/otherBrands), nunca "la página menciona...".
   Es el mismo principio que esta regla protege en el resto de la pantalla;
   no hace falta tocarlo, hace falta no romperlo.
+- **El mapa de cobertura vive aquí desde SEARCH-SEO-1 Fase 1b** (log §274):
+  `CoverageSection` (`citations/_components/coverage-section.tsx`) con
+  `loadCoverageSectionData` (`lib/web-audit/coverage-section-data.ts`). Sus
+  invariantes siguen siendo los de `.claude/rules/web-audit.md` (puerta Pro
+  leída en crudo, deltas sólo con muestra suficiente, Evolución desde 4
+  puntos). Se pinta en las dos ramas con escaneo completado, también tras el
+  aviso de «respondió sin citar fuentes». Va dentro de `WebAuditProvider`,
+  porque `WebAuditDriveNotice` es el único sitio que enseña el fallo de una
+  campaña reanudada desde el cliente (ADR 0038): si se quita de aquí, ese
+  fallo deja de verse en todo el producto.

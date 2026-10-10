@@ -966,77 +966,6 @@
   place-items: center;
 }
 
-/* "Si arreglas los N problemas técnicos" (TechnicalPotentialBanner).
-   Founder feedback 2026-08-17: la caja plana original no se leía como el
-   titular de la pestaña Problemas. `color-mix` reutiliza --pos-ink en vez de
-   inventar un hex nuevo, mismo patrón que .art-rec-pri. */
-.tech-potential {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 18px 20px;
-  border-radius: var(--r-xl);
-  background: linear-gradient(135deg, var(--pos-soft), var(--surface) 130%);
-  border: 1px solid color-mix(in srgb, var(--pos-ink) 16%, transparent);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px color-mix(in srgb, var(--pos-ink) 12%, transparent);
-}
-.tech-potential-badge {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: var(--surface);
-  color: var(--pos-ink);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 10px color-mix(in srgb, var(--pos-ink) 18%, transparent);
-}
-.tech-potential-body { flex: 1; min-width: 0; }
-.tech-potential-label {
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--pos-ink);
-}
-.tech-potential-scores { display: flex; align-items: center; gap: 10px; margin-top: 7px; flex-wrap: wrap; }
-.tech-potential-score {
-  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.tech-potential-score-from { color: var(--ink-3); }
-.tech-potential-score-to { color: var(--pos-ink); }
-.tech-potential-arrow {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--pos-ink);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
-}
-.tech-potential-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--pos-ink);
-  background: var(--surface);
-  border-radius: 999px;
-  padding: 4px 10px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
-  white-space: nowrap;
-}
-.tech-potential-caption { font-size: 11.5px; font-weight: 650; color: var(--pos-ink); margin-top: 9px; }
-.tech-potential-note { font-size: 10.5px; line-height: 1.5; color: var(--ink-3); margin: 4px 0 0; }
 
 @media (max-width: 420px) {
   .tech-potential { padding: 16px; }
@@ -1235,3 +1164,204 @@
     justify-content: center;
   }
 }
+
+/* ============================================================
+   Auditoría SEO — SEARCH-SEO-1 Fase 1b (log §271), design in
+   docs/design-reference/search-seo-1/maqueta.html. Lives inside .wa2-scope,
+   so it reads the brand tokens that wrapper re-points. Mobile first: the two
+   grids open at 1200px, where .wa2-page is wide enough (it is 640px from
+   900px, the width at which the design itself stacks).
+   ============================================================ */
+.sa-screen { display: flex; flex-direction: column; gap: 14px; margin-top: 14px; }
+.sa-screen .card { padding: 15px; border-radius: 14px; min-width: 0; }
+.sa-ph h2 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.15;
+}
+.sa-ph p { font-size: 14px; color: var(--ink-3); margin: 4px 0 0; max-width: 60ch; }
+.sa-eyb {
+  font: 600 10.5px var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.sa-eyb-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--brand-cyan); }
+.sa-grid-hero, .sa-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.sa-side { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.sa-ch { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.sa-ch h3 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.sa-src { font-size: 11.5px; color: var(--ink-4); }
+.sa-empty, .sa-note { font-size: 12.5px; color: var(--ink-3); margin: 0 0 10px; }
+
+/* Score */
+.sa-score { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.sa-score-k { font-size: 13.5px; font-weight: 750; color: var(--ink); }
+.sa-score p { font-size: 13px; color: var(--ink-3); max-width: 32ch; margin: 0; }
+.sa-score-delta { font-size: 11.5px; font-weight: 650; color: var(--ink-3); display: inline-flex; gap: 4px; align-items: center; }
+.sa-band { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; font-weight: 650; padding: 4px 11px; border-radius: 999px; }
+.sa-band-good { background: var(--pos-soft); color: var(--pos-ink); }
+.sa-band-fair { background: var(--warn-soft); color: var(--warn-ink); }
+.sa-band-poor { background: var(--neg-soft); color: var(--neg-ink); }
+
+/* Areas and the bars the page rows share */
+.sa-cats { display: flex; flex-direction: column; gap: 14px; }
+.sa-cat { display: grid; grid-template-columns: minmax(0, 1fr) 44px; gap: 6px 14px; align-items: center; }
+.sa-cat-n { display: flex; flex-direction: column; min-width: 0; }
+.sa-cat-n b { font-size: 13.5px; color: var(--ink); font-weight: 650; }
+.sa-cat-n > span:not(.sa-who) { font-size: 11.5px; color: var(--ink-4); }
+.sa-cat .sa-track { grid-column: 1 / -1; grid-row: 2; }
+.sa-track { height: 10px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; }
+.sa-fill { height: 100%; border-radius: inherit; }
+.sa-cat-v { font: 600 13px var(--mono); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* GOOGLE / IA tags */
+.sa-who { display: inline-flex; gap: 5px; margin-top: 3px; flex-shrink: 0; }
+.sa-tag { display: inline-flex; align-items: center; font: 600 10px var(--mono); letter-spacing: .04em; padding: 2px 6px; border-radius: 5px; }
+.sa-tag-g { background: #e9f0ff; color: #2453c7; }
+.sa-tag-ia { background: #eee8fb; color: #6d46c8; }
+
+/* «Qué arreglar» */
+.sa-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.sa-filter {
+  display: inline-flex;
+  gap: 7px;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  padding: 6px 11px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.sa-filter b { font: 700 11px var(--mono); }
+.sa-filter[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.sa-filter:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sa-dot { width: 7px; height: 7px; border-radius: 50%; }
+.sa-dot-critical { background: var(--wa-crit); }
+.sa-dot-warning { background: var(--warn); }
+.sa-dot-improvement { background: var(--ink-4); }
+.sa-dot-ok { background: var(--pos); }
+.sa-issues { display: flex; flex-direction: column; }
+.sa-issues[data-filter="critical"] > [data-sev]:not([data-sev="critical"]),
+.sa-issues[data-filter="warning"] > [data-sev]:not([data-sev="warning"]),
+.sa-issues[data-filter="improvement"] > [data-sev]:not([data-sev="improvement"]),
+.sa-issues[data-filter="ok"] > [data-sev]:not([data-sev="ok"]) { display: none; }
+.sa-iss.wa-details { border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; }
+.sa-iss.wa-details > summary { gap: 12px; padding: 13px 4px; }
+.sa-ok { display: flex; align-items: center; gap: 12px; padding: 13px 4px; border-top: 1px solid var(--line-soft); }
+.sa-sev {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font: 800 13px var(--font-display), "Bricolage Grotesque", sans-serif;
+}
+.sa-sev-critical { background: var(--wa-crit-soft); color: var(--wa-crit); }
+.sa-sev-warning { background: var(--warn-soft); color: var(--warn-ink); }
+.sa-sev-improvement { background: var(--surface-sunk); color: var(--ink-2); }
+.sa-sev-ok { background: var(--pos-soft); color: var(--pos-ink); }
+.sa-iss-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sa-iss-t > b { color: var(--ink); font-size: 14px; font-weight: 650; }
+.sa-iss-t > span { font-size: 12px; color: var(--ink-4); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sa-iss .sa-who { margin-top: 0; }
+.sa-iss .wa-chev { margin-left: 0; }
+.sa-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.sa-iss-in.wa-details-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 4px 4px 16px; border-top: 0; }
+.sa-iss-in h4 { font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 6px; }
+.sa-iss-in h4 + p + h4 { margin-top: 12px; }
+.sa-iss-in p { font-size: 13px; color: var(--ink-2); margin: 0; line-height: 1.5; }
+.sa-urls { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sa-urls li {
+  font: 500 12px var(--mono);
+  color: var(--ink-2);
+  background: var(--surface-sunk);
+  padding: 5px 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pages reviewed */
+.sa-pg-list { display: flex; flex-direction: column; }
+.sa-pg.wa-details { border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; }
+.sa-pg.wa-details > summary { display: grid; grid-template-columns: minmax(0, 1fr) 70px 30px 16px; gap: 10px; padding: 9px 2px; }
+.sa-pg-skipped { padding: 9px 2px; border-top: 1px solid var(--line-soft); }
+.sa-pg-n { display: flex; flex-direction: column; min-width: 0; }
+.sa-pg-n code { font: 500 12.5px var(--mono); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-pg-skipped .sa-pg-n code { color: var(--ink-3); }
+.sa-pg-n span { font-size: 11px; color: var(--ink-4); }
+.sa-pg-track { height: 6px; }
+.sa-pg .sa-cat-v { font-size: 12px; }
+
+/* Honest scope note */
+.sa-scope { background: linear-gradient(120deg, #f2f7ff, #effbfc); border: 1px solid #dbe6fb; border-radius: 14px; padding: 16px 18px; }
+.sa-scope p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
+.sa-scope b { color: var(--ink); }
+
+@media (min-width: 900px) {
+  .sa-ph h2 { font-size: 28px; }
+  .sa-screen .card { padding: 18px 20px; }
+  .sa-cat { grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 44px; }
+  .sa-cat .sa-track { grid-column: auto; grid-row: auto; }
+  .sa-iss-in.wa-details-body { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding-left: 44px; }
+  .sa-pg.wa-details > summary { grid-template-columns: minmax(0, 1fr) 120px 34px 16px; }
+}
+@media (max-width: 899px) {
+  .sa-iss .sa-who { display: none; }
+}
+@media (min-width: 1200px) {
+  .sa-grid-hero { grid-template-columns: 300px minmax(0, 1fr); }
+  .sa-grid-2 { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); align-items: start; }
+}
+
+/* ============================================================
+   Páginas citadas — «Tu contenido frente a lo que cita la IA», the coverage
+   map moved from Auditoría web (SEARCH-SEO-1 Fase 1b, log §271).
+   ============================================================ */
+.cov-sec { margin-top: 18px; }
+.cov-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px 12px; flex-wrap: wrap; }
+.cov-head .cit2-blk-t { margin-bottom: 0; }
+.cov-head-r { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cov-date { font-size: 11px; color: var(--ink-4); }
+.cov-desc { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 0; }
+.cov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; margin-top: 12px; }
+.cov-empty { font-size: 12.5px; color: var(--ink-3); }
+.cov-legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-3); font-weight: 600; margin: -4px 0 10px; }
+.cov-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.cov-note { font-size: 12px; color: var(--ink-3); margin: -4px 0 10px; }
+.cov-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cov-list li { padding: 8px 10px; background: var(--surface-sunk); border-radius: 8px; font-size: 12.5px; color: var(--ink-2); }
+.cov-history { display: flex; flex-direction: column; gap: 6px; }
+.cov-hrow { padding: 8px 10px; border-radius: 8px; background: var(--surface-sunk); }
+.cov-hdate { font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 6px; }
+.cov-hgrid { display: grid; grid-template-columns: 90px minmax(0, 1fr) 92px; gap: 8px; align-items: center; }
+.cov-hgrid > span:not(.cov-hv) { font-size: 10.5px; color: var(--ink-2); }
+.cov-hv { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }

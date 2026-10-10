@@ -4,6 +4,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { NOT_COVERED_NOTE } from "@/lib/web-audit/coverage-map";
+import { fakeSupabase, type TableResult } from "@/lib/web-audit/test-support/fake-supabase";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R7-b — las primeras aserciones sobre la
@@ -32,60 +33,6 @@ const PROJECT: WebAuditProject = {
 };
 
 const RUN_ID = "22222222-2222-2222-2222-222222222222";
-
-type TableResult = { data: unknown; count?: number | null };
-
-/**
- * Un doble del constructor de consultas de PostgREST: cada método encadenable
- * se devuelve a sí mismo y el resultado se resuelve por tabla. Con esto basta
- * porque el módulo no depende de QUÉ filtros aplica —eso lo prueba producción
- * contra RLS— sino de qué hace con las filas que vuelven.
- *
- * `scan_runs` es la primera tabla con DOS consultas distintas en la misma
- * carga (el último run completado, vía `maybeSingle`, y los 5 más recientes
- * de cualquier estado, vía `limit`, para detectar `activeRun`) — un valor
- * único por tabla ya no basta para distinguirlas. Un fixture puede seguir
- * siendo un `TableResult` (se reutiliza en cada llamada, como hasta ahora) o
- * un ARRAY de `TableResult` (uno por llamada, en el orden en que
- * `loadWebAuditPageData` las hace) cuando a una tabla le hace falta responder
- * distinto la segunda vez.
- */
-function fakeSupabase(byTable: Record<string, TableResult | TableResult[]>) {
-  const calls: string[] = [];
-  const callCounts: Record<string, number> = {};
-  const resultFor = (table: string): TableResult => {
-    const entry = byTable[table];
-    if (Array.isArray(entry)) {
-      const index = callCounts[table] ?? 0;
-      callCounts[table] = index + 1;
-      return entry[index] ?? entry[entry.length - 1] ?? { data: null };
-    }
-    return entry ?? { data: null };
-  };
-
-  const builder = (table: string) => {
-    const chain: Record<string, unknown> = {};
-    const self = () => chain;
-    for (const method of ["select", "eq", "is", "in", "order", "limit"]) {
-      chain[method] = self;
-    }
-    chain.maybeSingle = async () => resultFor(table);
-    // El `await` sobre el propio constructor (una consulta que no acaba en
-    // `maybeSingle`) pasa por aquí.
-    chain.then = (resolve: (value: TableResult) => unknown) => resolve(resultFor(table));
-    return chain;
-  };
-
-  return {
-    calls,
-    client: {
-      from: (table: string) => {
-        calls.push(table);
-        return builder(table);
-      }
-    }
-  };
-}
 
 /**
  * Fixtures con la forma real de lo persistido — mismos moldes que
@@ -163,113 +110,13 @@ function coverageMapJson(): string {
   });
 }
 
-/**
- * Resultados de escaneo para los tres temas del mapa. El primero lleva una cita
- * de grounding al dominio propio, así que ese tema clasifica como `performing`
- * y los otros dos no — lo justo para que cobertura y aprovechamiento sean
- * números reales en vez de nulos.
- */
-function promptResults() {
-  const row = (n: number, citaPropia: boolean) => ({
-    id: `result-${n}`,
-    prompt_id: `prompt-${n}`,
-    run_id: RUN_ID,
-    provider: "gemini",
-    mentioned_competitors_count: 0,
-    extracted_json: {
-      citations: citaPropia ? [{ url: "https://genscore.es/t1", source: "grounding" }] : []
-    }
-  });
-
-  return [row(1, true), row(2, false), row(3, false)];
-}
-
 function load(byTable: Record<string, TableResult | TableResult[]>) {
   const { client } = fakeSupabase(byTable);
-  return loadWebAuditPageData({ supabase: client, userId: "user-1", project: PROJECT });
+  return loadWebAuditPageData({ supabase: client, project: PROJECT });
 }
 
 beforeEach(() => {
   delete process.env.AUTO_WEB_AUDIT_ENABLED;
-});
-
-describe("la puerta Pro se lee en crudo del plan", () => {
-  /**
-   * `.claude/rules/web-audit.md`: se lee `profiles.current_plan` vía
-   * `isProOrAbove`, **nunca** vía `getPlanForUser`/`resolvePlan`. Es la única
-   * forma de que la cobertura (que gasta grounding de Gemini por lotes) no se
-   * abra por una resolución de plan que incluya periodos de prueba.
-   */
-  it.each([
-    ["pro", true],
-    ["agency", true],
-    ["free", false],
-    ["starter", false]
-  ])("current_plan=%s → canAuditCoverage=%s", async (plan, expected) => {
-    const data = await load({ profiles: { data: { current_plan: plan } } });
-    expect(data.canAuditCoverage).toBe(expected);
-  });
-
-  /**
-   * Sin fila de perfil —o con la columna ausente— la puerta cae CERRADA. Es la
-   * dirección de fallo cara aquí: abrirla gastaría llamadas reales de Gemini
-   * contra una cuenta que no las paga.
-   */
-  it("sin fila de perfil no abre la cobertura", async () => {
-    const data = await load({ profiles: { data: null } });
-    expect(data.canAuditCoverage).toBe(false);
-  });
-});
-
-describe("la cifra principal según el plan (ADR 0033 / ADR 0035)", () => {
-  /**
-   * Una cuenta no-Pro nunca puede poblar cobertura ni aprovechamiento, así que
-   * el compuesto sería la media de un solo valor — el mismo número, disfrazado
-   * de media. Su titular ES la nota técnica, una señal con nombre.
-   */
-  it("sin Pro, el titular es la nota técnica", async () => {
-    const data = await load({
-      profiles: { data: { current_plan: "free" } },
-      web_audit_snapshots: { data: [technicalRow({ readiness_score: 42 })] }
-    });
-
-    expect(data.heroScore).toBe(42);
-  });
-
-  it("sin auditoría técnica ni Pro no se inventa un número", async () => {
-    const data = await load({ profiles: { data: { current_plan: "free" } } });
-    expect(data.heroScore).toBeNull();
-  });
-
-  /**
-   * **El caso que distingue de verdad las dos ramas: una cuenta que BAJÓ de
-   * plan.** Mientras fue Pro dejó cobertura persistida, así que el compuesto y
-   * la nota técnica ya no coinciden — y a partir de ese momento el titular
-   * tiene que ser la técnica, la única señal que su plan sigue midiendo.
-   *
-   * Sin este caso la aserción no discrimina nada, y lo comprobé mutando el
-   * código: en una cuenta free recién creada el compuesto ES la técnica (media
-   * de un solo valor), justo lo que dice el comentario de esa línea, así que
-   * `heroScore = globalScore.score` pasaba los tests igual.
-   */
-  it("una cuenta que bajó de plan ve su nota técnica, no el compuesto heredado", async () => {
-    const data = await load({
-      profiles: { data: { current_plan: "free" } },
-      scan_runs: [{ data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } }, { data: [] }],
-      generated_solutions: { data: [{ sanitized_content: coverageMapJson() }] },
-      // Sin resultados de escaneo cada tema queda `inconclusive` y el
-      // porcentaje de cobertura sale nulo — la clasificación necesita cruzar el
-      // mapa con lo que la IA respondió (README de la spec, tabla de la matriz).
-      scan_prompt_results: { data: promptResults() },
-      web_audit_snapshots: { data: [technicalRow({ readiness_score: 30 })] }
-    });
-
-    // La cobertura persistida existe y produce compuesto...
-    expect(data.summary).not.toBeNull();
-    expect(data.globalScore.score).not.toBe(30);
-    // ...pero el titular es la técnica, porque es lo único que su plan mide.
-    expect(data.heroScore).toBe(30);
-  });
 });
 
 describe("despertar al worker es una decisión, no un efecto (WEB-AUDIT-DRIVE-1)", () => {
@@ -330,7 +177,7 @@ describe("despertar al worker es una decisión, no un efecto (WEB-AUDIT-DRIVE-1)
    */
   it("sin escaneo completado no se consulta el job", async () => {
     const { client, calls } = fakeSupabase({ profiles: { data: { current_plan: "pro" } }, scan_runs: { data: null } });
-    const data = await loadWebAuditPageData({ supabase: client, userId: "user-1", project: PROJECT });
+    const data = await loadWebAuditPageData({ supabase: client, project: PROJECT });
 
     expect(data.hasCompletedScan).toBe(false);
     expect(data.shouldDispatchAudit).toBe(false);
@@ -526,20 +373,24 @@ describe("una pantalla sin datos no inventa ninguno", () => {
     const data = await load({ profiles: { data: { current_plan: "pro" } } });
 
     expect(data.hasCompletedScan).toBe(false);
-    expect(data.summary).toBeNull();
-    expect(data.latestMap).toBeNull();
     expect(data.technicalSnapshot).toBeNull();
-    expect(data.heroScore).toBeNull();
-    expect(data.coverageDelta).toBeNull();
-    expect(data.surfacingDelta).toBeNull();
-    expect(data.trend).toEqual([]);
-    expect(data.auditedScanDate).toBeNull();
-    expect(data.activeCampaignProgress).toBeNull();
+    expect(data.currentTechnicalReport).toBeNull();
+    expect(data.technicalScoreDelta).toBeNull();
     expect(data.llmsTxtFile).toBeNull();
+  });
 
-    // `grouped` existe siempre con sus seis cubos vacíos: el JSX itera sobre
-    // ellos sin comprobar, así que un `undefined` aquí sería una pantalla rota.
-    expect(Object.values(data.grouped).every((list) => list.length === 0)).toBe(true);
+  /**
+   * La cobertura se fue a Páginas citadas (SEARCH-SEO-1 Fase 1b), pero el
+   * llms.txt generado sigue saliendo de sus páginas verificadas: el último mapa
+   * es lo único de la cobertura que esta pantalla todavía lee.
+   */
+  it("el llms.txt se construye con el último mapa de cobertura", async () => {
+    const data = await load({
+      scan_runs: [{ data: { id: RUN_ID, finished_at: null, created_at: "2026-08-11T08:00:00.000Z" } }, { data: [] }],
+      generated_solutions: { data: { sanitized_content: coverageMapJson() } }
+    });
+
+    expect(data.llmsTxtFile).not.toBeNull();
   });
 
   /** Los pasos de publicación se derivan del dominio, no de datos de escaneo. */

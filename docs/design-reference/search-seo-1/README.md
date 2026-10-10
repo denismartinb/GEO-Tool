@@ -25,3 +25,9 @@ aprobada el 2026-10-10 («si perfecto»). Se construyó sin la nota proyectada
 el estado «auditoría en marcha». En escritorio, si «Indicadores clave» deja
 hueco, los motores suben a él y la tarjeta va a la derecha del desglose, a
 petición del fundador (log §271).
+
+**Fase 1b (log §274).** La vista Auditoría SEO se construyó con los checks de
+hoy: «Salud técnica» en vez de Salud SEO, cuatro áreas, sin Core Web Vitals,
+velocidad ni móvil (fase 2), sin botón de Search Console (fase 3) y sin puntos
+por fila. El acceso de bots de IA va en la columna lateral, junto a las
+páginas revisadas.

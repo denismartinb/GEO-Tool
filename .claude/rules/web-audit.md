@@ -20,6 +20,16 @@ paths:
 > nombra con `lib/web-audit/issue-labels.ts`. Un cálculo o un nombre propio
 > en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
 > mismo problema.
+>
+> **Desde la Fase 1b (log §274) la pantalla es sólo la parte técnica.** La
+> nota se llama «Salud técnica» y no «Salud SEO» hasta que la fase 2 mida
+> velocidad, móvil y los checks nuevos. Las áreas y la lista de «Qué arreglar»
+> salen de `lib/web-audit/seo-audit-view.ts` sobre `buildTechnicalIssuesReport`;
+> cada check vive en una sola área, y un área sin nada medido no se pinta. El
+> mapa de cobertura (Contenido / Implementado, Evolución, Historial) **vive en
+> Páginas citadas**, con su loader propio (`loadCoverageSectionData`) y el
+> `WebAuditProvider` y `WebAuditDriveNotice` movidos a `citations/`. Las reglas
+> de cobertura de abajo siguen valiendo; sólo cambió dónde se pintan.
 
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los
@@ -168,9 +178,11 @@ Consecuencias, y son reglas:
 
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 
-`page.tsx` orquesta datos; los catorce componentes que pintan filas, anillos,
-tarjetas y el gráfico de tendencia viven en
-`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83).
+`page.tsx` orquesta datos; los componentes que pintan filas, la nota, las
+áreas y la lista de «Qué arreglar» viven en
+`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83). Los de
+cobertura (tiles, sección y gráfico de tendencia) viven desde §274 en
+`citations/_components/`.
 Componente nuevo de esta pantalla → ahí.
 
 **Cada uno de esos módulos tiene tests de render, y un componente nuevo también

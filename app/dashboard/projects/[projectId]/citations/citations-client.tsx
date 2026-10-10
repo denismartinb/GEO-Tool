@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
 import { FormattedResponse } from "@/components/ui/formatted-response";
@@ -495,7 +495,8 @@ export function CitationsClient({
   totalCited,
   yours,
   citationRateAnyDomain,
-  brandLabel
+  brandLabel,
+  coverageSection
 }: {
   citationRows: CitationRow[];
   opportunityGroups: OpportunityDomainGroup[];
@@ -506,6 +507,8 @@ export function CitationsClient({
   yours: number;
   citationRateAnyDomain: number | null;
   brandLabel: string;
+  /** «Tu contenido frente a lo que cita la IA», server-rendered (SEARCH-SEO-1 Fase 1b). */
+  coverageSection?: ReactNode;
 }) {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"all" | CitationRow["category"]>("all");
@@ -602,6 +605,8 @@ export function CitationsClient({
         <ImpactBar breakdown={impactBreakdown} brandLabel={brandLabel} />
         <SourceDonut breakdown={sourceTypeBreakdown} />
       </div>
+
+      {coverageSection}
 
       <div className="cit2-cols">
         <div className="cit2-rail">

@@ -60,14 +60,27 @@ describe("IssueRow", () => {
     expect(html).not.toContain("páginas");
   });
 
-  it("no inventa una ganancia de puntos cuando la comprobación no tiene peso", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: null })} />);
-    expect(html).not.toContain("pt");
+  /**
+   * SEARCH-SEO-1 Fase 1b: la fila ya no enseña la ganancia en puntos. El
+   * fundador quitó la nota proyectada de la tarjeta de Visión general y el
+   * diseño aprobado no lleva puntos por fila.
+   */
+  it("no enseña puntos, haya ganancia o no", () => {
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: 6 })} />)).not.toContain(" pt");
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: null })} />)).not.toContain(" pt");
   });
 
-  it("muestra la ganancia con un solo decimal cuando sí la hay", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: 6 })} />);
-    expect(html).toContain("6,0 pt");
+  it("explica por qué importa y dice a quién afecta", () => {
+    const html = renderToStaticMarkup(<IssueRow issue={issue({ check: "noindex" })} />);
+    expect(html).toContain("Por qué importa");
+    expect(html).toContain("Google no muestra la página");
+    expect(html).toContain("GOOGLE");
+    expect(html).toContain("IA");
+  });
+
+  it("nombra la gravedad con las mismas palabras que la tarjeta de Visión general", () => {
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "warning" })} />)).toContain("Aviso");
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "improvement" })} />)).toContain("Mejora");
   });
 
   it("lleva la guía concreta de la comprobación, no un texto genérico", () => {
