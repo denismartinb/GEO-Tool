@@ -70,22 +70,33 @@ describe("D3 · first action", () => {
   });
 });
 
-describe("D5 · two days left", () => {
-  it("goes out when roughly two days of trial remain", () => {
-    // 7 days = 168 h; 120 h in leaves 48 h.
-    expect(decideTrialEmail(account(120, WEDNESDAY), sentKinds("trial_d1", "trial_d3"), WEDNESDAY)).toEqual({
+describe("D5 · last notice, on the trial's last day (§254)", () => {
+  it("goes out when about one day of trial remains", () => {
+    // 7 days = 168 h; 144 h in leaves 24 h.
+    expect(decideTrialEmail(account(144, WEDNESDAY), sentKinds("trial_d1", "trial_d3"), WEDNESDAY)).toEqual({
       kind: "trial_d5"
     });
   });
 
-  it("ignores the 48 h spacing and Mondays: its date will not wait", () => {
-    const recent: SentState = { kinds: new Set(["trial_d3"]), lastLifecycleSentAt: new Date(MONDAY.getTime() - 20 * HOUR) };
-    expect(decideTrialEmail(account(120, MONDAY), recent, MONDAY)).toEqual({ kind: "trial_d5" });
+  it("covers the whole 24 h window, so the daily cron always lands in it once", () => {
+    // 36 h left is the first hour in; just over 12 h left the last.
+    expect(decideTrialEmail(account(132, WEDNESDAY), sentKinds("trial_d3"), WEDNESDAY)).toEqual({ kind: "trial_d5" });
+    expect(decideTrialEmail(account(155.5, WEDNESDAY), sentKinds("trial_d3"), WEDNESDAY)).toEqual({ kind: "trial_d5" });
   });
 
-  it("is sent once, and not in the last day", () => {
-    expect(decideTrialEmail(account(120, WEDNESDAY), sentKinds("trial_d5"), WEDNESDAY)).toBeNull();
-    expect(decideTrialEmail(account(150, WEDNESDAY), sentKinds("trial_d3"), WEDNESDAY)).toBeNull();
+  it("no longer goes out two days before the end", () => {
+    // 120 h in leaves 48 h: that was the old window (36–60 h left).
+    expect(decideTrialEmail(account(120, WEDNESDAY), sentKinds("trial_d1", "trial_d3"), WEDNESDAY)).toBeNull();
+  });
+
+  it("ignores the 48 h spacing and Mondays: its date will not wait", () => {
+    const recent: SentState = { kinds: new Set(["trial_d3"]), lastLifecycleSentAt: new Date(MONDAY.getTime() - 20 * HOUR) };
+    expect(decideTrialEmail(account(144, MONDAY), recent, MONDAY)).toEqual({ kind: "trial_d5" });
+  });
+
+  it("is sent once, and not in the last 12 hours", () => {
+    expect(decideTrialEmail(account(144, WEDNESDAY), sentKinds("trial_d5"), WEDNESDAY)).toBeNull();
+    expect(decideTrialEmail(account(160, WEDNESDAY), sentKinds("trial_d3"), WEDNESDAY)).toBeNull();
   });
 });
 
@@ -97,7 +108,7 @@ describe("global silences", () => {
     ["an account with no trial", { trialEndsAt: null }]
   ] as const)("sends nothing to %s", (_label, overrides) => {
     expect(decideTrialEmail(account(26, WEDNESDAY, overrides), NOTHING_SENT, WEDNESDAY)).toBeNull();
-    expect(decideTrialEmail(account(120, WEDNESDAY, overrides), NOTHING_SENT, WEDNESDAY)).toBeNull();
+    expect(decideTrialEmail(account(144, WEDNESDAY, overrides), NOTHING_SENT, WEDNESDAY)).toBeNull();
   });
 
   it("sends nothing once the trial is over — that is Fase D", () => {

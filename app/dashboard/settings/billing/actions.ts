@@ -310,7 +310,7 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   }
 
   // FOUNDER-PRICE-1: the founder coupon only when getActivePromoPlanIds says
-  // so — the same source /pricing, the console and the emails read, so the
+  // so — the same source /precios, the console and the emails read, so the
   // shown price and the charged price cannot drift apart.
   const promoCouponId = (await getActivePromoPlanIds()).includes(planId) ? getPromoCouponIdForPlan(planId) : null;
 
@@ -328,8 +328,12 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
     automatic_tax: { enabled: true },
     subscription_data: { metadata: { user_id: user.id, plan_id: planId } },
     metadata: { user_id: user.id, plan_id: planId },
-    success_url: `${siteUrl}/dashboard/settings/billing?checkout=success`,
-    cancel_url: `${siteUrl}/dashboard/settings/billing?checkout=cancelled`
+    // CHECKOUT-RETURN-1 (log §255): straight to the page that reads
+    // `?checkout=`, not through /dashboard/settings/billing — that route's
+    // redirect drops the query, so the success notice, the plan poller and the
+    // purchase conversion never ran after a real payment.
+    success_url: `${siteUrl}/dashboard/settings?checkout=success#plan`,
+    cancel_url: `${siteUrl}/dashboard/settings?checkout=cancelled#plan`
   });
 
   const isMissingCustomerError = (error: unknown): boolean => {

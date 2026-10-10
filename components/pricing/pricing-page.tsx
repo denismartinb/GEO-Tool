@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { FreeReportPriceLine } from "@/components/free-report/free-report-offers";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { supportMailto } from "@/lib/support";
@@ -145,7 +146,7 @@ function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
 }
 
 /**
- * `/pricing` es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
+ * `/precios` es un **componente de servidor** (PRELAUNCH-HARDENING-1 Fase V,
  * V4), mismo caso que la landing: era cliente entera por el acordeón de
  * preguntas, que ahora vive aislado en `PricingFaq`.
  *
@@ -164,18 +165,18 @@ export async function PricingPage() {
   return (
     <div className="lp">
       {/* HOME-SEO-AUDIT-1 (fundador, 2026-08-25): se retira este banner
-          propio de `/pricing`. Desde PROMO-EVERYWHERE-1 (log §30 más abajo,
+          propio de `/precios`. Desde PROMO-EVERYWHERE-1 (log §30 más abajo,
           §159 en el mapa de zonas de CLAUDE.md) `PublicHeader` ya monta la
           tira de promoción común (`.lp-promo`) en TODAS las superficies
           públicas, incluida ésta. Con el cupón de Stripe real configurado en
-          el entorno, las dos se pintaban a la vez sobre `/pricing` — la común
+          el entorno, las dos se pintaban a la vez sobre `/precios` — la común
           y ésta, ambas anunciando el mismo descuento con textos distintos.
           El fundador la vio duplicada en el preview y pidió quitar ésta,
           quedándose con la común (`docs/brand/design-decisions-log.md` §31,
           "importante mantener la tira comun en /precios"). */}
 
       {/* NAV */}
-      <PublicHeader activeHref="/pricing" />
+      <PublicHeader activeHref="/precios" />
 
       {/* HERO */}
       <header className="lp-hero price-hero">
@@ -220,6 +221,8 @@ export async function PricingPage() {
           <p className="price-tax-note">
             Todos los planes empiezan con 7 días de Pro gratis, sin tarjeta. Precios con IVA incluido.
           </p>
+          {/* FREE-REPORT-2 (log §252): one quiet line for whoever still doubts. */}
+          <FreeReportPriceLine />
         </div>
       </section>
 
@@ -284,13 +287,13 @@ export async function PricingPage() {
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/#como">Cómo funciona</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>

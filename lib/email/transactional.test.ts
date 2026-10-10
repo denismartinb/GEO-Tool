@@ -458,6 +458,6 @@ describe("bienvenida", () => {
     process.env.LIFECYCLE_EMAILS_ENABLED = "true";
     process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
     await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
-    expect(lastPayload().html).toContain("Te avisaremos 2 días antes");
+    expect(lastPayload().html).toContain("Te avisaremos el día antes");
   });
 });

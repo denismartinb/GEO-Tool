@@ -11,6 +11,7 @@ import { type createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { sanitizeField } from "@/lib/text/sanitize";
 import {
+  carryForwardCoverage,
   parseCoverageMap,
   NOT_COVERED_NOTE,
   COULD_NOT_VERIFY_NOTE,
@@ -489,6 +490,57 @@ export async function auditDomainCoverageCore({
       // redirect-resolution / off-domain. No network, no Gemini spend.
       logCachedCoverageDiag(projectId, scanId, existingRow.raw_content, existing!);
       return { success: true, coverage: existing!, cached: true, status: "completed", totalPrompts: prompts.length };
+    }
+
+    // COVERAGE-WEEKLY-1 (log §253): the automatic post-scan audit reuses a
+    // recent completed map instead of searching the own site again — what it
+    // measures changes when the customer publishes, not with every scan.
+    // Attached to THIS scan as its own row, so every reader that keys
+    // coverage by scan (run audit status, the report, the citation window)
+    // keeps working unchanged. A human-triggered campaign never carries.
+    if (trigger === "automatic" && existingRow?.status === "completed" && existing && !existingMatchesScan) {
+      const carried = carryForwardCoverage({
+        map: existing,
+        activePromptIds: prompts.map((p) => p.id),
+        scanId,
+        now: Date.now()
+      });
+      if (carried) {
+        const { error: carryError } = await withTimeout(
+          service.from("generated_solutions").insert({
+            recommendation_id: null,
+            project_id: projectId,
+            rule_id: RULE_ID,
+            generation_type: GENERATION_TYPE,
+            status: "completed",
+            raw_content: existingRow.raw_content,
+            sanitized_content: JSON.stringify(carried),
+            is_sanitized: true,
+            sanitized_at: carried.generatedAt,
+            provider: "gemini",
+            evidence_json: {
+              scan_id: scanId,
+              prompt_ids: carried.topics.map((t) => t.promptId),
+              topics: carried.topics.map((t) => t.topic),
+              carried_from_scan_id: existing.scanId,
+              verified_at: carried.verifiedAt
+            }
+          }),
+          "persist_carried_coverage"
+        );
+        if (!carryError) {
+          console.info(`${LOG_PREFIX} carried_forward`, {
+            project_id: projectId,
+            scan_id: scanId,
+            from_scan_id: existing.scanId,
+            verified_at: carried.verifiedAt
+          });
+          return { success: true, coverage: carried, cached: true, status: "completed", totalPrompts: prompts.length };
+        }
+        // Fall through to a real campaign: spending Gemini calls is the
+        // recoverable mistake, leaving this scan with no coverage is not.
+        console.error(`${LOG_PREFIX} carry_persist_failed`, { project_id: projectId, scan_id: scanId });
+      }
     }
 
     // Resuming an in-progress campaign for THIS scan skips the rate-limit

@@ -96,7 +96,7 @@ describe("integridad de enlaces internos en contenido publicado", () => {
   });
 
   it("el set de rutas válidas incluye las rutas base conocidas", () => {
-    for (const route of ["/blog", "/glosario", "/docs", "/geo", "/pricing", "/comparativas"]) {
+    for (const route of ["/blog", "/glosario", "/docs", "/geo", "/precios", "/comparativas"]) {
       expect(VALID_ROUTES.has(route), `${route} debería existir como ruta real`).toBe(true);
     }
   });

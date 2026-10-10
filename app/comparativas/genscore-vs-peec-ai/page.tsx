@@ -42,18 +42,17 @@ export default function GenscoreVsPeecAiPage() {
       {itemListSchema()}
       <h1 className="lp-h2">GenScore vs Peec AI</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Datos de Peec AI consultados el {PEEC_RESEARCH_DATE} en fuentes públicas de terceros — varias
-        cifras exactas (motores incluidos por defecto, coste de add-ons, duración del trial) no se
-        pudieron corroborar entre fuentes independientes y no se publican aquí como hechos. Confírmalas
-        en peec.ai antes de decidir.
+        Datos de Peec AI revisados el {PEEC_RESEARCH_DATE} en su propia web. Su página de precios no
+        muestra importes: el precio de entrada procede de un tercero y es orientativo. Confírmalo en
+        peec.ai antes de decidir.
       </p>
       <div className="blog-body">
         <KeyTakeaway label="En dos frases">
-          Peec AI no cobra un extra por lanzar tus prompts en distintos idiomas o países, y ya incluye
-          usuarios ilimitados en su plan de entrada. GenScore no desglosa por país, pero incluye los tres
-          motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por añadirlos, y
-          convierte lo que detecta en contenido generado, no solo en una sugerencia priorizada de qué
-          hacer.
+          Peec AI incluye usuarios ilimitados en todos sus planes de autoservicio y mide varios países e
+          idiomas desde su plan Pro, pero te hace elegir tres modelos y deja Claude para Enterprise.
+          GenScore no desglosa por país, pero incluye los tres motores que de verdad importan hoy
+          (Gemini, Claude, ChatGPT) sin elegir ni pagar complementos, y convierte lo que detecta en
+          contenido generado, no solo en una sugerencia priorizada de qué hacer.
         </KeyTakeaway>
 
         <h2>Comparativa</h2>
@@ -93,9 +92,9 @@ export default function GenscoreVsPeecAiPage() {
         </CompareTable>
 
         <Verdict title="Cuándo elegir Peec AI" badge="Cuándo elegir el competidor">
-          Si monitorizas marca en varios mercados o idiomas a la vez y no quieres pagar un extra por
-          cada uno, o si tu equipo es grande y valoras tener usuarios ilimitados ya en el plan de
-          entrada, Peec AI cubre ese caso mejor que GenScore hoy.
+          Si monitorizas la misma marca en dos o tres mercados o idiomas a la vez (desde su plan Pro), o
+          si tu equipo es grande y valoras tener usuarios ilimitados en todos los planes, Peec AI cubre
+          ese caso mejor que GenScore hoy.
         </Verdict>
 
         <Verdict title="Cuándo elegir GenScore" badge="Cuándo elegir GenScore">
@@ -108,16 +107,27 @@ export default function GenscoreVsPeecAiPage() {
         <h2>Metodología</h2>
         <p>
           Los datos de GenScore vienen directamente de los planes reales del producto (la misma fuente
-          que usa la página de Precios). Los datos de Peec AI proceden de una búsqueda agregada de
-          reseñas y páginas de precios públicas de terceros — su propia página de precios no pudo
-          consultarse de forma directa, así que solo se publican aquí las cifras y afirmaciones que dos
-          o más fuentes independientes corroboraron. Si detectas un dato desactualizado o inexacto,
-          dínoslo y lo corregimos.
+          que usa la página de Precios). Los de Peec AI —modelos, países e idiomas, usuarios— proceden
+          de su propia{" "}
+          <a href="https://www.peec.ai/pricing" rel="nofollow noopener noreferrer" target="_blank">
+            página de precios
+          </a>
+          , y su función «Actions», de{" "}
+          <a href="https://peec.ai/blog/introducing-actions" rel="nofollow noopener noreferrer" target="_blank">
+            su blog
+          </a>
+          , revisados el 9 de octubre de 2026. Esa página no muestra importes, así que el precio de
+          entrada es de{" "}
+          <a href="https://pricingsaas.com/companies/peec" rel="nofollow noopener noreferrer" target="_blank">
+            PricingSaaS
+          </a>{" "}
+          (último visto el 14 de septiembre de 2026, con facturación anual) y es orientativo. Si
+          detectas un dato desactualizado o inexacto, dínoslo y lo corregimos.
         </p>
 
         <ArticleCta
           title="¿Cuánto te cuesta de verdad no saberlo?"
-          text="Prueba Pro 7 días gratis y compara tu visibilidad real, sin pagar add-ons por idioma. Sin tarjeta."
+          text="Prueba Pro 7 días gratis y compara tu visibilidad real, sin pagar complementos por motor. Sin tarjeta."
         />
       </div>
     </BlogPageShell>

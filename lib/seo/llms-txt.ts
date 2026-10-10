@@ -1,6 +1,7 @@
 import { BLOG_POSTS, BLOG_CLUSTERS } from "@/lib/blog/posts";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 import { DOCS_NAV } from "@/lib/docs/nav";
+import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
 import { SITE_URL } from "./metadata";
 
 /**
@@ -42,6 +43,16 @@ export const COMPARATIVAS = [
     path: "/comparativas/alternativas-a-otterly",
     title: "Alternativas a Otterly en 2026",
     note: "cinco alternativas ordenadas por el límite que te hace buscarlas, con lo que cada una no resuelve."
+  },
+  {
+    path: "/comparativas/profound-vs-peec-ai-vs-otterly",
+    title: "Profound vs Peec AI vs Otterly",
+    note: "comparativa neutral a tres, con fuentes fechadas en cada fila."
+  },
+  {
+    path: "/comparativas/alternativas-a-peec-ai",
+    title: "Alternativas a Peec AI en 2026",
+    note: "siete alternativas ordenadas por el límite que te hace buscarlas, con lo que cada una no resuelve."
   }
 ] as const;
 
@@ -55,21 +66,25 @@ export function buildLlmsTxt(): string {
   sections.push(
     `# GenScore
 
-> GenScore mide y mejora cómo aparece una marca en las respuestas de
-> asistentes de IA (ChatGPT, Gemini, Claude): GEO (Generative Engine
-> Optimization). Escanea prompts reales de tu categoría, calcula un GEO
-> Score compuesto (presencia, prominencia, cuota de voz y autoridad) y
-> genera recomendaciones concretas para mejorar.`
+> ${CANONICAL_DEFINITION} Escanea prompts reales de tu categoría y
+> calcula el GEO Score, una puntuación de 0 a 100 que resume si la IA
+> menciona la marca, con qué protagonismo, cómo sale frente a su
+> competencia, si cita su web como fuente y si esa web está técnicamente
+> preparada para ser citada. Después genera recomendaciones concretas
+> para mejorarlo.`
   );
 
   sections.push(
     `## Producto
 
 ${line("Qué es GenScore", "/que-es-genscore", "qué es el producto, qué mide y en qué se diferencia del SEO.")}
+${line("Quiénes somos", "/sobre-genscore", "quién hace GenScore, desde dónde, cómo mide y cómo contactar.")}
+${line("Estudios", "/estudios", "estudios de GenScore sobre búsqueda con IA en España: dato propio y recopilaciones con fuente.")}
 ${line("Qué es el GEO", "/geo", "guía visual de Generative Engine Optimization.")}
-${line("Precios", "/pricing", "planes Starter, Pro y Agencia, con 7 días de Pro gratis.")}
+${line("Precios", "/precios", "planes Starter, Pro y Agencia, con 7 días de Pro gratis.")}
 ${line("¿Aparece tu marca en ChatGPT?", "/gratis/aparece-mi-marca-en-chatgpt", "comprobación real y anónima contra ChatGPT, sin registro.")}
-${line("Prueba gratis", "/signup", "registro con 7 días de prueba de Pro.")}`
+${line("Prueba gratis", "/signup", "registro con 7 días de prueba de Pro.")}
+${line("Versión completa de este fichero", "/llms-full.txt", "el contenido clave del sitio en texto plano, en un solo documento.")}`
   );
 
   sections.push(

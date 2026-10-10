@@ -89,3 +89,13 @@ igual.
 - **Un tipo nuevo en `email_sends` necesita migración**: 0037 fija `kind` con
   un `check` (0038 lo amplió, §238). El test de `winback-schedule.test.ts`
   comprueba que la migración permite todos los tipos que se anotan.
+- **El último aviso de la prueba (`trial_d5`) sale el último día, 12–36 h
+  antes del final, y con escaneo lleva el informe** (§254). El informe del
+  correo sale de `buildReportModel` y cumple `.claude/rules/report.md`. Se
+  escapa todo lo que viene del escaneo, porque aquí no hay React. Si no se
+  puede cargar, el correo sale sin informe, nunca deja de salir. El proyecto
+  sale de la consulta por `owner_user_id` del destinatario: el cliente de
+  servicio no tiene RLS que lo proteja.
+- **Un enlace del correo a una página con sesión pasa por `/login?next=`**, y
+  `next` sólo se acepta tras `safeNextPath` (§254). Así quien no tiene la
+  sesión abierta aterriza donde pidió y no en el panel.

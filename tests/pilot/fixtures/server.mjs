@@ -85,7 +85,13 @@ const BLOG_SLUGS = [
   "geo-negocios-locales-servicios-profesionales",
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que",
-  "que-software-de-facturacion-recomienda-la-ia"
+  "que-software-de-facturacion-recomienda-la-ia",
+  // STUDY-HOME-1 (2026-10-09, log §251).
+  "de-buscar-a-preguntar",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro",
+  // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
+  "como-aparecer-en-gemini-y-vistas-creadas-con-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
@@ -95,6 +101,10 @@ const BLOG_SLUGS = [
 const PUBLIC_PAGES = new Map([
   ["/geo", "GEO — GenScore"],
   ["/que-es-genscore", "Qué es GenScore — GenScore"],
+  // GEO-SELF-1 Fase 1 (log §256).
+  ["/sobre-genscore", "Quiénes somos — GenScore"],
+  // GEO-SELF-1 Fase 4 (log §260).
+  ["/estudios", "Estudios — GenScore"],
   ["/privacidad", "Privacidad — GenScore"],
   ["/cookies", "Cookies — GenScore"],
   ["/terminos", "Términos — GenScore"],
@@ -104,6 +114,8 @@ const PUBLIC_PAGES = new Map([
   ["/comparativas/genscore-vs-peec-ai", "GenScore vs Peec AI — GenScore"],
   ["/comparativas/genscore-vs-profound", "GenScore vs Profound — GenScore"],
   ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — GenScore"],
+  ["/comparativas/profound-vs-peec-ai-vs-otterly", "Profound vs Peec AI vs Otterly — GenScore"],
+  ["/comparativas/alternativas-a-peec-ai", "Alternativas a Peec AI en 2026 — GenScore"],
   ["/comparativas/mejores-herramientas-geo-en-espanol", "Las mejores herramientas GEO en 2026 — GenScore"]
 ]);
 
@@ -772,7 +784,7 @@ function welcomeTourPopup() {
  */
 const MOBNAV_MARKUP = `<nav class="lp-mobnav" aria-label="Menú">
   <button type="button" class="lp-mobnav-close" aria-label="Cerrar menú">×</button>
-  <a href="/pricing">Precios</a>
+  <a href="/precios">Precios</a>
   <a href="/blog">Blog</a>
   <div class="lp-mobnav-ctas">
     <a class="lp-cta-soft" href="/login">Iniciar sesión</a>
@@ -826,7 +838,7 @@ ${overflow}
 }
 
 /**
- * `/pricing` (landing.spec.ts). Necesita tarjetas de plan reconocibles —el
+ * `/precios` (landing.spec.ts). Necesita tarjetas de plan reconocibles —el
  * `ContentExpectation` del journey mira `.price-card`— y el mismo cajón móvil,
  * porque las dos páginas comerciales comparten `MarketingMobileNav` y un fallo
  * en él sale en las dos.
@@ -842,7 +854,7 @@ function pricingPage() {
   return `<!doctype html>
 <html lang="es"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="canonical" href="${SITE_URL}/pricing">
+<link rel="canonical" href="${SITE_URL}/precios">
 <title>Precios — GenScore</title>
 <style>body{margin:0;background:#fff;color:#111;font-family:system-ui;padding:16px}${MOBNAV_STYLE}</style>
 </head><body>
@@ -976,7 +988,7 @@ const server = createServer((request, response) => {
     return;
   }
 
-  if (path === "/pricing") {
+  if (path === "/precios") {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
     response.end(pricingPage());
     return;

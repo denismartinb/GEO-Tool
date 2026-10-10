@@ -14,7 +14,7 @@ import { assertPageIsHealthy, captureInteraction, visitAsUser } from "../support
  * public page and is exactly what would surface a real bug if one of these
  * routes ever started bouncing a logged-in visitor to /login unexpectedly.
  *
- * Does NOT cover `/` or `/pricing`: both are client components that cannot
+ * Does NOT cover `/` or `/precios`: both are client components that cannot
  * export per-page `metadata` yet (see docs/launch-plan.md, Fase 7b ledger) —
  * add them here once a future phase gives them their own canonical.
  */
@@ -66,7 +66,13 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // GROWTH-2, N5 (2026-09-19).
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
   // SECTOR-STUDY-1 (2026-10-09, log §246).
-  "que-software-de-facturacion-recomienda-la-ia": "sectores"
+  "que-software-de-facturacion-recomienda-la-ia": "sectores",
+  // STUDY-HOME-1 (2026-10-09, log §251).
+  "de-buscar-a-preguntar": "fundamentos",
+  // W5 (2026-10-09).
+  "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks",
+  // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
+  "como-aparecer-en-gemini-y-vistas-creadas-con-ia": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
@@ -159,6 +165,20 @@ test("/que-es-genscore renders and has its own canonical", async ({ page }, test
   await assertCanonical(page, "/que-es-genscore");
 });
 
+// GEO-SELF-1 Fase 1 (log §256): la página «Quiénes somos».
+test("/sobre-genscore renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/sobre-genscore", "sobre-genscore");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/sobre-genscore");
+});
+
+// GEO-SELF-1 Fase 4 (log §260): el hub de estudios.
+test("/estudios renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/estudios", "estudios");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/estudios");
+});
+
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/geo", "geo");
   assertPageIsHealthy(findings);
@@ -178,8 +198,8 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
  */
 test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
-    describedAs: "el formulario de dominio y la explicación de qué obtiene el visitante",
-    anyOf: [{ selector: ".lp-hero-form" }]
+    describedAs: "el formulario de dominio y el resultado de ejemplo",
+    anyOf: [{ selector: ".fc-hero-form" }, { selector: ".fcp-example" }]
   });
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/gratis/aparece-mi-marca-en-chatgpt");
@@ -310,6 +330,29 @@ test("/comparativas/alternativas-a-otterly renders and has its own canonical", a
   );
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/comparativas/alternativas-a-otterly");
+});
+
+// GEO-SELF-1 Fase 2 (log §258).
+test("/comparativas/profound-vs-peec-ai-vs-otterly renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/profound-vs-peec-ai-vs-otterly",
+    "comparativas-profound-vs-peec-ai-vs-otterly"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/profound-vs-peec-ai-vs-otterly");
+});
+
+test("/comparativas/alternativas-a-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/alternativas-a-peec-ai",
+    "comparativas-alternativas-a-peec-ai"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/alternativas-a-peec-ai");
 });
 
 test("/comparativas renders and has its own canonical", async ({ page }, testInfo) => {

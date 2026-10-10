@@ -14,7 +14,7 @@ import type { Metadata } from "next";
  *    se fusiona campo a campo.** Declarar `openGraph: { title, description }`
  *    en una página le quita `og:image`, `og:site_name` y `og:locale` — sin
  *    ningún error, y con el resultado de que la tarjeta al compartir queda peor
- *    que antes de "mejorarla". Pasó exactamente eso en la home y en `/pricing`
+ *    que antes de "mejorarla". Pasó exactamente eso en la home y en `/precios`
  *    (SEO-POS-1 T-a, corregido aquí). Por eso este helper siempre emite el
  *    objeto completo: nadie debería tener que acordarse de esa regla otra vez.
  */

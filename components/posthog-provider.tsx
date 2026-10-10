@@ -14,7 +14,7 @@ import type { PostHog } from "posthog-js";
  * It used to be a static top-level import in a component mounted by the root
  * layout, which put the whole SDK (~225 KB of `dist/array.js`) into the shared
  * client chunk of every page — including `/`, `/blog/**`, `/docs/**` and
- * `/pricing`, the surfaces GROWTH-2 exists to rank. Analytics has no business
+ * `/precios`, the surfaces GROWTH-2 exists to rank. Analytics has no business
  * competing with first paint on a marketing page: nothing here needs to run
  * before the page is interactive, and the pageview capture already happened in
  * an effect.
