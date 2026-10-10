@@ -23147,3 +23147,26 @@ contando «Ferrús» con tilde), no sobre el resumen de la herramienta.
 
 **Pendiente.** Nada roto conocido. Las cifras son una foto del 2026-10-10;
 si se reescanea, la tabla se actualiza con `dateUpdated`.
+
+## 267. CREATE-PROJECT-RACE-1: una alta duplicada por carrera se lee como «dominio ya activo», no como fallo (2026-10-08)
+
+**Qué pasaba.** `createProjectCore` comprueba si el dominio ya existe (lectura) y
+después inserta. Las dos operaciones no son atómicas: un doble clic o dos
+pestañas pasan ambas la lectura, y la segunda choca con la restricción
+`projects_owner_domain_country_lang_uniq` (migración 0001). El proyecto no se
+duplicaba —la base lo impedía—, pero el usuario veía «no se pudo crear el
+proyecto, inténtalo de nuevo» cuando el proyecto sí existía.
+
+**Decisión.** Un error de insert con SQLSTATE `23505` devuelve
+`already_active`, la misma variante que ya usa el camino de lectura. La acción
+no cambia: su tabla de traducción ya cubre esa variante. Cualquier otro código
+sigue siendo `insert_failed`. No se añade token de idempotencia ni migración.
+
+**Pendiente.** La segunda petición aterriza en `/dashboard/projects/new` con el
+aviso de «ya existe» en vez de en el proyecto recién creado; redirigir al
+existente sería mejor, pero cambia la acción y no es de esta fase. Los trabajos
+huérfanos (escaneo creado y proyecto no) no se pueden producir por este
+camino: el escaneo se crea después del insert del proyecto.
+
+**Trazabilidad.** `lib/projects/create-project.ts`,
+`lib/projects/create-project.test.ts`.
