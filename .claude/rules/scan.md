@@ -105,6 +105,18 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/adr/0037`). A lease must also be **bounded** — a stale job with no
   attempts left is failed, not reclaimed again, or one poison job consumes
   every pass forever.
+- **La cadena de `/api/scan/continue` es un acelerador; el motor es el cron
+  `/api/cron/scan-continue`, cada 5 minutos.** Vercel corta con 508 una cadena
+  de auto-llamadas a los pocos saltos aunque la URL esté bien: el 2026-10-10
+  la del barrido de las 06:00 murió hacia el quinto salto y el run esperó once
+  minutos al vigilante, que sólo reanuda `SCAN_RESUME_CAP` veces
+  (`docs/brand/design-decisions-log.md` §262). El pase de `lib/scan/drain.ts`
+  re-despacha todo run joven, parado al menos lo que dura un lease y con
+  trabajo reclamable, y **no escribe nada**: ni marca de reanudación, ni
+  `updated_at`, ni jobs. Así un re-despacho que no avanza deja el run igual de
+  parado y el camino de reanudar/fallar del vigilante sigue viéndolo. Si se le
+  añade una escritura, ese contrato se rompe y un run muerto puede no fallar
+  nunca. Lo vigila `vercel-crons.test.ts`.
 - **Never let a browser be the only thing driving a scan.** Work that continues
   after a response is sent must be dispatched server-side; a client-side loop
   is an accelerator, never the engine. A phone that locks its screen suspends
@@ -138,8 +150,9 @@ worse than no rule, because a future session will obey it anyway.
   auditoría el 2026-10-09, `docs/brand/design-decisions-log.md` §261). Ningún
   trabajo puede depender de que una cadena así complete: el motor tiene que
   ser algo que arranque desde cero (un cron), y la cadena, un acelerador. La
-  auditoría ya va así; si la cadena de `/api/scan/continue` resulta tener el
-  mismo tope, le toca lo mismo (pendiente, §261).
+  auditoría ya va así, y la cadena de `/api/scan/continue` también, desde que
+  se confirmó el mismo tope (§262, regla de arriba). Queda la del barrido
+  diario (`/api/cron/sweep-continue`), sin 508 visto todavía.
 - **El barrido tiene sus propios fallos, y también tienen que llegar al
   operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
   y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como

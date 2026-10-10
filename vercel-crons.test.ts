@@ -59,6 +59,14 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     // 09:45 Madrid in summer / 08:45 in winter: a morning inbox, and off the
     // round hour on purpose (Vercel crons on :00 queue behind everyone else's).
     why: "trial lifecycle emails D1/D3/D5 — LIFECYCLE-TRIAL-1, log §233"
+  },
+  {
+    path: "/api/cron/scan-continue",
+    schedule: "*/5 * * * *",
+    // A cron firing is what starts a fresh chain: Vercel cuts a scan's own
+    // chain of self-calls with 508 after a few hops (log §261), so without
+    // this a run waits for the 15-minute watchdog and its three resumes.
+    why: "re-dispatch stalled scan runs — SCAN-CRON-DRAIN-1, log §262"
   }
 ];
 

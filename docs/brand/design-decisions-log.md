@@ -22874,3 +22874,56 @@ cron con una cadena en curso no duplica auditorías.
   reanudaciones (§227, §228).
 - **Fuera de alcance:** sustituir las auto-llamadas por una cola de Vercel.
   Más limpio, obra mayor, no hace falta todavía.
+
+---
+
+## 262. SCAN-CRON-DRAIN-1: un cron cada 5 minutos continúa los escaneos que la cadena de auto-llamadas deja a medias (2026-10-10)
+
+**Qué se vio.** En el barrido de las 06:00 UTC del 2026-10-10, la cadena de
+`/api/scan/continue` de un run de 15 preguntas recibió un 508 a las 06:04,
+hacia el quinto salto, con la URL ya limpia (`https://www.genscore.es/api/scan/continue`).
+Es el mismo corte por detección de bucles que AUDIT-CRON-DRAIN-1 (§261)
+encontró en la cadena de la auditoría: no lo causa la barra doble de §241. El
+vigilante retomó el run a las 06:15 (reanudación 1 de 3) y el escaneo terminó
+hacia las 06:17. Hoy sólo costó 11 minutos. Pero el vigilante reanuda como
+mucho `SCAN_RESUME_CAP` (3) veces, así que un proyecto que necesite más
+saltos de los que caben en cuatro cadenas acabaría fallando con trabajo
+pendiente. El fundador eligió «Abrir PR» en la tarjeta de decisión del hilo
+«Producto a prueba de fallos».
+
+**Qué se decidió.** Una ruta nueva, `/api/cron/scan-continue`, cada 5 minutos
+(`vercel.json`). La lógica está en `lib/scan/drain.ts` y cada pase hace esto:
+
+- Lee los runs `pending`/`running` de menos de `SCAN_RESUME_MAX_RUN_AGE_HOURS`
+  (6 h) con `updated_at` de hace al menos un lease (90 s).
+- Se queda con los que tienen trabajo que el ejecutor puede reclamar: un job
+  `pending`, o `running` con el lease vencido.
+- Re-despacha hasta 5, del más parado al menos. Los demás siguen siendo
+  elegibles en el pase siguiente.
+
+Un disparo de cron empieza una cadena nueva, que es justo lo que la cadena
+cortada ya no puede hacer.
+
+**Lo que el pase NO hace, a propósito.** No escribe nada: ni marca de
+reanudación, ni `updated_at`, ni toca jobs. Si su despacho avanza, el ejecutor
+actualiza `updated_at` como siempre. Si no avanza, el run sigue igual de
+parado y el vigilante ve exactamente lo mismo que antes de esta fase, con sus
+reanudaciones y su fallo con aviso. Escribir aquí haría que un run muerto
+pareciera vivo y no fallara nunca. Un doble despacho (este pase más una cadena
+viva o más el vigilante) es seguro porque la reclamación de lotes es atómica
+(ADR 0037). Tampoco depende de `CRON_SCANS_ENABLED`, por la misma razón que el
+vigilante: no inicia escaneos, sólo continúa los que ya existen.
+
+**Coste.** Unas 288 invocaciones al día, casi todas dos lecturas sin
+despacho. Ninguna llamada a un LLM que el escaneo no fuera a hacer de todos
+modos.
+
+**Pendiente.**
+- La cadena del barrido diario (`/api/cron/weekly-scans` →
+  `/api/cron/sweep-continue`) también son auto-llamadas y tendrá el mismo
+  tope cuando haya más proyectos recurrentes que los que caben en unos pocos
+  saltos. Hoy no se ha visto un 508 ahí. Si aparece, el remedio es el mismo:
+  que un cron, y no la cadena, sea el motor.
+- Ese mismo 2026-10-10 todas las extracciones de OpenAI devolvieron 429 desde
+  las 06:00 UTC. Es un tema de cuenta del proveedor y no de esta fase: avisado
+  al fundador.
