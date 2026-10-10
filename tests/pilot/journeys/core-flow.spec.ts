@@ -271,90 +271,56 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     `/dashboard/projects/${id}/web-audit`,
     "web-audit",
     {
-      // The tabs only exist once `summary` does — i.e. once the project has a
-      // real coverage audit. Anchoring here is exactly what would have turned
-      // the 2026-08-02 false PASS into a loud failure: every capture that day
-      // showed the "Todavía no has auditado tu web" card instead of these.
-      describedAs: "las pestañas de la auditoría (Problemas · Correcto · Páginas)",
-      anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas técnicos/i }]
+      // «Qué arreglar» only exists once a technical audit does. Anchoring here
+      // is what turns the 2026-08-02 false PASS (every capture showed the
+      // "Todavía no has auditado tu web" card) into a loud failure.
+      // SEARCH-SEO-1 Fase 1b replaced the Problemas/Correcto/Páginas tabs with
+      // one list behind a severity filter.
+      describedAs: "la lista «Qué arreglar» de la Auditoría SEO",
+      anyOf: [{ selector: ".sa-fixes" }, { text: /qué arreglar/i }]
     }
   );
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "web-audit");
 
-  // Explicit tab coverage, not left to the generic sweep's luck: the
-  // interaction explorer's per-screen budget (4 candidates) is spent by
-  // nav/notifications/InfoTip/the already-active first tab before it ever
-  // reaches Correcto or Páginas — confirmed empirically on this PR's own
-  // pilot run (2026-08-03), whose only tab capture was "Problemas", the
-  // default. A full ux-pilot design-fidelity review flagged this exact
-  // gap: this PR's own new Correcto/Páginas tabs had never been seen with
-  // real data by anything. Real proof each tab actually switches content,
-  // not just that clicking it doesn't crash.
-  for (const label of ["Correcto", "Páginas"] as const) {
-    const tab = page.getByRole("tab", { name: label });
-    await tab.click();
-    await expect(tab, `clicking the "${label}" tab did not select it`).toHaveAttribute(
-      "aria-selected",
-      "true"
-    );
-    await expect(
-      page.locator('[role="tabpanel"]:not([hidden])'),
-      `"${label}" tab panel never became visible`
-    ).toBeVisible();
-    await captureInteraction(page, testInfo, `web-audit-tab-${label.toLowerCase()}`);
+  // The severity filter: real proof each option actually hides the rest, not
+  // left to the generic sweep's luck (its budget runs out before it).
+  const filters = page.locator(".sa-filter");
+  const filterCount = await filters.count();
+  for (let i = 1; i < filterCount; i++) {
+    const filter = filters.nth(i);
+    await filter.click();
+    await expect(filter, "clicking a severity filter did not select it").toHaveAttribute("aria-pressed", "true");
+    await captureInteraction(page, testInfo, `web-audit-filter-${i}`);
   }
+  if (filterCount > 0) await filters.first().click();
 
-  // Fase 3b's copyable fixes live INSIDE a page row, and those rows are
-  // native <details>, collapsed by default. Neither the sweep (its budget is
-  // spent long before) nor the tab captures above ever open one, so without
-  // this the whole feature has zero visual evidence — the Páginas capture
-  // just shows ten closed rows. The loop above leaves "Páginas" selected.
-  const firstPageRow = page.locator('[role="tabpanel"]:not([hidden]) details.wa-details').first();
+  // Fase 3b's copyable fixes live INSIDE a page row, a collapsed <details>.
+  // Without opening one the whole feature has zero visual evidence.
+  const firstPageRow = page.locator("details.sa-pg").first();
   if ((await firstPageRow.count()) > 0) {
     await firstPageRow.locator("summary").click();
     await expect(firstPageRow, "clicking a page row did not expand it").toHaveAttribute("open", "");
     await captureInteraction(page, testInfo, "web-audit-page-row-open");
   }
 
-  // Fase 3a's generated llms.txt has the SAME problem one tab over, and it
-  // bit for real: PR #319 came back PILOT PASS with web-audit ✅ on all three
-  // viewports while not one capture contained the feature the PR existed for
-  // — the issue rows in Problemas are collapsed <details> too, and nothing
-  // ever opened the llms.txt one. A green row for a screen whose new content
-  // was never on screen is exactly the 2026-08-02 empty-state incident in a
-  // different costume.
-  await page.getByRole("tab", { name: "Problemas" }).click();
-  const llmsIssue = page
-    .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
-    .filter({ hasText: "llms.txt" })
-    .first();
+  // Fase 3a's generated llms.txt lives in a collapsed issue row too, and it
+  // bit for real: PR #319 came back PILOT PASS while not one capture
+  // contained the feature the PR existed for.
+  const llmsIssue = page.locator("details.sa-iss").filter({ hasText: "llms.txt" }).first();
 
   if ((await llmsIssue.count()) > 0) {
     await llmsIssue.locator("summary").click();
     await expect(llmsIssue, "clicking the llms.txt issue did not expand it").toHaveAttribute("open", "");
-    // fullContent: the file block alone is taller than the fold, so a
-    // viewport capture verifies the generated llms.txt and silently omits the
-    // five publishing steps underneath — which are half of what this phase
-    // ships. Confirmed on the first run: 800px tall, steps nowhere in it.
+    // fullContent: the file block alone is taller than the fold.
     await captureInteraction(page, testInfo, "web-audit-llms-txt-open", { fullContent: true });
 
     // El distintivo vive en la fila CERRADA, así que una captura de la fila
-    // abierta no lo prueba. Se comprueba aquí, mecánicamente.
-    //
-    // Pero se comprueba CONDICIONADO a que la incidencia traiga solución de
-    // verdad, que no siempre ocurre: `buildLlmsTxt` devuelve null cuando
-    // ninguna campaña de cobertura ha verificado una página, porque se niega
-    // a emitir un fichero que sería sólo marcadores de posición. En un
-    // proyecto así la fila correctamente NO lleva distintivo.
-    //
-    // La versión anterior afirmaba "sabemos que trae solución" y sólo era
-    // cierto del proyecto que el piloto elegía entonces. Sin PILOT_PROJECT_ID
-    // el piloto autodescubre proyecto, así que el día que eligió uno con 0
-    // páginas verificadas (Xataka, 2026-08-05) la aserción falló describiendo
-    // como rota una pantalla que estaba bien. El invariante real es más
-    // estrecho y no depende del proyecto: **si dentro hay solución, la fila
-    // cerrada tiene que anunciarla**.
+    // abierta no lo prueba. Se comprueba CONDICIONADO a que la incidencia
+    // traiga solución de verdad: `buildLlmsTxt` devuelve null cuando ninguna
+    // campaña de cobertura ha verificado una página. El invariante real no
+    // depende del proyecto: **si dentro hay solución, la fila cerrada tiene
+    // que anunciarla**.
     const hasGeneratedFix = (await llmsIssue.locator(".wa2-llms").count()) > 0;
     if (hasGeneratedFix) {
       await expect(
@@ -372,14 +338,8 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     }
   }
 
-  // Misma incidencia estructural que las dos anteriores: los pasos del sitemap
-  // están dentro de un <details> colapsado, y sin abrirlo la fase no tiene
-  // ninguna evidencia visual. Es el tercer sitio hoy donde el mismo patrón
-  // habría pasado como verde sin enseñar nada.
-  const sitemapIssue = page
-    .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
-    .filter({ hasText: "sitemap.xml" })
-    .first();
+  // Same structural trap: the sitemap steps sit inside a collapsed row.
+  const sitemapIssue = page.locator("details.sa-iss").filter({ hasText: "sitemap.xml" }).first();
 
   if ((await sitemapIssue.count()) > 0) {
     await sitemapIssue.locator("summary").click();

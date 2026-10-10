@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { ISSUE_CHECK_META, issueScopeLabel } from "@/lib/web-audit/issue-labels";
+import { ISSUE_CHECK_META, ISSUE_SEVERITY_LABELS as SEVERITY_LABEL, issueScopeLabel } from "@/lib/web-audit/issue-labels";
 import type { IssueSeverity } from "@/lib/web-audit/issues";
 import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 
@@ -11,12 +11,6 @@ import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
  * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA
  * button from the approved mockup: each listed issue is the link instead.
  */
-
-const SEVERITY_LABEL: Record<IssueSeverity, [string, string]> = {
-  critical: ["Crítico", "Críticos"],
-  warning: ["Aviso", "Avisos"],
-  improvement: ["Mejora", "Mejoras"]
-};
 
 const SEVERITIES: IssueSeverity[] = ["critical", "warning", "improvement"];
 

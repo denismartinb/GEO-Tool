@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import { SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
 import { TrendChart, type TrendChartPoint } from "./trend-chart";
-import { formatDate } from "./format";
+import { formatDate } from "../../web-audit/_components/format";
 
 /**
  * PRELAUNCH-HARDENING-1 R7 — tests de render del gráfico de tendencia.

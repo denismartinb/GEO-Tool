@@ -1,5 +1,5 @@
 import { SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
-import { formatDate } from "./format";
+import { formatDate } from "../../web-audit/_components/format";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R7 — un trozo de la pantalla de Auditoría web.
@@ -92,8 +92,12 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
       <g fontSize={10} fill="var(--ink-4)" textAnchor="middle">
         {points.map((p, i) => {
           if (i > 0 && xLabels[i] === xLabels[i - 1]) return null;
+          // The outer labels anchor to their edge: centred, the last date ran
+          // past the viewBox and was clipped («6 oct 20…» on a phone).
+          const anchor = points.length > 1 && i === 0 ? "start" : points.length > 1 && i === points.length - 1 ? "end" : "middle";
+          const x = anchor === "start" ? xFor(i) - 6 : anchor === "end" ? W - 2 : xFor(i);
           return (
-            <text key={p.generatedAt} x={xFor(i)} y={H - 4}>
+            <text key={p.generatedAt} x={x} y={H - 4} textAnchor={anchor}>
               {xLabels[i]}
             </text>
           );

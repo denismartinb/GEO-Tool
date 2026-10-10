@@ -23665,3 +23665,90 @@ días de barridos.
 que el fundador decida) y el «15» del asistente, cuando el fundador lo pida.
 Los proyectos que ya existen conservan sus 15 preguntas: el cambio sólo afecta
 a las altas nuevas.
+
+## 274. SEARCH-SEO-1 Fase 1b: Auditoría SEO con el diseño aprobado y la cobertura en Páginas citadas (2026-10-10)
+
+**Qué se decidió.** Segunda mitad de la fase 1 de §271. La pantalla
+Auditoría SEO (`/web-audit`) adopta la maqueta aprobada
+(`docs/design-reference/search-seo-1/maqueta.html`) con los checks que ya
+existen, y el mapa de cobertura se muda a Páginas citadas. Las capturas del
+build real en móvil y escritorio se enseñaron al fundador con el PR.
+
+**Auditoría SEO, de arriba abajo.**
+
+- **Nota «Salud técnica»** con el medidor, la franja Buena (≥70) /
+  Mejorable (≥40) / Baja, el delta frente a la revisión anterior y una frase
+  con los fallos críticos. Es `actualReadinessScore` de
+  `buildTechnicalIssuesReport`, la misma cifra que ya enseñaba la pantalla.
+  **No se llama «Salud SEO»**: ese nombre es de la fase 2, cuando la nota
+  incluya velocidad, móvil y los checks SEO nuevos. Ponerlo antes sería
+  llamar SEO a una nota que mide otra cosa.
+- **«Por áreas»**: cuatro áreas (rastreo e indexación, etiquetas, contenido
+  citable, datos estructurados) con el porcentaje de comprobaciones
+  superadas y a quién afectan (Google, IA). Cada check pertenece a una sola
+  área (`SEO_AREAS`, `lib/web-audit/seo-audit-view.ts`, con test que lo
+  fija). Un área sin nada medido no se pinta: un 0% inventado leería como
+  suspenso.
+- **«Qué arreglar»**: primero los problemas, por gravedad; después los checks
+  que ya pasan («Bien»). Filtro Todo / Crítico / Aviso / Mejora / Bien, con
+  los nombres de la tarjeta de Visión general (`ISSUE_SEVERITY_LABELS`, ahora
+  compartido). Cada fila abre «Por qué importa» (texto nuevo `why` en
+  `issue-labels.ts`), «Cómo arreglarlo», el llms.txt o los pasos del sitemap
+  cuando hay solución, y las páginas o bots afectados.
+- **«Páginas revisadas»** con nota y barra por página, y al lado la nota de
+  alcance («Esto es lo que vemos desde fuera… No rastreamos la web entera») y
+  el acceso de bots de IA.
+
+**Lo que no sale de la maqueta, a propósito.**
+
+- Core Web Vitals, velocidad y móvil: fase 2. No hay medición detrás.
+- El botón de Search Console: fase 3.
+- «Generar la solución»: no existe esa acción para un check técnico.
+- Los puntos por fila («+6,0 pt») y el banner de nota proyectada
+  (`TechnicalPotentialBanner`): el fundador quitó la nota proyectada de la
+  tarjeta de Visión general (§271) y la maqueta no los trae.
+- En móvil, las etiquetas Google/IA de cada fila se ocultan para que el
+  título no se parta; siguen en «Por áreas».
+
+**La cobertura se muda a Páginas citadas.** Contenido / Implementado,
+Evolución (desde 4 comprobaciones), Lo que ya funciona e Historial (desde 2)
+van en una sección «Tu contenido frente a lo que cita la IA», justo después
+del reparto de citas, y también tras el aviso de «respondió sin citar
+fuentes». Responde a una pregunta sobre citas, no sobre cómo ve Google la web.
+
+- **Loaders separados.** `loadCoverageSectionData`
+  (`lib/web-audit/coverage-section-data.ts`) se llevó la lógica de cobertura
+  de `loadWebAuditPageData` sin reescribirla. `page-data.ts` ya no pide el
+  plan ni `userId`: lee sólo el último mapa, para el llms.txt.
+- **Se movieron** `web-audit-context.tsx` (el `WebAuditProvider`),
+  `web-audit-drive-notice.tsx` y `trend-chart.tsx` a `citations/`, y los tiles
+  a `citations/_components/coverage-tiles.tsx`.
+- **«Diagnóstico general» se retira.** Promediaba cobertura con la nota
+  técnica, y la nota técnica ya tiene su pantalla. Las pestañas
+  (`audit-tabs.tsx`) también, porque ya no hay dos vistas que alternar.
+  `lib/web-audit/global-score.ts` se queda: lo usa el informe de prospecto.
+- La última fecha del gráfico de evolución se cortaba en móvil («6 oct 20…»).
+  Las etiquetas extremas se anclan ahora al borde.
+
+**Regla de premisa (se movió un camino de recuperación).** El
+`WebAuditProvider` es el acelerador de cliente que reanuda una campaña de
+cobertura en marcha, y `WebAuditDriveNotice` es el único sitio que pinta su
+fallo (ADR 0038). Ahora sólo se montan en Páginas citadas.
+
+- *Premisa:* el motor de la cobertura es el servidor (encolado tras escaneo,
+  cron cada 10 minutos, §261). La pestaña sólo acelera.
+- *Qué la verifica hoy:* `vercel-crons.test.ts` fija el cron de
+  `/api/cron/run-audit`, y el backfill y el rescate de locks siguen igual.
+- *Si falla:* una campaña parada ya no se reanuda al abrir Auditoría SEO, y
+  su error no se ve allí. Sólo Páginas citadas lo enseña. Auditoría SEO
+  conserva su propio despertar del worker (`shouldDispatchAudit` →
+  `after(triggerWebAuditRun)`), que no depende del provider.
+
+**Pendiente o conocido.**
+
+- Fase 2: Salud SEO, checks nuevos, PageSpeed Insights y la tarjeta
+  «Buscadores». Fase 3: Search Console. Fase 4: artículo y portada.
+- El gráfico de evolución no se estira en escritorio ancho (alto fijo, ancho
+  por proporción). Se dejó como estaba en la pantalla vieja.
+- El piloto no tiene historial de cobertura, así que Evolución e Historial
+  sólo los cubren sus tests de render (como ya pasaba, §87).

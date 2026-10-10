@@ -6,7 +6,7 @@ import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes"
 import { PageFixBlock } from "../page-fix-block";
 import { formatDate } from "./format";
 import { CheckDot } from "./issue-rows";
-import { ScoreRing } from "./score-tiles";
+import { scoreColor } from "./score-tiles";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R7 — un trozo de la pantalla de Auditoría web.
@@ -59,12 +59,13 @@ export function PageAuditRow({ page, fixContext }: { page: PageAuditEntry; fixCo
   if (page.status !== "analyzed" || !page.check) {
     const skipLabel = page.status === "analyzed" ? PAGE_SKIP_LABELS.skipped_error : PAGE_SKIP_LABELS[page.status];
     return (
-      <div style={{ padding: "10px 12px", background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 10 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink-3)", overflowWrap: "anywhere" }}>{path}</span>
-          <span style={{ fontSize: 10.5, color: "var(--ink-4)" }}>{page.contextLabel}</span>
+      <div className="sa-pg sa-pg-skipped">
+        <div className="sa-pg-n">
+          <code>{path}</code>
+          <span>
+            {page.contextLabel} · {skipLabel}
+          </span>
         </div>
-        <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "4px 0 0" }}>{skipLabel}</p>
       </div>
     );
   }
@@ -81,19 +82,22 @@ export function PageAuditRow({ page, fixContext }: { page: PageAuditEntry; fixCo
   // (score + failing-check count); the how-to-fix detail is one tap away.
   const failingCount = guidance.length;
   return (
-    <details className="wa-details">
+    <details className="wa-details sa-pg">
       <summary>
-        <div style={{ minWidth: 0, flex: 1 }}>
-          <div style={{ fontSize: 12.5, fontWeight: 650, color: "var(--ink)", overflowWrap: "anywhere" }}>{path}</div>
-          <div style={{ fontSize: 10.5, color: "var(--ink-4)" }}>
+        <div className="sa-pg-n">
+          <code>{path}</code>
+          <span>
             {page.contextLabel}
             {failingCount > 0 ? ` · ${failingCount} ${failingCount === 1 ? "mejora pendiente" : "mejoras pendientes"}` : " · todo en orden"}
-          </div>
+          </span>
         </div>
-        {/* Lighthouse-style ring instead of a flat neutral badge (WEB-AUDIT-R4):
-            same semantic thresholds as the hero gauge, so a failing page reads
-            red at a glance without opening it. */}
-        <ScoreRing score={check.pageScore} label={path} />
+        {/* SEARCH-SEO-1 Fase 1b: the approved design's bar + number replaces
+            the Lighthouse-style ring (WEB-AUDIT-R4). Same thresholds
+            (`scoreColor`), so a failing page still reads red at a glance. */}
+        <div className="sa-track sa-pg-track" role="img" aria-label={`Salud técnica de ${path}: ${check.pageScore} de 100`}>
+          <div className="sa-fill" style={{ width: `${check.pageScore}%`, background: scoreColor(check.pageScore) }} />
+        </div>
+        <span className="sa-cat-v">{check.pageScore}</span>
         <span className="wa-chev">
           <Icon name="chevDown" size={14} />
         </span>
