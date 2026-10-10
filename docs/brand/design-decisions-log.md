@@ -23450,3 +23450,18 @@ en esta fase. El cambio de modelo en sí no es código: son
 pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
 que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
 extracción en los primeros escaneos.
+
+## 270. FREE-REPORT-ASK-REMOVE-1: fuera la barra de búsqueda decorativa de `/gratis/informe-geo` (2026-10-10)
+
+**Qué.** La portada oscura de `/gratis/informe-geo` llevaba, entre la píldora
+y el titular, una barra con lupa, el texto «¿Qué empresa me recomiendas
+para…?» y un cursor parpadeando (`.fr-ask`, `.fr-caret`). Se retira entera,
+con sus estilos y su animación. En móvil ya estaba oculta, así que allí no
+cambia nada; en escritorio el titular sube a ocupar su sitio.
+
+**Por qué.** Decisión del fundador (2026-10-10, «quita esto»). Era decorativa,
+no hacía nada al pulsarla, y parecía un campo que se podía usar.
+
+**Nota.** El artboard aprobado (`docs/design-reference/free-report-1/Main.dc.html`)
+la sigue llevando; esta entrada es la desviación aprobada. No retira ningún
+camino de recuperación.

@@ -110,13 +110,6 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
         <div className="fr-hero-inner">
           <div className="fr-hero-copy">
             <span className="fr-pill">Informe gratuito · ChatGPT, Gemini y Claude</span>
-            <div className="fr-ask" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 20 20">
-                <circle cx="8.5" cy="8.5" r="5.5" stroke="#8fe9f1" strokeWidth="2" fill="none" />
-                <path d="M13 13 L17 17" stroke="#8fe9f1" strokeWidth="2" strokeLinecap="round" />
-              </svg>
-              «¿Qué empresa me recomiendas para…?»<span className="fr-caret" />
-            </div>
             <h1 className="fr-title">
               Cuando tu cliente le pregunta a la IA, <span className="fr-grad">¿te nombra a ti o a tu competencia?</span>
             </h1>
