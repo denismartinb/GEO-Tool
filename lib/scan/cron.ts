@@ -59,7 +59,7 @@ const RECURRING_INTERVAL_DAYS_BY_PLAN: Record<string, number> = {
   free: 1,
   starter: 7,
   /**
-   * SCAN-CADENCE-1 (log §271): a paying Pro project is scanned every 2 days,
+   * SCAN-CADENCE-1 (log §272): a paying Pro project is scanned every 2 days,
    * not daily. The score is the median of the last 3 comparable runs
    * (`lib/scoring/score-window.ts`), so a daily scan mostly re-measures the
    * same window; halving it halves the largest LLM bill line. The 7-day
@@ -74,7 +74,7 @@ const RECURRING_INTERVAL_DAYS_BY_PLAN: Record<string, number> = {
 };
 
 /**
- * SCAN-CADENCE-1 (log §271): the key into RECURRING_INTERVAL_DAYS_BY_PLAN for
+ * SCAN-CADENCE-1 (log §272): the key into RECURRING_INTERVAL_DAYS_BY_PLAN for
  * one owner. Same effective plan as everywhere else in system code
  * (`resolveSystemPlanId`: comped and trial expiry applied), except that a
  * Pro account still inside its reverse trial — `trial_ends_at` set, no Stripe

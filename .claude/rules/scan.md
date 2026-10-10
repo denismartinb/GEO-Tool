@@ -322,6 +322,6 @@ worse than no rule, because a future session will obey it anyway.
   (clave `trial`). Barrido, vigilante y salud de `/admin` tienen que usar la
   misma clave. Si no, el vigilante avisa de un Pro de pago que no tocaba
   escanear, o calla ante una prueba que se quedó sin su escaneo diario
-  (`docs/brand/design-decisions-log.md` §271). `/precios` dice «Diario» para
+  (`docs/brand/design-decisions-log.md` §272). `/precios` dice «Diario» para
   Pro hasta que el fundador descongele los textos: no lo cambies sin que él lo
   pida.

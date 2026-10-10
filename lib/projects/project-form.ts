@@ -23,7 +23,7 @@ import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
 export const MAX_INITIAL_PROMPTS = 17;
 
 /**
- * SCAN-CADENCE-1 (log §271): 17, not 15, because 17 prompts × 3 engines = 51
+ * SCAN-CADENCE-1 (log §272): 17, not 15, because 17 prompts × 3 engines = 51
  * answers clears the 50-answer sampling floor (`lib/scan/sampling.ts`) with
  * one pass per prompt, where 15 × 3 = 45 fell short and doubled every prompt
  * (90 answers) — more prompts, about half the cost per scan.

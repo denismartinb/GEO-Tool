@@ -581,7 +581,7 @@ export function CitationsClient({
               </>
             ) : (
               <>
-                Revisa en <b>Auditoría web</b> si tus páginas son accesibles y citables para los motores
+                Revisa en <b>Auditoría SEO</b> si tus páginas son accesibles y citables para los motores
                 de IA.
               </>
             )}

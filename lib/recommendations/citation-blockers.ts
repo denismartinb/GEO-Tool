@@ -83,10 +83,16 @@ export function blockerDetail(blocker: CitationBlocker): string {
   switch (blocker.kind) {
     case "bots":
       return "Esos motores no pueden leer tu contenido, así que no pueden citarte.";
+    // Number agrees with the title: «Una de tus páginas…» read «Llevan…»
+    // (SEARCH-SEO-1 Fase 1a, log §271).
     case "noindex":
-      return "Llevan una etiqueta noindex: por buena que sea la página, ningún motor la va a citar.";
+      return blocker.urls.length === 1
+        ? "Lleva una etiqueta noindex: por buena que sea la página, ningún motor la va a citar."
+        : "Llevan una etiqueta noindex: por buenas que sean las páginas, ningún motor las va a citar.";
     case "snippet":
-      return "Llevan nosnippet o max-snippet:0, que prohíbe reproducir un fragmento — y sin fragmento no hay cita.";
+      return blocker.urls.length === 1
+        ? "Lleva nosnippet o max-snippet:0, que prohíbe reproducir un fragmento — y sin fragmento no hay cita."
+        : "Llevan nosnippet o max-snippet:0, que prohíbe reproducir un fragmento — y sin fragmento no hay cita.";
   }
 }
 

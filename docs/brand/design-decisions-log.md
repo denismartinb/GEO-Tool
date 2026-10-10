@@ -23485,7 +23485,114 @@ no hacía nada al pulsarla, y parecía un campo que se podía usar.
 la sigue llevando; esta entrada es la desviación aprobada. No retira ningún
 camino de recuperación.
 
-## 271. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
+---
+
+## 271. SEARCH-SEO-1 Fase 1a: «Posicionamiento en buscadores» en el menú, Auditoría SEO y la franja de prioridad en Visión general (2026-10-10)
+
+**Qué se decidió.** GenScore suma una parte de SEO sin pagar a terceros. El
+fundador fijó la arquitectura el 2026-10-10:
+
+- El menú tiene dos bloques de análisis: «Posicionamiento en IA» (Visión
+  general, Prompts, Competidores, Páginas citadas) y «Posicionamiento en
+  buscadores».
+- El segundo bloque tiene dos pantallas: Auditoría SEO, sin conectar nada, y
+  Posición en Google, con Search Console.
+- El diseño está aprobado y guardado en `docs/design-reference/search-seo-1/`.
+
+El plan va por fases:
+
+1. Menú y Auditoría SEO con los checks actuales. El mapa de cobertura pasa a
+   Páginas citadas.
+2. Checks SEO nuevos, la nota «Salud SEO», Core Web Vitals con PageSpeed
+   Insights y la tarjeta «Buscadores» en Visión general.
+3. Search Console, con migración y verificación de Google.
+4. Artículo y tarjeta en la portada.
+
+Este PR es la fase **1a** más la tarjeta de Auditoría SEO en Visión general,
+que el fundador pidió adelantar. El resto de la 1b, el rediseño de la pantalla
+y el traslado de la cobertura, va en un PR aparte.
+
+**Qué cambia en 1a.**
+
+- **El menú pasa a tener dos bloques**, con «Auditoría web» renombrada a
+  «Auditoría SEO» bajo «Posicionamiento en buscadores». Las tres listas de
+  enlaces se pintan con una sola función (`renderProjectLink`), así que la
+  regla de «activo» ya no está copiada en dos bucles.
+- **La ruta sigue siendo `/web-audit`.** Cambiarla rompería los enlaces de las
+  notificaciones y los correos ya enviados. Sólo cambia el nombre de la
+  pantalla: título de pestaña, cabecera, la notificación «Auditoría SEO
+  completada», el texto de Páginas citadas, el informe y el tour de la consola.
+- **Visión general abre con una franja «Prioridad 1 · tu web»** cuando hay un
+  freno de cita. Los frenos son un bot bloqueado, una página con noindex o una
+  página con nosnippet. Salen de `findCitationBlockers`, el mismo módulo y los
+  mismos textos que Recomendaciones (§167), y se leen de la misma instantánea
+  de auditoría. Las dos pantallas no pueden discrepar.
+- **Sin enlace desde «Diagnóstico técnico».** La maqueta lo traía y se probó
+  en el preview, pero el fundador lo retiró (2026-10-10): en su lugar va la
+  tarjeta de Auditoría SEO, y un enlace suelto en la fila del desglose sobraba.
+- **Tarjeta «Auditoría SEO» en Visión general**, debajo de los motores de IA
+  y a la altura de «Diagnóstico técnico», que es la fila que amplía. En móvil
+  sale después de los motores. **En escritorio (desde 1200px), cuando
+  «Indicadores clave» deja un hueco** (la cuarta celda junto a «Presión
+  competitiva», vacía cuando el sentimiento no se enseña por falta de
+  muestra), **los motores de IA suben a ese hueco y la tarjeta ocupa su sitio a
+  la derecha del desglose** (fundador, 2026-10-10: «subir arriba el de
+  posicionamiento de motores de IA, que es del mismo tamaño de las cards, y
+  poner el de auditoría SEO a la derecha de desglose de GEO Score»). Un primer
+  intento subía la tarjeta SEO al hueco; se descartó porque estiraba la fila
+  entera. Con los cuatro indicadores, o sin auditoría, nada se mueve: así el
+  desglose nunca se queda sin columna derecha. Entre 760 y 1199px tampoco
+  cambia. Las dos copias de los motores están en el HTML y el CSS enseña una
+  (`.ov2-eng-kpi` / `.ov2-eng-side.is-in-kpis`), como ya hacía
+  `.ov2-gauge-sec-lbl`. Diseño aprobado en
+  `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`. Enseña:
+  - cuántos problemas hay de cada gravedad (Crítico, Aviso, Mejora);
+  - los tres primeros que arreglar, con su alcance y sus puntos;
+  - la fecha de la revisión y cuántas páginas se revisaron.
+
+  Cada problema enlaza con Auditoría SEO; no hay botón. Sale de
+  `buildOverviewSeoSummary`, que pasa la instantánea por
+  `buildTechnicalIssuesReport`, el mismo cálculo que la pantalla. Los nombres
+  de cada problema viven ahora en `lib/web-audit/issue-labels.ts` y los usan
+  las dos pantallas.
+- **Lo que el fundador quitó de la maqueta de la tarjeta:** la nota de hoy
+  frente a la de arreglarlo todo («62 → 79»), «Se vuelve a revisar tras cada
+  escaneo» y el botón «Ver Auditoría SEO».
+- **Sin auditoría, la tarjeta no sale.** La maqueta tenía un estado «tu
+  primera auditoría está en marcha», pero la auditoría técnica automática se
+  puede apagar por proyecto. Prometer una auditoría que quizá no llega es
+  justo lo que no se hace; la fila «Diagnóstico técnico» ya dice que falta.
+- **Los puntos se redondean antes de decidir si se enseñan.** Un arreglo de
+  0,4 puntos no lleva insignia, para que no se lea «+0 pts».
+
+**Por qué sólo los frenos.** El fundador preguntó si el SEO debe ser la
+prioridad para quien lo tiene mal. La respuesta es: sólo cuando impide el
+acceso. Los motores no pueden citar una página que no pueden leer ni indexar.
+La velocidad o los títulos ayudan en Google, pero no deciden si una IA nombra
+a una marca. Una franja que empujara el SEO siempre prometería más de lo que es
+cierto.
+
+**Decisiones del fundador al aprobar el plan (2026-10-10):**
+
+- Recomendaciones **no** copia todos los fallos SEO. Mantiene el reparto de
+  §167 y sólo muestra los frenos duros. Esto corrige una nota de la maqueta.
+- «Salud SEO» será una nota aparte, que no mueve la Puntuación GEO.
+
+**Pendiente o conocido.**
+
+- Mientras no llegue la 1b, la pantalla se llama Auditoría SEO pero sigue
+  enseñando arriba «Diagnóstico general», con Contenido e Implementado, que es
+  cobertura de IA. La 1b los lleva a Páginas citadas.
+- La portada y `/geo` siguen diciendo «Auditoría web» en su demo del producto.
+  Se cambian con la fase 4.
+- El bloque «Posicionamiento en buscadores» tiene una sola entrada hasta la
+  fase 3.
+- La franja enseña sólo el primer freno y cuenta los demás. El detalle vive en
+  Auditoría SEO y en Recomendaciones.
+- La tarjeta se convierte en «Buscadores» en la fase 2, con la Salud SEO, y
+  suma la mitad de Google en la fase 3.
+
+## 272. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
 
 **Qué se decidió (fundador, 2026-10-10, sobre la propuesta de este hilo).**
 
