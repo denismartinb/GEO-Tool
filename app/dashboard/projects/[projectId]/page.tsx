@@ -614,9 +614,11 @@ export default async function ProjectDetailPage({
   const sentimentTotal =
     sentimentCounts.positive + sentimentCounts.neutral + sentimentCounts.mixed + sentimentCounts.negative;
   // With the sentiment KPI withheld the desktop KPI grid has three cards and
-  // an empty fourth cell; the Auditoría SEO card fills it from 1200px
-  // (founder, 2026-10-10, log §269) instead of sitting under the engines.
-  const seoInKpiGrid = seoSummary !== null && !hasSufficientSample(sentimentTotal);
+  // an empty fourth cell. From 1200px the engine bars fill it and the
+  // Auditoría SEO card takes their place beside the breakdown (founder,
+  // 2026-10-10, log §269). Without an audit the engines stay put, so the
+  // breakdown never loses its right-hand column.
+  const enginesInKpiGrid = seoSummary !== null && !hasSufficientSample(sentimentTotal);
   const dominantSentiment =
     sentimentTotal > 0
       ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentCounts)
@@ -810,6 +812,31 @@ export default async function ProjectDetailPage({
     jointPotentialPoints && Math.round(jointPotentialPoints.deltaPoints) > 0
       ? Math.round(jointPotentialPoints.deltaPoints)
       : null;
+
+  const engineBars =
+    engineBreakdown.length > 0 ? (
+      engineBreakdown.map((e) => {
+        const meta = getEngineMeta(e.provider);
+        return (
+          <div key={e.provider} className="ov2-engbar">
+            <span className="nm">
+              <span className="ov2-eng-ico" style={{ color: meta.color }}>
+                <EngineGlyph provider={e.provider} />
+              </span>
+              {meta.label}
+            </span>
+            <div className="track">
+              <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
+            </div>
+            <span className="v">{e.mentionRate}%</span>
+          </div>
+        );
+      })
+    ) : (
+      <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
+        Aparecerá aquí después de completar un escaneo.
+      </div>
+    );
 
   /* ---- render ---- */
   return (
@@ -1221,14 +1248,12 @@ export default async function ProjectDetailPage({
                 )}
               </div>
             ))}
-            {seoInKpiGrid && seoSummary ? (
-              <div className="ov2-seo-kpi">
-                <SeoAuditCard
-                  summary={seoSummary}
-                  auditedAt={seoAuditedAt}
-                  href={`/dashboard/projects/${projectId}/web-audit`}
-                  title="Auditoría SEO"
-                />
+            {enginesInKpiGrid ? (
+              <div className="ov2-eng-kpi">
+                <div className="card">
+                  <div className="ov2-kpi-k">Posicionamiento por motores de IA</div>
+                  {engineBars}
+                </div>
               </div>
             ) : null}
           </div>
@@ -1334,39 +1359,19 @@ export default async function ProjectDetailPage({
           </div>
 
           <div className="ov2-score-side">
-          {/* 4 · Posicionamiento por motores de IA */}
+          {/* 4 · Posicionamiento por motores de IA. From 1200px this copy is
+              hidden when the engines move up into the KPI grid. */}
+          <div className={`ov2-eng-side${enginesInKpiGrid ? " is-in-kpis" : ""}`}>
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
           <div className="card" style={{ padding: 18 }}>
-            {engineBreakdown.length > 0 ? (
-              engineBreakdown.map((e) => {
-                const meta = getEngineMeta(e.provider);
-                return (
-                  <div key={e.provider} className="ov2-engbar">
-                    <span className="nm">
-                      <span className="ov2-eng-ico" style={{ color: meta.color }}>
-                        <EngineGlyph provider={e.provider} />
-                      </span>
-                      {meta.label}
-                    </span>
-                    <div className="track">
-                      <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
-                    </div>
-                    <span className="v">{e.mentionRate}%</span>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
-                Aparecerá aquí después de completar un escaneo.
-              </div>
-            )}
+            {engineBars}
+          </div>
           </div>
           {/* Auditoría SEO (SEARCH-SEO-1, log §269): under the engine bars on
-              mobile and tablet. From 1200px it moves up into the KPI grid's
-              empty cell when there is one (`seoInKpiGrid`), and this copy is
-              hidden there. Not rendered without a usable audit snapshot. */}
+              mobile and tablet, and beside the breakdown on desktop. Not
+              rendered without a usable audit snapshot. */}
           {seoSummary ? (
-            <div className={`ov2-seo-side${seoInKpiGrid ? " is-in-kpis" : ""}`}>
+            <div className={`ov2-seo-side${enginesInKpiGrid ? " is-first" : ""}`}>
               <div className="ov2-sec-lbl ov2-seo-lbl">Auditoría SEO</div>
               <SeoAuditCard
                 summary={seoSummary}

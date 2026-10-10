@@ -23365,17 +23365,19 @@ y el traslado de la cobertura, va en un PR aparte.
   tarjeta de Auditoría SEO, y un enlace suelto en la fila del desglose sobraba.
 - **Tarjeta «Auditoría SEO» en Visión general**, debajo de los motores de IA
   y a la altura de «Diagnóstico técnico», que es la fila que amplía. En móvil
-  sale después de los motores. **En escritorio (desde 1200px) sube al hueco de
-  «Indicadores clave»**, la cuarta celda que queda vacía junto a «Presión
-  competitiva» cuando el sentimiento no se enseña por falta de muestra
-  (fundador, 2026-10-10, «en desktop la subimos arriba donde está el hueco»).
-  Con los cuatro indicadores no hay hueco y se queda bajo los motores. Entre
-  760 y 1199px tampoco sube: las celdas miden ~175px y las tres gravedades no
-  caben. Las dos copias están en el HTML y el CSS enseña una sola
-  (`.ov2-seo-kpi` / `.ov2-seo-side.is-in-kpis`), como ya hacía
-  `.ov2-gauge-sec-lbl`. Coste conocido: la fila de abajo crece a la altura de
-  la tarjeta, así que «Presión competitiva» y la tarjeta de la puntuación se
-  estiran con su contenido centrado. Diseño aprobado en
+  sale después de los motores. **En escritorio (desde 1200px), cuando
+  «Indicadores clave» deja un hueco** (la cuarta celda junto a «Presión
+  competitiva», vacía cuando el sentimiento no se enseña por falta de
+  muestra), **los motores de IA suben a ese hueco y la tarjeta ocupa su sitio a
+  la derecha del desglose** (fundador, 2026-10-10: «subir arriba el de
+  posicionamiento de motores de IA, que es del mismo tamaño de las cards, y
+  poner el de auditoría SEO a la derecha de desglose de GEO Score»). Un primer
+  intento subía la tarjeta SEO al hueco; se descartó porque estiraba la fila
+  entera. Con los cuatro indicadores, o sin auditoría, nada se mueve: así el
+  desglose nunca se queda sin columna derecha. Entre 760 y 1199px tampoco
+  cambia. Las dos copias de los motores están en el HTML y el CSS enseña una
+  (`.ov2-eng-kpi` / `.ov2-eng-side.is-in-kpis`), como ya hacía
+  `.ov2-gauge-sec-lbl`. Diseño aprobado en
   `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`. Enseña:
   - cuántos problemas hay de cada gravedad (Crítico, Aviso, Mejora);
   - los tres primeros que arreglar, con su alcance y sus puntos;

@@ -58,7 +58,7 @@ describe("Visión general: Auditoría SEO card", () => {
 
   it("sits in the engines column on mobile, after the engine bars and before the competitors panel", () => {
     const side = overview.indexOf('className="ov2-score-side"');
-    const engines = overview.indexOf("Posicionamiento por motores de IA</div>");
+    const engines = overview.indexOf("className={`ov2-eng-side");
     const card = overview.indexOf('className={`ov2-seo-side');
     const cols = overview.indexOf('className="ov2-cols"');
     expect(side).toBeGreaterThan(-1);
@@ -67,16 +67,16 @@ describe("Visión general: Auditoría SEO card", () => {
     expect(card).toBeLessThan(cols);
   });
 
-  it("moves up into the KPI grid's empty cell on desktop when the sentiment KPI is withheld", () => {
+  it("moves the engine bars into the KPI grid's empty cell on desktop, leaving the card beside the breakdown", () => {
     const kpis = overview.indexOf('className="ov2-kpi-car"');
-    const slot = overview.indexOf('className="ov2-seo-kpi"');
-    const hero = overview.indexOf('className="ov2-score-row"');
+    const slot = overview.indexOf('className="ov2-eng-kpi"');
+    const row = overview.indexOf('className="ov2-score-row"');
     expect(slot).toBeGreaterThan(kpis);
-    expect(slot).toBeLessThan(hero);
-    expect(overview).toContain("!hasSufficientSample(sentimentTotal)");
+    expect(slot).toBeLessThan(row);
+    expect(overview).toContain("seoSummary !== null && !hasSufficientSample(sentimentTotal)");
     const css = read("app/console.css");
-    expect(css).toMatch(/\.ov2-seo-kpi \{ display: none; \}/);
-    expect(css).toMatch(/@media \(min-width: 1200px\) \{\n  \.ov2-seo-side\.is-in-kpis \{ display: none; \}/);
+    expect(css).toMatch(/\.ov2-eng-kpi \{ display: none; \}/);
+    expect(css).toMatch(/@media \(min-width: 1200px\) \{\n  \.ov2-eng-side\.is-in-kpis \{ display: none; \}/);
   });
 
   it("counts problems through the Auditoría SEO screen's own aggregation", () => {

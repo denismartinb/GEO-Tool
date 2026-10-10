@@ -7,8 +7,8 @@ import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 /**
  * Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase 1b, log §269,
  * design in `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`).
- * It sits under the AI-engine bars, or from 1200px in the KPI grid's empty
- * cell when the sentiment KPI is withheld. The founder removed the projected-score line and the CTA
+ * It sits under the AI-engine bars, or on desktop beside the GEO Score
+ * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA
  * button from the approved mockup: each listed issue is the link instead.
  */
 
@@ -23,16 +23,12 @@ const SEVERITIES: IssueSeverity[] = ["critical", "warning", "improvement"];
 export function SeoAuditCard({
   summary,
   auditedAt,
-  href,
-  title
+  href
 }: {
   summary: OverviewSeoSummary;
   /** Already formatted, e.g. "9 oct". Null when the snapshot has no date. */
   auditedAt: string | null;
   href: string;
-  /** Heading inside the card, for the KPI-grid placement where no external
-   *  section label sits above it. */
-  title?: string;
 }) {
   const pages = `${summary.analyzedPageCount} ${summary.analyzedPageCount === 1 ? "página" : "páginas"}`;
   const meta = auditedAt ? `Revisada el ${auditedAt} · ${pages}` : `${pages} revisadas`;
@@ -40,7 +36,6 @@ export function SeoAuditCard({
 
   return (
     <div className="card ov2-seo">
-      {title ? <div className="ov2-kpi-k">{title}</div> : null}
       <div className="ov2-seo-meta">{meta}</div>
       {clean ? (
         <div className="ov2-seo-ok">
