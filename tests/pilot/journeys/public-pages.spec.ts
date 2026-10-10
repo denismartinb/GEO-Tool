@@ -198,8 +198,8 @@ test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
  */
 test("/gratis/aparece-mi-marca-en-chatgpt renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/gratis/aparece-mi-marca-en-chatgpt", "free-checker", {
-    describedAs: "el formulario de dominio y la explicación de qué obtiene el visitante",
-    anyOf: [{ selector: ".lp-hero-form" }]
+    describedAs: "el formulario de dominio y el resultado de ejemplo",
+    anyOf: [{ selector: ".fc-hero-form" }, { selector: ".fcp-example" }]
   });
   assertPageIsHealthy(findings);
   await assertCanonical(page, "/gratis/aparece-mi-marca-en-chatgpt");

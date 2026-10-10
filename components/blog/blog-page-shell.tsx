@@ -41,7 +41,9 @@ export function BlogPageShell({
    * /glosario keep the previous look.
    */
   hero?: ReactNode;
-  children: ReactNode;
+  /** Optional: the free checker renders its whole page inside `hero`
+   * (GEO-SELF-1 Fase 5), so without children the body section is skipped. */
+  children?: ReactNode;
 }) {
   return (
     <div className="lp">
@@ -49,6 +51,7 @@ export function BlogPageShell({
 
       <main>
         {hero}
+        {children !== undefined && (
         <section className={hero ? "lp-section lp-article" : "lp-section"}>
           <div className="lp-inner">
             {!hero && breadcrumb && breadcrumb.length > 0 && (
@@ -68,6 +71,7 @@ export function BlogPageShell({
             {children}
           </div>
         </section>
+        )}
       </main>
 
       <footer className="lp-footer">

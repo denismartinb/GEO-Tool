@@ -588,7 +588,8 @@ ratios, nunca recuentos absolutos (fundador, 2026-10-09).
 | --- | --- | --- | --- | --- | --- |
 | ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | ✅ Publicado | #564 |
 | ST2 | De buscar a preguntar: cómo la IA está cambiando la búsqueda en España (datos de terceros + dato propio de ST1) | `fundamentos` | búsqueda con ia en españa | ✅ Publicado | #571 |
-| ST-H | Hub `/estudios`: reúne los estudios publicados con su cifra, su fuente y el método (GEO-SELF-1 Fase 4, log §260). Cada estudio nuevo se añade a `STUDY_ENTRIES` en `lib/estudios/studies.ts` | — | estudios búsqueda ia españa | 🟡 En PR (2026-10-09) | #(este) |
+| ST-H | Hub `/estudios`: reúne los estudios publicados con su cifra, su fuente y el método (GEO-SELF-1 Fase 4, log §260). Cada estudio nuevo se añade a `STUDY_ENTRIES` en `lib/estudios/studies.ts` | — | estudios búsqueda ia españa | ✅ Publicado (2026-10-10) | #579 |
+| CK1 | Comprobador gratuito rehecho: portada oscura con el campo, resultado de ejemplo etiquetado como inventado, cómo leerlo, gratis frente a completo, FAQ de cinco preguntas y schema `WebApplication` gratuito (GEO-SELF-1 Fase 5, log §263) | `/gratis/aparece-mi-marca-en-chatgpt` | aparece mi marca en chatgpt | 🟡 En PR (2026-10-10) | #(este) |
 
 ---
 
