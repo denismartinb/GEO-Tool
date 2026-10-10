@@ -1137,12 +1137,3 @@
 .ov2-prio-d { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); margin-top: 3px; }
 .ov2-prio-url { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
 .ov2-prio-cta { grid-column: 2; justify-self: start; margin-top: 2px; }
-
-.ov2-brow-link {
-  display: inline-block;
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 650;
-  color: var(--brand-blue);
-}
-.ov2-brow-link:hover { text-decoration: underline; }

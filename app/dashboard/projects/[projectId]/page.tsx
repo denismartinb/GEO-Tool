@@ -1275,11 +1275,6 @@ export default async function ProjectDetailPage({
                               ? translateDroppedComponentReason(component?.reason)
                               : meta.hint}
                         </div>
-                        {key === "technical" ? (
-                          <Link href={`/dashboard/projects/${projectId}/web-audit`} className="ov2-brow-link">
-                            Ver en Auditoría SEO →
-                          </Link>
-                        ) : null}
                       </div>
                       <div className="ov2-brow-meter">
                         {isDropped ? (

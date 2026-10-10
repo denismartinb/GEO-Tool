@@ -23210,7 +23210,7 @@ de la cobertura.
   página con nosnippet. Salen de `findCitationBlockers`, el mismo módulo y los
   mismos textos que Recomendaciones (§167), y se leen de la misma instantánea
   de auditoría. Las dos pantallas no pueden discrepar.
-- **«Diagnóstico técnico» en el desglose enlaza con Auditoría SEO.**
+- **Sin enlace desde «Diagnóstico técnico».** La maqueta lo traía y se probó en el preview, pero el fundador lo retiró (2026-10-10): Visión general tendrá una tarjeta propia de Auditoría SEO en la Fase 1b, y un enlace suelto en la fila del desglose sobraba.
 
 **Por qué sólo los frenos.** El fundador preguntó si el SEO debe ser la
 prioridad para quien lo tiene mal. La respuesta es: sólo cuando impide el

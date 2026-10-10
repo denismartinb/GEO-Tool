@@ -4,8 +4,9 @@
 encanta»), con escritorio (1440 px) y móvil (390 px). Tiene cuatro vistas:
 
 - **Visión general**: la franja «Prioridad 1 · tu web», que sólo sale con un
-  freno real, el enlace de «Diagnóstico técnico» a Auditoría SEO y la tarjeta
-  «Buscadores».
+  freno real, el enlace de «Diagnóstico técnico» a Auditoría SEO (retirado
+  por el fundador; en su lugar habrá una tarjeta de Auditoría SEO en la
+  Fase 1b, log §269) y la tarjeta «Buscadores».
 - **Auditoría SEO**: la nota de Salud SEO, las áreas con etiquetas GOOGLE/IA,
   Core Web Vitals, «Qué arreglar» y las páginas revisadas.
 - **Posición en Google**: Search Console.
