@@ -38,14 +38,21 @@ export const GENERATION_MODELS: Record<CompareEngine, ModelOption[]> = {
   ],
   openai: [
     { id: "gpt-4o-mini", label: "gpt-4o-mini", price: { inPerM: 0.15, outPerM: 0.6 } },
-    { id: "gpt-6-luna", label: "gpt-6-luna", price: { inPerM: 0.1, outPerM: 0.5 } },
-    { id: "gpt-4.1-nano", label: "gpt-4.1-nano", price: { inPerM: 0.1, outPerM: 0.4 } }
+    { id: "gpt-6-luna", label: "gpt-6-luna", price: { inPerM: 0.1, outPerM: 0.5 } }
+    // gpt-4.1-nano is not here: it does not take the web_search tool, so every
+    // generation request is rejected (all 10 in the first real run, log §263).
+    // It stays an extraction option, which needs no search.
   ],
   claude: [
     { id: "claude-haiku-4-5-20251001", label: "Haiku 4.5", price: { inPerM: 1, outPerM: 5 } },
     { id: "claude-haiku-5-5", label: "Haiku 5.5", price: { inPerM: 0.1, outPerM: 0.5 } }
   ]
 };
+
+/** Models offered only as extractors (no search needed), priced here so their cost is measured too. */
+const EXTRACTION_ONLY_MODELS: ModelOption[] = [
+  { id: "gpt-4.1-nano", label: "gpt-4.1-nano", price: { inPerM: 0.1, outPerM: 0.4 } }
+];
 
 /** Gemini 3 grounding: per search query, outside the free monthly allowance. */
 export const GEMINI_SEARCH_FEE_PER_QUERY = 0.014;
@@ -102,7 +109,7 @@ export function findExtractionOption(id: string): ExtractionOption | null {
 /** Price of a model id the comparison actually called, or null when it is not in the catalogue (e.g. an env override). */
 export function priceOf(modelId: string | null | undefined): ModelPrice | null {
   if (!modelId) return null;
-  const all = [...GENERATION_MODELS.gemini, ...GENERATION_MODELS.openai, ...GENERATION_MODELS.claude];
+  const all = [...GENERATION_MODELS.gemini, ...GENERATION_MODELS.openai, ...GENERATION_MODELS.claude, ...EXTRACTION_ONLY_MODELS];
   // Providers echo versioned ids ("gpt-4o-mini-2024-07-18", "claude-haiku-4-5-20251001"):
   // match the longest catalogue id the reported one starts with.
   const match = all

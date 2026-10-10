@@ -404,6 +404,7 @@ function Results({
                 <td>
                   <strong>{COMPARE_ENGINE_LABEL[row.engine]}</strong>
                   <div className="adm-dim">{modelLabel(row.engine, candidate[row.engine])}</div>
+                  <CandidateHealth answers={result.answers} engine={row.engine} />
                 </td>
                 <td className="adm-num">
                   {score(row.scoreA)} → {score(row.scoreB)}
@@ -440,6 +441,29 @@ function Results({
         Descargar todo (JSON)
       </button>
     </>
+  );
+}
+
+/**
+ * What the agreement figures leave out: candidate answers that failed (kept
+ * out of every denominator) and answers cut at the scan's output cap, which
+ * still count but say less than they would have.
+ */
+function CandidateHealth({ answers, engine }: { answers: CompareAnswer[]; engine: CompareEngine }) {
+  const candidate = answers.filter((a) => a.engine === engine && a.pass === "b");
+  const failed = candidate.filter((a) => !isOk(a));
+  const cut = candidate.filter((a) => isOk(a) && a.truncated).length;
+  if (failed.length === 0 && cut === 0) return null;
+  const reasons = [...new Set(failed.map((a) => a.error))].join(" · ");
+  return (
+    <div className="adm-cmp-health">
+      {failed.length > 0 ? (
+        <div title={reasons}>
+          {failed.length} de {candidate.length} fallidas{reasons ? `: ${reasons}` : ""}
+        </div>
+      ) : null}
+      {cut > 0 ? <div>{cut} cortadas por longitud</div> : null}
+    </div>
   );
 }
 

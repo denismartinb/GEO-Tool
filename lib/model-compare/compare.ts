@@ -69,6 +69,8 @@ export type CompareAnswerOk = AnswerKey & {
   brandPosition: number | null;
   namedBrands: string[];
   citedDomains: string[];
+  /** The answer hit the scan's output cap and was cut short (only measurable for Claude today). */
+  truncated?: boolean;
 };
 
 export type CompareAnswerFailed = AnswerKey & { error: string };

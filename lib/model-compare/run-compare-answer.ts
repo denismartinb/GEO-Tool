@@ -1,5 +1,5 @@
 import "server-only";
-import { extractClaudeStructuredData, generateClaudeVisibilityAnswer } from "@/lib/llm/claude";
+import { CLAUDE_GENERATION_MAX_TOKENS, extractClaudeStructuredData, generateClaudeVisibilityAnswer } from "@/lib/llm/claude";
 import { extractGeminiStructuredData, generateGeminiVisibilityAnswer } from "@/lib/llm/gemini";
 import { extractOpenAIStructuredData, generateOpenAIVisibilityAnswer } from "@/lib/llm/openai";
 import { buildExtractionUpdate } from "@/lib/scan/extraction";
@@ -109,6 +109,7 @@ export async function runCompareAnswer(input: {
         sentiment: fields.sentiment,
         extracted_json: slimExtracted(data)
       },
+      truncated: engine === "claude" && (answer.tokensOut ?? 0) >= CLAUDE_GENERATION_MAX_TOKENS,
       brandPosition: data.brand.mentioned ? data.brand.position : null,
       namedBrands: [
         ...data.competitors.filter((competitor) => competitor.mentioned).map((competitor) => competitor.name),

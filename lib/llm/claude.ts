@@ -77,6 +77,9 @@ function extractText(data: AnthropicResponse): string {
  * meaning citation_found / citations_count remain 0 for Claude-backed scans.
  * This is honest — no fake citations.
  */
+/** Output cap of a scan answer. Exported so the model comparison can flag answers cut at it. */
+export const CLAUDE_GENERATION_MAX_TOKENS = 1024;
+
 export async function generateClaudeVisibilityAnswer(input: {
   prompt: string;
   country: string;
@@ -106,7 +109,7 @@ export async function generateClaudeVisibilityAnswer(input: {
 
   const requestBody = JSON.stringify({
     model,
-    max_tokens: 1024,
+    max_tokens: CLAUDE_GENERATION_MAX_TOKENS,
     system,
     messages: [{ role: "user", content: userContent }]
   });
@@ -212,9 +215,13 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
     input.rawResponseText
   ].join("\n\n");
 
+  // 4096, not 2048: Haiku 5.5 writes ~1,400–2,000 output tokens per
+  // extraction (Haiku 4.5: ~700), and at 2048 a third of its extractions were
+  // cut mid-JSON and failed as invalid_json (MODEL-COMPARE-1, log §263). The
+  // cap only bounds the worst case; a model that writes less pays for less.
   const requestBody = JSON.stringify({
     model,
-    max_tokens: 2048,
+    max_tokens: 4096,
     messages: [{ role: "user", content: userContent }]
   });
 

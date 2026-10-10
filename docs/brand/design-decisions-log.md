@@ -23062,3 +23062,31 @@ paso.
 **Pendiente.** Nada cambia en producción por esta fase. Si un candidato sale
 «Equivalente», cambiar el modelo de un motor es una decisión del fundador y
 va como su propio cambio: variable de entorno o ADR si es Gemini (ADR 0042).
+
+**Primera pasada real (2026-10-10, un proyecto interno, 10 preguntas × 3
+motores, una repetición).** Cambió tres cosas en esta misma fase:
+
+- **gpt-4.1-nano sale de la generación.** No admite la herramienta
+  `web_search`: OpenAI rechazó las 10 peticiones. Sigue disponible como
+  extractor, porque extraer no busca.
+- **La extracción de Claude pasa de 2048 a 4096 tokens de salida.** Haiku 5.5
+  escribe unos 1.400–2.000 tokens por extracción (Haiku 4.5, unos 700). Con el
+  tope de 2048, 7 de 20 extracciones se cortaron a mitad del JSON y fallaron
+  como `invalid_json`. Hoy no cambia nada en producción, porque Haiku 4.5 no
+  se acerca al tope. Pero si `SCAN_EXTRACTION_CLAUDE_MODEL` se hubiera puesto
+  a Haiku 5.5 con el tope viejo, un tercio de las filas de cada escaneo
+  habría salido con error.
+- **La página marca las respuestas del candidato que fallaron o se cortaron.**
+  Haiku 5.5 llegó al tope de 1024 tokens de la generación en 5 de 7
+  respuestas. Una respuesta cortada sigue contando, pero dice menos.
+
+Lo medido, sin decidir nada todavía:
+
+- gemini-3.1-flash-lite apenas busca: reportó búsquedas en 1 de 5 respuestas
+  válidas, frente a todas con gemini-3.6-flash. Coincidió en las menciones
+  pero compartió muchas menos fuentes que el ruido (9 % frente a 32 %). Su
+  coste por respuesta es un tercio, en gran parte porque no paga búsquedas.
+- Con 10 preguntas y una repetición, el ruido entre dos pasadas de los
+  modelos de hoy es alto: 45–54 % de competidores en común, y una nota que
+  se mueve 2–7 puntos. Hacen falta más preguntas o más repeticiones antes de
+  dar un veredicto.
