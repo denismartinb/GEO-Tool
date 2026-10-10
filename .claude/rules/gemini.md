@@ -84,3 +84,5 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   `/admin/comparar-modelos` (`lib/model-compare/`). El escaneo no lo pasa y
   sigue leyendo `GEMINI_MODEL`/`OPENAI_MODEL`/`ANTHROPIC_MODEL`, que es donde
   se cambia un modelo de verdad, con su ADR si es Gemini (log §269).
+  Lo mismo vale para `singleSearch` (pedir una sola búsqueda a Gemini): es una
+  prueba del comparador, no un ajuste del escaneo.

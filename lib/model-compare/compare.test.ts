@@ -8,6 +8,7 @@ import {
   findExtractionOption,
   isAllowedGenerationModel,
   priceOf,
+  resolveGenerationCall,
   tokenCost
 } from "@/lib/model-compare/catalogue";
 import {
@@ -97,6 +98,15 @@ describe("catalogue", () => {
     expect(priceOf("gemini-3.1-flash-lite")).toEqual({ inPerM: 0.25, outPerM: 1.5 });
     expect(priceOf("some-unknown-model")).toBeNull();
     expect(priceOf(null)).toBeNull();
+  });
+
+  it("calls the single-search variant with the real model id and the ask", () => {
+    expect(resolveGenerationCall("gemini", "gemini-3.6-flash~una-busqueda")).toEqual({ model: "gemini-3.6-flash", singleSearch: true });
+    expect(resolveGenerationCall("gemini", CURRENT)).toEqual({ model: undefined, singleSearch: false });
+    expect(resolveGenerationCall("claude", "claude-haiku-5-5")).toEqual({ model: "claude-haiku-5-5", singleSearch: false });
+    // The reported model id prices as the plain model, never as the variant.
+    expect(priceOf("gemini-3.6-flash")).toEqual({ inPerM: 0.75, outPerM: 3.75 });
+    expect(estimateAnswerCost("gemini", "gemini-3.6-flash~una-busqueda", CURRENT)).toBeLessThan(estimateAnswerCost("gemini", CURRENT, CURRENT));
   });
 
   it("estimates a cheaper Gemini answer with the lite model", () => {

@@ -23450,3 +23450,13 @@ en esta fase. El cambio de modelo en sí no es código: son
 pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
 que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
 extracción en los primeros escaneos.
+
+**Gemini con una sola búsqueda (2026-10-10).** Gemini decide cuántas
+búsquedas en Google lanza por respuesta (normalmente dos o más) y cada una se
+paga aparte, así que son el 90 % de su coste. Ninguna opción de la API lo
+limita, así que la única palanca es pedírselo en la instrucción. El catálogo
+gana un candidato de Gemini, «gemini-3.6-flash · una búsqueda»: el mismo
+modelo con una línea más en la instrucción (`singleSearch` en
+`generateGeminiVisibilityAnswer`, que el escaneo nunca pasa). La pasada mide
+si obedece (búsquedas por respuesta) y qué cuesta en fuentes y en nota. Si
+sale bien, llevarlo al escaneo es un cambio aparte, con su ADR (ADR 0042).
