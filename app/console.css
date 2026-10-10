@@ -1090,7 +1090,7 @@
 .dbg-switch-txt small { font-size: 11.5px; color: var(--ink-3); }
 .switch-toggle:disabled { opacity: .45; cursor: not-allowed; }
 
-/* SEARCH-SEO-1 Fase 1 (log §269) — Visión general: a citation blocker on the
+/* SEARCH-SEO-1 Fase 1 (log §271) — Visión general: a citation blocker on the
    site leads the screen, above the summary. Same shape as the approved
    mockup (docs/design-reference/search-seo-1/), red because it is the one
    thing that makes every other action on this screen unable to pay off. */
@@ -1138,7 +1138,7 @@
 .ov2-prio-url { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
 .ov2-prio-cta { grid-column: 2; justify-self: start; margin-top: 2px; }
 
-/* SEARCH-SEO-1 (log §269): Auditoría SEO card in Visión general, under the
+/* SEARCH-SEO-1 (log §271): Auditoría SEO card in Visión general, under the
    engine bars. Severity names and colours follow the Auditoría SEO screen
    (Crítico / Aviso / Mejora). Text sits on tinted fills, so it uses the -ink
    tokens and --ink-2; --ink-3 only on the white card itself (styles.md). */
@@ -1215,7 +1215,7 @@
 .ov2-seo-ok b { display: block; color: var(--ink); font-size: 14px; }
 .ov2-seo-ok span { font-size: 12.5px; color: var(--ink-2); }
 
-/* Engine bars in the KPI grid (founder, 2026-10-10, log §269). When the
+/* Engine bars in the KPI grid (founder, 2026-10-10, log §271). When the
    sentiment KPI is withheld the grid has an empty fourth cell: from 1200px the
    engine bars fill it and the Auditoría SEO card moves up beside the GEO
    Score breakdown. Both engine copies exist in the DOM; exactly one shows.

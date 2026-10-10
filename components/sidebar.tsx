@@ -27,7 +27,7 @@ type WorkspaceProject = {
 // version of this phase DID add one and the founder had it removed: pinchar el
 // propio dominio es el gesto que ya existía y el que la gente conoce.
 // The operational half (/debug) has no entry at all, by design.
-// SEARCH-SEO-1 Fase 1 (log §269): two "Analizar" blocks, IA first and
+// SEARCH-SEO-1 Fase 1 (log §271): two "Analizar" blocks, IA first and
 // search engines second, so what we measure in AI answers and what we measure
 // in Google read as two different questions (founder, 2026-10-10).
 const aiLinks = [

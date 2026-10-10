@@ -390,7 +390,7 @@ export default async function ProjectDetailPage({
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
             .limit(7),
-          // SEARCH-SEO-1 Fase 1 (log §269): the same snapshot Recomendaciones
+          // SEARCH-SEO-1 Fase 1 (log §271): the same snapshot Recomendaciones
           // reads for its citation blockers, so both screens name the same
           // blockers from the same data.
           supabase
@@ -416,7 +416,7 @@ export default async function ProjectDetailPage({
     pages: auditSnapshotForBlockers?.pages ?? null
   });
 
-  // Auditoría SEO card (log §269): the same snapshot, through the same
+  // Auditoría SEO card (log §271): the same snapshot, through the same
   // aggregation as the Auditoría SEO screen.
   const seoSummary = buildOverviewSeoSummary(auditSnapshotForBlockers);
   const seoAuditedAt = auditSnapshotForBlockers?.created_at
@@ -616,7 +616,7 @@ export default async function ProjectDetailPage({
   // With the sentiment KPI withheld the desktop KPI grid has three cards and
   // an empty fourth cell. From 1200px the engine bars fill it and the
   // Auditoría SEO card takes their place beside the breakdown (founder,
-  // 2026-10-10, log §269). Without an audit the engines stay put, so the
+  // 2026-10-10, log §271). Without an audit the engines stay put, so the
   // breakdown never loses its right-hand column.
   const enginesInKpiGrid = seoSummary !== null && !hasSufficientSample(sentimentTotal);
   const dominantSentiment =
@@ -933,7 +933,7 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
-          {/* 0 · SEARCH-SEO-1 Fase 1 (log §269): a citation blocker on the
+          {/* 0 · SEARCH-SEO-1 Fase 1 (log §271): a citation blocker on the
               site outranks the summary. Same blockers, titles and copy as
               Recomendaciones (lib/recommendations/citation-blockers.ts), so
               the two screens never disagree. The first one leads; the rest
@@ -1367,7 +1367,7 @@ export default async function ProjectDetailPage({
             {engineBars}
           </div>
           </div>
-          {/* Auditoría SEO (SEARCH-SEO-1, log §269): under the engine bars on
+          {/* Auditoría SEO (SEARCH-SEO-1, log §271): under the engine bars on
               mobile and tablet, and beside the breakdown on desktop. Not
               rendered without a usable audit snapshot. */}
           {seoSummary ? (

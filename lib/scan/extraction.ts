@@ -338,6 +338,76 @@ async function buildGroundedCitations(input: {
 }
 
 /**
+ * What a successful extraction writes onto its `scan_prompt_results` row:
+ * verified mentions, the tracked-set reconciliation, the grounded citations
+ * and the counters the score reads. Shared by the scan and by the
+ * operator's model comparison (MODEL-COMPARE-1, log §269), so the
+ * comparison scores exactly what a scan would have persisted and differs
+ * from it only in the model.
+ */
+export async function buildExtractionUpdate(input: {
+  extracted: ExtractionOutput;
+  rawResponseText: string;
+  brand: string;
+  brandAliases: string[];
+  competitors: string[];
+  groundingChunks: Array<{ uri?: string; title?: string }>;
+  /** The provider that GENERATED the row — never the extraction route (.claude/rules/scan.md). */
+  provider: string | null;
+}) {
+  const { rawResponseText, competitors } = input;
+
+  // MENTION-VERIFY-1: downgrade any "mentioned: true" the model can't back
+  // up with a display_name_found that both plausibly names the brand AND
+  // is actually in the raw response text — see verifyExtractedMentions
+  // above. Must run BEFORE reconciliation so reconcileExtractedCompetitors'
+  // position re-densification sees the verified mentioned/position values,
+  // not the model's raw (possibly hallucinated) ones.
+  const verifiedData = verifyExtractedMentions(
+    input.extracted,
+    rawResponseText,
+    input.brand,
+    input.brandAliases
+  );
+
+  // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
+  // user didn't choose to track — see reconcileExtractedCompetitors above.
+  const reconciledData = reconcileExtractedCompetitors(verifiedData, competitors);
+
+  const mentionedCompetitorsCount = reconciledData.competitors.filter((c) => c.mentioned).length;
+
+  const groundingChunks = input.groundingChunks;
+  const citations = await buildGroundedCitations({
+    groundingChunks,
+    inlineCitations: reconciledData.citations.map((c) => ({
+      url: c.url,
+      domain: c.domain,
+      label: c.label
+    })),
+    // OpenAI's web_search citations are already final destination URLs
+    // (unlike Gemini's Google redirect wrappers) — skip live resolution.
+    groundingUrlsAreFinal: input.provider === "openai"
+  });
+
+  // Anti-fake invariant: citations_count / citation_found only reflect
+  // real grounding sources. Inline-only citations never flip
+  // citation_found to true, and a real zero-grounding result is still
+  // marked with EXTRACTION_VERSION ("grounded-v1"), distinguishing it
+  // from an unprocessed row (extraction_version !== EXTRACTION_VERSION).
+  const groundingCitations = citations.filter((c) => c.source === "grounding");
+  const citationsCount = groundingCitations.length;
+
+  return {
+    brand_mentioned: reconciledData.brand.mentioned,
+    citation_found: citationsCount > 0,
+    mentioned_competitors_count: mentionedCompetitorsCount,
+    citations_count: citationsCount,
+    sentiment: reconciledData.sentiment,
+    extracted_json: { ...reconciledData, citations }
+  };
+}
+
+/**
  * Runs structured extraction for a single eligible row and persists the
  * result (or a sanitized extraction_error) via `update()`. Scoped to
  * `row.id` (plus project/run), so concurrent invocations across different
@@ -382,58 +452,19 @@ async function extractAndPersistRow(input: {
           ? await extractOpenAIStructuredData(extractionArgs)
           : await extractGeminiStructuredData(extractionArgs);
 
-    // MENTION-VERIFY-1: downgrade any "mentioned: true" the model can't back
-    // up with a display_name_found that both plausibly names the brand AND
-    // is actually in the raw response text — see verifyExtractedMentions
-    // above. Must run BEFORE reconciliation so reconcileExtractedCompetitors'
-    // position re-densification sees the verified mentioned/position values,
-    // not the model's raw (possibly hallucinated) ones.
-    const verifiedData = verifyExtractedMentions(
-      extracted.data,
+    const fields = await buildExtractionUpdate({
+      extracted: extracted.data,
       rawResponseText,
-      row.brand_snapshot,
-      row.brand_aliases_snapshot ?? []
-    );
-
-    // SCAN-TRACKED-SET-1: never persist an entity in `competitors` that the
-    // user didn't choose to track — see reconcileExtractedCompetitors above.
-    const reconciledData = reconcileExtractedCompetitors(verifiedData, competitors);
-
-    const mentionedCompetitorsCount = reconciledData.competitors.filter((c) => c.mentioned).length;
-
-    const groundingChunks = row.raw_response_json?.grounding_chunks ?? [];
-    const citations = await buildGroundedCitations({
-      groundingChunks,
-      inlineCitations: reconciledData.citations.map((c) => ({
-        url: c.url,
-        domain: c.domain,
-        label: c.label
-      })),
-      // OpenAI's web_search citations are already final destination URLs
-      // (unlike Gemini's Google redirect wrappers) — skip live resolution.
-      groundingUrlsAreFinal: row.provider === "openai"
+      brand: row.brand_snapshot,
+      brandAliases: row.brand_aliases_snapshot ?? [],
+      competitors,
+      groundingChunks: row.raw_response_json?.grounding_chunks ?? [],
+      provider: row.provider
     });
-
-    // Anti-fake invariant: citations_count / citation_found only reflect
-    // real grounding sources. Inline-only citations never flip
-    // citation_found to true, and a real zero-grounding result is still
-    // marked with EXTRACTION_VERSION ("grounded-v1"), distinguishing it
-    // from an unprocessed row (extraction_version !== EXTRACTION_VERSION).
-    const groundingCitations = citations.filter((c) => c.source === "grounding");
-    const citationsCount = groundingCitations.length;
 
     await service
       .from("scan_prompt_results")
-      .update({
-        brand_mentioned: reconciledData.brand.mentioned,
-        citation_found: citationsCount > 0,
-        mentioned_competitors_count: mentionedCompetitorsCount,
-        citations_count: citationsCount,
-        sentiment: reconciledData.sentiment,
-        extracted_json: { ...reconciledData, citations },
-        extraction_version: EXTRACTION_VERSION,
-        extraction_error: null
-      })
+      .update({ ...fields, extraction_version: EXTRACTION_VERSION, extraction_error: null })
       .eq("id", row.id)
       .eq("project_id", projectId)
       .eq("run_id", runId);

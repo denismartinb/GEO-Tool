@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * SEARCH-SEO-1 Fase 1 (log §269) — source-level contracts for the new console
+ * SEARCH-SEO-1 Fase 1 (log §271) — source-level contracts for the new console
  * navigation. The sidebar is a client component with hooks, so these read the
  * source instead of rendering it, same approach as tests/mission-parity.test.ts.
  */

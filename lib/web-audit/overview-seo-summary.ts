@@ -4,7 +4,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 
 /**
  * What Visión general's Auditoría SEO card shows (SEARCH-SEO-1 Fase 1b, log
- * §269). A thin projection of `buildTechnicalIssuesReport`, the same
+ * §271). A thin projection of `buildTechnicalIssuesReport`, the same
  * aggregation the Auditoría SEO screen runs, so the card and the screen can
  * never count a different number of problems.
  *

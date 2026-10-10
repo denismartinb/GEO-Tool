@@ -5,7 +5,7 @@ import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 
 /**
  * Render tests for Visión general's Auditoría SEO card (SEARCH-SEO-1, log
- * §269). They assert content, never appearance: the counts shown are the
+ * §271). They assert content, never appearance: the counts shown are the
  * counts passed in, labels come from the shared issue labels, and the
  * founder-removed elements (projected score, CTA button) stay out.
  */

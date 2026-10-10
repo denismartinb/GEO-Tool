@@ -5,7 +5,7 @@ import type { IssueSeverity } from "@/lib/web-audit/issues";
 import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 
 /**
- * Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase 1b, log §269,
+ * Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase 1b, log §271,
  * design in `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`).
  * It sits under the AI-engine bars, or on desktop beside the GEO Score
  * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA

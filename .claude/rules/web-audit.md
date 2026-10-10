@@ -8,7 +8,7 @@ paths:
 # Auditoría web — invariantes
 
 > **La pantalla se llama «Auditoría SEO» desde SEARCH-SEO-1 Fase 1a** (log
-> §269) y vive en el bloque «Posicionamiento en buscadores» del menú. La ruta
+> §271) y vive en el bloque «Posicionamiento en buscadores» del menú. La ruta
 > sigue siendo `/web-audit` a propósito: las notificaciones y los correos ya
 > enviados enlazan ahí. Si algún día cambia, `/web-audit` tiene que redirigir.
 > Los frenos de cita que Visión general pone como «Prioridad 1» salen de

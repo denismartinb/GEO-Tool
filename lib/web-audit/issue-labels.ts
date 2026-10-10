@@ -7,7 +7,7 @@ import type { IssueCheckKey, TechnicalIssue } from "@/lib/web-audit/issues";
  * phrased for "N pages fail this" instead of one page's own detail.
  *
  * Lives here, not in the Auditoría SEO screen, because Visión general names
- * the same issues in its Auditoría SEO card (SEARCH-SEO-1, log §269): one
+ * the same issues in its Auditoría SEO card (SEARCH-SEO-1, log §271): one
  * label per check, so the two screens never call a problem by two names.
  */
 export const ISSUE_CHECK_META: Record<IssueCheckKey, { label: string; guidance: string; unit: "página" | "bot" }> = {

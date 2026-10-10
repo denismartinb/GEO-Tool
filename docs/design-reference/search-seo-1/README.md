@@ -5,14 +5,14 @@ encanta»), con escritorio (1440 px) y móvil (390 px). Tiene cuatro vistas:
 
 - **Visión general**: la franja «Prioridad 1 · tu web», que sólo sale con un
   freno real, el enlace de «Diagnóstico técnico» a Auditoría SEO (retirado
-  por el fundador; en su lugar va la tarjeta de Auditoría SEO, log §269) y la tarjeta «Buscadores».
+  por el fundador; en su lugar va la tarjeta de Auditoría SEO, log §271) y la tarjeta «Buscadores».
 - **Auditoría SEO**: la nota de Salud SEO, las áreas con etiquetas GOOGLE/IA,
   Core Web Vitals, «Qué arreglar» y las páginas revisadas.
 - **Posición en Google**: Search Console.
 - **Posición en Google sin conectar**.
 
 Los datos de la maqueta son de ejemplo. El plan por fases y las decisiones
-están en `docs/brand/design-decisions-log.md` §269. Lo que todavía no está
+están en `docs/brand/design-decisions-log.md` §271. Lo que todavía no está
 construido aparece aquí porque es el diseño aprobado, no porque exista.
 
 Una salvedad que el diseño no recoge: Recomendaciones **no** copia todos los
@@ -24,4 +24,4 @@ aprobada el 2026-10-10 («si perfecto»). Se construyó sin la nota proyectada
 («62 → 79»), sin la nota de revisión y sin botón, que el fundador quitó, y sin
 el estado «auditoría en marcha». En escritorio, si «Indicadores clave» deja
 hueco, los motores suben a él y la tarjeta va a la derecha del desglose, a
-petición del fundador (log §269).
+petición del fundador (log §271).
