@@ -22741,6 +22741,53 @@ sus páginas en `app/comparativas/`, `lib/seo/llms-txt.ts`,
 `tests/pilot/fixtures/server.mjs`, `docs/content-calendar.md`,
 `.claude/rules/growth-content.md`.
 
+
+## 259. GEO-SELF-1 Fase 3: guía «Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google» (2026-10-09)
+
+**Qué se publica.** `/blog/como-aparecer-en-gemini-y-vistas-creadas-con-ia`,
+cluster `playbooks`, frente F4 del plan GEO-SELF-1 aprobado por el fundador el
+2026-10-09. Ataca la consulta «cómo aparecer en AI Overviews» y sus variantes en
+castellano, que hoy no responde ninguna herramienta GEO española con
+documentación oficial de Google detrás.
+
+**Decisiones.**
+
+- **El término de Google en español es «Vistas creadas con IA»**, no
+  «Resúmenes creados con IA»: es el que usan la ayuda de Google en español y el
+  blog de Google España. El título añade «(AI Overviews)» porque es como lo
+  busca la gente.
+- **Toda afirmación sobre Google sale de su documentación oficial**
+  (Search Central «AI features and your website», actualizada el 2025-12-10; la
+  página de rastreadores comunes; la ayuda de Gemini y de Search Console; los
+  anuncios de Google España). Lo que viene de terceros se dice: el informe de IA
+  generativa de Search Console (junio de 2026) sólo se pudo contrastar en PPC
+  Land y TechWyse, y el texto lo atribuye así.
+- **Que Google-Extended no afecte a las Vistas ni al Modo IA es lectura, no
+  cita.** Google dice que no afecta a la Búsqueda y que controla «otros
+  sistemas»; la figura lo declara como nuestra lectura en su pie.
+- **Honestidad de producto.** El artículo dice, en el cuerpo y en el FAQ, que
+  GenScore mide Gemini (con preguntas repetidas) y no las Vistas ni el Modo IA,
+  coherente con `ai-overviews-vs-chatgpt-diferencia`. No nombra Perplexity, así
+  que no entra en `ALLOWED_TO_MENTION_PERPLEXITY`.
+- **La metadata nombra AI Overviews y el Modo IA como tema, no como motor
+  nuestro**, igual que el precedente `ai-overviews-vs-chatgpt-diferencia` (§223
+  a §225): la pieza existe para responder esa búsqueda y el FAQ declara que no
+  los medimos.
+- **`heroStat`: la cifra de Pew (8% frente a 15%)**, que el cuerpo publica con
+  su muestra y su país. Es de EE. UU. y el texto lo dice; junto a ella va la
+  versión de Google, sin método publicado. No se usó ninguna cifra española: la
+  única con método (Laboratorio de Periodismo) mide sólo búsquedas sobre medios.
+- **Sin autor con nombre**: `AuthorBio` de la empresa, como el resto, mientras
+  el fundador no decida quién firma (§256).
+- **Portada** dibujada en SVG en `docs/design-reference/blog-covers/` con el
+  lenguaje del catálogo (piezas → lente → panel), rasterizada a WebP 1200×300,
+  comprobada en la tira de 96 px, en el recorte móvil y junto a las portadas
+  vecinas.
+
+**Pendiente.** Refrescar la pieza cuando el informe de IA generativa de Search
+Console llegue a las cuentas españolas y su documentación oficial se pueda leer
+entera.
+
 ## 260. AUDIT-CRON-DRAIN-1: el worker de auditoría corre cada 10 minutos, porque Vercel corta las cadenas de auto-llamadas (2026-10-09)
 
 > Plan aprobado por el fundador el 2026-10-09 («Si»), hilo «Producto a prueba
