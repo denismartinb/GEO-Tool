@@ -48,6 +48,11 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
+import { SeoAuditCard } from "./_components/seo-audit-card";
 import {
   GEO_SCORE_COMPONENT_META,
   parseEngineCoverage,
@@ -223,6 +228,16 @@ function affectedPromptIds(evidenceJson: unknown): string[] {
 // consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
 // entre sí y entre proyectos. `requireActiveProject` está memoizada por
 // petición, así que esto no añade ninguna consulta.
+/** The page path only: the domain is already in the header (SEARCH-SEO-1). */
+function displayPath(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}` || "/";
+  } catch {
+    return url;
+  }
+}
+
 export async function generateMetadata({
   params
 }: {
@@ -332,7 +347,13 @@ export default async function ProjectDetailPage({
   const successMessage = rawSuccessMessage && feedback.success !== "scan_started" ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
-  const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
+  const [
+    { data: latestScore },
+    { data: allPromptResults },
+    { data: activeRecommendations },
+    { data: trendHistoryDesc },
+    { data: latestAuditSnapshot }
+  ] =
     latestCompletedRun
       ? await Promise.all([
           supabase
@@ -368,9 +389,43 @@ export default async function ProjectDetailPage({
             .select("run_id, visibility_score, citation_score, competitor_gap_score, created_at, details_json")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
-            .limit(7)
+            .limit(7),
+          // SEARCH-SEO-1 Fase 1 (log §271): the same snapshot Recomendaciones
+          // reads for its citation blockers, so both screens name the same
+          // blockers from the same data.
+          supabase
+            .from("web_audit_snapshots")
+            .select("bots, pages, created_at")
+            .eq("project_id", projectId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
         ])
-      : [{ data: null }, { data: null }, { data: null }, { data: null }];
+      : [{ data: null }, { data: null }, { data: null }, { data: null }, { data: null }];
+
+  // A blocker makes every citation impossible, so it outranks everything else
+  // on this screen. Only blockers, never the softer SEO checks: speed or
+  // titles matter for Google but do not decide whether an AI names the brand.
+  const auditSnapshotForBlockers = latestAuditSnapshot as {
+    bots: BotAccessReport | null;
+    pages: PageAuditEntry[] | null;
+    created_at: string | null;
+  } | null;
+  const citationBlockers = findCitationBlockers({
+    bots: auditSnapshotForBlockers?.bots ?? null,
+    pages: auditSnapshotForBlockers?.pages ?? null
+  });
+
+  // Auditoría SEO card (log §271): the same snapshot, through the same
+  // aggregation as the Auditoría SEO screen.
+  const seoSummary = buildOverviewSeoSummary(auditSnapshotForBlockers);
+  const seoAuditedAt = auditSnapshotForBlockers?.created_at
+    ? new Date(auditSnapshotForBlockers.created_at).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+        timeZone: "Europe/Madrid"
+      })
+    : null;
 
   const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
   const activeRecommendationsCount = activeRecommendations?.length ?? null;
@@ -558,6 +613,12 @@ export default async function ProjectDetailPage({
   }
   const sentimentTotal =
     sentimentCounts.positive + sentimentCounts.neutral + sentimentCounts.mixed + sentimentCounts.negative;
+  // With the sentiment KPI withheld the desktop KPI grid has three cards and
+  // an empty fourth cell. From 1200px the engine bars fill it and the
+  // Auditoría SEO card takes their place beside the breakdown (founder,
+  // 2026-10-10, log §271). Without an audit the engines stay put, so the
+  // breakdown never loses its right-hand column.
+  const enginesInKpiGrid = seoSummary !== null && !hasSufficientSample(sentimentTotal);
   const dominantSentiment =
     sentimentTotal > 0
       ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentCounts)
@@ -752,6 +813,31 @@ export default async function ProjectDetailPage({
       ? Math.round(jointPotentialPoints.deltaPoints)
       : null;
 
+  const engineBars =
+    engineBreakdown.length > 0 ? (
+      engineBreakdown.map((e) => {
+        const meta = getEngineMeta(e.provider);
+        return (
+          <div key={e.provider} className="ov2-engbar">
+            <span className="nm">
+              <span className="ov2-eng-ico" style={{ color: meta.color }}>
+                <EngineGlyph provider={e.provider} />
+              </span>
+              {meta.label}
+            </span>
+            <div className="track">
+              <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
+            </div>
+            <span className="v">{e.mentionRate}%</span>
+          </div>
+        );
+      })
+    ) : (
+      <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
+        Aparecerá aquí después de completar un escaneo.
+      </div>
+    );
+
   /* ---- render ---- */
   return (
     <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
@@ -847,6 +933,38 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {/* 0 · SEARCH-SEO-1 Fase 1 (log §271): a citation blocker on the
+              site outranks the summary. Same blockers, titles and copy as
+              Recomendaciones (lib/recommendations/citation-blockers.ts), so
+              the two screens never disagree. The first one leads; the rest
+              are counted and live on Auditoría SEO. */}
+          {citationBlockers.length > 0 ? (
+            <div className="ov2-prio" role="note">
+              <span className="ov2-prio-ico" aria-hidden="true">!</span>
+              <div className="ov2-prio-body">
+                <div className="ov2-prio-k">Prioridad 1 · tu web</div>
+                <p className="ov2-prio-t">{blockerTitle(citationBlockers[0])}</p>
+                <p className="ov2-prio-d">
+                  {blockerDetail(citationBlockers[0])}
+                  {citationBlockers.length > 1
+                    ? ` Y hay ${citationBlockers.length - 1} ${citationBlockers.length - 1 === 1 ? "freno más" : "frenos más"}.`
+                    : null}
+                </p>
+                {blockerUrls(citationBlockers[0]).length > 0 ? (
+                  <p className="ov2-prio-url">
+                    {displayPath(blockerUrls(citationBlockers[0])[0])}
+                    {blockerUrls(citationBlockers[0]).length > 1
+                      ? ` y ${blockerUrls(citationBlockers[0]).length - 1} más`
+                      : ""}
+                  </p>
+                ) : null}
+              </div>
+              <Link href={`/dashboard/projects/${projectId}/web-audit`} className="btn btn-primary btn-sm ov2-prio-cta">
+                Ver cómo arreglarlo
+              </Link>
+            </div>
+          ) : null}
+
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
@@ -1130,6 +1248,14 @@ export default async function ProjectDetailPage({
                 )}
               </div>
             ))}
+            {enginesInKpiGrid ? (
+              <div className="ov2-eng-kpi">
+                <div className="card">
+                  <div className="ov2-kpi-k">Posicionamiento por motores de IA</div>
+                  {engineBars}
+                </div>
+              </div>
+            ) : null}
           </div>
           </div>
           </div>
@@ -1233,33 +1359,27 @@ export default async function ProjectDetailPage({
           </div>
 
           <div className="ov2-score-side">
-          {/* 4 · Posicionamiento por motores de IA */}
+          {/* 4 · Posicionamiento por motores de IA. From 1200px this copy is
+              hidden when the engines move up into the KPI grid. */}
+          <div className={`ov2-eng-side${enginesInKpiGrid ? " is-in-kpis" : ""}`}>
           <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
           <div className="card" style={{ padding: 18 }}>
-            {engineBreakdown.length > 0 ? (
-              engineBreakdown.map((e) => {
-                const meta = getEngineMeta(e.provider);
-                return (
-                  <div key={e.provider} className="ov2-engbar">
-                    <span className="nm">
-                      <span className="ov2-eng-ico" style={{ color: meta.color }}>
-                        <EngineGlyph provider={e.provider} />
-                      </span>
-                      {meta.label}
-                    </span>
-                    <div className="track">
-                      <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
-                    </div>
-                    <span className="v">{e.mentionRate}%</span>
-                  </div>
-                );
-              })
-            ) : (
-              <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
-                Aparecerá aquí después de completar un escaneo.
-              </div>
-            )}
+            {engineBars}
           </div>
+          </div>
+          {/* Auditoría SEO (SEARCH-SEO-1, log §271): under the engine bars on
+              mobile and tablet, and beside the breakdown on desktop. Not
+              rendered without a usable audit snapshot. */}
+          {seoSummary ? (
+            <div className={`ov2-seo-side${enginesInKpiGrid ? " is-first" : ""}`}>
+              <div className="ov2-sec-lbl ov2-seo-lbl">Auditoría SEO</div>
+              <SeoAuditCard
+                summary={seoSummary}
+                auditedAt={seoAuditedAt}
+                href={`/dashboard/projects/${projectId}/web-audit`}
+              />
+            </div>
+          ) : null}
           </div>
           </div>
 

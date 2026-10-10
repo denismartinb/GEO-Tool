@@ -20,7 +20,7 @@ import { SUPPORT_EMAIL } from "@/lib/support";
  * is `noreply@`, and several emails invite the reader to answer them («responde
  * a este correo»); without a Reply-To that answer lands in a mailbox nobody
  * reads. It must be Resend's own `replyTo` field: a `Reply-To` passed in
- * `headers` did not survive the send (REPLY-TO-SUPPORT-1, log §271).
+ * `headers` did not survive the send (REPLY-TO-SUPPORT-1, log §272).
  */
 export async function sendEmail(
   to: string,

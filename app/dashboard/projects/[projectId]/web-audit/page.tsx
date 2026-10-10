@@ -79,7 +79,7 @@ export async function generateMetadata({
   params: Promise<{ projectId: string }>;
 }): Promise<Metadata> {
   const { projectId } = await params;
-  return projectScreenMetadata("Auditoría web", async () => (await requireActiveProject(projectId)).domain);
+  return projectScreenMetadata("Auditoría SEO", async () => (await requireActiveProject(projectId)).domain);
 }
 export default async function WebAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
@@ -134,7 +134,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
       <div className="ov-sticky-header">
         <div className="ov-sticky-left">
           <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Auditoría web</p>
+            <p className="kicker" style={{ marginBottom: 2 }}>Auditoría SEO</p>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
                 {project.name}

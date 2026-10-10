@@ -1089,3 +1089,149 @@
 .dbg-switch-txt b { font-size: 13px; font-weight: 750; color: var(--ink); display: block; }
 .dbg-switch-txt small { font-size: 11.5px; color: var(--ink-3); }
 .switch-toggle:disabled { opacity: .45; cursor: not-allowed; }
+
+/* SEARCH-SEO-1 Fase 1 (log §271) — Visión general: a citation blocker on the
+   site leads the screen, above the summary. Same shape as the approved
+   mockup (docs/design-reference/search-seo-1/), red because it is the one
+   thing that makes every other action on this screen unable to pay off. */
+.ov2-prio {
+  position: relative;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 14px 16px 14px 18px;
+  margin-bottom: 12px;
+  background: linear-gradient(110deg, #fff5f5, #fff9f1);
+  border: 1px solid #f6cfd3;
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ov2-prio::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, var(--neg-ink), #f08a4b);
+}
+.ov2-prio-ico {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: var(--neg-ink);
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: 0 1px 2px rgba(11, 20, 38, .06);
+}
+.ov2-prio-k {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--neg-ink);
+}
+.ov2-prio-t { font-size: 14px; font-weight: 750; color: var(--ink); margin-top: 3px; }
+.ov2-prio-d { font-size: 12.5px; line-height: 1.55; color: var(--ink-2); margin-top: 3px; }
+.ov2-prio-url { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); margin-top: 4px; overflow-wrap: anywhere; }
+.ov2-prio-cta { grid-column: 2; justify-self: start; margin-top: 2px; }
+
+/* SEARCH-SEO-1 (log §271): Auditoría SEO card in Visión general, under the
+   engine bars. Severity names and colours follow the Auditoría SEO screen
+   (Crítico / Aviso / Mejora). Text sits on tinted fills, so it uses the -ink
+   tokens and --ink-2; --ink-3 only on the white card itself (styles.md). */
+.ov2-seo-lbl { margin-top: 24px; }
+.ov2-seo { padding: 16px 18px; }
+.ov2-seo-meta { font-size: 11.5px; color: var(--ink-3); margin-bottom: 10px; }
+.ov2-seo-sev { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.ov2-seo-sv { border-radius: 10px; padding: 9px 10px; display: flex; flex-direction: column; gap: 1px; }
+.ov2-seo-sv b { font-size: 22px; line-height: 1.05; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ov2-seo-sv span { font-size: 11.5px; font-weight: 650; }
+.ov2-seo-sv-critical { background: var(--neg-soft); color: var(--neg-ink); }
+.ov2-seo-sv-warning { background: var(--warn-soft); color: var(--warn-ink); }
+.ov2-seo-sv-improvement { background: var(--surface-2); color: var(--ink-2); }
+.ov2-seo-sv.is-zero { opacity: .6; }
+.ov2-seo-fxh {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  margin: 14px 0 2px;
+}
+.ov2-seo-fxl { display: flex; flex-direction: column; }
+.ov2-seo-fx {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 2px;
+  border-top: 1px solid var(--line-soft);
+  color: inherit;
+  text-decoration: none;
+  border-radius: 6px;
+}
+.ov2-seo-fx:hover b { color: var(--brand-blue); }
+.ov2-seo-fx:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: -2px; }
+.ov2-seo-dot { width: 8px; height: 8px; border-radius: 50%; }
+.ov2-seo-dot-critical { background: var(--brand-neg); }
+.ov2-seo-dot-warning { background: var(--warn); }
+.ov2-seo-dot-improvement { background: var(--ink-4); }
+.ov2-seo-fx-txt { min-width: 0; }
+.ov2-seo-fx-txt b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov2-seo-fx-txt span { display: block; font-size: 11.5px; color: var(--ink-3); }
+.ov2-seo-fx-r { display: flex; align-items: center; gap: 6px; color: var(--ink-3); }
+.ov2-seo-fx-r em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--pos-ink);
+  background: var(--pos-soft);
+  padding: 2px 7px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.ov2-seo-ok { display: flex; gap: 12px; align-items: center; }
+.ov2-seo-ok-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--pos-soft);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+}
+.ov2-seo-ok b { display: block; color: var(--ink); font-size: 14px; }
+.ov2-seo-ok span { font-size: 12.5px; color: var(--ink-2); }
+
+/* Engine bars in the KPI grid (founder, 2026-10-10, log §271). When the
+   sentiment KPI is withheld the grid has an empty fourth cell: from 1200px the
+   engine bars fill it and the Auditoría SEO card moves up beside the GEO
+   Score breakdown. Both engine copies exist in the DOM; exactly one shows.
+   Below 1200px nothing moves. */
+.ov2-eng-side, .ov2-seo-side { display: contents; }
+.ov2-eng-kpi { display: none; }
+@media (min-width: 1200px) {
+  .ov2-eng-side.is-in-kpis { display: none; }
+  .ov2-seo-side.is-first .ov2-seo-lbl { margin-top: 30px; }
+  .ov2-eng-kpi { display: flex; flex-direction: column; min-width: 0; }
+  .ov2-eng-kpi .card {
+    flex: 1;
+    border-radius: 13px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}

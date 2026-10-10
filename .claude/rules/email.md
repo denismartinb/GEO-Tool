@@ -104,4 +104,4 @@ igual.
   `Reply-To` metido en `headers` no sobrevive al envío. Sólo se cambia el
   destino cuando responder debe llegar a otra persona, como el aviso interno
   de un informe gratis, que responde al solicitante
-  (`docs/brand/design-decisions-log.md` §271).
+  (`docs/brand/design-decisions-log.md` §272).

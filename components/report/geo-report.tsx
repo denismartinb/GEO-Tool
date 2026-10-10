@@ -498,7 +498,7 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
             <span className="gr-num">{nextSec()}</span>
             <h2>Tu web, lista para la IA</h2>
           </div>
-          <p className="gr-lede">Las mismas comprobaciones que ves en Auditoría web, sobre las páginas principales de tu dominio.</p>
+          <p className="gr-lede">Las mismas comprobaciones que ves en Auditoría SEO, sobre las páginas principales de tu dominio.</p>
           <div className="gr-scorebox gr-one">
             {tech.score !== null ? (
               <div className="gr-s gr-me">

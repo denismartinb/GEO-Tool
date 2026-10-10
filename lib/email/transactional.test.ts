@@ -166,7 +166,7 @@ describe("a quién va cada correo", () => {
   });
 });
 
-describe("respuestas: nunca a noreply (REPLY-TO-SUPPORT-1, log §271)", () => {
+describe("respuestas: nunca a noreply (REPLY-TO-SUPPORT-1, log §272)", () => {
   it("todo correo pide las respuestas en soporte, con el campo propio de Resend", async () => {
     await sendWelcomeEmail(CUSTOMER);
     const payload = send.mock.calls.at(-1)?.[0] as { replyTo?: string; headers?: Record<string, string> };

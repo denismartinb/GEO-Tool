@@ -7,6 +7,20 @@ paths:
 
 # Auditoría web — invariantes
 
+> **La pantalla se llama «Auditoría SEO» desde SEARCH-SEO-1 Fase 1a** (log
+> §271) y vive en el bloque «Posicionamiento en buscadores» del menú. La ruta
+> sigue siendo `/web-audit` a propósito: las notificaciones y los correos ya
+> enviados enlazan ahí. Si algún día cambia, `/web-audit` tiene que redirigir.
+> Los frenos de cita que Visión general pone como «Prioridad 1» salen de
+> `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`), el mismo
+> módulo que Recomendaciones. Una franja propia con otro criterio es justo la
+> discrepancia que se quiere evitar.
+> La tarjeta «Auditoría SEO» de Visión general cuenta los problemas con
+> `buildOverviewSeoSummary`, que pasa por `buildTechnicalIssuesReport`, y los
+> nombra con `lib/web-audit/issue-labels.ts`. Un cálculo o un nombre propio
+> en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
+> mismo problema.
+
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los
 identificadores `WEB-AUDIT-*` son nombres estables, no un orden).

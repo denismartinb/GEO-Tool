@@ -695,7 +695,7 @@ export function ProductTour({
           </div>
           <div className="pt-nav" data-nav="4">
             <i />
-            Auditoría web
+            Auditoría SEO
           </div>
           <div className="pt-slabel">Actuar</div>
           <div className="pt-nav" data-nav="5">
@@ -970,7 +970,7 @@ export function ProductTour({
           {/* 7 — auditoría técnica. Comprobaciones y pesos reales del diseño
               aprobado en docs/design-reference/web-audit-issues-1/. */}
           <section className={`pt-act${stepIdx === 6 ? " is-on" : ""}`} data-act="7">
-            <p className="pt-h">Auditoría web</p>
+            <p className="pt-h">Auditoría SEO</p>
             <p className="pt-hsub">14 páginas analizadas · hoy</p>
             <div className="pt-card pt-fill pt-center">
               <div className="pt-audittop">
