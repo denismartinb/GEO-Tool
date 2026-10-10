@@ -14,6 +14,7 @@ import {
   type PlanOffer,
   type RunSnapshot
 } from "./templates";
+import type { ReportModel } from "@/lib/report/report-model";
 
 /**
  * LIFECYCLE-TRIAL-1 (log §233). What would be a real failure in an inbox:
@@ -60,7 +61,7 @@ describe("commercial emails never go out without a working unsubscribe", () => {
       await sendTrialD3Email(TO, USER, { daysLeft: 4, projectId: null, domain: null, recommendation: null, otherRecommendations: 0 })
     ).toBe(false);
     expect(
-      await sendTrialD5Email(TO, USER, { trialEndsAt: new Date(), domain: null, pro: proWithPromo, starter, lossRows })
+      await sendTrialD5Email(TO, USER, { trialEndsAt: new Date(), projectId: null, domain: null, report: null, pro: proWithPromo, starter, lossRows })
     ).toBe(false);
     expect(send).not.toHaveBeenCalled();
   });
@@ -129,7 +130,9 @@ describe("D5 prices", () => {
   it("quotes the founder price as forever, with the real list price and the slots left", async () => {
     await sendTrialD5Email(TO, USER, {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
+      projectId: null,
       domain: "clinicaaurora.es",
+      report: null,
       pro: proWithPromo,
       starter,
       lossRows
@@ -152,7 +155,9 @@ describe("D5 prices", () => {
   it("quotes the list price, with no discount and no deadline, once the promo is gone", async () => {
     await sendTrialD5Email(TO, USER, {
       trialEndsAt: new Date("2026-10-05T10:00:00Z"),
+      projectId: null,
       domain: null,
+      report: null,
       pro: proNoPromo,
       starter: { planName: "Starter", price: 29, promo: null },
       lossRows
@@ -161,5 +166,121 @@ describe("D5 prices", () => {
     expect(html).toContain("Mantener Pro por 99 €/mes");
     expect(html).not.toContain("Precio fundador");
     expect(html).not.toContain("plazas");
+  });
+});
+
+/**
+ * TRIAL-REPORT-EMAIL-1 (log §254). The last-day email carries the report of
+ * the last scan. What would be a real failure: a figure that is not a share,
+ * a quote from a stored LLM answer injected as HTML, an empty block printed
+ * as if it said something, or a link to the report that loses the reader at
+ * the login.
+ */
+function reportModel(overrides: Partial<ReportModel> = {}): ReportModel {
+  const gemini = { provider: "gemini", label: "Gemini", mentionShare: 0.41, bestPosition: 2, citesOwnSite: true };
+  return {
+    brandName: "Clínica Aurora",
+    domain: "clinicaaurora.es",
+    scanDate: "2026-10-04",
+    geoScore: 34,
+    engines: [{ provider: "openai", label: "ChatGPT", mentionShare: 0.18, bestPosition: 4, citesOwnSite: null }, gemini],
+    cover: { mentionShare: 0.23 },
+    summary: {
+      lede: "",
+      ownCitationShare: null,
+      weakestEngine: gemini,
+      technicalScore: null,
+      findings: [
+        { tone: "neg", title: "ChatGPT casi no te nombra", text: "Te menciona en el 18% de las respuestas." },
+        { tone: "pos", title: "Gemini cita tu web", text: "Usa páginas de tu dominio." },
+        { tone: "info", title: "Tercer hallazgo", text: "No cabe en el correo." }
+      ]
+    },
+    matrix: { hasCoverage: false, groups: [] },
+    competition: {
+      bars: [
+        { name: "Clínica Sonrisa Norte", isBrand: false, share: 0.62, byEngine: [] },
+        { name: "Clínica Aurora", isBrand: true, share: 0.23, byEngine: [] }
+      ],
+      cards: [],
+      cloud: []
+    },
+    sources: {
+      columns: [],
+      ownCitationShare: null,
+      ownPages: [],
+      topSource: null,
+      brandQuotes: [
+        { text: "Clínica Aurora <script>x</script> destaca por su financiación.", provider: "gemini", engineLabel: "Gemini", topic: "Implantes" }
+      ]
+    },
+    technical: null,
+    plan: [{ title: "Publica tus precios", description: "", firstStep: null, providers: [], topics: [], engineLabels: [] }],
+    ...overrides
+  };
+}
+
+describe("last-day email with the report", () => {
+  const base = {
+    trialEndsAt: new Date("2026-10-05T10:00:00Z"),
+    projectId: "7b0c2c3e-1111-4222-8333-444455556666",
+    domain: "clinicaaurora.es",
+    pro: proWithPromo,
+    starter,
+    lossRows
+  };
+
+  it("shows the report's shares, the quote, two findings and the first action, then the offer", async () => {
+    await sendTrialD5Email(TO, USER, { ...base, report: reportModel() });
+    const { subject, html } = last();
+    expect(subject).toBe("Tu informe GEO de clinicaaurora.es, antes de que termine tu prueba");
+    expect(html).toContain("Último aviso de tu prueba");
+    expect(html).toContain("termina el lunes 5 de octubre");
+    expect(html).toContain("dónde te nombra ChatGPT y Gemini");
+    expect(html).toContain("Te mencionan en el 23% de las respuestas a las preguntas principales de búsqueda");
+    expect(html).toContain(">41%<");
+    expect(html).toContain("Clínica Aurora (tú)");
+    expect(html).toContain("ChatGPT casi no te nombra");
+    expect(html).not.toContain("Tercer hallazgo");
+    expect(html).toContain("Publica tus precios");
+    expect(html).toContain("Mantener Pro por 69 €/mes");
+    // A literal sentence of a stored answer, escaped: React escapes the printed report, nobody does here.
+    expect(html).toContain("&lt;script&gt;");
+    expect(html).not.toContain("<script>x");
+    expect(html).toContain("Frase literal de una respuesta de tu escaneo.");
+  });
+
+  it("links the full report through /login, so a signed-out reader lands on it after signing in", async () => {
+    await sendTrialD5Email(TO, USER, { ...base, report: reportModel() });
+    expect(last().html).toContain("/login?next=%2Finforme%2F7b0c2c3e-1111-4222-8333-444455556666&utm_source=email");
+  });
+
+  it("omits a block with no data instead of printing it empty", async () => {
+    await sendTrialD5Email(TO, USER, {
+      ...base,
+      report: reportModel({
+        geoScore: null,
+        sources: null,
+        competition: { bars: [{ name: "Clínica Aurora", isBrand: true, share: 0.23, byEngine: [] }], cards: [], cloud: [] },
+        plan: []
+      })
+    });
+    const { html } = last();
+    expect(html).not.toContain("Puntuación GEO");
+    expect(html).not.toContain("Quién aparece en las respuestas");
+    expect(html).not.toContain("Lo que dijo");
+    expect(html).not.toContain("Tu primera acción");
+    expect(html).toContain("Menciones por motor");
+  });
+
+  it("never prints an absolute count of answers or questions", async () => {
+    await sendTrialD5Email(TO, USER, { ...base, report: reportModel() });
+    expect(last().html).not.toMatch(/\d+ de \d+ respuestas/);
+  });
+
+  it("without a report, keeps the deadline-only email", async () => {
+    await sendTrialD5Email(TO, USER, { ...base, report: null });
+    expect(last().subject).toBe("Tu prueba de Pro termina el lunes");
+    expect(last().html).not.toContain("informe");
   });
 });

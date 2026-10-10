@@ -29,7 +29,7 @@ export async function BillingContent({
   /** BILLING-STRIPE-1: `?checkout=success|cancelled` from the Stripe Checkout redirect. */
   checkoutStatus?: string;
   /**
-   * PRECIO-BUTTONS-CONSOLE-1: `?openPlan=<id>` from a `/pricing` CTA clicked
+   * PRECIO-BUTTONS-CONSOLE-1: `?openPlan=<id>` from a `/precios` CTA clicked
    * while logged in — opens "Cambiar de plan" straight into that plan
    * instead of requiring a second click inside the console. Already
    * validated against `PLANS` by the caller (`app/dashboard/settings/page.tsx`).

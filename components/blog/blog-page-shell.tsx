@@ -2,12 +2,13 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS } from "@/components/marketing-content-links";
+import { FreeReportPromoCard } from "@/components/free-report/free-report-promo-card";
+import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 
 /**
  * GROWTH-1 blog shell — deliberately mirrors components/legal-page-shell.tsx
- * (same nav/footer pattern as /privacidad, /terminos, /pricing) rather than
+ * (same nav/footer pattern as /privacidad, /terminos, /precios) rather than
  * introducing a new layout system for what is, visually, the same marketing
  * chrome around different body content.
  */
@@ -78,13 +79,13 @@ export function BlogPageShell({
             <nav className="links" aria-label="Pie de página">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               {MARKETING_CONTENT_LINKS.map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
               ))}
-              {MARKETING_ENTITY_LINKS.map((l) => (
+              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
                 <Link key={l.href} href={l.href}>
                   {l.label}
                 </Link>
@@ -99,6 +100,7 @@ export function BlogPageShell({
           <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
         </div>
       </footer>
+      <FreeReportPromoCard />
     </div>
   );
 }

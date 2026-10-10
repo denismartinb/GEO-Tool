@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { metadata as homeMetadata } from "../page";
 import { metadata as pricingMetadata } from "./page";
-import { PLANS } from "./plans-data";
+import { PLANS } from "@/app/pricing/plans-data";
 
 /**
  * SEO-POS-1 (T1). Dos cosas que este test protege:
  *
- * 1. Que la home y `/pricing` sigan teniendo título, descripción y canonical
+ * 1. Que la home y `/precios` sigan teniendo título, descripción y canonical
  *    propios. Los perdieron por ser componentes cliente enteros y nadie se dio
  *    cuenta hasta la auditoría de 2026-08-09; volver a marcar cualquiera de las
  *    dos como `"use client"` los borraría otra vez en silencio.
- * 2. Que los precios que la descripción de `/pricing` promete al buscador sean
+ * 2. Que los precios que la descripción de `/precios` promete al buscador sean
  *    los reales de `plans-data.ts`. Un snippet con un precio viejo es la misma
  *    clase de mentira que PRICING-TRUTH-1 limpió de la página.
  */
@@ -36,18 +36,23 @@ describe("metadata de la home", () => {
     expect(description.length).toBeGreaterThan(70);
   });
 
+  it("el título cita el precio real de entrada, nunca un plan gratis (TRIAL-ONLY-1)", () => {
+    expect(String(pricingMetadata.title)).toContain(`desde ${priceOf("Starter")} €`);
+    expect(String(pricingMetadata.title)).not.toMatch(/desde 0 €/);
+  });
+
   it("no nombra motores que el producto no ejecuta", () => {
     const text = `${String(homeMetadata.title)} ${homeMetadata.description ?? ""}`;
     expect(text).not.toMatch(/Perplexity|AI Overviews/i);
   });
 });
 
-describe("metadata de /pricing", () => {
+describe("metadata de /precios", () => {
   it("tiene título propio y canonical absoluto", () => {
     expect(pricingMetadata.title).toBeTruthy();
     expect(pricingMetadata.title).not.toBe("GenScore");
     expect(pricingMetadata.alternates?.canonical).toBe(
-      "https://www.genscore.es/pricing"
+      "https://www.genscore.es/precios"
     );
   });
 

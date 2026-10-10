@@ -36,7 +36,23 @@ export const MARKETING_CONTENT_LINKS: ReadonlyArray<{ href: string; label: strin
  * dominio es una declaración que nadie respalda (SEO-POS-1 Fase E, E2).
  */
 export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/que-es-genscore", label: "Qué es GenScore" }
+  { href: "/que-es-genscore", label: "Qué es GenScore" },
+  // GEO-SELF-1 Fase 1: la página `AboutPage` de la empresa. Misma razón que la
+  // de arriba — una página de entidad sin enlaces entrantes no la respalda nadie.
+  { href: "/sobre-genscore", label: "Quiénes somos" },
+  // GEO-SELF-1 Fase 4 (log §260): the studies hub — the data that backs the
+  // entity. Same reason: a page meant to be cited needs inbound links.
+  { href: "/estudios", label: "Estudios" }
+];
+
+/**
+ * FREE-REPORT-2 (log §252): la oferta de captación, en todos los pies de
+ * página públicos. Lista aparte por el mismo motivo que
+ * `MARKETING_ENTITY_LINKS`: `MARKETING_CONTENT_LINKS` son las cuatro capas de
+ * contenido y su test las fija por igualdad exacta.
+ */
+export const MARKETING_LEAD_LINKS: ReadonlyArray<{ href: string; label: string }> = [
+  { href: "/gratis/informe-geo", label: "Informe gratis" }
 ];
 
 /**

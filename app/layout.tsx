@@ -113,8 +113,19 @@ export const metadata: Metadata = {
   // GROWTH-2 Fase 2.1: Search Console ownership verification. Mirrors the
   // Sentry/PostHog pattern — no-op (tag omitted entirely) until the founder
   // creates the property and sets the env var, see docs/environment-contract.md.
-  ...(process.env.GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+  //
+  // GEO-SELF-1 Fase 1: same for Bing Webmaster Tools (`msvalidate.01`). Bing's
+  // index is what ChatGPT search grounds on, so it gets its own optional tag
+  // instead of depending on the import-from-Search-Console path.
+  ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION
+    ? {
+        verification: {
+          ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+          ...(process.env.BING_SITE_VERIFICATION
+            ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } }
+            : {})
+        }
+      }
     : {})
 };
 

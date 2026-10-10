@@ -172,6 +172,17 @@ only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
 which any page view already does. A sub-daily schedule needs Vercel Pro (the
 account is Pro since 2026-08-04).
 
+**Scan continuation pass (SCAN-CRON-DRAIN-1, log §262).** `/api/cron/scan-continue`
+runs every 5 minutes (`*/5 * * * *`) and re-dispatches every scan run younger
+than 6h that has been idle ≥90s with work the executor can still claim. It
+exists because Vercel cuts a chain of self-calls to `/api/scan/continue` with
+508 after a few hops even with a correct URL (log §261), and a cron firing is
+what starts a fresh chain. No new variables: `CRON_SECRET` for its own auth,
+`SCAN_CONTINUE_SECRET` for the dispatch it makes. Writes nothing and does not
+count against the watchdog's resume cap. Not gated on `CRON_SCANS_ENABLED`,
+same reasoning as the watchdog. ~288 invocations/day, almost all of them two
+reads and no dispatch.
+
 ### Cuentas internas de prueba (PROJECT-DEFAULTS-BY-ACCOUNT-1)
 
 | Variable | Required | Where | Expected shape |
@@ -254,10 +265,12 @@ and a feature that needs a variable set in three environments before it does
 anything is a feature that gets found broken later. `false` is the escape
 hatch for cost — each automatic audit spends real Gemini grounding calls.
 
-Reuses `CRON_SECRET` for both entry points: Vercel's daily cron (`GET
-/api/cron/run-audit`, `0 7 * * *` — an hour after the scan sweep, so the
-day's automatic scans have already queued their audits) and the worker's own
-`POST` self-chain. No new secret.
+Reuses `CRON_SECRET` for both entry points: Vercel's cron (`GET
+/api/cron/run-audit`, `*/10 * * * *` since AUDIT-CRON-DRAIN-1, log §261 —
+before that `0 7 * * *`) and the worker's own `POST` self-chain. No new
+secret. The cron is what drains the queue: Vercel rejects a chain of
+self-calls with 508 after a few hops, so the self-chain alone only ever
+advances a handful of jobs.
 
 `OPS_ALERT_EMAIL` receives the failure alert when a queued audit exhausts its
 six attempts (~12.5 h of backoff). It goes to the **operator**, never to the
@@ -401,6 +414,8 @@ nothing. A kind with no label simply is not sent to that platform.
 | Variable | Required | Where | Expected shape |
 |---|---|---|---|
 | `GOOGLE_SITE_VERIFICATION` | No | Vercel + local `.env.local` | El token del `<meta name="google-site-verification" ...>`, **solo el valor del atributo `content`**, no la etiqueta completa |
+| `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §256). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
+| `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §256). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
 
 Igual que Sentry/PostHog: opcional por diseño. `app/layout.tsx` solo añade el
 `<meta>` de verificación cuando la variable existe (`verification.google` en el
@@ -475,6 +490,28 @@ Por qué importa Bing aparte de su propio buscador: la búsqueda de ChatGPT se
 ha apoyado históricamente en el índice de Bing, así que este paso no es solo
 "SEO clásico" — también alimenta la visibilidad en motores generativos
 (GROWTH-2, `docs/launch-plan.md` Fase 7).
+
+**`BING_SITE_VERIFICATION` (GEO-SELF-1 Fase 1, log §256).** Mismo patrón que
+`GOOGLE_SITE_VERIFICATION`: método de etiqueta HTML, opcional, sin la variable
+no se pinta nada. **La propiedad ya está verificada por importación desde
+Search Console (arriba)**, así que esta variable sólo hace falta si Bing pide
+re-verificar o si el fundador prefiere un método que no dependa de Google. No
+la configures "por si acaso" por la misma razón que la de Google.
+
+**IndexNow — `INDEXNOW_KEY` (GEO-SELF-1 Fase 1, log §256).** IndexNow avisa a
+Bing (y a los motores que se apoyan en su índice) de que una URL ha cambiado
+sin esperar al siguiente rastreo. Pasos:
+
+1. Genera una clave (un UUID vale: `uuidgen`).
+2. En Vercel, añade `INDEXNOW_KEY` con ese valor en Producción y redeploy.
+3. Comprueba que `https://www.genscore.es/indexnow-key.txt` devuelve la clave.
+4. Tras publicar contenido, desde local y con la misma clave en el entorno:
+   `INDEXNOW_KEY=<clave> pnpm indexnow:ping`. Envía todas las URLs del sitemap;
+   IndexNow descarga `/indexnow-key.txt` para verificar que la clave es nuestra,
+   así que el paso 3 tiene que estar hecho antes.
+
+**No está enganchado al build ni a ningún deploy, a propósito**: un ping por
+cada preview mandaría URLs de producción que no han cambiado. Se lanza a mano.
 
 ### Billing (BILLING-STRIPE-1)
 

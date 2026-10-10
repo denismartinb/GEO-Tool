@@ -250,7 +250,7 @@ const welcomeDate = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "l
 export async function sendWelcomeEmail(to: string, now: Date = new Date()): Promise<void> {
   const endLabel = welcomeDate.format(new Date(now.getTime() + TRIAL_LENGTH_MS));
   const closing = isLifecycleEmailEnabled()
-    ? `Tu prueba termina el ${endLabel}. Te avisaremos 2 días antes y no se te cobra nada de forma automática.`
+    ? `Tu prueba termina el ${endLabel}. Te avisaremos el día antes y no se te cobra nada de forma automática.`
     : `Tu prueba termina el ${endLabel}. No se te cobra nada de forma automática.`;
   await sendEmail(
     to,

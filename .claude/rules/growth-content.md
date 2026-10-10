@@ -28,7 +28,8 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   versión del modelo o "la misma instrucción que usa un escaneo" es
   información del producto que no se regala. Se dice qué motores (ChatGPT,
   Gemini, Claude), la fecha, el criterio ("solo cuenta si el nombre aparece en
-  la respuesta") y que se repitió "múltiples veces, en distintos momentos"; las marcas
+  la respuesta") y que se repitió "múltiples veces en distintos momentos del
+  tiempo" —nunca "varias veces" (fundador, 2026-10-10; log §260)—; las marcas
   van en texto normal, sin negrita ni cursiva; las preguntas se enseñan como
   muestra, no completas, para que su número no se deduzca.
 - **Ninguna cifra de mercado de terceros se presenta como dato propio de
@@ -104,6 +105,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   contradiciéndose a un enlace de distancia (log §74). La solución definitiva
   fue mejor: retirar el dato, porque **lo que no se publica no se queda
   rancio** (log §75).
+
+- **El hub `/estudios` no tiene datos propios.** Título, fecha, cifra y fuente
+  de cada estudio se leen de `BLOG_POSTS`; la única lista a mano es
+  `STUDY_ENTRIES` en `lib/estudios/studies.ts` (slug + tipo). Un estudio nuevo
+  se publica como artículo con `heroStat` y fuente, y se añade ahí en el mismo
+  PR; una segunda redacción de su cifra en el hub divergiría al primer
+  refresco (log §260).
 
 ## Imágenes
 
@@ -255,8 +263,8 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - **Una página de marketing nunca es `"use client"` en su raíz.** Eso impide
   exportar `metadata`, y la página se queda sin título, sin descripción y sin
   canonical propios sin que nada falle: es exactamente lo que les pasó a la
-  home y a `/pricing`. El patrón es página de servidor con la metadata +
-  componente cliente aparte (log §46; `app/pricing/pricing-metadata.test.ts`).
+  home y a `/precios`. El patrón es página de servidor con la metadata +
+  componente cliente aparte (log §46; `app/precios/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT. Un `<title>` con Perplexity o AI Overviews es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
@@ -269,7 +277,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `openGraph` de una página **reemplaza** el del layout raíz en vez de
   fusionarse campo a campo, así que declarar solo `title`/`description` le quita
   a la página `og:image`, `og:site_name`, `og:locale` y la tarjeta de Twitter
-  enteras, sin ningún error visible. Pasó en la home y en `/pricing` (log §47).
+  enteras, sin ningún error visible. Pasó en la home y en `/precios` (log §47).
 - **Un `og:image` sólo puede ser una imagen rasterizada.** Ninguna red social
   renderiza SVG: la tarjeta sale en blanco, y `ogImageFor()` filtra por `RASTER`
   justo por eso (log §47). **Desde el 2026-08-20 ninguna portada del blog es
@@ -293,6 +301,20 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   derivó hasta listar la mitad del contenido publicado sin que nada avisara — y
   es el fichero sobre el que el producto publica una guía
   (`lib/seo/llms-txt.ts`, `llms-txt.test.ts`; log §47).
+  **Lo mismo vale para `/llms-full.txt`** (`lib/seo/llms-full-txt.ts`, log
+  §256): importa los datos que renderiza cada página —por eso el FAQ de
+  `/que-es-genscore` y el texto de `/sobre-genscore` viven en `lib/brand/`—,
+  nunca una segunda redacción. **Y la fecha de `/blog` y de cada pilar se
+  deriva de sus artículos** (`lib/seo/sitemap-dates.ts`), no se escribe a mano:
+  las dos fechas a mano que había se quedaron rancias (log §256).
+- **Un grupo con nombre en `robots.ts` repite la lista de `disallow` entera.**
+  Según RFC 9309 un rastreador que encaja en un grupo con nombre ignora el de
+  `*`: un `GPTBot` con sólo `allow: "/"` tendría abiertos `/dashboard` y
+  `/api` (`lib/seo/robots-rules.ts`, `app/robots.test.ts`; log §256).
+- **Ni `founder` ni `Person` en el schema, ni nombre de persona, foto o
+  empleador en `/sobre-genscore`** (fundador, 2026-10-09; log §256). La
+  entidad es la empresa; `author` y `publisher` de los artículos apuntan al
+  `Organization` por `@id`. Firmar con nombre sería una fase propia.
 - **Una pantalla PÚBLICA sin valor de búsqueda lleva `robots: { index: false,
   follow: true }`**, no una línea en `robots.ts`: `Disallow` impide rastrear, no
   indexar, y estas pantallas están enlazadas desde todos los shells de
@@ -370,6 +392,19 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   piloto llegara a abrirla** — incluido el del PR que la rediseñaba (log §62).
   Lo fijan los dos tests de `tests/pilot/fixtures/fixture-drift.test.ts` que
   contrastan `COMPARATIVAS` contra el spec y contra el fixture.
+- **Una comparativa a tres (o más) entre competidores es neutral: GenScore no
+  entra en la tabla ni lleva `Verdict`.** Aparece sólo en un bloque
+  etiquetado antes de la FAQ, declarado como nuestro y con sus límites
+  (`profound-vs-peec-ai-vs-otterly`, log §258). Meterla en la tabla de una
+  pieza que se presenta como neutral sería un anuncio con otro nombre.
+- **Un importe que el fabricante no publica se cita a un tercero, con su
+  nombre y su fecha, y se marca «orientativo».** Las comparativas nuevas
+  guardan sus fuentes en los datos (`lib/comparativas/sources.ts`) y las
+  pintan en una sección «Fuentes» (log §258).
+- **De una herramienta ajena se dice «no consta» una interfaz en castellano,
+  nunca que no la tenga**, salvo que esté verificado. Lo mismo para cualquier
+  dato que sólo sugiere una nota de prensa (la ciudad de GEO Metrics, log
+  §258): si no se ha podido verificar, no se publica.
 - **Un `PILOT PASS` es la lista de lo que el piloto vio, no una afirmación
   sobre lo que el PR cambió.** El piloto no sabe qué prometía el PR; cruzar su
   tabla con las pantallas que toca el diff es trabajo del Director y no lo

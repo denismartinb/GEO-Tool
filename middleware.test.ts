@@ -125,12 +125,20 @@ describe("middleware · alcance", () => {
     }
   });
 
+  it("no corre sobre las páginas públicas estáticas que no leen la sesión", () => {
+    const matcher = new RegExp(`^${config.matcher[0]}$`);
+
+    for (const excluded of ["/sobre-genscore", "/estudios", "/comparativas/genscore-vs-otterly"]) {
+      expect(matcher.test(excluded), excluded).toBe(false);
+    }
+  });
+
   it("sí corre sobre las pantallas de producto", () => {
     // Next ancla sus matchers; sin `^...$` el patrón casa en cualquier punto
     // de la ruta y las exclusiones parecen no funcionar.
     const matcher = new RegExp(`^${config.matcher[0]}$`);
 
-    for (const included of ["/", "/dashboard", `/dashboard/projects/${PROJECT_ID}`, "/blog", "/pricing"]) {
+    for (const included of ["/", "/dashboard", `/dashboard/projects/${PROJECT_ID}`, "/blog", "/precios"]) {
       expect(matcher.test(included), included).toBe(true);
     }
   });

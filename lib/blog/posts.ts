@@ -318,6 +318,35 @@ export const BLOG_POSTS: BlogPost[] = [
     cluster: "sectores"
   },
   {
+    slug: "la-ia-te-menciona-pero-recomienda-a-otro",
+    title: "La IA te menciona pero recomienda a otro: qué hacer cuando sales y no eres la respuesta",
+    description:
+      "Aparecer en ChatGPT no es ser su recomendación. Un caso real de nuestras pruebas, cómo leer una respuesta sin engañarte y qué palancas sí mueven algo (y cuál no).",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/la-ia-te-menciona-pero-recomienda-a-otro/cover.webp",
+    coverIcon: "target",
+    primaryKeyword: "la ia te menciona pero recomienda a otro",
+    cluster: "playbooks"
+  },
+  {
+    slug: "como-aparecer-en-gemini-y-vistas-creadas-con-ia",
+    title: "Cómo aparecer en Gemini, las Vistas creadas con IA (AI Overviews) y el Modo IA de Google",
+    description:
+      "Qué dice Google oficialmente sobre sus funciones de IA, qué comprobar para que pueda usarte como fuente, cómo cambia el Modo IA la forma de buscar y qué controla de verdad Google-Extended.",
+    metaDescription:
+      "Cómo aparecer en las Vistas creadas con IA, el Modo IA y Gemini: lo que Google dice oficialmente, qué revisar y qué no funciona.",
+    datePublished: "2026-10-09",
+    coverImage: "/blog/como-aparecer-en-gemini-y-vistas-creadas-con-ia/cover.webp",
+    coverIcon: "search",
+    primaryKeyword: "cómo aparecer en ai overviews",
+    cluster: "playbooks",
+    heroStat: {
+      value: "8%",
+      label: "de las visitas con un resumen de IA en Google acaban en clic a un resultado tradicional, frente al 15% cuando no aparece.",
+      source: "Pew Research Center, navegación de 900 adultos en EE. UU. (2025)"
+    }
+  },
+  {
     slug: "mi-marca-no-aparece-en-chatgpt-por-que",
     title: "Tu marca es nueva y la IA no la conoce todavía: por dónde empezar con GEO",
     description:
@@ -378,7 +407,7 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "que-software-de-facturacion-recomienda-la-ia",
-    title: "¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? Lo hemos medido",
+    title: "¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles?",
     description:
       "Preguntamos a ChatGPT, Gemini y Claude qué software de facturación recomiendan en España. Holded aparece en el 72% de las respuestas. Ranking por motor y metodología.",
     datePublished: "2026-10-09",

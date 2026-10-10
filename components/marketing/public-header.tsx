@@ -9,8 +9,9 @@ import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
 import { PromoStrip } from "@/components/landing/session-ctas";
 import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
+import { FREE_REPORT_PATH } from "@/lib/free-report/promo";
 
-type NavItem = { anchor: string; label: string } | { href: string; label: string };
+type NavItem = { anchor: string; label: string } | { href: string; label: string; lead?: boolean };
 
 
 /**
@@ -76,7 +77,7 @@ function SessionSkeleton() {
 
 /**
  * Single source of truth for the public-site nav links, shared by every
- * marketing surface (home, /pricing, /geo, blog/comparativas/glosario,
+ * marketing surface (home, /precios, /geo, blog/comparativas/glosario,
  * /docs, legal pages). GENSCORE-HEADER-1: previously each surface kept its
  * own hand-copied array and silently drifted (missing links, missing mobile
  * CTAs, a different burger/drawer behavior on home vs everywhere else).
@@ -97,8 +98,12 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "producto", label: "Producto" },
   { anchor: "como", label: "Cómo funciona" },
   { href: "/geo", label: "Qué es GEO" },
-  { href: "/pricing", label: "Precios" },
-  { href: "/blog", label: "Blog" }
+  { href: "/precios", label: "Precios" },
+  { href: "/blog", label: "Blog" },
+  // FREE-REPORT-2 (log §252): the free report, highlighted and last, on every
+  // public page. Plain link, no `?desde=`: the landing is also reached from
+  // ads and outreach, and a nav click is not a campaign.
+  { href: FREE_REPORT_PATH, label: "Informe gratis", lead: true }
 ];
 
 /**
@@ -140,7 +145,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
    * HEADER-SCROLL-SOLID-1 (2026-09-09, founder-reported): HEADER-FLAT-1 made
    * `.lp-nav-wrap` transparent at rest on all 7 public surfaces so it blends
    * with the hero. It never had a scrolled state, so on any surface without
-   * a dark hero behind it (the blog, /geo, /pricing, /docs, legal pages) the
+   * a dark hero behind it (the blog, /geo, /precios, /docs, legal pages) the
    * page's own content scrolls past right behind the sticky nav with nothing
    * separating them — text visibly overlapping the nav links/logo. This adds
    * a solid+blurred background once scrolled past a small threshold, leaving
@@ -160,7 +165,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const links = PUBLIC_NAV_ITEMS.map((item) =>
     "anchor" in item
       ? { href: isHome ? `#${item.anchor}` : `/#${item.anchor}`, label: item.label, isAnchor: true }
-      : { href: item.href, label: item.label, isAnchor: false }
+      : { href: item.href, label: item.label, isAnchor: false, lead: "lead" in item && item.lead === true }
   );
 
   return (
@@ -169,7 +174,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
           promocion a todas las urls públicas si el usuario no está logado").
           Vivía sólo en el hero de la home (`LandingPage`); movida aquí para
           que salga en las siete superficies públicas que comparten
-          `PublicHeader` (home, /geo, /pricing, /blog, /comparativas,
+          `PublicHeader` (home, /geo, /precios, /blog, /comparativas,
           /glosario, /docs, legales) sin copiar el render en cada una — el
           mismo motivo por el que `PUBLIC_NAV_ITEMS` vive en un solo sitio
           (GENSCORE-HEADER-1, comentario de arriba). El propio componente
@@ -192,8 +197,15 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
               {l.label}
             </a>
           ) : (
-            <Link key={l.href} href={l.href} className={l.href === activeHref ? "active" : ""}>
+            <Link
+              key={l.href}
+              href={l.href}
+              className={[l.href === activeHref ? "active" : "", "lead" in l && l.lead ? "lp-nav-lead" : ""]
+                .filter(Boolean)
+                .join(" ")}
+            >
               {l.label}
+              {"lead" in l && l.lead ? <span className="lp-nav-new">Nuevo</span> : null}
             </Link>
           )
         )}

@@ -94,7 +94,10 @@ export const config = {
      * - VERCEL-COST-1 Fase 3-b (2026-08-31): a subset of the pure
      *   public-marketing surface — comparativas, docs, glosario, gratis + its
      *   API, geo, cookies, privacidad, terminos, que-es-genscore, feed.xml,
-     *   llms.txt, robots.txt, sitemap.xml. None of these read the auth
+     *   llms.txt, robots.txt, sitemap.xml. GEO-SELF-1 Fase 1 adds
+     *   sobre-genscore, llms-full.txt and indexnow-key.txt under the same check (static, no
+     *   Supabase read, not one of the three names middleware.test.ts pins); Fase 4
+     *   adds estudios (log §260), same reasoning. None of these read the auth
      *   cookie server-side — verified no `supabase`/`getUser`/`getClaims`
      *   usage under any of these route trees — and the public header already
      *   resolves session via its own `fetch('/api/me')` call
@@ -103,7 +106,7 @@ export const config = {
      *   Every request to this Edge Function is a billed Observability event
      *   regardless of what the handler does.
      *
-     *   Deliberately does NOT include `/`, `/blog` or `/pricing`:
+     *   Deliberately does NOT include `/`, `/blog` or `/precios`:
      *   `middleware.test.ts` (PRELAUNCH-HARDENING-1 Fase Q4) asserts those
      *   three stay covered, and that invariant isn't revisited here — this
      *   phase only takes the routes the existing test doesn't protect.
@@ -120,6 +123,6 @@ export const config = {
      *   refresh. No such route exists today, but this repo has a documented
      *   history of exactly this class of silent matcher mistake.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore)(?:/|$)|feed\\.xml$|llms\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore|estudios)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

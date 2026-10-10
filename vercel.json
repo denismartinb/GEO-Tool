@@ -12,7 +12,7 @@
     },
     {
       "path": "/api/cron/run-audit",
-      "schedule": "0 7 * * *"
+      "schedule": "*/10 * * * *"
     },
     {
       "path": "/api/cron/scan-watchdog",
@@ -21,6 +21,10 @@
     {
       "path": "/api/cron/lifecycle-emails",
       "schedule": "45 7 * * *"
+    },
+    {
+      "path": "/api/cron/scan-continue",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

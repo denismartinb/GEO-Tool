@@ -47,3 +47,26 @@ de aquí):
   firmada de `lib/email/unsubscribe.ts` es por cuenta. El correo es la
   respuesta a su petición, no comercial.
 - En móvil no se pinta la burbuja de pregunta (no estaba en `Movil.dc.html`).
+
+## FREE-REPORT-2 — el informe en toda la web pública (2026-10-09, log §252)
+
+Mismo canvas, tableros nuevos. El fundador validó la tarjeta del blog y aprobó
+el plan completo («Dibuja esa banda y vamos con todo»):
+
+- `Blog-escritorio.dc.html`, `Blog-movil.dc.html`, `Blog-reglas.dc.html`: la
+  tarjeta de la esquina en blog, comparativas, glosario y docs, y cuándo sale.
+- `Portada-banda.dc.html`, `Portada-banda-movil.dc.html`: la banda de la
+  portada, entre «Cinco pantallas» y las preguntas frecuentes.
+- `Precios-linea.dc.html`: una línea bajo las tarjetas de precios.
+- `Cabecera-enlace.dc.html`: «Informe gratis» en cabecera, menú móvil y pie.
+
+`/_blob/…` es la misma portada anonimizada que sirve
+`public/informe-gratis/portada-ejemplo.webp`.
+
+**Desviaciones conscientes en la implementación:**
+
+- En el menú móvil, «Informe gratis» sale con el mismo estilo que los demás
+  enlaces: `MarketingMobileNav` pinta etiquetas de texto y darle un estilo
+  propio a una sola entrada no compensaba tocar un componente compartido.
+- La tarjeta tampoco sale en `/que-es-genscore` ni en el comprobador, aunque
+  usen el mismo shell del blog: la lista de rutas es la de `Blog-reglas`.

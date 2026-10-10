@@ -3,7 +3,7 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
-import { COMPARISON_ROWS, OTTERLY_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-otterly";
+import { COMPARISON_ROWS, OTTERLY_REFRESH_DATE, OTTERLY_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-otterly";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
@@ -42,13 +42,14 @@ export default function GenscoreVsOtterlyPage() {
       {itemListSchema()}
       <h1 className="lp-h2">GenScore vs Otterly</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Datos de Otterly consultados el {OTTERLY_RESEARCH_DATE} en fuentes públicas de terceros —
-        confírmalos en otterly.ai antes de decidir, los precios cambian.
+        Datos de Otterly consultados el {OTTERLY_RESEARCH_DATE} en fuentes públicas de terceros; precios,
+        motores y mercados revisados en su página de precios el {OTTERLY_REFRESH_DATE}. Confírmalos en
+        otterly.ai antes de decidir, los precios cambian.
       </p>
       <div className="blog-body">
         <KeyTakeaway label="En dos frases">
-          Otterly cubre nominalmente más motores y más mercados, y no tiene competencia real en
-          castellano ni en el bucle de acción — solo monitoriza y audita. GenScore se prueba 7 días con Pro y sin tarjeta, cubre
+          Otterly incluye cuatro motores y cubre más mercados, pero no consta en castellano ni compite
+          en el bucle de acción — solo monitoriza y audita. GenScore se prueba 7 días con Pro y sin tarjeta, cubre
           los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por
           añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
         </KeyTakeaway>
@@ -90,9 +91,9 @@ export default function GenscoreVsOtterlyPage() {
         </CompareTable>
 
         <Verdict title="Cuándo elegir Otterly" badge="Cuándo elegir el competidor">
-          Si necesitas seguimiento en decenas de mercados a la vez, cobertura nominal de seis motores
-          (aunque dos sean add-ons de pago), o ya trabajas en inglés y no te importa que el producto no
-          tenga versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
+          Si necesitas seguimiento en decenas de mercados a la vez, Perplexity y Copilot incluidos en el
+          plan (con Gemini, Claude y Google AI Mode como add-ons de pago), o ya trabajas en inglés y no
+          te importa que no conste una versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
         </Verdict>
 
         <Verdict title="Cuándo elegir GenScore" badge="Cuándo elegir GenScore">

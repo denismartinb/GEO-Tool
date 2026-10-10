@@ -29,7 +29,7 @@ const PAGE_URL = `${SITE_URL}/comparativas/alternativas-a-otterly`;
 export const metadata: Metadata = contentMetadata({
   title: "Alternativas a Otterly en 2026: cuál elegir según tu caso — GenScore",
   description:
-    "Cinco alternativas a Otterly comparadas por el motivo que te hace buscarlas: quince prompts en el plan de entrada, motores que se cobran aparte, diagnóstico sin ejecución o producto solo en inglés. GenScore resuelve tres de los cuatro y se prueba 7 días sin tarjeta.",
+    "Cinco alternativas a Otterly comparadas por el motivo que te hace buscarlas: quince prompts en el plan de entrada, motores que se cobran aparte, diagnóstico sin ejecución o producto en inglés. GenScore resuelve tres de los cuatro y se prueba 7 días sin tarjeta.",
   path: "/comparativas/alternativas-a-otterly"
 });
 
@@ -42,7 +42,7 @@ const faqItems = [
   {
     question: "¿Cuál es la alternativa más barata a Otterly?",
     answer:
-      `En la entrada los precios son parecidos —GenScore Starter cuesta ${STARTER_PRICE} €/mes y Otterly arranca en 29 $/mes—, pero GenScore te deja probar 7 días con Pro y sin tarjeta antes de pagar nada. Donde la diferencia es grande es en el escalón de ~100 prompts la comparación es ${PRO_PRICE} €/mes de GenScore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini y Google AI Mode, que se cobran aparte en todos los niveles.`
+      `En la entrada los precios son parecidos —GenScore Starter cuesta ${STARTER_PRICE} €/mes y Otterly arranca en 29 $/mes—, pero GenScore te deja probar 7 días con Pro y sin tarjeta antes de pagar nada. Donde la diferencia es grande es en el escalón de ~100 prompts: la comparación es ${PRO_PRICE} €/mes de GenScore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini, Claude y Google AI Mode, que se cobran aparte en todos los niveles.`
   },
   {
     question: "¿Puedo probar una alternativa sin dejar Otterly?",
@@ -52,7 +52,7 @@ const faqItems = [
   {
     question: "¿Qué hace GenScore que Otterly no haga?",
     answer:
-      "Tres cosas concretas. Primera: entra en la fase de solución — genera el borrador de FAQ, datos estructurados y briefs desde el plan Pro, mientras que Otterly termina en monitorización, auditoría y reporting. Segunda: incluye ChatGPT, Gemini y Claude en todos los planes de pago sin add-ons, mientras que en Otterly Gemini y Google AI Mode se cobran aparte en todos los niveles. Tercera: es un producto en castellano, interfaz y soporte, no una herramienta en inglés con el equipo traduciendo."
+      "Tres cosas concretas. Primera: entra en la fase de solución — genera el borrador de FAQ, datos estructurados y briefs desde el plan Pro, mientras que Otterly termina en monitorización, auditoría y reporting. Segunda: incluye ChatGPT, Gemini y Claude en todos los planes de pago sin add-ons, mientras que en Otterly Gemini, Claude y Google AI Mode se cobran aparte en todos los niveles. Tercera: es un producto en castellano, interfaz y soporte, mientras que en Otterly no consta una versión en castellano."
   }
 ];
 
@@ -90,8 +90,8 @@ export default function AlternativasAOtterlyPage() {
 
       <h1 className="lp-h2">Alternativas a Otterly en 2026</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
-        Datos consultados el {RESEARCH_DATE}. Las cifras de Otterly proceden de fuentes públicas de
-        terceros y son orientativas — confírmalas en otterly.ai antes de decidir.
+        Datos revisados el {RESEARCH_DATE}. Los precios y motores de Otterly proceden de su propia
+        página de precios; confírmalos en otterly.ai antes de decidir.
       </p>
 
       <div className="blog-body">
@@ -151,8 +151,8 @@ export default function AlternativasAOtterlyPage() {
         <p>
           Los 29 $ de la puerta de entrada compran quince prompts. Para una marca con dos líneas de
           producto y algo de vocabulario propio, quince consultas se agotan enseguida — y el escalón
-          siguiente multiplica la factura por 6,5. Encima, Google AI Mode y Gemini se cobran aparte en
-          todos los niveles, así que el precio con el que comparaste no es el que acabas pagando.
+          siguiente multiplica la factura por 6,5. Encima, Google AI Mode, Gemini y Claude se cobran
+          aparte en todos los niveles, así que el precio con el que comparaste no es el que acabas pagando.
         </p>
 
         <h2>Los cuatro motivos reales para buscar alternativa</h2>
@@ -244,15 +244,21 @@ export default function AlternativasAOtterlyPage() {
         <h2>Metodología</h2>
         <p>
           Los datos de GenScore vienen de los planes reales del producto, la misma fuente que usa la
-          página de <Link href="/pricing">Precios</Link>. Los de Otterly proceden de agregadores de
-          reseñas de terceros consultados en la fecha indicada arriba: su página de precios no es
-          accesible desde nuestro entorno, así que ninguna de sus cifras viene de fuente primaria. Se
-          publican porque dos fuentes independientes entre sí coinciden y porque cuadran con lo que ya
-          investigamos para la{" "}
-          <Link href="/comparativas/genscore-vs-otterly">comparativa 1:1 con Otterly</Link>, no porque
-          las hayamos podido verificar en origen. Los precios de Semrush y Ahrefs se dan como
-          estructura (módulo + suite) y no como cifra cerrada, porque las fuentes públicas se
-          contradicen entre sí. Si detectas un dato desactualizado, dínoslo y lo corregimos.
+          página de <Link href="/precios">Precios</Link>. Los precios, la ampliación de prompts y los
+          motores de Otterly proceden de su propia{" "}
+          <a href="https://otterly.ai/pricing" rel="nofollow noopener noreferrer" target="_blank">
+            página de precios
+          </a>
+          , revisada el 9 de octubre de 2026; sus usuarios por plan, de las reseñas de terceros que ya
+          usamos para la{" "}
+          <Link href="/comparativas/genscore-vs-otterly">comparativa 1:1 con Otterly</Link>. Los
+          importes de Peec AI no están en su web: son de{" "}
+          <a href="https://pricingsaas.com/companies/peec" rel="nofollow noopener noreferrer" target="_blank">
+            PricingSaaS
+          </a>{" "}
+          (último visto el 14 de septiembre de 2026) y son orientativos. Los precios de Semrush y Ahrefs
+          se dan como estructura (módulo + suite) y no como cifra cerrada, porque las fuentes públicas
+          se contradicen entre sí. Si detectas un dato desactualizado, dínoslo y lo corregimos.
         </p>
 
         <ArticleCta
