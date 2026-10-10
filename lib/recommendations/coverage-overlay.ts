@@ -33,7 +33,14 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  * anchored to one prompt, so there is no single topic to join against.
  */
 
-export type CoverageOverlayState = "confirmed_surfacing_gap" | "possible_content_gap" | "none";
+/**
+ * `home_only` (AUDIT-TRUTH-1, GS-03, log §276): the only own page Google
+ * returned for the topic is the site's home. A home rarely answers one
+ * specific question, so it does not certify coverage: the card keeps the
+ * "create" advice and says that only the home was found, instead of telling
+ * the user "no crees una página nueva" and linking the home.
+ */
+export type CoverageOverlayState = "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "none";
 
 export type CoverageOverlayEntry = {
   state: CoverageOverlayState;
@@ -56,6 +63,16 @@ export const COVERAGE_OVERLAY_TYPES: ReadonlySet<string> = new Set([
   "add_citation_block",
   "increase_brand_visibility"
 ]);
+
+/** True for "https://acme.es", "https://acme.es/" and "https://www.acme.es/?x=1". */
+export function isSiteRoot(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.replace(/\/+$/, "");
+    return path === "" || /^\/index\.[a-z]+$/i.test(path);
+  } catch {
+    return false;
+  }
+}
 
 function bumpConfidence(confidence: "low" | "medium" | "high"): "low" | "medium" | "high" {
   if (confidence === "low") return "medium";
@@ -101,7 +118,9 @@ export function computeCoverageOverlay(params: {
     const topic = topicByPromptId.get(promptId);
     if (!topic) continue;
 
-    if (topic.found) {
+    if (topic.found && topic.pages.length > 0 && topic.pages.every((p) => isSiteRoot(p.url))) {
+      overlay.set(rec.id, { state: "home_only", verifiedPage: topic.pages[0], confidenceOverride: null });
+    } else if (topic.found) {
       overlay.set(rec.id, {
         state: "confirmed_surfacing_gap",
         verifiedPage: topic.pages[0] ?? null,
@@ -134,7 +153,18 @@ export function computeCoverageOverlay(params: {
  * without updating this function degrades to a generic, still-true
  * sentence instead of throwing.
  */
-export type OverlayCopy = { whatWeFound: string; whatToDo: string };
+export type OverlayCopy = {
+  whatWeFound: string;
+  whatToDo: string;
+  /**
+   * Replaces the card's own `first_step` (GS-03, log §276). The engine writes
+   * that step before coverage exists, so for `increase_brand_visibility` it
+   * always says "Publica una página". Once coverage found a page, the card,
+   * its detail and the report must all say the same thing: improve that
+   * page. Every consumer reads the step from here when an overlay exists.
+   */
+  firstStep: string;
+};
 
 export function overlayCopy(recommendationType: string, state: CoverageOverlayState): OverlayCopy | null {
   if (state === "confirmed_surfacing_gap") {
@@ -143,7 +173,9 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que esa página no está apareciendo en la respuesta de la IA.",
         whatToDo:
-          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer."
+          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer.",
+        firstStep:
+          "Refuerza tu página sobre este tema: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta."
       };
     }
     if (recommendationType === "add_citation_block") {
@@ -151,12 +183,14 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que la IA no lo está citando como fuente.",
         whatToDo:
-          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar."
+          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.",
+        firstStep: "Añade a tu página sobre este tema un dato concreto con fecha y fuente (precio, cifra, plazo)."
       };
     }
     return {
       whatWeFound: "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta.",
-      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva."
+      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva.",
+      firstStep: "Revisa tu página sobre este tema y refuérzala en vez de crear una nueva."
     };
   }
 
@@ -165,7 +199,9 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
       return {
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
-        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
+        firstStep:
+          "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
       };
     }
     if (recommendationType === "add_citation_block") {
@@ -173,12 +209,28 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.",
         whatToDo:
-          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo."
+          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo.",
+        firstStep:
+          "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
       };
     }
     return {
       whatWeFound: "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
-      whatToDo: "plantéate crear una página que responda a esta consulta."
+      whatToDo: "plantéate crear una página que responda a esta consulta.",
+      firstStep: "Publica una página que responda a esta consulta."
+    };
+  }
+
+  if (state === "home_only") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció tu portada. Una portada rara vez responde a una pregunta concreta, así que no la damos por cubierta.",
+      whatToDo:
+        "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
+          : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
     };
   }
 

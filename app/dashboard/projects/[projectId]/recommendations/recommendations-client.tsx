@@ -63,7 +63,7 @@ type EvidenceJson = {
  * exactly as before" — coverage data is optional and sparse by design.
  */
 export type CoverageOverlay = {
-  state: "confirmed_surfacing_gap" | "possible_content_gap" | "none";
+  state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "none";
   verifiedPage: { url: string; title: string } | null;
   confidenceOverride: "low" | "medium" | "high" | null;
 };
@@ -79,17 +79,35 @@ export type CoverageOverlay = {
  * If you change the wording here, change it there too, or the test will say
  * so.
  */
+/**
+ * GS-03 (log §276): the step a card shows. With a coverage verdict it comes
+ * from the overlay, so the card, its detail and the report say the same
+ * thing ("refuerza tu página" vs. "publica una página"); otherwise it is the
+ * engine's own `first_step`.
+ */
+export function effectiveFirstStep(rec: {
+  recommendation_type: string;
+  coverageOverlay?: CoverageOverlay | null;
+  evidence_json?: { first_step?: string } | null;
+}): string | null {
+  const overlay = rec.coverageOverlay;
+  const fromOverlay = overlay ? overlayCopyLocal(rec.recommendation_type, overlay.state)?.firstStep : null;
+  return fromOverlay ?? rec.evidence_json?.first_step ?? null;
+}
+
 export function overlayCopyLocal(
   recommendationType: string,
   state: CoverageOverlay["state"]
-): { whatWeFound: string; whatToDo: string } | null {
+): { whatWeFound: string; whatToDo: string; firstStep: string } | null {
   if (state === "confirmed_surfacing_gap") {
     if (recommendationType === "increase_brand_visibility") {
       return {
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que esa página no está apareciendo en la respuesta de la IA.",
         whatToDo:
-          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer."
+          "no crees una página nueva. Refuerza la que ya tienes: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta, para que sea más fácil de extraer.",
+        firstStep:
+          "Refuerza tu página sobre este tema: responde la pregunta en las dos primeras frases, con el titular en forma de pregunta."
       };
     }
     if (recommendationType === "add_citation_block") {
@@ -97,12 +115,14 @@ export function overlayCopyLocal(
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta. El problema no es que te falte contenido, sino que la IA no lo está citando como fuente.",
         whatToDo:
-          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar."
+          "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.",
+        firstStep: "Añade a tu página sobre este tema un dato concreto con fecha y fuente (precio, cifra, plazo)."
       };
     }
     return {
       whatWeFound: "Buscamos en Google dentro de tu dominio y encontramos contenido tuyo sobre esta consulta.",
-      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva."
+      whatToDo: "revisa esa página y refuérzala en vez de crear una nueva.",
+      firstStep: "Revisa tu página sobre este tema y refuérzala en vez de crear una nueva."
     };
   }
 
@@ -111,7 +131,9 @@ export function overlayCopyLocal(
       return {
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
-        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+        whatToDo: "publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
+        firstStep:
+          "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
       };
     }
     if (recommendationType === "add_citation_block") {
@@ -119,12 +141,28 @@ export function overlayCopyLocal(
         whatWeFound:
           "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta. Puede que el problema no sea de citación, sino que todavía no has publicado contenido sobre esto.",
         whatToDo:
-          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo."
+          "antes de intentar que te citen, plantéate crear una página que responda a esta consulta. Si crees que ya la tienes, puede que Google aún no la haya indexado — revísalo.",
+        firstStep:
+          "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
       };
     }
     return {
       whatWeFound: "Buscamos en Google dentro de tu dominio y no apareció ninguna página tuya sobre esta consulta.",
-      whatToDo: "plantéate crear una página que responda a esta consulta."
+      whatToDo: "plantéate crear una página que responda a esta consulta.",
+      firstStep: "Publica una página que responda a esta consulta."
+    };
+  }
+
+  if (state === "home_only") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció tu portada. Una portada rara vez responde a una pregunta concreta, así que no la damos por cubierta.",
+      whatToDo:
+        "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
+          : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
     };
   }
 
@@ -631,6 +669,7 @@ export function RecCard({
   rec,
   projectId,
   compact = false,
+  showOwnStep = false,
   priorityRank,
 }: {
   rec: Recommendation;
@@ -648,6 +687,8 @@ export function RecCard({
    * affected queries rather than N copies of the same paragraph.
    */
   compact?: boolean;
+  /** Inside a group whose members do NOT share a step (GS-03): show this card's own. */
+  showOwnStep?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
@@ -711,7 +752,7 @@ export function RecCard({
   // RECS-REDESIGN-1 — the single bounded first move, emitted by every engine
   // rule. Older rows (persisted before this field existed) simply don't render
   // the block; nothing is invented to fill it.
-  const firstStep = ev.first_step ?? null;
+  const firstStep = effectiveFirstStep(rec);
 
   const priorityBadgeCls =
     rankCls === "high"
@@ -807,7 +848,7 @@ export function RecCard({
           )}
           <div className="rec-title">{rec.title}</div>
           {!compact && <div className="rec-problem">{rec.description}</div>}
-          {!compact && firstStep && (
+          {(!compact || showOwnStep) && firstStep && (
             <div className="rec2-step">
               <Icon name="arrRight" size={13} />
               <span>
@@ -991,6 +1032,43 @@ export function RecCard({
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
                 <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "possible_content_gap")?.whatToDo}
+              </p>
+            </div>
+          )}
+          {overlay?.state === "home_only" && (
+            <div
+              style={{
+                marginBottom: 14,
+                padding: "12px 16px",
+                background: "var(--surface-sunk)",
+                borderRadius: 10,
+                border: "1.5px solid var(--line)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: 11,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.07em",
+                  color: "var(--ink-4)",
+                  marginBottom: 6,
+                }}
+              >
+                <Icon name="info" size={12} />
+                Auditoría de tu web
+              </div>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
+                Sólo encontramos tu portada
+              </div>
+              <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
+                {overlayCopyLocal(rec.recommendation_type, "home_only")?.whatWeFound}
+              </p>
+              <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "home_only")?.whatToDo}
               </p>
             </div>
           )}
@@ -1280,7 +1358,12 @@ function GroupedRecs({
   // Showing them once here and suppressing them on the cards is what keeps an
   // expanded group readable instead of eight copies of the same two sentences.
   const shared = items[0];
-  const sharedStep = shared.evidence_json?.first_step ?? null;
+  // A coverage verdict can change one member's step (GS-03), so the step is
+  // only hoisted when every member really shares it; otherwise each card
+  // shows its own.
+  const memberSteps = items.map((r) => effectiveFirstStep(r));
+  const stepsAgree = memberSteps.every((s) => s === memberSteps[0]);
+  const sharedStep = stepsAgree ? memberSteps[0] : null;
   // A single-member group has nothing repeated to hoist, so its one card keeps
   // its own description and step.
   const single = items.length === 1;
@@ -1331,7 +1414,7 @@ function GroupedRecs({
             </div>
           )}
           {visible.map((rec) => (
-            <RecCard key={rec.id} rec={rec} projectId={projectId} compact={!single} />
+            <RecCard key={rec.id} rec={rec} projectId={projectId} compact={!single} showOwnStep={!single && !stepsAgree} />
           ))}
           {hiddenCount > 0 && (
             <button

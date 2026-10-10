@@ -8,6 +8,7 @@ import {
   ResolvedHistoryCard,
   SolutionPanel,
   overlayCopyLocal,
+  effectiveFirstStep,
   predictionVerdictLine,
   type Recommendation,
   type ResolvedHistoryItem
@@ -214,7 +215,7 @@ describe("RecCard — CTA y chip de control", () => {
  */
 describe("overlayCopyLocal — en paridad con el servidor", () => {
   const TYPES = ["add_citation_block", "increase_brand_visibility", "algún_tipo_sin_clasificar"] as const;
-  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "none"] as const;
+  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "home_only", "none"] as const;
 
   it("coincide literalmente con overlayCopy para cada combinación de tipo y estado", () => {
     for (const type of TYPES) {
@@ -266,6 +267,42 @@ describe("RecCard — el overlay de cobertura dice lo correcto según el tipo", 
       />
     );
     expect(html).toContain("publica una página que responda esta pregunta en las dos primeras frases");
+  });
+});
+
+describe("RecCard — crear o mejorar, una sola decisión (GS-03)", () => {
+  const withOverlay = (state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only", url: string | null) =>
+    baseRec({
+      recommendation_type: "increase_brand_visibility",
+      evidence_json: {
+        first_step: "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+      },
+      coverageOverlay: { state, verifiedPage: url ? { url, title: "T" } : null, confidenceOverride: null }
+    });
+
+  it("con página propia encontrada, el primer paso ya no manda publicar una página", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={withOverlay("confirmed_surfacing_gap", "https://acme.com/precios")} />);
+    expect(html).toContain("Refuerza tu página sobre este tema");
+    expect(html).not.toContain("Publica una página");
+  });
+
+  it("si sólo apareció la portada, no la certifica y mantiene la acción de crear", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={withOverlay("home_only", "https://acme.com/")} />);
+    expect(html).toContain("Sólo encontramos tu portada");
+    expect(html).toContain("Publica una página");
+    expect(html).not.toContain("no crees una página nueva");
+  });
+
+  it("sin página propia, todo dice crear", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={withOverlay("possible_content_gap", null)} />);
+    expect(html).toContain("Publica una página");
+    expect(html).not.toContain("Refuerza tu página");
+  });
+
+  it("effectiveFirstStep cae al paso del motor cuando no hay veredicto de cobertura", () => {
+    expect(
+      effectiveFirstStep({ recommendation_type: "increase_brand_visibility", coverageOverlay: null, evidence_json: { first_step: "Paso del motor." } })
+    ).toBe("Paso del motor.");
   });
 });
 

@@ -23665,3 +23665,23 @@ días de barridos.
 que el fundador decida) y el «15» del asistente, cuando el fundador lo pida.
 Los proyectos que ya existen conservan sus 15 preguntas: el cambio sólo afecta
 a las altas nuevas.
+
+## 276. AUDIT-TRUTH-1: frases que el producto afirmaba sin datos y un informe que no cuadraba con las pantallas (2026-10-11)
+
+**Origen.** Auditoría externa de producto del 11-oct-2026 (PDF privado que el fundador adjuntó en el hilo «Priorizar la auditoría del 11 de octubre»). Se corrigieron los bloques 1 y 2 de la priorización (GS-02, GS-03, GS-04 y GS-07). El fundador dio el sí explícito para tocar estas frases pese a la congelación de textos (§273): no son cambios de estilo, son frases que hoy dicen algo falso.
+
+**Qué se decidió.**
+
+1. **GS-02 · El liderazgo es una comparación.** La frase del resumen de Visión general caía por defecto en «Hoy mantienes la mayor visibilidad frente a tus competidores». No miraba si había competidores ni si la marca salía, así que un proyecto sin competidores y con 0 de 72 menciones se leía como líder. Ahora decide `resolveCompetitiveClaim` (`lib/metrics/competitive-claim.ts`, puro y con tests). Distingue siete casos: rival por delante, sin citas propias, sin competidores, nadie nombrado, empate, por delante con muestra pequeña y liderazgo real. La frase de liderazgo sólo sale con un competidor real por detrás y con muestra suficiente (`hasSufficientSample`).
+2. **GS-04 · La pista de mención dice sólo lo que muestran las respuestas.** Bajo «La IA no menciona tu marca», el cajón de Prompts decía siempre «La IA te nombra por lo que ya sabe de tu marca». Era falso cuando no había mención, y además afirmaba de dónde sale lo que sabe el modelo, cosa que nada mide. Ahora la escribe `mentionHint` según haya respuestas, mención y cita. También se quitó «por lo que ya sabe» de la ayuda de `/runs/[runId]`.
+3. **GS-07 · Las fuentes del informe salen de `resolveCitation`**, la misma función de Páginas citadas. El informe leía `domain || url` en crudo. Cuando no se resolvía el redirect de Gemini, `vertexaisearch.cloud.google.com` aparecía como «la web más citada», y el redirect se imprimía como página propia. Una cita sin dominio resuelto queda fuera del informe.
+4. **GS-07 · Una cita de «cómo te describe» tiene que ser sobre la marca.** `findQuote` dejó de buscar subcadenas. Ahora exige el nombre como palabra propia que no sea el principio de otro nombre con mayúscula («Marca Plus+»). En las citas de marca, además, descarta las frases que nombran otra marca de la misma respuesta.
+5. **GS-03 · Crear o mejorar se decide una sola vez.** Antes, el motor escribía «Publica una página» como primer paso antes de que existiera la auditoría de cobertura, y el detalle decía «no crees una página nueva». Ahora `overlayCopy` lleva su propio `firstStep` y lo leen la tarjeta (`effectiveFirstStep`), la cabecera de grupo (sólo agrupa el paso cuando todos los miembros coinciden) y el plan del informe (`report-data.ts` aplica el mismo `computeCoverageOverlay`). **Nuevo estado `home_only`:** si la única página propia que devuelve Google es la portada, no se da el tema por cubierto. La tarjeta lo dice («Sólo encontramos tu portada»), mantiene la acción de crear y no sube la confianza. La columna «¿Página tuya?» del informe pone «—».
+
+**Qué queda pendiente** (de la misma priorización, sin empezar):
+- GS-01: Competidores suma los últimos 5 escaneos y su tabla de brechas sólo mira el último.
+- GS-06: hay dos umbrales distintos para el puesto medio.
+- GS-08: el informe puede tratar como rival directo una herramienta citada.
+- El informe toma la cobertura de las 3 últimas filas de `domain_coverage`, mientras que Recomendaciones sólo mira la última. Es una pequeña diferencia de lectura que no se ha tocado.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.

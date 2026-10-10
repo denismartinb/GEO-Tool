@@ -23,6 +23,21 @@ type Competitor = {
   domain: string;
 };
 
+/**
+ * GS-04 (log §276): the hint under "La IA (no) menciona tu marca" used to be
+ * one fixed sentence, "La IA te nombra por lo que ya sabe de tu marca", shown
+ * even when the brand was NOT named. It also claimed where the model's
+ * knowledge came from, which nothing here measures. It now only restates
+ * what the answers show.
+ */
+export function mentionHint(hasResults: boolean, mentioned: boolean, cited: boolean): string {
+  if (!hasResults) return "Esta pregunta todavía no tiene respuestas escaneadas.";
+  if (!mentioned) return "Ninguna respuesta a esta pregunta nombra tu marca.";
+  return cited
+    ? "Te nombra y, además, usa tu web como fuente."
+    : "Te nombra en la respuesta, aunque sin citar tu web.";
+}
+
 type Props = {
   projectId: string;
   projectDomain: string;
@@ -299,7 +314,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="stmt" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
                     {brandMentioned ? "La IA menciona tu marca" : "La IA no menciona tu marca"}
                   </div>
-                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, no por tu web.</div>
+                  <div className="hint">{mentionHint(results.length > 0, brandMentioned, hasOwnCitation)}</div>
                 </div>
                 <div className="pr2-presence-cell">
                   <div className="stmt" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>

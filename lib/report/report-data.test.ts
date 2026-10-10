@@ -132,4 +132,36 @@ describe("loadReportInput", () => {
       { title: "Publica una FAQ", description: "D", firstStep: "Empieza por la portada", providers: ["gemini"], topics: ["Local"] }
     ]);
   });
+
+  describe("plan step follows the coverage verdict (GS-03)", () => {
+    function withPage(url: string) {
+      const tables = base();
+      tables.generated_solutions = {
+        data: [
+          {
+            sanitized_content: JSON.stringify({
+              scanId: RUN.id,
+              generatedAt: "2026-10-09T09:00:00Z",
+              topics: [{ promptId: "q1", topic: "t", found: true, pages: [{ url, title: "P" }], note: "" }]
+            })
+          }
+        ]
+      };
+      const rec = (tables.recommendations.data as Array<{ evidence_json: { affected_prompt_details: Array<{ id?: string }> } }>)[0];
+      rec.evidence_json.affected_prompt_details[0].id = "r1";
+      return tables;
+    }
+
+    it("says improve when the screen says improve", async () => {
+      const input = (await loadReportInput({ supabase: fakeSupabase(withPage("https://acme.es/servicios")), project: PROJECT }))!;
+      expect(input.plan[0].firstStep).toMatch(/^Refuerza tu página/);
+      expect(input.coverage?.q1).toBe("yes");
+    });
+
+    it("does not certify the home as coverage", async () => {
+      const input = (await loadReportInput({ supabase: fakeSupabase(withPage("https://acme.es/")), project: PROJECT }))!;
+      expect(input.plan[0].firstStep).toMatch(/^Publica una página/);
+      expect(input.coverage?.q1).toBe("unknown");
+    });
+  });
 });

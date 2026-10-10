@@ -432,6 +432,19 @@ paths:
   `CoverageOverlay`/`GeneratedSolution` ahí. Ninguna duplicación nueva se
   añade sin el test que la blinda: mismo principio que el guardián de tres
   vías de `GROUNDED_PROVIDERS` (`.claude/rules/web-audit.md`, log §130).
+- **Crear o mejorar lo decide el overlay, y todos lo leen de ahí**
+  (AUDIT-TRUTH-1, GS-03, log §276). El motor escribe `first_step` antes de que
+  exista la cobertura, así que para `increase_brand_visibility` siempre dice
+  «Publica una página». Con veredicto de cobertura, el paso sale de
+  `overlayCopy(...).firstStep`. Lo leen la tarjeta (`effectiveFirstStep`), la
+  cabecera de grupo y el plan del informe (`lib/report/report-data.ts`). Un
+  grupo sólo comparte el paso cuando todos sus miembros coinciden. Si no, cada
+  tarjeta enseña el suyo (`showOwnStep`).
+- **La portada sola no certifica cobertura** (estado `home_only`,
+  `isSiteRoot`). Si la única página propia que devuelve Google es la home, la
+  tarjeta lo dice, mantiene la acción de crear y no sube la confianza. Decir
+  «no crees una página nueva» y enlazar la portada fue lo que encontró la
+  auditoría del 11-oct.
 - **Este módulo sólo afirma problemas, nunca «está bien».** Es lo que hace
   segura la ausencia de un campo en una instantánea vieja: «nunca medido» se
   excluye solo, sin necesidad de un `isMeasured` propio. Si alguna vez se le

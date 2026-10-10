@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ResultRow } from "@/app/dashboard/projects/[projectId]/prompts/page";
-import { PromptDrawer } from "./prompt-drawer";
+import { PromptDrawer, mentionHint } from "./prompt-drawer";
 
 /**
  * PROMPT-DRAWER-TRUTH-1 (log §147) — tests de render del cajón, escritos por
@@ -261,5 +261,34 @@ describe("PromptDrawer — la evidencia que no se puede recuperar", () => {
 
     expect(html).not.toContain("no dejó una cita textual recuperable");
     expect(html).not.toContain("Evidencias de mención de GenScore");
+  });
+});
+
+describe("mentionHint (GS-04)", () => {
+  it("una respuesta sin mención nunca dice que te nombra", () => {
+    for (const cited of [true, false]) {
+      expect(mentionHint(true, false, cited)).not.toMatch(/te nombra/i);
+    }
+  });
+
+  it("con mención distingue si además cita tu web", () => {
+    expect(mentionHint(true, true, true)).toMatch(/usa tu web como fuente/);
+    expect(mentionHint(true, true, false)).toMatch(/sin citar tu web/);
+  });
+
+  it("sin respuestas no afirma nada sobre la marca", () => {
+    expect(mentionHint(false, false, false)).toMatch(/todavía no tiene respuestas/);
+  });
+
+  it("no atribuye de dónde viene lo que sabe el modelo", () => {
+    const cases: Array<[boolean, boolean, boolean]> = [
+      [true, true, true],
+      [true, true, false],
+      [true, false, false],
+      [false, false, false]
+    ];
+    for (const [hasResults, mentioned, cited] of cases) {
+      expect(mentionHint(hasResults, mentioned, cited)).not.toMatch(/lo que ya sabe/);
+    }
   });
 });

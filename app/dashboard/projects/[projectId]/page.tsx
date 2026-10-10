@@ -53,6 +53,7 @@ import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 import { SeoAuditCard } from "./_components/seo-audit-card";
+import { resolveCompetitiveClaim } from "@/lib/metrics/competitive-claim";
 import {
   GEO_SCORE_COMPONENT_META,
   parseEngineCoverage,
@@ -695,6 +696,15 @@ export default async function ProjectDetailPage({
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
+  // GS-02 (log §276): leadership is a comparison and is only claimed when
+  // there is a competitor, the brand is ahead of it, and the sample holds.
+  const competitiveClaim = resolveCompetitiveClaim({
+    brandRate: computedMentionRate,
+    competitors: competitorRows,
+    citationScore,
+    sampleSufficient
+  });
+
   /* ---- unified competitive panorama (PANORAMA-PARITY-1, PANORAMA-EMPTY-1) ----
    * Merges the two previously-separate real sections (brand position ranking +
    * competitor table) into one list, per founder request (Task Intake
@@ -990,18 +1000,28 @@ export default async function ProjectDetailPage({
               GenScore detectó que <b>{project.brand}</b> aparece en{" "}
               <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
               ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}).
-              {topCompetitor && topCompetitor.mentionRate > computedMentionRate ? (
+              {competitiveClaim.kind === "behind" ? (
                 <>
                   {" "}Tu rival más visible,{" "}
-                  <b>{topCompetitor.name}</b>, te saca ventaja:{" "}
-                  <span className="hl-neg">{topCompetitor.mentionRate}% de presencia</span> frente a
+                  <b>{competitiveClaim.competitor}</b>, te saca ventaja:{" "}
+                  <span className="hl-neg">{competitiveClaim.competitorRate}% de presencia</span> frente a
                   tu {computedMentionRate}%.
                 </>
-              ) : citationScore === 0 ? (
+              ) : competitiveClaim.kind === "no_citations" ? (
                 <>
                   {" "}Tu mayor freno son las citas:{" "}
                   <span className="hl-neg">ninguna de las fuentes que usa la IA es tuya todavía</span>.
                 </>
+              ) : competitiveClaim.kind === "no_competitors" ? (
+                <> No sigues a ningún competidor, así que todavía no hay con quién compararte.</>
+              ) : competitiveClaim.kind === "nobody_named" ? (
+                <> La IA no nombró ni a tu marca ni a tus competidores en estas respuestas.</>
+              ) : competitiveClaim.kind === "tied" ? (
+                <>
+                  {" "}Empatas en presencia con <b>{competitiveClaim.competitor}</b>, tu competidor más visible.
+                </>
+              ) : competitiveClaim.kind === "ahead_small_sample" ? (
+                <> Vas por delante de tus competidores en este escaneo, pero con tan pocas respuestas todavía no es concluyente.</>
               ) : (
                 <>
                   {" "}Hoy mantienes la{" "}
