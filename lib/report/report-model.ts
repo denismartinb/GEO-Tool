@@ -1,4 +1,5 @@
 import { classifySourceType } from "@/lib/citations/source-type";
+import { resolveCitation } from "@/lib/citations/aggregate-citations";
 import { isSameOrSubdomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
@@ -164,7 +165,7 @@ type Ext = {
   brand?: { mentioned?: boolean; position?: number | null };
   competitors?: Array<{ name?: string; mentioned?: boolean; position?: number | null }>;
   other_brands_mentioned?: unknown;
-  citations?: Array<{ url?: string | null; domain?: string | null }>;
+  citations?: Array<{ url?: string | null; domain?: string | null; title?: string | null; source?: string | null }>;
 };
 
 function parseExt(raw: unknown): Ext {
@@ -202,33 +203,70 @@ function cleanSentence(s: string): string {
 }
 
 /**
+ * True when `sentence` names `needle` as a word of its own: not inside a
+ * longer word, and not as the start of a longer capitalised name
+ * ("Fibrox Plus+", "Acme Studio" when the needle is "acme"). That second
+ * case is a different product or brand; quoting it as a description of the
+ * brand is a misattribution (GS-07, log §276).
+ */
+function namesAsWord(sentence: string, needle: string): boolean {
+  const lower = sentence.toLowerCase();
+  let from = 0;
+  for (;;) {
+    const at = lower.indexOf(needle, from);
+    if (at === -1) return false;
+    from = at + 1;
+    const before = sentence.slice(0, at);
+    const after = sentence.slice(at + needle.length);
+    if (/[\p{L}\p{N}]$/u.test(before)) continue;
+    if (/^[\p{L}\p{N}+]/u.test(after)) continue;
+    if (/^\s+(?:\p{Lu}[\p{L}\p{N}]*\+?|\+)/u.test(after)) continue;
+    return true;
+  }
+}
+
+/**
  * The first sentence of `text` that names one of `names`, cleaned of markdown.
  * Exported for tests. Returns null when no sentence names it — a quote is
  * never paraphrased or invented.
+ *
+ * `exclude` lists other brands of the same answer: a sentence that also
+ * names one of them is about that brand as much as ours ("Lowco, la marca de
+ * Fibrox…"), so it is not quoted as a description of ours.
  */
-export function findQuote(text: string | null, names: string[]): string | null {
+export function findQuote(text: string | null, names: string[], exclude: string[] = []): string | null {
   if (!text) return null;
   const needles = names.map(key).filter(Boolean);
   if (needles.length === 0) return null;
+  const blocked = exclude.map(key).filter((n) => n && !needles.includes(n));
   const sentences = text.split(/(?<=[.!?])\s+|\n+/);
   for (const raw of sentences) {
     const s = cleanSentence(raw);
     if (s.length < 25) continue;
-    const lower = s.toLowerCase();
-    if (!needles.some((n) => lower.includes(n))) continue;
+    if (!needles.some((n) => namesAsWord(s, n))) continue;
+    if (blocked.some((n) => namesAsWord(s, n))) continue;
     if (s.length <= MAX_QUOTE_CHARS) return s;
     return `${s.slice(0, MAX_QUOTE_CHARS - 1).replace(/\s+\S*$/, "")}…`;
   }
   return null;
 }
 
+/**
+ * GS-07 (log §276): each citation goes through `resolveCitation`, the same
+ * function Páginas citadas uses, so the report and that screen name the same
+ * sites. Reading `domain || url` raw let Gemini's grounding redirect
+ * (vertexaisearch.cloud.google.com) through as "the most cited site" whenever
+ * a domain was not resolved, and printed the redirect as one of the
+ * customer's own pages. A citation that resolves to no domain is left out:
+ * the report has no honest name for it.
+ */
 function citedDomains(ext: Ext): Array<{ domain: string; url: string | null }> {
   const out: Array<{ domain: string; url: string | null }> = [];
   for (const c of ext.citations ?? []) {
-    const raw = c?.domain || c?.url;
-    if (!raw) continue;
-    const domain = normalizeDomain(raw);
-    if (domain) out.push({ domain, url: c.url ?? null });
+    if (!c) continue;
+    const resolved = resolveCitation(c as Parameters<typeof resolveCitation>[0]);
+    if (!resolved?.domain) continue;
+    out.push({ domain: resolved.domain, url: resolved.url || null });
   }
   return out;
 }
@@ -333,9 +371,9 @@ export function buildReportModel(input: ReportInput): ReportModel | null {
   const direct = [...inWithout.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "es"))[0]?.[0] ?? null;
   const engineLabelsOf = (name: string) =>
     engineOrder.filter((e) => (tally.get(name)?.get(e) ?? 0) > 0).map((e) => getEngineMeta(e).label);
-  const quoteFor = (names: string[], pool: typeof rows): ReportQuote | null => {
+  const quoteFor = (names: string[], pool: typeof rows, excludeOthers = false): ReportQuote | null => {
     for (const r of pool) {
-      const text = findQuote(r.rawText, names);
+      const text = findQuote(r.rawText, names, excludeOthers ? r.others : []);
       if (text) return { text, provider: r.provider, engineLabel: getEngineMeta(r.provider).label, topic: topicOf(r) };
     }
     return null;
@@ -393,7 +431,7 @@ export function buildReportModel(input: ReportInput): ReportModel | null {
     const brandNames = [input.brandName, ...input.brandAliases];
     const brandQuotes: ReportQuote[] = [];
     for (const provider of engineOrder) {
-      const q = quoteFor(brandNames, rows.filter((r) => r.named && r.provider === provider));
+      const q = quoteFor(brandNames, rows.filter((r) => r.named && r.provider === provider), true);
       if (q) brandQuotes.push(q);
       if (brandQuotes.length === 2) break;
     }

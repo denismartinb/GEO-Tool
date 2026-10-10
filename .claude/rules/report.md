@@ -58,3 +58,20 @@ histórico (`docs/brand/design-decisions-log.md` §248) o al diseño aprobado
 - **El informe vive fuera de `app/dashboard/`.** Meterlo en el layout de la
   consola reabre el fallo de §217: los ancestros con
   `overflow`/`transform` deforman las páginas.
+
+## Fuentes y citas (AUDIT-TRUTH-1, log §276)
+
+- **Cada cita del informe pasa por `resolveCitation`**
+  (`lib/citations/aggregate-citations.ts`), la misma función de Páginas
+  citadas. El informe y esa pantalla tienen que nombrar las mismas webs. Leer
+  `domain || url` en crudo hacía que el redirect de Gemini
+  (`vertexaisearch.cloud.google.com`) saliera como «la web más citada» y como
+  página propia. Una cita sin dominio resuelto se omite.
+- **`findQuote` busca el nombre como palabra propia, nunca como subcadena.**
+  No vale dentro de otra palabra ni como principio de un nombre más largo con
+  mayúscula («Marca Plus+»). En las citas de «cómo te describe», una frase que
+  nombra otra marca de la misma respuesta tampoco vale. Si no queda ninguna
+  frase, no hay cita.
+- **El primer paso del plan sale de `overlayCopy` cuando hay veredicto de
+  cobertura**, igual que en la tarjeta de Recomendaciones. Una portada sola
+  pone «—» en «¿Página tuya?», nunca «Sí».

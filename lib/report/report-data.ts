@@ -6,6 +6,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
 import { selectPlan } from "@/lib/recommendations/plan";
+import { computeCoverageOverlay, isSiteRoot, overlayCopy } from "@/lib/recommendations/coverage-overlay";
 import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 import { buildReportTechChecks } from "@/lib/report/report-tech";
 import type { ReportAnswer, ReportCoverage, ReportInput, ReportPlanItem } from "@/lib/report/report-model";
@@ -48,11 +49,12 @@ type RecRow = {
   impact: string;
   effort: string;
   priority_rank: number;
+  confidence?: string | null;
   consecutive_runs_open?: number;
   evidence_json: {
     first_step?: string | null;
     affected_prompt_ids?: unknown;
-    affected_prompt_details?: Array<{ provider?: string | null }> | null;
+    affected_prompt_details?: Array<{ id?: string | null; provider?: string | null }> | null;
   } | null;
 };
 
@@ -128,7 +130,7 @@ export async function loadReportInput({
     supabase
       .from("recommendations")
       .select(
-        "id, title, description, recommendation_type, impact, effort, priority_rank, consecutive_runs_open, evidence_json"
+        "id, title, description, recommendation_type, impact, effort, confidence, priority_rank, consecutive_runs_open, evidence_json"
       )
       .eq("project_id", projectId)
       .eq("run_id", run.id)
@@ -165,7 +167,10 @@ export async function loadReportInput({
   if (coverageMap) {
     coverage = {};
     for (const t of coverageMap.topics) {
-      coverage[t.promptId] = t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
+      // A topic whose only own page is the home is not certified as covered
+      // (GS-03, log §276): same verdict as the Recomendaciones overlay.
+      const homeOnly = t.found && t.pages.length > 0 && t.pages.every((p) => isSiteRoot(p.url));
+      coverage[t.promptId] = homeOnly ? "unknown" : t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
     }
   }
 
@@ -185,7 +190,24 @@ export async function loadReportInput({
             ?.deltaPoints ?? null)
         : null
   }));
+  // GS-03 (log §276): the plan's first step goes through the same coverage
+  // overlay as the Recomendaciones card, so the report never says "crea una
+  // página" where the screen says "refuerza la que ya tienes".
+  const overlayByRecId = computeCoverageOverlay({
+    recommendations: recs.map((r) => ({
+      id: r.id,
+      recommendationType: r.recommendation_type,
+      resultId: r.evidence_json?.affected_prompt_details?.[0]?.id ?? null,
+      confidence: r.confidence === "high" || r.confidence === "medium" ? r.confidence : "low"
+    })),
+    resultIdToPromptId: new Map(
+      results.filter((r) => r.prompt_id).map((r) => [r.id as string, r.prompt_id as string])
+    ),
+    coverageTopics: coverageMap?.topics ?? []
+  });
   const plan: ReportPlanItem[] = selectPlan(recs).map((r) => {
+    const overlay = overlayByRecId.get(r.id);
+    const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
     const topics = new Set<string>();
     for (const id of affectedIds(r.evidence_json)) {
       const promptId = resultById.get(id)?.prompt_id;
@@ -195,7 +217,7 @@ export async function loadReportInput({
     return {
       title: r.title,
       description: r.description,
-      firstStep: r.evidence_json?.first_step ?? null,
+      firstStep: overlayStep ?? r.evidence_json?.first_step ?? null,
       providers: (r.evidence_json?.affected_prompt_details ?? [])
         .map((d) => d?.provider)
         .filter((p): p is string => typeof p === "string" && p.length > 0),
