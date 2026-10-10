@@ -23599,3 +23599,55 @@ pero dentro de `headers`, y esa cabecera no sobrevivió al envío de Resend.
 (buzón o reenvío en el proveedor del dominio). Desde este entorno no se puede
 consultar el MX de `genscore.es`. Si no existe, las respuestas rebotarán en vez
 de perderse en noreply.
+
+## 275. DEMO-CALL-1 + AFFILIATES-1: videollamada de 20 minutos y programa de afiliados (2026-10-10)
+
+**Qué se decidió.** El fundador comparó GenScore con Peec AI y GEO Metrics y
+aprobó, sobre la maqueta `docs/design-reference/demo-affiliates-1/
+maqueta-aprobada.html`, dos de sus palancas comerciales:
+
+- **`/demo`**: el visitante pide una videollamada de 20 minutos «con el equipo
+  de GenScore» eligiendo un hueco de lunes a viernes, de 18:00 a 21:00 (hora de
+  Madrid), en los próximos 10 días laborables, nunca a menos de 4 h vista ni en
+  festivo nacional (`lib/demo/slots.ts`). No hay calendario detrás —el
+  fundador no quiso una página de reservas de Google por ahora—: la solicitud
+  llega por correo a `OPS_ALERT_EMAIL` (Reply-To el solicitante) y el
+  solicitante recibe un correo que dice que la invitación se la enviamos
+  nosotros. Todo el copy habla de «solicitud», nunca de cita confirmada. Mismo
+  patrón sin migración que el informe gratis (§249): éxito sólo si el correo
+  al operador se aceptó.
+- **Portada**: una línea secundaria con icono de cámara bajo el campo del hero
+  («Agenda una videollamada de 20 min con el equipo de GenScore», más corta en
+  móvil). El registro sigue siendo el CTA principal: el fundador lo pidió
+  expresamente («a igualdad de conversión, con el registro gratis no tengo que
+  dedicar tiempo ni pagar comisión»). En `/precios`, «Plan Agencia» y «Hablar
+  con ventas» van a `/demo?desde=…` en vez de a un `mailto:`. Los «Hablar con
+  ventas» de la consola no se tocan.
+- **`/afiliados`**: 30 % de lo cobrado sin IVA, 12 meses, sólo cuentas Pro con
+  pago real (la prueba de 7 días no cuenta), pago mensual por transferencia
+  desde 50 €. El fundador retiró la condición sobre pujar por la marca y el
+  correo masivo. Formulario de solicitud por correo, mismo patrón.
+- **Seguimiento sin migración ni herramienta de pago**: `?ref=<código>` deja la
+  cookie `gs_ref` 90 días (último clic gana), sólo para códigos de
+  `AFFILIATE_CODES`; el alta (correo y Google) la copia a
+  `user_metadata.referral_code` sin pisar una existente; el checkout la pasa a
+  los metadatos de la suscripción de Stripe; el día 5 un cron
+  (`/api/cron/affiliate-report`) manda al operador la comisión de cada afiliado
+  del mes anterior, calculada sobre facturas de Pro pagadas.
+
+**Lo que queda pendiente o roto conocido.**
+
+- Dos personas pueden pedir el mismo hueco: no hay reserva atómica. El
+  operador lo resuelve al responder. Si el volumen lo justifica, el siguiente
+  paso es una página de reservas de Google Calendar.
+- Sin historial de pagos: la columna «acumulado» del informe mensual sólo mira
+  el mes; los meses por debajo de 50 € se llevan a mano. Un reembolso hecho
+  después del día 5 no se descuenta.
+- Un usuario logado podría escribir su propio `referral_code` en sus metadatos
+  de Supabase; como sólo viajan a Stripe códigos aprobados, el abuso realista
+  es un afiliado refiriéndose a sí mismo.
+- `?ref=` hace correr el middleware también en las rutas públicas que la
+  exclusión de coste de VERCEL-COST-1 Fase 3-b salta, pero sólo cuando la URL
+  lleva `ref`.
+- Para activar el programa hay que dar de alta los códigos en
+  `AFFILIATE_CODES` (Vercel) a medida que el fundador aprueba solicitudes.
