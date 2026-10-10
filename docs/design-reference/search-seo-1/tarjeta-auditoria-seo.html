@@ -1,0 +1,309 @@
+<title>Tarjeta Auditoría SEO</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/motion@11.11.13/dist/motion.js"></script>
+<style>
+/* Layout: lámina de revisión en claro, misma consola que la maqueta aprobada de SEARCH-SEO-1. Selector de estado arriba; marco de escritorio y marco de móvil con el mismo contenido (container queries); notas de decisión al final. La consola es clara a propósito: se ve igual en tema claro y oscuro. */
+:root{
+  color-scheme:light;
+  --canvas:#f4f6fa; --page:#f7f8fb; --surface:#ffffff; --surface-2:#eef2f8;
+  --ink:#0b1426; --ink-2:#3b4759; --ink-3:#5b6b82; --ink-4:#98a2b3;
+  --line:#e7eaf0; --line-soft:#eef1f6;
+  --blue:#2563eb; --blue-2:#4f7bff; --blue-soft:rgba(37,99,235,.10); --cyan:#09c5d6;
+  --pos:#15915a; --pos-soft:#e7f6ee; --warn:#c2570c; --warn-soft:#fcede1; --neg:#d23b48; --neg-soft:#fdecee;
+  --neutral-soft:#eef1f6; --neutral-ink:#4a586e;
+  --shadow:0 1px 2px rgba(11,20,38,.04),0 6px 18px rgba(11,20,38,.05);
+  --display:"Bricolage Grotesque","Figtree",system-ui,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink-2);font:15px/1.5 var(--body);padding-inline:16px;padding-block:28px 72px;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:var(--display);color:var(--ink);margin:0;line-height:1.15;text-wrap:balance}
+p{margin:0}
+button{font-family:inherit}
+.sheet{max-width:1640px;margin:0 auto;display:flex;flex-direction:column;gap:24px}
+.intro{display:flex;flex-direction:column;gap:10px;max-width:820px}
+.intro h1{font-size:clamp(26px,4vw,36px);font-weight:800;letter-spacing:-.02em}
+.intro p{font-size:16px}
+.tag{align-self:flex-start;font:600 11px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--warn);background:var(--warn-soft);padding:4px 10px;border-radius:999px}
+.switcher{display:flex;gap:6px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:5px;align-self:flex-start;box-shadow:var(--shadow);max-width:100%}
+.switcher button{border:0;background:transparent;color:var(--ink-3);font-weight:600;font-size:14px;padding:8px 14px;border-radius:8px;cursor:pointer}
+.switcher button[aria-pressed="true"]{color:var(--blue);background:var(--blue-soft)}
+.switcher button:focus-visible,.btn:focus-visible,.fx:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.frames{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+.fcol{display:flex;flex-direction:column;gap:8px;min-width:0}
+.flabel{font:600 11px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4)}
+.dcol{flex:1 1 900px}
+.dscroll{overflow-x:auto;border-radius:16px;border:1px solid var(--line);box-shadow:0 30px 60px -40px rgba(11,20,38,.45)}
+.desk{width:1180px;height:880px;display:grid;grid-template-columns:236px 1fr;background:var(--page);overflow:hidden}
+.mcol{flex:0 0 390px;max-width:100%}
+.phone{width:390px;max-width:100%;height:844px;border-radius:40px;border:10px solid #0b1426;background:var(--page);overflow:hidden;display:flex;flex-direction:column;box-shadow:0 30px 60px -40px rgba(11,20,38,.6)}
+
+/* console chrome */
+.sb{background:var(--surface);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.sb-brand{height:52px;display:flex;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--line-soft);font:800 17px var(--display);color:var(--ink)}
+.mark{width:22px;height:22px;border-radius:7px;background:conic-gradient(from 210deg,var(--blue),var(--cyan),var(--blue-2),var(--blue))}
+.proj{display:flex;align-items:center;gap:10px;margin:12px 12px 4px;padding:9px 11px;border:1px solid var(--line);border-radius:10px}
+.fav{width:26px;height:26px;border-radius:7px;background:#e6f6f8;color:#0a8a96;font:700 12px var(--display);display:grid;place-items:center;flex:0 0 auto}
+.proj b{display:block;color:var(--ink);font-size:13px;font-weight:650}
+.proj span{display:block;color:var(--ink-4);font-size:11px}
+.sb-scroll{flex:1;overflow:auto;padding:4px 12px 12px}
+.ngl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-4);padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;color:var(--ink-2);font-size:13.5px;font-weight:550}
+.ni svg{width:17px;height:17px;flex:0 0 auto;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ni.on{background:var(--blue-soft);color:var(--blue);font-weight:650}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.top{height:52px;flex:0 0 auto;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--line);background:var(--surface);font-size:13px;color:var(--ink-4)}
+.top b{color:var(--ink);font-weight:650;margin-left:6px}
+.scroll{flex:1;overflow:auto;overscroll-behavior:contain}
+.mtop{height:56px;flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--line)}
+.mtop .ham{width:20px;height:14px;border-top:2px solid var(--ink-2);border-bottom:2px solid var(--ink-2);position:relative}
+.mtop .ham:after{content:"";position:absolute;inset:4px 0 auto;border-top:2px solid var(--ink-2)}
+.mtop b{font:800 16px var(--display);color:var(--ink)}
+.mtop .fav{margin-left:auto;width:24px;height:24px}
+
+/* screen */
+.screen{container-type:inline-size;padding:26px 28px 40px;display:flex;flex-direction:column;gap:16px}
+.ph h2{font-size:28px;font-weight:800;letter-spacing:-.025em}
+.ph p{font-size:14px;color:var(--ink-3);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px 20px;min-width:0}
+.ch{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.ch h3{font-size:16px;font-weight:700;letter-spacing:-.01em}
+.ch .src{font-size:11.5px;color:var(--ink-4)}
+.newt{font:700 9.5px var(--mono);letter-spacing:.06em;color:#fff;background:linear-gradient(90deg,var(--blue),var(--cyan));padding:2px 7px;border-radius:999px;margin-left:6px;vertical-align:2px}
+.track{height:7px;border-radius:999px;background:var(--surface-2);overflow:hidden}
+.fill{height:100%;border-radius:inherit;transform-origin:left center}
+
+.prio{position:relative;display:grid;grid-template-columns:40px 1fr auto;gap:14px;align-items:center;background:linear-gradient(110deg,#fff5f5,#fff9f1);border:1px solid #f6cfd3;border-radius:14px;padding:15px 18px;overflow:hidden}
+.prio:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--neg),#f08a4b)}
+.prio .pi{width:40px;height:40px;border-radius:12px;background:#fff;display:grid;place-items:center;box-shadow:var(--shadow);color:var(--neg);font:800 18px var(--display)}
+.prio .pk{font:700 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--neg);margin-bottom:3px}
+.prio p{font-size:14px} .prio p b{color:var(--ink)}
+.ins{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;box-shadow:var(--shadow)}
+.ins .ii{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--blue),var(--cyan))}
+.ins p{font-size:14px} .ins b{color:var(--ink)}
+.ov-hero{display:grid;grid-template-columns:200px 1fr;gap:16px}
+.gauge{display:flex;align-items:center;justify-content:center}
+.gnum{text-align:center} .gnum b{display:block;font:800 46px/1 var(--display);color:var(--ink)} .gnum span{font-size:12px;color:var(--ink-4)}
+.ov-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.kpi{display:flex;flex-direction:column;gap:6px;padding:15px 16px}
+.kpi .k{font-size:12px;color:var(--ink-3);font-weight:600}
+.kpi .v{font:800 26px/1.05 var(--display);color:var(--ink)}
+.ov-cols{display:grid;grid-template-columns:1.45fr 1fr;gap:16px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.brow{display:grid;grid-template-columns:32px 1fr 110px;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.brow:last-child{border-bottom:0}
+.brow .bi{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;font:700 12px var(--display)}
+.brow b{display:block;font-size:13.5px;color:var(--ink);font-weight:650}
+.brow span.h{display:block;font-size:12px;color:var(--ink-3)}
+.brow .bm{display:flex;flex-direction:column;gap:5px;align-items:flex-end}
+.brow .bm .track{width:100%}
+.brow .bm em{font:700 13px var(--mono);font-style:normal;color:var(--ink)}
+.engb{display:grid;grid-template-columns:78px 1fr 40px;gap:10px;align-items:center;font-size:13px;padding:6px 0}
+.engb em{font:700 12.5px var(--mono);font-style:normal;color:var(--ink);text-align:right}
+
+/* ---------- the new card ---------- */
+.seo{position:relative;outline:2px solid transparent}
+.seo.focus{box-shadow:0 0 0 3px rgba(37,99,235,.18),var(--shadow);border-color:#c9d8fb}
+.sev{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.sv{border-radius:10px;padding:9px 10px;display:flex;flex-direction:column;gap:1px}
+.sv b{font:800 22px/1.05 var(--display);font-variant-numeric:tabular-nums}
+.sv span{font-size:11.5px;font-weight:650}
+.sv.c{background:var(--neg-soft);color:var(--neg)} .sv.w{background:var(--warn-soft);color:var(--warn)} .sv.i{background:var(--neutral-soft);color:var(--neutral-ink)}
+.sv.zero{opacity:.55}
+.fxh{font:600 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);margin:14px 0 4px}
+.fxl{display:flex;flex-direction:column}
+.fx{display:grid;grid-template-columns:8px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line-soft);text-decoration:none;color:inherit;border-radius:6px}
+.fx .d{width:8px;height:8px;border-radius:50%}
+.fx b{display:block;font-size:13px;color:var(--ink);font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx span{display:block;font-size:11.5px;color:var(--ink-4)}
+.fx .fr{display:flex;align-items:center;gap:6px}
+.fx .cv{width:15px;height:15px;stroke:var(--ink-4);fill:none;stroke-width:2}
+.fx:hover b{color:var(--blue)}
+.fx em{font:700 11.5px var(--mono);font-style:normal;color:var(--pos);background:var(--pos-soft);padding:2px 7px;border-radius:999px;white-space:nowrap}
+.pot{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border-radius:10px;background:linear-gradient(110deg,#f2f7ff,#effbfc);border:1px solid #dbe6fb;font-size:12.5px;color:var(--ink-2)}
+.pot .sc{display:flex;align-items:center;gap:6px;font:800 17px var(--display);color:var(--ink);white-space:nowrap}
+.pot .sc i{font-style:normal;color:var(--ink-4);font-size:13px}
+.pot .sc .to{color:var(--pos)}
+.cta{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;flex-wrap:wrap}
+.cta small{font-size:11.5px;color:var(--ink-4)}
+.btn{display:inline-flex;align-items:center;gap:7px;border:0;background:var(--blue);color:#fff;font-weight:650;font-size:13px;padding:8px 13px;border-radius:9px;cursor:pointer}
+.btn.ghost{background:var(--surface);color:var(--blue);border:1px solid var(--line)}
+.ok{display:flex;gap:12px;align-items:center;padding:4px 0 2px}
+.ok .oi{width:38px;height:38px;border-radius:11px;background:var(--pos-soft);color:var(--pos);display:grid;place-items:center;flex:0 0 auto}
+.ok b{display:block;color:var(--ink);font-size:14px}
+.ok span{font-size:12.5px;color:var(--ink-3)}
+.empty{display:flex;gap:12px;align-items:flex-start}
+.empty .oi{width:38px;height:38px;border-radius:11px;background:var(--surface-2);color:var(--ink-3);display:grid;place-items:center;flex:0 0 auto}
+.empty b{display:block;color:var(--ink);font-size:14px}
+.empty span{font-size:12.5px;color:var(--ink-3)}
+
+@container (max-width:640px){
+  .screen{padding:16px 14px 32px;gap:14px}
+  .ph h2{font-size:23px}
+  .ov-hero,.ov-cols{grid-template-columns:1fr}
+  .ov-kpis .kpi .v{font-size:20px}
+  .card{padding:15px}
+  .prio{grid-template-columns:1fr;gap:10px} .prio .pi{display:none}
+  .brow{grid-template-columns:32px 1fr 64px}
+  .gnum b{font-size:38px}
+}
+
+/* notes */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.note{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;display:flex;flex-direction:column;gap:6px}
+.note .q{font:600 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--blue)}
+.note h3{font-size:16px}
+.note p{font-size:13.5px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="sheet">
+  <header class="intro">
+    <span class="tag">Fase 1b · propuesta</span>
+    <h1>Tarjeta de Auditoría SEO en Visión general</h1>
+    <p>Sustituye al enlace que quitamos de «Diagnóstico técnico». Va en la columna derecha, debajo de los motores de IA y a la altura de «Diagnóstico técnico», y sólo enseña datos que la auditoría ya mide hoy: cuántos problemas hay por gravedad y los tres que más suben tu nota. Cada problema abre Auditoría SEO. Cambia de estado con las pestañas.</p>
+    <div class="switcher" role="group" aria-label="Estado de la tarjeta">
+      <button type="button" data-s="issues" aria-pressed="true">Con problemas</button>
+      <button type="button" data-s="block" aria-pressed="false">Con un freno (Prioridad 1)</button>
+      <button type="button" data-s="clean" aria-pressed="false">Sin problemas</button>
+      <button type="button" data-s="none" aria-pressed="false">Sin auditoría todavía</button>
+    </div>
+  </header>
+
+  <div class="frames">
+    <div class="fcol dcol">
+      <span class="flabel">Escritorio · 1440 px</span>
+      <div class="dscroll"><div class="desk">
+        <aside class="sb">
+          <div class="sb-brand"><span class="mark"></span>GenScore</div>
+          <div class="proj"><span class="fav">C</span><div><b>clinicaejemplo.es</b><span>Pro</span></div></div>
+          <div class="sb-scroll">
+            <div class="ngl">Posicionamiento en IA</div>
+            <div class="ni on"><svg viewBox="0 0 24 24"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Visión general</div>
+            <div class="ni"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Prompts</div>
+            <div class="ni"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3 3-5 6-5s6 2 6 5M17 11a3 3 0 100-6M21 20c0-2-1.5-3.5-3.5-4.3"/></svg>Competidores</div>
+            <div class="ni"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>Páginas citadas</div>
+            <div class="ngl">Posicionamiento en buscadores</div>
+            <div class="ni"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>Auditoría SEO</div>
+            <div class="ngl">Actuar</div>
+            <div class="ni"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7V17h8v-2.3A7 7 0 0012 2z"/></svg>Recomendaciones</div>
+          </div>
+        </aside>
+        <div class="main">
+          <div class="top">Posicionamiento en IA / <b>Visión general</b></div>
+          <div class="scroll"><div data-mount="d"></div></div>
+        </div>
+      </div></div>
+    </div>
+    <div class="fcol mcol">
+      <span class="flabel">Móvil · 390 px</span>
+      <div class="phone">
+        <div class="mtop"><span class="ham"></span><b>Visión general</b><span class="fav">C</span></div>
+        <div class="scroll"><div data-mount="m"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="notes" aria-label="Decisiones">
+    <div class="note"><span class="q">Dónde va</span><h3>Junto a «Diagnóstico técnico»</h3><p>El desglose ocupa dos tercios y la columna de la derecha sólo tiene los motores, así que le sobra alto. La tarjeta rellena ese hueco y queda a la altura de la fila que explica. En móvil sale justo después de los motores, antes de los competidores.</p></div><div class="note"><span class="q">Qué enseña</span><h3>Sólo lo que la auditoría ya mide</h3><p>Los problemas por gravedad (Crítico, Aviso y Mejora, los mismos nombres que la pantalla de Auditoría SEO) y los tres que más puntos suben. Sale del mismo cálculo que la pantalla, así que no pueden discrepar. Sin botón: cada problema es un enlace a Auditoría SEO.</p></div>
+    
+    <div class="note"><span class="q">Con un freno</span><h3>Encaja con la franja roja</h3><p>Si hay un noindex o un bot bloqueado, la franja «Prioridad 1» sigue arriba, y en la tarjeta ese freno aparece primero en la lista. Es el mismo dato en dos sitios, con un nivel de detalle distinto.</p></div>
+    <div class="note"><span class="q">Más adelante</span><h3>Se convierte en «Buscadores»</h3><p>En la fase 2 la cifra de arriba pasa a ser la Salud SEO, con los checks nuevos y la velocidad. En la fase 3 se le añade la mitad de Google (clics y puesto medio) cuando conectes Search Console. El sitio en la pantalla no cambia.</p></div>
+  </section>
+</div>
+
+<script>
+const ISSUES = [
+  {sev:'c', t:'Datos estructurados', s:'6 de 10 páginas', p:9},
+  {sev:'w', t:'Listas o tablas', s:'4 de 10 páginas', p:4},
+  {sev:'w', t:'Intro respuesta-primero', s:'5 de 10 páginas', p:3}
+];
+const BLOCK = [
+  {sev:'c', t:'Página indexable', s:'1 de 10 páginas · /ortodoncia-invisible', p:4},
+  ...ISSUES
+];
+const COL = {c:'var(--neg)', w:'var(--warn)', i:'var(--neutral-ink)'};
+let STATE = 'issues';
+
+function seoCard(state){
+  const head = `<div class="ch"><h3>Auditoría SEO<span class="newt">NUEVO</span></h3><span class="src">${state==='none'?'Aún sin revisar':'Revisada el 9 oct · 10 páginas'}</span></div>`;
+  if (state==='none') return `<div class="card seo">${head}
+    <div class="empty"><span class="oi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+    <div><b>Tu primera auditoría está en marcha</b><span>Se hace sola después de cada escaneo y revisa cómo leen tu web Google y los motores de IA.</span></div></div></div>`;
+  if (state==='clean') return `<div class="card seo">${head}
+    <div class="ok"><span class="oi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+    <div><b>Sin problemas técnicos</b><span>Las 10 páginas revisadas pasan todas las comprobaciones.</span></div></div></div>`;
+  const list = state==='block' ? BLOCK : ISSUES;
+  const counts = state==='block' ? {c:2,w:3,i:2} : {c:1,w:3,i:2};
+  const top = list.slice(0,3);
+  return `<div class="card seo">${head}
+    <div class="sev">
+      <div class="sv c ${counts.c?'':'zero'}"><b data-count="${counts.c}">${counts.c}</b><span>${counts.c===1?'Crítico':'Críticos'}</span></div>
+      <div class="sv w"><b data-count="${counts.w}">${counts.w}</b><span>${counts.w===1?'Aviso':'Avisos'}</span></div>
+      <div class="sv i"><b data-count="${counts.i}">${counts.i}</b><span>${counts.i===1?'Mejora':'Mejoras'}</span></div>
+    </div>
+    <div class="fxh">Lo primero que arreglar</div>
+    <div class="fxl">${top.map(x=>`<a class="fx" href="#" onclick="return false"><span class="d" style="background:${COL[x.sev]}"></span><div style="min-width:0"><b>${x.t}</b><span>${x.s}</span></div><span class="fr">${x.p?`<em>+${x.p} pts</em>`:''}<svg class="cv" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></a>`).join('')}</div>
+  </div>`;
+}
+
+function screen(state){
+  const blocked = state==='block';
+  const tech = state==='clean'?94 : blocked?58 : state==='none'?null : 62;
+  const rows = [['Presencia','Cuántas respuestas te nombran.',38,'#e9f0ff','#2453c7'],['Posición','En qué lugar te nombran.',55,'#e9f0ff','#2453c7'],['Sentimiento','Cómo hablan de ti.',72,'#e7f6ee','#15915a'],['Citas','Cuántas veces enlazan tu web.',31,'#fcede1','#c2570c'],['Diagnóstico técnico','Si los motores pueden leer tu web.',tech,'#eef2f8','#4a586e']];
+  return `<div class="screen">
+    <div class="ph"><h2>Visión general</h2><p>clinicaejemplo.es · último escaneo hace 2 h</p></div>
+    ${blocked?`<div class="prio"><span class="pi">!</span><div><div class="pk">Prioridad 1 · tu web</div><p><b>Una página tiene noindex.</b> Lleva una etiqueta que pide no indexarla, así que ningún motor puede citarla.</p></div><a class="btn" href="#" onclick="return false">Ver cómo arreglarlo</a></div>`:''}
+    <div class="ins"><span class="ii"></span><p>GenScore detectó que <b>Clínica Ejemplo</b> aparece en el <b>38% de las respuestas</b>. Tu rival más visible, <b>Dental Norte</b>, llega al 61%.</p></div>
+    <div class="ov-hero">
+      <div class="card gauge"><div class="gnum"><b>${blocked?43:51}</b><span>Puntuación GEO</span></div></div>
+      <div class="ov-kpis">
+        <div class="card kpi"><span class="k">Presencia</span><span class="v">38%</span></div>
+        <div class="card kpi"><span class="k">Puesto medio</span><span class="v">3,4</span></div>
+        <div class="card kpi"><span class="k">Sentimiento</span><span class="v" style="font-size:18px;padding-top:4px">Positivo</span></div>
+      </div>
+    </div>
+    <div class="ov-cols">
+      <div class="card"><div class="ch"><h3>Desglose de la Puntuación GEO</h3></div>
+        ${rows.map(([l,h,v,bg,ink])=>`<div class="brow"><span class="bi" style="background:${bg};color:${ink}">${l[0]}</span><div><b>${l}</b><span class="h">${v===null?'Se calcula con tu primera auditoría.':h}</span></div><div class="bm"><em>${v===null?'—':v}</em><div class="track"><div class="fill" style="width:${v||0}%;background:${ink}"></div></div></div></div>`).join('')}
+      </div>
+      <div class="col">
+        <div class="card"><div class="ch"><h3>Posicionamiento por motores de IA</h3></div>
+          ${[['ChatGPT',44,'#10a37f'],['Gemini',blocked?29:41,'#4f7bff'],['Claude',40,'#d97757']].map(([n,v,c])=>`<div class="engb"><span>${n}</span><div class="track" style="height:8px"><div class="fill" style="width:${v}%;background:${c}"></div></div><em>${v}%</em></div>`).join('')}
+        </div>
+        ${seoCard(state)}
+      </div>
+    </div>
+  </div>`;
+}
+
+const M = window.Motion;
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+function anim(t,k,o){ try{ if(M&&M.animate&&t&&(t.length===undefined||t.length)) M.animate(t,k,o);}catch(e){} }
+
+function render(){
+  document.querySelectorAll('[data-mount]').forEach(root=>{
+    root.innerHTML = screen(STATE);
+    root.parentElement.scrollTop = 0;
+    if (!M || reduce) return;
+    const card = root.querySelector('.seo');
+    anim(card,{opacity:[0,1],transform:['translateY(12px)','translateY(0)']},{duration:.55,ease:[.22,1,.36,1]});
+    const st = M.stagger;
+    anim(root.querySelectorAll('.seo .sv, .seo .fx'),{opacity:[0,1],transform:['translateY(6px)','translateY(0)']},{duration:.4,delay:st?st(.06,{startDelay:.2}):.2});
+    root.querySelectorAll('.seo [data-count]').forEach(el=>{
+      const to=+el.dataset.count; if(isNaN(to)) return;
+      try{ M.animate(0,to,{duration:1.1,delay:.25,onUpdate:v=>{el.textContent=Math.round(v);}});}catch(e){}
+    });
+    anim(root.querySelectorAll('.brow .fill, .engb .fill'),{transform:['scaleX(0)','scaleX(1)']},{duration:.9,delay:.15});
+  });
+}
+document.querySelectorAll('.switcher button').forEach(b=>b.addEventListener('click',()=>{
+  STATE=b.dataset.s;
+  document.querySelectorAll('.switcher button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  render();
+}));
+render();
+</script>

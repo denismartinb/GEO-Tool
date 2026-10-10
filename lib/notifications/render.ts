@@ -198,7 +198,7 @@ export function renderNotification(
     case "audit_completed": {
       const score = num(payload.readinessScore);
       return {
-        title: "Auditoría web completada",
+        title: "Auditoría SEO completada",
         body: `Diagnóstico técnico ${score !== null ? Math.round(score) : "—"}/100.`,
         targetLabel: domain,
         href: hrefForProject(row.project_id, "/web-audit"),
