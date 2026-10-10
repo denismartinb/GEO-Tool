@@ -4,6 +4,7 @@ import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
 import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categories";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -14,12 +15,19 @@ import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
  * Returns whether Resend ACCEPTED the email. The lifecycle sequence (log
  * §233) records a send only on `true`, so a failed send stays eligible for
  * the next pass; every older caller ignores the value, as before.
+ *
+ * Replies go to `SUPPORT_EMAIL` unless `replyTo` says otherwise. The sender
+ * is `noreply@`, and several emails invite the reader to answer them («responde
+ * a este correo»); without a Reply-To that answer lands in a mailbox nobody
+ * reads. It must be Resend's own `replyTo` field: a `Reply-To` passed in
+ * `headers` did not survive the send (REPLY-TO-SUPPORT-1, log §270).
  */
 export async function sendEmail(
   to: string,
   subject: string,
   html: string,
-  headers?: Record<string, string>
+  headers?: Record<string, string>,
+  replyTo: string = SUPPORT_EMAIL
 ): Promise<boolean> {
   const resend = getResendClient();
   if (!resend) return false;
@@ -28,6 +36,7 @@ export async function sendEmail(
     const { error } = await resend.emails.send({
       from: getEmailFromAddress(),
       to,
+      replyTo,
       subject,
       html,
       ...(headers ? { headers } : {})

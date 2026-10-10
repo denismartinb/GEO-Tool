@@ -166,6 +166,15 @@ describe("a quién va cada correo", () => {
   });
 });
 
+describe("respuestas: nunca a noreply (REPLY-TO-SUPPORT-1, log §270)", () => {
+  it("todo correo pide las respuestas en soporte, con el campo propio de Resend", async () => {
+    await sendWelcomeEmail(CUSTOMER);
+    const payload = send.mock.calls.at(-1)?.[0] as { replyTo?: string; headers?: Record<string, string> };
+    expect(payload.replyTo).toBe("soporte@genscore.es");
+    expect(payload.headers?.["Reply-To"]).toBeUndefined();
+  });
+});
+
 describe("isOpsAlertConfigured", () => {
   /**
    * REGRESIÓN — 2026-08-05. Comprobar sólo la dirección no bastaba: estaba

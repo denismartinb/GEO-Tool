@@ -34,6 +34,9 @@ describe("free report emails", () => {
     expect(subject).toContain("tuempresa.es");
     expect(html).toContain("48 h laborables");
     expect(html).toContain("preguntas principales de búsqueda");
+    // «Qué vendes» is free text: it is echoed as what they sell, never as their «sector».
+    expect(html).toContain("sobre lo que vendes");
+    expect(html).not.toContain("de tu sector");
     for (const pattern of FORBIDDEN) expect(html).not.toMatch(pattern);
   });
 
