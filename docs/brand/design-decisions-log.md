@@ -22990,3 +22990,47 @@ modos.
 - Ese mismo 2026-10-10 todas las extracciones de OpenAI devolvieron 429 desde
   las 06:00 UTC. Es un tema de cuenta del proveedor y no de esta fase: avisado
   al fundador.
+
+## 263. GEO-SELF-1 Fase 5: el comprobador gratuito rehecho sobre el diseño aprobado (2026-10-10)
+
+**Qué.** `/gratis/aparece-mi-marca-en-chatgpt` pasa al diseño que el fundador
+aprobó el 2026-10-10 («Me vale», `docs/design-reference/geo-self-1-checker/`):
+
+- Portada oscura (la de los artículos, §247) con migas, antetítulo, H1, la
+  entradilla y el campo dentro. Campo y botón en fila en escritorio y
+  apilados en móvil; debajo, «Sin registro · Sin tarjeta · Respuesta real de
+  ChatGPT».
+- «01 · Así es un resultado»: un ejemplo con «Competidor A/B/C» y dominios
+  genéricos, etiquetado «Ejemplo ilustrativo con datos inventados». Cada
+  bloque del ejemplo existe en el resultado real (`FreeCheckerResult`):
+  pregunta, respuesta, marcas nombradas y fuentes.
+- «02 · Qué significa tu resultado» (tres tarjetas), «03 · Gratis frente a
+  completo» (tabla en escritorio, dos tarjetas en móvil, misma fuente
+  `COMPARISON`) con CTA a `/signup`, «04 · Preguntas frecuentes» (cinco) y
+  tres enlaces: `/estudios`, la guía S1 y el informe gratis
+  (`?desde=comprobador`, clave nueva `FREE_REPORT_ENTRY.checker`).
+- Schema `WebApplication` gratuito (`offers` a 0 EUR, `provider` por `@id`),
+  además de las migas y el `FAQPage` que ya había. Sitemap a 2026-10-10.
+
+**Por qué.** Fase 5 del plan de posicionamiento propio (F6 del plan): la
+página que debe captar la consulta transaccional «¿aparece mi marca en
+ChatGPT?» era una columna centrada sin ejemplo de lo que se obtiene ni
+comparación con el escaneo completo.
+
+**Qué cambia en el comportamiento.** Nada del flujo: `?d=` sigue rellenando
+sin lanzar, la espera, el resultado, el camino `degraded` al registro y la
+conversión `free_check` son los mismos. Cambia el sitio donde se pintan:
+`FreeCheckerForm` dibuja ahora la portada (`heading` + `note`) y envuelve la
+espera y el resultado en su propia `lp-section`; el contenido llega ya
+seccionado como `children`. `BlogPageShell` acepta no tener `children` y
+entonces no pinta la sección del cuerpo — la página entera va en `hero`,
+porque con resultado el formulario sustituye portada y contenido a la vez.
+
+**Copy.** La FAQ deja de decir «sobre diez preguntas reales» (una cifra absoluta,
+que la norma de §246–§248 retira) y usa «preguntas principales de búsqueda» y
+«múltiples veces en distintos momentos del tiempo».
+
+**Pendiente o conocido.** El piloto del comprobador sigue sin pulsar el botón
+(gasta una consulta real); su expectativa de contenido pasa a `.fc-hero-form`
+o `.fcp-example`. Compartir un resultado por enlace queda fuera: exige
+guardar resultados, es decir, esquema.

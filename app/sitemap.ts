@@ -48,7 +48,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   // fichero existe para no dar.
   { path: "", lastModified: "2026-08-25" },
   { path: "/geo", lastModified: "2026-07-23" },
-  { path: "/gratis/aparece-mi-marca-en-chatgpt", lastModified: "2026-08-15" },
+  { path: "/gratis/aparece-mi-marca-en-chatgpt", lastModified: "2026-10-10" },
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/sobre-genscore", lastModified: "2026-10-09" },
