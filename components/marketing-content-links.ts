@@ -39,7 +39,10 @@ export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string
   { href: "/que-es-genscore", label: "Qué es GenScore" },
   // GEO-SELF-1 Fase 1: la página `AboutPage` de la empresa. Misma razón que la
   // de arriba — una página de entidad sin enlaces entrantes no la respalda nadie.
-  { href: "/sobre-genscore", label: "Quiénes somos" }
+  { href: "/sobre-genscore", label: "Quiénes somos" },
+  // GEO-SELF-1 Fase 4 (log §260): the studies hub — the data that backs the
+  // entity. Same reason: a page meant to be cited needs inbound links.
+  { href: "/estudios", label: "Estudios" }
 ];
 
 /**

@@ -254,7 +254,7 @@ anything is a feature that gets found broken later. `false` is the escape
 hatch for cost — each automatic audit spends real Gemini grounding calls.
 
 Reuses `CRON_SECRET` for both entry points: Vercel's cron (`GET
-/api/cron/run-audit`, `*/10 * * * *` since AUDIT-CRON-DRAIN-1, log §260 —
+/api/cron/run-audit`, `*/10 * * * *` since AUDIT-CRON-DRAIN-1, log §261 —
 before that `0 7 * * *`) and the worker's own `POST` self-chain. No new
 secret. The cron is what drains the queue: Vercel rejects a chain of
 self-calls with 508 after a few hops, so the self-chain alone only ever

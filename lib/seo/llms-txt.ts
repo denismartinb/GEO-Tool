@@ -79,6 +79,7 @@ export function buildLlmsTxt(): string {
 
 ${line("Qué es GenScore", "/que-es-genscore", "qué es el producto, qué mide y en qué se diferencia del SEO.")}
 ${line("Quiénes somos", "/sobre-genscore", "quién hace GenScore, desde dónde, cómo mide y cómo contactar.")}
+${line("Estudios", "/estudios", "estudios de GenScore sobre búsqueda con IA en España: dato propio y recopilaciones con fuente.")}
 ${line("Qué es el GEO", "/geo", "guía visual de Generative Engine Optimization.")}
 ${line("Precios", "/precios", "planes Starter, Pro y Agencia, con 7 días de Pro gratis.")}
 ${line("¿Aparece tu marca en ChatGPT?", "/gratis/aparece-mi-marca-en-chatgpt", "comprobación real y anónima contra ChatGPT, sin registro.")}

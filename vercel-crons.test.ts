@@ -46,12 +46,12 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
   {
     path: "/api/cron/run-audit",
     schedule: "*/10 * * * *",
-    // Every 10 minutes, not daily (AUDIT-CRON-DRAIN-1, log §260): Vercel
+    // Every 10 minutes, not daily (AUDIT-CRON-DRAIN-1, log §261): Vercel
     // rejects a chain of self-calls with 508 after a few hops, so the worker's
     // own self-chain cannot drain the queue. Each cron firing starts a fresh
     // chain; back on a daily schedule, every audit past the first few hops
     // waits until the next morning.
-    why: "post-scan web audit queue, drained every 10 min — ADR 0027, log §260"
+    why: "post-scan web audit queue, drained every 10 min — ADR 0027, log §261"
   },
   {
     path: "/api/cron/lifecycle-emails",

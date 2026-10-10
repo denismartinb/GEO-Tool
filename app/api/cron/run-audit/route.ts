@@ -42,7 +42,7 @@ export const dynamic = "force-dynamic";
  *
  * (3) is why the queue exists at all: a lost `after()` must not mean a
  * silently missing audit. It used to run once a day at 07:00. AUDIT-CRON-
- * DRAIN-1 (log §260) moved it to every 10 minutes because (2) cannot drain a
+ * DRAIN-1 (log §261) moved it to every 10 minutes because (2) cannot drain a
  * queue on its own: Vercel rejects a chain of self-calls with 508 after a few
  * hops (seen at hops 3 and 5 on 2026-10-09, with a clean URL), so a chain only
  * ever advances a handful of jobs. A cron firing is not a self-call, so each

@@ -28,7 +28,8 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   versión del modelo o "la misma instrucción que usa un escaneo" es
   información del producto que no se regala. Se dice qué motores (ChatGPT,
   Gemini, Claude), la fecha, el criterio ("solo cuenta si el nombre aparece en
-  la respuesta") y que se repitió "múltiples veces, en distintos momentos"; las marcas
+  la respuesta") y que se repitió "múltiples veces en distintos momentos del
+  tiempo" —nunca "varias veces" (fundador, 2026-10-10; log §260)—; las marcas
   van en texto normal, sin negrita ni cursiva; las preguntas se enseñan como
   muestra, no completas, para que su número no se deduzca.
 - **Ninguna cifra de mercado de terceros se presenta como dato propio de
@@ -104,6 +105,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   contradiciéndose a un enlace de distancia (log §74). La solución definitiva
   fue mejor: retirar el dato, porque **lo que no se publica no se queda
   rancio** (log §75).
+
+- **El hub `/estudios` no tiene datos propios.** Título, fecha, cifra y fuente
+  de cada estudio se leen de `BLOG_POSTS`; la única lista a mano es
+  `STUDY_ENTRIES` en `lib/estudios/studies.ts` (slug + tipo). Un estudio nuevo
+  se publica como artículo con `heroStat` y fuente, y se añade ahí en el mismo
+  PR; una segunda redacción de su cifra en el hub divergiría al primer
+  refresco (log §260).
 
 ## Imágenes
 

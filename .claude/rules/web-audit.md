@@ -275,7 +275,7 @@ Consecuencias, y son reglas, no matices:
   rechaza con 508 una cadena de llamadas de la web a sí misma a los pocos
   saltos (3 y 5 el 2026-10-09, con la URL ya limpia de §241), así que
   `triggerWebAuditRun` sólo avanza un puñado de trabajos por cadena. Por eso
-  `/api/cron/run-audit` corre cada 10 minutos (AUDIT-CRON-DRAIN-1, log §260):
+  `/api/cron/run-audit` corre cada 10 minutos (AUDIT-CRON-DRAIN-1, log §261):
   cada disparo del cron no es una auto-llamada y arranca una cadena nueva.
   Volver a un horario diario devuelve la cola a vaciarse al día siguiente;
   lo vigila `vercel-crons.test.ts`.

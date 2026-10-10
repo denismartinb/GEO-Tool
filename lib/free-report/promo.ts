@@ -37,7 +37,9 @@ export const PROMO_SHOWN_THIS_VISIT_KEY = "gs.freeReport.shown";
 export const FREE_REPORT_ENTRY = {
   blogCard: "tarjeta-contenido",
   homeBand: "banda-portada",
-  pricingLine: "linea-precios"
+  pricingLine: "linea-precios",
+  // GEO-SELF-1 Fase 4 (log §260): the CTA closing /estudios.
+  studiesHub: "hub-estudios"
 } as const;
 
 export function freeReportHref(entry: (typeof FREE_REPORT_ENTRY)[keyof typeof FREE_REPORT_ENTRY]): string {

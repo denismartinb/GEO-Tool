@@ -37,6 +37,7 @@ describe("buildLlmsFullTxt", () => {
 
   it("incluye «Quiénes somos» entero", () => {
     expect(content).toContain(`${SITE_URL}/sobre-genscore`);
+    expect(content).toContain(`${SITE_URL}/estudios`);
     for (const section of ABOUT_SECTIONS) {
       for (const paragraph of section.paragraphs) expect(content).toContain(paragraph);
     }
