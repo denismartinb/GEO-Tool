@@ -307,3 +307,13 @@ worse than no rule, because a future session will obey it anyway.
   escaneo de toda alta ocurre en la prueba de Pro (`0017_reverse_trial.sql`).
   Si algún día vuelve un plan gratuito que escanee, tendrá otro id, no éste
   (`docs/brand/design-decisions-log.md` §243).
+- **Qué modelo extrae lo decide `resolveExtractionRoute`
+  (`lib/scan/extraction-routing.ts`), y nada más.** Sin
+  `SCAN_EXTRACTION_CLAUDE_MODEL`, cada fila se extrae con el proveedor que la
+  generó, como siempre. Con la variable puesta, todas van a ese modelo de
+  Claude. Lo que depende de quién GENERÓ la fila sigue leyendo
+  `row.provider`, nunca la ruta de extracción: `groundingUrlsAreFinal`, las
+  citas y la generación. Encender la variable mueve la mención, los
+  competidores y el sentimiento, así que se hace después de
+  `pnpm bench:extraction`, nunca a ciegas
+  (`docs/brand/design-decisions-log.md` §253).
