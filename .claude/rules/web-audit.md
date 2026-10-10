@@ -15,6 +15,11 @@ paths:
 > `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`), el mismo
 > módulo que Recomendaciones. Una franja propia con otro criterio es justo la
 > discrepancia que se quiere evitar.
+> La tarjeta «Auditoría SEO» de Visión general cuenta los problemas con
+> `buildOverviewSeoSummary`, que pasa por `buildTechnicalIssuesReport`, y los
+> nombra con `lib/web-audit/issue-labels.ts`. Un cálculo o un nombre propio
+> en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
+> mismo problema.
 
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los

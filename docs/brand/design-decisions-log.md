@@ -23341,8 +23341,9 @@ El plan va por fases:
 3. Search Console, con migración y verificación de Google.
 4. Artículo y tarjeta en la portada.
 
-Este PR es la fase **1a**. La 1b es el rediseño de la pantalla y el traslado
-de la cobertura.
+Este PR es la fase **1a** más la tarjeta de Auditoría SEO en Visión general,
+que el fundador pidió adelantar. El resto de la 1b, el rediseño de la pantalla
+y el traslado de la cobertura, va en un PR aparte.
 
 **Qué cambia en 1a.**
 
@@ -23359,7 +23360,31 @@ de la cobertura.
   página con nosnippet. Salen de `findCitationBlockers`, el mismo módulo y los
   mismos textos que Recomendaciones (§167), y se leen de la misma instantánea
   de auditoría. Las dos pantallas no pueden discrepar.
-- **Sin enlace desde «Diagnóstico técnico».** La maqueta lo traía y se probó en el preview, pero el fundador lo retiró (2026-10-10): Visión general tendrá una tarjeta propia de Auditoría SEO en la Fase 1b, y un enlace suelto en la fila del desglose sobraba.
+- **Sin enlace desde «Diagnóstico técnico».** La maqueta lo traía y se probó
+  en el preview, pero el fundador lo retiró (2026-10-10): en su lugar va la
+  tarjeta de Auditoría SEO, y un enlace suelto en la fila del desglose sobraba.
+- **Tarjeta «Auditoría SEO» en Visión general**, debajo de los motores de IA
+  y a la altura de «Diagnóstico técnico», que es la fila que amplía. En móvil
+  sale después de los motores. Diseño aprobado en
+  `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`. Enseña:
+  - cuántos problemas hay de cada gravedad (Crítico, Aviso, Mejora);
+  - los tres primeros que arreglar, con su alcance y sus puntos;
+  - la fecha de la revisión y cuántas páginas se revisaron.
+
+  Cada problema enlaza con Auditoría SEO; no hay botón. Sale de
+  `buildOverviewSeoSummary`, que pasa la instantánea por
+  `buildTechnicalIssuesReport`, el mismo cálculo que la pantalla. Los nombres
+  de cada problema viven ahora en `lib/web-audit/issue-labels.ts` y los usan
+  las dos pantallas.
+- **Lo que el fundador quitó de la maqueta de la tarjeta:** la nota de hoy
+  frente a la de arreglarlo todo («62 → 79»), «Se vuelve a revisar tras cada
+  escaneo» y el botón «Ver Auditoría SEO».
+- **Sin auditoría, la tarjeta no sale.** La maqueta tenía un estado «tu
+  primera auditoría está en marcha», pero la auditoría técnica automática se
+  puede apagar por proyecto. Prometer una auditoría que quizá no llega es
+  justo lo que no se hace; la fila «Diagnóstico técnico» ya dice que falta.
+- **Los puntos se redondean antes de decidir si se enseñan.** Un arreglo de
+  0,4 puntos no lleva insignia, para que no se lea «+0 pts».
 
 **Por qué sólo los frenos.** El fundador preguntó si el SEO debe ser la
 prioridad para quien lo tiene mal. La respuesta es: sólo cuando impide el
@@ -23385,3 +23410,5 @@ cierto.
   fase 3.
 - La franja enseña sólo el primer freno y cuenta los demás. El detalle vive en
   Auditoría SEO y en Recomendaciones.
+- La tarjeta se convierte en «Buscadores» en la fase 2, con la Salud SEO, y
+  suma la mitad de Google en la fase 3.

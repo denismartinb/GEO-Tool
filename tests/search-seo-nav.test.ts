@@ -52,3 +52,24 @@ describe("Visión general: citation blockers lead the screen", () => {
     expect(strip).toBeLessThan(insight);
   });
 });
+
+describe("Visión general: Auditoría SEO card", () => {
+  const overview = read("app/dashboard/projects/[projectId]/page.tsx");
+
+  it("sits in the engines column, after the engine bars and before the competitors panel", () => {
+    const side = overview.indexOf('className="ov2-score-side"');
+    const engines = overview.indexOf("Posicionamiento por motores de IA</div>");
+    const card = overview.indexOf("<SeoAuditCard");
+    const cols = overview.indexOf('className="ov2-cols"');
+    expect(side).toBeGreaterThan(-1);
+    expect(engines).toBeGreaterThan(side);
+    expect(card).toBeGreaterThan(engines);
+    expect(card).toBeLessThan(cols);
+  });
+
+  it("counts problems through the Auditoría SEO screen's own aggregation", () => {
+    expect(overview).toContain("buildOverviewSeoSummary(");
+    const summary = read("lib/web-audit/overview-seo-summary.ts");
+    expect(summary).toContain("buildTechnicalIssuesReport(");
+  });
+});

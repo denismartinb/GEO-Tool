@@ -51,6 +51,8 @@ import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
+import { SeoAuditCard } from "./_components/seo-audit-card";
 import {
   GEO_SCORE_COMPONENT_META,
   parseEngineCoverage,
@@ -393,7 +395,7 @@ export default async function ProjectDetailPage({
           // blockers from the same data.
           supabase
             .from("web_audit_snapshots")
-            .select("bots, pages")
+            .select("bots, pages, created_at")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
             .limit(1)
@@ -407,11 +409,23 @@ export default async function ProjectDetailPage({
   const auditSnapshotForBlockers = latestAuditSnapshot as {
     bots: BotAccessReport | null;
     pages: PageAuditEntry[] | null;
+    created_at: string | null;
   } | null;
   const citationBlockers = findCitationBlockers({
     bots: auditSnapshotForBlockers?.bots ?? null,
     pages: auditSnapshotForBlockers?.pages ?? null
   });
+
+  // Auditoría SEO card (log §269): the same snapshot, through the same
+  // aggregation as the Auditoría SEO screen.
+  const seoSummary = buildOverviewSeoSummary(auditSnapshotForBlockers);
+  const seoAuditedAt = auditSnapshotForBlockers?.created_at
+    ? new Date(auditSnapshotForBlockers.created_at).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+        timeZone: "Europe/Madrid"
+      })
+    : null;
 
   const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
   const activeRecommendationsCount = activeRecommendations?.length ?? null;
@@ -1333,6 +1347,19 @@ export default async function ProjectDetailPage({
               </div>
             )}
           </div>
+          {/* Auditoría SEO (SEARCH-SEO-1, log §269): level with the
+              "Diagnóstico técnico" row it expands on. Not rendered without a
+              usable audit snapshot. */}
+          {seoSummary ? (
+            <>
+              <div className="ov2-sec-lbl ov2-seo-lbl">Auditoría SEO</div>
+              <SeoAuditCard
+                summary={seoSummary}
+                auditedAt={seoAuditedAt}
+                href={`/dashboard/projects/${projectId}/web-audit`}
+              />
+            </>
+          ) : null}
           </div>
           </div>
 
