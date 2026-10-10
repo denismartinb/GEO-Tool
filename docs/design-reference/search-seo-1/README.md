@@ -22,4 +22,5 @@ aprobó al aceptar el plan.
 `tarjeta-auditoria-seo.html` es la tarjeta de Auditoría SEO de Visión general,
 aprobada el 2026-10-10 («si perfecto»). Se construyó sin la nota proyectada
 («62 → 79»), sin la nota de revisión y sin botón, que el fundador quitó, y sin
-el estado «auditoría en marcha» (log §269).
+el estado «auditoría en marcha». En escritorio va en el hueco de «Indicadores
+clave» en vez de bajo los motores, a petición del fundador (log §269).

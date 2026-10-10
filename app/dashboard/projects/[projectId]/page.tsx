@@ -613,6 +613,10 @@ export default async function ProjectDetailPage({
   }
   const sentimentTotal =
     sentimentCounts.positive + sentimentCounts.neutral + sentimentCounts.mixed + sentimentCounts.negative;
+  // With the sentiment KPI withheld the desktop KPI grid has three cards and
+  // an empty fourth cell; the Auditoría SEO card fills it from 1200px
+  // (founder, 2026-10-10, log §269) instead of sitting under the engines.
+  const seoInKpiGrid = seoSummary !== null && !hasSufficientSample(sentimentTotal);
   const dominantSentiment =
     sentimentTotal > 0
       ? (Object.entries(sentimentCounts).sort((a, b) => b[1] - a[1])[0][0] as keyof typeof sentimentCounts)
@@ -1217,6 +1221,16 @@ export default async function ProjectDetailPage({
                 )}
               </div>
             ))}
+            {seoInKpiGrid && seoSummary ? (
+              <div className="ov2-seo-kpi">
+                <SeoAuditCard
+                  summary={seoSummary}
+                  auditedAt={seoAuditedAt}
+                  href={`/dashboard/projects/${projectId}/web-audit`}
+                  title="Auditoría SEO"
+                />
+              </div>
+            ) : null}
           </div>
           </div>
           </div>
@@ -1347,18 +1361,19 @@ export default async function ProjectDetailPage({
               </div>
             )}
           </div>
-          {/* Auditoría SEO (SEARCH-SEO-1, log §269): level with the
-              "Diagnóstico técnico" row it expands on. Not rendered without a
-              usable audit snapshot. */}
+          {/* Auditoría SEO (SEARCH-SEO-1, log §269): under the engine bars on
+              mobile and tablet. From 1200px it moves up into the KPI grid's
+              empty cell when there is one (`seoInKpiGrid`), and this copy is
+              hidden there. Not rendered without a usable audit snapshot. */}
           {seoSummary ? (
-            <>
+            <div className={`ov2-seo-side${seoInKpiGrid ? " is-in-kpis" : ""}`}>
               <div className="ov2-sec-lbl ov2-seo-lbl">Auditoría SEO</div>
               <SeoAuditCard
                 summary={seoSummary}
                 auditedAt={seoAuditedAt}
                 href={`/dashboard/projects/${projectId}/web-audit`}
               />
-            </>
+            </div>
           ) : null}
           </div>
           </div>
