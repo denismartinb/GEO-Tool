@@ -6,7 +6,7 @@ import { buildExtractionUpdate } from "@/lib/scan/extraction";
 import { resolveExtractionRoute } from "@/lib/scan/extraction-routing";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import type { BusinessProfile } from "@/lib/llm/contracts";
-import { CURRENT, type CompareEngine, type ExtractionChoice } from "@/lib/model-compare/catalogue";
+import { resolveGenerationCall, type CompareEngine, type ExtractionChoice } from "@/lib/model-compare/catalogue";
 import { slimExtracted, type CompareAnswer, type ComparePass } from "@/lib/model-compare/compare";
 
 export type CompareProject = {
@@ -45,15 +45,15 @@ export async function runCompareAnswer(input: {
 }): Promise<CompareAnswer> {
   const { project, engine, pass, promptIndex, sample } = input;
   const base = { engine, pass, promptIndex, sample };
-  const model = input.generationModel === CURRENT ? undefined : input.generationModel;
+  const { model, singleSearch } = resolveGenerationCall(engine, input.generationModel);
   try {
-    const generate =
+    const call = { prompt: input.promptText, country: project.country, language: project.language, model };
+    const answer =
       engine === "gemini"
-        ? generateGeminiVisibilityAnswer
+        ? await generateGeminiVisibilityAnswer({ ...call, singleSearch })
         : engine === "openai"
-          ? generateOpenAIVisibilityAnswer
-          : generateClaudeVisibilityAnswer;
-    const answer = await generate({ prompt: input.promptText, country: project.country, language: project.language, model });
+          ? await generateOpenAIVisibilityAnswer(call)
+          : await generateClaudeVisibilityAnswer(call);
 
     const extractionArgs = {
       brand: project.brand,

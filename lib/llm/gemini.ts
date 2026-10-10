@@ -97,6 +97,12 @@ export async function generateGeminiVisibilityAnswer(input: {
   language: string;
   /** Overrides `GEMINI_MODEL` for this call only — the operator's model comparison (MODEL-COMPARE-1). The scan never passes it. */
   model?: string;
+  /**
+   * Comparison only, like `model`: asks for a single Google Search query.
+   * Grounding is billed per query and the model chooses how many to run, so
+   * the instruction is the only lever there is (log §269). The scan never passes it.
+   */
+  singleSearch?: boolean;
 }): Promise<GeminiVisibilityResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
@@ -114,7 +120,10 @@ export async function generateGeminiVisibilityAnswer(input: {
     "Recommend specific products, brands, services or providers by name when that",
     "genuinely helps answer the question, exactly as you would for any user. Do",
     "not favour or avoid any particular brand. Do not mention that this is an",
-    "analysis."
+    "analysis.",
+    ...(input.singleSearch
+      ? ["Use Google Search at most once: run the single search query that best covers the question, then answer."]
+      : [])
   ].join("\n");
   const promptBlock = [
     `Question: ${input.prompt}`,

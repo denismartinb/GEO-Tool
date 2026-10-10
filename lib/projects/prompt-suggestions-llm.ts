@@ -4,6 +4,7 @@ import { z } from "zod";
 import { generateGeminiJson } from "@/lib/llm/gemini-client";
 import { PROMPT_CATEGORIES, type PromptCategory } from "@/lib/projects/prompt-categories";
 import type { BusinessProfile } from "@/lib/llm/contracts";
+import { MAX_INITIAL_PROMPTS } from "@/lib/projects/project-form";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R5 (2/2) — los dos generadores de prompts, en su
@@ -41,7 +42,7 @@ export async function suggestPrompts(input: {
   profile: BusinessProfile;
   limit?: number;
 }): Promise<Array<{ text: string; category: PromptCategory }>> {
-  const limit = Math.min(Math.max(input.limit ?? 10, 1), 15);
+  const limit = Math.min(Math.max(input.limit ?? 10, 1), MAX_INITIAL_PROMPTS);
   const categoryList = PROMPT_CATEGORIES.map((category) => `"${category}"`).join(", ");
   const promptBlock = [
     "You are a GEO research analyst. Generate the most relevant questions real potential customers",

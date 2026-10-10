@@ -23451,6 +23451,25 @@ pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
 que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
 extracción en los primeros escaneos.
 
+**Gemini con una sola búsqueda (2026-10-10).** Gemini decide cuántas
+búsquedas en Google lanza por respuesta (normalmente dos o más) y cada una se
+paga aparte, así que son el 90 % de su coste. Ninguna opción de la API lo
+limita, así que la única palanca es pedírselo en la instrucción. El catálogo
+gana un candidato de Gemini, «gemini-3.6-flash · una búsqueda»: el mismo
+modelo con una línea más en la instrucción (`singleSearch` en
+`generateGeminiVisibilityAnswer`, que el escaneo nunca pasa). La pasada mide
+si obedece (búsquedas por respuesta) y qué cuesta en fuentes y en nota. Si
+sale bien, llevarlo al escaneo es un cambio aparte, con su ADR (ADR 0042).
+
+**Resultado de la pasada de una búsqueda (2026-10-10, 8 preguntas × 2
+repeticiones, solo Gemini).** Sale «Distinto», no se adopta. Hoy Gemini ya
+hace de media 1,4–1,6 búsquedas por respuesta, no dos o más como se suponía.
+Con la instrucción baja a 1,0 de media, pero no la obedece del todo: 3 de 16
+respuestas hicieron dos búsquedas. El coste por respuesta baja un 30 %
+(2,9 → 2,0 céntimos), pero la nota cae de 57 a 39 cuando el ruido entre dos
+pasadas de hoy es de 1,4 puntos. También pierde una mención y alguna fuente.
+El ahorro no compensa mover la nota así.
+
 ## 270. FREE-REPORT-ASK-REMOVE-1: fuera la barra de búsqueda decorativa de `/gratis/informe-geo` (2026-10-10)
 
 **Qué.** La portada oscura de `/gratis/informe-geo` llevaba, entre la píldora
@@ -23599,3 +23618,50 @@ pero dentro de `headers`, y esa cabecera no sobrevivió al envío de Resend.
 (buzón o reenvío en el proveedor del dominio). Desde este entorno no se puede
 consultar el MX de `genscore.es`. Si no existe, las respuestas rebotarán en vez
 de perderse en noreply.
+
+## 273. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
+
+**Qué se decidió (fundador, 2026-10-10, sobre la propuesta de este hilo).**
+
+1. **El asistente de alta propone 17 preguntas en vez de 15**
+   (`MAX_INITIAL_PROMPTS`, `lib/projects/project-form.ts`; el tope de
+   `suggestPrompts` sigue a esa constante). El suelo de muestra no cambia
+   (`MIN_RESPONSES_PER_RUN = 50`, `lib/scan/sampling.ts`). Con 15 preguntas ×
+   3 motores salían 45 respuestas, por debajo del suelo, así que cada pregunta
+   se repetía y el escaneo hacía 90 respuestas. Con 17 salen 51 y basta una
+   pasada. Son más preguntas y cuestan casi la mitad por escaneo. El tope del
+   plan sigue mandando: `Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS)`.
+2. **Cadencia del escaneo automático.** Pro de pago pasa a cada 2 días
+   (`RECURRING_INTERVAL_DAYS_BY_PLAN.pro = 2`). La prueba de 7 días sigue
+   diaria con una clave propia, `trial`, que resuelve `resolveCadencePlanId`
+   (`lib/scan/cron.ts`). Es Pro efectivo con `trial_ends_at` y sin
+   suscripción de Stripe. Starter sigue semanal y Agencia diaria. La
+   Puntuación GEO es la mediana de los 3 últimos escaneos comparables
+   (`lib/scoring/score-window.ts`): escanear a diario sobre todo vuelve a
+   medir la misma ventana. El momento «se ha movido» que vende ocurre en la
+   prueba, y por eso la prueba conserva el ritmo diario.
+3. **El vigilante y la columna «Error» de `/admin` usan la misma clave de
+   cadencia.** Así un Pro de pago sin escaneo ayer no salta como «sin datos».
+   Una prueba sin escaneo ayer sí salta. El modelo de coste de `/admin` cuenta
+   15 escaneos al mes para Pro.
+
+**Ningún texto del producto cambia, a propósito.** El fundador lo congeló:
+«de momento no tocamos nada, ningún mensaje en ninguna página… Yo te aviso
+cuando sea necesario». Así que:
+- `/precios` y el modal de planes siguen diciendo «Diario» para Pro
+  (`app/pricing/plans-data.ts`). **Eso ya no es cierto para Pro de pago.** Es
+  una deuda conocida que el fundador cerrará cuando lo decida. Hasta entonces,
+  ningún anuncio ni correo debe prometer escaneo diario en Pro.
+- El asistente sigue diciendo «recomendamos al menos 15». La cifra del texto se
+  separó de la constante (`RECOMMENDED_MIN_PROMPTS_COPY = 15`) y sigue siendo
+  cierta, porque 17 ≥ 15.
+
+**Coste estimado (no medido todavía).** Un dominio Pro típico pasa de unos
+36 $/mes a unos 11 $/mes. La mitad del ahorro viene de la frecuencia y la otra
+mitad de no duplicar preguntas. La cifra real se verá en `/admin` tras unos
+días de barridos.
+
+**Qué queda pendiente.** Alinear el copy de `/precios` (Pro «Cada 2 días» o lo
+que el fundador decida) y el «15» del asistente, cuando el fundador lo pida.
+Los proyectos que ya existen conservan sus 15 preguntas: el cambio sólo afecta
+a las altas nuevas.
