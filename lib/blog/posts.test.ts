@@ -178,3 +178,14 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
     }
   });
 });
+
+// F8 (log §265): the 2026-10-10 baseline audit flagged long <title>s and meta
+// descriptions across the blog. Search engines and the audit cut them at
+// these lengths, so a new post that needs a longer on-page title sets
+// `seoTitle` / `metaDescription` instead.
+describe("snippet lengths", () => {
+  it.each(BLOG_POSTS.map((p) => [p.slug, p] as const))("%s fits the SERP", (_slug, post) => {
+    expect(`${getSeoTitle(post)} — GenScore`.length).toBeLessThanOrEqual(70);
+    expect(getMetaDescription(post).length).toBeLessThanOrEqual(160);
+  });
+});

@@ -43,6 +43,14 @@ describe("contentMetadata", () => {
     );
   });
 
+  it("declara el español como único idioma de la propia URL", () => {
+    const m = contentMetadata({ title: "t", description: "d", path: "/blog" });
+    expect(m.alternates?.languages).toEqual({
+      "es-ES": `${SITE_URL}/blog`,
+      "x-default": `${SITE_URL}/blog`
+    });
+  });
+
   it("solo declara el RSS cuando se pide", () => {
     expect(meta.alternates?.types).toBeUndefined();
     const withRss = contentMetadata({ title: "t", description: "d", path: "/blog", rss: true });

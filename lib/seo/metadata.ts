@@ -77,6 +77,10 @@ export function contentMetadata(input: ContentMetadataInput): Metadata {
     description,
     alternates: {
       canonical: url,
+      // F8 (log §265): the site is Spanish-only. The audit flags every page
+      // with no hreflang, and declaring es-ES plus x-default on the same URL
+      // is the honest way to say "one language, this is it".
+      languages: { "es-ES": url, "x-default": url },
       ...(rss
         ? { types: { "application/rss+xml": `${SITE_URL}/feed.xml` } }
         : {})
