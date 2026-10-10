@@ -1,3 +1,4 @@
+import { studiesLastModified } from "@/lib/estudios/studies";
 import { describe, expect, it } from "vitest";
 import sitemap from "./sitemap";
 import { BLOG_POSTS, BLOG_CLUSTERS } from "@/lib/blog/posts";
@@ -81,6 +82,12 @@ describe("sitemap", () => {
         { datePublished: "2026-08-15" }
       ])
     ).toBe("2026-09-01");
+  });
+
+  it("includes /estudios with the date of its newest study (GEO-SELF-1 Fase 4)", () => {
+    const entry = sitemap().find((e) => e.url === "https://www.genscore.es/estudios");
+    expect(entry).toBeDefined();
+    expect(new Date(entry!.lastModified as string | Date).toISOString().slice(0, 10)).toBe(studiesLastModified());
   });
 
   it("includes /sobre-genscore (GEO-SELF-1)", () => {

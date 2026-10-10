@@ -172,6 +172,13 @@ test("/sobre-genscore renders and has its own canonical", async ({ page }, testI
   await assertCanonical(page, "/sobre-genscore");
 });
 
+// GEO-SELF-1 Fase 4 (log §260): el hub de estudios.
+test("/estudios renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(page, testInfo, "/estudios", "estudios");
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/estudios");
+});
+
 test("/geo renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(page, testInfo, "/geo", "geo");
   assertPageIsHealthy(findings);

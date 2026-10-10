@@ -1,3 +1,4 @@
+import { getStudies, STUDIES_LEAD, STUDIES_METHOD, STUDY_KIND_LABEL } from "@/lib/estudios/studies";
 import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
 import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
 import { DOCS_NAV } from "@/lib/docs/nav";
@@ -230,6 +231,23 @@ ${ABOUT_SECTIONS.map(
 - Correo: ${ABOUT_CONTACT.email}
 - LinkedIn: ${ABOUT_CONTACT.linkedin}
 - G2: ${ABOUT_CONTACT.g2}`);
+
+  sections.push(`## Estudios
+
+URL: ${url("/estudios")}
+
+${STUDIES_LEAD}
+
+${getStudies()
+  .map((s) => {
+    const stat = s.post.heroStat ? `\n\nCifra principal: ${s.post.heroStat.value} ${s.post.heroStat.label} (${s.post.heroStat.source})` : "";
+    return `### ${s.post.title}\n\n${STUDY_KIND_LABEL[s.kind]}, ${s.post.datePublished}. ${url(s.href)}\n\n${s.post.description}${stat}`;
+  })
+  .join("\n\n")}
+
+### Cómo hacemos los estudios
+
+${STUDIES_METHOD.join("\n\n")}`);
 
   sections.push(`## GEO Score
 
