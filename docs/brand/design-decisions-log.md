@@ -23030,6 +23030,19 @@ porque con resultado el formulario sustituye portada y contenido a la vez.
 que la norma de §246–§248 retira) y usa «preguntas principales de búsqueda» y
 «múltiples veces en distintos momentos del tiempo».
 
+**El resultado real, con la forma del ejemplo** (pedido por el fundador sobre
+una captura del preview, 2026-10-10). `FreeCheckerResult` seguía con el
+aspecto antiguo —columna estrecha, etiquetas en monoespaciada— y con copy que
+la norma de §246–§248 ya no admite: «Has visto 1 pregunta en 1 motor»,
+«10 preguntas reales de tu categoría» y «varias preguntas repetidas en el
+tiempo». Ahora es la misma tarjeta que «Así es un resultado»: cabecera con el
+veredicto (cálida si no te nombra, verde si sí), la pregunta, la respuesta
+completa y, al lado, las marcas y las fuentes; debajo, el aviso de
+variabilidad y el paso al escaneo completo con las filas de la tabla «gratis
+frente a completo». El veredicto deja de contar marcas («nombró 4 marcas»
+pasa a «nombró otras marcas, pero no a X») y el remedio del aviso usa la
+fórmula del método (`lib/free-checker/result-copy.ts`, con su test).
+
 **Pendiente o conocido.** El piloto del comprobador sigue sin pulsar el botón
 (gasta una consulta real); su expectativa de contenido pasa a `.fc-hero-form`
 o `.fcp-example`. Compartir un resultado por enlace queda fuera: exige

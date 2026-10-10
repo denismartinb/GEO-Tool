@@ -11896,3 +11896,59 @@ select.set-field {
   .fcp-next-card { padding: 18px; }
   .fcp-next-title { margin-top: 4px; }
 }
+
+/* --- Resultado real con la forma del ejemplo (GEO-SELF-1 Fase 5, log §263) ---
+   Reutiliza `.fcp-example`/`.fcp-lbl`/`.fcp-chips` de arriba: el ejemplo de la
+   página y el resultado son la misma tarjeta, uno inventado y otro en vivo. */
+.fc-state { padding-top: 56px; }
+.fcr { max-width: 824px; margin: 0 auto 72px; color: var(--brand-ink); font-family: var(--font-body), "Figtree", -apple-system, sans-serif; }
+.fcr > .fcp-kicker { margin-bottom: 14px; }
+.fcr-card .fcp-verdict { font-size: 26px; text-wrap: balance; }
+.fcr-head-pos { background: #ecfdf3; border-bottom-color: #c6f0d6; }
+.fcr-lbl-pos { color: #067647; }
+.fcr-prompt-row { padding: 22px 26px 0; }
+.fcr-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); }
+.fcr-grid > div { padding: 22px 26px 26px; }
+.fcr-grid > div + div { border-left: 1px solid #e6e9ef; }
+.fcr-side { display: flex; flex-direction: column; gap: 22px; }
+.fcr-answer { margin-top: 10px; }
+.fcr-answer .fc-answer { border-left: 0; padding: 0; }
+.fcr-answer .fc-answer-p, .fcr-answer .fc-answer-ul li { font-size: 15px; color: var(--brand-ink-2); }
+.fcr-small { margin: 10px 0 0; font-size: 13px; line-height: 1.5; color: var(--brand-ink-3); }
+.fcr-sources { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.fcr-sources li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 15px; line-height: 1.5; }
+.fcr-sources a:not(.btn) { color: var(--brand-blue); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.fcr-cited p { margin: 8px 0 0; font-size: 15px; line-height: 1.6; color: var(--brand-ink-2); }
+.fcr-note {
+  margin-top: 20px; border: 1px solid #fde4c4; background: #fff7ed; border-radius: 14px; padding: 18px 22px;
+}
+.fcr-note p { margin: 6px 0 0; font-size: 15px; line-height: 1.6; color: var(--brand-ink-2); }
+.fcr-upsell { margin-top: 20px; border: 2px solid var(--brand-blue); border-radius: 14px; padding: 22px 26px; background: #fff; }
+.fcr-upsell h3 {
+  margin: 0; font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 22px;
+  font-weight: 800; letter-spacing: -.015em; line-height: 1.25; color: var(--brand-ink);
+}
+.fcr-upsell ul { margin: 12px 0 0; padding-left: 18px; list-style: disc; font-size: 15px; line-height: 1.7; color: var(--brand-ink-2); }
+.fcr-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+.fcr-btn {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 0 22px;
+  border: 0; border-radius: 10px; background: var(--brand-blue); color: #fff; font: inherit;
+  font-size: 15px; font-weight: 700; cursor: pointer; transition: background .15s;
+}
+.fcr-btn:hover { background: #1d4ed8; }
+.fcr-btn-soft { background: #eef2ff; color: var(--brand-blue); }
+.fcr-btn-soft:hover { background: #e0e7ff; }
+.fcr-btn:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 3px; }
+@media (max-width: 720px) {
+  .fc-state { padding-top: 32px; }
+  .fcr-card .fcp-verdict { font-size: 21px; }
+  .fcr-prompt-row { padding: 18px 18px 0; }
+  .fcr-grid { grid-template-columns: 1fr; }
+  .fcr-grid > div { padding: 18px; }
+  .fcr-grid > div + div { border-left: 0; border-top: 1px solid #e6e9ef; }
+  .fcr-note { padding: 16px 18px; }
+  .fcr-upsell { padding: 18px; }
+  .fcr-upsell h3 { font-size: 19px; }
+  .fcr-actions { flex-direction: column; }
+  .fcr-btn { width: 100%; }
+}
