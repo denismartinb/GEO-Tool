@@ -594,6 +594,34 @@ optional alerts fall back to the old "desactívalo en Ajustes" footer and the
 `lifecycle` category is never sent (a commercial email with no working way out
 is worse than no email).
 
+### Programa de afiliados (AFFILIATES-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `AFFILIATE_CODES` | No (unset = ningún código es válido) | Vercel (Production; Preview si se quiere probar) | códigos aprobados separados por comas, cada uno en minúsculas con letras, números y guiones, 2–40 caracteres, p. ej. `campamentoweb,newsletter-seo` |
+
+Allow-list que falla cerrada: sin la variable, `?ref=` no guarda cookie, una
+alta no guarda `referral_code` y checkout no manda `ref` a Stripe. Con ella:
+
+1. `middleware.ts` guarda el código en la cookie `gs_ref` (primera parte,
+   `httpOnly`, 90 días, gana el último clic) en cualquier página con `?ref=`,
+   incluidas las públicas que el matcher salta en las visitas normales.
+2. El alta por email (`app/signup/actions.ts`, `options.data`) y la primera
+   sesión con Google (`app/auth/callback/route.ts`, `updateUser`) copian el
+   código a `user_metadata.referral_code`, sin pisar nunca uno ya guardado.
+3. `createCheckoutSession` añade `ref` a `subscription_data.metadata` y a
+   `metadata` de la sesión de Stripe si el código sigue en la lista.
+4. El cron `/api/cron/affiliate-report` (día 5, 07:00 UTC, mismo
+   `CRON_SECRET`) lee de Stripe las facturas de Pro pagadas el mes anterior
+   con `ref` y manda el informe a `OPS_ALERT_EMAIL`. Necesita
+   `STRIPE_SECRET_KEY` y `STRIPE_PRICE_ID_PRO`; sin ellas manda un correo
+   avisando de que no se pudo generar.
+
+Quitar un código de la lista corta la atribución de altas y suscripciones
+nuevas; las suscripciones que ya llevan `ref` en Stripe siguen saliendo en el
+informe hasta cumplir sus 12 meses. Al añadir un código hay que redeplegar:
+el middleware lee la variable en el Edge.
+
 ---
 
 ## Vercel configuration

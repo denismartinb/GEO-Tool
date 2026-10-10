@@ -229,6 +229,43 @@ describe("createCheckoutSession", () => {
     );
   });
 
+  // AFFILIATES-1: the affiliate code on the account travels to Stripe, where
+  // the monthly report reads it — only while it is still an approved code.
+  it("adds the account's approved affiliate code as `ref` to the subscription and session metadata", async () => {
+    process.env.AFFILIATE_CODES = "campamentoweb";
+    try {
+      const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+      getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+      getPriceIdForPlan.mockReturnValue("price_pro_test");
+      const supabase = fakeSupabase({ profile: { current_plan: "pro", stripe_customer_id: null } });
+      requireUser.mockResolvedValue({
+        supabase,
+        user: { id: USER_ID, email: "founder@example.com", user_metadata: { referral_code: "campamentoweb" } }
+      });
+      const { createCheckoutSession } = await import("./actions");
+
+      await createCheckoutSession("pro");
+
+      const expected = { user_id: USER_ID, plan_id: "pro", ref: "campamentoweb" };
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({ metadata: expected, subscription_data: { metadata: expected } })
+      );
+
+      // A code no longer in AFFILIATE_CODES is left out entirely.
+      process.env.AFFILIATE_CODES = "otro";
+      create.mockClear();
+      await createCheckoutSession("pro");
+      expect(create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { user_id: USER_ID, plan_id: "pro" },
+          subscription_data: { metadata: { user_id: USER_ID, plan_id: "pro" } }
+        })
+      );
+    } finally {
+      delete process.env.AFFILIATE_CODES;
+    }
+  });
+
   // FOUNDER-PRICE-1 (replaces PRICING-PROMO-1's date window).
   it("applies the promo coupon to the Checkout Session when one is configured for the plan", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });

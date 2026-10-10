@@ -1,11 +1,13 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
+import { AFFILIATE_REF_COOKIE, referralCodeForNewAccount } from "@/lib/affiliates/codes";
 
 const EMAIL_RATE_LIMIT_ERROR =
   "Se han enviado demasiados emails de confirmación en poco tiempo. Espera unos minutos e inténtalo de nuevo.";
@@ -26,6 +28,21 @@ const signupSchema = z.object({
   confirmPassword: z.string().min(8)
 });
 
+/**
+ * AFFILIATES-1 — the affiliate code the visitor arrived with (`gs_ref`, set
+ * by `middleware.ts`), if it is still an approved code. Never throws: a
+ * missing cookie store or a bad value must not stand between a person and
+ * their account.
+ */
+async function readReferralCode(): Promise<string | null> {
+  try {
+    const store = await cookies();
+    return referralCodeForNewAccount({ cookieCode: store.get(AFFILIATE_REF_COOKIE)?.value ?? null, existing: null });
+  } catch {
+    return null;
+  }
+}
+
 export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -43,10 +60,16 @@ export async function signup(formData: FormData) {
     ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   const supabase = await createClient();
+  const referralCode = await readReferralCode();
   const { data, error } = await supabase.auth.signUp({
     email: parsed.data.email,
     password: parsed.data.password,
-    options: { emailRedirectTo: `${siteUrl}/auth/callback` }
+    options: {
+      emailRedirectTo: `${siteUrl}/auth/callback`,
+      // AFFILIATES-1: stored in user_metadata at creation, so it can never
+      // overwrite an earlier attribution; checkout copies it to Stripe.
+      ...(referralCode ? { data: { referral_code: referralCode } } : {})
+    }
   });
 
   if (error) {

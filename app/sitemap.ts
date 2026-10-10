@@ -51,6 +51,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/gratis/aparece-mi-marca-en-chatgpt", lastModified: "2026-10-10" },
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/demo", lastModified: "2026-10-10" },
+  { path: "/afiliados", lastModified: "2026-10-10" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/sobre-genscore", lastModified: "2026-10-09" },
   { path: "/estudios", lastModified: studiesLastModified() },

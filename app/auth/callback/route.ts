@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { parseConsentCookie } from "@/lib/ads/consent";
 import { PENDING_CONVERSION_COOKIE } from "@/lib/ads/pending-conversion";
+import { readRefCookie, referralCodeForNewAccount } from "@/lib/affiliates/codes";
 
 const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténtalo de nuevo.";
 
@@ -47,6 +48,34 @@ function isFreshSignup(user: {
   return Math.abs(lastSignInAt - emailConfirmedAt) < NEW_USER_WINDOW_MS;
 }
 
+/**
+ * AFFILIATES-1 — a Google sign-up never goes through `signup()`, so this is
+ * where its affiliate code (`gs_ref`) reaches the account. Only on the
+ * account's first session, only if it carries no code yet (a password
+ * sign-up already stored one at creation), and never at the cost of the
+ * login: any failure is logged and the redirect goes ahead.
+ */
+async function storeReferralCode(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  user: { id: string; user_metadata?: Record<string, unknown> | null },
+  cookieHeader: string
+): Promise<void> {
+  try {
+    const code = referralCodeForNewAccount({
+      cookieCode: readRefCookie(cookieHeader),
+      existing: user.user_metadata?.referral_code
+    });
+    if (!code) return;
+    const { error } = await supabase.auth.updateUser({ data: { referral_code: code } });
+    if (error) console.error("[geo:auth-callback] referral_code_not_stored", { userId: user.id, message: error.message });
+  } catch (updateError) {
+    console.error("[geo:auth-callback] referral_code_not_stored", {
+      userId: user.id,
+      message: updateError instanceof Error ? updateError.message : String(updateError)
+    });
+  }
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -73,6 +102,9 @@ export async function GET(request: Request) {
   }
 
   let countGoogleSignup = false;
+  if (data.user && isFreshSignup(data.user)) {
+    await storeReferralCode(supabase, data.user, request.headers.get("cookie") ?? "");
+  }
   if (data.user?.email && isFreshSignup(data.user)) {
     await sendWelcomeEmail(data.user.email);
     const method = data.user.app_metadata?.provider === "google" ? "google" : "password";

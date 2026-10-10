@@ -5,6 +5,12 @@ import {
   getProjectIdFromDomainsQuery,
   getProjectIdFromPathname
 } from "@/lib/active-project-cookie";
+import {
+  AFFILIATE_REF_COOKIE,
+  AFFILIATE_REF_COOKIE_MAX_AGE_S,
+  AFFILIATE_REF_PARAM,
+  resolveAffiliateCode
+} from "@/lib/affiliates/codes";
 
 /**
  * Refreshes the Supabase auth session cookie on every request.
@@ -80,6 +86,21 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // AFFILIATES-1 — `?ref=<code>` on any page remembers the affiliate for 90
+  // days (last click wins). Only codes listed in AFFILIATE_CODES: an unknown
+  // or malformed one sets nothing. Read at sign-up (app/signup/actions.ts,
+  // app/auth/callback/route.ts), never trusted as anything but attribution.
+  const referralCode = resolveAffiliateCode(request.nextUrl.searchParams.get(AFFILIATE_REF_PARAM));
+  if (referralCode) {
+    response.cookies.set(AFFILIATE_REF_COOKIE, referralCode, {
+      path: "/",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: request.nextUrl.protocol === "https:",
+      maxAge: AFFILIATE_REF_COOKIE_MAX_AGE_S
+    });
+  }
+
   return response;
 }
 
@@ -122,7 +143,21 @@ export const config = {
      *   `/geoscore` or `/docsxyz` route that actually needs the session
      *   refresh. No such route exists today, but this repo has a documented
      *   history of exactly this class of silent matcher mistake.
+     *
+     *   AFFILIATES-1 adds afiliados, same check: static page, no session
+     *   read; its application form is a server action that reads no session.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore|estudios)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore|estudios|afiliados)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    /*
+     * AFFILIATES-1 — an affiliate link may land on ANY page, including the
+     * public ones the entry above skips (a comparativa, the free report,
+     * /afiliados itself). This second entry runs the middleware for those
+     * too, but only when the URL carries `?ref=`, so the cost exclusion above
+     * still holds for every ordinary visit. Static assets stay excluded.
+     */
+    {
+      source: "/((?!_next/static|_next/image|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+      has: [{ type: "query", key: "ref" }]
+    }
   ],
 };

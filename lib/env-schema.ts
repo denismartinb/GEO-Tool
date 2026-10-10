@@ -136,7 +136,9 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   INDEXNOW_KEY: "/indexnow-key.txt responde 404 y `pnpm indexnow:ping` no envía nada",
   INTERNAL_TEST_ACCOUNT_EMAILS:
     "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)",
-  COMPED_ACCOUNT_EMAILS: "ninguna cuenta queda exenta de pagar: todo el mundo lee su plan real, incluido cualquiera pensado como comped"
+  COMPED_ACCOUNT_EMAILS: "ninguna cuenta queda exenta de pagar: todo el mundo lee su plan real, incluido cualquiera pensado como comped",
+  AFFILIATE_CODES:
+    "ningún enlace de afiliado (`?ref=`) guarda cookie ni llega a Stripe: las altas nuevas no quedan atribuidas a nadie"
 };
 
 /**
@@ -203,7 +205,8 @@ export const envSchema = z.object({
   BING_SITE_VERIFICATION: optionalText,
   INDEXNOW_KEY: optionalText,
   INTERNAL_TEST_ACCOUNT_EMAILS: optionalText,
-  COMPED_ACCOUNT_EMAILS: optionalText
+  COMPED_ACCOUNT_EMAILS: optionalText,
+  AFFILIATE_CODES: optionalText
 });
 
 export type Env = z.infer<typeof envSchema>;

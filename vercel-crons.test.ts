@@ -67,6 +67,13 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     // chain of self-calls with 508 after a few hops (log §261), so without
     // this a run waits for the 15-minute watchdog and its three resumes.
     why: "re-dispatch stalled scan runs — SCAN-CRON-DRAIN-1, log §262"
+  },
+  {
+    path: "/api/cron/affiliate-report",
+    schedule: "0 7 5 * *",
+    // The 5th, not the 1st: late renewals and refunds of the previous month
+    // have had a few days to settle, and the page promises «el día 5».
+    why: "monthly affiliate commissions to the operator — AFFILIATES-1"
   }
 ];
 
