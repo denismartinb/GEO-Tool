@@ -52,7 +52,7 @@ export const STUDIES_LEAD =
 
 /** How we measure, in the terms the founder allows (log §246): no counts, no model versions. */
 export const STUDIES_METHOD: readonly string[] = [
-  "Los estudios con dato propio lanzan las preguntas principales de búsqueda de un sector a ChatGPT, Gemini y Claude, varias veces a cada motor y en distintos momentos.",
+  "Los estudios con dato propio se realizan mediante un sistema algorítmico que genera las preguntas de búsqueda más relevantes de un sector o empresa y realiza un análisis determinista en ChatGPT, Gemini y Claude, múltiples veces en cada motor y en distintos momentos del tiempo.",
   "Una marca cuenta como recomendada sólo si su nombre aparece en la respuesta. Publicamos porcentajes, nunca recuentos sueltos, porque una sola respuesta no es un dato.",
   "Las recopilaciones citan cada cifra con su fuente, su muestra y su fecha. Una cifra sin fuente no entra."
 ];

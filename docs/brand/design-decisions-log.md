@@ -22804,9 +22804,11 @@ o un motor necesita un sitio que citar, no dos artículos sueltos en el blog.
   `STUDY_ENTRIES` (slug + tipo), y `getStudies` lanza si un slug no existe,
   así que un estudio retirado del blog rompe el build en vez de dejar un
   enlace muerto.
-- **Sólo porcentajes, motores por su nombre.** El método dice «preguntas
-  principales de búsqueda», «varias veces a cada motor» y nombra ChatGPT,
-  Gemini y Claude sin versiones. `studies.test.ts` lo comprueba sobre los
+- **Sólo porcentajes, motores por su nombre.** El método usa la redacción del
+  fundador (2026-10-10): «un sistema algorítmico que genera las preguntas de
+  búsqueda más relevantes de un sector o empresa y realiza un análisis
+  determinista en ChatGPT, Gemini y Claude, múltiples veces en cada motor y en
+  distintos momentos del tiempo». Sin versiones de modelo. `studies.test.ts` lo comprueba sobre los
   textos del hub (sin recuentos absolutos, sin Perplexity ni Copilot).
 - **Schema `CollectionPage` + `ItemList`**, con `publisher` por `@id` del
   `Organization` (regla de §100/§256), y migas.
@@ -22818,6 +22820,12 @@ o un motor necesita un sitio que citar, no dos artículos sueltos en el blog.
   (`FREE_REPORT_ENTRY.studiesHub`).
 - **Piloto:** `/estudios` entra en `PUBLIC_PAGES` del fixture y en
   `public-pages.spec.ts` (carga sana + canonical propio).
+
+- **Redacción (fundador, 2026-10-10).** «varias veces» pasa a «múltiples
+  veces en distintos momentos del tiempo» en todo el contenido público que
+  describe la medición (hub, guía de Gemini, «De buscar a preguntar», guía de
+  Perplexity), y el título del estudio de facturación pierde el «Lo hemos
+  medido» final.
 
 **Pendiente.** El estudio de clínicas dentales (hilo «Captación por sectores:
 clínicas») se añade a `STUDY_ENTRIES` cuando se publique. Firmar los estudios
