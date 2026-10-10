@@ -99,3 +99,9 @@ igual.
 - **Un enlace del correo a una página con sesión pasa por `/login?next=`**, y
   `next` sólo se acepta tras `safeNextPath` (§254). Así quien no tiene la
   sesión abierta aterriza donde pidió y no en el panel.
+- **Responder a un correo nunca va a noreply.** `sendEmail` manda `replyTo`
+  con el campo propio de Resend, y por defecto vale `SUPPORT_EMAIL`. Un
+  `Reply-To` metido en `headers` no sobrevive al envío. Sólo se cambia el
+  destino cuando responder debe llegar a otra persona, como el aviso interno
+  de un informe gratis, que responde al solicitante
+  (`docs/brand/design-decisions-log.md` §272).

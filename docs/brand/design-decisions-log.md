@@ -23592,7 +23592,34 @@ cierto.
 - La tarjeta se convierte en «Buscadores» en la fase 2, con la Salud SEO, y
   suma la mitad de Google en la fase 3.
 
-## 272. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
+## 272. REPLY-TO-SUPPORT-1: las respuestas a cualquier correo van a soporte, no a noreply (2026-10-10)
+
+**Qué pasó.** La confirmación del informe gratuito («Hemos recibido tu
+petición») invita a responder con un competidor o una pregunta. El fundador
+respondió a una de prueba y el cliente de correo la dirigía a
+`noreply@genscore.es`. El código sí pasaba `Reply-To: soporte@genscore.es`,
+pero dentro de `headers`, y esa cabecera no sobrevivió al envío de Resend.
+
+**Qué se decidió.**
+
+- `sendEmail` (`lib/email/transactional.ts`) manda siempre el campo propio de
+  Resend, `replyTo`, y por defecto vale `SUPPORT_EMAIL` (`lib/support.ts`).
+  Así cubre a la vez la confirmación del informe, la bienvenida («Si algo no
+  te encaja, responde a este email») y cualquier correo futuro. Todos los
+  correos ya decían en el pie «¿Dudas? Escríbenos a soporte@genscore.es».
+- El aviso interno de una petición de informe mantiene `replyTo` del
+  solicitante: responderlo le escribe a él directamente.
+- La confirmación decía «las preguntas principales de búsqueda de tu sector
+  («geo»)», y lo que va entre comillas es el campo libre «Qué vendes». Pasa a
+  «sobre lo que vendes («…»)». El «geo» de la captura era lo que se escribió en
+  la prueba, no un dato mal interpolado.
+
+**Pendiente.** Comprobar que `soporte@genscore.es` recibe correo de verdad
+(buzón o reenvío en el proveedor del dominio). Desde este entorno no se puede
+consultar el MX de `genscore.es`. Si no existe, las respuestas rebotarán en vez
+de perderse en noreply.
+
+## 273. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
 
 **Qué se decidió (fundador, 2026-10-10, sobre la propuesta de este hilo).**
 

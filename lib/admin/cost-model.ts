@@ -52,7 +52,7 @@ const COVERAGE_AUDIT_USD = 0.28;
 const SCANS_PER_MONTH_BY_PLAN: Record<string, number> = {
   free: 30,
   starter: 4.3,
-  /** Pro de pago cada 2 días desde SCAN-CADENCE-1 (log §272); la prueba de 7 días sigue diaria. */
+  /** Pro de pago cada 2 días desde SCAN-CADENCE-1 (log §273); la prueba de 7 días sigue diaria. */
   pro: 15,
   agency: 30
 };
