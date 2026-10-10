@@ -23470,6 +23470,21 @@ respuestas hicieron dos búsquedas. El coste por respuesta baja un 30 %
 pasadas de hoy es de 1,4 puntos. También pierde una mención y alguna fuente.
 El ahorro no compensa mover la nota así.
 
+## 270. FREE-REPORT-ASK-REMOVE-1: fuera la barra de búsqueda decorativa de `/gratis/informe-geo` (2026-10-10)
+
+**Qué.** La portada oscura de `/gratis/informe-geo` llevaba, entre la píldora
+y el titular, una barra con lupa, el texto «¿Qué empresa me recomiendas
+para…?» y un cursor parpadeando (`.fr-ask`, `.fr-caret`). Se retira entera,
+con sus estilos y su animación. En móvil ya estaba oculta, así que allí no
+cambia nada; en escritorio el titular sube a ocupar su sitio.
+
+**Por qué.** Decisión del fundador (2026-10-10, «quita esto»). Era decorativa,
+no hacía nada al pulsarla, y parecía un campo que se podía usar.
+
+**Nota.** El artboard aprobado (`docs/design-reference/free-report-1/Main.dc.html`)
+la sigue llevando; esta entrada es la desviación aprobada. No retira ningún
+camino de recuperación.
+
 ## 271. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
 
 **Qué se decidió (fundador, 2026-10-10, sobre la propuesta de este hilo).**
