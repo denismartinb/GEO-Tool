@@ -73,7 +73,7 @@ describe("findDuplicateControls", () => {
 
   it("stays quiet on a healthy page", () => {
     expect(
-      findDuplicateControls([control(), control({ name: "Ver planes", href: "/pricing" })])
+      findDuplicateControls([control(), control({ name: "Ver planes", href: "/precios" })])
     ).toEqual([]);
   });
 

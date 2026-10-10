@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/safe-next-path";
 
 const EMAIL_NOT_CONFIRMED_ERROR =
   "Tu email todavía no está confirmado. Revisa tu bandeja de entrada y haz clic en el enlace que te enviamos.";
@@ -16,16 +17,19 @@ const LOGIN_ERROR_MESSAGES: Record<string, string> = {
 export async function login(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
+  // TRIAL-REPORT-EMAIL-1 (log §254): a link that asked for a page (the
+  // report in the last-day email) lands there after signing in.
+  const next = safeNextPath(formData.get("next"));
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     const message = LOGIN_ERROR_MESSAGES[error.code ?? ""] ?? GENERIC_LOGIN_ERROR;
-    redirect(`/login?error=${encodeURIComponent(message)}`);
+    redirect(`/login?error=${encodeURIComponent(message)}${next ? `&next=${encodeURIComponent(next)}` : ""}`);
   }
 
-  redirect("/dashboard");
+  redirect(next ?? "/dashboard");
 }
 
 const GOOGLE_OAUTH_ERROR = "No se pudo iniciar sesión con Google. Inténtalo de nuevo.";
@@ -47,13 +51,14 @@ async function isOAuthRedirectReady(url: string): Promise<boolean> {
 
 export async function signInWithGoogle(formData: FormData) {
   const from = formData.get("from") === "signup" ? "/signup" : "/login";
+  const next = safeNextPath(formData.get("next"));
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
     ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${siteUrl}/auth/callback` }
+    options: { redirectTo: `${siteUrl}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""}` }
   });
 
   if (error || !data.url || !(await isOAuthRedirectReady(data.url))) {

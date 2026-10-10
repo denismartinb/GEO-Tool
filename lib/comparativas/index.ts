@@ -39,7 +39,17 @@ export const COMPARATIVAS_INDEX: ComparativaLink[] = [
   {
     href: "/comparativas/alternativas-a-otterly",
     title: "Alternativas a Otterly en 2026",
-    blurb: "Cinco alternativas comparadas por el motivo que te hace buscarlas: prompts, motores que se cobran aparte, o producto solo en inglés."
+    blurb: "Cinco alternativas comparadas por el motivo que te hace buscarlas: prompts, motores que se cobran aparte, o producto en inglés."
+  },
+  {
+    href: "/comparativas/profound-vs-peec-ai-vs-otterly",
+    title: "Profound vs Peec AI vs Otterly",
+    blurb: "Profound, Peec AI y Otterly comparadas fila a fila: precios y escalones, motores cubiertos, prompts, países e idiomas, citas, sentimiento, agencias y prueba gratuita."
+  },
+  {
+    href: "/comparativas/alternativas-a-peec-ai",
+    title: "Alternativas a Peec AI en 2026",
+    blurb: "Siete alternativas a Peec AI comparadas por el motivo que te hace buscarlas: tres modelos a elegir, precio que no está en la web, recomendaciones que no se redactan, pocos países o producto en inglés."
   }
 ];
 

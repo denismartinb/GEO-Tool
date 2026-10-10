@@ -38,7 +38,9 @@ bloqueado en el sandbox de los agentes. Todos los assets locales cargan.
    pasos numerados. Es la única superficie oscura de la zona pública.
 4. «Cinco pantallas. Todo tu posicionamiento.»
 5. «Cómo se gana una recomendación»
-6. Testimonio (Nerea Solís · Nordika Home).
+6. ~~Testimonio (Nerea Solís · Nordika Home).~~ **RETIRADO (2026-10-08): era inventado** (confirmado por el fundador;
+   ver log §146, rectificado). Los artboards `.dc.html` de este directorio **conservan esa sección como artefacto
+   histórico y no son una fuente de contenido**: no se reimplementa.
 7. «Lo que nos preguntan antes de empezar» — FAQ de 6 preguntas.
 8. «Averigua qué dice la IA de ti ahora mismo» — CTA final al comprobador.
 
@@ -73,6 +75,6 @@ en `app/globals.css`, junto a `.lp-hero--home`.
   decisión explícita del fundador (COMPARATIVAS-DESIGN-1, log §63). El nav es
   además fuente única de las ~57 superficies públicas, no sólo de la portada.
   Va en su propio PR, no en el de la portada.
-- **El testimonio lleva nombre, empresa y una cifra** (+128 % de cuota de voz en
-  IA). Publicarlo exige que sea una medición real de esa cuenta: CLAUDE.md
-  prohíbe métricas falsas y aquí además hay una persona identificada.
+- ~~El testimonio lleva nombre, empresa y una cifra.~~ **Rectificado (2026-10-08): ni la persona, ni la empresa, ni la
+  cifra son reales** (confirmado por el fundador). No hay testimonio en la portada ni debe reponerse sin el original y
+  el permiso del cliente en el repositorio. CLAUDE.md prohíbe las métricas falsas.

@@ -36,7 +36,7 @@ describe("variabilityNotice", () => {
     const no = variabilityNotice({ engineLabel: "ChatGPT", brandMentioned: false });
 
     const cause = "busca en tiempo real y no es determinista";
-    const remedy = "hacen falta varias preguntas repetidas en el tiempo";
+    const remedy = "múltiples veces en distintos momentos del tiempo";
     for (const notice of [yes, no]) {
       expect(notice.body).toContain(cause);
       expect(notice.body).toContain(remedy);

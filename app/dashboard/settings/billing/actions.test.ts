@@ -25,24 +25,21 @@ const getStripeClient = vi.fn();
 const getPriceIdForPlan = vi.fn();
 const getPromoCouponIdForPlan = vi.fn((_planId: string) => null as string | null);
 const isSelfServePlan = vi.fn((planId: string) => planId === "starter" || planId === "pro");
+// FOUNDER-PRICE-1: the founder offer (Stripe coupons + slots) and the
+// price-vs-catalog guard are both reads against Stripe — mocked so each test
+// states the shape it needs.
+const getActivePromoPlanIds = vi.fn(async () => ["starter", "pro"] as string[]);
+const stripePriceMatchesPlan = vi.fn(async () => true);
+const invalidateFounderOfferCache = vi.fn();
 vi.mock("@/lib/stripe", () => ({
   getStripeClient: (...args: unknown[]) => getStripeClient(...args),
   getPriceIdForPlan: (...args: unknown[]) => getPriceIdForPlan(...args),
   getPromoCouponIdForPlan: (...args: [string]) => getPromoCouponIdForPlan(...args),
-  isSelfServePlan: (...args: [string]) => isSelfServePlan(...args)
+  isSelfServePlan: (...args: [string]) => isSelfServePlan(...args),
+  getActivePromoPlanIds: () => getActivePromoPlanIds(),
+  stripePriceMatchesPlan: () => stripePriceMatchesPlan(),
+  invalidateFounderOfferCache: () => invalidateFounderOfferCache()
 }));
-
-// isPromoActive() reads the real wall clock (PROMO_ENDS_AT, app/pricing/plans-data.ts).
-// A test asserting on its output can't depend on that without breaking the
-// instant the real promo window closes — which is exactly what happened here
-// on 2026-09-01. PLANS stays real (planIdSchema is built from it at module
-// load, app/dashboard/settings/billing/actions.ts:18) — only isPromoActive is
-// made deterministic.
-const isPromoActive = vi.fn(() => true);
-vi.mock("@/app/pricing/plans-data", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/app/pricing/plans-data")>();
-  return { ...actual, isPromoActive: () => isPromoActive() };
-});
 
 const USER_ID = "user-1";
 
@@ -67,9 +64,36 @@ function fakeSupabase({
           select() {
             return { eq: () => ({ maybeSingle: () => Promise.resolve({ data: profile, error: null }) }) };
           },
+          // Thenable builder: supports `.eq().is().select()` chains and, like a
+          // real filtered UPDATE, only "matches" the stored profile row when
+          // every filter holds — so a guarded write (`stripe_subscription_id`
+          // must still be the one we cancelled) can be tested for real.
           update(patch: Row) {
-            profileUpdates.push(patch);
-            return { eq: () => Promise.resolve({ error: updateError ? { message: updateError } : null }) };
+            const filters: Array<[string, string, unknown]> = [];
+            const builder = {
+              eq(column: string, value: unknown) {
+                filters.push(["eq", column, value]);
+                return builder;
+              },
+              is(column: string, value: unknown) {
+                filters.push(["is", column, value]);
+                return builder;
+              },
+              select() {
+                return builder;
+              },
+              then(resolve: (value: unknown) => unknown, reject?: (reason: unknown) => unknown) {
+                const matches = filters.every(([kind, column, value]) => {
+                  if (column === "id") return true;
+                  const stored = (profile as Row | null)?.[column] ?? null;
+                  return kind === "is" ? stored === value : stored === value;
+                });
+                if (updateError) return Promise.resolve({ data: null, error: { message: updateError } }).then(resolve, reject);
+                if (matches) profileUpdates.push(patch);
+                return Promise.resolve({ data: matches ? [{ id: USER_ID }] : [], error: null }).then(resolve, reject);
+              }
+            };
+            return builder;
           }
         };
       }
@@ -99,8 +123,11 @@ beforeEach(() => {
   getPriceIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReset();
   getPromoCouponIdForPlan.mockReturnValue(null);
-  isPromoActive.mockReset();
-  isPromoActive.mockReturnValue(true);
+  getActivePromoPlanIds.mockReset();
+  getActivePromoPlanIds.mockResolvedValue(["starter", "pro"]);
+  stripePriceMatchesPlan.mockReset();
+  stripePriceMatchesPlan.mockResolvedValue(true);
+  invalidateFounderOfferCache.mockReset();
   createServiceClient.mockReset();
   resetHeaderEntries();
 });
@@ -192,8 +219,8 @@ describe("createCheckoutSession", () => {
         // the internal `host` Vercel rewrites requests to, and not
         // NEXT_PUBLIC_SITE_URL (production) — both previously sent a Preview
         // deployment's checkout back to the wrong origin after payment.
-        success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=success",
-        cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings/billing?checkout=cancelled",
+        success_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings?checkout=success#plan",
+        cancel_url: "https://geo-tool-git-some-branch-team.vercel.app/dashboard/settings?checkout=cancelled#plan",
         mode: "subscription",
         client_reference_id: USER_ID,
         line_items: [{ price: "price_pro_test", quantity: 1 }],
@@ -202,11 +229,7 @@ describe("createCheckoutSession", () => {
     );
   });
 
-  // PRICING-PROMO-1. isPromoActive() is mocked above (deterministic true by
-  // default) instead of depending on the real wall clock against the real
-  // PROMO_ENDS_AT — the previous version of this comment warned that these
-  // tests "only mean something while the promo window is open", and that is
-  // exactly what broke them the instant it closed on 2026-09-01.
+  // FOUNDER-PRICE-1 (replaces PRICING-PROMO-1's date window).
   it("applies the promo coupon to the Checkout Session when one is configured for the plan", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
@@ -242,12 +265,12 @@ describe("createCheckoutSession", () => {
     expect(sessionParams).not.toHaveProperty("discounts");
   });
 
-  it("does not add a discounts param once the promo window has closed, even with a coupon configured", async () => {
+  it("does not add a discounts param once the founder slots are gone, even with a coupon configured", async () => {
     const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
     getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
     getPriceIdForPlan.mockReturnValue("price_pro_test");
     getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
-    isPromoActive.mockReturnValue(false);
+    getActivePromoPlanIds.mockResolvedValue([]);
     requireUser.mockResolvedValue({
       supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
       user: { id: USER_ID, email: "founder@example.com" }
@@ -258,6 +281,40 @@ describe("createCheckoutSession", () => {
 
     const sessionParams = create.mock.calls[0][0];
     expect(sessionParams).not.toHaveProperty("discounts");
+  });
+
+  it("refuses checkout without creating a session when the Stripe price does not match the catalog", async () => {
+    const create = vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/session/xyz" });
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_old");
+    stripePriceMatchesPlan.mockResolvedValue(false);
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("pro");
+
+    expect(result.success).toBe(false);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("forgets the cached founder offer when a discounted session fails", async () => {
+    const create = vi.fn().mockRejectedValue(new Error("coupon max_redemptions reached"));
+    getStripeClient.mockReturnValue({ checkout: { sessions: { create } } });
+    getPriceIdForPlan.mockReturnValue("price_pro_test");
+    getPromoCouponIdForPlan.mockReturnValue("promo_pro_test");
+    requireUser.mockResolvedValue({
+      supabase: fakeSupabase({ profile: { current_plan: "free", stripe_customer_id: null } }),
+      user: { id: USER_ID, email: "founder@example.com" }
+    });
+    const { createCheckoutSession } = await import("./actions");
+
+    const result = await createCheckoutSession("pro");
+
+    expect(result.success).toBe(false);
+    expect(invalidateFounderOfferCache).toHaveBeenCalledTimes(1);
   });
 
   it("strips a trailing slash from the NEXT_PUBLIC_SITE_URL fallback when no host header is present", async () => {
@@ -279,8 +336,8 @@ describe("createCheckoutSession", () => {
 
     expect(create).toHaveBeenCalledWith(
       expect.objectContaining({
-        success_url: "https://www.genscore.es/dashboard/settings/billing?checkout=success",
-        cancel_url: "https://www.genscore.es/dashboard/settings/billing?checkout=cancelled"
+        success_url: "https://www.genscore.es/dashboard/settings?checkout=success#plan",
+        cancel_url: "https://www.genscore.es/dashboard/settings?checkout=cancelled#plan"
       })
     );
 
@@ -504,10 +561,10 @@ describe("createPortalSession", () => {
 
 describe("changePlan — Stripe-aware downgrade", () => {
   it("cancels the live Stripe subscription and clears stripe_subscription_id when downgrading", async () => {
-    const cancel = vi.fn().mockResolvedValue({});
+    const cancel = vi.fn().mockResolvedValue({ status: "canceled" });
     getStripeClient.mockReturnValue({ subscriptions: { cancel } });
     const supabase = fakeSupabase({
-      profile: { stripe_subscription_id: "sub_123" },
+      profile: { current_plan: "pro", stripe_subscription_id: "sub_123" },
       activeProjectCount: 0
     });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
@@ -520,13 +577,13 @@ describe("changePlan — Stripe-aware downgrade", () => {
     expect(cancel).toHaveBeenCalledWith("sub_123");
     // Regression: the final profiles write is privileged (0016_protect_billing_columns.sql
     // rejects it otherwise) — must go through the service client, not the caller's own session.
-    expect(supabase.__profileUpdates).toContainEqual({ current_plan: "free", stripe_subscription_id: null });
+    expect(supabase.__profileUpdates).toContainEqual({ current_plan: "free", stripe_subscription_id: null, cancel_at: null });
   });
 
   it("does not call Stripe when there is no subscription to cancel", async () => {
     const cancel = vi.fn();
     getStripeClient.mockReturnValue({ subscriptions: { cancel } });
-    const supabase = fakeSupabase({ profile: { stripe_subscription_id: null }, activeProjectCount: 0 });
+    const supabase = fakeSupabase({ profile: { current_plan: "pro", stripe_subscription_id: null }, activeProjectCount: 0 });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
     createServiceClient.mockReturnValue(supabase);
     const { changePlan } = await import("./actions");
@@ -540,7 +597,7 @@ describe("changePlan — Stripe-aware downgrade", () => {
   it("fails the downgrade (does not silently succeed) when Stripe cancellation fails", async () => {
     const cancel = vi.fn().mockRejectedValue(new Error("stripe down"));
     getStripeClient.mockReturnValue({ subscriptions: { cancel } });
-    const supabase = fakeSupabase({ profile: { stripe_subscription_id: "sub_123" }, activeProjectCount: 0 });
+    const supabase = fakeSupabase({ profile: { current_plan: "pro", stripe_subscription_id: "sub_123" }, activeProjectCount: 0 });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
     createServiceClient.mockReturnValue(supabase);
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -554,7 +611,7 @@ describe("changePlan — Stripe-aware downgrade", () => {
   });
 
   it("fails gracefully instead of crashing when the service client is unavailable", async () => {
-    const supabase = fakeSupabase({ profile: { stripe_subscription_id: null }, activeProjectCount: 0 });
+    const supabase = fakeSupabase({ profile: { current_plan: "pro", stripe_subscription_id: null }, activeProjectCount: 0 });
     requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
     createServiceClient.mockImplementation(() => {
       throw new Error("Missing SUPABASE_SERVICE_ROLE_KEY");
@@ -567,5 +624,153 @@ describe("changePlan — Stripe-aware downgrade", () => {
     expect(result.success).toBe(false);
     expect(supabase.__profileUpdates).toHaveLength(0);
     errorSpy.mockRestore();
+  });
+});
+
+describe("changePlan — payment gate (SECURITY, server-side)", () => {
+  // Reproduction of the reported hole: the "paid plans only through Checkout"
+  // rule lived in the client (change-plan-modal), while the action wrote
+  // `current_plan` with the service role for ANY valid plan id.
+  it.each(["starter", "pro", "agency"])(
+    "a Free user calling changePlan(%s) directly gets no entitlement and no write",
+    async (target) => {
+      const supabase = fakeSupabase({ profile: { current_plan: "free", stripe_subscription_id: null }, activeProjectCount: 0 });
+      requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+      createServiceClient.mockReturnValue(supabase);
+      const { changePlan } = await import("./actions");
+
+      const result = await changePlan(target);
+
+      expect(result.success).toBe(false);
+      expect(supabase.__profileUpdates).toHaveLength(0);
+    }
+  );
+
+  it("an unconverted Pro trial cannot be turned into a paid plan without paying either", async () => {
+    const supabase = fakeSupabase({
+      profile: { current_plan: "pro", stripe_subscription_id: null, trial_ends_at: "2099-01-01T00:00:00Z" },
+      activeProjectCount: 0
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("agency");
+
+    expect(result.success).toBe(false);
+    expect(supabase.__profileUpdates).toHaveLength(0);
+  });
+
+  it("a subscriber cannot jump to another paid plan through this action (portal only)", async () => {
+    const supabase = fakeSupabase({
+      profile: { current_plan: "starter", stripe_subscription_id: "sub_1" },
+      activeProjectCount: 0
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("pro");
+
+    expect(result.success).toBe(false);
+    expect(supabase.__profileUpdates).toHaveLength(0);
+  });
+
+  it("rejects before archiving anything when the target is not allowed", async () => {
+    const supabase = fakeSupabase({ profile: { current_plan: "free", stripe_subscription_id: null }, activeProjectCount: 0 });
+    const fromSpy = vi.spyOn(supabase, "from");
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("pro", ["00000000-0000-4000-8000-000000000001"]);
+
+    expect(result.success).toBe(false);
+    expect(fromSpy).not.toHaveBeenCalledWith("projects");
+  });
+
+  it("keeps the overage flow working: same-plan + archive ids archives but never writes the plan", async () => {
+    const supabase = fakeSupabase({
+      profile: { current_plan: "starter", stripe_subscription_id: "sub_1" },
+      activeProjectCount: 1
+    });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("starter", []);
+
+    expect(result).toEqual({ success: true });
+    expect(supabase.__profileUpdates).toHaveLength(0);
+  });
+});
+
+describe("changePlan — cancel vs entitlements (SEC-CHANGEPLAN-1)", () => {
+  async function setup(profile: Row, stripe: unknown, activeProjectCount = 0) {
+    const supabase = fakeSupabase({ profile, activeProjectCount });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(supabase);
+    getStripeClient.mockReturnValue(stripe);
+    const { changePlan } = await import("./actions");
+    return { supabase, changePlan };
+  }
+
+  it("fails closed and keeps stripe_subscription_id when there is a subscription but no Stripe client", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { supabase, changePlan } = await setup({ current_plan: "pro", stripe_subscription_id: "sub_1" }, null);
+
+    const result = await changePlan("free");
+
+    expect(result.success).toBe(false);
+    expect(supabase.__profileUpdates).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
+  it("does not revoke entitlements when Stripe answers with something other than a cancelled subscription", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cancel = vi.fn().mockResolvedValue({ status: "active" });
+    const { supabase, changePlan } = await setup(
+      { current_plan: "pro", stripe_subscription_id: "sub_1" },
+      { subscriptions: { cancel } }
+    );
+
+    const result = await changePlan("free");
+
+    expect(result.success).toBe(false);
+    expect(supabase.__profileUpdates).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
+  it("never overwrites a newer subscription linked after we read the profile (guarded write)", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const cancel = vi.fn().mockResolvedValue({ status: "canceled" });
+    // The row we read says sub_old, but by the time the privileged write runs
+    // the stored row points at sub_new: the guarded UPDATE matches nothing.
+    const supabase = fakeSupabase({ profile: { current_plan: "pro", stripe_subscription_id: "sub_old" }, activeProjectCount: 0 });
+    const service = fakeSupabase({ profile: { current_plan: "pro", stripe_subscription_id: "sub_new" }, activeProjectCount: 0 });
+    requireUser.mockResolvedValue({ supabase, user: { id: USER_ID } });
+    createServiceClient.mockReturnValue(service);
+    getStripeClient.mockReturnValue({ subscriptions: { cancel } });
+    const { changePlan } = await import("./actions");
+
+    const result = await changePlan("free");
+
+    expect(result.success).toBe(false);
+    expect(service.__profileUpdates).toHaveLength(0);
+    errorSpy.mockRestore();
+  });
+
+  it("a Free-bound downgrade of an unconverted trial needs no Stripe call and writes once", async () => {
+    const cancel = vi.fn();
+    const { supabase, changePlan } = await setup(
+      { current_plan: "pro", stripe_subscription_id: null, trial_ends_at: "2099-01-01T00:00:00Z" },
+      { subscriptions: { cancel } }
+    );
+
+    const result = await changePlan("free");
+
+    expect(result).toEqual({ success: true });
+    expect(cancel).not.toHaveBeenCalled();
+    expect(supabase.__profileUpdates).toHaveLength(1);
   });
 });

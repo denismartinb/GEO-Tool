@@ -5,6 +5,7 @@ import {
   GEMINI_API_URL,
   GeminiConfigError,
   fetchGeminiWithRetry,
+  geminiGenerationTuning,
   getGeminiModel,
   toIncidentError
 } from "@/lib/llm/gemini-client";
@@ -89,7 +90,7 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
     contents: [{ parts: [{ text: promptBlock }] }],
     systemInstruction: { parts: [{ text: instruction }] },
     tools: [{ google_search: {} }],
-    generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+    generationConfig: geminiGenerationTuning(model)
   });
 
   // LLM-RESILIENCE-1: was a bare `fetchWithTimeout` that died on the first

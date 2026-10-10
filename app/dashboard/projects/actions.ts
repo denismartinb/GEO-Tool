@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
-import { generateAddedPrompts, suggestCompetitors, suggestPrompts } from "@/lib/llm/gemini";
+import { generateAddedPrompts, suggestCompetitorsWithReason, suggestPrompts } from "@/lib/llm/gemini";
 import { reportLlmIncident } from "@/lib/llm/llm-incident";
 import { resolveBusinessContext } from "@/lib/projects/business-profile";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
@@ -41,6 +41,13 @@ export type ProjectSetupSuggestion = {
    * server says which one happened.
    */
   failed: Array<"competitors" | "prompts">;
+  /**
+   * Why the competitor half came back empty (a self-authored category such as
+   * `timeout`, `schema`, `filtered`). Only ever set on Vercel previews, where
+   * runtime logs are not kept, so a failed suggestion can be diagnosed from
+   * the screen; production never receives it (log §240).
+   */
+  competitorsReason?: string;
 };
 
 /**
@@ -70,6 +77,13 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
   const brand = deriveBrandFromDomain(domain);
   const language = languageForCountry(country);
   const plan = await getPlanForUser(supabase, user.id);
+  // TRIAL-ONLY-1: an account without a plan is read-only and cannot create a
+  // domain (`createProjectCore`), so spending Gemini calls on suggestions for
+  // one is pure cost. The wizard already hides the button; this is the
+  // server-side half.
+  if (plan.id === "free") {
+    return empty;
+  }
   // suggestPrompts itself hard-caps at 15 (lib/llm/gemini.ts) regardless of
   // what's requested — Math.min just avoids asking for more than the plan
   // allows when a lower-tier plan's cap is below that.
@@ -88,16 +102,21 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
 
   const failed: Array<"competitors" | "prompts"> = [];
 
+  let competitorsReason: string | null = null;
   const [competitors, prompts] = await Promise.all([
     // suggestCompetitors reports its own incident (it is the grounded call and
     // owns the error) and answers [] either way, so the flag here records that
-    // the half failed, not why.
-    suggestCompetitors({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS }).catch(
-      () => {
+    // the half failed; the reason only travels to previews (below).
+    suggestCompetitorsWithReason({ brand, domain, country, language, profile: context.profile, limit: MAX_INITIAL_COMPETITORS })
+      .then((result) => {
+        competitorsReason = result.reason;
+        return result.competitors;
+      })
+      .catch(() => {
         failed.push("competitors");
+        competitorsReason = "unknown";
         return [];
-      }
-    ),
+      }),
     suggestPrompts({ brand, domain, country, language, profile: context.profile, limit: promptLimit }).catch(async (error) => {
       failed.push("prompts");
       await reportLlmIncident({ surface: "onboarding_suggestions", provider: "gemini", error, domain });
@@ -117,7 +136,8 @@ export async function suggestProjectSetup(input: { domain: string; country: stri
     language,
     competitors,
     prompts,
-    failed
+    failed,
+    ...(process.env.VERCEL_ENV === "preview" && competitorsReason ? { competitorsReason } : {})
   };
 }
 
@@ -337,7 +357,9 @@ export async function deleteProjects(projectIds: string[]): Promise<DeleteProjec
     .eq("owner_user_id", user.id)
     .eq("is_archived", false);
 
-  if (countError || (remainingCount ?? 0) > plan.caps.projects) {
+  // TRIAL-ONLY-1: without a plan nothing scans, so there is no domain cap to
+  // be "still over" — same exemption as `getDomainOverage`.
+  if (countError || (plan.id !== "free" && (remainingCount ?? 0) > plan.caps.projects)) {
     return {
       success: false,
       error: "Los dominios se eliminaron, pero todavía tienes más de los que permite tu plan. Recarga la página."

@@ -1,7 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/safe-next-path";
+import { parseConsentCookie } from "@/lib/ads/consent";
+import { PENDING_CONVERSION_COOKIE } from "@/lib/ads/pending-conversion";
 
 const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténtalo de nuevo.";
 
@@ -47,7 +51,8 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const providerError = url.searchParams.get("error_description") ?? url.searchParams.get("error");
-  const next = url.searchParams.get("next") ?? "/dashboard";
+  // Only a path on this site: `new URL("//evil.com", origin)` would leave it.
+  const next = safeNextPath(url.searchParams.get("next")) ?? "/dashboard";
 
   if (providerError) {
     console.error("[geo:auth-callback] provider_error", { providerError });
@@ -67,6 +72,7 @@ export async function GET(request: Request) {
     return safeLoginError(url);
   }
 
+  let countGoogleSignup = false;
   if (data.user?.email && isFreshSignup(data.user)) {
     await sendWelcomeEmail(data.user.email);
     const method = data.user.app_metadata?.provider === "google" ? "google" : "password";
@@ -75,7 +81,23 @@ export async function GET(request: Request) {
       { id: data.user.id, email: data.user.email, created_at: data.user.created_at },
       method
     );
+    await captureFunnelEvent("signup_completed", data.user.id, { method });
+    // PAID-ADS-1: a password sign-up is counted on /signup/confirm; a Google
+    // one never sees that page, so it is flagged here for the next page to
+    // count — and only when the visitor already accepted ad cookies, which
+    // this request can read because the consent cookie is first-party.
+    countGoogleSignup =
+      method === "google" && parseConsentCookie(request.headers.get("cookie") ?? "")?.measurement === true;
   }
 
-  return NextResponse.redirect(new URL(next, url.origin));
+  const response = NextResponse.redirect(new URL(next, url.origin));
+  if (countGoogleSignup) {
+    response.cookies.set(PENDING_CONVERSION_COOKIE, "sign_up", {
+      path: "/",
+      maxAge: 600,
+      sameSite: "lax",
+      secure: url.protocol === "https:"
+    });
+  }
+  return response;
 }

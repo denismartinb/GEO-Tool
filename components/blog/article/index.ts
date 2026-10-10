@@ -26,3 +26,15 @@ export {
 } from "./blocks";
 
 export { Figure, ProductMock, ShareOfVoice, PromptSet, AnswerSample, AnswerPair, RecommendationSample, type MockRow } from "./figure";
+
+export {
+  BarChart,
+  ColumnChart,
+  ChartPair,
+  EngineChart,
+  InsightPanel,
+  Insight,
+  type BarRow,
+  type Column,
+  type EngineRow
+} from "./charts";

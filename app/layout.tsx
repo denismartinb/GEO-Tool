@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { AdsConsent } from "@/components/ads/ads-consent";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
 import {
@@ -112,8 +113,19 @@ export const metadata: Metadata = {
   // GROWTH-2 Fase 2.1: Search Console ownership verification. Mirrors the
   // Sentry/PostHog pattern — no-op (tag omitted entirely) until the founder
   // creates the property and sets the env var, see docs/environment-contract.md.
-  ...(process.env.GOOGLE_SITE_VERIFICATION
-    ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } }
+  //
+  // GEO-SELF-1 Fase 1: same for Bing Webmaster Tools (`msvalidate.01`). Bing's
+  // index is what ChatGPT search grounds on, so it gets its own optional tag
+  // instead of depending on the import-from-Search-Console path.
+  ...(process.env.GOOGLE_SITE_VERIFICATION || process.env.BING_SITE_VERIFICATION
+    ? {
+        verification: {
+          ...(process.env.GOOGLE_SITE_VERIFICATION ? { google: process.env.GOOGLE_SITE_VERIFICATION } : {}),
+          ...(process.env.BING_SITE_VERIFICATION
+            ? { other: { "msvalidate.01": process.env.BING_SITE_VERIFICATION } }
+            : {})
+        }
+      }
     : {})
 };
 
@@ -168,6 +180,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
         <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
+        <AdsConsent />
       </body>
     </html>
   );

@@ -130,6 +130,28 @@ Consecuencias, y son reglas:
   No es un respaldo: no reintroducir lecturas. Se dejó porque tirar una columna
   es un cambio destructivo con su propia aprobación.
 
+### La cobertura automática se busca una vez por semana (COVERAGE-WEEKLY-1, log §253)
+
+- **Tras cada escaneo, la auditoría automática reutiliza el último mapa
+  completado si su búsqueda real tiene menos de `COVERAGE_REFRESH_INTERVAL_MS`**
+  (`carryForwardCoverage`, `lib/web-audit/coverage-map.ts`). Lo que mide —si tu
+  web ha publicado algo sobre un tema— cambia cuando el cliente publica, no con
+  cada escaneo, y desde Gemini 3 cada búsqueda se cobra.
+- **La copia es una fila propia del escaneo nuevo, nunca un "mira la de la
+  semana pasada".** Todos los lectores casan cobertura y escaneo por `scanId`
+  (estado de auditoría por run, informe, ventana de citación). Una copia que no
+  se adjuntara dejaría cada escaneo diario como «Parcial» y el informe sin
+  columna de cobertura.
+- **`generatedAt` es cuándo se adjuntó; `verifiedAt` es cuándo se buscó de
+  verdad.** No los confundas:
+  - La ventana de citación filtra por `generatedAt`. Con la fecha vieja dejaría
+    fuera las citas del escaneo en curso.
+  - La frescura se mide con `verifiedAt`, que pasa intacto de copia en copia.
+    Medirla con `generatedAt` haría que la semana no terminara nunca.
+- **No se copia lo que una campaña real haría mejor:** un prompt sin tema, un
+  tema inconcluso o una auditoría pedida a mano. Si guardar la copia falla, se
+  hace la campaña: gastar llamadas tiene arreglo y un escaneo sin cobertura no.
+
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 
 `page.tsx` orquesta datos; los catorce componentes que pintan filas, anillos,
@@ -271,6 +293,14 @@ Consecuencias, y son reglas, no matices:
   claim es un UPDATE atómico condicional: un despacho duplicado es un no-op.
   El job se lee con el cliente de usuario (RLS `jobs_select_owner`), no con
   service-role — un render no necesita más privilegio del que ya tiene.
+- **La cadena de auto-llamadas tampoco es el motor: lo es el cron.** Vercel
+  rechaza con 508 una cadena de llamadas de la web a sí misma a los pocos
+  saltos (3 y 5 el 2026-10-09, con la URL ya limpia de §241), así que
+  `triggerWebAuditRun` sólo avanza un puñado de trabajos por cadena. Por eso
+  `/api/cron/run-audit` corre cada 10 minutos (AUDIT-CRON-DRAIN-1, log §261):
+  cada disparo del cron no es una auto-llamada y arranca una cadena nueva.
+  Volver a un horario diario devuelve la cola a vaciarse al día siguiente;
+  lo vigila `vercel-crons.test.ts`.
 
 ### Una etiqueta de estado se mide contra el reloj
 

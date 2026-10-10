@@ -169,7 +169,7 @@ export default function GeoExplainerPage() {
           </p>
           <div className="gx-hero-actions">
             <Link href="/signup" className="btn btn-primary">
-              Mide tu visibilidad gratis <Icon name="arrRight" size={15} />
+              Prueba Pro 7 días gratis <Icon name="arrRight" size={15} />
             </Link>
             <Link href="/blog" className="btn btn-ghost">Leer el blog</Link>
           </div>
@@ -360,7 +360,7 @@ export default function GeoExplainerPage() {
             <div className="onb-aurora" style={{ opacity: 0.25 }}><div className="blob blob-2" /><div className="blob blob-3" /></div>
             <div style={{ position: "relative", zIndex: 2 }}>
               <h2>Descubre cómo te ve la IA</h2>
-              <p>Introduce tu dominio y obtén tu GEO Score real en minutos. Gratis, sin tarjeta.</p>
+              <p>Introduce tu dominio y obtén tu GEO Score real en minutos. Prueba Pro 7 días gratis, sin tarjeta.</p>
               <div className="row">
                 <Link href="/signup" className="btn btn-white btn-lg">
                   Analiza tu dominio <Icon name="arrRight" size={16} />
@@ -384,7 +384,7 @@ export default function GeoExplainerPage() {
             <div className="links">
               <Link href="/#producto">Producto</Link>
               <Link href="/geo">Qué es GEO</Link>
-              <Link href="/pricing">Precios</Link>
+              <Link href="/precios">Precios</Link>
               <Link href="/blog">Blog</Link>
               <Link href="/privacidad">Privacidad</Link>
               <Link href="/terminos">Términos</Link>

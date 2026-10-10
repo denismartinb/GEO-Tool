@@ -45,11 +45,13 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
   },
   {
     path: "/api/cron/run-audit",
-    schedule: "0 7 * * *",
-    // The hour gap is load-bearing, not cosmetic: the sweep is the safety net
-    // for audits queued by the day's automatic scans, so it has to run after
-    // those scans have finished queueing them.
-    why: "post-scan web audit queue, one hour after the scan sweep — ADR 0027"
+    schedule: "*/10 * * * *",
+    // Every 10 minutes, not daily (AUDIT-CRON-DRAIN-1, log §261): Vercel
+    // rejects a chain of self-calls with 508 after a few hops, so the worker's
+    // own self-chain cannot drain the queue. Each cron firing starts a fresh
+    // chain; back on a daily schedule, every audit past the first few hops
+    // waits until the next morning.
+    why: "post-scan web audit queue, drained every 10 min — ADR 0027, log §261"
   },
   {
     path: "/api/cron/lifecycle-emails",
@@ -57,6 +59,14 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     // 09:45 Madrid in summer / 08:45 in winter: a morning inbox, and off the
     // round hour on purpose (Vercel crons on :00 queue behind everyone else's).
     why: "trial lifecycle emails D1/D3/D5 — LIFECYCLE-TRIAL-1, log §233"
+  },
+  {
+    path: "/api/cron/scan-continue",
+    schedule: "*/5 * * * *",
+    // A cron firing is what starts a fresh chain: Vercel cuts a scan's own
+    // chain of self-calls with 508 after a few hops (log §261), so without
+    // this a run waits for the 15-minute watchdog and its three resumes.
+    why: "re-dispatch stalled scan runs — SCAN-CRON-DRAIN-1, log §262"
   }
 ];
 

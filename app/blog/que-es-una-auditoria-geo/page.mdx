@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   NumberedSection,
@@ -13,10 +13,9 @@ import {
   Figure,
   Verdict,
   AuthorBio,
-  ArticleCta,
-  PostMeta
+  ArticleCta
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-una-auditoria-geo");
 
@@ -51,13 +50,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -297,16 +290,16 @@ llevan años siendo la referencia.
 Arregla lo técnico primero, porque es lo barato, lo determinista y lo que
 depende solo de ti. Pero no confundas haberlo arreglado con estar apareciendo.
 
-<ArticleCta
-  title="Pásale esta auditoría a tu web entera, no a una página"
-  text="GenScore audita las seis dimensiones página a página y te dice qué arreglar primero. Escaneo gratuito, sin tarjeta."
-/>
-
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="Pásale esta auditoría a tu web entera, no a una página"
+  text="GenScore audita las seis dimensiones página a página y te dice qué arreglar primero. Prueba Pro 7 días gratis, sin tarjeta."
+/>
 
 </div>
 

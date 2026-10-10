@@ -43,6 +43,8 @@ Task Intake de Fase 2.6).
 | C1 | `/comparativas/genscore-vs-otterly` | genscore vs otterly | ✅ Hecho | #292 |
 | C2 | `/comparativas/genscore-vs-peec-ai` | genscore vs peec ai | ✅ Hecho | #302 |
 | C3 | `/comparativas/mejores-herramientas-geo-en-espanol` (pilar) | mejores herramientas geo español | ✅ Hecho | #306 |
+| C4 | `/comparativas/profound-vs-peec-ai-vs-otterly` (neutral a tres, GEO-SELF-1 Fase 2, log §258) | profound vs peec ai vs otterly | ✅ Hecho | #577 |
+| C5 | `/comparativas/alternativas-a-peec-ai` (GEO-SELF-1 Fase 2, log §258) | alternativas a peec ai | ✅ Hecho | #577 |
 
 ## Capa D — Glosario (Fase 2.4 / 2.6b)
 
@@ -166,8 +168,9 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W2 | GEO para SaaS B2B: las preguntas que hace un comprador antes de pedir demo | `sectores` | ✅ Publicado | #346 |
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | ✅ Publicado | #349 |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
-| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🔲 Pendiente | — |
+| W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | 🟡 En PR (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
+| G1 | Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google (GEO-SELF-1 Fase 3, log §259) — slug `como-aparecer-en-gemini-y-vistas-creadas-con-ia` | `playbooks` | ✅ Publicado (2026-10-09) | #578 |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
@@ -575,6 +578,18 @@ explícitamente que no hay cifra fiable para eso.
 
 **Con N5 se cierra la tanda completa de los 5 artículos aprobados por Task
 Intake el 2026-09-19.**
+
+## Estudios con dato propio (SECTOR-STUDY-1)
+
+Mediciones reales hechas con `/admin/estudio` (log §246). Sólo porcentajes y
+ratios, nunca recuentos absolutos (fundador, 2026-10-09).
+
+| # | Pieza | Cluster | Keyword primaria | Estado | PR |
+| --- | --- | --- | --- | --- | --- |
+| ST1 | ¿Qué programa de facturación recomienda la IA a los autónomos y pymes españoles? | `sectores` | qué software de facturación recomienda la ia | ✅ Publicado | #564 |
+| ST2 | De buscar a preguntar: cómo la IA está cambiando la búsqueda en España (datos de terceros + dato propio de ST1) | `fundamentos` | búsqueda con ia en españa | ✅ Publicado | #571 |
+| ST-H | Hub `/estudios`: reúne los estudios publicados con su cifra, su fuente y el método (GEO-SELF-1 Fase 4, log §260). Cada estudio nuevo se añade a `STUDY_ENTRIES` en `lib/estudios/studies.ts` | — | estudios búsqueda ia españa | ✅ Publicado (2026-10-10) | #579 |
+| CK1 | Comprobador gratuito rehecho: portada oscura con el campo, resultado de ejemplo etiquetado como inventado, cómo leerlo, gratis frente a completo, FAQ de cinco preguntas y schema `WebApplication` gratuito (GEO-SELF-1 Fase 5, log §263) | `/gratis/aparece-mi-marca-en-chatgpt` | aparece mi marca en chatgpt | 🟡 En PR (2026-10-10) | #(este) |
 
 ---
 

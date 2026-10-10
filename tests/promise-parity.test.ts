@@ -47,11 +47,13 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
 
 /** Cada fichero que citaba un precio a mano, y el import que ahora lo evita. */
 const PRICE_QUOTING_FILES = [
-  "app/pricing/page.tsx",
+  "app/precios/page.tsx",
   "components/landing/session-ctas.tsx",
   "lib/comparativas/genscore-vs-otterly.ts",
   "lib/comparativas/alternativas-a-otterly.ts",
   "lib/comparativas/mejores-herramientas-geo.ts",
+  "lib/comparativas/profound-vs-peec-ai-vs-otterly.ts",
+  "lib/comparativas/alternativas-a-peec-ai.ts",
   "app/comparativas/alternativas-a-otterly/page.tsx"
 ];
 

@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Verdict,
@@ -13,10 +13,9 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  AnswerSample,
-  PostMeta
+  AnswerSample
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("mi-marca-no-aparece-en-chatgpt-por-que");
 
@@ -51,13 +50,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -197,16 +190,16 @@ propios que desarrollamos en
 <a href="/blog/geo-negocios-locales-servicios-profesionales">GEO para
 negocios locales y servicios profesionales</a>.
 
-<ArticleCta
-  title="Averigua desde qué punto partes de verdad"
-  text="El primer escaneo de GenScore te dice, con preguntas reales en Gemini, Claude y ChatGPT, cuántas de ellas te mencionan hoy — la línea base desde la que medir todo lo que hagas después."
-/>
-
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="Averigua desde qué punto partes de verdad"
+  text="El primer escaneo de GenScore te dice, con preguntas reales en Gemini, Claude y ChatGPT, cuántas de ellas te mencionan hoy — la línea base desde la que medir todo lo que hagas después."
+/>
 
 </div>
 

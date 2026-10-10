@@ -11,11 +11,15 @@ import {
   paragraph,
   PREFERENCES_URL,
   scoreBar,
+  sectionLabel,
   sendEmail,
+  statCell,
+  statRow,
   subtext,
   wrap
 } from "@/lib/email/transactional";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
+import { formatShare, type ReportModel } from "@/lib/report/report-model";
 import { SITE_URL } from "@/lib/seo/metadata";
 
 /**
@@ -53,8 +57,12 @@ export type TopRecommendation = { title: string; description: string; engines: s
 export type PlanOffer = {
   planName: string;
   price: number;
-  /** Present only while the launch promo can really be redeemed at checkout. */
-  promo: { price: number; months: number; endsLabel: string } | null;
+  /**
+   * Present only while the founder price can really be redeemed at checkout
+   * (FOUNDER-PRICE-1, log §237): forever, for the first `total` subscriptions,
+   * `remaining` of which are still free.
+   */
+  promo: { price: number; remaining: number; total: number } | null;
 };
 
 const dateLong = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
@@ -120,12 +128,12 @@ export function priceBox(offer: PlanOffer): string {
   const off = Math.round(((offer.price - offer.promo.price) / offer.price) * 100);
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;border:2px solid #2563EB;border-radius:16px;"><tr><td style="padding:20px 22px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
-      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio de lanzamiento · ${H(offer.planName)}</td>
+      <td style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#2563EB;">Precio fundador · ${H(offer.planName)}</td>
       <td align="right"><span style="display:inline-block;background:#E7F6EE;color:#15915A;font-weight:800;font-size:12.5px;padding:4px 10px;border-radius:999px;">−${off}%</span></td>
     </tr></table>
-    <div style="margin-top:10px;"><span style="font-size:18px;color:#94A1B5;text-decoration:line-through;font-weight:700;">${offer.price} €</span><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;padding-left:10px;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
-    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Durante ${offer.promo.months} meses. Después, ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
-    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Disponible hasta el ${offer.promo.endsLabel}</div>
+    <div style="margin-top:10px;"><span style="font-size:20px;font-weight:700;color:#8A96A8;text-decoration:line-through;margin-right:8px;">${offer.price} €</span><span class="em-score-num" style="font-size:42px;font-weight:800;color:#0B1426;letter-spacing:-.03em;">${offer.promo.price} €</span><span style="font-size:15px;color:#5B6B82;font-weight:600;">/mes</span></div>
+    <div style="font-size:13px;color:#3B4759;margin-top:4px;">Para siempre, mientras mantengas tu suscripción. Precio normal: ${offer.price} €/mes. Sin permanencia: cancelas cuando quieras desde Facturación.</div>
+    <div style="margin-top:12px;font-size:13px;font-weight:700;color:#A8660B;">Quedan ${offer.promo.remaining} cuentas con precio fundador</div>
   </td></tr></table>`;
 }
 
@@ -135,7 +143,7 @@ function offerPriceLabel(offer: PlanOffer): string {
 
 /**
  * What changes when the trial ends, from `PLANS` via the caller: the rows
- * are the real Pro vs Free caps, never a marketing list typed here.
+ * are the real Pro caps against the read-only state (TRIAL-ONLY-1), never a marketing list typed here.
  */
 export function lossTable(rows: Array<{ label: string; pro: string; free: string }>, freeFromLabel: string): string {
   const head = (text: string, color: string) =>
@@ -146,15 +154,15 @@ export function lossTable(rows: Array<{ label: string; pro: string; free: string
         `<tr><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#3B4759;">${r.label}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#0B1426;font-weight:700;">${r.pro}</td><td style="padding:10px 14px;border-top:1px solid #EEF1F6;font-size:13.5px;color:#5B6B82;">${r.free}</td></tr>`
     )
     .join("");
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Free, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 4px;border:1px solid #E7EAF0;border-radius:14px;overflow:hidden;"><tr>${head("", "#5B6B82")}${head("Pro, hoy", "#2563EB")}${head(`Sin plan, desde el ${freeFromLabel}`, "#D23B48")}</tr>${body}</table>`;
 }
 
-/** The one testimonial confirmed as real (log §146). Never another name. */
-export function nordikaQuote(): string {
-  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:26px 0 0;background:#F7F8FB;border-radius:14px;"><tr><td style="padding:18px 20px;">
-    <div style="font-size:14.5px;line-height:1.55;color:#0B1426;">«No sabíamos si ChatGPT nos nombraba, y mucho menos por qué. En tres meses hemos subido un <b>128% nuestra cuota de voz en IA</b>.»</div>
-    <div style="font-size:12.5px;color:#5B6B82;margin-top:8px;">Nerea Solís · Marketing digital en Nordika Home</div></td></tr></table>`;
-}
+/*
+ * No testimonial in any email. The quote that used to live here (a named person, a company and a
+ * growth figure, commented as "confirmed as real") was INVENTED — confirmed by the founder on 2026-10-08. It is NOT
+ * replaced with another customer, anonymised or kept as a figure: an email may carry a testimonial again only when
+ * the original evidence and the customer's consent are on record.
+ */
 
 function recommendationCard(rec: TopRecommendation): string {
   const engines = rec.engines.length
@@ -327,17 +335,106 @@ export async function sendTrialD3Email(
   return sendEmail(to, "Tus clientes ya le preguntan a la IA por tu sector", html, envelope.headers);
 }
 
+/** Where "Ver el informe completo" lands: through /login, which forwards a signed-in reader straight on. */
+export function reportLink(projectId: string, campaign: string): string {
+  return url(`/login?next=${encodeURIComponent(`/informe/${projectId}`)}`, campaign);
+}
+
+const toneColor = (tone: "pos" | "neg" | "info"): string =>
+  tone === "pos" ? "#15915A" : tone === "neg" ? "#D23B48" : "#2563EB";
+
 /**
- * D5 · quedan 2 días. Fulfils the welcome email's promise of a warning before
- * the trial ends. The table and the prices come from the caller (`PLANS`,
- * live promo) — the loss is what really happens on the end date.
+ * TRIAL-REPORT-EMAIL-1 (log §254). The GenScore report of the last scan,
+ * condensed to what fits an email, from the same `buildReportModel` the
+ * printed report uses — so every rule of `.claude/rules/report.md` holds here
+ * too: shares through `formatShare` only, engines by name, the quote literal
+ * or absent, a block without data omitted. React escapes the printed report;
+ * here nobody does, so every string that came from a scan goes through `H`.
+ */
+export function reportDigest(model: ReportModel): string {
+  const blocks: string[] = [];
+
+  if (model.geoScore !== null) {
+    blocks.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:22px 0 0;background:#0B1426;border-radius:16px;"><tr><td style="padding:22px 22px 20px;">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#7FB0FF;">Puntuación GEO</div>
+  <div style="margin-top:8px;"><span class="em-score-num" style="font-size:48px;font-weight:800;color:#ffffff;letter-spacing:-.03em;">${model.geoScore}</span><span style="font-size:16px;color:#8A96A8;font-weight:600;"> / 100</span></div>
+  ${scoreBar(model.geoScore, "#38BDF8").replace(/#E7EAF0/g, "#24314A")}
+  <div style="font-size:13px;color:#C9D2E0;margin-top:10px;">Te mencionan en el ${formatShare(model.cover.mentionShare)} de las respuestas a las preguntas principales de búsqueda de tu sector.</div>
+</td></tr></table>`);
+  }
+
+  if (model.engines.length > 0) {
+    blocks.push(sectionLabel("Menciones por motor"));
+    blocks.push(statRow(model.engines.map((e) => statCell(formatShare(e.mentionShare), H(e.label), "")).join("")));
+  }
+
+  const bars = model.competition.bars.slice(0, 4);
+  if (bars.length > 1) {
+    const rows = bars
+      .map((bar) => {
+        const pct = Math.round(bar.share * 100);
+        const color = bar.isBrand ? "#2563EB" : "#94A1B5";
+        const label = bar.isBrand ? `${H(bar.name)} (tú)` : H(bar.name);
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
+  <td style="font-size:13.5px;color:${bar.isBrand ? "#0B1426" : "#3B4759"};font-weight:${bar.isBrand ? 800 : 600};">${label}</td>
+  <td align="right" style="font-size:13.5px;font-weight:800;color:#0B1426;">${formatShare(bar.share)}</td></tr>
+  <tr><td colspan="2" style="padding-top:6px;">${scoreBar(pct, color).replace("margin-top:10px;", "")}</td></tr></table>`;
+      })
+      .join("");
+    blocks.push(sectionLabel("Quién aparece en las respuestas"));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:14px;"><tr><td style="padding:8px 20px 16px;">${rows}</td></tr></table>`
+    );
+  }
+
+  const quote = model.sources?.brandQuotes[0] ?? model.competition.cards.find((card) => card.quote)?.quote ?? null;
+  if (quote) {
+    blocks.push(sectionLabel(`Lo que dijo ${H(quote.engineLabel)} · ${H(quote.topic)}`));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-left:3px solid #2563EB;"><tr><td style="padding:2px 0 2px 16px;font-size:14.5px;line-height:1.6;color:#0B1426;font-style:italic;">«${H(quote.text)}»</td></tr></table>
+<div style="font-size:11.5px;color:#5B6B82;margin-top:6px;padding-left:19px;">Frase literal de una respuesta de tu escaneo.</div>`
+    );
+  }
+
+  const findings = model.summary.findings.slice(0, 2);
+  if (findings.length > 0) {
+    blocks.push(sectionLabel("Lo más importante"));
+    blocks.push(
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${findings
+        .map(
+          (f) =>
+            `<tr><td valign="top" style="padding:10px 10px 0 0;width:10px;"><div style="width:8px;height:8px;border-radius:4px;background:${toneColor(f.tone)};margin-top:6px;"></div></td><td style="padding-top:10px;"><div style="font-size:14.5px;font-weight:800;color:#0B1426;">${H(f.title)}</div><div style="font-size:13.5px;line-height:1.5;color:#3B4759;margin-top:2px;">${H(f.text)}</div></td></tr>`
+        )
+        .join("")}</table>`
+    );
+  }
+
+  const action = model.plan[0];
+  if (action) {
+    blocks.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0;background:#E9EFFD;border-radius:14px;"><tr><td style="padding:16px 20px;">
+  <div style="font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2563EB;">Tu primera acción</div>
+  <div style="margin-top:8px;font-size:15.5px;line-height:1.4;color:#0B1426;font-weight:800;">${H(action.title)}</div>
+</td></tr></table>`);
+  }
+
+  return blocks.join("\n");
+}
+
+/**
+ * Último aviso de la prueba (the `trial_d5` kind; log §233, moved to the
+ * last day by §254). Fulfils the welcome email's promise of a warning before
+ * the trial ends. With a scan, it carries the GenScore report of that scan
+ * (founder, 2026-10-09: the report next to the deadline, not mid-trial);
+ * without one, it is the deadline email as approved in §233.
  */
 export async function sendTrialD5Email(
   to: string,
   userId: string,
   input: {
     trialEndsAt: Date;
+    projectId: string | null;
     domain: string | null;
+    report: ReportModel | null;
     pro: PlanOffer;
     starter: PlanOffer;
     lossRows: Array<{ label: string; pro: string; free: string }>;
@@ -350,26 +447,214 @@ export async function sendTrialD5Email(
   const endDate = formatDateLong(input.trialEndsAt);
   const who = input.domain ? `<b style="color:#0B1426;">${H(input.domain)}</b>` : "tu dominio";
   const starterPrice = input.starter.promo
-    ? `${input.starter.promo.price} €/mes (antes ${input.starter.price} €) durante ${input.starter.promo.months} meses`
+    ? `${input.starter.promo.price} €/mes para siempre (precio fundador)`
     : `${input.starter.price} €/mes`;
+  const offer = `
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
+    ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}`;
+  const preheader = input.pro.promo
+    ? `Mantén Pro por ${input.pro.promo.price} €/mes para siempre. Precio fundador: quedan ${input.pro.promo.remaining} plazas.`
+    : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`;
+
+  if (input.report && input.projectId && input.domain) {
+    const engines = input.report.engines.map((e) => H(e.label));
+    const named = engines.length > 1 ? `${engines.slice(0, -1).join(", ")} y ${engines[engines.length - 1]}` : engines[0] ?? "la IA";
+    const html = wrap(
+      `
+      ${eyebrow("Último aviso de tu prueba", "#D23B48")}
+      ${heading(`Así te ve la IA: el informe de ${H(input.domain)}`)}
+      ${paragraph(`Tu prueba de Pro termina el ${endDay} ${endDate}. Antes, aquí tienes el informe de tu último escaneo: dónde te nombra ${named}, a quién recomienda en tu lugar y qué cambiar primero.`)}
+      ${reportDigest(input.report)}
+      ${subtext(`<a href="${reportLink(input.projectId, "trial_d5")}" style="${FOOTER_LINK_STYLE}">Ver el informe completo</a>, con el detalle por pregunta y tu plan de acción, listo para guardar en PDF y compartir con tu equipo.`)}
+      ${paragraph(`Desde el ${endDate}, ${who} dejará de escanearse: el informe se quedará con los datos de hoy y, si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+      ${offer}
+      `,
+      { footerHtml: envelope.footerHtml, preheader }
+    );
+    return sendEmail(to, `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, envelope.headers);
+  }
 
   const html = wrap(
     `
-    ${eyebrow("Quedan 2 días", "#D23B48")}
+    ${eyebrow("Último aviso de tu prueba", "#D23B48")}
     ${heading(`Tu prueba de Pro termina el ${endDay} ${endDate}`)}
-    ${paragraph(`Desde ese día, ${who} dejará de escanearse a diario. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
+    ${paragraph(`Desde ese día, ${who} dejará de escanearse: verás tus datos, pero no se actualizan. Si un competidor te adelanta en las respuestas de la IA, no lo verás.`)}
     ${lossTable(input.lossRows, endDate)}
+    ${offer}
+    `,
+    { footerHtml: envelope.footerHtml, preheader }
+  );
+  return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
+}
+
+/* ------------------------------------------- fin de prueba y recuperación */
+
+const dateWithMonth = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", timeZone: "Europe/Madrid" });
+
+function starterLine(starter: PlanOffer, campaign: string, lead: string): string {
+  const price = starter.promo ? `${starter.promo.price} €/mes` : `${starter.price} €/mes`;
+  const forever = starter.promo ? " para siempre (precio fundador)" : "";
+  return subtext(
+    `${lead} <a href="${url("/dashboard/settings?openPlan=starter", campaign)}" style="${FOOTER_LINK_STYLE}">Starter por ${price}</a>${forever}.`
+  );
+}
+
+/** The last real scan, as three figures — or nothing when there is no scan to quote. */
+function lastScanBlock(snap: RunSnapshot | null): string {
+  if (!snap) return "";
+  const recs = snap.activeRecommendations;
+  return `${sectionLabel(`Tu último escaneo · ${dateWithMonth.format(snap.runDate)}`)}${statRow(
+    statCell(String(Math.round(snap.geoScore)), "Puntuación GEO", "em-stack-td") +
+      statCell(`${snap.brandMentions} de ${snap.answers}`, "respuestas te mencionan", "em-stack-td em-stack-second") +
+      statCell(String(recs), recs === 1 ? "recomendación abierta" : "recomendaciones abiertas", "em-stack-td em-stack-second")
+  )}`;
+}
+
+/**
+ * D7 · fin de prueba, and its «tardía» version (LIFECYCLE-WINBACK-1, log
+ * §238). Account news plus an offer, so it carries the lifecycle unsubscribe
+ * (log §232); whoever opted out gets the plain `sendTrialEndedEmail`
+ * instead — the runner decides, not this template.
+ */
+export async function sendTrialEndedOfferEmail(
+  to: string,
+  userId: string,
+  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer }
+): Promise<boolean> {
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const campaign = input.late ? "trial_ended_late" : "trial_ended";
+  const endDate = formatDateLong(input.trialEndsAt);
+  const domain = input.snapshot ? H(input.snapshot.domain) : null;
+  const intact = "tus dominios, escaneos y recomendaciones siguen intactos";
+
+  const subject = input.late
+    ? `Tu prueba de Pro terminó el ${endDate} (y no te avisamos)`
+    : input.snapshot
+      ? `Tu prueba ha terminado. Tus datos de ${input.snapshot.domain} siguen aquí`
+      : "Tu prueba ha terminado. Tus datos siguen aquí";
+
+  const opening = input.late
+    ? `${eyebrow("Un aviso que llega tarde", "#5B6B82")}
+    ${heading(`Tu prueba de Pro terminó el ${endDate}`)}
+    ${paragraph(`Tendríamos que haberte escrito ese día y no lo hicimos. Perdona. Tu cuenta ya no tiene Pro, pero ${intact}.`)}`
+    : `${eyebrow("Fin de la prueba", "#5B6B82")}
+    ${heading("Tu prueba de Pro ha terminado")}
+    ${paragraph(`Tus 7 días de <b style="color:#0B1426;">Pro</b> han terminado. Tus dominios, escaneos y recomendaciones siguen intactos: no hemos borrado nada.`)}`;
+
+  const bridge = input.late
+    ? input.pro.promo
+      ? "Si quieres retomarlo donde lo dejaste, el precio fundador sigue disponible mientras queden plazas:"
+      : "Si quieres retomarlo donde lo dejaste, puedes volver a Pro cuando quieras:"
+    : `A partir de hoy ${domain ? `<b style="color:#0B1426;">${domain}</b>` : "tu dominio"} ya no se escanea: tus datos siguen aquí, pero no se actualizan. Si quieres seguir viendo cómo cambian las respuestas de la IA, vuelve cuando quieras:`;
+
+  const html = wrap(
+    `
+    ${opening}
+    ${lastScanBlock(input.snapshot)}
+    ${paragraph(bridge)}
     ${priceBox(input.pro)}
-    ${button(url("/dashboard/settings?openPlan=pro", "trial_d5"), `Mantener Pro por ${offerPriceLabel(input.pro)}`)}
-    ${subtext(`¿Te basta con un escaneo semanal? <a href="${url("/dashboard/settings?openPlan=starter", "trial_d5")}" style="${FOOTER_LINK_STYLE}">Starter por ${starterPrice}</a>.`)}
-    ${nordikaQuote()}
+    ${button(url("/dashboard/settings?openPlan=pro", campaign), `Volver a Pro por ${offerPriceLabel(input.pro)}`)}
+    ${input.late ? "" : starterLine(input.starter, campaign, "¿Te basta con un escaneo semanal?")}
     `,
     {
       footerHtml: envelope.footerHtml,
       preheader: input.pro.promo
-        ? `Mantén Pro por ${input.pro.promo.price} €/mes (antes ${input.pro.price} €). Precio de lanzamiento hasta el ${input.pro.promo.endsLabel}.`
-        : `Tu prueba termina el ${endDate}. Elige tu plan para seguir midiendo a diario.`
+        ? `Tu prueba de Pro ha terminado. Vuelve a Pro por ${input.pro.promo.price} €/mes para siempre: quedan ${input.pro.promo.remaining} cuentas con precio fundador.`
+        : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
     }
   );
-  return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
+  return sendEmail(to, subject, html, envelope.headers);
+}
+
+/**
+ * D+3 · tus datos siguen aquí. The real gap with the most-mentioned rival of
+ * the last scan; when the customer leads, the «vas por delante» variant.
+ * Needs a scan with a ranking: without one the runner does not call it.
+ */
+export async function sendWinbackD3Email(
+  to: string,
+  userId: string,
+  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer }
+): Promise<boolean> {
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const snap = input.snapshot;
+  const domain = H(snap.domain);
+  const rival = snap.topCompetitor;
+  const behind = rival !== null && rival.mentions > snap.brandMentions;
+  const ratio = behind && snap.brandMentions > 0 ? Math.floor(rival.mentions / snap.brandMentions) : 0;
+
+  const headline = !behind
+    ? "Vas por delante en la IA. ¿Sigues por delante?"
+    : ratio >= 2
+      ? `${rival.name} aparece ${ratio} veces más que tú`
+      : `${rival.name} aparece en más respuestas que tú`;
+  const subject = behind ? `${headline} en la IA` : headline;
+
+  const rows = [
+    ...(rival ? [{ label: H(rival.name), count: rival.mentions, total: snap.answers, isBrand: false }] : []),
+    { label: `${domain} (tú)`, count: snap.brandMentions, total: snap.answers, isBrand: true }
+  ];
+
+  const html = wrap(
+    `
+    ${eyebrow("Tus datos siguen aquí")}
+    ${heading(H(headline))}
+    ${versusBars(rows, `Respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
+    ${paragraph(
+      behind
+        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
+        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si alguien te ha adelantado desde entonces.`
+    )}
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "winback_d3"), "Volver a medir a diario")}
+    ${starterLine(input.starter, "winback_d3", "O")}
+    `,
+    {
+      footerHtml: envelope.footerHtml,
+      preheader: `Es tu último escaneo de ${snap.domain}. Desde entonces no lo estás midiendo.`
+    }
+  );
+  return sendEmail(to, subject, html, envelope.headers);
+}
+
+/**
+ * D+10 · el precio fundador. Only while founder slots remain — its whole
+ * content is that offer, and the scarcity it quotes is the real count read
+ * from Stripe (`getFounderOffer`, FOUNDER-PRICE-1, log §237). Without an
+ * offer this returns `false` and nothing is sent. The design's calendar
+ * deadline ("Últimos días… hasta el 31 de octubre") no longer exists.
+ */
+export async function sendWinbackD10Email(
+  to: string,
+  userId: string,
+  input: { domain: string | null; pro: PlanOffer }
+): Promise<boolean> {
+  const promo = input.pro.promo;
+  if (!promo) return false;
+  const envelope = lifecycleEnvelope(userId);
+  if (!envelope) return false;
+
+  const plan = H(input.pro.planName);
+  const slots = promo.remaining === 1 ? "Queda 1 cuenta" : `Quedan ${promo.remaining} cuentas`;
+  const follow = input.domain ? `seguir <b style="color:#0B1426;">${H(input.domain)}</b> a diario` : "seguir tu dominio a diario";
+
+  const html = wrap(
+    `
+    ${eyebrow("Precio fundador", "#A8660B")}
+    ${heading(`${slots} con ${plan} a ${promo.price} €/mes para siempre`)}
+    ${paragraph(`Las cuentas con precio fundador de ${plan} pagan <b style="color:#0B1426;">${promo.price} €/mes para siempre</b>, en lugar de ${input.pro.price} €, y pueden ${follow} en las respuestas de la IA. Cuando se agoten, se aplica el precio normal. Es el último email que te enviamos sobre esto.`)}
+    ${priceBox(input.pro)}
+    ${button(url("/dashboard/settings?openPlan=pro", "winback_d10"), `Contratar ${plan} por ${promo.price} €/mes`)}
+    `,
+    {
+      footerHtml: envelope.footerHtml,
+      preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
+    }
+  );
+  return sendEmail(to, `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
 }

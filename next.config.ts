@@ -10,6 +10,20 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "1mb"
     }
+  },
+  // GEO-SELF-1 Fase 1 (log §256): the public pricing page lives at the
+  // Spanish URL `/precios` (founder decision 2026-10-09) — the one canonical
+  // URL, the one every internal link and the menu point to. `/pricing`, its
+  // old route, answers with a permanent redirect so old links, bookmarks,
+  // search results and AI answers still land; Next keeps the query string
+  // (`/pricing?openPlan=pro` → `/precios?openPlan=pro`). This is NOT the
+  // apex → www redirect `docs/environment-contract.md` says must stay in
+  // Vercel's domain config; that one still lives there.
+  async redirects() {
+    return [
+      { source: "/pricing", destination: "/precios", permanent: true },
+      { source: "/pricing/:path*", destination: "/precios/:path*", permanent: true }
+    ];
   }
 };
 

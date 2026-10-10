@@ -3,7 +3,7 @@ import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Verdict,
@@ -14,10 +14,9 @@ import {
   AnswerSample,
   AuthorBio,
   ArticleCta,
-  Figure,
-  PostMeta
+  Figure
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("como-aparecer-en-perplexity");
 
@@ -52,13 +51,7 @@ export const faqItems = [
 
 <FaqPageSchema items={faqItems} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -100,7 +93,7 @@ tu marca sea conocida en la categoría.
 >
   <AnswerSample
     verdict="Con cita anclada"
-    text="El plan Starter incluye 25 prompts mensuales [1] y añade seguimiento semanal frente al escaneo puntual del plan gratuito [2]."
+    text="El plan Starter incluye 25 prompts mensuales [1] y añade seguimiento semanal frente a la prueba de 7 días de Pro [2]."
     source="ejemplo-marca.com/planes-y-limites"
   />
 </Figure>
@@ -189,18 +182,18 @@ Si quieres comprobar tú mismo, a mano, si tu marca aparece citada en
 Perplexity — sin esperar a que lo automatice ninguna herramienta —, el método
 manual que describimos en <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo
 saber si tu marca aparece en ChatGPT, Gemini y Claude</a> funciona igual: los
-mismos prompts repetidos varias veces, mirando qué cita y qué no.
-
-<ArticleCta
-  title="Mide de verdad los motores que sí puedes accionar hoy"
-  text="GenScore hace en ChatGPT, Gemini y Claude lo que este artículo te pide comprobar a mano en Perplexity: seguimiento sistemático, no una búsqueda suelta. Escaneo gratuito, sin tarjeta."
-/>
+mismos prompts repetidos múltiples veces en distintos momentos del tiempo, mirando qué cita y qué no.
 
 <AuthorBio>
 
 Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
 
 </AuthorBio>
+
+<ArticleCta
+  title="Mide de verdad los motores que sí puedes accionar hoy"
+  text="GenScore hace en ChatGPT, Gemini y Claude lo que este artículo te pide comprobar a mano en Perplexity: seguimiento sistemático, no una búsqueda suelta. Prueba Pro 7 días gratis, sin tarjeta."
+/>
 
 </div>
 

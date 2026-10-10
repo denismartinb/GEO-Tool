@@ -50,7 +50,10 @@ export function variabilityNotice(input: {
     ? "Con una consulta no se puede decir que aparezcas siempre — sólo que en ésta apareciste."
     : "Con una consulta no se puede decir que no aparezcas — sólo que en ésta no apareciste.";
 
-  const remedy = "Para saberlo de verdad hacen falta varias preguntas repetidas en el tiempo.";
+  // GEO-SELF-1 Fase 5 (log §263): misma fórmula del método que el resto de la
+  // web pública — nunca "varias".
+  const remedy =
+    "Para saberlo de verdad hay que repetir las preguntas principales de búsqueda múltiples veces en distintos momentos del tiempo.";
 
   return { label: VARIABILITY_LABEL, body: `${cause} ${claim} ${remedy}` };
 }

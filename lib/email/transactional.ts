@@ -250,7 +250,7 @@ const welcomeDate = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "l
 export async function sendWelcomeEmail(to: string, now: Date = new Date()): Promise<void> {
   const endLabel = welcomeDate.format(new Date(now.getTime() + TRIAL_LENGTH_MS));
   const closing = isLifecycleEmailEnabled()
-    ? `Tu prueba termina el ${endLabel}. Te avisaremos 2 días antes y no se te cobra nada de forma automática.`
+    ? `Tu prueba termina el ${endLabel}. Te avisaremos el día antes y no se te cobra nada de forma automática.`
     : `Tu prueba termina el ${endLabel}. No se te cobra nada de forma automática.`;
   await sendEmail(
     to,
@@ -322,8 +322,8 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
   );
 }
 
-export async function sendTrialEndedEmail(to: string): Promise<void> {
-  await sendEmail(
+export async function sendTrialEndedEmail(to: string): Promise<boolean> {
+  return sendEmail(
     to,
     "Tu prueba de Pro ha terminado",
     wrap(
@@ -331,12 +331,12 @@ export async function sendTrialEndedEmail(to: string): Promise<void> {
       ${eyebrow("Tu prueba ha terminado", "#5B6B82")}
       ${heading("Se acabaron tus 7 días de Pro")}
       ${paragraph(
-        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">Free</b>. Tus dominios y escaneos siguen intactos — no hemos borrado nada."
+        "Tus 7 días de prueba de <b style=\"color:#0B1426;\">Pro</b> han terminado y tu cuenta ha pasado a <b style=\"color:#0B1426;\">solo lectura</b>. Tus dominios, escaneos y recomendaciones siguen ahí — no hemos borrado nada —, pero no se hacen escaneos nuevos."
       )}
-      ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Recupera el acceso completo cuando quieras.")}
-      ${button("https://www.genscore.es/dashboard/settings/billing", "Ver planes")}
+      ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Elige un plan y volvemos a escanear desde donde lo dejaste.")}
+      ${button("https://www.genscore.es/dashboard/settings?openPlan=pro#plan", "Elegir plan")}
     `,
-      { preheader: "Tu cuenta ha pasado a Free — tus datos siguen intactos." }
+      { preheader: "Tu cuenta está en solo lectura — tus datos siguen intactos." }
     )
   );
 }

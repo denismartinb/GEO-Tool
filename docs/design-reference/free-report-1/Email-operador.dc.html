@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Correo al operador</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1d4ed8}a:hover{color:#0b1426}
+</style>
+</helmet>
+<div style="width: 640px; height: 720px; box-sizing: border-box; background: #eef1f6; font-family: Figtree, sans-serif; color: #0b1426; padding: 24px; display: flex; flex-direction: column; gap: 16px">
+<div style="font-size: 13px; color: #4a5670; display: flex; flex-direction: column; gap: 4px">
+<span><strong style="color: #0b1426">Para:</strong> OPS_ALERT_EMAIL</span>
+<span><strong style="color: #0b1426">Asunto:</strong> [Informe gratis] tuempresa.es · reformas de cocinas en Valencia</span>
+</div>
+<div style="background: #ffffff; border-radius: 12px; padding: 28px 32px; display: flex; flex-direction: column; gap: 18px; font-size: 15px; line-height: 1.55; color: #34405a">
+<h1 style="margin: 0; font-size: 21px; font-weight: 700; color: #0b1426">Nueva petición de informe</h1>
+<table style="border-collapse: collapse; width: 100%; font-size: 15px">
+<tbody>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600; width: 150px; border-bottom: 1px solid #e6eaf2">Dominio</th><td style="padding: 8px 0; color: #0b1426; border-bottom: 1px solid #e6eaf2">tuempresa.es</td></tr>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600; border-bottom: 1px solid #e6eaf2">Email</th><td style="padding: 8px 0; color: #0b1426; border-bottom: 1px solid #e6eaf2">nombre@tuempresa.es</td></tr>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600; border-bottom: 1px solid #e6eaf2">Qué vende</th><td style="padding: 8px 0; color: #0b1426; border-bottom: 1px solid #e6eaf2">Reformas de cocinas en Valencia</td></tr>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600; border-bottom: 1px solid #e6eaf2">Pedido</th><td style="padding: 8px 0; color: #0b1426; border-bottom: 1px solid #e6eaf2">[fecha y hora]</td></tr>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600; border-bottom: 1px solid #e6eaf2">Origen</th><td style="padding: 8px 0; color: #0b1426; border-bottom: 1px solid #e6eaf2">[utm_source / utm_campaign, si vienen]</td></tr>
+<tr><th scope="row" style="text-align: left; padding: 8px 12px 8px 0; color: #4a5670; font-weight: 600">Entregar antes de</th><td style="padding: 8px 0; color: #0b1426; font-weight: 700">[fecha + 48 h laborables]</td></tr>
+</tbody>
+</table>
+<div style="background: #f3f6fb; border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 6px">
+<strong style="color: #0b1426">Siguiente paso</strong>
+<span>Lanza el estudio en modo «Una marca» con este dominio y esta descripción, y pasa el JSON al hilo de outreach para curarlo.</span>
+<a href="#" style="font-weight: 600">Abrir /admin/estudio con estos datos</a>
+</div>
+<p style="margin: 0; font-size: 13px; color: #4a5670">Al solicitante ya le ha llegado la confirmación con el plazo de 48 h laborables.</p>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":640,"height":720}}'>
+class Component extends DCLogic {
+renderVals() {
+return {};
+}
+}
+</script>
+</body>
+</html>

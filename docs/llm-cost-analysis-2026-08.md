@@ -282,6 +282,35 @@ necesita de nuevo, regenerar desde esta tabla en vez de buscar el enlace.
 
 ---
 
+## 8. Adenda 2026-10-09: Gemini 3 cambia quién es el motor caro
+
+Estimado, no medido. Las tarifas son las de las páginas oficiales consultadas el 2026-10-09.
+
+- **`gemini-3.6-flash` (ADR 0042) cobra el grounding por consulta de búsqueda**, no por
+  petición. Hay 5.000 consultas al mes gratis para toda la cuenta y después cuestan
+  $14 cada 1.000. Con 2.5 había 1.500 peticiones gratis **al día**. Una llamada de
+  Gemini 3 puede lanzar varias búsquedas.
+- **Cuántas lanza no lo registra nadie.** Ni `generateGeminiVisibilityAnswer` ni
+  `auditDomainContent` guardan `webSearchQueries`. Con un supuesto de 2 por llamada de
+  escaneo y 3 por llamada de auditoría, fuera del tramo gratis un Pro típico (1 dominio,
+  15 prompts, ×2 repeticiones por el suelo, diario, auditoría tras cada escaneo) cuesta
+  **~$68/mes**. La generación de Gemini pasa a ser el mayor coste por escaneo y la
+  auditoría de cobertura el segundo.
+- **Palancas aplicadas** (log §253):
+  1. **COVERAGE-WEEKLY-1.** La auditoría automática de cobertura reutiliza el mapa de la
+     semana (`carryForwardCoverage`) en vez de volver a buscar la web propia en cada
+     escaneo.
+  2. **EXTRACTION-SINGLE-MODEL-1.** `SCAN_EXTRACTION_CLAUDE_MODEL` envía toda la
+     extracción a un único modelo barato. Viene apagado hasta que el banco de extracción
+     lo apruebe.
+
+  Con las dos, ~$46/mes.
+- **Palanca descartada: repetir prompts sólo en el primer escaneo.** La ventana es la
+  mediana de puntuaciones *por run* (ADR 0036), no un agregado de respuestas. Con runs de
+  45 respuestas, la cifra publicada sería ~40 % más ruidosa, las alertas de caída
+  (por run) saltarían más y 90 frente a 45 respuestas queda en el borde de
+  `isWindowEligible`.
+
 ## Consultas usadas
 
 ### Coste de generación por plan y motor

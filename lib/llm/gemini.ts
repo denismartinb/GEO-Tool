@@ -15,6 +15,7 @@ import {
   GeminiConfigError,
   GeminiTimeoutError,
   getGeminiApiError,
+  geminiGenerationTuning,
   getGeminiModel,
   GEMINI_CALL_TIMEOUT_MS
 } from "@/lib/llm/gemini-client";
@@ -30,7 +31,11 @@ import {
   type DomainAuditRawResponse
 } from "@/lib/web-audit/audit-domain-content";
 import { inferBrandAliases, inferBusinessProfile } from "@/lib/projects/infer-business-profile";
-import { suggestCompetitors, type SuggestedCompetitor } from "@/lib/competitors/competitor-suggestions-llm";
+import {
+  suggestCompetitors,
+  suggestCompetitorsWithReason,
+  type SuggestedCompetitor
+} from "@/lib/competitors/competitor-suggestions-llm";
 import {
   generateAddedPrompts,
   suggestPrompts,
@@ -72,7 +77,7 @@ export type {
 export { auditDomainContent };
 export type { DomainAuditInput, DomainAuditRawResponse };
 export { inferBrandAliases, inferBusinessProfile };
-export { suggestCompetitors };
+export { suggestCompetitors, suggestCompetitorsWithReason };
 export type { SuggestedCompetitor };
 export { generateAddedPrompts, suggestPrompts };
 export type { AddPromptsMode, GeneratedPromptCandidate };
@@ -119,16 +124,10 @@ export async function generateGeminiVisibilityAnswer(input: {
     contents: [{ parts: [{ text: promptBlock }] }],
     systemInstruction: { parts: [{ text: instruction }] },
     tools: [{ google_search: {} }],
-    // gemini-2.5-flash "thinking" is on by default and, combined with
-    // google_search grounding, regularly pushes latency past
-    // GEMINI_CALL_TIMEOUT_MS — causing GeminiTimeoutError on most/all
-    // prompts in a run (docs/adr/0009-gemini-2.5-flash-model-pin.md).
-    // Disabling thinking restores latency comparable to the previously
-    // pinned gemini-2.0-flash-001.
-    // temperature: 0 — see ADR 0009 addendum (2026-06-19): pins the LLM's own
-    // sampling to remove one of two sources of run-to-run score variance.
-    // Google Search grounding results can still vary independently.
-    generationConfig: { temperature: 0, thinkingConfig: { thinkingBudget: 0 } }
+    // Temperature and thinking per model family — ADR 0042 (thinking must stay
+    // minimal: with google_search grounding it is what decides whether a call
+    // fits GEMINI_CALL_TIMEOUT_MS, ADR 0009 addendum 2026-06-14).
+    generationConfig: geminiGenerationTuning(model)
   });
 
   let response = await fetchWithTimeout(
@@ -255,12 +254,8 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contents: [{ parts: [{ text: promptBlock }] }],
-        // temperature: 0 — see ADR 0009 addendum (2026-06-19).
-        generationConfig: {
-          temperature: 0,
-          responseMimeType: "application/json",
-          thinkingConfig: { thinkingBudget: 0 }
-        }
+        // Temperature and thinking per model family — ADR 0042.
+        generationConfig: { ...geminiGenerationTuning(model), responseMimeType: "application/json" }
       })
     },
     {

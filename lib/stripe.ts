@@ -1,15 +1,15 @@
 import "server-only";
 
 import Stripe from "stripe";
-import { isPromoActive, PLANS, type Plan } from "@/app/pricing/plans-data";
+import { FOUNDER_SLOTS, PLANS, type Plan } from "@/app/pricing/plans-data";
 
 /**
  * BILLING-STRIPE-1: only Starter and Pro are self-serve Stripe products —
  * Free has no subscription, and Agency is "hablar con ventas" (no
  * self-service price per PRICING-TRUTH-1). Price ids live in env vars, not
- * committed here, since they differ between Stripe test mode (used until
- * the founder's go-live checklist — Vercel Pro, alta autónomo, VeriFactu
- * decision — is done) and live mode.
+ * committed here, since they differ between Stripe test and live mode.
+ * FOUNDER-PRICE-1: the amount behind each id must match `PLANS` —
+ * `stripePriceMatchesPlan` makes checkout refuse when it does not.
  */
 const SELF_SERVE_PRICE_ENV_VAR: Partial<Record<Plan["id"], string | undefined>> = {
   starter: process.env.STRIPE_PRICE_ID_STARTER,
@@ -34,50 +34,148 @@ export function getPlanIdForPriceId(priceId: string): SelfServePlanId | null {
 }
 
 /**
- * PRICING-PROMO-1: cupón real de Stripe (`amount_off`, `duration: repeating`,
- * `duration_in_months: 6`, `redeem_by` = `PROMO_ENDS_AT`) — creado a mano en
- * el Dashboard (test mode hoy; live cuando se active), nunca por esta app.
- * `null` mientras no exista, y entonces el checkout cobra el precio normal.
+ * FOUNDER-PRICE-1 (log §237): un cupón de Stripe por plan, creado a mano en
+ * el Dashboard (nunca por esta app), con `duration: forever`, `currency: eur`
+ * y `amount_off` = `price − promoPrice` del plan. `amount_off` y no
+ * `percent_off` porque un 30 % sobre 29 € son 20,30 €, no los 20 € que enseña
+ * la pantalla. Variables nuevas a propósito (no las `_PROMO` de
+ * PRICING-PROMO-1): esos cupones son de 6 meses, y reutilizar el nombre
+ * habría anunciado "para siempre" sobre un descuento que caduca.
  */
-const SELF_SERVE_PROMO_COUPON_ENV_VAR: Partial<Record<Plan["id"], string | undefined>> = {
-  starter: process.env.STRIPE_COUPON_ID_STARTER_PROMO,
-  pro: process.env.STRIPE_COUPON_ID_PRO_PROMO
+const FOUNDER_COUPON_ENV_VAR: Partial<Record<Plan["id"], string | undefined>> = {
+  starter: process.env.STRIPE_COUPON_ID_STARTER_FOUNDER,
+  pro: process.env.STRIPE_COUPON_ID_PRO_FOUNDER
 };
 
 export function getPromoCouponIdForPlan(planId: SelfServePlanId): string | null {
-  return SELF_SERVE_PROMO_COUPON_ENV_VAR[planId] ?? null;
+  return FOUNDER_COUPON_ENV_VAR[planId] ?? null;
+}
+
+export type FounderOffer = {
+  /** Planes cuyo precio fundador se puede mostrar Y cobrar ahora mismo. */
+  planIds: SelfServePlanId[];
+  /** Plazas libres de `FOUNDER_SLOTS`, sumando los canjes de todos los cupones. */
+  remaining: number;
+  total: number;
+};
+
+const NO_FOUNDER_OFFER: FounderOffer = { planIds: [], remaining: 0, total: FOUNDER_SLOTS };
+const FOUNDER_OFFER_TTL_MS = 5 * 60 * 1000;
+const FOUNDER_OFFER_ERROR_TTL_MS = 60 * 1000;
+let founderOfferCache: { value: FounderOffer; expiresAt: number } | null = null;
+
+/** Para el checkout: tras un fallo, la siguiente lectura vuelve a Stripe. */
+export function invalidateFounderOfferCache(): void {
+  founderOfferCache = null;
 }
 
 /**
- * Los planes cuya promo se puede mostrar de verdad ahora mismo: la fecha no
- * ha pasado Y el cupón de Stripe que la haría real está configurado. Nunca al
- * revés — mostrar el precio tachado sin cupón anunciaría un descuento que el
- * checkout no puede dar, que es justo lo que esta fase existe para evitar.
- * Fuente única para `/pricing` y para el modal de cambio de plan, así que las
- * dos pantallas no puedan divergir sobre qué planes llevan promo.
+ * Whether a Stripe coupon is exactly the discount `plan` advertises:
+ * forever, in euros, for `price − promoPrice`, still redeemable. Anything
+ * else — a percentage, the old 6-month launch coupon, a typo in the amount —
+ * means the screen and the charge would disagree, so the offer is not shown.
  */
-export function getActivePromoPlanIds(): SelfServePlanId[] {
-  if (!isPromoActive()) return [];
-  return (["starter", "pro"] as const).filter((id) => getPromoCouponIdForPlan(id) !== null);
+export function couponMatchesFounderPrice(
+  coupon: Pick<Stripe.Coupon, "valid" | "duration" | "amount_off" | "currency">,
+  plan: Pick<Plan, "price" | "promoPrice">
+): boolean {
+  if (plan.promoPrice === undefined) return false;
+  return (
+    coupon.valid === true &&
+    coupon.duration === "forever" &&
+    coupon.currency === "eur" &&
+    coupon.amount_off === Math.round((plan.price - plan.promoPrice) * 100)
+  );
 }
 
 /**
- * PRICING-PROMO-1: whether a REAL subscription is currently under one of our
- * own promo coupons, and until when — read from Stripe itself, never
- * inferred from `isPromoActive()` (that only says whether *new* checkouts
- * can still redeem the coupon; a subscriber who redeemed it before
- * `PROMO_ENDS_AT` keeps their 6 months running well past that date). Matches
- * the discount's coupon id against `getPromoCouponIdForPlan(planId)` rather
- * than trusting any discount present, so a manually-applied support coupon
- * in the Stripe Dashboard is never mislabeled as "precio de lanzamiento".
- * Returns null on any failure (unconfigured Stripe, unreachable API, no
- * matching discount) — the "Tu plan" card falls back to the plain price
- * rather than guessing.
+ * FOUNDER-PRICE-1: the one source of truth for "can the founder price be
+ * shown and charged right now, and how many slots are left". Reads the
+ * coupons from Stripe — never trusts the env var alone — and caches for five
+ * minutes so a page render is not one Stripe call per visitor. Fails closed:
+ * no Stripe, an unreachable API or a misconfigured coupon all mean no offer,
+ * never an advertised discount checkout cannot apply.
+ */
+export async function getFounderOffer(now: number = Date.now()): Promise<FounderOffer> {
+  if (founderOfferCache && founderOfferCache.expiresAt > now) return founderOfferCache.value;
+
+  const stripe = getStripeClient();
+  const configured = (["starter", "pro"] as const)
+    .map((id) => ({ id, couponId: getPromoCouponIdForPlan(id) }))
+    .filter((entry): entry is { id: SelfServePlanId; couponId: string } => entry.couponId !== null);
+  if (!stripe || configured.length === 0) return NO_FOUNDER_OFFER;
+
+  try {
+    const coupons = await Promise.all(configured.map(({ couponId }) => stripe.coupons.retrieve(couponId)));
+    const redeemed = coupons.reduce((sum, coupon) => sum + (coupon.times_redeemed ?? 0), 0);
+    const remaining = Math.max(0, FOUNDER_SLOTS - redeemed);
+    const planIds =
+      remaining === 0
+        ? []
+        : configured
+            .filter(({ id }, i) => {
+              const plan = PLANS.find((p) => p.id === id);
+              return plan !== undefined && couponMatchesFounderPrice(coupons[i], plan);
+            })
+            .map(({ id }) => id);
+    const value: FounderOffer = { planIds, remaining: planIds.length > 0 ? remaining : 0, total: FOUNDER_SLOTS };
+    founderOfferCache = { value, expiresAt: now + FOUNDER_OFFER_TTL_MS };
+    return value;
+  } catch (error) {
+    console.error("[geo:billing] failed to read founder coupons from Stripe", {
+      message: error instanceof Error ? error.message : String(error)
+    });
+    founderOfferCache = { value: NO_FOUNDER_OFFER, expiresAt: now + FOUNDER_OFFER_ERROR_TTL_MS };
+    return NO_FOUNDER_OFFER;
+  }
+}
+
+/**
+ * Los planes cuyo precio fundador se puede mostrar de verdad ahora mismo.
+ * Fuente única para `/precios`, la consola, los correos y el checkout, así
+ * que ninguna pantalla puede divergir de lo que se cobra.
+ */
+export async function getActivePromoPlanIds(): Promise<SelfServePlanId[]> {
+  return (await getFounderOffer()).planIds;
+}
+
+/**
+ * FOUNDER-PRICE-1: guard against the catalog and Stripe disagreeing. Price
+ * ids live in env vars, so a deploy that ships new `PLANS` prices before the
+ * env points at the matching Stripe Price would show one amount and charge
+ * another. Checkout refuses instead (`createCheckoutSession`). The Price must
+ * also be tax-inclusive: `/precios` shows final prices with IVA.
+ */
+export async function stripePriceMatchesPlan(
+  stripe: Stripe,
+  priceId: string,
+  planId: SelfServePlanId
+): Promise<boolean> {
+  const plan = PLANS.find((p) => p.id === planId);
+  if (!plan) return false;
+  const price = await stripe.prices.retrieve(priceId);
+  // IVA incluido (founder, 2026-10-09): the shown price is the final price,
+  // so a tax-exclusive Price would add 21 % on top at checkout.
+  return (
+    price.currency === "eur" &&
+    price.unit_amount === Math.round(plan.price * 100) &&
+    price.tax_behavior === "inclusive"
+  );
+}
+
+/**
+ * Whether a REAL subscription is currently under one of our own founder
+ * coupons — read from Stripe itself. Matches the discount's coupon id against
+ * `getPromoCouponIdForPlan(planId)` rather than trusting any discount present,
+ * so a manually-applied support coupon in the Stripe Dashboard is never
+ * mislabeled as "precio fundador". A founder discount is `forever`, so there
+ * is no end date to report. Returns null on any failure — the "Tu plan" card
+ * falls back to the plain price rather than guessing.
  */
 export async function getActiveSubscriptionPromo(
   subscriptionId: string,
   planId: Plan["id"]
-): Promise<{ promoPrice: number; endsAt: string } | null> {
+): Promise<{ promoPrice: number } | null> {
   if (!isSelfServePlan(planId)) return null;
   const couponId = getPromoCouponIdForPlan(planId);
   if (!couponId) return null;
@@ -92,14 +190,14 @@ export async function getActiveSubscriptionPromo(
       const coupon = d.source.coupon;
       return (typeof coupon === "string" ? coupon : coupon?.id) === couponId;
     });
-    if (!match || typeof match === "string" || !match.end) return null;
+    if (!match || typeof match === "string") return null;
 
     // The Plan definition, not the coupon's amount_off, is the source of
-    // truth for the price shown — same reasoning as getActivePromoPlanIds.
+    // truth for the price shown — same reasoning as getFounderOffer.
     const plan = PLANS.find((p) => p.id === planId);
     if (!plan || plan.promoPrice === undefined) return null;
 
-    return { promoPrice: plan.promoPrice, endsAt: new Date(match.end * 1000).toISOString() };
+    return { promoPrice: plan.promoPrice };
   } catch (error) {
     console.error("[geo:billing] failed to read subscription discount from Stripe", {
       subscriptionId,

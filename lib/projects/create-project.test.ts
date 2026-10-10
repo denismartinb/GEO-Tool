@@ -41,7 +41,7 @@ type Row = Record<string, unknown>;
 const USER = { id: "user-1" } as AuthenticatedContext["user"];
 const PROJECT_ID = "33333333-3333-3333-3333-333333333333";
 
-const PLAN = { id: "free", caps: { projects: 3, prompts: 10 } } as unknown as Plan;
+const PLAN = { id: "starter", caps: { projects: 3, prompts: 10 } } as unknown as Plan;
 
 function input(overrides: Partial<NormalizedProjectInput> = {}): NormalizedProjectInput {
   return {
@@ -176,6 +176,13 @@ describe("createProjectCore · guardas antes de crear nada", () => {
   it("respeta el tope de proyectos del plan", async () => {
     const { result } = run({ activeProjectCount: 3 });
     expect((await result).status).toBe("project_limit_reached");
+  });
+
+  it("sin plan (prueba terminada, solo lectura) no crea dominios aunque quede cupo — TRIAL-ONLY-1", async () => {
+    const readOnly = { id: "free", caps: { projects: 3, prompts: 10 } } as unknown as Plan;
+    const { result, inserted } = run({ activeProjectCount: 0 }, input(), readOnly);
+    expect((await result).status).toBe("project_limit_reached");
+    expect(inserted.projects).toHaveLength(0);
   });
 
   it("deja pasar cuando aún queda cupo", async () => {

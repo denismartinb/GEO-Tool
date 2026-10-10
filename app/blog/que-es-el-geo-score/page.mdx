@@ -2,7 +2,7 @@ import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { ArticleSchema } from "@/components/blog/article-schema";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { RelatedPosts } from "@/components/blog/related-posts";
-import { BlogCover } from "@/components/blog/blog-cover";
+import { ArticleHero } from "@/components/blog/article-hero";
 import {
   KeyTakeaway,
   Stat,
@@ -12,10 +12,9 @@ import {
   AuthorBio,
   ArticleCta,
   Figure,
-  ProductMock,
-  PostMeta
+  ProductMock
 } from "@/components/blog/article";
-import { getBlogPost, blogPostBreadcrumb, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
 export const post = getBlogPost("que-es-el-geo-score");
 
@@ -33,13 +32,7 @@ export const mockRows = [
 
 <BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
 
-<BlogPageShell breadcrumb={blogPostBreadcrumb(post)}>
-
-<BlogCover icon={post.coverIcon} image={post.coverImage} alt={post.title} compact priority />
-
-# {post.title}
-
-<PostMeta post={post} />
+<BlogPageShell hero={<ArticleHero post={post} />}>
 
 <div className="blog-body">
 
@@ -124,7 +117,7 @@ Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos 
 
 <ArticleCta
   title="¿Quieres ver el GEO Score real de tu marca?"
-  text="Mídelo en minutos con escaneos reales. Gratis, sin tarjeta."
+  text="Mídelo en minutos con escaneos reales. Prueba Pro 7 días gratis, sin tarjeta."
 />
 
 <RelatedPosts cluster="medicion" currentSlug={post.slug} />

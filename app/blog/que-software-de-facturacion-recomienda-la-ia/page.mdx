@@ -1,0 +1,144 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PromptSet
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-software-de-facturacion-recomienda-la-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué programa de facturación recomienda la IA en España?",
+    answer:
+      "En nuestra medición del 9 de octubre de 2026, Holded fue la marca más nombrada: apareció en el 72% de las respuestas de ChatGPT, Gemini y Claude a preguntas de compra sobre software de facturación y contabilidad. Le siguieron Sage (61%) y Contasimple (45%). Es una foto de esa fecha: repetida otro día, el orden puede moverse."
+  },
+  {
+    question: "¿ChatGPT, Gemini y Claude recomiendan las mismas marcas?",
+    answer:
+      "No. Contasimple salió en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Quipu, en el 83% de las de Gemini, el 13% de las de ChatGPT y ninguna de las de Claude. Medir en un solo motor da una foto incompleta."
+  },
+  {
+    question: "¿Cómo se hizo el estudio?",
+    answer:
+      "Hicimos a ChatGPT, Gemini y Claude preguntas reales de compra, en español y para España, ninguna con el nombre de una marca, y repetimos cada una múltiples veces, en distintos momentos, porque la IA no responde siempre igual. Una marca solo cuenta si su nombre aparece en la respuesta."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Holded aparece en el 72% de las respuestas, seguido de Sage (61%) y Contasimple (45%). Pero lo que más llama la atención es que los tres motores no recomiendan lo mismo: Contasimple sale en el 78% de las respuestas de Gemini y en ninguna de las de Claude. Medido el 9 de octubre de 2026 con preguntas reales de compra, repetidas múltiples veces y en distintos momentos en cada motor.
+
+</KeyTakeaway>
+
+Cuando un autónomo pregunta a ChatGPT qué programa usar para hacer sus facturas, no recibe diez enlaces azules. Recibe una respuesta con tres, cuatro o cinco nombres. Si tu marca no está en esa lista, para ese comprador no existes.
+
+Quisimos saber qué nombres son. Así que hicimos a las tres IA más usadas las preguntas que haría alguien que busca software de facturación o contabilidad en España, y contamos quién aparece.
+
+<StatGrid label="Estudio GenScore, 9 de octubre de 2026: software de facturación y contabilidad">
+  <Stat value="72%" label="Respuestas que nombran a Holded, la marca más presente en los tres motores juntos" source="Estudio GenScore, 9 oct 2026" tone="blue" />
+  <Stat value="78% / 0%" label="Respuestas que nombran a Contasimple en Gemini frente a Claude: la mayor diferencia entre motores entre las cinco primeras" source="Estudio GenScore, 9 oct 2026" tone="warm" />
+  <Stat value="4%" label="Respuestas que nombran a a3, un nombre clásico del software para asesorías" source="Estudio GenScore, 9 oct 2026" tone="cyan" />
+</StatGrid>
+
+## El ranking
+
+<Figure
+  label="Figura 1"
+  caption="Las diez marcas de software de facturación más nombradas. Presencia: porcentaje de respuestas válidas que nombran la marca al menos una vez. Cada motor aporta el mismo número de respuestas."
+  wide
+>
+
+| # | Marca | Presencia | Gemini | ChatGPT | Claude | Preguntas en que aparece |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Holded | 72% | 96% | 57% | 65% | 100% |
+| 2 | Sage | 61% | 65% | 30% | 87% | 100% |
+| 3 | Contasimple | 45% | 78% | 57% | 0% | 92% |
+| 4 | Odoo | 41% | 52% | 9% | 61% | 92% |
+| 5 | Anfix | 35% | 57% | 48% | 0% | 75% |
+| 6 | Quipu | 32% | 83% | 13% | 0% | 83% |
+| 7 | Zoho | 32% | 35% | 0% | 61% | 92% |
+| 8 | Billin | 29% | 70% | 13% | 4% | 75% |
+| 9 | Debitoor | 25% | 0% | 0% | 74% | 83% |
+| 10 | FacturaDirecta | 22% | 48% | 13% | 4% | 50% |
+
+</Figure>
+
+Cómo leerla: una respuesta que repite el nombre tres veces cuenta una. Los motores también nombraron organismos, hojas de cálculo y pasarelas de pago (la Agencia Tributaria, Excel, PayPal…); no son programas de facturación y no están en la tabla.
+
+## Tres cosas que nos llamaron la atención
+
+**Los motores no se ponen de acuerdo.** Quipu aparece en el 83% de las respuestas de Gemini, en el 13% de las de ChatGPT y en ninguna de las de Claude. Con Debitoor pasa al revés: Claude lo nombra en el 74% de sus respuestas y los otros dos, nunca. Una posible explicación, que es inferencia nuestra y no lo hemos medido: no todos los motores consultan la web antes de responder. Medir solo en un motor da una foto incompleta.
+
+**Marcas que la IA nombra por su cuenta.** Partimos de una lista de candidatas y los motores nombraron muchas más. Algunas con presencia notable: Gespymes (39% de las respuestas de Gemini), ContaPlus (39% de las de Claude) y STEL Order (30% de las de Gemini). Menos del 2% de las respuestas no nombró ninguna marca.
+
+**Las que no aparecen.** Declarando, que estaba en nuestra lista de candidatas, no salió en ninguna respuesta. Y a3, de Wolters Kluwer, apareció solo en el 4%, aunque una de las preguntas era precisamente qué herramienta usan las gestorías. Es una foto de una fecha, no un juicio sobre ningún producto.
+
+## Por qué importa si vendes software (o cualquier otra cosa)
+
+La pregunta "¿qué programa me recomiendas?" es la pregunta de compra por excelencia. Quien la hace ya ha decidido comprar y solo le falta elegir. Si la IA responde con una lista corta, entrar en esa lista vale más que cualquier posición en Google.
+
+Y esto no pasa solo en software. Pasa con seguros, clínicas, abogados, tiendas online y casi cualquier categoría donde alguien pide una recomendación. Si quieres empezar a mirarlo en la tuya, en <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber si tu marca aparece en ChatGPT</a> está el primer paso, y en <a href="/blog/como-elegir-prompts-monitorizar-marca-ia">cómo elegir los prompts correctos</a>, cómo escribir preguntas como las de abajo para tu sector.
+
+## Metodología
+
+- **Preguntas:** preguntas reales de compra, en español y para España. Ninguna nombra una marca. Hay una muestra en la Figura 2.
+- **Motores:** ChatGPT, Gemini y Claude, consultados el 9 de octubre de 2026.
+- **Repeticiones:** cada pregunta se hizo múltiples veces a cada motor, en distintos momentos, porque la IA no responde siempre lo mismo. Las respuestas que fallaron no cuentan en ningún porcentaje.
+- **Instrucción neutral:** cada motor responde como a un usuario normal, sin saber que se está midiendo a nadie.
+- **Verificación:** una marca solo cuenta si su nombre aparece en la respuesta. No contamos menciones "por contexto".
+- **Límites:** es una foto de una fecha. Las respuestas cambian con el tiempo y entre ejecuciones; repetido otro día, el orden puede moverse.
+
+<Figure
+  label="Figura 2"
+  caption="Algunas de las preguntas del estudio, tal como se hicieron. Ninguna nombra una marca."
+>
+<PromptSet
+  prompts={[
+    { text: "¿Cuál es el mejor programa de facturación para autónomos en España?", intent: "Recomendación" },
+    { text: "Necesito un programa para hacer facturas que cumpla con Verifactu, ¿cuál uso?", intent: "Requisito legal" },
+    { text: "¿Qué programa de facturación gratuito o barato me recomiendas para autónomos?", intent: "Precio" },
+    { text: "Mejores alternativas a Excel para llevar la facturación de una pequeña empresa", intent: "Alternativas" },
+    { text: "¿Qué herramienta de contabilidad usan las gestorías y asesorías en España?", intent: "Profesionales" },
+  ]}
+/>
+</Figure>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de mediciones reales hechas con nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Te nombra la IA cuando alguien pregunta por lo que vendes?"
+  text="GenScore hace esta misma medición con tus preguntas y tus competidores, de forma periódica, y te dice qué cambiar para aparecer."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>

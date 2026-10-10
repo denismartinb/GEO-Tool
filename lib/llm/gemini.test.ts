@@ -8,6 +8,7 @@ import {
   inferBusinessProfile,
   otherBrandsRelevanceHint,
   suggestCompetitors,
+  suggestCompetitorsWithReason,
   suggestPrompts,
   GeminiConfigError,
   GeminiTimeoutError,
@@ -83,10 +84,31 @@ describe("generateGeminiVisibilityAnswer", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [endpoint, init] = fetchMock.mock.calls[0];
-    expect(endpoint).toContain("gemini-2.5-flash");
+    expect(endpoint).toContain("/gemini-3.6-flash:generateContent");
 
     const body = JSON.parse(init.body as string);
     expect(body.tools).toEqual([{ google_search: {} }]);
+    // ADR 0042: Gemini 3 keeps its default temperature and minimal thinking,
+    // and never receives thinkingBudget next to thinkingLevel (a 400).
+    expect(body.generationConfig).toEqual({ thinkingConfig: { thinkingLevel: "minimal" } });
+  });
+
+  it("keeps the ADR 0009 tuning when GEMINI_MODEL rolls back to a 2.5 model", async () => {
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
+    const fetchMock = mockFetchOnce({
+      candidates: [{ content: { parts: [{ text: "Acme is great." }] } }],
+      modelVersion: "gemini-2.5-flash"
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await generateGeminiVisibilityAnswer({ prompt: "best widgets", country: "ES", language: "es" });
+
+    const [endpoint, init] = fetchMock.mock.calls[0];
+    expect(endpoint).toContain("/gemini-2.5-flash:generateContent");
+    expect(JSON.parse(init.body as string).generationConfig).toEqual({
+      temperature: 0,
+      thinkingConfig: { thinkingBudget: 0 }
+    });
   });
 
   it("sends a brand-blind, neutral generation prompt (docs/adr/0007)", async () => {
@@ -991,7 +1013,10 @@ describe("inferBusinessProfile", () => {
 describe("suggestCompetitors (grounded, business-profile-driven)", () => {
   beforeEach(() => {
     process.env.GEMINI_API_KEY = "test-key";
-    delete process.env.GEMINI_MODEL;
+    // The single grounded call these cases mock is the Gemini 2.x path.
+    // Gemini 3 searches and structures in two calls (ADR 0042), covered in
+    // gemini-client.test.ts.
+    process.env.GEMINI_MODEL = "gemini-2.5-flash";
   });
 
   afterEach(() => {
@@ -1061,6 +1086,40 @@ describe("suggestCompetitors (grounded, business-profile-driven)", () => {
     });
 
     expect(result).toEqual([{ name: "Consultora Rival", domain: "consultorarival.es" }]);
+  });
+
+  it("accepts a bare array instead of the { competitors } wrapper", async () => {
+    const bare = JSON.stringify([{ name: "Consultora Rival", domain: "consultorarival.es" }]);
+    vi.stubGlobal("fetch", mockFetchOnce({ candidates: [{ content: { parts: [{ text: bare }] } }] }));
+
+    const result = await suggestCompetitorsWithReason({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual({ competitors: [{ name: "Consultora Rival", domain: "consultorarival.es" }], reason: null });
+  });
+
+  it.each([
+    ["schema", { rivals: [{ title: "X" }] }],
+    ["no_items", { competitors: [] }],
+    ["filtered", { competitors: [{ name: "iFinanciera", domain: "ifinanciera.es" }] }]
+  ])("says why the list is empty: %s", async (reason, body) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.stubGlobal("fetch", mockFetchOnce({ candidates: [{ content: { parts: [{ text: JSON.stringify(body) }] } }] }));
+
+    const result = await suggestCompetitorsWithReason({
+      brand: "iFinanciera",
+      domain: "ifinanciera.es",
+      country: "ES",
+      language: "es",
+      profile: financialProfile
+    });
+
+    expect(result).toEqual({ competitors: [], reason });
   });
 
   it("still excludes the brand's own domain and dedupes", async () => {
