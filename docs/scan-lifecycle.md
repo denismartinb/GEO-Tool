@@ -338,7 +338,7 @@ Since ALERTS-ALWAYS-1 (log §227) reconciliation also runs every 15 minutes
 across every project (`/api/cron/scan-watchdog`), so a dead chain is picked up
 within ~15 minutes even with nobody looking.
 
-Since SCAN-CRON-DRAIN-1 (log §261) a dead chain is usually picked up sooner,
+Since SCAN-CRON-DRAIN-1 (log §262) a dead chain is usually picked up sooner,
 and without spending a resume: every 5 minutes `/api/cron/scan-continue`
 (`lib/scan/drain.ts`) re-dispatches any run younger than 6h, idle for at least
 the job lease (90s), that still has claimable work. It writes nothing, so a

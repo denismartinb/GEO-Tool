@@ -9,12 +9,12 @@ import { scheduleScanContinuation } from "@/lib/scan/continuation";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SCAN-CRON-DRAIN-1 (`docs/brand/design-decisions-log.md` §261).
+ * SCAN-CRON-DRAIN-1 (`docs/brand/design-decisions-log.md` §262).
  *
  * A campaign advances by self-calls to `/api/scan/continue`, one invocation
  * handing the next batch to a fresh one (ADR 0014/0037). Vercel cuts a chain
  * of self-calls with 508 after a few hops even when the URL is right (log
- * §260): on 2026-10-10 the 06:00 sweep's chain died at about the fifth hop
+ * §261): on 2026-10-10 the 06:00 sweep's chain died at about the fifth hop
  * and the run sat still until the watchdog resumed it eleven minutes later.
  * The watchdog only resumes SCAN_RESUME_CAP times, so a project that needs
  * more hops than (cap + 1) chains can carry would fail with work left.

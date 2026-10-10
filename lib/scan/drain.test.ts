@@ -17,7 +17,7 @@ import {
 } from "@/lib/scan/drain";
 
 /**
- * SCAN-CRON-DRAIN-1 (log §261). The 2026-10-10 06:00 sweep's chain died at
+ * SCAN-CRON-DRAIN-1 (log §262). The 2026-10-10 06:00 sweep's chain died at
  * 06:04 with a 508 and nothing moved until the watchdog at 06:15. These pin
  * which runs the 5-minute pass re-dispatches and, as importantly, which it
  * leaves alone.

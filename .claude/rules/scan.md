@@ -110,7 +110,7 @@ worse than no rule, because a future session will obey it anyway.
   de auto-llamadas a los pocos saltos aunque la URL esté bien: el 2026-10-10
   la del barrido de las 06:00 murió hacia el quinto salto y el run esperó once
   minutos al vigilante, que sólo reanuda `SCAN_RESUME_CAP` veces
-  (`docs/brand/design-decisions-log.md` §261). El pase de `lib/scan/drain.ts`
+  (`docs/brand/design-decisions-log.md` §262). El pase de `lib/scan/drain.ts`
   re-despacha todo run joven, parado al menos lo que dura un lease y con
   trabajo reclamable, y **no escribe nada**: ni marca de reanudación, ni
   `updated_at`, ni jobs. Así un re-despacho que no avanza deja el run igual de

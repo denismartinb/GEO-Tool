@@ -9,7 +9,7 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 /**
- * SCAN-CRON-DRAIN-1 (log §261): every 5 minutes (`vercel.json`), re-dispatch
+ * SCAN-CRON-DRAIN-1 (log §262): every 5 minutes (`vercel.json`), re-dispatch
  * young scan runs whose self-continuation chain stopped — Vercel cuts those
  * chains with 508 after a few hops, and a cron firing is what starts a fresh
  * one. See `lib/scan/drain.ts`.

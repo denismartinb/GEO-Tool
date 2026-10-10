@@ -62,9 +62,9 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     path: "/api/cron/scan-continue",
     schedule: "*/5 * * * *",
     // A cron firing is what starts a fresh chain: Vercel cuts a scan's own
-    // chain of self-calls with 508 after a few hops (log §260), so without
+    // chain of self-calls with 508 after a few hops (log §261), so without
     // this a run waits for the 15-minute watchdog and its three resumes.
-    why: "re-dispatch stalled scan runs — SCAN-CRON-DRAIN-1, log §261"
+    why: "re-dispatch stalled scan runs — SCAN-CRON-DRAIN-1, log §262"
   }
 ];
 

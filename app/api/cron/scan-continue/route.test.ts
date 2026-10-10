@@ -7,7 +7,7 @@ vi.mock("@/lib/supabase/service", () => ({ createServiceClient: () => ({}) }));
 import { GET } from "@/app/api/cron/scan-continue/route";
 
 /**
- * SCAN-CRON-DRAIN-1 (log §261): the only new authenticated surface. A missing
+ * SCAN-CRON-DRAIN-1 (log §262): the only new authenticated surface. A missing
  * gate here would let anyone re-dispatch scans; a broken one would quietly
  * stop the pass that carries runs past Vercel's 508.
  */

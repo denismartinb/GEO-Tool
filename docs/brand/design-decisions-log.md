@@ -22790,12 +22790,12 @@ entera.
 
 ---
 
-## 261. SCAN-CRON-DRAIN-1: un cron cada 5 minutos continúa los escaneos que la cadena de auto-llamadas deja a medias (2026-10-10)
+## 262. SCAN-CRON-DRAIN-1: un cron cada 5 minutos continúa los escaneos que la cadena de auto-llamadas deja a medias (2026-10-10)
 
 **Qué se vio.** En el barrido de las 06:00 UTC del 2026-10-10, la cadena de
 `/api/scan/continue` de un run de 15 preguntas recibió un 508 a las 06:04,
 hacia el quinto salto, con la URL ya limpia (`https://www.genscore.es/api/scan/continue`).
-Es el mismo corte por detección de bucles que AUDIT-CRON-DRAIN-1 (§260)
+Es el mismo corte por detección de bucles que AUDIT-CRON-DRAIN-1 (§261)
 encontró en la cadena de la auditoría: no lo causa la barra doble de §241. El
 vigilante retomó el run a las 06:15 (reanudación 1 de 3) y el escaneo terminó
 hacia las 06:17. Hoy sólo costó 11 minutos. Pero el vigilante reanuda como
