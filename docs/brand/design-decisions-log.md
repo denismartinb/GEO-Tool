@@ -23073,3 +23073,43 @@ hay que aplicar a mano antes del deploy) sigue en #549.
 comped cuyo `current_plan` crudo sea `free` no puede usar el flujo de sólo
 archivar con su plan efectivo; riesgo aceptado (el cupo de Agencia hace
 improbable el exceso).
+
+## 265. SECTOR-STUDY-2: estudio de clínicas dentales, «¿Qué clínicas dentales recomienda la IA?» (2026-10-10)
+
+**Qué se publica.** `/blog/que-clinicas-dentales-recomienda-la-ia`, segundo
+estudio con dato propio (tras §246), medido con `/admin/estudio` el
+2026-10-10 en Madrid y Valencia con las mismas preguntas principales de
+búsqueda, cambiando sólo la ciudad. Se añade a `STUDY_ENTRIES` del hub
+`/estudios` (§260). Portada en
+`docs/design-reference/blog-covers/que-clinicas-dentales-recomienda-la-ia-cover.svg`,
+exportada a WebP 1200×300 (§125).
+
+**Decisiones del fundador (2026-10-10).**
+- Título general, sin ciudad; el cuerpo habla de grandes ciudades de España
+  y dice explícitamente que esta primera edición cubre Madrid y Valencia
+  (no se afirma «las principales ciudades» sin haberlas medido).
+- Sección propia que explica por qué Gemini recomienda clínicas
+  independientes y Claude cadenas. Los dos datos son medidos (fuentes que
+  cita Gemini); los cuatro motivos se presentan como **interpretación
+  nuestra**, no como hallazgo. El comportamiento de los resúmenes con IA de
+  Google se declara probable y **no medido**.
+- El mismo contenido sirve de artículo, de PDF para las clínicas que lo
+  pidan y de post de LinkedIn. Más ciudades
+  (`captacion-clinicas/estudios/bloques-mas-ciudades.md`) sólo si el post y
+  los correos 1:1 funcionan.
+
+**Reglas aplicadas.** Sólo porcentajes y ratios, nunca recuentos (§246);
+motores sin versión; frase de método canónica. Al ser publicidad sanitaria
+(RD 1907/1996): sin testimonios ni casos de éxito ni promesa de resultados.
+Sólo se nombran clínicas que aparecen; las ausentes, sólo en agregado
+(«77% de las independientes bien valoradas»). Asensio se cuenta como
+«Asensio Odontología Avanzada», el nombre con que la nombra la IA, no el de
+su dominio. «Clínica Dental Milenium» es la red de clínicas de Sanitas
+(sanitas.es/dental/clinicas-dentales-milenium), así que se cuenta dentro de
+Sanitas Dental como cadena: eso la pone primera en Madrid (19%) y deja la
+cifra de Claude en «2 de cada 3» respuestas con cadena. Las tablas se
+recalcularon sobre las respuestas guardadas (texto + marcas extraídas,
+contando «Ferrús» con tilde), no sobre el resumen de la herramienta.
+
+**Pendiente.** Nada roto conocido. Las cifras son una foto del 2026-10-10;
+si se reescanea, la tabla se actualiza con `dateUpdated`.

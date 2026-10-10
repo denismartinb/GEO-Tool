@@ -424,6 +424,25 @@ export const BLOG_POSTS: BlogPost[] = [
     }
   },
   {
+    slug: "que-clinicas-dentales-recomienda-la-ia",
+    title: "¿Qué clínicas dentales recomienda la IA?",
+    description:
+      "Preguntamos a ChatGPT, Gemini y Claude a qué dentista ir en grandes ciudades de España. El 77% de las clínicas independientes bien valoradas no aparece nunca. Ranking por motor y por qué Gemini prefiere las independientes.",
+    datePublished: "2026-10-10",
+    coverImage: "/blog/que-clinicas-dentales-recomienda-la-ia/cover.webp",
+    coverIcon: "trendUp",
+    // SECTOR-STUDY-2 (log §265): second own-data study, dental clinics in
+    // Madrid and Valencia, measured with /admin/estudio. Percentages only;
+    // only clinics that appear are named, absent ones only in aggregate.
+    primaryKeyword: "qué clínicas dentales recomienda la ia",
+    cluster: "sectores",
+    heroStat: {
+      value: "77%",
+      label: "de las clínicas independientes con mejores opiniones que analizamos no aparece en ninguna respuesta de la IA.",
+      source: "Estudio GenScore, 10 oct 2026"
+    }
+  },
+  {
     slug: "de-buscar-a-preguntar",
     title: "De buscar a preguntar: cómo la IA está cambiando la búsqueda en España",
     description:

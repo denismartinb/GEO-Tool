@@ -67,6 +67,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "mi-marca-no-aparece-en-chatgpt-por-que": "playbooks",
   // SECTOR-STUDY-1 (2026-10-09, log §246).
   "que-software-de-facturacion-recomienda-la-ia": "sectores",
+  // SECTOR-STUDY-2 (2026-10-10, log §265).
+  "que-clinicas-dentales-recomienda-la-ia": "sectores",
   // STUDY-HOME-1 (2026-10-09, log §251).
   "de-buscar-a-preguntar": "fundamentos",
   // W5 (2026-10-09).

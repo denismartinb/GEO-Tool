@@ -1,0 +1,180 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  PromptSet
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-clinicas-dentales-recomienda-la-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué clínicas dentales recomienda la IA?",
+    answer:
+      "Depende del motor y de la ciudad. En nuestra medición del 10 de octubre de 2026, la más nombrada en Madrid fue una cadena, Sanitas Dental (19% de las respuestas), seguida de la independiente Ferrus & Bratos (17%). En Valencia, Clínica Llobell y Asensio Odontología Avanzada (22% cada una). Pero solo el 7% de las clínicas nombradas aparece en más de un motor, y el 77% de las clínicas independientes bien valoradas que analizamos no aparece en ninguna respuesta."
+  },
+  {
+    question: "¿Por qué Gemini recomienda más clínicas independientes que Claude?",
+    answer:
+      "Gemini no nombró ninguna cadena dental; 2 de cada 3 respuestas de Claude nombran una. Nuestra interpretación es que Gemini se apoya en el buscador de Google, donde una búsqueda de dentista ya es local y pesan la web de la clínica, sus reseñas y los directorios sanitarios, mientras que un motor que tira más de memoria nombra lo que más se repite en internet, que suelen ser las cadenas."
+  },
+  {
+    question: "¿Cómo se hizo el estudio?",
+    answer:
+      "Hicimos a ChatGPT, Gemini y Claude las preguntas que haría un paciente que busca dentista en su ciudad, ninguna con el nombre de una clínica, y repetimos cada una múltiples veces en cada motor y en distintos momentos del tiempo. Esta primera edición cubre Madrid y Valencia. Una clínica solo cuenta si su nombre aparece en la respuesta."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Cuando un paciente pregunta a la IA a qué dentista ir, la respuesta trae tres o cuatro nombres, y casi nunca son los mismos en cada motor. Solo el 7% de las clínicas nombradas lo son por más de un motor. Claude se apoya sobre todo en cadenas como Vitaldent o Sanitas Dental, mientras que Gemini recomienda clínicas independientes. Y más de 3 de cada 4 clínicas con muy buenas opiniones en internet no aparecen nunca.
+
+</KeyTakeaway>
+
+Siete de cada diez pacientes miran opiniones antes de elegir dentista, según una encuesta de Sanitas de 2025. Durante años eso significaba Google y Doctoralia. Cada vez más gente hace esa pregunta a una IA, y la IA no devuelve diez resultados: devuelve una lista corta.
+
+Quisimos saber quién entra en esa lista, y lo medimos en grandes ciudades de España. Esta primera edición cubre Madrid y Valencia.
+
+<StatGrid label="Estudio GenScore, 10 de octubre de 2026: clínicas dentales">
+  <Stat value="77%" label="De las clínicas independientes bien valoradas que analizamos no aparece en ninguna respuesta" source="Estudio GenScore, 10 oct 2026" tone="blue" />
+  <Stat value="7%" label="De las clínicas nombradas aparecen en más de un motor" source="Estudio GenScore, 10 oct 2026" tone="warm" />
+  <Stat value="2 de cada 3" label="Respuestas de Claude nombran una cadena dental; las de Gemini, ninguna" source="Estudio GenScore, 10 oct 2026" tone="cyan" />
+</StatGrid>
+
+## Las más nombradas, ciudad a ciudad
+
+En cada ciudad hicimos las mismas preguntas, cambiando solo el nombre de la ciudad. Estas son las clínicas que más aparecen en Madrid y en Valencia.
+
+<Figure
+  label="Figura 1 · Madrid"
+  caption="Presencia: porcentaje de respuestas que nombran a la clínica al menos una vez. Cada motor aporta el mismo número de respuestas. Sanitas Dental incluye sus clínicas Milenium."
+  wide
+>
+
+| Clínica | Presencia | Gemini | ChatGPT | Claude |
+| --- | --- | --- | --- | --- |
+| Sanitas Dental (cadena) | 19% | 0% | 0% | 58% |
+| Ferrus & Bratos | 17% | 42% | 8% | 0% |
+| Vitaldent (cadena) | 14% | 0% | 8% | 33% |
+| Clínica Palma Medicodental | 11% | 17% | 17% | 0% |
+| Clínica CIRO | 11% | 8% | 25% | 0% |
+| Citadental | 11% | 33% | 0% | 0% |
+
+</Figure>
+
+<Figure
+  label="Figura 2 · Valencia"
+  caption="Misma medida que la Figura 1. Las cadenas se marcan aparte."
+  wide
+>
+
+| Clínica | Presencia | Gemini | ChatGPT | Claude |
+| --- | --- | --- | --- | --- |
+| Clínica Llobell | 22% | 50% | 17% | 0% |
+| Asensio Odontología Avanzada | 22% | 50% | 17% | 0% |
+| Vitaldent (cadena) | 17% | 0% | 0% | 50% |
+| Instituto CIMEV | 14% | 33% | 8% | 0% |
+| Clara Martínez Valero | 14% | 33% | 8% | 0% |
+| Clínica Peydró | 11% | 33% | 0% | 0% |
+| Clínica Badal | 11% | 0% | 33% | 0% |
+| Centro Odontológico Dr. Puchol | 11% | 33% | 0% | 0% |
+
+</Figure>
+
+## Cuatro cosas que nos llamaron la atención
+
+**Cada motor tiene su lista.** Citadental sale en un tercio de las respuestas de Gemini en Madrid y en ninguna de ChatGPT ni de Claude. En Valencia, Clínica Llobell sale en la mitad de las respuestas de Gemini y en ninguna de Claude. Solo el 7% de las clínicas nombradas aparecen en más de un motor. Medir en uno solo da una foto incompleta.
+
+**Claude tira de cadenas.** 2 de cada 3 respuestas de Claude nombran una cadena dental, sobre todo Vitaldent y Sanitas Dental (a veces con el nombre de sus clínicas Milenium). En Madrid, la más nombrada es precisamente una cadena. Gemini no nombró ninguna cadena en ninguna de las dos ciudades y ChatGPT, muy pocas veces.
+
+**Las buenas opiniones no bastan.** Partimos de una lista de clínicas independientes con muchas y muy buenas opiniones en internet. Más de 3 de cada 4 no aparecen en ninguna respuesta. Y la clínica independiente que más sale lo hace en menos de 1 de cada 4 respuestas: el mercado está muy repartido y casi nadie lo ocupa.
+
+**Los directorios pesan.** Cuando la IA cita sus fuentes, Top Doctors, Doctoralia y Doctory aparecen en 4 de cada 10 respuestas en Valencia y en 1 de cada 4 en Madrid. Junto a ellos salen las webs de las propias clínicas y algún medio de prensa.
+
+## Por qué Gemini recomienda más clínicas independientes
+
+Es la diferencia más clara del estudio. Gemini, el motor de Google, no nombró ninguna cadena dental y repartió sus recomendaciones entre clínicas independientes. Claude hizo casi lo contrario. Dos datos ayudan a entender por qué:
+
+<StatGrid label="Fuentes que cita Gemini">
+  <Stat value="Al menos 2 de cada 3" label="Fuentes que cita Gemini son las webs de las propias clínicas; el resto son sobre todo directorios sanitarios" source="Estudio GenScore, 10 oct 2026" tone="blue" />
+  <Stat value="5 de cada 6" label="Respuestas de Gemini que nombran a Clínica Llobell citan también su web" source="Estudio GenScore, 10 oct 2026" tone="cyan" />
+</StatGrid>
+
+A partir de esos datos y de cómo funciona cada motor, estos son los motivos que vemos. Son nuestra interpretación como especialistas en posicionamiento en IA, no algo que el estudio mida directamente:
+
+- **Gemini se apoya en el buscador de Google.** Antes de responder consulta resultados de Google, y una búsqueda de dentista en una ciudad ya es local: pesan las fichas de la clínica, sus reseñas y su ubicación. Ahí una clínica de barrio bien valorada compite de igual a igual con una cadena.
+- **Lee páginas concretas, no marcas.** Una página que explica los implantes en esa ciudad, con quién los hace y cómo, es material directo para una respuesta. Las cadenas suelen tener páginas genéricas por ciudad que dicen poco de un centro concreto.
+- **Se fía de directorios con reseñas de pacientes.** Top Doctors, Doctoralia o Doctory listan profesionales y clínicas, no grandes marcas. Estar bien en esos directorios es estar en las fuentes que Gemini lee.
+- **Un motor que tira más de memoria nombra lo que más se repite en internet.** Las cadenas tienen más publicidad, más prensa y más presencia acumulada, y eso es lo que aparece en las respuestas de Claude.
+
+Las respuestas con IA del propio buscador de Google (los resúmenes que aparecen sobre los resultados) usan la misma familia de modelos y el mismo buscador, así que es probable que se comporten de forma parecida. Eso no lo hemos medido en este estudio; en <a href="/blog/ai-overviews-vs-chatgpt-diferencia">AI Overviews frente a ChatGPT</a> explicamos en qué se diferencian.
+
+## Qué puede hacer una clínica
+
+- Mantener completas y al día sus fichas en los directorios que la IA consulta, con el mismo nombre que usa en su web.
+- Tener una página clara para cada tratamiento y ciudad, que responda en las primeras líneas lo que preguntaría un paciente.
+- Usar siempre el mismo nombre. Si la IA conoce a la clínica por el nombre de su equipo y no por la marca, la atribuye peor.
+- Medirlo en los tres motores, porque lo que funciona en uno no se nota en otro. En <a href="/blog/geo-negocios-locales-servicios-profesionales">GEO para negocios locales</a> está el detalle.
+
+## Metodología
+
+Los estudios con dato propio se realizan mediante un sistema algorítmico que genera las preguntas de búsqueda más relevantes de un sector o empresa y realiza un análisis determinista en ChatGPT, Gemini y Claude, múltiples veces en cada motor y en distintos momentos del tiempo.
+
+- **Preguntas:** las preguntas principales de búsqueda son las que haría un paciente que busca dentista en su ciudad. Ninguna nombra una clínica. Hay una muestra en la Figura 3.
+- **Ciudades:** esta edición cubre Madrid y Valencia, con las mismas preguntas en las dos y solo el nombre de la ciudad cambiado.
+- **Verificación:** una clínica solo cuenta si su nombre aparece en la respuesta.
+- **Límites:** medido el 10 de octubre de 2026. Es una foto de una fecha, y repetido otro día el orden puede moverse. No es un juicio sobre la calidad de ninguna clínica.
+
+<Figure
+  label="Figura 3"
+  caption="Algunas de las preguntas principales de búsqueda, tal como se hicieron. En cada ciudad se cambió solo el nombre de la ciudad."
+>
+<PromptSet
+  prompts={[
+    { text: "¿Cuál es la mejor clínica dental de Valencia?", intent: "Recomendación" },
+    { text: "¿Dónde me pongo implantes dentales en Madrid? Busco una clínica de confianza.", intent: "Tratamiento" },
+    { text: "¿Qué clínica recomiendas para ortodoncia invisible?", intent: "Tratamiento" },
+    { text: "Busco un dentista que trate bien a pacientes con miedo al dentista", intent: "Experiencia" },
+    { text: "¿Qué clínicas dentales tienen mejor relación calidad-precio?", intent: "Precio" },
+  ]}
+/>
+</Figure>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de mediciones reales hechas con nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Te recomienda la IA cuando un paciente busca dentista?"
+  text="GenScore hace esta medición con las preguntas de tu clínica y tus competidores, de forma periódica, y te dice qué cambiar para aparecer."
+/>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</div>
+
+</BlogPageShell>
