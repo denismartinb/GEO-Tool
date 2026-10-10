@@ -48,6 +48,9 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import {
   GEO_SCORE_COMPONENT_META,
   parseEngineCoverage,
@@ -223,6 +226,16 @@ function affectedPromptIds(evidenceJson: unknown): string[] {
 // consola heredaban `title: "GenScore"` del layout raíz y eran indistinguibles
 // entre sí y entre proyectos. `requireActiveProject` está memoizada por
 // petición, así que esto no añade ninguna consulta.
+/** The page path only: the domain is already in the header (SEARCH-SEO-1). */
+function displayPath(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.pathname}${parsed.search}` || "/";
+  } catch {
+    return url;
+  }
+}
+
 export async function generateMetadata({
   params
 }: {
@@ -332,7 +345,13 @@ export default async function ProjectDetailPage({
   const successMessage = rawSuccessMessage && feedback.success !== "scan_started" ? rawSuccessMessage : null;
 
   /* ---- queries that require a completed run ---- */
-  const [{ data: latestScore }, { data: allPromptResults }, { data: activeRecommendations }, { data: trendHistoryDesc }] =
+  const [
+    { data: latestScore },
+    { data: allPromptResults },
+    { data: activeRecommendations },
+    { data: trendHistoryDesc },
+    { data: latestAuditSnapshot }
+  ] =
     latestCompletedRun
       ? await Promise.all([
           supabase
@@ -368,9 +387,31 @@ export default async function ProjectDetailPage({
             .select("run_id, visibility_score, citation_score, competitor_gap_score, created_at, details_json")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
-            .limit(7)
+            .limit(7),
+          // SEARCH-SEO-1 Fase 1 (log §269): the same snapshot Recomendaciones
+          // reads for its citation blockers, so both screens name the same
+          // blockers from the same data.
+          supabase
+            .from("web_audit_snapshots")
+            .select("bots, pages")
+            .eq("project_id", projectId)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle()
         ])
-      : [{ data: null }, { data: null }, { data: null }, { data: null }];
+      : [{ data: null }, { data: null }, { data: null }, { data: null }, { data: null }];
+
+  // A blocker makes every citation impossible, so it outranks everything else
+  // on this screen. Only blockers, never the softer SEO checks: speed or
+  // titles matter for Google but do not decide whether an AI names the brand.
+  const auditSnapshotForBlockers = latestAuditSnapshot as {
+    bots: BotAccessReport | null;
+    pages: PageAuditEntry[] | null;
+  } | null;
+  const citationBlockers = findCitationBlockers({
+    bots: auditSnapshotForBlockers?.bots ?? null,
+    pages: auditSnapshotForBlockers?.pages ?? null
+  });
 
   const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
   const activeRecommendationsCount = activeRecommendations?.length ?? null;
@@ -847,6 +888,38 @@ export default async function ProjectDetailPage({
       {/* ===== DATA STATE ===== */}
       {hasData ? (
         <div className="ov2-scope">
+          {/* 0 · SEARCH-SEO-1 Fase 1 (log §269): a citation blocker on the
+              site outranks the summary. Same blockers, titles and copy as
+              Recomendaciones (lib/recommendations/citation-blockers.ts), so
+              the two screens never disagree. The first one leads; the rest
+              are counted and live on Auditoría SEO. */}
+          {citationBlockers.length > 0 ? (
+            <div className="ov2-prio" role="note">
+              <span className="ov2-prio-ico" aria-hidden="true">!</span>
+              <div className="ov2-prio-body">
+                <div className="ov2-prio-k">Prioridad 1 · tu web</div>
+                <p className="ov2-prio-t">{blockerTitle(citationBlockers[0])}</p>
+                <p className="ov2-prio-d">
+                  {blockerDetail(citationBlockers[0])}
+                  {citationBlockers.length > 1
+                    ? ` Y hay ${citationBlockers.length - 1} ${citationBlockers.length - 1 === 1 ? "freno más" : "frenos más"}.`
+                    : null}
+                </p>
+                {blockerUrls(citationBlockers[0]).length > 0 ? (
+                  <p className="ov2-prio-url">
+                    {displayPath(blockerUrls(citationBlockers[0])[0])}
+                    {blockerUrls(citationBlockers[0]).length > 1
+                      ? ` y ${blockerUrls(citationBlockers[0]).length - 1} más`
+                      : ""}
+                  </p>
+                ) : null}
+              </div>
+              <Link href={`/dashboard/projects/${projectId}/web-audit`} className="btn btn-primary btn-sm ov2-prio-cta">
+                Ver cómo arreglarlo
+              </Link>
+            </div>
+          ) : null}
+
           {/* 1 · Executive summary / insight banner */}
           <div className="ov2-insight">
             <div className="ov2-insight-ico">
@@ -1202,6 +1275,11 @@ export default async function ProjectDetailPage({
                               ? translateDroppedComponentReason(component?.reason)
                               : meta.hint}
                         </div>
+                        {key === "technical" ? (
+                          <Link href={`/dashboard/projects/${projectId}/web-audit`} className="ov2-brow-link">
+                            Ver en Auditoría SEO →
+                          </Link>
+                        ) : null}
                       </div>
                       <div className="ov2-brow-meter">
                         {isDropped ? (

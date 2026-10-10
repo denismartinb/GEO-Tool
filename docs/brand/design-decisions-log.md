@@ -23170,3 +23170,68 @@ camino: el escaneo se crea después del insert del proyecto.
 
 **Trazabilidad.** `lib/projects/create-project.ts`,
 `lib/projects/create-project.test.ts`.
+## 269. SEARCH-SEO-1 Fase 1a: «Posicionamiento en buscadores» en el menú, Auditoría SEO y la franja de prioridad en Visión general (2026-10-10)
+
+**Qué se decidió.** GenScore suma una parte de SEO sin pagar a terceros. El
+fundador fijó la arquitectura el 2026-10-10:
+
+- El menú tiene dos bloques de análisis: «Posicionamiento en IA» (Visión
+  general, Prompts, Competidores, Páginas citadas) y «Posicionamiento en
+  buscadores».
+- El segundo bloque tiene dos pantallas: Auditoría SEO, sin conectar nada, y
+  Posición en Google, con Search Console.
+- El diseño está aprobado y guardado en `docs/design-reference/search-seo-1/`.
+
+El plan va por fases:
+
+1. Menú y Auditoría SEO con los checks actuales. El mapa de cobertura pasa a
+   Páginas citadas.
+2. Checks SEO nuevos, la nota «Salud SEO», Core Web Vitals con PageSpeed
+   Insights y la tarjeta «Buscadores» en Visión general.
+3. Search Console, con migración y verificación de Google.
+4. Artículo y tarjeta en la portada.
+
+Este PR es la fase **1a**. La 1b es el rediseño de la pantalla y el traslado
+de la cobertura.
+
+**Qué cambia en 1a.**
+
+- **El menú pasa a tener dos bloques**, con «Auditoría web» renombrada a
+  «Auditoría SEO» bajo «Posicionamiento en buscadores». Las tres listas de
+  enlaces se pintan con una sola función (`renderProjectLink`), así que la
+  regla de «activo» ya no está copiada en dos bucles.
+- **La ruta sigue siendo `/web-audit`.** Cambiarla rompería los enlaces de las
+  notificaciones y los correos ya enviados. Sólo cambia el nombre de la
+  pantalla: título de pestaña, cabecera, la notificación «Auditoría SEO
+  completada», el texto de Páginas citadas, el informe y el tour de la consola.
+- **Visión general abre con una franja «Prioridad 1 · tu web»** cuando hay un
+  freno de cita. Los frenos son un bot bloqueado, una página con noindex o una
+  página con nosnippet. Salen de `findCitationBlockers`, el mismo módulo y los
+  mismos textos que Recomendaciones (§167), y se leen de la misma instantánea
+  de auditoría. Las dos pantallas no pueden discrepar.
+- **«Diagnóstico técnico» en el desglose enlaza con Auditoría SEO.**
+
+**Por qué sólo los frenos.** El fundador preguntó si el SEO debe ser la
+prioridad para quien lo tiene mal. La respuesta es: sólo cuando impide el
+acceso. Los motores no pueden citar una página que no pueden leer ni indexar.
+La velocidad o los títulos ayudan en Google, pero no deciden si una IA nombra
+a una marca. Una franja que empujara el SEO siempre prometería más de lo que es
+cierto.
+
+**Decisiones del fundador al aprobar el plan (2026-10-10):**
+
+- Recomendaciones **no** copia todos los fallos SEO. Mantiene el reparto de
+  §167 y sólo muestra los frenos duros. Esto corrige una nota de la maqueta.
+- «Salud SEO» será una nota aparte, que no mueve la Puntuación GEO.
+
+**Pendiente o conocido.**
+
+- Mientras no llegue la 1b, la pantalla se llama Auditoría SEO pero sigue
+  enseñando arriba «Diagnóstico general», con Contenido e Implementado, que es
+  cobertura de IA. La 1b los lleva a Páginas citadas.
+- La portada y `/geo` siguen diciendo «Auditoría web» en su demo del producto.
+  Se cambian con la fase 4.
+- El bloque «Posicionamiento en buscadores» tiene una sola entrada hasta la
+  fase 3.
+- La franja enseña sólo el primer freno y cuenta los demás. El detalle vive en
+  Auditoría SEO y en Recomendaciones.

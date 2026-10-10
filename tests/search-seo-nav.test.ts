@@ -1,0 +1,54 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+
+/**
+ * SEARCH-SEO-1 Fase 1 (log §269) — source-level contracts for the new console
+ * navigation. The sidebar is a client component with hooks, so these read the
+ * source instead of rendering it, same approach as tests/mission-parity.test.ts.
+ */
+const root = join(__dirname, "..");
+const read = (path: string) => readFileSync(join(root, path), "utf8");
+
+describe("console navigation: two analysis blocks", () => {
+  const sidebar = read("components/sidebar.tsx");
+
+  it("names the two blocks the founder chose, IA first", () => {
+    const ai = sidebar.indexOf(">Posicionamiento en IA<");
+    const search = sidebar.indexOf(">Posicionamiento en buscadores<");
+    const act = sidebar.indexOf(">Actuar<");
+    expect(ai).toBeGreaterThan(-1);
+    expect(search).toBeGreaterThan(ai);
+    expect(act).toBeGreaterThan(search);
+    expect(sidebar).not.toContain(">Analizar<");
+  });
+
+  it("calls the audit screen Auditoría SEO and keeps its route", () => {
+    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría SEO"');
+    expect(sidebar).not.toContain('label: "Auditoría web"');
+  });
+});
+
+describe("Auditoría SEO screen name", () => {
+  it("uses the new name in the tab title and the page kicker", () => {
+    const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
+    expect(page).toContain('projectScreenMetadata("Auditoría SEO"');
+    expect(page).toContain(">Auditoría SEO</p>");
+  });
+});
+
+describe("Visión general: citation blockers lead the screen", () => {
+  const overview = read("app/dashboard/projects/[projectId]/page.tsx");
+
+  it("reads blockers from the same module as Recomendaciones", () => {
+    expect(overview).toContain('from "@/lib/recommendations/citation-blockers"');
+    expect(overview).toContain("findCitationBlockers(");
+  });
+
+  it("renders the priority strip before the summary sentence", () => {
+    const strip = overview.indexOf('className="ov2-prio"');
+    const insight = overview.indexOf('className="ov2-insight"');
+    expect(strip).toBeGreaterThan(-1);
+    expect(strip).toBeLessThan(insight);
+  });
+});

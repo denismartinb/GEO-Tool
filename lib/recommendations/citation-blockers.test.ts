@@ -90,6 +90,10 @@ describe("copy del bloqueo", () => {
   it("cada bloqueo explica por qué impide la cita", () => {
     expect(blockerDetail({ kind: "snippet", urls: ["a"] })).toContain("sin fragmento no hay cita");
     expect(blockerDetail({ kind: "noindex", urls: ["a"] })).toContain("ningún motor la va a citar");
+    expect(blockerDetail({ kind: "noindex", urls: ["a"] })).toMatch(/^Lleva /);
+    expect(blockerDetail({ kind: "noindex", urls: ["a", "b"] })).toContain("ningún motor las va a citar");
+    expect(blockerDetail({ kind: "snippet", urls: ["a"] })).toMatch(/^Lleva /);
+    expect(blockerDetail({ kind: "snippet", urls: ["a", "b"] })).toMatch(/^Llevan /);
   });
 
   it("sólo los bloqueos por página traen URLs", () => {

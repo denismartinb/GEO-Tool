@@ -27,19 +27,27 @@ type WorkspaceProject = {
 // version of this phase DID add one and the founder had it removed: pinchar el
 // propio dominio es el gesto que ya existía y el que la gente conoce.
 // The operational half (/debug) has no entry at all, by design.
-const analyzeLinks = [
+// SEARCH-SEO-1 Fase 1 (log §269): two "Analizar" blocks, IA first and
+// search engines second, so what we measure in AI answers and what we measure
+// in Google read as two different questions (founder, 2026-10-10).
+const aiLinks = [
   { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
   { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null as null | string },
-  { segment: "/web-audit", label: "Auditoría web", icon: "search", countKey: null as null | string },
+];
+
+// The route stays `/web-audit`: renaming it would break every notification
+// and email link already sent. Only the screen's name changed.
+const searchLinks = [
+  { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null as null | string },
 ];
 
 const actLinks = [
   { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" as null | string },
 ];
 
-// "Aprender" no depende del dominio activo — a diferencia de Analizar/Actuar,
+// "Aprender" no depende del dominio activo — a diferencia de los bloques del proyecto,
 // enlaza al blog público (fuera de /dashboard), así que no lleva countKey ni
 // se deshabilita nunca por falta de proyecto.
 const learnLinks = [{ href: "/blog", label: "Manuales GEO", icon: "fileText" }];
@@ -89,7 +97,7 @@ export function Sidebar({
   const domainsQueryProjectId = pathname === "/dashboard/domains" ? searchParams.get("active") : null;
   // Outside a project's own routes (Billing, Settings, the dashboard root)
   // the URL carries no projectId at all — fall back to the cookie-remembered
-  // selection, then to the most recent active project, so "Analizar"/"Actuar"
+  // selection, then to the most recent active project, so the project blocks
   // still link somewhere instead of going fully disabled whenever the
   // account isn't currently inside a project.
   const project =
@@ -119,6 +127,41 @@ export function Sidebar({
     if (key === "competitors") return competitorCountByProject[projectId] ?? 0;
     if (key === "recs") return recommendationCountByProject[projectId] ?? 0;
     return 0;
+  }
+
+  function renderProjectLink(link: { segment: string; label: string; icon: string; countKey: string | null }) {
+    const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
+    // The overview is the project root: matching its prefix would light it up
+    // on every other screen of the project.
+    const active = href
+      ? link.segment
+        ? pathname === href || pathname.startsWith(`${href}/`)
+        : pathname === href
+      : false;
+    const count = project ? getCount(project.id, link.countKey) : 0;
+
+    if (!href) {
+      return (
+        <span key={link.label} className="nav-item disabled" aria-disabled="true">
+          <Icon name={link.icon} size={17} />
+          <span className="hide-collapsed">{link.label}</span>
+        </span>
+      );
+    }
+
+    return (
+      <Link
+        key={link.label}
+        href={href}
+        className={`nav-item ${active ? "active" : ""}`}
+        onClick={handleNavSelect}
+        aria-current={active ? "page" : undefined}
+      >
+        <Icon name={link.icon} size={17} />
+        <span className="hide-collapsed">{link.label}</span>
+        {count > 0 && <span className="nav-count hide-collapsed">{count}</span>}
+      </Link>
+    );
   }
 
   const avatarInitials = deriveAvatarInitials(userEmail);
@@ -172,75 +215,14 @@ export function Sidebar({
       )}
 
       <div className="sb-scroll">
-        <div className="nav-group-label hide-collapsed">Analizar</div>
-        {analyzeLinks.map((link) => {
-          const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
-          const active = href
-            ? link.segment
-              ? pathname === href || pathname.startsWith(`${href}/`)
-              : pathname === href
-            : false;
-          const count = project ? getCount(project.id, link.countKey) : 0;
+        <div className="nav-group-label hide-collapsed">Posicionamiento en IA</div>
+        {aiLinks.map(renderProjectLink)}
 
-          if (!href) {
-            return (
-              <span key={link.label} className="nav-item disabled" aria-disabled="true">
-                <Icon name={link.icon} size={17} />
-                <span className="hide-collapsed">{link.label}</span>
-              </span>
-            );
-          }
-
-          return (
-            <Link
-              key={link.label}
-              href={href}
-              className={`nav-item ${active ? "active" : ""}`}
-              onClick={handleNavSelect}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon name={link.icon} size={17} />
-              <span className="hide-collapsed">{link.label}</span>
-              {count > 0 && (
-                <span className="nav-count hide-collapsed">{count}</span>
-              )}
-            </Link>
-          );
-        })}
+        <div className="nav-group-label hide-collapsed">Posicionamiento en buscadores</div>
+        {searchLinks.map(renderProjectLink)}
 
         <div className="nav-group-label hide-collapsed">Actuar</div>
-        {actLinks.map((link) => {
-          const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
-          const active = href
-            ? pathname === href || pathname.startsWith(`${href}/`)
-            : false;
-          const count = project ? getCount(project.id, link.countKey) : 0;
-
-          if (!href) {
-            return (
-              <span key={link.label} className="nav-item disabled" aria-disabled="true">
-                <Icon name={link.icon} size={17} />
-                <span className="hide-collapsed">{link.label}</span>
-              </span>
-            );
-          }
-
-          return (
-            <Link
-              key={link.label}
-              href={href}
-              className={`nav-item ${active ? "active" : ""}`}
-              onClick={handleNavSelect}
-              aria-current={active ? "page" : undefined}
-            >
-              <Icon name={link.icon} size={17} />
-              <span className="hide-collapsed">{link.label}</span>
-              {count > 0 && (
-                <span className="nav-count hide-collapsed">{count}</span>
-              )}
-            </Link>
-          );
-        })}
+        {actLinks.map(renderProjectLink)}
 
         <div className="nav-group-label hide-collapsed">Aprender</div>
         {learnLinks.map((link) => {
