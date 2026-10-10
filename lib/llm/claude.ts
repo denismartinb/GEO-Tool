@@ -77,8 +77,12 @@ function extractText(data: AnthropicResponse): string {
  * meaning citation_found / citations_count remain 0 for Claude-backed scans.
  * This is honest — no fake citations.
  */
-/** Output cap of a scan answer. Exported so the model comparison can flag answers cut at it. */
-export const CLAUDE_GENERATION_MAX_TOKENS = 1024;
+/**
+ * Output cap of a scan answer. Exported so the model comparison can flag answers cut at it.
+ * 2048, not 1024: Haiku 5.5 writes about twice as long as Haiku 4.5 and a quarter of its
+ * answers were cut at 1024 (log §263). Haiku 4.5 stays well under either cap.
+ */
+export const CLAUDE_GENERATION_MAX_TOKENS = 2048;
 
 export async function generateClaudeVisibilityAnswer(input: {
   prompt: string;

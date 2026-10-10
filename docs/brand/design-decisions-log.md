@@ -23108,3 +23108,16 @@ motores, una repetición, extracción del candidato con Haiku 5.5).**
 - **El ruido sigue siendo muy alto.** La nota global de dos pasadas de los
   modelos de hoy se movió de 48,6 a 29,6. Ningún veredicto con una sola
   repetición basta para cambiar producción.
+
+**Tercera pasada y decisión (2026-10-10).** Solo Claude, 8 preguntas × 2
+repeticiones. Haiku 5.5 salió «Distinto»: igual mención y misma nota dentro
+del ruido, pero nombra la mitad de marcas por respuesta (3,3 frente a 6,7) y
+4 de 16 respuestas se cortaron al tope de 1024. El fundador decidió adaptarse
+a los modelos nuevos mientras no hay clientes: el criterio para generar es
+parecerse a lo que el público ve en el asistente, y para extraer, el más
+barato que lea bien. Por eso **el tope de generación de Claude sube a 2048**
+en esta fase. El cambio de modelo en sí no es código: son
+`ANTHROPIC_MODEL` y `SCAN_EXTRACTION_CLAUDE_MODEL` en Vercel, que el fundador
+pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
+que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
+extracción en los primeros escaneos.
