@@ -21,8 +21,6 @@ import type { FreeReportRequest } from "@/lib/free-report/request";
  * be a fake success (`.claude/rules/server-actions.md`).
  */
 
-const SUPPORT_ADDRESS = "soporte@genscore.es";
-
 export function getOpsAddress(): string | null {
   const raw = process.env.OPS_ALERT_EMAIL?.trim();
   return raw ? raw : null;
@@ -104,7 +102,7 @@ export function buildConfirmationEmail(request: FreeReportRequest) {
       `
       ${eyebrow("Informe GEO gratuito")}
       ${heading("Hemos recibido tu petición")}
-      ${paragraph(`Ya estamos preparando el informe de <strong style="color:#0B1426;">${domain}</strong>. Vamos a hacer a ChatGPT, Gemini y Claude las preguntas principales de búsqueda de tu sector («${escapeHtml(request.business)}») y a ver a quién recomiendan, qué fuentes citan y si tu web está preparada para ellos.`)}
+      ${paragraph(`Ya estamos preparando el informe de <strong style="color:#0B1426;">${domain}</strong>. Vamos a hacer a ChatGPT, Gemini y Claude las preguntas principales de búsqueda sobre lo que vendes («${escapeHtml(request.business)}») y a ver a quién recomiendan, qué fuentes citan y si tu web está preparada para ellos.`)}
       ${paragraph("Repetimos las búsquedas en distintos momentos y una persona revisa cada informe antes de enviarlo. Lo tendrás en este correo en 48 h laborables.")}
       <div style="margin:22px 0 0;border:1px solid #E1E6EF;border-radius:10px;padding:16px 18px;font-size:14.5px;line-height:1.55;color:#3B4759;">
         <strong style="color:#0B1426;">¿Algo que debamos saber?</strong><br>
@@ -128,10 +126,11 @@ export async function sendFreeReportOpsEmail(
   if (!to) return false;
   const { subject, html } = buildOpsEmail(request, input);
   // Reply-To the requester: answering this email writes to them directly.
-  return sendEmail(to, subject, html, { "Reply-To": request.email });
+  return sendEmail(to, subject, html, undefined, request.email);
 }
 
 export async function sendFreeReportConfirmationEmail(request: FreeReportRequest): Promise<boolean> {
   const { subject, html } = buildConfirmationEmail(request);
-  return sendEmail(request.email, subject, html, { "Reply-To": SUPPORT_ADDRESS });
+  // Replies go to support by default (`sendEmail`): this email asks for them.
+  return sendEmail(request.email, subject, html);
 }
