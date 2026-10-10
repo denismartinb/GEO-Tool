@@ -1,0 +1,239 @@
+/* DEMO-CALL-1 — /demo. Prefixed `dm-` so nothing here can collide with
+   globals.css; design in docs/design-reference/demo-affiliates-1/. */
+
+.dm-page {
+  padding: 112px 16px 72px;
+  background: var(--brand-canvas);
+}
+.dm-inner {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.dm-copy { min-width: 0; }
+.dm-eyebrow {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-blue);
+}
+.dm-title {
+  margin: 0 0 16px;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: clamp(30px, 4.4vw, 46px);
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--brand-ink);
+  text-wrap: balance;
+}
+.dm-lede {
+  margin: 0 0 22px;
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--brand-ink-2);
+  max-width: 52ch;
+}
+.dm-list {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.dm-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--brand-ink-2);
+}
+.dm-check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin-top: 1px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--brand-pos-soft);
+  color: var(--brand-pos);
+}
+.dm-alt {
+  margin: 0;
+  font-size: 14px;
+  color: var(--brand-ink-3);
+}
+.dm-alt a {
+  color: var(--brand-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.dm-alt a:hover { text-decoration: underline; }
+
+/* The dark card: slot picker + form. */
+.dm-card {
+  box-sizing: border-box;
+  min-width: 0;
+  background: var(--brand-canvas-dark);
+  color: var(--brand-ink-on-dark);
+  border-radius: 18px;
+  padding: 26px;
+  display: grid;
+  gap: 16px;
+  box-shadow: 0 18px 40px rgba(8, 18, 35, 0.18);
+}
+.dm-card-title {
+  margin: 0;
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-size: 22px;
+  line-height: 1.2;
+}
+.dm-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+  color: #b8c3d6;
+}
+.dm-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: thin;
+}
+.dm-day,
+.dm-time {
+  font: inherit;
+  color: inherit;
+  background: transparent;
+  border: 1px solid #2a3a58;
+  border-radius: 10px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+.dm-day {
+  flex: none;
+  min-width: 64px;
+  padding: 8px 10px;
+  display: grid;
+  gap: 1px;
+  text-align: center;
+  font-size: 14px;
+  text-transform: capitalize;
+}
+.dm-day small {
+  font-size: 11px;
+  color: #8d9ab0;
+}
+.dm-time {
+  padding: 9px 4px;
+  font-size: 14px;
+  text-align: center;
+}
+.dm-times {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.dm-day:hover,
+.dm-time:hover { border-color: #4f7bff; }
+.dm-day.is-on,
+.dm-time.is-on {
+  background: var(--brand-blue);
+  border-color: var(--brand-blue);
+  color: #fff;
+}
+.dm-day.is-on small { color: #dbe6ff; }
+.dm-day:focus-visible,
+.dm-time:focus-visible,
+.dm-btn:focus-visible,
+.dm-field input:focus-visible {
+  outline: 2px solid var(--brand-cyan);
+  outline-offset: 2px;
+}
+.dm-fields {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+.dm-field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #d5dcea;
+}
+.dm-opt { font-weight: 400; color: #8d9ab0; }
+.dm-field input {
+  box-sizing: border-box;
+  width: 100%;
+  font: inherit;
+  font-weight: 400;
+  font-size: 15px;
+  color: var(--brand-ink-on-dark);
+  background: var(--brand-surface-dark);
+  border: 1px solid #2a3a58;
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+.dm-field input::placeholder { color: #6f7d95; }
+.dm-err {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ffb4a8;
+}
+.dm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  padding: 12px 18px;
+  border: 0;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  font-size: 15px;
+  background: var(--brand-blue);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+}
+.dm-btn:hover { background: #1d4fd8; }
+.dm-btn--light {
+  background: #fff;
+  color: var(--brand-ink);
+  justify-self: start;
+}
+.dm-btn--light:hover { background: #eef2fb; }
+.dm-fine {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #8d9ab0;
+}
+.dm-fine a { color: #b8c3d6; }
+.dm-done p { margin: 0; font-size: 15px; line-height: 1.55; color: #d5dcea; }
+.dm-done strong { color: #fff; }
+
+/* Honeypot: off-screen, out of the tab order. */
+.dm-hp {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (max-width: 860px) {
+  .dm-page { padding-top: 96px; }
+  .dm-inner { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+  .dm-card { padding: 20px; }
+}

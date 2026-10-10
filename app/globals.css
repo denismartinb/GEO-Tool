@@ -4984,6 +4984,16 @@ a.notif-row:hover {
    una fila desordenada (FREE-CHECKER-1, log §113). */
 .lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
+/* DEMO-CALL-1 (2026-10-10, diseño en docs/design-reference/demo-affiliates-1/):
+   la videollamada es una línea secundaria bajo el campo, nunca un segundo
+   botón que compita con «Analiza gratis». Icono de cámara, no flecha ni
+   teléfono: es una videollamada (fundador, 2026-10-10). En móvil la frase se
+   acorta para no partirse en dos líneas. */
+.lp-hero-call { display: inline-flex; align-items: center; gap: 7px; margin-top: 16px; font-size: 14.5px; font-weight: 600; color: var(--brand-blue); text-decoration: none; }
+.lp-hero-call:hover { text-decoration: underline; }
+.lp-hero-call svg { flex: none; }
+.lp-hero-call .short { display: none; }
+@media (max-width: 560px) { .lp-hero-call .long { display: none; } .lp-hero-call .short { display: inline; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 /* "Unos pixeles más de aire" entre título, subtítulo, campo y demo — sólo en

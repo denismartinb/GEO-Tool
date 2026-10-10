@@ -356,6 +356,14 @@ export function LandingPage() {
           <div className="lp-hero-form">
             <HeroDomainField />
           </div>
+          <Link href="/demo" className="lp-hero-call">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="2" y="6" width="14" height="12" rx="2" />
+              <path d="M16 10l6-3v10l-6-3z" />
+            </svg>
+            <span className="long">Agenda una videollamada de 20 min con el equipo de GenScore</span>
+            <span className="short">Agenda una videollamada de 20 min</span>
+          </Link>
         </div>
 
         {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.
