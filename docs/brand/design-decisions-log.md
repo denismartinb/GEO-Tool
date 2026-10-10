@@ -23460,3 +23460,12 @@ modelo con una línea más en la instrucción (`singleSearch` en
 `generateGeminiVisibilityAnswer`, que el escaneo nunca pasa). La pasada mide
 si obedece (búsquedas por respuesta) y qué cuesta en fuentes y en nota. Si
 sale bien, llevarlo al escaneo es un cambio aparte, con su ADR (ADR 0042).
+
+**Resultado de la pasada de una búsqueda (2026-10-10, 8 preguntas × 2
+repeticiones, solo Gemini).** Sale «Distinto», no se adopta. Hoy Gemini ya
+hace de media 1,4–1,6 búsquedas por respuesta, no dos o más como se suponía.
+Con la instrucción baja a 1,0 de media, pero no la obedece del todo: 3 de 16
+respuestas hicieron dos búsquedas. El coste por respuesta baja un 30 %
+(2,9 → 2,0 céntimos), pero la nota cae de 57 a 39 cuando el ruido entre dos
+pasadas de hoy es de 1,4 puntos. También pierde una mención y alguna fuente.
+El ahorro no compensa mover la nota así.
