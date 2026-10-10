@@ -103,6 +103,8 @@ const PUBLIC_PAGES = new Map([
   ["/que-es-genscore", "Qué es GenScore — GenScore"],
   // GEO-SELF-1 Fase 1 (log §256).
   ["/sobre-genscore", "Quiénes somos — GenScore"],
+  // GEO-SELF-1 Fase 4 (log §260).
+  ["/estudios", "Estudios — GenScore"],
   ["/privacidad", "Privacidad — GenScore"],
   ["/cookies", "Cookies — GenScore"],
   ["/terminos", "Términos — GenScore"],

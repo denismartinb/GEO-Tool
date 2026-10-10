@@ -1,3 +1,4 @@
+import { studiesLastModified } from "@/lib/estudios/studies";
 import type { MetadataRoute } from "next";
 import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
 import { DOCS_NAV } from "@/lib/docs/nav";
@@ -51,6 +52,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/sobre-genscore", lastModified: "2026-10-09" },
+  { path: "/estudios", lastModified: studiesLastModified() },
   { path: "/precios", lastModified: "2026-08-25" },
   { path: "/blog", lastModified: latestPostDate(BLOG_POSTS) ?? BLOG_FIRST_PUBLISHED },
   { path: "/docs", lastModified: DOCS_LAST_MODIFIED },

@@ -116,6 +116,7 @@ describe("MARKETING_ENTITY_LINKS", () => {
 
   it("contiene «Quiénes somos» (GEO-SELF-1)", () => {
     expect(MARKETING_ENTITY_LINKS.map((l) => l.href)).toContain("/sobre-genscore");
+    expect(MARKETING_ENTITY_LINKS.map((l) => l.href)).toContain("/estudios");
   });
 
   it("apunta solo a rutas que existen de verdad", () => {

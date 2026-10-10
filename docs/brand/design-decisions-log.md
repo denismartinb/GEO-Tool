@@ -22787,3 +22787,46 @@ documentación oficial de Google detrás.
 **Pendiente.** Refrescar la pieza cuando el informe de IA generativa de Search
 Console llegue a las cuentas españolas y su documentación oficial se pueda leer
 entera.
+
+## 260. GEO-SELF-1 Fase 4: hub de estudios `/estudios` (2026-10-09)
+
+**Qué.** Una URL estable, `/estudios`, que reúne los estudios publicados —hoy
+el de software de facturación (dato propio) y «De buscar a preguntar»
+(recopilación de fuentes)— con su tipo, fecha, cifra principal y fuente, el
+método en tres frases y cómo citar los datos. Es el frente F5 del plan
+aprobado por el fundador para que los motores citen a GenScore: un periodista
+o un motor necesita un sitio que citar, no dos artículos sueltos en el blog.
+
+**Decisiones.**
+- **El hub no tiene datos propios.** Cada estudio es un artículo del blog; su
+  título, fecha, descripción y cifra (`heroStat` con `source`) se leen de
+  `BLOG_POSTS` a través de `lib/estudios/studies.ts`. La única lista a mano es
+  `STUDY_ENTRIES` (slug + tipo), y `getStudies` lanza si un slug no existe,
+  así que un estudio retirado del blog rompe el build en vez de dejar un
+  enlace muerto.
+- **Sólo porcentajes, motores por su nombre.** El método usa la redacción del
+  fundador (2026-10-10): «un sistema algorítmico que genera las preguntas de
+  búsqueda más relevantes de un sector o empresa y realiza un análisis
+  determinista en ChatGPT, Gemini y Claude, múltiples veces en cada motor y en
+  distintos momentos del tiempo». Sin versiones de modelo. `studies.test.ts` lo comprueba sobre los
+  textos del hub (sin recuentos absolutos, sin Perplexity ni Copilot).
+- **Schema `CollectionPage` + `ItemList`**, con `publisher` por `@id` del
+  `Organization` (regla de §100/§256), y migas.
+- **Enlazado:** «Estudios» entra en `MARKETING_ENTITY_LINKS` (todos los pies),
+  en el sitemap con la fecha de su estudio más reciente (`studiesLastModified`),
+  en `llms.txt` y en una sección propia de `llms-full.txt` con cada cifra y
+  su fuente.
+- **CTA al informe gratuito** con `?desde=hub-estudios`
+  (`FREE_REPORT_ENTRY.studiesHub`).
+- **Piloto:** `/estudios` entra en `PUBLIC_PAGES` del fixture y en
+  `public-pages.spec.ts` (carga sana + canonical propio).
+
+- **Redacción (fundador, 2026-10-10).** «varias veces» pasa a «múltiples
+  veces en distintos momentos del tiempo» en todo el contenido público que
+  describe la medición (hub, guía de Gemini, «De buscar a preguntar», guía de
+  Perplexity), y el título del estudio de facturación pierde el «Lo hemos
+  medido» final.
+
+**Pendiente.** El estudio de clínicas dentales (hilo «Captación por sectores:
+clínicas») se añade a `STUDY_ENTRIES` cuando se publique. Firmar los estudios
+con nombre sigue sin decidir (§256).
