@@ -145,6 +145,14 @@ worse than no rule, because a future session will obey it anyway.
   Vercel rechazaba con 508 — lo vio el `response.ok` de la regla anterior,
   pero sólo en un log que nadie leía (`docs/brand/design-decisions-log.md`
   §241). Concatenar `process.env.NEXT_PUBLIC_SITE_URL` a mano reabre el fallo.
+- **Una cadena de auto-llamadas no llega lejos: Vercel la corta con 508 a los
+  pocos saltos**, aunque la URL esté bien (3 y 5 saltos en la cadena de la
+  auditoría el 2026-10-09, `docs/brand/design-decisions-log.md` §261). Ningún
+  trabajo puede depender de que una cadena así complete: el motor tiene que
+  ser algo que arranque desde cero (un cron), y la cadena, un acelerador. La
+  auditoría ya va así, y la cadena de `/api/scan/continue` también, desde que
+  se confirmó el mismo tope (§262, regla de arriba). Queda la del barrido
+  diario (`/api/cron/sweep-continue`), sin 508 visto todavía.
 - **El barrido tiene sus propios fallos, y también tienen que llegar al
   operador.** La regla de abajo se escribió para lo que pasa DENTRO de un run
   y se aplicó sólo ahí: un escaneo del cron que revienta antes de existir como
