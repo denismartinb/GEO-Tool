@@ -105,6 +105,18 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/adr/0037`). A lease must also be **bounded** — a stale job with no
   attempts left is failed, not reclaimed again, or one poison job consumes
   every pass forever.
+- **La cadena de `/api/scan/continue` es un acelerador; el motor es el cron
+  `/api/cron/scan-continue`, cada 5 minutos.** Vercel corta con 508 una cadena
+  de auto-llamadas a los pocos saltos aunque la URL esté bien: el 2026-10-10
+  la del barrido de las 06:00 murió hacia el quinto salto y el run esperó once
+  minutos al vigilante, que sólo reanuda `SCAN_RESUME_CAP` veces
+  (`docs/brand/design-decisions-log.md` §261). El pase de `lib/scan/drain.ts`
+  re-despacha todo run joven, parado al menos lo que dura un lease y con
+  trabajo reclamable, y **no escribe nada**: ni marca de reanudación, ni
+  `updated_at`, ni jobs. Así un re-despacho que no avanza deja el run igual de
+  parado y el camino de reanudar/fallar del vigilante sigue viéndolo. Si se le
+  añade una escritura, ese contrato se rompe y un run muerto puede no fallar
+  nunca. Lo vigila `vercel-crons.test.ts`.
 - **Never let a browser be the only thing driving a scan.** Work that continues
   after a response is sent must be dispatched server-side; a client-side loop
   is an accelerator, never the engine. A phone that locks its screen suspends

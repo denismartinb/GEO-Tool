@@ -171,6 +171,17 @@ only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
 which any page view already does. A sub-daily schedule needs Vercel Pro (the
 account is Pro since 2026-08-04).
 
+**Scan continuation pass (SCAN-CRON-DRAIN-1, log §261).** `/api/cron/scan-continue`
+runs every 5 minutes (`*/5 * * * *`) and re-dispatches every scan run younger
+than 6h that has been idle ≥90s with work the executor can still claim. It
+exists because Vercel cuts a chain of self-calls to `/api/scan/continue` with
+508 after a few hops even with a correct URL (log §260), and a cron firing is
+what starts a fresh chain. No new variables: `CRON_SECRET` for its own auth,
+`SCAN_CONTINUE_SECRET` for the dispatch it makes. Writes nothing and does not
+count against the watchdog's resume cap. Not gated on `CRON_SCANS_ENABLED`,
+same reasoning as the watchdog. ~288 invocations/day, almost all of them two
+reads and no dispatch.
+
 ### Cuentas internas de prueba (PROJECT-DEFAULTS-BY-ACCOUNT-1)
 
 | Variable | Required | Where | Expected shape |

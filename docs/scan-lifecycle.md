@@ -338,6 +338,13 @@ Since ALERTS-ALWAYS-1 (log §227) reconciliation also runs every 15 minutes
 across every project (`/api/cron/scan-watchdog`), so a dead chain is picked up
 within ~15 minutes even with nobody looking.
 
+Since SCAN-CRON-DRAIN-1 (log §261) a dead chain is usually picked up sooner,
+and without spending a resume: every 5 minutes `/api/cron/scan-continue`
+(`lib/scan/drain.ts`) re-dispatches any run younger than 6h, idle for at least
+the job lease (90s), that still has claimable work. It writes nothing, so a
+dispatch that makes no progress leaves the run exactly as stale as before and
+the resume/fail path above still applies to it.
+
 This reconciliation is what unblocks the "one active scan per project"
 invariant: a stuck run no longer permanently blocks new scans, because it
 becomes terminal (`failed`) on the next pass instead of remaining
