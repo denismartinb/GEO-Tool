@@ -37,10 +37,16 @@ import { analyzeRunHealth } from "@/lib/scan/scan-health-alert";
  */
 
 describe("evaluateRecurringFreshness", () => {
+  it("gives paid Pro a 2-day cycle (SCAN-CADENCE-1)", () => {
+    const now = Date.parse("2026-09-28T10:00:00.000Z");
+    expect(evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-27T06:00:31.000Z", now }).stale).toBe(false);
+    expect(evaluateRecurringFreshness({ planId: "trial", lastCompletedAt: "2026-09-27T06:00:31.000Z", now }).stale).toBe(true);
+  });
+
   it("counts a daily project as fresh when today's scan exists after the grace", () => {
     const now = Date.parse("2026-09-28T10:00:00.000Z");
     expect(
-      evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-28T06:00:31.000Z", now })
+      evaluateRecurringFreshness({ planId: "agency", lastCompletedAt: "2026-09-28T06:00:31.000Z", now })
     ).toEqual({ stale: false, cutoffIso: "2026-09-28T06:00:00.000Z" });
   });
 
@@ -57,7 +63,7 @@ describe("evaluateRecurringFreshness", () => {
     // question is still about yesterday's.
     const now = Date.parse("2026-09-28T08:00:00.000Z");
     expect(
-      evaluateRecurringFreshness({ planId: "pro", lastCompletedAt: "2026-09-27T06:00:31.000Z", now })
+      evaluateRecurringFreshness({ planId: "agency", lastCompletedAt: "2026-09-27T06:00:31.000Z", now })
     ).toEqual({ stale: false, cutoffIso: "2026-09-27T06:00:00.000Z" });
   });
 

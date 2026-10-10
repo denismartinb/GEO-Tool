@@ -317,3 +317,11 @@ worse than no rule, because a future session will obey it anyway.
   competidores y el sentimiento, así que se hace después de
   `pnpm bench:extraction`, nunca a ciegas
   (`docs/brand/design-decisions-log.md` §253).
+- **La cadencia del barrido se lee con `resolveCadencePlanId`, no con el plan
+  a secas.** Pro de pago va cada 2 días, pero la prueba de Pro sigue diaria
+  (clave `trial`). Barrido, vigilante y salud de `/admin` tienen que usar la
+  misma clave. Si no, el vigilante avisa de un Pro de pago que no tocaba
+  escanear, o calla ante una prueba que se quedó sin su escaneo diario
+  (`docs/brand/design-decisions-log.md` §271). `/precios` dice «Diario» para
+  Pro hasta que el fundador descongele los textos: no lo cambies sin que él lo
+  pida.

@@ -56,7 +56,7 @@ describe("estimateProjectMonthlyCost", () => {
     expect(estimate.basis).toContain("sin escaneo recurrente efectivo");
   });
 
-  it("uses the weekly cadence for Starter and the daily one for Pro", () => {
+  it("uses the weekly cadence for Starter, every 2 days for Pro and daily for Agency", () => {
     const base = {
       promptCount: 10,
       engines: ["gemini"] as const,
@@ -66,7 +66,10 @@ describe("estimateProjectMonthlyCost", () => {
     const starter = estimateProjectMonthlyCost({ ...base, engines: [...base.engines], planId: "starter" });
     const pro = estimateProjectMonthlyCost({ ...base, engines: [...base.engines], planId: "pro" });
 
-    expect(pro.monthlyUsd).toBeGreaterThan(starter.monthlyUsd * 5);
+    const agency = estimateProjectMonthlyCost({ ...base, engines: [...base.engines], planId: "agency" });
+
+    expect(pro.monthlyUsd).toBeGreaterThan(starter.monthlyUsd * 3);
+    expect(agency.monthlyUsd).toBeCloseTo(pro.monthlyUsd * 2, 1);
   });
 
   it("downgrades provenance to 'no medido' when the unmeasured coverage audit is included", () => {

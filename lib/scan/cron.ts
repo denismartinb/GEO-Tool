@@ -58,9 +58,35 @@ export function resolveMaxSweepChainInvocations(): number {
 const RECURRING_INTERVAL_DAYS_BY_PLAN: Record<string, number> = {
   free: 1,
   starter: 7,
-  pro: 1,
+  /**
+   * SCAN-CADENCE-1 (log §271): a paying Pro project is scanned every 2 days,
+   * not daily. The score is the median of the last 3 comparable runs
+   * (`lib/scoring/score-window.ts`), so a daily scan mostly re-measures the
+   * same window; halving it halves the largest LLM bill line. The 7-day
+   * trial keeps the daily cadence (`trial` below) — that is where the
+   * "it moved" moment sells. `/precios` still says "Diario" on purpose: the
+   * founder froze every product text until he has seen this run (2026-10-10).
+   */
+  pro: 2,
+  /** An unconverted reverse trial of Pro — see resolveCadencePlanId. */
+  trial: 1,
   agency: 1
 };
+
+/**
+ * SCAN-CADENCE-1 (log §271): the key into RECURRING_INTERVAL_DAYS_BY_PLAN for
+ * one owner. Same effective plan as everywhere else in system code
+ * (`resolveSystemPlanId`: comped and trial expiry applied), except that a
+ * Pro account still inside its reverse trial — `trial_ends_at` set, no Stripe
+ * subscription — gets its own `trial` cadence. A trial that has elapsed
+ * already resolves to `free` before this check, and a converted trial has a
+ * subscription, so neither can land here.
+ */
+export function resolveCadencePlanId(row: Parameters<typeof resolveSystemPlanId>[0]): string {
+  const planId = resolvePlan(resolveSystemPlanId(row) as string | undefined).id;
+  if (planId === "pro" && row?.trial_ends_at && !row.stripe_subscription_id) return "trial";
+  return planId;
+}
 
 /**
  * The UTC hour `/api/cron/weekly-scans` is scheduled to fire at. MUST match
@@ -357,6 +383,11 @@ export async function runDailyCronScan({
       resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id
     ])
   );
+  // SCAN-CADENCE-1: the cadence key differs from the plan only for an active
+  // Pro trial, which stays daily while paid Pro moves to every 2 days.
+  const cadencePlanIdByOwnerId = new Map(
+    (profileRows ?? []).map((row) => [row.id, resolveCadencePlanId(row as Parameters<typeof resolveSystemPlanId>[0])])
+  );
 
   const results: CronResult[] = [];
 
@@ -386,7 +417,7 @@ export async function runDailyCronScan({
         .order("created_at", { ascending: false })
         .limit(FAILURE_STREAK_LIMIT);
 
-      const planId = planIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
+      const planId = cadencePlanIdByOwnerId.get(project.owner_user_id as string) ?? "pro";
       const cutoffIso = resolveEligibilityCutoffIso({ planId, now: Date.now() });
 
       return { id: project.id, recentRuns: recentRuns ?? [], cutoffIso };

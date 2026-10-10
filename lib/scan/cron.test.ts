@@ -38,7 +38,7 @@ async function flushAfterCallbacks() {
 
 type ProjectRow = { id: string; owner_user_id?: string };
 type ScanRunRow = { project_id: string; status: string; created_at: string };
-type ProfileRow = { id: string; current_plan: string };
+type ProfileRow = { id: string; current_plan: string; trial_ends_at?: string | null; stripe_subscription_id?: string | null };
 
 /**
  * Minimal fake service client supporting exactly the query shapes
@@ -235,6 +235,8 @@ describe("runDailyCronScan", () => {
     // 06:00Z anchor, so it is eligible.
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
+      // A daily plan: paid Pro is every 2 days since SCAN-CADENCE-1.
+      profiles: [{ id: "p1", current_plan: "agency" }],
       scanRuns: [{ project_id: "p1", status: "completed", created_at: new Date(nowMs - 20 * HOUR_MS).toISOString() }]
     });
 
@@ -263,6 +265,8 @@ describe("runDailyCronScan", () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
     const service = fakeServiceClient({
       projects: [{ id: "p1" }],
+      // A daily plan: paid Pro is every 2 days since SCAN-CADENCE-1.
+      profiles: [{ id: "p1", current_plan: "agency" }],
       scanRuns: [
         { project_id: "p1", status: "completed", created_at: new Date(nowMs - (23 * HOUR_MS + 45 * 60_000)).toISOString() }
       ]
@@ -444,16 +448,17 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
     expect(result.results).toEqual([{ projectId: "p1", status: "scanned" }]);
   });
 
-  it("still applies the daily cadence for Pro and Agency plans", async () => {
+  it("still applies the daily cadence for a Pro trial and Agency (SCAN-CADENCE-1)", async () => {
     const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const trialEndsAt = new Date(nowMs + 3 * 24 * HOUR_MS).toISOString();
     const service = fakeServiceClient({
-      projects: [{ id: "pro-project" }, { id: "agency-project" }],
+      projects: [{ id: "trial-project" }, { id: "agency-project" }],
       profiles: [
-        { id: "pro-project", current_plan: "pro" },
+        { id: "trial-project", current_plan: "pro", trial_ends_at: trialEndsAt, stripe_subscription_id: null },
         { id: "agency-project", current_plan: "agency" }
       ],
       scanRuns: [
-        { project_id: "pro-project", status: "completed", created_at: new Date(nowMs - 30 * HOUR_MS).toISOString() },
+        { project_id: "trial-project", status: "completed", created_at: new Date(nowMs - 30 * HOUR_MS).toISOString() },
         { project_id: "agency-project", status: "completed", created_at: new Date(nowMs - 30 * HOUR_MS).toISOString() }
       ]
     });
@@ -462,8 +467,32 @@ describe("runDailyCronScan — plan-based cadence and eligibility (PRICING-TRUTH
 
     expect(result.results).toEqual(
       expect.arrayContaining([
-        { projectId: "pro-project", status: "scanned" },
+        { projectId: "trial-project", status: "scanned" },
         { projectId: "agency-project", status: "scanned" }
+      ])
+    );
+  });
+
+  it("scans a paying Pro project every 2 days, not daily (SCAN-CADENCE-1)", async () => {
+    const { runDailyCronScan } = await import("@/lib/scan/cron");
+    const service = fakeServiceClient({
+      projects: [{ id: "recent" }, { id: "due" }],
+      profiles: [
+        { id: "recent", current_plan: "pro", stripe_subscription_id: "sub_1" },
+        { id: "due", current_plan: "pro", stripe_subscription_id: "sub_2" }
+      ],
+      scanRuns: [
+        { project_id: "recent", status: "completed", created_at: new Date(nowMs - 20 * HOUR_MS).toISOString() },
+        { project_id: "due", status: "completed", created_at: new Date(nowMs - 50 * HOUR_MS).toISOString() }
+      ]
+    });
+
+    const result = await runDailyCronScan({ service });
+
+    expect(result.results).toEqual(
+      expect.arrayContaining([
+        { projectId: "recent", status: "skipped_recent" },
+        { projectId: "due", status: "scanned" }
       ])
     );
   });
