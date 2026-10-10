@@ -95,11 +95,13 @@ export async function generateGeminiVisibilityAnswer(input: {
   prompt: string;
   country: string;
   language: string;
+  /** Overrides `GEMINI_MODEL` for this call only — the operator's model comparison (MODEL-COMPARE-1). The scan never passes it. */
+  model?: string;
 }): Promise<GeminiVisibilityResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new GeminiConfigError("Missing GEMINI_API_KEY");
 
-  const model = getGeminiModel();
+  const model = input.model || getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
   // Brand-blind, neutral simulation prompt (docs/adr/0007-neutral-visibility-simulation.md).
@@ -164,11 +166,14 @@ export async function generateGeminiVisibilityAnswer(input: {
       content?: { parts?: Array<{ text?: string }> };
       groundingMetadata?: {
         groundingChunks?: Array<{ web?: { uri?: string; title?: string } }>;
+        webSearchQueries?: string[];
       };
     }>;
     usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
     modelVersion?: string;
   };
+
+  const webSearchQueries = data.candidates?.[0]?.groundingMetadata?.webSearchQueries;
 
   const text =
     data.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ??
@@ -189,7 +194,8 @@ export async function generateGeminiVisibilityAnswer(input: {
     tokensIn: data.usageMetadata?.promptTokenCount ?? null,
     tokensOut: data.usageMetadata?.candidatesTokenCount ?? null,
     totalTokens: data.usageMetadata?.totalTokenCount ?? null,
-    ...(groundingChunks?.length ? { groundingChunks } : {})
+    ...(groundingChunks?.length ? { groundingChunks } : {}),
+    ...(Array.isArray(webSearchQueries) ? { searchQueries: webSearchQueries.length } : {})
   };
 }
 
@@ -201,6 +207,8 @@ export async function extractGeminiStructuredData(input: {
   profile?: BusinessProfile;
   /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
   deadlineAt?: number;
+  /** Overrides `GEMINI_MODEL` for this extraction only (MODEL-COMPARE-1). The scan never passes it. */
+  model?: string;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.GEMINI_API_KEY;
   // Categorized rather than a bare Error: at the extraction stage this is a
@@ -208,7 +216,7 @@ export async function extractGeminiStructuredData(input: {
   // key during *generation* triggers in the executor.
   if (!apiKey) throw new ExtractionError("config", "Missing GEMINI_API_KEY");
 
-  const model = getGeminiModel();
+  const model = input.model || getGeminiModel();
   const endpoint = `${GEMINI_API_URL}/${model}:generateContent?key=${apiKey}`;
 
   const schemaInstruction = `Return ONLY valid JSON with this exact shape:
@@ -271,6 +279,7 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   const data = (await response.json()) as {
     candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number };
     modelVersion?: string;
   };
 
@@ -293,6 +302,8 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   return {
     data: parsed.data,
-    model: data.modelVersion ?? model
+    model: data.modelVersion ?? model,
+    tokensIn: data.usageMetadata?.promptTokenCount ?? null,
+    tokensOut: data.usageMetadata?.candidatesTokenCount ?? null
   };
 }

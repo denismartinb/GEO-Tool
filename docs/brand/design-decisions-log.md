@@ -23319,3 +23319,134 @@ suscripción viva que seguía cobrando sin rastro en nuestros datos.
 `lib/billing/stripe-webhook.ts`, `lib/billing/webhook-registry.ts`,
 `app/api/webhooks/stripe/route.ts` (+tests),
 `supabase/migrations/0039_stripe_webhook_events.sql`.
+
+---
+
+## 269. MODEL-COMPARE-1: `/admin/comparar-modelos`, para probar modelos más baratos contra los de hoy antes de cambiar nada (2026-10-10)
+
+**Por qué.** Tras COVERAGE-WEEKLY-1 y EXTRACTION-SINGLE-MODEL-1 (§253), la
+siguiente palanca de coste es generar las respuestas con modelos más baratos
+(gemini-3.1-flash-lite, gpt-6-luna o gpt-4.1-nano, Haiku 5.5). Esto mueve lo
+que el cliente ve, así que no se toca sin medirlo antes. El fundador lo pidió
+así: «montar algo en preview para hacer esas pruebas de usar modelos más
+baratos de claude, gemini y openai y contrastar información en todo el
+producto». Aprobó la maqueta con «sí».
+
+**Qué se decidió.** Una página de operador, `/admin/comparar-modelos`, con la
+misma forma que `/admin/estudio` (§246). Usa `requireOperator()` en cada
+action y las claves de Vercel, y no escribe nada en la base de datos. El
+navegador lanza pasos de una pregunta × motores × una repetición, dos a la
+vez. Cada respuesta se compara en tres pasadas:
+
+- **A, hoy:** generación y extracción de producción (`resolveExtractionRoute`).
+  Es la línea base de verdad, también en coste.
+- **A2, ruido** (opcional, activado por defecto): A otra vez. Dos pasadas del
+  mismo modelo nunca coinciden al 100 %, y sin esta referencia no se distingue
+  el efecto del modelo barato del azar de siempre.
+- **B, candidato:** el modelo de generación y la extracción que elija el
+  operador.
+
+La maqueta decía que la extracción elegida se aplicaba «en las dos pasadas».
+Se cambió para que A no se mueva y siga siendo la referencia.
+
+**Paridad con el escaneo, que es lo que hace válida la comparación.** La
+generación usa las funciones del escaneo con un `model?` opcional.
+`generate*VisibilityAnswer` y `extract*StructuredData` de los tres motores
+aceptan ahora ese parámetro, y sin él hacen exactamente lo de antes. La
+extracción convierte las respuestas con `buildExtractionUpdate`
+(`lib/scan/extraction.ts`), extraído de `extractAndPersistRow` para que el
+escaneo y la comparación usen el mismo código. La nota sale de
+`computeRunScoresFromResults` y `getEffectiveGeoScore`, sin el componente
+técnico. Esa nota sirve para comparar pasadas y la página dice que no es la
+Puntuación GEO del cliente.
+
+**Coste.** Se mide con los tokens reales que devuelve cada proveedor (los
+extractores devuelven ahora `tokensIn`/`tokensOut`) y con las búsquedas
+reales: `webSearchQueries` de Gemini 3 a 0,014 $ y las llamadas
+`web_search_call` de OpenAI a 0,01 $. Los precios por token están en
+`lib/model-compare/catalogue.ts`. El coste por escaneo se proyecta con las
+preguntas del proyecto × las repeticiones de `computeSampleCount`. El
+estimado previo dice «estimado». La prueba se para al llegar a 10 $ medidos.
+
+**Veredicto por motor.** Se miden cuatro coincidencias entre A y B:
+
+- mención sí/no;
+- Jaccard de marcas nombradas;
+- sentimiento cuando las dos nombran la marca;
+- Jaccard de dominios citados, salvo en Claude, que no cita.
+
+Con A2, «Equivalente» si cada coincidencia queda a ≤5 puntos de la de A frente
+a A2 y la nota se mueve ≤ el ruido (mínimo 2). «Distinto» si alguna pasa del
+doble, y «Revisar» en medio. Sin A2 se aplican umbrales fijos (85 % / 70 %,
+3 / 6 puntos), y la página lo dice. Una respuesta fallida no entra en ningún
+denominador.
+
+**Límites.** El catálogo de modelos es cerrado: el servidor rechaza cualquier
+id que no esté. La comparación usa como mucho 20 preguntas y 3 repeticiones, y
+el proyecto, sus preguntas y sus competidores se releen en el servidor en cada
+paso.
+
+**Regla de premisa.** No aplica: no se retira ningún camino de recuperación.
+
+**Pendiente.** Nada cambia en producción por esta fase. Si un candidato sale
+«Equivalente», cambiar el modelo de un motor es una decisión del fundador y
+va como su propio cambio: variable de entorno o ADR si es Gemini (ADR 0042).
+
+**Primera pasada real (2026-10-10, un proyecto interno, 10 preguntas × 3
+motores, una repetición).** Cambió tres cosas en esta misma fase:
+
+- **gpt-4.1-nano sale de la generación.** No admite la herramienta
+  `web_search`: OpenAI rechazó las 10 peticiones. Sigue disponible como
+  extractor, porque extraer no busca.
+- **La extracción de Claude pasa de 2048 a 4096 tokens de salida.** Haiku 5.5
+  escribe unos 1.400–2.000 tokens por extracción (Haiku 4.5, unos 700). Con el
+  tope de 2048, 7 de 20 extracciones se cortaron a mitad del JSON y fallaron
+  como `invalid_json`. Hoy no cambia nada en producción, porque Haiku 4.5 no
+  se acerca al tope. Pero si `SCAN_EXTRACTION_CLAUDE_MODEL` se hubiera puesto
+  a Haiku 5.5 con el tope viejo, un tercio de las filas de cada escaneo
+  habría salido con error.
+- **La página marca las respuestas del candidato que fallaron o se cortaron.**
+  Haiku 5.5 llegó al tope de 1024 tokens de la generación en 5 de 7
+  respuestas. Una respuesta cortada sigue contando, pero dice menos.
+
+Lo medido, sin decidir nada todavía:
+
+- gemini-3.1-flash-lite apenas busca: reportó búsquedas en 1 de 5 respuestas
+  válidas, frente a todas con gemini-3.6-flash. Coincidió en las menciones
+  pero compartió muchas menos fuentes que el ruido (9 % frente a 32 %). Su
+  coste por respuesta es un tercio, en gran parte porque no paga búsquedas.
+- Con 10 preguntas y una repetición, el ruido entre dos pasadas de los
+  modelos de hoy es alto: 45–54 % de competidores en común, y una nota que
+  se mueve 2–7 puntos. Hacen falta más preguntas o más repeticiones antes de
+  dar un veredicto.
+
+**Segunda pasada real (2026-10-10, otro proyecto interno, 8 preguntas × 3
+motores, una repetición, extracción del candidato con Haiku 5.5).**
+
+- **gpt-6-luna también sale de la generación.** OpenAI rechazó con un 400 las
+  8 peticiones, igual que con nano. OpenAI se queda sin un generador más
+  barato en el catálogo. Su pasada B usa gpt-4o-mini y mide sólo el cambio de
+  extracción.
+- **Claude con Haiku 5.5 (generación y extracción) salió «Equivalente».**
+  Mención 100 % frente a 87,5 % de ruido, competidores 35 % frente a 39 %,
+  sentimiento 100 %, y la misma nota que la pasada de hoy. El coste por
+  respuesta baja un 79 %. No hubo cortes ni fallos de extracción con el tope
+  de 4096.
+- **gemini-3.1-flash-lite salió «Distinto».** No hizo ni una búsqueda, así
+  que perdió todas las fuentes. Que no busque es la razón de que sea barato.
+- **El ruido sigue siendo muy alto.** La nota global de dos pasadas de los
+  modelos de hoy se movió de 48,6 a 29,6. Ningún veredicto con una sola
+  repetición basta para cambiar producción.
+
+**Tercera pasada y decisión (2026-10-10).** Solo Claude, 8 preguntas × 2
+repeticiones. Haiku 5.5 salió «Distinto»: igual mención y misma nota dentro
+del ruido, pero nombra la mitad de marcas por respuesta (3,3 frente a 6,7) y
+4 de 16 respuestas se cortaron al tope de 1024. El fundador decidió adaptarse
+a los modelos nuevos mientras no hay clientes: el criterio para generar es
+parecerse a lo que el público ve en el asistente, y para extraer, el más
+barato que lea bien. Por eso **el tope de generación de Claude sube a 2048**
+en esta fase. El cambio de modelo en sí no es código: son
+`ANTHROPIC_MODEL` y `SCAN_EXTRACTION_CLAUDE_MODEL` en Vercel, que el fundador
+pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
+que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
+extracción en los primeros escaneos.

@@ -147,11 +147,13 @@ export async function generateOpenAIVisibilityAnswer(input: {
   prompt: string;
   country: string;
   language: string;
+  /** Overrides `OPENAI_MODEL` for this call only — the operator's model comparison (MODEL-COMPARE-1). The scan never passes it. */
+  model?: string;
 }): Promise<GeminiVisibilityResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new OpenAIConfigError("Missing OPENAI_API_KEY");
 
-  const model = getOpenAIModel();
+  const model = input.model || getOpenAIModel();
 
   // Brand-blind, neutral simulation prompt (docs/adr/0007-neutral-visibility-simulation.md)
   // — same instruction used for Gemini/Claude, so the three providers measure
@@ -228,7 +230,8 @@ export async function generateOpenAIVisibilityAnswer(input: {
     tokensIn: data.usage?.input_tokens ?? null,
     tokensOut: data.usage?.output_tokens ?? null,
     totalTokens: data.usage?.total_tokens ?? null,
-    ...(groundingChunks.length ? { groundingChunks } : {})
+    ...(groundingChunks.length ? { groundingChunks } : {}),
+    searchQueries: (data.output ?? []).filter((item) => item.type === "web_search_call").length
   };
 }
 
@@ -247,6 +250,8 @@ export async function extractOpenAIStructuredData(input: {
   profile?: BusinessProfile;
   /** Absolute epoch-ms budget for the whole extraction pass (EXTRACTION-RELIABILITY-1) — no attempt or backoff starts past it. */
   deadlineAt?: number;
+  /** Overrides `OPENAI_MODEL` for this extraction only (MODEL-COMPARE-1). The scan never passes it. */
+  model?: string;
 }): Promise<GeminiStructuredExtractionResponse> {
   const apiKey = process.env.OPENAI_API_KEY;
   // Categorized rather than an OpenAIConfigError: at the extraction stage
@@ -256,7 +261,7 @@ export async function extractOpenAIStructuredData(input: {
 
   let model: string;
   try {
-    model = getOpenAIModel();
+    model = input.model || getOpenAIModel();
   } catch {
     throw new ExtractionError("config", "Missing OPENAI_MODEL — no default is assumed.");
   }
@@ -338,6 +343,8 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
 
   return {
     data: parsed.data,
-    model
+    model,
+    tokensIn: data.usage?.input_tokens ?? null,
+    tokensOut: data.usage?.output_tokens ?? null
   };
 }

@@ -38,12 +38,23 @@ export type GeminiVisibilityResponse = {
    * did not ground its answer in a search result.
    */
   groundingChunks?: Array<{ uri: string; title?: string }>;
+  /**
+   * Web searches the engine ran for this answer, when the provider reports
+   * them (Gemini `webSearchQueries`, OpenAI `web_search_call` items). Only
+   * the operator's model comparison reads it, to price Gemini 3's per-query
+   * grounding fee and OpenAI's per-call search fee from real counts
+   * (MODEL-COMPARE-1, log §269). Absent when the provider says nothing.
+   */
+  searchQueries?: number;
 };
 
 /** Lo que devuelve la extracción estructurada, en cualquiera de los motores. */
 export type GeminiStructuredExtractionResponse = {
   data: ExtractionOutput;
   model: string;
+  /** Token usage of the extraction call, when reported (MODEL-COMPARE-1 prices it; the scan does not read it). */
+  tokensIn?: number | null;
+  tokensOut?: number | null;
 };
 
 /**
