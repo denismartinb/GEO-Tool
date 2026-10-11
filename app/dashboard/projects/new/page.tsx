@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
-import { getUsageSummary } from "@/lib/billing";
+import { getUsageSummary, resolvePlan } from "@/lib/billing";
+import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
 import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
@@ -37,6 +38,11 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
     ? "Tu prueba de Pro ha terminado. Elige un plan en Ajustes para añadir dominios y volver a escanear."
     : errorMessages.project_limit_reached;
 
+  // The engines this account's first scan will really run (Perplexity only on
+  // Pro and Agencia), so the wizard's "Motores" row and count can't drift
+  // from the scan (log §285).
+  const engines = resolveScanProvidersForPlan(resolvePlan(usage.planId));
+
   const errorMessage = params.error
     ? params.error === "project_limit_reached"
       ? limitMessage
@@ -50,6 +56,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
       errorMessage={errorMessage}
       atLimit={atProjectLimit}
       promptCap={usage.promptCap}
+      engines={engines}
       suggestAction={suggestProjectSetup}
       generateMorePromptsAction={generateMorePrompts}
       createAction={createProject}

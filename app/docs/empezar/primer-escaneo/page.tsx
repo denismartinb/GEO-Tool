@@ -63,8 +63,8 @@ export default function PrimerEscaneoPage() {
 
       <h2>Qué incluye la prueba gratuita</h2>
       <p>
-        Toda cuenta nueva empieza con 7 días de Pro completo, sin tarjeta: hasta 5 dominios, los tres
-        motores de IA y escaneo diario, así que al acabar la prueba ya tienes varios escaneos y la
+        Toda cuenta nueva empieza con 7 días de Pro completo, sin tarjeta: hasta 5 dominios, los cuatro
+        motores de IA (ChatGPT, Gemini, Claude y Perplexity) y escaneo diario, así que al acabar la prueba ya tienes varios escaneos y la
         tendencia de tu visibilidad. Si al terminar no contratas un plan, no se te cobra nada: tu cuenta
         pasa a solo lectura, sigues viendo tus datos y vuelves a escanear en cuanto elijas un plan.
       </p>

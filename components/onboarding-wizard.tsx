@@ -14,6 +14,7 @@ import type { PromptCategory } from "@/lib/projects/prompt-categories";
 import { isWellFormedDomain, MAX_USER_COMPETITORS, RECOMMENDED_MIN_PROMPTS_COPY, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import type { LLMScanProvider } from "@/lib/scan/providers";
 import { PLANS } from "@/app/pricing/plans-data";
 
 const DEFAULT_PROMPT_CAP = 10;
@@ -37,8 +38,10 @@ const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai"
 
 // Mismos motores, mismos glifos y colores que Visión general/Prompts
 // (lib/scan/engine-meta.ts, components/ui/engine-glyph.tsx) — no un set
-// paralelo de puntos de color inventado para este flujo.
-const ENGINE_PROVIDERS = ["gemini", "claude", "openai"] as const;
+// paralelo de puntos de color inventado para este flujo. Sólo el respaldo: la
+// página pasa los motores reales del plan (`resolveScanProvidersForPlan`),
+// así que Pro y Agencia ven Perplexity y Starter no (log §285).
+const DEFAULT_ENGINE_PROVIDERS: readonly LLMScanProvider[] = ["gemini", "claude", "openai"];
 
 // Nombres amigables para lo que devuelve `languageForCountry`
 // (lib/projects/project-form.ts) — sólo cubre los códigos que ese mapa puede
@@ -354,6 +357,8 @@ type OnboardingWizardProps = {
    * so a Starter/Pro/Agency user isn't stuck at a hardcoded 10 during
    * onboarding (SCAN-CHAIN-1 follow-up). */
   promptCap?: number;
+  /** Engines the owner's plan scans with, in scan order. */
+  engines?: readonly LLMScanProvider[];
   suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
   generateMorePromptsAction: (input: {
     domain: string;
@@ -521,6 +526,7 @@ export function OnboardingWizard({
   errorMessage,
   atLimit = false,
   promptCap = DEFAULT_PROMPT_CAP,
+  engines = DEFAULT_ENGINE_PROVIDERS,
   suggestAction,
   generateMorePromptsAction,
   createAction
@@ -828,7 +834,7 @@ export function OnboardingWizard({
 
                 <div className="add-engines">
                   <span className="cap">Motores</span>
-                  {ENGINE_PROVIDERS.map((provider) => {
+                  {engines.map((provider) => {
                     const meta = getEngineMeta(provider);
                     return (
                       <span className="eng-chip" key={provider}>
@@ -848,7 +854,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown={false}
             language={language}
-            engineCount={ENGINE_PROVIDERS.length}
+            engineCount={engines.length}
             competitorsCount={null}
             promptsCount={null}
           />
@@ -989,7 +995,7 @@ export function OnboardingWizard({
             domain={domain}
             languageKnown
             language={language}
-            engineCount={ENGINE_PROVIDERS.length}
+            engineCount={engines.length}
             competitorsCount={validCompetitorCount}
             promptsCount={null}
           />
@@ -1066,7 +1072,7 @@ export function OnboardingWizard({
           domain={domain}
           languageKnown
           language={language}
-          engineCount={ENGINE_PROVIDERS.length}
+          engineCount={engines.length}
           competitorsCount={validCompetitorCount}
           promptsCount={validPromptCount}
         />
