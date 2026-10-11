@@ -25,11 +25,12 @@ import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
 
 /**
- * Auditoría GEO y Auditoría SEO: one screen, two blocks (SEARCH-SEO-1 Fase
- * 1b, log §275, design in
- * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). The menu has
- * an entry for each, `?bloque=geo|seo`, and both read the same technical
- * audit that runs after every scan.
+ * Auditoría técnica: one screen, two blocks, Auditoría GEO and Auditoría SEO
+ * (SEARCH-SEO-1 Fase 1b, log §275, design in
+ * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). Since
+ * NAV-SIMPLIFY-1 (log §291) the menu has one entry; the block cards switch
+ * `?bloque=geo|seo`, and both read the same technical audit that runs after
+ * every scan.
  *
  * GEO is «¿te puede citar la IA?»: the coverage map, AI bots, llms.txt and the
  * citable-content checks. SEO is «¿te encuentra Google?»: tags, headings,
@@ -59,10 +60,14 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+// NAV-SIMPLIFY-1 (log §291): one menu entry, «Auditoría técnica», for both
+// blocks. The tab title and the kicker name the screen; the block cards below
+// say which block is open.
+const SCREEN_LABEL = "Auditoría técnica";
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { projectId } = await params;
-  const block = parseAuditBlock((await searchParams)[AUDIT_BLOCK_PARAM]);
-  return projectScreenMetadata(AUDIT_BLOCKS[block].label, async () => (await requireActiveProject(projectId)).domain);
+  return projectScreenMetadata(SCREEN_LABEL, async () => (await requireActiveProject(projectId)).domain);
 }
 
 export default async function WebAuditPage({ params, searchParams }: PageProps) {
@@ -103,7 +108,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
         <div className="ov-sticky-header">
           <div className="ov-sticky-left">
             <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>{AUDIT_BLOCKS[activeBlock].label}</p>
+              <p className="kicker" style={{ marginBottom: 2 }}>{SCREEN_LABEL}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
                   {project.name}

@@ -10,36 +10,42 @@ import { describe, expect, it } from "vitest";
 const root = join(__dirname, "..");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
-describe("console navigation: two analysis blocks", () => {
+describe("console navigation: NAV-SIMPLIFY-1 (log §291)", () => {
   const sidebar = read("components/sidebar.tsx");
 
-  it("names the two blocks the founder chose, IA first", () => {
-    const ai = sidebar.indexOf(">Posicionamiento en IA<");
-    const search = sidebar.indexOf(">Posicionamiento en buscadores<");
-    const act = sidebar.indexOf(">Actuar<");
-    expect(ai).toBeGreaterThan(-1);
-    expect(search).toBeGreaterThan(ai);
-    expect(act).toBeGreaterThan(search);
+  it("names the four blocks the founder chose, in his order", () => {
+    const labels = [">Posicionamiento en la IA<", ">Posicionamiento global<", ">Actuar<", ">Aprender<"].map((l) =>
+      sidebar.indexOf(l)
+    );
+    expect(labels.every((i) => i > -1)).toBe(true);
+    expect([...labels].sort((x, y) => x - y)).toEqual(labels);
+    expect(sidebar).not.toContain(">Posicionamiento en buscadores<");
     expect(sidebar).not.toContain(">Analizar<");
   });
 
-  it("opens the one audit route from two entries, GEO under IA and SEO under buscadores (log §275)", () => {
-    const geo = sidebar.indexOf('label: "Auditoría GEO"');
-    const seo = sidebar.indexOf('label: "Auditoría SEO"');
-    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría GEO", icon: "sparkles", countKey: null, block: "geo" }');
-    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" }');
-    expect(sidebar.indexOf("const aiLinks")).toBeLessThan(geo);
-    expect(geo).toBeLessThan(sidebar.indexOf("const searchLinks"));
-    expect(sidebar.indexOf("const searchLinks")).toBeLessThan(seo);
-    expect(sidebar).not.toContain('label: "Auditoría web"');
+  it("opens the audit route from one entry, «Auditoría técnica», under Posicionamiento global", () => {
+    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría técnica", icon: "search", countKey: null }');
+    expect(sidebar).not.toContain('label: "Auditoría GEO"');
+    expect(sidebar).not.toContain('label: "Auditoría SEO"');
+    const audit = sidebar.indexOf('label: "Auditoría técnica"');
+    expect(sidebar.indexOf("const globalLinks")).toBeLessThan(audit);
+    expect(audit).toBeLessThan(sidebar.indexOf('label: "Posición en Google"'));
+  });
+
+  it("renames the learn link and the tour entry", () => {
+    expect(sidebar).toContain('label: "Manuales y estudios"');
+    expect(sidebar).toContain(">¿Cómo funciona?</span>");
+    expect(sidebar).not.toContain("¿Qué es el GEO?</span>");
   });
 });
 
 describe("audit screen name", () => {
-  it("names the tab title and the kicker after the open block", () => {
+  it("names the tab title and the kicker «Auditoría técnica», whatever block is open", () => {
     const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
-    expect(page).toContain("projectScreenMetadata(AUDIT_BLOCKS[block].label");
-    expect(page).toContain("{AUDIT_BLOCKS[activeBlock].label}</p>");
+    expect(page).toContain('const SCREEN_LABEL = "Auditoría técnica";');
+    expect(page).toContain("projectScreenMetadata(SCREEN_LABEL");
+    expect(page).toContain("{SCREEN_LABEL}</p>");
+    expect(page).toContain("<BlockSwitch ");
   });
 });
 

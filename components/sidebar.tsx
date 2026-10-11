@@ -11,7 +11,6 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { avatarInitials as deriveAvatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { resolveSelectedProject } from "@/lib/active-project-cookie";
 import { writeCachedSessionUser } from "@/lib/use-session-user";
-import { AUDIT_BLOCK_PARAM, parseAuditBlock, type AuditBlockKey } from "@/lib/web-audit/audit-blocks";
 
 type WorkspaceProject = {
   id: string;
@@ -31,13 +30,14 @@ type WorkspaceProject = {
 // SEARCH-SEO-1 Fase 1 (log §271): two "Analizar" blocks, IA first and
 // search engines second, so what we measure in AI answers and what we measure
 // in Google read as two different questions (founder, 2026-10-10).
+// NAV-SIMPLIFY-1 (log §291): the second block is «Posicionamiento global»,
+// and the two audit entries became one, «Auditoría técnica»; the screen's own
+// block cards switch between GEO and SEO.
 type ProjectLink = {
   segment: string;
   label: string;
   icon: string;
   countKey: string | null;
-  /** `?bloque=` of the audit screen: two entries, one screen (log §275). */
-  block?: AuditBlockKey;
 };
 
 const aiLinks: ProjectLink[] = [
@@ -45,16 +45,15 @@ const aiLinks: ProjectLink[] = [
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
   { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null },
-  { segment: "/web-audit", label: "Auditoría GEO", icon: "sparkles", countKey: null, block: "geo" },
 ];
 
 // The route stays `/web-audit`: renaming it would break every notification
-// and email link already sent. SEARCH-SEO-1 Fase 1b (log §275) split the
-// screen into a GEO block and an SEO block; each menu entry opens its own.
+// and email link already sent. Without `?bloque=` the screen opens the GEO
+// block; links already sent with `?bloque=seo` still open SEO (log §275, §291).
 // SEARCH-SEO-1 Fase 3 (log §284): «Posición en Google», the customer's own
 // Search Console data.
-const searchLinks: ProjectLink[] = [
-  { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" },
+const globalLinks: ProjectLink[] = [
+  { segment: "/web-audit", label: "Auditoría técnica", icon: "search", countKey: null },
   { segment: "/search-console", label: "Posición en Google", icon: "trendUp", countKey: null },
 ];
 
@@ -65,7 +64,7 @@ const actLinks: ProjectLink[] = [
 // "Aprender" no depende del dominio activo — a diferencia de los bloques del proyecto,
 // enlaza al blog público (fuera de /dashboard), así que no lleva countKey ni
 // se deshabilita nunca por falta de proyecto.
-const learnLinks = [{ href: "/blog", label: "Manuales GEO", icon: "fileText" }];
+const learnLinks = [{ href: "/blog", label: "Manuales y estudios", icon: "fileText" }];
 
 function getProjectId(pathname: string) {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
@@ -145,18 +144,14 @@ export function Sidebar({
   }
 
   function renderProjectLink(link: ProjectLink) {
-    const base = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
-    const href = base && link.block ? `${base}?${AUDIT_BLOCK_PARAM}=${link.block}` : base;
+    const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
     // The overview is the project root: matching its prefix would light it up
     // on every other screen of the project.
-    const onRoute = base
+    const active = href
       ? link.segment
-        ? pathname === base || pathname.startsWith(`${base}/`)
-        : pathname === base
+        ? pathname === href || pathname.startsWith(`${href}/`)
+        : pathname === href
       : false;
-    // The two audit entries share a route; the block in the URL decides which
-    // one is lit, with the same default the screen uses (GEO).
-    const active = onRoute && (!link.block || parseAuditBlock(searchParams.get(AUDIT_BLOCK_PARAM)) === link.block);
     const count = project ? getCount(project.id, link.countKey) : 0;
 
     if (!href) {
@@ -234,11 +229,11 @@ export function Sidebar({
       )}
 
       <div className="sb-scroll">
-        <div className="nav-group-label hide-collapsed">Posicionamiento en IA</div>
+        <div className="nav-group-label hide-collapsed">Posicionamiento en la IA</div>
         {aiLinks.map(renderProjectLink)}
 
-        <div className="nav-group-label hide-collapsed">Posicionamiento en buscadores</div>
-        {searchLinks.map(renderProjectLink)}
+        <div className="nav-group-label hide-collapsed">Posicionamiento global</div>
+        {globalLinks.map(renderProjectLink)}
 
         <div className="nav-group-label hide-collapsed">Actuar</div>
         {actLinks.map(renderProjectLink)}
@@ -267,7 +262,8 @@ export function Sidebar({
             vuelta al tour (fundador, 2026-08-06: «luego estará en el menú, en
             qué es el GEO»). La página /geo no se pierde: el propio tour la
             enlaza en su pie. Se cierra el cajón móvil al abrirlo, o el popup
-            saldría detrás del menú. */}
+            saldría detrás del menú. NAV-SIMPLIFY-1 (log §291): se llama
+            «¿Cómo funciona?», porque lo que abre es el tour del producto. */}
         <button
           type="button"
           className="nav-item"
@@ -278,7 +274,7 @@ export function Sidebar({
           }}
         >
           <Icon name="info" size={15} />
-          <span className="hide-collapsed">¿Qué es el GEO?</span>
+          <span className="hide-collapsed">¿Cómo funciona?</span>
         </button>
         <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>

@@ -78,7 +78,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       {/* header-flicker-prehydration-2 — seeds the public header's identity
           cache from the identity this layout already resolved server-side,
           so the first public page this visitor opens (the sidebar's own
-          "Manuales GEO" link goes straight to /blog) paints the account chip
+          "Manuales y estudios" link goes straight to /blog) paints the account chip
           instead of flashing the anonymous CTAs. Renders nothing; see
           components/session-cache-sync.tsx. */}
       <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
