@@ -24623,3 +24623,33 @@ dice si se cumplió (§181).
 palanca es la autoridad externa (Fase 7), no más texto en la página.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 291. NAV-SIMPLIFY-1: menú de la consola en cuatro bloques (2026-10-11)
+
+**Qué se decidió.** El fundador propuso simplificar la navegación y aprobó la
+maqueta en escritorio y móvil («me encaja el nuevo menú»):
+
+- **Posicionamiento en la IA:** Visión general, Prompts, Competidores, Páginas
+  citadas. «Auditoría GEO» sale de este bloque.
+- **Posicionamiento global** (antes «Posicionamiento en buscadores»):
+  **Auditoría técnica** y Posición en Google. Las entradas «Auditoría GEO» y
+  «Auditoría SEO» (§275) pasan a ser una sola.
+- **Actuar:** Recomendaciones, sin cambios.
+- **Aprender:** «Manuales GEO» pasa a «Manuales y estudios» y sigue llevando al
+  blog, donde los estudios también son artículos.
+- **Pie:** «¿Qué es el GEO?» pasa a «¿Cómo funciona?». Abre el mismo tour de
+  siempre; el nombre nuevo dice lo que abre.
+
+**Cómo.** La pantalla de la auditoría ya tenía sus dos tarjetas de bloque
+(`BlockSwitch`, §275), que cambian entre GEO y SEO. Ese es el selector, en vez
+de la pastilla de la maqueta. Sin `?bloque=` abre GEO como antes, y los enlaces
+ya enviados con `?bloque=seo` siguen abriendo SEO. El rótulo y el título de la
+pestaña dicen «Auditoría técnica», sea cual sea el bloque abierto. La entrada
+del menú se ilumina en los dos bloques.
+
+**Qué queda pendiente.** Nada en código. El tour del producto sigue enlazando a
+`/geo` con «¿Qué es el GEO?» en su pie, a propósito: ese enlace lleva a la
+página del término.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: los dos
+bloques de la auditoría siguen alcanzables desde sus tarjetas.

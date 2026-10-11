@@ -1,0 +1,180 @@
+<title>Menú de la consola</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;550;650;750&family=Hanken+Grotesk:wght@600;750&display=swap">
+<style>
+/* Layout: two device frames (desktop console + mobile drawer) over a short before/after table. Console tokens copied from app/globals.css. */
+:root{
+  --bg:#f3f5f9; --surface:#ffffff; --surface-2:#f1f4f9; --line:#e3e8f0; --line-soft:#edf0f5;
+  --ink:#0f172a; --ink-2:#334155; --ink-3:#64748b; --ink-4:#94a3b8;
+  --blue:#2563eb; --blue-soft:rgba(37,99,235,.1); --new:#0f6b41; --new-bg:#effaf4;
+  --font-body:"Figtree",system-ui,sans-serif; --font-display:"Hanken Grotesk","Figtree",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b1120; --surface:#111827; --surface-2:#1a2335; --line:#263147; --line-soft:#1f2a3d;
+  --ink:#e5e9f2; --ink-2:#c3cbd9; --ink-3:#8c97ab; --ink-4:#64708a; --blue:#6b9cff; --blue-soft:rgba(107,156,255,.15);
+  --new:#7fd8a6; --new-bg:#11281d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b1120; --surface:#111827; --surface-2:#1a2335; --line:#263147; --line-soft:#1f2a3d;
+  --ink:#e5e9f2; --ink-2:#c3cbd9; --ink-3:#8c97ab; --ink-4:#64708a; --blue:#6b9cff; --blue-soft:rgba(107,156,255,.15);
+  --new:#7fd8a6; --new-bg:#11281d; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:28px 48px;display:grid;gap:28px}
+h1{font-family:var(--font-display);font-size:26px;font-weight:750;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.lede{color:var(--ink-3);max-width:68ch;margin:6px 0 0}
+.kick{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:24px;align-items:start}
+@media (max-width:900px){.stage{grid-template-columns:1fr}}
+.frame{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px rgba(15,23,42,.06)}
+.desk{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:600px}
+@media (max-width:640px){.desk{grid-template-columns:1fr}.desk .sb{display:none}}
+.sb{border-right:1px solid var(--line-soft);display:flex;flex-direction:column;background:var(--surface)}
+.sb-top{padding:14px 12px 6px}
+.proj{display:flex;align-items:center;gap:9px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.fav{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#2563eb,#22d3ee);flex:none}
+.proj b{font-size:13px}.proj span{display:block;font-size:11px;color:var(--ink-3)}
+nav{padding:0 12px;flex:1}
+.gl{font-size:10.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-4);padding:14px 10px 6px}
+.ni{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:8px;color:var(--ink-2);font-size:13.5px;font-weight:550;border:0;background:none;width:100%;text-align:left;font-family:inherit;cursor:pointer}
+.ni:hover{background:var(--surface-2)}
+.ni:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+.ni.on{background:var(--blue-soft);color:var(--blue);font-weight:650}
+.ni svg{width:16px;height:16px;flex:none}
+.cnt{margin-left:auto;font-size:11px;font-weight:650;color:var(--ink-3);background:var(--surface-2);border-radius:999px;padding:1px 7px}
+.ni.on .cnt{background:var(--surface);color:var(--blue)}
+.sb-foot{border-top:1px solid var(--line-soft);padding:10px 12px}
+.sb-foot .ni{font-size:12px}
+.user{display:flex;align-items:center;gap:10px;padding:6px 8px}
+.av{width:28px;height:28px;border-radius:999px;background:var(--blue-soft);color:var(--blue);display:grid;place-items:center;font-weight:700;font-size:11px}
+.user small{display:block;color:var(--ink-3);font-size:11px}
+.main{padding:20px 22px;display:grid;gap:16px;align-content:start;min-width:0}
+.ph .k{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.ph h2{font-family:var(--font-display);font-size:20px;margin:2px 0 0;letter-spacing:-.01em}
+.seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:3px;flex-wrap:wrap}
+.seg button{border:0;background:none;font:inherit;font-size:13px;font-weight:600;color:var(--ink-3);padding:7px 14px;border-radius:8px;cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(15,23,42,.12)}
+.seg button:focus-visible{outline:2px solid var(--blue)}
+.card{border:1px solid var(--line);border-radius:12px;padding:16px}
+.score{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.score b{font-family:var(--font-display);font-size:34px;font-variant-numeric:tabular-nums}
+.score span{color:var(--ink-3)}
+.bars{display:grid;gap:8px;margin-top:12px}
+.bar{display:grid;grid-template-columns:minmax(0,1fr) 44px;gap:10px;align-items:center;font-size:13px}
+.track{grid-column:1/-1;height:6px;border-radius:9px;background:var(--surface-2);overflow:hidden}
+.track i{display:block;height:100%;background:var(--blue);border-radius:9px}
+.note{font-size:12.5px;color:var(--ink-3)}
+.ph-row{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+/* phone */
+.phone{width:300px;max-width:100%;margin:0 auto;border:1px solid var(--line);border-radius:30px;padding:10px;background:var(--surface);box-shadow:0 10px 30px rgba(15,23,42,.08)}
+.screen{border-radius:22px;overflow:hidden;position:relative;height:600px;background:var(--bg)}
+.mbar{height:48px;display:flex;align-items:center;gap:10px;padding:0 14px;background:var(--surface);border-bottom:1px solid var(--line-soft);font-weight:650}
+.scrim{position:absolute;inset:48px 0 0;background:rgba(15,23,42,.35)}
+.drawer{position:absolute;top:0;left:0;bottom:0;width:248px;background:var(--surface);display:flex;flex-direction:column;overflow:auto}
+.drawer nav{padding:0 10px}
+.cap{font-size:12.5px;color:var(--ink-3);text-align:center;margin-top:10px}
+/* table */
+.cmp{width:100%;border-collapse:collapse;font-size:13.5px}
+.cmp th,.cmp td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.cmp th{font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.tag{display:inline-block;font-size:11px;font-weight:650;border-radius:999px;padding:1px 8px;background:var(--new-bg);color:var(--new);margin-left:6px}
+.scroll{overflow-x:auto}
+@media (prefers-reduced-motion:no-preference){.ni,.seg button{transition:background .15s,color .15s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="kick">Propuesta de navegación · GenScore</p>
+    <h1>Menú de la consola, simplificado</h1>
+    <p class="lede">Cuatro bloques en vez de cuatro con la auditoría partida en dos. Las dos auditorías pasan a ser una sola entrada, «Auditoría técnica», con un selector GEO / SEO dentro. Pulsa el menú y el selector para probarlo. Los datos de la pantalla son de ejemplo.</p>
+  </header>
+
+  <div class="stage">
+    <div>
+      <p class="kick">Escritorio</p>
+      <div class="frame desk">
+        <aside class="sb" id="sbDesk"></aside>
+        <section class="main">
+          <div class="ph-row">
+            <div class="ph"><div class="k" id="pageKick">Auditoría técnica</div><h2>genscore.es</h2></div>
+          </div>
+          <div class="seg" role="tablist" aria-label="Bloque de la auditoría">
+            <button role="tab" class="on" data-b="geo" id="tab-geo" aria-selected="true">Para la IA · GEO</button>
+            <button role="tab" data-b="seo" id="tab-seo" aria-selected="false">Para Google · SEO</button>
+          </div>
+          <div class="card" id="blockCard"></div>
+          <p class="note">Los enlaces que ya mandamos en correos y avisos (<code>/web-audit?bloque=seo</code>) siguen abriendo la pestaña SEO. Sin parámetro abre GEO, como hoy.</p>
+        </section>
+      </div>
+    </div>
+
+    <div>
+      <p class="kick">Móvil · menú abierto</p>
+      <div class="phone"><div class="screen">
+        <div class="mbar">GenScore</div>
+        <div class="scrim"></div>
+        <aside class="drawer" id="sbMob"></aside>
+      </div></div>
+      <p class="cap">Mismo orden y mismos nombres que en escritorio.</p>
+    </div>
+  </div>
+
+  <section>
+    <p class="kick">Qué cambia</p>
+    <div class="frame" style="padding:6px 8px"><div class="scroll">
+      <table class="cmp">
+        <thead><tr><th>Hoy</th><th>Propuesta</th></tr></thead>
+        <tbody>
+          <tr><td>Posicionamiento en IA: Visión general, Prompts, Competidores, Páginas citadas, Auditoría GEO</td><td>Posicionamiento en la IA: Visión general, Prompts, Competidores, Páginas citadas</td></tr>
+          <tr><td>Posicionamiento en buscadores: Auditoría SEO, Posición en Google</td><td>Posicionamiento global: <b>Auditoría técnica</b><span class="tag">GEO + SEO</span>, Posición en Google</td></tr>
+          <tr><td>Actuar: Recomendaciones</td><td>Actuar: Recomendaciones</td></tr>
+          <tr><td>Aprender: Manuales GEO</td><td>Aprender: Manuales y estudios (el blog, donde viven también los estudios)</td></tr>
+          <tr><td>Pie: ¿Qué es el GEO? (abre el tour)</td><td>Pie: ¿Cómo funciona? (abre el mismo tour)</td></tr>
+        </tbody>
+      </table>
+    </div></div>
+  </section>
+</div>
+
+<script>
+const I={
+ overview:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z"/>',
+ prompts:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+ comp:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v2M16 3.1a4 4 0 0 1 0 7.8M22 21v-2a4 4 0 0 0-3-3.9"/>',
+ cite:'<path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/>',
+ audit:'<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+ google:'<path d="M23 6l-9.5 9.5-5-5L1 18"/><path d="M17 6h6v6"/>',
+ recs:'<path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/>',
+ book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M4 19.5V21h16"/>',
+ help:'<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>'
+};
+const svg=n=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
+const MENU=[
+ ["Posicionamiento en la IA",[["ov","Visión general","overview"],["pr","Prompts","prompts",17],["co","Competidores","comp",6],["ci","Páginas citadas","cite"]]],
+ ["Posicionamiento global",[["au","Auditoría técnica","audit"],["gg","Posición en Google","google"]]],
+ ["Actuar",[["re","Recomendaciones","recs",9]]],
+ ["Aprender",[["ma","Manuales y estudios","book"]]]
+];
+let active="au";
+function render(el){
+  el.innerHTML=`<div class="sb-top"><div class="proj"><span class="fav"></span><div><b>genscore.es</b><span>Cambiar de dominio</span></div></div></div>
+  <nav>${MENU.map(([g,items])=>`<div class="gl">${g}</div>`+items.map(([id,l,ic,c])=>`<button class="ni${id===active?' on':''}" data-id="${id}" aria-current="${id===active?'page':'false'}">${svg(ic)}<span>${l}</span>${c?`<span class="cnt">${c}</span>`:''}</button>`).join('')).join('')}</nav>
+  <div class="sb-foot"><button class="ni">${svg('help')}<span>¿Cómo funciona?</span></button>
+  <div class="user"><div class="av">DM</div><div><b style="font-size:12.5px">Denis</b><small>Pro</small></div></div></div>`;
+}
+const BLOCK={
+ geo:{s:72,l:"Salud GEO",rows:[["Cobertura de tus servicios",80],["Bots de IA permitidos",100],["llms.txt",0],["Contenido citable",64]]},
+ seo:{s:81,l:"Salud SEO",rows:[["Etiquetas y títulos",90],["Indexación y sitemap",100],["Velocidad en móvil",58],["Texto alternativo",70]]}
+};
+let block="geo";
+function renderBlock(){
+  const b=BLOCK[block];
+  document.getElementById('blockCard').innerHTML=`<div class="score"><b>${b.s}</b><span>/ 100 · ${b.l} (ejemplo)</span></div>
+  <div class="bars">${b.rows.map(([n,v])=>`<div class="bar"><span>${n}</span><span style="text-align:right;font-variant-numeric:tabular-nums">${v}</span><div class="track"><i style="width:${v}%"></i></div></div>`).join('')}</div>`;
+  document.querySelectorAll('.seg button').forEach(t=>{const on=t.dataset.b===block;t.classList.toggle('on',on);t.setAttribute('aria-selected',on)});
+}
+function all(){render(document.getElementById('sbDesk'));render(document.getElementById('sbMob'));
+  const label=MENU.flatMap(m=>m[1]).find(i=>i[0]===active)[1];document.getElementById('pageKick').textContent=label;
+  document.querySelector('.seg').style.display=active==='au'?'':'none';document.getElementById('blockCard').style.display=active==='au'?'':'none';}
+document.addEventListener('click',e=>{const n=e.target.closest('.ni[data-id]');if(n){active=n.dataset.id;all();}
+  const t=e.target.closest('.seg button');if(t){block=t.dataset.b;renderBlock();}});
+all();renderBlock();
+</script>
