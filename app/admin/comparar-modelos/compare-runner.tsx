@@ -5,6 +5,7 @@ import {
   answerCost,
   COMPARE_ENGINE_LABEL,
   COMPARE_ENGINES,
+  DEFAULT_COMPARE_ENGINES,
   COMPARE_LIMITS,
   CURRENT,
   estimateAnswerCost,
@@ -55,11 +56,12 @@ type Result = { summary: CompareSummary & { answersPerEngineInScan: number }; an
 export function CompareRunner({ projects }: { projects: CompareProjectOption[] }) {
   const [projectId, setProjectId] = useState(projects[0]?.id ?? "");
   const [samples, setSamples] = useState(1);
-  const [engines, setEngines] = useState<CompareEngine[]>([...COMPARE_ENGINES]);
+  const [engines, setEngines] = useState<CompareEngine[]>([...DEFAULT_COMPARE_ENGINES]);
   const [candidate, setCandidate] = useState<PassModels>({
     gemini: (GENERATION_MODELS.gemini[1] ?? GENERATION_MODELS.gemini[0]).id,
     openai: (GENERATION_MODELS.openai[1] ?? GENERATION_MODELS.openai[0]).id,
-    claude: (GENERATION_MODELS.claude[1] ?? GENERATION_MODELS.claude[0]).id
+    claude: (GENERATION_MODELS.claude[1] ?? GENERATION_MODELS.claude[0]).id,
+    perplexity: GENERATION_MODELS.perplexity[0].id
   });
   const [extractionId, setExtractionId] = useState(EXTRACTION_OPTIONS[1].id);
   const [measureNoise, setMeasureNoise] = useState(true);
