@@ -50,6 +50,10 @@ paths:
 
 - **Nada de recomendaciones falsas** (lista de prohibido de `CLAUDE.md`). Una
   recomendación existe porque hay evidencia persistida que la respalda.
+  La excepción son las tarjetas «Con tus datos de Google» (log §293): su
+  evidencia son los datos en vivo del Search Console del cliente, que no se
+  guardan (`.claude/rules/search-console.md`). No entran en el plan, ni en
+  los puntos potenciales, ni en «Resueltas».
 - **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
   el aviso de "interpretación de la IA" ya existente.
 - Si una recomendación no puede calcular su impacto, se muestra sin impacto —
@@ -598,7 +602,7 @@ paths:
   motor y por repetición. El motor se pinta como icono en la fila, como ya
   exigía RECS-EVIDENCE-2.
 
-## Diagnóstico (RECS-DIAGNOSIS-1, log §293)
+## Diagnóstico (RECS-DIAGNOSIS-1, log §298)
 
 - **«Te citan» es una cita del dominio propio en un motor que busca en la
   web, la misma definición que la puntuación** (`hasOwnDomainCitation` +

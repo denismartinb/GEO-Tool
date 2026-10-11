@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { auditedPagesFromSnapshot } from "@/lib/search-console/audited-pages";
 import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { propertyLabel } from "@/lib/search-console/property";
+import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
 import { AUDIT_BLOCK_PARAM } from "@/lib/web-audit/audit-blocks";
-import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { ClicksImpressionsChart, NearPageOneScatter } from "./_components/gsc-charts";
 import { GscConnect } from "./_components/gsc-connect";
 import { GscDisconnect } from "./_components/gsc-disconnect";
@@ -47,21 +46,7 @@ export default async function SearchConsolePage({
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  const [{ data: snapshot }, { data: promptRows }] = await Promise.all([
-    supabase
-      .from("web_audit_snapshots")
-      .select("pages")
-      .eq("project_id", projectId)
-      .not("pages", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase.from("project_prompts").select("prompt_text").eq("project_id", projectId).eq("is_active", true)
-  ]);
-  const auditedPages = auditedPagesFromSnapshot((snapshot?.pages ?? []) as PageAuditEntry[]);
-  const trackedPrompts = (promptRows ?? [])
-    .map((r) => r.prompt_text)
-    .filter((t): t is string => typeof t === "string");
+  const { auditedPages, trackedPrompts } = await readSearchConsoleInputs(supabase, projectId);
 
   const state = await loadSearchConsoleScreen(projectId, user.id, project.domain, auditedPages, trackedPrompts);
   const connectHref = `/api/search-console/connect?projectId=${projectId}`;

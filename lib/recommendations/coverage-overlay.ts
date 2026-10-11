@@ -41,7 +41,7 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  * the user "no crees una página nueva" and linking the home.
  */
 /**
- * `no_editable_page` (RECS-DIAGNOSIS-1, log §293): the only own-domain pages
+ * `no_editable_page` (RECS-DIAGNOSIS-1, log §298): the only own-domain pages
  * Google returned are user-generated (a forum, a community thread, a Q&A
  * board). They live on the brand's domain but are not a page the brand
  * writes, so "refuerza tu página" would send the user to edit a complaint

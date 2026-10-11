@@ -24703,9 +24703,42 @@ Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
 **Pendiente.** Las tarjetas ya guardadas no cambian hasta el siguiente
 escaneo del proyecto, porque el texto se escribe al generarlas.
 
+## 293. SEARCH-SEO-1 Fase 3d: recomendaciones con datos de Google (2026-10-11)
+
+**Qué se decidió.** La pantalla de Recomendaciones gana un bloque «Con tus
+datos de Google», encima de las recomendaciones de IA, sólo cuando el proyecto
+tiene Search Console conectado. Es la segunda mitad del diseño aprobado de
+Fase 3b (`docs/design-reference/search-seo-1/fase-3b/Recs.dc.html`, «Implementa
+todo»). Como mucho hay una tarjeta de cada tipo, la más fuerte:
+
+- **Subir a la página 1:** la búsqueda de la página 2 (puestos 11–20) con más
+  impresiones, con la página que sale y hasta dos páginas de la web que ya
+  están en la página 1 desde las que enlazarla.
+- **Título y descripción:** la primera de «Te ven, pero no entran», comparada
+  con el CTR de las otras búsquedas de la propia web en el mismo tramo, nunca
+  con una curva del sector (§287).
+- **Google + IA:** la primera pregunta de Google que el escaneo todavía no
+  vigila, con «Vigilar prompt», que pasa por `addPrompts` igual que en
+  «Posición en Google» (`useWatchPrompt`, compartido).
+
+**En vivo, sin guardar.** Las tarjetas se calculan en cada carga
+(`buildGoogleRecommendations`, puro) sobre las mismas filas cacheadas 30 min
+de §289, leídas con los mismos datos propios (`readSearchConsoleInputs`), así
+que las dos pantallas comparten caché. No hay migración: una tarjeta existe
+porque Google lo dice hoy y se va sola cuando el dato mejora. Por eso todavía
+no tienen «Marcar como hecho» ni «Ahora no». Se le preguntó al fundador si
+guardarlas (con migración) o calcularlas en vivo, y se construyó la opción
+recomendada mientras contestaba. El bloque va en un `Suspense`, así que un
+Google lento no retrasa las recomendaciones de IA.
+
+**Qué queda pendiente.** «Generar el texto» y las tres propuestas de título
+del diseño necesitan una generación con IA anclada a datos de Google. Es la
+siguiente pieza. Mientras tanto, las tarjetas de página 1 y de título llevan a
+«Posición en Google».
+
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 293. RECS-DIAGNOSIS-1 — Recomendaciones: que el diagnóstico sea cierto (2026-10-11)
+## 298. RECS-DIAGNOSIS-1 — Recomendaciones: que el diagnóstico sea cierto (2026-10-11)
 
 **Contexto.** El fundador abrió una línea de mejora de Recomendaciones
 (funcional y de experiencia) y aprobó un plan de siete puntos. Pidió además
