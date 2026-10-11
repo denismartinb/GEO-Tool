@@ -23,7 +23,7 @@ export function GoogleRecsPresent() {
 }
 
 /**
- * RECS-SHORT-CARD-1 (log §302): «Mejora IA» / «Mejora Google». Both halves
+ * RECS-SHORT-CARD-1 (log §303): «Mejora IA» / «Mejora Google». Both halves
  * are rendered on the server and stay mounted; the Google half streams in
  * hidden behind its Suspense (log §298). The pills only appear once Google
  * recommendations have actually arrived (`GoogleRecsPresent`); until then,

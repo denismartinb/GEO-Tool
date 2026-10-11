@@ -450,7 +450,7 @@ describe("RecCard — insignia de reaparición (RECS-LOOP-1 Fase B)", () => {
   });
 });
 
-describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §302)", () => {
+describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () => {
   it("la tarjeta plegada lleva tipo, instrucción y alcance, y deja la descripción para el detalle", () => {
     const html = renderToStaticMarkup(
       <RecCard

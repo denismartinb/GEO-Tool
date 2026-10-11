@@ -11277,7 +11277,7 @@ select.set-field {
 }
 .rec2-step b { color: var(--ink); font-weight: 750; }
 
-/* RECS-SHORT-CARD-1 (log §302) — short card: kind kicker, reach line, and
+/* RECS-SHORT-CARD-1 (log §303) — short card: kind kicker, reach line, and
    the two confidences side by side in the detail. */
 .rec2-kind {
   font-size: 10.5px;

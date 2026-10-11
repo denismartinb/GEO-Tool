@@ -765,7 +765,7 @@ export function RecCard({
         ? "badge badge-warn"
         : "badge badge-neutral";
 
-  // RECS-SHORT-CARD-1 (log §302) — the two confidences, kept apart. "Lo que
+  // RECS-SHORT-CARD-1 (log §303) — the two confidences, kept apart. "Lo que
   // vimos" reads the data (run confidence + what the evidence observed);
   // "Por qué funciona" reads who controls the move. One "Confianza" label
   // used to mix both.
@@ -817,7 +817,7 @@ export function RecCard({
         }}
         aria-expanded={open}
       >
-        {/* Center column. RECS-SHORT-CARD-1 (log §302): the collapsed card
+        {/* Center column. RECS-SHORT-CARD-1 (log §303): the collapsed card
             says what kind of move this is, what to do (title), the one
             instruction to start with, and where it was seen. The description
             moved into "Lo que vimos": it is the finding, read once the card
@@ -936,7 +936,7 @@ export function RecCard({
         </div>
       </div>
 
-      {/* Expandable detail. RECS-SHORT-CARD-1 (log §302): no block renders
+      {/* Expandable detail. RECS-SHORT-CARD-1 (log §303): no block renders
           empty — a block without data is left out, never filled with
           "Sin datos disponibles". */}
       <div className="rec-detail">
@@ -1458,7 +1458,7 @@ export function RecommendationsClient({
     ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
     : selectPlan(recommendations);
 
-  // RECS-SHORT-CARD-1 (log §302): the list under the plan is «Más adelante»,
+  // RECS-SHORT-CARD-1 (log §303): the list under the plan is «Más adelante»,
   // so it leaves out the plan's own cards. Showing them twice made sense when
   // the section was "Todas"; under "más adelante" it would say the plan's
   // actions can wait. Supersedes the "repetition is fine" rule of §115, and
@@ -1511,7 +1511,7 @@ export function RecommendationsClient({
 
       {/* 4 · The plan — always on top, whatever the filter, in the accent
           treatment so the three that matter carry visible weight. Since
-          RECS-SHORT-CARD-1 (log §302) they are left out of «Más adelante»
+          RECS-SHORT-CARD-1 (log §303) they are left out of «Más adelante»
           below instead of repeated there. */}
       {plan.length > 0 && (
         <>

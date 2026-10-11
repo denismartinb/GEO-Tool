@@ -424,6 +424,12 @@ to `environment: "development"`, nothing breaks. Cron Monitors
 (`lib/observability/cron-monitor.ts`) check in only when `VERCEL_ENV` is
 `production`; Sentry creates each monitor on its first check-in.
 
+**Cron monitors and the free plan (OBSERVABILITY-2, log §302):** Sentry's
+free plan includes one cron monitor, so only `scan-watchdog` checks in by
+default. `SENTRY_CRON_MONITORS` (optional, Production) widens it with a
+comma-separated list of cron names (`scan-watchdog,scan-continue`) or `all`,
+once the plan pays for more. The other crons keep reporting errors.
+
 
 ### Paid ads and conversion tracking (PAID-ADS-1)
 

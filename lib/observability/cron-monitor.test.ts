@@ -10,7 +10,7 @@ vi.mock("@sentry/nextjs", () => ({
   flush: async () => true
 }));
 
-import { CRON_MONITORS, monitorSlug, withCronMonitor, type CronPath } from "./cron-monitor";
+import { CRON_MONITORS, isMonitoredCron, monitorSlug, withCronMonitor, type CronPath } from "./cron-monitor";
 
 /**
  * OBSERVABILITY-1 (log §300). The monitor is only as good as its schedule: a
@@ -55,6 +55,7 @@ describe("withCronMonitor", () => {
     delete process.env.SENTRY_DSN;
     delete process.env.VERCEL_ENV;
     delete process.env.CRON_SECRET;
+    delete process.env.SENTRY_CRON_MONITORS;
   });
 
   it("slug legible", () => {
@@ -96,5 +97,30 @@ describe("withCronMonitor", () => {
     process.env.VERCEL_ENV = "preview";
     await handler(request());
     expect(captureCheckIn).not.toHaveBeenCalled();
+  });
+
+  it("un cron sin monitor no hace check-in, pero su excepción llega a Sentry", async () => {
+    const boom = new Error("boom");
+    const handler = withCronMonitor("/api/cron/scan-continue", async () => {
+      throw boom;
+    });
+    await expect(handler(request())).rejects.toBe(boom);
+    expect(captureCheckIn).not.toHaveBeenCalled();
+    expect(captureException).toHaveBeenCalledWith(boom, { tags: { cron: "cron-scan-continue" } });
+  });
+});
+
+/** OBSERVABILITY-2 (log §302): el plan gratuito de Sentry incluye un monitor. */
+describe("isMonitoredCron", () => {
+  it("por defecto sólo el vigilante", () => {
+    const monitored = (Object.keys(CRON_MONITORS) as CronPath[]).filter((p) => isMonitoredCron(p, undefined));
+    expect(monitored).toEqual(["/api/cron/scan-watchdog"]);
+  });
+
+  it("la variable amplía la lista, o la abre entera con all", () => {
+    expect(isMonitoredCron("/api/cron/scan-continue", "scan-watchdog, scan-continue")).toBe(true);
+    expect(isMonitoredCron("/api/cron/weekly-scans", "scan-watchdog,scan-continue")).toBe(false);
+    expect(isMonitoredCron("/api/cron/weekly-scans", "all")).toBe(true);
+    expect(isMonitoredCron("/api/cron/scan-watchdog", "  ")).toBe(true);
   });
 });

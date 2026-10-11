@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { GoogleRecsPresent, RecsViewTabs } from "./recs-view-tabs";
 
-// RECS-SHORT-CARD-1 (log §302). Clicks and effects don't run here, so this
+// RECS-SHORT-CARD-1 (log §303). Clicks and effects don't run here, so this
 // only pins the starting state: no pills until Google cards actually mount.
 // That they then appear is checked by hand on the preview.
 describe("RecsViewTabs", () => {
