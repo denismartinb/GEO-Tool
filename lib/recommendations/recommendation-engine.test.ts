@@ -826,19 +826,19 @@ describe("generateRecommendationsForRun", () => {
           provider: "gemini"
         }),
         prompt({
-          id: "claude-result",
+          id: "openai-result",
           promptId: "prompt-stable-1",
           prompt_text_snapshot: "best running shoes",
           brand_mentioned: true,
           citation_found: false,
-          provider: "claude"
+          provider: "openai"
         })
       ]);
 
       const visibilityRec = recs.find((r) => r.recommendation_type === "increase_brand_visibility");
       const citationRec = recs.find((r) => r.recommendation_type === "add_citation_block");
       expect(visibilityRec?.evidence_json.affected_prompt_ids).toEqual(["gemini-result"]);
-      expect(citationRec?.evidence_json.affected_prompt_ids).toEqual(["claude-result"]);
+      expect(citationRec?.evidence_json.affected_prompt_ids).toEqual(["openai-result"]);
     });
 
     it("records provider per affected prompt, absent when the caller didn't supply one", () => {
@@ -1020,8 +1020,8 @@ describe("generateRecommendationsForRun", () => {
 
   it("surfaces amplify_positive_pattern when the brand has winning prompts and an open gap elsewhere (N4)", () => {
     const recs = run([
-      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
-      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
+      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
     ]);
 
@@ -1032,8 +1032,8 @@ describe("generateRecommendationsForRun", () => {
 
   it("does not surface amplify_positive_pattern when there is no open gap elsewhere (N4)", () => {
     const recs = run([
-      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
-      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" })
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
+      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), })
     ]);
 
     // Both prompts already mention+cite the brand — nothing left to amplify toward.
@@ -1042,7 +1042,7 @@ describe("generateRecommendationsForRun", () => {
 
   it("does not surface amplify_positive_pattern from a single winning prompt (N4)", () => {
     const recs = run([
-      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive" }),
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p2", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
     ]);
 
@@ -1051,8 +1051,8 @@ describe("generateRecommendationsForRun", () => {
 
   it("counts neutral (not just positive) sentiment as a winning prompt, since most factual citations land neutral (N4)", () => {
     const recs = run([
-      prompt({ id: "p1", prompt_text_snapshot: "horarios de vuelos de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral" }),
-      prompt({ id: "p2", prompt_text_snapshot: "tarifas de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral" }),
+      prompt({ id: "p1", prompt_text_snapshot: "horarios de vuelos de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
+      prompt({ id: "p2", prompt_text_snapshot: "tarifas de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
     ]);
 
@@ -1167,5 +1167,76 @@ describe("generateRecommendationsForRun", () => {
     expect(rec).toBeDefined();
     // Would otherwise read: «Escribe a ocu.org para que te incluyan en "ocu.org"».
     expect(rec!.evidence_json.first_step).not.toContain('"ocu.org"');
+  });
+});
+
+describe("RECS-DIAGNOSIS-1 — «te citan» means a grounded engine cited YOUR web (log §299)", () => {
+  it("never asks Claude to cite you: it does not search the web, so the card could never be closed", () => {
+    const recs = run([
+      prompt({ id: "c1", promptId: "q1", prompt_text_snapshot: "best running shoes", brand_mentioned: true, citation_found: false, provider: "claude" })
+    ]);
+    expect(recs.some((r) => r.recommendation_type === "add_citation_block")).toBe(false);
+  });
+
+  it("treats an answer that cites someone else's web as a citation gap", () => {
+    const recs = run([
+      prompt({
+        id: "g1",
+        promptId: "q1",
+        prompt_text_snapshot: "best running shoes",
+        brand_mentioned: true,
+        citation_found: true,
+        provider: "gemini",
+        extracted_json: extractedWith({ citations: [{ domain: "runnersworld.com", source: "grounding" }] })
+      })
+    ]);
+    const rec = recs.find((r) => r.recommendation_type === "add_citation_block");
+    expect(rec?.evidence_json.affected_prompt_ids).toEqual(["g1"]);
+    expect(rec?.description).toMatch(/no cita tu web/);
+    expect(rec?.description).toMatch(/de Gemini/);
+  });
+
+  it("counts the brand's own site on another TLD or subdomain as cited", () => {
+    const recs = run([
+      prompt({
+        id: "g1",
+        promptId: "q1",
+        prompt_text_snapshot: "best running shoes",
+        brand_mentioned: true,
+        citation_found: true,
+        provider: "gemini",
+        extracted_json: extractedWith({ citations: [{ domain: "blog.acme.es", source: "grounding" }] })
+      })
+    ]);
+    expect(recs.some((r) => r.recommendation_type === "add_citation_block")).toBe(false);
+  });
+
+  it("does not call other people's citations «your winning pattern»", () => {
+    const foreign = extractedWith({ citations: [{ domain: "elmundo.es", source: "grounding" }] });
+    const recs = run([
+      prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", provider: "gemini", extracted_json: foreign }),
+      prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", provider: "gemini", extracted_json: foreign }),
+      prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
+    ]);
+    expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
+  });
+
+  it("counts questions, not answers, in a title that says «consultas»", () => {
+    const comp = extractedWith({ competitors: [{ name: "Rival", mentioned: true }] });
+    const rows = ["gemini", "openai", "claude"].flatMap((provider) => [
+      prompt({ id: `a-${provider}`, promptId: "q1", prompt_text_snapshot: "mejor tienda online", brand_mentioned: false, mentioned_competitors_count: 1, provider, extracted_json: comp }),
+      prompt({ id: `b-${provider}`, promptId: "q2", prompt_text_snapshot: "dónde comprar barato", brand_mentioned: false, mentioned_competitors_count: 1, provider, extracted_json: comp })
+    ]);
+    const rec = run(rows, {}, ["Rival"]).find((r) => r.recommendation_type === "close_competitor_gap");
+    expect(rec?.title).toBe("Disputa a Rival 2 consultas donde no apareces");
+    expect(rec?.description).toMatch(/6 respuestas/);
+  });
+
+  it("says what it observed on a visibility gap, not that nobody holds the query", () => {
+    const rec = run([
+      prompt({ id: "g1", promptId: "q1", prompt_text_snapshot: "best running shoes", brand_mentioned: false, provider: "gemini" })
+    ]).find((r) => r.recommendation_type === "increase_brand_visibility");
+    expect(rec?.description).toMatch(/^En 1 respuesta de Gemini/);
+    expect(rec?.description).not.toMatch(/se la lleva quien publique primero/);
   });
 });

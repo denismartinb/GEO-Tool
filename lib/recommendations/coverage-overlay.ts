@@ -40,7 +40,19 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  * "create" advice and says that only the home was found, instead of telling
  * the user "no crees una página nueva" and linking the home.
  */
-export type CoverageOverlayState = "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "none";
+/**
+ * `no_editable_page` (RECS-DIAGNOSIS-1, log §299): the only own-domain pages
+ * Google returned are user-generated (a forum, a community thread, a Q&A
+ * board). They live on the brand's domain but are not a page the brand
+ * writes, so "refuerza tu página" would send the user to edit a complaint
+ * thread. Same treatment as `home_only`: coverage is not certified.
+ */
+export type CoverageOverlayState =
+  | "confirmed_surfacing_gap"
+  | "possible_content_gap"
+  | "home_only"
+  | "no_editable_page"
+  | "none";
 
 export type CoverageOverlayEntry = {
   state: CoverageOverlayState;
@@ -72,6 +84,42 @@ export function isSiteRoot(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Forums, community boards and Q&A threads on the brand's own domain
+ * (comunidad.acme.es, acme.es/foro/…). Matched on the first host label or
+ * the first path segment only, so a page that merely mentions "comunidad" in
+ * a deeper slug is not affected.
+ */
+const COMMUNITY_SEGMENTS = new Set([
+  "comunidad",
+  "community",
+  "communities",
+  "foro",
+  "foros",
+  "forum",
+  "forums",
+  "discussions",
+  "discusiones",
+  "questions",
+  "preguntas"
+]);
+
+export function isCommunityPage(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const firstLabel = parsed.hostname.toLowerCase().replace(/^www\./, "").split(".")[0];
+    const firstSegment = parsed.pathname.split("/").filter(Boolean)[0]?.toLowerCase() ?? "";
+    return COMMUNITY_SEGMENTS.has(firstLabel) || COMMUNITY_SEGMENTS.has(firstSegment);
+  } catch {
+    return false;
+  }
+}
+
+/** A page that can answer one question and that the brand can edit. */
+export function isAnswerPage(url: string): boolean {
+  return !isSiteRoot(url) && !isCommunityPage(url);
 }
 
 function bumpConfidence(confidence: "low" | "medium" | "high"): "low" | "medium" | "high" {
@@ -118,12 +166,18 @@ export function computeCoverageOverlay(params: {
     const topic = topicByPromptId.get(promptId);
     if (!topic) continue;
 
-    if (topic.found && topic.pages.length > 0 && topic.pages.every((p) => isSiteRoot(p.url))) {
-      overlay.set(rec.id, { state: "home_only", verifiedPage: topic.pages[0], confidenceOverride: null });
+    const answerPages = topic.pages.filter((p) => isAnswerPage(p.url));
+    if (topic.found && topic.pages.length > 0 && answerPages.length === 0) {
+      const homeOnly = topic.pages.every((p) => isSiteRoot(p.url));
+      overlay.set(rec.id, {
+        state: homeOnly ? "home_only" : "no_editable_page",
+        verifiedPage: homeOnly ? topic.pages[0] : null,
+        confidenceOverride: null
+      });
     } else if (topic.found) {
       overlay.set(rec.id, {
         state: "confirmed_surfacing_gap",
-        verifiedPage: topic.pages[0] ?? null,
+        verifiedPage: answerPages[0] ?? null,
         confidenceOverride: bumpConfidence(rec.confidence)
       });
     } else if (topic.note === NOT_COVERED_NOTE) {
@@ -225,6 +279,19 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
     return {
       whatWeFound:
         "Buscamos en Google dentro de tu dominio y sólo apareció tu portada. Una portada rara vez responde a una pregunta concreta, así que no la damos por cubierta.",
+      whatToDo:
+        "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
+          : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+    };
+  }
+
+  if (state === "no_editable_page") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció contenido de foros o de tu comunidad de usuarios. No es una página que tú escribas, así que no la damos por cubierta.",
       whatToDo:
         "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
       firstStep:

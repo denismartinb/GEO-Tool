@@ -215,7 +215,7 @@ describe("RecCard — CTA y chip de control", () => {
  */
 describe("overlayCopyLocal — en paridad con el servidor", () => {
   const TYPES = ["add_citation_block", "increase_brand_visibility", "algún_tipo_sin_clasificar"] as const;
-  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "home_only", "none"] as const;
+  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "home_only", "no_editable_page", "none"] as const;
 
   it("coincide literalmente con overlayCopy para cada combinación de tipo y estado", () => {
     for (const type of TYPES) {

@@ -66,7 +66,7 @@ type EvidenceJson = {
  * exactly as before" — coverage data is optional and sparse by design.
  */
 export type CoverageOverlay = {
-  state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "none";
+  state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "no_editable_page" | "none";
   verifiedPage: { url: string; title: string } | null;
   confidenceOverride: "low" | "medium" | "high" | null;
 };
@@ -160,6 +160,19 @@ export function overlayCopyLocal(
     return {
       whatWeFound:
         "Buscamos en Google dentro de tu dominio y sólo apareció tu portada. Una portada rara vez responde a una pregunta concreta, así que no la damos por cubierta.",
+      whatToDo:
+        "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
+          : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+    };
+  }
+
+  if (state === "no_editable_page") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció contenido de foros o de tu comunidad de usuarios. No es una página que tú escribas, así que no la damos por cubierta.",
       whatToDo:
         "publica una página propia que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta. Si ya tienes una, revisa que Google la tenga indexada.",
       firstStep:
@@ -1038,7 +1051,7 @@ export function RecCard({
               </p>
             </div>
           )}
-          {overlay?.state === "home_only" && (
+          {(overlay?.state === "home_only" || overlay?.state === "no_editable_page") && (
             <div
               style={{
                 marginBottom: 14,
@@ -1065,13 +1078,13 @@ export function RecCard({
                 Auditoría de tu web
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
-                Sólo encontramos tu portada
+                {overlay.state === "home_only" ? "Sólo encontramos tu portada" : "Sólo encontramos foros o comunidad"}
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                {overlayCopyLocal(rec.recommendation_type, "home_only")?.whatWeFound}
+                {overlayCopyLocal(rec.recommendation_type, overlay.state)?.whatWeFound}
               </p>
               <p style={{ fontSize: 13, color: "var(--ink)", lineHeight: 1.6, margin: "8px 0 0" }}>
-                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, "home_only")?.whatToDo}
+                <b>Qué hacer:</b> {overlayCopyLocal(rec.recommendation_type, overlay.state)?.whatToDo}
               </p>
             </div>
           )}

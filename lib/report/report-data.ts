@@ -6,7 +6,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
 import { selectPlan } from "@/lib/recommendations/plan";
-import { computeCoverageOverlay, isSiteRoot, overlayCopy } from "@/lib/recommendations/coverage-overlay";
+import { computeCoverageOverlay, isAnswerPage, overlayCopy } from "@/lib/recommendations/coverage-overlay";
 import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 import { buildReportTechChecks } from "@/lib/report/report-tech";
 import type { ReportAnswer, ReportCoverage, ReportInput, ReportPlanItem } from "@/lib/report/report-model";
@@ -167,10 +167,11 @@ export async function loadReportInput({
   if (coverageMap) {
     coverage = {};
     for (const t of coverageMap.topics) {
-      // A topic whose only own page is the home is not certified as covered
-      // (GS-03, log §278): same verdict as the Recomendaciones overlay.
-      const homeOnly = t.found && t.pages.length > 0 && t.pages.every((p) => isSiteRoot(p.url));
-      coverage[t.promptId] = homeOnly ? "unknown" : t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
+      // A topic whose only own pages are the home or a forum/community
+      // thread is not certified as covered (GS-03 log §278, RECS-DIAGNOSIS-1
+      // log §299): same verdict as the Recomendaciones overlay.
+      const noAnswerPage = t.found && t.pages.length > 0 && !t.pages.some((p) => isAnswerPage(p.url));
+      coverage[t.promptId] = noAnswerPage ? "unknown" : t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
     }
   }
 

@@ -81,7 +81,7 @@ describe("visibility card on a definitional query", () => {
 
   it("leaves an ordinary query exactly as before", () => {
     const rec = visibilityCard("mejores herramientas geo en español", ["peec.ai", "otterly.ai"]);
-    expect(rec.description).toMatch(/se la lleva quien publique primero/);
+    expect(rec.description).toMatch(/no te nombró ni a ti ni a ningún competidor/);
     expect(rec.impact).toBe("medium");
     expect(rec.evidence_json.query_shape).toBeUndefined();
   });
