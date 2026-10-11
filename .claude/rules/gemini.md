@@ -21,7 +21,7 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   modelo (ADR 0042, log §240). Llamada nueva → usa la función.
 - **No new providers** without explicit approval. Perplexity is approved
   (2026-10-10, log §274): in the operator's tools since Fase 1, and as a scan
-  engine for Pro and Agencia since Fase 2 (log §282), switched on by listing
+  engine for Pro and Agencia since Fase 2 (log §283), switched on by listing
   it in `LLM_SCAN_PROVIDERS`. Its client uses the Agent API, not Sonar
   `/chat/completions` (announced unsupported after 2026-09-27).
 - **No crawler** without explicit approval.

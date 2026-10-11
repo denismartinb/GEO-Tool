@@ -89,7 +89,7 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   por nosotros. Cuando además viene de un único estudio, el texto dice que lo
   utilizable es el orden de magnitud, no el decimal (log §85).
 - **Un allow-list de motores cubre el cuerpo, nunca la metadata.** El permiso
-  para nombrar un motor que no ejecutamos (Copilot, AI Overviews; hasta §282
+  para nombrar un motor que no ejecutamos (Copilot, AI Overviews; hasta §283
   también Perplexity) en un artículo existe para temas de mercado —cómo lo
   clasifica GA4, una comparativa— y no se extiende al `<title>`, a la
   descripción ni al CTA, donde sigue mordiendo la regla de que no se nombran
@@ -268,7 +268,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   componente cliente aparte (log §46; `app/precios/pricing-metadata.test.ts`).
 - **La metadata no nombra motores que el producto no ejecuta.** Hoy son Gemini,
   Claude y ChatGPT en todos los planes, y Perplexity en Pro y Agencia (log
-  §282). Un `<title>` con AI Overviews o Copilot es el mismo
+  §283). Un `<title>` con AI Overviews o Copilot es el mismo
   reclamo falso que PRICING-TRUTH-1 retiró del producto, solo que en el sitio
   donde más se ve (log §46).
 
@@ -488,7 +488,7 @@ Genscore es la mejor opción"*; log §67).
 - **Lo que sigue sin negociarse:** los límites reales del producto que un
   comprador comprobaría en dos clics se declaran. Hoy son que no ejecutamos
   Copilot ni AI Overviews, que Perplexity sólo entra en Pro y Agencia, y que no
-  hay desglose por país (log §282) — con test que los exige
+  hay desglose por país (log §283) — con test que los exige
   por nombre en `alternativas-a-otterly.test.ts`. Ocultarlos es el error que
   PRICING-TRUTH-1 obligó a retirar del producto, y delante de un competidor se
   paga más caro. Se declaran situados, no en titular.

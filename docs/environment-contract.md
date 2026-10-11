@@ -138,7 +138,7 @@ decision 2026-07-18); Free stays at 1 (Gemini only, via the
 endpoint supported only until 2026-09-27. Its search results are final URLs
 (no redirect resolution), and its answers are extracted by Gemini (log §274).
 
-**Scan engine since Fase 2 (log §282), for Pro and Agencia only.** Append
+**Scan engine since Fase 2 (log §283), for Pro and Agencia only.** Append
 `perplexity` at the END of `LLM_SCAN_PROVIDERS` (e.g.
 `gemini,openai,claude,perplexity`) to switch it on; remove it to switch it
 off. `resolveScanProvidersForPlan` never gives it to a plan whose

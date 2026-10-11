@@ -1,0 +1,1487 @@
+<!doctype html><html lang=es><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Afiliados en admin</title>
+<style>:root{--bg:#eef1f6;--ink:#0f1729;--mut:#5b6476}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1320;--ink:#eef1f6;--mut:#9aa3b5}}
+:root[data-theme="dark"]{--bg:#0d1320;--ink:#eef1f6;--mut:#9aa3b5}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif;padding:24px 16px}
+h1{font-size:22px;margin:0 0 4px} p{color:var(--mut);margin:0 0 20px;max-width:760px}
+.row{display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start} figure{margin:0;max-width:100%} figcaption{font-size:13px;color:var(--mut);margin-bottom:6px}
+iframe{border:1px solid #c9d0dc;border-radius:12px;background:#fff;max-width:100%}</style></head><body>
+<h1>/admin/afiliados</h1><p>Así se verá el apartado nuevo con los códigos de ejemplo <b>campamentoweb</b> y <b>newsletter-seo</b>. Las altas salen de las cuentas reales; el botón «Copiar» copia la URL.</p>
+<div class=row><figure><figcaption>Escritorio</figcaption><iframe width=1100 height=760 srcdoc="&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset=utf-8&gt;&lt;meta name=viewport content=&quot;width=device-width,initial-scale=1&quot;&gt;&lt;style&gt;:root {
+  --canvas: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #fbfbfd;
+  --line: #e8eaef;
+  --line-soft: #eef0f4;
+  --ink: #0f1729;
+  --ink-2: #475067;
+  --ink-3: #6b7385;
+  --ink-4: #98a0b0;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --accent-ink: #3730a3;
+  --accent-ring: rgba(79, 70, 229, .30);
+  --pos: #15915a;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --sh-1: 0 1px 2px rgba(16,24,40,.05), 0 1px 1px rgba(16,24,40,.03);
+  --sh-2: 0 2px 4px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.06);
+  --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
+  --sidebar-w: 248px;
+  --header-h: 52px;
+  /* `.page`&#x27;s own max-width/padding, pulled out to variables because
+     `.mrk-full`&#x27;s sidebar-aware full-bleed fix below has to reproduce this
+     exact geometry to cancel it out — two literals that must stay equal but
+     live in different rules is exactly how they drift. */
+  --page-max-w: 1320px;
+  --page-pad-x: 34px;
+  /* Shared mobile-drawer chassis (header-consistency-public-private,
+     2026-08-15) — both the console sidebar drawer (.sb) and the public
+     header drawer (.lp-mobnav) read these, so a future change to one
+     changes both instead of drifting apart again. */
+  --drawer-w: 288px;
+  --drawer-anim: .24s cubic-bezier(.4, 0, .2, 1);
+  color-scheme: light;
+
+  /* ============================================================
+     BRAND-5a — Genscore v3 tokens (docs/brand/brand-guidelines.md).
+     Not wired into any component yet — BRAND-5b repaints the app onto
+     these, replacing the --ink/--accent/etc. set above. Kept alongside
+     rather than overwritten so this PR has zero visual diff outside the
+     logo/favicon/OG.
+     ============================================================ */
+  --brand-ink: #0b1426;
+  --brand-ink-on-dark: #f7f8fb;
+  --brand-ink-2: #3b4759;
+  --brand-ink-3: #5b6b82;
+  --brand-ink-4: #98a2b3;
+  --brand-blue: #2563eb;
+  --brand-blue-2: #4f7bff;
+  --brand-blue-soft: rgba(37, 99, 235, .10);
+  --brand-blue-soft-2: rgba(37, 99, 235, .16);
+  --brand-cyan: #09c5d6;
+  --brand-warm: #ffb020;
+  --brand-canvas: #f7f8fb;
+  --brand-surface: #ffffff;
+  --brand-canvas-dark: #081223;
+  --brand-surface-dark: #0f1c33;
+  --brand-line: #e7eaf0;
+  --brand-line-soft: #eef1f6;
+  --brand-muted: #5b6b82;
+  --brand-pos: #15915a;
+  --brand-pos-soft: #e7f6ee;
+  --brand-neg: #d23b48;
+  --brand-neg-soft: #fdecee;
+  --brand-shadow-card: 0 1px 2px rgba(11, 20, 38, .04), 0 6px 18px rgba(11, 20, 38, .05);
+  /* --font-display (Bricolage Grotesque) and --font-body (Figtree) are
+     injected on &lt;html&gt; by next/font/google in app/layout.tsx — not
+     redeclared here. */
+}
+body{margin:0} code{font-size:12px} /*
+ * ADMIN-CONSOLE-1. Classes are prefixed `adm-` and scoped under `.adm-shell`
+ * because the dashboard already owns generic names this screen would
+ * otherwise collide with both ways (`.card`, `.badge`, `.chip`, `.pill`) —
+ * same convention as `.ptour` in the onboarding tour
+ * (.claude/rules/onboarding.md).
+ */
+
+.adm-shell {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), &quot;Hanken Grotesk&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;
+}
+
+.adm-opbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--brand-ink);
+  color: var(--brand-ink-on-dark);
+  font-size: 13.5px;
+}
+
+.adm-opbar-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-opbar-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--brand-warm);
+  color: #1b1206;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.adm-opbar-links {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+}
+
+.adm-opbar-links a {
+  color: var(--brand-ink-on-dark);
+  opacity: 0.82;
+  text-decoration: none;
+}
+
+.adm-opbar-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.adm-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.adm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.adm-h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.adm-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.adm-kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+}
+
+.adm-kpi dt {
+  font-size: 11px;
+  color: var(--ink-4);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.adm-kpi dd {
+  margin: 5px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.adm-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.adm-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.adm-chip.adm-chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.adm-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  /*
+   * ADMIN-CONSOLE-UX-1, corrección tras el fundador. Deja consultar el ancho
+   * REAL de este contenedor (visible, sin importar cuánto se haya desplazado
+   * su tabla hija) vía `cqi` — ver `.adm-detail-sticky` más abajo. El propio
+   * `.adm-table-wrap` ya se dimensiona por su padre (`.adm-main`), no por la
+   * tabla que desborda dentro de él, así que esto no cambia su tamaño.
+   */
+  container-type: inline-size;
+}
+
+.adm-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+}
+
+.adm-table th,
+.adm-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.adm-table thead th {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  background: var(--surface-2);
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-table tbody tr.adm-row-selected {
+  background: var(--accent-soft);
+}
+
+.adm-table a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.adm-table a:hover {
+  text-decoration: underline;
+}
+
+.adm-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-em {
+  font-weight: 650;
+}
+
+.adm-uid {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 450;
+}
+
+.adm-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 640;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.adm-pill-trial { background: #fff3de; color: #92600a; border-color: #f4dcae; }
+.adm-pill-trial_expired { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-pill-paid { background: var(--brand-pos-soft); color: var(--brand-pos); border-color: #b9e5cd; }
+.adm-pill-free { background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
+/* ADMIN-HEALTH-1 (§230): la columna &quot;Error&quot; y su detalle en la ficha. */
+.adm-pill-error { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-health-box { margin: 14px 20px 0; padding: 12px 14px; border: 1px solid #f6c6cb; border-radius: 10px; background: var(--brand-neg-soft); color: var(--brand-neg); }
+.adm-health-box .adm-mini-title { color: var(--brand-neg); margin: 0 0 6px; }
+.adm-health-box ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+
+/* ADMIN-CONSOLE-2a — automatismos y coste */
+
+.adm-kpi-foot {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+
+.adm-dim {
+  color: var(--ink-4);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.adm-frac {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-frac-on { font-weight: 700; color: var(--brand-pos); }
+.adm-frac-off { font-weight: 700; color: var(--ink-4); }
+.adm-frac-sep { color: var(--ink-4); }
+.adm-frac-total { color: var(--ink-3); }
+
+.adm-inert {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #92600a;
+  background: #fff3de;
+  border: 1px solid #f4dcae;
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.adm-proj-block {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+
+.adm-proj-block:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-block .adm-proj {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.adm-proj-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.adm-cost {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.adm-cost-tag {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.adm-cost-basis {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ADMIN-CONSOLE-2b / ADMIN-CONSOLE-UX-1 — escritura por proyecto, en columnas.
+ * `auto-fit` con `minmax()` colapsa por sí solo según el ancho REAL
+ * disponible, sin ninguna consulta condicional (`@media`/`@container`) que
+ * mantener — el primer intento usaba una `@container`, correcta en
+ * aislamiento pero sin poder verificarse contra el preview real del
+ * fundador; esto es intrínsecamente correcto por especificación, en
+ * cualquier navegador, sin depender de qué construya el ancho del
+ * contenedor.
+ */
+.adm-proj-write {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.adm-toggle-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.adm-toggle-label {
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.adm-toggle-on { color: var(--brand-pos); }
+.adm-toggle-off { color: var(--ink-4); }
+
+.adm-toggle-form .btn {
+  font-size: 11.5px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.adm-toggle-btn-off {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.adm-cost-note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-4);
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+
+.adm-cost-note code {
+  font-size: 10.5px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.adm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+
+.adm-drawer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+}
+
+/*
+ * ADMIN-CONSOLE-UX-1. La ficha se abre en acordeón justo bajo la fila que se
+ * toca, no como tarjeta fija tras toda la tabla — en móvil eso obligaba a
+ * bajar siempre la misma distancia sin importar qué fila se hubiera abierto.
+ *
+ * Corrección (mismo día, capturas del fundador): la celda es parte de la
+ * fila de una tabla con `min-width: 760px` — sin arreglar, su contenido
+ * quedaba a ESA anchura y sólo se leía desplazando horizontalmente, mitad
+ * cortado a cada lado, en cualquier móvil real. Los números cortos del resto
+ * de la tabla toleran ese desplazamiento; una ficha para leer, no. La celda
+ * en sí se deja a 760px+ (no se puede evitar, es parte de la fila), pero su
+ * contenido va en `.adm-detail-sticky`: `position: sticky; left: 0` lo fija
+ * al borde visible según se desplaza la tabla, y `width: 100cqi` lo dimensiona
+ * al ancho REAL de `.adm-table-wrap` (gracias a su `container-type` de
+ * arriba) en vez de al de la fila que desborda dentro de él. Resultado: la
+ * ficha se ve entera, a ancho de pantalla, sin desplazamiento propio, aunque
+ * la fila que la contiene sí sea más ancha que la pantalla.
+ */
+.adm-detail-row td {
+  padding: 0;
+}
+
+/*
+ * Segunda corrección, mismo día: `.adm-table th, .adm-table td` (más abajo en
+ * este mismo fichero) pone `white-space: nowrap` con especificidad
+ * elemento+clase (0,1,1). `.adm-detail-cell` de una sola clase (0,1,0) nunca
+ * podía ganarle, así que el `white-space: normal` de más arriba no llegó a
+ * aplicarse nunca — el texto seguía sin partirse en una sola línea
+ * interminable, y esa línea sin partir empujaba el ancho de todo lo que
+ * colgaba de esta celda (incluidas las columnas de `.adm-proj-write`, que
+ * por eso tampoco colapsaban a una). Capturas del fundador desde su móvil lo
+ * confirmaron. `.adm-table .adm-detail-cell` iguala la especificidad de la
+ * regla que había que vencer.
+ */
+.adm-table .adm-detail-cell {
+  white-space: normal;
+  padding: 0;
+}
+
+.adm-detail-sticky {
+  position: sticky;
+  left: 0;
+  width: 100cqi;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+.adm-detail-sticky .adm-drawer {
+  box-shadow: none;
+}
+
+/* Sólo cuando la fila seleccionada no está en la página filtrada actual. */
+.adm-drawer-standalone {
+  margin-top: 18px;
+}
+
+.adm-drawer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.adm-drawer-top h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.adm-drawer-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0;
+}
+
+.adm-drawer-cols &gt; div {
+  padding: 18px 20px;
+}
+
+.adm-drawer-cols &gt; div:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.adm-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 13px;
+  margin: 0;
+}
+
+.adm-dl dt {
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.adm-dl dd {
+  margin: 0;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.adm-mini-title {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.adm-proj {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12.5px;
+}
+
+.adm-proj:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-d {
+  font-weight: 600;
+}
+
+.adm-proj-s {
+  color: var(--ink-4);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-close {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.adm-close:hover {
+  text-decoration: underline;
+}
+
+.adm-note {
+  border-left: 3px solid var(--brand-warm);
+  background: #fff8e9;
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 760px) {
+  .adm-drawer-cols {
+    grid-template-columns: 1fr;
+  }
+  .adm-drawer-cols &gt; div:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/* SECTOR-STUDY-1: the study form&#x27;s fields had no visible box, and its buttons
+   read as plain text (&quot;Lanzar (0 respuestas)&quot; looked like a label). */
+.adm-study input:not([type=&quot;checkbox&quot;]):not([type=&quot;radio&quot;]),
+.adm-study select,
+.adm-study textarea {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  padding: 6px 9px;
+  font: inherit;
+}
+.adm-study textarea { display: block; margin-top: 4px; }
+.adm-study .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* MODEL-COMPARE-1 (log §263): /admin/comparar-modelos. */
+.adm-cmp-h2 { font-size: 15px; font-weight: 700; margin: 26px 0 10px; color: var(--ink); }
+.adm-cmp-form { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin: 8px 0 12px; }
+.adm-cmp-hint { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 12px; max-width: 760px; }
+.adm-cmp-engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.adm-cmp-engine { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
+.adm-cmp-engine-off { opacity: .55; }
+.adm-cmp-engine-name { font-weight: 700; display: block; margin-bottom: 8px; }
+.adm-cmp-vs { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.adm-cmp-tag { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-4); margin-bottom: 2px; }
+.adm-cmp-model { font-size: 13px; padding: 6px 0; }
+.adm-cmp-arrow { font-size: 12px; color: var(--ink-4); padding-bottom: 7px; }
+.adm-cmp-price { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.adm-cmp-check { display: flex; gap: 8px; align-items: flex-start; max-width: 620px; font-size: 13px; }
+.adm-cmp-launch { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 12px 14px; }
+.adm-cmp-progress { font-size: 13px; color: var(--ink-2); margin: 10px 0; }
+.adm-cmp-verdict { font-size: 16px !important; }
+.adm-cmp-questions { display: grid; gap: 8px; margin-bottom: 10px; }
+.adm-cmp-q { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.adm-cmp-q summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 13px; }
+.adm-cmp-dots { display: inline-flex; gap: 4px; }
+.adm-cmp-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; }
+.adm-cmp-dot-same { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.adm-cmp-dot-diff { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.adm-cmp-dot-fail { background: var(--surface-2); color: var(--ink-4); }
+.adm-cmp-q-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 0 14px 14px; }
+.adm-cmp-brands { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.adm-cmp-brand { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+.adm-cmp-brand-lost { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-cmp-brand-new { background: #fff3de; color: #92600a; border-color: #f4dcae; }
+.adm-cmp-health { margin-top: 4px; font-size: 11.5px; color: var(--brand-neg); max-width: 240px; }
+
+/* AFFILIATES-ADMIN-1 — /admin/afiliados */
+.adm-aff-table .adm-table { min-width: 0; }
+.adm-aff { margin-top: 28px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); padding: 18px 20px; }
+.adm-aff-title { font-size: 16px; font-weight: 750; margin: 0 0 12px; }
+.adm-aff-form { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 4px; }
+.adm-aff-field { display: grid; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.adm-aff-field select,
+.adm-aff-field input { box-sizing: border-box; height: 38px; font: inherit; font-weight: 450; font-size: 14px; min-width: 220px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.adm-aff-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.adm-aff-link { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.adm-aff-label { font-size: 13px; font-weight: 650; }
+.adm-aff-url { box-sizing: border-box; min-width: 0; width: 100%; font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--ink-2); }
+.adm-aff-copy { cursor: pointer; min-width: 78px; justify-content: center; }
+@media (max-width: 640px) {
+  .adm-aff { padding: 14px; }
+  .adm-aff-field, .adm-aff-field select, .adm-aff-field input { width: 100%; min-width: 0; }
+  .adm-aff-form { display: grid; }
+  .adm-aff-link { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-aff-label { grid-column: 1 / -1; }
+  .adm-aff-table .adm-table th,
+  .adm-aff-table .adm-table td { padding: 10px; }
+}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;adm-shell&quot;&gt;&lt;div class=&quot;adm-opbar&quot;&gt;&lt;div class=&quot;adm-opbar-who&quot;&gt;&lt;span class=&quot;adm-opbar-badge&quot;&gt;Modo operador&lt;/span&gt;&lt;span&gt;tu correo&lt;/span&gt;&lt;/div&gt;
+&lt;nav class=&quot;adm-opbar-links&quot;&gt;&lt;a&gt;Usuarios&lt;/a&gt;&lt;a&gt;Estudio&lt;/a&gt;&lt;a&gt;Comparar modelos&lt;/a&gt;&lt;a&gt;Afiliados&lt;/a&gt;&lt;a&gt;Salir a la consola&lt;/a&gt;&lt;/nav&gt;&lt;/div&gt;
+&lt;main class=&quot;adm-main&quot;&gt;&lt;div class=&quot;adm-head&quot;&gt;&lt;div&gt;&lt;h1 class=&quot;adm-h1&quot;&gt;Afiliados&lt;/h1&gt;&lt;p class=&quot;adm-sub&quot;&gt;Códigos activos y enlaces para compartir · sólo lectura. Los códigos se añaden o quitan en Vercel (&lt;code&gt;AFFILIATE_CODES&lt;/code&gt;) y se aplican tras un Redeploy.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;adm-table-wrap adm-aff-table&quot;&gt;&lt;table class=&quot;adm-table&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Código&lt;/th&gt;&lt;th&gt;Estado&lt;/th&gt;&lt;th class=&quot;adm-num&quot;&gt;Altas&lt;/th&gt;&lt;th class=&quot;adm-num&quot;&gt;De pago&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td class=&quot;adm-em&quot;&gt;campamentoweb&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;adm-pill adm-pill-paid&quot;&gt;Activo&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td class=&quot;adm-em&quot;&gt;newsletter-seo&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;adm-pill adm-pill-paid&quot;&gt;Activo&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;
+&lt;p class=&quot;adm-cmp-hint&quot;&gt;«De pago» cuenta las cuentas con suscripción en Stripe, igual que en Usuarios. La comisión real la calcula el informe del día 5 a partir de los cobros.&lt;/p&gt;
+&lt;section class=&quot;adm-aff&quot;&gt;&lt;h2 class=&quot;adm-aff-title&quot;&gt;Enlaces para compartir&lt;/h2&gt;&lt;div class=&quot;adm-aff-form&quot;&gt;
+&lt;label class=&quot;adm-aff-field&quot;&gt;&lt;span&gt;Código&lt;/span&gt;&lt;select&gt;&lt;option&gt;campamentoweb&lt;/option&gt;&lt;option&gt;newsletter-seo&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+&lt;label class=&quot;adm-aff-field&quot;&gt;&lt;span&gt;Campaña &lt;span class=&quot;adm-dim&quot;&gt;(opcional)&lt;/span&gt;&lt;/span&gt;&lt;input placeholder=&quot;newsletter-octubre&quot;&gt;&lt;/label&gt;&lt;/div&gt;
+&lt;p class=&quot;adm-cmp-hint&quot;&gt;Cada enlace lleva &lt;code&gt;ref=campamentoweb&lt;/code&gt; (lo que atribuye el alta durante 90 días) y &lt;code&gt;utm_source=campamentoweb&lt;/code&gt; · &lt;code&gt;utm_medium=afiliado&lt;/code&gt; para verlo en PostHog.&lt;/p&gt;
+&lt;ul class=&quot;adm-aff-links&quot;&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Portada&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Precios&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/precios?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiado&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Comprobador gratis&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/gratis/aparece-mi-marca-en-chatgpt?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Informe gratis&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/gratis/informe-geo?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;&lt;/main&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></figure>
+<figure><figcaption>Móvil (375 px)</figcaption><iframe width=375 height=760 srcdoc="&lt;!doctype html&gt;&lt;html&gt;&lt;head&gt;&lt;meta charset=utf-8&gt;&lt;meta name=viewport content=&quot;width=device-width,initial-scale=1&quot;&gt;&lt;style&gt;:root {
+  --canvas: #f6f7f9;
+  --surface: #ffffff;
+  --surface-2: #fbfbfd;
+  --line: #e8eaef;
+  --line-soft: #eef0f4;
+  --ink: #0f1729;
+  --ink-2: #475067;
+  --ink-3: #6b7385;
+  --ink-4: #98a0b0;
+  --accent: #4f46e5;
+  --accent-soft: #eef2ff;
+  --accent-ink: #3730a3;
+  --accent-ring: rgba(79, 70, 229, .30);
+  --pos: #15915a;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --sh-1: 0 1px 2px rgba(16,24,40,.05), 0 1px 1px rgba(16,24,40,.03);
+  --sh-2: 0 2px 4px rgba(16,24,40,.05), 0 4px 12px rgba(16,24,40,.06);
+  --sh-pop: 0 12px 40px rgba(16,24,40,.16), 0 4px 12px rgba(16,24,40,.08);
+  --sidebar-w: 248px;
+  --header-h: 52px;
+  /* `.page`&#x27;s own max-width/padding, pulled out to variables because
+     `.mrk-full`&#x27;s sidebar-aware full-bleed fix below has to reproduce this
+     exact geometry to cancel it out — two literals that must stay equal but
+     live in different rules is exactly how they drift. */
+  --page-max-w: 1320px;
+  --page-pad-x: 34px;
+  /* Shared mobile-drawer chassis (header-consistency-public-private,
+     2026-08-15) — both the console sidebar drawer (.sb) and the public
+     header drawer (.lp-mobnav) read these, so a future change to one
+     changes both instead of drifting apart again. */
+  --drawer-w: 288px;
+  --drawer-anim: .24s cubic-bezier(.4, 0, .2, 1);
+  color-scheme: light;
+
+  /* ============================================================
+     BRAND-5a — Genscore v3 tokens (docs/brand/brand-guidelines.md).
+     Not wired into any component yet — BRAND-5b repaints the app onto
+     these, replacing the --ink/--accent/etc. set above. Kept alongside
+     rather than overwritten so this PR has zero visual diff outside the
+     logo/favicon/OG.
+     ============================================================ */
+  --brand-ink: #0b1426;
+  --brand-ink-on-dark: #f7f8fb;
+  --brand-ink-2: #3b4759;
+  --brand-ink-3: #5b6b82;
+  --brand-ink-4: #98a2b3;
+  --brand-blue: #2563eb;
+  --brand-blue-2: #4f7bff;
+  --brand-blue-soft: rgba(37, 99, 235, .10);
+  --brand-blue-soft-2: rgba(37, 99, 235, .16);
+  --brand-cyan: #09c5d6;
+  --brand-warm: #ffb020;
+  --brand-canvas: #f7f8fb;
+  --brand-surface: #ffffff;
+  --brand-canvas-dark: #081223;
+  --brand-surface-dark: #0f1c33;
+  --brand-line: #e7eaf0;
+  --brand-line-soft: #eef1f6;
+  --brand-muted: #5b6b82;
+  --brand-pos: #15915a;
+  --brand-pos-soft: #e7f6ee;
+  --brand-neg: #d23b48;
+  --brand-neg-soft: #fdecee;
+  --brand-shadow-card: 0 1px 2px rgba(11, 20, 38, .04), 0 6px 18px rgba(11, 20, 38, .05);
+  /* --font-display (Bricolage Grotesque) and --font-body (Figtree) are
+     injected on &lt;html&gt; by next/font/google in app/layout.tsx — not
+     redeclared here. */
+}
+body{margin:0} code{font-size:12px} /*
+ * ADMIN-CONSOLE-1. Classes are prefixed `adm-` and scoped under `.adm-shell`
+ * because the dashboard already owns generic names this screen would
+ * otherwise collide with both ways (`.card`, `.badge`, `.chip`, `.pill`) —
+ * same convention as `.ptour` in the onboarding tour
+ * (.claude/rules/onboarding.md).
+ */
+
+.adm-shell {
+  min-height: 100vh;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body), &quot;Hanken Grotesk&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;
+}
+
+.adm-opbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 10px 24px;
+  background: var(--brand-ink);
+  color: var(--brand-ink-on-dark);
+  font-size: 13.5px;
+}
+
+.adm-opbar-who {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.adm-opbar-badge {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--brand-warm);
+  color: #1b1206;
+  padding: 3px 8px;
+  border-radius: 5px;
+}
+
+.adm-opbar-links {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+}
+
+.adm-opbar-links a {
+  color: var(--brand-ink-on-dark);
+  opacity: 0.82;
+  text-decoration: none;
+}
+
+.adm-opbar-links a:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.adm-main {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 80px;
+}
+
+.adm-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.adm-h1 {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.adm-sub {
+  font-size: 13px;
+  color: var(--ink-3);
+  margin-top: 4px;
+}
+
+.adm-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.adm-kpi {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 13px 15px;
+}
+
+.adm-kpi dt {
+  font-size: 11px;
+  color: var(--ink-4);
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.adm-kpi dd {
+  margin: 5px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-toolbar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.adm-search {
+  flex: 1;
+  min-width: 200px;
+}
+
+.adm-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.adm-chip.adm-chip-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.adm-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  /*
+   * ADMIN-CONSOLE-UX-1, corrección tras el fundador. Deja consultar el ancho
+   * REAL de este contenedor (visible, sin importar cuánto se haya desplazado
+   * su tabla hija) vía `cqi` — ver `.adm-detail-sticky` más abajo. El propio
+   * `.adm-table-wrap` ya se dimensiona por su padre (`.adm-main`), no por la
+   * tabla que desborda dentro de él, así que esto no cambia su tamaño.
+   */
+  container-type: inline-size;
+}
+
+.adm-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 760px;
+  font-size: 13px;
+}
+
+.adm-table th,
+.adm-table td {
+  padding: 10px 14px;
+  text-align: left;
+  border-bottom: 1px solid var(--line-soft);
+  white-space: nowrap;
+}
+
+.adm-table thead th {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  background: var(--surface-2);
+}
+
+.adm-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.adm-table tbody tr.adm-row-selected {
+  background: var(--accent-soft);
+}
+
+.adm-table a {
+  color: inherit;
+  text-decoration: none;
+  display: block;
+}
+
+.adm-table a:hover {
+  text-decoration: underline;
+}
+
+.adm-num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-em {
+  font-weight: 650;
+}
+
+.adm-uid {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-4);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 450;
+}
+
+.adm-pill {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 640;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.adm-pill-trial { background: #fff3de; color: #92600a; border-color: #f4dcae; }
+.adm-pill-trial_expired { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-pill-paid { background: var(--brand-pos-soft); color: var(--brand-pos); border-color: #b9e5cd; }
+.adm-pill-free { background: var(--surface-2); color: var(--ink-3); border-color: var(--line); }
+/* ADMIN-HEALTH-1 (§230): la columna &quot;Error&quot; y su detalle en la ficha. */
+.adm-pill-error { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-health-box { margin: 14px 20px 0; padding: 12px 14px; border: 1px solid #f6c6cb; border-radius: 10px; background: var(--brand-neg-soft); color: var(--brand-neg); }
+.adm-health-box .adm-mini-title { color: var(--brand-neg); margin: 0 0 6px; }
+.adm-health-box ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.45; }
+
+/* ADMIN-CONSOLE-2a — automatismos y coste */
+
+.adm-kpi-foot {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-weight: 600;
+}
+
+.adm-dim {
+  color: var(--ink-4);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.adm-frac {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-frac-on { font-weight: 700; color: var(--brand-pos); }
+.adm-frac-off { font-weight: 700; color: var(--ink-4); }
+.adm-frac-sep { color: var(--ink-4); }
+.adm-frac-total { color: var(--ink-3); }
+
+.adm-inert {
+  margin-left: 7px;
+  font-size: 10.5px;
+  font-weight: 650;
+  color: #92600a;
+  background: #fff3de;
+  border: 1px solid #f4dcae;
+  border-radius: 999px;
+  padding: 1px 7px;
+  white-space: nowrap;
+}
+
+.adm-proj-block {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+
+.adm-proj-block:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-block .adm-proj {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.adm-proj-auto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+
+.adm-cost {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.adm-cost-tag {
+  font-size: 9.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+
+.adm-cost-basis {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * ADMIN-CONSOLE-2b / ADMIN-CONSOLE-UX-1 — escritura por proyecto, en columnas.
+ * `auto-fit` con `minmax()` colapsa por sí solo según el ancho REAL
+ * disponible, sin ninguna consulta condicional (`@media`/`@container`) que
+ * mantener — el primer intento usaba una `@container`, correcta en
+ * aislamiento pero sin poder verificarse contra el preview real del
+ * fundador; esto es intrínsecamente correcto por especificación, en
+ * cualquier navegador, sin depender de qué construya el ancho del
+ * contenedor.
+ */
+.adm-proj-write {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 14px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.adm-toggle-form {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.adm-toggle-label {
+  font-size: 11.5px;
+  font-weight: 650;
+}
+
+.adm-toggle-on { color: var(--brand-pos); }
+.adm-toggle-off { color: var(--ink-4); }
+
+.adm-toggle-form .btn {
+  font-size: 11.5px;
+  padding: 5px 12px;
+  white-space: nowrap;
+}
+
+.adm-toggle-btn-off {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+}
+
+.adm-cost-note {
+  margin: 14px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-4);
+  border-top: 1px solid var(--line-soft);
+  padding-top: 10px;
+}
+
+.adm-cost-note code {
+  font-size: 10.5px;
+  background: var(--surface-2);
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.adm-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+
+.adm-drawer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+}
+
+/*
+ * ADMIN-CONSOLE-UX-1. La ficha se abre en acordeón justo bajo la fila que se
+ * toca, no como tarjeta fija tras toda la tabla — en móvil eso obligaba a
+ * bajar siempre la misma distancia sin importar qué fila se hubiera abierto.
+ *
+ * Corrección (mismo día, capturas del fundador): la celda es parte de la
+ * fila de una tabla con `min-width: 760px` — sin arreglar, su contenido
+ * quedaba a ESA anchura y sólo se leía desplazando horizontalmente, mitad
+ * cortado a cada lado, en cualquier móvil real. Los números cortos del resto
+ * de la tabla toleran ese desplazamiento; una ficha para leer, no. La celda
+ * en sí se deja a 760px+ (no se puede evitar, es parte de la fila), pero su
+ * contenido va en `.adm-detail-sticky`: `position: sticky; left: 0` lo fija
+ * al borde visible según se desplaza la tabla, y `width: 100cqi` lo dimensiona
+ * al ancho REAL de `.adm-table-wrap` (gracias a su `container-type` de
+ * arriba) en vez de al de la fila que desborda dentro de él. Resultado: la
+ * ficha se ve entera, a ancho de pantalla, sin desplazamiento propio, aunque
+ * la fila que la contiene sí sea más ancha que la pantalla.
+ */
+.adm-detail-row td {
+  padding: 0;
+}
+
+/*
+ * Segunda corrección, mismo día: `.adm-table th, .adm-table td` (más abajo en
+ * este mismo fichero) pone `white-space: nowrap` con especificidad
+ * elemento+clase (0,1,1). `.adm-detail-cell` de una sola clase (0,1,0) nunca
+ * podía ganarle, así que el `white-space: normal` de más arriba no llegó a
+ * aplicarse nunca — el texto seguía sin partirse en una sola línea
+ * interminable, y esa línea sin partir empujaba el ancho de todo lo que
+ * colgaba de esta celda (incluidas las columnas de `.adm-proj-write`, que
+ * por eso tampoco colapsaban a una). Capturas del fundador desde su móvil lo
+ * confirmaron. `.adm-table .adm-detail-cell` iguala la especificidad de la
+ * regla que había que vencer.
+ */
+.adm-table .adm-detail-cell {
+  white-space: normal;
+  padding: 0;
+}
+
+.adm-detail-sticky {
+  position: sticky;
+  left: 0;
+  width: 100cqi;
+  box-sizing: border-box;
+  background: var(--surface-2);
+  padding: 12px;
+}
+
+.adm-detail-sticky .adm-drawer {
+  box-shadow: none;
+}
+
+/* Sólo cuando la fila seleccionada no está en la página filtrada actual. */
+.adm-drawer-standalone {
+  margin-top: 18px;
+}
+
+.adm-drawer-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.adm-drawer-top h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.adm-drawer-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 0;
+}
+
+.adm-drawer-cols &gt; div {
+  padding: 18px 20px;
+}
+
+.adm-drawer-cols &gt; div:first-child {
+  border-right: 1px solid var(--line);
+}
+
+.adm-dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  font-size: 13px;
+  margin: 0;
+}
+
+.adm-dl dt {
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  padding-top: 1px;
+}
+
+.adm-dl dd {
+  margin: 0;
+  font-weight: 560;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+
+.adm-mini-title {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.adm-proj {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12.5px;
+}
+
+.adm-proj:last-of-type {
+  border-bottom: 0;
+}
+
+.adm-proj-d {
+  font-weight: 600;
+}
+
+.adm-proj-s {
+  color: var(--ink-4);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.adm-close {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.adm-close:hover {
+  text-decoration: underline;
+}
+
+.adm-note {
+  border-left: 3px solid var(--brand-warm);
+  background: #fff8e9;
+  border-radius: 0 10px 10px 0;
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  margin-bottom: 16px;
+}
+
+@media (max-width: 760px) {
+  .adm-drawer-cols {
+    grid-template-columns: 1fr;
+  }
+  .adm-drawer-cols &gt; div:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+/* SECTOR-STUDY-1: the study form&#x27;s fields had no visible box, and its buttons
+   read as plain text (&quot;Lanzar (0 respuestas)&quot; looked like a label). */
+.adm-study input:not([type=&quot;checkbox&quot;]):not([type=&quot;radio&quot;]),
+.adm-study select,
+.adm-study textarea {
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  padding: 6px 9px;
+  font: inherit;
+}
+.adm-study textarea { display: block; margin-top: 4px; }
+.adm-study .btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* MODEL-COMPARE-1 (log §263): /admin/comparar-modelos. */
+.adm-cmp-h2 { font-size: 15px; font-weight: 700; margin: 26px 0 10px; color: var(--ink); }
+.adm-cmp-form { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: center; margin: 8px 0 12px; }
+.adm-cmp-hint { font-size: 12.5px; color: var(--ink-3); margin: 6px 0 12px; max-width: 760px; }
+.adm-cmp-engines { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 14px; }
+.adm-cmp-engine { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 12px 14px; }
+.adm-cmp-engine-off { opacity: .55; }
+.adm-cmp-engine-name { font-weight: 700; display: block; margin-bottom: 8px; }
+.adm-cmp-vs { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.adm-cmp-tag { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-4); margin-bottom: 2px; }
+.adm-cmp-model { font-size: 13px; padding: 6px 0; }
+.adm-cmp-arrow { font-size: 12px; color: var(--ink-4); padding-bottom: 7px; }
+.adm-cmp-price { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.adm-cmp-check { display: flex; gap: 8px; align-items: flex-start; max-width: 620px; font-size: 13px; }
+.adm-cmp-launch { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; justify-content: space-between; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); padding: 12px 14px; }
+.adm-cmp-progress { font-size: 13px; color: var(--ink-2); margin: 10px 0; }
+.adm-cmp-verdict { font-size: 16px !important; }
+.adm-cmp-questions { display: grid; gap: 8px; margin-bottom: 10px; }
+.adm-cmp-q { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.adm-cmp-q summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; cursor: pointer; font-size: 13px; }
+.adm-cmp-dots { display: inline-flex; gap: 4px; }
+.adm-cmp-dot { width: 20px; height: 20px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700; }
+.adm-cmp-dot-same { background: var(--brand-pos-soft); color: var(--brand-pos); }
+.adm-cmp-dot-diff { background: var(--brand-neg-soft); color: var(--brand-neg); }
+.adm-cmp-dot-fail { background: var(--surface-2); color: var(--ink-4); }
+.adm-cmp-q-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 0 14px 14px; }
+.adm-cmp-brands { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.adm-cmp-brand { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; }
+.adm-cmp-brand-lost { background: var(--brand-neg-soft); color: var(--brand-neg); border-color: #f6c6cb; }
+.adm-cmp-brand-new { background: #fff3de; color: #92600a; border-color: #f4dcae; }
+.adm-cmp-health { margin-top: 4px; font-size: 11.5px; color: var(--brand-neg); max-width: 240px; }
+
+/* AFFILIATES-ADMIN-1 — /admin/afiliados */
+.adm-aff-table .adm-table { min-width: 0; }
+.adm-aff { margin-top: 28px; border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--surface); padding: 18px 20px; }
+.adm-aff-title { font-size: 16px; font-weight: 750; margin: 0 0 12px; }
+.adm-aff-form { display: flex; flex-wrap: wrap; gap: 12px 18px; margin-bottom: 4px; }
+.adm-aff-field { display: grid; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.adm-aff-field select,
+.adm-aff-field input { box-sizing: border-box; height: 38px; font: inherit; font-weight: 450; font-size: 14px; min-width: 220px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); }
+.adm-aff-links { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.adm-aff-link { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.adm-aff-label { font-size: 13px; font-weight: 650; }
+.adm-aff-url { box-sizing: border-box; min-width: 0; width: 100%; font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--ink-2); }
+.adm-aff-copy { cursor: pointer; min-width: 78px; justify-content: center; }
+@media (max-width: 640px) {
+  .adm-aff { padding: 14px; }
+  .adm-aff-field, .adm-aff-field select, .adm-aff-field input { width: 100%; min-width: 0; }
+  .adm-aff-form { display: grid; }
+  .adm-aff-link { grid-template-columns: minmax(0, 1fr) auto; }
+  .adm-aff-label { grid-column: 1 / -1; }
+  .adm-aff-table .adm-table th,
+  .adm-aff-table .adm-table td { padding: 10px; }
+}
+&lt;/style&gt;&lt;/head&gt;&lt;body&gt;
+&lt;div class=&quot;adm-shell&quot;&gt;&lt;div class=&quot;adm-opbar&quot;&gt;&lt;div class=&quot;adm-opbar-who&quot;&gt;&lt;span class=&quot;adm-opbar-badge&quot;&gt;Modo operador&lt;/span&gt;&lt;span&gt;tu correo&lt;/span&gt;&lt;/div&gt;
+&lt;nav class=&quot;adm-opbar-links&quot;&gt;&lt;a&gt;Usuarios&lt;/a&gt;&lt;a&gt;Estudio&lt;/a&gt;&lt;a&gt;Comparar modelos&lt;/a&gt;&lt;a&gt;Afiliados&lt;/a&gt;&lt;a&gt;Salir a la consola&lt;/a&gt;&lt;/nav&gt;&lt;/div&gt;
+&lt;main class=&quot;adm-main&quot;&gt;&lt;div class=&quot;adm-head&quot;&gt;&lt;div&gt;&lt;h1 class=&quot;adm-h1&quot;&gt;Afiliados&lt;/h1&gt;&lt;p class=&quot;adm-sub&quot;&gt;Códigos activos y enlaces para compartir · sólo lectura. Los códigos se añaden o quitan en Vercel (&lt;code&gt;AFFILIATE_CODES&lt;/code&gt;) y se aplican tras un Redeploy.&lt;/p&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;div class=&quot;adm-table-wrap adm-aff-table&quot;&gt;&lt;table class=&quot;adm-table&quot;&gt;&lt;thead&gt;&lt;tr&gt;&lt;th&gt;Código&lt;/th&gt;&lt;th&gt;Estado&lt;/th&gt;&lt;th class=&quot;adm-num&quot;&gt;Altas&lt;/th&gt;&lt;th class=&quot;adm-num&quot;&gt;De pago&lt;/th&gt;&lt;/tr&gt;&lt;/thead&gt;&lt;tbody&gt;
+&lt;tr&gt;&lt;td class=&quot;adm-em&quot;&gt;campamentoweb&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;adm-pill adm-pill-paid&quot;&gt;Activo&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td class=&quot;adm-em&quot;&gt;newsletter-seo&lt;/td&gt;&lt;td&gt;&lt;span class=&quot;adm-pill adm-pill-paid&quot;&gt;Activo&lt;/span&gt;&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;td class=&quot;adm-num&quot;&gt;0&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;&lt;/div&gt;
+&lt;p class=&quot;adm-cmp-hint&quot;&gt;«De pago» cuenta las cuentas con suscripción en Stripe, igual que en Usuarios. La comisión real la calcula el informe del día 5 a partir de los cobros.&lt;/p&gt;
+&lt;section class=&quot;adm-aff&quot;&gt;&lt;h2 class=&quot;adm-aff-title&quot;&gt;Enlaces para compartir&lt;/h2&gt;&lt;div class=&quot;adm-aff-form&quot;&gt;
+&lt;label class=&quot;adm-aff-field&quot;&gt;&lt;span&gt;Código&lt;/span&gt;&lt;select&gt;&lt;option&gt;campamentoweb&lt;/option&gt;&lt;option&gt;newsletter-seo&lt;/option&gt;&lt;/select&gt;&lt;/label&gt;
+&lt;label class=&quot;adm-aff-field&quot;&gt;&lt;span&gt;Campaña &lt;span class=&quot;adm-dim&quot;&gt;(opcional)&lt;/span&gt;&lt;/span&gt;&lt;input placeholder=&quot;newsletter-octubre&quot;&gt;&lt;/label&gt;&lt;/div&gt;
+&lt;p class=&quot;adm-cmp-hint&quot;&gt;Cada enlace lleva &lt;code&gt;ref=campamentoweb&lt;/code&gt; (lo que atribuye el alta durante 90 días) y &lt;code&gt;utm_source=campamentoweb&lt;/code&gt; · &lt;code&gt;utm_medium=afiliado&lt;/code&gt; para verlo en PostHog.&lt;/p&gt;
+&lt;ul class=&quot;adm-aff-links&quot;&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Portada&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Precios&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/precios?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiado&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Comprobador gratis&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/gratis/aparece-mi-marca-en-chatgpt?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;li class=&quot;adm-aff-link&quot;&gt;&lt;span class=&quot;adm-aff-label&quot;&gt;Informe gratis&lt;/span&gt;&lt;input class=&quot;adm-aff-url&quot; readonly value=&quot;https://www.genscore.es/gratis/informe-geo?ref=campamentoweb&amp;amp;utm_source=campamentoweb&amp;amp;utm_medium=afiliado&quot;&gt;&lt;button class=&quot;adm-chip adm-aff-copy&quot;&gt;Copiar&lt;/button&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/section&gt;&lt;/main&gt;&lt;/div&gt;&lt;/body&gt;&lt;/html&gt;"></iframe></figure></div></body></html>

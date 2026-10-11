@@ -335,4 +335,4 @@ worse than no rule, because a future session will obey it anyway.
   migración no está aplicada, Perplexity cuenta como encendido y los otros
   tres interruptores siguen funcionando. El suelo de «al menos un motor» sólo
   cuenta Gemini, Claude y OpenAI, porque Perplexity solo nunca corre en
-  Starter (`docs/brand/design-decisions-log.md` §282).
+  Starter (`docs/brand/design-decisions-log.md` §283).
