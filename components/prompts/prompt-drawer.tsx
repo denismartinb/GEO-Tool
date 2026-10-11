@@ -10,18 +10,38 @@ import { FormattedResponse } from "@/components/ui/formatted-response";
 import { buildRanking } from "@/components/prompts/mention-coverage";
 import { computeDominantBrandSentiment } from "@/lib/metrics/brand-sentiment";
 import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
-import { sampleCountOf, sampleLabel } from "@/lib/scan/sample-display";
 import { matchDisplayName } from "@/lib/brand-aliases/match-display-name";
 // Same brand-domain matching the Citations page and run-scoring use, so
 // "Citada" here can never disagree with own_citation_share / citation_score
 // over what counts as the brand's own domain (BRAND-DOMAIN-1).
 import { isBrandDomain } from "@/lib/domains/brand-domain";
+import {
+  mentionLine,
+  ownCitationLine,
+  sourceFrequency,
+  summarizeEngines,
+} from "@/components/prompts/engine-summary";
 
 type Competitor = {
   id: string;
   name: string;
   domain: string;
 };
+
+/**
+ * GS-04 (log §278): the hint under "La IA (no) menciona tu marca" used to be
+ * one fixed sentence, "La IA te nombra por lo que ya sabe de tu marca", shown
+ * even when the brand was NOT named. It also claimed where the model's
+ * knowledge came from, which nothing here measures. It now only restates
+ * what the answers show.
+ */
+export function mentionHint(hasResults: boolean, mentioned: boolean, cited: boolean): string {
+  if (!hasResults) return "Esta pregunta todavía no tiene respuestas escaneadas.";
+  if (!mentioned) return "Ninguna respuesta a esta pregunta nombra tu marca.";
+  return cited
+    ? "Te nombra y, además, usa tu web como fuente."
+    : "Te nombra en la respuesta, aunque sin citar tu web.";
+}
 
 type Props = {
   projectId: string;
@@ -69,6 +89,9 @@ function sentimentBadgeClass(s: string | null | undefined): string {
 
 type Tab = "resumen" | "respuestas";
 
+/** Sources shown per engine before «Ver N fuentes más». */
+const SOURCES_PER_ENGINE = 4;
+
 /**
  * Mirrors the frontend display rule from docs/adr/0006: the raw Google
  * grounding-redirect URL (vertexaisearch.cloud.google.com/...) must never be
@@ -101,6 +124,11 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
   // marca propia nunca se pliega, mencionada o no, porque es la razón por la
   // que se abrió el cajón.
   const [showAllRanking, setShowAllRanking] = useState(false);
+  // Engines whose full source list was asked for ("Ver N fuentes más").
+  const [openSources, setOpenSources] = useState<ReadonlySet<string>>(() => new Set());
+  // Respuestas tab: which engine and which of its answers is on screen.
+  const [respEngine, setRespEngine] = useState(0);
+  const [respIndex, setRespIndex] = useState(0);
 
   if (!results.length) return null;
 
@@ -111,72 +139,55 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     new Set(extractedList.flatMap((e) => e?.brand?.evidence ?? []))
   );
 
-  // Evidence and citations organized by engine (founder feedback 2026-07-24:
-  // a flat list merged across engines was harder to scan than one grouped by
-  // motor). Each engine keeps its own de-duplicated citation list — the same
-  // source cited by two engines legitimately appears once under each.
-  const engineGroups = results.map((r, i) => {
-    const ext = extractedList[i];
-    const evidence = ext?.brand?.evidence ?? [];
-    const citations: Array<{
-      url?: string | null;
-      domain?: string | null;
-      title?: string | null;
-      source?: "grounding" | "inline";
-    }> = [];
-    const seen = new Set<string>();
-    for (const cite of ext?.citations ?? []) {
-      const key = (cite.domain ?? cite.title ?? cite.url ?? "").toLowerCase();
-      if (!key || seen.has(key)) continue;
-      seen.add(key);
-      citations.push(cite);
-    }
-    // The project's own domain, when this engine used it, goes first — it's
-    // the one source in the list that's actually yours.
-    citations.sort((a, b) => {
-      const aOwn = isBrandDomain(a.domain, projectDomain);
-      const bOwn = isBrandDomain(b.domain, projectDomain);
-      if (aOwn === bOwn) return 0;
-      return aOwn ? -1 : 1;
-    });
-    // Fase −1c (docs/geo-score-variability-2026-08.md §3): WHICH of the
-    // brand's known names this mention actually matched — the tracked brand
-    // string, or one of its aliases. Purely presentational, computed over
-    // this row's OWN snapshot (frozen at scan time, ADR 0025), never over the
-    // project's current brand_aliases, so a later alias edit can't relabel
-    // how an old mention is explained. Falls back to `projectBrand` only for
-    // rows persisted before brand_snapshot existed.
-    const displayNameMatch = matchDisplayName(
-      ext?.brand?.display_name_found,
-      r.brand_snapshot ?? projectBrand,
-      r.brand_aliases_snapshot ?? []
-    );
-    // PROMPT-DRAWER-TRUTH-1: se lee de `extracted_json`, no de la columna
-    // `brand_mentioned`. Las dos coinciden cuando la extracción funcionó, pero
-    // en una fila cuya extracción falló la columna conserva el valor ingenuo
-    // del momento de generar (una subcadena en `prompt-job.ts`) y no hay
-    // ninguna verificación detrás — decir «mención verificada» de eso sería
-    // afirmar algo que nadie comprobó (MENTION-VERIFY-1, docs/adr/0021).
-    const verifiedMention = Boolean(ext?.brand?.mentioned);
-    return { row: r, meta: getEngineMeta(r.provider), evidence, citations, displayNameMatch, verifiedMention };
-  });
-  /**
-   * PROMPT-DRAWER-TRUTH-1 (log §147): un motor entra en el panel si aporta
-   * citas **o** si su mención está verificada y no las trae.
-   *
-   * Antes sólo entraba con citas, así que el 10% de las menciones verificadas
-   * que no dejan una cita utilizable —186 filas de Gemini, 39 de ChatGPT y 12
-   * de Claude sobre 2.367 medidas el 2026-08-23— hacían desaparecer la sección
-   * entera sin decir nada, debajo de un «La IA menciona tu marca» en verde. El
-   * usuario que abre justo una de ésas concluye que la herramienta se lo
-   * inventa, que es exactamente lo que le pasó al fundador.
-   */
-  const evidenceGroups = engineGroups.filter((g) => g.evidence.length > 0 || g.verifiedMention);
-  const citationGroups = engineGroups.filter((g) => g.citations.length > 0);
-  const totalCitations = citationGroups.reduce((sum, g) => sum + g.citations.length, 0);
-  const hasOwnCitation = engineGroups.some((g) =>
-    g.citations.some((c) => isBrandDomain(c.domain, projectDomain))
-  );
+  // PROMPT-DRAWER-ENGINES-1 (log §280): one block per ENGINE, not per answer.
+  // With sampling (ADR 0030) a prompt can hold five answers per engine, and
+  // listing each one as its own row repeated "Gemini · muestra 1 de 5" fifteen
+  // times (founder, 2026-10-11). Counts per engine live in engine-summary.ts.
+  const engines = summarizeEngines(results, extractedList, projectDomain);
+  const rowById = new Map(results.map((r, i) => [r.id, { row: r, ext: extractedList[i] }]));
+  const answersPerEngine = new Set(engines.map((e) => e.answers));
+  const sameAnswerCount = answersPerEngine.size === 1 ? engines[0].answers : null;
+
+  // Evidence grouped per engine and de-duplicated: five answers of the same
+  // engine often quote the very same sentence.
+  const evidenceGroups = engines
+    .map((e) => {
+      const entries = e.rowIds.map((id) => rowById.get(id)!);
+      const evidence = Array.from(new Set(entries.flatMap(({ ext }) => ext?.brand?.evidence ?? [])));
+      // PROMPT-DRAWER-TRUTH-1: se lee de `extracted_json`, no de la columna
+      // `brand_mentioned`. Las dos coinciden cuando la extracción funcionó, pero
+      // en una fila cuya extracción falló la columna conserva el valor ingenuo
+      // del momento de generar (una subcadena en `prompt-job.ts`) y no hay
+      // ninguna verificación detrás — decir «mención verificada» de eso sería
+      // afirmar algo que nadie comprobó (MENTION-VERIFY-1, docs/adr/0021).
+      const verifiedMention = entries.some(({ ext }) => Boolean(ext?.brand?.mentioned));
+      // Fase −1c (docs/geo-score-variability-2026-08.md §3): WHICH of the
+      // brand's known names this mention actually matched — the tracked brand
+      // string, or one of its aliases. Computed over each row's OWN snapshot
+      // (frozen at scan time, ADR 0025), never over the project's current
+      // brand_aliases. The first alias match of the engine is the one shown.
+      const aliasMatch =
+        entries
+          .map(({ row, ext }) =>
+            matchDisplayName(
+              ext?.brand?.display_name_found,
+              row.brand_snapshot ?? projectBrand,
+              row.brand_aliases_snapshot ?? []
+            )
+          )
+          .find((m) => m?.isAlias) ?? null;
+      return { provider: e.provider, meta: getEngineMeta(e.provider), evidence, verifiedMention, aliasMatch };
+    })
+    /**
+     * PROMPT-DRAWER-TRUTH-1 (log §147): un motor entra en el panel si aporta
+     * citas **o** si su mención está verificada y no las trae. Antes sólo
+     * entraba con citas, y una mención verificada sin cita utilizable hacía
+     * desaparecer la sección entera debajo de un «La IA menciona tu marca».
+     */
+    .filter((g) => g.evidence.length > 0 || g.verifiedMention);
+
+  const hasAnySource = engines.some((e) => e.sources.length > 0);
+  const hasOwnCitation = engines.some((e) => e.ownCited > 0);
 
   // PROMPT-DRAWER-TRUTH-1 (log §147): la cobertura sale de contar respuestas,
   // no de `some(...)` pintado como 100%/0%. El cálculo y su orden viven en
@@ -196,21 +207,17 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
 
   const category = results[0].category;
 
-  /**
-   * SAMPLING-SURFACE-1 (ADR 0030): with repetitions, `results` arrives in
-   * whatever order the query returned, so the same engine's answers can be
-   * scattered through the "Por motor" list. Sorting by engine and then by
-   * sample puts an engine's own repetitions next to each other, which is what
-   * makes "this engine said different things on different tries" legible at a
-   * glance. `sampleCount` is derived once and shared with the label so the two
-   * cannot disagree about how many times the prompt was asked.
-   */
-  const sampleCount = sampleCountOf(results);
-  const enginesBySample = [...results].sort((a, b) => {
-    const byProvider = normalizeProvider(a.provider).localeCompare(normalizeProvider(b.provider));
-    if (byProvider !== 0) return byProvider;
-    return Number(a.sample_index ?? 0) - Number(b.sample_index ?? 0);
-  });
+  // Respuestas tab: clamp the selection, since the rows can change under an
+  // open drawer (a new scan lands) and leave an index past the end.
+  const engineIdx = Math.min(respEngine, engines.length - 1);
+  const currentEngine = engines[engineIdx];
+  const answerIdx = Math.min(respIndex, currentEngine.answers - 1);
+  const current = rowById.get(currentEngine.rowIds[answerIdx]) ?? null;
+  const currentCitations = current?.ext?.citations ?? [];
+  const currentCitesOwn = currentCitations.some((c) => isBrandDomain(c.domain, projectDomain));
+  const currentSources = new Set(
+    currentCitations.map((c) => (c.domain ?? c.title ?? c.url ?? "").toLowerCase()).filter(Boolean)
+  ).size;
 
   return (
     <>
@@ -299,7 +306,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <div className="stmt" style={{ color: brandMentioned ? "var(--pos-ink)" : "var(--neg-ink)" }}>
                     {brandMentioned ? "La IA menciona tu marca" : "La IA no menciona tu marca"}
                   </div>
-                  <div className="hint">La IA te nombra por lo que ya sabe de tu marca, no por tu web.</div>
+                  <div className="hint">{mentionHint(results.length > 0, brandMentioned, hasOwnCitation)}</div>
                 </div>
                 <div className="pr2-presence-cell">
                   <div className="stmt" style={{ color: hasOwnCitation ? "var(--accent-ink)" : "var(--ink-4)" }}>
@@ -314,48 +321,42 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                 </div>
               </div>
 
-              {/* Por motor */}
+              {/* Por motor: one row per engine (PROMPT-DRAWER-ENGINES-1, log §280).
+                  The per-answer detail lives only in «Respuestas». */}
               <div>
-                <p className="ac-title">Por motor</p>
+                <div className="pr2-rk-head">
+                  <p className="ac-title">Por motor</p>
+                  {sameAnswerCount !== null && sameAnswerCount > 1 ? (
+                    <span className="pr2-eng-sub">Cada motor respondió {sameAnswerCount} veces en este escaneo</span>
+                  ) : null}
+                </div>
                 <div className="aside-card">
-                  {enginesBySample.map((r) => {
-                    const meta = getEngineMeta(r.provider);
-                    const label = sampleLabel(r.sample_index, sampleCount);
+                  {engines.map((e) => {
+                    const meta = getEngineMeta(e.provider);
                     return (
-                      <div key={r.id} className="pr2-erow">
+                      <div key={e.provider} className="pr2-erow">
                         <span className="pr2-eav" style={{ color: meta.color }}>
-                          <EngineGlyph provider={normalizeProvider(r.provider)} />
+                          <EngineGlyph provider={e.provider} />
                         </span>
-                        {/* SAMPLING-SURFACE-1 (ADR 0030): with repetitions this
-                            list showed "Gemini / Gemini / Gemini / Claude /
-                            ..." with nothing saying why — three rows that look
-                            like a rendering bug but are in fact three separate
-                            answers to the same question, and whose disagreement
-                            is the entire point of sampling. The label only
-                            appears when there is more than one sample. */}
                         <span className="pr2-erow-name">
                           {meta.label}
-                          {label ? (
-                            <span style={{ color: "var(--ink-4)", fontWeight: 500 }}> · {label}</span>
-                          ) : null}
+                          <small>{mentionLine(e)}</small>
                         </span>
-                        <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
-                          {r.brand_mentioned ? "Marca mencionada" : "Marca no mencionada"}
-                        </span>
-                        {r.brand_mentioned ? (
-                          r.sentiment ? (
-                            <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
-                              {sentimentLabels[r.sentiment] ?? r.sentiment}
-                            </span>
-                          ) : null
-                        ) : (
-                          // SCREEN-POLISH-1 Fase A: no brand mention on this
-                          // row → no brand sentiment to report, however the
-                          // LLM filled `sentiment` for it.
-                          <span className="badge badge-outline">{SENTIMENT_NA_LABEL}</span>
-                        )}
-                        <span className="pr2-erow-cit">
-                          {r.citations_count ?? 0} {r.citations_count === 1 ? "cita" : "citas"}
+                        <span className="pr2-erow-stats">
+                          {e.mentioned > 0 ? (
+                            e.sentiment ? (
+                              <span className={`badge ${sentimentBadgeClass(e.sentiment)}`}>
+                                {sentimentLabels[e.sentiment] ?? e.sentiment}
+                              </span>
+                            ) : null
+                          ) : (
+                            // SCREEN-POLISH-1 Fase A: no brand mention from this
+                            // engine → no brand sentiment to report.
+                            <span className="badge badge-outline">{SENTIMENT_NA_LABEL}</span>
+                          )}
+                          <span className={`badge ${e.ownCited > 0 ? "badge-accent" : "badge-neutral"}`}>
+                            {ownCitationLine(e)}
+                          </span>
                         </span>
                       </div>
                     );
@@ -440,21 +441,18 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                   <p className="ac-title">Evidencias de mención de {projectBrand}</p>
                   <div className="aside-card">
                     {evidenceGroups.map((g) => (
-                      <Fragment key={g.row.id}>
+                      <Fragment key={g.provider}>
                         <div className="pr2-eng-group-h">
                           <span className="ico" style={{ color: g.meta.color }}>
-                            <EngineGlyph provider={normalizeProvider(g.row.provider)} />
+                            <EngineGlyph provider={g.provider} />
                           </span>
                           <span className="nm">{g.meta.label}</span>
                           {/* Fase −1c: dice explícitamente si la mención contó
                               a través de un alias, no de "{projectBrand}"
-                              literal — el hueco que ADR 0025 dejó documentado
-                              sin arreglar ("este panel muestra la cita pero
-                              nunca dice que la mención contó porque casó con
-                              'Firefox' en vez de con 'Mozilla'"). */}
-                          {g.displayNameMatch?.isAlias ? (
+                              literal (ADR 0025). */}
+                          {g.aliasMatch ? (
                             <span className="badge badge-accent" style={{ fontSize: 10 }}>
-                              vía alias «{g.displayNameMatch.matchedName}»
+                              vía alias «{g.aliasMatch.matchedName}»
                             </span>
                           ) : null}
                         </div>
@@ -465,17 +463,11 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                             </p>
                           ))
                         ) : (
-                          // Lo que este texto puede afirmar y lo que no: la
-                          // mención SÍ está verificada (el nombre aparece de
-                          // verdad en la respuesta, MENTION-VERIFY-1), y lo que
-                          // falta es la frase que la rodea. Decir «no te
+                          // La mención SÍ está verificada (MENTION-VERIFY-1); lo
+                          // que falta es la frase que la rodea. Decir «no te
                           // menciona» aquí sería tan falso como enseñar una
-                          // cita inventada.
-                          // `pr2-evi` y no `pr2-cit-note`: comparte la fila con
-                          // las citas de los otros motores, así que va en su
-                          // misma celda. Sin cursiva —no es una cita— y en tono
-                          // apagado, porque `pr2-cit-note b` pinta en rojo de
-                          // error y aquí no ha fallado nada del usuario.
+                          // cita inventada. Tono apagado: no ha fallado nada
+                          // del usuario.
                           <p className="pr2-evi" style={{ fontStyle: "normal", color: "var(--ink-4)" }}>
                             Mención verificada, pero este motor no dejó una cita textual recuperable. La
                             respuesta completa está en «Respuestas», con el nombre resaltado.
@@ -490,34 +482,59 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
               {/* Fuentes usadas, agrupadas por motor. No son necesariamente
                   páginas que citen la marca — son las páginas que la IA usó
                   (búsqueda/grounding) para construir su respuesta. */}
-              {citationGroups.length > 0 && (
+              {hasAnySource && (
                 <div>
-                  <p className="ac-title">
-                    Fuentes usadas ({totalCitations}){" "}
-                    <InfoTip text="Páginas que la IA usó para construir esta respuesta (búsqueda o grounding) — no implica que hablen de tu marca en concreto. Que una sea tu dominio es lo que cuenta como 'Citada'." />
-                  </p>
+                  <div className="pr2-rk-head">
+                    <p className="ac-title">
+                      Fuentes usadas{" "}
+                      <InfoTip text="Páginas que la IA usó para construir sus respuestas (búsqueda o grounding) — no implica que hablen de tu marca en concreto. Que una sea tu dominio es lo que cuenta como 'Citada'." />
+                    </p>
+                    <span className="pr2-eng-sub">Sin repetir, por motor</span>
+                  </div>
                   <div className="aside-card">
-                    {citationGroups.map((g) => (
-                      <Fragment key={g.row.id}>
-                        <div className="pr2-eng-group-h">
-                          <span className="ico" style={{ color: g.meta.color }}>
-                            <EngineGlyph provider={normalizeProvider(g.row.provider)} />
-                          </span>
-                          <span className="nm">{g.meta.label}</span>
-                        </div>
-                        {g.citations.map((cite, i) => {
-                          const isOwn =
-                            isBrandDomain(cite.domain, projectDomain);
-                          return (
-                            <div key={i} className={`pr2-cit${isOwn ? " own" : ""}`}>
-                              <Icon name="globe" size={13} />
-                              <span className="pr2-cit-d">{citationDisplayLabel(cite)}</span>
-                              {isOwn && <span className="pr2-rk-tag">Tú</span>}
-                            </div>
-                          );
-                        })}
-                      </Fragment>
-                    ))}
+                    {engines.map((e) => {
+                      const meta = getEngineMeta(e.provider);
+                      const open = openSources.has(e.provider);
+                      const shown = open ? e.sources : e.sources.slice(0, SOURCES_PER_ENGINE);
+                      const hidden = e.sources.length - shown.length;
+                      return (
+                        <Fragment key={e.provider}>
+                          <div className="pr2-eng-group-h">
+                            <span className="ico" style={{ color: meta.color }}>
+                              <EngineGlyph provider={e.provider} />
+                            </span>
+                            <span className="nm">{meta.label}</span>
+                          </div>
+                          {e.sources.length === 0 ? (
+                            <p className="pr2-cit-none">Respondió sin buscar en la web.</p>
+                          ) : (
+                            shown.map((src) => {
+                              const freq = sourceFrequency(src.answers, e.answers);
+                              return (
+                                <div
+                                  key={citationDisplayLabel(src.citation)}
+                                  className={`pr2-cit${src.isOwn ? " own" : ""}`}
+                                >
+                                  <Icon name="globe" size={13} />
+                                  <span className="pr2-cit-d">{citationDisplayLabel(src.citation)}</span>
+                                  {src.isOwn && <span className="pr2-rk-tag">Tú</span>}
+                                  {freq ? <span className="pr2-cit-f">{freq}</span> : null}
+                                </div>
+                              );
+                            })
+                          )}
+                          {hidden > 0 ? (
+                            <button
+                              type="button"
+                              className="pr2-rk-more"
+                              onClick={() => setOpenSources((prev) => new Set(prev).add(e.provider))}
+                            >
+                              Ver {hidden} {hidden === 1 ? "fuente más" : "fuentes más"} de {meta.label}
+                            </button>
+                          ) : null}
+                        </Fragment>
+                      );
+                    })}
                     {!hasOwnCitation && (
                       <p className="pr2-cit-note">
                         <b>Ninguna es {projectDomain}</b> — por eso «Citada: No». Publicar contenido que la IA
@@ -530,73 +547,76 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
             </>
           )}
 
-          {tab === "respuestas" && (
+          {tab === "respuestas" && current && (
             <>
-              <div className="aside-card">
-                <table className="pr2-rtbl">
-                  <thead>
-                    <tr>
-                      <th>Motor</th>
-                      <th>Marca</th>
-                      <th>Sentimiento</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.map((r) => {
-                      const meta = getEngineMeta(r.provider);
-                      return (
-                        <tr key={r.id}>
-                          <td>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                              <span className="pr2-eav" style={{ width: 20, height: 20, color: meta.color }}>
-                                <EngineGlyph provider={normalizeProvider(r.provider)} />
-                              </span>
-                              {meta.label}
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`badge ${r.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
-                              {r.brand_mentioned ? "Sí" : "No"}
-                            </span>
-                          </td>
-                          <td>
-                            {r.brand_mentioned ? (
-                              r.sentiment ? (
-                                <span className={`badge ${sentimentBadgeClass(r.sentiment)}`}>
-                                  {sentimentLabels[r.sentiment] ?? r.sentiment}
-                                </span>
-                              ) : (
-                                <span style={{ color: "var(--ink-4)" }}>—</span>
-                              )
-                            ) : (
-                              // SCREEN-POLISH-1 Fase A: no mention, no brand
-                              // sentiment to report.
-                              <span className="badge badge-outline">{SENTIMENT_NA_LABEL}</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+              {/* PROMPT-DRAWER-ENGINES-1 (log §280): one answer at a time,
+                  chosen by engine and answer, instead of a table plus every
+                  full text one after another. */}
+              {engines.length > 1 ? (
+                <div className="pr2-seg" role="group" aria-label="Motor">
+                  {engines.map((e, i) => (
+                    <button
+                      key={e.provider}
+                      type="button"
+                      className={i === engineIdx ? "on" : undefined}
+                      aria-pressed={i === engineIdx}
+                      onClick={() => {
+                        setRespEngine(i);
+                        setRespIndex(0);
+                      }}
+                    >
+                      <span style={{ color: getEngineMeta(e.provider).color, display: "inline-grid", width: 14, height: 14 }}>
+                        <EngineGlyph provider={e.provider} />
+                      </span>
+                      {getEngineMeta(e.provider).label}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {currentEngine.answers > 1 ? (
+                <div className="pr2-chips" role="group" aria-label="Respuesta">
+                  {currentEngine.rowIds.map((id, k) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={`pr2-chip${k === answerIdx ? " on" : ""}`}
+                      aria-pressed={k === answerIdx}
+                      onClick={() => setRespIndex(k)}
+                    >
+                      Respuesta {k + 1}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="resp-full">
+                <div className="eng-head pr2-resp-meta">
+                  <span className="pr2-eav" style={{ width: 20, height: 20, color: getEngineMeta(current.row.provider).color }}>
+                    <EngineGlyph provider={normalizeProvider(current.row.provider)} />
+                  </span>
+                  <span className="nm">{getEngineMeta(current.row.provider).label}</span>
+                  <span className={`badge ${current.row.brand_mentioned ? "badge-pos" : "badge-neutral"}`}>
+                    {current.row.brand_mentioned ? "Te nombra" : "No te nombra"}
+                  </span>
+                  {current.row.brand_mentioned && current.row.sentiment ? (
+                    <span className={`badge ${sentimentBadgeClass(current.row.sentiment)}`}>
+                      {sentimentLabels[current.row.sentiment] ?? current.row.sentiment}
+                    </span>
+                  ) : null}
+                  {currentCitesOwn ? <span className="badge badge-accent">Cita tu web</span> : null}
+                  <span className="pr2-resp-src">
+                    {currentSources === 0
+                      ? "Sin fuentes"
+                      : `${currentSources} ${currentSources === 1 ? "fuente" : "fuentes"}`}
+                  </span>
+                </div>
+                <div className="body">
+                  {current.row.raw_response_text ? (
+                    <FormattedResponse text={current.row.raw_response_text} brand={projectBrand} />
+                  ) : (
+                    <p style={{ color: "var(--ink-4)" }}>El texto de esta respuesta no se guardó.</p>
+                  )}
+                </div>
               </div>
-
-              {results.map(
-                (r) =>
-                  r.raw_response_text && (
-                    <div key={r.id} className="resp-full">
-                      <div className="eng-head">
-                        <span className="pr2-eav" style={{ width: 20, height: 20, color: getEngineMeta(r.provider).color }}>
-                          <EngineGlyph provider={normalizeProvider(r.provider)} />
-                        </span>
-                        <span className="nm">{getEngineMeta(r.provider).label}</span>
-                      </div>
-                      <div className="body">
-                        <FormattedResponse text={r.raw_response_text} brand={projectBrand} />
-                      </div>
-                    </div>
-                  )
-              )}
             </>
           )}
         </div>

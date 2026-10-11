@@ -410,7 +410,9 @@
   .ov2-scope { max-width: 1200px; }
 
   .ov2-insight { padding: 17px 20px; }
-  .ov2-insight-txt { font-size: 14px; max-width: 92ch; }
+  /* No max-width: a cap in `ch` stopped the sentence well short of the
+     banner's right edge on wide screens (founder, 2026-10-11, log §279). */
+  .ov2-insight-txt { font-size: 14px; }
 
   /* More room than the 900px step above — the gauge column and its card
      padding widen back out again; everything else about the hero band
@@ -436,15 +438,17 @@
   .ov2-brow-meter .track { height: 8px; }
 
   /* Analysis column (panorama) + sticky action rail (oportunidades) */
+  /* Same tracks and gap as `.ov2-score-row` above, so Oportunidades lines
+     up with the engine bars and Auditoría SEO column (log §279). */
   .ov2-cols {
     display: grid;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
-    gap: 24px;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 22px;
     align-items: start;
     margin-top: 4px;
   }
   .ov2-main, .ov2-rail { display: block; min-width: 0; }
-  .ov2-main > .ov2-sec-lbl:first-child,
+  .ov2-main > .ov2-pano-dup:first-child > .ov2-sec-lbl:first-child,
   .ov2-rail > .ov2-sec-lbl:first-child { margin-top: 26px; }
   /* 60px clears the sticky page header (.ov-sticky-header) while the rail
      follows the (usually taller) analysis column during scroll. */
@@ -1145,6 +1149,40 @@
    engine bars fill it and the Auditoría SEO card moves up beside the GEO
    Score breakdown. Both engine copies exist in the DOM; exactly one shows.
    Below 1200px nothing moves. */
+/* Panorámica competitiva split (founder, 2026-10-11, log §279). From
+   1200px, when the side column holds the engine bars AND the Auditoría SEO
+   card (`is-pano-up`, set in page.tsx), the chart card moves under the GEO
+   Score breakdown and both columns stretch so the chart and the SEO card end
+   on the same line; the "Último escaneo" table then opens the next row, level
+   with Oportunidades. The chart exists twice in the DOM; exactly one shows.
+   Below 1200px nothing moves. */
+.ov2-pano-up { display: none; }
+.ov2-pano-dup { display: contents; }
+.ov2-cmp-lbl { display: none; }
+.ov2-cmp-card.has-chart { margin-top: 11px; }
+@media (min-width: 1200px) {
+  .ov2-score-row.is-pano-up { align-items: stretch; }
+  .ov2-score-row.is-pano-up .ov2-score-main,
+  .ov2-score-row.is-pano-up .ov2-score-side { display: flex; flex-direction: column; }
+  .ov2-score-row.is-pano-up .ov2-seo-side > .card { flex: 1; }
+  /* When the SEO card is the one stretched, its "lo primero que arreglar"
+     rows share the extra height instead of leaving a blank bottom. */
+  .ov2-score-row.is-pano-up .ov2-seo { display: flex; flex-direction: column; }
+  .ov2-score-row.is-pano-up .ov2-seo-fxl { flex: 1; }
+  .ov2-score-row.is-pano-up .ov2-seo-fx { flex: 1; }
+  .ov2-pano-up { display: flex; flex-direction: column; flex: 1; }
+  .ov2-pano-up > .card { flex: 1; display: flex; flex-direction: column; }
+  /* The chart grows with the card instead of leaving white space under a
+     fixed 86px of bars: each bar keeps its proportion through `--h`. */
+  .ov2-pano-up .ov2-posbars { flex: 1; height: auto; min-height: 86px; }
+  .ov2-pano-up .ov2-posbars .b { height: var(--h) !important; }
+  .ov2-main.is-pano-up .ov2-pano-dup { display: none; }
+  .ov2-main.is-pano-up .ov2-cmp-lbl { display: flex; margin-top: 26px; }
+  .ov2-main.is-pano-up .ov2-cmp-card { margin-top: 0; }
+  /* The section label above already says "Último escaneo". */
+  .ov2-main.is-pano-up .ov2-cmp-hd-nm { visibility: hidden; }
+}
+
 .ov2-eng-side, .ov2-seo-side { display: contents; }
 .ov2-eng-kpi { display: none; }
 @media (min-width: 1200px) {

@@ -23932,3 +23932,58 @@ quitan el horario «L–V, 18:00–21:00» y la línea equivalente de la tarjeta
 porque los propios huecos ya lo enseñan. La tarjeta de reserva pasa a blanco y
 monta sobre el borde de la banda, y debajo van los tres pasos de la llamada.
 Por debajo de 860px el orden es: texto en oscuro, tarjeta y pasos.
+
+## 278. AUDIT-TRUTH-1: frases que el producto afirmaba sin datos y un informe que no cuadraba con las pantallas (2026-10-11)
+
+**Origen.** Auditoría externa de producto del 11-oct-2026 (PDF privado que el fundador adjuntó en el hilo «Priorizar la auditoría del 11 de octubre»). Se corrigieron los bloques 1 y 2 de la priorización (GS-02, GS-03, GS-04 y GS-07). El fundador dio el sí explícito para tocar estas frases pese a la congelación de textos (§273): no son cambios de estilo, son frases que hoy dicen algo falso.
+
+**Qué se decidió.**
+
+1. **GS-02 · El liderazgo es una comparación.** La frase del resumen de Visión general caía por defecto en «Hoy mantienes la mayor visibilidad frente a tus competidores». No miraba si había competidores ni si la marca salía, así que un proyecto sin competidores y con 0 de 72 menciones se leía como líder. Ahora decide `resolveCompetitiveClaim` (`lib/metrics/competitive-claim.ts`, puro y con tests). Distingue siete casos: rival por delante, sin citas propias, sin competidores, nadie nombrado, empate, por delante con muestra pequeña y liderazgo real. La frase de liderazgo sólo sale con un competidor real por detrás y con muestra suficiente (`hasSufficientSample`).
+2. **GS-04 · La pista de mención dice sólo lo que muestran las respuestas.** Bajo «La IA no menciona tu marca», el cajón de Prompts decía siempre «La IA te nombra por lo que ya sabe de tu marca». Era falso cuando no había mención, y además afirmaba de dónde sale lo que sabe el modelo, cosa que nada mide. Ahora la escribe `mentionHint` según haya respuestas, mención y cita. También se quitó «por lo que ya sabe» de la ayuda de `/runs/[runId]`.
+3. **GS-07 · Las fuentes del informe salen de `resolveCitation`**, la misma función de Páginas citadas. El informe leía `domain || url` en crudo. Cuando no se resolvía el redirect de Gemini, `vertexaisearch.cloud.google.com` aparecía como «la web más citada», y el redirect se imprimía como página propia. Una cita sin dominio resuelto queda fuera del informe.
+4. **GS-07 · Una cita de «cómo te describe» tiene que ser sobre la marca.** `findQuote` dejó de buscar subcadenas. Ahora exige el nombre como palabra propia que no sea el principio de otro nombre con mayúscula («Marca Plus+»). En las citas de marca, además, descarta las frases que nombran otra marca de la misma respuesta.
+5. **GS-03 · Crear o mejorar se decide una sola vez.** Antes, el motor escribía «Publica una página» como primer paso antes de que existiera la auditoría de cobertura, y el detalle decía «no crees una página nueva». Ahora `overlayCopy` lleva su propio `firstStep` y lo leen la tarjeta (`effectiveFirstStep`), la cabecera de grupo (sólo agrupa el paso cuando todos los miembros coinciden) y el plan del informe (`report-data.ts` aplica el mismo `computeCoverageOverlay`). **Nuevo estado `home_only`:** si la única página propia que devuelve Google es la portada, no se da el tema por cubierto. La tarjeta lo dice («Sólo encontramos tu portada»), mantiene la acción de crear y no sube la confianza. La columna «¿Página tuya?» del informe pone «—».
+
+**Qué queda pendiente** (de la misma priorización, sin empezar):
+- GS-01: Competidores suma los últimos 5 escaneos y su tabla de brechas sólo mira el último.
+- GS-06: hay dos umbrales distintos para el puesto medio.
+- GS-08: el informe puede tratar como rival directo una herramienta citada.
+- El informe toma la cobertura de las 3 últimas filas de `domain_coverage`, mientras que Recomendaciones sólo mira la última. Es una pequeña diferencia de lectura que no se ha tocado.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.
+
+## 279. OV-ALIGN-1: la panorámica sube junto a Auditoría SEO y la frase del resumen usa todo el ancho (2026-10-11)
+
+**Origen.** El fundador, sobre el preview de AUDIT-TRUTH-1 (§278), con capturas de escritorio: la frase resumen se cortaba antes del borde derecho del recuadro, y pidió subir la panorámica competitiva bajo el desglose del GEO Score, alineada con Auditoría SEO, para que «Último escaneo» y Oportunidades queden también alineados. Dijo que se podía hacer algo más grande si hacía falta.
+
+**Qué se decidió.**
+
+1. **La frase resumen no tiene ancho máximo.** `.ov2-insight-txt` llevaba `max-width: 92ch` desde 1200px, que en pantallas anchas la cortaba a dos tercios del recuadro. Se quita.
+2. **La panorámica se parte en dos desde 1200px.** El gráfico («Tu puesto medio cuando apareces» y el top 5) va bajo el desglose y las dos columnas se estiran hasta terminar a la misma altura que la tarjeta de Auditoría SEO. Si la columna estirada es la de Auditoría SEO, sus filas de «Lo primero que arreglar» se reparten la altura sobrante; si es el gráfico, sus barras crecen manteniendo la proporción (`--h`). La tabla («Último escaneo», con su «Ver todo») abre la fila siguiente, a la misma altura que Oportunidades.
+3. **Sólo cuando la columna derecha lleva motores y Auditoría SEO** (`panoramaUp` en `page.tsx`). Si los motores ya subieron a la rejilla de indicadores (§271), al lado del gráfico no quedaría nada; si no hay auditoría, tampoco. En esos casos se mantiene la colocación anterior.
+4. **Las dos filas usan las mismas columnas** (`2fr / 1fr`, hueco de 22px). Antes, la de abajo era `1.5fr / 1fr`, así que Oportunidades nunca podía alinearse con la columna de motores.
+5. **«Ver todo» en Auditoría SEO**, como el resto de secciones de la pantalla, a petición del fundador (lleva a `/web-audit`). La tarjeta sigue sin botón propio (§271).
+6. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
+
+**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase. *(Resuelto en §280.)*
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.
+
+## 280. PROMPT-DRAWER-ENGINES-1: el cajón de Prompts resume cada motor en una fila (2026-10-11)
+
+**Qué pasaba.** Con pocas preguntas, el escaneo repite cada pregunta hasta cinco veces por motor (SAMPLING-1, ADR 0030). El cajón pintaba una fila por respuesta, así que un proyecto de una pregunta enseñaba quince filas «Gemini · muestra 1 de 5». Las evidencias y las fuentes también se agrupaban por respuesta, con la cabecera del motor repetida cinco veces. El fundador no entendía qué era «1 de 5» (2026-10-11).
+
+**Qué se decidió** (maqueta aprobada en el hilo, https://claude.ai/artifact/CSoYAA5cQ3yXNfdwG2zwHp, v3):
+
+1. **Una fila por motor, en texto.** Debajo del nombre, «Te nombra en N de M respuestas». A la derecha, el sentimiento que más se repite (sólo sobre respuestas que nombran la marca, `computeDominantBrandSentiment`) y «Cita tu web en X de M respuestas» o «No cita tu web». La frase va completa a petición del fundador: «en 3 de 5» suelto no decía de qué. Con una sola respuesta por motor no hay fracción («Te nombra», «Cita tu web»).
+2. **Sin puntos ni desplegable.** Una primera versión de la maqueta llevaba un punto por respuesta y un desplegable por motor; el fundador no entendió los puntos y prefirió sin desplegable. El detalle de cada respuesta vive sólo en la pestaña Respuestas.
+3. **Fuentes sin repetir, por motor.** Cada web sale una vez por motor con «en X de M respuestas». Una web citada dos veces en la misma respuesta cuenta una. Tu web va primero, luego las más usadas; se ven cuatro y el resto tras «Ver N fuentes más de …». Un motor sin fuentes dice «Respondió sin buscar en la web.».
+4. **Evidencias por motor, sin repetir.** La misma frase citada en cinco respuestas sale una vez. La regla de §147 se mantiene: un motor con mención verificada y sin cita textual sigue saliendo con su aviso.
+5. **Respuestas, de una en una.** La tabla y los quince textos seguidos se sustituyen por un selector de motor y unas pastillas «Respuesta 1…5». Cada respuesta lleva «Te nombra»/«No te nombra», el sentimiento, «Cita tu web» y cuántas fuentes usó.
+
+Los recuentos viven en `components/prompts/engine-summary.ts` (puro, con tests). `sampleLabel` («muestra N de M») deja de usarse en el cajón; sigue en `lib/scan/sample-display.ts` con sus tests.
+
+**Qué queda pendiente.** Nada de esta fase. Las cifras absolutas del cajón («3 de 5 respuestas») son dentro del producto, no contenido público, así que no les aplica la norma de sólo porcentajes.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.
