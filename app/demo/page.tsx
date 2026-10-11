@@ -21,13 +21,13 @@ import "./demo.css";
 export const metadata: Metadata = contentMetadata({
   title: "Agenda una videollamada con GenScore",
   description:
-    "Una videollamada de 20 minutos con el equipo de GenScore: qué responden ChatGPT, Gemini y Claude sobre tu sector, a quién recomiendan en tu lugar y qué plan encaja contigo.",
+    "Una videollamada de 20 minutos con el equipo de GenScore: qué responden ChatGPT, Gemini, Claude y Perplexity sobre tu sector, a quién recomiendan en tu lugar y qué plan encaja contigo.",
   path: "/demo"
 });
 
 const STEPS = [
   {
-    title: "Tu marca en ChatGPT, Gemini y Claude",
+    title: "Tu marca en ChatGPT, Gemini, Claude y Perplexity",
     text: "Qué responden a las preguntas principales de búsqueda de tu sector."
   },
   {
@@ -40,7 +40,7 @@ const STEPS = [
   }
 ];
 
-const CHIPS = ["ChatGPT, Gemini y Claude", "Sin compromiso"];
+const CHIPS = ["ChatGPT, Gemini, Claude y Perplexity", "Sin compromiso"];
 
 export default function DemoPage() {
   return (

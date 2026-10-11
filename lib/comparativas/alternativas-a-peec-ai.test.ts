@@ -33,7 +33,7 @@ describe("alternativas-a-peec-ai", () => {
     const genscore = ALTERNATIVES.find((a) => a.slug === "genscore");
     expect(genscore, "GenScore debe aparecer en la lista").toBeDefined();
     expect(genscore?.ours).toBe(true);
-    expect(genscore?.tradeoff).toMatch(/Perplexity/i);
+    expect(genscore?.tradeoff).toMatch(/Copilot/i);
     expect(genscore?.tradeoff).toMatch(/pa[íi]s/i);
   });
 

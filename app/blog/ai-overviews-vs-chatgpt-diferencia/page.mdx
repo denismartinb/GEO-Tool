@@ -29,7 +29,7 @@ export const faqItems = [
   {
     question: "¿GenScore mide AI Overviews?",
     answer:
-      "No hoy. GenScore escanea Gemini, Claude y ChatGPT con preguntas reales. AI Overviews, Perplexity y Copilot no están soportados — quedan fuera de lo que medimos, sin fecha comprometida de cuándo podrían añadirse."
+      "No hoy. GenScore escanea ChatGPT, Gemini y Claude con preguntas reales, y también Perplexity en los planes Pro y Agencia. AI Overviews y Copilot no están soportados: quedan fuera de lo que medimos, sin fecha comprometida de cuándo podrían añadirse."
   },
   {
     question: "¿Por qué GenScore no mide AI Overviews si también es de Google?",
@@ -59,8 +59,8 @@ AI Overviews es una función dentro de los resultados de búsqueda de Google:
 sigues en una página de resultados, con un resumen generado por IA arriba y
 enlaces normales debajo. ChatGPT, Gemini y Claude son productos
 conversacionales distintos: una conversación de principio a fin, sin lista de
-resultados detrás. GenScore escanea Gemini, Claude y ChatGPT — no AI
-Overviews, ni Perplexity, ni Copilot. Esta pieza explica la diferencia real
+resultados detrás. GenScore escanea ChatGPT, Gemini y Claude, y Perplexity en
+Pro y Agencia. No escanea AI Overviews ni Copilot. Esta pieza explica la diferencia real
 entre ambos tipos de superficie y traza exactamente esa frontera.
 
 </KeyTakeaway>
@@ -86,7 +86,7 @@ hay "resultados" en el sentido clásico — hay una respuesta.
 | **Dónde vive** | Dentro de la página de resultados de búsqueda | App o web propia, sin resultados de búsqueda al lado |
 | **Formato de entrada** | Una búsqueda, como siempre | Una conversación, con contexto entre preguntas |
 | **Qué hay debajo de la respuesta** | La lista de resultados orgánicos de siempre | Nada — la respuesta es el producto final |
-| **¿GenScore lo escanea hoy?** | No | Sí (Gemini, Claude, ChatGPT) |
+| **¿GenScore lo escanea hoy?** | No | Sí (ChatGPT, Gemini, Claude) |
 
 </CompareTable>
 
@@ -117,16 +117,16 @@ lleva a medir la equivocada o a prometer una cobertura que no existe.
     "Gemini (Google) — motor soportado por GenScore.",
     "Claude (Anthropic) — motor soportado por GenScore.",
     "AI Overviews (Google) — función dentro de la búsqueda, no soportada por GenScore hoy.",
-    "Perplexity — producto de búsqueda conversacional con citas ancladas, tratado como tema de mercado; no soportado por GenScore hoy.",
+    "Perplexity — producto de búsqueda conversacional con citas ancladas; soportado por GenScore en los planes Pro y Agencia.",
     "Microsoft Copilot — asistente de Microsoft; no soportado por GenScore hoy."
   ]}
 />
 
 <Verdict title="Lo que GenScore escanea hoy, sin ambigüedad">
 
-GenScore ejecuta escaneos reales contra **Gemini, Claude y ChatGPT** — los
-tres aparecen en cada informe del producto. **AI Overviews, Perplexity y
-Copilot no están soportados hoy**, y no hay fecha comprometida de cuándo
+GenScore ejecuta escaneos reales contra **ChatGPT, Gemini y Claude** en todos
+los planes, y contra **Perplexity** en Pro y Agencia. **AI Overviews y Copilot
+no están soportados hoy**, y no hay fecha comprometida de cuándo
 podrían incorporarse: no es una promesa aplazada, es simplemente lo que el
 producto hace y lo que no hace en este momento.
 
@@ -142,7 +142,7 @@ una página de resultados de búsqueda normal, cambia según la consulta, la
 localización y la sesión de cada usuario, y Google no ofrece una vía
 equivalente y estable para lanzar la misma búsqueda de forma sistemática y
 repetible como sí permite la API de un chat. Medirlo con rigor exigiría un
-método distinto del que usamos hoy para los tres motores conversacionales, y
+método distinto del que usamos hoy para los motores conversacionales, y
 eso no está construido todavía.
 
 ## ¿Debería preocuparme por AI Overviews si GenScore no lo mide?
@@ -161,15 +161,17 @@ buscando en Google y mirando qué aparece en el panel.
 
 ## Motores de mercado, no motores soportados
 
-Es una distinción que aplicamos también a Perplexity — lo tratamos con más
-detalle en <a href="/blog/como-aparecer-en-perplexity">cómo aparecer en
-Perplexity</a> — y que vale igual para Copilot y para AI Overviews: hablar de
+Es una distinción que vale para Copilot y para AI Overviews: hablar de
 cómo funcionan, qué los diferencia y qué influye en que te citen es información
 útil aunque no los midamos. Lo que no hacemos es prometer que los medimos
 cuando no es cierto — es el mismo principio que llevó a corregir a tiempo el
 título de <a href="/blog/como-saber-si-tu-marca-aparece-en-chatgpt">cómo saber
 si tu marca aparece en ChatGPT, Gemini y Claude</a>, que en un primer borrador
-mencionaba un motor que no ejecutamos.
+mencionaba un motor que entonces no ejecutábamos.
+
+Perplexity ya no está en ese grupo: GenScore lo mide en los planes Pro y
+Agencia. Qué lo diferencia de un chat y qué influye en que te cite lo tratamos
+en <a href="/blog/como-aparecer-en-perplexity">cómo aparecer en Perplexity</a>.
 
 <AuthorBio>
 
@@ -178,8 +180,8 @@ Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos 
 </AuthorBio>
 
 <ArticleCta
-  title="¿Sabes cómo te ve tu marca en los tres motores que sí puedes controlar?"
-  text="GenScore escanea con preguntas reales en Gemini, Claude y ChatGPT, y te enseña la respuesta completa en cada uno."
+  title="¿Sabes cómo te ve tu marca en los motores que sí puedes controlar?"
+  text="GenScore escanea con preguntas reales en ChatGPT, Gemini, Claude y Perplexity (este último, en Pro y Agencia), y te enseña la respuesta completa en cada uno."
 />
 
 </div>

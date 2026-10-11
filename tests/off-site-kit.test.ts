@@ -76,7 +76,7 @@ describe("lo que el kit dice de la marca es lo que dice el producto", () => {
     ).toBe(true);
   });
 
-  it("nombra los tres motores que ejecutamos y ninguno más", () => {
+  it("nombra los motores que ejecutamos", () => {
     for (const engine of SUPPORTED_ENGINES) {
       expect(kit, `el kit debería nombrar ${engine}`).toContain(engine);
     }
@@ -88,8 +88,10 @@ describe("lo que el kit dice de la marca es lo que dice el producto", () => {
    * igual —o más— fuera del sitio, donde nadie modera lo que decimos.
    */
   it("declara los límites reales del producto", () => {
-    expect(kit).toMatch(/Perplexity/);
+    // PERPLEXITY-ENGINE-1: Perplexity dejó de ser un límite (Pro y Agencia);
+    // los que quedan son Copilot, AI Overviews y el desglose por país.
     expect(kit).toMatch(/Copilot/);
+    expect(kit).toMatch(/AI Overviews/);
     expect(kit).toMatch(/desglose por país/i);
   });
 

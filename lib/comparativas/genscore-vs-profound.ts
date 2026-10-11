@@ -47,7 +47,7 @@ export const COMPARISON_ROWS: {
   },
   {
     label: "Motores de IA cubiertos",
-    genscore: "3 (Gemini, Claude, ChatGPT), los mismos en todos los planes de pago y en la prueba de Pro",
+    genscore: "4 en Pro, Agencia y la prueba de Pro (ChatGPT, Gemini, Claude y Perplexity); 3 en Starter",
     profound:
       "Hasta 9 motores en Enterprise (entre ellos Perplexity, Microsoft Copilot, Google AI Mode y Claude); la prueba gratuita cubre 3: ChatGPT, Gemini y AI Overviews",
     profoundWins: true

@@ -3,6 +3,7 @@ import "server-only";
 import { generateGeminiVisibilityAnswer, GeminiConfigError } from "@/lib/llm/gemini";
 import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/claude";
 import { generateOpenAIVisibilityAnswer, OpenAIConfigError } from "@/lib/llm/openai";
+import { generatePerplexityVisibilityAnswer, PerplexityConfigError } from "@/lib/llm/perplexity";
 import type { GeminiVisibilityResponse } from "@/lib/llm/contracts";
 import { delay } from "@/lib/llm/http";
 import { createServiceClient } from "@/lib/supabase/service";
@@ -54,6 +55,7 @@ async function callProvider(
 ): Promise<GeminiVisibilityResponse> {
   if (provider === "claude") return generateClaudeVisibilityAnswer(input);
   if (provider === "openai") return generateOpenAIVisibilityAnswer(input);
+  if (provider === "perplexity") return generatePerplexityVisibilityAnswer(input);
   return generateGeminiVisibilityAnswer(input);
 }
 
@@ -242,7 +244,12 @@ export async function processPromptJob({
           });
           return { provider, kind: "success", llmResult, latency: Date.now() - llmStart };
         } catch (error) {
-          if (error instanceof GeminiConfigError || error instanceof ClaudeConfigError || error instanceof OpenAIConfigError) {
+          if (
+            error instanceof GeminiConfigError ||
+            error instanceof ClaudeConfigError ||
+            error instanceof OpenAIConfigError ||
+            error instanceof PerplexityConfigError
+          ) {
             return { provider, kind: "config_error", error };
           }
           return { provider, kind: "retryable_error", error };

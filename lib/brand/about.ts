@@ -38,7 +38,7 @@ export const ABOUT_SECTIONS: AboutSection[] = [
   {
     heading: "Qué medimos",
     paragraphs: [
-      "Las respuestas de ChatGPT, Gemini y Claude. Son los tres motores que GenScore ejecuta hoy, los tres incluidos en todos los planes de pago; no medimos Perplexity, Copilot ni AI Overviews.",
+      "Las respuestas de ChatGPT, Gemini, Claude y Perplexity. ChatGPT, Gemini y Claude están incluidos en todos los planes de pago; Perplexity, en Pro y Agencia y en la prueba de Pro. No medimos Copilot ni AI Overviews.",
       "De cada respuesta miramos si te mencionan, con qué protagonismo, cómo sales frente a tus competidores y si el modelo cita tu web como fuente. Y, aparte, si tu web está técnicamente preparada para que un motor la lea y la cite. Todo eso se resume en el GEO Score, de 0 a 100 por dominio."
     ]
   },

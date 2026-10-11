@@ -140,6 +140,11 @@ describe("selectCitedSources", () => {
     expect(selectCitedSources("Sin marcas.", results)).toEqual([{ uri: "https://a.com" }, { uri: "https://b.com" }]);
   });
 
+  it("keeps only the results the answer links to, plus links outside the results", () => {
+    const text = "Mira [Holded](https://a.com) y [la AEAT](https://aeat.es/app).";
+    expect(selectCitedSources(text, results)).toEqual([{ uri: "https://a.com" }, { uri: "https://aeat.es/app" }]);
+  });
+
   it("reads plain and grouped markers", () => {
     expect(selectCitedSources("Uno [2].", results)).toEqual([{ uri: "https://b.com" }]);
     expect(selectCitedSources("Dos [1, 2].", results)).toHaveLength(2);
@@ -149,5 +154,11 @@ describe("selectCitedSources", () => {
 describe("stripCitationMarkers", () => {
   it("removes markers without leaving a space before punctuation", () => {
     expect(stripCitationMarkers("Acme [1][web:2], y Beta [3].")).toBe("Acme, y Beta.");
+  });
+
+  it("keeps a Markdown link's label and drops its URL", () => {
+    expect(stripCitationMarkers("Prueba [Holded: autónomos](https://www.holded.com/es/autonomos).")).toBe(
+      "Prueba Holded: autónomos."
+    );
   });
 });

@@ -66,7 +66,7 @@ export default function PlanesYLimitesPage() {
 
       <h2>Qué cambia al subir de plan</h2>
       <ul>
-        <li><strong>Starter → Pro</strong>: escaneo diario, más dominios y prompts, y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
+        <li><strong>Starter → Pro</strong>: escaneo diario, más dominios y prompts, Perplexity como cuarto motor de IA, y el generador de soluciones (FAQ, schema, briefs listos para publicar).</li>
         <li><strong>Pro → Agencia</strong>: volumen de dominios y prompts a medida de tu cartera de clientes, con las mismas condiciones de motores y frecuencia de escaneo que Pro.</li>
       </ul>
 

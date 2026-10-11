@@ -243,7 +243,7 @@ export const BLOG_POSTS: BlogPost[] = [
     title: "Cómo aparecer en Perplexity (y en qué se diferencia de otros motores)",
     seoTitle: "Cómo aparecer en Perplexity y en qué se diferencia",
     description:
-      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y por qué esto queda fuera de lo que GenScore mide hoy.",
+      "Perplexity ancla cada afirmación a una cita numerada, no solo te menciona. Qué hacer distinto: estructura citable, datos con procedencia, frescura, y cómo medirlo con GenScore en Pro y Agencia.",
     metaDescription:
       "Cómo aparecer en Perplexity: por qué es distinto de Google y de ChatGPT, y qué mueve de verdad que te cite.",
     datePublished: "2026-08-14",

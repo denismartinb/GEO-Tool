@@ -37,14 +37,16 @@ import { FreeReportBand } from "@/components/free-report/free-report-offers";
  * respuesta-primero», «llms.txt»), copiados de `issue-rows.tsx`, para que
  * quien llegue a la auditoría reconozca lo que vio en la portada.
  */
-/* Los tres motores que el escaneo consulta de verdad (`lib/llm/`), no una
+/* Los motores que el escaneo consulta de verdad (`lib/llm/`), no una
    selección de marcas. El artboard pone esta fila bajo el texto del paso 1 con
-   un solo logo y dos huecos que su editor rellenaba; aquí se sirven los tres
-   que el producto ejecuta, que es lo que la frase del paso afirma. */
+   un solo logo y dos huecos que su editor rellenaba; aquí se sirven los que el
+   producto ejecuta, que es lo que la frase del paso afirma. Perplexity sólo en
+   Pro y Agencia (PERPLEXITY-ENGINE-1). */
 const HOW_ENGINES = [
   { name: "ChatGPT", src: "/brand/engines/chatgpt.svg" },
   { name: "Gemini", src: "/brand/engines/gemini.svg" },
-  { name: "Claude", src: "/brand/engines/claude.svg" }
+  { name: "Claude", src: "/brand/engines/claude.svg" },
+  { name: "Perplexity", src: "/brand/engines/perplexity.svg" }
 ];
 
 /* Las cinco pantallas, en el orden del artboard. Los rótulos son los del
@@ -346,8 +348,8 @@ export function LandingPage() {
             recomienda tu marca?
           </h1>
           <p className="lp-lead">
-            Analizamos si ChatGPT, Gemini y Claude te recomiendan y cómo puedes mejorar tu visibilidad
-            en los motores de IA.
+            Analizamos si ChatGPT, Gemini, Claude y Perplexity te recomiendan y cómo puedes mejorar tu
+            visibilidad en los motores de IA.
           </p>
           {/* Las llamadas a la acción viven DENTRO de `HeroDomainField`, no
               aquí: «Analiza gratis» tiene que guardar el dominio escrito antes
@@ -398,7 +400,7 @@ export function LandingPage() {
 
       <main>
       {/* La franja «Motores de IA que analizamos por ti» se retira aquí:
-          HOME-2026-08 sube los tres motores al hero, con sus logos, justo bajo
+          HOME-2026-08 sube los motores al hero, con sus logos, justo bajo
           el campo de dominio. Mantener las dos dejaba los mismos tres nombres
           repetidos a cien píxeles de distancia. */}
 

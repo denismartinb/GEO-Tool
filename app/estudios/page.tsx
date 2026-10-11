@@ -99,7 +99,7 @@ export default function EstudiosPage() {
 
         <ArticleCta
           title="¿Qué dice la IA de tu sector?"
-          text="Pide el informe gratuito y te enseñamos qué marcas nombran ChatGPT, Gemini y Claude cuando alguien pregunta por lo que vendes."
+          text="Pide el informe gratuito y te enseñamos qué marcas nombran ChatGPT, Gemini, Claude y Perplexity cuando alguien pregunta por lo que vendes."
           cta="Pedir el informe gratis"
           href={freeReportHref(FREE_REPORT_ENTRY.studiesHub)}
         />

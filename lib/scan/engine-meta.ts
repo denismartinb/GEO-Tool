@@ -37,7 +37,10 @@ export const ENGINE_META: Record<string, EngineMeta> = {
   // ENGINES-2a: OpenAI generates with the Responses API `web_search` tool
   // (lib/llm/openai.ts), so it produces real url_citation grounding — same
   // grounded semantics as GROUNDED_PROVIDERS in lib/scoring/run-scoring.ts.
-  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: true }
+  openai: { label: "ChatGPT", color: "#10a37f", short: "O", grounded: true },
+  // PERPLEXITY-ENGINE-1 Fase 2: Perplexity searches the web on every answer
+  // (lib/llm/perplexity.ts), same grounded semantics as GROUNDED_PROVIDERS.
+  perplexity: { label: "Perplexity", color: "#20808d", short: "P", grounded: true }
 };
 
 const FALLBACK_META: EngineMeta = { label: "", color: "#9333a8", short: "?", grounded: false };

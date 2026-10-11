@@ -65,4 +65,25 @@ describe("resolveScanProvidersForPlan", () => {
     const empty: LLMScanProvider[] = [];
     expect(resolveScanProvidersForPlan(fakePlan(3), empty)).toEqual([]);
   });
+
+  describe("Perplexity (PERPLEXITY-ENGINE-1 Fase 2)", () => {
+    beforeEach(() => {
+      process.env.LLM_SCAN_PROVIDERS = "gemini,openai,claude,perplexity";
+    });
+
+    it("gives Pro and Agencia (cap 4) all four engines and Starter (cap 3) the other three", () => {
+      expect(resolveScanProvidersForPlan(fakePlan(4))).toEqual(["gemini", "openai", "claude", "perplexity"]);
+      expect(resolveScanProvidersForPlan(fakePlan(3))).toEqual(["gemini", "openai", "claude"]);
+    });
+
+    it("never hands Perplexity to a plan below cap 4, even with another engine switched off", () => {
+      expect(resolveScanProvidersForPlan(fakePlan(3), ["gemini", "claude", "perplexity"])).toEqual(["gemini", "claude"]);
+      expect(resolveScanProvidersForPlan(fakePlan(1), ["perplexity"])).toEqual([]);
+    });
+
+    it("is off until LLM_SCAN_PROVIDERS lists it", () => {
+      process.env.LLM_SCAN_PROVIDERS = "gemini,openai,claude";
+      expect(resolveScanProvidersForPlan(fakePlan(4))).toEqual(["gemini", "openai", "claude"]);
+    });
+  });
 });

@@ -52,7 +52,7 @@ export default function GenscoreVsProfoundPage() {
           grandes empresas, con hasta nueve motores y creación de contenido en su plan Enterprise — pero
           sin precio público, sin que conste un producto en castellano y sin presencia conocida en el
           mercado hispanohablante. GenScore se prueba 7 días con Pro, sin tarjeta y sin hablar con nadie
-          de ventas, cubre los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) y
+          de ventas, cubre ChatGPT, Gemini, Claude y Perplexity (este, en Pro y Agencia) y
           convierte lo que detecta en acciones concretas desde el plan Pro, sin un contrato Enterprise.
         </KeyTakeaway>
 
@@ -94,7 +94,7 @@ export default function GenscoreVsProfoundPage() {
 
         <Verdict title="Cuándo elegir Profound" badge="Cuándo elegir el competidor">
           Si eres una empresa de tamaño medio o grande con presupuesto para una herramienta enterprise,
-          necesitas cobertura amplia de motores (incluido Perplexity, que GenScore no soporta hoy) o
+          necesitas cobertura amplia de motores (incluidos Copilot y AI Overviews, que GenScore no soporta hoy) o
           crear contenido dentro de la misma herramienta, y no te importa que no conste una interfaz en
           castellano ni pasar por una demo de ventas antes de ver un precio, Profound es una opción real,
           con analítica más profunda y 4,5/5 en G2.

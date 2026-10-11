@@ -14,7 +14,7 @@ export const QUE_ES_GENSCORE_FAQ: { question: string; answer: string }[] = [
   {
     question: "¿Qué mide exactamente GenScore?",
     answer:
-      "Cinco señales sobre las respuestas reales de ChatGPT, Gemini y Claude: si el modelo menciona tu marca, con qué prominencia dentro de la respuesta, en qué posición frente a tus competidores, si respalda la mención citando tu web, y si tu web está técnicamente preparada para que la extraigan. Todo eso se resume en el GEO Score, una puntuación de 0 a 100 por dominio."
+      "Cinco señales sobre las respuestas reales de ChatGPT, Gemini, Claude y Perplexity: si el modelo menciona tu marca, con qué prominencia dentro de la respuesta, en qué posición frente a tus competidores, si respalda la mención citando tu web, y si tu web está técnicamente preparada para que la extraigan. Todo eso se resume en el GEO Score, una puntuación de 0 a 100 por dominio."
   },
   {
     question: "¿En qué se diferencia GenScore de una herramienta SEO?",
@@ -29,6 +29,6 @@ export const QUE_ES_GENSCORE_FAQ: { question: string; answer: string }[] = [
   {
     question: "¿Se puede probar sin pagar?",
     answer:
-      "Sí. Cada cuenta nueva tiene 7 días de Pro gratis, sin tarjeta, con escaneos reales (no es una demo) en ChatGPT, Gemini y Claude. Si no contratas, no se cobra nada y la cuenta pasa a solo lectura: sigues viendo tus datos, pero no lanzas escaneos nuevos. Además, el comprobador anónimo de ChatGPT es gratuito y no pide registro."
+      "Sí. Cada cuenta nueva tiene 7 días de Pro gratis, sin tarjeta, con escaneos reales (no es una demo) en ChatGPT, Gemini, Claude y Perplexity. Si no contratas, no se cobra nada y la cuenta pasa a solo lectura: sigues viendo tus datos, pero no lanzas escaneos nuevos. Además, el comprobador anónimo de ChatGPT es gratuito y no pide registro."
   }
 ];

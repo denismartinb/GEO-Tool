@@ -38,7 +38,7 @@ describe("profound-vs-peec-ai-vs-otterly", () => {
 
   it("la nota de GenScore se declara como nuestra y nombra sus límites reales", () => {
     expect(GENSCORE_NOTE.body).toMatch(/nuestra herramienta/i);
-    expect(GENSCORE_NOTE.limits).toMatch(/Perplexity/);
+    expect(GENSCORE_NOTE.limits).toMatch(/Copilot/);
     expect(GENSCORE_NOTE.limits).toMatch(/pa[íi]s/i);
   });
 

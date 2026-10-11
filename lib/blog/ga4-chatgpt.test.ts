@@ -176,9 +176,11 @@ describe("los límites del artículo se mantienen", () => {
     }
   });
 
-  it("el CTA nombra los tres motores que GenScore sí ejecuta", () => {
+  it("el CTA nombra los motores que GenScore sí ejecuta", () => {
+    // PERPLEXITY-ENGINE-1: Perplexity se ejecuta en Pro y Agencia, así que el
+    // CTA ya puede nombrarlo; lo que sigue fuera es Copilot / AI Overviews.
     const cta = PROSE.match(/<ArticleCta.*?\/>/)?.[0] ?? "";
-    expect(cta).toMatch(/ChatGPT, Gemini y Claude/);
-    expect(cta, "el CTA no puede insinuar cobertura que no tenemos").not.toMatch(/Perplexity/i);
+    expect(cta).toMatch(/ChatGPT, Gemini, Claude y Perplexity/);
+    expect(cta, "el CTA no puede insinuar cobertura que no tenemos").not.toMatch(/Copilot|AI Overviews/i);
   });
 });

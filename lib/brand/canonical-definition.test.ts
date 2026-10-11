@@ -17,8 +17,11 @@ import {
  * motores no los ejecutamos. Aplicarlo habría sembrado el mismo reclamo falso
  * que PRICING-TRUTH-1 retiró del producto, en las superficies más vistas del
  * sitio y en la cadena que más se repite.
+ *
+ * Perplexity salió de esta lista con PERPLEXITY-ENGINE-1: hoy se ejecuta en
+ * Pro y Agencia, así que ya no es un reclamo falso.
  */
-const UNSUPPORTED_ENGINES = ["Perplexity", "AI Overviews", "Copilot", "Grok", "DeepSeek", "Meta AI"];
+const UNSUPPORTED_ENGINES = ["AI Overviews", "Copilot", "Grok", "DeepSeek", "Meta AI"];
 
 describe("definición canónica de GenScore", () => {
   const bothVariants = [
@@ -27,7 +30,7 @@ describe("definición canónica de GenScore", () => {
   ] as const;
 
   for (const [label, text] of bothVariants) {
-    it(`la versión ${label} nombra los tres motores que sí ejecutamos`, () => {
+    it(`la versión ${label} nombra los motores que sí ejecutamos`, () => {
       for (const engine of SUPPORTED_ENGINES) {
         expect(text, `falta ${engine}`).toContain(engine);
       }

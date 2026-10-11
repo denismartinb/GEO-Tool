@@ -325,3 +325,14 @@ worse than no rule, because a future session will obey it anyway.
   (`docs/brand/design-decisions-log.md` §273). `/precios` dice «Diario» para
   Pro hasta que el fundador descongele los textos: no lo cambies sin que él lo
   pida.
+- **Perplexity sólo entra en planes con `caps.engines >= 4`.** Se vende con
+  Pro y Agencia, nunca con Starter. Estar al final de `LLM_SCAN_PROVIDERS` no
+  basta, porque el filtro de `/debug` va antes del tope: un Starter con otro
+  motor apagado recibiría Perplexity en su hueco. La guarda vive en
+  `resolveScanProvidersForPlan` (`PERPLEXITY_MIN_ENGINE_CAP`) y la vigila
+  `providers.test.ts`. Su interruptor de `/debug` (migración 0040) se lee en
+  `lib/scan/engine-flags.ts`, en una consulta aparte de los otros tres: si la
+  migración no está aplicada, Perplexity cuenta como encendido y los otros
+  tres interruptores siguen funcionando. El suelo de «al menos un motor» sólo
+  cuenta Gemini, Claude y OpenAI, porque Perplexity solo nunca corre en
+  Starter (`docs/brand/design-decisions-log.md` §283).

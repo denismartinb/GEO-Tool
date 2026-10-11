@@ -38,15 +38,15 @@ revisa nunca.
 | Plan | Precio | Dominios | Prompts | Motores | Frecuencia |
 |---|---|---|---|---|---|
 | Starter | 29 € | 1 | 25 | 3 | Semanal |
-| Pro | 99 € | 5 | 100 | 3 | Diario |
-| Agencia | Plan a medida | A medida | 300 | 3 | Diario |
+| Pro | 99 € | 5 | 100 | 4 | Diario |
+| Agencia | Plan a medida | A medida | 300 | 4 | Diario |
 
 No hay plan gratuito (TRIAL-ONLY-1, 2026-10-09): toda cuenta empieza con
 **7 días de Pro gratis, sin tarjeta**, y al terminar sin contratar queda en
 solo lectura. Lo único gratis y sin registro es el comprobador
 `/gratis/aparece-mi-marca-en-chatgpt`.
 
-**Los tres motores son ChatGPT, Gemini y Claude** (`lib/brand/canonical-definition.ts`).
+**Los motores son ChatGPT, Gemini, Claude y Perplexity** (`lib/brand/canonical-definition.ts`). Perplexity va incluido en Pro y Agencia (y en la prueba de Pro); Starter mide ChatGPT, Gemini y Claude.
 
 **La descripción de una línea, palabra por palabra** — es la misma cadena que
 usan la home, `/que-es-genscore` y el schema, y usarla también fuera es
@@ -54,8 +54,8 @@ precisamente lo que ayuda a que "GenScore" resuelva a nuestra entidad
 (Fase E, log §100):
 
 > GenScore es una plataforma de Generative Engine Optimization (GEO) que mide
-> y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini y
-> Claude.
+> y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini,
+> Claude y Perplexity.
 
 ---
 
@@ -65,8 +65,8 @@ Un comprador lo comprueba en dos clics, y delante de un competidor o de una
 comunidad técnica ocultarlo se paga más caro que decirlo. Ya es obligatorio en
 las comparativas (`alternativas-a-otterly.test.ts` lo exige por nombre):
 
-- **No ejecutamos Perplexity ni Copilot.** Tres motores: ChatGPT, Gemini,
-  Claude.
+- **No ejecutamos Copilot ni AI Overviews.** Cuatro motores: ChatGPT, Gemini,
+  Claude y Perplexity, este último sólo en Pro y Agencia (Starter tiene tres).
 - **No hay desglose por país.**
 - **No hay plan gratuito permanente**: la prueba de Pro dura 7 días.
 
@@ -124,8 +124,9 @@ se responde entera sin producto:
 **c) Cuando alguien pide recomendación directa** — sólo si el hilo encaja:
 
 > Nosotros hacemos exactamente eso (aviso: soy de GenScore). Ejecutamos
-> ChatGPT, Gemini y Claude, en castellano y con el mercado español como foco.
-> Lo que **no** tenemos: Perplexity, Copilot, ni desglose por país — si
+> ChatGPT, Gemini, Claude y Perplexity (este, en Pro y Agencia), en castellano
+> y con el mercado español como foco. Lo que **no** tenemos: Copilot, AI
+> Overviews, ni desglose por país — si
 > necesitas cualquiera de esas tres, mira otra. Tienes 7 días de Pro gratis,
 > sin tarjeta, para que lo compruebes antes de creerme.
 
@@ -148,7 +149,7 @@ que lo pare y donde queda grabado.
 | 0:00–0:15 | La pregunta, sin intro: *"¿ChatGPT recomienda tu marca cuando alguien pregunta por lo que vendes? Vamos a comprobarlo en tres minutos."* Sin logo, sin música. |
 | 0:15–1:00 | A mano: sesión limpia, 3 preguntas reales de cliente, y qué mirar — mención, posición, cita. |
 | 1:00–2:00 | Por qué una medición no vale: se repite la misma pregunta y sale distinto. **Enseñar esto en vivo**, es el momento que convence. |
-| 2:00–2:40 | Lo mismo automatizado, con un escaneo real. Declarar los tres motores. |
+| 2:00–2:40 | Lo mismo automatizado, con un escaneo real. Declarar los motores del plan que se enseña. |
 | 2:40–3:00 | Cierre: la lista de prompts es lo que decide el resultado; enlace a `/blog/como-elegir-prompts-monitorizar-marca-ia`. |
 
 **Título:** `¿ChatGPT menciona tu marca? Cómo comprobarlo (y por qué cambia cada semana)`
@@ -176,8 +177,8 @@ sale de §2.**
 - **Categoría:** SEO / Search Engine Optimization Software → subcategoría de
   monitorización de IA generativa si existe; si no, SEO.
 - **Descripción corta (≤160 car.):**
-  > GenScore mide si ChatGPT, Gemini y Claude mencionan y citan tu marca al
-  > responder en tu mercado, y convierte cada hallazgo en acciones concretas.
+  > GenScore mide si ChatGPT, Gemini, Claude y Perplexity mencionan y citan tu
+  > marca al responder en tu mercado, y convierte cada hallazgo en acciones.
 - **Descripción larga:** la definición canónica de §2 + los dos párrafos de
   `/que-es-genscore`. No reescribirla: el objetivo de la Fase E es que sea
   **literalmente la misma cadena** en todas partes.

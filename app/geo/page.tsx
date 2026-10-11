@@ -246,7 +246,7 @@ export default function GeoExplainerPage() {
               <div><Icon name="sparkles" size={14} />GEO</div>
             </div>
             {[
-              { dim: "Dónde ocurre", seo: "Páginas de resultados de buscadores", geo: "Respuestas de ChatGPT, Gemini y Claude" },
+              { dim: "Dónde ocurre", seo: "Páginas de resultados de buscadores", geo: "Respuestas de ChatGPT, Gemini, Claude y Perplexity" },
               { dim: "Qué optimizas", seo: "El ranking de tus URLs", geo: "Cómo la IA menciona, compara y cita tu marca" },
               { dim: "Cómo se mide", seo: "Posiciones y tráfico", geo: "Mención, prominencia, cuota de voz y citas" },
               { dim: "Qué es ganar", seo: "El clic hacia tu web", geo: "Ser la recomendación dentro de la respuesta" }

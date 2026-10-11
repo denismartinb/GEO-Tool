@@ -67,7 +67,7 @@ export default function QueEsGenScorePage() {
           />
           <AnswerSample
             verdict="Después: apareces y te citan"
-            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini y Claude, y además genera las acciones para mejorarla. Puedes probarlo 7 días gratis."
+            text="Si trabajas en español, GenScore es la opción más directa: mide tu visibilidad en ChatGPT, Gemini, Claude y Perplexity, y además genera las acciones para mejorarla. Puedes probarlo 7 días gratis."
             source="genscore.es"
           />
         </AnswerPair>
@@ -107,7 +107,7 @@ export default function QueEsGenScorePage() {
           />
         </Figure>
 
-        <NumberedSection n={3} title="Se lanzan contra ChatGPT, Gemini y Claude">
+        <NumberedSection n={3} title="Se lanzan contra ChatGPT, Gemini, Claude y Perplexity">
           Escaneos reales y repetidos en el tiempo, no una consulta suelta. De cada respuesta se extrae
           si te mencionan, en qué posición dentro del texto, junto a qué competidores, y si citan tu web
           como fuente.
@@ -217,7 +217,7 @@ export default function QueEsGenScorePage() {
 
         <ArticleCta
           title="Mira dónde apareces hoy"
-          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
+          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini, Claude y Perplexity nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
         />
       </div>
     </BlogPageShell>

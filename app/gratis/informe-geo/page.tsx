@@ -26,7 +26,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
 export const metadata: Metadata = contentMetadata({
   title: "Pide tu informe GEO gratis: qué dice la IA de tu marca — GenScore",
   description:
-    "Te enviamos un informe de tu marca en ChatGPT, Gemini y Claude: en qué preguntas apareces, a quién recomiendan en tu lugar, qué fuentes citan y qué cambiar primero. Gratis, en 48 h laborables.",
+    "Te enviamos un informe de tu marca en ChatGPT, Gemini, Claude y Perplexity: en qué preguntas apareces, a quién recomiendan en tu lugar, qué fuentes citan y qué cambiar primero. Gratis, en 48 h laborables.",
   path: "/gratis/informe-geo"
 });
 
@@ -113,7 +113,7 @@ const STEPS = [
     body: "Con eso elegimos las preguntas principales de búsqueda que haría tu cliente."
   },
   {
-    title: "Se las hacemos a ChatGPT, Gemini y Claude",
+    title: "Se las hacemos a ChatGPT, Gemini, Claude y Perplexity",
     body: "Múltiples veces, en distintos momentos, y anotamos a quién nombra y qué cita."
   },
   {
@@ -154,7 +154,7 @@ export default function FreeReportPage() {
           <section className="fr-section">
             <div className="lp-inner">
               <h2 className="fr-h2">Qué incluye tu informe</h2>
-              <p className="fr-sub">Ocho páginas con datos reales de tu marca, medidos en ChatGPT, Gemini y Claude.</p>
+              <p className="fr-sub">Ocho páginas con datos reales de tu marca, medidos en ChatGPT, Gemini, Claude y Perplexity.</p>
               <div className="fr-incl">
                 {INCLUDES.map((item) => (
                   <div className="fr-card" key={item.title}>

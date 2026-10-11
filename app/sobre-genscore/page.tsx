@@ -93,7 +93,7 @@ export default function SobreGenScorePage() {
 
         <ArticleCta
           title="Mira dónde apareces hoy"
-          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini y Claude nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
+          text="Lanza tu primer escaneo con GenScore y comprueba si ChatGPT, Gemini, Claude y Perplexity nombran tu marca. Prueba Pro 7 días gratis, sin tarjeta."
         />
       </div>
     </BlogPageShell>
