@@ -25272,6 +25272,19 @@ La analítica es sin cookies, así que una «visita» es una
 sesión de PostHog, casi una carga de página, y la pantalla nunca dice
 «usuarios».
 
+**Tráfico automático fuera** (el fundador vio 386 visitas y no se lo creyó,
+con razón). Medido en PostHog el mismo día sobre 28 días: unas 102 sesiones
+eran navegadores sin pantalla, con la ventana por defecto de 800×600 o
+1280×720 y sin ciudad (agentes y pruebas que corren en centros de datos de
+EE. UU.), y otras 17 eran escáneres de enlaces de correo desde ciudades de
+centros de datos de EE. UU. (Ashburn, San José…) abriendo `/baja` y `/login`.
+El filtro de visitas quita la combinación «ventana por defecto y sin ciudad»
+(un portátil real de 1280×720 con ciudad sigue contando), esas ciudades de
+EE. UU., y las rutas `/login` y `/baja`, que no son captación. Con eso, 386
+pasan a 234. Entre esas 234 sigue habiendo visitas del equipo anteriores a la
+marca de navegador interno; no se pueden separar con seguridad y no se
+intenta.
+
 **Indicador «Search Console»** (pedido por el fundador el mismo día): cuántas
 cuentas que cuentan tienen hoy una conexión activa en
 `search_console_connections`, cuántas conectaron por primera vez dentro del

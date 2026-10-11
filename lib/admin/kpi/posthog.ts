@@ -26,7 +26,25 @@ export const PANEL_CACHE_SECONDS = 600;
 const QUERY_TIMEOUT_MS = 15_000;
 const SITE_HOST = new URL(SITE_URL).host;
 /** Paths that are not marketing traffic: the product itself and operator screens. */
-const EXCLUDED_PATH_PREFIXES = ["/dashboard", "/admin", "/mfa", "/auth", "/informe"];
+// `/login` and `/baja` are not acquisition: an existing user signing in, or an
+// email client's link scanner opening an unsubscribe link.
+const EXCLUDED_PATH_PREFIXES = ["/dashboard", "/admin", "/mfa", "/auth", "/informe", "/login", "/baja"];
+
+/**
+ * Automated browsers, measured on the real data (2026-10-11): about a quarter
+ * of the visits were headless browsers with the default 800×600 or 1280×720
+ * window and no geolocated city (agents and test runners in cloud
+ * datacenters), plus link scanners from US datacenter towns. A real 1280×720
+ * laptop still counts when it has a city; only the combination is dropped.
+ */
+const AUTOMATION_FILTER = [
+  "NOT (",
+  "((properties.$screen_width = 800 AND properties.$screen_height = 600)",
+  " OR (properties.$screen_width = 1280 AND properties.$screen_height = 720))",
+  " AND properties.$geoip_city_name IS NULL)",
+  " AND NOT (properties.$geoip_country_code = 'US' AND properties.$geoip_city_name IN",
+  " ('Ashburn', 'Council Bluffs', 'Boardman', 'The Dalles', 'San Jose', 'Santa Clara'))"
+].join("");
 
 type PosthogConfig = { apiKey: string; projectId: string; host: string };
 
@@ -72,7 +90,8 @@ function pageviewFilter(from: Date, to: Date): string {
     `timestamp >= ${sqlTime(from)}`,
     `timestamp < ${sqlTime(to)}`,
     `properties.$host = '${SITE_HOST}'`,
-    `NOT (${paths})`
+    `NOT (${paths})`,
+    AUTOMATION_FILTER
   ].join(" AND ");
 }
 
