@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
-import { DotMeter } from "@/components/ui/dot-meter";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
 import { useActionFeedback, ActionAnnouncement } from "@/components/ui/action-feedback";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -29,6 +28,7 @@ import {
   pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
+import { adviceSignal, dataSignal, scopeLine } from "@/lib/recommendations/card-signals";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -235,7 +235,7 @@ export type Recommendation = {
   potentialPoints?: number | null;
 };
 
-type FilterMode = "all" | "high" | "quick" | "content" | "technical" | "authority" | "resolved";
+type FilterMode = "all" | "technical" | "resolved";
 
 /**
  * RECS-LOOP-1 Fase A — mirrors lib/recommendations/prediction-verification.ts
@@ -368,18 +368,6 @@ export function predictionVerdictLine(item: ResolvedHistoryItem): string | null 
   const { kind, fulfilledCount, totalCount } = item.verification.verdict;
   const clause = verdictClause(kind, fulfilledCount, totalCount);
   return `El escaneo del ${anchorDate} ya no la encontró. ${clause.charAt(0).toUpperCase()}${clause.slice(1)}.`;
-}
-
-function impactToN(val: string): number {
-  if (val === "high") return 5;
-  if (val === "medium" || val === "med") return 3;
-  return 1;
-}
-
-function effortToN(val: string): number {
-  if (val === "high") return 5;
-  if (val === "medium" || val === "med") return 3;
-  return 1;
 }
 
 /**
@@ -777,6 +765,40 @@ export function RecCard({
         ? "badge badge-warn"
         : "badge badge-neutral";
 
+  // RECS-SHORT-CARD-1 (log §301) — the two confidences, kept apart. "Lo que
+  // vimos" reads the data (run confidence + what the evidence observed);
+  // "Por qué funciona" reads who controls the move. One "Confianza" label
+  // used to mix both.
+  const providers = Array.from(new Set(promptDetails.flatMap((p) => p.providers)));
+  const questionCount =
+    promptDetails.length > 0
+      ? promptDetails.length
+      : new Set(affectedPrompts.map((p) => p.trim().toLowerCase())).size;
+  const reach = scopeLine(questionCount, providers);
+  const data = dataSignal({
+    confidence: effectiveConfidence,
+    questionCount,
+    providers,
+    runsOpen: rec.consecutive_runs_open ?? 1
+  });
+  const advice = adviceSignal(control, ev.query_shape);
+  const showKind = !compact;
+  const hasBadges =
+    Boolean(priorityRank) ||
+    priorityLevel(rec) === "high" ||
+    quickWin ||
+    (rec.consecutive_runs_open ?? 1) > 1 ||
+    Boolean(rec.previouslyMarkedDoneAt) ||
+    control === "third_party" ||
+    control === "in_app";
+  const hasEvidence =
+    displaySnippets.length > 0 ||
+    sentimentDrivers.length > 0 ||
+    competitors.length > 0 ||
+    domains.length > 0 ||
+    citationPages.length > 0 ||
+    assumptions.length > 0;
+
   return (
     <div
       id={priorityRank ? undefined : `rec-${rec.id}`}
@@ -795,23 +817,13 @@ export function RecCard({
         }}
         aria-expanded={open}
       >
-        {/* Center column.
-            RECS-REDESIGN-1 simplification: the collapsed card carries exactly
-            three things — what to do (title), why (description) and the first
-            move (first step). The rank pill, the internal type badge
-            ("Perseguir fuentes de citación") and the impact/effort/confidence
-            meter trio were all removed from this view: they are engine
-            vocabulary, not decisions the user makes at a glance, and with
-            15+ cards they were most of the page's ink. Impact, effort and
-            confidence still exist — they moved into the expanded detail. */}
+        {/* Center column. RECS-SHORT-CARD-1 (log §301): the collapsed card
+            says what kind of move this is, what to do (title), the one
+            instruction to start with, and where it was seen. The description
+            moved into "Lo que vimos": it is the finding, read once the card
+            is open. */}
         <div style={{ minWidth: 0, flex: 1 }}>
-          {(priorityRank ||
-            priorityLevel(rec) === "high" ||
-            quickWin ||
-            (rec.consecutive_runs_open ?? 1) > 1 ||
-            Boolean(rec.previouslyMarkedDoneAt) ||
-            control === "third_party" ||
-            control === "in_app") && (
+          {(showKind || hasBadges) && (
             <div
               style={{
                 display: "flex",
@@ -822,6 +834,7 @@ export function RecCard({
               }}
             >
               {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
+              {showKind && <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>}
               {priorityLevel(rec) === "high" && <span className={priorityBadgeCls}>Prioridad alta</span>}
               {quickWin && (
                 <span className="badge badge-pos">
@@ -842,12 +855,8 @@ export function RecCard({
                   La marcaste como hecha el {formatHistoryDate(rec.previouslyMarkedDoneAt)}
                 </span>
               )}
-              {/* RECS-ACCION-1 — sólo se marca la EXCEPCIÓN. "En tu web" es lo
-                  que el usuario ya da por supuesto en 11 de los 15 tipos, y
-                  repetirlo en cada tarjeta sería justo la tinta que
-                  RECS-REDESIGN-1 quitó de aquí (log §115). Lo que cambia una
-                  decisión de un vistazo es lo contrario: que esto NO dependa
-                  de él. La ausencia de chip significa "es tuyo". */}
+              {/* RECS-ACCION-1 — sólo se marca la EXCEPCIÓN. La ausencia de
+                  chip significa "es tuyo" (log §127). */}
               {control === "third_party" && (
                 <span className="badge badge-outline">
                   <Icon name="globe" size={11} />
@@ -863,13 +872,26 @@ export function RecCard({
             </div>
           )}
           <div className="rec-title">{rec.title}</div>
-          {!compact && <div className="rec-problem">{rec.description}</div>}
           {(!compact || showOwnStep) && firstStep && (
             <div className="rec2-step">
               <Icon name="arrRight" size={13} />
               <span>
-                <b>Empieza por aquí.</b> {firstStep}
+                <b>Haz esto.</b> {firstStep}
               </span>
+            </div>
+          )}
+          {reach && (
+            <div className="rec2-reach">
+              {providers.length > 0 && (
+                <span className="rec2-reach-g" aria-hidden="true">
+                  {providers.map((provider) => (
+                    <span key={provider} style={{ color: getEngineMeta(provider).color }} title={getEngineMeta(provider).label}>
+                      <EngineGlyph provider={provider} />
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span>{reach}</span>
             </div>
           )}
         </div>
@@ -896,11 +918,6 @@ export function RecCard({
                 <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type, ev.query_shape)}</div>
               </>
             ) : (
-              /* Confidence deliberately NOT shown here (founder review): repeated
-                 down a list it read as the product hedging on every single card.
-                 It still qualifies the number — that is why a low-confidence run
-                 shows this qualitative label instead of a figure — and it stays
-                 visible inside the expanded detail. */
               <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
                 {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
               </div>
@@ -913,54 +930,36 @@ export function RecCard({
               setOpen((o) => !o);
             }}
           >
-            {open ? "Ocultar" : "Ver más"}
+            {open ? "Ocultar" : "Ver cómo"}
             <Icon name={open ? "chevDown" : "chevRight"} size={14} />
           </button>
         </div>
       </div>
 
-      {/* Expandable detail */}
+      {/* Expandable detail. RECS-SHORT-CARD-1 (log §301): no block renders
+          empty — a block without data is left out, never filled with
+          "Sin datos disponibles". */}
       <div className="rec-detail">
         <div className="rec-detail-inner">
-          {/* Impact / effort / confidence, moved here from the collapsed card
-              (RECS-REDESIGN-1). They are qualifiers you read while deciding
-              whether to take this on — useful once the card is open, pure
-              noise multiplied across a 15-card list. */}
-          <div
-            style={{
-              display: "flex",
-              gap: 20,
-              alignItems: "center",
-              flexWrap: "wrap",
-              paddingBottom: 12,
-              marginBottom: 12,
-              borderBottom: "1px solid var(--line-soft)",
-            }}
-          >
-            <div className="rmetric" style={{ textAlign: "left" }}>
-              <div className="l">Impacto</div>
-              <div className="v" style={{ justifyContent: "flex-start" }}>
-                <DotMeter n={impactToN(rec.impact)} tone="h" />
+          <div className="rec2-why">
+            <div className="rec2-why-box">
+              <div className="rec2-why-h">
+                <span className="rec2-label">Lo que vimos</span>
+                <span className={`rec2-chip rec2-chip-${data.tone}`}>{data.label}</span>
               </div>
+              {!compact && rec.description && <p className="rec2-why-p">{rec.description}</p>}
+              {data.note && <div className="rec2-why-note">{data.note}</div>}
             </div>
-            <div className="rmetric" style={{ textAlign: "left" }}>
-              <div className="l">Esfuerzo</div>
-              <div className="v" style={{ justifyContent: "flex-start" }}>
-                <DotMeter n={effortToN(rec.effort)} tone="m" />
+            {(ev.why_this_matters || advice) && (
+              <div className="rec2-why-box">
+                <div className="rec2-why-h">
+                  <span className="rec2-label">Por qué funciona</span>
+                  {advice && <span className="rec2-chip rec2-chip-advice">{advice.label}</span>}
+                </div>
+                {ev.why_this_matters && <p className="rec2-why-p">{ev.why_this_matters}</p>}
+                {advice && <div className="rec2-why-note">{advice.note}</div>}
               </div>
-            </div>
-            <div className="rmetric" style={{ textAlign: "left" }}>
-              <div className="l">Confianza</div>
-              <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
-                {effectiveConfidence === "low" ? "Baja" : effectiveConfidence === "high" ? "Alta" : "Media"}
-              </div>
-            </div>
-            <div className="rmetric" style={{ textAlign: "left" }}>
-              <div className="l">Tipo</div>
-              <div className="v" style={{ justifyContent: "flex-start", fontSize: 12, fontWeight: 700 }}>
-                {labelForType(rec.recommendation_type)}
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Auditoría de cobertura del dominio (RECS-COVERAGE-OVERLAY-1) — shown
@@ -1089,117 +1088,80 @@ export function RecCard({
             </div>
           )}
 
-          {/* Two-column evidence grid */}
-          <div className="rec-evidence-grid">
-            {/* Columna izquierda — Por qué importa */}
-            <div className="rec-evidence-col">
-              <div className="rec-evidence-col-label">Por qué importa</div>
-              {ev.why_this_matters ? (
-                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-                  {ev.why_this_matters}
-                </p>
-              ) : (
-                <p style={{ fontSize: 13, color: "var(--ink-4)", fontStyle: "italic", margin: 0 }}>
-                  Sin datos de razonamiento disponibles.
-                </p>
-              )}
+          {(promptDetails.length > 0 || affectedPrompts.length > 0) && (
+            <div className="rec2-block">
+              <div className="rec2-label">{questionCount === 1 ? "La pregunta" : "Las preguntas"}</div>
               {promptDetails.length > 0 ? (
-                <div>
-                  <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
-                    {promptDetails.length} prompt{promptDetails.length !== 1 ? "s" : ""} afectado{promptDetails.length !== 1 ? "s" : ""}
-                  </div>
-                  <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0, listStyle: "none" }}>
-                    {promptDetails.slice(0, 4).map((p) => (
-                      <li key={p.id} style={{ marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                          {/* RECS-EVIDENCE-2 (docs/external-audit-2026-08.md,
-                              Fase 7) — de qué motor viene esta evidencia
-                              concreta. `p.provider` falta en filas persistidas
-                              antes de esta fase; nada se pinta en ese caso,
-                              nunca se asume Gemini por defecto aquí (a
-                              diferencia de `normalizeProvider`, pensado para
-                              filas de escaneo reales, no para evidencia
-                              histórica que nunca lo registró). */}
-                          {p.providers.map((provider) => (
-                            <span
-                              key={provider}
-                              style={{
-                                color: getEngineMeta(provider).color,
-                                display: "inline-flex",
-                                width: 12,
-                                height: 12,
-                                flexShrink: 0
-                              }}
-                              title={getEngineMeta(provider).label}
-                            >
-                              <EngineGlyph provider={provider} />
-                            </span>
-                          ))}
-                          <span>{p.prompt}</span>
+                <ul className="rec2-qs">
+                  {promptDetails.slice(0, 4).map((p) => (
+                    <li key={p.id} className="rec2-q">
+                      <div className="rec2-q-t">
+                        {/* RECS-EVIDENCE-2 — de qué motor viene esta evidencia
+                            concreta. Sin `provider` (filas antiguas) no se
+                            pinta nada, nunca se asume Gemini. */}
+                        {p.providers.map((provider) => (
+                          <span
+                            key={provider}
+                            className="rec2-q-g"
+                            style={{ color: getEngineMeta(provider).color }}
+                            title={getEngineMeta(provider).label}
+                          >
+                            <EngineGlyph provider={provider} />
+                          </span>
+                        ))}
+                        <span>{p.prompt}</span>
+                      </div>
+                      {(p.competitors.length > 0 || p.domains.length > 0) && (
+                        <div className="rec2-q-m">
+                          {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
+                          {p.competitors.length > 0 && p.domains.length > 0 && <span> · </span>}
+                          {p.domains.length > 0 && <span>Cita: {p.domains.join(", ")}</span>}
                         </div>
-                        {(p.competitors.length > 0 || p.domains.length > 0) && (
-                          <div style={{ fontSize: 11.5, color: "var(--ink-4)", marginTop: 2 }}>
-                            {p.competitors.length > 0 && <span>Gana: {p.competitors.join(", ")}</span>}
-                            {p.competitors.length > 0 && p.domains.length > 0 && <span> · </span>}
-                            {p.domains.length > 0 && <span>Cita: {p.domains.join(", ")}</span>}
-                          </div>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : affectedPrompts.length > 0 && (
-                <div>
-                  <div style={{ fontSize: 12, color: "var(--ink-4)", fontWeight: 600, marginBottom: 4 }}>
-                    {affectedPrompts.length} prompt{affectedPrompts.length !== 1 ? "s" : ""} afectado{affectedPrompts.length !== 1 ? "s" : ""}
-                  </div>
-                  <ul style={{ fontSize: 12.5, color: "var(--ink-3)", paddingLeft: 16, margin: 0 }}>
-                    {affectedPrompts.slice(0, 4).map((p, i) => (
-                      <li key={i}>{p}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {assumptions.length > 0 && (
-                <p style={{ fontSize: 11.5, color: "var(--ink-4)", lineHeight: 1.5, margin: 0 }}>
-                  <span style={{ fontWeight: 600 }}>Supuestos: </span>
-                  {assumptions.join(" ")}
-                </p>
-              )}
-            </div>
-
-            {/* Columna derecha — Evidencia */}
-            <div className="rec-evidence-col">
-              <div className="rec-evidence-col-label">Evidencia</div>
-              {displaySnippets.length > 0 ? (
-                displaySnippets.slice(0, 3).map((snippet, i) => (
-                  <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
-                ))
+                      )}
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <p style={{ fontSize: 12.5, color: "var(--ink-4)", margin: 0 }}>
-                  Sin fragmentos de evidencia disponibles.
-                </p>
+                <ul className="rec2-qs">
+                  {affectedPrompts.slice(0, 4).map((p, i) => (
+                    <li key={i} className="rec2-q">
+                      <div className="rec2-q-t">
+                        <span>{p}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
+              {questionCount > 4 && <div className="rec2-why-note">y {questionCount - 4} más</div>}
+            </div>
+          )}
+
+          {hasEvidence && (
+            <div className="rec2-block">
+              <div className="rec2-label">Evidencia</div>
+              {displaySnippets.slice(0, 3).map((snippet, i) => (
+                <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
+              ))}
               {sentimentDrivers.length > 0 && (
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                <p className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Temas recurrentes: </span>
                   {sentimentDrivers.join(", ")}
                 </p>
               )}
               {competitors.length > 0 && (
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                <p className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Competidores: </span>
                   {competitors.join(", ")}
                 </p>
               )}
               {domains.length > 0 && (
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
+                <p className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Dominios: </span>
                   {domains.join(", ")}
                 </p>
               )}
               {citationPages.length > 0 && (
-                <div style={{ fontSize: 12.5, color: "var(--ink-3)" }}>
+                <div className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Páginas citadas: </span>
                   <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
                     {citationPages.slice(0, 4).map((page, i) => (
@@ -1210,8 +1172,14 @@ export function RecCard({
                   </ul>
                 </div>
               )}
+              {assumptions.length > 0 && (
+                <p className="rec2-ev-p" style={{ color: "var(--ink-4)" }}>
+                  <span style={{ fontWeight: 600 }}>Supuestos: </span>
+                  {assumptions.join(" ")}
+                </p>
+              )}
             </div>
-          </div>
+          )}
 
           {/* Mejorar redacción con IA — el botón solo aparece mientras no haya
               una solución generada; una vez generada, se muestra la insignia.
@@ -1225,7 +1193,7 @@ export function RecCard({
               <>
                 <button
                   type="button"
-                  className="btn btn-ghost btn-sm"
+                  className="btn btn-primary btn-sm"
                   onClick={handleRewrite}
                   disabled={rewriteFeedback.isPending}
                 >
@@ -1412,7 +1380,7 @@ function GroupedRecs({
                 <div className="rec2-step">
                   <Icon name="arrRight" size={13} />
                   <span>
-                    <b>Empieza por aquí.</b> {sharedStep}
+                    <b>Haz esto.</b> {sharedStep}
                   </span>
                 </div>
               )}
@@ -1426,7 +1394,7 @@ function GroupedRecs({
                   margin: "14px 0 2px",
                 }}
               >
-                Consultas afectadas
+                Las preguntas
               </div>
             </div>
           )}
@@ -1490,27 +1458,18 @@ export function RecommendationsClient({
     ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
     : selectPlan(recommendations);
 
-  // "Todas" is exactly that: every active recommendation, including the ones
-  // already shown above as priority actions.
-  //
-  // "Alta prioridad" returns THE PLAN — the same three cards shown above, not a
-  // separate impact×confidence selection. Two different answers to "what is
-  // high priority here?" on one screen is the contradiction this redesign set
-  // out to remove, and it had crept back in through the filter (founder
-  // review). Repetition is fine; disagreement is not.
-  const filtered =
-    filter === "high"
-      ? plan
-      : recommendations.filter((r) =>
-          filter === "technical" ? categoryForType(r.recommendation_type) === "technical" : true,
-        );
+  // RECS-SHORT-CARD-1 (log §301): the list under the plan is «Más adelante»,
+  // so it leaves out the plan's own cards. Showing them twice made sense when
+  // the section was "Todas"; under "más adelante" it would say the plan's
+  // actions can wait. Supersedes the "repetition is fine" rule of §115, and
+  // with it the "Alta prioridad" filter, which only repeated the plan.
+  const planIdSet = new Set(plan.map((r) => r.id));
+  const filtered = recommendations.filter((r) =>
+    filter === "technical" ? categoryForType(r.recommendation_type) === "technical" : !planIdSet.has(r.id),
+  );
 
-  // Four filters, no more (founder review). "Victorias rápidas", "Contenido" y
-  // "Autoridad" salieron: con las categorías ya visibles como acordeones en la
-  // lista, duplicaban la misma navegación en dos sitios distintos.
   const tabs: [FilterMode, string][] = [
-    ["all", "Todas"],
-    ["high", "Alta prioridad"],
+    ["all", "Pendientes"],
     ...(hasTechnical ? [["technical", "Técnico"] as [FilterMode, string]] : []),
     ...(resolvedHistory.length > 0 ? [["resolved", "Resueltas"] as [FilterMode, string]] : []),
   ];
@@ -1550,11 +1509,10 @@ export function RecommendationsClient({
         </button>
       )}
 
-      {/* 4 · The priority actions — always on top, whatever the filter, in the
-          accent treatment so the three that matter carry visible weight. They
-          are NOT removed from the list below: "Todas" means all of them, and a
-          repeat costs nothing next to the confusion of a list that silently
-          hides its three most important rows (founder review). */}
+      {/* 4 · The plan — always on top, whatever the filter, in the accent
+          treatment so the three that matter carry visible weight. Since
+          RECS-SHORT-CARD-1 (log §301) they are left out of «Más adelante»
+          below instead of repeated there. */}
       {plan.length > 0 && (
         <>
           <div className="rec2-plan">
@@ -1562,7 +1520,7 @@ export function RecommendationsClient({
                 confianza baja, que hoy es lo normal) el titular se quedaba en
                 "3 acciones prioritarias." y ese punto huérfano cantaba. */}
             <div className="rec2-plan-t">
-              {plan.length} {plan.length === 1 ? "acción prioritaria" : "acciones prioritarias"}
+              Tu plan de esta semana
               {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? `. Hasta +${formatPoints(planPoints)} puntos` : ""}
             </div>
           </div>
@@ -1574,7 +1532,7 @@ export function RecommendationsClient({
 
       {/* 5 · Filters, directly under the priority actions. */}
       <div className="rec2-sec">
-        <span className="rec2-sec-t">Todas las recomendaciones</span>
+        <span className="rec2-sec-t">Más adelante</span>
         {/* GEO-REPORT-1 Fase 2 (log §250): el informe de GenScore sustituye a
             "Exportar plan". Es navegación, no una acción: abre el informe en su
             propia página, legible en pantalla aunque el navegador no imprima. */}
@@ -1617,9 +1575,13 @@ export function RecommendationsClient({
                     their last active recommendation done, so it points at
                     where that action actually went instead of reading like
                     it vanished (founder feedback 2026-09-07). */}
-                <div className="section-empty-title">Nada que corregir ahora mismo</div>
+                <div className="section-empty-title">
+                  {plan.length > 0 ? "Nada más por ahora" : "Nada que corregir ahora mismo"}
+                </div>
                 <div className="section-empty-desc">
-                  {resolvedHistory.length > 0
+                  {plan.length > 0
+                    ? "Empieza por tu plan de esta semana."
+                    : resolvedHistory.length > 0
                     ? "Lo que ya has resuelto está en la pestaña “Resueltas”."
                     : "Vuelve tras tu próximo escaneo."}
                 </div>
@@ -1638,7 +1600,7 @@ export function RecommendationsClient({
             ) : (
               <>
                 <div className="section-empty-title">Nada con este filtro</div>
-                <div className="section-empty-desc">Vuelve a &ldquo;Todas&rdquo; para verlo todo.</div>
+                <div className="section-empty-desc">Vuelve a &ldquo;Pendientes&rdquo; para verlo todo.</div>
               </>
             )}
           </div>

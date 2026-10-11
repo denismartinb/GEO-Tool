@@ -25099,3 +25099,50 @@ configuran en su panel. No se añade `tunnelRoute`: los bloqueadores de
 anuncios se comen parte de los errores del navegador, pero el túnel pasaría
 cada evento por una función de Vercel, que es justo el coste que recortó
 VERCEL-COST-1 (§199).
+
+## 301. RECS-SHORT-CARD-1 — Recomendaciones: tarjeta corta, dos confianzas y pastillas IA/Google (2026-10-11)
+
+**Qué.** Punto 1 de la línea de mejora de Recomendaciones, sobre la maqueta
+que el fundador aprobó el 2026-10-11 («Implementa»):
+
+- **Tarjeta plegada corta.** Tipo de acción (rótulo), título, una sola
+  instrucción («Haz esto.», antes «Empieza por aquí.») y una línea de
+  alcance con los iconos de motor y «N preguntas · Gemini y ChatGPT»
+  (preguntas distintas, `groupPromptDetails`, como pide §299). La
+  descripción sale de la vista plegada y pasa al detalle. «Ver más» pasa a
+  «Ver cómo».
+- **Dos confianzas separadas** (`lib/recommendations/card-signals.ts`).
+  «Lo que vimos» es la del dato: lee `confidence`, que el motor copia de la
+  confianza del escaneo, más lo observado (preguntas, motores, escaneos
+  seguidos abierta). «Por qué funciona» es la del consejo: lee quién
+  controla la acción (`deliverableForType().control`) y la forma de la
+  pregunta (§292), nunca la confianza del escaneo. Sustituye a la fila
+  Impacto/Esfuerzo/Confianza/Tipo, que mezclaba las dos en una etiqueta.
+- **Ningún bloque vacío.** Se retiran «Sin datos de razonamiento
+  disponibles» y «Sin fragmentos de evidencia disponibles»: un bloque sin
+  datos no se pinta. «Por qué importa» se reparte entre «Por qué funciona»
+  y «Las preguntas».
+- **El botón del entregable pasa a primario.**
+- **«Más adelante» no repite el plan.** La lista bajo el plan se llama «Más
+  adelante» y deja fuera las tres tarjetas del plan; el techo de puntos de
+  cada grupo se calcula sin ellas. **Supersede** la regla de §115 «Todas
+  significa todas, repetir no cuesta nada»: bajo «más adelante», repetir el
+  plan diría que sus acciones pueden esperar. Con ella se va el filtro «Alta
+  prioridad», que sólo repetía el plan. Las pestañas quedan en Pendientes,
+  Técnico y Resueltas. El titular del plan pasa a «Tu plan de esta semana».
+- **Pastillas «Mejora IA» / «Mejora Google»**
+  (`_components/recs-view-tabs.tsx`). Sólo existen con Search Console
+  conectado (`isSearchConsoleActive`, lectura de nuestra base de datos, sin
+  Google). Las dos mitades se renderizan en el servidor y siguen montadas;
+  la pastilla sólo oculta una, así que el bloque de Google sigue llegando
+  tras su esqueleto (§298). El carrusel de Google es de SEARCH-SEO-1 (§295)
+  y no se toca.
+
+**Qué no cambia.** El contador del menú (aparcado por el fundador: «poner
+sólo 3 parece que hay pocas»), los puntos (ADR 0017), el motor de reglas y
+la tarjeta embebida en Auditoría web, que hereda el formato nuevo.
+
+**Pendiente.** Los pasos «Cómo hacerlo» de la maqueta necesitan el
+entregable pregenerado (punto 3); hoy la tarjeta enseña el primer paso, la
+auditoría de cobertura y la acción sugerida cuando existen. Punto 2 (cola
+única IA + Google) cambiará las pastillas.

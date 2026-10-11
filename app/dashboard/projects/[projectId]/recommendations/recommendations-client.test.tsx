@@ -5,6 +5,7 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: () => {} }) }))
 
 import {
   RecCard,
+  RecommendationsClient,
   ResolvedHistoryCard,
   SolutionPanel,
   overlayCopyLocal,
@@ -14,6 +15,7 @@ import {
   type ResolvedHistoryItem
 } from "./recommendations-client";
 import { overlayCopy } from "@/lib/recommendations/coverage-overlay";
+import { labelForType } from "@/lib/recommendations/recommendation-engine";
 
 /**
  * Estas dos cosas el `ux-pilot` NO las puede ver, y por eso se prueban aquí.
@@ -445,5 +447,74 @@ describe("RecCard — insignia de reaparición (RECS-LOOP-1 Fase B)", () => {
       <RecCard projectId="p1" rec={baseRec({ previouslyMarkedDoneAt: "2026-08-12T00:00:00Z" })} />
     );
     expect(html).toContain("La marcaste como hecha el 12 ago 2026");
+  });
+});
+
+describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §301)", () => {
+  it("la tarjeta plegada lleva tipo, instrucción y alcance, y deja la descripción para el detalle", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        rec={baseRec({
+          description: "En 2 respuestas de Gemini no te nombran.",
+          evidence_json: {
+            first_step: "Publica una página que responda la pregunta.",
+            affected_prompt_details: [
+              { id: "a", prompt: "mejor crm", provider: "gemini", competitors: [], domains: [], snippet: "" },
+              { id: "b", prompt: "Mejor CRM", provider: "openai", competitors: [], domains: [], snippet: "" },
+              { id: "c", prompt: "crm barato", provider: "gemini", competitors: [], domains: [], snippet: "" }
+            ]
+          }
+        })}
+        projectId="p1"
+      />
+    );
+    expect(html).toContain("Haz esto.");
+    expect(html).not.toContain("Empieza por aquí");
+    expect(html).toContain("2 preguntas · Gemini y ChatGPT");
+    expect(html).toContain("Ver cómo");
+    // The description lives in «Lo que vimos», once.
+    expect(html.split("En 2 respuestas de Gemini no te nombran.").length - 1).toBe(1);
+    expect(html).toContain("Lo que vimos");
+  });
+
+  it("separa la confianza del dato de la del consejo", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        rec={baseRec({
+          confidence: "high",
+          evidence_json: { why_this_matters: "Las IA citan páginas que responden." }
+        })}
+        projectId="p1"
+      />
+    );
+    expect(html).toContain("Dato sólido");
+    expect(html).toContain("Por qué funciona");
+    expect(html).toContain("Lo controlas tú");
+    expect(html).not.toContain(">Confianza<");
+  });
+
+  it("no pinta bloques vacíos", () => {
+    const html = renderToStaticMarkup(<RecCard rec={baseRec({ evidence_json: {} })} projectId="p1" />);
+    expect(html).not.toContain("Sin datos de razonamiento");
+    expect(html).not.toContain("Sin fragmentos de evidencia");
+    expect(html).not.toContain(">Evidencia<");
+    expect(html).not.toContain("Las preguntas");
+  });
+
+  it("«Más adelante» no repite las tarjetas del plan", () => {
+    const recs = [
+      baseRec({ id: "plan1", title: "Acción del plan" }),
+      baseRec({ id: "later1", title: "Otra cosa", recommendation_type: "add_citation_block" })
+    ];
+    const html = renderToStaticMarkup(
+      <RecommendationsClient recommendations={recs} projectId="p1" planIds={["plan1"]} />
+    );
+    expect(html).toContain("Tu plan de esta semana");
+    expect(html).toContain("Más adelante");
+    expect(html).not.toContain("Alta prioridad</button>");
+    expect(html.split("Acción del plan").length - 1).toBe(1);
+    // Only the non-plan type gets a group row.
+    expect(html).toContain(labelForType("add_citation_block"));
+    expect(html.split('class="rec2-group"').length - 1).toBe(1);
   });
 });
