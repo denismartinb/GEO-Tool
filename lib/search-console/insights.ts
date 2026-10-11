@@ -23,10 +23,10 @@ export type DeviceRow = { device: string; clicks: number; impressions: number; p
 export type TierKey = "top3" | "page1" | "page2" | "beyond";
 
 export const TIERS: Array<{ key: TierKey; label: string; range: string; max: number }> = [
-  { key: "top3", label: "Top 3", range: "Puestos 1 a 3", max: 3 },
-  { key: "page1", label: "Resto de la página 1", range: "Puestos 4 a 10", max: 10 },
+  { key: "top3", label: "Top 3 resultados", range: "Puestos 1 a 3", max: 3 },
+  { key: "page1", label: "Página 1", range: "Puestos 4 a 10", max: 10 },
   { key: "page2", label: "Página 2", range: "Puestos 11 a 20", max: 20 },
-  { key: "beyond", label: "Más allá", range: "Puesto 21 o peor", max: Number.POSITIVE_INFINITY }
+  { key: "beyond", label: "Resto de páginas", range: "Puesto 21 o peor", max: Number.POSITIVE_INFINITY }
 ];
 
 export function tierOf(position: number): TierKey {

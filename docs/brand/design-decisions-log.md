@@ -24535,3 +24535,51 @@ Google está «En producción», porque si no la conexión caduca a los 7 días
 (§284).
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+---
+
+## 289. SEARCH-SEO-1 Fase 3c: ajustes del fundador a «Posición en Google» (2026-10-11)
+
+**Qué se decidió.** Tras ver la Fase 3b (§287) en producción, el fundador pidió
+estos cambios, todos aplicados:
+
+- El texto bajo el puesto medio pasa a «Es la media de todas las veces que te
+  buscan entre las veces que apareces», con sus palabras.
+- Los tramos se llaman «Top 3 resultados», «Página 1», «Página 2» y «Resto de
+  páginas». Los rangos de puestos no cambian.
+- Sale la tarjeta «Puesto medio» de los indicadores, porque repetía el bloque
+  «Tu posición en Google». Quedan tres: clics, impresiones y páginas
+  indexadas.
+- Sale la tarjeta «Indexación» con el donut, porque repetía «Páginas
+  indexadas». Con ella se va su enlace a la Auditoría SEO, que no era un camino
+  de recuperación: la auditoría sigue en el menú y en «Tus páginas en Google».
+  El gráfico de la página 2 ocupa ahora todo el ancho.
+- En «Móvil y ordenador», el porcentaje de impresiones va en su propia línea.
+- Los botones de «Preguntas que te hacen en Google» pasan a «Vigilar prompt» y
+  «Prompt vigilado» con un check verde. Se ha quitado «ya la vigilas en IA» de
+  la línea y se corrige «1 impresiones».
+- **Añadir era lento.** `addPrompts` categoriza con Gemini y lanza el escaneo
+  del prompt nuevo, y eso son unos segundos. La pantalla lo marca como vigilado
+  al pulsar y dice «Añadiéndola a tus prompts…» hasta que termina; si falla, se
+  deshace y enseña el error. No se toca `addPromptsCore`.
+- **Nueva pantalla de carga con Motion** (dependencia nueva `motion`, pedida
+  por el fundador). Una barra de búsqueda y unos resultados donde «tu web»
+  sube y baja de puesto, en bucle. Es ambiente: no enseña porcentaje ni pasos,
+  porque nada sabe cuánto falta.
+- **Caché de 30 minutos** («cachea en sesión… para que no tarde tanto»). Las
+  filas crudas de Google se guardan en la caché de datos de Next con
+  `unstable_cache`. La clave lleva proyecto, dueño, propiedad, el último día de
+  la ventana y, en la pantalla, un hash de las páginas a inspeccionar. Con un
+  acierto no se llama a Google, ni siquiera para renovar el token. La conexión
+  se sigue leyendo antes: desconectar oculta los datos al momento. Los fallos y
+  los estados que no son «listo» no se guardan. Visión general usa la misma
+  caché con su propia clave. Esto modifica la regla «no hay caché entre
+  peticiones» de §284. Lo que se guarda vive fuera de nuestra base de datos y
+  caduca solo.
+
+**Qué queda pendiente.** Las recomendaciones con datos de Google (siguiente
+fase). Tampoco se ha medido en producción cuánto más rápida carga la pantalla
+con la caché.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: el enlace de
+la tarjeta de indexación llevaba a una pantalla que sigue en el menú.

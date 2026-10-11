@@ -8,37 +8,61 @@ import { fmtInt, fmtPosition } from "./format";
 
 /**
  * «Preguntas que te hacen en Google» (log §287): queries phrased as a
- * question, and whether the AI scan already tracks them. «Vigilar en IA»
+ * question, and whether the AI scan already tracks them. «Vigilar prompt»
  * goes through `addPrompts` in manual mode, the same path as adding a prompt
  * by hand: plan cap, categorisation and a scan of just that prompt.
  */
 
-type RowState = { kind: "idle" } | { kind: "added"; scanLaunched: boolean } | { kind: "error"; message: string };
+type RowState =
+  | { kind: "idle" }
+  | { kind: "adding" }
+  | { kind: "added"; scanLaunched: boolean }
+  | { kind: "error"; message: string };
+
+function CheckIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 function QuestionRow({ projectId, item }: { projectId: string; item: QuestionQuery }) {
   const [state, setState] = useState<RowState>({ kind: "idle" });
-  const [pending, startTransition] = useTransition();
-  const tracked = item.tracked || state.kind === "added";
+  const [, startTransition] = useTransition();
+  // Shown as watched the moment it is pressed: adding categorises the prompt
+  // and launches its scan, which takes a few seconds. A failure undoes it.
+  const tracked = item.tracked || state.kind === "adding" || state.kind === "added";
 
-  const watch = () =>
+  const watch = () => {
+    setState({ kind: "adding" });
     startTransition(async () => {
-      const result = await addPrompts({ projectId, mode: "manual", manualPrompts: [item.query] });
-      setState(result.success ? { kind: "added", scanLaunched: result.scanLaunched } : { kind: "error", message: result.error });
+      try {
+        const result = await addPrompts({ projectId, mode: "manual", manualPrompts: [item.query] });
+        setState(result.success ? { kind: "added", scanLaunched: result.scanLaunched } : { kind: "error", message: result.error });
+      } catch {
+        setState({ kind: "error", message: "No se ha podido añadir. Inténtalo de nuevo." });
+      }
     });
+  };
 
   return (
     <li>
       <div>
         <b className="gsc-qq">{item.query}</b>
         <span className="gsc-sub">
-          Puesto {fmtPosition(item.position)} en Google · {fmtInt(item.impressions)} impresiones ·{" "}
-          {tracked ? "ya la vigilas en IA" : "todavía no la vigilas en IA"}
+          Puesto {fmtPosition(item.position)} en Google · {fmtInt(item.impressions)}{" "}
+          {item.impressions === 1 ? "impresión" : "impresiones"}
         </span>
-        {state.kind === "added" ? (
+        {state.kind === "adding" ? (
+          <span className="gsc-act gsc-muted" role="status">
+            Añadiéndola a tus prompts…
+          </span>
+        ) : state.kind === "added" ? (
           <span className="gsc-act" role="status">
             {state.scanLaunched
-              ? "Añadida a tus preguntas. La estamos preguntando a los motores de IA."
-              : "Añadida a tus preguntas. Entrará en tu próximo escaneo."}
+              ? "Añadida a tus prompts. La estamos preguntando a los motores de IA."
+              : "Añadida a tus prompts. Entrará en tu próximo escaneo."}
           </span>
         ) : state.kind === "error" ? (
           <span className="gsc-act gsc-down" role="alert">
@@ -47,12 +71,13 @@ function QuestionRow({ projectId, item }: { projectId: string; item: QuestionQue
         ) : null}
       </div>
       {tracked ? (
-        <Link className="gsc-qbtn" href={`/dashboard/projects/${projectId}/prompts`}>
-          Ver en Prompts
+        <Link className="gsc-qbtn is-done" href={`/dashboard/projects/${projectId}/prompts`} title="Ver en Prompts">
+          <CheckIcon />
+          Prompt vigilado
         </Link>
       ) : (
-        <button type="button" className="gsc-qbtn" onClick={watch} disabled={pending}>
-          {pending ? "Añadiendo…" : "Vigilar en IA"}
+        <button type="button" className="gsc-qbtn" onClick={watch}>
+          Vigilar prompt
         </button>
       )}
     </li>
