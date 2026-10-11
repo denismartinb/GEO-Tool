@@ -42,8 +42,8 @@ export function ClicksImpressionsChart({ daily }: { daily: DailyPoint[] }) {
   if (daily.length < 2) {
     return <p className="sa-empty">Google todavía no tiene suficientes días con datos para dibujar la evolución.</p>;
   }
-  const W = 860;
-  const H = 240;
+  const W = 640;
+  const H = 300;
   const L = 40;
   const R = 54;
   const T = 12;
@@ -152,8 +152,8 @@ export function NearPageOneScatter({ queries }: { queries: QueryView[] }) {
   if (points.length === 0) {
     return <p className="sa-empty">Todavía no sales entre los 30 primeros resultados para ninguna búsqueda.</p>;
   }
-  const W = 420;
-  const H = 270;
+  const W = 480;
+  const H = 280;
   const L = 54;
   const R = 12;
   const T = 34;
@@ -173,7 +173,7 @@ export function NearPageOneScatter({ queries }: { queries: QueryView[] }) {
   const radius = (q: QueryView) => 5 + Math.min(10, Math.sqrt(q.clicks) * 0.7);
 
   return (
-    <div className="gsc-chart-box" onMouseLeave={() => setHover(null)}>
+    <div className="gsc-chart-box gsc-scatter" onMouseLeave={() => setHover(null)}>
       <svg className="gsc-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Búsquedas por puesto en Google e impresiones">
         <rect x={x(10.5)} y={T} width={x(20.5) - x(10.5)} height={ih} fill="#2563eb" fillOpacity={0.07} />
         {pages.map((p) => (
