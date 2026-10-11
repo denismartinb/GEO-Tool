@@ -3036,6 +3036,85 @@ a {
   opacity: .5;
   cursor: not-allowed;
 }
+/* PROMPTS-REVIEW-1: review step after generating prompts. */
+.add-prompts-review-note {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.add-prompts-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.add-prompts-review-regen {
+  border: 0;
+  background: none;
+  padding: 4px 0;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.add-prompts-review-regen:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+.add-prompts-review-list .add-prompts-manual-item {
+  background: var(--surface);
+}
+.add-prompts-review-list .add-prompts-manual-item.is-off {
+  background: var(--surface-2);
+}
+.add-prompts-review-list .is-off .add-prompts-manual-item-text {
+  color: var(--ink-4);
+  text-decoration: line-through;
+}
+.add-prompts-review-check {
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.add-prompts-review-check:disabled {
+  cursor: not-allowed;
+}
+.add-prompts-review-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.add-prompts-review-main .add-prompts-manual-item-text {
+  cursor: pointer;
+}
+.add-prompts-review-topic {
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+.add-prompts-review-edit {
+  flex-shrink: 0;
+}
+.add-prompts-review-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.add-prompts-review-hint {
+  font-size: 12px;
+  color: var(--ink-4);
+}
 .add-prompts-text-input {
   width: 100%;
   border: 1px solid var(--line-strong);
