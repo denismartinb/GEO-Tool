@@ -13,7 +13,7 @@ import { writeCachedSessionUser } from "@/lib/use-session-user";
  * anonymous "Iniciar sesión / Prueba gratis" CTAs on a public page, and until
  * now the only thing that ever wrote it was a public page itself. So the
  * first public surface a freshly logged-in visitor opened was a guaranteed
- * cache miss — you log in, land in the console, click "Manuales GEO" in the
+ * cache miss — you log in, land in the console, click "Manuales y estudios" in the
  * sidebar, and that blog page flickers by construction, every time, for every
  * new account. Here the identity is already resolved server-side (the layout
  * has it for the sidebar chip), so seeding costs nothing: no request, no

@@ -31,7 +31,7 @@ import {
  * `--journeys write`, igual que cualquier otra siembra de estado.
  *
  * Lo que SÍ sigue siendo determinista sin ninguna escritura: reabrir el tour
- * desde «¿Qué es el GEO?» funciona pase lo que pase con la marca de «ya
+ * desde «¿Cómo funciona?» funciona pase lo que pase con la marca de «ya
  * visto» — es la vía que existe precisamente para volver a verlo. Esta
  * pasada verifica esa vía, siempre.
  *
@@ -42,7 +42,7 @@ import {
 
 const TITLE = "Aprende cómo funciona";
 
-test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra", async ({ page }, testInfo) => {
+test("«¿Cómo funciona?» reabre el tour con contenido real, avanza y cierra", async ({ page }, testInfo) => {
   await page.goto("/dashboard", { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(1_500);
 
@@ -52,7 +52,7 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
   // menú tiene que funcionar en cualquiera de los dos estados de partida.
   await dismissWelcomeTour(page);
 
-  const reopen = page.getByRole("button", { name: /Qué es el GEO/i });
+  const reopen = page.getByRole("button", { name: /Cómo funciona/i });
 
   // PILOT-DRAWER-VIEWPORT-1 (2026-08-27, log §176). Bajo 760px la barra
   // lateral es un cajón `position: fixed` que vive en `translateX(-100%)`
@@ -68,7 +68,7 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
   // se preguntaba antes de que la cabecera pintara y se contestaba que no— sino
   // «¿se alcanza la entrada del menú?». Si no, hay cajón que abrir, lo diga el
   // ancho o lo diga la hidratación.
-  await expect(reopen, "«¿Qué es el GEO?» desapareció del menú lateral").toBeVisible();
+  await expect(reopen, "«¿Cómo funciona?» desapareció del menú lateral").toBeVisible();
   const needsDrawer = await expect(reopen)
     .toBeInViewport({ timeout: 1_000 })
     .then(
@@ -86,7 +86,7 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
     await expect(async () => {
       await burger.click();
       await expect(reopen).toBeInViewport();
-    }, "el cajón de navegación móvil no llegó a traer «¿Qué es el GEO?» a la pantalla").toPass({
+    }, "el cajón de navegación móvil no llegó a traer «¿Cómo funciona?» a la pantalla").toPass({
       timeout: 15_000
     });
   }
@@ -94,7 +94,7 @@ test("«¿Qué es el GEO?» reabre el tour con contenido real, avanza y cierra",
   await reopen.click();
 
   const scrim = page.locator(WELCOME_TOUR_SCRIM);
-  await expect(scrim, "«¿Qué es el GEO?» del menú no reabrió el tour").toBeVisible({ timeout: 5_000 });
+  await expect(scrim, "«¿Cómo funciona?» del menú no reabrió el tour").toBeVisible({ timeout: 5_000 });
   await expect(page.getByRole("heading", { name: TITLE })).toBeVisible();
 
   // Contenido real, no un lienzo en blanco. El paso 1 teclea el dominio; si el

@@ -50,6 +50,10 @@ paths:
 
 - **Nada de recomendaciones falsas** (lista de prohibido de `CLAUDE.md`). Una
   recomendación existe porque hay evidencia persistida que la respalda.
+  La excepción son las tarjetas «Con tus datos de Google» (log §293): su
+  evidencia son los datos en vivo del Search Console del cliente, que no se
+  guardan (`.claude/rules/search-console.md`). No entran en el plan, ni en
+  los puntos potenciales, ni en «Resueltas».
 - **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
   el aviso de "interpretación de la IA" ya existente.
 - Si una recomendación no puede calcular su impacto, se muestra sin impacto —
@@ -578,3 +582,22 @@ paths:
 - **Todo artefacto de datos estructurados avisa de que su contenido tiene que
   estar visible en la página.** Marcar un `FAQPage` sobre preguntas que no están
   en la página es marcado de contenido inexistente.
+
+## Preguntas de definición (RECS-DEFINITION-1, log §292)
+
+- **Una pregunta de definición no promete una mención.** `classifyQueryShape`
+  (`lib/recommendations/query-shape.ts`) la reconoce por la redacción o
+  porque todas las fuentes citadas (dos como mínimo) son diccionarios o
+  enciclopedias. La tarjeta de visibilidad cambia la afirmación, el impacto y
+  la etiqueta de los puntos («si te nombran»), nunca la cifra: el
+  contrafactual sigue siendo ADR 0017. Viaja como `evidence_json.query_shape`,
+  sin migración.
+- **«Qué es X» sólo cuenta con un término corto.** «qué es el mejor CRM para
+  pymes» es una pregunta de recomendación y ahí sí se nombran marcas. El
+  patrón limita el término a dos palabras por eso; no lo amplíes sin un caso
+  real.
+- **La lista de prompts afectados se agrupa por pregunta**
+  (`groupPromptDetails`). `affected_prompt_details` guarda una entrada por
+  fila de escaneo, así que sin agrupar la misma pregunta salía una vez por
+  motor y por repetición. El motor se pinta como icono en la fila, como ya
+  exigía RECS-EVIDENCE-2.

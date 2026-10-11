@@ -124,4 +124,4 @@ obedecerá igual.
   (`POST /api/account/onboarding-tour/reset`). `tests/pilot/journeys/
   onboarding-tour.spec.ts` (set por defecto, cada preview deploy) se queda
   con lo único que es determinista sin escribir nada: reabrir el tour desde
-  «¿Qué es el GEO?» funciona pase lo que pase con la marca de origen.
+  «¿Cómo funciona?» (antes «¿Qué es el GEO?», log §291) funciona pase lo que pase con la marca de origen.

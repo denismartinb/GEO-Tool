@@ -21,7 +21,7 @@ import { markTourSeen } from "@/app/dashboard/actions";
  *
  * Dos maneras de que aparezca, ambas pedidas por el fundador:
  *   1. solo, la primera vez que alguien entra en la consola;
- *   2. a demanda, desde «¿Qué es el GEO?» del menú lateral.
+ *   2. a demanda, desde «¿Cómo funciona?» del menú lateral.
  *
  * El «ya lo he visto» vive en `profiles.onboarding_tour_seen_at`
  * (ONBOARDING-TOUR-PERSIST-1, 2026-08-25) y llega como prop leída
@@ -64,7 +64,7 @@ export function TourProvider({
   // Páginas citadas y la campana en las tres anchuras (ver log §40).
   //
   // El coste asumido: si alguien recarga en el primer segundo y se lo pierde,
-  // ya no vuelve solo. Para eso está «¿Qué es el GEO?» en el menú lateral, que
+  // ya no vuelve solo. Para eso está «¿Cómo funciona?» en el menú lateral, que
   // es justo la puerta de vuelta que el fundador pidió.
   //
   // Y no se abre en `/dashboard`, que es una ruta puente: su página no pinta

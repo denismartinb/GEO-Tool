@@ -1,3 +1,4 @@
+import { classifyQueryShape } from "@/lib/recommendations/query-shape";
 import { classifySourceType, type SourceType } from "@/lib/citations/source-type";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 
@@ -562,30 +563,43 @@ function perPromptGapCards(opts: {
       return !result.brand_mentioned && ev.competitors.length === 0;
     });
     if (visibilityAffected.length > 0) {
+      // log §292: a definitional query («qué significa X») is answered with
+      // dictionaries, not brands. Telling the user "whoever publishes first
+      // wins it" there promises a mention the engines almost never give; what
+      // is winnable is being cited as the source. Same card, same dedupeKey
+      // and same counterfactual points (ADR 0017) — only the claim changes.
+      const visibilityDomains = visibilityAffected.flatMap((r) => promptEvidence(r).domains);
+      const isDefinition = classifyQueryShape(group[0].prompt_text_snapshot, visibilityDomains) === "definition";
       cards.push({
         title: `Aparece en "${label}"`,
-        description:
-          "Ni tú ni ningún competidor aparecéis en esta respuesta. Es una consulta libre: se la lleva quien publique primero la mejor respuesta.",
+        description: isDefinition
+          ? "Es una pregunta de definición: la IA responde con diccionarios y enciclopedias, no con marcas. Lo realista aquí es que cite tu web como fuente, no que te recomiende."
+          : "Ni tú ni ningún competidor aparecéis en esta respuesta. Es una consulta libre: se la lleva quien publique primero la mejor respuesta.",
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
-        impact: "medium",
+        impact: isDefinition ? "low" : "medium",
         effort: "medium",
         confidence: runScore.confidence,
         source_type: "rule",
         affectedCount: visibilityAffected.length,
-        severityScore: 48 + confWeight(runScore.confidence) * 4,
+        severityScore: (isDefinition ? 40 : 48) + confWeight(runScore.confidence) * 4,
         evidence_json: buildEvidenceJson({
           ruleId: "rule_visibility_001",
           scoreDetails,
           runScore,
           affected: visibilityAffected,
-          assumptions: ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
-          whyThisMatters:
-            "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
-          firstStep:
-            "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
-          snippetSource: "brand"
+          assumptions: isDefinition
+            ? ["En una pregunta de definición, la IA suele apoyarse en fuentes de referencia en vez de nombrar marcas."]
+            : ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
+          whyThisMatters: isDefinition
+            ? "Una pregunta de definición rara vez acaba en una recomendación de marca, pero sí en una fuente citada. Si la explicación más clara está en tu web, la IA puede citarla."
+            : "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
+          firstStep: isDefinition
+            ? "Responde la definición en las dos primeras frases de tu página sobre el tema, con el titular en forma de pregunta. Si el término tiene otros significados, acláralo en esa misma frase."
+            : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
+          snippetSource: "brand",
+          ...(isDefinition ? { extra: { query_shape: "definition" } } : {})
         })
       });
     }

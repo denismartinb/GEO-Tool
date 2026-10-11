@@ -24688,3 +24688,117 @@ colaterales.
 consentimiento de Google está «En producción» (§284).
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 291. NAV-SIMPLIFY-1: menú de la consola en cuatro bloques (2026-10-11)
+
+**Qué se decidió.** El fundador propuso simplificar la navegación y aprobó la
+maqueta en escritorio y móvil («me encaja el nuevo menú»):
+
+- **Posicionamiento en la IA:** Visión general, Prompts, Competidores, Páginas
+  citadas. «Auditoría GEO» sale de este bloque.
+- **Posicionamiento global** (antes «Posicionamiento en buscadores»):
+  **Auditoría técnica** y Posición en Google. Las entradas «Auditoría GEO» y
+  «Auditoría SEO» (§275) pasan a ser una sola.
+- **Actuar:** Recomendaciones, sin cambios.
+- **Aprender:** «Manuales GEO» pasa a «Manuales y estudios» y sigue llevando al
+  blog, donde los estudios también son artículos.
+- **Pie:** «¿Qué es el GEO?» pasa a «¿Cómo funciona?». Abre el mismo tour de
+  siempre; el nombre nuevo dice lo que abre.
+
+**Cómo.** La pantalla de la auditoría ya tenía sus dos tarjetas de bloque
+(`BlockSwitch`, §275), que cambian entre GEO y SEO. Ese es el selector, en vez
+de la pastilla de la maqueta. Sin `?bloque=` abre GEO como antes, y los enlaces
+ya enviados con `?bloque=seo` siguen abriendo SEO. El rótulo y el título de la
+pestaña dicen «Auditoría técnica», sea cual sea el bloque abierto. La entrada
+del menú se ilumina en los dos bloques.
+
+**Qué queda pendiente.** Nada en código. El tour del producto sigue enlazando a
+`/geo` con «¿Qué es el GEO?» en su pie, a propósito: ese enlace lleva a la
+página del término.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: los dos
+bloques de la auditoría siguen alcanzables desde sus tarjetas.
+
+## 292. RECS-DEFINITION-1: las preguntas de definición no prometen una mención (2026-10-11)
+
+**Qué se decidió.** El fundador probó en genscore.es la tarjeta «Aparece en
+"que significa geo"» de su propio proyecto (§290) y pidió aprender de ella.
+Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
+(«Ejecuta todo de forma autónoma», 2026-10-11).
+
+1. **Pregunta de definición.** `lib/recommendations/query-shape.ts` la
+   reconoce por la redacción («qué significa X», «qué es X» con un término de
+   una o dos palabras, «significado de», «definición de») o porque todas las
+   fuentes citadas, dos como mínimo, son diccionarios o enciclopedias. En ese
+   caso la tarjeta de visibilidad:
+   - dice que la IA responde con diccionarios y que lo realista es que te
+     cite, no que te recomiende, en vez de «se la lleva quien publique
+     primero»;
+   - pasa a impacto bajo y baja algo en el plan;
+   - etiqueta sus puntos como «si te nombran».
+
+   La cifra no cambia: sigue siendo el contrafactual de ADR 0017. Cambia lo
+   que declara, como el «si te citan» de §140.
+2. **Términos ambiguos.** En una pregunta de definición, el primer paso y el
+   playbook de la reescritura piden aclarar los otros significados del
+   término en las dos primeras frases. Fuera de las preguntas de definición
+   no se intenta detectar ambigüedad: no hay una señal fiable.
+3. **Reforzar antes que crear.** El playbook de `increase_brand_visibility`
+   pide reforzar la página que ya exista sobre el tema antes de publicar una
+   URL nueva. El veredicto con datos lo sigue dando el overlay de cobertura
+   (§278). Esto cubre el caso en que no lo hay, que fue el de `/geo`.
+4. **FAQPage.** El prompt de reescritura prohíbe prometer el resultado
+   enriquecido de FAQ de Google, que sólo se enseña en webs de administración
+   y de salud. El marcado sirve para que los motores de IA lean las preguntas.
+5. **Detalles de la tarjeta.**
+   - Los prompts afectados se agrupan por pregunta, con un icono por motor
+     (`groupPromptDetails`). La tarjeta del fundador enseñaba «8 prompts
+     afectados» y la misma pregunta cuatro veces.
+   - Los puntos de Impacto y Esfuerzo nunca se pintaban: `--p-high` y
+     `--p-med` no están declarados en ningún sitio, así que sólo se veían los
+     puntos grises. Se arregla con un valor por defecto en el propio
+     `var()`, también en `.rec-rank`.
+
+- **Clasificador de fuentes.** `classifySourceType` añade diccionarios
+  (RAE, Fundéu, WordReference, Wiktionary y otros) al grupo de enciclopedias,
+  y la etiqueta pasa a «Diccionario o enciclopedia» en Páginas citadas. Como
+  efecto lateral, en el informe esos dominios pasan de «Medios y otras webs»
+  a «Comparadores y comunidades», donde ya estaba Wikipedia.
+
+**Pendiente.** Las tarjetas ya guardadas no cambian hasta el siguiente
+escaneo del proyecto, porque el texto se escribe al generarlas.
+
+## 293. SEARCH-SEO-1 Fase 3d: recomendaciones con datos de Google (2026-10-11)
+
+**Qué se decidió.** La pantalla de Recomendaciones gana un bloque «Con tus
+datos de Google», encima de las recomendaciones de IA, sólo cuando el proyecto
+tiene Search Console conectado. Es la segunda mitad del diseño aprobado de
+Fase 3b (`docs/design-reference/search-seo-1/fase-3b/Recs.dc.html`, «Implementa
+todo»). Como mucho hay una tarjeta de cada tipo, la más fuerte:
+
+- **Subir a la página 1:** la búsqueda de la página 2 (puestos 11–20) con más
+  impresiones, con la página que sale y hasta dos páginas de la web que ya
+  están en la página 1 desde las que enlazarla.
+- **Título y descripción:** la primera de «Te ven, pero no entran», comparada
+  con el CTR de las otras búsquedas de la propia web en el mismo tramo, nunca
+  con una curva del sector (§287).
+- **Google + IA:** la primera pregunta de Google que el escaneo todavía no
+  vigila, con «Vigilar prompt», que pasa por `addPrompts` igual que en
+  «Posición en Google» (`useWatchPrompt`, compartido).
+
+**En vivo, sin guardar.** Las tarjetas se calculan en cada carga
+(`buildGoogleRecommendations`, puro) sobre las mismas filas cacheadas 30 min
+de §289, leídas con los mismos datos propios (`readSearchConsoleInputs`), así
+que las dos pantallas comparten caché. No hay migración: una tarjeta existe
+porque Google lo dice hoy y se va sola cuando el dato mejora. Por eso todavía
+no tienen «Marcar como hecho» ni «Ahora no». Se le preguntó al fundador si
+guardarlas (con migración) o calcularlas en vivo, y se construyó la opción
+recomendada mientras contestaba. El bloque va en un `Suspense`, así que un
+Google lento no retrasa las recomendaciones de IA.
+
+**Qué queda pendiente.** «Generar el texto» y las tres propuestas de título
+del diseño necesitan una generación con IA anclada a datos de Google. Es la
+siguiente pieza. Mientras tanto, las tarjetas de página 1 y de título llevan a
+«Posición en Google».
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

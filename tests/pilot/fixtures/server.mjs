@@ -302,7 +302,7 @@ function shellWrap(body) {
            reportara como estado vacío (5ª pasada del self-check). -->
       <p class="notif-panel-row">Sin novedades</p>
     </div>
-    <button type="button" class="side-geo">¿Qué es el GEO?</button>
+    <button type="button" class="side-geo">¿Cómo funciona?</button>
   </header>
   <script>
   (function () {
