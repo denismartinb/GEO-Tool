@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
@@ -53,6 +54,7 @@ import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 import { SeoAuditCard } from "./_components/seo-audit-card";
+import { GscOverviewHalf } from "./_components/gsc-overview-half";
 import { resolveCompetitiveClaim } from "@/lib/metrics/competitive-claim";
 import {
   GEO_SCORE_COMPONENT_META,
@@ -257,7 +259,7 @@ export default async function ProjectDetailPage({
 }) {
   const { projectId } = await params;
   const feedback = await searchParams;
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   const RUNS_SELECT =
     "id, status, error_summary, total_prompts, successful_prompts, failed_prompts, created_at, started_at, finished_at";
@@ -1572,7 +1574,13 @@ export default async function ProjectDetailPage({
                 summary={seoSummary}
                 auditedAt={seoAuditedAt}
                 href={`/dashboard/projects/${projectId}/web-audit`}
-              />
+              >
+                {/* SEARCH-SEO-1 Fase 3 (log §283): Search Console, streamed in
+                    so Google's latency never holds up the Overview. */}
+                <Suspense fallback={null}>
+                  <GscOverviewHalf projectId={projectId} ownerUserId={user.id} domain={project.domain} />
+                </Suspense>
+              </SeoAuditCard>
             </div>
           ) : null}
           </div>

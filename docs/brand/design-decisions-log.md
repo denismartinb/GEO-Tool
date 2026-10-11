@@ -24125,3 +24125,138 @@ Petición del fundador, el mismo día que puso `AFFILIATE_CODES` en Vercel: ver 
   hace falta el aviso por correo que exige toda escritura desde `/admin`.
 - Lógica pura en `lib/admin/affiliates.ts`, con tests. Si hay más de 1000
   cuentas, la página lo avisa: las altas por código se quedarían cortas.
+
+## 283. SEARCH-SEO-1 Fase 3: «Posición en Google» con Search Console (2026-10-11)
+
+**Qué se decidió.** Fase 3 de §271, aprobada en el plan del 2026-10-10
+(`docs/design-reference/search-seo-1/maqueta.html`, pantallas «Posición en
+Google» y «sin conectar», y la mitad de Google de la tarjeta «Buscadores» de
+Visión general). El fundador dio paso con «seguimos» tras la Fase 2.
+
+- **Pantalla nueva** `/dashboard/projects/[id]/search-console`, entrada
+  «Posición en Google» en el bloque «Posicionamiento en buscadores» del menú,
+  bajo Auditoría SEO. Contenido, todo leído en directo del Search Console del
+  cliente:
+  - cuatro indicadores: clics, impresiones, puesto medio (con cambio frente a
+    los 28 días anteriores) y páginas indexadas;
+  - gráfico diario de clics e impresiones, con dos ejes;
+  - «A un paso de la página 1»: cada búsqueda por puesto e impresiones, con la
+    franja de la página 2 (puestos 11–20);
+  - «Indexación», con la inspección de URL de Google;
+  - «Tus búsquedas», con filtros Todas / Página 1 / Casi página 1 y
+    movimiento de puesto.
+- **Visión general**: la tarjeta «Auditoría SEO» suma debajo la mitad de
+  Google («Google · últimos 28 días»: clics, puesto medio y cuántas búsquedas
+  están en la página 2, que enlaza a la pantalla). Sin conectar, invita a
+  conectar. Se carga en un `Suspense`, así que la latencia de Google nunca
+  retrasa el resto de la pantalla.
+- **Diferencias con la maqueta, a propósito:**
+  - En «sin conectar» la maqueta ponía detrás de la caja la pantalla con
+    datos de ejemplo difuminados. Aquí va un panel liso: números inventados
+    detrás de una pantalla real seguirían siendo números inventados.
+  - «Páginas indexadas» es de las páginas que ya revisa la auditoría (como
+    mucho diez), no de toda la web, y lo dice («de las revisadas»). La
+    inspección de URL va página a página; contar toda la web sería un
+    rastreador (prohibido sin aprobación, `CLAUDE.md`).
+  - La tarjeta de Visión general conserva el nombre «Auditoría SEO» de §271;
+    la mitad de Google entra dentro de ella.
+  - La etiqueta «NUEVO» del menú de la maqueta no se pone, igual que no se
+    puso en Auditoría SEO.
+  - Los números siguen el formato es-ES: «1045», no «1.045» (cuatro cifras no
+    llevan separador).
+
+**Conexión, revisada por data-guardian antes de escribir la tabla.**
+
+- OAuth de Google con el permiso `webmasters.readonly`, sólo lectura, con el
+  mismo cliente OAuth «GenScore» del login. `GET /api/search-console/connect`
+  comprueba que la sesión es dueña del proyecto, firma un `state` (proyecto,
+  usuario, nonce, caduca en 10 min) y guarda nonce y verificador PKCE en una
+  cookie httpOnly limitada a la ruta de vuelta. `GET
+  /api/search-console/callback` comprueba firma, caducidad, nonce, que el
+  usuario es el mismo que empezó y que sigue siendo dueño; canjea el código
+  con PKCE (un código que acabe en los logs de Vercel no sirve sin el
+  verificador), exige el permiso concedido y guarda el token cifrado. La
+  redirección final se construye en el servidor; no se acepta `next`. La
+  cookie se borra en todos los desenlaces. El `error_description` de Google
+  nunca se enseña ni se guarda.
+- **Tabla `search_console_connections` (migración 0040)**: una fila por
+  proyecto. RLS activada sin políticas y `revoke all` a `anon` y
+  `authenticated`: el navegador no la lee nunca, ni siquiera el texto
+  cifrado. Sólo la toca código de servidor con service role después de
+  `requireActiveProject` + `requireUser`, filtrando siempre por
+  `project_id` y `owner_user_id` (`lib/search-console/connection.ts`).
+  Restricciones con nombre: estado, formato de propiedad, longitud del error,
+  el permiso exacto y que una fila activa tenga token.
+- **Cifrado** (`lib/search-console/crypto.ts`): AES-256-GCM con IV aleatorio
+  y AAD ligado a proyecto y dueño (un token no se puede mover a otra fila).
+  Una clave maestra, `GSC_TOKEN_ENCRYPTION_KEY`, de la que salen por HKDF dos
+  subclaves: una cifra y otra firma el `state`. El formato
+  `v1:<keyId>:<datos>` permite rotar: `GSC_TOKEN_ENCRYPTION_KEY_PREVIOUS` lee
+  lo viejo y el cargador lo recifra con la nueva al usarlo. Sin clave válida
+  la función no se ofrece.
+- **Propiedad**: sólo se acepta una que esté verificada en la cuenta (se
+  comprueba contra la lista en vivo de Google) y que cubra el dominio del
+  proyecto (`lib/search-console/property.ts`): una de dominio que lo
+  contenga, o un prefijo de URL del mismo host en cualquier dirección. Ver
+  la web equivocada en la pantalla sería una métrica falsa. Si sólo hay una
+  candidata se elige sola; si hay varias, el cliente elige.
+- **Desconectar** revoca el token en Google (si falla, sigue) y borra la
+  fila. El éxito sólo se anuncia si el borrado se guardó.
+- **Errores**: cada llamada a Google lleva tiempo máximo de 10 s y un
+  reintento ante red o 5xx. Las categorías son constantes propias
+  (`revoked`, `permission`, `quota`, `timeout`, `unavailable`, `config`). Un
+  permiso revocado borra el token y pide reconectar; sin permiso sobre la
+  propiedad, también pide reconectar; los fallos pasajeros no marcan nada.
+  Los logs llevan operación, categoría y código HTTP, nunca un código,
+  token, `state` ni el cuerpo de Google.
+- **Sin caché compartida.** Los datos se piden a Google en cada visita,
+  memoizados sólo por petición (`React.cache`). Una caché entre peticiones
+  tendría que ir por proyecto y dueño para no servir los datos de Google de
+  una cuenta a otra, y guardar resultados necesitaría otra migración.
+- La ventana es la de Search Console: 28 días que terminan hace 3, porque
+  Google tarda 2–3 días en consolidar los datos, frente a los 28 anteriores.
+  El modelo de la pantalla es puro (`lib/search-console/report.ts`), con
+  tests.
+
+**Respuesta ante una filtración.** Si se filtran a la vez la clave y la base
+de datos, rotar no basta: quien tenga las dos ya puede descifrar todo. Hay
+que revocar en Google todos los tokens: `pnpm search-console:revoke-all`
+(sin `--confirm` sólo cuenta; con `--confirm` revoca y borra, y cada cliente
+tendrá que reconectar).
+
+**Lo que hace falta fuera del repo, en este orden:**
+
+1. Aplicar la migración 0040 a mano en Supabase. Hasta entonces la pantalla
+   dice que la conexión llega pronto y Visión general no enseña la mitad de
+   Google.
+2. En Google Cloud (proyecto `geo-tool`): activar la «Google Search Console
+   API», añadir el permiso `webmasters.readonly` en la pantalla de
+   consentimiento y dar de alta la URI
+   `https://www.genscore.es/api/search-console/callback` en el cliente
+   OAuth. La pantalla de consentimiento tiene que estar «En producción»: en
+   «Prueba» Google caduca los permisos a los 7 días. Hasta que Google
+   verifique la app, enseña un aviso de app no verificada y admite hasta 100
+   usuarios; la caja de conectar ya lo avisa.
+3. En Vercel: `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` y
+   `GSC_TOKEN_ENCRYPTION_KEY` (`docs/environment-contract.md`).
+
+**Lo que queda sin verificar o pendiente.**
+
+- Los previews de Vercel no se pueden registrar como URI de vuelta en
+  Google, así que el flujo de conectar sólo se puede probar en producción.
+  Lo demás (estados, pantalla, cifrado, rutas) está cubierto por tests.
+- Borrar un proyecto o la cuenta borra la fila por cascada, pero no revoca
+  el permiso en Google. Queda pendiente un revocado previo, sin bloquear el
+  borrado.
+- Nada obliga en la base de datos a que `owner_user_id` sea el dueño del
+  proyecto. Hoy el único escritor pone los dos desde fuentes verificadas y
+  no existe traspaso de proyectos; una FK compuesta tocaría `projects` y
+  necesitaría su propia aprobación. Riesgo residual aceptado.
+- La inspección de URL tiene cupo de Google (unas 2000 al día por
+  propiedad); con diez por visita no es un problema hoy. Si lo fuera, la
+  solución es guardar resultados, que necesita su propia migración.
+- Fase 4 (artículo y tarjeta en la portada) es del hilo de contenido, cuando
+  esto esté en producción.
+
+**Regla de premisa.** No se retira ningún camino de recuperación. Si la
+conexión falla, la pantalla dice por qué y ofrece reconectar o desconectar.

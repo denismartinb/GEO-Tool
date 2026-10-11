@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Icon } from "@/components/ui/icon";
 import { ISSUE_CHECK_META, ISSUE_SEVERITY_LABELS as SEVERITY_LABEL, issueScopeLabel } from "@/lib/web-audit/issue-labels";
 import type { IssueSeverity } from "@/lib/web-audit/issues";
@@ -31,12 +32,15 @@ const SEVERITIES: IssueSeverity[] = ["critical", "warning", "improvement"];
 export function SeoAuditCard({
   summary,
   auditedAt,
-  href
+  href,
+  children
 }: {
   summary: OverviewSeoSummary;
   /** Already formatted, e.g. "9 oct". Null when the snapshot has no date. */
   auditedAt: string | null;
   href: string;
+  /** The Google half (Search Console), log §283. */
+  children?: ReactNode;
 }) {
   const pages = `${summary.analyzedPageCount} ${summary.analyzedPageCount === 1 ? "página" : "páginas"}`;
   const meta = auditedAt ? `Revisada el ${auditedAt} · ${pages}` : `${pages} revisadas`;
@@ -115,6 +119,7 @@ export function SeoAuditCard({
           </div>
         </>
       )}
+      {children}
     </div>
   );
 }

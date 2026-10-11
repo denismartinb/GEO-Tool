@@ -141,7 +141,15 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
     "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)",
   COMPED_ACCOUNT_EMAILS: "ninguna cuenta queda exenta de pagar: todo el mundo lee su plan real, incluido cualquiera pensado como comped",
   AFFILIATE_CODES:
-    "ningún enlace de afiliado (`?ref=`) guarda cookie ni llega a Stripe: las altas nuevas no quedan atribuidas a nadie"
+    "ningún enlace de afiliado (`?ref=`) guarda cookie ni llega a Stripe: las altas nuevas no quedan atribuidas a nadie",
+  GOOGLE_OAUTH_CLIENT_ID:
+    "no se puede conectar Search Console: «Posición en Google» dice que la conexión llega pronto y Visión general no enseña la mitad de Google",
+  GOOGLE_OAUTH_CLIENT_SECRET:
+    "no se puede conectar Search Console ni refrescar las conexiones ya hechas: «Posición en Google» deja de enseñar datos",
+  GSC_TOKEN_ENCRYPTION_KEY:
+    "no se puede cifrar ni leer ningún token de Search Console: la conexión no se ofrece y las ya hechas dejan de mostrar datos",
+  GSC_TOKEN_ENCRYPTION_KEY_PREVIOUS:
+    "tras rotar GSC_TOKEN_ENCRYPTION_KEY, las conexiones cifradas con la clave anterior no se pueden leer y piden reconectar"
 };
 
 /**
@@ -212,7 +220,11 @@ export const envSchema = z.object({
   PAGESPEED_API_KEY: optionalText,
   INTERNAL_TEST_ACCOUNT_EMAILS: optionalText,
   COMPED_ACCOUNT_EMAILS: optionalText,
-  AFFILIATE_CODES: optionalText
+  AFFILIATE_CODES: optionalText,
+  GOOGLE_OAUTH_CLIENT_ID: optionalText,
+  GOOGLE_OAUTH_CLIENT_SECRET: optionalText,
+  GSC_TOKEN_ENCRYPTION_KEY: optionalText,
+  GSC_TOKEN_ENCRYPTION_KEY_PREVIOUS: optionalText
 });
 
 export type Env = z.infer<typeof envSchema>;
