@@ -603,7 +603,7 @@ paths:
   motor y por repetición. El motor se pinta como icono en la fila, como ya
   exigía RECS-EVIDENCE-2.
 
-## Diagnóstico (RECS-DIAGNOSIS-1, log §298)
+## Diagnóstico (RECS-DIAGNOSIS-1, log §299)
 
 - **«Te citan» es una cita del dominio propio en un motor que busca en la
   web, la misma definición que la puntuación** (`hasOwnDomainCitation` +

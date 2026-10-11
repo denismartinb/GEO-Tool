@@ -1170,7 +1170,7 @@ describe("generateRecommendationsForRun", () => {
   });
 });
 
-describe("RECS-DIAGNOSIS-1 — «te citan» means a grounded engine cited YOUR web (log §298)", () => {
+describe("RECS-DIAGNOSIS-1 — «te citan» means a grounded engine cited YOUR web (log §299)", () => {
   it("never asks Claude to cite you: it does not search the web, so the card could never be closed", () => {
     const recs = run([
       prompt({ id: "c1", promptId: "q1", prompt_text_snapshot: "best running shoes", brand_mentioned: true, citation_found: false, provider: "claude" })

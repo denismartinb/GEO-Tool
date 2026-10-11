@@ -169,7 +169,7 @@ export async function loadReportInput({
     for (const t of coverageMap.topics) {
       // A topic whose only own pages are the home or a forum/community
       // thread is not certified as covered (GS-03 log §278, RECS-DIAGNOSIS-1
-      // log §298): same verdict as the Recomendaciones overlay.
+      // log §299): same verdict as the Recomendaciones overlay.
       const noAnswerPage = t.found && t.pages.length > 0 && !t.pages.some((p) => isAnswerPage(p.url));
       coverage[t.promptId] = noAnswerPage ? "unknown" : t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
     }

@@ -229,7 +229,7 @@ describe("home_only (GS-03)", () => {
   });
 });
 
-describe("no_editable_page (RECS-DIAGNOSIS-1, log §298)", () => {
+describe("no_editable_page (RECS-DIAGNOSIS-1, log §299)", () => {
   function overlayFor(pages: Array<{ url: string; title: string }>) {
     return computeCoverageOverlay({
       recommendations: [rec({ recommendationType: "increase_brand_visibility" })],

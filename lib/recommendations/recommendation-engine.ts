@@ -221,7 +221,7 @@ function confWeight(conf: "low" | "medium" | "high") {
 }
 
 /**
- * RECS-DIAGNOSIS-1 (log §298). "Te citan" means the same thing here as in the
+ * RECS-DIAGNOSIS-1 (log §299). "Te citan" means the same thing here as in the
  * citation score (ADR 0012 + ADR 0013): a grounded engine cited YOUR domain.
  * `citation_found` only says the answer cited some web, and an ungrounded
  * engine (Claude) never cites anything, so reading it raw produced cards no
@@ -255,7 +255,7 @@ function isOwnCitationGap(result: PromptResultInput, projectDomain: string): boo
 /**
  * Distinct questions behind a set of answer rows. A run asks every question
  * once per engine (and per sample), so a row count is a count of answers,
- * never of questions — "13 consultas" on a 6-question project (log §298).
+ * never of questions — "13 consultas" on a 6-question project (log §299).
  */
 function countQuestions(rows: PromptResultInput[]): number {
   return new Set(rows.map((r) => r.promptId ?? r.prompt_text_snapshot.trim().toLowerCase())).size;
