@@ -25213,7 +25213,7 @@ auditoría de cobertura y la acción sugerida cuando existen. Punto 2 (cola
 
 **Qué pidió el fundador.** «Cuando se termina una generación de prompts por
 kw, es importante que se muestren para validar o editar antes de añadirlos
-al panel». Maqueta (escritorio y móvil) enseñada en el hilo antes de implementar.
+al panel». Maqueta (escritorio y móvil) aprobada por el fundador el 2026-10-11, en `docs/design-reference/prompts-review-1/maqueta.html`.
 
 **Qué cambia.** «Añadir prompts» en modo «Basado en keywords» y en
 «Generación automática» pasa de un paso a dos:
