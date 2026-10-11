@@ -38,7 +38,7 @@ const watch: GoogleRecommendation = { kind: "watch_in_ai", query: "cuál es la m
 const later = (rec: GoogleRecommendation, canPersist = false) =>
   renderToStaticMarkup(<GoogleLaterCard rec={rec} projectId="p1" canPersist={canPersist} />);
 
-describe("pickPlanRec — qué tarjeta de Google entra en el plan (log §306)", () => {
+describe("pickPlanRec — qué tarjeta de Google entra en el plan (log §307)", () => {
   it("la página 1 primero, luego el título, nunca «vigilar»", () => {
     expect(pickPlanRec([watch, snippet, push])).toBe(push);
     expect(pickPlanRec([watch, snippet])).toBe(snippet);

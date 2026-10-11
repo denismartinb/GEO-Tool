@@ -18,7 +18,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
  * PRICING-TRUTH-1 limpió del resto del producto.
  */
 export const metadata: Metadata = contentMetadata({
-  title: "Posicionamiento GEO: mide si la IA cita tu marca — GenScore",
+  title: "Posicionamiento GEO: mide si la IA cita tu marca · GenScore",
   description:
     "GenScore mide si ChatGPT, Gemini, Claude y Perplexity nombran y citan tu marca, te compara con tu competencia y te dice qué cambiar. Prueba Pro 7 días gratis.",
   path: ""

@@ -24,7 +24,7 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/que-es-genscore`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Qué es GenScore: visibilidad de tu marca en la IA — GenScore",
+  title: "Qué es GenScore: visibilidad de tu marca en la IA · GenScore",
   description: CANONICAL_DEFINITION,
   path: "/que-es-genscore"
 });

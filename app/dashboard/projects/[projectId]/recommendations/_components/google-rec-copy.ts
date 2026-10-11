@@ -7,7 +7,7 @@ import type {
 import { fmtInt, fmtPct } from "../../search-console/_components/format";
 
 /**
- * Copy of the Google cards in Recomendaciones (RECS-ONE-QUEUE-1, log §306,
+ * Copy of the Google cards in Recomendaciones (RECS-ONE-QUEUE-1, log §307,
  * design in docs/design-reference/recs-one-queue-1/). Pure: every sentence is
  * a template over the Google figures the card carries, never a claim we did
  * not read from Search Console.

@@ -7,7 +7,7 @@ import { GoogleRecMark } from "./google-rec-frame";
 /**
  * «Vigilar prompt» on the Google + IA card (log §293), same action as
  * «Posición en Google», with «Ahora no» next to it until it is watched (§294).
- * Outlined, like every card of the carousel (RECS-ONE-QUEUE-1, log §306).
+ * Outlined, like every card of the carousel (RECS-ONE-QUEUE-1, log §307).
  */
 export function GoogleWatchActions({ projectId, query }: { projectId: string; query: string }) {
   const { state, tracked, watch } = useWatchPrompt(projectId, query, false);

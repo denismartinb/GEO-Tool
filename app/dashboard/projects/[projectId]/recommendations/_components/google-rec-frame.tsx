@@ -30,7 +30,7 @@ type MarkInput = {
 
 /**
  * The save/undo state of one Google card, shared by the carousel card below
- * and the plan card (`google-plan-card.tsx`, log §306).
+ * and the plan card (`google-plan-card.tsx`, log §307).
  */
 export function useGoogleRecMark({ projectId, kind, query, position, impressions, ctr }: MarkInput) {
   const [handled, setHandled] = useState<Handled | null>(null);

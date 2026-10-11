@@ -657,7 +657,7 @@ export default async function RecommendationsPage({
   // RECS-SHORT-CARD-1 (log §303): the groups sit under «Más adelante», which
   // leaves out the plan's cards, so their ceiling is computed without them.
   const plan = selectPlan(recs);
-  // RECS-ONE-QUEUE-1 (log §306): with Search Console connected, a Google card
+  // RECS-ONE-QUEUE-1 (log §307): with Search Console connected, a Google card
   // can take slot 2 and the third AI action moves to «Más adelante». The page
   // doesn't wait for Google to know which, so it computes both ceilings.
   const googleConnected = await isSearchConsoleActive(projectId, user.id);
@@ -792,7 +792,7 @@ export default async function RecommendationsPage({
   const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
   const googleSlotProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
 
-  // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §306).
+  // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §307).
   const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || resolvedHistoryForClient.length > 0);
   const aiContent = !latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>
@@ -975,7 +975,7 @@ export default async function RecommendationsPage({
             </div>
           )}
 
-          {/* 4 · RECS-ONE-QUEUE-1 (log §306): one queue. The Google cards live
+          {/* 4 · RECS-ONE-QUEUE-1 (log §307): one queue. The Google cards live
               inside it (slot 2 of the plan, and a row at the top of «Más
               adelante»), streamed in by `RecommendationsClient`'s slots. With
               no AI list to sit in, every Google card goes to the row. */}

@@ -5,7 +5,7 @@ import { DOCS_NAV } from "@/lib/docs/nav";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Documentación — GenScore",
+  title: "Documentación · GenScore",
   description:
     "Cómo funciona GenScore: primer escaneo, qué muestra cada informe, cómo se calcula el GEO Score, y qué incluye cada plan.",
   path: "/docs"

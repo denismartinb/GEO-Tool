@@ -10,7 +10,7 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-peec-ai`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "GenScore vs Peec AI: comparativa de herramientas de visibilidad en IA — GenScore",
+  title: "GenScore vs Peec AI: comparativa de herramientas de visibilidad en IA · GenScore",
   description:
     "GenScore frente a Peec AI: precio de entrada, coste de motores adicionales, cobertura multi-país, usuarios de equipo y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
   path: "/comparativas/genscore-vs-peec-ai"

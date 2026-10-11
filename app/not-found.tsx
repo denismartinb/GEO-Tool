@@ -24,7 +24,7 @@ import { NotFoundMission } from "@/components/not-found-mission";
  * `app/dashboard/not-found.tsx`.
  */
 export const metadata: Metadata = {
-  title: "Página no encontrada — GenScore",
+  title: "Página no encontrada · GenScore",
   robots: { index: false, follow: true }
 };
 

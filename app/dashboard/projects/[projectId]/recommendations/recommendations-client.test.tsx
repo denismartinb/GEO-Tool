@@ -520,7 +520,7 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
   });
 });
 
-describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §306)", () => {
+describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §307)", () => {
   const three = [
     baseRec({ id: "a", title: "Primera IA" }),
     baseRec({ id: "b", title: "Segunda IA", recommendation_type: "add_citation_block" }),
@@ -565,7 +565,7 @@ describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §306)", () => 
 });
 
 
-describe("planSummary — cada fuente en su escala (log §306)", () => {
+describe("planSummary — cada fuente en su escala (log §307)", () => {
   it("suma el objetivo de Google a los puntos de IA, sin mezclarlos", () => {
     expect(planSummary(9, "push_page_one", 2)).toBe("Hasta +9 pt GEO y una búsqueda hacia la página 1 de Google");
     expect(planSummary(9, "improve_snippet", 2)).toBe("Hasta +9 pt GEO y un título que atraiga más clics en Google");

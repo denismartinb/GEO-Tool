@@ -21,7 +21,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
  * foto, ningún empleador.
  */
 export const metadata: Metadata = contentMetadata({
-  title: "Quiénes somos: GenScore, herramienta GEO hecha en España — GenScore",
+  title: "Quiénes somos: GenScore, herramienta GEO hecha en España · GenScore",
   description: ABOUT_LEAD,
   path: PAGE_PATH
 });

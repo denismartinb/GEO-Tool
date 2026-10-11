@@ -101,12 +101,12 @@ revisión de data-guardian que lo precedió.
 - **El bloque de Recomendaciones reserva su sitio.** La página lee
   `isSearchConsoleActive` (nuestra base de datos, sin Google). Sólo si está
   conectado monta las ranuras, con su esqueleto mientras llega Google. Sin
-  conexión no pinta nada (log §298, ranuras de §306).
+  conexión no pinta nada (log §298, ranuras de §307).
 - **El bloque va en un `Suspense`.** Google no puede retrasar las
   recomendaciones de IA.
 - **Una tarjeta de cada tipo como mucho.** La lista completa ya está en
   «Posición en Google».
-- **Las tarjetas se reparten en la cola de Recomendaciones (log §306).** La
+- **Las tarjetas se reparten en la cola de Recomendaciones (log §307).** La
   de la página 1 (o, si no hay, la de título) va al puesto 2 del plan
   (`GooglePlanSlot`); el resto, a la fila de «Más adelante»
   (`GoogleLaterSlot`). Las dos ranuras leen Google una sola vez por petición

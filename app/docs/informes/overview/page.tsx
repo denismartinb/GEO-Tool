@@ -9,7 +9,7 @@ const SLUG = "informes/overview";
 const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
-  title: `${page.title} — GenScore`,
+  title: `${page.title} · GenScore`,
   description: page.description,
   path: `/docs/${SLUG}`
 });

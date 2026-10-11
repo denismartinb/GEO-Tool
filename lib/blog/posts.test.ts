@@ -188,7 +188,7 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
 // `seoTitle` / `metaDescription` instead.
 describe("snippet lengths", () => {
   it.each(BLOG_POSTS.map((p) => [p.slug, p] as const))("%s fits the SERP", (_slug, post) => {
-    expect(`${getSeoTitle(post)} — GenScore`.length).toBeLessThanOrEqual(70);
+    expect(`${getSeoTitle(post)} · GenScore`.length).toBeLessThanOrEqual(70);
     expect(getMetaDescription(post).length).toBeLessThanOrEqual(160);
   });
 });

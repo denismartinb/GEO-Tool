@@ -12,7 +12,7 @@ import { BajaForm } from "./baja-form";
  * render — the write re-checks it (`./actions.ts`).
  */
 export const metadata: Metadata = {
-  title: "Preferencias de email — GenScore",
+  title: "Preferencias de email · GenScore",
   robots: { index: false, follow: false }
 };
 

@@ -7,7 +7,7 @@ import { planCopy } from "./google-rec-copy";
 import { HandledNote, useGoogleRecMark } from "./google-rec-frame";
 
 /**
- * The Google card inside «Tu plan de esta semana» (RECS-ONE-QUEUE-1, log §306,
+ * The Google card inside «Tu plan de esta semana» (RECS-ONE-QUEUE-1, log §307,
  * design in docs/design-reference/recs-one-queue-1/). Same shell as an AI plan
  * card (`RecCard` with `priorityRank`), so the queue reads as one list; it keeps
  * its own scale (its place in Google, never GEO points) and its own two

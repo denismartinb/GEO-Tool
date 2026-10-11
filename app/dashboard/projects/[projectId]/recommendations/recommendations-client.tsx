@@ -836,7 +836,7 @@ export function RecCard({
               }}
             >
               {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
-              {/* RECS-ONE-QUEUE-1 (log §306): one queue for AI and Google, so a
+              {/* RECS-ONE-QUEUE-1 (log §307): one queue for AI and Google, so a
                   plan card says where it comes from. */}
               {priorityRank && <span className="rec2-src rec2-src-ia"><Icon name="sparkles" size={11} />IA</span>}
               {showKind && <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>}
@@ -1468,7 +1468,7 @@ export function RecommendationsClient({
   googleLaterSlot?: ReactNode;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
-  // RECS-ONE-QUEUE-1 (log §306): one queue for AI and Google. With Search
+  // RECS-ONE-QUEUE-1 (log §307): one queue for AI and Google. With Search
   // Console connected, slot 2 waits for Google ("pending") and is reported by
   // `GooglePlanMarker` once Google answers: a card kind, or null when there is
   // none and the third AI action takes the slot back.
@@ -1545,7 +1545,7 @@ export function RecommendationsClient({
       {/* 4 · The plan — always on top, whatever the filter, in the accent
           treatment so the three that matter carry visible weight. Since
           RECS-SHORT-CARD-1 (log §303) they are left out of «Más adelante»
-          below instead of repeated there. Since RECS-ONE-QUEUE-1 (log §306)
+          below instead of repeated there. Since RECS-ONE-QUEUE-1 (log §307)
           slot 2 can be Google's. */}
       {(plan.length > 0 || googleInPlan) && (
         <>
@@ -1595,7 +1595,7 @@ export function RecommendationsClient({
         </div>
       </div>
 
-      {/* RECS-ONE-QUEUE-1 (log §306): «Más adelante» opens with the rest of
+      {/* RECS-ONE-QUEUE-1 (log §307): «Más adelante» opens with the rest of
           the Google cards, one row that scrolls sideways (founder, log §295).
           Hidden rather than unmounted under the other filters, so a card's
           «Deshacer» survives switching tabs. */}
@@ -1685,7 +1685,7 @@ export function RecommendationsClient({
 }
 
 /**
- * The line next to «Tu plan de esta semana» (RECS-ONE-QUEUE-1, log §306). Each
+ * The line next to «Tu plan de esta semana» (RECS-ONE-QUEUE-1, log §307). Each
  * source keeps its own scale: GEO points for the AI cards (a joint ceiling,
  * never a sum, ADR 0017 §3) and what the Google card moves in Google.
  */

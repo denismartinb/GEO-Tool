@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel de negocio · escritorio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f6fb}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+.pg{font-family:Figtree,system-ui,sans-serif;color:#0f172a;background:#f4f6fb;min-height:100%}
+.disp{font-family:"Bricolage Grotesque",Figtree,sans-serif}
+.card{background:#fff;border:1px solid #e3e8f2;border-radius:16px;padding:22px 24px;box-sizing:border-box;min-width:0}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.ch h2{margin:0;font-size:17px;font-weight:700}
+.src{font-size:11.5px;font-weight:600;color:#475569;background:#eef2f8;border-radius:999px;padding:4px 10px;white-space:nowrap}
+.lbl{font-size:12.5px;color:#475569;font-weight:600}
+.big{font-size:30px;font-weight:700;letter-spacing:-0.02em;line-height:1.1}
+.up{color:#0f766e;font-weight:700;font-size:12.5px}
+.down{color:#b45309;font-weight:700;font-size:12.5px}
+.mut{color:#64748b;font-size:12.5px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th{text-align:left;font-size:11.5px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding:0 10px 10px;border-bottom:1px solid #e3e8f2;white-space:nowrap}
+td{padding:11px 10px;border-bottom:1px solid #eef2f8;white-space:nowrap}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.pill{display:inline-block;font-size:11.5px;font-weight:700;border-radius:999px;padding:3px 9px}
+.btn{font:600 13px Figtree,sans-serif;border:1px solid #d5dcea;background:#fff;color:#0f172a;border-radius:10px;padding:0 14px;height:40px;cursor:pointer}
+.seg{font:600 13px Figtree,sans-serif;border:0;background:transparent;color:#475569;border-radius:8px;padding:0 14px;height:36px;cursor:pointer}
+.seg.on{background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.12)}
+</style>
+</helmet>
+<div class="pg">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 10px 24px; background: #0b1324; color: #dbe4f5; font-size: 13.5px">
+<div style="display: flex; align-items: center; gap: 10px"><span style="font-size: 10.5px; font-weight: 700; letter-spacing: .1em; background: #f5b54a; color: #1b1206; padding: 3px 8px; border-radius: 5px">OPERADOR</span><span>denis.martinb@gmail.com · MFA activo</span></div>
+<nav style="display: flex; gap: 18px; font-size: 13px; flex-wrap: wrap"><a href="#" style="color: #fff; font-weight: 700; text-decoration: underline; text-underline-offset: 5px">Panel</a><a href="#" style="color: #b8c4da; text-decoration: none">Usuarios</a><a href="#" style="color: #b8c4da; text-decoration: none">Afiliados</a><a href="#" style="color: #b8c4da; text-decoration: none">Estudio</a><a href="#" style="color: #b8c4da; text-decoration: none">Comparar modelos</a></nav>
+</div>
+
+<div style="max-width: 1360px; margin: 0 auto; padding: 28px 32px 56px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap">
+<div>
+<h1 class="disp" style="margin: 0; font-size: 34px; letter-spacing: -0.02em">Panel de negocio</h1>
+<p class="mut" style="margin: 6px 0 0; font-size: 13.5px">Actualizado hace 4 min · PostHog, Stripe, Supabase y Search Console · sin tráfico propio ni de bots</p>
+</div>
+<div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap">
+<div style="display: flex; gap: 2px; background: #e8edf6; border-radius: 10px; padding: 2px">
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="4"><button class="{{p.cls}}" onClick="{{p.pick}}">{{p.label}}</button></sc-for>
+</div>
+<button class="btn" aria-label="Actualizar datos">Actualizar</button>
+</div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center; background: #0b1324; color: #fff; border-radius: 18px; padding: 22px 26px">
+<div style="flex: 2 1 320px; min-width: 0">
+<div style="font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #8fe9f2">OBJETIVO DEL SPRINT</div>
+<div class="disp" style="font-size: 24px; font-weight: 700; margin-top: 6px">Primera suscripción de pago antes del 24 de octubre</div>
+<div style="margin-top: 14px; height: 10px; background: rgba(255,255,255,.14); border-radius: 999px; overflow: hidden"><div style="width: 6%; height: 100%; background: #09c5d6; border-radius: 999px"></div></div>
+<div style="margin-top: 8px; font-size: 13px; color: #b8c4da">0 de 1 pagos · 3 checkouts iniciados · 11 pruebas Pro en curso</div>
+</div>
+<div style="flex: 1 1 140px; border-left: 1px solid rgba(255,255,255,.14); padding-left: 20px"><div style="font-size: 12.5px; color: #b8c4da">Quedan</div><div class="disp" style="font-size: 34px; font-weight: 700">13 días</div></div>
+<div style="flex: 1 1 140px; border-left: 1px solid rgba(255,255,255,.14); padding-left: 20px"><div style="font-size: 12.5px; color: #b8c4da">MRR</div><div class="disp" style="font-size: 34px; font-weight: 700">0 €</div></div>
+<div style="flex: 1 1 160px; border-left: 1px solid rgba(255,255,255,.14); padding-left: 20px"><div style="font-size: 12.5px; color: #b8c4da">Plazas precio fundador</div><div class="disp" style="font-size: 34px; font-weight: 700">38 <span style="font-size: 16px; color: #b8c4da">de 38</span></div></div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+<div class="card" style="padding: 18px 18px 14px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 6px"><span class="lbl">{{k.label}}</span><span class="src" style="font-size: 10.5px; padding: 2px 7px">{{k.src}}</span></div>
+<div class="big" style="margin-top: 10px">{{k.value}}</div>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; margin-top: 6px">
+<span class="{{k.cls}}">{{k.delta}}</span>
+<svg width="120" height="36" viewBox="0 0 120 36" aria-hidden="true"><polyline points="{{k.spark}}" fill="none" stroke="#2563eb" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></polyline></svg>
+</div>
+</div>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px">
+<div class="card" style="flex: 999 1 620px">
+<div class="ch"><h2>Embudo de conversión · últimos 28 días</h2><span class="src">PostHog · eventos del servidor</span></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{funnel}}" as="f" hint-placeholder-count="6">
+<div style="display: grid; grid-template-columns: 170px minmax(0,1fr) 120px; gap: 14px; align-items: center">
+<div style="font-size: 14px; font-weight: 600">{{f.label}}</div>
+<div style="height: 30px; background: #f1f4fa; border-radius: 8px; overflow: hidden"><div style="{{f.bar}}"></div></div>
+<div style="text-align: right"><span style="font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums">{{f.value}}</span> <span class="{{f.rateCls}}">{{f.rate}}</span></div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top: 18px; display: flex; gap: 12px; align-items: flex-start; background: #fff7e8; border: 1px solid #f6dcaa; border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: #5b3a06">
+<strong style="white-space: nowrap">Mayor fuga</strong><span>Del primer escaneo al checkout pasa el 16 %. Ningún checkout ha terminado en pago todavía.</span>
+</div>
+</div>
+
+<div class="card" style="flex: 1 1 360px">
+<div class="ch"><h2>Pruebas Pro en curso</h2><span class="src">Supabase</span></div>
+<p class="mut" style="margin: -6px 0 12px">Ordenadas por días que quedan: quién puede pagar esta semana.</p>
+<div style="overflow-x: auto">
+<table>
+<thead><tr><th>Dominio</th><th class="num">Quedan</th><th>Señal</th></tr></thead>
+<tbody>
+<sc-for list="{{trials}}" as="t" hint-placeholder-count="6">
+<tr><td style="font-weight: 600">{{t.domain}}</td><td class="num">{{t.left}}</td><td><span class="pill" style="{{t.pill}}">{{t.signal}}</span></td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<a href="#" style="display: inline-block; margin-top: 12px; font-size: 13.5px; font-weight: 600">Ver las 11 en Usuarios</a>
+</div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Visitas y altas por día</h2><div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap"><span style="display: flex; gap: 6px; align-items: center; font-size: 12.5px"><span style="width: 14px; height: 3px; background: #2563eb; border-radius: 2px"></span>Visitantes</span><span style="display: flex; gap: 6px; align-items: center; font-size: 12.5px"><span style="width: 14px; height: 3px; background: #e0790b; border-radius: 2px"></span>Altas confirmadas</span><span class="src">PostHog</span></div></div>
+<div style="position: relative">
+<svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="width: 100%; height: 220px; display: block" role="img" aria-label="Visitantes y altas diarias de los últimos 28 días">
+<line x1="0" y1="196" x2="1000" y2="196" stroke="#e3e8f2" stroke-width="1"></line>
+<line x1="0" y1="131" x2="1000" y2="131" stroke="#eef2f8" stroke-width="1"></line>
+<line x1="0" y1="66" x2="1000" y2="66" stroke="#eef2f8" stroke-width="1"></line>
+<polygon points="0,196 0.0,169.1 37.0,171.8 74.1,162.4 111.1,155.7 148.1,166.5 185.2,170.5 222.2,158.4 259.3,149.0 296.3,154.4 333.3,159.7 370.4,142.3 407.4,145.0 444.4,151.7 481.5,135.6 518.5,126.2 555.6,131.5 592.6,140.9 629.6,115.4 666.7,99.3 703.7,122.1 740.7,130.2 777.8,111.4 814.8,88.6 851.9,10.7 888.9,68.4 925.9,102.0 963.0,107.4 1000.0,96.6 1000,196" fill="rgba(37,99,235,.10)"></polygon>
+<polyline points="0.0,169.1 37.0,171.8 74.1,162.4 111.1,155.7 148.1,166.5 185.2,170.5 222.2,158.4 259.3,149.0 296.3,154.4 333.3,159.7 370.4,142.3 407.4,145.0 444.4,151.7 481.5,135.6 518.5,126.2 555.6,131.5 592.6,140.9 629.6,115.4 666.7,99.3 703.7,122.1 740.7,130.2 777.8,111.4 814.8,88.6 851.9,10.7 888.9,68.4 925.9,102.0 963.0,107.4 1000.0,96.6" fill="none" stroke="#2563eb" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>
+<polyline points="0.0,196.0 37.0,196.0 74.1,158.4 111.1,196.0 148.1,158.4 185.2,196.0 222.2,196.0 259.3,158.4 296.3,158.4 333.3,196.0 370.4,120.8 407.4,158.4 444.4,196.0 481.5,158.4 518.5,120.8 555.6,158.4 592.6,196.0 629.6,158.4 666.7,120.8 703.7,158.4 740.7,196.0 777.8,158.4 814.8,120.8 851.9,45.6 888.9,120.8 925.9,158.4 963.0,158.4 1000.0,158.4" fill="none" stroke="#e0790b" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke"></polyline>
+</svg>
+<div style="position: absolute; left: 82%; top: 0; transform: translateX(-50%); background: #0b1324; color: #fff; font-size: 12px; border-radius: 8px; padding: 6px 9px; white-space: nowrap">9 oct · 138 visitantes · 4 altas<br><span style="color: #8fe9f2">correos a agencias + PDF en LinkedIn</span></div>
+</div>
+<div style="display: flex; justify-content: space-between" class="mut"><span>14 sep</span><span>21 sep</span><span>28 sep</span><span>5 oct</span><span>11 oct</span></div>
+</div>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px">
+<div class="card" style="flex: 1 1 520px">
+<div class="ch"><h2>Canales de adquisición</h2><span class="src">PostHog · utm_source y referente</span></div>
+<div style="overflow-x: auto">
+<table>
+<thead><tr><th>Canal</th><th style="width: 40%">Visitantes</th><th class="num">Altas</th><th class="num">Conversión</th></tr></thead>
+<tbody>
+<sc-for list="{{channels}}" as="c" hint-placeholder-count="6">
+<tr><td style="font-weight: 600">{{c.name}}</td><td><div style="display: flex; align-items: center; gap: 8px"><div style="{{c.bar}}"></div><span class="mut">{{c.visits}}</span></div></td><td class="num">{{c.signups}}</td><td class="num" style="font-weight: 700">{{c.conv}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+<p class="mut" style="margin: 12px 0 0">«Asistentes de IA» agrupa chatgpt.com, perplexity.ai, gemini.google.com y claude.ai como referentes.</p>
+</div>
+
+<div class="card" style="flex: 1 1 420px">
+<div class="ch"><h2>Páginas que traen altas</h2><span class="src">PostHog</span></div>
+<div style="overflow-x: auto">
+<table>
+<thead><tr><th>Página de entrada</th><th class="num">Visitantes</th><th class="num">Altas</th></tr></thead>
+<tbody>
+<sc-for list="{{pages}}" as="p" hint-placeholder-count="6">
+<tr><td style="font-weight: 600; max-width: 260px; overflow: hidden; text-overflow: ellipsis">{{p.path}}</td><td class="num">{{p.visits}}</td><td class="num">{{p.signups}}</td></tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px">
+<div class="card">
+<div class="ch"><h2>Google · genscore.es</h2><span class="src">Search Console · 28 días</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px">
+<div><div class="lbl">Clics</div><div class="big" style="font-size: 26px">86</div><span class="up">+41 %</span></div>
+<div><div class="lbl">Impresiones</div><div class="big" style="font-size: 26px">4.920</div><span class="up">+63 %</span></div>
+<div><div class="lbl">CTR</div><div class="big" style="font-size: 26px">1,7 %</div><span class="down">−0,3 pt</span></div>
+<div><div class="lbl">Puesto medio</div><div class="big" style="font-size: 26px">18,4</div><span class="up">sube 4,1</span></div>
+</div>
+<div class="mut" style="margin-top: 14px">Más clics: «geo seo», «aparecer en chatgpt», «genscore»</div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Experiencia web</h2><span class="src">PostHog · web vitals</span></div>
+<div style="display: flex; flex-direction: column; gap: 12px">
+<sc-for list="{{vitals}}" as="v" hint-placeholder-count="3">
+<div><div style="display: flex; justify-content: space-between; font-size: 13.5px"><span style="font-weight: 600">{{v.name}}</span><span style="font-weight: 700">{{v.good}} buenas</span></div>
+<div style="height: 8px; background: #fde8e8; border-radius: 999px; overflow: hidden; margin-top: 6px; display: flex"><div style="{{v.bar}}"></div><div style="{{v.mid}}"></div></div></div>
+</sc-for>
+</div>
+<div style="display: flex; gap: 18px; margin-top: 16px; font-size: 13.5px"><span><strong>58 %</strong> móvil</span><span><strong>42 %</strong> escritorio</span><span><strong>12</strong> clics de rabia</span></div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Ingresos</h2><span class="src">Stripe · modo live</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 18px">
+<div><div class="lbl">MRR</div><div class="big" style="font-size: 26px">0 €</div></div>
+<div><div class="lbl">Suscripciones</div><div class="big" style="font-size: 26px">0</div></div>
+<div><div class="lbl">Checkouts abandonados</div><div class="big" style="font-size: 26px">3</div></div>
+<div><div class="lbl">Cobrado en el mes</div><div class="big" style="font-size: 26px">0 €</div></div>
+</div>
+<div class="mut" style="margin-top: 14px">Con IVA incluido, igual que los precios publicados.</div>
+</div>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2480}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { period: '28d' }; }
+  renderVals() {
+    const P = [['hoy','Hoy'],['7d','7 días'],['28d','28 días'],['mes','Este mes']];
+    const periods = P.map(([id, label]) => ({ label, cls: 'seg' + (this.state.period === id ? ' on' : ''), pick: () => this.setState({ period: id }) }));
+    const kpis = [
+      { label: 'Visitantes', src: 'PostHog', value: '1.284', delta: '+212 % vs 28 días antes', cls: 'up', spark: '0.0,26.9 13.3,25.1 26.7,21.7 40.0,23.4 53.3,20.0 66.7,16.6 80.0,18.3 93.3,11.4 106.7,8.0 120.0,9.7' },
+      { label: 'Altas confirmadas', src: 'PostHog', value: '23', delta: '+9', cls: 'up', spark: '0.0,27.2 13.3,32.0 26.7,22.4 40.0,27.2 53.3,22.4 66.7,17.6 80.0,22.4 93.3,12.8 106.7,17.6 120.0,8.0' },
+      { label: 'Visita → alta', src: 'PostHog', value: '1,8 %', delta: '+0,4 pt', cls: 'up', spark: '0.0,16.0 13.3,16.0 26.7,24.0 40.0,8.0 53.3,16.0 66.7,16.0 80.0,8.0 93.3,16.0 106.7,16.0 120.0,16.0' },
+      { label: 'Pruebas Pro activas', src: 'Supabase', value: '11', delta: '4 acaban esta semana', cls: 'down', spark: '0.0,18.9 13.3,16.7 26.7,16.7 40.0,14.5 53.3,12.4 66.7,12.4 80.0,10.2 93.3,8.0 106.7,8.0 120.0,8.0' },
+      { label: 'Checkouts iniciados', src: 'PostHog', value: '3', delta: '0 terminados', cls: 'down', spark: '0.0,32.0 13.3,32.0 26.7,8.0 40.0,32.0 53.3,32.0 66.7,8.0 80.0,32.0 93.3,8.0 106.7,32.0 120.0,32.0' },
+      { label: 'Clientes de pago', src: 'Stripe', value: '0', delta: 'objetivo: 1', cls: 'down', spark: '0,32 120,32' }
+    ];
+    const fun = [['Visitantes','1.284',100,'',''],['Alta enviada','41',36,'3,2 %','up'],['Alta confirmada','23',27,'56 %','up'],['Primer escaneo','19',24,'83 %','up'],['Checkout iniciado','3',10,'16 %','down'],['Pago','0',0,'0 %','down']];
+    const funnel = fun.map(([label, value, w, rate, rateCls], i) => ({ label, value, rate, rateCls, bar: 'height:100%;border-radius:8px;width:' + Math.max(w, 1.5) + '%;background:' + (i === 4 ? '#e0790b' : i === 5 ? '#cbd5e1' : '#2563eb') }));
+    const pill = { hot: 'background:#dcfce7;color:#14532d', warm: 'background:#e0ecff;color:#1e3a8a', cold: 'background:#f1f5f9;color:#475569' };
+    const trials = [
+      ['clinica-ejemplo.es','1 día','Abrió precios','hot'],
+      ['agencia-ejemplo.com','2 días','Checkout sin terminar','hot'],
+      ['tienda-ejemplo.es','3 días','5 escaneos','warm'],
+      ['despacho-ejemplo.es','4 días','Descargó informe','warm'],
+      ['estudio-ejemplo.com','5 días','Sin entrar 3 días','cold'],
+      ['saas-ejemplo.io','6 días','1 escaneo','cold']
+    ].map(([domain, left, signal, k]) => ({ domain, left, signal, pill: pill[k] }));
+    const ch = [['LinkedIn',412,6],['Directo',301,5],['Google orgánico',236,4],['Email (outreach)',188,7],['X',48,0],['Asistentes de IA',22,1]];
+    const channels = ch.map(([name, v, s]) => ({ name, visits: String(v), signups: String(s), conv: (s / v * 100).toFixed(1).replace('.', ',') + ' %', bar: 'height:8px;border-radius:999px;background:#2563eb;width:' + Math.round(v / 412 * 100) + '%;max-width:140px;min-width:4px' }));
+    const pages = [['/',488,7],['/blog/de-buscar-a-preguntar',214,3],['/gratis/informe-geo',131,5],['/precios',122,4],['/blog/que-clinicas-dentales-recomienda-la-ia',97,2],['/comprobador',86,2]].map(([path, v, s]) => ({ path, visits: String(v), signups: String(s) }));
+    const vit = [['Carga (LCP)',92,5],['Respuesta (INP)',97,2],['Estabilidad (CLS)',99,1]];
+    const vitals = vit.map(([name, g, m]) => ({ name, good: g + ' %', bar: 'height:100%;background:#0f9d76;width:' + g + '%', mid: 'height:100%;background:#f5b54a;width:' + m + '%' }));
+    return { periods, kpis, funnel, trials, channels, pages, vitals };
+  }
+}
+</script>
+</body>
+</html>

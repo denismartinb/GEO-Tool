@@ -54,7 +54,7 @@ paths:
   evidencia son los datos en vivo del Search Console del cliente, que no se
   guardan; sólo se guarda lo que el cliente hizo con la tarjeta (log §294,
   `.claude/rules/search-console.md`). Una sola puede entrar en el plan, en el
-  puesto 2 (log §306), pero nunca en los puntos potenciales ni en
+  puesto 2 (log §307), pero nunca en los puntos potenciales ni en
   «Resueltas».
 - **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
   el aviso de "interpretación de la IA" ya existente.
@@ -639,10 +639,10 @@ paths:
   «Sin datos disponibles».
 - **«Más adelante» no repite el plan, y su techo por grupo se calcula sin
   él.** Supersede la regla de §115 de repetir el plan bajo «Todas».
-- **SUPERSEDED por log §306: ya no hay pastillas «Mejora IA»/«Mejora
+- **SUPERSEDED por log §307: ya no hay pastillas «Mejora IA»/«Mejora
   Google».** La pantalla es una sola cola (sección de abajo).
 
-## Una sola cola (RECS-ONE-QUEUE-1, log §306)
+## Una sola cola (RECS-ONE-QUEUE-1, log §307)
 
 - **Como mucho una tarjeta de Google en el plan, y en el puesto 2.** Sólo
   `push_page_one` o, si no hay, `improve_snippet` (`pickPlanRec`). «Vigilar
@@ -661,3 +661,13 @@ paths:
   monta aunque no haya plan, para que el marcador llegue.
 - **Sin subtítulo bajo «Más adelante»** («Lo que no entró en el plan» lo
   quitó el fundador al aprobar).
+
+## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
+
+En todos los textos propios del producto y de marketing no uses rayas largas
+(U+2014), tampoco en títulos, metadatos, emails, accesibilidad, imágenes ni
+borradores generados por IA. Usa punto, coma, dos puntos o paréntesis según el
+sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
+consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
+identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
+log §306).

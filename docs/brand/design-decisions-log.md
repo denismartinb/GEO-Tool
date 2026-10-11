@@ -25209,6 +25209,103 @@ entregable pregenerado (punto 3); hoy la tarjeta enseña el primer paso, la
 auditoría de cobertura y la acción sugerida cuando existen. Punto 2 (cola
 única IA + Google) cambiará las pastillas.
 
+## 304. ADMIN-PANEL-1 — Panel de negocio en /admin (2026-10-11)
+
+**Qué.** `/admin/panel` es la nueva portada de la consola de operador (`/admin`
+redirige ahí y «Panel» va primero en la barra). Reúne en una página lo que
+hasta ahora había que mirar en cuatro sitios:
+
+- **Objetivo del sprint**: la primera suscripción de pago antes del 24 de
+  octubre, días que quedan, MRR y plazas de precio fundador
+  (`getFounderOffer`).
+- **Seis indicadores** con su fuente: visitas (PostHog), altas (Supabase),
+  visita → alta (aproximada), pruebas Pro activas, checkouts iniciados y
+  suscripciones de pago (Stripe).
+- **Embudo** visita → alta → primer escaneo → checkout → pago, cada paso con
+  su fuente, y la «mayor fuga» marcada.
+- **Pruebas Pro en curso**, ordenadas por días restantes, con una señal que
+  sólo usa hechos que tenemos: checkout de Stripe sin terminar, días sin
+  entrar o número de escaneos.
+- **Visitas y altas por día** (28 días, Madrid), **canales**
+  (`lib/admin/kpi/channels.ts`), **páginas de entrada**, **Google** (la misma
+  lectura de Search Console que la tarjeta de Visión general, sobre el
+  proyecto de genscore.es del operador), **web vitals** con los umbrales de
+  Google, y **ingresos** (MRR, cobrado este mes, checkouts sin terminar).
+
+Periodos: hoy, 7 días, 28 días y este mes, siempre comparados con el periodo
+de la misma duración justo antes (`lib/admin/kpi/period.ts`).
+
+**Por qué en código y no con Claude Dashboards.** El fundador preguntó por la
+función de Dashboards de Claude. Un Claude Dashboard vive en claude.ai y no
+se puede meter dentro de `/admin`, que exige sesión de operador con MFA. Se
+construyó en la propia app.
+
+**Cómo lee PostHog.** Por su Query API (HogQL), desde el servidor, con una
+clave **personal** de sólo lectura (`POSTHOG_PERSONAL_API_KEY`, alcance
+`query:read`), `POSTHOG_PROJECT_ID` y `POSTHOG_API_HOST` (por defecto
+`https://eu.posthog.com`). Sin ellas, la mitad web dice que PostHog no está
+conectado. Las lecturas se guardan 10 minutos (`unstable_cache`, etiqueta
+`admin-panel`); «Actualizar» las vacía con `updateTag`. No escribe nada en la
+base de datos, así que no necesita correo a `OPS_ALERT_EMAIL`.
+
+**Qué cuenta y qué no.** Sólo el sitio público de `www.genscore.es`: fuera la
+consola, `/admin`, `/mfa`, `/auth` y `/informe`. Las cuentas del operador
+(`ADMIN_USER_IDS`), las de prueba internas, las comped y las del equipo
+(`isPanelExcludedEmail`: correos que empiezan por `denislagarteiru`,
+`denis.martinb`, `chuchibolu` o `arangulina`, y cualquier dominio con
+`instinct` como parte, como `mail.instinct.com`, a petición del fundador el mismo día) no cuentan en ninguna
+cifra: ni altas, ni pruebas, ni checkouts, ni suscripciones, ni cobros. En
+Stripe se reconocen por el `user_id` del checkout o de la suscripción y por
+el email de la factura, porque un checkout de un cliente ya existente no
+lleva email. Las visitas de PostHog no se pueden filtrar así: son anónimas. Los previews y
+Vercel ya quedan fuera porque sólo cuenta `www.genscore.es`. Para las visitas
+del equipo a la web de verdad, un navegador del equipo deja de enviar
+analítica: al abrir la consola con una cuenta propia, o `/admin`, se guarda
+`gs_internal_visitor=1` en `localStorage` y `posthog-provider.tsx` ya no carga
+PostHog ni registra la página (`lib/analytics/internal-visitor.ts`). En un
+dispositivo donde nadie inicia sesión se activa a mano con `?interno=1` en
+cualquier URL, y se quita con `?interno=0`. Es una exclusión, no un
+identificador: no dice quién es nadie ni sale del navegador, así que la
+promesa de «sin cookies de analítica» sigue en pie. Las visitas del equipo
+anteriores a esto siguen en PostHog y no se pueden quitar.
+La analítica es sin cookies, así que una «visita» es una
+sesión de PostHog, casi una carga de página, y la pantalla nunca dice
+«usuarios».
+
+**Tráfico automático fuera** (el fundador vio 386 visitas y no se lo creyó,
+con razón). Medido en PostHog el mismo día sobre 28 días: unas 102 sesiones
+eran navegadores sin pantalla, con la ventana por defecto de 800×600 o
+1280×720 y sin ciudad (agentes y pruebas que corren en centros de datos de
+EE. UU.), y otras 17 eran escáneres de enlaces de correo desde ciudades de
+centros de datos de EE. UU. (Ashburn, San José…) abriendo `/baja` y `/login`.
+El filtro de visitas quita la combinación «ventana por defecto y sin ciudad»
+(un portátil real de 1280×720 con ciudad sigue contando), esas ciudades de
+EE. UU., y las rutas `/login` y `/baja`, que no son captación. Con eso, 386
+pasan a 234. Entre esas 234 sigue habiendo visitas del equipo anteriores a la
+marca de navegador interno; no se pueden separar con seguridad y no se
+intenta.
+
+**Indicador «Search Console»** (pedido por el fundador el mismo día): cuántas
+cuentas que cuentan tienen hoy una conexión activa en
+`search_console_connections`, cuántas conectaron por primera vez dentro del
+periodo y qué parte del total de cuentas son. Lee sólo `owner_user_id`,
+`status` y `connected_at`, nunca el token, en su propia consulta: si la
+migración 0041 faltara o la lectura fallara, la tarjeta dice «no se pudo
+leer», no un cero. Una conexión revocada o con error no cuenta como conectada.
+
+**Diferencias con la maqueta aprobada**, todas para no pintar algo que no
+medimos (`docs/design-reference/admin-panel-1/README.md`): los canales no
+tienen altas porque el registro no guarda el canal; «Páginas que traen
+altas» pasa a «Páginas de entrada»; el embudo usa Supabase y Stripe para
+altas, checkout y pago porque los eventos de servidor de PostHog sólo
+existen desde el 2026-10-09 y el de pago no ha saltado nunca; no hay señal
+«Abrió precios».
+
+**Pendiente.** Guardar `utm_source` al registrarse daría altas y conversión
+por canal. Necesita tocar el registro y es una fase aparte. El objetivo del
+sprint está escrito en la página (`SPRINT_GOAL_DEADLINE`): cuando se cumpla
+o cambie, se cambia ahí.
+
 ## 305. PROMPTS-REVIEW-1: los prompts generados se revisan antes de añadirlos (2026-10-11)
 
 **Qué pidió el fundador.** «Cuando se termina una generación de prompts por
@@ -25243,7 +25340,26 @@ de propuestas (5), los textos del primer paso y el modo manual.
 **Pendiente.** Un prompt editado conserva el tema que propuso el generador;
 si la edición cambia de tema, el usuario no puede corregirlo aquí.
 
-## 306. RECS-ONE-QUEUE-1 — Recomendaciones en una sola cola de IA y Google (2026-10-11)
+## 306. COPY-SIN-RAYAS-1 Fase 1: títulos sin raya larga y norma de copy (2026-10-11)
+
+**Decisión.** Las rayas largas (U+2014) delatan un texto escrito por un LLM. El
+separador de marca de todo `<title>` pasa de « — GenScore» a « · GenScore»
+(`Posicionamiento GEO: mide si la IA cita tu marca · GenScore`), incluido
+`consoleTitle` en la consola. `app/layout.tsx` sigue con `title: "GenScore"` y
+sin `title.template`: cada página pasa su título completo y una plantilla
+duplicaría la marca. «Precios de GenScore» sustituye su raya por dos puntos.
+El título del feed RSS pasa a «GenScore · Blog».
+
+**Norma.** Entra en `CLAUDE.md` y en las reglas de ruta de contenido,
+recomendaciones y correo. U+2013 se conserva en rangos. Citas, evidencias
+externas, identificadores y el escape de `lib/scan/extraction.ts` no se tocan.
+
+**Pendiente (fases 2 a 4 del encargo).** Cuerpo de la web pública, blog,
+glosario, docs y SVG; correos y panel; prompt de reescritura de
+recomendaciones y pruebas de prevención. Esta fase no toca la prosa interna de
+`CLAUDE.md` ni de las reglas, que también contiene rayas.
+
+## 307. RECS-ONE-QUEUE-1: Recomendaciones en una sola cola de IA y Google (2026-10-11)
 
 **Qué pidió el fundador.** Punto 2 de la línea de mejora de Recomendaciones:
 una sola cola en vez de las pastillas «Mejora IA» / «Mejora Google» de §303.

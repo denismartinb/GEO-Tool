@@ -19,7 +19,7 @@ import { laterCopy, pickPlanRec } from "./google-rec-copy";
  * («Marcar como hecho» / «Ahora no», log §294, migration 0042), and a handled
  * card gives way to the next case of its kind.
  *
- * RECS-ONE-QUEUE-1 (log §306, design in docs/design-reference/recs-one-queue-1/):
+ * RECS-ONE-QUEUE-1 (log §307, design in docs/design-reference/recs-one-queue-1/):
  * one queue instead of two pills. The strongest Google card that asks for a
  * change on the site takes the plan's second slot (`GooglePlanSlot`); the rest
  * open «Más adelante» as a one-row carousel (`GoogleLaterSlot`). Both stream in

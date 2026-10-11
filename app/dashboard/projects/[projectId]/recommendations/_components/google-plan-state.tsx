@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect } from "react";
 
 /**
- * Which Google card took the plan's second slot (RECS-ONE-QUEUE-1, log §306).
+ * Which Google card took the plan's second slot (RECS-ONE-QUEUE-1, log §307).
  * `pending` while the Google rows stream in; `null` when there is none, so the
  * third AI action takes its place.
  */

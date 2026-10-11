@@ -4,7 +4,7 @@ import { LegalPageShell } from "@/components/legal-page-shell";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Términos del Servicio — GenScore",
+  title: "Términos del Servicio · GenScore",
   description:
     "Condiciones de uso de GenScore: objeto del servicio, planes, derecho de desistimiento, limitación de responsabilidad y cancelación.",
   path: "/terminos"
