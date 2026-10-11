@@ -188,3 +188,43 @@ describe("overlayCopy", () => {
     expect(overlayCopy("add_citation_block", "none")).toBeNull();
   });
 });
+
+describe("home_only (GS-03)", () => {
+  it("does not certify coverage when the only own page is the home", () => {
+    for (const url of ["https://acme.com/", "https://acme.com", "https://www.acme.com/?utm=x", "https://acme.com/index.html"]) {
+      const overlay = computeCoverageOverlay({
+        recommendations: [rec({ recommendationType: "increase_brand_visibility" })],
+        resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
+        coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages: [{ url, title: "Inicio" }], note: "n" }]
+      });
+      expect(overlay.get("rec-1")?.state, url).toBe("home_only");
+      expect(overlay.get("rec-1")?.confidenceOverride, url).toBeNull();
+    }
+  });
+
+  it("a real inner page among the results still confirms coverage", () => {
+    const overlay = computeCoverageOverlay({
+      recommendations: [rec()],
+      resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
+      coverageTopics: [
+        {
+          promptId: "prompt-1",
+          topic: "x",
+          found: true,
+          pages: [{ url: "https://acme.com/", title: "Inicio" }, { url: "https://acme.com/precios", title: "Precios" }],
+          note: "n"
+        }
+      ]
+    });
+    expect(overlay.get("rec-1")?.state).toBe("confirmed_surfacing_gap");
+  });
+
+  it("every state's first step agrees with its own advice: improve when covered, create otherwise", () => {
+    for (const type of ["increase_brand_visibility", "add_citation_block"]) {
+      expect(overlayCopy(type, "confirmed_surfacing_gap")?.firstStep).not.toMatch(/^Publica/);
+      expect(overlayCopy(type, "possible_content_gap")?.firstStep).toMatch(/^Publica/);
+      expect(overlayCopy(type, "home_only")?.firstStep).toMatch(/^Publica/);
+      expect(overlayCopy(type, "home_only")?.whatToDo).not.toContain("no crees una página nueva");
+    }
+  });
+});

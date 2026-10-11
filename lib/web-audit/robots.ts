@@ -61,7 +61,7 @@ export type BotAccessReport = {
    */
   probes?: { robots: ProbeState; llmsTxt: ProbeState; sitemap: ProbeState };
   /**
-   * Salud SEO site facts (SEARCH-SEO-1 Fase 2, log §278): Googlebot access,
+   * Salud SEO site facts (SEARCH-SEO-1 Fase 2, log §281): Googlebot access,
    * the http → https redirect and the home page speed. Stored here because
    * this column already holds the site-level half of the audit, so no
    * migration was needed. Optional: older snapshots have none of it.
@@ -125,7 +125,7 @@ export function resolveBotAccess(content: string): Map<BotAgent, boolean> {
 }
 
 /**
- * Whether robots.txt lets Googlebot in (Salud SEO, log §278), with the same
+ * Whether robots.txt lets Googlebot in (Salud SEO, log §281), with the same
  * simplified rules as the AI bots. Kept out of `TRACKED_BOT_AGENTS` because
  * that list is the AI-bot card.
  */

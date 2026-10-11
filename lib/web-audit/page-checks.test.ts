@@ -488,7 +488,7 @@ describe("checkIndexability — directivas que bloquean la cita", () => {
   });
 });
 
-describe("checkSeoPage (Salud SEO, log §278)", () => {
+describe("checkSeoPage (Salud SEO, log §281)", () => {
   const ctx = { pageUrl: "https://acme.com/servicios?utm=x#top" };
 
   it("passes the viewport only with width=device-width", () => {

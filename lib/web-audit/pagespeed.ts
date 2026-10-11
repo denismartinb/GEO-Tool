@@ -4,7 +4,7 @@ import { parsePageSpeedResponse, type DeviceSpeed, type PageSpeedReport } from "
 
 /**
  * Core Web Vitals of the home page from Google's free PageSpeed Insights API
- * (SEARCH-SEO-1 Fase 2, log §278). Needs `PAGESPEED_API_KEY`; without it
+ * (SEARCH-SEO-1 Fase 2, log §281). Needs `PAGESPEED_API_KEY`; without it
  * nothing is called and the speed card is not drawn (`undefined`), because a
  * number we did not measure is not shown.
  *

@@ -36,7 +36,7 @@ import { WebAuditProvider } from "./web-audit-context";
  * canonical, indexing, hreflang and sitemap. Each block has its score, its
  * «Si arreglas…» banner and the Problemas / Correcto / Páginas tabs.
  *
- * Fase 2 (log §278): the SEO block's score is the «Salud SEO», with six more
+ * Fase 2 (log §281): the SEO block's score is the «Salud SEO», with six more
  * checks and the home page speed («Optimización de tu página Home»). Those
  * count only there, never in the Salud técnica, so the GEO Score does not
  * move. Search Console is Fase 3 and is not drawn until it exists.

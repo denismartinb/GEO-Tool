@@ -16,7 +16,7 @@ import { formatDate } from "./format";
 import { NewBadge } from "./new-badge";
 
 /**
- * «Optimización de tu página Home» (SEARCH-SEO-1 Fase 2, log §278, design in
+ * «Optimización de tu página Home» (SEARCH-SEO-1 Fase 2, log §281, design in
  * `docs/design-reference/search-seo-1/salud-seo.html`): the three Core Web
  * Vitals of the home page, mobile and desktop, as Google PageSpeed Insights
  * reported them. Only mobile scores in the Salud SEO, which the card says.

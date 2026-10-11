@@ -164,3 +164,66 @@ describe("formatShare", () => {
     expect(formatShare(0.3333)).toBe("33%");
   });
 });
+
+describe("sources: Gemini grounding redirects (GS-07)", () => {
+  const REDIRECT = "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AbC123";
+  function grounded(promptId: string, citations: Array<{ domain: string | null }>): ReportAnswer {
+    return {
+      promptId,
+      promptText: `Pregunta ${promptId}`,
+      topic: "Local",
+      provider: "gemini",
+      rawText: null,
+      extracted: {
+        brand: { mentioned: false, position: null },
+        competitors: [],
+        other_brands_mentioned: [],
+        citations: citations.map((c) => ({ url: REDIRECT, domain: c.domain, title: c.domain, source: "grounding" }))
+      }
+    };
+  }
+
+  it("never names the redirect host as a source, even when no domain was resolved", () => {
+    const m = buildReportModel(
+      input([
+        grounded("p1", [{ domain: null }, { domain: null }, { domain: "elpais.com" }]),
+        grounded("p2", [{ domain: null }])
+      ])
+    )!;
+    const json = JSON.stringify(m.sources);
+    expect(json).not.toContain("vertexaisearch");
+    expect(m.sources?.topSource?.domain).toBe("elpais.com");
+  });
+
+  it("lists the customer's own page by domain, never by the redirect URL", () => {
+    const m = buildReportModel(input([grounded("p1", [{ domain: "www.acme.es" }])]))!;
+    expect(m.sources?.ownPages).toEqual(["acme.es"]);
+  });
+});
+
+describe("findQuote attribution (GS-07)", () => {
+  it("does not quote a longer product name as the brand", () => {
+    expect(
+      findQuote("Fibrox Plus+ tiene el mejor catálogo de fútbol de toda España ahora mismo.", ["Fibrox"])
+    ).toBeNull();
+  });
+
+  it("does not quote a sentence that is about another brand of the same answer", () => {
+    const text = "Lowco, la marca low cost de Fibrox, ofrece fibra y móvil sin permanencia.";
+    expect(findQuote(text, ["Fibrox"], ["Lowco"])).toBeNull();
+  });
+
+  it("does not match the name inside another word", () => {
+    expect(findQuote("La empresa Acmeplus ofrece auditorías técnicas muy completas.", ["Acme"])).toBeNull();
+  });
+
+  it("still quotes a sentence that describes the brand itself", () => {
+    expect(findQuote("Fibrox ofrece fibra, móvil y televisión en un mismo paquete.", ["Fibrox"], ["Lowco"])).toBe(
+      "Fibrox ofrece fibra, móvil y televisión en un mismo paquete."
+    );
+  });
+
+  it("matches an alias that is itself a longer name", () => {
+    expect(findQuote("Acme Studio diseña webs para pymes desde hace diez años.", ["Acme", "Acme Studio"])).not.toBeNull();
+  });
+});

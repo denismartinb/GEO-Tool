@@ -6,7 +6,7 @@ import type { HttpsRedirectState } from "@/lib/web-audit/seo-health";
 
 /**
  * Does `http://<domain>/` send visitors to https? (Salud SEO, SEARCH-SEO-1
- * Fase 2, log §278.) One fixed URL on the project's own domain, so this is
+ * Fase 2, log §281.) One fixed URL on the project's own domain, so this is
  * not a crawler. Same SSRF rules as `fetchPageSafely`: every hop must stay on
  * the domain and resolve to a public IP before it is requested, and redirects
  * are followed by hand. The https target itself is never requested; reaching

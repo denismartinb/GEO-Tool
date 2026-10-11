@@ -67,7 +67,7 @@ describe("PageAuditRow", () => {
     expect(seo).toContain("Salud SEO de /precios: 78 de 100");
   });
 
-  it("suma los checks nuevos de la Salud SEO de la página, sólo en el bloque SEO (log §278)", () => {
+  it("suma los checks nuevos de la Salud SEO de la página, sólo en el bloque SEO (log §281)", () => {
     const seoCheck = {
       viewportOk: true,
       imageCount: 4,

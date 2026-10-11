@@ -6,7 +6,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 
 /**
  * What Visión general's Auditoría SEO card shows (SEARCH-SEO-1, log §271 and
- * §278). Since Fase 2 it is the SEO block of the Auditoría SEO screen: the
+ * §281). Since Fase 2 it is the SEO block of the Auditoría SEO screen: the
  * same `buildAuditBlock` call, so the card's Salud SEO, counts, order and
  * points are the screen's, never a second calculation. GEO problems live in
  * the GEO block and, when they stop the AI from citing, in the «Prioridad 1»

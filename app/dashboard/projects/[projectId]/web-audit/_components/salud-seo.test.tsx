@@ -6,7 +6,7 @@ import { SeoWeightsCard, seoWeightGroups } from "./seo-weights-card";
 import { NEW_SEO_CHECKS_UNTIL, isNewSeoCheck } from "@/lib/web-audit/issue-labels";
 
 /**
- * Render tests for the Salud SEO pieces (SEARCH-SEO-1 Fase 2, log §278):
+ * Render tests for the Salud SEO pieces (SEARCH-SEO-1 Fase 2, log §281):
  * content, never appearance. The speed card is a client component, but its
  * first render (mobile) is plain markup and `renderToStaticMarkup` reads it.
  */

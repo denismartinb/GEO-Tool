@@ -43,7 +43,7 @@ export type IssueCheckKey =
   | "bot_blocked"
   | "llms_txt_missing"
   | "sitemap_missing"
-  /** Salud SEO only (log §278): built by `seo-health.ts`, never by `buildTechnicalIssuesReport`. */
+  /** Salud SEO only (log §281): built by `seo-health.ts`, never by `buildTechnicalIssuesReport`. */
   | SeoExtraCheckKey;
 
 export type TechnicalIssue = {

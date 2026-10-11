@@ -53,7 +53,7 @@ la tarjeta de cobertura; los temas que la IA ya cita van en la pestaña
 Correcto del bloque GEO; y el acceso de bots va en la columna lateral del
 bloque GEO.
 
-## Fase 2: Salud SEO y velocidad (`salud-seo.html`, log §278)
+## Fase 2: Salud SEO y velocidad (`salud-seo.html`, log §281)
 
 Aprobada por el fundador el 2026-10-11 («Perfecto»), con un cambio: la tarjeta
 de velocidad se llama **«Optimización de tu página Home»**, no «Velocidad de

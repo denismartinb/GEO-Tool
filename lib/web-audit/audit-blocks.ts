@@ -23,7 +23,7 @@ import {
  * the GEO Score. Unscored checks (bots, llms.txt, snippet, sitemap) stay
  * unscored here too.
  *
- * Exception, approved by the founder for SEARCH-SEO-1 Fase 2 (log §278): the
+ * Exception, approved by the founder for SEARCH-SEO-1 Fase 2 (log §281): the
  * SEO block's score is the «Salud SEO». It adds the checks of
  * `seo-health.ts` (speed, Googlebot, HTTPS, viewport, alt text, duplicate
  * metadata) with their own weights, so its 45 + 55 points make 100. Those

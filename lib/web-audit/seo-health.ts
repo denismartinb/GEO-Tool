@@ -4,7 +4,7 @@ import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { IssueSeverity, TechnicalIssue, TechnicalPassingCheck } from "@/lib/web-audit/issues";
 
 /**
- * Salud SEO (SEARCH-SEO-1 Fase 2, log §278, design in
+ * Salud SEO (SEARCH-SEO-1 Fase 2, log §281, design in
  * `docs/design-reference/search-seo-1/salud-seo.html`): the checks that only
  * the «Auditoría SEO» block scores. Pure, like `issues.ts`.
  *

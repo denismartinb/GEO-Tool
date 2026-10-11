@@ -96,7 +96,7 @@ export function PageAuditRow({
   // checks never measured on this page are left out instead of being shown
   // as broken (legacy pre-R3 snapshots have no indexability/citability; the
   // production crash of 2026-07-12 was reading them unguarded).
-  // The SEO block adds the page's own Salud SEO checks (log §278). The site
+  // The SEO block adds the page's own Salud SEO checks (log §281). The site
   // facts (speed, Googlebot, HTTPS) are about the site, not this page, so
   // they count in the block's score and not in each page's.
   const extraStates =

@@ -11,7 +11,7 @@ const FIELD = {
   }
 };
 
-describe("fetchPageSpeed (Salud SEO, log §278)", () => {
+describe("fetchPageSpeed (Salud SEO, log §281)", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();

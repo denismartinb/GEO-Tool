@@ -148,7 +148,7 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
     audience: ["google", "ia"],
     unit: "página"
   },
-  // Salud SEO only (SEARCH-SEO-1 Fase 2, log §278): these never score in the
+  // Salud SEO only (SEARCH-SEO-1 Fase 2, log §281): these never score in the
   // Salud técnica, so they never move the GEO Score.
   page_speed: {
     label: "Velocidad en móvil",
@@ -211,7 +211,7 @@ export function pluralizeUnit(unit: "página" | "bot", count: number): string {
 }
 
 
-/** Checks the Salud SEO adds (log §278): the screen badges them «NUEVO» for the first weeks. */
+/** Checks the Salud SEO adds (log §281): the screen badges them «NUEVO» for the first weeks. */
 export const NEW_SEO_CHECKS = new Set<IssueCheckKey>([
   "page_speed",
   "googlebot_blocked",

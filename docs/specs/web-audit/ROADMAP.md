@@ -18,7 +18,7 @@ orden — el orden lo fija la columna `#`.
 | 6b | La auditoría, visible en Escaneos | AUDIT-IN-RUNS-1 | log §22 | ✅ Implementada (2026-08-05) | Ninguno (sólo datos ya persistidos) | Human Gate |
 | 6c | Fuera el botón «Auditar ahora» | AUDIT-NO-BUTTON-1 | log §25 | ✅ Implementada (2026-08-05) | Ninguno | Petición directa del fundador |
 | 7 | Auditoría en dos bloques, GEO y SEO | SEARCH-SEO-1 Fase 1b | log §275 | ✅ Implementada (2026-10-11). **Retirado:** el «Diagnóstico general» (promedio de cobertura y nota técnica); su lugar lo ocupan las notas de los dos bloques y la línea de Salud técnica. Las pestañas, el banner «Si arreglas…» y la cobertura se quedan, ahora por bloque | Ninguno (sólo datos ya persistidos) | Maqueta aprobada por el fundador (2026-10-11) |
-| 8 | Salud SEO, checks nuevos y velocidad de la Home | SEARCH-SEO-1 Fase 2 | log §278 | ✅ Implementada (2026-10-11). La nota del bloque SEO pasa a «Salud SEO» con seis checks nuevos y la velocidad (PageSpeed Insights, sólo con `PAGESPEED_API_KEY`). Nada entra en `pageScore` ni en la Puntuación GEO | Ninguno (`bots.site` y `PageCheckResult.seo` en los jsonb existentes) | Maqueta aprobada por el fundador (2026-10-11) |
+| 8 | Salud SEO, checks nuevos y velocidad de la Home | SEARCH-SEO-1 Fase 2 | log §281 | ✅ Implementada (2026-10-11). La nota del bloque SEO pasa a «Salud SEO» con seis checks nuevos y la velocidad (PageSpeed Insights, sólo con `PAGESPEED_API_KEY`). Nada entra en `pageScore` ni en la Puntuación GEO | Ninguno (`bots.site` y `PageCheckResult.seo` en los jsonb existentes) | Maqueta aprobada por el fundador (2026-10-11) |
 
 ### Fila 6 — qué se implementó y qué no (2026-08-04)
 

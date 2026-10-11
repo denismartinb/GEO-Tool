@@ -16,7 +16,7 @@ paths:
 > módulo que Recomendaciones. Una franja propia con otro criterio es justo la
 > discrepancia que se quiere evitar.
 > La tarjeta «Auditoría SEO» de Visión general es el bloque SEO desde la
-> Fase 2 (log §278): `buildOverviewSeoSummary` llama a `buildAuditBlock("seo",
+> Fase 2 (log §281): `buildOverviewSeoSummary` llama a `buildAuditBlock("seo",
 > …)` igual que la pantalla, y nombra con `lib/web-audit/issue-labels.ts`. Un
 > cálculo o un nombre propio en la tarjeta haría que las dos pantallas
 > contaran o llamaran distinto al mismo problema.
@@ -31,7 +31,7 @@ paths:
 > propios a un bloque: separaría su nota del componente técnico del GEO
 > Score. Los checks sin peso siguen sin puntos también dentro del bloque.
 >
-> **Única excepción aprobada: la Salud SEO** (Fase 2, log §278). El bloque SEO
+> **Única excepción aprobada: la Salud SEO** (Fase 2, log §281). El bloque SEO
 > suma los checks de `lib/web-audit/seo-health.ts` (velocidad, Googlebot,
 > HTTPS, viewport, texto alternativo, títulos repetidos) con los pesos de
 > `SEO_EXTRA_WEIGHTS`, aprobados por el fundador: 45 + 55 = 100. Esos checks

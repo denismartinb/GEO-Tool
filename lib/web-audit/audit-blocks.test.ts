@@ -200,7 +200,7 @@ describe("formatBlockPoints", () => {
   });
 });
 
-describe("Salud SEO (SEARCH-SEO-1 Fase 2, log §278)", () => {
+describe("Salud SEO (SEARCH-SEO-1 Fase 2, log §281)", () => {
   const seoFields = { viewportOk: true, imageCount: 2, imagesMissingAlt: 0, localBusiness: false, titleKey: "t", descriptionKey: "d", pageKey: "home" };
   const speedySite = {
     googlebotAllowed: true,

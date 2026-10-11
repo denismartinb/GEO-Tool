@@ -76,7 +76,7 @@ describe("Visión general: Auditoría SEO card", () => {
   it("moves the engine bars into the KPI grid's empty cell on desktop, leaving the card beside the breakdown", () => {
     const kpis = overview.indexOf('className="ov2-kpi-car"');
     const slot = overview.indexOf('className="ov2-eng-kpi"');
-    const row = overview.indexOf('className="ov2-score-row"');
+    const row = overview.indexOf("className={`ov2-score-row");
     expect(slot).toBeGreaterThan(kpis);
     expect(slot).toBeLessThan(row);
     expect(overview).toContain("seoSummary !== null && !hasSufficientSample(sentimentTotal)");
@@ -89,5 +89,35 @@ describe("Visión general: Auditoría SEO card", () => {
     expect(overview).toContain("buildOverviewSeoSummary(");
     const summary = read("lib/web-audit/overview-seo-summary.ts");
     expect(summary).toContain("buildTechnicalIssuesReport(");
+  });
+});
+
+describe("Visión general: competitive panorama beside Auditoría SEO (log §279)", () => {
+  const overview = read("app/dashboard/projects/[projectId]/page.tsx");
+  const css = read("app/console.css");
+
+  it("moves the chart up only when the side column holds the engines and the SEO card", () => {
+    expect(overview).toContain(
+      "const panoramaUp = seoSummary !== null && !enginesInKpiGrid && panoramaTop !== null && panoramaTable !== null;"
+    );
+    const breakdownEnd = overview.indexOf('<div className="ov2-pano-up">');
+    const side = overview.indexOf('<div className="ov2-score-side">');
+    expect(breakdownEnd).toBeGreaterThan(-1);
+    expect(breakdownEnd).toBeLessThan(side);
+  });
+
+  it("keeps the phone order: the chart's mobile copy still opens the analysis column", () => {
+    const main = overview.indexOf("className={`ov2-main");
+    const dup = overview.indexOf('<div className="ov2-pano-dup">');
+    const rail = overview.indexOf('<div className="ov2-rail">');
+    expect(dup).toBeGreaterThan(main);
+    expect(dup).toBeLessThan(rail);
+    expect(css).toMatch(/\.ov2-pano-up \{ display: none; \}\n\.ov2-pano-dup \{ display: contents; \}/);
+  });
+
+  it("gives the analysis row the same tracks as the score row, so Oportunidades lines up", () => {
+    const tracks = css.match(/grid-template-columns: minmax\(0, 2fr\) minmax\(0, 1fr\);/g) ?? [];
+    expect(tracks.length).toBeGreaterThanOrEqual(2);
+    expect(css).not.toMatch(/\.ov2-insight-txt \{[^}]*max-width/);
   });
 });

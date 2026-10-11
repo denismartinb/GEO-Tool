@@ -5,7 +5,7 @@ import { passingCheckLabel } from "@/lib/web-audit/issue-labels";
 import { SEO_EXTRA_WEIGHTS, type SeoExtraCheckKey } from "@/lib/web-audit/seo-health";
 
 /**
- * «Cómo se calcula tu Salud SEO» (log §278): the founder asked for the
+ * «Cómo se calcula tu Salud SEO» (log §281): the founder asked for the
  * weights on screen. Read from the same tables the score uses
  * (`page-checks.ts` through `pageCheckWeight`, and `SEO_EXTRA_WEIGHTS`), so
  * the card cannot drift from the number above it.

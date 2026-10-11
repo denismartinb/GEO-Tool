@@ -13,7 +13,7 @@ import { formatVital, type VitalRating } from "@/lib/web-audit/seo-health";
  * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA
  * button from the approved mockup: each listed issue is the link instead.
  *
- * Fase 2 (log §278, design in `docs/design-reference/search-seo-1/
+ * Fase 2 (log §281, design in `docs/design-reference/search-seo-1/
  * salud-seo.html`): the card is the SEO block. It shows the Salud SEO, the
  * block's counts and first three issues with their block points, and a line
  * with the home page's mobile speed when it was measured. Every link opens

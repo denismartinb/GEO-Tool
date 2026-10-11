@@ -439,7 +439,7 @@ export async function runTechnicalAuditCore({
       projectDomainNormalized
     });
 
-    // Salud SEO site facts (log §278), started now so they run alongside the
+    // Salud SEO site facts (log §281), started now so they run alongside the
     // page fetches and add no wall-clock time: both are bounded below the
     // page budget. Speed is reused for a week, since it changes when the
     // site changes and each measurement takes seconds.

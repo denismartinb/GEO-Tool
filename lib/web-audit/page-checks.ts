@@ -96,7 +96,7 @@ export type CitabilityCheck = {
 };
 
 /**
- * Salud SEO page signals (SEARCH-SEO-1 Fase 2, log §278). Scored only by
+ * Salud SEO page signals (SEARCH-SEO-1 Fase 2, log §281). Scored only by
  * `seo-health.ts`, never by `pageScore`, so the GEO Score does not move.
  * Optional on `PageCheckResult` for the same reason as `indexability`: a
  * snapshot persisted before this phase has none of it.
@@ -127,7 +127,7 @@ export type PageCheckResult = {
   /** Optional ONLY because persisted pre-R3 snapshots lack them (buildPageCheckResult always sets both) — every consumer of a persisted row must tolerate their absence. Production crash 2026-07-12: the web-audit page read `.noindex` off a pre-R3 row and took the whole page down. */
   indexability?: IndexabilityCheck;
   citability?: CitabilityCheck;
-  /** Salud SEO only (log §278). Undefined on snapshots taken before Fase 2. */
+  /** Salud SEO only (log §281). Undefined on snapshots taken before Fase 2. */
   seo?: SeoPageCheck;
   /** 0-100, rescaled from an 85-point baseline when freshness is unknown (see buildPageCheckResult). */
   pageScore: number;
@@ -482,7 +482,7 @@ function pageIdentity(pageUrl: string): string {
   }
 }
 
-/** Salud SEO page signals (log §278). Pure string scans, like every check here. */
+/** Salud SEO page signals (log §281). Pure string scans, like every check here. */
 export function checkSeoPage(html: string, context: Pick<PageCheckContext, "pageUrl">): SeoPageCheck {
   let viewportOk = false;
   for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
@@ -547,7 +547,7 @@ export function buildPageCheckResult(html: string, context: PageCheckContext, no
     freshness.status === "unknown" ? Math.round((baseline / 85) * 100) : Math.round(baseline + freshness.points);
 
   // `seo` stays out of `baseline` on purpose: the Salud SEO scores it, the
-  // GEO Score never does (founder, 2026-10-11, log §278).
+  // GEO Score never does (founder, 2026-10-11, log §281).
   const seo = checkSeoPage(html, context);
 
   return { structuredData, answerFormat, metadata, freshness, indexability, citability, seo, pageScore };
@@ -643,7 +643,7 @@ export function buildKeyedPageCheckGuidance(check: PageCheckResult): PageGuidanc
       "Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."
     );
   }
-  // Salud SEO (log §278). `seo` is undefined on older snapshots: no line then.
+  // Salud SEO (log §281). `seo` is undefined on older snapshots: no line then.
   const seo: SeoPageCheck | undefined = check.seo;
   if (seo && !seo.viewportOk) {
     push("viewport_missing", 'Añade <meta name="viewport" content="width=device-width, initial-scale=1"> en el <head> para que la página se vea bien en el móvil.');

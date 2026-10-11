@@ -102,7 +102,7 @@ describe("buildBotAccessReport", () => {
   });
 });
 
-describe("resolveGooglebotAccess (Salud SEO, log §278)", () => {
+describe("resolveGooglebotAccess (Salud SEO, log §281)", () => {
   it("reads Googlebot with the same rules as the AI bots", () => {
     expect(resolveGooglebotAccess("User-agent: *\nDisallow: /\n")).toBe(false);
     expect(resolveGooglebotAccess("User-agent: Googlebot\nDisallow:\n\nUser-agent: *\nDisallow: /\n")).toBe(true);

@@ -9,7 +9,7 @@ function redirect(location: string, status = 301): Response {
   return new Response(null, { status, headers: { location } });
 }
 
-describe("checkHttpsRedirect (Salud SEO, log §278)", () => {
+describe("checkHttpsRedirect (Salud SEO, log §281)", () => {
   beforeEach(() => {
     lookupMock.mockResolvedValue([{ address: "8.8.8.8", family: 4 }]);
   });

@@ -21,7 +21,7 @@ vi.mock("./snapshot-rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./snapshot-rate-limit")>();
   return { ...actual, checkSnapshotRateLimit: vi.fn() };
 });
-// Salud SEO site facts (log §278): never touch the network from a unit test.
+// Salud SEO site facts (log §281): never touch the network from a unit test.
 vi.mock("./https-check", () => ({ checkHttpsRedirect: vi.fn(async () => "ok") }));
 vi.mock("./pagespeed", () => ({ fetchPageSpeed: vi.fn(async () => undefined) }));
 vi.mock("@/lib/scan/citation-resolution", () => ({
@@ -325,7 +325,7 @@ describe("runTechnicalAuditCore", () => {
     dateNowSpy.mockRestore();
   });
 
-  it("persists the Salud SEO site facts inside bots.site, and reuses a page speed younger than a week (log §278)", async () => {
+  it("persists the Salud SEO site facts inside bots.site, and reuses a page speed younger than a week (log §281)", async () => {
     mockedCheckSnapshotRateLimit.mockResolvedValue({ allowed: true, count: 0, limit: 5, remaining: 5, windowStart: new Date().toISOString() });
     mockedFetchPageSafely.mockResolvedValue({ status: "skipped_offsite" });
     mockedBuildBotAccessReport.mockResolvedValue({
