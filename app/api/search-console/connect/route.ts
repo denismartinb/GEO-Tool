@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   }
 
   const response = NextResponse.redirect(
-    buildAuthUrl({ clientId: client.clientId, state, codeChallenge: pkceChallenge(verifier), loginHint: user.email ?? undefined })
+    buildAuthUrl({ clientId: client.clientId, state, codeChallenge: pkceChallenge(verifier) })
   );
   response.cookies.set(GSC_OAUTH_COOKIE, packOAuthCookie(nonce, verifier), GSC_OAUTH_COOKIE_OPTIONS);
   return response;

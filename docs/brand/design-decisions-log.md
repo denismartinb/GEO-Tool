@@ -24333,3 +24333,16 @@ insignia de cada búsqueda («PÁGINA 2»). Sólo texto. Además, la primera
 conexión real falló con `403 access_denied` porque la app de Google Cloud
 seguía en modo «Prueba»: hay que publicarla («En producción») o añadir al
 usuario como tester. Es configuración de Google, no un fallo del código.
+
+**Adenda 2 §284 (2026-10-11):** las tres líneas de la tarjeta «Conecta tu
+Search Console» pasan al texto que escribió el fundador: el puesto y su
+evolución en el tiempo, las búsquedas en las primeras páginas con las keywords
+más relevantes como oportunidad, y la indexación como complemento de lo que
+ven los motores de IA. Sólo texto.
+
+**Adenda 3 §284 (2026-10-11):** «Conectar con Google» enseña siempre el
+selector de cuentas de Google (`prompt=select_account consent`) y ya no manda
+`login_hint` con el correo de la sesión. Pasó en la primera prueba real: la
+propiedad de Search Console del fundador está en otra cuenta de Google, no en
+la del login. Si la cuenta elegida no tiene una propiedad que cubra el dominio,
+la pantalla ya lo dice con el estado de elegir propiedad.
