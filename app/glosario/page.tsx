@@ -9,7 +9,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
 const SITE_URL = "https://www.genscore.es";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Glosario GEO — GenScore",
+  title: "Glosario GEO · GenScore",
   description:
     "Los términos clave de GEO (Generative Engine Optimization) explicados en una frase: GEO, AEO, GEO Score, cuota de voz en IA, llms.txt, grounding y más.",
   path: "/glosario"

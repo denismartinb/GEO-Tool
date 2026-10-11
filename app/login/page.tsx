@@ -15,7 +15,7 @@ import type { Metadata } from "next";
  * los enlaces de la página sí deben seguir repartiendo autoridad.
  */
 export const metadata: Metadata = {
-  title: "Iniciar sesión — GenScore",
+  title: "Iniciar sesión · GenScore",
   robots: { index: false, follow: true }
 };
 

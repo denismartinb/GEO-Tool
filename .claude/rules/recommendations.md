@@ -644,3 +644,13 @@ paths:
   `GoogleRecsPresent`, que `GoogleRecs` monta sólo con al menos una tarjeta,
   y las apaga al desmontarse. Ocultan una mitad sin desmontarla: el bloque de
   Google sigue en su `Suspense` (log §298).
+
+## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
+
+En todos los textos propios del producto y de marketing no uses rayas largas
+(U+2014), tampoco en títulos, metadatos, emails, accesibilidad, imágenes ni
+borradores generados por IA. Usa punto, coma, dos puntos o paréntesis según el
+sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
+consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
+identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
+log §306).

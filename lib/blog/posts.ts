@@ -614,7 +614,7 @@ export function getMetaDescription(post: BlogPost): string {
  */
 export function blogPostMetadata(post: BlogPost) {
   return contentMetadata({
-    title: `${getSeoTitle(post)} — GenScore`,
+    title: `${getSeoTitle(post)} · GenScore`,
     description: getMetaDescription(post),
     path: `/blog/${post.slug}`,
     image: post.coverImage,

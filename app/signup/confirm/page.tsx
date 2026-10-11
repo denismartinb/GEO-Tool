@@ -11,7 +11,7 @@ import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
  * los enlaces de la página sí deben seguir repartiendo autoridad.
  */
 export const metadata: Metadata = {
-  title: "Confirma tu correo — GenScore",
+  title: "Confirma tu correo · GenScore",
   robots: { index: false, follow: true }
 };
 

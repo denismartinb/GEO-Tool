@@ -5,7 +5,7 @@ import { requireOperator } from "@/lib/admin/operator";
 import { InternalVisitorMark } from "@/components/internal-visitor-mark";
 
 export const metadata: Metadata = {
-  title: "Consola de operador — GenScore",
+  title: "Consola de operador · GenScore",
   robots: { index: false, follow: false }
 };
 
