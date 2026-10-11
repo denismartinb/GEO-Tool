@@ -23718,3 +23718,110 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
   - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
     al añadir un motor;
   - los textos que dicen «3 motores», que siguen congelados.
+
+## 275. SEARCH-SEO-1 Fase 1b: la auditoría en dos bloques, GEO y SEO (2026-10-11)
+
+**Qué se decidió.** Segunda mitad de la fase 1 de §271. Primero se construyó
+la vista Auditoría SEO de `docs/design-reference/search-seo-1/maqueta.html`
+tal cual: una nota «Salud técnica», cuatro áreas y una lista «Qué arreglar»
+con filtro, y el mapa de cobertura se mudaba a Páginas citadas. Al ver las
+capturas del build, el fundador echó de menos la organización anterior: las
+pestañas Problemas / Correcto / Páginas, la tarjeta «Si arreglas… 85 → 100»,
+los puntos por problema y, sobre todo, una auditoría propia de GEO, «que es
+nuestra especialidad» (2026-10-10). En una tarjeta de decisión eligió
+**partir la pantalla en dos bloques**, y aprobó la maqueta
+(`auditoria-geo-seo.html`, móvil y escritorio) el 2026-10-11. Esa primera
+versión no llegó a producción; esta entrada describe lo que sí se entrega.
+
+**Una pantalla, dos bloques.** La ruta sigue siendo `/web-audit` (§271) y
+`?bloque=geo|seo` elige el bloque; sin parámetro, o con otro valor, abre GEO.
+
+- **Auditoría GEO** («¿Te puede citar la IA?»): datos estructurados,
+  respuesta al principio, listas o tablas, extensión, frescura, bots de IA,
+  fragmentos bloqueados y llms.txt, más la cobertura de contenido.
+- **Auditoría SEO** («¿Te encuentra Google?»): título, meta description,
+  `<h1>`, `<h2>`, Open Graph, canonical, indexación, hreflang y sitemap.
+- Cada check vive en un solo bloque (`AUDIT_BLOCKS`,
+  `lib/web-audit/audit-blocks.ts`, fijado por test).
+- **Menú:** «Auditoría GEO» al final de Posicionamiento en IA y «Auditoría
+  SEO» en Posicionamiento en buscadores. Las dos van a la misma ruta, y el
+  bloque de la URL decide cuál se ilumina. El fundador dejó abierto unirlas
+  en una sola entrada, «Auditoría técnica», según cómo quede el diseño final.
+  De momento son dos.
+- La tarjeta de Auditoría SEO de Visión general sigue contando los problemas
+  de los dos bloques, como antes. Cada problema enlaza ahora a su bloque.
+
+**Notas por bloque, sin métrica nueva.** La nota de un bloque es la parte de
+sus puntos que ganan las páginas, con los pesos que ya usa `page-checks.ts`:
+55 puntos de GEO y 45 de SEO. Juntas dan la Salud técnica de siempre, que es
+el componente técnico de la Puntuación GEO, así que ninguna cifra existente
+cambia. La pantalla lo dice en una línea bajo los bloques.
+
+- Es Σ ganado / Σ posible sobre las páginas analizadas. Una página sin fecha
+  deja fuera de su máximo los 15 puntos de frescura, igual que `pageScore`.
+- Los puntos de cada problema son exactos: lo que sube la nota del bloque si
+  se arregla sólo ese check. Fechar una página sin fecha también mete esos 15
+  puntos en el máximo, por eso la ganancia es una diferencia de dos cocientes
+  y no un peso.
+- Los checks sin peso (bots, llms.txt, fragmentos y sitemap) siguen sin
+  puntuar y la fila dice «sin puntos» (§131).
+- La gravedad de cada fila es la de `buildTechnicalIssuesReport`, la misma
+  que usa la tarjeta de Visión general.
+- `pageCheckStates` (`issues.ts`) expone por página qué check falla y cuánto
+  vale, para no duplicar predicados ni pesos. `buildKeyedPageCheckGuidance`
+  (`page-checks.ts`) etiqueta cada línea de guía con su check, para que cada
+  bloque muestre sólo la suya.
+
+**Cada bloque, de arriba abajo.**
+
+- La tarjeta **«Si arreglas los N problemas que puntúan: X → 100»**. Vuelve
+  de la pestaña Problemas anterior, ahora en puntos del bloque. Sólo sale si
+  queda algo que ganar.
+- Las **pestañas** Problemas · Correcto · Páginas (`audit-tabs.tsx`, que
+  vuelve).
+  - *Problemas*: recuento por gravedad, y filas con gravedad, alcance,
+    «Solución disponible», etiquetas Google/IA y puntos. Al abrir una fila
+    salen «Por qué importa», «Cómo arreglarlo», el llms.txt o los pasos del
+    sitemap, y las páginas o bots afectados.
+  - *Correcto*: los checks que cumplen todas las páginas medidas. En GEO
+    también los temas que la IA ya cita.
+  - *Páginas*: la nota de cada página en ese bloque, con sólo sus checks,
+    su guía y sus arreglos copiables.
+- En **GEO**, encima de las pestañas, la tarjeta **«Cobertura de tu
+  contenido»** (Contenido / Implementado), con la evolución y el historial
+  plegados. En la columna lateral van la nota de alcance y el acceso de bots.
+
+**La cobertura vuelve a esta pantalla.** Páginas citadas queda como en
+`main`. `loadCoverageSectionData` (`lib/web-audit/coverage-section-data.ts`)
+se queda como cargador propio, llamado junto a `loadWebAuditPageData`.
+`WebAuditProvider` envuelve toda la pantalla, como antes de la fase, y
+`WebAuditDriveNotice` va dentro de la tarjeta de cobertura.
+
+**Lo que no sale todavía, a propósito.** Core Web Vitals, velocidad y móvil
+son la fase 2, porque hoy no hay medición detrás. Search Console es la
+fase 3.
+
+**Regla de premisa (se movió un camino de recuperación).**
+`WebAuditDriveNotice` es el único sitio que pinta el fallo de una campaña de
+cobertura reanudada desde el navegador (ADR 0038).
+
+- *Antes:* se veía arriba de la pantalla en cualquier vista.
+- *Ahora:* sólo se ve dentro de la tarjeta de cobertura del bloque GEO.
+  `WebAuditProvider` sigue montado en toda la pantalla, así que la campaña se
+  reanuda también desde el bloque SEO, pero su fallo sólo se lee en GEO.
+- *Premisa:* el motor es el servidor (encolado tras escaneo y cron cada 10
+  minutos, §261). La pestaña sólo acelera.
+- *Qué la verifica hoy:* `vercel-crons.test.ts`.
+- *Si falla:* quien sólo mire el bloque SEO no ve el error de una campaña de
+  cobertura. La cobertura es de GEO, así que se acepta.
+
+**Pendiente o conocido.**
+
+- Fase 2: Salud SEO, checks nuevos, PageSpeed Insights y la tarjeta
+  «Buscadores». Fase 3: Search Console. Fase 4: artículo y portada.
+- La tarjeta de Visión general sigue enseñando los puntos en escala de Salud
+  técnica («+9 pts»), y la pantalla en escala de bloque («+16 pt»). Son el
+  mismo arreglo medido sobre dos totales distintos. Si confunde, es una
+  decisión aparte.
+- El piloto no tiene historial de cobertura, así que la evolución y el
+  historial sólo los cubren sus tests de render (§87).
