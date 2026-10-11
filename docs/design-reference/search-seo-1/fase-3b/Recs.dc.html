@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recomendaciones con datos de Google</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&amp;family=Figtree:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f3f5f8}
+a{color:#1d4ed8}a:hover{color:#1e3a8a}
+.rc{background:#fff;border:1px solid #e3e8ef;border-radius:14px;padding:18px 20px;display:flex;flex-direction:column;gap:10px}
+.tags{display:flex;gap:6px;flex-wrap:wrap}
+.tag{font:600 11px Figtree,sans-serif;border-radius:999px;padding:3px 9px}
+.g{background:#eaf1ff;color:#1d4ed8;border:1px solid #b9cdfb}
+.k{background:#f1f3f6;color:#4a5363}
+.rc h4{margin:0;font:700 16.5px/1.3 Figtree,sans-serif;color:#0b1220}
+.ev{font-size:13px;color:#4a5363;line-height:1.5}
+.step{font-size:13.5px;color:#0b1220;line-height:1.5;background:#f6f8fb;border-radius:10px;padding:10px 12px}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.b1{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;background:#2563eb;color:#fff;font:600 13px Figtree,sans-serif;text-decoration:none;border:0}
+.b1:hover{background:#1d4ed8;color:#fff}
+.b2{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:10px;background:#fff;color:#1d4ed8;font:600 13px Figtree,sans-serif;text-decoration:none;border:1px solid #b9cdfb}
+</style>
+</helmet>
+<div style="width: 880px; box-sizing: border-box; padding: 28px; font-family: Figtree, system-ui, sans-serif; color: #0b1220; background: #f3f5f8; display: flex; flex-direction: column; gap: 14px">
+<div>
+<div style="font: 600 12px Figtree, sans-serif; color: #5b6474; margin-bottom: 4px">Recomendaciones · con Search Console conectado</div>
+<h2 style="margin: 0; font: 800 26px/1.1 'Bricolage Grotesque', sans-serif; letter-spacing: -0.02em">Nuevas recomendaciones con tus datos de Google</h2>
+<p style="margin: 6px 0 0; font-size: 13.5px; color: #4a5363; line-height: 1.5">Aparecen junto a las de IA en la misma pantalla, con su etiqueta. Sólo salen si tienes Search Console conectado.</p>
+</div>
+
+<div class="rc">
+<div class="tags"><span class="tag g">Datos de Google</span><span class="tag k">Subir a la página 1</span></div>
+<h4>Sube «aparecer en chatgpt» a la primera página de Google</h4>
+<div class="ev">Estás en el puesto 12,4 con /blog/aparecer-en-chatgpt y la ven 2.210 veces al mes. Es tu búsqueda con más impresiones en la página 2.</div>
+<div class="step"><b>Primer paso:</b> amplía el artículo con una respuesta directa en las primeras líneas y enlázalo desde tu Home y desde /blog/que-es-geo, que ya están en la página 1.</div>
+<div class="acts"><a class="b1" href="#">Generar el texto</a><a class="b2" href="#">Marcar como hecho</a></div>
+</div>
+
+<div class="rc">
+<div class="tags"><span class="tag g">Datos de Google</span><span class="tag k">Título y descripción</span></div>
+<h4>Mejora el título de /precios: la ven 1.240 veces y entra el 0,8%</h4>
+<div class="ev">Sales en el puesto 3,2 para «precio herramienta geo». En ese puesto suele entrar alrededor del 10%.</div>
+<div class="step"><b>Primer paso:</b> pon el precio y el beneficio en el título y en la descripción. Te proponemos tres versiones para elegir.</div>
+<div class="acts"><a class="b1" href="#">Ver propuestas</a><a class="b2" href="#">Marcar como hecho</a></div>
+</div>
+
+<div class="rc">
+<div class="tags"><span class="tag g">Datos de Google</span><span class="tag k">Google + IA</span></div>
+<h4>Vigila en la IA «¿cuál es la mejor herramienta geo?»</h4>
+<div class="ev">La gente ya te encuentra en Google con esa pregunta (puesto 9,1), pero todavía no sabes si ChatGPT, Gemini o Claude te nombran cuando se la hacen.</div>
+<div class="acts"><a class="b1" href="#">Añadir a mis preguntas</a><a class="b2" href="#">Ahora no</a></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":880,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

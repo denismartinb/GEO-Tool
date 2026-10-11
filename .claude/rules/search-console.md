@@ -47,3 +47,16 @@ revisión de data-guardian que lo precedió.
   cupo, 5xx) no marcan nada.
 - **Si se filtran a la vez la clave y la base de datos, rotar no basta:** se
   revocan en Google todos los tokens con `pnpm search-console:revoke-all`.
+
+## Fase 3b: puesto, páginas y oportunidades (log §287)
+
+- **Toda referencia es la propia web.** «Lo habitual» en un tramo es el CTR
+  de las otras búsquedas de la web en ese tramo (`findCtrOpportunities`),
+  nunca una curva de CTR del sector. Inventarse una sería una métrica falsa.
+- **Los problemas SEO de una página los cuenta la auditoría, no esta zona.**
+  `auditedPagesFromSnapshot` reutiliza `pageCheckStates` y
+  `seoPageExtraStates` filtrados por `AUDIT_BLOCKS.seo.checks`. Una página
+  sin analizar es «Sin auditar», nunca «Correcta».
+- **«Vigilar en IA» pasa por `addPrompts` (modo manual)**, con su tope de
+  plan y su escaneo. No se escribe en `project_prompts` por otro camino.
+- **Sólo se enlaza lo que `isWebUrl` acepta.**

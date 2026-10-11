@@ -24443,3 +24443,65 @@ botón de escaneo o una puerta propia.
 
 **Regla de premisa.** No se retira ningún camino de recuperación para el
 cliente: los controles de `/debug` ya eran internos por diseño (§32).
+
+---
+
+## 287. SEARCH-SEO-1 Fase 3b: «Posición en Google» enseña el puesto y qué hacer para subir (2026-10-11)
+
+**Qué se decidió.** El fundador aprobó la maqueta de
+`docs/design-reference/search-seo-1/fase-3b/` («Me parece perfecto.
+Implementa todo») tras pedir que la pantalla diera la posición como tal y más
+datos de Search Console. Se construye la pantalla; las recomendaciones con
+datos de Google (`Recs.dc.html`) son la siguiente fase.
+
+Bloques nuevos, en este orden:
+
+1. **Tu posición en Google.** Puesto medio grande con su cambio en puestos
+   frente a los 28 días anteriores, reparto de las búsquedas por tramos (top 3,
+   resto de la página 1, página 2, más allá) y la evolución diaria del puesto
+   medio con el eje invertido («mejor arriba»).
+2. **Las búsquedas que te traen visitas.** El puesto va en una insignia del
+   color de su tramo, y hay una columna nueva, «Página que sale»: la página con
+   más impresiones para esa búsqueda.
+3. **Tus páginas en Google.** Las diez páginas que más visitas traen, con su
+   puesto medio, y cruzadas con la última auditoría: «Correcta», «N problemas
+   SEO» (enlaza a la Auditoría SEO) o «Sin auditar».
+4. **Te ven, pero no entran.** Búsquedas de la página 1 con muchas impresiones
+   cuyo CTR queda por debajo de la mitad del habitual en ese tramo.
+5. **Preguntas que te hacen en Google**, con un botón «Vigilar en IA».
+6. **Móvil y ordenador.** Puesto medio y CTR por dispositivo.
+7. **Dos páginas compiten por la misma búsqueda** (canibalización).
+
+**Cómo se calcula.** Todo vive en `lib/search-console/insights.ts`, un módulo
+puro.
+
+- **La referencia es la propia web, nunca una curva del sector.** «Tus clics
+  habituales» es el CTR de las otras búsquedas de la web en el mismo tramo, con
+  al menos 3 búsquedas de comparación y 50 impresiones. Una curva de CTR por
+  posición del sector sería una estimación presentada como dato.
+- **Los problemas por página salen de los predicados de la auditoría**
+  (`pageCheckStates`, `seoPageExtraStates`), filtrados por
+  `AUDIT_BLOCKS.seo.checks`. Ver `lib/search-console/audited-pages.ts`. Los
+  hechos de sitio (Googlebot, HTTPS, velocidad) no cuentan como problema de una
+  página. Si una página se descargó pero no se analizó, sale «Sin auditar» y
+  nunca «Correcta».
+- **«Vigilar en IA» usa la server action `addPrompts` en modo manual.** Hereda
+  el tope del plan, la longitud de 10 a 300 caracteres, la categoría y el
+  escaneo del prompt nuevo, sin un camino propio. Una pregunta cuenta como ya
+  vigilada si un prompt activo contiene todas sus palabras con significado.
+- **Sólo se enlaza una URL http(s)** (`isWebUrl`). Google devuelve las URLs de
+  la propia propiedad, pero un enlace a otra cosa no se pinta.
+- **Se hacen tres consultas más a Search Analytics** (búsqueda+página, página,
+  dispositivo) en paralelo con las de antes. Igual que en la Fase 3, no se
+  guarda nada y no hay caché entre peticiones.
+
+**Qué queda pendiente.**
+
+- Recomendaciones alimentadas por Search Console (`Recs.dc.html`). Si hay que
+  guardar datos de Search Console para el motor de recomendaciones, hará falta
+  una migración y aprobación propia.
+- El selector de propiedad y la conexión siguen funcionando sólo en
+  producción: el `redirect_uri` usa `getSiteUrl()`, que en preview también
+  apunta a genscore.es.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
