@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resolveBotAccess, buildBotAccessReport, TRACKED_BOT_AGENTS } from "./robots";
+import { resolveBotAccess, resolveGooglebotAccess, buildBotAccessReport, TRACKED_BOT_AGENTS } from "./robots";
 
 describe("resolveBotAccess", () => {
   it("blocks a bot with an exact-token Disallow: / group", () => {
@@ -64,6 +64,8 @@ describe("buildBotAccessReport", () => {
     expect(report.llmsTxtFound).toBe(false);
     expect(report.llmsTxtBytes).toBeNull();
     expect(report.sitemapFound).toBe(false);
+    // No robots.txt lets every crawler in, Googlebot included.
+    expect(report.site).toEqual({ googlebotAllowed: true });
   });
 
   it("parses a real robots.txt and reports llms.txt/sitemap.xml presence + byte size", async () => {
@@ -93,10 +95,18 @@ describe("buildBotAccessReport", () => {
 
   it("treats a fetch error as a missing file rather than throwing", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
-    await expect(buildBotAccessReport("example.com")).resolves.toMatchObject({
-      robotsFound: false,
-      llmsTxtFound: false,
-      sitemapFound: false
-    });
+    const report = await buildBotAccessReport("example.com");
+    expect(report).toMatchObject({ robotsFound: false, llmsTxtFound: false, sitemapFound: false });
+    // A robots.txt we could not read says nothing about Googlebot.
+    expect(report.site?.googlebotAllowed).toBeUndefined();
+  });
+});
+
+describe("resolveGooglebotAccess (Salud SEO, log §281)", () => {
+  it("reads Googlebot with the same rules as the AI bots", () => {
+    expect(resolveGooglebotAccess("User-agent: *\nDisallow: /\n")).toBe(false);
+    expect(resolveGooglebotAccess("User-agent: Googlebot\nDisallow:\n\nUser-agent: *\nDisallow: /\n")).toBe(true);
+    expect(resolveGooglebotAccess("User-agent: GPTBot\nDisallow: /\n")).toBe(true);
+    expect(resolveGooglebotAccess("User-agent: googlebot\nDisallow: /private\n")).toBe(true);
   });
 });

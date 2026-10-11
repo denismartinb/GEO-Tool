@@ -8,11 +8,14 @@ import {
   ISSUE_CHECK_META as CHECK_META,
   ISSUE_SEVERITY_LABELS,
   SINGLE_FACT_CHECKS,
+  isNewSeoCheck,
   issueScopeLabel,
+  passingCheckLabel,
   pluralizeUnit
 } from "@/lib/web-audit/issue-labels";
 import { formatBlockPoints } from "@/lib/web-audit/audit-blocks";
 import { AudienceTags } from "./audience-tags";
+import { NewBadge } from "./new-badge";
 
 /**
  * The rows of the Problemas and Correcto tabs in each audit block
@@ -59,6 +62,7 @@ export function IssueRow({
           <span className="sa-iss-top">
             <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
             <b>{meta.label}</b>
+            {isNewSeoCheck(issue.check) && <NewBadge />}
           </span>
           <span className="sa-iss-sub">
             <span className="sa-iss-scope">{scopeLabel}</span>
@@ -108,7 +112,9 @@ export function IssueRow({
 /** A check every measured page already passes: a row of the Correcto tab. */
 export function PassingRow({ passing }: { passing: TechnicalPassingCheck }) {
   const meta = CHECK_META[passing.check];
-  const scopeLabel = SINGLE_FACT_CHECKS.has(passing.check)
+  const scopeLabel = passing.scopeText
+    ? passing.scopeText
+    : SINGLE_FACT_CHECKS.has(passing.check)
     ? "Encontrado"
     : `${passing.passedCount} de ${passing.applicableCount} ${pluralizeUnit(meta.unit, passing.applicableCount)}`;
   return (
@@ -118,7 +124,8 @@ export function PassingRow({ passing }: { passing: TechnicalPassingCheck }) {
       </span>
       <span className="sa-iss-t">
         <span className="sa-iss-top">
-          <b>{meta.label}</b>
+          <b>{passingCheckLabel(passing.check)}</b>
+          {isNewSeoCheck(passing.check) && <NewBadge />}
         </span>
         <span className="sa-iss-sub">
           <span className="sa-sr">Correcto · </span>

@@ -24000,6 +24000,119 @@ Los recuentos viven en `components/prompts/engine-summary.ts` (puro, con tests).
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.
 
+## 281. SEARCH-SEO-1 Fase 2: la Salud SEO, seis checks nuevos y la velocidad de la Home (2026-10-11)
+
+**Qué se decidió.** Fase 2 de §271. El fundador aprobó la maqueta
+(`docs/design-reference/search-seo-1/salud-seo.html`, móvil y escritorio) el
+2026-10-11 con un cambio: la tarjeta de velocidad se llama «Optimización de
+tu página Home», no «Velocidad de tu portada».
+
+- La nota del bloque SEO pasa a llamarse **Salud SEO**. La del bloque GEO se
+  rotula «Nota GEO». Las dos etiquetas viven en `AUDIT_BLOCKS.scoreLabel`.
+- **Checks nuevos, todos en el bloque SEO** (`lib/web-audit/seo-health.ts`):
+  velocidad en móvil (Core Web Vitals), Googlebot permitido, HTTPS y
+  redirecciones, viewport móvil, imágenes sin texto alternativo, títulos o
+  descripciones repetidos y negocio local en datos estructurados.
+- **Pesos aprobados, sobre 100:** los ocho checks SEO de siempre suman 45;
+  velocidad 20, Googlebot 10, HTTPS 10, viewport 5, texto alternativo 5 y
+  títulos únicos 5. «Negocio local» es una mejora sin puntos, porque no
+  sabemos si el negocio atiende en un local. Los pesos se publican en la
+  pantalla («Cómo se calcula tu Salud SEO»), leídos de las mismas tablas que
+  la nota.
+- Los checks nuevos llevan la etiqueta «NUEVO» hasta el 8 de noviembre de
+  2026 (`NEW_SEO_CHECKS_UNTIL`).
+- La línea bajo los bloques dice ahora: «Tu Puntuación GEO usa la Salud
+  técnica (N/100): los checks GEO y los SEO de siempre. Las comprobaciones
+  nuevas y la velocidad sólo cuentan en la Salud SEO.»
+
+**La Puntuación GEO no se mueve, por diseño.** Lo nuevo nunca entra en
+`pageScore` ni en `readiness_score`, que es el componente técnico de la
+Puntuación GEO (§131). Así una web lenta no baja una métrica que mide la
+visibilidad en IA. `buildAuditBlock` suma lo nuevo sólo al bloque SEO, y un
+test fija que la Salud técnica, el bloque GEO y el `pageScore` de una página
+dan lo mismo con y sin los datos nuevos. Es la excepción aprobada a «no le
+pongas pesos propios a un bloque» (§275).
+
+**Cómo se mide, sin migración.**
+
+- Lo que es de la web va en el jsonb `web_audit_snapshots.bots`, como
+  `bots.site`. Ahí ya vivía la parte de sitio de la auditoría.
+  - **Googlebot** se lee del robots.txt que ya se descargaba, con las mismas
+    reglas simplificadas que los bots de IA. Sin robots.txt (404) está
+    permitido; si no se pudo leer, queda sin medir.
+  - **HTTPS**: una petición a `http://dominio/` con las redirecciones
+    seguidas a mano, como mucho tres saltos. Cada salto se queda en el
+    dominio y resuelve a una IP pública, con los mismos guardianes que
+    `fetch-page.ts`. Llegar a https en el dominio cuenta como «ok»; una
+    página propia en http, como «missing»; cualquier otra cosa (DNS, tiempo,
+    5xx, un salto fuera del dominio) queda sin medir.
+  - **Velocidad** viene de la API gratuita de Google PageSpeed Insights,
+    móvil y escritorio en paralelo, sólo para la portada.
+    - Se usan los datos de usuarios reales de Chrome si Google los tiene, y
+      si no la medición de laboratorio, que no trae INP. La tarjeta dice cuál
+      de las dos es.
+    - Se reutiliza 7 días (`PAGESPEED_REFRESH_MS`), porque cambia cuando
+      cambia la web y cada medición tarda segundos.
+    - Tiempo máximo de 20 s, sin reintento. Arranca junto con la descarga de
+      páginas, así que no alarga la auditoría.
+    - **Necesita `PAGESPEED_API_KEY`.** Sin ella no se llama a nada, no sale
+      la tarjeta y la Salud SEO se calcula sin velocidad. La clave nunca se
+      registra en logs.
+- Lo que es de cada página va en `PageCheckResult.seo`, opcional: viewport
+  (`width=device-width`), imágenes sin atributo `alt` (los píxeles de 1×1 no
+  cuentan) y tipo LocalBusiness o un subtipo en el JSON-LD. Para comparar
+  títulos y descripciones se guarda un hash corto del texto normalizado,
+  nunca el texto. Dos entradas de la misma URL o con el mismo canonical son
+  la misma página. Hacen falta dos páginas medidas para comparar.
+- **Todo es tri-estado:** lo no medido (una auditoría vieja, sin clave, un
+  HTTPS que no se pudo averiguar) no puntúa, no es problema y no sale como
+  correcto.
+
+**La aritmética.** La Salud SEO es Σ ganado / Σ posible, como la nota de cada
+bloque (§275). Los checks de página cuentan una vez por cada página que los
+midió. Los de sitio (velocidad, Googlebot, HTTPS) cuentan una vez por página
+analizada, para que pesen lo mismo que en una página.
+
+- La velocidad vale 20 × la media de los vitals medidos en móvil: entero si
+  es bueno, la mitad si es mejorable y nada si es lento.
+- Su gravedad: crítico si algún vital es lento, aviso si alguno es mejorable.
+  Googlebot bloqueado y falta de HTTPS son críticos. Viewport, texto
+  alternativo y títulos repetidos son avisos.
+- El bloque SEO se ordena por gravedad y después por sus propios puntos.
+- En la pestaña Páginas, la Salud SEO de cada página suma sólo sus checks de
+  página. Los de sitio no son de ninguna página en concreto.
+
+**Visión general.** La tarjeta «Auditoría SEO» pasa a ser el bloque SEO:
+Salud SEO, recuento por gravedad, los tres primeros problemas con sus puntos
+de bloque y una línea con la velocidad en móvil («Velocidad en móvil: LCP
+3,4 s, mejorable»). Todos los enlaces abren el bloque SEO.
+
+- Sale del mismo `buildAuditBlock` que la pantalla, así que no puede contar
+  distinto.
+- Los problemas de GEO dejan de salir en esta tarjeta. Los frenos de cita
+  siguen en la franja «Prioridad 1».
+- Cierra la discrepancia de escala que anotó §275: la tarjeta ya enseña
+  puntos de bloque, como la pantalla.
+- No se pone el hueco «Conecta Search Console», porque sería un botón que no
+  hace nada hasta la fase 3.
+
+**Regla de premisa.** No se retira ningún camino de recuperación. La tarjeta
+de velocidad depende de una clave que puede faltar. Sin clave, no sale
+ninguna tarjeta: no se enseña una velocidad que no se ha medido. Si Google no
+responde, la tarjeta lo dice y la siguiente auditoría lo vuelve a intentar.
+
+**Pendiente o conocido.**
+
+- Denis tiene que crear `PAGESPEED_API_KEY` en Google Cloud (PageSpeed
+  Insights API, gratis) y añadirla en Vercel. Hasta entonces la velocidad no
+  se mide.
+- Una medición de laboratorio en móvil a veces pasa de 20 s. Ese día la
+  velocidad queda sin medir y se reintenta en la siguiente auditoría. Si pasa
+  a menudo, se puede subir el tiempo dentro del presupuesto de la auditoría.
+- «Imágenes sin texto alternativo» cuenta las que no tienen atributo `alt`.
+  Un `alt=""` vale, porque es lo correcto en una imagen decorativa.
+- Fase 3: Search Console. Fase 4: artículo y portada.
+
 ## 282. PERPLEXITY-ENGINE-1 Fase 2: Perplexity entra en el escaneo de Pro y Agencia (2026-10-11)
 
 **Qué se decidió.** Perplexity pasa a ser el cuarto motor del escaneo, solo para Pro y

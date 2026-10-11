@@ -1,6 +1,7 @@
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
+import type { SeoExtraCheckKey } from "@/lib/web-audit/seo-health";
 
 /**
  * WEB-AUDIT-ISSUES-1 (founder-approved 2026-08-02, design artifact "Auditoría
@@ -41,7 +42,9 @@ export type IssueCheckKey =
   | "freshness"
   | "bot_blocked"
   | "llms_txt_missing"
-  | "sitemap_missing";
+  | "sitemap_missing"
+  /** Salud SEO only (log §281): built by `seo-health.ts`, never by `buildTechnicalIssuesReport`. */
+  | SeoExtraCheckKey;
 
 export type TechnicalIssue = {
   check: IssueCheckKey;
@@ -62,6 +65,8 @@ export type TechnicalIssue = {
   pointDelta: number | null;
   /** Affected page URLs (already sanitized, from PageAuditEntry.url) — for bot_blocked, the blocked agent names instead. */
   affectedLabels: string[];
+  /** Replaces the «N de M páginas» scope when a count says nothing («LCP de 3,4 s en móvil»). Salud SEO checks only. */
+  scopeText?: string;
 };
 
 export type TechnicalPassingCheck = {
@@ -69,6 +74,8 @@ export type TechnicalPassingCheck = {
   /** How many measured instances pass this check. Only present in this list when > 0 — a full fail is fully represented by its `TechnicalIssue`, no redundant "0 de N" row. */
   passedCount: number;
   applicableCount: number;
+  /** Same as `TechnicalIssue.scopeText`, for the Correcto tab. */
+  scopeText?: string;
 };
 
 export type TechnicalIssuesReport = {
@@ -113,7 +120,7 @@ const WEIGHT = {
   freshnessAging: 8
 } as const;
 
-export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing">;
+export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing" | SeoExtraCheckKey>;
 
 type PageCheckDefinition = {
   key: PageLevelCheckKey;
@@ -378,7 +385,7 @@ function resolveSeverity(hardBlock: boolean, pointDelta: number | null): IssueSe
   return "improvement";
 }
 
-const SEVERITY_ORDER: Record<IssueSeverity, number> = { critical: 0, warning: 1, improvement: 2 };
+export const SEVERITY_ORDER: Record<IssueSeverity, number> = { critical: 0, warning: 1, improvement: 2 };
 
 function round1(value: number): number {
   return Math.round(value * 10) / 10;
@@ -456,6 +463,11 @@ export function pageCheckStates(check: PageCheckResult): PageCheckState[] {
       : { weight: def.weight, earned: def.weight === null || fails ? 0 : def.weight, possible: def.weight ?? 0 };
     return { check: def.key, fails, ...points };
   });
+}
+
+/** What a page-level check is worth per page, for the «Cómo se calcula tu Salud SEO» card. Null when it carries no points or is not a page check. */
+export function pageCheckWeight(check: IssueCheckKey): number | null {
+  return PAGE_CHECKS.find((def) => def.key === check)?.weight ?? null;
 }
 
 export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAccessReport): TechnicalIssuesReport {

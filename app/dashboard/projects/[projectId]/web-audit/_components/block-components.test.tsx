@@ -83,7 +83,7 @@ describe("BlockPotentialBanner", () => {
     expect(html).toContain("los 3 problemas que puntúan");
     expect(html).toContain(">76<");
     expect(html).toContain(">100<");
-    expect(html).toContain("Nota SEO");
+    expect(html).toContain("Salud SEO");
   });
 
   it("uses the singular for one problem", () => {

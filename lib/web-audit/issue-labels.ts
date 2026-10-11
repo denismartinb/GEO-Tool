@@ -22,6 +22,8 @@ export type IssueCheckMeta = {
   /** The GOOGLE / IA tags the screen shows next to the check. Empty when neither is honest (Open Graph is for link previews). */
   audience: IssueAudience[];
   unit: "página" | "bot";
+  /** The name when the check passes, when `label` names the problem («Imágenes sin texto alternativo»). */
+  okLabel?: string;
 };
 
 export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
@@ -145,6 +147,61 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
     why: "El sitemap es la lista de páginas de tu web. Sin él, Google y los bots de IA sólo encuentran lo que está enlazado.",
     audience: ["google", "ia"],
     unit: "página"
+  },
+  // Salud SEO only (SEARCH-SEO-1 Fase 2, log §281): these never score in the
+  // Salud técnica, so they never move the GEO Score.
+  page_speed: {
+    label: "Velocidad en móvil",
+    guidance:
+      "Reduce el peso de la imagen o el bloque principal de tu portada, aplaza los scripts que no hacen falta al cargar y reserva el espacio de imágenes y anuncios para que nada se mueva.",
+    why: "Google usa la experiencia de carga en móvil para ordenar resultados, y una portada lenta pierde visitas antes de que la vean.",
+    audience: ["google"],
+    unit: "página"
+  },
+  googlebot_blocked: {
+    label: "Googlebot permitido",
+    guidance: "Revisa tu robots.txt y quita la regla «Disallow: /» que afecta a Googlebot o a todos los rastreadores.",
+    why: "Si robots.txt bloquea a Googlebot, Google no puede leer tu web y deja de enseñarla en sus resultados.",
+    audience: ["google"],
+    unit: "página"
+  },
+  https_redirect: {
+    label: "HTTPS y redirecciones",
+    guidance: "Haz que http://tu-dominio redirija con un 301 a https://tu-dominio. Casi todas las plataformas y CDN lo activan con un interruptor.",
+    why: "Sin la redirección, Google y tus visitas pueden llegar a la versión sin cifrar, que el navegador marca como no segura.",
+    audience: ["google"],
+    unit: "página"
+  },
+  viewport_missing: {
+    label: "Viewport móvil",
+    guidance: 'Añade <meta name="viewport" content="width=device-width, initial-scale=1"> en el <head> de cada página afectada.',
+    why: "Sin esa etiqueta, el móvil enseña la página como si fuera de ordenador, en miniatura. Google indexa con la versión móvil.",
+    audience: ["google"],
+    unit: "página"
+  },
+  image_alt_missing: {
+    label: "Imágenes sin texto alternativo",
+    guidance: "Añade un atributo alt que describa cada imagen con contenido. Las decorativas pueden llevar alt vacío.",
+    why: "Google no ve las imágenes: lee su texto alternativo para entenderlas y enseñarlas en la búsqueda de imágenes.",
+    audience: ["google"],
+    unit: "página",
+    okLabel: "Imágenes con texto alternativo"
+  },
+  duplicate_metadata: {
+    label: "Títulos o descripciones repetidos",
+    guidance: "Escribe un <title> y una meta description propios para cada página, que digan lo que la distingue de las demás.",
+    why: "Si varias páginas se presentan igual, Google no sabe cuál enseñar y en el resultado parecen la misma.",
+    audience: ["google"],
+    unit: "página",
+    okLabel: "Títulos y descripciones únicos"
+  },
+  local_business_missing: {
+    label: "Negocio local en datos estructurados",
+    guidance:
+      "Si atiendes a clientes en un local o en una zona, añade datos estructurados LocalBusiness (o el tipo concreto: Dentist, Restaurant…) con dirección, teléfono y horario.",
+    why: "Le dice a Google dónde estás y cuándo abres, que es lo que usa para las búsquedas «cerca de mí» y el mapa.",
+    audience: ["google"],
+    unit: "página"
   }
 };
 
@@ -154,16 +211,41 @@ export function pluralizeUnit(unit: "página" | "bot", count: number): string {
 }
 
 
+/** Checks the Salud SEO adds (log §281): the screen badges them «NUEVO» for the first weeks. */
+export const NEW_SEO_CHECKS = new Set<IssueCheckKey>([
+  "page_speed",
+  "googlebot_blocked",
+  "https_redirect",
+  "viewport_missing",
+  "image_alt_missing",
+  "duplicate_metadata",
+  "local_business_missing"
+]);
+
+/** Until when the «NUEVO» badge shows: four weeks after the Salud SEO shipped. */
+export const NEW_SEO_CHECKS_UNTIL = Date.parse("2026-11-08T00:00:00+01:00");
+
+export function isNewSeoCheck(check: IssueCheckKey, now: number = Date.now()): boolean {
+  return now < NEW_SEO_CHECKS_UNTIL && NEW_SEO_CHECKS.has(check);
+}
+
 export const SINGLE_FACT_CHECKS = new Set<IssueCheckKey>(["llms_txt_missing", "sitemap_missing"]);
 
-/** "3 de 10 páginas", "1 de 5 bots", or "No encontrado" for a site-wide file that is simply missing. */
+/** "3 de 10 páginas", "1 de 5 bots", "No encontrado" for a site-wide file that is simply missing, or the check's own `scopeText`. */
 export function issueScopeLabel(issue: TechnicalIssue): string {
+  if (issue.scopeText) return issue.scopeText;
   if (SINGLE_FACT_CHECKS.has(issue.check)) return "No encontrado";
   const unit = ISSUE_CHECK_META[issue.check].unit;
   return `${issue.affectedCount} de ${issue.applicableCount} ${pluralizeUnit(unit, issue.applicableCount)}`;
 }
 
 /** One name per severity, shared by the Auditoría SEO screen and Visión general's card: [singular, plural]. */
+/** The check's name for a passing row. */
+export function passingCheckLabel(check: IssueCheckKey): string {
+  const meta = ISSUE_CHECK_META[check];
+  return meta.okLabel ?? meta.label;
+}
+
 export const ISSUE_SEVERITY_LABELS: Record<IssueSeverity, [string, string]> = {
   critical: ["Crítico", "Críticos"],
   warning: ["Aviso", "Avisos"],

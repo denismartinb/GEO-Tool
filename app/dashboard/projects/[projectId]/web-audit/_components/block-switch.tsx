@@ -36,6 +36,7 @@ export function BlockSwitch({
             </span>
             <span className="sa-blk-q">{def.question}</span>
             <span className="sa-blk-n">
+              <em>{def.scoreLabel}</em>
               {view.score === null ? (
                 <b>—</b>
               ) : (

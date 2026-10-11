@@ -52,3 +52,22 @@ historial de la cobertura, que la maqueta no dibujaba, van plegados dentro de
 la tarjeta de cobertura; los temas que la IA ya cita van en la pestaña
 Correcto del bloque GEO; y el acceso de bots va en la columna lateral del
 bloque GEO.
+
+## Fase 2: Salud SEO y velocidad (`salud-seo.html`, log §281)
+
+Aprobada por el fundador el 2026-10-11 («Perfecto»), con un cambio: la tarjeta
+de velocidad se llama **«Optimización de tu página Home»**, no «Velocidad de
+tu portada» como en la maqueta.
+
+- La nota del bloque SEO pasa a llamarse «Salud SEO» y suma seis checks
+  nuevos y la velocidad, con los pesos de la tabla de la maqueta. Nada de eso
+  entra en la Puntuación GEO.
+- Tarjeta «Optimización de tu página Home»: LCP, INP y CLS en móvil y
+  escritorio, con la fuente de los datos (usuarios reales o laboratorio).
+- «Cómo se calcula tu Salud SEO» en la columna lateral, plegada.
+- La tarjeta de Visión general enseña la Salud SEO y una línea de velocidad.
+
+Lo construido difiere de la maqueta en dos detalles: en la tarjeta de Visión
+general la Salud SEO va en su propia fila, encima del recuento por gravedad
+que ya existía, y la pestaña Páginas puntúa cada página sólo con sus checks
+de página (los de sitio cuentan en la nota del bloque).
