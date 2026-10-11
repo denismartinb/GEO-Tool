@@ -1758,18 +1758,68 @@
    Search Console, above the AI ones in Recomendaciones. Design in
    docs/design-reference/search-seo-1/fase-3b/Recs.dc.html. */
 .grec { margin-bottom: 20px; }
-.grec-head { margin-bottom: 10px; }
-.grec-head h3 { margin: 0; font-size: 15px; font-weight: 750; color: var(--ink); letter-spacing: -.01em; }
-.grec-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+/* RECS-ONE-QUEUE-1 (log §306): the row opens «Más adelante», headed by its
+   source chip like every card of the queue. */
+.grec-head {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  margin-bottom: 10px;
+  font-size: 14px; font-weight: 750; color: var(--ink); letter-spacing: -.005em;
+}
+.grec-head-sub { font-size: 12.5px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
 /* One row of cards that scrolls sideways (founder, 2026-10-11): stacked, three
-   cards pushed the AI plan below the fold. At most one card per kind (§293), so
-   three fit side by side on a wide screen and the rest of the time it scrolls. */
+   cards pushed the AI plan below the fold. At most one card per kind (§293).
+   Fixed width, as in the approved design (log §306). */
 .grec-list {
   display: flex; gap: 12px;
   overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
   padding: 2px 2px 10px; margin: 0 -2px;
 }
-.grec-list > .grec-card { flex: 0 0 min(340px, 86%); scroll-snap-align: start; }
+.grec-list > .grec-card { flex: 0 0 300px; scroll-snap-align: start; }
+@media (max-width: 560px) {
+  .grec-list > .grec-card { flex-basis: 280px; }
+}
+.grec-list > .grec-card > .grec-acts { margin-top: auto; }
+/* A long question would stretch every card in the row; four lines, the rest in
+   the tooltip. */
+.grec-list .grec-card h4 { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.grec-kind {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3);
+}
+/* «Ahora no»: the quiet second action, next to an outlined button. */
+.grec-quiet {
+  height: 30px; padding: 0 8px; border: 0; border-radius: var(--r-xs);
+  background: transparent; color: var(--ink-2);
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+}
+.grec-quiet:hover { color: var(--ink); background: var(--surface-2); }
+.grec-quiet:disabled { opacity: .6; cursor: default; }
+
+/* RECS-ONE-QUEUE-1 (log §306): where each card of the queue comes from. */
+.rec2-src {
+  display: inline-flex; align-items: center;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
+}
+.rec2-src-ia { background: #eaf0fd; color: #1d4ed8; }
+.rec2-src-g { background: #e9f5ef; color: #0f6b46; }
+.rec2-gdot {
+  display: inline-grid; place-items: center;
+  width: 13px; height: 13px; border-radius: 999px; flex-shrink: 0;
+  background: #15805a; color: #fff;
+  font-size: 8.5px; font-weight: 800; line-height: 1;
+}
+.rec2-plan-s { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.rec2-howto {
+  margin: 0; padding-left: 18px;
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13.5px; line-height: 1.55; color: var(--ink);
+}
+.rec-card.rec2-gcard-skel {
+  min-height: 128px; padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 9px;
+}
+.rec-card.rec2-gcard-handled { padding: 12px 18px; }
+.grec-card { flex: 0 0 min(340px, 86%); scroll-snap-align: start; }
 @media (min-width: 1200px) {
   .grec-list > .grec-card { flex-basis: calc((100% - 24px) / 3); }
 }

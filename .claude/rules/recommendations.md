@@ -53,8 +53,9 @@ paths:
   La excepción son las tarjetas «Con tus datos de Google» (log §293): su
   evidencia son los datos en vivo del Search Console del cliente, que no se
   guardan; sólo se guarda lo que el cliente hizo con la tarjeta (log §294,
-  `.claude/rules/search-console.md`). No entran en el plan, ni en los puntos
-  potenciales, ni en «Resueltas».
+  `.claude/rules/search-console.md`). Una sola puede entrar en el plan, en el
+  puesto 2 (log §306), pero nunca en los puntos potenciales ni en
+  «Resueltas».
 - **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
   el aviso de "interpretación de la IA" ya existente.
 - Si una recomendación no puede calcular su impacto, se muestra sin impacto —
@@ -638,9 +639,24 @@ paths:
   «Sin datos disponibles».
 - **«Más adelante» no repite el plan, y su techo por grupo se calcula sin
   él.** Supersede la regla de §115 de repetir el plan bajo «Todas».
-- **Las pastillas «Mejora IA»/«Mejora Google» sólo existen cuando llegan
-  tarjetas de Google**, no por tener Search Console conectado: una conexión a
-  otra cuenta de Google dejaba la pestaña vacía (log §303). Las enciende
-  `GoogleRecsPresent`, que `GoogleRecs` monta sólo con al menos una tarjeta,
-  y las apaga al desmontarse. Ocultan una mitad sin desmontarla: el bloque de
-  Google sigue en su `Suspense` (log §298).
+- **SUPERSEDED por log §306: ya no hay pastillas «Mejora IA»/«Mejora
+  Google».** La pantalla es una sola cola (sección de abajo).
+
+## Una sola cola (RECS-ONE-QUEUE-1, log §306)
+
+- **Como mucho una tarjeta de Google en el plan, y en el puesto 2.** Sólo
+  `push_page_one` o, si no hay, `improve_snippet` (`pickPlanRec`). «Vigilar
+  en la IA» no entra: no pide cambiar la web. La tercera de IA sale a «Más
+  adelante» mientras el puesto es de Google, y vuelve si Google no trae
+  tarjeta.
+- **Cada fuente en su escala, nunca sumadas.** La de Google enseña su puesto
+  o su porcentaje de clics; jamás puntos GEO. Con Google en el plan, el techo
+  es el conjunto de las dos primeras de IA (`planPointsWithGoogle`), y los
+  grupos de «Más adelante» se recalculan con la tercera dentro.
+- **Toda tarjeta del plan y toda cabecera de grupo lleva su etiqueta de
+  fuente** (`.rec2-src`, «IA» o «Google»).
+- **El cliente sabe si el puesto 2 es de Google por `GooglePlanMarker`**, que
+  la ranura monta siempre al resolverse, con o sin tarjeta. La ranura se
+  monta aunque no haya plan, para que el marcador llegue.
+- **Sin subtítulo bajo «Más adelante»** («Lo que no entró en el plan» lo
+  quitó el fundador al aprobar).

@@ -34,8 +34,7 @@ import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
-import { GoogleRecsSlot } from "./_components/google-recs";
-import { RecsViewTabs } from "./_components/recs-view-tabs";
+import { GoogleLaterSlot, GooglePlanSlot } from "./_components/google-recs";
 import { isSearchConsoleActive } from "@/lib/search-console/load";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
@@ -658,12 +657,16 @@ export default async function RecommendationsPage({
   // RECS-SHORT-CARD-1 (log §303): the groups sit under «Más adelante», which
   // leaves out the plan's cards, so their ceiling is computed without them.
   const plan = selectPlan(recs);
-  const planIdSet = new Set(plan.map((r) => r.id));
-  const jointPointsByType: Record<string, number | null> = {};
-  if (scoreInputRows.length > 0) {
+  // RECS-ONE-QUEUE-1 (log §306): with Search Console connected, a Google card
+  // can take slot 2 and the third AI action moves to «Más adelante». The page
+  // doesn't wait for Google to know which, so it computes both ceilings.
+  const googleConnected = await isSearchConsoleActive(projectId, user.id);
+  const groupCeilings = (excluded: Set<string>): Record<string, number | null> => {
+    const out: Record<string, number | null> = {};
+    if (scoreInputRows.length === 0) return out;
     const byType = new Map<string, Recommendation[]>();
     for (const rec of recs) {
-      if (planIdSet.has(rec.id)) continue;
+      if (excluded.has(rec.id)) continue;
       const bucket = byType.get(rec.recommendation_type) ?? [];
       bucket.push(rec);
       byType.set(rec.recommendation_type, bucket);
@@ -678,9 +681,14 @@ export default async function RecommendationsPage({
           affectedPromptIds: affectedPromptIds(r.evidence_json),
         })),
       );
-      jointPointsByType[type] = joint && Math.round(joint.deltaPoints) > 0 ? Math.round(joint.deltaPoints) : null;
+      out[type] = joint && Math.round(joint.deltaPoints) > 0 ? Math.round(joint.deltaPoints) : null;
     }
-  }
+    return out;
+  };
+  const jointPointsByType = groupCeilings(new Set(plan.map((r) => r.id)));
+  const jointPointsByTypeWithGoogle = googleConnected
+    ? groupCeilings(new Set(plan.slice(0, 2).map((r) => r.id)))
+    : undefined;
 
   // El plan se selecciona AQUI, no en el cliente, porque su techo de puntos
   // tiene que ser un contrafactual conjunto sobre esas mismas acciones —
@@ -699,6 +707,18 @@ export default async function RecommendationsPage({
         )
       : null;
   const planPoints = planJoint ? planJoint.deltaPoints : null;
+  const planJointWithGoogle =
+    googleConnected && scoreInputRows.length > 0 && plan.length > 0
+      ? computeJointPotentialPoints(
+          scoreInputRows,
+          project.domain,
+          plan.slice(0, 2).map((r) => ({
+            recommendationType: r.recommendation_type,
+            affectedPromptIds: affectedPromptIds(r.evidence_json),
+          })),
+        )
+      : null;
+  const planPointsWithGoogle = planJointWithGoogle ? planJointWithGoogle.deltaPoints : null;
 
   /* Diagnóstico de por qué NO hay cifra de puntos — SOLO en logs de servidor.
    *
@@ -770,10 +790,10 @@ export default async function RecommendationsPage({
   // takeover owns the screen, so the rocket animation reads as full screen
   // instead of sitting under a second chrome band (founder, 2026-08-25).
   const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
-  // A database read, no Google call (log §298): decides whether the pills exist.
-  const googleConnected = await isSearchConsoleActive(projectId, user.id);
+  const googleSlotProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
 
-  // The AI half of the screen, shared by both layouts below.
+  // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §306).
+  const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || resolvedHistoryForClient.length > 0);
   const aiContent = !latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">
@@ -822,7 +842,14 @@ export default async function RecommendationsPage({
               jointPointsByType={jointPointsByType}
               planIds={planIds}
               planPoints={planPoints}
+              planPointsWithGoogle={planPointsWithGoogle}
+              jointPointsByTypeWithGoogle={jointPointsByTypeWithGoogle}
               latestCompletedRunId={latestCompletedRun.id}
+              googleConnected={googleConnected}
+              googlePlanSlot={
+                googleConnected ? <GooglePlanSlot {...googleSlotProps} rank={plan.length > 0 ? 2 : 1} /> : null
+              }
+              googleLaterSlot={googleConnected ? <GoogleLaterSlot {...googleSlotProps} /> : null}
             />
           );
 
@@ -948,22 +975,12 @@ export default async function RecommendationsPage({
             </div>
           )}
 
-          {/* 4 · RECS-SHORT-CARD-1 (log §303): with Search Console connected the
-              screen splits into two pills, «Mejora IA» (default) and «Mejora
-              Google». The Google block is still SEARCH-SEO-1's (log §293,
-              §295, §298), streamed behind its own skeleton; the pills only
-              decide which half is in view. Without a connection there is
-              nothing to switch to, so no pills. */}
-          {googleConnected ? (
-            <RecsViewTabs
-              ai={aiContent}
-              google={
-                <GoogleRecsSlot projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
-              }
-            />
-          ) : (
-            aiContent
-          )}
+          {/* 4 · RECS-ONE-QUEUE-1 (log §306): one queue. The Google cards live
+              inside it (slot 2 of the plan, and a row at the top of «Más
+              adelante»), streamed in by `RecommendationsClient`'s slots. With
+              no AI list to sit in, every Google card goes to the row. */}
+          {aiContent}
+          {googleConnected && !aiHasList && <GoogleLaterSlot {...googleSlotProps} includePlan />}
         </div>
       )}
     </div>

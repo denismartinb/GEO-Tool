@@ -9,6 +9,7 @@ import {
   ResolvedHistoryCard,
   SolutionPanel,
   overlayCopyLocal,
+  planSummary,
   effectiveFirstStep,
   predictionVerdictLine,
   type Recommendation,
@@ -516,5 +517,68 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
     // Only the non-plan type gets a group row.
     expect(html).toContain(labelForType("add_citation_block"));
     expect(html.split('class="rec2-group"').length - 1).toBe(1);
+  });
+});
+
+describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §306)", () => {
+  const three = [
+    baseRec({ id: "a", title: "Primera IA" }),
+    baseRec({ id: "b", title: "Segunda IA", recommendation_type: "add_citation_block" }),
+    baseRec({ id: "c", title: "Tercera IA", recommendation_type: "create_faq_section" })
+  ];
+
+  it("sin Search Console: tres de IA, cada una con su etiqueta, y sin pastillas", () => {
+    const html = renderToStaticMarkup(
+      <RecommendationsClient recommendations={three} projectId="p1" planIds={["a", "b", "c"]} planPoints={13} />
+    );
+    expect(html).not.toContain("Mejora Google");
+    expect(html).not.toContain("rec2-views");
+    expect(html.split('class="rec2-src rec2-src-ia"').length - 1).toBe(3);
+    expect(html).toContain("Hasta +13 pt GEO si haces las tres");
+    expect(html).not.toContain("Lo que no entró en el plan");
+  });
+
+  it("con Search Console, el puesto 2 espera a Google y la tercera pasa a «Más adelante»", () => {
+    const html = renderToStaticMarkup(
+      <RecommendationsClient
+        recommendations={three}
+        projectId="p1"
+        planIds={["a", "b", "c"]}
+        planPoints={13}
+        planPointsWithGoogle={9}
+        googleConnected
+        googlePlanSlot={<div id="slot-google">google</div>}
+        googleLaterSlot={<div id="row-google">fila</div>}
+      />
+    );
+    const first = html.indexOf("Primera IA");
+    const slot = html.indexOf('id="slot-google"');
+    const second = html.indexOf("Segunda IA");
+    expect(first).toBeLessThan(slot);
+    expect(slot).toBeLessThan(second);
+    // The second AI card is number 3 now, and the third left the plan.
+    expect(html).toMatch(/rec2-rank">3<\/span><span class="rec2-src rec2-src-ia">IA<\/span><span class="rec2-kind">/);
+    expect(html).toContain(labelForType("create_faq_section"));
+    expect(html).toContain("Hasta +9 pt GEO");
+    expect(html).toContain('id="row-google"');
+  });
+});
+
+
+describe("planSummary — cada fuente en su escala (log §306)", () => {
+  it("suma el objetivo de Google a los puntos de IA, sin mezclarlos", () => {
+    expect(planSummary(9, "push_page_one", 2)).toBe("Hasta +9 pt GEO y una búsqueda hacia la página 1 de Google");
+    expect(planSummary(9, "improve_snippet", 2)).toBe("Hasta +9 pt GEO y un título que atraiga más clics en Google");
+  });
+
+  it("sin cifra de puntos, sólo dice lo de Google", () => {
+    expect(planSummary(null, "push_page_one", 2)).toBe("Una búsqueda hacia la página 1 de Google");
+  });
+
+  it("sin Google, cuenta las acciones; sin cifra, no dice nada", () => {
+    expect(planSummary(13, null, 3)).toBe("Hasta +13 pt GEO si haces las tres");
+    expect(planSummary(5, null, 2)).toBe("Hasta +5 pt GEO si haces las dos");
+    expect(planSummary(null, null, 3)).toBeNull();
+    expect(planSummary(9, "pending", 2)).toBe("Hasta +9 pt GEO");
   });
 });

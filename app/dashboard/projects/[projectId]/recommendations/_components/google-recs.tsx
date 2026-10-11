@@ -1,53 +1,72 @@
-import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, cache } from "react";
 import type { AuthenticatedContext } from "@/lib/auth";
-import { TIERS, displayPath, tierOf } from "@/lib/search-console/insights";
-import { isSearchConsoleActive, loadSearchConsoleScreen } from "@/lib/search-console/load";
+import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { buildGoogleRecommendations, type GoogleRecommendation } from "@/lib/search-console/recommendations";
 import { readRecStates } from "@/lib/search-console/rec-states";
 import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
-import { fmtInt, fmtPct, fmtPosition } from "../../search-console/_components/format";
 import { GoogleRecFrame, GoogleRecMark } from "./google-rec-frame";
 import { GoogleWatchActions } from "./google-watch";
-import { GoogleRecsPresent } from "./recs-view-tabs";
+import { GooglePlanCard } from "./google-plan-card";
+import { GooglePlanMarker } from "./google-plan-state";
+import { laterCopy, pickPlanRec } from "./google-rec-copy";
 
 /**
- * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §293,
- * design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html). Only
- * with Search Console connected; recomputed on every load from the same
+ * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §293).
+ * Only with Search Console connected; recomputed on every load from the same
  * cached Google rows as «Posición en Google», so a card leaves by itself when
  * its number improves. Only what the customer did with a card is stored
  * («Marcar como hecho» / «Ahora no», log §294, migration 0042), and a handled
- * card gives way to the next case of its kind. Rendered inside a Suspense
- * boundary: a slow Google never holds back the AI recommendations below.
+ * card gives way to the next case of its kind.
+ *
+ * RECS-ONE-QUEUE-1 (log §306, design in docs/design-reference/recs-one-queue-1/):
+ * one queue instead of two pills. The strongest Google card that asks for a
+ * change on the site takes the plan's second slot (`GooglePlanSlot`); the rest
+ * open «Más adelante» as a one-row carousel (`GoogleLaterSlot`). Both stream in
+ * behind their own Suspense: a slow Google never holds back the AI cards.
  */
 
-/** "/precios", or «tu Home» for the root: a bare "/" reads as a typo. */
-function pageName(url: string): string {
-  const path = displayPath(url);
-  return path === "/" ? "tu Home" : path;
+type SlotProps = {
+  projectId: string;
+  ownerUserId: string;
+  domain: string;
+  supabase: AuthenticatedContext["supabase"];
+};
+
+/**
+ * One Google read per request, shared by the plan slot and the carousel
+ * (React `cache`, keyed on the same arguments both slots receive).
+ */
+const loadGoogleRecs = cache(
+  async (
+    projectId: string,
+    ownerUserId: string,
+    domain: string,
+    supabase: AuthenticatedContext["supabase"]
+  ): Promise<{ recs: GoogleRecommendation[]; canPersist: boolean } | null> => {
+    const [{ auditedPages, trackedPrompts }, recStates] = await Promise.all([
+      readSearchConsoleInputs(supabase, projectId),
+      readRecStates(supabase, projectId, ownerUserId)
+    ]);
+    const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, auditedPages, trackedPrompts, false);
+    if (state.kind !== "ready") return null;
+    const recs = buildGoogleRecommendations({
+      report: state.report,
+      pageByQuery: state.insights.pageByQuery,
+      pages: state.insights.pages,
+      ctr: state.insights.ctr,
+      questions: state.insights.questions,
+      hidden: recStates.available ? recStates.hidden : undefined
+    });
+    return { recs, canPersist: recStates.available };
+  }
+);
+
+function load({ projectId, ownerUserId, domain, supabase }: SlotProps) {
+  return loadGoogleRecs(projectId, ownerUserId, domain, supabase);
 }
 
-function joinPaths(urls: string[]): string {
-  const paths = urls.map((u) => pageName(u));
-  return paths.length <= 1 ? (paths[0] ?? "") : `${paths.slice(0, -1).join(", ")} y ${paths[paths.length - 1]}`;
-}
-
-function impressionsText(n: number): string {
-  return `${fmtInt(n)} ${n === 1 ? "vez" : "veces"}`;
-}
-
-function frameProps(rec: GoogleRecommendation) {
-  return {
-    kind: rec.kind,
-    query: rec.query,
-    position: rec.position,
-    impressions: rec.impressions,
-    ctr: rec.kind === "improve_snippet" ? rec.ctr : null
-  };
-}
-
-export function GoogleRecCard({
+/** The short card of the «Con tus datos de Google» row. */
+export function GoogleLaterCard({
   rec,
   projectId,
   canPersist = false
@@ -56,125 +75,58 @@ export function GoogleRecCard({
   projectId: string;
   canPersist?: boolean;
 }) {
-  const gscHref = `/dashboard/projects/${projectId}/search-console`;
-  const frame = { projectId, canPersist, ...frameProps(rec) };
-
-  if (rec.kind === "push_page_one") {
-    const where = rec.page ? pageName(rec.page) : "la página que sale";
-    return (
-      <GoogleRecFrame {...frame}>
-        <div className="grec-tags">
-          <span className="grec-tag grec-g">Datos de Google</span>
-          <span className="grec-tag">Subir a la página 1</span>
-        </div>
-        <h4>Sube «{rec.query}» a la primera página de Google</h4>
-        <p className="grec-ev">
-          Estás en el puesto {fmtPosition(rec.position)}
-          {rec.page ? ` con ${pageName(rec.page)}` : ""} y la ven {impressionsText(rec.impressions)} en 28 días. Es tu
-          búsqueda con más impresiones en la página 2.
-        </p>
-        <p className="grec-step">
-          <b>Primer paso:</b> responde a «{rec.query}» en las primeras líneas de {where} y enlázala desde{" "}
-          {rec.linkFrom.length > 0
-            ? `${joinPaths(rec.linkFrom)}, que ya ${rec.linkFrom.length === 1 ? "está" : "están"} en la página 1.`
-            : "tus páginas más visitadas."}
-        </p>
-        <div className="grec-acts">
-          <Link className="btn btn-ghost btn-sm" href={gscHref}>
-            Ver en Posición en Google
-          </Link>
-          <GoogleRecMark status="done" label="Marcar como hecho" />
-        </div>
-      </GoogleRecFrame>
-    );
-  }
-
-  if (rec.kind === "improve_snippet") {
-    const tier = TIERS.find((t) => t.key === tierOf(rec.position));
-    const peers = tier ? `en los ${tier.range.toLowerCase()}` : "en ese tramo";
-    return (
-      <GoogleRecFrame {...frame}>
-        <div className="grec-tags">
-          <span className="grec-tag grec-g">Datos de Google</span>
-          <span className="grec-tag">Título y descripción</span>
-        </div>
-        <h4>
-          {rec.page
-            ? `Mejora el título de ${pageName(rec.page)}: la ven ${impressionsText(rec.impressions)} y entra el ${fmtPct(rec.ctr)}`
-            : `Mejora el título de la página que sale para «${rec.query}»`}
-        </h4>
-        <p className="grec-ev">
-          Sales en el puesto {fmtPosition(rec.position)} para «{rec.query}». Tus otras búsquedas {peers} entran alrededor
-          del {fmtPct(rec.benchmark)}.
-        </p>
-        <p className="grec-step">
-          <b>Primer paso:</b> reescribe el título y la descripción de{" "}
-          {rec.page ? pageName(rec.page) : "esa página"} para que digan qué ofreces y por qué entrar.
-        </p>
-        <div className="grec-acts">
-          <Link className="btn btn-ghost btn-sm" href={gscHref}>
-            Ver en Posición en Google
-          </Link>
-          <GoogleRecMark status="done" label="Marcar como hecho" />
-        </div>
-      </GoogleRecFrame>
-    );
-  }
-
+  const copy = laterCopy(rec);
   return (
-    <GoogleRecFrame {...frame}>
-      <div className="grec-tags">
-        <span className="grec-tag grec-g">Datos de Google</span>
-        <span className="grec-tag">Google + IA</span>
-      </div>
-      <h4 title={rec.query}>Vigila en la IA «{rec.query}»</h4>
-      <p className="grec-ev">
-        La gente ya te encuentra en Google con esa pregunta (puesto {fmtPosition(rec.position)}), pero todavía no sabes si
-        los motores de IA te nombran cuando se la hacen.
-      </p>
-      <GoogleWatchActions projectId={projectId} query={rec.query} />
+    <GoogleRecFrame
+      projectId={projectId}
+      canPersist={canPersist}
+      kind={rec.kind}
+      query={rec.query}
+      position={rec.position}
+      impressions={rec.impressions}
+      ctr={rec.kind === "improve_snippet" ? rec.ctr : null}
+    >
+      <div className="grec-kind">{copy.kind}</div>
+      <h4 title={rec.query}>{copy.title}</h4>
+      <p className="grec-ev">{copy.text}</p>
+      {rec.kind === "watch_in_ai" ? (
+        <GoogleWatchActions projectId={projectId} query={rec.query} />
+      ) : (
+        <div className="grec-acts">
+          <GoogleRecMark status="done" label="Marcar como hecho" />
+          <GoogleRecMark status="dismissed" label="Ahora no" quiet />
+        </div>
+      )}
     </GoogleRecFrame>
   );
 }
 
-export async function GoogleRecs({
-  projectId,
-  ownerUserId,
-  domain,
-  supabase
-}: {
-  projectId: string;
-  ownerUserId: string;
-  domain: string;
-  supabase: AuthenticatedContext["supabase"];
-}) {
-  const [{ auditedPages, trackedPrompts }, recStates] = await Promise.all([
-    readSearchConsoleInputs(supabase, projectId),
-    readRecStates(supabase, projectId, ownerUserId)
-  ]);
-  const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, auditedPages, trackedPrompts, false);
-  if (state.kind !== "ready") return null;
-  const recs = buildGoogleRecommendations({
-    report: state.report,
-    pageByQuery: state.insights.pageByQuery,
-    pages: state.insights.pages,
-    ctr: state.insights.ctr,
-    questions: state.insights.questions,
-    hidden: recStates.available ? recStates.hidden : undefined
-  });
-  if (recs.length === 0) return null;
+function GoogleRowHead() {
+  return (
+    <div className="grec-head" id="grec-title">
+      <span className="rec2-src rec2-src-g">Google</span>
+      Con tus datos de Google
+      <span className="grec-head-sub">Search Console · últimos 28 días</span>
+    </div>
+  );
+}
 
+async function GoogleLaterResolved({ includePlan, ...props }: SlotProps & { includePlan: boolean }) {
+  const data = await load(props);
+  if (!data) return null;
+  const planRec = includePlan ? null : pickPlanRec(data.recs);
+  const later = data.recs.filter((r) => r !== planRec);
+  if (later.length === 0) return null;
   return (
     <section className="grec" aria-labelledby="grec-title">
-      <GoogleRecsPresent />
-      <GoogleRecsHead />
+      <GoogleRowHead />
       <div className="grec-list">
-        {recs.map((rec) => (
-          <GoogleRecCard
+        {later.map((rec) => (
+          <GoogleLaterCard
             key={`${rec.kind}:${rec.query}`}
             rec={rec}
-            projectId={projectId}
-            canPersist={recStates.available}
+            projectId={props.projectId}
+            canPersist={data.canPersist}
           />
         ))}
       </div>
@@ -182,22 +134,13 @@ export async function GoogleRecs({
   );
 }
 
-function GoogleRecsHead() {
-  return (
-    <div className="grec-head">
-      <h3 id="grec-title">Con tus datos de Google</h3>
-      <p>De tu Search Console, últimos 28 días. Se actualizan solas cuando cambian tus datos.</p>
-    </div>
-  );
-}
-
 /** Same row and card size as the real block, so nothing moves when it lands. */
-function GoogleRecsSkeleton() {
+function GoogleLaterSkeleton() {
   return (
     <section className="grec" aria-labelledby="grec-title" aria-busy="true">
-      <GoogleRecsHead />
+      <GoogleRowHead />
       <div className="grec-list">
-        {[0, 1, 2].map((i) => (
+        {[0, 1].map((i) => (
           <div key={i} className="grec-card grec-skel" aria-hidden="true">
             <span className="grec-skel-line grec-skel-tag" />
             <span className="grec-skel-line grec-skel-title" />
@@ -212,16 +155,48 @@ function GoogleRecsSkeleton() {
 }
 
 /**
- * The block's slot (log §298). Only with Search Console connected (a database
- * read, no Google call) does it reserve the space with a skeleton while the
- * Google rows stream in; otherwise nothing, so the page doesn't jump either
- * way.
+ * The carousel at the top of «Más adelante». Mounted only with Search Console
+ * connected (the page reads that from our database, no Google call, log §298).
+ * `includePlan` puts every Google card here, for a screen with no AI plan.
  */
-export async function GoogleRecsSlot(props: Parameters<typeof GoogleRecs>[0]) {
-  if (!(await isSearchConsoleActive(props.projectId, props.ownerUserId))) return null;
+export function GoogleLaterSlot({ includePlan = false, ...props }: SlotProps & { includePlan?: boolean }) {
   return (
-    <Suspense fallback={<GoogleRecsSkeleton />}>
-      <GoogleRecs {...props} />
+    <Suspense fallback={<GoogleLaterSkeleton />}>
+      <GoogleLaterResolved {...props} includePlan={includePlan} />
+    </Suspense>
+  );
+}
+
+async function GooglePlanResolved({ rank, ...props }: SlotProps & { rank: number }) {
+  const data = await load(props);
+  const planRec = data ? pickPlanRec(data.recs) : null;
+  return (
+    <>
+      <GooglePlanMarker kind={planRec?.kind ?? null} />
+      {planRec && data && (
+        <GooglePlanCard rec={planRec} projectId={props.projectId} rank={rank} canPersist={data.canPersist} />
+      )}
+    </>
+  );
+}
+
+/** A collapsed plan card's height, so the third AI card doesn't jump. */
+function GooglePlanSkeleton() {
+  return (
+    <div className="rec-card rec2-priority rec2-gcard-skel" aria-hidden="true">
+      <span className="grec-skel-line grec-skel-tag" />
+      <span className="grec-skel-line grec-skel-title" />
+      <span className="grec-skel-line" />
+      <span className="grec-skel-line grec-skel-short" />
+    </div>
+  );
+}
+
+/** Slot 2 of «Tu plan de esta semana», when Search Console is connected. */
+export function GooglePlanSlot({ rank, ...props }: SlotProps & { rank: number }) {
+  return (
+    <Suspense fallback={<GooglePlanSkeleton />}>
+      <GooglePlanResolved {...props} rank={rank} />
     </Suspense>
   );
 }

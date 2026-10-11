@@ -7,6 +7,7 @@ import { GoogleRecMark } from "./google-rec-frame";
 /**
  * «Vigilar prompt» on the Google + IA card (log §293), same action as
  * «Posición en Google», with «Ahora no» next to it until it is watched (§294).
+ * Outlined, like every card of the carousel (RECS-ONE-QUEUE-1, log §306).
  */
 export function GoogleWatchActions({ projectId, query }: { projectId: string; query: string }) {
   const { state, tracked, watch } = useWatchPrompt(projectId, query, false);
@@ -21,10 +22,10 @@ export function GoogleWatchActions({ projectId, query }: { projectId: string; qu
           </Link>
         ) : (
           <>
-            <button type="button" className="btn btn-primary btn-sm" onClick={watch}>
+            <button type="button" className="btn btn-ghost btn-sm" onClick={watch}>
               Vigilar prompt
             </button>
-            <GoogleRecMark status="dismissed" label="Ahora no" />
+            <GoogleRecMark status="dismissed" label="Ahora no" quiet />
           </>
         )}
       </div>
