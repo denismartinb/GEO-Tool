@@ -1564,7 +1564,10 @@ export default async function ProjectDetailPage({
               rendered without a usable audit snapshot. */}
           {seoSummary ? (
             <div className={`ov2-seo-side${enginesInKpiGrid ? " is-first" : ""}`}>
-              <div className="ov2-sec-lbl ov2-seo-lbl">Auditoría SEO</div>
+              <div className="ov2-sec-lbl ov2-seo-lbl">
+                Auditoría SEO
+                <Link href={`/dashboard/projects/${projectId}/web-audit`}>Ver todo</Link>
+              </div>
               <SeoAuditCard
                 summary={seoSummary}
                 auditedAt={seoAuditedAt}

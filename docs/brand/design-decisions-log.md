@@ -23696,7 +23696,8 @@ a las altas nuevas.
 2. **La panorámica se parte en dos desde 1200px.** El gráfico («Tu puesto medio cuando apareces» y el top 5) va bajo el desglose y las dos columnas se estiran hasta terminar a la misma altura que la tarjeta de Auditoría SEO. Si la columna estirada es la de Auditoría SEO, sus filas de «Lo primero que arreglar» se reparten la altura sobrante; si es el gráfico, sus barras crecen manteniendo la proporción (`--h`). La tabla («Último escaneo», con su «Ver todo») abre la fila siguiente, a la misma altura que Oportunidades.
 3. **Sólo cuando la columna derecha lleva motores y Auditoría SEO** (`panoramaUp` en `page.tsx`). Si los motores ya subieron a la rejilla de indicadores (§271), al lado del gráfico no quedaría nada; si no hay auditoría, tampoco. En esos casos se mantiene la colocación anterior.
 4. **Las dos filas usan las mismas columnas** (`2fr / 1fr`, hueco de 22px). Antes, la de abajo era `1.5fr / 1fr`, así que Oportunidades nunca podía alinearse con la columna de motores.
-5. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
+5. **«Ver todo» en Auditoría SEO**, como el resto de secciones de la pantalla, a petición del fundador (lleva a `/web-audit`). La tarjeta sigue sin botón propio (§271).
+6. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
 
 **Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase.
 
