@@ -5,12 +5,15 @@ import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { ProcessFlow } from "@/components/blog/process-flow";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { QUE_SIGNIFICA_GEO_FAQ } from "@/lib/brand/que-significa-geo-faq";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "¿Qué es el GEO? Guía visual de Generative Engine Optimization — GenScore",
+  title: "¿Qué significa GEO? Generative Engine Optimization — GenScore",
   description:
-    "Qué es el GEO (Generative Engine Optimization), en qué se diferencia del SEO y cómo se mide la visibilidad de tu marca en respuestas de IA: GEO Score, tasa de mención, cuota de citas y más, explicados con ejemplos de GenScore.",
+    "GEO significa Generative Engine Optimization: conseguir que ChatGPT, Gemini o Claude nombren tu marca. Origen del término, diferencia con el SEO y cómo se mide.",
   path: "/geo"
 });
 
@@ -161,11 +164,12 @@ export default function GeoExplainerPage() {
         </div>
         <div className="lp-hero-content">
           <span className="lp-eyebrow"><Icon name="sparkles" size={14} />Guía visual</span>
-          <h1 className="lp-h1">¿Qué es el <span className="grad">GEO</span>?</h1>
+          <h1 className="lp-h1">¿Qué significa <span className="grad">GEO</span>?</h1>
           <p className="lp-lead">
-            GEO significa <strong>Generative Engine Optimization</strong>: conseguir que tu marca
-            aparezca — y aparezca bien — cuando alguien pregunta a ChatGPT, Gemini o Claude.
-            Aquí lo explicamos en cinco minutos, con los mismos indicadores que verás en GenScore.
+            GEO significa <strong>Generative Engine Optimization</strong> (optimización para motores
+            generativos): conseguir que tu marca aparezca, y aparezca bien, cuando alguien pregunta a
+            ChatGPT, Gemini o Claude. No tiene que ver con la geolocalización: fuera del marketing
+            digital, «geo» es el prefijo griego de «tierra», el de geografía o geología.
           </p>
           <div className="gx-hero-actions">
             <Link href="/signup" className="btn btn-primary">
@@ -350,6 +354,32 @@ export default function GeoExplainerPage() {
               ]}
             />
           </div>
+        </div>
+      </section>
+
+      {/* FAQ — GEO-SELF-1 Fase 9 (log §290). Same pairs as the FAQPage JSON-LD
+          and /llms-full.txt, from lib/brand/que-significa-geo-faq.ts. */}
+      <section className="lp-section lp-faq-sec" id="faq">
+        <FaqPageSchema items={QUE_SIGNIFICA_GEO_FAQ} />
+        <div className="lp-inner">
+          <div className="lp-sec-head">
+            <div className="lp-kicker">Preguntas frecuentes</div>
+            <h2 className="lp-h2">Qué significa GEO, en cinco respuestas</h2>
+          </div>
+          <div className="lp-faq">
+            {QUE_SIGNIFICA_GEO_FAQ.map((f) => (
+              <details className="lp-faq-item" key={f.question} open>
+                <summary>
+                  <span>{f.question}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </summary>
+                <p>{f.answer}</p>
+              </details>
+            ))}
+          </div>
+          <FaqAccordion selector=".lp-faq-item" />
         </div>
       </section>
 
