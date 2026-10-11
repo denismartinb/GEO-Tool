@@ -24882,3 +24882,33 @@ plan de IA por debajo del primer pantallazo.
 **Qué queda pendiente.** Nada nuevo. El carrusel no tiene flechas: se desliza
 con el dedo, la rueda o la barra, y en escritorio no hace falta porque caben
 las tres.
+
+## 297. SEARCH-SEO-1 Fase 3g: el bloque de Google de Recomendaciones llega antes y sin saltos (2026-10-11)
+
+**Qué se decidió.** El fundador vio que «Con tus datos de Google» tardaba en
+aparecer y que la pantalla parpadeaba al llegar. Había dos causas, y cada una
+tiene su arreglo.
+
+- **El salto.** El bloque iba en un `Suspense` sin nada de reserva. Al llegar
+  empujaba hacia abajo el plan de IA, que ya estaba pintado. Ahora
+  `GoogleRecsSlot` comprueba primero en nuestra base de datos, sin llamar a
+  Google, si Search Console está conectado (`isSearchConsoleActive`). Si lo
+  está, reserva el sitio con un esqueleto de las mismas tarjetas mientras
+  llegan los datos. Si no lo está, no pinta nada, como antes. Esa lectura va
+  en el camino de la página: es una consulta a la tabla de conexiones.
+- **La espera.** La entrada de caché de Recomendaciones era la misma que la
+  de «Posición en Google» e incluía la inspección de indexación de hasta
+  `INSPECTION_LIMIT` páginas. Cuando la caché fallaba, esas llamadas eran lo
+  más lento, y Recomendaciones no las usa. `loadSearchConsoleScreen` guarda
+  ahora dos entradas: la analítica de búsquedas (`screen-rows`), que comparten
+  las dos pantallas y ya no depende de las URL auditadas, y las inspecciones
+  (`inspections` + hash de URL), que sólo pide la pantalla
+  (`inspect = false` en Recomendaciones). Las dos claves llevan proyecto,
+  dueño y propiedad, como exige la regla. Sin propiedad guardada todavía, las
+  dos llamadas van en serie para que sólo una la decida.
+
+**Qué queda pendiente.** Con la caché vacía (la primera visita en media hora),
+el bloque sigue esperando a Google. Ahora lo hace detrás de un esqueleto y
+sin las inspecciones. Si al final no sale ninguna tarjeta, el esqueleto se
+retira y la página sube una vez. Es raro con Search Console conectado y con
+datos.

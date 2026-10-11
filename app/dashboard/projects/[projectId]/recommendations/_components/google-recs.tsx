@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { AuthenticatedContext } from "@/lib/auth";
 import { TIERS, displayPath, tierOf } from "@/lib/search-console/insights";
-import { loadSearchConsoleScreen } from "@/lib/search-console/load";
+import { isSearchConsoleActive, loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { buildGoogleRecommendations, type GoogleRecommendation } from "@/lib/search-console/recommendations";
 import { readRecStates } from "@/lib/search-console/rec-states";
 import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
@@ -150,7 +151,7 @@ export async function GoogleRecs({
     readSearchConsoleInputs(supabase, projectId),
     readRecStates(supabase, projectId, ownerUserId)
   ]);
-  const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, auditedPages, trackedPrompts);
+  const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, auditedPages, trackedPrompts, false);
   if (state.kind !== "ready") return null;
   const recs = buildGoogleRecommendations({
     report: state.report,
@@ -164,10 +165,7 @@ export async function GoogleRecs({
 
   return (
     <section className="grec" aria-labelledby="grec-title">
-      <div className="grec-head">
-        <h3 id="grec-title">Con tus datos de Google</h3>
-        <p>De tu Search Console, últimos 28 días. Se actualizan solas cuando cambian tus datos.</p>
-      </div>
+      <GoogleRecsHead />
       <div className="grec-list">
         {recs.map((rec) => (
           <GoogleRecCard
@@ -179,5 +177,49 @@ export async function GoogleRecs({
         ))}
       </div>
     </section>
+  );
+}
+
+function GoogleRecsHead() {
+  return (
+    <div className="grec-head">
+      <h3 id="grec-title">Con tus datos de Google</h3>
+      <p>De tu Search Console, últimos 28 días. Se actualizan solas cuando cambian tus datos.</p>
+    </div>
+  );
+}
+
+/** Same row and card size as the real block, so nothing moves when it lands. */
+function GoogleRecsSkeleton() {
+  return (
+    <section className="grec" aria-labelledby="grec-title" aria-busy="true">
+      <GoogleRecsHead />
+      <div className="grec-list">
+        {[0, 1, 2].map((i) => (
+          <div key={i} className="grec-card grec-skel" aria-hidden="true">
+            <span className="grec-skel-line grec-skel-tag" />
+            <span className="grec-skel-line grec-skel-title" />
+            <span className="grec-skel-line" />
+            <span className="grec-skel-line grec-skel-short" />
+            <span className="grec-skel-line grec-skel-btn" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/**
+ * The block's slot (log §297). Only with Search Console connected (a database
+ * read, no Google call) does it reserve the space with a skeleton while the
+ * Google rows stream in; otherwise nothing, so the page doesn't jump either
+ * way.
+ */
+export async function GoogleRecsSlot(props: Parameters<typeof GoogleRecs>[0]) {
+  if (!(await isSearchConsoleActive(props.projectId, props.ownerUserId))) return null;
+  return (
+    <Suspense fallback={<GoogleRecsSkeleton />}>
+      <GoogleRecs {...props} />
+    </Suspense>
   );
 }

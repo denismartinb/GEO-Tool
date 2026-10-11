@@ -117,6 +117,15 @@ async function readActive(ids: VerifiedIds): Promise<ActiveConnection | SearchCo
   return { property: connection.property };
 }
 
+/**
+ * Whether Search Console is configured and connected for this project: our
+ * database only, no call to Google. Recomendaciones reads it before streaming
+ * the Google block, to reserve its space only when the block can appear.
+ */
+export async function isSearchConsoleActive(projectId: string, ownerUserId: string): Promise<boolean> {
+  return "property" in (await readActive({ projectId, ownerUserId }));
+}
+
 /** Refreshes the access token, re-encrypting the refresh token when needed. */
 async function getAccess(ids: VerifiedIds, domain: string, active: ActiveConnection): Promise<Access | SearchConsoleState> {
   const ciphertext = await readTokenCiphertext(ids);
@@ -253,7 +262,12 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
   /** Pages of the latest technical audit, with their SEO problem count. */
   auditedPages: AuditedPage[],
   /** Active prompt texts, to tell which Google questions are already tracked in the AI scan. */
-  trackedPrompts: string[]
+  trackedPrompts: string[],
+  /**
+   * Ask Google about the audited pages' indexing. Recomendaciones doesn't use
+   * it and passes false: the inspections are the slow half of a cache miss.
+   */
+  inspect = true
 ): Promise<SearchConsoleScreen> {
   const ids = { projectId, ownerUserId };
   const active = await readActive(ids);
@@ -261,13 +275,16 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
   const { current, previous } = searchWindows(new Date());
   const urls = [...new Set(auditedPages.map((p) => p.url))].slice(0, INSPECTION_LIMIT);
 
-  const data = await withGoogleData(
+  // Two cache entries (log §297): the search analytics, shared by «Posición en
+  // Google» and Recomendaciones, and the URL inspections, which only the
+  // screen reads and which take most of a miss. Same three-part key prefix.
+  const analytics = withGoogleData(
     ids,
     domain,
     active,
-    ["screen", current.endDate, shortHash(urls)],
+    ["screen-rows", current.endDate],
     async ({ accessToken, property }) => {
-      const [cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows, inspections] = await Promise.all([
+      const [cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows] = await Promise.all([
         querySearchAnalytics(accessToken, property, current),
         querySearchAnalytics(accessToken, property, previous),
         querySearchAnalytics(accessToken, property, {
@@ -297,38 +314,39 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
         querySearchAnalytics(accessToken, property, {
           ...current,
           dimensions: ["device"]
-        }),
-        Promise.all(
-          urls.map(async (url): Promise<InspectionVerdict | null> => {
-            try {
-              return {
-                url,
-                ...(await inspectUrl(accessToken, property, url))
-              };
-            } catch {
-              return null;
-            }
-          })
-        )
+        })
       ]);
-      return {
-        cur,
-        prev,
-        daily,
-        curQ,
-        prevQ,
-        queryPage,
-        pageRows,
-        deviceRows,
-        inspections
-      };
+      return { cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows };
     }
   );
+  const inspectionsCall = () =>
+    inspect && urls.length > 0
+      ? withGoogleData(ids, domain, active, ["inspections", current.endDate, shortHash(urls)], ({ accessToken, property }) =>
+          Promise.all(
+            urls.map(async (url): Promise<InspectionVerdict | null> => {
+              try {
+                return {
+                  url,
+                  ...(await inspectUrl(accessToken, property, url))
+                };
+              } catch {
+                return null;
+              }
+            })
+          )
+        )
+      : null;
+  // Without a stored property yet, the first call decides it: no race.
+  const [data, inspectionData] = active.property
+    ? await Promise.all([analytics, inspectionsCall()])
+    : [await analytics, await inspectionsCall()];
   if (!("rows" in data)) return data;
+  if (inspectionData && !("rows" in inspectionData)) return inspectionData;
   const { property } = data;
-  const { cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows, inspections } = data.rows;
+  const { cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows } = data.rows;
+  const inspections = inspectionData ? inspectionData.rows : null;
 
-  const inspected = inspections.filter((i): i is InspectionVerdict => i !== null);
+  const inspected = inspections?.filter((i): i is InspectionVerdict => i !== null) ?? null;
   const report = buildSearchConsoleReport({
     current: totals(cur),
     previous: totals(prev),
@@ -379,7 +397,7 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
       ),
       cannibalization: findCannibalization(qp)
     },
-    uninspected: urls.length - inspected.length,
+    uninspected: inspected ? urls.length - inspected.length : 0,
     window: current
   };
 });

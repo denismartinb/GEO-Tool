@@ -1815,6 +1815,19 @@
 .grec-status-muted { color: var(--ink-3); }
 .grec-status-ok { color: #0f6b41; }
 .grec-status-error { color: var(--brand-neg); }
+/* Skeleton while the Google rows stream in (log §297): same card, so the plan
+   below doesn't move when the block lands. */
+.grec-skel { min-height: 214px; box-shadow: none; }
+.grec-skel-line {
+  display: block; height: 12px; border-radius: 6px; background: var(--surface-2);
+  animation: grec-pulse 1.4s ease-in-out infinite;
+}
+.grec-skel-tag { width: 40%; height: 18px; border-radius: 999px; }
+.grec-skel-title { width: 85%; height: 16px; }
+.grec-skel-short { width: 60%; }
+.grec-skel-btn { width: 45%; height: 30px; margin-top: auto; border-radius: var(--r-sm); }
+@keyframes grec-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .grec-skel-line { animation: none; } }
 /* «Marcar como hecho» / «Ahora no» leave this row in the card's place (log §294).
    On the white card, so --ink-2 for contrast regardless (styles.md). */
 .grec-card.grec-card-handled { box-shadow: none; background: var(--surface); padding: 12px 18px; }

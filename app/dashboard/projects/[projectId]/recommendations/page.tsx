@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -35,7 +34,7 @@ import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
-import { GoogleRecs } from "./_components/google-recs";
+import { GoogleRecsSlot } from "./_components/google-recs";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
 function affectedPromptIds(evidenceJson: unknown): string[] {
@@ -889,11 +888,10 @@ export default async function RecommendationsPage({
           )}
 
           {/* 4 · SEARCH-SEO-1 Fase 3d (log §293): cards from the customer's own
-              Search Console, only when it is connected. Streamed, so Google
-              never holds back the AI recommendations below. */}
-          <Suspense fallback={null}>
-            <GoogleRecs projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
-          </Suspense>
+              Search Console, only when it is connected. Streamed behind a
+              skeleton of the same size (log §297), so Google never holds back
+              the AI recommendations below and nothing jumps when it lands. */}
+          <GoogleRecsSlot projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
 
           {!latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>
