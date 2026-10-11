@@ -5,8 +5,8 @@
  * that included them would celebrate our own activity.
  *
  * Matched on the local part's prefix, so `denis.martinb+prueba3@gmail.com`
- * counts as the founder too, and on any domain whose first label is
- * `instinct`. Kept apart from `INTERNAL_TEST_ACCOUNT_EMAILS`, which changes
+ * counts as the founder too, and on any domain with an `instinct` label
+ * (`instinct.com`, `mail.instinct.com`). Kept apart from `INTERNAL_TEST_ACCOUNT_EMAILS`, which changes
  * product defaults and must stay an exact allow-list.
  */
 const EXCLUDED_LOCAL_PREFIXES = ["denislagarteiru", "denis.martinb", "chuchibolu", "arangulina"];
@@ -19,6 +19,5 @@ export function isPanelExcludedEmail(email: string | null | undefined): boolean 
   const local = normalized.slice(0, at);
   const domain = normalized.slice(at + 1);
   if (EXCLUDED_LOCAL_PREFIXES.some((prefix) => local.startsWith(prefix))) return true;
-  const firstLabel = domain.split(".")[0];
-  return EXCLUDED_DOMAIN_LABELS.includes(firstLabel);
+  return domain.split(".").some((label) => EXCLUDED_DOMAIN_LABELS.includes(label));
 }

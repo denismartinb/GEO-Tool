@@ -175,6 +175,7 @@ describe("own accounts", () => {
     expect(isPanelExcludedEmail("arangulina@gmail.com")).toBe(true);
     expect(isPanelExcludedEmail("ana@instinct.ai")).toBe(true);
     expect(isPanelExcludedEmail("ana@instinct.com")).toBe(true);
+    expect(isPanelExcludedEmail("8sfcsw@mail.instinct.com")).toBe(true);
     expect(isPanelExcludedEmail("ana@clinicadental.es")).toBe(false);
     expect(isPanelExcludedEmail("maria.denislagarteiru@gmail.com")).toBe(false);
     expect(isPanelExcludedEmail("ana@notinstinct.com")).toBe(false);

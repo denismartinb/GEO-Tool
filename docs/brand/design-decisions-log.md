@@ -25252,8 +25252,8 @@ base de datos, así que no necesita correo a `OPS_ALERT_EMAIL`.
 consola, `/admin`, `/mfa`, `/auth` y `/informe`. Las cuentas del operador
 (`ADMIN_USER_IDS`), las de prueba internas, las comped y las del equipo
 (`isPanelExcludedEmail`: correos que empiezan por `denislagarteiru`,
-`denis.martinb`, `chuchibolu` o `arangulina`, y cualquier dominio
-`instinct.*`, a petición del fundador el mismo día) no cuentan en ninguna
+`denis.martinb`, `chuchibolu` o `arangulina`, y cualquier dominio con
+`instinct` como parte, como `mail.instinct.com`, a petición del fundador el mismo día) no cuentan en ninguna
 cifra: ni altas, ni pruebas, ni checkouts, ni suscripciones, ni cobros. En
 Stripe se reconocen por el `user_id` del checkout o de la suscripción y por
 el email de la factura, porque un checkout de un cliente ya existente no
