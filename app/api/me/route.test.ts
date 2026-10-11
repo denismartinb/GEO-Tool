@@ -140,4 +140,23 @@ describe("GET /api/me", () => {
     expect(user.email).toBe("de5@gmail.com");
     expect(user.planId).toBeTruthy();
   });
+
+  it("reports a comped account with the console's plan, so the cached chip and the answer agree", async () => {
+    const original = process.env.COMPED_ACCOUNT_EMAILS;
+    process.env.COMPED_ACCOUNT_EMAILS = USER.email;
+    try {
+      // `current_plan` says free; the console (`getPlanForUser`) reads this
+      // account as Agencia and seeds the header cache with it. If this
+      // endpoint disagreed, the chip would paint with the badge and then
+      // shrink — the overlapping-chips bug (log §275).
+      loggedIn({ current_plan: "free", trial_ends_at: null, stripe_subscription_id: null });
+
+      const { user } = await (await GET()).json();
+
+      expect(user.planId).toBe("agency");
+    } finally {
+      if (original === undefined) delete process.env.COMPED_ACCOUNT_EMAILS;
+      else process.env.COMPED_ACCOUNT_EMAILS = original;
+    }
+  });
 });

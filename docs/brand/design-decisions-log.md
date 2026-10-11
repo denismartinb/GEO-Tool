@@ -23718,3 +23718,36 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
   - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
     al añadir un motor;
   - los textos que dicen «3 motores», que siguen congelados.
+
+## 275. HEADER-CHIP-PLAN-PARITY-1: dos chips de cuenta solapados en la cabecera pública (2026-10-11)
+
+**Qué vio el fundador.** Con sesión iniciada, en la portada, a veces salían
+dos chips de cuenta: uno recortado («CH c») detrás del chip completo. El de
+detrás estaba desplazado 60 px a la izquierda y cortado en plano por arriba.
+
+**Causa.** Dos sitios decían el plan de la cuenta de forma distinta:
+
+- La consola (`getPlanForUser`) aplica la caducidad de la prueba y después
+  las cuentas comped (BILLING-COMPED-1, §222). Una cuenta comped es Agencia.
+  `SessionCacheSync` guarda ese plan en la caché de identidad de la cabecera
+  (§226).
+- `/api/me` aplicaba sólo la caducidad. Para la misma cuenta decía Free.
+
+En cada página pública el chip se pintaba desde la caché con la insignia
+«Agencia» (260 px) y, al llegar `/api/me`, se quedaba en 200 px sin insignia.
+Reproducido en local: el chip pasa de `x=1157, ancho 260` a `x=1217, ancho
+200`, los mismos 60 px de la captura. En el DOM hay un solo chip. Lo que se
+ve detrás es pintura vieja que Chrome no invalidó al encoger el chip; en el
+navegador sin cabeza no se reproduce ese resto de pintura, pero sí el salto
+que lo provoca.
+
+**Arreglo.** `/api/me` resuelve el plan igual que la consola:
+`resolveEffectivePlanId(caducidad aplicada, email de la sesión)`. Sin columna
+nueva en el select ni escrituras. Con caché y respuesta de acuerdo, el chip no
+cambia de tamaño después de pintarse. Efecto colateral correcto: una cuenta
+comped deja de ver la tira de promoción, igual que una de pago.
+
+**Pendiente o conocido.** Si el plan cambia de verdad entre visitas (alguien
+contrata), la primera página pública aún pinta el plan viejo un momento y el
+chip cambia de ancho una vez. No se ha añadido una defensa de CSS contra el
+resto de pintura porque no se puede verificar sin el navegador del fundador.
