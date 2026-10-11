@@ -5,6 +5,7 @@ import { PLANS } from "@/app/pricing/plans-data";
 import { loadAutomationSnapshot, type AccountAutomation, type ProjectAutomation } from "@/lib/admin/automation";
 import { deriveAccountHealth, type AccountHealth, type HealthRun } from "@/lib/admin/account-health";
 import { resolvePlan, resolveSystemPlanId } from "@/lib/billing";
+import { resolveCadencePlanId } from "@/lib/scan/cron";
 
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
@@ -160,6 +161,7 @@ function healthFor(input: {
   }
   return deriveAccountHealth({
     planId: resolvePlan(resolveSystemPlanId(input.profile) as string | undefined).id,
+    cadencePlanId: resolveCadencePlanId(input.profile),
     now: Date.now(),
     projects: input.projects.map((project) => ({
       domain: project.domain,

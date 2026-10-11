@@ -11,7 +11,7 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { useTypewriter } from "@/components/ui/use-typewriter";
 import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, MAX_INITIAL_PROMPTS, MAX_USER_COMPETITORS, sanitizePromptLineText } from "@/lib/projects/project-form";
+import { isWellFormedDomain, MAX_USER_COMPETITORS, RECOMMENDED_MIN_PROMPTS_COPY, sanitizePromptLineText } from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { PLANS } from "@/app/pricing/plans-data";
@@ -526,7 +526,7 @@ export function OnboardingWizard({
   createAction
 }: OnboardingWizardProps) {
   // SCREEN-POLISH-1 Fase B: only used in the copy below when promptCap is
-  // below MAX_INITIAL_PROMPTS (Free today) — the first plan tier (PLANS is
+  // below RECOMMENDED_MIN_PROMPTS_COPY (Free today) — the first plan tier (PLANS is
   // already ordered by prompt cap, ascending) that covers more than this
   // account's own cap, to name a concrete upgrade instead of a vague "more".
   const nextPromptPlan = PLANS.find((p) => p.caps.prompts > promptCap);
@@ -1005,9 +1005,9 @@ export function OnboardingWizard({
           <h1 className="onb2-h1">Revisa tus prompts</h1>
           <p className="onb2-sub">
             Cada prompt se lanza a los tres motores. Quita los que no te representen
-            {promptCap >= MAX_INITIAL_PROMPTS ? (
+            {promptCap >= RECOMMENDED_MIN_PROMPTS_COPY ? (
               <>
-                {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{MAX_INITIAL_PROMPTS}</b> para
+                {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{RECOMMENDED_MIN_PROMPTS_COPY}</b> para
                 obtener mejores datos.
               </>
             ) : (

@@ -44,7 +44,7 @@ const COVERAGE_AUDIT_USD = 0.28;
 
 /**
  * Cadencia real del barrido recurrente, copiada de
- * `RECURRING_INTERVAL_MS_BY_PLAN` en `lib/scan/cron.ts`. Free aparece con
+ * `RECURRING_INTERVAL_DAYS_BY_PLAN` en `lib/scan/cron.ts`. Free aparece con
  * cadencia diaria ahí, pero el propio barrido lo descarta antes
  * (`skipped_plan_ineligible`), así que su coste recurrente real es 0 — eso lo
  * decide `estimateProjectMonthlyCost` abajo, no esta tabla.
@@ -52,7 +52,8 @@ const COVERAGE_AUDIT_USD = 0.28;
 const SCANS_PER_MONTH_BY_PLAN: Record<string, number> = {
   free: 30,
   starter: 4.3,
-  pro: 30,
+  /** Pro de pago cada 2 días desde SCAN-CADENCE-1 (log §273); la prueba de 7 días sigue diaria. */
+  pro: 15,
   agency: 30
 };
 

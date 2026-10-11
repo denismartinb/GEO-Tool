@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   RECURRING_CRON_UTC_HOUR,
   mostRecentCronFiringAt,
+  resolveCadencePlanId,
   resolveEligibilityCutoffIso
 } from "@/lib/scan/cron";
 
@@ -65,8 +66,13 @@ describe("resolveEligibilityCutoffIso", () => {
   const now = Date.parse("2026-06-20T08:00:00.000Z");
 
   it("uses this firing itself for a daily plan", () => {
-    expect(resolveEligibilityCutoffIso({ planId: "pro", now })).toBe("2026-06-20T06:00:00.000Z");
+    expect(resolveEligibilityCutoffIso({ planId: "trial", now })).toBe("2026-06-20T06:00:00.000Z");
     expect(resolveEligibilityCutoffIso({ planId: "agency", now })).toBe("2026-06-20T06:00:00.000Z");
+  });
+
+  it("uses the previous firing for paid Pro's every-2-days cadence (SCAN-CADENCE-1)", () => {
+    // Scanned at yesterday's firing → not due today; due at tomorrow's.
+    expect(resolveEligibilityCutoffIso({ planId: "pro", now })).toBe("2026-06-19T06:00:00.000Z");
   });
 
   it("uses six days before this firing for Starter's weekly cadence", () => {
@@ -82,11 +88,35 @@ describe("resolveEligibilityCutoffIso", () => {
   it("never lets an off-schedule run inside the previous interval block the next firing", () => {
     // The founder-visible bug, as a property: a run at ANY time of the day
     // before this firing is before the cutoff for a daily plan.
-    const cutoff = resolveEligibilityCutoffIso({ planId: "pro", now });
+    const cutoff = resolveEligibilityCutoffIso({ planId: "agency", now });
 
     for (const hour of [0, 6, 9, 13, 18, 23]) {
       const yesterdayRun = `2026-06-19T${String(hour).padStart(2, "0")}:08:00.000Z`;
       expect(yesterdayRun < cutoff, `a run at ${yesterdayRun} must not block the 06:00 firing`).toBe(true);
     }
+  });
+});
+
+describe("resolveCadencePlanId (SCAN-CADENCE-1)", () => {
+  const future = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString();
+  const past = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString();
+  const base = { email: "someone@example.com", stripe_subscription_id: null, trial_ends_at: null };
+
+  it("keeps an active Pro trial on the daily cadence", () => {
+    expect(resolveCadencePlanId({ ...base, current_plan: "pro", trial_ends_at: future })).toBe("trial");
+  });
+
+  it("moves a paying Pro account to every 2 days", () => {
+    expect(resolveCadencePlanId({ ...base, current_plan: "pro", stripe_subscription_id: "sub_1", trial_ends_at: future })).toBe("pro");
+    expect(resolveCadencePlanId({ ...base, current_plan: "pro" })).toBe("pro");
+  });
+
+  it("treats an elapsed trial as free, never as a daily trial", () => {
+    expect(resolveCadencePlanId({ ...base, current_plan: "pro", trial_ends_at: past })).toBe("free");
+  });
+
+  it("leaves Starter and Agency as they were", () => {
+    expect(resolveCadencePlanId({ ...base, current_plan: "starter" })).toBe("starter");
+    expect(resolveCadencePlanId({ ...base, current_plan: "agency" })).toBe("agency");
   });
 });

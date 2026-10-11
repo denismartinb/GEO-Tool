@@ -36,12 +36,31 @@ export const DEFAULT_COMPARE_ENGINES: CompareEngine[] = ["gemini", "openai", "cl
 
 export type ModelPrice = { inPerM: number; outPerM: number };
 
-export type ModelOption = { id: string; label: string; price: ModelPrice };
+export type ModelOption = {
+  id: string;
+  label: string;
+  price: ModelPrice;
+  /** The model the API is called with, when the option is a variant of one ("gemini-3.6-flash~una-busqueda"). */
+  apiModel?: string;
+  /** Gemini only: ask the model for a single Google Search query per answer (`generateGeminiVisibilityAnswer`). */
+  singleSearch?: true;
+};
 
 /** Generation candidates per engine. The first entry of each list is the model production runs today by default. */
 export const GENERATION_MODELS: Record<CompareEngine, ModelOption[]> = {
   gemini: [
     { id: "gemini-3.6-flash", label: "gemini-3.6-flash", price: { inPerM: 0.75, outPerM: 3.75 } },
+    // Same model, asked to search once. Grounding is billed per query and the
+    // model picks how many it runs (usually two or more); no API setting caps
+    // it, so the instruction is the only lever, and this measures whether it is
+    // obeyed and what it costs in sources (log §269).
+    {
+      id: "gemini-3.6-flash~una-busqueda",
+      label: "gemini-3.6-flash · una búsqueda",
+      price: { inPerM: 0.75, outPerM: 3.75 },
+      apiModel: "gemini-3.6-flash",
+      singleSearch: true
+    },
     { id: "gemini-3.1-flash-lite", label: "gemini-3.1-flash-lite", price: { inPerM: 0.25, outPerM: 1.5 } }
   ],
   openai: [
@@ -117,6 +136,13 @@ export function isAllowedGenerationModel(engine: CompareEngine, id: string): boo
   return id === CURRENT || GENERATION_MODELS[engine].some((option) => option.id === id);
 }
 
+/** What to call the generation API with: the model id (undefined = production's own) and, for Gemini, the single-search ask. */
+export function resolveGenerationCall(engine: CompareEngine, id: string): { model: string | undefined; singleSearch: boolean } {
+  if (id === CURRENT) return { model: undefined, singleSearch: false };
+  const option = GENERATION_MODELS[engine].find((candidate) => candidate.id === id);
+  return { model: option?.apiModel ?? id, singleSearch: option?.singleSearch === true };
+}
+
 export function findExtractionOption(id: string): ExtractionOption | null {
   return EXTRACTION_OPTIONS.find((option) => option.id === id) ?? null;
 }
@@ -148,9 +174,10 @@ export function estimateAnswerCost(engine: CompareEngine, generationModelId: str
   const generation = priceOf(generationModelId) ?? GENERATION_MODELS[engine][0].price;
   // Perplexity has no extractor of its own: the scan's routing sends its rows to Gemini.
   const extraction = priceOf(extractionModelId) ?? GENERATION_MODELS[engine === "perplexity" ? "gemini" : engine][0].price;
+  const singleSearch = GENERATION_MODELS[engine].some((option) => option.id === generationModelId && option.singleSearch);
   const searchFee =
     engine === "gemini"
-      ? ESTIMATE.geminiSearches * GEMINI_SEARCH_FEE_PER_QUERY
+      ? (singleSearch ? 1 : ESTIMATE.geminiSearches) * GEMINI_SEARCH_FEE_PER_QUERY
       : engine === "openai"
         ? ESTIMATE.openaiSearches * OPENAI_SEARCH_FEE_PER_CALL
         : engine === "perplexity"
