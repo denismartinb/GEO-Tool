@@ -500,6 +500,22 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de los españoles ya usa la IA en lugar del buscador, la cifra más alta de Europa.",
       source: "Bain & Company, 2025"
     }
+  },
+  {
+    slug: "genscore-ya-mide-perplexity",
+    title: "GenScore ya mide Perplexity: qué mirar cuando la IA busca y cita fuentes",
+    seoTitle: "GenScore ya mide Perplexity: qué mirar en tu marca",
+    metaDescription:
+      "GenScore suma Perplexity en Pro y Agencia. Qué tiene de distinto un motor que busca y cita fuentes, y qué mirar en tu primer escaneo.",
+    description:
+      "Perplexity entra en GenScore como cuarto motor en Pro y Agencia. Qué tiene de distinto un motor que busca en la web y cita sus fuentes, y las tres cosas que conviene mirar en tu primer escaneo.",
+    datePublished: "2026-10-12",
+    coverImage: "/blog/genscore-ya-mide-perplexity/cover.webp",
+    coverIcon: "search",
+    // CONTENT-LAUNCH-1 (log §285): launch post for PERPLEXITY-ENGINE-1 Fase 2
+    // (log §283). Product claims trace to that section.
+    primaryKeyword: "medir marca en perplexity",
+    cluster: "playbooks"
   }
 ];
 
