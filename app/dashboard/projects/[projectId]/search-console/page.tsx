@@ -132,6 +132,7 @@ export default async function SearchConsolePage({
             <>
               <GscPosition position={state.report.position} tiers={state.insights.tiers} daily={state.report.daily} />
               <GscKpis report={state.report} daily={state.report.daily} index={state.report.index} uninspected={state.uninspected} />
+              <div className="gsc-grid-2 gsc-grid-charts">
               <div className="card">
                 <div className="sa-ch">
                   <h3>Clics e impresiones</h3>
@@ -150,7 +151,7 @@ export default async function SearchConsolePage({
               </div>
               <div className="card">
                 <div className="sa-ch">
-                  <h3>Búsquedas en la página 2 de Google</h3>
+                  <h3>Búsquedas por página de Google</h3>
                   <span className="sa-src">Cada punto es una búsqueda</span>
                 </div>
                 <NearPageOneScatter queries={state.report.queries} />
@@ -159,6 +160,7 @@ export default async function SearchConsolePage({
                     ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20). Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad a corto plazo."
                     : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
                 </p>
+              </div>
               </div>
               <GscQueries queries={state.report.queries} pageByQuery={state.insights.pageByQuery} />
               <GscPages pages={state.insights.pages} auditHref={auditHref} />

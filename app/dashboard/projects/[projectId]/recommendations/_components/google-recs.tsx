@@ -125,7 +125,7 @@ export function GoogleRecCard({
         <span className="grec-tag grec-g">Datos de Google</span>
         <span className="grec-tag">Google + IA</span>
       </div>
-      <h4>Vigila en la IA «{rec.query}»</h4>
+      <h4 title={rec.query}>Vigila en la IA «{rec.query}»</h4>
       <p className="grec-ev">
         La gente ya te encuentra en Google con esa pregunta (puesto {fmtPosition(rec.position)}), pero todavía no sabes si
         los motores de IA te nombran cuando se la hacen.
