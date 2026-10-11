@@ -2,6 +2,7 @@ import "server-only";
 
 import { getPlanForUser } from "@/lib/billing";
 import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createClient } from "@/lib/supabase/server";
 import { ScanMissionRocket } from "@/components/scan-mission-rocket";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
@@ -62,7 +63,11 @@ export async function FirstScanTakeover({
       .eq("is_active", true)
   ]);
 
-  const engines = plan ? resolveScanProvidersForPlan(plan).length : null;
+  const engineProviders = plan ? resolveScanProvidersForPlan(plan) : null;
+  const engines = engineProviders ? engineProviders.length : null;
+  // Named in the ignition copy, so a Pro/Agencia mission says Perplexity and a
+  // Starter one doesn't (log §285).
+  const engineNames = engineProviders ? engineProviders.map((p) => getEngineMeta(p).label) : null;
 
   /**
    * `total_prompts` counts LANZAMIENTOS, not prompts, and the difference is
@@ -92,6 +97,7 @@ export async function FirstScanTakeover({
       prompts={prompts}
       samples={samples}
       engines={engines}
+      engineNames={engineNames}
       expectedResponses={expectedResponses}
     />
   );

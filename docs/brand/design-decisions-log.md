@@ -24346,3 +24346,53 @@ selector de cuentas de Google (`prompt=select_account consent`) y ya no manda
 propiedad de Search Console del fundador está en otra cuenta de Google, no en
 la del login. Si la cuenta elegida no tiene una propiedad que cubra el dominio,
 la pantalla ya lo dice con el estado de elegir propiedad.
+
+---
+
+## 285. PERPLEXITY-ENGINE-1 Fase 2b: lo que se quedó en tres motores (2026-10-11)
+
+**Qué pasó.** Una auditoría externa del contenido publicado tras §283 encontró
+cuatro sitios que seguían hablando de tres motores o que podían confundir al
+lector. Se corrigen aquí:
+
+- `/docs/empezar/primer-escaneo`: la prueba de Pro incluye los cuatro motores,
+  no «los tres».
+- Maqueta de Prompts en «El producto» de la portada: «14 preguntas · 4 motores
+  · 56 respuestas». Es una escena ilustrativa; se ajusta para que no
+  contradiga al hero.
+- `como-saber-si-tu-marca-aparece-en-chatgpt`: título, pregunta de la FAQ y
+  CTA nombran a Perplexity. Se añade `seoTitle` porque el título visible ya no
+  cabe en 70 caracteres con « — GenScore» (§265).
+- `como-aparecer-en-perplexity`: el ejemplo de frase citable decía «el plan
+  Starter cuesta 49 €/mes», que se leía como nuestro Starter (29 €). Pasa a
+  una gestoría inventada, igual que el `AnswerSample` de la figura 1. Gana
+  `dateUpdated`.
+
+- Asistente «Añade un dominio» (lo vio el fundador en su cuenta Agencia):
+  la fila «Motores» y el recuento del resumen eran una lista fija de tres. La
+  página pasa ahora los motores reales del plan con
+  `resolveScanProvidersForPlan`, la misma función que usa el escaneo, así que
+  Pro y Agencia ven cuatro y Starter tres. Los interruptores de `/debug` no
+  entran porque el proyecto todavía no existe.
+
+- Misión del primer escaneo, paso «Ignición»: decía siempre «Gemini, ChatGPT
+  y Claude, preguntados a la vez» y «Los tres a la vez». Ahora nombra los
+  motores que de verdad pregunta el run (los mismos que cuenta la barra
+  superior, de `resolveScanProvidersForPlan`) y dice «Los cuatro» en Pro y
+  Agencia. Si no se conocen, no se adivina una lista. Sólo cambia texto: el
+  cohete y su animación no se tocan (`.claude/rules/mission-rocket.md`).
+- Resultado del comprobador gratuito: la lista de lo que mide el escaneo
+  completo (prueba de Pro) suma Perplexity.
+
+**Lo que se deja como está, a propósito.**
+
+- `/blog/que-es-el-geo-score` dice «A diario» en los planes de pago. No es
+  exacto (Starter es semanal; Pro de pago, cada 2 días, §273), pero el
+  fundador congeló ese texto. Pendiente de su decisión.
+- `/terminos` suma Perplexity a los proveedores de ejemplo, pero mantiene
+  «beta privada» por decisión del fundador.
+- Los estudios siguen en tres motores porque se midieron así (§283).
+- El tour de bienvenida dice «30 lanzamientos en tres motores». Es una escena
+  ilustrativa con cifras de ejemplo (`.claude/rules/onboarding.md`); se deja.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
