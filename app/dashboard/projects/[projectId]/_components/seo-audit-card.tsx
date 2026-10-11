@@ -1,22 +1,18 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { ISSUE_CHECK_META, issueScopeLabel } from "@/lib/web-audit/issue-labels";
+import { ISSUE_CHECK_META, ISSUE_SEVERITY_LABELS as SEVERITY_LABEL, issueScopeLabel } from "@/lib/web-audit/issue-labels";
 import type { IssueSeverity } from "@/lib/web-audit/issues";
 import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
+import { AUDIT_BLOCK_PARAM, auditBlockOf } from "@/lib/web-audit/audit-blocks";
 
 /**
  * Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase 1b, log §271,
  * design in `docs/design-reference/search-seo-1/tarjeta-auditoria-seo.html`).
  * It sits under the AI-engine bars, or on desktop beside the GEO Score
  * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA
- * button from the approved mockup: each listed issue is the link instead.
+ * button from the approved mockup: each listed issue is the link instead,
+ * and it opens the audit block the issue belongs to, GEO or SEO (log §275).
  */
-
-const SEVERITY_LABEL: Record<IssueSeverity, [string, string]> = {
-  critical: ["Crítico", "Críticos"],
-  warning: ["Aviso", "Avisos"],
-  improvement: ["Mejora", "Mejoras"]
-};
 
 const SEVERITIES: IssueSeverity[] = ["critical", "warning", "improvement"];
 
@@ -70,7 +66,11 @@ export function SeoAuditCard({
               // Rounded first: a 0.4-point fix must not read as "+0 pts".
               const points = issue.pointDelta != null ? Math.round(issue.pointDelta) : 0;
               return (
-                <Link key={issue.check} href={href} className="ov2-seo-fx">
+                <Link
+                  key={issue.check}
+                  href={`${href}?${AUDIT_BLOCK_PARAM}=${auditBlockOf(issue.check)}`}
+                  className="ov2-seo-fx"
+                >
                   <span className={`ov2-seo-dot ov2-seo-dot-${issue.severity}`} aria-hidden="true" />
                   <span className="ov2-seo-fx-txt">
                     <b>{ISSUE_CHECK_META[issue.check].label}</b>

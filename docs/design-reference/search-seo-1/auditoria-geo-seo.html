@@ -1,0 +1,273 @@
+<title>Auditoría GEO y SEO</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: notes column on top, then the same screen rendered twice (phone frame 390px, desktop frame 1280px) driven by container queries */
+:root{
+  --bg:#eef1f6; --canvas:#f4f6f9; --card:#ffffff; --ink:#0f172a; --ink2:#334155; --ink3:#64748b; --line:#e2e8f0; --sunk:#f1f5f9;
+  --blue:#2563eb; --blue-soft:#e8effe; --blue-ink:#1d4ed8;
+  --pos:#15803d; --pos-soft:#eaf7ef; --pos-line:#bfe5cd;
+  --crit:#c8323c; --crit-soft:#fdecee; --warn:#b7791f; --warn-soft:#fdf4e3; --imp:#64748b; --imp-soft:#f1f5f9;
+  --ia:#7c3aed; --ia-soft:#f1ebfe;
+  --font:"Figtree",system-ui,sans-serif; --mono:"JetBrains Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0b1020}}
+:root[data-theme="dark"]{--bg:#0b1020}
+body{background:var(--bg);font-family:var(--font);color:var(--ink);line-height:1.5}
+.page{max-width:1400px;margin:0 auto;padding-inline:16px;padding-block:24px 56px;display:flex;flex-direction:column;gap:22px}
+.notes{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;color:var(--ink2);max-width:900px}
+.notes h1{font-size:24px;margin:0 0 6px;color:var(--ink);text-wrap:balance}
+.notes h2{font-size:15px;margin:14px 0 4px;color:var(--ink)}
+.notes p{margin:0 0 6px;max-width:72ch}.notes ul{margin:4px 0;padding-left:20px}.notes li{margin:3px 0;max-width:72ch}
+.frames{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap}
+.frame{display:flex;flex-direction:column;gap:8px;min-width:0}
+.frame-lbl{font-size:12px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .frame-lbl,:root:not([data-theme="light"]) .notes-dark{color:#cbd5e1}}
+.phone{width:390px;max-width:100%;border-radius:32px;border:10px solid #111827;overflow:hidden;background:var(--canvas)}
+.desk{width:1280px;max-width:100%;border-radius:14px;border:1px solid var(--line);overflow:hidden;background:var(--canvas)}
+.desk-wrap{overflow-x:auto;max-width:100%}
+
+/* ---------- the screen ---------- */
+.app{container-type:inline-size;background:var(--canvas);font-size:14px}
+.hdr{background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;justify-content:space-between;gap:10px;align-items:flex-end}
+.kicker{font-size:12px;color:var(--ink3);margin:0 0 2px}
+.proj{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.proj b{font-size:16px}
+.chip{font-family:var(--mono);font-size:11px;background:var(--sunk);border-radius:999px;padding:3px 9px;color:var(--ink2)}
+.date{font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.body{padding:14px;display:flex;flex-direction:column;gap:12px;max-width:1200px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+
+/* block selector */
+.blocks{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.blk{appearance:none;font:inherit;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:16px;padding:12px;cursor:pointer;display:flex;flex-direction:column;gap:4px;color:var(--ink)}
+.blk[aria-pressed="true"]{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.blk:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.blk-eyb{font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+.blk-eyb i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.blk-geo .blk-eyb{color:var(--ia)} .blk-geo .blk-eyb i{background:var(--ia)}
+.blk-seo .blk-eyb{color:var(--blue-ink)} .blk-seo .blk-eyb i{background:var(--blue)}
+.blk-q{font-size:12.5px;color:var(--ink3);line-height:1.35}
+.blk-n{display:flex;align-items:baseline;gap:4px;margin-top:2px}
+.blk-n b{font-size:30px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.blk-n span{font-size:12px;color:var(--ink3)}
+.blk-meta{font-size:11.5px;color:var(--ink3)}
+.blk-meta .c{color:var(--crit);font-weight:700}
+.total{font-size:12px;color:var(--ink3);padding:0 2px}
+.total b{color:var(--ink2)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;width:max-content;max-width:100%}
+.tab{appearance:none;font:inherit;font-weight:600;font-size:14px;border:0;background:transparent;color:var(--ink2);padding:7px 14px;border-radius:9px;cursor:pointer}
+.tab[aria-selected="true"]{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(15,23,42,.08)}
+.tab:focus-visible{outline:2px solid var(--blue)}
+
+/* projected banner (as production) */
+.proj-b{background:var(--pos-soft);border:1px solid var(--pos-line);border-radius:16px;padding:16px;display:flex;gap:14px}
+.proj-ico{width:44px;height:44px;border-radius:12px;background:var(--card);display:grid;place-items:center;color:var(--pos);font-size:20px;flex-shrink:0;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+.proj-k{font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--pos)}
+.proj-n{display:flex;align-items:center;gap:10px;margin:2px 0}
+.proj-n .a{font-size:34px;font-weight:800;color:#475569;font-variant-numeric:tabular-nums}
+.proj-n .b{font-size:34px;font-weight:800;color:var(--pos);font-variant-numeric:tabular-nums}
+.proj-n .ar{width:28px;height:28px;border-radius:50%;background:var(--card);display:grid;place-items:center;color:var(--pos)}
+.proj-t{font-size:12.5px;color:var(--ink2);margin:2px 0 0}
+
+/* coverage (GEO only) */
+.cov-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.cov-h h3{margin:0;font-size:15px}
+.cov-h span{font-size:11.5px;color:var(--ink3)}
+.cov-d{font-size:12.5px;color:var(--ink3);margin:4px 0 10px}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tile{background:var(--sunk);border-radius:12px;padding:10px 12px}
+.tile-l{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.tile-v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;margin:2px 0 6px}
+.bar{height:6px;border-radius:99px;background:#e2e8f0;overflow:hidden}.bar i{display:block;height:100%;border-radius:99px}
+.tile-h{font-size:11px;color:var(--ink3);margin-top:6px}
+
+/* issues */
+.iss-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.iss-h h3{margin:0;font-size:16px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+.cnt-l{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+.cnt-v{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums}
+.list{display:flex;flex-direction:column;gap:8px}
+details.row,.row{border:1px solid var(--line);border-radius:12px;background:var(--card)}
+.row summary{list-style:none;cursor:pointer;display:flex;gap:10px;align-items:center;padding:12px}
+.row summary::-webkit-details-marker{display:none}
+.row summary:focus-visible{outline:2px solid var(--blue);border-radius:12px}
+.stripe{width:4px;align-self:stretch;border-radius:4px;flex-shrink:0}
+.r-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.r-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.r-top b{font-size:14.5px;font-weight:700}
+.sev{font-size:11.5px;font-weight:600;border-radius:999px;padding:2px 9px}
+.sev-c{background:var(--crit-soft);color:var(--crit)} .sev-w{background:var(--warn-soft);color:#92600f} .sev-i{background:var(--imp-soft);color:var(--ink2)} .sev-ok{background:var(--pos-soft);color:var(--pos)}
+.r-sub{font-size:12.5px;color:var(--ink3);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.tags{display:inline-flex;gap:4px}
+.tg{font-size:9.5px;font-weight:800;letter-spacing:.06em;border-radius:5px;padding:1px 5px}
+.tg-g{background:var(--blue-soft);color:var(--blue-ink)} .tg-ia{background:var(--ia-soft);color:var(--ia)}
+.fix{font-size:11px;font-weight:600;color:var(--pos);background:var(--pos-soft);border-radius:999px;padding:1px 8px}
+.pts{font-size:13px;font-weight:700;color:var(--blue-ink);background:var(--blue-soft);border-radius:999px;padding:4px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.pts-0{color:var(--ink3);background:var(--sunk);font-weight:600;font-size:11.5px}
+.chev{color:var(--ink3);transition:transform .15s}
+details[open] .chev{transform:rotate(180deg)}
+.r-body{padding:0 14px 14px 26px;display:grid;gap:12px}
+.r-body h4{margin:0 0 3px;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3)}
+.r-body p{margin:0;font-size:13px;color:var(--ink2);max-width:62ch}
+.urls{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px}
+.urls li{font-family:var(--mono);font-size:11.5px;background:var(--sunk);border-radius:6px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.okrow{display:flex;gap:10px;align-items:center;padding:12px}
+.okic{width:26px;height:26px;border-radius:8px;background:var(--pos-soft);color:var(--pos);display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.pg{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.pg:last-child{border-bottom:0}
+.pg-m{flex:1;min-width:0}
+.pg-m code{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.pg-m div{font-size:11.5px;color:var(--ink3)}
+.pg .bar{width:90px;flex-shrink:0}
+.pg b{width:28px;text-align:right;font-variant-numeric:tabular-nums}
+.side-note{font-size:12.5px;color:var(--ink2);background:#f0f9ff;border:1px solid #cfe8f7;border-radius:12px;padding:12px}
+.layout{display:grid;gap:12px}
+
+@container (min-width:900px){
+  .hdr{padding:14px 28px}
+  .body{padding:22px 28px}
+  .blk{padding:16px 18px}
+  .blk-n b{font-size:38px}
+  .layout{grid-template-columns:minmax(0,1fr) 360px;align-items:start}
+  .r-body{grid-template-columns:minmax(0,1fr) minmax(0,.8fr)}
+}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+</style>
+
+<div class="page">
+  <section class="notes">
+    <h1>Auditoría web en dos bloques: GEO y SEO</h1>
+    <p>Maqueta con datos inventados de una clínica de ejemplo. Toca los bloques, las pestañas y las filas: funcionan igual en el móvil y en el escritorio.</p>
+    <h2>Cómo se reparte</h2>
+    <ul>
+      <li><b>Auditoría GEO</b> (¿te puede citar la IA?): la cobertura de tu contenido (Contenido e Implementado, que vuelve aquí desde Páginas citadas), el acceso de los bots de IA, el llms.txt, los fragmentos bloqueados, los datos estructurados, la respuesta al principio, las listas o tablas, la extensión y la frescura.</li>
+      <li><b>Auditoría SEO</b> (¿te encuentra Google?): el título, la meta description, los encabezados, Open Graph, el canonical, la indexación, el hreflang y el sitemap. Velocidad, móvil y Search Console llegarán aquí en las fases 2 y 3.</li>
+      <li>Cada bloque tiene su nota de 0 a 100, calculada sólo con sus comprobaciones. Juntas siguen dando la Salud técnica de siempre, que es la parte técnica de tu Puntuación GEO, así que ninguna cifra cambia.</li>
+      <li>Vuelven las pestañas <b>Problemas · Correcto · Páginas</b>, la tarjeta verde «si arreglas…» y los puntos por problema. Cada fila suma «Por qué importa» y las etiquetas Google/IA.</li>
+      <li>El acceso de los bots de IA, el llms.txt y el sitemap no dan puntos, como hoy: salen como problema con la etiqueta «sin puntos».</li>
+    </ul>
+    <h2>En el menú, lo que te propongo</h2>
+    <p>Una sola pantalla con dos entradas: «Auditoría GEO» en <i>Posicionamiento en IA</i> y «Auditoría SEO» en <i>Posicionamiento en buscadores</i>. Cada una abre la pantalla con su bloque ya elegido, y arriba siempre puedes cambiar de bloque.</p>
+  </section>
+
+  <div class="frames">
+    <div class="frame"><div class="frame-lbl notes-dark">Móvil · 390 px</div><div class="phone"><div class="app" data-app></div></div></div>
+    <div class="frame"><div class="frame-lbl notes-dark">Escritorio · 1280 px</div><div class="desk-wrap"><div class="desk"><div class="app" data-app></div></div></div></div>
+  </div>
+</div>
+
+<script>
+const DATA = {
+  geo: {
+    name: "Auditoría GEO", q: "¿Te puede citar la IA?", score: 55, projected: 100,
+    issues: [
+      {sev:"c", name:"Datos estructurados", scope:"4 de 5 páginas", pts:22, tags:["g","ia"],
+       why:"Le dicen a la IA y a Google qué es cada página (un servicio, un precio, una pregunta frecuente) sin que tengan que deducirlo del texto.",
+       how:"Añade JSON-LD con un @type reconocido: MedicalClinic, Service, FAQPage. Abre cada página en «Páginas» para copiar el bloque.",
+       urls:["/","/tratamientos","/implantes","/implantes/precio"]},
+      {sev:"c", name:"Acceso de bots de IA", scope:"1 de 7 bots bloqueado", pts:0, tags:["ia"],
+       why:"Si el bot de un motor no puede leer tu web, ese motor no puede citarte, aunque el resto esté perfecto.",
+       how:"Quita la línea que bloquea a ClaudeBot en tu robots.txt.", urls:["ClaudeBot (Anthropic)"]},
+      {sev:"w", name:"Contenido actualizado", scope:"3 de 5 páginas", pts:16, tags:["g","ia"],
+       why:"Los motores prefieren citar páginas con fecha reciente cuando la pregunta depende de precios o plazos.",
+       how:"Revisa el contenido y publica la fecha de modificación (article:modified_time o dateModified).",
+       urls:["/tratamientos","/implantes/precio","/equipo"]},
+      {sev:"w", name:"Respuesta al principio", scope:"2 de 5 páginas", pts:4, tags:["ia"],
+       why:"La IA extrae la frase que responde a la pregunta. Si la respuesta está al final, cita a otro que la tenga arriba.",
+       how:"Abre la página con un párrafo de 2 o 3 frases que responda directamente a la pregunta principal.",
+       urls:["/implantes","/equipo"]},
+      {sev:"w", name:"Listas o tablas", scope:"1 de 5 páginas", pts:4, tags:["ia"],
+       why:"Las listas y tablas se citan casi tal cual: precios, pasos, horarios.",
+       how:"Convierte en lista o tabla la información que el usuario compara.", urls:["/equipo"]},
+      {sev:"w", name:"llms.txt", scope:"No encontrado", pts:0, fix:true, tags:["ia"],
+       why:"Un índice pensado para la IA con tus páginas importantes. Hoy pesa poco, pero cuesta minutos.",
+       how:"Te lo damos generado con tus temas: descárgalo y súbelo a la raíz de tu web.", urls:[]}
+    ],
+    ok: [["Contenido sustancial","5 de 5 páginas",["ia"]],["Fragmentos no bloqueados","5 de 5 páginas",["g","ia"]],["Bots de OpenAI, Google y Perplexity","Permitidos",["ia"]]],
+    pages: [["/","portada",62],["/tratamientos","verificada",48],["/implantes","citada por la IA",71],["/implantes/precio","citada por la IA",40],["/equipo","verificada",53]]
+  },
+  seo: {
+    name: "Auditoría SEO", q: "¿Te encuentra Google?", score: 76, projected: 100,
+    issues: [
+      {sev:"c", name:"Hreflang", scope:"5 de 5 páginas", pts:11, tags:["g"],
+       why:"Si tu web tiene versiones por idioma o país, Google necesita saber cuál enseñar a cada persona.",
+       how:"Añade una etiqueta <link rel=\"alternate\" hreflang> por versión en el <head>. Si sólo tienes una, ignóralo.",
+       urls:["/","/tratamientos","/implantes","/implantes/precio","/equipo"]},
+      {sev:"w", name:"Al menos dos <h2>", scope:"4 de 5 páginas", pts:9, tags:["g","ia"],
+       why:"Los subtítulos ordenan la página para Google y para la IA, que los usa para encontrar la parte que responde.",
+       how:"Divide el contenido en secciones con un <h2> descriptivo cada una.", urls:["/tratamientos","/implantes","/implantes/precio","/equipo"]},
+      {sev:"w", name:"Meta description", scope:"2 de 5 páginas", pts:4, tags:["g"],
+       why:"Es el texto que Google enseña bajo tu enlace. Si falta o es demasiado larga, la escribe Google por ti.",
+       how:"Escribe una de entre 50 y 160 caracteres que resuma la página.", urls:["/","/equipo"]},
+      {sev:"w", name:"sitemap.xml", scope:"No encontrado", pts:0, fix:true, tags:["g","ia"],
+       why:"Le da a Google la lista completa de tus páginas para que no tenga que descubrirlas una a una.",
+       how:"Te damos los pasos según tu plataforma (WordPress, Wix, Shopify…).", urls:[]}
+    ],
+    ok: [["Título con longitud válida","5 de 5 páginas",["g"]],["Un solo <h1>","5 de 5 páginas",["g"]],["Canonical propio","5 de 5 páginas",["g"]],["Página indexable","5 de 5 páginas",["g","ia"]],["Open Graph","5 de 5 páginas",[]]],
+    pages: [["/","portada",80],["/tratamientos","verificada",71],["/implantes","citada por la IA",82],["/implantes/precio","citada por la IA",76],["/equipo","verificada",69]]
+  }
+};
+const SEV = {c:["Crítico","sev-c","var(--crit)"], w:["Aviso","sev-w","var(--warn)"], i:["Mejora","sev-i","var(--imp)"]};
+const color = s => s>=70 ? "var(--pos)" : s>=40 ? "var(--warn)" : "var(--crit)";
+const tags = t => `<span class="tags">${t.map(x=>x==="g"?'<span class="tg tg-g">GOOGLE</span>':'<span class="tg tg-ia">IA</span>').join("")}</span>`;
+const esc = s => s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+
+function blockCard(key, d, active){
+  const crit = d.issues.filter(i=>i.sev==="c").length;
+  return `<button class="blk blk-${key}" data-block="${key}" aria-pressed="${active}">
+    <span class="blk-eyb"><i></i>${d.name}</span>
+    <span class="blk-q">${d.q}</span>
+    <span class="blk-n"><b style="color:${color(d.score)}">${d.score}</b><span>/100</span></span>
+    <span class="blk-meta">${crit ? `<span class="c">${crit} crítico${crit>1?"s":""}</span> · ` : ""}${d.issues.length} problemas</span>
+  </button>`;
+}
+function issueRow(i){
+  const [label, cls, col] = SEV[i.sev];
+  const pts = i.pts ? `<span class="pts">+${i.pts} pt</span>` : `<span class="pts pts-0">sin puntos</span>`;
+  return `<details class="row"><summary>
+    <span class="stripe" style="background:${col}"></span>
+    <span class="r-main"><span class="r-top"><span class="sev ${cls}">${label}</span><b>${esc(i.name)}</b></span>
+      <span class="r-sub">${i.scope}${i.fix?'<span class="fix">✓ Solución disponible</span>':""}${tags(i.tags)}</span></span>
+    ${pts}<span class="chev" aria-hidden="true">⌄</span></summary>
+    <div class="r-body"><div><h4>Por qué importa</h4><p>${esc(i.why)}</p><h4 style="margin-top:10px">Cómo arreglarlo</h4><p>${esc(i.how)}</p></div>
+    ${i.urls.length?`<div><h4>${i.name.startsWith("Acceso")?"Bots bloqueados":"Páginas afectadas"}</h4><ul class="urls">${i.urls.map(u=>`<li>${u.startsWith("/")?"clinicaejemplo.es"+u:u}</li>`).join("")}</ul></div>`:""}</div></details>`;
+}
+function panel(key, d, tab){
+  const scored = d.issues.filter(i=>i.pts).length;
+  const banner = `<div class="proj-b"><div class="proj-ico" aria-hidden="true">✦</div><div>
+    <div class="proj-k">Si arreglas los ${scored} problemas que puntúan</div>
+    <div class="proj-n"><span class="a">${d.score}</span><span class="ar" aria-hidden="true">→</span><span class="b">${d.projected}</span></div>
+    <p class="proj-t">${key==="geo"?"Nota GEO de tu web: lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones.":"Nota SEO de tu web: lo que Google necesita para entenderla e indexarla."}</p></div></div>`;
+  const coverage = key==="geo" ? `<div class="card"><div class="cov-h"><h3>Cobertura de tu contenido</h3><span>Comprobada el 6 oct 2026</span></div>
+    <p class="cov-d">Tema a tema: si tu web publica una página sobre cada uno de tus prompts, y si la IA la cita al responder.</p>
+    <div class="tiles"><div class="tile"><div class="tile-l">Contenido</div><div class="tile-v">9 / 12</div><div class="bar"><i style="width:75%;background:var(--pos)"></i></div><div class="tile-h">Temas con página propia</div></div>
+    <div class="tile"><div class="tile-l">Implementado</div><div class="tile-v">4 / 9</div><div class="bar"><i style="width:44%;background:var(--warn)"></i></div><div class="tile-h">2 temas con página que la IA aún no cita</div></div></div></div>` : "";
+  const counts = ["c","w","i"].map(s=>{const n=d.issues.filter(i=>i.sev===s).length; return n?`<div><div class="cnt-l">${SEV[s][0]}${n>1?"s":""}</div><div class="cnt-v" style="color:${SEV[s][2]}">${n}</div></div>`:""}).join("");
+  let content;
+  if (tab==="problemas") content = `<div class="card"><div class="iss-h"><h3>Problemas</h3></div><div class="counts">${counts}</div><div class="list">${d.issues.map(issueRow).join("")}</div></div>`;
+  else if (tab==="correcto") content = `<div class="card"><div class="iss-h"><h3>Lo que ya está bien</h3></div><div class="list" style="margin-top:12px">${d.ok.map(([n,s,t])=>`<div class="row okrow"><span class="okic">✓</span><span class="r-main"><span class="r-top"><b>${esc(n)}</b></span><span class="r-sub">${s}${t.length?tags(t):""}</span></span></div>`).join("")}</div></div>`;
+  else content = `<div class="card"><div class="iss-h"><h3>Páginas revisadas</h3></div><p class="cov-d">Nota ${key==="geo"?"GEO":"SEO"} de cada página. Toca una para ver qué mejorar en ella.</p>${d.pages.map(([p,c,s])=>`<div class="pg"><div class="pg-m"><code>${p}</code><div>${c}</div></div><div class="bar"><i style="width:${s}%;background:${color(s)}"></i></div><b>${s}</b></div>`).join("")}</div>`;
+  const side = `<div class="side-note"><b>Esto es lo que vemos desde fuera.</b> Revisamos las páginas clave de tu web: la portada, las que hemos verificado y las que cita la IA. No rastreamos la web entera.</div>`;
+  return `${banner}<div class="tabs" role="tablist">${["problemas","correcto","paginas"].map(t=>`<button class="tab" role="tab" data-tab="${t}" aria-selected="${t===tab}">${{problemas:"Problemas",correcto:"Correcto",paginas:"Páginas"}[t]}</button>`).join("")}</div>
+    <div class="layout"><div style="display:flex;flex-direction:column;gap:12px">${coverage}${content}</div><div style="display:flex;flex-direction:column;gap:12px">${side}</div></div>`;
+}
+function render(app){
+  const st = app._st;
+  app.innerHTML = `<div class="hdr"><div><p class="kicker">${DATA[st.block].name}</p><div class="proj"><b>Clínica Ejemplo</b><span class="chip">clinicaejemplo.es</span></div></div><span class="date">Revisada el 10 oct 2026</span></div>
+  <div class="body"><div class="blocks">${blockCard("geo",DATA.geo,st.block==="geo")}${blockCard("seo",DATA.seo,st.block==="seo")}</div>
+  <div class="total">Juntas forman tu <b>Salud técnica: 64/100</b>, la parte técnica de tu Puntuación GEO.</div>
+  ${panel(st.block, DATA[st.block], st.tab)}</div>`;
+}
+document.querySelectorAll("[data-app]").forEach(app=>{
+  app._st = {block:"geo", tab:"problemas"};
+  render(app);
+  app.addEventListener("click", e=>{
+    const b = e.target.closest("[data-block]"); const t = e.target.closest("[data-tab]");
+    if (b){ app._st.block = b.dataset.block; render(app); }
+    else if (t){ app._st.tab = t.dataset.tab; render(app); }
+  });
+});
+</script>

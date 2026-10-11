@@ -20,6 +20,19 @@ paths:
 > nombra con `lib/web-audit/issue-labels.ts`. Un cálculo o un nombre propio
 > en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
 > mismo problema.
+>
+> **Desde la Fase 1b (log §275) la pantalla tiene dos bloques**, «Auditoría
+> GEO» y «Auditoría SEO», con una entrada de menú cada uno y la misma ruta
+> (`?bloque=geo|seo`, GEO por defecto). Qué check va en qué bloque lo decide
+> `AUDIT_BLOCKS` (`lib/web-audit/audit-blocks.ts`), y cada check vive en uno
+> solo. La nota de un bloque es Σ ganado / Σ posible con los pesos de
+> `page-checks.ts`, leídos de `pageCheckStates` (`issues.ts`): **no es una
+> métrica nueva**, y juntas siguen dando la Salud técnica. No le pongas pesos
+> propios a un bloque: separaría su nota del componente técnico del GEO
+> Score. Los checks sin peso siguen sin puntos también dentro del bloque. La
+> cobertura se pinta en el bloque GEO, con su propio cargador
+> (`loadCoverageSectionData`), y `WebAuditDriveNotice` va dentro de su
+> tarjeta.
 
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los
@@ -168,9 +181,9 @@ Consecuencias, y son reglas:
 
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 
-`page.tsx` orquesta datos; los catorce componentes que pintan filas, anillos,
-tarjetas y el gráfico de tendencia viven en
-`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83).
+`page.tsx` orquesta datos; los componentes que pintan bloques, filas,
+pestañas, la cobertura y el gráfico de tendencia viven en
+`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83, §275).
 Componente nuevo de esta pantalla → ahí.
 
 **Cada uno de esos módulos tiene tests de render, y un componente nuevo también

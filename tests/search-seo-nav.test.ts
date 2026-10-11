@@ -23,17 +23,23 @@ describe("console navigation: two analysis blocks", () => {
     expect(sidebar).not.toContain(">Analizar<");
   });
 
-  it("calls the audit screen Auditoría SEO and keeps its route", () => {
-    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría SEO"');
+  it("opens the one audit route from two entries, GEO under IA and SEO under buscadores (log §275)", () => {
+    const geo = sidebar.indexOf('label: "Auditoría GEO"');
+    const seo = sidebar.indexOf('label: "Auditoría SEO"');
+    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría GEO", icon: "sparkles", countKey: null, block: "geo" }');
+    expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" }');
+    expect(sidebar.indexOf("const aiLinks")).toBeLessThan(geo);
+    expect(geo).toBeLessThan(sidebar.indexOf("const searchLinks"));
+    expect(sidebar.indexOf("const searchLinks")).toBeLessThan(seo);
     expect(sidebar).not.toContain('label: "Auditoría web"');
   });
 });
 
-describe("Auditoría SEO screen name", () => {
-  it("uses the new name in the tab title and the page kicker", () => {
+describe("audit screen name", () => {
+  it("names the tab title and the kicker after the open block", () => {
     const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
-    expect(page).toContain('projectScreenMetadata("Auditoría SEO"');
-    expect(page).toContain(">Auditoría SEO</p>");
+    expect(page).toContain("projectScreenMetadata(AUDIT_BLOCKS[block].label");
+    expect(page).toContain("{AUDIT_BLOCKS[activeBlock].label}</p>");
   });
 });
 

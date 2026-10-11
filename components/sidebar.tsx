@@ -11,6 +11,7 @@ import { FaviconImg } from "@/components/ui/favicon-img";
 import { avatarInitials as deriveAvatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { resolveSelectedProject } from "@/lib/active-project-cookie";
 import { writeCachedSessionUser } from "@/lib/use-session-user";
+import { AUDIT_BLOCK_PARAM, parseAuditBlock, type AuditBlockKey } from "@/lib/web-audit/audit-blocks";
 
 type WorkspaceProject = {
   id: string;
@@ -30,21 +31,32 @@ type WorkspaceProject = {
 // SEARCH-SEO-1 Fase 1 (log §271): two "Analizar" blocks, IA first and
 // search engines second, so what we measure in AI answers and what we measure
 // in Google read as two different questions (founder, 2026-10-10).
-const aiLinks = [
-  { segment: "", label: "Visión general", icon: "overview", countKey: null as null | string },
+type ProjectLink = {
+  segment: string;
+  label: string;
+  icon: string;
+  countKey: string | null;
+  /** `?bloque=` of the audit screen: two entries, one screen (log §275). */
+  block?: AuditBlockKey;
+};
+
+const aiLinks: ProjectLink[] = [
+  { segment: "", label: "Visión general", icon: "overview", countKey: null },
   { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
   { segment: "/competitors", label: "Competidores", icon: "competitors", countKey: "competitors" },
-  { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null as null | string },
+  { segment: "/citations", label: "Páginas citadas", icon: "cite", countKey: null },
+  { segment: "/web-audit", label: "Auditoría GEO", icon: "sparkles", countKey: null, block: "geo" },
 ];
 
 // The route stays `/web-audit`: renaming it would break every notification
-// and email link already sent. Only the screen's name changed.
-const searchLinks = [
-  { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null as null | string },
+// and email link already sent. SEARCH-SEO-1 Fase 1b (log §275) split the
+// screen into a GEO block and an SEO block; each menu entry opens its own.
+const searchLinks: ProjectLink[] = [
+  { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" },
 ];
 
-const actLinks = [
-  { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" as null | string },
+const actLinks: ProjectLink[] = [
+  { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" },
 ];
 
 // "Aprender" no depende del dominio activo — a diferencia de los bloques del proyecto,
@@ -129,15 +141,19 @@ export function Sidebar({
     return 0;
   }
 
-  function renderProjectLink(link: { segment: string; label: string; icon: string; countKey: string | null }) {
-    const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
+  function renderProjectLink(link: ProjectLink) {
+    const base = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
+    const href = base && link.block ? `${base}?${AUDIT_BLOCK_PARAM}=${link.block}` : base;
     // The overview is the project root: matching its prefix would light it up
     // on every other screen of the project.
-    const active = href
+    const onRoute = base
       ? link.segment
-        ? pathname === href || pathname.startsWith(`${href}/`)
-        : pathname === href
+        ? pathname === base || pathname.startsWith(`${base}/`)
+        : pathname === base
       : false;
+    // The two audit entries share a route; the block in the URL decides which
+    // one is lit, with the same default the screen uses (GEO).
+    const active = onRoute && (!link.block || parseAuditBlock(searchParams.get(AUDIT_BLOCK_PARAM)) === link.block);
     const count = project ? getCount(project.id, link.countKey) : 0;
 
     if (!href) {

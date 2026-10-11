@@ -1,3 +1,4 @@
+import type { IssueCheckKey } from "@/lib/web-audit/issues";
 /**
  * Deterministic, no-LLM technical GEO checks for a single fetched page
  * (WEB-AUDIT-2, expanded under WEB-AUDIT-R3 with indexing/citability/OG
@@ -439,13 +440,20 @@ export function buildPageCheckResult(html: string, context: PageCheckContext, no
  * guidance, never an assertion about something that was never measured. Same
  * rationale as the existing `?? 0` guards for h1Count/titleLength below.
  */
-export function buildPageCheckGuidance(check: PageCheckResult): string[] {
-  const lines: string[] = [];
+/**
+ * One guidance line and the check it is about, so a screen can show only the
+ * lines of one block (Auditoría GEO/SEO, log §275).
+ */
+export type PageGuidanceLine = { check: IssueCheckKey; line: string };
+
+export function buildKeyedPageCheckGuidance(check: PageCheckResult): PageGuidanceLine[] {
+  const lines: PageGuidanceLine[] = [];
+  const push = (key: IssueCheckKey, line: string) => lines.push({ check: key, line });
   const indexability: IndexabilityCheck | undefined = check.indexability;
   const citability: CitabilityCheck | undefined = check.citability;
 
   if (!check.structuredData.pass) {
-    lines.push(
+    push("structured_data", 
       "Añade datos estructurados (JSON-LD) con un @type reconocido por los motores de IA: Article, FAQPage, HowTo, Product, Organization..."
     );
   }
@@ -454,59 +462,64 @@ export function buildPageCheckGuidance(check: PageCheckResult): string[] {
     // existed (pre-existing cached rows within the 24h cache window) —
     // never render "undefined detectado".
     const h1Count = check.answerFormat.h1Count ?? 0;
-    lines.push(`Usa un único <h1> por página (ahora: ${h1Count} detectado${h1Count === 1 ? "" : "s"}).`);
+    push("single_h1", `Usa un único <h1> por página (ahora: ${h1Count} detectado${h1Count === 1 ? "" : "s"}).`);
   }
   if (!check.answerFormat.hasTwoH2) {
-    lines.push(`Añade al menos dos <h2> que estructuren la respuesta (ahora: ${check.answerFormat.h2Count ?? 0}).`);
+    push("two_h2", `Añade al menos dos <h2> que estructuren la respuesta (ahora: ${check.answerFormat.h2Count ?? 0}).`);
   }
   if (!check.answerFormat.hasAnswerFirstIntro) {
-    lines.push(
+    push("answer_first_intro", 
       "Añade un párrafo de al menos 200 caracteres justo después del título que responda directamente a la pregunta principal."
     );
   }
   if (!check.metadata.titleOk) {
-    lines.push(`Ajusta el <title> a entre 15 y 70 caracteres (ahora: ${check.metadata.titleLength ?? 0}).`);
+    push("title_length", `Ajusta el <title> a entre 15 y 70 caracteres (ahora: ${check.metadata.titleLength ?? 0}).`);
   }
   if (!check.metadata.descriptionOk) {
-    lines.push(`Ajusta la meta description a entre 50 y 160 caracteres (ahora: ${check.metadata.descriptionLength ?? 0}).`);
+    push("description_length", `Ajusta la meta description a entre 50 y 160 caracteres (ahora: ${check.metadata.descriptionLength ?? 0}).`);
   }
   // `=== false`, not `!`: a legacy snapshot never measured OG at all
   // (ogOk undefined) — only a real measured failure earns guidance.
   if (check.metadata.ogOk === false) {
-    lines.push("Añade etiquetas Open Graph (og:title y og:description) para que la página se comparta y previsualice correctamente.");
+    push("open_graph", "Añade etiquetas Open Graph (og:title y og:description) para que la página se comparta y previsualice correctamente.");
   }
   if (check.freshness.status === "unknown") {
-    lines.push(
+    push("freshness", 
       "Añade una fecha de actualización localizable: dateModified/datePublished en el JSON-LD, o una etiqueta <meta> de última modificación."
     );
   } else if (check.freshness.status === "stale" || check.freshness.status === "aging") {
-    lines.push("Actualiza el contenido de esta página y refresca su fecha de modificación.");
+    push("freshness", "Actualiza el contenido de esta página y refresca su fecha de modificación.");
   }
   if (indexability?.noindex) {
-    lines.push(
+    push("noindex", 
       "Esta página tiene una etiqueta <meta name=\"robots\"> con noindex: ni Google ni los motores de IA pueden indexarla. Quítala si quieres que sea citable."
     );
   }
   if (indexability && !indexability.canonicalOk) {
-    lines.push(
+    push("canonical", 
       indexability.canonicalPresent
         ? "El <link rel=\"canonical\"> de esta página apunta a otro dominio — corrígelo para que apunte a esta misma URL en tu dominio."
         : "Añade una etiqueta <link rel=\"canonical\"> que apunte a esta misma página en tu dominio."
     );
   }
   if (indexability && !indexability.hreflangPresent) {
-    lines.push(
+    push("hreflang", 
       "Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."
     );
   }
   if (citability && !citability.hasListOrTable) {
-    lines.push("Añade listas o tablas que estructuren la información — los motores de IA citan con más frecuencia contenido en ese formato.");
+    push("list_or_table", "Añade listas o tablas que estructuren la información — los motores de IA citan con más frecuencia contenido en ese formato.");
   }
   if (citability && !citability.contentOk) {
-    lines.push(
+    push("content_length", 
       `Amplía el contenido visible de esta página (ahora: ${citability.wordCount} palabras) — los motores de IA prefieren respuestas sustanciales.`
     );
   }
 
   return lines;
+}
+
+/** The same lines as plain text, for callers that show a page's guidance whole. */
+export function buildPageCheckGuidance(check: PageCheckResult): string[] {
+  return buildKeyedPageCheckGuidance(check).map((g) => g.line);
 }

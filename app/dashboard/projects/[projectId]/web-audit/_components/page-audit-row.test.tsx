@@ -54,14 +54,26 @@ function page(overrides: Partial<PageAuditEntry> = {}): PageAuditEntry {
 
 describe("PageAuditRow", () => {
   it("enseña la ruta, no la URL entera, y su etiqueta de contexto", () => {
-    const html = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} />);
+    const html = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="geo" />);
     expect(html).toContain("/precios");
     expect(html).toContain("portada");
   });
 
-  it("publica la nota real de la página", () => {
-    const html = renderToStaticMarkup(<PageAuditRow page={page({ check: check({ pageScore: 42 }) })} fixContext={fixContext} />);
-    expect(html).toContain("42");
+  it("publica la nota de la página dentro de su bloque, con los pesos de siempre", () => {
+    // GEO: 45 de 55 (sin listas). SEO: 35 de 45 (sin description ni hreflang).
+    const geo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="geo" />);
+    const seo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="seo" />);
+    expect(geo).toContain("Nota GEO de /precios: 82 de 100");
+    expect(seo).toContain("Nota SEO de /precios: 78 de 100");
+  });
+
+  it("enseña sólo las comprobaciones y la guía de su bloque", () => {
+    const geo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="geo" />);
+    const seo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="seo" />);
+    expect(geo).toContain("listas o tablas");
+    expect(geo).not.toContain("meta description");
+    expect(seo).toContain("meta description");
+    expect(seo).not.toContain("listas o tablas");
   });
 
   /**
@@ -73,7 +85,7 @@ describe("PageAuditRow", () => {
     const legacy = page({
       check: check({ indexability: undefined, citability: undefined })
     });
-    expect(() => renderToStaticMarkup(<PageAuditRow page={legacy} fixContext={fixContext} />)).not.toThrow();
+    expect(() => renderToStaticMarkup(<PageAuditRow page={legacy} fixContext={fixContext} block="geo" />)).not.toThrow();
   });
 
   /** Mismo motivo, un nivel más abajo: `ogOk` también es opcional por lo mismo. */
@@ -81,7 +93,7 @@ describe("PageAuditRow", () => {
     const legacy = page({
       check: check({ metadata: { points: 15, titleOk: true, descriptionOk: true, titleLength: 40, descriptionLength: 120 } })
     });
-    expect(() => renderToStaticMarkup(<PageAuditRow page={legacy} fixContext={fixContext} />)).not.toThrow();
+    expect(() => renderToStaticMarkup(<PageAuditRow page={legacy} fixContext={fixContext} block="geo" />)).not.toThrow();
   });
 
   /**
@@ -92,10 +104,10 @@ describe("PageAuditRow", () => {
    */
   it("cada motivo de descarte tiene su propio texto", () => {
     const offsite = renderToStaticMarkup(
-      <PageAuditRow page={page({ status: "skipped_offsite", check: null })} fixContext={fixContext} />
+      <PageAuditRow page={page({ status: "skipped_offsite", check: null })} fixContext={fixContext} block="geo" />
     );
     const unsafeIp = renderToStaticMarkup(
-      <PageAuditRow page={page({ status: "skipped_unsafe_ip", check: null })} fixContext={fixContext} />
+      <PageAuditRow page={page({ status: "skipped_unsafe_ip", check: null })} fixContext={fixContext} block="geo" />
     );
     expect(offsite).toContain("fuera del dominio verificado");
     expect(unsafeIp).toContain("IP");
@@ -104,7 +116,7 @@ describe("PageAuditRow", () => {
 
   it("una página sin comprobar por presupuesto no se presenta como fallida", () => {
     const html = renderToStaticMarkup(
-      <PageAuditRow page={page({ status: "skipped_budget", check: null })} fixContext={fixContext} />
+      <PageAuditRow page={page({ status: "skipped_budget", check: null })} fixContext={fixContext} block="geo" />
     );
     expect(html).toContain("Sin comprobar");
   });
