@@ -25250,8 +25250,15 @@ base de datos, así que no necesita correo a `OPS_ALERT_EMAIL`.
 
 **Qué cuenta y qué no.** Sólo el sitio público de `www.genscore.es`: fuera la
 consola, `/admin`, `/mfa`, `/auth` y `/informe`. Las cuentas del operador
-(`ADMIN_USER_IDS`), las de prueba internas y las comped no cuentan en
-ninguna cifra. La analítica es sin cookies, así que una «visita» es una
+(`ADMIN_USER_IDS`), las de prueba internas, las comped y las del equipo
+(`isPanelExcludedEmail`: correos que empiezan por `denislagarteiru`,
+`denis.martinb`, `chuchibolu` o `arangulina`, y cualquier dominio
+`instinct.*`, a petición del fundador el mismo día) no cuentan en ninguna
+cifra: ni altas, ni pruebas, ni checkouts, ni suscripciones, ni cobros. En
+Stripe se reconocen por el `user_id` del checkout o de la suscripción y por
+el email de la factura, porque un checkout de un cliente ya existente no
+lleva email. Las visitas de PostHog no se pueden filtrar así: son anónimas.
+La analítica es sin cookies, así que una «visita» es una
 sesión de PostHog, casi una carga de página, y la pantalla nunca dice
 «usuarios».
 

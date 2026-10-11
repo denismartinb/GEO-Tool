@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { classifySource, groupChannels } from "@/lib/admin/kpi/channels";
+import { isPanelExcludedEmail } from "@/lib/admin/kpi/excluded-accounts";
 import {
   buildFunnel,
   daysLeft,
@@ -163,5 +164,20 @@ describe("model", () => {
     expect(linePoints([0, 10], 100, 40)).toBe("0,36 100,4");
     // All zeros stays on the baseline instead of dividing by zero.
     expect(linePoints([0, 0, 0], 100, 40)).toBe("0,36 50,36 100,36");
+  });
+});
+
+describe("own accounts", () => {
+  it("leaves out the team's sign-ups by prefix and the instinct domains", () => {
+    expect(isPanelExcludedEmail("denislagarteiru@gmail.com")).toBe(true);
+    expect(isPanelExcludedEmail("Denis.MartinB+prueba3@gmail.com")).toBe(true);
+    expect(isPanelExcludedEmail("chuchibolu2@hotmail.com")).toBe(true);
+    expect(isPanelExcludedEmail("arangulina@gmail.com")).toBe(true);
+    expect(isPanelExcludedEmail("ana@instinct.ai")).toBe(true);
+    expect(isPanelExcludedEmail("ana@instinct.com")).toBe(true);
+    expect(isPanelExcludedEmail("ana@clinicadental.es")).toBe(false);
+    expect(isPanelExcludedEmail("maria.denislagarteiru@gmail.com")).toBe(false);
+    expect(isPanelExcludedEmail("ana@notinstinct.com")).toBe(false);
+    expect(isPanelExcludedEmail(null)).toBe(false);
   });
 });

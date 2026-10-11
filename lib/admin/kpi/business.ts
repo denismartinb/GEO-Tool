@@ -7,6 +7,7 @@ import { isOperatorUserId } from "@/lib/admin/operator";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
 import { getFounderOffer, getStripeClient } from "@/lib/stripe";
+import { isPanelExcludedEmail } from "@/lib/admin/kpi/excluded-accounts";
 import { daysLeft, monthlyCents, trialSignal, type TrialSignal } from "@/lib/admin/kpi/model";
 import { lastMadridDates, madridDateKey, madridStartOfMonth, type PanelWindow } from "@/lib/admin/kpi/period";
 
@@ -19,7 +20,8 @@ type ServiceClient = ReturnType<typeof createServiceClient>;
  *
  * Our own accounts are left out of every figure: operators
  * (`ADMIN_USER_IDS`), internal test accounts (`INTERNAL_TEST_ACCOUNT_EMAILS`)
- * and comped accounts (`COMPED_ACCOUNT_EMAILS`). A count that included them
+ * comped accounts (`COMPED_ACCOUNT_EMAILS`) and the team's own sign-ups
+ * (`isPanelExcludedEmail`). A count that included them
  * would celebrate our own sign-ups.
  *
  * Each source fails on its own: Stripe down still shows the accounts, and the
@@ -32,7 +34,12 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const STRIPE_LIST_CAP = 500;
 
 export function isCountedAccount(row: { id: string; email: string }): boolean {
-  return !isOperatorUserId(row.id) && !isInternalTestAccountEmail(row.email) && !isCompedAccountEmail(row.email);
+  return (
+    !isOperatorUserId(row.id) &&
+    !isInternalTestAccountEmail(row.email) &&
+    !isCompedAccountEmail(row.email) &&
+    !isPanelExcludedEmail(row.email)
+  );
 }
 
 function inWindow(iso: string, from: Date, to: Date): boolean {
@@ -92,10 +99,30 @@ export async function loadBusinessSections(input: {
   now: Date;
 }): Promise<BusinessData> {
   const { service, window, now } = input;
-  const stripeData = loadStripe(window, now);
-  const accounts = await loadAccounts(service, window, now, stripeData);
+  const usersRead = readUsers(service);
+  // A checkout opened by an account that already has a Stripe customer carries
+  // no email, so our own checkouts are recognised by user id as well.
+  const excludedUserIds = usersRead.then((read) =>
+    read ? new Set(read.users.filter((u) => !isCountedAccount(u)).map((u) => u.id)) : new Set<string>()
+  );
+  const stripeData = loadStripe(window, now, excludedUserIds);
+  const accounts = await loadAccounts(service, window, now, usersRead, stripeData);
   const stripe = await stripeData;
   return { accounts, revenue: stripe.section };
+}
+
+type UsersRead = { users: AdminUserRow[]; authUsersTruncated: boolean } | null;
+
+async function readUsers(service: ServiceClient): Promise<UsersRead> {
+  try {
+    const page = await listOperatorUsers(service);
+    return { users: page.users, authUsersTruncated: page.authUsersTruncated };
+  } catch (error) {
+    console.error("[geo:admin] panel could not read accounts", {
+      message: error instanceof Error ? error.message : "unknown"
+    });
+    return null;
+  }
 }
 
 type StripeRead = {
@@ -104,7 +131,11 @@ type StripeRead = {
   openCheckoutUserIds: Set<string>;
 };
 
-async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
+async function loadStripe(
+  window: PanelWindow,
+  now: Date,
+  excludedUserIdsRead: Promise<Set<string>>
+): Promise<StripeRead> {
   const stripe = getStripeClient();
   if (!stripe) return { section: { kind: "not_configured" }, openCheckoutUserIds: new Set() };
   try {
@@ -122,6 +153,7 @@ async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
         .autoPagingToArray({ limit: STRIPE_LIST_CAP }),
       getFounderOffer(now.getTime())
     ]);
+    const excludedUserIds = await excludedUserIdsRead;
 
     const started = new Set<string>();
     const completed = new Set<string>();
@@ -130,7 +162,8 @@ async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
       const who = session.client_reference_id ?? session.customer_email ?? session.id;
       const email = session.customer_details?.email ?? session.customer_email ?? "";
       if (session.client_reference_id && isOperatorUserId(session.client_reference_id)) continue;
-      if (isInternalTestAccountEmail(email) || isCompedAccountEmail(email)) continue;
+      if (session.client_reference_id && excludedUserIds.has(session.client_reference_id)) continue;
+      if (isOwnEmail(email)) continue;
       const created = new Date(session.created * 1000);
       if (created >= window.from && created < window.to) {
         started.add(who);
@@ -143,12 +176,15 @@ async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
       if (session.client_reference_id && session.status === "complete") openCheckoutUserIds.delete(session.client_reference_id);
     }
 
+    const countedSubscriptions = subscriptions.filter((subscription) => !isOwnSubscription(subscription, excludedUserIds));
     let mrrCents = 0;
-    for (const subscription of subscriptions) {
+    for (const subscription of countedSubscriptions) {
       mrrCents += subscriptionMonthlyCents(subscription);
     }
 
-    const collectedThisMonthCents = invoices.reduce((sum, invoice) => sum + (invoice.amount_paid ?? 0), 0);
+    const collectedThisMonthCents = invoices
+      .filter((invoice) => !isOwnEmail(invoice.customer_email))
+      .reduce((sum, invoice) => sum + (invoice.amount_paid ?? 0), 0);
     const truncated = [sessions, subscriptions, invoices].some((list) => list.length >= STRIPE_LIST_CAP);
 
     return {
@@ -156,7 +192,7 @@ async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
         kind: "ready",
         checkoutsStarted: started.size,
         checkoutsCompleted: completed.size,
-        activeSubscriptions: subscriptions.length,
+        activeSubscriptions: countedSubscriptions.length,
         mrrCents: Math.round(mrrCents),
         collectedThisMonthCents,
         founderRemaining: founder.remaining,
@@ -173,6 +209,18 @@ async function loadStripe(window: PanelWindow, now: Date): Promise<StripeRead> {
   }
 }
 
+function isOwnEmail(email: string | null | undefined): boolean {
+  return Boolean(email) && (isInternalTestAccountEmail(email) || isCompedAccountEmail(email) || isPanelExcludedEmail(email));
+}
+
+/** Ours if its metadata names one of our user ids, or its last invoice went to one of our emails. */
+function isOwnSubscription(subscription: Stripe.Subscription, excludedUserIds: Set<string>): boolean {
+  const userId = subscription.metadata?.user_id;
+  if (userId && (excludedUserIds.has(userId) || isOperatorUserId(userId))) return true;
+  const invoice = subscription.latest_invoice;
+  return Boolean(invoice && typeof invoice !== "string" && isOwnEmail(invoice.customer_email));
+}
+
 function subscriptionMonthlyCents(subscription: Stripe.Subscription): number {
   const invoice = subscription.latest_invoice;
   if (!invoice || typeof invoice === "string") return 0;
@@ -184,20 +232,13 @@ async function loadAccounts(
   service: ServiceClient,
   window: PanelWindow,
   now: Date,
+  usersRead: Promise<UsersRead>,
   stripeData: Promise<StripeRead>
 ): Promise<AccountsSection> {
-  let users: AdminUserRow[];
-  let authUsersTruncated = false;
-  try {
-    const page = await listOperatorUsers(service);
-    users = page.users.filter(isCountedAccount);
-    authUsersTruncated = page.authUsersTruncated;
-  } catch (error) {
-    console.error("[geo:admin] panel could not read accounts", {
-      message: error instanceof Error ? error.message : "unknown"
-    });
-    return { kind: "error" };
-  }
+  const read = await usersRead;
+  if (!read) return { kind: "error" };
+  const users = read.users.filter(isCountedAccount);
+  const authUsersTruncated = read.authUsersTruncated;
 
   const cohort = users.filter((u) => inWindow(u.createdAt, window.from, window.to));
   const previousSignups = users.filter((u) => inWindow(u.createdAt, window.prevFrom, window.prevTo)).length;

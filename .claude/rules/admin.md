@@ -235,7 +235,8 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   propio operador a su proyecto de genscore.es. «Actualizar» sólo vacía la
   caché de la página (`updateTag("admin-panel")`); no es una escritura. Cada
   fuente falla por su cuenta y dice que no se pudo leer, nunca un cero. Las
-  cuentas propias (operadores, prueba interna y comped) no cuentan en ninguna
-  cifra (`isCountedAccount`). Una métrica que no se puede atar a una cuenta,
+  cuentas propias (operadores, prueba interna, comped y las del equipo de
+  `isPanelExcludedEmail`) no cuentan en ninguna cifra (`isCountedAccount`),
+  tampoco en Stripe, donde se reconocen también por `user_id`. Una métrica que no se puede atar a una cuenta,
   como las altas por canal o «abrió precios», no se pinta: la analítica es sin
   cookies (`docs/brand/design-decisions-log.md` §304).
