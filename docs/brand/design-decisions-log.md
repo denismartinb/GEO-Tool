@@ -23707,9 +23707,9 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
 
 **Pendiente.**
 
-- `PERPLEXITY_API_KEY` en Vercel: solo puede crearla el fundador.
-- Medir con datos reales cuánto difiere Perplexity de los otros tres, en
-  `/admin/estudio` con la casilla marcada.
+- ~~`PERPLEXITY_API_KEY` en Vercel~~ (puesta el 2026-10-11).
+- ~~Medir con datos reales~~: primer estudio el 2026-10-11 (facturación, una
+  pasada), 12 de 12 respuestas válidas. Ver la adenda de abajo.
 - **Fase 2 (aprobada en principio para Pro y Agencia):** antes, maqueta en
   artefacto. Después:
   - motor del escaneo limitado por plan (hoy `caps.engines` cuenta motores, no
@@ -23718,6 +23718,18 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
   - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
     al añadir un motor;
   - los textos que dicen «3 motores», que siguen congelados.
+
+**Adenda (2026-10-11): las fuentes son los enlaces del texto.** El primer
+estudio real guardó unas 30 fuentes por respuesta cuando la respuesta enseñaba
+2–4. `perplexity/sonar` cita por la Agent API con enlaces Markdown dentro del
+texto (`[Holded](https://…)`), no con marcadores `[n]`: 9 de las 12 respuestas
+llevaban enlaces y ninguna marcadores, así que `selectCitedSources` caía al
+caso «sin marcas» y contaba todo lo que había consultado. Ahora cuentan los
+enlaces y los marcadores. Un enlace que no está entre los resultados de
+búsqueda también cuenta, y solo cuando no hay ninguno de los dos se usan todos
+los resultados. `stripCitationMarkers` deja la etiqueta del enlace y quita la
+URL, para que las citas literales no lleven URLs. Las menciones de marca de ese
+estudio no cambian: las sacaba el texto, no las fuentes.
 
 ## 275. SEARCH-SEO-1 Fase 1b: la auditoría en dos bloques, GEO y SEO (2026-10-11)
 
