@@ -6,8 +6,9 @@ import { PAGE_ONE_MAX_POSITION, type SearchConsoleReport } from "@/lib/search-co
  * log §293, design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html).
  *
  * Computed live on every load from the rows `loadSearchConsoleScreen` already
- * read, never stored: a card exists because Google says so today, and goes
- * away by itself when the number improves. Each card carries the Google
+ * read: a card exists because Google says so today, and goes away by itself
+ * when the number improves. Only what the customer did with a card is stored
+ * (`hidden`, log §294). Each card carries the Google
  * figures that justify it; the copy is built from them in the component.
  */
 
@@ -45,6 +46,16 @@ export type WatchInAi = {
 
 export type GoogleRecommendation = PushToPageOne | ImproveSnippet | WatchInAi;
 
+export type GoogleRecKind = GoogleRecommendation["kind"];
+
+/**
+ * Identity of a card across loads: the same kind for the same query is the
+ * same advice. The key of a «Marcar como hecho» / «Ahora no» row (log §294).
+ */
+export function googleRecKey(kind: GoogleRecKind, query: string): string {
+  return `${kind}\u0000${query}`;
+}
+
 export const LINK_FROM_LIMIT = 2;
 
 function pagesOnPageOne(pages: PageView[], exclude: string | null): string[] {
@@ -67,12 +78,17 @@ export function buildGoogleRecommendations(input: {
   pages: PageView[];
   ctr: CtrOpportunity[];
   questions: QuestionQuery[];
+  /** `googleRecKey`s the customer already marked done or set aside (log §294). */
+  hidden?: ReadonlySet<string>;
 }): GoogleRecommendation[] {
   if (input.report.empty) return [];
   const out: GoogleRecommendation[] = [];
+  const hidden = input.hidden ?? new Set<string>();
+  const visible = (kind: GoogleRecKind, query: string) => !hidden.has(googleRecKey(kind, query));
 
-  // `nearPage1` is already sorted by impressions, highest first.
-  const push = input.report.nearPage1[0];
+  // `nearPage1` is already sorted by impressions, highest first. A card the
+  // customer already handled gives way to the next case of the same kind.
+  const push = input.report.nearPage1.find((q) => visible("push_page_one", q.query));
   if (push) {
     const raw = input.pageByQuery[push.query] ?? null;
     const page = raw && isWebUrl(raw) ? raw : null;
@@ -86,7 +102,7 @@ export function buildGoogleRecommendations(input: {
     });
   }
 
-  const snippet = input.ctr[0];
+  const snippet = input.ctr.find((o) => visible("improve_snippet", o.query));
   if (snippet) {
     out.push({
       kind: "improve_snippet",
@@ -99,7 +115,7 @@ export function buildGoogleRecommendations(input: {
     });
   }
 
-  const question = input.questions.find((q) => !q.tracked);
+  const question = input.questions.find((q) => !q.tracked && visible("watch_in_ai", q.query));
   if (question) {
     out.push({ kind: "watch_in_ai", query: question.query, position: question.position, impressions: question.impressions });
   }

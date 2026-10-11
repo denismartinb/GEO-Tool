@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import type { Plan } from "@/app/pricing/plans-data";
 import { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT } from "@/lib/notifications/types";
+import { LANE_NOTIFICATION_TYPES, selectLaneNotifications } from "@/lib/notifications/lanes";
 import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 
 export { NOTIFICATIONS_BELL_LIMIT, NOTIFICATIONS_PAGE_LIMIT };
@@ -243,6 +244,9 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     supabase
       .from("notifications")
       .select("id, type, severity, project_id, payload_json, read_at, created_at")
+      // NOTIF-LANES-1 (log §297): only the types the bell can show, so a long
+      // run of hidden ones (one per scan) never crowds them out of the limit.
+      .in("type", [...LANE_NOTIFICATION_TYPES])
       .order("created_at", { ascending: false })
       .limit(NOTIFICATIONS_BELL_LIMIT),
     getPlanForUser(supabase, user.id)
@@ -353,7 +357,12 @@ export async function getWorkspaceCounters(): Promise<WorkspaceCounters> {
     return acc;
   }, {});
 
-  const notifications: WorkspaceNotification[] = (notificationRows ?? []).map(mapNotificationRow);
+  // NOTIF-LANES-1: at most one per lane — the account lane is added by the
+  // layout (`getAccountNotice`), so this is never more than two.
+  const notifications: WorkspaceNotification[] = selectLaneNotifications(
+    (notificationRows ?? []).map(mapNotificationRow),
+    Date.now()
+  );
 
   const dataMaturityByProject: Record<string, DataMaturityState> = {};
   for (const project of projects ?? []) {
@@ -401,6 +410,7 @@ export async function getNotificationsPageData(): Promise<{
     supabase
       .from("notifications")
       .select("id, type, severity, project_id, payload_json, read_at, created_at")
+      .in("type", [...LANE_NOTIFICATION_TYPES])
       .order("created_at", { ascending: false })
       .limit(NOTIFICATIONS_PAGE_LIMIT)
   ]);

@@ -52,8 +52,9 @@ paths:
   recomendación existe porque hay evidencia persistida que la respalda.
   La excepción son las tarjetas «Con tus datos de Google» (log §293): su
   evidencia son los datos en vivo del Search Console del cliente, que no se
-  guardan (`.claude/rules/search-console.md`). No entran en el plan, ni en
-  los puntos potenciales, ni en «Resueltas».
+  guardan; sólo se guarda lo que el cliente hizo con la tarjeta (log §294,
+  `.claude/rules/search-console.md`). No entran en el plan, ni en los puntos
+  potenciales, ni en «Resueltas».
 - **El texto narrativo de Gemini nunca es hecho verificado.** Se renderiza con
   el aviso de "interpretación de la IA" ya existente.
 - Si una recomendación no puede calcular su impacto, se muestra sin impacto —

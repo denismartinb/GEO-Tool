@@ -3,17 +3,21 @@ import type { AuthenticatedContext } from "@/lib/auth";
 import { TIERS, displayPath, tierOf } from "@/lib/search-console/insights";
 import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { buildGoogleRecommendations, type GoogleRecommendation } from "@/lib/search-console/recommendations";
+import { readRecStates } from "@/lib/search-console/rec-states";
 import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
 import { fmtInt, fmtPct, fmtPosition } from "../../search-console/_components/format";
+import { GoogleRecFrame, GoogleRecMark } from "./google-rec-frame";
 import { GoogleWatchActions } from "./google-watch";
 
 /**
  * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §293,
  * design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html). Only
  * with Search Console connected; recomputed on every load from the same
- * cached Google rows as «Posición en Google», never stored, so a card leaves
- * by itself when its number improves. Rendered inside a Suspense boundary:
- * a slow Google never holds back the AI recommendations below.
+ * cached Google rows as «Posición en Google», so a card leaves by itself when
+ * its number improves. Only what the customer did with a card is stored
+ * («Marcar como hecho» / «Ahora no», log §294, migration 0042), and a handled
+ * card gives way to the next case of its kind. Rendered inside a Suspense
+ * boundary: a slow Google never holds back the AI recommendations below.
  */
 
 /** "/precios", or «tu Home» for the root: a bare "/" reads as a typo. */
@@ -31,13 +35,32 @@ function impressionsText(n: number): string {
   return `${fmtInt(n)} ${n === 1 ? "vez" : "veces"}`;
 }
 
-export function GoogleRecCard({ rec, projectId }: { rec: GoogleRecommendation; projectId: string }) {
+function frameProps(rec: GoogleRecommendation) {
+  return {
+    kind: rec.kind,
+    query: rec.query,
+    position: rec.position,
+    impressions: rec.impressions,
+    ctr: rec.kind === "improve_snippet" ? rec.ctr : null
+  };
+}
+
+export function GoogleRecCard({
+  rec,
+  projectId,
+  canPersist = false
+}: {
+  rec: GoogleRecommendation;
+  projectId: string;
+  canPersist?: boolean;
+}) {
   const gscHref = `/dashboard/projects/${projectId}/search-console`;
+  const frame = { projectId, canPersist, ...frameProps(rec) };
 
   if (rec.kind === "push_page_one") {
     const where = rec.page ? pageName(rec.page) : "la página que sale";
     return (
-      <article className="grec-card">
+      <GoogleRecFrame {...frame}>
         <div className="grec-tags">
           <span className="grec-tag grec-g">Datos de Google</span>
           <span className="grec-tag">Subir a la página 1</span>
@@ -58,8 +81,9 @@ export function GoogleRecCard({ rec, projectId }: { rec: GoogleRecommendation; p
           <Link className="btn btn-ghost btn-sm" href={gscHref}>
             Ver en Posición en Google
           </Link>
+          <GoogleRecMark status="done" label="Marcar como hecho" />
         </div>
-      </article>
+      </GoogleRecFrame>
     );
   }
 
@@ -67,7 +91,7 @@ export function GoogleRecCard({ rec, projectId }: { rec: GoogleRecommendation; p
     const tier = TIERS.find((t) => t.key === tierOf(rec.position));
     const peers = tier ? `en los ${tier.range.toLowerCase()}` : "en ese tramo";
     return (
-      <article className="grec-card">
+      <GoogleRecFrame {...frame}>
         <div className="grec-tags">
           <span className="grec-tag grec-g">Datos de Google</span>
           <span className="grec-tag">Título y descripción</span>
@@ -89,24 +113,25 @@ export function GoogleRecCard({ rec, projectId }: { rec: GoogleRecommendation; p
           <Link className="btn btn-ghost btn-sm" href={gscHref}>
             Ver en Posición en Google
           </Link>
+          <GoogleRecMark status="done" label="Marcar como hecho" />
         </div>
-      </article>
+      </GoogleRecFrame>
     );
   }
 
   return (
-    <article className="grec-card">
+    <GoogleRecFrame {...frame}>
       <div className="grec-tags">
         <span className="grec-tag grec-g">Datos de Google</span>
         <span className="grec-tag">Google + IA</span>
       </div>
-      <h4>Vigila en la IA «{rec.query}»</h4>
+      <h4 title={rec.query}>Vigila en la IA «{rec.query}»</h4>
       <p className="grec-ev">
         La gente ya te encuentra en Google con esa pregunta (puesto {fmtPosition(rec.position)}), pero todavía no sabes si
         los motores de IA te nombran cuando se la hacen.
       </p>
       <GoogleWatchActions projectId={projectId} query={rec.query} />
-    </article>
+    </GoogleRecFrame>
   );
 }
 
@@ -121,7 +146,10 @@ export async function GoogleRecs({
   domain: string;
   supabase: AuthenticatedContext["supabase"];
 }) {
-  const { auditedPages, trackedPrompts } = await readSearchConsoleInputs(supabase, projectId);
+  const [{ auditedPages, trackedPrompts }, recStates] = await Promise.all([
+    readSearchConsoleInputs(supabase, projectId),
+    readRecStates(supabase, projectId, ownerUserId)
+  ]);
   const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, auditedPages, trackedPrompts);
   if (state.kind !== "ready") return null;
   const recs = buildGoogleRecommendations({
@@ -129,7 +157,8 @@ export async function GoogleRecs({
     pageByQuery: state.insights.pageByQuery,
     pages: state.insights.pages,
     ctr: state.insights.ctr,
-    questions: state.insights.questions
+    questions: state.insights.questions,
+    hidden: recStates.available ? recStates.hidden : undefined
   });
   if (recs.length === 0) return null;
 
@@ -141,7 +170,12 @@ export async function GoogleRecs({
       </div>
       <div className="grec-list">
         {recs.map((rec) => (
-          <GoogleRecCard key={`${rec.kind}:${rec.query}`} rec={rec} projectId={projectId} />
+          <GoogleRecCard
+            key={`${rec.kind}:${rec.query}`}
+            rec={rec}
+            projectId={projectId}
+            canPersist={recStates.available}
+          />
         ))}
       </div>
     </section>

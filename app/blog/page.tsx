@@ -62,7 +62,7 @@ export default function BlogIndexPage() {
       <div className="lp-inner blog-idx-hero-inner">
         <div className="art-hero-eyebrow">Blog GenScore</div>
         <h1>Blog</h1>
-        <p className="art-hero-sub">GEO (Generative Engine Optimization): metodología, guías y análisis, organizados por tema.</p>
+        <p className="art-hero-sub">GEO (Generative Engine Optimization): metodología, guías, estudios y análisis.</p>
 
         {/* destacado — el artículo publicado más recientemente */}
         <Link href={`/blog/${featured.slug}`} className="blog-idx-featured">

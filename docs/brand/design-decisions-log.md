@@ -24622,6 +24622,71 @@ dice si se cumplió (§181).
 **Pendiente.** Nada en código. Si en cuatro semanas no aparece, la siguiente
 palanca es la autoridad externa (Fase 7), no más texto en la página.
 
+## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-11)
+
+**Qué se decidió.** Segundo artículo de lanzamiento de §288:
+`/blog/auditoria-seo-y-search-console-en-genscore` (cluster `playbooks`), que
+estaba previsto para el martes 13 a las 20:30 y el fundador lo adelantó al
+mergear el 2026-10-11, así que se publica con esa fecha; los posts de LinkedIn
+y de X siguen esperando su «sí, publica». El fundador fijó
+el enfoque el 2026-10-11: la integración aporta la posición general de la
+marca, oportunidades de mejora globales y qué mejorar para Google y para los
+motores de IA, porque las mejoras de posicionamiento muchas veces son
+colaterales.
+
+- **Las páginas del carrusel van dentro del artículo** (decisión del fundador,
+  2026-10-11); LinkedIn y X llevan una imagen resumen que enlaza aquí. Son
+  maquetas HTML/CSS con datos inventados y etiquetadas como tales, rasterizadas
+  a WebP: la opción (4) de ADR 0028, nunca una captura de una cuenta real.
+- **Entran tres páginas, no todas, por el presupuesto de `public/`**
+  (`tests/asset-budget.test.ts`): a 840 px y calidad 58 las tres más la
+  portada pesan 81 KB y dejan `public/` justo bajo el tope de 1.792 KB. La
+  página de texto «Lo que mejoras en Google suele ayudarte también en la IA»
+  se cuenta en prosa, y la portada va sólo en WebP (su SVG fuente vive en
+  `/mnt/project-files/contenido/lanzamientos/seo-search-console/`). **Con esto
+  `public/` queda sin margen:** el siguiente artículo con portada romperá el
+  test, y la pregunta que pide su comentario —por qué pesan tanto las
+  portadas del catálogo— hay que contestarla antes de subir el tope.
+- **Cada afirmación de producto sale de §281, §284 y §287**: Salud SEO y
+  Core Web Vitals; conexión de sólo lectura, datos en directo y sin guardar,
+  sólo la propiedad del dominio; puesto medio, tramos, evolución, búsquedas
+  con su página, páginas cruzadas con la auditoría, «Te ven, pero no entran»
+  con la propia web como referencia, «Vigilar en IA», móvil/ordenador y
+  canibalización.
+- **Se queda fuera la página del carrusel de recomendaciones con datos de
+  Google** (`Recs.dc.html`): es la siguiente fase de §287 y no está
+  construida. Si sale antes del martes, se añade.
+
+**Cambios del fundador (2026-10-11, sobre el preview).**
+
+- Texto propio para el resumen y para la lista de oportunidades.
+- La etiqueta de las maquetas pasa de «Ejemplo ilustrativo · cifras
+  inventadas» a «Ejemplo ilustrativo», en las imágenes y en los pies. Las
+  cifras siguen siendo inventadas; sólo cambia cómo se dice.
+- El artículo llama «Vigilar prompt» al botón de «Posición en Google», como
+  el producto desde §289 (el renombre del botón lo hizo esa fase; aquí sólo
+  se alinea el texto del artículo).
+- El autor de todos los artículos (`AuthorBio`) enseña el símbolo de GenScore
+  (`BrandMark`) en vez de una «G» de texto. Se retira la prop `initial`, que
+  ningún artículo usaba.
+- La cabecera del índice `/blog` pasa a decir sólo «GEO (Generative Engine
+  Optimization): metodología, guías, estudios y análisis.».
+- Los artículos de lanzamiento de Perplexity y de Search Console llevan en la
+  portada, en el hueco de la cifra grande, los logos de lo que cuentan (campo
+  nuevo `heroLogos` en `BlogPost`, grupos unidos por «+», pintado por
+  `ArticleHero` sólo si no hay `heroStat`). Perplexity: los cuatro motores,
+  con Perplexity resaltado y la etiqueta «Nuevo». Search Console: «Google» +
+  los cuatro motores, porque el artículo es Google y la IA en el mismo sitio.
+  Se reutilizan los SVG de `public/brand/engines/`, sin añadir peso a
+  `public/` (está en el límite de `asset-budget.test.ts`). La primera versión
+  ponía el símbolo de GenScore junto a la «G» de Google y el fundador lo
+  descartó: uno al lado del otro casi no se distinguen. No es una cifra, así
+  que la regla de §247 sigue intacta. El de Perplexity sale a producción con
+  el merge de este PR.
+
+**Pendiente.** Igual que §288: comprobar antes de publicar que la pantalla de
+consentimiento de Google está «En producción» (§284).
+
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
 ## 291. NAV-SIMPLIFY-1: menú de la consola en cuatro bloques (2026-10-11)
@@ -24737,6 +24802,157 @@ siguiente pieza. Mientras tanto, las tarjetas de página 1 y de título llevan a
 «Posición en Google».
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 294. SEARCH-SEO-1 Fase 3e: «Marcar como hecho» y «Ahora no» en las tarjetas de Google (2026-10-11)
+
+**Qué se decidió.** El fundador contestó a la pregunta de §293: «guardamos en
+base de datos, hago migración». Las tarjetas «Con tus datos de Google» ganan
+los dos botones que ya traía el diseño aprobado
+(`docs/design-reference/search-seo-1/fase-3b/Recs.dc.html`): «Marcar como
+hecho» en «Subir a la página 1» y en «Título y descripción», y «Ahora no» en
+«Google + IA», junto a «Vigilar prompt» mientras la pregunta no se vigila.
+
+**Qué se guarda y qué no.** Las tarjetas se siguen calculando en vivo sobre la
+caché de 30 minutos (§289, §293). La migración 0042
+(`search_console_rec_states`) sólo guarda lo que el cliente hizo con una: una
+fila por proyecto, tipo y búsqueda, con `done` o `dismissed`. También copia el
+puesto, las impresiones y el CTR del momento, para que una fase futura pueda
+decir si el cambio funcionó, igual que «Resueltas» (ADR 0041). Ninguna otra
+cosa de Search Console va a la base de datos.
+
+**Cómo se comporta.**
+- Al pulsar, la tarjeta se oculta al momento y deja «Marcada como hecha» o «La
+  dejamos para más adelante», con «Deshacer». Si el guardado falla, la
+  tarjeta vuelve con el error.
+- En la siguiente carga, `buildGoogleRecommendations` salta las tarjetas
+  guardadas (`hidden`, clave `googleRecKey(kind, query)`) y ofrece el
+  siguiente caso del mismo tipo. La misma búsqueda guardada en un tipo sigue
+  pudiendo salir en otro, porque es otro consejo.
+- La tabla la lee el dueño con RLS de sólo lectura. Escriben las server
+  actions `markGoogleRecommendationAction` y `undoGoogleRecommendationAction`
+  con service role, tras comprobar la propiedad del proyecto con el cliente
+  del usuario, y filtrando por proyecto y dueño. Es el mismo patrón que
+  `recommendations` (0002) y `generated_solutions` (0005). En los logs no va
+  la búsqueda, sólo el proyecto, el tipo y el código de error.
+- Sin la migración aplicada, `readRecStates` devuelve `available: false` y las
+  tarjetas salen sin los dos botones: un botón que no puede guardar es peor
+  que ninguno.
+
+**Hay que aplicar a mano** `supabase/migrations/0042_search_console_rec_states.sql`
+en el editor SQL de Supabase. No hace falta antes de desplegar: el código
+tolera que falte.
+
+**Qué queda pendiente.**
+- Comprobar si lo marcado como hecho mejoró (puesto e impresiones de antes
+  frente a los de ahora) y enseñarlo. Los datos ya se guardan; falta la
+  pantalla.
+- «Generar el texto» y las tres propuestas de título siguen siendo la
+  siguiente pieza.
+
+**Regla de premisa.** «Ahora no» oculta una tarjeta sin plazo. La salida es
+«Deshacer», que sólo está en la propia tarjeta hasta recargar. Si alguien
+quiere recuperar una tarjeta apartada después, hoy no hay pantalla para
+hacerlo. La búsqueda sigue viéndose en «Posición en Google», así que no se
+pierde ningún dato.
+
+## 295. SEARCH-SEO-1 Fase 3f: gráficos a dos columnas y recomendaciones de Google en carrusel (2026-10-11)
+
+**Qué se decidió.** Dos ajustes del fundador sobre lo ya publicado.
+
+- En «Posición en Google», la tarjeta «Búsquedas en la página 2 de Google»
+  pasa a llamarse **«Búsquedas por página de Google»** y deja de ocupar todo
+  el ancho. A ancho completo su gráfico (420 unidades de ancho) se estiraba
+  hasta el tamaño de la página, con las etiquetas a 25 px. Desde 1200 px va a
+  dos columnas con «Clics e impresiones» (`.gsc-grid-charts`, 1,3fr y 1fr).
+  En una columna su gráfico tiene un tope de 620 px. Para que quepan a media
+  anchura, «Clics e impresiones» pasa de 860×240 a 640×300 unidades y el
+  gráfico de puestos de 420×270 a 480×280. En el móvil, el gráfico diario sigue
+  desplazándose dentro de su tarjeta (ancho mínimo 520 px).
+- En Recomendaciones, el bloque «Con tus datos de Google» deja de apilar las
+  tarjetas y las pone **en una fila que se desliza** (`.grec-list` con
+  `scroll-snap`). Hay como mucho una por tipo (§293), así que desde 1200 px
+  caben las tres; por debajo se desliza. Los botones quedan al pie de cada
+  tarjeta, y un título largo (las preguntas) se corta a cuatro líneas, con la
+  pregunta entera en el `title`.
+
+**Por qué.** El fundador: «esta sección ha quedado enorme» y «mejor que salgan
+en tarjetas en un carrusel, en una fila». Apiladas, tres tarjetas empujaban el
+plan de IA por debajo del primer pantallazo.
+
+**Qué queda pendiente.** Nada nuevo. El carrusel no tiene flechas: se desliza
+con el dedo, la rueda o la barra, y en escritorio no hace falta porque caben
+las tres.
+
+## 297. NOTIF-LANES-1: la campana enseña tres avisos como mucho (2026-10-11)
+
+**Qué pidió el fundador.** «Quitaría las recurrentes de escaneo completado.
+Las notificaciones, si son demasiadas ya no se leen. Lo ideal es que como
+mucho se acumulen unas 3», y un aviso de los días que quedan de prueba. La
+propuesta aprobada (maqueta en móvil y escritorio:
+https://claude.ai/artifact/5gk9HZ4XDjK1oMogShtbBT) son tres carriles con un
+aviso cada uno. Esta es su Fase 1.
+
+**Qué cambia.**
+1. **Tres carriles, uno por aviso** (`lib/notifications/lanes.ts`).
+   - «Tu cuenta»: días de prueba o cuenta en solo lectura.
+   - «Tu siguiente paso»: la primera acción del plan de Recomendaciones
+     (punto 5).
+   - «Algo ha cambiado»: `ai_bot_blocked`, `page_unreachable`,
+     `emerging_competitor` y `surfacing_dropped`. Si coinciden, gana la más
+     grave en ese orden, no la más reciente.
+   - Un aviso de más de 14 días no sale.
+2. **Fuera de la campana y de la página de notificaciones:** escaneo
+   completado, escaneo fallido, brecha cerrada, `coverage_dropped`,
+   `llms_txt_lost` y `sitemap_lost`. Sus emisores siguen escribiendo la fila:
+   el filtro está en la lectura (`LANE_NOTIFICATION_TYPES` en las dos
+   consultas de `lib/project-workspace.ts`), así que el escaneo no se toca y
+   la Fase 2 puede leer el historial (primer escaneo listo). `gap_pending`
+   también sale (punto 5).
+3. **«Tu cuenta» no es una fila.** Se calcula en cada carga con la fecha de
+   fin de la prueba (`account-notice.ts`, `account-notice-data.ts`), así que
+   el número de días siempre es el real y no hace falta cron ni migración.
+   - En prueba: «Te quedan N días de Pro», en tono tranquilo.
+   - En las últimas 24 horas: «Último día de tu prueba de Pro», en rojo, y
+     enciende el punto de la campana hasta que se abre.
+   - En `free`: «Tu puntuación lleva N días sin actualizarse».
+   - Nombra el precio fundador sólo si `getFounderOffer` dice que Pro aún lo
+     cobra. El enlace abre «Cambiar de plan» con Pro marcado (§221).
+   - Una cuenta Pro de pago o comped no ve nada en este carril.
+4. **La campana pierde las pestañas «Todas / No leídas» y los grupos por
+   día:** con tres avisos sobran. Cada aviso dice su carril. El pie pasa a
+   «Ver historial».
+5. **«Tu siguiente paso» es la acción nº 1 de Recomendaciones.** La primera
+   versión leía `gap_pending`, que el escaneo elige sólo por impacto, y el
+   fundador vio que señalaba una brecha que no estaba entre las acciones
+   prioritarias de la pantalla («si es algo importante debería estar en las
+   recomendaciones prioritarias»). Ahora no es una fila:
+   `next-step-data.ts` lee las mismas filas que la pantalla y el informe
+   (recomendaciones activas del último escaneo completado, puntos de
+   `computeRecommendationPotentialPoints`) y toma `selectPlan(...)[0]`. Así la
+   campana y la pantalla nombran siempre la misma acción. Lleva el dominio,
+   los puntos si la tarjeta los enseña y enlaza a Recomendaciones.
+   - El proyecto es el de la cookie de proyecto activo, o el más reciente.
+     Como el layout no se repinta al navegar, puede ir un paso por detrás
+     tras cambiar de proyecto; por eso nombra el dominio.
+   - No enciende el punto de la campana: está siempre que el plan tenga
+     acciones, y un punto que nunca se apaga no avisa de nada.
+   - Coste: tres lecturas más por carga del layout (último escaneo,
+     recomendaciones y filas del escaneo). El layout no se vuelve a ejecutar
+     en la navegación entre pantallas.
+
+**Pendiente (Fase 2 y 3 de la maqueta).** «Tu siguiente paso» con primer
+escaneo listo, «Conecta Search Console» y la mejor oportunidad de la semana
+(alineada con el plan semanal de Recomendaciones). Alertas nuevas de caída en
+Google y acceso de Google retirado, que necesitan ampliar el `CHECK` de
+tipos. `ai_bot_blocked` y `emerging_competitor` ya tienen carril pero nadie
+los emite todavía.
+
+**Regla de premisa.** Se retira un aviso de error: «El escaneo ha fallado».
+La premisa es que el cliente no puede hacer nada con él. Hoy la sostienen el
+reintento automático y el vigilante (§227, §228), que avisan al operador de
+todo run fallido. Si esa premisa falla, la pantalla afectada es Visión
+general, que sigue enseñando el estado del último escaneo
+(`latestScanStatusByProject`); la campana ya no lo dice.
 
 ## 298. RECS-DIAGNOSIS-1 — Recomendaciones: que el diagnóstico sea cierto (2026-10-11)
 
