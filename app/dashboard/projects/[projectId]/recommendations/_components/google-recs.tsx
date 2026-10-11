@@ -8,7 +8,7 @@ import { fmtInt, fmtPct, fmtPosition } from "../../search-console/_components/fo
 import { GoogleWatchActions } from "./google-watch";
 
 /**
- * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §292,
+ * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §293,
  * design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html). Only
  * with Search Console connected; recomputed on every load from the same
  * cached Google rows as «Posición en Google», never stored, so a card leaves

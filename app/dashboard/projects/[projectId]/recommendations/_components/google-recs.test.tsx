@@ -11,7 +11,7 @@ import { GoogleRecCard } from "./google-recs";
 const render = (rec: Parameters<typeof GoogleRecCard>[0]["rec"]) =>
   renderToStaticMarkup(<GoogleRecCard rec={rec} projectId="p1" />);
 
-describe("GoogleRecCard (log §292)", () => {
+describe("GoogleRecCard (log §293)", () => {
   it("names the page-2 query, its page and the page-1 pages to link from", () => {
     const html = render({
       kind: "push_page_one",

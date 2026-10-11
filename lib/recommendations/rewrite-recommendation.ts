@@ -62,6 +62,8 @@ export type RewriteRecommendationResult =
 
 type EvidenceJson = {
   why_this_matters?: string;
+  /** log §292 — "definition" for a «qué significa X» query. */
+  query_shape?: string;
   affected_prompts?: string[];
   mentioned_competitors?: string[];
   citation_domains?: string[];
@@ -465,12 +467,15 @@ export async function rewriteRecommendationCore({
       ruleTitle: recommendation.title,
       ruleDescription: recommendation.description,
       whyThisMatters: evidence.why_this_matters ?? "",
-      affectedPrompts: evidence.affected_prompts ?? [],
+      // One line per prompt: the list holds one entry per engine row, and the
+      // same question four times in the prompt reads as four questions (§292).
+      affectedPrompts: Array.from(new Set(evidence.affected_prompts ?? [])),
       mentionedCompetitors: promptCompetitors,
       citationDomains: anchoredDomains,
       dominantCompetitor: evidence.dominant_competitor,
       evidenceSnippets: evidence.evidence_snippets ?? [],
-      citationPages: evidence.citation_pages
+      citationPages: evidence.citation_pages,
+      queryShape: evidence.query_shape === "definition" ? ("definition" as const) : undefined
     };
 
     /**

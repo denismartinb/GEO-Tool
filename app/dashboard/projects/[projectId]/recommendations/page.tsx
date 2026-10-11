@@ -888,7 +888,7 @@ export default async function RecommendationsPage({
             </div>
           )}
 
-          {/* 4 · SEARCH-SEO-1 Fase 3d (log §292): cards from the customer's own
+          {/* 4 · SEARCH-SEO-1 Fase 3d (log §293): cards from the customer's own
               Search Console, only when it is connected. Streamed, so Google
               never holds back the AI recommendations below. */}
           <Suspense fallback={null}>

@@ -76,7 +76,7 @@ revisión de data-guardian que lo precedió.
 - **«Vigilar prompt» se marca al pulsarlo** y se deshace si `addPrompts`
   falla. Mientras se añade, la fila lo dice («Añadiéndola a tus prompts…»).
 
-## Recomendaciones con datos de Google (log §292)
+## Recomendaciones con datos de Google (log §293)
 
 - **Se calculan en vivo y no se guardan.** `buildGoogleRecommendations` es
   pura y trabaja sobre las filas que ya leyó `loadSearchConsoleScreen`. Una

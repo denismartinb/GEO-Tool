@@ -9,7 +9,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
  * Our own data that `loadSearchConsoleScreen` reads next to Google's: the
  * pages of the latest technical audit and the active prompts. «Posición en
  * Google» and Recomendaciones read them the same way, so both pages ask for
- * the same audited URLs and share the 30-minute Google cache (log §289, §292).
+ * the same audited URLs and share the 30-minute Google cache (log §289, §293).
  * RLS scopes both reads to the signed-in owner.
  */
 export async function readSearchConsoleInputs(

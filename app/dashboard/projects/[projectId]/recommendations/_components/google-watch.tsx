@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CheckIcon, useWatchPrompt, watchStatusText } from "@/components/search-console/watch-prompt";
 
-/** «Vigilar prompt» on the Google + IA card (log §292), same action as «Posición en Google». */
+/** «Vigilar prompt» on the Google + IA card (log §293), same action as «Posición en Google». */
 export function GoogleWatchActions({ projectId, query }: { projectId: string; query: string }) {
   const { state, tracked, watch } = useWatchPrompt(projectId, query, false);
   const status = watchStatusText(state);

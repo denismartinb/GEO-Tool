@@ -41,6 +41,11 @@ export type RecommendationRewriteInput = {
    * anchored set above, so naming one of these pages is allowed by the guard.
    */
   citationPages?: { domain: string; title: string; url: string }[];
+  /**
+   * log §292 — the engine classified the prompt as a definitional query
+   * («qué significa X»), answered with dictionaries rather than brands.
+   */
+  queryShape?: "definition";
 };
 
 export type RecommendationRewrite = {
@@ -107,8 +112,16 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       return "ASSET FOCUS — freshness update: the AI is citing outdated information about the brand. Provide as examples (1) a list of the specific facts or figures that appear stale based on the evidence snippets (use only what is given; [tu dato aquí] for any updated value to fill in), and (2) a concise, up-to-date factual paragraph the brand can publish so models start citing current information. Never invent dates or numbers — mark every unknown value with a clearly-labelled placeholder.";
     case "pursue_citation_sources":
       return `ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan.${input.citationPages?.length ? " When a source has a specific example page listed under 'Example pages already cited', name that exact page/article in the plan instead of only the bare domain — it is a stronger, more concrete PR target." : ""} Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play (name the specific cited page when one is given for that domain); (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains and pages given.`;
-    case "increase_brand_visibility":
-      return "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page.";
+    case "increase_brand_visibility": {
+      // log §292. Both lines come from the founder's own test of this card on
+      // genscore.es («que significa geo», 2026-10-11): the plan said "create a
+      // page" when the site already had one on the topic, and never noticed the
+      // term was ambiguous.
+      const base =
+        "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page. If the brand domain is likely to already have a page on this topic, the first step is to strengthen THAT page (question-shaped heading, answer in the first two sentences) instead of publishing a new URL: two pages on the same topic compete with each other.";
+      if (input.queryShape !== "definition") return base;
+      return `${base} This is a DEFINITIONAL query: AI answers to it lean on dictionaries and encyclopedias and rarely name a brand. Set the goal as being cited as the clearest source, never as being recommended, and do not promise the brand will be named. The intro paragraph must open with the definition itself. If the term has other common meanings (for example an everyday or etymological sense alongside a technical one), name them and disambiguate in the first two sentences.`;
+    }
     case "increase_brand_prominence":
       return `ASSET FOCUS — prominence: the brand is mentioned but ${input.dominantCompetitor ?? "a competitor"} consistently appears first or more prominently in the same answers. Provide as examples (1) a revised opening/lead paragraph structure for the relevant page that leads with the brand's strongest differentiator and direct answer first (front-load the key fact, don't bury it), and (2) a short outline of what to add so the brand reads as the primary, most complete answer rather than a secondary mention. Use only the given facts; [tu dato aquí] for any missing specific value.`;
     case "amplify_positive_pattern":
@@ -145,7 +158,7 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     // viven aquí — declarado así a propósito, ver la regla de ruta.
     "You may NAME a competitor, but you may NEVER claim the brand is better, stronger, more reliable or otherwise superior to a named competitor. A neutral, verifiable comparison is fine ('X answers this query, you do not'); a value judgement is not ('unlike X, we keep a high standard'). Comparative advertising naming rivals without objective, verifiable data exposes the brand to a legal claim — never write it, not even softened.",
     "An evaluative adjective about the brand's own product IS an invented value unless a given fact backs it. 'Competitive prices', 'excellent coverage', 'robust network', 'superior experience', 'added value' are inventions exactly like an invented number would be: you do not know them. Either ground the claim in the facts below, or write the placeholder ([tu dato aquí]) and let the user fill it in. Prefer a short, verifiable sentence over a long, flattering one.",
-    "Whenever an example is FAQPage (or any schema whose content is user-visible), the plan MUST state that the questions and answers have to be visible on the page itself — structured data describing content that is not on the page is treated as spam by search engines and cannot be corroborated by AI engines.",
+    "Whenever an example is FAQPage (or any schema whose content is user-visible), the plan MUST state that the questions and answers have to be visible on the page itself — structured data describing content that is not on the page is treated as spam by search engines and cannot be corroborated by AI engines. Never promise FAQ rich results in Google: Google only shows them for well-known government and health sites; the markup is there so AI engines can read the questions and answers.",
     "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
     "If no competitors or domains are listed below, do not invent or imply any.",
     `Write entirely in this language: ${input.language}.`,

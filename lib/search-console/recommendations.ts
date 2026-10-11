@@ -3,7 +3,7 @@ import { PAGE_ONE_MAX_POSITION, type SearchConsoleReport } from "@/lib/search-co
 
 /**
  * Recommendations from the customer's own Search Console (SEARCH-SEO-1 Fase 3d,
- * log §292, design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html).
+ * log §293, design in docs/design-reference/search-seo-1/fase-3b/Recs.dc.html).
  *
  * Computed live on every load from the rows `loadSearchConsoleScreen` already
  * read, never stored: a card exists because Google says so today, and goes

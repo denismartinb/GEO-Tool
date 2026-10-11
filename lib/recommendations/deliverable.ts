@@ -153,8 +153,12 @@ export function classifySolutionReadiness(solution: {
  * dos promesas que no valen lo mismo. La cifra no cambia; cambia lo que
  * declara.
  */
-export function pointsCaption(type: string): string {
-  return deliverableForType(type).control === "third_party" ? "si te citan" : "potenciales";
+export function pointsCaption(type: string, queryShape?: string | null): string {
+  if (deliverableForType(type).control === "third_party") return "si te citan";
+  // log §292: in a definitional query the counterfactual assumes the brand
+  // gets named, which the engines rarely do there — say it's conditional.
+  if (type === "increase_brand_visibility" && queryShape === "definition") return "si te nombran";
+  return "potenciales";
 }
 
 /** Copy de la insignia de estado del artefacto generado. */

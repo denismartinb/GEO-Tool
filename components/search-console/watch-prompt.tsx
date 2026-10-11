@@ -9,7 +9,7 @@ import { addPrompts } from "@/app/dashboard/projects/[projectId]/actions";
  * (plan cap, categorisation and a scan of just that prompt). It reads as
  * watched the moment it is pressed, because adding takes a few seconds, and
  * goes back if the action fails. Shared by «Posición en Google» and the
- * Google cards of Recomendaciones (log §292).
+ * Google cards of Recomendaciones (log §293).
  */
 
 export type WatchState =
