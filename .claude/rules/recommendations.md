@@ -638,6 +638,9 @@ paths:
   «Sin datos disponibles».
 - **«Más adelante» no repite el plan, y su techo por grupo se calcula sin
   él.** Supersede la regla de §115 de repetir el plan bajo «Todas».
-- **Las pastillas «Mejora IA»/«Mejora Google» sólo existen con Search
-  Console conectado**, y ocultan una mitad sin desmontarla: el bloque de
+- **Las pastillas «Mejora IA»/«Mejora Google» sólo existen cuando llegan
+  tarjetas de Google**, no por tener Search Console conectado: una conexión a
+  otra cuenta de Google dejaba la pestaña vacía (log §301). Las enciende
+  `GoogleRecsPresent`, que `GoogleRecs` monta sólo con al menos una tarjeta,
+  y las apaga al desmontarse. Ocultan una mitad sin desmontarla: el bloque de
   Google sigue en su `Suspense` (log §298).

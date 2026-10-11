@@ -25137,6 +25137,12 @@ que el fundador aprobó el 2026-10-11 («Implementa»):
   la pastilla sólo oculta una, así que el bloque de Google sigue llegando
   tras su esqueleto (§298). El carrusel de Google es de SEARCH-SEO-1 (§295)
   y no se toca.
+  **Corrección del fundador en el preview:** con Search Console conectado a
+  la cuenta de Google equivocada, «Mejora Google» salía vacía. Las pastillas
+  sólo aparecen cuando llegan tarjetas de Google: `GoogleRecs` monta
+  `GoogleRecsPresent` únicamente con al menos una, y al desmontarse (última
+  tarjeta marcada como hecha) desaparecen otra vez. Hasta entonces la página
+  es sólo la mitad de IA, sin pestañas. Que la conexión exista no basta.
 
 **Qué no cambia.** El contador del menú (aparcado por el fundador: «poner
 sólo 3 parece que hay pocas»), los puntos (ADR 0017), el motor de reglas y
