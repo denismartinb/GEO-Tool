@@ -99,14 +99,14 @@ describe("toda pantalla privada declara su propia pestaña", () => {
 
 describe("el formato del título", () => {
   it("usa el mismo separador que los 33 títulos públicos", () => {
-    expect(consoleTitle("Ajustes")).toBe("Ajustes — GenScore");
+    expect(consoleTitle("Ajustes")).toBe("Ajustes · GenScore");
   });
 
   it("pone el dominio antes de la marca, que es lo que sobrevive al recorte", () => {
-    expect(projectScreenTitle("Visión general", "acme.com")).toBe("Visión general · acme.com — GenScore");
+    expect(projectScreenTitle("Visión general", "acme.com")).toBe("Visión general · acme.com · GenScore");
   });
 
   it("sin dominio resuelto, cae al nombre de la pantalla en vez de a un hueco", () => {
-    expect(projectScreenTitle("Prompts", null)).toBe("Prompts — GenScore");
+    expect(projectScreenTitle("Prompts", null)).toBe("Prompts · GenScore");
   });
 });

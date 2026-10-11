@@ -6,7 +6,7 @@ import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cos
 import { STATUS_FILTERS, buildQuery, currency } from "./shared";
 import { UsersTable } from "./users-table";
 
-export const metadata: Metadata = { title: "Usuarios — Consola de operador" };
+export const metadata: Metadata = { title: "Usuarios · Consola de operador" };
 
 export default async function AdminUsersPage({
   searchParams

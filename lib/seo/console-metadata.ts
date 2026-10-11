@@ -16,16 +16,16 @@ import { SITE_NAME } from "./metadata";
  * `robots.ts`. Ningún motor lo lee nunca. Es UX de consola.
  *
  * **Por qué no se usa `title.template` del layout raíz**, que sería lo
- * elegante: hay 33 títulos públicos que ya escriben «— GenScore» a mano, y la
- * plantilla se lo añadiría otra vez a los 33 («Blog — GenScore — GenScore»).
+ * elegante: hay 33 títulos públicos que ya escriben «· GenScore» a mano, y la
+ * plantilla se lo añadiría otra vez a los 33 («Blog · GenScore · GenScore»).
  * Hacerlo bien exige quitar el sufijo de todos, y eso toca el `<title>` de
  * todas las páginas indexadas — otra clase de riesgo, y su propia fase si
  * alguna vez compensa.
  */
 
-/** `"Ajustes"` → `"Ajustes — GenScore"`. El separador es el de las 33 públicas. */
+/** `"Ajustes"` → `"Ajustes · GenScore"`. El separador es el de las 33 públicas. */
 export function consoleTitle(screen: string): string {
-  return `${screen} — ${SITE_NAME}`;
+  return `${screen} · ${SITE_NAME}`;
 }
 
 /**
@@ -35,7 +35,7 @@ export function consoleTitle(screen: string): string {
  * una pestaña estrecha recorta por la derecha, así que lo que distingue tiene
  * que ir antes que lo que se repite. Con tres proyectos abiertos, «Visión
  * general · acme.com» y «Visión general · otra.com» se distinguen aunque la
- * pestaña sólo enseñe veinte caracteres; «Visión general — GenScore» tres
+ * pestaña sólo enseñe veinte caracteres; «Visión general · GenScore» tres
  * veces, no.
  */
 export function projectScreenTitle(screen: string, domain: string | null): string {

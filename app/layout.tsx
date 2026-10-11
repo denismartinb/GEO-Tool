@@ -82,7 +82,7 @@ const mono = JetBrains_Mono({
 // El `title` sigue siendo la marca a secas: es el respaldo de una página sin
 // título propio, y ahí lo correcto es el nombre. Convertirlo en
 // `{ default, template }` es la solución elegante y hoy rompería 33 títulos
-// públicos que ya escriben «— GenScore» a mano — ver `console-metadata.ts`.
+// públicos que ya escriben «· GenScore» a mano (ver `console-metadata.ts`).
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.genscore.es"),
   title: "GenScore",

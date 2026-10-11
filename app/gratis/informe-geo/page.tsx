@@ -24,7 +24,7 @@ import { contentMetadata } from "@/lib/seo/metadata";
  * page reads no session (`middleware.ts`, VERCEL-COST-1 Fase 3-b).
  */
 export const metadata: Metadata = contentMetadata({
-  title: "Pide tu informe GEO gratis: qué dice la IA de tu marca — GenScore",
+  title: "Pide tu informe GEO gratis: qué dice la IA de tu marca · GenScore",
   description:
     "Te enviamos un informe de tu marca en ChatGPT, Gemini, Claude y Perplexity: en qué preguntas apareces, a quién recomiendan en tu lugar, qué fuentes citan y qué cambiar primero. Gratis, en 48 h laborables.",
   path: "/gratis/informe-geo"

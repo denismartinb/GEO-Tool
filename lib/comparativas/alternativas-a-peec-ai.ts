@@ -318,7 +318,7 @@ export const ALTERNATIVES: Alternative[] = [
 
 export const PAGE = {
   slug: "alternativas-a-peec-ai",
-  metaTitle: "Alternativas a Peec AI en 2026: cuál elegir según tu caso — GenScore",
+  metaTitle: "Alternativas a Peec AI en 2026: cuál elegir según tu caso · GenScore",
   metaDescription:
     "Siete alternativas a Peec AI comparadas por el motivo que te hace buscarlas: tres modelos a elegir, precio que no está en la web, recomendaciones que no se redactan, pocos países o producto en inglés. GenScore se prueba 7 días sin tarjeta.",
   h1: "Alternativas a Peec AI en 2026",

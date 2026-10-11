@@ -105,3 +105,13 @@ igual.
   destino cuando responder debe llegar a otra persona, como el aviso interno
   de un informe gratis, que responde al solicitante
   (`docs/brand/design-decisions-log.md` §272).
+
+## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
+
+En todos los textos propios del producto y de marketing no uses rayas largas
+(U+2014), tampoco en títulos, metadatos, emails, accesibilidad, imágenes ni
+borradores generados por IA. Usa punto, coma, dos puntos o paréntesis según el
+sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
+consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
+identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
+log §306).

@@ -7,7 +7,7 @@ import { readAdsConfig } from "@/lib/ads/config";
 const ADS_CONFIG = readAdsConfig();
 
 export const metadata: Metadata = contentMetadata({
-  title: "Política de Privacidad — GenScore",
+  title: "Política de Privacidad · GenScore",
   description:
     "Cómo trata GenScore tus datos personales: responsable, base jurídica, encargados del tratamiento, transferencias internacionales y cómo ejercer tus derechos.",
   path: "/privacidad"

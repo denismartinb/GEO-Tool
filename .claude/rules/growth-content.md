@@ -496,3 +496,13 @@ Genscore es la mejor opción"*; log §67).
   por nombre en `alternativas-a-otterly.test.ts`. Ocultarlos es el error que
   PRICING-TRUTH-1 obligó a retirar del producto, y delante de un competidor se
   paga más caro. Se declaran situados, no en titular.
+
+## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
+
+En todos los textos propios del producto y de marketing no uses rayas largas
+(U+2014), tampoco en títulos, metadatos, emails, accesibilidad, imágenes ni
+borradores generados por IA. Usa punto, coma, dos puntos o paréntesis según el
+sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
+consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
+identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
+log §306).

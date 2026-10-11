@@ -5,7 +5,7 @@ import { summarizeAffiliateCodes, type AffiliateAccount } from "@/lib/admin/affi
 import { SITE_URL } from "@/lib/seo/metadata";
 import { AffiliateLinks } from "./affiliate-links";
 
-export const metadata: Metadata = { title: "Afiliados — Consola de operador" };
+export const metadata: Metadata = { title: "Afiliados · Consola de operador" };
 
 /** Same cap as the Usuarios table (`lib/admin/users.ts`). */
 const AUTH_USERS_FETCH_CAP = 1000;

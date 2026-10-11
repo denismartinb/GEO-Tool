@@ -13,7 +13,7 @@ const ADS_CONFIG = readAdsConfig();
 const ADS_ON = adsEnabled(ADS_CONFIG);
 
 export const metadata: Metadata = contentMetadata({
-  title: "Política de Cookies — GenScore",
+  title: "Política de Cookies · GenScore",
   description: ADS_ON
     ? "Qué cookies usa GenScore: la cookie técnica de sesión y, solo si las aceptas, cookies publicitarias de Google y LinkedIn para medir anuncios."
     : "Qué cookies usa GenScore: solo la cookie técnica de sesión, sin cookies de analítica ni publicitarias, y por eso sin banner de consentimiento.",

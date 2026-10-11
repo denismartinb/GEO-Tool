@@ -25242,3 +25242,22 @@ de propuestas (5), los textos del primer paso y el modo manual.
 
 **Pendiente.** Un prompt editado conserva el tema que propuso el generador;
 si la edición cambia de tema, el usuario no puede corregirlo aquí.
+
+## 306. COPY-SIN-RAYAS-1 Fase 1: títulos sin raya larga y norma de copy (2026-10-11)
+
+**Decisión.** Las rayas largas (U+2014) delatan un texto escrito por un LLM. El
+separador de marca de todo `<title>` pasa de « — GenScore» a « · GenScore»
+(`Posicionamiento GEO: mide si la IA cita tu marca · GenScore`), incluido
+`consoleTitle` en la consola. `app/layout.tsx` sigue con `title: "GenScore"` y
+sin `title.template`: cada página pasa su título completo y una plantilla
+duplicaría la marca. «Precios de GenScore» sustituye su raya por dos puntos.
+El título del feed RSS pasa a «GenScore · Blog».
+
+**Norma.** Entra en `CLAUDE.md` y en las reglas de ruta de contenido,
+recomendaciones y correo. U+2013 se conserva en rangos. Citas, evidencias
+externas, identificadores y el escape de `lib/scan/extraction.ts` no se tocan.
+
+**Pendiente (fases 2 a 4 del encargo).** Cuerpo de la web pública, blog,
+glosario, docs y SVG; correos y panel; prompt de reescritura de
+recomendaciones y pruebas de prevención. Esta fase no toca la prosa interna de
+`CLAUDE.md` ni de las reglas, que también contiene rayas.

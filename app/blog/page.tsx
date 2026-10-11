@@ -9,7 +9,7 @@ import { COMPARATIVAS_INDEX } from "@/lib/comparativas";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "Blog — GenScore",
+  title: "Blog · GenScore",
   description:
     "GEO (Generative Engine Optimization): metodología, guías y análisis sobre cómo aparecen las marcas en respuestas de IA.",
   path: "/blog",

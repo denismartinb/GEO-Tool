@@ -18,7 +18,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
  * salen de `lib/blog/posts.ts` vía `lib/estudios/studies.ts`, nunca de aquí.
  */
 export const metadata: Metadata = contentMetadata({
-  title: "Estudios sobre búsqueda con IA en España — GenScore",
+  title: "Estudios sobre búsqueda con IA en España · GenScore",
   description: STUDIES_LEAD,
   path: PAGE_PATH
 });

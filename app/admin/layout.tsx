@@ -4,7 +4,7 @@ import Link from "next/link";
 import { requireOperator } from "@/lib/admin/operator";
 
 export const metadata: Metadata = {
-  title: "Consola de operador — GenScore",
+  title: "Consola de operador · GenScore",
   robots: { index: false, follow: false }
 };
 

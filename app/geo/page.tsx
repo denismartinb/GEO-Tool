@@ -11,7 +11,7 @@ import { QUE_SIGNIFICA_GEO_FAQ } from "@/lib/brand/que-significa-geo-faq";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = contentMetadata({
-  title: "¿Qué significa GEO? Generative Engine Optimization — GenScore",
+  title: "¿Qué significa GEO? Generative Engine Optimization · GenScore",
   description:
     "GEO significa Generative Engine Optimization: conseguir que ChatGPT, Gemini o Claude nombren tu marca. Origen del término, diferencia con el SEO y cómo se mide.",
   path: "/geo"
