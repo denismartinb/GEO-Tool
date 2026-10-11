@@ -24100,3 +24100,28 @@ responde, la tarjeta lo dice y la siguiente auditoría lo vuelve a intentar.
 - «Imágenes sin texto alternativo» cuenta las que no tienen atributo `alt`.
   Un `alt=""` vale, porque es lo correcto en una imagen decorativa.
 - Fase 3: Search Console. Fase 4: artículo y portada.
+
+## 282. AFFILIATES-ADMIN-1: los códigos de afiliado y sus enlaces en /admin (2026-10-11)
+
+Petición del fundador, el mismo día que puso `AFFILIATE_CODES` en Vercel: ver en
+`/admin` los códigos activos y generar las URL que se le dan a cada afiliado.
+
+- Página nueva `/admin/afiliados`, enlazada en la barra del operador. Detrás de
+  `requireOperator()` como el resto de `/admin`.
+- Tabla con un código por fila: los de `AFFILIATE_CODES` («Activo», aunque no
+  tengan altas todavía) y los retirados que aún tienen cuentas atribuidas
+  («Retirado»). «Altas» cuenta las cuentas con ese `user_metadata.referral_code`.
+  «De pago» usa la misma regla que la tabla de Usuarios: la cuenta tiene
+  `stripe_subscription_id`. No es la comisión: ésa la calcula el informe del
+  día 5 a partir de los cobros (§277).
+- Generador de enlaces: se elige código y, opcionalmente, campaña, y salen las
+  URL de Portada, Precios, Comprobador gratis e Informe gratis con botón
+  «Copiar». Cada URL lleva `ref` primero (lo que paga al afiliado) y
+  `utm_source=<código>`, `utm_medium=afiliado` y, si se escribe, `utm_campaign`,
+  para separar ese tráfico en PostHog (regla de UTM del 2026-10-09). La base
+  es `SITE_URL` (producción), también cuando la página se abre en un preview.
+- **Sólo lectura.** Los códigos siguen viviendo en la variable de Vercel; añadir
+  o quitar uno es editarla y hacer Redeploy. Sin tabla ni migración, así que no
+  hace falta el aviso por correo que exige toda escritura desde `/admin`.
+- Lógica pura en `lib/admin/affiliates.ts`, con tests. Si hay más de 1000
+  cuentas, la página lo avisa: las altas por código se quedarían cortas.
