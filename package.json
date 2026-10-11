@@ -16,6 +16,7 @@
     "study:sector": "NODE_OPTIONS=--conditions=react-server tsx scripts/sector-study.ts",
     "check:domains": "NODE_OPTIONS=--conditions=react-server tsx scripts/domain-check.ts",
     "indexnow:ping": "tsx scripts/indexnow-ping.ts",
+    "search-console:revoke-all": "NODE_OPTIONS=--conditions=react-server tsx scripts/search-console-revoke-all.ts",
     "validate": "pnpm run build && pnpm run typecheck && pnpm run lint",
     "check:env": "node --experimental-strip-types scripts/check-env.mjs",
     "fix:log-numbering": "node --experimental-strip-types scripts/fix-log-numbering.mjs"

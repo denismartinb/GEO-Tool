@@ -17,7 +17,7 @@ import { describe, expect, it } from "vitest";
  * hueco que un humano no ve leyendo un diff.
  *
  * La escalera es de CITATIONS-REDESIGN-1 (log §5) y la ratificó
- * OV-DESKTOP-2 (log §119). Si algún día se cambia, se cambia para las siete y
+ * OV-DESKTOP-2 (log §119). Si algún día se cambia, se cambia para las ocho y
  * este test se actualiza con ellas — que es justo lo que se quiere que cueste.
  *
  * Deliberadamente NO comprueba `--ov-hdr-page-cap` ni `--mrk-page-cap`: ésos
@@ -49,7 +49,8 @@ const COLUMNS = [
   ".cit2-page",
   ".rec2-scope",
   ".dm2-page",
-  ".wa2-page"
+  ".wa2-page",
+  ".gsc-page"
 ] as const;
 
 const SHEETS = ["app/globals.css", "app/console.css"] as const;

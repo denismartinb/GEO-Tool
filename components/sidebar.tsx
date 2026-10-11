@@ -51,8 +51,11 @@ const aiLinks: ProjectLink[] = [
 // The route stays `/web-audit`: renaming it would break every notification
 // and email link already sent. SEARCH-SEO-1 Fase 1b (log §275) split the
 // screen into a GEO block and an SEO block; each menu entry opens its own.
+// SEARCH-SEO-1 Fase 3 (log §284): «Posición en Google», the customer's own
+// Search Console data.
 const searchLinks: ProjectLink[] = [
   { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" },
+  { segment: "/search-console", label: "Posición en Google", icon: "trendUp", countKey: null },
 ];
 
 const actLinks: ProjectLink[] = [

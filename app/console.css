@@ -1531,3 +1531,145 @@
 @media (min-width: 1200px) {
   .sa-grid-2 { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
 }
+
+/* ============================================================
+   Posición en Google — SEARCH-SEO-1 Fase 3 (log §284), design in
+   docs/design-reference/search-seo-1/maqueta.html (screens "gsc" and
+   "connect"). Same four-rung column as the other console screens
+   (tests/console-page-width.test.ts). Media queries, not container
+   queries (.claude/rules/styles.md).
+   ============================================================ */
+.gsc-page { max-width: 460px; margin: 0 auto; }
+@media (min-width: 900px) {
+  .gsc-page { max-width: 640px; }
+}
+@media (min-width: 1200px) {
+  .gsc-page { max-width: 1200px; }
+}
+@media (min-width: 1600px) {
+  .gsc-page { max-width: 1280px; }
+}
+.gsc-screen { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.gsc-screen .card { padding: 15px; border-radius: 14px; min-width: 0; }
+.gsc-intro p { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.gsc-muted { color: var(--ink-4); font-weight: 500; }
+.gsc-up { color: var(--pos-ink); }
+.gsc-down { color: var(--neg-ink); }
+.gsc-flat { color: var(--ink-3); }
+
+.gsc-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--ink-3); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; white-space: nowrap; }
+.gsc-live { width: 7px; height: 7px; border-radius: 50%; background: #15915a; box-shadow: 0 0 0 3px color-mix(in srgb, #15915a 18%, transparent); }
+.gsc-chip-full { display: none; }
+@media (min-width: 900px) {
+  .gsc-chip-full { display: inline; }
+  .gsc-chip-compact { display: none; }
+}
+
+.gsc-outcome { margin: 0; font-size: 13px; padding: 10px 13px; border-radius: 11px; }
+.gsc-outcome-ok { background: var(--pos-soft); color: var(--pos-ink); }
+.gsc-outcome-warn { background: var(--warn-soft); color: var(--warn-ink); }
+
+/* KPI tiles */
+.gsc-kpis { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+@media (min-width: 1200px) {
+  .gsc-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+}
+.gsc-kpi { display: flex; flex-direction: column; gap: 6px; }
+.gsc-kpi-k { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+.gsc-kpi-v { font: 800 26px/1.05 var(--font-display), "Bricolage Grotesque", sans-serif; color: var(--ink); letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.gsc-kpi-d { font: 600 11.5px var(--mono); }
+.gsc-spark { width: 100%; height: 30px; overflow: visible; }
+.gsc-track { height: 8px; margin-top: 6px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; }
+.gsc-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #15915a, #3fbf86); }
+
+/* Charts */
+.gsc-legend { display: flex; gap: 14px; font-size: 12px; color: var(--ink-3); flex-wrap: wrap; }
+.gsc-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.gsc-legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.gsc-chart { width: 100%; height: auto; display: block; overflow: visible; }
+.gsc-chart text { font: 500 10.5px var(--mono); fill: var(--ink-4); }
+.gsc-chart .gsc-band-label { fill: #2563eb; font-weight: 600; }
+/* The daily chart is 860 units wide: below 640px it keeps a readable size and
+   scrolls inside its card instead of shrinking its labels to nothing. */
+.gsc-chart-scroll { overflow-x: auto; }
+.gsc-chart-scroll .gsc-chart { min-width: 560px; }
+.gsc-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+@media (min-width: 1200px) {
+  .gsc-grid-2 { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+}
+
+/* Indexing donut */
+.gsc-donut-wrap { display: flex; flex-direction: column; gap: 16px; align-items: stretch; }
+@media (min-width: 560px) {
+  .gsc-donut-wrap { flex-direction: row; align-items: center; gap: 18px; }
+}
+.gsc-donut { width: 132px; height: 132px; position: relative; flex: 0 0 auto; align-self: center; }
+.gsc-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.gsc-donut-c { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.gsc-donut-c b { font: 800 26px/1 var(--font-display), "Bricolage Grotesque", sans-serif; color: var(--ink); }
+.gsc-donut-c span { font-size: 11px; color: var(--ink-4); }
+.gsc-reasons { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; flex: 1; min-width: 0; }
+.gsc-reasons li { display: grid; grid-template-columns: 10px 1fr auto; gap: 8px; align-items: center; color: var(--ink-2); }
+.gsc-reasons i { width: 10px; height: 10px; border-radius: 3px; }
+.gsc-reasons b { font: 600 12.5px var(--mono); color: var(--ink); }
+.gsc-index-link { margin-top: 14px; display: inline-flex; }
+
+/* Queries table */
+.gsc-qfil { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.gsc-st { display: inline-flex; gap: 7px; align-items: center; font-size: 12.5px; font-weight: 600; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); padding: 6px 11px; border-radius: 999px; cursor: pointer; }
+.gsc-st b { font: 700 11px var(--mono); }
+.gsc-st.gsc-st-on { border-color: var(--ink); background: var(--ink); color: #fff; }
+.gsc-st:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gsc-qt-wrap { overflow-x: auto; }
+.gsc-qt { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gsc-qt th { font: 600 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); text-align: left; padding: 8px; border-bottom: 1px solid var(--line); }
+.gsc-qt td { padding: 10px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+.gsc-qt td.n { font: 600 12.5px var(--mono); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.gsc-qt th.n { text-align: right; }
+.gsc-qt tr:last-child td { border-bottom: 0; }
+.gsc-qq { color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.gsc-pos { white-space: nowrap; }
+.gsc-pos b { font: 700 12.5px var(--mono); color: var(--ink); }
+.gsc-mv { font: 600 11px var(--mono); }
+.gsc-flag { font: 600 10px var(--mono); padding: 2px 6px; border-radius: 5px; background: var(--warn-soft); color: var(--warn-ink); margin-left: 6px; white-space: nowrap; }
+@media (max-width: 639px) {
+  .gsc-hide-m { display: none; }
+}
+
+/* Connect / pick property / messages */
+.gsc-lock { display: grid; place-items: center; padding: 28px 12px; border-radius: 16px; background: linear-gradient(120deg, #f2f7ff, #effbfc); border: 1px solid #dbe6fb; }
+.gsc-cbox { box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 30px 60px -30px rgba(11, 20, 38, .4); padding: 24px 22px 20px; max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.gsc-cbox h3, .gsc-pick h3 { font: 800 20px var(--font-display), "Bricolage Grotesque", sans-serif; letter-spacing: -.02em; color: var(--ink); margin: 0; }
+.gsc-cbox p, .gsc-pick p { font-size: 14px; color: var(--ink-2); margin: 0; }
+.gsc-cbox ul { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; font-size: 13.5px; color: var(--ink-2); }
+.gsc-cbox li { display: grid; grid-template-columns: 18px 1fr; gap: 8px; }
+.gsc-cbox li::before { content: "✓"; color: var(--pos-ink); font-weight: 800; }
+.gsc-gbtn { display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-weight: 650; font-size: 14.5px; padding: 11px 16px; border-radius: 10px; text-decoration: none; }
+.gsc-gbtn:hover { background: var(--surface-2); }
+.gsc-gbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gsc-fine { font-size: 12px; color: var(--ink-4); line-height: 1.5; }
+.gsc-fine a { color: var(--accent); }
+.gsc-pick { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.gsc-pick-list { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.gsc-pick-opt { display: flex; gap: 10px; align-items: center; font: 500 13px var(--mono); color: var(--ink); padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; overflow-wrap: anywhere; }
+.gsc-foot { font-size: 12px; color: var(--ink-4); margin: 4px 2px 0; overflow-wrap: anywhere; }
+.gsc-lnk { background: none; border: 0; padding: 0; font: inherit; font-weight: 650; color: var(--accent); cursor: pointer; }
+.gsc-lnk:disabled { opacity: .6; cursor: default; }
+
+/* Visión general: Google half of the search card */
+.ov2-gsc { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.ov2-gsc-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.ov2-gsc-h b { font-size: 13.5px; color: var(--ink); }
+.ov2-gsc-h span { font-size: 11.5px; color: var(--ink-4); }
+.ov2-gsc-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.ov2-gsc-gm { border: 1px solid var(--line-soft); border-radius: 10px; padding: 10px 12px; }
+.ov2-gsc-gm .k { font-size: 11.5px; color: var(--ink-3); font-weight: 600; }
+.ov2-gsc-gm .v { font: 800 22px/1.1 var(--font-display), "Bricolage Grotesque", sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ov2-gsc-gm .d { font: 600 11px var(--mono); }
+.ov2-gsc-near { display: flex; gap: 12px; align-items: center; margin-top: 10px; background: linear-gradient(120deg, #f2f7ff, #effbfc); border: 1px solid #dbe6fb; border-radius: 12px; padding: 11px 13px; text-decoration: none; color: inherit; }
+.ov2-gsc-near .nn { font: 800 24px/1 var(--font-display), "Bricolage Grotesque", sans-serif; color: #2563eb; min-width: 28px; text-align: center; }
+.ov2-gsc-near p { font-size: 12.5px; color: var(--ink-2); margin: 0; }
+.ov2-gsc-near em { font-style: normal; font-weight: 650; color: var(--accent); white-space: nowrap; }
+.ov2-gsc-cta { display: flex; flex-direction: column; gap: 8px; }
+.ov2-gsc-cta p { font-size: 12.5px; color: var(--ink-3); margin: 0; }
+.ov2-gsc-cta a { align-self: flex-start; }
