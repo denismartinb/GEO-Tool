@@ -20,7 +20,19 @@ vi.mock("@/lib/admin/signup-alert", () => ({
   sendNewSignupOpsAlert: (...args: unknown[]) => sendNewSignupOpsAlert(...args)
 }));
 
+// AFFILIATES-1: the `gs_ref` cookie, mutable per test. `null` = no cookie
+// store at all (throws, as outside a request), which must never block sign-up.
+let refCookie: string | null | undefined;
+vi.mock("next/headers", () => ({
+  cookies: async () => {
+    if (refCookie === undefined) throw new Error("cookies() outside a request");
+    return { get: (name: string) => (name === "gs_ref" && refCookie ? { name, value: refCookie } : undefined) };
+  }
+}));
+
 beforeEach(() => {
+  refCookie = undefined;
+  delete process.env.AFFILIATE_CODES;
   redirectMock.mockClear();
   signUp.mockReset();
   sendWelcomeEmail.mockReset();
@@ -176,5 +188,45 @@ describe("signup", () => {
     ).rejects.toThrow(/^REDIRECT:\/signup\?error=/);
 
     expect(signUp).not.toHaveBeenCalled();
+  });
+});
+
+describe("signup · affiliate code (AFFILIATES-1)", () => {
+  const fields = { email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" };
+
+  it("stores an approved gs_ref code in user_metadata at creation", async () => {
+    process.env.AFFILIATE_CODES = "campamentoweb";
+    refCookie = "campamentoweb";
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const { signup } = await import("./actions");
+
+    await expect(signup(formData(fields))).rejects.toThrow(/REDIRECT:\/signup\/confirm/);
+
+    expect(signUp).toHaveBeenCalledWith({
+      email: "new@example.com",
+      password: "supersecret",
+      options: { emailRedirectTo: "http://localhost:3000/auth/callback", data: { referral_code: "campamentoweb" } }
+    });
+  });
+
+  it("ignores a code that is not approved", async () => {
+    process.env.AFFILIATE_CODES = "campamentoweb";
+    refCookie = "otro";
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const { signup } = await import("./actions");
+
+    await expect(signup(formData(fields))).rejects.toThrow(/REDIRECT:\/signup\/confirm/);
+
+    expect(signUp.mock.calls[0][0].options).toEqual({ emailRedirectTo: "http://localhost:3000/auth/callback" });
+  });
+
+  it("signs up normally when the cookie store is unavailable", async () => {
+    process.env.AFFILIATE_CODES = "campamentoweb";
+    refCookie = undefined;
+    signUp.mockResolvedValue({ data: { session: null }, error: null });
+    const { signup } = await import("./actions");
+
+    await expect(signup(formData(fields))).rejects.toThrow(/REDIRECT:\/signup\/confirm/);
+    expect(signUp).toHaveBeenCalledTimes(1);
   });
 });

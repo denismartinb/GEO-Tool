@@ -8,7 +8,6 @@ import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { FreeReportPriceLine } from "@/components/free-report/free-report-offers";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
-import { supportMailto } from "@/lib/support";
 import { SELLABLE_PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getFounderOffer } from "@/lib/stripe";
 
@@ -64,10 +63,11 @@ function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly s
         // contrata online. Escríbenos a soporte@genscore.es"). Hasta ahora
         // esta tarjeta terminaba en un botón que no hacía nada, así que el
         // único plan que EXIGE hablar con alguien era el único sin forma de
-        // hacerlo. Mismo destino que ya usa el modal de cambio de plan.
-        <a className={ctaClass} href={supportMailto("Plan Agencia")}>
+        // hacerlo. DEMO-CALL-1 (2026-10-10): lleva a `/demo`, donde se
+        // pide una videollamada con hueco, en vez de abrir un correo.
+        <Link className={ctaClass} href="/demo?desde=precios-agencia">
           {plan.cta}
-        </a>
+        </Link>
       ) : (
         <PlanCardCta planId={plan.id} cta={plan.cta} className={ctaClass} primary={plan.ctaStyle === "primary"} />
       )}
@@ -267,9 +267,9 @@ export async function PricingPage() {
                 <Link className="btn btn-white btn-lg" href="/signup">
                   Empezar la prueba <Icon name="arrRight" size={16} />
                 </Link>
-                <a className="btn btn-onaccent btn-lg" href={supportMailto("Hablar con ventas")}>
+                <Link className="btn btn-onaccent btn-lg" href="/demo?desde=precios">
                   Hablar con ventas
-                </a>
+                </Link>
               </div>
             </div>
           </div>

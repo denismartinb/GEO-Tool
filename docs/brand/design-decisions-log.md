@@ -23859,3 +23859,76 @@ contrata), la primera página pública aún pinta el plan viejo un momento y el
 chip cambia de ancho una vez. No se ha añadido una defensa de CSS contra el
 resto de pintura porque no se puede verificar sin el navegador del fundador.
 
+## 277. DEMO-CALL-1 + AFFILIATES-1: videollamada de 20 minutos y programa de afiliados (2026-10-10)
+
+**Qué se decidió.** El fundador comparó GenScore con Peec AI y GEO Metrics y
+aprobó, sobre la maqueta `docs/design-reference/demo-affiliates-1/
+maqueta-aprobada.html`, dos de sus palancas comerciales:
+
+- **`/demo`**: el visitante pide una videollamada de 20 minutos «con el equipo
+  de GenScore» eligiendo un hueco de lunes a viernes, de 18:00 a 21:00 (hora de
+  Madrid), en los próximos 10 días laborables, nunca a menos de 4 h vista ni en
+  festivo nacional (`lib/demo/slots.ts`). No hay calendario detrás —el
+  fundador no quiso una página de reservas de Google por ahora—: la solicitud
+  llega por correo a `OPS_ALERT_EMAIL` (Reply-To el solicitante) y el
+  solicitante recibe un correo que dice que la invitación se la enviamos
+  nosotros. Todo el copy habla de «solicitud», nunca de cita confirmada. Mismo
+  patrón sin migración que el informe gratis (§249): éxito sólo si el correo
+  al operador se aceptó.
+- **Portada**: una línea secundaria con icono de cámara bajo el campo del hero
+  («Agenda una videollamada de 20 min con el equipo de GenScore», más corta en
+  móvil). El registro sigue siendo el CTA principal: el fundador lo pidió
+  expresamente («a igualdad de conversión, con el registro gratis no tengo que
+  dedicar tiempo ni pagar comisión»). En `/precios`, «Plan Agencia» y «Hablar
+  con ventas» van a `/demo?desde=…` en vez de a un `mailto:`. Los «Hablar con
+  ventas» de la consola no se tocan.
+- **`/afiliados`**: 30 % de lo cobrado sin IVA, 12 meses, sólo cuentas Pro con
+  pago real (la prueba de 7 días no cuenta), pago mensual por transferencia
+  desde 50 €. El fundador retiró la condición sobre pujar por la marca y el
+  correo masivo. Formulario de solicitud por correo, mismo patrón.
+- **Seguimiento sin migración ni herramienta de pago**: `?ref=<código>` deja la
+  cookie `gs_ref` 90 días (último clic gana), sólo para códigos de
+  `AFFILIATE_CODES`; el alta (correo y Google) la copia a
+  `user_metadata.referral_code` sin pisar una existente; el checkout la pasa a
+  los metadatos de la suscripción de Stripe; el día 5 un cron
+  (`/api/cron/affiliate-report`) manda al operador la comisión de cada afiliado
+  del mes anterior, calculada sobre facturas de Pro pagadas.
+
+**Lo que queda pendiente o roto conocido.**
+
+- Dos personas pueden pedir el mismo hueco: no hay reserva atómica. El
+  operador lo resuelve al responder. Si el volumen lo justifica, el siguiente
+  paso es una página de reservas de Google Calendar.
+- Sin historial de pagos: la columna «acumulado» del informe mensual sólo mira
+  el mes; los meses por debajo de 50 € se llevan a mano. Un reembolso hecho
+  después del día 5 no se descuenta.
+- Un usuario logado podría escribir su propio `referral_code` en sus metadatos
+  de Supabase; como sólo viajan a Stripe códigos aprobados, el abuso realista
+  es un afiliado refiriéndose a sí mismo.
+- `?ref=` hace correr el middleware también en las rutas públicas que la
+  exclusión de coste de VERCEL-COST-1 Fase 3-b salta, pero sólo cuando la URL
+  lleva `ref`.
+- Para activar el programa hay que dar de alta los códigos en
+  `AFFILIATE_CODES` (Vercel) a medida que el fundador aprueba solicitudes.
+
+**Adenda (2026-10-11): la entrada de la portada pasa a ser una píldora.** El
+fundador eligió, entre tres alternativas, la «píldora con el próximo hueco»,
+pidiéndola más pequeña y menos llamativa que la maqueta. Es
+`components/landing/hero-call-pill.tsx`: texto de 13px, fondo blanco
+translúcido, «Videollamada de 20 min» y el primer hueco libre real
+(`listDemoSlots` + `formatDemoSlotShort`), calculado en el navegador porque la
+portada es estática. Antes de hidratar enseña «L–V, 18:00–21:00», que siempre
+es cierto. Por debajo de 400px se cae el «Próximo hueco:» y se queda la fecha.
+Enlaza a `/demo?desde=portada`. El rediseño del hueco de `/demo` está en
+maqueta, pendiente de elección.
+
+**Adenda (2026-10-11): `/demo` pasa a la banda oscura.** El fundador eligió la
+opción 2 de la maqueta (`docs/design-reference/demo-affiliates-1/demo-redesign.html`)
+porque la columna de texto dejaba un hueco grande junto al formulario. El
+texto va ahora sobre una banda oscura con dos etiquetas: «ChatGPT, Gemini y
+Claude» y «Sin compromiso» («Oferta de lanzamiento» se probó y se retiró
+porque no enlazaba a nada). Por decisión suya se
+quitan el horario «L–V, 18:00–21:00» y la línea equivalente de la tarjeta,
+porque los propios huecos ya lo enseñan. La tarjeta de reserva pasa a blanco y
+monta sobre el borde de la banda, y debajo van los tres pasos de la llamada.
+Por debajo de 860px el orden es: texto en oscuro, tarjeta y pasos.

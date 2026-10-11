@@ -1,0 +1,168 @@
+<title>Botón de videollamada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: three labelled options, each a desktop hero crop + a 375px phone crop side by side. Single light look on purpose: it mirrors the real GenScore hero. */
+:root {
+  color-scheme: light;
+  --ink: #0b1426;
+  --ink-2: #44506a;
+  --ink-3: #6b7690;
+  --blue: #2457e6;
+  --blue-soft: #e8eefe;
+  --line: #d9e0ee;
+  --page: #eef1f7;
+  --surface: #ffffff;
+  --green: #12a150;
+  --display: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--body); }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 36px 64px; padding-inline: 16px; display: grid; gap: 40px; }
+header.top h1 { font-family: var(--display); font-size: clamp(26px, 3.4vw, 36px); margin: 0 0 8px; letter-spacing: -0.02em; text-wrap: balance; }
+header.top p { margin: 0; color: var(--ink-2); font-size: 16px; line-height: 1.55; max-width: 68ch; }
+
+.opt { display: grid; gap: 14px; }
+.opt-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.opt-head h2 { margin: 0; font-family: var(--display); font-size: 22px; letter-spacing: -0.01em; }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+.opt-head p { margin: 0; flex-basis: 100%; color: var(--ink-2); font-size: 15px; line-height: 1.5; max-width: 72ch; }
+.frames { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+@media (max-width: 900px) { .frames { grid-template-columns: minmax(0, 1fr); } .phone { justify-self: center; } }
+
+/* Hero crop */
+.hero { border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(180deg, #dce6fb 0%, #f4f7fd 55%, #fff 100%); padding: 40px 24px 44px; text-align: center; display: grid; justify-items: center; gap: 18px; min-width: 0; overflow: hidden; }
+.hero h3 { margin: 0; font-family: var(--display); font-weight: 800; font-size: clamp(28px, 4vw, 46px); line-height: 1.02; letter-spacing: -0.035em; }
+.hero h3 em { font-style: normal; color: var(--blue); }
+.field { width: min(100%, 520px); display: flex; align-items: center; gap: 10px; background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 6px 6px 6px 18px; box-shadow: 0 10px 28px rgba(11, 20, 38, 0.08); }
+.field span { flex: 1; text-align: left; color: #9aa3b5; font-size: 15px; }
+.field b { background: var(--blue); color: #fff; font-weight: 600; font-size: 15px; border-radius: 999px; padding: 11px 20px; white-space: nowrap; }
+.engines { display: flex; gap: 18px; font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.engines i { font-style: normal; display: inline-flex; align-items: center; gap: 6px; }
+.engines i::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--c); }
+
+/* Phone crop */
+.phone { width: 300px; max-width: 100%; border-radius: 30px; border: 8px solid #141b2b; background: #141b2b; overflow: hidden; }
+.phone .hero { border: 0; border-radius: 22px; padding: 30px 16px 34px; gap: 14px; }
+.phone .hero h3 { font-size: 30px; }
+.phone .field { flex-direction: column; border-radius: 18px; padding: 8px; gap: 8px; }
+.phone .field span { padding: 6px 8px; width: 100%; }
+.phone .field b { width: 100%; text-align: center; }
+.phone .engines { gap: 12px; font-size: 13px; }
+
+.cam { width: 18px; height: 18px; flex: none; }
+
+/* A · Pill with availability */
+.a-pill { display: inline-flex; align-items: center; gap: 10px; padding: 7px 14px 7px 7px; border-radius: 999px; background: rgba(255,255,255,0.75); border: 1px solid var(--line); color: var(--ink); font-size: 14.5px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 14px rgba(36, 87, 230, 0.10); backdrop-filter: blur(6px); }
+.a-pill .ic { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--blue); color: #fff; }
+.a-pill .ic .cam { width: 16px; height: 16px; }
+.a-pill .next { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); font-weight: 500; padding-left: 10px; border-left: 1px solid var(--line); }
+.a-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px rgba(18, 161, 80, 0.18); }
+.a-pill .arr { color: var(--blue); font-weight: 700; }
+.phone .a-pill { flex-wrap: wrap; justify-content: center; border-radius: 18px; padding: 10px 12px; text-align: left; }
+.phone .a-pill .next { border-left: 0; padding-left: 0; flex-basis: 100%; justify-content: center; font-size: 13px; }
+
+/* B · Floating card */
+.b-card { display: flex; align-items: center; gap: 14px; text-align: left; width: min(100%, 440px); padding: 12px 14px; border-radius: 16px; background: #fff; border: 1px solid var(--line); box-shadow: 0 14px 30px rgba(11, 20, 38, 0.08); color: var(--ink); text-decoration: none; }
+.b-card .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); flex: none; }
+.b-card .ic .cam { width: 22px; height: 22px; }
+.b-card .txt { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.b-card strong { font-size: 15px; }
+.b-card small { font-size: 13px; color: var(--ink-3); }
+.b-card .go { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font-weight: 700; flex: none; }
+
+/* C · "o" divider + outlined button */
+.c-or { display: flex; align-items: center; gap: 12px; width: min(100%, 360px); color: var(--ink-3); font-size: 13px; }
+.c-or::before, .c-or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.c-btn { display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px; border-radius: 999px; border: 1.5px solid var(--ink); background: transparent; color: var(--ink); font-weight: 600; font-size: 15px; text-decoration: none; }
+.c-btn .meta { color: var(--ink-3); font-weight: 500; }
+.phone .c-btn { width: 100%; justify-content: center; }
+
+.current { display: inline-flex; align-items: center; gap: 8px; color: var(--blue); font-weight: 600; font-size: 14.5px; }
+
+.note { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+.note strong { color: var(--ink); }
+a:focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="cam" viewBox="0 0 24 24"><path d="M3.5 7.5A1.5 1.5 0 0 1 5 6h9a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 14 18H5a1.5 1.5 0 0 1-1.5-1.5z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M15.5 10.5 20.5 7.5v9l-5-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Tres alternativas para el botón de videollamada</h1>
+    <p>Las tres mantienen «Analiza gratis» como botón principal y la videollamada como segunda opción, como acordamos. Cambia sólo el bloque que va debajo de ChatGPT, Gemini y Claude. A la izquierda, escritorio; a la derecha, móvil.</p>
+  </header>
+
+  <section class="opt" aria-labelledby="a">
+    <div class="opt-head">
+      <span class="tag">Opción A</span>
+      <h2 id="a">Píldora con el próximo hueco</h2>
+      <p>Una píldora con el icono de cámara y, a la derecha, el próximo hueco libre con un punto verde. El dato es real: sale de los mismos huecos de lunes a viernes de 18:00 a 21:00. Es la que más invita a hacer clic sin quitarle sitio al registro.</p>
+    </div>
+    <div class="frames">
+      <div class="hero">
+        <h3>¿Sabes si <em>la IA</em><br>recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <a class="a-pill" href="#a"><span class="ic"><svg class="cam"><use href="#cam"/></svg></span>Videollamada de 20 min<span class="next"><span class="dot"></span>Próximo hueco: mar 13, 18:00 <span class="arr">→</span></span></a>
+      </div>
+      <div class="phone"><div class="hero">
+        <h3>¿Sabes si <em>la IA</em> recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <a class="a-pill" href="#a"><span class="ic"><svg class="cam"><use href="#cam"/></svg></span>Videollamada de 20 min<span class="next"><span class="dot"></span>Próximo hueco: mar 13, 18:00 <span class="arr">→</span></span></a>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="opt" aria-labelledby="b">
+    <div class="opt-head">
+      <span class="tag">Opción B</span>
+      <h2 id="b">Tarjeta «¿Prefieres que te lo enseñemos?»</h2>
+      <p>Una tarjeta blanca pequeña con el icono en un cuadrado azul claro, una pregunta, el horario y una flecha. Se ve más trabajada y explica qué es antes del clic, pero ocupa más alto y compite un poco más con el campo.</p>
+    </div>
+    <div class="frames">
+      <div class="hero">
+        <h3>¿Sabes si <em>la IA</em><br>recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <a class="b-card" href="#b"><span class="ic"><svg class="cam"><use href="#cam"/></svg></span><span class="txt"><strong>¿Prefieres que te lo enseñemos?</strong><small>Videollamada de 20 min con el equipo · L–V, 18:00–21:00</small></span><span class="go">→</span></a>
+      </div>
+      <div class="phone"><div class="hero">
+        <h3>¿Sabes si <em>la IA</em> recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <a class="b-card" href="#b"><span class="ic"><svg class="cam"><use href="#cam"/></svg></span><span class="txt"><strong>¿Prefieres que te lo enseñemos?</strong><small>Videollamada de 20 min · L–V, 18:00–21:00</small></span><span class="go">→</span></a>
+      </div></div>
+    </div>
+  </section>
+
+  <section class="opt" aria-labelledby="c">
+    <div class="opt-head">
+      <span class="tag">Opción C</span>
+      <h2 id="c">«o» y botón de contorno</h2>
+      <p>Una línea con «o» separa las dos vías y debajo va un botón con borde oscuro, sin relleno. Es la más limpia y la más clara como segunda opción, y en móvil queda como un segundo botón a todo el ancho.</p>
+    </div>
+    <div class="frames">
+      <div class="hero">
+        <h3>¿Sabes si <em>la IA</em><br>recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <div class="c-or">o</div>
+        <a class="c-btn" href="#c"><svg class="cam"><use href="#cam"/></svg>Agenda una videollamada <span class="meta">· 20 min</span></a>
+      </div>
+      <div class="phone"><div class="hero">
+        <h3>¿Sabes si <em>la IA</em> recomienda tu marca?</h3>
+        <div class="field"><span>tudominio.es</span><b>Analiza gratis</b></div>
+        <div class="engines"><i style="--c:#10a37f">ChatGPT</i><i style="--c:#8e6cf0">Gemini</i><i style="--c:#d97757">Claude</i></div>
+        <div class="c-or">o</div>
+        <a class="c-btn" href="#c"><svg class="cam"><use href="#cam"/></svg>Agenda una videollamada <span class="meta">· 20 min</span></a>
+      </div></div>
+    </div>
+  </section>
+
+  <div class="note"><strong>Hoy:</strong> <span class="current"><svg class="cam"><use href="#cam"/></svg>Agenda una videollamada de 20 min con el equipo de GenScore</span><br>Mi recomendación es la <strong>A</strong>: ver el próximo hueco hace que la llamada parezca real e inmediata, y sigue siendo más discreta que el botón de registro.</div>
+</div>

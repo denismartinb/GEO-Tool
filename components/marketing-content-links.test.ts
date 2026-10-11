@@ -1,7 +1,12 @@
 import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_SHELLS } from "./marketing-content-links";
+import {
+  MARKETING_CONTENT_LINKS,
+  MARKETING_ENTITY_LINKS,
+  MARKETING_LEAD_LINKS,
+  MARKETING_SHELLS
+} from "./marketing-content-links";
 
 /**
  * SEO-POS-1 (T3). El fallo que este test impide repetir: `/glosario` y
@@ -135,6 +140,32 @@ describe("MARKETING_ENTITY_LINKS", () => {
         `${shell} no usa MARKETING_ENTITY_LINKS en el pie, así que la página de entidad ` +
           "pierde su enlace entrante desde esa superficie"
       ).toBe(true);
+    });
+  }
+});
+
+/**
+ * FREE-REPORT-2 (log §252) and AFFILIATES-1: the acquisition pages. Every
+ * shell renders this list next to the entity list, so an entry here reaches
+ * every public footer without touching a shell by hand.
+ */
+describe("MARKETING_LEAD_LINKS", () => {
+  it("contiene el informe gratis y el programa de afiliados", () => {
+    expect(MARKETING_LEAD_LINKS.map((l) => l.href)).toEqual(["/gratis/informe-geo", "/afiliados"]);
+  });
+
+  it("apunta solo a rutas que existen de verdad", () => {
+    for (const link of MARKETING_LEAD_LINKS) {
+      expect(
+        existsSync(join(process.cwd(), "app", link.href.replace(/^\//, ""), "page.tsx")),
+        `${link.href} no tiene page.tsx`
+      ).toBe(true);
+    }
+  });
+
+  for (const shell of MARKETING_SHELLS) {
+    it(`${shell} renderiza la lista de captación en su pie`, () => {
+      expect(footerBlockOf(shell).includes("MARKETING_LEAD_LINKS"), `${shell} no usa MARKETING_LEAD_LINKS`).toBe(true);
     });
   }
 });

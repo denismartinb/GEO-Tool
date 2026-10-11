@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const exchangeCodeForSession = vi.fn();
+const updateUser = vi.fn();
 vi.mock("@/lib/supabase/server", () => ({
   createClient: async () => ({
-    auth: { exchangeCodeForSession }
+    auth: { exchangeCodeForSession, updateUser }
   })
 }));
 
@@ -157,5 +158,65 @@ describe("GET /auth/callback", () => {
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
     const location = response.headers.get("location") ?? "";
     expect(location.startsWith("https://app.example.com/login?error=")).toBe(true);
+  });
+});
+
+describe("GET /auth/callback · affiliate code (AFFILIATES-1)", () => {
+  const withRef = (cookie: string) =>
+    new Request("https://app.example.com/auth/callback?code=abc123", { headers: { cookie } });
+  const freshGoogle = (metadata?: Record<string, unknown>) => ({
+    ...userAt("new@example.com", "2026-07-11T18:00:00.000Z", "2026-07-11T18:00:00.400Z", "google"),
+    user_metadata: metadata
+  });
+
+  beforeEach(() => {
+    exchangeCodeForSession.mockReset();
+    updateUser.mockReset();
+    updateUser.mockResolvedValue({ data: {}, error: null });
+    sendWelcomeEmail.mockReset();
+    sendNewSignupOpsAlert.mockReset();
+    process.env.AFFILIATE_CODES = "campamentoweb";
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("stores the approved gs_ref code on a brand-new Google account", async () => {
+    exchangeCodeForSession.mockResolvedValue({ data: { user: freshGoogle({}) }, error: null });
+
+    await GET(withRef("gs_ref=campamentoweb"));
+
+    expect(updateUser).toHaveBeenCalledWith({ data: { referral_code: "campamentoweb" } });
+  });
+
+  it("never overwrites a code the account already has", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: freshGoogle({ referral_code: "newsletter-seo" }) },
+      error: null
+    });
+
+    await GET(withRef("gs_ref=campamentoweb"));
+
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("does nothing for a returning user or an unknown code", async () => {
+    exchangeCodeForSession.mockResolvedValue({
+      data: { user: userAt("old@example.com", "2026-01-01T00:00:00.000Z", "2026-07-11T18:00:00.000Z", "google", "2026-01-01T00:00:01.000Z") },
+      error: null
+    });
+    await GET(withRef("gs_ref=campamentoweb"));
+    exchangeCodeForSession.mockResolvedValue({ data: { user: freshGoogle({}) }, error: null });
+    await GET(withRef("gs_ref=desconocido"));
+
+    expect(updateUser).not.toHaveBeenCalled();
+  });
+
+  it("still logs the user in when storing the code fails", async () => {
+    exchangeCodeForSession.mockResolvedValue({ data: { user: freshGoogle({}) }, error: null });
+    updateUser.mockRejectedValue(new Error("network"));
+
+    const response = await GET(withRef("gs_ref=campamentoweb"));
+
+    expect(response.headers.get("location")).toBe("https://app.example.com/dashboard");
+    expect(sendWelcomeEmail).toHaveBeenCalledWith("new@example.com");
   });
 });

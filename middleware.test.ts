@@ -142,4 +142,61 @@ describe("middleware · alcance", () => {
       expect(matcher.test(included), included).toBe(true);
     }
   });
+
+  it("no corre sobre /afiliados en una visita normal (AFFILIATES-1)", () => {
+    const matcher = new RegExp(`^${config.matcher[0]}$`);
+    expect(matcher.test("/afiliados")).toBe(false);
+  });
+
+  /**
+   * AFFILIATES-1 — un enlace de afiliado puede caer en una página pública que
+   * el primer patrón salta. La segunda entrada sólo corre con `?ref=`, así que
+   * la exclusión de coste se mantiene para cualquier otra visita.
+   */
+  it("corre en cualquier página con ?ref=, salvo estáticos", () => {
+    const entry = config.matcher[1] as { source: string; has: Array<{ type: string; key: string }> };
+    expect(entry.has).toEqual([{ type: "query", key: "ref" }]);
+    const matcher = new RegExp(`^${entry.source}$`);
+    for (const included of ["/", "/comparativas/genscore-vs-otterly", "/gratis/informe-geo", "/afiliados"]) {
+      expect(matcher.test(included), included).toBe(true);
+    }
+    for (const excluded of ["/_next/static/chunks/main.js", "/logo.svg", "/favicon.ico"]) {
+      expect(matcher.test(excluded), excluded).toBe(false);
+    }
+  });
+});
+
+describe("middleware · enlace de afiliado (AFFILIATES-1)", () => {
+  beforeEach(() => {
+    process.env.AFFILIATE_CODES = "campamentoweb,newsletter-seo";
+  });
+
+  it("guarda un código aprobado 90 días, sólo en el servidor", async () => {
+    const response = await middleware(request("/?ref=CampamentoWeb"));
+    const cookie = response.cookies.get("gs_ref");
+    expect(cookie?.value).toBe("campamentoweb");
+    expect(cookie?.maxAge).toBe(90 * 24 * 60 * 60);
+    expect(cookie?.httpOnly).toBe(true);
+    expect(cookie?.sameSite).toBe("lax");
+    expect(cookie?.path).toBe("/");
+  });
+
+  it("ignora un código que no está en AFFILIATE_CODES o mal formado", async () => {
+    for (const path of ["/?ref=desconocido", "/?ref=%3Cscript%3E", "/?ref=", "/blog"]) {
+      const response = await middleware(request(path));
+      expect(response.cookies.get("gs_ref"), path).toBeUndefined();
+    }
+  });
+
+  it("sin AFFILIATE_CODES no guarda nada", async () => {
+    delete process.env.AFFILIATE_CODES;
+    const response = await middleware(request("/?ref=campamentoweb"));
+    expect(response.cookies.get("gs_ref")).toBeUndefined();
+  });
+
+  it("no bloquea ni redirige por llevar ?ref=", async () => {
+    const response = await middleware(request("/precios?ref=campamentoweb"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("location")).toBeNull();
+  });
 });
