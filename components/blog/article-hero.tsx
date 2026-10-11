@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { BrandMark } from "@/components/ui/brand-logo";
 import { blogPostBreadcrumb, getBlogCluster, type BlogPost } from "@/lib/blog/posts";
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
@@ -62,24 +61,23 @@ export function ArticleHero({ post }: { post: BlogPost }) {
 
         {!stat && post.heroLogos && post.heroLogos.length > 0 && (
           <div className="art-hero-logos">
-            <figure className="art-hero-logo">
-              <span className="art-hero-logo-tile">
-                <BrandMark size={52} />
-              </span>
-              <figcaption>GenScore</figcaption>
-            </figure>
-            {post.heroLogos.map((logo) => (
-              <span key={logo.src} className="art-hero-logo-pair">
-                <span className="art-hero-logo-plus" aria-hidden="true">
-                  +
-                </span>
-                <figure className="art-hero-logo">
-                  <span className="art-hero-logo-tile">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={logo.src} alt="" width={52} height={52} />
+            {post.heroLogos.map((group, groupIndex) => (
+              <span key={groupIndex} className="art-hero-logo-pair">
+                {groupIndex > 0 && (
+                  <span className="art-hero-logo-plus" aria-hidden="true">
+                    +
                   </span>
-                  <figcaption>{logo.name}</figcaption>
-                </figure>
+                )}
+                {group.map((logo) => (
+                  <figure key={logo.src} className={logo.badge ? "art-hero-logo is-new" : "art-hero-logo"}>
+                    <span className="art-hero-logo-tile">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logo.src} alt="" width={40} height={40} />
+                      {logo.badge && <span className="art-hero-logo-badge">{logo.badge}</span>}
+                    </span>
+                    <figcaption>{logo.name}</figcaption>
+                  </figure>
+                ))}
               </span>
             ))}
           </div>

@@ -103,11 +103,13 @@ export type BlogPost = {
   heroStat?: { value: string; label: string; source: string };
   /**
    * CONTENT-LAUNCH-2 (log §296): for a launch post with no figure to show,
-   * the logos of what GenScore now connects to, next to GenScore's own mark,
-   * in the slot `heroStat` would use. Real brand files from `public/brand/`,
-   * never a made-up figure. Ignored when the post also has `heroStat`.
+   * the logos of what the post is about, in the slot `heroStat` would use.
+   * Groups are joined by a «+». Real brand files from `public/brand/engines/`,
+   * never a made-up figure, and never GenScore's own mark next to Google's
+   * «G»: side by side they read as the same logo (founder, 2026-10-11).
+   * Ignored when the post also has `heroStat`.
    */
-  heroLogos?: { name: string; src: string }[];
+  heroLogos?: { name: string; src: string; badge?: string }[][];
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -520,7 +522,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Perplexity entra en GenScore como cuarto motor en Pro y Agencia. Qué tiene de distinto un motor que busca en la web y cita sus fuentes, y las tres cosas que conviene mirar en tu primer escaneo.",
     datePublished: "2026-10-11",
     coverImage: "/blog/genscore-ya-mide-perplexity/cover.webp",
-    heroLogos: [{ name: "Perplexity", src: "/brand/engines/perplexity.svg" }],
+    heroLogos: [[{ name: "ChatGPT", src: "/brand/engines/chatgpt.svg" }, { name: "Gemini", src: "/brand/engines/gemini.svg" }, { name: "Claude", src: "/brand/engines/claude.svg" }, { name: "Perplexity", src: "/brand/engines/perplexity.svg", badge: "Nuevo" }]],
     coverIcon: "search",
     // CONTENT-LAUNCH-1 (log §288): launch post for PERPLEXITY-ENGINE-1 Fase 2
     // (log §283). Product claims trace to that section.
@@ -537,7 +539,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "GenScore suma Google a la IA. Conecta tu Search Console y ve tu puesto en Google búsqueda a búsqueda, tus mejores oportunidades y qué mejorar para Google y para ChatGPT, Gemini, Claude y Perplexity, con la Auditoría SEO al lado.",
     datePublished: "2026-10-13",
     coverImage: "/blog/auditoria-seo-y-search-console-en-genscore/cover.webp",
-    heroLogos: [{ name: "Google Search Console", src: "/brand/engines/google.svg" }],
+    heroLogos: [[{ name: "Google", src: "/brand/engines/google.svg" }], [{ name: "ChatGPT", src: "/brand/engines/chatgpt.svg" }, { name: "Gemini", src: "/brand/engines/gemini.svg" }, { name: "Claude", src: "/brand/engines/claude.svg" }, { name: "Perplexity", src: "/brand/engines/perplexity.svg" }]],
     coverIcon: "search",
     // CONTENT-LAUNCH-2 (log §296): launch post for SEARCH-SEO-1 Fases 2, 3
     // and 3b (log §281, §284, §287). Product claims trace to those sections;
