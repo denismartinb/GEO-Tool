@@ -5714,7 +5714,7 @@ a.notif-row:hover {
 }
 .fc-field:focus-within { border-color: var(--brand-blue); box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 10px 32px rgba(37,99,235,.12); }
 
-/* Los tres motores, bajo el campo. No es decoración: es la lista de lo que el
+/* Los motores, bajo el campo. No es decoración: es la lista de lo que el
    comprobador consulta de verdad, y por eso los nombres van en texto y no
    dentro del SVG — un logo no lo lee un lector de pantalla ni un motor
    generativo. Los `img` van `aria-hidden` porque el nombre ya está al lado. */
@@ -5727,6 +5727,10 @@ a.notif-row:hover {
   font-size: 14.5px; font-weight: 600; color: var(--ink-2);
 }
 .lp-engine img { width: 22px; height: 22px; display: block; }
+/* «Nuevo» junto a Perplexity (PERPLEXITY-ENGINE-1): la píldora de «Informe
+   gratis» de la cabecera, a un punto menos. Selector doble porque
+   `.lp-nav-new` se declara más abajo y ganaría el empate. */
+.lp-nav-new.lp-engine-new { margin-left: -3px; padding: 1px 6px; font-size: 10px; white-space: nowrap; }
 
 /* Por debajo de 560 px el botón sale de la píldora y se pone debajo, a todo el
    ancho. No es preferencia: el campo tiene `max-width: 560px`, así que por
@@ -6384,6 +6388,14 @@ a.notif-row:hover {
   .lp-engines { margin-top: 20px; gap: 12px 16px; }
   .lp-engine { font-size: 13px; gap: 7px; }
   .lp-engine img { width: 20px; height: 20px; }
+}
+/* Con cuatro motores y la etiqueta «Nuevo», la fila no cabe en una línea en
+   un móvil de 375 px y Perplexity caía solo a una segunda. Dos por fila,
+   centradas, se leen como una lista y no como un descuelgue. El corte va en
+   480 px y no en 420: entre medias (móviles de 428-430 px) la fila tampoco
+   cabe entera. */
+@media (max-width: 480px) {
+  .lp-engines { display: grid; grid-template-columns: repeat(2, auto); justify-content: center; gap: 10px 22px; }
 }
 
 .lp-hero-actions { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
@@ -8145,6 +8157,11 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
 .price-mx-yes { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 999px; background: var(--pos-soft); color: var(--pos); }
 .price-mx-no { color: var(--ink-4); font-weight: 600; }
 .price-mx-txt { font-size: 13px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+/* PERPLEXITY-ENGINE-1 Fase 2: etiqueta «Nuevo» junto a los motores de Pro y
+   Agencia. Reutiliza la píldora de «Informe gratis» de la cabecera
+   (`.lp-nav-new`) a un punto menos, sin romper la línea: va en el mismo flujo
+   que el texto y nunca se parte. */
+.lp-nav-new.price-new-tag { display: inline-block; margin-left: 6px; padding: 1px 6px; font-size: 10px; vertical-align: 1px; white-space: nowrap; }
 
 .price-anchor { display: flex; gap: 20px; align-items: flex-start; max-width: 860px; margin: 0 auto; background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); padding: 28px 30px; box-shadow: var(--sh-1); }
 .price-anchor-ic { width: 48px; height: 48px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; flex: 0 0 auto; }

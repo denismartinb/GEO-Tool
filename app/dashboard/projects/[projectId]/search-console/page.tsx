@@ -16,7 +16,7 @@ import { GscPickProperty } from "./_components/gsc-pick-property";
 import { GscQueries } from "./_components/gsc-queries";
 
 /**
- * «Posición en Google» — SEARCH-SEO-1 Fase 3 (log §283), design in
+ * «Posición en Google» — SEARCH-SEO-1 Fase 3 (log §284), design in
  * docs/design-reference/search-seo-1/maqueta.html (screens "gsc" and
  * "connect"). Every number is read live from the customer's own Search
  * Console; nothing is stored or estimated. Indexing is asked for the pages

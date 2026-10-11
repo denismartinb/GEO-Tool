@@ -1,5 +1,5 @@
 /**
- * «Conecta tu Search Console» (log §283, design screen "connect"). The ghost
+ * «Conecta tu Search Console» (log §284, design screen "connect"). The ghost
  * behind the box in the mockup was example data; here it is a plain panel,
  * because blurred fake numbers behind a real screen would still be fake
  * numbers.

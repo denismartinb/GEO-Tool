@@ -1,7 +1,7 @@
 import { isSameOrSubdomain, normalizeDomain } from "@/lib/domains/brand-domain";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Which Search Console properties may feed a
+ * SEARCH-SEO-1 Fase 3 (log §284). Which Search Console properties may feed a
  * project's screen. It is the customer's own Google data either way, but the
  * wrong site on the screen would be a fake metric, so a property only counts
  * when it covers the project's domain:

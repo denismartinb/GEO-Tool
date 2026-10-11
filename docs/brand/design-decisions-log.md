@@ -23707,9 +23707,9 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
 
 **Pendiente.**
 
-- `PERPLEXITY_API_KEY` en Vercel: solo puede crearla el fundador.
-- Medir con datos reales cuánto difiere Perplexity de los otros tres, en
-  `/admin/estudio` con la casilla marcada.
+- ~~`PERPLEXITY_API_KEY` en Vercel~~ (puesta el 2026-10-11).
+- ~~Medir con datos reales~~: primer estudio el 2026-10-11 (facturación, una
+  pasada), 12 de 12 respuestas válidas. Ver la adenda de abajo.
 - **Fase 2 (aprobada en principio para Pro y Agencia):** antes, maqueta en
   artefacto. Después:
   - motor del escaneo limitado por plan (hoy `caps.engines` cuenta motores, no
@@ -23718,6 +23718,18 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
   - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
     al añadir un motor;
   - los textos que dicen «3 motores», que siguen congelados.
+
+**Adenda (2026-10-11): las fuentes son los enlaces del texto.** El primer
+estudio real guardó unas 30 fuentes por respuesta cuando la respuesta enseñaba
+2–4. `perplexity/sonar` cita por la Agent API con enlaces Markdown dentro del
+texto (`[Holded](https://…)`), no con marcadores `[n]`: 9 de las 12 respuestas
+llevaban enlaces y ninguna marcadores, así que `selectCitedSources` caía al
+caso «sin marcas» y contaba todo lo que había consultado. Ahora cuentan los
+enlaces y los marcadores. Un enlace que no está entre los resultados de
+búsqueda también cuenta, y solo cuando no hay ninguno de los dos se usan todos
+los resultados. `stripCitationMarkers` deja la etiqueta del enlace y quita la
+URL, para que las citas literales no lleven URLs. Las menciones de marca de ese
+estudio no cambian: las sacaba el texto, no las fuentes.
 
 ## 275. SEARCH-SEO-1 Fase 1b: la auditoría en dos bloques, GEO y SEO (2026-10-11)
 
@@ -24126,7 +24138,59 @@ Petición del fundador, el mismo día que puso `AFFILIATE_CODES` en Vercel: ver 
 - Lógica pura en `lib/admin/affiliates.ts`, con tests. Si hay más de 1000
   cuentas, la página lo avisa: las altas por código se quedarían cortas.
 
-## 283. SEARCH-SEO-1 Fase 3: «Posición en Google» con Search Console (2026-10-11)
+## 283. PERPLEXITY-ENGINE-1 Fase 2: Perplexity entra en el escaneo de Pro y Agencia (2026-10-11)
+
+**Qué se decidió.** Perplexity pasa a ser el cuarto motor del escaneo, solo para Pro y
+Agencia. Lo aprobó el fundador el 2026-10-11 («Seguimos para llevarlo al producto»), y
+pidió anunciarlo ya en `/precios` y en la portada con una etiqueta «Nuevo» pequeña.
+Starter se queda con ChatGPT, Gemini y Claude.
+
+- `caps.engines` sube a 4 en Pro y Agencia (`app/pricing/plans-data.ts`). La matriz de
+  /precios pasa a «3 / 4 / 4».
+- `resolveScanProvidersForPlan` no añade nunca Perplexity a un plan con tope por debajo de
+  `PERPLEXITY_MIN_ENGINE_CAP` (4). Estar al final de `LLM_SCAN_PROVIDERS` no basta, porque
+  el filtro de `/debug` va antes del tope: un Starter con un motor apagado habría recibido
+  Perplexity en ese hueco.
+- Lo genera la Agent API (`lib/llm/perplexity.ts`, Fase 1, §274 y su adenda de citas) y lo
+  extrae Gemini. Sus URLs son finales. Cuenta como motor con búsqueda en las tres copias
+  (`run-scoring.ts`, `opportunity-matrix.ts`, `ENGINE_META`), y las vigila el test de
+  paridad.
+- Se añade un interruptor «Motor: Perplexity» en `/debug`, junto a los otros tres. Lo pidió
+  el fundador. Usa la migración `0040_project_engine_perplexity_toggle.sql` y se lee en
+  `lib/scan/engine-flags.ts`, en una consulta aparte. El suelo de «al menos un motor» sólo
+  cuenta Gemini, Claude y OpenAI.
+- Barrido de textos: la portada, /precios, las páginas públicas, docs, comparativas, blog,
+  FAQ, definición canónica, correos, el informe gratuito y `/privacidad` (nuevo encargado
+  del tratamiento) dicen ahora «ChatGPT, Gemini, Claude y Perplexity». Donde importa el plan
+  dicen «Perplexity en Pro y Agencia». Los límites declarados frente a la competencia pasan
+  a Copilot y AI Overviews.
+- El asistente de alta dice «los motores de tu plan» en vez de «los tres motores».
+
+**Qué NO cambia.**
+- Los estudios con dato propio (facturación, clínicas, «De buscar a preguntar») se
+  midieron con tres motores y siguen diciendo tres.
+- El comprobador gratuito no cambia.
+- Las maquetas con datos de ejemplo («14 prompts · 3 motores») no cambian.
+- El texto «Diario» de Pro sigue congelado (§273).
+
+**Activación.** El código no hace nada hasta que en Vercel (Production) se añade
+`perplexity` al final de `LLM_SCAN_PROVIDERS`. `PERPLEXITY_API_KEY` ya está puesta desde la
+Fase 1. Quitarlo de la variable es el rollback, sin desplegar código.
+
+**Transición de la Puntuación GEO.** El primer escaneo con cuatro motores tiene otro
+conjunto de motores que el anterior. `readComparableRun` (`score-reliability.ts`) ya
+oculta el delta cuando el conjunto cambia, así que no se pinta una subida o bajada que
+venga sólo de añadir un motor.
+
+**Premisa (regla de cierre de fase).** No se retira ningún camino de recuperación. La
+migración 0040 se aplica a mano. Sin ella, el interruptor sale como «Sin migrar» y
+Perplexity cuenta como encendido.
+
+**Pendiente.** El informe gratuito se prepara con `/admin/estudio`, donde Perplexity sigue
+desmarcado por defecto. Para que cuadre con el texto nuevo («cuatro motores») hay que
+marcarlo al preparar cada informe.
+
+## 284. SEARCH-SEO-1 Fase 3: «Posición en Google» con Search Console (2026-10-11)
 
 **Qué se decidió.** Fase 3 de §271, aprobada en el plan del 2026-10-10
 (`docs/design-reference/search-seo-1/maqueta.html`, pantallas «Posición en
@@ -24179,7 +24243,7 @@ Visión general). El fundador dio paso con «seguimos» tras la Fase 2.
   redirección final se construye en el servidor; no se acepta `next`. La
   cookie se borra en todos los desenlaces. El `error_description` de Google
   nunca se enseña ni se guarda.
-- **Tabla `search_console_connections` (migración 0040)**: una fila por
+- **Tabla `search_console_connections` (migración 0041)**: una fila por
   proyecto. RLS activada sin políticas y `revoke all` a `anon` y
   `authenticated`: el navegador no la lee nunca, ni siquiera el texto
   cifrado. Sólo la toca código de servidor con service role después de
@@ -24226,7 +24290,7 @@ tendrá que reconectar).
 
 **Lo que hace falta fuera del repo, en este orden:**
 
-1. Aplicar la migración 0040 a mano en Supabase. Hasta entonces la pantalla
+1. Aplicar la migración 0041 a mano en Supabase. Hasta entonces la pantalla
    dice que la conexión llega pronto y Visión general no enseña la mitad de
    Google.
 2. En Google Cloud (proyecto `geo-tool`): activar la «Google Search Console

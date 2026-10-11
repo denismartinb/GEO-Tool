@@ -120,7 +120,7 @@ table.gr-mx { width: 100%; border-collapse: collapse; margin-top: 16px; font-siz
 .gr-bar .gr-bn { font-size: 12px; font-weight: 600; color: #3b4759; text-align: right; }
 .gr-bar .gr-bt { height: 16px; background: #f3f5f9; border-radius: 5px; display: flex; overflow: hidden; }
 .gr-bar .gr-seg { height: 100%; }
-.gr-seg.gr-g { background: #4f7bff; } .gr-seg.gr-o { background: #0b1426; } .gr-seg.gr-c { background: #d97757; }
+.gr-seg.gr-g { background: #4f7bff; } .gr-seg.gr-o { background: #0b1426; } .gr-seg.gr-c { background: #d97757; } .gr-seg.gr-p { background: #20808d; }
 .gr-bar .gr-bv { font-family: var(--gr-font-display), "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 14px; }
 .gr-bar.gr-me .gr-bn { color: #2563eb; font-weight: 800; }
 .gr-bar.gr-me .gr-bt { outline: 2px solid #2563eb; outline-offset: 2px; }

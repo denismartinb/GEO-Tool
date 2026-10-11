@@ -48,7 +48,7 @@ export const COMPARISON_ROWS: {
   },
   {
     label: "Motores de IA cubiertos",
-    genscore: "3 en planes de pago (Gemini, Claude, ChatGPT), todos incluidos sin add-ons",
+    genscore: "4 en Pro y Agencia (ChatGPT, Gemini, Claude y Perplexity) y 3 en Starter, todos incluidos sin add-ons",
     otterly:
       "4 incluidos en todos los planes (ChatGPT, AI Overviews, Perplexity y Microsoft Copilot); Google AI Mode, Gemini y Claude son add-ons con coste extra, no incluidos en el precio base",
     otterlyWins: true

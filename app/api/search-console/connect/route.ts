@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Starts the read-only Search Console
+ * SEARCH-SEO-1 Fase 3 (log §284). Starts the read-only Search Console
  * connection: proves the session owns the project, signs a state bound to
  * project, user and a nonce, keeps nonce + PKCE verifier in a single-use
  * httpOnly cookie, and sends the browser to Google's consent screen.

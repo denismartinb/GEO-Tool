@@ -1575,7 +1575,7 @@ export default async function ProjectDetailPage({
                 auditedAt={seoAuditedAt}
                 href={`/dashboard/projects/${projectId}/web-audit`}
               >
-                {/* SEARCH-SEO-1 Fase 3 (log §283): Search Console, streamed in
+                {/* SEARCH-SEO-1 Fase 3 (log §284): Search Console, streamed in
                     so Google's latency never holds up the Overview. */}
                 <Suspense fallback={null}>
                   <GscOverviewHalf projectId={projectId} ownerUserId={user.id} domain={project.domain} />

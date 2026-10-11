@@ -61,8 +61,8 @@ export default function OverviewReportPage() {
 
       <h2>Posicionamiento por motores de IA</h2>
       <p>
-        GenScore no consulta un único modelo. Este bloque desglosa tu posición media por motor (Gemini,
-        Claude, ChatGPT según tu plan) — el número de motores incluidos depende de tu plan, ver{" "}
+        GenScore no consulta un único modelo. Este bloque desglosa tu posición media por motor (ChatGPT,
+        Gemini y Claude en todos los planes, y Perplexity en Pro y Agencia). El número de motores incluidos depende de tu plan, ver{" "}
         <Link href="/docs/planes-y-limites">Planes y límites</Link>.
       </p>
 

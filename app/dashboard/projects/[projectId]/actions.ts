@@ -490,13 +490,15 @@ export async function setSamplingEnabled(formData: FormData) {
  * off the last engine still on.
  */
 const engineToggleSchema = recurringScansSchema.extend({
-  engine: z.enum(["gemini", "claude", "openai"])
+  engine: z.enum(["gemini", "claude", "openai", "perplexity"])
 });
 
 const ENGINE_TOGGLE_COLUMN = {
   gemini: "engine_gemini_enabled",
   claude: "engine_claude_enabled",
-  openai: "engine_openai_enabled"
+  openai: "engine_openai_enabled",
+  // PERPLEXITY-ENGINE-1 Fase 2, migration 0040.
+  perplexity: "engine_perplexity_enabled"
 } as const;
 
 export async function setEngineEnabled(formData: FormData) {
@@ -514,7 +516,10 @@ export async function setEngineEnabled(formData: FormData) {
   const enabled = parsed.data.enabled === "true";
   const { supabase, user } = await requireUser();
 
-  if (!enabled) {
+  // The "last engine" floor counts only Gemini/Claude/OpenAI: Perplexity never
+  // runs below caps.engines 4, so switching it off can never leave a scan with
+  // no engine, and it cannot be the one that keeps a Starter scan alive.
+  if (!enabled && engine !== "perplexity") {
     const { data: currentFlags, error: readError } = await supabase
       .from("projects")
       .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")

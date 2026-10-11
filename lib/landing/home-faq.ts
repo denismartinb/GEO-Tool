@@ -50,12 +50,12 @@ export const HOME_FAQ: readonly HomeFaqEntry[] = [
   },
   {
     q: "¿Cómo sé si mi marca aparece en ChatGPT?",
-    a: "Prueba el comprobador gratuito: sin registro, preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo, con 7 días de Pro gratis y sin tarjeta, repite la comprobación en Gemini y Claude, con tus propios prompts, y la repite de forma continua.",
+    a: "Prueba el comprobador gratuito: sin registro, preguntamos a ChatGPT por tu categoría y te decimos si te nombra y qué marcas nombra en tu lugar. Es una foto de un motor; el escaneo completo, con 7 días de Pro gratis y sin tarjeta, repite la comprobación en Gemini, Claude y Perplexity, con tus propios prompts, y la repite de forma continua.",
     link: { href: "/gratis/aparece-mi-marca-en-chatgpt", label: "Probar el comprobador gratis" }
   },
   {
     q: "¿Qué motores analiza GenScore?",
-    a: "Hoy, ChatGPT, Gemini y Claude. Se ejecutan de verdad, con al menos una llamada real por prompt y por motor — no son estimaciones ni datos de terceros. Iremos sumando motores según cambie el mercado, y sin coste extra en tu plan."
+    a: "ChatGPT, Gemini, Claude y Perplexity. Perplexity está incluido en los planes Pro y Agencia, y en la prueba de Pro de 7 días; el plan Starter analiza ChatGPT, Gemini y Claude. Se ejecutan de verdad, con al menos una llamada real por prompt y por motor: no son estimaciones ni datos de terceros. En Pro y Agencia, los motores que vayamos sumando entran sin coste extra."
   },
   {
     q: "¿En qué se diferencia de una herramienta de SEO?",

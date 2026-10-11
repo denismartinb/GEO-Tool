@@ -10,7 +10,8 @@ import {
   type PreviousRecommendationRow
 } from "@/lib/recommendations/recommendation-history";
 import { computeEngineCoverage } from "@/lib/scan/engine-coverage";
-import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
+import { enginesFromFlags } from "@/lib/scan/engine-flags";
+import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import {
   resolveTechnicalComponent,
   TECHNICAL_SNAPSHOT_LOOKUP_LIMIT
@@ -252,8 +253,8 @@ export async function executePendingScan({
   const plan = resolvePlan(resolveSystemPlanId(ownerProfile) as string | undefined);
 
   /**
-   * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration
-   * 0033), re-read HERE rather than carried in `run` from creation time — same
+   * `engine_{gemini,claude,openai,perplexity}_enabled` (ENGINE-DEBUG-TOGGLE-1,
+   * migrations 0033/0040; read in `engine-flags.ts`), re-read HERE rather than carried in `run` from creation time — same
    * "re-read at execution, don't freeze at enqueue" rule WEB-AUDIT-AUTO-SPLIT-1
    * established for its audit-half switches: a batch executed later than
    * creation must see whatever the founder's switches say NOW, not what they
@@ -261,21 +262,16 @@ export async function executePendingScan({
    * `run-creation.ts`'s: the select above (`project`) is on the execution
    * critical path, and a column PostgREST doesn't know about must not fail it.
    */
-  const { data: engineFlagsRow } = await service
-    .from("projects")
-    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
-    .eq("id", projectId)
-    .maybeSingle();
-
-  const enabledEngines: LLMScanProvider[] | undefined = engineFlagsRow
-    ? (
-        [
-          engineFlagsRow.engine_gemini_enabled !== false ? "gemini" : null,
-          engineFlagsRow.engine_claude_enabled !== false ? "claude" : null,
-          engineFlagsRow.engine_openai_enabled !== false ? "openai" : null
-        ].filter(Boolean) as LLMScanProvider[]
-      )
-    : undefined;
+  const [{ data: engineFlagsRow }, { data: perplexityFlagRow }] = await Promise.all([
+    service
+      .from("projects")
+      .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+      .eq("id", projectId)
+      .maybeSingle(),
+    // Own query: migration 0040 is applied by hand (see engine-flags.ts).
+    service.from("projects").select("engine_perplexity_enabled").eq("id", projectId).maybeSingle()
+  ]);
+  const enabledEngines = enginesFromFlags(engineFlagsRow, perplexityFlagRow);
 
   const providers = resolveScanProvidersForPlan(plan, enabledEngines);
 

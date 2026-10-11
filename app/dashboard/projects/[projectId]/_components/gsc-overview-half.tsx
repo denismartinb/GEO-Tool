@@ -4,7 +4,7 @@ import { fmtDeltaPct, fmtInt, fmtPosition } from "../search-console/_components/
 
 /**
  * The Google half of Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase
- * 3, log §283; design: the "Buscadores" card of
+ * 3, log §284; design: the "Buscadores" card of
  * docs/design-reference/search-seo-1/maqueta.html). Clicks and average
  * position of the last 28 days, and how many searches sit on Google's page 2.
  *

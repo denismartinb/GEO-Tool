@@ -50,7 +50,7 @@ export default function GenscoreVsOtterlyPage() {
         <KeyTakeaway label="En dos frases">
           Otterly incluye cuatro motores y cubre más mercados, pero no consta en castellano ni compite
           en el bucle de acción — solo monitoriza y audita. GenScore se prueba 7 días con Pro y sin tarjeta, cubre
-          los tres motores que de verdad importan hoy (Gemini, Claude, ChatGPT) sin coste extra por
+          ChatGPT, Gemini y Claude en todos los planes, y Perplexity en Pro y Agencia, sin coste extra por
           añadirlos, y convierte lo que detecta en acciones concretas, no solo en un informe.
         </KeyTakeaway>
 
@@ -91,7 +91,7 @@ export default function GenscoreVsOtterlyPage() {
         </CompareTable>
 
         <Verdict title="Cuándo elegir Otterly" badge="Cuándo elegir el competidor">
-          Si necesitas seguimiento en decenas de mercados a la vez, Perplexity y Copilot incluidos en el
+          Si necesitas seguimiento en decenas de mercados a la vez, AI Overviews y Copilot incluidos en el
           plan (con Gemini, Claude y Google AI Mode como add-ons de pago), o ya trabajas en inglés y no
           te importa que no conste una versión en castellano, Otterly es una opción real y más madura en volumen de mercados.
         </Verdict>

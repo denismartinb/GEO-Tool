@@ -3,7 +3,7 @@ import "server-only";
 import { getSiteUrl } from "@/lib/site-url";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). The only module that talks to Google for the
+ * SEARCH-SEO-1 Fase 3 (log §284). The only module that talks to Google for the
  * Search Console connection: OAuth (code exchange with PKCE, refresh, revoke)
  * and the three read endpoints the screen uses (sites, Search Analytics, URL
  * Inspection).

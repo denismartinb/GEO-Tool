@@ -9,11 +9,16 @@ import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
 
 const HERO_DOMAIN_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
 
-/** Los tres motores que GenScore analiza de verdad. */
-const ENGINES = [
+/**
+ * Los motores que GenScore analiza de verdad. Perplexity entra en Pro y
+ * Agencia (y en la prueba de Pro), no en Starter; por eso lleva la etiqueta
+ * «Nuevo» y no se cuenta como motor de todos los planes (PERPLEXITY-ENGINE-1).
+ */
+const ENGINES: Array<{ name: string; src: string; isNew?: boolean }> = [
   { name: "ChatGPT", src: "/brand/engines/chatgpt.svg" },
   { name: "Gemini", src: "/brand/engines/gemini.svg" },
-  { name: "Claude", src: "/brand/engines/claude.svg" }
+  { name: "Claude", src: "/brand/engines/claude.svg" },
+  { name: "Perplexity", src: "/brand/engines/perplexity.svg", isNew: true }
 ];
 
 /**
@@ -116,6 +121,7 @@ export function HeroDomainField({ withEngines = true }: { withEngines?: boolean 
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={engine.src} alt="" width={22} height={22} aria-hidden="true" />
               {engine.name}
+              {engine.isNew ? <span className="lp-nav-new lp-engine-new">Nuevo</span> : null}
             </span>
           ))}
         </div>

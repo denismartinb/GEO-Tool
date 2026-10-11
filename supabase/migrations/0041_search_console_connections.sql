@@ -1,7 +1,7 @@
--- 0040_search_console_connections.sql
+-- 0041_search_console_connections.sql
 --
 -- Phase: SEARCH-SEO-1 Fase 3, «Posición en Google» (founder-approved plan
--- 2026-10-10, docs/brand/design-decisions-log.md §283; security review by
+-- 2026-10-10, docs/brand/design-decisions-log.md §284; security review by
 -- data-guardian before this file was written).
 --
 -- Purpose: one Google Search Console connection per project. The customer
@@ -23,7 +23,7 @@
 --
 -- Until this migration is applied the screen says the connection is not
 -- available yet; nothing else in the product reads this table.
--- Apply manually in the Supabase SQL editor, after 0039.
+-- Apply manually in the Supabase SQL editor, after 0040.
 
 create table if not exists public.search_console_connections (
   id uuid primary key default gen_random_uuid(),

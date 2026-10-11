@@ -1,5 +1,5 @@
 /**
- * SEARCH-SEO-1 Fase 3 (log §283) — incident response, never routine.
+ * SEARCH-SEO-1 Fase 3 (log §284) — incident response, never routine.
  *
  * If GSC_TOKEN_ENCRYPTION_KEY and the database leak together, rotating the
  * key does not help: whoever holds both can already decrypt every refresh

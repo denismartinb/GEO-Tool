@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { IndexSummary } from "@/lib/search-console/report";
 
 /**
- * Indexing donut (log §283). Built from Google's URL Inspection of the pages
+ * Indexing donut (log §284). Built from Google's URL Inspection of the pages
  * our audit already reviews (at most ten), so it speaks of those pages, never
  * of the whole site. Buckets only what Google said in words we can match;
  * the rest is "Otros motivos".

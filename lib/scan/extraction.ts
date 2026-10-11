@@ -618,7 +618,7 @@ export async function runStructuredExtractionForRun(input: {
     .eq("project_id", input.projectId)
     .eq("run_id", input.runId)
     .eq("status", "completed")
-    .in("provider", ["gemini", "claude", "openai"])
+    .in("provider", ["gemini", "claude", "openai", "perplexity"])
     .not("raw_response_text", "is", null);
 
   if (error || !rows?.length) return empty;

@@ -11,6 +11,21 @@ import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { SELLABLE_PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getFounderOffer } from "@/lib/stripe";
 
+/**
+ * PERPLEXITY-ENGINE-1 Fase 2: Perplexity entra como cuarto motor sólo en Pro y
+ * Agencia, y el fundador quiere una etiqueta «Nuevo» muy pequeña junto a la
+ * línea de motores de esos dos planes. Se decide aquí, por id de plan, y no
+ * en `plans-data.ts`: Starter sigue con tres motores y no lleva etiqueta.
+ */
+const PLANS_WITH_NEW_ENGINE: ReadonlySet<Plan["id"]> = new Set(["pro", "agency"]);
+
+function isEnginesLine(text: string): boolean {
+  return /motores de IA/i.test(text);
+}
+
+function NewEngineTag() {
+  return <span className="lp-nav-new price-new-tag">Nuevo</span>;
+}
 
 function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly string[] }) {
   const isRec = !!plan.recommended;
@@ -77,7 +92,10 @@ function PlanCard({ plan, promoPlanIds }: { plan: Plan; promoPlanIds: readonly s
             <span className="price-chk">
               <Icon name="check" size={12} />
             </span>
-            {h}
+            <span>
+              {h}
+              {PLANS_WITH_NEW_ENGINE.has(plan.id) && isEnginesLine(h) ? <NewEngineTag /> : null}
+            </span>
           </li>
         ))}
       </ul>
@@ -132,6 +150,7 @@ function PlanMatrix({ promoPlanIds }: { promoPlanIds: readonly string[] }) {
                   {r.vals.map((v, j) => (
                     <td key={SELLABLE_PLANS[j].id} className={"price-mx-cell" + (SELLABLE_PLANS[j].recommended ? " price-rec" : "")}>
                       <MatrixCell v={v} />
+                      {PLANS_WITH_NEW_ENGINE.has(SELLABLE_PLANS[j].id) && isEnginesLine(r.label) ? <NewEngineTag /> : null}
                     </td>
                   ))}
                 </tr>

@@ -1,7 +1,8 @@
 import "server-only";
 
 import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
-import { resolveScanProvidersForPlan, type LLMScanProvider } from "@/lib/scan/providers";
+import { enginesFromFlags } from "@/lib/scan/engine-flags";
+import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { computeSampleCount } from "@/lib/scan/sampling";
 import { ProjectActionError } from "@/lib/scan/types";
@@ -202,8 +203,8 @@ export async function createPendingScanRunCore({
     .maybeSingle();
 
   /**
-   * `engine_{gemini,claude,openai}_enabled` (ENGINE-DEBUG-TOGGLE-1, migration
-   * 0033) — same isolated-query reasoning as `sampling_enabled` above: this
+   * `engine_{gemini,claude,openai,perplexity}_enabled` (ENGINE-DEBUG-TOGGLE-1,
+   * migrations 0033/0040; read in `engine-flags.ts`) — same isolated-query reasoning as `sampling_enabled` above: this
    * runs on the critical path of every scan creation, so a column PostgREST
    * doesn't know about must not fail the whole project select. `undefined`
    * (migration not applied, or a transient read failure) resolves to
@@ -211,21 +212,16 @@ export async function createPendingScanRunCore({
    * treats as "no project override" — the current shipped behaviour, not a
    * new failure mode that silently drops an engine from every scan.
    */
-  const { data: engineFlagsRow } = await readClient
-    .from("projects")
-    .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
-    .eq("id", projectId)
-    .maybeSingle();
-
-  const enabledEngines: LLMScanProvider[] | undefined = engineFlagsRow
-    ? (
-        [
-          engineFlagsRow.engine_gemini_enabled !== false ? "gemini" : null,
-          engineFlagsRow.engine_claude_enabled !== false ? "claude" : null,
-          engineFlagsRow.engine_openai_enabled !== false ? "openai" : null
-        ].filter(Boolean) as LLMScanProvider[]
-      )
-    : undefined;
+  const [{ data: engineFlagsRow }, { data: perplexityFlagRow }] = await Promise.all([
+    readClient
+      .from("projects")
+      .select("engine_gemini_enabled, engine_claude_enabled, engine_openai_enabled")
+      .eq("id", projectId)
+      .maybeSingle(),
+    // Own query: migration 0040 is applied by hand (see engine-flags.ts).
+    readClient.from("projects").select("engine_perplexity_enabled").eq("id", projectId).maybeSingle()
+  ]);
+  const enabledEngines = enginesFromFlags(engineFlagsRow, perplexityFlagRow);
 
   // Read via the service client (not readClient) so this resolves correctly
   // for every caller — the cron path and reconciliation's auto-retry path

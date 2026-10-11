@@ -2,7 +2,7 @@
 
 Se inyectan solos al tocar `lib/search-console/**`,
 `app/api/search-console/**` y `app/dashboard/projects/*/search-console/**`.
-Cada regla es trazable a `docs/brand/design-decisions-log.md` §283 o a la
+Cada regla es trazable a `docs/brand/design-decisions-log.md` §284 o a la
 revisión de data-guardian que lo precedió.
 
 - **El token de Google es un secreto y sólo existe cifrado.** AES-256-GCM con

@@ -2,7 +2,7 @@ import type { DailyPoint, QueryView } from "@/lib/search-console/report";
 import { fmtDay, fmtInt, fmtPosition } from "./format";
 
 /**
- * Charts of «Posición en Google» (log §283): daily clicks and impressions on
+ * Charts of «Posición en Google» (log §284): daily clicks and impressions on
  * two axes, and queries by position and impressions with the page-2 band.
  * Server-rendered SVG, no chart library; each point carries a `<title>` so
  * the value is readable on hover and by screen readers.

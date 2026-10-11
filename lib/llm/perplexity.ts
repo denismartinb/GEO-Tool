@@ -76,6 +76,18 @@ type AgentApiResult = {
 /** Inline citation markers: `[1]`, `[web:1]`, `[web:1][web:3]`, `[1, 3]`. */
 const CITATION_MARKER = /\[(?:web:)?\d+(?:\s*,\s*(?:web:)?\d+)*\]/g;
 
+/**
+ * Inline Markdown links: `[Holded: autónomos](https://www.holded.com/es/autonomos)`.
+ * This is how `perplexity/sonar` cites through the Agent API in practice — the
+ * first real study (2026-10-11) had links in 9 of 12 answers and `[n]`
+ * markers in none.
+ */
+const MARKDOWN_LINK = /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g;
+
+function linkedUrls(text: string): string[] {
+  return Array.from(text.matchAll(MARKDOWN_LINK), (match) => match[2]);
+}
+
 function citedIds(text: string): Set<number> {
   const ids = new Set<number>();
   for (const marker of text.match(CITATION_MARKER) ?? []) {
@@ -91,6 +103,7 @@ function citedIds(text: string): Set<number> {
  */
 export function stripCitationMarkers(text: string): string {
   return text
+    .replace(MARKDOWN_LINK, "$1")
     .replace(CITATION_MARKER, "")
     .replace(/[ \t]+([.,;:!?])/g, "$1")
     .replace(/[ \t]{2,}/g, " ")
@@ -110,21 +123,34 @@ function answerText(data: AgentApiResult): string {
 }
 
 /**
- * Sources the answer actually used. When the text carries markers, only the
- * results it cites count, which is what a perplexity.ai reader sees under the
- * answer. With no markers there is nothing to tell them apart, so every
- * retrieved result counts, the same way Gemini's grounding chunks do.
+ * Sources the answer actually used. When the text carries Markdown links or
+ * `[n]` markers, only those count, which is what a perplexity.ai reader sees
+ * under the answer; counting every retrieved result instead recorded ~30
+ * "sources" per answer that showed 2–4 (first real study, 2026-10-11). With
+ * neither there is nothing to tell them apart, so every retrieved result
+ * counts, the same way Gemini's grounding chunks do.
  */
 export function selectCitedSources(text: string, results: AgentSearchResult[]): Array<{ uri: string; title?: string }> {
   const withUrl = results.filter((result): result is AgentSearchResult & { url: string } => Boolean(result.url));
   const ids = citedIds(text);
-  const cited = ids.size ? withUrl.filter((result) => typeof result.id === "number" && ids.has(result.id)) : withUrl;
+  const links = linkedUrls(text);
+  const explicit = ids.size > 0 || links.length > 0;
+  const linked = new Set(links);
+  const fromResults = explicit
+    ? withUrl.filter((result) => linked.has(result.url) || (typeof result.id === "number" && ids.has(result.id)))
+    : withUrl;
   const seen = new Set<string>();
   const sources: Array<{ uri: string; title?: string }> = [];
-  for (const result of cited) {
+  for (const result of fromResults) {
     if (seen.has(result.url)) continue;
     seen.add(result.url);
     sources.push(result.title ? { uri: result.url, title: result.title } : { uri: result.url });
+  }
+  // A link the model wrote that is not among the search results is still a source the reader sees.
+  for (const url of links) {
+    if (seen.has(url)) continue;
+    seen.add(url);
+    sources.push({ uri: url });
   }
   return sources;
 }

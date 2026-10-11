@@ -17,7 +17,7 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Google's redirect back after consent.
+ * SEARCH-SEO-1 Fase 3 (log §284). Google's redirect back after consent.
  *
  * Checks, in order: state signature and expiry, nonce == cookie, the session
  * user is the one who started the flow, and that user still owns the

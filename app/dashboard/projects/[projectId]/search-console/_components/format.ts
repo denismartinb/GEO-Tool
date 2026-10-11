@@ -1,4 +1,4 @@
-/** es-ES formatting for «Posición en Google» (log §283). */
+/** es-ES formatting for «Posición en Google» (log §284). */
 export function fmtInt(n: number): string {
   return Math.round(n).toLocaleString("es-ES");
 }

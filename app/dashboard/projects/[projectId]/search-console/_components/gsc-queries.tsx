@@ -5,7 +5,7 @@ import type { QueryView } from "@/lib/search-console/report";
 import { fmtInt, fmtPct, fmtPosition } from "./format";
 
 /**
- * «Tus búsquedas» (log §283). Queries come from Google and are untrusted
+ * «Tus búsquedas» (log §284). Queries come from Google and are untrusted
  * text: rendered as text only, never as HTML.
  */
 type Filter = "all" | "p1" | "near";

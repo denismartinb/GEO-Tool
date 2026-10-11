@@ -3,7 +3,7 @@ import { selectPropertyAction } from "../actions";
 
 /**
  * Shown when the connected Google account has several properties that cover
- * the domain, or none (log §283). Only matching properties are offered; the
+ * the domain, or none (log §284). Only matching properties are offered; the
  * action checks them again against the live list.
  */
 export function GscPickProperty({

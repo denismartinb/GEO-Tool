@@ -50,8 +50,8 @@ export default function GenscoreVsPeecAiPage() {
         <KeyTakeaway label="En dos frases">
           Peec AI incluye usuarios ilimitados en todos sus planes de autoservicio y mide varios países e
           idiomas desde su plan Pro, pero te hace elegir tres modelos y deja Claude para Enterprise.
-          GenScore no desglosa por país, pero incluye los tres motores que de verdad importan hoy
-          (Gemini, Claude, ChatGPT) sin elegir ni pagar complementos, y convierte lo que detecta en
+          GenScore no desglosa por país, pero incluye ChatGPT, Gemini y Claude en todos
+          los planes, y Perplexity en Pro y Agencia, sin elegir ni pagar complementos, y convierte lo que detecta en
           contenido generado, no solo en una sugerencia priorizada de qué hacer.
         </KeyTakeaway>
 
@@ -99,7 +99,7 @@ export default function GenscoreVsPeecAiPage() {
 
         <Verdict title="Cuándo elegir GenScore" badge="Cuándo elegir GenScore">
           Si operas principalmente en España o LATAM y quieres el producto en tu idioma, si quieres
-          empezar sin tarjeta y sin pagar un extra por los tres motores principales, o si lo que
+          empezar sin tarjeta y sin pagar un extra por los motores principales, o si lo que
           necesitas no es solo una lista priorizada de oportunidades sino contenido ya generado y listo
           para publicar (FAQ, schema, briefs), GenScore está construido específicamente para eso.
         </Verdict>

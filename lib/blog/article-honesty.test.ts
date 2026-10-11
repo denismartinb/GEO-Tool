@@ -6,67 +6,44 @@ import { GLOSSARY_TERMS } from "../glosario/terms";
 
 /**
  * SEO-POS-1 (S1, log §49). El propio borrador del plan proponía titular la
- * primera pieza de la Fase C "…en ChatGPT, Gemini y Perplexity" — Perplexity
- * no es un motor que GenScore ejecute hoy (`docs/launch-plan.md` Fase 8:
- * Gemini, Claude, ChatGPT; Perplexity "sin fecha, fuera de alcance"). Se
- * corrigió antes de publicar, pero solo porque alguien releyó el título con
- * cuidado. Este test es la red que no depende de que eso vuelva a pasar.
+ * primera pieza de la Fase C "…en ChatGPT, Gemini y Perplexity" cuando
+ * Perplexity no era un motor que GenScore ejecutara. Se corrigió antes de
+ * publicar, pero solo porque alguien releyó el título con cuidado. Este test
+ * es la red que no depende de que eso vuelva a pasar.
  *
- * No es una prohibición absoluta: una pieza que compare GenScore con la
- * competencia, o que hable de "cómo aparecer en Perplexity" como tema de
- * mercado (S7 de `docs/content-calendar.md`), tiene motivo legítimo para
- * nombrarlo. Por eso es un allow-list explícito, no un blanket ban — y **solo
- * puede crecer**, nunca reducirse en silencio: cada entrada nueva se añade en
- * el mismo PR que la justifica, igual que `PENDING_CONVERSION` en
- * `article-recipes.test.ts`.
+ * PERPLEXITY-ENGINE-1 (2026-10-11): Perplexity pasa a ser motor de GenScore en
+ * Pro y Agencia, así que el guardián deja de vigilar ese nombre y vigila los
+ * que siguen fuera. La forma también cambia: ya no basta con que un artículo
+ * no nombre un motor, porque varios hablan de Copilot o de AI Overviews como
+ * tema de mercado. Lo que no puede pasar es una FRASE que ponga a GenScore y a
+ * un motor no soportado juntos sin negarlo ("GenScore no mide AI Overviews").
  */
-const ALLOWED_TO_MENTION_PERPLEXITY = new Set<string>([
-  // SEO-POS-1 Fase C, S7 (2026-08-14): el artículo es justo "cómo aparecer en
-  // Perplexity" como tema de mercado — mencionar el motor es el propósito de
-  // la pieza, no un desliz. Declara explícitamente, con Verdict, que GenScore
-  // no lo mide hoy y sin comprometer fecha (Task Intake del fundador: "S7 sin
-  // la promesa" — se descartó anunciar una fecha de soporte sin decisión de
-  // producto real detrás).
-  "como-aparecer-en-perplexity",
-  // S8 (2026-08-14). El artículo va sobre cómo clasifica GA4 el tráfico de
-  // asistentes, y una de sus tres conclusiones ES que el canal "Asistente de
-  // IA" **no incluye Perplexity**: sus visitas se quedan en Referencia. Ahí
-  // Perplexity no aparece como motor de GenScore sino como una fuente de
-  // tráfico que el lector tiene en su propio informe y no encuentra donde
-  // debería. Omitirlo sería esconderle al lector la mitad de la respuesta para
-  // proteger una ambigüedad sobre nuestros motores que el artículo no crea:
-  // el CTA nombra los tres que ejecutamos (ChatGPT, Gemini y Claude) y la
-  // metadata no lo menciona, que es donde la regla de motores muerde
-  // (`.claude/rules/growth-content.md`, "La metadata no nombra motores que el
-  // producto no ejecuta").
-  "como-medir-trafico-chatgpt-ga4",
-  // GROWTH-2 (2026-09-19). El artículo existe justo para trazar la frontera
-  // entre AI Overviews/Perplexity/Copilot (motores de mercado, no soportados)
-  // y Gemini/Claude/ChatGPT (los tres que GenScore sí escanea). Nombrar
-  // Perplexity aquí es el propósito de la pieza, no un desliz — mismo
-  // razonamiento que "como-aparecer-en-perplexity" y
-  // "como-medir-trafico-chatgpt-ga4" ya sentaron. Un `Verdict` explícito dice
-  // qué motores escanea GenScore hoy, sin fecha comprometida para el resto, y
-  // ni el CTA ni la metadata lo nombran.
-  "ai-overviews-vs-chatgpt-diferencia"
-]);
+const UNSUPPORTED_ENGINES = /\b(Copilot|AI Overviews|Grok|DeepSeek|Meta AI)\b/;
+const NEGATION = /\b(no|ni|sin|fuera)\b/i;
 
 function readArticle(slug: string): string {
   return readFileSync(join(process.cwd(), "app", "blog", slug, "page.mdx"), "utf8");
 }
 
+function sentences(source: string): string[] {
+  return source.split(/(?<=[.!?:])\s+|\n\s*\n/);
+}
+
 describe("honestidad de motores en el cuerpo de los artículos", () => {
   for (const post of BLOG_POSTS) {
-    if (ALLOWED_TO_MENTION_PERPLEXITY.has(post.slug)) continue;
-
-    it(`${post.slug} no nombra Perplexity como motor de GenScore`, () => {
-      const source = readArticle(post.slug);
+    it(`${post.slug} no presenta como motor de GenScore uno que no ejecuta`, () => {
+      const offending = sentences(readArticle(post.slug)).filter(
+        (sentence) =>
+          // A question ("¿GenScore mide AI Overviews?") asserts nothing.
+          !sentence.includes("¿") &&
+          /GenScore/.test(sentence) &&
+          UNSUPPORTED_ENGINES.test(sentence) &&
+          !NEGATION.test(sentence)
+      );
       expect(
-        source,
-        `${post.slug} menciona Perplexity — no es un motor soportado hoy. ` +
-          "Si el artículo tiene un motivo legítimo (comparativa, tema de mercado), " +
-          "añade el slug a ALLOWED_TO_MENTION_PERPLEXITY en este mismo PR y explica por qué."
-      ).not.toMatch(/Perplexity/i);
+        offending,
+        `${post.slug} pone a GenScore junto a un motor que no ejecuta sin decir que no lo mide.`
+      ).toEqual([]);
     });
   }
 });

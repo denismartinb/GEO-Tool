@@ -12,7 +12,7 @@ import { GscError, listSites, refreshAccessToken, revokeToken } from "@/lib/sear
 import { PROPERTY_MAX_LENGTH, propertyMatchesDomain } from "@/lib/search-console/property";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). The two writes a customer makes from
+ * SEARCH-SEO-1 Fase 3 (log §284). The two writes a customer makes from
  * «Posición en Google»: choosing which property feeds the screen, and
  * disconnecting. Cores return a discriminated result; the actions translate
  * it (`.claude/rules/server-actions.md`). `ids` are already verified by the

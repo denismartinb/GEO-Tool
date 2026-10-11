@@ -1,7 +1,7 @@
 import { GSC_CALLBACK_PATH } from "@/lib/search-console/google";
 
 /**
- * The single-use cookie of a Search Console connect flow (log §283): the
+ * The single-use cookie of a Search Console connect flow (log §284): the
  * state's nonce and the PKCE verifier. httpOnly, scoped to the callback path
  * and ten minutes long; the callback deletes it on every outcome.
  */

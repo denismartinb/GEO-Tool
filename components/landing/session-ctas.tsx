@@ -208,7 +208,7 @@ export function HomeCtaBand() {
       <h2 className="lp-h2">Averigua qué dice la IA de ti <br />ahora mismo</h2>
       <p className="lp-sec-sub">
         Escribe tu dominio y lanza tu primer escaneo completo: preguntas reales de tu categoría
-        en ChatGPT, Gemini y Claude, con 7 días de Pro gratis.
+        en ChatGPT, Gemini, Claude y Perplexity, con 7 días de Pro gratis.
       </p>
       <div className="lp-close-field">
         <HeroDomainField withEngines={false} />

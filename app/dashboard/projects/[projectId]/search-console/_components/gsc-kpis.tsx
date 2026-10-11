@@ -2,7 +2,7 @@ import type { DailyPoint, IndexSummary, SearchConsoleReport } from "@/lib/search
 import { fmtDeltaPct, fmtInt, fmtPosition } from "./format";
 
 /**
- * The four KPI tiles of «Posición en Google» (log §283, design in
+ * The four KPI tiles of «Posición en Google» (log §284, design in
  * docs/design-reference/search-seo-1/maqueta.html, screen "gsc"). Deltas are
  * against the 28 days before; a delta Google cannot support (nothing to
  * compare with) is not shown.

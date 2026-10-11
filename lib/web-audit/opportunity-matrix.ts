@@ -77,7 +77,7 @@ export type WebAuditSummary = {
  * divergencia; ese test no existía. Ahora sí, y cubre las tres copias
  * (`opportunity-matrix.test.ts`, "paridad de motores grounded").
  */
-const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
+const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai", "perplexity"]);
 
 function isGroundedProvider(provider: string | null): boolean {
   return !provider || GROUNDED_PROVIDERS.has(provider);

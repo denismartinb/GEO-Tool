@@ -10,7 +10,7 @@ import { PROPERTY_MAX_LENGTH } from "@/lib/search-console/property";
 import { screenPath } from "@/lib/search-console/oauth-cookie";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Thin translations of the cores in
+ * SEARCH-SEO-1 Fase 3 (log §284). Thin translations of the cores in
  * `lib/search-console/property-core.ts`: validate, prove ownership, call the
  * core, map each outcome to one redirect.
  */

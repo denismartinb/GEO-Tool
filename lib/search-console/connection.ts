@@ -4,8 +4,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { GSC_SCOPE, type GscErrorCategory } from "@/lib/search-console/google";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Reads and writes of
- * `search_console_connections` (migration 0040).
+ * SEARCH-SEO-1 Fase 3 (log §284). Reads and writes of
+ * `search_console_connections` (migration 0041).
  *
  * Service-role only — the table has RLS and no policy. **Every function takes
  * ids the caller has ALREADY verified** (`requireActiveProject(projectId)` for

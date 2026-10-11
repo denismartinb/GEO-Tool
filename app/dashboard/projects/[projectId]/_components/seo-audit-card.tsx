@@ -39,7 +39,7 @@ export function SeoAuditCard({
   /** Already formatted, e.g. "9 oct". Null when the snapshot has no date. */
   auditedAt: string | null;
   href: string;
-  /** The Google half (Search Console), log §283. */
+  /** The Google half (Search Console), log §284. */
   children?: ReactNode;
 }) {
   const pages = `${summary.analyzedPageCount} ${summary.analyzedPageCount === 1 ? "página" : "páginas"}`;

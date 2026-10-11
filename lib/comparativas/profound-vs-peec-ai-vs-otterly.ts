@@ -263,9 +263,9 @@ export const GENSCORE_NOTE = {
   label: "Si buscas una opción en español",
   title: "GenScore",
   body:
-    `GenScore es nuestra herramienta, por eso no está en la tabla. Mide cómo aparece tu marca en ChatGPT, Gemini y Claude, los tres incluidos en todos los planes de pago sin complementos, con interfaz y soporte en castellano. Starter cuesta ${STARTER_PRICE} €/mes (~${STARTER_PROMPTS} prompts, escaneo semanal) y Pro ${PRO_PRICE} €/mes (~${PRO_PROMPTS} prompts, escaneo diario, sentimiento y un generador que redacta borradores de FAQ, datos estructurados y briefs). Se prueba 7 días con Pro, sin tarjeta.`,
+    `GenScore es nuestra herramienta, por eso no está en la tabla. Mide cómo aparece tu marca en ChatGPT, Gemini y Claude, incluidos en todos los planes de pago sin complementos, y en Perplexity desde Pro, con interfaz y soporte en castellano. Starter cuesta ${STARTER_PRICE} €/mes (~${STARTER_PROMPTS} prompts, escaneo semanal) y Pro ${PRO_PRICE} €/mes (~${PRO_PROMPTS} prompts, escaneo diario, sentimiento y un generador que redacta borradores de FAQ, datos estructurados y briefs). Se prueba 7 días con Pro, sin tarjeta.`,
   limits:
-    "Lo que no hace: no ejecuta Perplexity, Copilot ni AI Overviews, no desglosa la puntuación por país y su plan de Agencia gestiona varios dominios en una cuenta, pero todavía sin marca blanca.",
+    "Lo que no hace: no ejecuta Copilot ni AI Overviews, no desglosa la puntuación por país y su plan de Agencia gestiona varios dominios en una cuenta, pero todavía sin marca blanca.",
   href: "/comparativas/mejores-herramientas-geo-en-espanol"
 };
 
@@ -300,7 +300,7 @@ export const PAGE = {
     "Consultamos las páginas de precios, las páginas principales y los centros de ayuda de los tres fabricantes en la fecha indicada. Peec AI no publica importes en su web y Profound no publica el de su plan de agencia: en esos dos casos citamos a un tercero, con su fecha, y lo marcamos como orientativo. No hemos contratado ninguna de las tres herramientas para esta comparativa. Si detectas un dato desactualizado, dínoslo y lo corregimos.",
   cta: {
     title: "¿Tu equipo trabaja en castellano?",
-    text: "Prueba GenScore 7 días con Pro, sin tarjeta, y mide tu marca en ChatGPT, Gemini y Claude."
+    text: "Prueba GenScore 7 días con Pro, sin tarjeta, y mide tu marca en ChatGPT, Gemini, Claude y Perplexity."
   }
 };
 

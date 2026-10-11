@@ -42,7 +42,7 @@ const faqItems = [
   {
     question: "¿Cuál es la alternativa más barata a Otterly?",
     answer:
-      `En la entrada los precios son parecidos —GenScore Starter cuesta ${STARTER_PRICE} €/mes y Otterly arranca en 29 $/mes—, pero GenScore te deja probar 7 días con Pro y sin tarjeta antes de pagar nada. Donde la diferencia es grande es en el escalón de ~100 prompts: la comparación es ${PRO_PRICE} €/mes de GenScore Pro —con ChatGPT, Gemini y Claude incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini, Claude y Google AI Mode, que se cobran aparte en todos los niveles.`
+      `En la entrada los precios son parecidos —GenScore Starter cuesta ${STARTER_PRICE} €/mes y Otterly arranca en 29 $/mes—, pero GenScore te deja probar 7 días con Pro y sin tarjeta antes de pagar nada. Donde la diferencia es grande es en el escalón de ~100 prompts: la comparación es ${PRO_PRICE} €/mes de GenScore Pro —con ChatGPT, Gemini, Claude y Perplexity incluidos— frente a 189 $/mes de Otterly Standard más los add-ons de Gemini, Claude y Google AI Mode, que se cobran aparte en todos los niveles.`
   },
   {
     question: "¿Puedo probar una alternativa sin dejar Otterly?",
@@ -52,7 +52,7 @@ const faqItems = [
   {
     question: "¿Qué hace GenScore que Otterly no haga?",
     answer:
-      "Tres cosas concretas. Primera: entra en la fase de solución — genera el borrador de FAQ, datos estructurados y briefs desde el plan Pro, mientras que Otterly termina en monitorización, auditoría y reporting. Segunda: incluye ChatGPT, Gemini y Claude en todos los planes de pago sin add-ons, mientras que en Otterly Gemini, Claude y Google AI Mode se cobran aparte en todos los niveles. Tercera: es un producto en castellano, interfaz y soporte, mientras que en Otterly no consta una versión en castellano."
+      "Tres cosas concretas. Primera: entra en la fase de solución — genera el borrador de FAQ, datos estructurados y briefs desde el plan Pro, mientras que Otterly termina en monitorización, auditoría y reporting. Segunda: incluye ChatGPT, Gemini y Claude en todos los planes de pago sin add-ons, y Perplexity en Pro y Agencia, mientras que en Otterly Gemini, Claude y Google AI Mode se cobran aparte en todos los niveles. Tercera: es un producto en castellano, interfaz y soporte, mientras que en Otterly no consta una versión en castellano."
   }
 ];
 
@@ -101,7 +101,7 @@ export default function AlternativasAOtterlyPage() {
           con el precio, con la cobertura real o con que la herramienta te deja con el diagnóstico en
           la mano y sin nada que hacer con él. <strong>GenScore resuelve tres de esos cuatro
           límites</strong> — se prueba 7 días sin tarjeta, incluye ChatGPT, Gemini y Claude en todos
-          los planes de pago sin add-ons, y es la única de esta lista que además redacta la solución
+          los planes de pago sin add-ons (y Perplexity en Pro y Agencia), y es la única de esta lista que además redacta la solución
           en castellano.
         </KeyTakeaway>
 
@@ -222,7 +222,7 @@ export default function AlternativasAOtterlyPage() {
           datos estructurados, briefs— desde el plan Pro: es donde el resto de esta lista se detiene,
           incluida Otterly. Y si tu equipo trabaja en castellano, es la única con interfaz y soporte
           nativos, sin traducir un panel en inglés cada mañana. Al escalón de ~100 prompts, Pro cuesta
-          {PRO_PRICE} €/mes con los tres motores dentro, frente a 189 $ más add-ons.
+          {PRO_PRICE} €/mes con los cuatro motores dentro, frente a 189 $ más add-ons.
         </Verdict>
 
         <p>

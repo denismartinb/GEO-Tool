@@ -70,7 +70,7 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "Usuarios ilimitados ya en el plan de 29 $/mes.",
     context:
-      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En GenScore los usuarios ilimitados llegan desde Starter, pero la prueba de 7 días de Pro ya escanea de verdad, con los tres motores."
+      "Con quince prompts incluidos. Es decir: todo el equipo puede entrar a mirar la misma muestra de quince consultas. En GenScore los usuarios ilimitados llegan desde Starter, pero la prueba de 7 días de Pro ya escanea de verdad, con los cuatro motores."
   },
   {
     claim: "Seguimiento en más de 50 mercados.",
@@ -80,7 +80,7 @@ export const OTTERLY_STRENGTHS: { claim: string; context: string }[] = [
   {
     claim: "Cuatro motores incluidos en todos los planes: ChatGPT, AI Overviews, Perplexity y Microsoft Copilot.",
     context:
-      "GenScore ejecuta ChatGPT, Gemini y Claude —los tres donde tus clientes preguntan hoy— y los tres en todos los planes de pago, sin add-ons. En Otterly, Google AI Mode, Gemini y Claude se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
+      "GenScore ejecuta ChatGPT, Gemini y Claude en todos los planes de pago, sin add-ons, y suma Perplexity en Pro y Agencia sin coste aparte. En Otterly, Google AI Mode, Gemini y Claude se cobran aparte en todos los niveles, así que la cobertura amplia se paga dos veces: en el plan y en el complemento."
   },
   {
     claim: "El precio de entrada de pago más bajo de la categoría.",
@@ -156,12 +156,12 @@ export const ALTERNATIVES: Alternative[] = [
     url: "https://www.genscore.es",
     solves: ["prompts", "action", "espanol"],
     oneLiner:
-      "Mide cómo apareces en ChatGPT, Gemini y Claude, y genera el borrador de la solución (FAQ, datos estructurados, briefs) desde el plan Pro.",
+      "Mide cómo apareces en ChatGPT, Gemini, Claude y Perplexity (este, en Pro y Agencia), y genera el borrador de la solución (FAQ, datos estructurados, briefs) desde el plan Pro.",
     pricingNote:
       `7 días de Pro gratis sin tarjeta; Pro ${PRO_PRICE} €/mes con ~100 prompts — el escalón comparable al Standard de 189 $ de Otterly, sin add-ons por motor.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     tradeoff:
-      "No ejecuta Perplexity ni Copilot —sí ChatGPT, Gemini y Claude, los tres incluidos en todos los planes de pago, sin add-ons— y no desglosa la puntuación por país. Si tu negocio se juega en comparar mercados uno a uno, esa pieza concreta la cubre mejor Otterly.",
+      "No ejecuta Copilot ni AI Overviews (sí ChatGPT, Gemini y Claude en todos los planes de pago, sin add-ons, y Perplexity en Pro y Agencia) y no desglosa la puntuación por país. Si tu negocio se juega en comparar mercados uno a uno, esa pieza concreta la cubre mejor Otterly.",
     comparisonHref: "/comparativas/genscore-vs-otterly"
   },
   {

@@ -31,7 +31,7 @@ import {
 } from "@/lib/search-console/report";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Decides what «Posición en Google» and the
+ * SEARCH-SEO-1 Fase 3 (log §284). Decides what «Posición en Google» and the
  * Google half of Visión general's card can honestly show, and fetches it.
  *
  * Nothing is stored: every number is read live from Google on each render,
@@ -49,7 +49,7 @@ const QUERY_ROW_LIMIT = 250;
 export type SearchConsoleState =
   /** Missing key or OAuth client in Vercel: the feature is not offered. */
   | { kind: "not_configured" }
-  /** Migration 0040 not applied yet. */
+  /** Migration 0041 not applied yet. */
   | { kind: "unavailable" }
   | { kind: "disconnected" }
   /** Access lost: revoked at Google, expired grant, or no permission on the property. */

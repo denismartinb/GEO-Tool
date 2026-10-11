@@ -3,7 +3,7 @@ import "server-only";
 import { createCipheriv, createDecipheriv, createHash, createHmac, hkdfSync, randomBytes, timingSafeEqual } from "node:crypto";
 
 /**
- * SEARCH-SEO-1 Fase 3 (log §283). Secrets of the Search Console connection.
+ * SEARCH-SEO-1 Fase 3 (log §284). Secrets of the Search Console connection.
  *
  * One master key, `GSC_TOKEN_ENCRYPTION_KEY` (32 bytes, base64), from which two
  * independent subkeys are derived with HKDF-SHA256 — one encrypts refresh

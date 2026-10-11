@@ -81,7 +81,7 @@ export const TOOLS: ToolProfile[] = [
     name: "GenScore",
     url: "https://www.genscore.es",
     oneLiner:
-      "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini y Claude, con 7 días de Pro gratis, sin tarjeta.",
+      "Mide y mejora cómo aparece tu marca en respuestas de ChatGPT, Gemini, Claude y Perplexity (este, en Pro y Agencia), con 7 días de Pro gratis, sin tarjeta.",
     distinctiveFeature:
       "La única de esta lista que redacta el borrador de la solución sin un contrato Enterprise: genera recomendaciones con evidencia y un solucionador que redacta el borrador (FAQ, schema, briefs) desde el plan Pro.",
     pricingNote: `Planes desde ${STARTER_PRICE} €/mes, con 7 días de Pro gratis y sin tarjeta.`,
@@ -110,13 +110,13 @@ export const TOOLS: ToolProfile[] = [
     oneLiner:
       "Monitorización de visibilidad en IA construida para el mercado hispanohablante: prompts en español, competidores regionales y fuentes en dominios locales (.es, .mx, .ar, .cl, .co).",
     distinctiveFeature:
-      "Es la otra herramienta de esta lista pensada para el mercado en español desde el principio, con foco declarado en LATAM. Cubre ChatGPT, Perplexity y AI Overviews, un conjunto de motores distinto del de GenScore: nosotros ejecutamos Gemini y Claude, que ella no lista, y no ejecutamos Perplexity ni AI Overviews.",
+      "Es la otra herramienta de esta lista pensada para el mercado en español desde el principio, con foco declarado en LATAM. Cubre ChatGPT, Perplexity y AI Overviews, un conjunto de motores distinto del de GenScore: nosotros ejecutamos Gemini y Claude, que ella no lista, y Perplexity en Pro y Agencia, pero no AI Overviews.",
     pricingNote: "Desde unos 29 $/mes según su comunicación pública. Confírmalo en crecerank.com.",
     spanishSupport: "Sí — producto en español, con foco declarado en LATAM.",
     bestFor:
-      "Equipos con foco en LATAM que necesiten seguimiento por dominios locales país a país y prioricen la cobertura de Perplexity y AI Overviews sobre la de Gemini y Claude.",
+      "Equipos con foco en LATAM que necesiten seguimiento por dominios locales país a país y prioricen la cobertura de AI Overviews sobre la de Gemini y Claude.",
     context:
-      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es Perplexity y AI Overviews (CreceRank) frente a Gemini y Claude (GenScore), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y GenScore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, GenScore se puede probar 7 días con Pro y sin tarjeta, además de la comprobación anónima de ChatGPT sin registro."
+      "Es la comparación más directa de esta lista para un equipo hispanohablante, así que conviene mirar dos cosas concretas antes de decidir. La primera es el conjunto de motores: la elección real es AI Overviews (CreceRank) frente a Gemini y Claude (GenScore), con Perplexity en las dos (en GenScore, desde Pro), y depende de dónde pregunten tus clientes, no de cuál suena mejor. La segunda es dónde te deja cada una: CreceRank prioriza accionables en español, y GenScore además redacta el borrador — FAQ, datos estructurados y briefs — desde el plan Pro. Y para probarlo, GenScore se puede probar 7 días con Pro y sin tarjeta, además de la comprobación anónima de ChatGPT sin registro."
   },
   {
     slug: "mentio",
@@ -125,14 +125,14 @@ export const TOOLS: ToolProfile[] = [
     oneLiner:
       "Monitorización de menciones de marca y producto en asistentes de IA (ChatGPT, Claude, Gemini), con análisis de frecuencia y posición dentro de la respuesta.",
     distinctiveFeature:
-      "Cubre los mismos tres motores que GenScore, lo que la convierte en la comparación más limpia de esta lista en cuanto a cobertura: la diferencia no está en qué mide, sino en qué haces después con lo medido.",
+      "Cubre los mismos tres motores que GenScore incluye en todos sus planes, lo que la convierte en la comparación más limpia de esta lista en cuanto a cobertura (GenScore suma Perplexity en Pro y Agencia): la diferencia no está en qué mide, sino en qué haces después con lo medido.",
     pricingNote:
       "Sin cifra fiable. Las fuentes públicas de terceros dan importes inverosímiles y confunden el producto con GetMentioned, que es otra herramienta distinta. Confírmalo en su web antes de comparar.",
     spanishSupport: "No confirmado — documentación observada en inglés.",
     bestFor:
       "Equipos que quieran seguir menciones en los tres motores principales y no necesiten que la herramienta proponga ni redacte la solución.",
     context:
-      "Al cubrir ChatGPT, Claude y Gemini —los mismos tres que GenScore— la elección se reduce a lo que pasa después del informe. Mentio se detiene en la medición: cuántas veces te mencionan y en qué posición dentro de la respuesta. GenScore continúa hacia la recomendación con evidencia y el generador de soluciones, y lo hace en castellano. Antes de compararlas por precio, ten en cuenta que el suyo no está publicado de forma fiable en ninguna fuente que hayamos podido verificar."
+      "Al cubrir ChatGPT, Claude y Gemini, los mismos tres que GenScore incluye en todos sus planes, la elección se reduce a lo que pasa después del informe. Mentio se detiene en la medición: cuántas veces te mencionan y en qué posición dentro de la respuesta. GenScore continúa hacia la recomendación con evidencia y el generador de soluciones, y lo hace en castellano. Antes de compararlas por precio, ten en cuenta que el suyo no está publicado de forma fiable en ninguna fuente que hayamos podido verificar."
   },
   {
     slug: "peec-ai",
