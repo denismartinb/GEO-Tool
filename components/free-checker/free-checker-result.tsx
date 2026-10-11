@@ -186,7 +186,7 @@ export function FreeCheckerResult({
         <h3>Esto es una pregunta en un motor. El escaneo completo mide el resto.</h3>
         <ul>
           <li>Las preguntas principales de búsqueda de tu sector</li>
-          <li>ChatGPT, Gemini y Claude</li>
+          <li>ChatGPT, Gemini, Claude y Perplexity</li>
           <li>Múltiples veces en distintos momentos del tiempo</li>
           <li>Puntuación GEO, competidores, fuentes citadas, auditoría de tu web y plan de acción</li>
         </ul>

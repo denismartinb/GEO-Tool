@@ -9,6 +9,7 @@ import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
 import { requireUser } from "@/lib/auth";
+import { requireOperator } from "@/lib/admin/operator";
 import { requireActiveProject } from "@/lib/project-workspace";
 import {
   ENABLE_SYNC_SCAN_EXECUTION,
@@ -173,6 +174,8 @@ export default async function RunsPage({
   searchParams: Promise<{ error?: string; success?: string }>;
 }) {
   const { projectId } = await params;
+  // DEBUG-MFA-1: operator allow-list + verified TOTP session, same gate as `/admin`.
+  await requireOperator(`/dashboard/projects/${projectId}/debug`);
   const feedback = await searchParams;
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();

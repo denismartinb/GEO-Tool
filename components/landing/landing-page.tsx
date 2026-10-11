@@ -752,12 +752,12 @@ export function LandingPage() {
                         </div>
                       ))}
                     </div>
-                    <p className="lp-prod-mpie">14 preguntas, lanzadas en los tres motores.</p>
+                    <p className="lp-prod-mpie">14 preguntas, lanzadas en los cuatro motores.</p>
                   </div>
 
                   <div className="lp-prod-pghead">
                     <span className="t">Prompts</span>
-                    <span className="m">14 preguntas · 3 motores · 42 respuestas</span>
+                    <span className="m">14 preguntas · 4 motores · 56 respuestas</span>
                   </div>
 
                   <div className="lp-prod-card lp-prod-list">

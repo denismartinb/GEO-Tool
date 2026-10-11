@@ -247,6 +247,7 @@ export const BLOG_POSTS: BlogPost[] = [
     metaDescription:
       "Cómo aparecer en Perplexity: por qué es distinto de Google y de ChatGPT, y qué mueve de verdad que te cite.",
     datePublished: "2026-08-14",
+    dateUpdated: "2026-10-11",
     coverIcon: "search",
     coverImage: "/blog/como-aparecer-en-perplexity/cover.webp",
     primaryKeyword: "cómo aparecer en perplexity",
@@ -286,7 +287,8 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "como-saber-si-tu-marca-aparece-en-chatgpt",
-    title: "Cómo saber si tu marca aparece en ChatGPT, Gemini y Claude",
+    title: "Cómo saber si tu marca aparece en ChatGPT, Gemini, Claude y Perplexity",
+    seoTitle: "Cómo saber si tu marca aparece en ChatGPT y otras IA",
     metaDescription:
       "Tres formas de comprobarlo: qué preguntas probar tú mismo, qué mirar en tu analítica y cuándo hace falta una herramienta de monitorización.",
     description:

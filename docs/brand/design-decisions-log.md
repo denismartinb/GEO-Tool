@@ -24362,3 +24362,84 @@ ningún dato. Queda pendiente, con maqueta antes de construir: más datos de
 Search Console (páginas, CTR, dispositivos), que alimenten las
 recomendaciones de posicionamiento, y que la pantalla enseñe el puesto como
 tal (reparto por tramos y evolución).
+
+---
+
+## 285. PERPLEXITY-ENGINE-1 Fase 2b: lo que se quedó en tres motores (2026-10-11)
+
+**Qué pasó.** Una auditoría externa del contenido publicado tras §283 encontró
+cuatro sitios que seguían hablando de tres motores o que podían confundir al
+lector. Se corrigen aquí:
+
+- `/docs/empezar/primer-escaneo`: la prueba de Pro incluye los cuatro motores,
+  no «los tres».
+- Maqueta de Prompts en «El producto» de la portada: «14 preguntas · 4 motores
+  · 56 respuestas». Es una escena ilustrativa; se ajusta para que no
+  contradiga al hero.
+- `como-saber-si-tu-marca-aparece-en-chatgpt`: título, pregunta de la FAQ y
+  CTA nombran a Perplexity. Se añade `seoTitle` porque el título visible ya no
+  cabe en 70 caracteres con « — GenScore» (§265).
+- `como-aparecer-en-perplexity`: el ejemplo de frase citable decía «el plan
+  Starter cuesta 49 €/mes», que se leía como nuestro Starter (29 €). Pasa a
+  una gestoría inventada, igual que el `AnswerSample` de la figura 1. Gana
+  `dateUpdated`.
+
+- Asistente «Añade un dominio» (lo vio el fundador en su cuenta Agencia):
+  la fila «Motores» y el recuento del resumen eran una lista fija de tres. La
+  página pasa ahora los motores reales del plan con
+  `resolveScanProvidersForPlan`, la misma función que usa el escaneo, así que
+  Pro y Agencia ven cuatro y Starter tres. Los interruptores de `/debug` no
+  entran porque el proyecto todavía no existe.
+
+- Misión del primer escaneo, paso «Ignición»: decía siempre «Gemini, ChatGPT
+  y Claude, preguntados a la vez» y «Los tres a la vez». Ahora nombra los
+  motores que de verdad pregunta el run (los mismos que cuenta la barra
+  superior, de `resolveScanProvidersForPlan`) y dice «Los cuatro» en Pro y
+  Agencia. Si no se conocen, no se adivina una lista. Sólo cambia texto: el
+  cohete y su animación no se tocan (`.claude/rules/mission-rocket.md`).
+- Resultado del comprobador gratuito: la lista de lo que mide el escaneo
+  completo (prueba de Pro) suma Perplexity.
+
+**Lo que se deja como está, a propósito.**
+
+- `/blog/que-es-el-geo-score` dice «A diario» en los planes de pago. No es
+  exacto (Starter es semanal; Pro de pago, cada 2 días, §273), pero el
+  fundador congeló ese texto. Pendiente de su decisión.
+- `/terminos` suma Perplexity a los proveedores de ejemplo, pero mantiene
+  «beta privada» por decisión del fundador.
+- Los estudios siguen en tres motores porque se midieron así (§283).
+- El tour de bienvenida dice «30 lanzamientos en tres motores». Es una escena
+  ilustrativa con cifras de ejemplo (`.claude/rules/onboarding.md`); se deja.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 286. DEBUG-MFA-1 — `/debug` exige operador y MFA, como `/admin` (2026-10-11)
+
+**Qué se decidió.** El fundador: «a partir de ahora se tendrá que acceder con
+mfa». La pantalla de diagnóstico (`/debug` y
+`/dashboard/projects/[projectId]/debug`), el detalle de un escaneo
+(`/runs/[runId]`, que sólo se enlaza desde ella) y sus cuatro server actions
+(`setRecurringScans`, `setAutoAuditHalf`, `setSamplingEnabled`,
+`setEngineEnabled`) pasan a llamar a `requireOperator`, la misma puerta de
+`/admin`: usuario en `ADMIN_USER_IDS` y sesión `aal2` (TOTP). Si el operador
+no tiene la sesión elevada, va a `/mfa/challenge?next=<pantalla de debug>` (o
+a `/mfa/enroll` si no tiene factor) y vuelve a la misma pantalla. Cualquier
+otra cuenta recibe 404, no un 403. Cierra el pendiente de §32: hasta hoy
+cualquier cliente con sesión podía abrir `/debug` de su propio proyecto y
+apagar motores, muestreo o auditorías.
+
+**Por qué las actions también.** Una server action es un endpoint POST
+propio; proteger sólo la página dejaría los interruptores llamables a mano.
+
+**Qué no cambia.** `DeleteDomainButton` vive en la carpeta de debug pero lo
+usa Dominios, que es de cliente: no se toca. La propiedad del proyecto la
+sigue comprobando `requireActiveProject` después de la puerta.
+
+**Pendiente conocido.** El journey `--journeys scan` del piloto
+(`tests/pilot/journeys/scan/request-scan.spec.ts`) pulsa «Repetir escaneo» en
+`/debug` con la cuenta piloto, que no es operador: ahora recibirá 404. Es un
+workflow de disparo manual; si se vuelve a necesitar, hay que darle otro
+botón de escaneo o una puerta propia.
+
+**Regla de premisa.** No se retira ningún camino de recuperación para el
+cliente: los controles de `/debug` ya eran internos por diseño (§32).

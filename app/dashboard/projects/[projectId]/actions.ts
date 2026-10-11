@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { requireOperator } from "@/lib/admin/operator";
 import { createServiceClient } from "@/lib/supabase/service";
 import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
 import {
@@ -314,6 +315,17 @@ export async function executeScan(formData: FormData) {
 }
 
 /**
+ * DEBUG-MFA-1 — where `requireOperator` sends the operator back after the TOTP
+ * challenge. Only a UUID becomes part of the path; anything else falls back to
+ * the `/debug` shortcut, which resolves the project itself.
+ */
+function debugPath(projectId: FormDataEntryValue | null): string {
+  return typeof projectId === "string" && z.string().uuid().safeParse(projectId).success
+    ? `/dashboard/projects/${projectId}/debug`
+    : "/debug";
+}
+
+/**
  * Enables/disables the daily automatic scan for a project. Opt-in only:
  * enabling requires at least one completed scan run, so the recurring cadence
  * always starts from a known-good baseline (geo-strategy guardrail).
@@ -330,6 +342,8 @@ export async function executeScan(formData: FormData) {
  * where the user already is.
  */
 export async function setRecurringScans(formData: FormData) {
+  // DEBUG-MFA-1: `/debug` toggles are operator-only, behind a verified TOTP session.
+  await requireOperator(debugPath(formData.get("projectId")));
   const parsed = recurringScansSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled")
@@ -382,6 +396,8 @@ const auditHalfSchema = recurringScansSchema.extend({
 });
 
 export async function setAutoAuditHalf(formData: FormData) {
+  // DEBUG-MFA-1: `/debug` toggles are operator-only, behind a verified TOTP session.
+  await requireOperator(debugPath(formData.get("projectId")));
   const parsed = auditHalfSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled"),
@@ -435,6 +451,8 @@ export async function setAutoAuditHalf(formData: FormData) {
  * pattern as the audit halves.
  */
 export async function setSamplingEnabled(formData: FormData) {
+  // DEBUG-MFA-1: `/debug` toggles are operator-only, behind a verified TOTP session.
+  await requireOperator(debugPath(formData.get("projectId")));
   const parsed = recurringScansSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled")
@@ -502,6 +520,8 @@ const ENGINE_TOGGLE_COLUMN = {
 } as const;
 
 export async function setEngineEnabled(formData: FormData) {
+  // DEBUG-MFA-1: `/debug` toggles are operator-only, behind a verified TOTP session.
+  await requireOperator(debugPath(formData.get("projectId")));
   const parsed = engineToggleSchema.safeParse({
     projectId: formData.get("projectId"),
     enabled: formData.get("enabled"),
