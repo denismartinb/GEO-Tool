@@ -25305,3 +25305,37 @@ existen desde el 2026-10-09 y el de pago no ha saltado nunca; no hay señal
 por canal. Necesita tocar el registro y es una fase aparte. El objetivo del
 sprint está escrito en la página (`SPRINT_GOAL_DEADLINE`): cuando se cumpla
 o cambie, se cambia ahí.
+
+## 305. PROMPTS-REVIEW-1: los prompts generados se revisan antes de añadirlos (2026-10-11)
+
+**Qué pidió el fundador.** «Cuando se termina una generación de prompts por
+kw, es importante que se muestren para validar o editar antes de añadirlos
+al panel». Maqueta (escritorio y móvil) aprobada por el fundador el 2026-10-11, en `docs/design-reference/prompts-review-1/maqueta.html`.
+
+**Qué cambia.** «Añadir prompts» en modo «Basado en keywords» y en
+«Generación automática» pasa de un paso a dos:
+
+- `generatePromptProposals` (`lib/projects/add-prompts.ts`,
+  `generatePromptProposalsCore`) sólo genera. No escribe nada ni escanea.
+  Descarta lo que ya se vigila, los repetidos y lo que no cumple el largo de
+  un prompt manual (10–300 caracteres), y devuelve cuántos huecos le quedan
+  a la cuenta en su plan.
+- El modal enseña un paso nuevo, «Revisa los prompts»: cada propuesta con su
+  casilla (todas marcadas, salvo las que no caben en el plan), su tema y
+  «Editar». «Volver a generar» repite la generación; «Atrás» vuelve a las
+  palabras clave sin perderlas; cerrar descarta la propuesta.
+- `addReviewedPrompts` (`addReviewedPromptsCore`) guarda exactamente lo
+  marcado, con el texto editado y el tema que dio el generador, y lanza el
+  escaneo sólo de esos prompts, igual que antes.
+
+**El tope del plan cuenta lo que se añade.** El camino de un paso sólo
+rechazaba si la cuenta ya estaba en el tope, así que con un hueco libre
+podía añadir cinco. El paso de revisión no deja marcar más de los que caben
+y el servidor lo vuelve a comprobar. El modo «Manual» y «Vigilar prompt»
+(Search Console) siguen por `addPromptsCore`, sin cambios.
+
+**Qué no cambia.** El modelo que genera (`generateAddedPrompts`), el número
+de propuestas (5), los textos del primer paso y el modo manual.
+
+**Pendiente.** Un prompt editado conserva el tema que propuso el generador;
+si la edición cambia de tema, el usuario no puede corregirlo aquí.
