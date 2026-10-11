@@ -25052,3 +25052,30 @@ cambian.
 - Plan del fundador: https://claude.ai/artifact/DLsvhWmjTcxLS3Gx6kjUpN
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 300. NAV-DRAWER-FIT-1: el menú móvil cabe entero en un iPhone (2026-10-11)
+
+**Qué pasaba.** El fundador, en su iPhone: el cajón de la consola cortaba
+«Manuales y estudios», el último enlace, por debajo del pie fijo. Tras
+NAV-SIMPLIFY-1 (§291) la lista tiene cuatro bloques y nueve enlaces, y el pie
+apilaba tres filas: «¿Cómo funciona?», la cuenta y «Cerrar sesión», cada una
+de 44px. En total eran unos 170px fijos. Con las barras de Safari, la altura
+útil (unos 664px a 390 de ancho) no daba. La lista sí scrolleaba, pero nada
+lo indicaba.
+
+**Qué se decidió.** El cambio sólo afecta al cajón (≤760px); el escritorio no
+cambia.
+- El pie pasa a una sola fila: la cuenta a la izquierda; «¿Cómo funciona?» y
+  «Cerrar sesión» como iconos de 44px a la derecha. Los dos conservan su
+  nombre accesible: la ayuda deja su texto en el DOM, oculto a la vista, y
+  salir lleva `aria-label`. El pie mide 62px.
+- Las filas del menú bajan de 44 a 40px y los rótulos de bloque se aprietan.
+- Con eso la lista entera cabe en 390×664, medido en un fixture con el CSS
+  real.
+- «Cerrar sesión» deja de usar el icono de ajustes, que era un error de
+  siempre, y estrena `logOut`.
+
+**Qué queda.** No se ha probado en un iPhone real, sólo en Chromium a
+390×664. En un iPhone SE o con la letra del sistema más grande la lista
+volverá a scrollear, como antes. Las filas de 40px quedan por debajo de los
+44px que recomienda Apple. Se aceptó a cambio de que el menú quepa entero.
