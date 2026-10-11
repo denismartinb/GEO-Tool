@@ -243,3 +243,92 @@ export function NearPageOneScatter({ queries }: { queries: QueryView[] }) {
     </div>
   );
 }
+
+/**
+ * Daily average position (log §287). The axis is inverted: position 1 is the
+ * top of Google, so better is up, as the label says.
+ */
+export function PositionTrendChart({ daily }: { daily: DailyPoint[] }) {
+  const [hover, setHover] = useState<number | null>(null);
+  const points = daily.filter((d): d is DailyPoint & { position: number } => typeof d.position === "number" && d.position > 0);
+  if (points.length < 2) {
+    return <p className="sa-empty">Google todavía no tiene suficientes días con datos para dibujar la evolución.</p>;
+  }
+  const W = 420;
+  const H = 170;
+  const L = 34;
+  const R = 8;
+  const T = 10;
+  const B = 26;
+  const iw = W - L - R;
+  const ih = H - T - B;
+  const n = points.length;
+  const lo = Math.max(1, Math.floor(Math.min(...points.map((p) => p.position))));
+  const hi = Math.max(lo + 2, Math.ceil(Math.max(...points.map((p) => p.position))));
+  const x = (i: number) => L + (i / (n - 1)) * iw;
+  const y = (pos: number) => T + ((pos - lo) / (hi - lo)) * ih;
+  const line = points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)} ${y(p.position).toFixed(1)}`).join(" ");
+  const ticks = [lo, Math.round((lo + hi) / 2), hi].filter((v, i, a) => a.indexOf(v) === i);
+  const labelIdx = [...new Set([0, Math.round((n - 1) / 2), n - 1])];
+  const h = hover === null ? null : points[hover];
+  const first = points[0];
+  const last = points[n - 1];
+
+  return (
+    <div className="gsc-chart-box" onMouseLeave={() => setHover(null)}>
+      <svg
+        className="gsc-chart"
+        viewBox={`0 0 ${W} ${H}`}
+        role="img"
+        aria-label={`Evolución del puesto medio: del ${fmtPosition(first.position)} al ${fmtPosition(last.position)}`}
+      >
+        {ticks.map((v) => (
+          <g key={v}>
+            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#eef1f6" />
+            <text x={L - 6} y={y(v) + 3.5} textAnchor="end">
+              {v}
+            </text>
+          </g>
+        ))}
+        {labelIdx.map((i) => (
+          <text key={i} x={x(i)} y={H - 6} textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}>
+            {fmtDay(points[i].date)}
+          </text>
+        ))}
+        <path d={line} fill="none" stroke="#2563eb" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
+        {h === null || hover === null ? (
+          <circle cx={x(n - 1)} cy={y(last.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+        ) : (
+          <g pointerEvents="none">
+            <line x1={x(hover)} x2={x(hover)} y1={T} y2={T + ih} stroke="#98a2b3" strokeDasharray="3 3" />
+            <circle cx={x(hover)} cy={y(h.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+          </g>
+        )}
+        {points.map((p, i) => (
+          <rect
+            key={p.date}
+            x={x(i) - iw / (n - 1) / 2}
+            y={T}
+            width={iw / (n - 1)}
+            height={ih}
+            fill="transparent"
+            onMouseEnter={() => setHover(i)}
+            onClick={() => setHover(i)}
+          >
+            <title>{`${fmtDay(p.date)}: puesto medio ${fmtPosition(p.position)}`}</title>
+          </rect>
+        ))}
+      </svg>
+      {h !== null && hover !== null ? (
+        <ChartTip
+          left={(x(hover) / W) * 100}
+          top={((y(h.position) < T + ih / 2 ? y(h.position) + 6 : y(h.position) - 6) / H) * 100}
+          below={y(h.position) < T + ih / 2}
+        >
+          <b>{fmtDay(h.date)}</b>
+          <span>Puesto medio {fmtPosition(h.position)}</span>
+        </ChartTip>
+      ) : null}
+    </div>
+  );
+}

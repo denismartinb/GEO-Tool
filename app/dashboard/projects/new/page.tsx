@@ -40,7 +40,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
 
   // The engines this account's first scan will really run (Perplexity only on
   // Pro and Agencia), so the wizard's "Motores" row and count can't drift
-  // from the scan (log §285).
+  // from the scan (log §287).
   const engines = resolveScanProvidersForPlan(resolvePlan(usage.planId));
 
   const errorMessage = params.error

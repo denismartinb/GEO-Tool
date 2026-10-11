@@ -1652,6 +1652,51 @@
   .gsc-hide-m { display: none; }
 }
 
+/* Fase 3b blocks (log §287): position, pages, CTR, questions, devices, cannibalization */
+.gsc-pos-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+@media (min-width: 1200px) {
+  .gsc-pos-grid { grid-template-columns: minmax(0, .8fr) minmax(0, 1.1fr) minmax(0, 1.3fr); gap: 28px; align-items: start; }
+}
+.gsc-pos-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.gsc-pos-big b { font: 800 48px/1 var(--font-display), "Bricolage Grotesque", sans-serif; letter-spacing: -.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.gsc-pos-big .gsc-mv { font-size: 12px; }
+.gsc-pos-sub { margin: 6px 0 0; font-size: 12.5px; color: var(--ink-3); }
+.gsc-pos-explain { margin: 12px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--surface-sunk); font-size: 12.5px; line-height: 1.45; color: var(--ink-2); }
+.gsc-tierbar { display: flex; gap: 2px; height: 14px; border-radius: 999px; overflow: hidden; margin-top: 10px; background: var(--surface-sunk); }
+.gsc-tiers { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; font-size: 13px; color: var(--ink); }
+.gsc-tiers li { display: flex; gap: 8px; align-items: flex-start; }
+.gsc-tiers i { width: 10px; height: 10px; border-radius: 3px; margin-top: 4px; flex: none; }
+.gsc-tiers span { display: block; font-size: 12px; color: var(--ink-3); }
+.gsc-pos-trend-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 12px; }
+.gsc-posb { display: inline-flex; align-items: center; justify-content: center; min-width: 42px; height: 28px; padding: 0 7px; border-radius: 8px; box-sizing: border-box; font: 800 15px/1 var(--font-display), "Bricolage Grotesque", sans-serif; font-variant-numeric: tabular-nums; }
+.gsc-posb-top3 { background: #e6f6ee; color: #0f6b41; }
+.gsc-posb-page1 { background: #eef7f1; color: #12774a; }
+.gsc-posb-page2 { background: #eaf1ff; color: #1d4ed8; }
+.gsc-posb-beyond { background: #f1f3f6; color: #4a5363; }
+.gsc-plink { color: var(--accent); font-weight: 600; overflow-wrap: anywhere; text-decoration: none; }
+.gsc-plink:hover { text-decoration: underline; }
+.gsc-warn-link { color: var(--warn-ink); font-weight: 600; text-decoration: none; white-space: nowrap; }
+.gsc-warn-link:hover { text-decoration: underline; }
+.gsc-sub { display: block; font-size: 12px; color: var(--ink-3); line-height: 1.45; margin-top: 2px; }
+.gsc-show-m { display: none; }
+@media (max-width: 639px) {
+  .gsc-show-m { display: block; }
+}
+.gsc-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.gsc-list li { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--line-soft); }
+.gsc-list li:last-child { border-bottom: 0; }
+.gsc-list li > div { flex: 1; min-width: 0; }
+.gsc-act { display: block; font-size: 13px; color: var(--ink-2); margin-top: 4px; }
+.gsc-list-q li { align-items: center; flex-wrap: wrap; }
+.gsc-qbtn { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #b9cdfb; background: var(--surface); color: #1d4ed8; font: 600 13px var(--font-body), sans-serif; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.gsc-qbtn:hover { background: #eaf1ff; }
+.gsc-qbtn:disabled { opacity: .6; cursor: default; }
+.gsc-qbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gsc-devs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.gsc-dev { background: var(--surface-sunk); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.gsc-dev b { font: 800 30px/1.05 var(--font-display), "Bricolage Grotesque", sans-serif; color: var(--ink); font-variant-numeric: tabular-nums; }
+.gsc-dev .gsc-sub { color: var(--ink-2); margin: 0; }
+
 /* Connect / pick property / messages */
 .gsc-lock { display: grid; place-items: center; padding: 28px 12px; border-radius: 16px; background: linear-gradient(120deg, #f2f7ff, #effbfc); border: 1px solid #dbe6fb; }
 .gsc-cbox { box-sizing: border-box; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: 0 30px 60px -30px rgba(11, 20, 38, .4); padding: 24px 22px 20px; max-width: 440px; width: 100%; display: flex; flex-direction: column; gap: 12px; }
