@@ -24396,3 +24396,34 @@ lector. Se corrigen aquí:
   ilustrativa con cifras de ejemplo (`.claude/rules/onboarding.md`); se deja.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 286. DEBUG-MFA-1 — `/debug` exige operador y MFA, como `/admin` (2026-10-11)
+
+**Qué se decidió.** El fundador: «a partir de ahora se tendrá que acceder con
+mfa». La pantalla de diagnóstico (`/debug` y
+`/dashboard/projects/[projectId]/debug`), el detalle de un escaneo
+(`/runs/[runId]`, que sólo se enlaza desde ella) y sus cuatro server actions
+(`setRecurringScans`, `setAutoAuditHalf`, `setSamplingEnabled`,
+`setEngineEnabled`) pasan a llamar a `requireOperator`, la misma puerta de
+`/admin`: usuario en `ADMIN_USER_IDS` y sesión `aal2` (TOTP). Si el operador
+no tiene la sesión elevada, va a `/mfa/challenge?next=<pantalla de debug>` (o
+a `/mfa/enroll` si no tiene factor) y vuelve a la misma pantalla. Cualquier
+otra cuenta recibe 404, no un 403. Cierra el pendiente de §32: hasta hoy
+cualquier cliente con sesión podía abrir `/debug` de su propio proyecto y
+apagar motores, muestreo o auditorías.
+
+**Por qué las actions también.** Una server action es un endpoint POST
+propio; proteger sólo la página dejaría los interruptores llamables a mano.
+
+**Qué no cambia.** `DeleteDomainButton` vive en la carpeta de debug pero lo
+usa Dominios, que es de cliente: no se toca. La propiedad del proyecto la
+sigue comprobando `requireActiveProject` después de la puerta.
+
+**Pendiente conocido.** El journey `--journeys scan` del piloto
+(`tests/pilot/journeys/scan/request-scan.spec.ts`) pulsa «Repetir escaneo» en
+`/debug` con la cuenta piloto, que no es operador: ahora recibirá 404. Es un
+workflow de disparo manual; si se vuelve a necesitar, hay que darle otro
+botón de escaneo o una puerta propia.
+
+**Regla de premisa.** No se retira ningún camino de recuperación para el
+cliente: los controles de `/debug` ya eran internos por diseño (§32).
