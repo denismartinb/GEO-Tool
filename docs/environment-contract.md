@@ -406,6 +406,24 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
+**State as of 2026-10-11 (OBSERVABILITY-1, log §299):** `SENTRY_DSN` and
+`NEXT_PUBLIC_SENTRY_DSN` are set in Production + Preview since 2026-07-10, so
+error capture is live. `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`
+are **not** set: production stack traces are minified. Set all three in
+Production + Preview (the token as Sensitive; it needs the "Source Map
+Upload" / `project:releases` + `org:read` scopes, i.e. a Sentry *Organization
+Token*). With them set, `next.config.ts` wraps the build in
+`withSentryConfig`, uploads the maps and deletes them from the deployment.
+
+The SDK also reads, without any setup, Vercel's system variables
+`VERCEL_ENV` / `NEXT_PUBLIC_VERCEL_ENV` (Sentry `environment`) and
+`VERCEL_GIT_COMMIT_SHA` / `NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA` (`release`).
+The `NEXT_PUBLIC_` copies need Vercel's "Automatically expose System
+Environment Variables" (on by default); without it browser events fall back
+to `environment: "development"`, nothing breaks. Cron Monitors
+(`lib/observability/cron-monitor.ts`) check in only when `VERCEL_ENV` is
+`production`; Sentry creates each monitor on its first check-in.
+
 
 ### Paid ads and conversion tracking (PAID-ADS-1)
 

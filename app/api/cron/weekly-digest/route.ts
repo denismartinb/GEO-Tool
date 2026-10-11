@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { runWeeklyDigest } from "@/lib/scan/weekly-digest";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
+import { reportError } from "@/lib/observability/report-error";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -16,7 +18,7 @@ export const dynamic = "force-dynamic";
  * via CRON_DIGEST_ENABLED so the feature ships inert until the founder
  * explicitly turns it on in Vercel.
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
 
   if (!isAuthorizedInternalRequest(request, cronSecret)) {
@@ -32,7 +34,12 @@ export async function GET(request: Request) {
   try {
     const { processed, sent, skipped } = await runWeeklyDigest({ service });
     return NextResponse.json({ processed, sent, skipped });
-  } catch {
+  } catch (error) {
+    await reportError(error, "cron:weekly-digest");
     return NextResponse.json({ processed: 0, error: "query_failed" }, { status: 500 });
   }
 }
+
+// OBSERVABILITY-1 (log §299): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/weekly-digest", handleGet);

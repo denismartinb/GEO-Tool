@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { runScanDrain } from "@/lib/scan/drain";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
+import { reportError } from "@/lib/observability/report-error";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
  * switch stops the sweep from STARTING scans; this only carries on runs that
  * already exist, which a page view of the project would also do.
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   if (!isAuthorizedInternalRequest(request, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -31,6 +33,11 @@ export async function GET(request: Request) {
     console.error("[geo:scan:drain] pass failed", {
       message: error instanceof Error ? error.message : String(error)
     });
+    await reportError(error, "cron:scan-continue");
     return NextResponse.json({ error: "scan_drain_failed" }, { status: 500 });
   }
 }
+
+// OBSERVABILITY-1 (log §299): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/scan-continue", handleGet);

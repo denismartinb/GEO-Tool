@@ -7,6 +7,7 @@ import { runAffiliateReport } from "@/lib/affiliates/report";
 import { createStripeAffiliateSource } from "@/lib/affiliates/stripe-source";
 import { sendAffiliateReportEmail, sendAffiliateReportFailureEmail } from "@/lib/affiliates/emails";
 import { AFFILIATE_PLAN_ID } from "@/lib/affiliates/terms";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -18,7 +19,7 @@ export const dynamic = "force-dynamic";
  * writes nothing anywhere, so a manual re-run (same `CRON_SECRET`) only sends
  * the email again. Same auth as every other cron.
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   if (!isAuthorizedInternalRequest(request, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -46,3 +47,7 @@ export async function GET(request: Request) {
   }
   return NextResponse.json({ status: result.status, period: result.period.label }, { status: 500 });
 }
+
+// OBSERVABILITY-1 (log §299): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/affiliate-report", handleGet);
