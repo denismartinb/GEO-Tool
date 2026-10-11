@@ -456,7 +456,7 @@ paths:
   pide que declare algo limpio, esa garantía se cae y hay que rehacerla.
 - **"Alta prioridad" es un único criterio absoluto** (impacto × confianza),
   compartido entre la badge de la tarjeta y el filtro (el filtro se retiró
-  en §301; queda la insignia). No debe volver a existir
+  en §302; queda la insignia). No debe volver a existir
   un segundo criterio posicional (`priority_rank <= N`) conviviendo con él en
   la misma pantalla.
 - **`activeRun` nunca oculta recomendaciones ya existentes.** El overlay a
@@ -627,7 +627,7 @@ paths:
   Nunca «nadie ocupa esta consulta» ni «se la lleva quien publique primero»,
   que generalizan desde una muestra pequeña.
 
-## Tarjeta corta (RECS-SHORT-CARD-1, log §301)
+## Tarjeta corta (RECS-SHORT-CARD-1, log §302)
 
 - **La confianza del dato y la del consejo no se mezclan.** «Lo que vimos»
   lee `confidence` (la del escaneo) y lo observado; «Por qué funciona» lee
@@ -640,7 +640,7 @@ paths:
   él.** Supersede la regla de §115 de repetir el plan bajo «Todas».
 - **Las pastillas «Mejora IA»/«Mejora Google» sólo existen cuando llegan
   tarjetas de Google**, no por tener Search Console conectado: una conexión a
-  otra cuenta de Google dejaba la pestaña vacía (log §301). Las enciende
+  otra cuenta de Google dejaba la pestaña vacía (log §302). Las enciende
   `GoogleRecsPresent`, que `GoogleRecs` monta sólo con al menos una tarjeta,
   y las apaga al desmontarse. Ocultan una mitad sin desmontarla: el bloque de
   Google sigue en su `Suspense` (log §298).

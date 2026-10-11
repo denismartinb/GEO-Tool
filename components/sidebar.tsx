@@ -254,7 +254,6 @@ export function Sidebar({
             </Link>
           );
         })}
-
       </div>
 
       <div className="sb-foot">
@@ -263,18 +262,20 @@ export function Sidebar({
             qué es el GEO»). La página /geo no se pierde: el propio tour la
             enlaza en su pie. Se cierra el cajón móvil al abrirlo, o el popup
             saldría detrás del menú. NAV-SIMPLIFY-1 (log §291): se llama
-            «¿Cómo funciona?», porque lo que abre es el tour del producto. */}
+            «¿Cómo funciona?», porque lo que abre es el tour del producto.
+            NAV-DRAWER-FIT-1 (log §301): en el cajón móvil el pie es una sola
+            fila y este botón se queda en icono; el texto sigue en el DOM
+            (oculto a la vista, no a los lectores de pantalla). */}
         <button
           type="button"
-          className="nav-item"
-          style={{ fontSize: 12, marginBottom: 2, width: "100%", textAlign: "left" }}
+          className="nav-item sb-tour"
           onClick={() => {
             handleNavSelect();
             openTour();
           }}
         >
           <Icon name="info" size={15} />
-          <span className="hide-collapsed">¿Cómo funciona?</span>
+          <span className="hide-collapsed sb-tour-label">¿Cómo funciona?</span>
         </button>
         <Link href="/dashboard/settings" className="user-chip" onClick={handleNavSelect}>
           <div className="avatar">{avatarInitials}</div>
@@ -308,9 +309,13 @@ export function Sidebar({
           className="sb-signout"
           onSubmit={() => writeCachedSessionUser(null)}
         >
-          <button type="submit" className="nav-item" style={{ width: "100%" }}>
-            <Icon name="settings" size={15} />
-            <span>Cerrar sesión</span>
+          <button
+            type="submit"
+            className="nav-item sb-signout-btn"
+            aria-label="Cerrar sesión"
+            title="Cerrar sesión"
+          >
+            <Icon name="logOut" size={17} />
           </button>
         </form>
       </div>

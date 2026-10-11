@@ -1,5 +1,5 @@
 /**
- * RECS-SHORT-CARD-1 (log §301): the two confidences a recommendation card
+ * RECS-SHORT-CARD-1 (log §302): the two confidences a recommendation card
  * shows, kept apart on purpose.
  *
  * - "Lo que vimos" is about the DATA: how much evidence backs the finding. It

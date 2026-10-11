@@ -655,7 +655,7 @@ export default async function RecommendationsPage({
   // Per-type joint ceiling, for the collapsed group rows. Same rule as above:
   // one counterfactual over the union of the group's prompts, never the sum of
   // its members' individual deltas (ADR 0017 §3).
-  // RECS-SHORT-CARD-1 (log §301): the groups sit under «Más adelante», which
+  // RECS-SHORT-CARD-1 (log §302): the groups sit under «Más adelante», which
   // leaves out the plan's cards, so their ceiling is computed without them.
   const plan = selectPlan(recs);
   const planIdSet = new Set(plan.map((r) => r.id));
@@ -948,7 +948,7 @@ export default async function RecommendationsPage({
             </div>
           )}
 
-          {/* 4 · RECS-SHORT-CARD-1 (log §301): with Search Console connected the
+          {/* 4 · RECS-SHORT-CARD-1 (log §302): with Search Console connected the
               screen splits into two pills, «Mejora IA» (default) and «Mejora
               Google». The Google block is still SEARCH-SEO-1's (log §293,
               §295, §298), streamed behind its own skeleton; the pills only
