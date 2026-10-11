@@ -75,7 +75,7 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "la-ia-te-menciona-pero-recomienda-a-otro": "playbooks",
   // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
   "como-aparecer-en-gemini-y-vistas-creadas-con-ia": "playbooks",
-  // CONTENT-LAUNCH-1 (2026-10-12, log §285).
+  // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity": "playbooks"
 };
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { auditedPagesFromSnapshot } from "@/lib/search-console/audited-pages";
 import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { propertyLabel } from "@/lib/search-console/property";
 import { AUDIT_BLOCK_PARAM } from "@/lib/web-audit/audit-blocks";
@@ -10,16 +11,21 @@ import { ClicksImpressionsChart, NearPageOneScatter } from "./_components/gsc-ch
 import { GscConnect } from "./_components/gsc-connect";
 import { GscDisconnect } from "./_components/gsc-disconnect";
 import { GscIndexCard } from "./_components/gsc-index";
+import { GscCannibal, GscCtr, GscDevices, GscPages } from "./_components/gsc-insights";
 import { GscKpis } from "./_components/gsc-kpis";
 import { GscOutcome } from "./_components/gsc-outcome";
 import { GscPickProperty } from "./_components/gsc-pick-property";
+import { GscPosition } from "./_components/gsc-position";
 import { GscQueries } from "./_components/gsc-queries";
+import { GscQuestions } from "./_components/gsc-questions";
 
 /**
  * «Posición en Google» — SEARCH-SEO-1 Fase 3 (log §284), design in
  * docs/design-reference/search-seo-1/maqueta.html (screens "gsc" and
  * "connect"). Every number is read live from the customer's own Search
- * Console; nothing is stored or estimated. Indexing is asked for the pages
+ * Console; nothing is stored or estimated. Fase 3b (log §287, design in
+ * docs/design-reference/search-seo-1/fase-3b/) adds position, pages crossed
+ * with the audit, CTR, questions, devices and cannibalization. Indexing is asked for the pages
  * the technical audit already reviews (at most ten), so it never pretends to
  * cover the whole site.
  */
@@ -42,19 +48,23 @@ export default async function SearchConsolePage({
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
-  const { data: snapshot } = await supabase
-    .from("web_audit_snapshots")
-    .select("pages")
-    .eq("project_id", projectId)
-    .not("pages", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  const pageUrls = ((snapshot?.pages ?? []) as PageAuditEntry[])
-    .map((p) => p.url)
-    .filter((url): url is string => typeof url === "string" && /^https?:\/\//.test(url));
+  const [{ data: snapshot }, { data: promptRows }] = await Promise.all([
+    supabase
+      .from("web_audit_snapshots")
+      .select("pages")
+      .eq("project_id", projectId)
+      .not("pages", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase.from("project_prompts").select("prompt_text").eq("project_id", projectId).eq("is_active", true)
+  ]);
+  const auditedPages = auditedPagesFromSnapshot((snapshot?.pages ?? []) as PageAuditEntry[]);
+  const trackedPrompts = (promptRows ?? [])
+    .map((r) => r.prompt_text)
+    .filter((t): t is string => typeof t === "string");
 
-  const state = await loadSearchConsoleScreen(projectId, user.id, project.domain, pageUrls);
+  const state = await loadSearchConsoleScreen(projectId, user.id, project.domain, auditedPages, trackedPrompts);
   const connectHref = `/api/search-console/connect?projectId=${projectId}`;
   const auditHref = `/dashboard/projects/${projectId}/web-audit?${AUDIT_BLOCK_PARAM}=seo`;
 
@@ -88,7 +98,7 @@ export default async function SearchConsolePage({
       <div className="gsc-page">
         <div className="gsc-screen">
           <div className="gsc-intro">
-            <p>Tus búsquedas reales en Google: en qué puesto sales, cuántos te ven y cuántos entran.</p>
+            <p>En qué puesto sales en Google, para qué búsquedas y qué hacer para subir.</p>
           </div>
           <GscOutcome code={gsc} />
 
@@ -136,6 +146,7 @@ export default async function SearchConsolePage({
             </div>
           ) : (
             <>
+              <GscPosition position={state.report.position} tiers={state.insights.tiers} daily={state.report.daily} />
               <GscKpis report={state.report} daily={state.report.daily} index={state.report.index} uninspected={state.uninspected} />
               <div className="card">
                 <div className="sa-ch">
@@ -162,13 +173,22 @@ export default async function SearchConsolePage({
                   <NearPageOneScatter queries={state.report.queries} />
                   <p className="sa-note" style={{ marginTop: 8, marginBottom: 0 }}>
                     {state.report.nearPage1.length > 0
-                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20) y hay gente que las ve. Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad."
+                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20). Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad a corto plazo."
                       : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
                   </p>
                 </div>
                 <GscIndexCard index={state.report.index} uninspected={state.uninspected} auditHref={auditHref} />
               </div>
-              <GscQueries queries={state.report.queries} />
+              <GscQueries queries={state.report.queries} pageByQuery={state.insights.pageByQuery} />
+              <GscPages pages={state.insights.pages} auditHref={auditHref} />
+              <div className="gsc-grid-2">
+                <GscCtr items={state.insights.ctr} />
+                <GscQuestions projectId={projectId} questions={state.insights.questions} />
+              </div>
+              <div className="gsc-grid-2">
+                <GscDevices devices={state.insights.devices} />
+                <GscCannibal items={state.insights.cannibalization} />
+              </div>
             </>
           )}
 

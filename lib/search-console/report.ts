@@ -18,7 +18,13 @@ export type SearchTotals = {
   position: number;
 };
 
-export type DailyPoint = { date: string; clicks: number; impressions: number };
+export type DailyPoint = {
+  date: string;
+  clicks: number;
+  impressions: number;
+  /** Google's average position that day; absent where the caller did not read it. */
+  position?: number;
+};
 
 export type QueryRow = {
   query: string;

@@ -24334,7 +24334,179 @@ conexión real falló con `403 access_denied` porque la app de Google Cloud
 seguía en modo «Prueba»: hay que publicarla («En producción») o añadir al
 usuario como tester. Es configuración de Google, no un fallo del código.
 
-## 285. CONTENT-LAUNCH-1: artículo de lanzamiento de Perplexity (2026-10-12)
+**Adenda 2 §284 (2026-10-11):** las tres líneas de la tarjeta «Conecta tu
+Search Console» pasan al texto que escribió el fundador: el puesto y su
+evolución en el tiempo, las búsquedas en las primeras páginas con las keywords
+más relevantes como oportunidad, y la indexación como complemento de lo que
+ven los motores de IA. Sólo texto.
+
+**Adenda 3 §284 (2026-10-11):** «Conectar con Google» enseña siempre el
+selector de cuentas de Google (`prompt=select_account consent`) y ya no manda
+`login_hint` con el correo de la sesión. Pasó en la primera prueba real: la
+propiedad de Search Console del fundador está en otra cuenta de Google, no en
+la del login. Si la cuenta elegida no tiene una propiedad que cubra el dominio,
+la pantalla ya lo dice con el estado de elegir propiedad.
+
+**Adenda 4 §284 (2026-10-11):** tras ver los gráficos con datos reales, el
+fundador pidió leer los datos al pasar el ratón. Los dos gráficos pasan a
+componente de cliente (`gsc-charts.tsx`). El diario enseña la fecha, los clics
+y las impresiones del día con una guía vertical. El de puntos enseña la
+búsqueda, el puesto, las impresiones y los clics. En móvil se abre tocando.
+Los `<title>` se quedan para los lectores de pantalla. La etiqueta «PÁGINA 2»
+dentro de la franja no se entendía: arriba del gráfico van ahora tres
+pestañas, «Página 1», «Página 2» (resaltada) y «Página 3», con líneas en el
+puesto 10,5 y en el 20,5. La insignia de la tabla pasa a «Página 2». La nota
+del gráfico usa el texto del fundador («…tu mejor oportunidad a corto
+plazo.»), y la tabla se llama «Las búsquedas que te traen visitas». No cambia
+ningún dato. Queda pendiente, con maqueta antes de construir: más datos de
+Search Console (páginas, CTR, dispositivos), que alimenten las
+recomendaciones de posicionamiento, y que la pantalla enseñe el puesto como
+tal (reparto por tramos y evolución).
+
+---
+
+## 285. PERPLEXITY-ENGINE-1 Fase 2b: lo que se quedó en tres motores (2026-10-11)
+
+**Qué pasó.** Una auditoría externa del contenido publicado tras §283 encontró
+cuatro sitios que seguían hablando de tres motores o que podían confundir al
+lector. Se corrigen aquí:
+
+- `/docs/empezar/primer-escaneo`: la prueba de Pro incluye los cuatro motores,
+  no «los tres».
+- Maqueta de Prompts en «El producto» de la portada: «14 preguntas · 4 motores
+  · 56 respuestas». Es una escena ilustrativa; se ajusta para que no
+  contradiga al hero.
+- `como-saber-si-tu-marca-aparece-en-chatgpt`: título, pregunta de la FAQ y
+  CTA nombran a Perplexity. Se añade `seoTitle` porque el título visible ya no
+  cabe en 70 caracteres con « — GenScore» (§265).
+- `como-aparecer-en-perplexity`: el ejemplo de frase citable decía «el plan
+  Starter cuesta 49 €/mes», que se leía como nuestro Starter (29 €). Pasa a
+  una gestoría inventada, igual que el `AnswerSample` de la figura 1. Gana
+  `dateUpdated`.
+
+- Asistente «Añade un dominio» (lo vio el fundador en su cuenta Agencia):
+  la fila «Motores» y el recuento del resumen eran una lista fija de tres. La
+  página pasa ahora los motores reales del plan con
+  `resolveScanProvidersForPlan`, la misma función que usa el escaneo, así que
+  Pro y Agencia ven cuatro y Starter tres. Los interruptores de `/debug` no
+  entran porque el proyecto todavía no existe.
+
+- Misión del primer escaneo, paso «Ignición»: decía siempre «Gemini, ChatGPT
+  y Claude, preguntados a la vez» y «Los tres a la vez». Ahora nombra los
+  motores que de verdad pregunta el run (los mismos que cuenta la barra
+  superior, de `resolveScanProvidersForPlan`) y dice «Los cuatro» en Pro y
+  Agencia. Si no se conocen, no se adivina una lista. Sólo cambia texto: el
+  cohete y su animación no se tocan (`.claude/rules/mission-rocket.md`).
+- Resultado del comprobador gratuito: la lista de lo que mide el escaneo
+  completo (prueba de Pro) suma Perplexity.
+
+**Lo que se deja como está, a propósito.**
+
+- `/blog/que-es-el-geo-score` dice «A diario» en los planes de pago. No es
+  exacto (Starter es semanal; Pro de pago, cada 2 días, §273), pero el
+  fundador congeló ese texto. Pendiente de su decisión.
+- `/terminos` suma Perplexity a los proveedores de ejemplo, pero mantiene
+  «beta privada» por decisión del fundador.
+- Los estudios siguen en tres motores porque se midieron así (§283).
+- El tour de bienvenida dice «30 lanzamientos en tres motores». Es una escena
+  ilustrativa con cifras de ejemplo (`.claude/rules/onboarding.md`); se deja.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 286. DEBUG-MFA-1 — `/debug` exige operador y MFA, como `/admin` (2026-10-11)
+
+**Qué se decidió.** El fundador: «a partir de ahora se tendrá que acceder con
+mfa». La pantalla de diagnóstico (`/debug` y
+`/dashboard/projects/[projectId]/debug`), el detalle de un escaneo
+(`/runs/[runId]`, que sólo se enlaza desde ella) y sus cuatro server actions
+(`setRecurringScans`, `setAutoAuditHalf`, `setSamplingEnabled`,
+`setEngineEnabled`) pasan a llamar a `requireOperator`, la misma puerta de
+`/admin`: usuario en `ADMIN_USER_IDS` y sesión `aal2` (TOTP). Si el operador
+no tiene la sesión elevada, va a `/mfa/challenge?next=<pantalla de debug>` (o
+a `/mfa/enroll` si no tiene factor) y vuelve a la misma pantalla. Cualquier
+otra cuenta recibe 404, no un 403. Cierra el pendiente de §32: hasta hoy
+cualquier cliente con sesión podía abrir `/debug` de su propio proyecto y
+apagar motores, muestreo o auditorías.
+
+**Por qué las actions también.** Una server action es un endpoint POST
+propio; proteger sólo la página dejaría los interruptores llamables a mano.
+
+**Qué no cambia.** `DeleteDomainButton` vive en la carpeta de debug pero lo
+usa Dominios, que es de cliente: no se toca. La propiedad del proyecto la
+sigue comprobando `requireActiveProject` después de la puerta.
+
+**Pendiente conocido.** El journey `--journeys scan` del piloto
+(`tests/pilot/journeys/scan/request-scan.spec.ts`) pulsa «Repetir escaneo» en
+`/debug` con la cuenta piloto, que no es operador: ahora recibirá 404. Es un
+workflow de disparo manual; si se vuelve a necesitar, hay que darle otro
+botón de escaneo o una puerta propia.
+
+**Regla de premisa.** No se retira ningún camino de recuperación para el
+cliente: los controles de `/debug` ya eran internos por diseño (§32).
+
+---
+
+## 287. SEARCH-SEO-1 Fase 3b: «Posición en Google» enseña el puesto y qué hacer para subir (2026-10-11)
+
+**Qué se decidió.** El fundador aprobó la maqueta de
+`docs/design-reference/search-seo-1/fase-3b/` («Me parece perfecto.
+Implementa todo») tras pedir que la pantalla diera la posición como tal y más
+datos de Search Console. Se construye la pantalla; las recomendaciones con
+datos de Google (`Recs.dc.html`) son la siguiente fase.
+
+Bloques nuevos, en este orden:
+
+1. **Tu posición en Google.** Puesto medio grande con su cambio en puestos
+   frente a los 28 días anteriores, reparto de las búsquedas por tramos (top 3,
+   resto de la página 1, página 2, más allá) y la evolución diaria del puesto
+   medio con el eje invertido («mejor arriba»).
+2. **Las búsquedas que te traen visitas.** El puesto va en una insignia del
+   color de su tramo, y hay una columna nueva, «Página que sale»: la página con
+   más impresiones para esa búsqueda.
+3. **Tus páginas en Google.** Las diez páginas que más visitas traen, con su
+   puesto medio, y cruzadas con la última auditoría: «Correcta», «N problemas
+   SEO» (enlaza a la Auditoría SEO) o «Sin auditar».
+4. **Te ven, pero no entran.** Búsquedas de la página 1 con muchas impresiones
+   cuyo CTR queda por debajo de la mitad del habitual en ese tramo.
+5. **Preguntas que te hacen en Google**, con un botón «Vigilar en IA».
+6. **Móvil y ordenador.** Puesto medio y CTR por dispositivo.
+7. **Dos páginas compiten por la misma búsqueda** (canibalización).
+
+**Cómo se calcula.** Todo vive en `lib/search-console/insights.ts`, un módulo
+puro.
+
+- **La referencia es la propia web, nunca una curva del sector.** «Tus clics
+  habituales» es el CTR de las otras búsquedas de la web en el mismo tramo, con
+  al menos 3 búsquedas de comparación y 50 impresiones. Una curva de CTR por
+  posición del sector sería una estimación presentada como dato.
+- **Los problemas por página salen de los predicados de la auditoría**
+  (`pageCheckStates`, `seoPageExtraStates`), filtrados por
+  `AUDIT_BLOCKS.seo.checks`. Ver `lib/search-console/audited-pages.ts`. Los
+  hechos de sitio (Googlebot, HTTPS, velocidad) no cuentan como problema de una
+  página. Si una página se descargó pero no se analizó, sale «Sin auditar» y
+  nunca «Correcta».
+- **«Vigilar en IA» usa la server action `addPrompts` en modo manual.** Hereda
+  el tope del plan, la longitud de 10 a 300 caracteres, la categoría y el
+  escaneo del prompt nuevo, sin un camino propio. Una pregunta cuenta como ya
+  vigilada si un prompt activo contiene todas sus palabras con significado.
+- **Sólo se enlaza una URL http(s)** (`isWebUrl`). Google devuelve las URLs de
+  la propia propiedad, pero un enlace a otra cosa no se pinta.
+- **Se hacen tres consultas más a Search Analytics** (búsqueda+página, página,
+  dispositivo) en paralelo con las de antes. Igual que en la Fase 3, no se
+  guarda nada y no hay caché entre peticiones.
+
+**Qué queda pendiente.**
+
+- Recomendaciones alimentadas por Search Console (`Recs.dc.html`). Si hay que
+  guardar datos de Search Console para el motor de recomendaciones, hará falta
+  una migración y aprobación propia.
+- El selector de propiedad y la conexión siguen funcionando sólo en
+  producción: el `redirect_uri` usa `getSiteUrl()`, que en preview también
+  apunta a genscore.es.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 288. CONTENT-LAUNCH-1: artículo de lanzamiento de Perplexity (2026-10-11)
 
 **Qué se decidió.** El fundador pidió el 2026-10-11 un artículo de blog por
 cada funcionalidad nueva, con su post de LinkedIn y de X: Perplexity el lunes

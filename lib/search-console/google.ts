@@ -47,20 +47,24 @@ export function getRedirectUri(): string {
   return `${getSiteUrl()}${GSC_CALLBACK_PATH}`;
 }
 
-export function buildAuthUrl(input: { clientId: string; state: string; codeChallenge: string; loginHint?: string }): string {
+/**
+ * `select_account` always shows Google's account picker: the Search Console
+ * property often lives in a different Google account than the one used to
+ * sign in to GenScore, so no `login_hint` is sent.
+ */
+export function buildAuthUrl(input: { clientId: string; state: string; codeChallenge: string }): string {
   const params = new URLSearchParams({
     client_id: input.clientId,
     redirect_uri: getRedirectUri(),
     response_type: "code",
     scope: GSC_SCOPE,
     access_type: "offline",
-    prompt: "consent",
+    prompt: "select_account consent",
     include_granted_scopes: "false",
     state: input.state,
     code_challenge: input.codeChallenge,
     code_challenge_method: "S256"
   });
-  if (input.loginHint) params.set("login_hint", input.loginHint);
   return `${AUTH_ENDPOINT}?${params.toString()}`;
 }
 

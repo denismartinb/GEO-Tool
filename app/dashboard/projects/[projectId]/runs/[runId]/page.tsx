@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
+import { requireOperator } from "@/lib/admin/operator";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { EmptyState } from "@/components/empty-state";
 import { Icon } from "@/components/ui/icon";
@@ -47,6 +48,8 @@ export default async function RunDetailPage({
 }) {
   const { projectId, runId } = await params;
   const feedback = await searchParams;
+  // DEBUG-MFA-1: only reachable from `/debug`, so it carries the same gate.
+  await requireOperator(`/dashboard/projects/${projectId}/debug`);
   const runIdValidation = z.string().uuid().safeParse(runId);
   if (!runIdValidation.success) notFound();
 

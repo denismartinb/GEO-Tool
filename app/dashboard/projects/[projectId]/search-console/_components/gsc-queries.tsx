@@ -1,11 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { displayPath } from "@/lib/search-console/insights";
 import type { QueryView } from "@/lib/search-console/report";
 import { fmtInt, fmtPct, fmtPosition } from "./format";
+import { PosBadge } from "./gsc-posbadge";
 
 /**
- * «Tus búsquedas» (log §284). Queries come from Google and are untrusted
+ * «Las búsquedas que te traen visitas» (log §284). Queries come from Google and are untrusted
  * text: rendered as text only, never as HTML.
  */
 type Filter = "all" | "p1" | "near";
@@ -29,7 +31,7 @@ function Movement({ value }: { value: number | null }) {
   );
 }
 
-export function GscQueries({ queries }: { queries: QueryView[] }) {
+export function GscQueries({ queries, pageByQuery = {} }: { queries: QueryView[]; pageByQuery?: Record<string, string> }) {
   const [filter, setFilter] = useState<Filter>("all");
   const counts: Record<Filter, number> = {
     all: queries.length,
@@ -44,7 +46,7 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
   return (
     <div className="card">
       <div className="sa-ch">
-        <h3>Tus búsquedas</h3>
+        <h3>Las búsquedas que te traen visitas</h3>
         <span className="sa-src">Datos con 2–3 días de retraso, como en Search Console</span>
       </div>
       <div className="gsc-qfil" role="group" aria-label="Filtrar búsquedas">
@@ -74,6 +76,7 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
                 <th className="n">Clics</th>
                 <th className="n gsc-hide-m">Impresiones</th>
                 <th className="n gsc-hide-m">CTR</th>
+                <th className="gsc-hide-m">Página que sale</th>
               </tr>
             </thead>
             <tbody>
@@ -81,14 +84,23 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
                 <tr key={q.query}>
                   <td>
                     <span className="gsc-qq">{q.query}</span>
-                    {q.nearPage1 && <span className="gsc-flag">PÁGINA 2</span>}
+                    {q.nearPage1 && <span className="gsc-flag">Página 2</span>}
                   </td>
                   <td className="gsc-pos">
-                    <b>{fmtPosition(q.position)}</b> <Movement value={q.movement} />
+                    <PosBadge position={q.position} /> <Movement value={q.movement} />
                   </td>
                   <td className="n">{fmtInt(q.clicks)}</td>
                   <td className="n gsc-hide-m">{fmtInt(q.impressions)}</td>
                   <td className="n gsc-hide-m">{fmtPct(q.ctr)}</td>
+                  <td className="gsc-hide-m">
+                    {pageByQuery[q.query] ? (
+                      <a className="gsc-plink" href={pageByQuery[q.query]} target="_blank" rel="noopener noreferrer">
+                        {displayPath(pageByQuery[q.query])}
+                      </a>
+                    ) : (
+                      <span className="gsc-muted">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

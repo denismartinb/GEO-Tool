@@ -170,7 +170,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
 | W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | ✅ Publicado (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
 | W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
-| L1 | Lanzamiento: GenScore ya mide Perplexity (CONTENT-LAUNCH-1, log §285) — slug `genscore-ya-mide-perplexity` | `playbooks` | 🟡 En PR, se publica el lunes 2026-10-12 a las 20:30 | — |
+| L1 | Lanzamiento: GenScore ya mide Perplexity (CONTENT-LAUNCH-1, log §288) — slug `genscore-ya-mide-perplexity` | `playbooks` | ✅ Publicado 2026-10-11 (adelantado a petición del fundador) | — |
 | G1 | Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google (GEO-SELF-1 Fase 3, log §259) — slug `como-aparecer-en-gemini-y-vistas-creadas-con-ia` | `playbooks` | ✅ Publicado (2026-10-09) | #578 |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo

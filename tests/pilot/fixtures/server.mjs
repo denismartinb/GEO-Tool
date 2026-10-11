@@ -94,7 +94,7 @@ const BLOG_SLUGS = [
   "la-ia-te-menciona-pero-recomienda-a-otro",
   // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
   "como-aparecer-en-gemini-y-vistas-creadas-con-ia",
-  // CONTENT-LAUNCH-1 (2026-10-12, log §285).
+  // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity"
 ];
 

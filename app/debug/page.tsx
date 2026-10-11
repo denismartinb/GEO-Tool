@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { requireOperator } from "@/lib/admin/operator";
 import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
 
 /**
@@ -37,10 +38,13 @@ import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
  *
  * `requireUser` la protege igual que a cualquier pantalla de la consola — sin
  * sesión redirige a /login —, así que estar fuera de `/dashboard` no la deja
- * abierta. Lo que NO hace es distinguir operador de cliente: eso sigue
- * pendiente para antes de publicar la web (ver histórico §32).
+ * abierta. Desde DEBUG-MFA-1 (2026-10-11) además exige `requireOperator`, como
+ * `/admin`: lista de operadores y sesión `aal2` (TOTP). Un cliente recibe 404
+ * (cierra el pendiente de §32).
  */
 export default async function DebugShortcutPage() {
+  // DEBUG-MFA-1 (2026-10-11): operator allow-list + verified TOTP session.
+  await requireOperator("/debug");
   const { supabase } = await requireUser();
   const cookieStore = await cookies();
   const lastActiveProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;

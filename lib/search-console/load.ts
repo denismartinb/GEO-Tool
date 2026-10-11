@@ -22,6 +22,23 @@ import {
 } from "@/lib/search-console/google";
 import { rankMatchingProperties } from "@/lib/search-console/property";
 import {
+  buildDeviceViews,
+  buildPageViews,
+  findCannibalization,
+  findCtrOpportunities,
+  findQuestionQueries,
+  positionTiers,
+  topPageByQuery,
+  type AuditedPage,
+  type Cannibalization,
+  type CtrOpportunity,
+  type DeviceView,
+  type PageView,
+  type QueryPageRow,
+  type QuestionQuery,
+  type TierShare
+} from "@/lib/search-console/insights";
+import {
   buildSearchConsoleReport,
   searchWindows,
   type InspectionVerdict,
@@ -45,6 +62,8 @@ import {
 
 export const INSPECTION_LIMIT = 10;
 const QUERY_ROW_LIMIT = 250;
+const QUERY_PAGE_ROW_LIMIT = 1000;
+const PAGE_ROW_LIMIT = 50;
 
 export type SearchConsoleState =
   /** Missing key or OAuth client in Vercel: the feature is not offered. */
@@ -128,12 +147,25 @@ function queries(rows: AnalyticsRow[]): QueryRow[] {
   return rows.map((r) => ({ query: r.keys[0] ?? "", clicks: r.clicks, impressions: r.impressions, position: r.position }));
 }
 
+/** What the screen reads beyond the totals (log §287). */
+export type SearchConsoleInsights = {
+  tiers: TierShare[];
+  /** The page Google shows most for each query. */
+  pageByQuery: Record<string, string>;
+  pages: PageView[];
+  ctr: CtrOpportunity[];
+  questions: QuestionQuery[];
+  devices: DeviceView[];
+  cannibalization: Cannibalization[];
+};
+
 export type SearchConsoleScreen =
   | SearchConsoleState
   | {
       kind: "ready";
       property: string;
       report: SearchConsoleReport;
+      insights: SearchConsoleInsights;
       /** Audited pages Google could not be asked about this time. */
       uninspected: number;
       window: { startDate: string; endDate: string };
@@ -143,22 +175,32 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
   projectId: string,
   ownerUserId: string,
   domain: string,
-  pageUrls: string[]
+  /** Pages of the latest technical audit, with their SEO problem count. */
+  auditedPages: AuditedPage[],
+  /** Active prompt texts, to tell which Google questions are already tracked in the AI scan. */
+  trackedPrompts: string[]
 ): Promise<SearchConsoleScreen> {
   const ids = { projectId, ownerUserId };
   const access = await getAccess(ids, domain);
   if (!("accessToken" in access)) return access;
   const property = access.property!;
   const { current, previous } = searchWindows(new Date());
-  const urls = [...new Set(pageUrls)].slice(0, INSPECTION_LIMIT);
+  const urls = [...new Set(auditedPages.map((p) => p.url))].slice(0, INSPECTION_LIMIT);
 
   try {
-    const [cur, prev, daily, curQ, prevQ, inspections] = await Promise.all([
+    const [cur, prev, daily, curQ, prevQ, queryPage, pageRows, deviceRows, inspections] = await Promise.all([
       querySearchAnalytics(access.accessToken, property, current),
       querySearchAnalytics(access.accessToken, property, previous),
       querySearchAnalytics(access.accessToken, property, { ...current, dimensions: ["date"] }),
       querySearchAnalytics(access.accessToken, property, { ...current, dimensions: ["query"], rowLimit: QUERY_ROW_LIMIT }),
       querySearchAnalytics(access.accessToken, property, { ...previous, dimensions: ["query"], rowLimit: QUERY_ROW_LIMIT }),
+      querySearchAnalytics(access.accessToken, property, {
+        ...current,
+        dimensions: ["query", "page"],
+        rowLimit: QUERY_PAGE_ROW_LIMIT
+      }),
+      querySearchAnalytics(access.accessToken, property, { ...current, dimensions: ["page"], rowLimit: PAGE_ROW_LIMIT }),
+      querySearchAnalytics(access.accessToken, property, { ...current, dimensions: ["device"] }),
       Promise.all(
         urls.map(async (url): Promise<InspectionVerdict | null> => {
           try {
@@ -170,17 +212,41 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
       )
     ]);
     const inspected = inspections.filter((i): i is InspectionVerdict => i !== null);
+    const report = buildSearchConsoleReport({
+      current: totals(cur),
+      previous: totals(prev),
+      daily: daily.map((r) => ({ date: r.keys[0] ?? "", clicks: r.clicks, impressions: r.impressions, position: r.position })),
+      queries: queries(curQ),
+      previousQueries: queries(prevQ),
+      inspections: inspected
+    });
+    const qp: QueryPageRow[] = queryPage.map((r) => ({
+      query: r.keys[0] ?? "",
+      page: r.keys[1] ?? "",
+      clicks: r.clicks,
+      impressions: r.impressions,
+      position: r.position
+    }));
+    const pageByQuery = topPageByQuery(qp);
     return {
       kind: "ready",
       property,
-      report: buildSearchConsoleReport({
-        current: totals(cur),
-        previous: totals(prev),
-        daily: daily.map((r) => ({ date: r.keys[0] ?? "", clicks: r.clicks, impressions: r.impressions })),
-        queries: queries(curQ),
-        previousQueries: queries(prevQ),
-        inspections: inspected
-      }),
+      report,
+      insights: {
+        tiers: positionTiers(report.queries),
+        pageByQuery: Object.fromEntries(pageByQuery),
+        pages: buildPageViews(
+          pageRows.map((r) => ({ page: r.keys[0] ?? "", clicks: r.clicks, impressions: r.impressions, position: r.position })),
+          qp,
+          auditedPages
+        ),
+        ctr: findCtrOpportunities(report.queries, pageByQuery),
+        questions: findQuestionQueries(report.queries, trackedPrompts),
+        devices: buildDeviceViews(
+          deviceRows.map((r) => ({ device: r.keys[0] ?? "", clicks: r.clicks, impressions: r.impressions, position: r.position }))
+        ),
+        cannibalization: findCannibalization(qp)
+      },
       uninspected: urls.length - inspected.length,
       window: current
     };
