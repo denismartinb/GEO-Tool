@@ -4,7 +4,7 @@ import { sentryInitOptions } from "@/lib/observability/sentry-options";
 // PLATFORM-COMMERCIAL-1: optional by design. Guarded rather than passed
 // straight to Sentry.init() so an unset DSN (local, tests) produces zero
 // console noise, not just a silently-disabled SDK. Shared options and PII
-// scrubbing live in lib/observability (OBSERVABILITY-1, log §299).
+// scrubbing live in lib/observability (OBSERVABILITY-1, log §300).
 const dsn = process.env.SENTRY_DSN;
 
 if (dsn) {

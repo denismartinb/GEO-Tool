@@ -3,7 +3,7 @@ import "server-only";
 import * as Sentry from "@sentry/nextjs";
 
 /**
- * OBSERVABILITY-1 (log §299): send an error we caught and handled to Sentry.
+ * OBSERVABILITY-1 (log §300): send an error we caught and handled to Sentry.
  *
  * `onRequestError` (instrumentation.ts) only sees what escapes a route. The
  * crons catch their own failures to answer a clean 500 without leaking a raw

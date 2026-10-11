@@ -13,7 +13,7 @@ vi.mock("@sentry/nextjs", () => ({
 import { CRON_MONITORS, monitorSlug, withCronMonitor, type CronPath } from "./cron-monitor";
 
 /**
- * OBSERVABILITY-1 (log §299). The monitor is only as good as its schedule: a
+ * OBSERVABILITY-1 (log §300). The monitor is only as good as its schedule: a
  * crontab that drifts from vercel.json makes Sentry report "missed" runs that
  * were never due, or stay quiet about ones that were.
  */

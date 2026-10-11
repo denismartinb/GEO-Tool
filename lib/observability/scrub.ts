@@ -1,5 +1,5 @@
 /**
- * OBSERVABILITY-1 (log §299): what leaves GenScore for Sentry.
+ * OBSERVABILITY-1 (log §300): what leaves GenScore for Sentry.
  *
  * `sendDefaultPii: false` already keeps IPs, cookies and request bodies out,
  * but a few things still travel by default and some of them are secrets in

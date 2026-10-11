@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { redactEmails, scrubBreadcrumb, scrubEvent, stripQuery } from "./scrub";
 
-/** OBSERVABILITY-1 (log §299): what may and may not reach Sentry. */
+/** OBSERVABILITY-1 (log §300): what may and may not reach Sentry. */
 describe("scrubEvent", () => {
   it("quita la query de la URL: tokens de baja, código de OAuth, next", () => {
     const event = scrubEvent({

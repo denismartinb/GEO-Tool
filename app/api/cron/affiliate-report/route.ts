@@ -48,6 +48,6 @@ async function handleGet(request: Request) {
   return NextResponse.json({ status: result.status, period: result.period.label }, { status: 500 });
 }
 
-// OBSERVABILITY-1 (log §299): Sentry Cron Monitor — missed, timed-out and
+// OBSERVABILITY-1 (log §300): Sentry Cron Monitor — missed, timed-out and
 // 5xx runs open an issue (lib/observability/cron-monitor.ts).
 export const GET = withCronMonitor("/api/cron/affiliate-report", handleGet);

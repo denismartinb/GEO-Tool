@@ -228,3 +228,54 @@ describe("home_only (GS-03)", () => {
     }
   });
 });
+
+describe("no_editable_page (RECS-DIAGNOSIS-1, log §299)", () => {
+  function overlayFor(pages: Array<{ url: string; title: string }>) {
+    return computeCoverageOverlay({
+      recommendations: [rec({ recommendationType: "increase_brand_visibility" })],
+      resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
+      coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages, note: "n" }]
+    }).get("rec-1");
+  }
+
+  it("does not certify coverage with a forum or community thread on the brand's domain", () => {
+    for (const url of [
+      "https://comunidad.acme.es/t5/quejas/no-funciona/td-p/123",
+      "https://community.acme.com/thread/9",
+      "https://acme.es/foro/tema-123"
+    ]) {
+      const entry = overlayFor([{ url, title: "Hilo" }]);
+      expect(entry?.state, url).toBe("no_editable_page");
+      expect(entry?.verifiedPage, url).toBeNull();
+      expect(entry?.confidenceOverride, url).toBeNull();
+    }
+  });
+
+  it("skips the forum and links the brand's own page when both exist", () => {
+    const entry = overlayFor([
+      { url: "https://comunidad.acme.es/t5/hilo", title: "Hilo" },
+      { url: "https://acme.es/", title: "Inicio" },
+      { url: "https://acme.es/servicios/fibra", title: "Fibra" }
+    ]);
+    expect(entry?.state).toBe("confirmed_surfacing_gap");
+    expect(entry?.verifiedPage?.url).toBe("https://acme.es/servicios/fibra");
+  });
+
+  it("keeps home_only when the home is the only page", () => {
+    expect(overlayFor([{ url: "https://acme.es/", title: "Inicio" }])?.state).toBe("home_only");
+  });
+
+  it("does not treat a deep slug that merely contains «comunidad» as a forum", () => {
+    expect(overlayFor([{ url: "https://acme.es/blog/comunidad-de-vecinos", title: "Blog" }])?.state).toBe(
+      "confirmed_surfacing_gap"
+    );
+  });
+
+  it("tells the user to publish their own page, never to edit the thread", () => {
+    for (const type of ["add_citation_block", "increase_brand_visibility"]) {
+      const copy = overlayCopy(type, "no_editable_page");
+      expect(copy?.firstStep).toMatch(/^Publica/);
+      expect(copy?.whatToDo).not.toContain("no crees una página nueva");
+    }
+  });
+});

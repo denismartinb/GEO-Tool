@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 
 /**
- * OBSERVABILITY-1 (log §299): Sentry Cron Monitors for every Vercel cron.
+ * OBSERVABILITY-1 (log §300): Sentry Cron Monitors for every Vercel cron.
  *
  * What the email alerts can't see is a cron that never ran, or that Vercel
  * killed mid-pass: no code of ours is left alive to send anything. Those are

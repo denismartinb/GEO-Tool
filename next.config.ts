@@ -41,7 +41,7 @@ const configWithMDX = withMDX(nextConfig);
 // VERCEL-COST-1: withSentryConfig's webpack plugin instruments every route
 // at build time (auto error-capture wrapping) independently of whether it
 // ends up uploading a source map, so it only runs once SENTRY_ORG and
-// SENTRY_AUTH_TOKEN exist. OBSERVABILITY-1 (log §299) is the phase that asks
+// SENTRY_AUTH_TOKEN exist. OBSERVABILITY-1 (log §300) is the phase that asks
 // the founder to set them: without source maps every production stack trace
 // is minified and unreadable (the 2026-07-12 web-audit crash was never
 // diagnosed for exactly that reason). Error capture itself does NOT depend on

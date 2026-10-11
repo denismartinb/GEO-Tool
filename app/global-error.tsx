@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
 
 /**
- * OBSERVABILITY-1 (log §299): last-resort boundary for a render error outside
+ * OBSERVABILITY-1 (log §300): last-resort boundary for a render error outside
  * `/dashboard` (which has its own `error.tsx`) or in the root layout itself.
  * Like that one, Next's boundaries are not auto-instrumented by Sentry: the
  * explicit `captureException` is what makes the crash reach it (log of the

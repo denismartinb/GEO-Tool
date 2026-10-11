@@ -1,7 +1,7 @@
 import { scrubBreadcrumb, scrubEvent } from "./scrub";
 
 /**
- * OBSERVABILITY-1 (log §299): the one set of `Sentry.init` options shared by
+ * OBSERVABILITY-1 (log §300): the one set of `Sentry.init` options shared by
  * the server, edge and browser configs. Before this the three files repeated
  * the same object by hand, without environment, release or scrubbing.
  *

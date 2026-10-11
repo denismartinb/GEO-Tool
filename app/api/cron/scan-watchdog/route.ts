@@ -38,6 +38,6 @@ async function handleGet(request: Request) {
   }
 }
 
-// OBSERVABILITY-1 (log §299): Sentry Cron Monitor — missed, timed-out and
+// OBSERVABILITY-1 (log §300): Sentry Cron Monitor — missed, timed-out and
 // 5xx runs open an issue (lib/observability/cron-monitor.ts).
 export const GET = withCronMonitor("/api/cron/scan-watchdog", handleGet);

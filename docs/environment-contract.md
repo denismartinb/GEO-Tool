@@ -406,7 +406,7 @@ analytics cookies in use" claim in `/cookies` — if that ever changes,
 `/cookies` and `/privacidad` need a follow-up update to list PostHog as a
 processor before flipping the key on in production.
 
-**State as of 2026-10-11 (OBSERVABILITY-1, log §299):** `SENTRY_DSN` and
+**State as of 2026-10-11 (OBSERVABILITY-1, log §300):** `SENTRY_DSN` and
 `NEXT_PUBLIC_SENTRY_DSN` are set in Production + Preview since 2026-07-10, so
 error capture is live. `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN`
 are **not** set: production stack traces are minified. Set all three in
