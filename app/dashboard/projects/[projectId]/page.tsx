@@ -696,7 +696,7 @@ export default async function ProjectDetailPage({
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
-  // GS-02 (log §276): leadership is a comparison and is only claimed when
+  // GS-02 (log §277): leadership is a comparison and is only claimed when
   // there is a competitor, the brand is ahead of it, and the sample holds.
   const competitiveClaim = resolveCompetitiveClaim({
     brandRate: computedMentionRate,
@@ -849,7 +849,7 @@ export default async function ProjectDetailPage({
     );
 
   /* ---- render ---- */
-  /* Panorámica competitiva, split in two (founder, 2026-10-11, log §277).
+  /* Panorámica competitiva, split in two (founder, 2026-10-11, log §278).
      The chart card ("tu puesto medio" + top 5) and the "Último escaneo" table
      used to sit together in the analysis column below. From 1200px, when the
      side column holds both the engine bars and the Auditoría SEO card, the

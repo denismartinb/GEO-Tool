@@ -29,7 +29,7 @@ type Competitor = {
 };
 
 /**
- * GS-04 (log §276): the hint under "La IA (no) menciona tu marca" used to be
+ * GS-04 (log §277): the hint under "La IA (no) menciona tu marca" used to be
  * one fixed sentence, "La IA te nombra por lo que ya sabe de tu marca", shown
  * even when the brand was NOT named. It also claimed where the model's
  * knowledge came from, which nothing here measures. It now only restates
@@ -139,7 +139,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
     new Set(extractedList.flatMap((e) => e?.brand?.evidence ?? []))
   );
 
-  // PROMPT-DRAWER-ENGINES-1 (log §278): one block per ENGINE, not per answer.
+  // PROMPT-DRAWER-ENGINES-1 (log §279): one block per ENGINE, not per answer.
   // With sampling (ADR 0030) a prompt can hold five answers per engine, and
   // listing each one as its own row repeated "Gemini · muestra 1 de 5" fifteen
   // times (founder, 2026-10-11). Counts per engine live in engine-summary.ts.
@@ -321,7 +321,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
                 </div>
               </div>
 
-              {/* Por motor: one row per engine (PROMPT-DRAWER-ENGINES-1, log §278).
+              {/* Por motor: one row per engine (PROMPT-DRAWER-ENGINES-1, log §279).
                   The per-answer detail lives only in «Respuestas». */}
               <div>
                 <div className="pr2-rk-head">
@@ -549,7 +549,7 @@ export function PromptDrawer({ projectId, projectDomain, projectBrand, results, 
 
           {tab === "respuestas" && current && (
             <>
-              {/* PROMPT-DRAWER-ENGINES-1 (log §278): one answer at a time,
+              {/* PROMPT-DRAWER-ENGINES-1 (log §279): one answer at a time,
                   chosen by engine and answer, instead of a table plus every
                   full text one after another. */}
               {engines.length > 1 ? (

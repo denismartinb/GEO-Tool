@@ -293,7 +293,7 @@ describe("mentionHint (GS-04)", () => {
   });
 });
 
-describe("PromptDrawer — una fila por motor (log §278)", () => {
+describe("PromptDrawer — una fila por motor (log §279)", () => {
   // Cinco respuestas de Gemini a la misma pregunta: antes eran cinco filas
   // «Gemini · muestra N de 5».
   const results = [0, 1, 2, 3, 4].map((i) =>

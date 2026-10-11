@@ -433,7 +433,7 @@ paths:
   añade sin el test que la blinda: mismo principio que el guardián de tres
   vías de `GROUNDED_PROVIDERS` (`.claude/rules/web-audit.md`, log §130).
 - **Crear o mejorar lo decide el overlay, y todos lo leen de ahí**
-  (AUDIT-TRUTH-1, GS-03, log §276). El motor escribe `first_step` antes de que
+  (AUDIT-TRUTH-1, GS-03, log §277). El motor escribe `first_step` antes de que
   exista la cobertura, así que para `increase_brand_visibility` siempre dice
   «Publica una página». Con veredicto de cobertura, el paso sale de
   `overlayCopy(...).firstStep`. Lo leen la tarjeta (`effectiveFirstStep`), la

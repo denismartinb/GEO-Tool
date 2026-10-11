@@ -86,7 +86,7 @@ describe("Visión general: Auditoría SEO card", () => {
   });
 });
 
-describe("Visión general: competitive panorama beside Auditoría SEO (log §277)", () => {
+describe("Visión general: competitive panorama beside Auditoría SEO (log §278)", () => {
   const overview = read("app/dashboard/projects/[projectId]/page.tsx");
   const css = read("app/console.css");
 

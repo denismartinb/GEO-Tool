@@ -207,7 +207,7 @@ function cleanSentence(s: string): string {
  * longer word, and not as the start of a longer capitalised name
  * ("Fibrox Plus+", "Acme Studio" when the needle is "acme"). That second
  * case is a different product or brand; quoting it as a description of the
- * brand is a misattribution (GS-07, log §276).
+ * brand is a misattribution (GS-07, log §277).
  */
 function namesAsWord(sentence: string, needle: string): boolean {
   const lower = sentence.toLowerCase();
@@ -252,7 +252,7 @@ export function findQuote(text: string | null, names: string[], exclude: string[
 }
 
 /**
- * GS-07 (log §276): each citation goes through `resolveCitation`, the same
+ * GS-07 (log §277): each citation goes through `resolveCitation`, the same
  * function Páginas citadas uses, so the report and that screen name the same
  * sites. Reading `domain || url` raw let Gemini's grounding redirect
  * (vertexaisearch.cloud.google.com) through as "the most cited site" whenever

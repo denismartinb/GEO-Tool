@@ -23719,7 +23719,7 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
     al añadir un motor;
   - los textos que dicen «3 motores», que siguen congelados.
 
-## 276. AUDIT-TRUTH-1: frases que el producto afirmaba sin datos y un informe que no cuadraba con las pantallas (2026-10-11)
+## 277. AUDIT-TRUTH-1: frases que el producto afirmaba sin datos y un informe que no cuadraba con las pantallas (2026-10-11)
 
 **Origen.** Auditoría externa de producto del 11-oct-2026 (PDF privado que el fundador adjuntó en el hilo «Priorizar la auditoría del 11 de octubre»). Se corrigieron los bloques 1 y 2 de la priorización (GS-02, GS-03, GS-04 y GS-07). El fundador dio el sí explícito para tocar estas frases pese a la congelación de textos (§273): no son cambios de estilo, son frases que hoy dicen algo falso.
 
@@ -23739,9 +23739,9 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.
 
-## 277. OV-ALIGN-1: la panorámica sube junto a Auditoría SEO y la frase del resumen usa todo el ancho (2026-10-11)
+## 278. OV-ALIGN-1: la panorámica sube junto a Auditoría SEO y la frase del resumen usa todo el ancho (2026-10-11)
 
-**Origen.** El fundador, sobre el preview de AUDIT-TRUTH-1 (§276), con capturas de escritorio: la frase resumen se cortaba antes del borde derecho del recuadro, y pidió subir la panorámica competitiva bajo el desglose del GEO Score, alineada con Auditoría SEO, para que «Último escaneo» y Oportunidades queden también alineados. Dijo que se podía hacer algo más grande si hacía falta.
+**Origen.** El fundador, sobre el preview de AUDIT-TRUTH-1 (§277), con capturas de escritorio: la frase resumen se cortaba antes del borde derecho del recuadro, y pidió subir la panorámica competitiva bajo el desglose del GEO Score, alineada con Auditoría SEO, para que «Último escaneo» y Oportunidades queden también alineados. Dijo que se podía hacer algo más grande si hacía falta.
 
 **Qué se decidió.**
 
@@ -23752,11 +23752,11 @@ mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
 5. **«Ver todo» en Auditoría SEO**, como el resto de secciones de la pantalla, a petición del fundador (lleva a `/web-audit`). La tarjeta sigue sin botón propio (§271).
 6. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
 
-**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase. *(Resuelto en §278.)*
+**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase. *(Resuelto en §279.)*
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.
 
-## 278. PROMPT-DRAWER-ENGINES-1: el cajón de Prompts resume cada motor en una fila (2026-10-11)
+## 279. PROMPT-DRAWER-ENGINES-1: el cajón de Prompts resume cada motor en una fila (2026-10-11)
 
 **Qué pasaba.** Con pocas preguntas, el escaneo repite cada pregunta hasta cinco veces por motor (SAMPLING-1, ADR 0030). El cajón pintaba una fila por respuesta, así que un proyecto de una pregunta enseñaba quince filas «Gemini · muestra 1 de 5». Las evidencias y las fuentes también se agrupaban por respuesta, con la cabecera del motor repetida cinco veces. El fundador no entendía qué era «1 de 5» (2026-10-11).
 

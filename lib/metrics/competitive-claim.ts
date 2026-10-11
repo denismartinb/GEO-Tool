@@ -1,5 +1,5 @@
 /**
- * AUDIT-TRUTH-1 (GS-02, external product audit 2026-10-11, log §276) — the
+ * AUDIT-TRUTH-1 (GS-02, external product audit 2026-10-11, log §277) — the
  * single owner of "what may the Overview summary claim about the brand
  * against its competitors".
  *

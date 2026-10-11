@@ -8,7 +8,7 @@ import {
   type SummaryRow
 } from "./engine-summary";
 
-/** PROMPT-DRAWER-ENGINES-1 (log §278): one summary per engine, not per answer. */
+/** PROMPT-DRAWER-ENGINES-1 (log §279): one summary per engine, not per answer. */
 
 function row(id: string, provider: string, sample: number, mentioned: boolean, sentiment: string | null = null): SummaryRow {
   return { id, provider, sample_index: sample, brand_mentioned: mentioned, sentiment };

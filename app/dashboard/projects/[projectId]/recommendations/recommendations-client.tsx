@@ -80,7 +80,7 @@ export type CoverageOverlay = {
  * so.
  */
 /**
- * GS-03 (log §276): the step a card shows. With a coverage verdict it comes
+ * GS-03 (log §277): the step a card shows. With a coverage verdict it comes
  * from the overlay, so the card, its detail and the report say the same
  * thing ("refuerza tu página" vs. "publica una página"); otherwise it is the
  * engine's own `first_step`.
