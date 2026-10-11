@@ -7,6 +7,7 @@ import { isOperatorUserId } from "@/lib/admin/operator";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
 import { getFounderOffer, getStripeClient } from "@/lib/stripe";
+import { isCountedAccount } from "@/lib/admin/kpi/own-accounts";
 import { isPanelExcludedEmail } from "@/lib/admin/kpi/excluded-accounts";
 import { daysLeft, monthlyCents, trialSignal, type TrialSignal } from "@/lib/admin/kpi/model";
 import { lastMadridDates, madridDateKey, madridStartOfMonth, type PanelWindow } from "@/lib/admin/kpi/period";
@@ -33,14 +34,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 /** Stripe pages fetched at most; hitting it is said on screen. */
 const STRIPE_LIST_CAP = 500;
 
-export function isCountedAccount(row: { id: string; email: string }): boolean {
-  return (
-    !isOperatorUserId(row.id) &&
-    !isInternalTestAccountEmail(row.email) &&
-    !isCompedAccountEmail(row.email) &&
-    !isPanelExcludedEmail(row.email)
-  );
-}
 
 function inWindow(iso: string, from: Date, to: Date): boolean {
   const t = Date.parse(iso);

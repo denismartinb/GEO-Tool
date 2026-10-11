@@ -237,6 +237,8 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   fuente falla por su cuenta y dice que no se pudo leer, nunca un cero. Las
   cuentas propias (operadores, prueba interna, comped y las del equipo de
   `isPanelExcludedEmail`) no cuentan en ninguna cifra (`isCountedAccount`),
-  tampoco en Stripe, donde se reconocen también por `user_id`. Una métrica que no se puede atar a una cuenta,
+  tampoco en Stripe, donde se reconocen también por `user_id`. Un navegador del
+  equipo no envía analítica web (`lib/analytics/internal-visitor.ts`): si se
+  quita esa marca, el panel vuelve a contar nuestras visitas. Una métrica que no se puede atar a una cuenta,
   como las altas por canal o «abrió precios», no se pinta: la analítica es sin
   cookies (`docs/brand/design-decisions-log.md` §304).

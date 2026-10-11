@@ -25257,7 +25257,17 @@ consola, `/admin`, `/mfa`, `/auth` y `/informe`. Las cuentas del operador
 cifra: ni altas, ni pruebas, ni checkouts, ni suscripciones, ni cobros. En
 Stripe se reconocen por el `user_id` del checkout o de la suscripción y por
 el email de la factura, porque un checkout de un cliente ya existente no
-lleva email. Las visitas de PostHog no se pueden filtrar así: son anónimas.
+lleva email. Las visitas de PostHog no se pueden filtrar así: son anónimas. Los previews y
+Vercel ya quedan fuera porque sólo cuenta `www.genscore.es`. Para las visitas
+del equipo a la web de verdad, un navegador del equipo deja de enviar
+analítica: al abrir la consola con una cuenta propia, o `/admin`, se guarda
+`gs_internal_visitor=1` en `localStorage` y `posthog-provider.tsx` ya no carga
+PostHog ni registra la página (`lib/analytics/internal-visitor.ts`). En un
+dispositivo donde nadie inicia sesión se activa a mano con `?interno=1` en
+cualquier URL, y se quita con `?interno=0`. Es una exclusión, no un
+identificador: no dice quién es nadie ni sale del navegador, así que la
+promesa de «sin cookies de analítica» sigue en pie. Las visitas del equipo
+anteriores a esto siguen en PostHog y no se pueden quitar.
 La analítica es sin cookies, así que una «visita» es una
 sesión de PostHog, casi una carga de página, y la pantalla nunca dice
 «usuarios».
