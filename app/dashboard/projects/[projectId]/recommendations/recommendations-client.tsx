@@ -14,6 +14,7 @@ import {
   restoreRecommendationAction
 } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
+import { groupPromptDetails } from "@/lib/recommendations/prompt-details";
 import {
   GROUP_PREVIEW_SIZE,
   MIN_VISIBLE_POINTS,
@@ -52,6 +53,8 @@ type EvidenceJson = {
   action_suggested?: string;
   /** RECS-REDESIGN-1 — bounded first move for this gap. */
   first_step?: string;
+  /** log §292 — "definition" for a «qué significa X» query. */
+  query_shape?: string;
 };
 
 /**
@@ -727,7 +730,7 @@ export function RecCard({
   }
 
   const ev: EvidenceJson = rec.evidence_json ?? {};
-  const promptDetails = ev.affected_prompt_details ?? [];
+  const promptDetails = groupPromptDetails(ev.affected_prompt_details ?? []);
   const affectedPrompts = ev.affected_prompts ?? [];
   const snippets = ev.evidence_snippets ?? [];
   const staleSignals = ev.stale_signals ?? [];
@@ -877,7 +880,7 @@ export function RecCard({
             {typeof rec.potentialPoints === "number" && rec.potentialPoints >= MIN_VISIBLE_POINTS ? (
               <>
                 <div className="rec2-pts">+{formatPoints(rec.potentialPoints)} pt</div>
-                <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type)}</div>
+                <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type, ev.query_shape)}</div>
               </>
             ) : (
               /* Confidence deliberately NOT shown here (founder review): repeated
@@ -1104,20 +1107,21 @@ export function RecCard({
                               diferencia de `normalizeProvider`, pensado para
                               filas de escaneo reales, no para evidencia
                               histórica que nunca lo registró). */}
-                          {p.provider && (
+                          {p.providers.map((provider) => (
                             <span
+                              key={provider}
                               style={{
-                                color: getEngineMeta(p.provider).color,
+                                color: getEngineMeta(provider).color,
                                 display: "inline-flex",
                                 width: 12,
                                 height: 12,
                                 flexShrink: 0
                               }}
-                              title={getEngineMeta(p.provider).label}
+                              title={getEngineMeta(provider).label}
                             >
-                              <EngineGlyph provider={p.provider} />
+                              <EngineGlyph provider={provider} />
                             </span>
-                          )}
+                          ))}
                           <span>{p.prompt}</span>
                         </div>
                         {(p.competitors.length > 0 || p.domains.length > 0) && (

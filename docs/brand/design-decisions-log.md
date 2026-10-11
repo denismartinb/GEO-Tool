@@ -24653,3 +24653,54 @@ página del término.
 
 **Regla de premisa.** No se retira ningún camino de recuperación: los dos
 bloques de la auditoría siguen alcanzables desde sus tarjetas.
+
+## 292. RECS-DEFINITION-1: las preguntas de definición no prometen una mención (2026-10-11)
+
+**Qué se decidió.** El fundador probó en genscore.es la tarjeta «Aparece en
+"que significa geo"» de su propio proyecto (§290) y pidió aprender de ella.
+Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
+(«Ejecuta todo de forma autónoma», 2026-10-11).
+
+1. **Pregunta de definición.** `lib/recommendations/query-shape.ts` la
+   reconoce por la redacción («qué significa X», «qué es X» con un término de
+   una o dos palabras, «significado de», «definición de») o porque todas las
+   fuentes citadas, dos como mínimo, son diccionarios o enciclopedias. En ese
+   caso la tarjeta de visibilidad:
+   - dice que la IA responde con diccionarios y que lo realista es que te
+     cite, no que te recomiende, en vez de «se la lleva quien publique
+     primero»;
+   - pasa a impacto bajo y baja algo en el plan;
+   - etiqueta sus puntos como «si te nombran».
+
+   La cifra no cambia: sigue siendo el contrafactual de ADR 0017. Cambia lo
+   que declara, como el «si te citan» de §140.
+2. **Términos ambiguos.** En una pregunta de definición, el primer paso y el
+   playbook de la reescritura piden aclarar los otros significados del
+   término en las dos primeras frases. Fuera de las preguntas de definición
+   no se intenta detectar ambigüedad: no hay una señal fiable.
+3. **Reforzar antes que crear.** El playbook de `increase_brand_visibility`
+   pide reforzar la página que ya exista sobre el tema antes de publicar una
+   URL nueva. El veredicto con datos lo sigue dando el overlay de cobertura
+   (§278). Esto cubre el caso en que no lo hay, que fue el de `/geo`.
+4. **FAQPage.** El prompt de reescritura prohíbe prometer el resultado
+   enriquecido de FAQ de Google, que sólo se enseña en webs de administración
+   y de salud. El marcado sirve para que los motores de IA lean las preguntas.
+5. **Detalles de la tarjeta.**
+   - Los prompts afectados se agrupan por pregunta, con un icono por motor
+     (`groupPromptDetails`). La tarjeta del fundador enseñaba «8 prompts
+     afectados» y la misma pregunta cuatro veces.
+   - Los puntos de Impacto y Esfuerzo nunca se pintaban: `--p-high` y
+     `--p-med` no están declarados en ningún sitio, así que sólo se veían los
+     puntos grises. Se arregla con un valor por defecto en el propio
+     `var()`, también en `.rec-rank`.
+
+- **Clasificador de fuentes.** `classifySourceType` añade diccionarios
+  (RAE, Fundéu, WordReference, Wiktionary y otros) al grupo de enciclopedias,
+  y la etiqueta pasa a «Diccionario o enciclopedia» en Páginas citadas. Como
+  efecto lateral, en el informe esos dominios pasan de «Medios y otras webs»
+  a «Comparadores y comunidades», donde ya estaba Wikipedia.
+
+**Pendiente.** Las tarjetas ya guardadas no cambian hasta el siguiente
+escaneo del proyecto, porque el texto se escribe al generarlas.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
