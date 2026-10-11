@@ -1,6 +1,8 @@
 import { classifyQueryShape } from "@/lib/recommendations/query-shape";
 import { classifySourceType, type SourceType } from "@/lib/citations/source-type";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
+import { isBrandDomain } from "@/lib/domains/brand-domain";
+import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 type ProjectInput = {
   brand: string;
@@ -216,6 +218,69 @@ function getExtracted(result: PromptResultInput): ExtractedShape | null {
 
 function confWeight(conf: "low" | "medium" | "high") {
   return conf === "high" ? 3 : conf === "medium" ? 2 : 1;
+}
+
+/**
+ * RECS-DIAGNOSIS-1 (log §293). "Te citan" means the same thing here as in the
+ * citation score (ADR 0012 + ADR 0013): a grounded engine cited YOUR domain.
+ * `citation_found` only says the answer cited some web, and an ungrounded
+ * engine (Claude) never cites anything, so reading it raw produced cards no
+ * user could ever close ("get Claude to cite you") and called other people's
+ * citations "your winning pattern".
+ */
+/*
+ * This module is imported by the client (labelForType), so it cannot import
+ * `lib/scoring/run-scoring.ts` (server-only through `lib/scan/constants`).
+ * `getEngineMeta(...).grounded` is the client-safe twin of
+ * `GROUNDED_PROVIDERS`, already held in parity by the three-way guard
+ * (log §130), and `isBrandDomain` is the exact matcher `hasOwnDomainCitation`
+ * uses. A missing provider reads as grounded, same as `isGroundedRow`.
+ */
+function isGroundedResult(result: PromptResultInput): boolean {
+  return getEngineMeta(result.provider).grounded;
+}
+
+function citesOwnDomain(result: PromptResultInput, projectDomain: string): boolean {
+  if (!isGroundedResult(result) || !projectDomain.trim()) return false;
+  return (getExtracted(result)?.citations ?? []).some(
+    (c) => c.source === "grounding" && isBrandDomain(c.domain, projectDomain)
+  );
+}
+
+/** A grounded answer that names the brand but does not cite its domain. */
+function isOwnCitationGap(result: PromptResultInput, projectDomain: string): boolean {
+  return result.brand_mentioned && isGroundedResult(result) && !citesOwnDomain(result, projectDomain);
+}
+
+/**
+ * Distinct questions behind a set of answer rows. A run asks every question
+ * once per engine (and per sample), so a row count is a count of answers,
+ * never of questions — "13 consultas" on a 6-question project (log §293).
+ */
+function countQuestions(rows: PromptResultInput[]): number {
+  return new Set(rows.map((r) => r.promptId ?? r.prompt_text_snapshot.trim().toLowerCase())).size;
+}
+
+function questionsLabel(n: number): string {
+  return n === 1 ? "1 consulta" : `${n} consultas`;
+}
+
+function answersLabel(n: number): string {
+  return n === 1 ? "1 respuesta" : `${n} respuestas`;
+}
+
+/**
+ * "de Gemini y ChatGPT" — the engines that actually produced these rows.
+ * Rows without a provider are left out rather than assumed to be Gemini
+ * (RECS-EVIDENCE-2), so the phrase can be empty.
+ */
+function enginesPhrase(rows: PromptResultInput[]): string {
+  const labels = Array.from(
+    new Set(rows.filter((r) => r.provider).map((r) => getEngineMeta(r.provider).label).filter(Boolean))
+  );
+  if (labels.length === 0) return "";
+  const list = labels.length === 1 ? labels[0] : `${labels.slice(0, -1).join(", ")} y ${labels[labels.length - 1]}`;
+  return ` de ${list}`;
 }
 
 /**
@@ -483,9 +548,12 @@ function computeProminenceGap(promptResults: PromptResultInput[], namedCompetito
  * useful advice when there's somewhere left to apply it; on an
  * already-perfect run it would just be noise.
  */
-function computeWinningPattern(promptResults: PromptResultInput[]): PromptResultInput[] {
+function computeWinningPattern(promptResults: PromptResultInput[], projectDomain: string): PromptResultInput[] {
   return promptResults.filter(
-    (r) => r.brand_mentioned && r.citation_found && (r.sentiment === "positive" || r.sentiment === "neutral")
+    (r) =>
+      r.brand_mentioned &&
+      citesOwnDomain(r, projectDomain) &&
+      (r.sentiment === "positive" || r.sentiment === "neutral")
   );
 }
 
@@ -521,8 +589,9 @@ function perPromptGapCards(opts: {
   promptResults: PromptResultInput[];
   runScore: RunScoreInput;
   scoreDetails: Record<string, unknown>;
+  projectDomain: string;
 }): CandidateRec[] {
-  const { promptResults, runScore, scoreDetails } = opts;
+  const { promptResults, runScore, scoreDetails, projectDomain } = opts;
   const cards: CandidateRec[] = [];
 
   // RECS-EVIDENCE-2 (docs/external-audit-2026-08.md, Fase 7). Grouped by the
@@ -574,7 +643,7 @@ function perPromptGapCards(opts: {
         title: `Aparece en "${label}"`,
         description: isDefinition
           ? "Es una pregunta de definición: la IA responde con diccionarios y enciclopedias, no con marcas. Lo realista aquí es que cite tu web como fuente, no que te recomiende."
-          : "Ni tú ni ningún competidor aparecéis en esta respuesta. Es una consulta libre: se la lleva quien publique primero la mejor respuesta.",
+          : `En ${answersLabel(visibilityAffected.length)}${enginesPhrase(visibilityAffected)} a esta pregunta, la IA no te nombró ni a ti ni a ningún competidor. Sin nadie por delante, una página que responda bien la pregunta lo tiene más fácil.`,
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
@@ -594,7 +663,7 @@ function perPromptGapCards(opts: {
             : ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
           whyThisMatters: isDefinition
             ? "Una pregunta de definición rara vez acaba en una recomendación de marca, pero sí en una fuente citada. Si la explicación más clara está en tu web, la IA puede citarla."
-            : "Nadie ocupa todavía esta consulta. Entrar ahora es más barato que disputarla cuando un competidor ya se haya asentado.",
+            : "En estas respuestas no aparece ningún competidor. Entrar ahora es más barato que disputarla cuando uno ya se haya asentado.",
           firstStep: isDefinition
             ? "Responde la definición en las dos primeras frases de tu página sobre el tema, con el titular en forma de pregunta. Si el término tiene otros significados, acláralo en esa misma frase."
             : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
@@ -604,12 +673,14 @@ function perPromptGapCards(opts: {
       });
     }
 
-    const citationAffected = group.filter((result) => result.brand_mentioned && !result.citation_found);
+    // RECS-DIAGNOSIS-1: only answers that COULD cite (grounded engines) and
+    // did not cite the brand's own domain. See `citesOwnDomain`.
+    const citationAffected = group.filter((result) => isOwnCitationGap(result, projectDomain));
     if (citationAffected.length > 0) {
       cards.push({
         title: `Consigue que te citen en "${label}"`,
         description:
-          "La IA te nombra en esta respuesta, pero se apoya en otras webs como fuente. Para citarte necesita un dato tuyo que pueda verificar.",
+          `La IA te nombra en ${answersLabel(citationAffected.length)}${enginesPhrase(citationAffected)}, pero no cita tu web como fuente. Para citarte necesita un dato tuyo que pueda verificar.`,
         rule_id: "rule_citations_001",
         recommendation_type: "add_citation_block",
         dedupeKey: `add_citation_block:${stableId}`,
@@ -688,12 +759,14 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
   for (const result of promptResults) {
     const ev = promptEvidence(result);
     const normalizedDomains = ev.domains.map(normalizeDomainValue);
-    if (normalizedBrand && normalizedDomains.includes(normalizedBrand)) continue; // brand already cited here
+    // Same ownership rule as the citation score (ADR 0013, BRAND-DOMAIN-1):
+    // a subdomain or the same brand on another TLD is the brand's own site.
+    if (normalizedBrand && normalizedDomains.some((d) => isBrandDomain(d, normalizedBrand))) continue; // brand already cited here
 
     const seenInThisPrompt = new Set<string>();
     for (const page of promptCitationPages(result)) {
       const key = normalizeDomainValue(page.domain);
-      if (!key || key === normalizedBrand || seenInThisPrompt.has(key)) continue;
+      if (!key || (normalizedBrand && isBrandDomain(key, normalizedBrand)) || seenInThisPrompt.has(key)) continue;
       seenInThisPrompt.add(key);
       const entry = bySource.get(key) ?? { domain: page.domain, prompts: [], examplePage: null };
       entry.prompts.push(result);
@@ -890,7 +963,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // Per-prompt visibility ("increase_brand_visibility") and citation
   // ("add_citation_block") gaps — one focused card per affected query instead
   // of one bundled card mixing unrelated topics (Fase B2).
-  candidates.push(...perPromptGapCards({ promptResults, runScore, scoreDetails }));
+  candidates.push(...perPromptGapCards({ promptResults, runScore, scoreDetails, projectDomain: input.project.domain }));
 
   const dominantCompetitors = computeCompetitorDominance(promptResults, input.competitors);
   if (dominantCompetitors.length > 0) {
@@ -898,7 +971,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
       const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
       const effort: "high" | "medium" = entry.prompts.length >= 4 ? "high" : "medium";
       candidates.push({
-        title: `Disputa a ${entry.competitor} ${entry.prompts.length} consultas donde no apareces`,
+        title: `Disputa a ${entry.competitor} ${questionsLabel(countQuestions(entry.prompts))} donde no apareces`,
         description: `${entry.competitor} sale en ${entry.prompts.length} respuestas y tú no. Publica contenido que responda esas consultas mejor y que compare con honestidad.`,
         rule_id: "rule_competitor_gap_001",
         recommendation_type: "close_competitor_gap",
@@ -1022,7 +1095,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
 
   if (comparativePrompts.length >= 2) {
     candidates.push({
-      title: `Publica una comparativa: ${comparativePrompts.length} consultas la piden`,
+      title: `Publica una comparativa: ${questionsLabel(countQuestions(comparativePrompts))} la ${countQuestions(comparativePrompts) === 1 ? "pide" : "piden"}`,
       description: "Son consultas de comparación donde salen tus competidores y tú no. La IA cita comparativas que incluyen a la competencia con honestidad.",
       rule_id: "rule_comparison_content_001",
       recommendation_type: "add_comparison_content",
@@ -1345,11 +1418,12 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // already-perfect run "replicate this" has nothing left to replicate
   // toward. severityScore is deliberately low so this never crowds out a
   // real gap-fix card, only fills the backlog when there's room.
-  const winningPrompts = computeWinningPattern(promptResults);
-  const hasOpenGap = brandMissing.length > 0 || promptResults.some((p) => p.brand_mentioned && !p.citation_found);
+  const winningPrompts = computeWinningPattern(promptResults, input.project.domain);
+  const hasOpenGap =
+    brandMissing.length > 0 || promptResults.some((p) => isOwnCitationGap(p, input.project.domain));
   if (winningPrompts.length >= 2 && hasOpenGap) {
     candidates.push({
-      title: `Repite lo que ya te funciona en ${winningPrompts.length} consultas`,
+      title: `Repite lo que ya te funciona en ${questionsLabel(countQuestions(winningPrompts))}`,
       description: `En estas consultas la IA te menciona y te cita. Mira qué tienen en común esas páginas y aplica la misma fórmula donde todavía no apareces.`,
       rule_id: "rule_amplify_positive_001",
       recommendation_type: "amplify_positive_pattern",
@@ -1365,7 +1439,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         scoreDetails,
         runScore,
         affected: winningPrompts,
-        assumptions: [`La IA te menciona y cita, sin narrativa negativa, en ${winningPrompts.length} consultas.`],
+        assumptions: [`La IA te menciona y cita tu web, sin narrativa negativa, en ${answersLabel(winningPrompts.length)}.`],
         whyThisMatters:
           "Ya tienes la receta probada en tu propio dominio. Copiarla es más barato y más seguro que inventar un formato nuevo.",
         firstStep:

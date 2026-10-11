@@ -24704,3 +24704,72 @@ Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
 escaneo del proyecto, porque el texto se escribe al generarlas.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 293. RECS-DIAGNOSIS-1 — Recomendaciones: que el diagnóstico sea cierto (2026-10-11)
+
+**Contexto.** El fundador abrió una línea de mejora de Recomendaciones
+(funcional y de experiencia) y aprobó un plan de siete puntos. Pidió además
+una segunda opinión externa, que encontró fallos de diagnóstico. Se
+comprobaron en el código y se añadieron como punto 0, antes de cualquier
+cambio visual: una recomendación bien presentada sobre un diagnóstico falso
+es peor que ninguna. Criterio de salida: ninguna acción imposible y ninguna
+cita propia falsa.
+
+**Decidido.**
+
+1. **«Te citan» significa lo mismo que en la puntuación.** Un motor que busca
+   en la web (`GROUNDED_PROVIDERS`) citó el dominio de la marca
+   (`hasOwnDomainCitation`, ADR 0012 + ADR 0013). El motor de
+   recomendaciones leía `citation_found` en crudo, lo que causaba dos
+   errores:
+   - `add_citation_block` («Consigue que te citen») salía para respuestas de
+     Claude, que no busca en la web. Era una tarea imposible de cerrar.
+   - Cualquier cita de otra web contaba como «te citan».
+
+   `amplify_positive_pattern` («Repite lo que ya te funciona») tenía el mismo
+   fallo y llamaba patrón ganador a citas ajenas. Ahora los dos usan
+   `citesOwnDomain`/`isOwnCitationGap`, construidas con las piezas seguras
+   para el cliente (`getEngineMeta(...).grounded` e `isBrandDomain`), porque
+   el motor también se importa desde el cliente. `computeCitationSourceGap` reconoce
+   el dominio propio con `isBrandDomain`: un subdominio o la misma marca en
+   otro TLD cuentan como propios, igual que en la puntuación (ADR 0019 pide
+   que el matching de dominio sea el mismo en todas partes).
+2. **Un foro no es «tu página».** El overlay de cobertura daba por cubierta
+   una pregunta con un hilo de quejas de la comunidad de usuarios del propio
+   dominio, y decía «refuerza tu página» enlazando ese hilo. Nace el estado
+   `no_editable_page`:
+   - `isCommunityPage` mira el primer subdominio o el primer tramo de la
+     ruta: comunidad, foro, forum, questions…
+   - Si sólo aparecen portada o foros, no se certifica la cobertura y se
+     pide publicar una página propia.
+   - Si hay foro y página propia, se enlaza la página propia.
+
+   El informe (`report-data.ts`) aplica el mismo criterio con
+   `isAnswerPage`.
+3. **Preguntas y respuestas se cuentan por separado.** Un run pregunta cada
+   consulta una vez por motor y por muestra. Los títulos que decían «N
+   consultas» contaban respuestas: «13 consultas» en un proyecto de 6
+   preguntas. Ahora `countQuestions` cuenta preguntas distintas, y las
+   descripciones que hablan de respuestas siguen diciendo «respuestas».
+4. **Se dice lo observado, no se generaliza.** La tarjeta de visibilidad
+   decía «Ni tú ni ningún competidor aparecéis… se la lleva quien publique
+   primero». Ahora dice «En N respuestas de Gemini y ChatGPT a esta
+   pregunta, la IA no te nombró ni a ti ni a ningún competidor». La de cita
+   dice cuántas respuestas y de qué motor no citan tu web. Los motores salen
+   de `getEngineMeta`, y una fila sin `provider` no se atribuye a ninguno.
+
+**No cambia.** La fórmula de la puntuación y los contrafactuales (ADR 0017)
+no cambian: el motor de recomendaciones adopta la definición que la
+puntuación ya usaba. Los umbrales de las reglas (≥2 respuestas) tampoco
+cambian.
+
+**Pendiente.**
+- Las tarjetas ya guardadas no cambian hasta el siguiente escaneo, porque el
+  texto se escribe al generarlas.
+- Comprobar que la página propuesta responde de verdad a la pregunta exige
+  leerla. Va con el punto 4 del plan («tu página frente a las que cita la
+  IA»), con el rastreo de páginas citadas que el fundador aprobó el
+  2026-10-11.
+- Plan del fundador: https://claude.ai/artifact/DLsvhWmjTcxLS3Gx6kjUpN
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

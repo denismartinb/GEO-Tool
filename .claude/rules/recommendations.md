@@ -597,3 +597,26 @@ paths:
   fila de escaneo, así que sin agrupar la misma pregunta salía una vez por
   motor y por repetición. El motor se pinta como icono en la fila, como ya
   exigía RECS-EVIDENCE-2.
+
+## Diagnóstico (RECS-DIAGNOSIS-1, log §293)
+
+- **«Te citan» es una cita del dominio propio en un motor que busca en la
+  web, la misma definición que la puntuación** (`hasOwnDomainCitation` +
+  `isGroundedRow`, ADR 0012/0013). El motor no puede importarlas porque el
+  cliente lo importa y `run-scoring.ts` es de servidor: usa sus gemelas
+  seguras, `getEngineMeta(...).grounded` (en paridad con
+  `GROUNDED_PROVIDERS` por el guardián de log §130) e `isBrandDomain`. Nunca `citation_found` en crudo: sólo
+  dice que la respuesta citó alguna web, y en Claude es siempre `false`.
+  Leerlo así pedía a Claude que te citara (imposible) y llamaba «lo que te
+  funciona» a citas ajenas. Toda regla nueva sobre citas pasa por
+  `citesOwnDomain`/`isOwnCitationGap`.
+- **Un foro o comunidad del propio dominio no es «tu página»**
+  (`isCommunityPage`, estado `no_editable_page`). Tampoco lo es la portada
+  (`home_only`). Sólo `isAnswerPage` certifica cobertura, en la pantalla y en
+  el informe.
+- **«consultas» cuenta preguntas distintas (`countQuestions`); «respuestas»
+  cuenta filas.** Un run pregunta lo mismo una vez por motor y por muestra,
+  así que una cifra de filas bajo la palabra «consultas» está inflada.
+- **Se dice lo observado.** Cuántas respuestas, de qué motor, y qué no pasó.
+  Nunca «nadie ocupa esta consulta» ni «se la lleva quien publique primero»,
+  que generalizan desde una muestra pequeña.
