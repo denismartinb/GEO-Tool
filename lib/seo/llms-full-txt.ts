@@ -7,6 +7,7 @@ import { ABOUT_CONTACT, ABOUT_LEAD, ABOUT_SECTIONS } from "@/lib/brand/about";
 import { CANONICAL_DEFINITION_LONG } from "@/lib/brand/canonical-definition";
 import { GEO_SCORE_CANONICAL_PATH, GEO_SCORE_DEFINITION } from "@/lib/brand/geo-score-definition";
 import { QUE_ES_GENSCORE_FAQ } from "@/lib/brand/que-es-genscore-faq";
+import { QUE_SIGNIFICA_GEO_FAQ } from "@/lib/brand/que-significa-geo-faq";
 import { COMPARATIVAS_INDEX } from "@/lib/comparativas/index";
 import {
   COMPARISON_ROWS as OTTERLY_ROWS,
@@ -215,6 +216,12 @@ páginas está en ${url("/llms.txt")}.`);
 URL: ${url("/que-es-genscore")}
 
 ${QUE_ES_GENSCORE_FAQ.map((item) => `### ${item.question}\n\n${item.answer}`).join("\n\n")}`);
+
+  sections.push(`## Qué significa GEO
+
+URL: ${url("/geo")}
+
+${QUE_SIGNIFICA_GEO_FAQ.map((item) => `### ${item.question}\n\n${item.answer}`).join("\n\n")}`);
 
   sections.push(`## Quiénes somos
 

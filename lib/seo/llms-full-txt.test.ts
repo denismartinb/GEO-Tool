@@ -9,6 +9,7 @@ import { ABOUT_SECTIONS } from "@/lib/brand/about";
 import { CANONICAL_DEFINITION_LONG } from "@/lib/brand/canonical-definition";
 import { GEO_SCORE_DEFINITION } from "@/lib/brand/geo-score-definition";
 import { QUE_ES_GENSCORE_FAQ } from "@/lib/brand/que-es-genscore-faq";
+import { QUE_SIGNIFICA_GEO_FAQ } from "@/lib/brand/que-significa-geo-faq";
 import { TOOLS } from "@/lib/comparativas/mejores-herramientas-geo";
 import { COMPARISON_ROWS as OTTERLY_ROWS } from "@/lib/comparativas/genscore-vs-otterly";
 import { ALTERNATIVES } from "@/lib/comparativas/alternativas-a-otterly";
@@ -30,6 +31,13 @@ describe("buildLlmsFullTxt", () => {
 
   it("incluye todas las preguntas de /que-es-genscore con su respuesta", () => {
     for (const item of QUE_ES_GENSCORE_FAQ) {
+      expect(content).toContain(item.question);
+      expect(content).toContain(item.answer);
+    }
+  });
+
+  it("incluye todas las preguntas de «Qué significa GEO» (/geo) con su respuesta", () => {
+    for (const item of QUE_SIGNIFICA_GEO_FAQ) {
       expect(content).toContain(item.question);
       expect(content).toContain(item.answer);
     }
