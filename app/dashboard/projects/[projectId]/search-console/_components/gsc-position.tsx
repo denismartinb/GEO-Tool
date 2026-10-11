@@ -38,7 +38,7 @@ export function GscPosition({ position, tiers, daily }: { position: PositionKpi;
             {prev === null ? "Sin periodo anterior para comparar." : `En los 28 días anteriores estabas en el ${fmtPosition(prev)}.`}
           </p>
           <p className="gsc-pos-explain">
-            Es la media de todas tus búsquedas, pesada por las veces que sales. Abajo tienes el puesto de cada una.
+            Es la media de todas las veces que te buscan entre las veces que apareces.
           </p>
         </div>
         <div>

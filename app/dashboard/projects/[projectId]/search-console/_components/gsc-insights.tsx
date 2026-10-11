@@ -136,7 +136,9 @@ export function GscDevices({ devices }: { devices: DeviceView[] }) {
         {devices.map((d) => (
           <div key={d.device} className="gsc-dev">
             <span className="gsc-sub">
-              {d.label} · {fmtShare(d.impressionShare)} de las impresiones
+              {d.label}
+              <br />
+              {fmtShare(d.impressionShare)} de las impresiones
             </span>
             <b>{fmtPosition(d.position)}</b>
             <span className="gsc-sub">CTR {fmtPct(d.ctr)}</span>
