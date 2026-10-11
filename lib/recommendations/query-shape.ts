@@ -1,7 +1,7 @@
 import { classifySourceType } from "@/lib/citations/source-type";
 
 /**
- * Is this a "what does X mean" query? (log §291)
+ * Is this a "what does X mean" query? (log §292)
  *
  * A definitional query is answered with a definition, and the engines back it
  * with dictionaries and encyclopedias, not with brands. So the visibility card

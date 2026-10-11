@@ -72,7 +72,7 @@ export type SessionUser = { email: string; planId: string; planName: string };
  *    the cache from inside `/dashboard`, where the identity is already known
  *    server-side. Without it, the first public page a freshly logged-in
  *    visitor opens is always a cache miss — you log in, land in the console,
- *    click "Manuales GEO", and that first blog page flickers by
+ *    click "Manuales y estudios", and that first blog page flickers by
  *    construction. It also clears the cache on sign-out, so the hint never
  *    outlives the session that justified it.
  *

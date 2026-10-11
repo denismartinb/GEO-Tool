@@ -51,7 +51,7 @@ const DOMAIN_TYPES: Record<string, SourceType> = {
   "wikipedia.org": "encyclopedia",
   "wikimedia.org": "encyclopedia",
   "britannica.com": "encyclopedia",
-  // Dictionaries and language references (log §291): what the engines cite
+  // Dictionaries and language references (log §292): what the engines cite
   // for a definitional query («qué significa X»). Same bucket as the
   // encyclopedias because the play is the same — nobody can pitch the RAE.
   "rae.es": "encyclopedia",

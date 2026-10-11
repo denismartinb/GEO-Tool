@@ -53,7 +53,7 @@ type EvidenceJson = {
   action_suggested?: string;
   /** RECS-REDESIGN-1 — bounded first move for this gap. */
   first_step?: string;
-  /** log §291 — "definition" for a «qué significa X» query. */
+  /** log §292 — "definition" for a «qué significa X» query. */
   query_shape?: string;
 };
 

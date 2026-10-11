@@ -9,7 +9,7 @@ export type GroupedPromptDetail = {
 };
 
 /**
- * One row per prompt, with every engine that saw it (log §291).
+ * One row per prompt, with every engine that saw it (log §292).
  *
  * `affected_prompt_details` holds one entry per scan row, and a run asks the
  * same prompt to several engines, sometimes more than once. Listing the rows

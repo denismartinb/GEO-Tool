@@ -42,7 +42,7 @@ export type RecommendationRewriteInput = {
    */
   citationPages?: { domain: string; title: string; url: string }[];
   /**
-   * log §291 — the engine classified the prompt as a definitional query
+   * log §292 — the engine classified the prompt as a definitional query
    * («qué significa X»), answered with dictionaries rather than brands.
    */
   queryShape?: "definition";
@@ -113,7 +113,7 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
     case "pursue_citation_sources":
       return `ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan.${input.citationPages?.length ? " When a source has a specific example page listed under 'Example pages already cited', name that exact page/article in the plan instead of only the bare domain — it is a stronger, more concrete PR target." : ""} Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play (name the specific cited page when one is given for that domain); (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains and pages given.`;
     case "increase_brand_visibility": {
-      // log §291. Both lines come from the founder's own test of this card on
+      // log §292. Both lines come from the founder's own test of this card on
       // genscore.es («que significa geo», 2026-10-11): the plan said "create a
       // page" when the site already had one on the topic, and never noticed the
       // term was ambiguous.

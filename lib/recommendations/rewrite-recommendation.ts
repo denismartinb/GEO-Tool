@@ -62,7 +62,7 @@ export type RewriteRecommendationResult =
 
 type EvidenceJson = {
   why_this_matters?: string;
-  /** log §291 — "definition" for a «qué significa X» query. */
+  /** log §292 — "definition" for a «qué significa X» query. */
   query_shape?: string;
   affected_prompts?: string[];
   mentioned_competitors?: string[];
@@ -468,7 +468,7 @@ export async function rewriteRecommendationCore({
       ruleDescription: recommendation.description,
       whyThisMatters: evidence.why_this_matters ?? "",
       // One line per prompt: the list holds one entry per engine row, and the
-      // same question four times in the prompt reads as four questions (§291).
+      // same question four times in the prompt reads as four questions (§292).
       affectedPrompts: Array.from(new Set(evidence.affected_prompts ?? [])),
       mentionedCompetitors: promptCompetitors,
       citationDomains: anchoredDomains,

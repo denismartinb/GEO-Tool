@@ -155,7 +155,7 @@ export function classifySolutionReadiness(solution: {
  */
 export function pointsCaption(type: string, queryShape?: string | null): string {
   if (deliverableForType(type).control === "third_party") return "si te citan";
-  // log §291: in a definitional query the counterfactual assumes the brand
+  // log §292: in a definitional query the counterfactual assumes the brand
   // gets named, which the engines rarely do there — say it's conditional.
   if (type === "increase_brand_visibility" && queryShape === "definition") return "si te nombran";
   return "potenciales";

@@ -1048,7 +1048,7 @@ a {
   background: var(--line);
 }
 /* `--p-high`/`--p-med` are never declared anywhere, so the "on" dots painted
-   nothing and Recomendaciones showed only the grey "off" dots (log §291).
+   nothing and Recomendaciones showed only the grey "off" dots (log §292).
    The fallbacks are what actually paints today. */
 .ie-dot.on-h { background: var(--p-high, var(--accent)); }
 .ie-dot.on-m { background: var(--p-med, var(--ink-3)); }

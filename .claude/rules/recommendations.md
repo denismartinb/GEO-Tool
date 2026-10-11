@@ -579,7 +579,7 @@ paths:
   estar visible en la página.** Marcar un `FAQPage` sobre preguntas que no están
   en la página es marcado de contenido inexistente.
 
-## Preguntas de definición (RECS-DEFINITION-1, log §291)
+## Preguntas de definición (RECS-DEFINITION-1, log §292)
 
 - **Una pregunta de definición no promete una mención.** `classifyQueryShape`
   (`lib/recommendations/query-shape.ts`) la reconoce por la redacción o

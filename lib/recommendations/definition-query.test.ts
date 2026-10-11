@@ -7,7 +7,7 @@ import { pointsCaption } from "./deliverable";
 import { buildRecommendationRewritePrompt } from "./recommendation-rewrite-llm";
 import { domainsShownInPrompt } from "./anchored-domains";
 
-// log §291 — the founder's own card for «que significa geo» (2026-10-11).
+// log §292 — the founder's own card for «que significa geo» (2026-10-11).
 
 describe("isDefinitionalPrompt", () => {
   it.each(["que significa geo", "¿Qué significa GEO?", "qué es el geo", "significado de geo", "definición de GEO", "what does geo mean"])(

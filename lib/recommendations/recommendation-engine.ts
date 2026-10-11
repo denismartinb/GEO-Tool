@@ -563,7 +563,7 @@ function perPromptGapCards(opts: {
       return !result.brand_mentioned && ev.competitors.length === 0;
     });
     if (visibilityAffected.length > 0) {
-      // log §291: a definitional query («qué significa X») is answered with
+      // log §292: a definitional query («qué significa X») is answered with
       // dictionaries, not brands. Telling the user "whoever publishes first
       // wins it" there promises a mention the engines almost never give; what
       // is winnable is being cited as the source. Same card, same dedupeKey
