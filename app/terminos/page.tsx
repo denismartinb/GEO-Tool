@@ -41,7 +41,7 @@ export default function TerminosPage() {
       <p>
         Los escaneos, puntuaciones (como el GEO Score) y recomendaciones que genera GenScore se
         basan en respuestas obtenidas de modelos de lenguaje de terceros (como Gemini de Google,
-        Claude de Anthropic y ChatGPT de OpenAI). Estas respuestas son simulaciones representativas del comportamiento
+        Claude de Anthropic, ChatGPT de OpenAI y Perplexity). Estas respuestas son simulaciones representativas del comportamiento
         de dichos modelos y pueden variar entre ejecuciones, no garantizan una réplica exacta de lo
         que un usuario final vería en producción, ni constituyen una garantía de resultados
         futuros en tu visibilidad real. GenScore no fabrica ni infla métricas: cuando la

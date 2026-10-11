@@ -24358,8 +24358,8 @@ lector. Se corrigen aquí:
 - `/blog/que-es-el-geo-score` dice «A diario» en los planes de pago. No es
   exacto (Starter es semanal; Pro de pago, cada 2 días, §273), pero el
   fundador congeló ese texto. Pendiente de su decisión.
-- `/terminos` sigue diciendo «beta privada» y sólo pone de ejemplo tres
-  proveedores. Es texto legal: pendiente de su decisión.
+- `/terminos` suma Perplexity a los proveedores de ejemplo, pero mantiene
+  «beta privada» por decisión del fundador.
 - Los estudios siguen en tres motores porque se midieron así (§283).
 - El tour de bienvenida dice «30 lanzamientos en tres motores». Es una escena
   ilustrativa con cifras de ejemplo (`.claude/rules/onboarding.md`); se deja.
