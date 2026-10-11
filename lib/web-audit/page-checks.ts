@@ -95,6 +95,30 @@ export type CitabilityCheck = {
   contentOk: boolean;
 };
 
+/**
+ * Salud SEO page signals (SEARCH-SEO-1 Fase 2, log §278). Scored only by
+ * `seo-health.ts`, never by `pageScore`, so the GEO Score does not move.
+ * Optional on `PageCheckResult` for the same reason as `indexability`: a
+ * snapshot persisted before this phase has none of it.
+ *
+ * The title and description are kept as short hashes, never as text: they
+ * are only compared with the other pages of the same audit, and a hash
+ * stores nothing from the fetched page.
+ */
+export type SeoPageCheck = {
+  /** A `<meta name="viewport">` with `width=device-width`. */
+  viewportOk: boolean;
+  imageCount: number;
+  /** `<img>` tags with no `alt` attribute at all. `alt=""` is a valid decorative image. */
+  imagesMissingAlt: number;
+  /** JSON-LD declares a LocalBusiness (or one of its subtypes). */
+  localBusiness: boolean;
+  titleKey: string | null;
+  descriptionKey: string | null;
+  /** The page's own URL without query or hash, hashed: two audit entries of one page are not duplicates. */
+  pageKey: string;
+};
+
 export type PageCheckResult = {
   structuredData: StructuredDataCheck;
   answerFormat: AnswerFormatCheck;
@@ -103,6 +127,8 @@ export type PageCheckResult = {
   /** Optional ONLY because persisted pre-R3 snapshots lack them (buildPageCheckResult always sets both) — every consumer of a persisted row must tolerate their absence. Production crash 2026-07-12: the web-audit page read `.noindex` off a pre-R3 row and took the whole page down. */
   indexability?: IndexabilityCheck;
   citability?: CitabilityCheck;
+  /** Salud SEO only (log §278). Undefined on snapshots taken before Fase 2. */
+  seo?: SeoPageCheck;
   /** 0-100, rescaled from an 85-point baseline when freshness is unknown (see buildPageCheckResult). */
   pageScore: number;
 };
@@ -392,6 +418,112 @@ export function checkCitability(html: string): CitabilityCheck {
   return { points, hasListOrTable, wordCount, contentOk };
 }
 
+const LOCAL_BUSINESS_TYPES = new Set([
+  "LocalBusiness",
+  "MedicalClinic",
+  "MedicalBusiness",
+  "Dentist",
+  "Physician",
+  "Optician",
+  "Pharmacy",
+  "Restaurant",
+  "FoodEstablishment",
+  "CafeOrCoffeeShop",
+  "Bakery",
+  "BarOrPub",
+  "Store",
+  "AutoRepair",
+  "AutoDealer",
+  "LegalService",
+  "Attorney",
+  "Notary",
+  "AccountingService",
+  "RealEstateAgent",
+  "HealthAndBeautyBusiness",
+  "BeautySalon",
+  "HairSalon",
+  "DaySpa",
+  "LodgingBusiness",
+  "Hotel",
+  "ProfessionalService",
+  "HomeAndConstructionBusiness",
+  "Electrician",
+  "Plumber",
+  "SportsActivityLocation",
+  "ExerciseGym",
+  "VeterinaryCare",
+  "ChildCare",
+  "TravelAgency"
+]);
+
+/** FNV-1a, 32 bits, hex. Enough to tell ten pages apart; never stored as anything but a comparison key. */
+function shortHash(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < value.length; i += 1) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
+}
+
+function comparisonKey(text: string): string | null {
+  const normalized = text.toLowerCase().replace(/\s+/g, " ").trim();
+  return normalized ? shortHash(normalized) : null;
+}
+
+function pageIdentity(pageUrl: string): string {
+  try {
+    const url = new URL(pageUrl);
+    url.hash = "";
+    url.search = "";
+    return shortHash(url.toString().replace(/\/$/, ""));
+  } catch {
+    return shortHash(pageUrl);
+  }
+}
+
+/** Salud SEO page signals (log §278). Pure string scans, like every check here. */
+export function checkSeoPage(html: string, context: Pick<PageCheckContext, "pageUrl">): SeoPageCheck {
+  let viewportOk = false;
+  for (const match of html.matchAll(/<meta\b[^>]*>/gi)) {
+    const tag = match[0];
+    if ((getAttr(tag, "name") ?? "").toLowerCase() !== "viewport") continue;
+    if (/width\s*=\s*device-width/i.test(getAttr(tag, "content") ?? "")) viewportOk = true;
+  }
+
+  let imageCount = 0;
+  let imagesMissingAlt = 0;
+  for (const match of html.matchAll(/<img\b[^>]*>/gi)) {
+    const tag = match[0];
+    // A 1×1 tracking pixel is not an image anyone sees.
+    if (getAttr(tag, "width") === "1" && getAttr(tag, "height") === "1") continue;
+    imageCount += 1;
+    if (!/\salt(\s*=|[\s/>])/i.test(tag)) imagesMissingAlt += 1;
+  }
+
+  let localBusiness = false;
+  for (const node of extractLdJsonNodes(html)) {
+    const type = (node as Record<string, unknown> | null)?.["@type"];
+    const types = Array.isArray(type) ? type : [type];
+    if (types.some((t) => typeof t === "string" && LOCAL_BUSINESS_TYPES.has(t))) localBusiness = true;
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const descMatch =
+    html.match(/<meta[^>]+name=["']description["'][^>]*content=["']([^"']*)["'][^>]*>/i) ??
+    html.match(/<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i);
+
+  return {
+    viewportOk,
+    imageCount,
+    imagesMissingAlt,
+    localBusiness,
+    titleKey: titleMatch ? comparisonKey(stripTags(titleMatch[1])) : null,
+    descriptionKey: descMatch ? comparisonKey(descMatch[1]) : null,
+    pageKey: pageIdentity(context.pageUrl)
+  };
+}
+
 /**
  * Combines the six checks into a page's overall score. When freshness can't
  * be determined at all, the score is computed over the remaining 85 points
@@ -414,7 +546,11 @@ export function buildPageCheckResult(html: string, context: PageCheckContext, no
   const pageScore =
     freshness.status === "unknown" ? Math.round((baseline / 85) * 100) : Math.round(baseline + freshness.points);
 
-  return { structuredData, answerFormat, metadata, freshness, indexability, citability, pageScore };
+  // `seo` stays out of `baseline` on purpose: the Salud SEO scores it, the
+  // GEO Score never does (founder, 2026-10-11, log §278).
+  const seo = checkSeoPage(html, context);
+
+  return { structuredData, answerFormat, metadata, freshness, indexability, citability, seo, pageScore };
 }
 
 /**
@@ -505,6 +641,17 @@ export function buildKeyedPageCheckGuidance(check: PageCheckResult): PageGuidanc
   if (indexability && !indexability.hreflangPresent) {
     push("hreflang", 
       "Si esta página tiene versiones en otros idiomas o países, añade etiquetas <link rel=\"alternate\" hreflang=\"...\"> para cada una."
+    );
+  }
+  // Salud SEO (log §278). `seo` is undefined on older snapshots: no line then.
+  const seo: SeoPageCheck | undefined = check.seo;
+  if (seo && !seo.viewportOk) {
+    push("viewport_missing", 'Añade <meta name="viewport" content="width=device-width, initial-scale=1"> en el <head> para que la página se vea bien en el móvil.');
+  }
+  if (seo && seo.imagesMissingAlt > 0) {
+    push(
+      "image_alt_missing",
+      `Añade texto alternativo (alt) a ${seo.imagesMissingAlt === 1 ? "la imagen que no lo tiene" : `las ${seo.imagesMissingAlt} imágenes que no lo tienen`}. Las decorativas pueden llevar alt="".`
     );
   }
   if (citability && !citability.hasListOrTable) {

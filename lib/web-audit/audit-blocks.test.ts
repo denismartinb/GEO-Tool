@@ -199,3 +199,67 @@ describe("formatBlockPoints", () => {
     expect(formatBlockPoints(0.4)).toBe("<1 pt");
   });
 });
+
+describe("Salud SEO (SEARCH-SEO-1 Fase 2, log §278)", () => {
+  const seoFields = { viewportOk: true, imageCount: 2, imagesMissingAlt: 0, localBusiness: false, titleKey: "t", descriptionKey: "d", pageKey: "home" };
+  const speedySite = {
+    googlebotAllowed: true,
+    https: "ok" as const,
+    pageSpeed: { measuredAt: "2026-10-10T00:00:00Z", mobile: { source: "field" as const, lcpMs: 3400, inpMs: 100, cls: 0.01 }, desktop: null }
+  };
+
+  it("labels the SEO score «Salud SEO» and keeps «Nota GEO»", () => {
+    expect(AUDIT_BLOCKS.seo.scoreLabel).toBe("Salud SEO");
+    expect(AUDIT_BLOCKS.geo.scoreLabel).toBe("Nota GEO");
+  });
+
+  it("never moves the Salud técnica, the GEO block or a page's pageScore", () => {
+    const plain = [page("https://acme.com/", check({ description: false }))];
+    const withSeo = [page("https://acme.com/", { ...check({ description: false }), seo: { ...seoFields, viewportOk: false, imagesMissingAlt: 2 } })];
+    const before = blocks(plain);
+    const b = bots({ site: { ...speedySite, googlebotAllowed: false, https: "missing" } });
+    const report = buildTechnicalIssuesReport(withSeo, b);
+    expect(report.actualReadinessScore).toBe(before.report.actualReadinessScore);
+    expect(report.issues).toEqual(before.report.issues);
+    expect(buildAuditBlock("geo", withSeo, report, b)).toEqual(before.geo);
+    expect(withSeo[0].check!.pageScore).toBe(plain[0].check!.pageScore);
+  });
+
+  it("adds the new checks to the SEO block with their own weights, out of 100", () => {
+    // Page: 40 of 45 old SEO points (no description), viewport 5, alt 5,
+    // speed 20 × 5/6 (LCP mejorable), Googlebot 10, HTTPS 10. Duplicates
+    // need two pages, so they are not measured here.
+    const pages = [page("https://acme.com/", { ...check({ description: false }), seo: seoFields })];
+    const b = bots({ site: speedySite });
+    const report = buildTechnicalIssuesReport(pages, b);
+    const seo = buildAuditBlock("seo", pages, report, b);
+    const earned = 40 + 5 + 5 + 20 * (5 / 6) + 10 + 10;
+    expect(seo.score).toBe(Math.round((earned / 95) * 100));
+    expect(seo.projectedScore).toBe(100);
+    const speed = seo.issues.find((i) => i.issue.check === "page_speed")!;
+    expect(speed.blockPoints).toBeCloseTo((20 / 6 / 95) * 100, 1);
+    expect(seo.passing.map((p) => p.check)).toEqual(expect.arrayContaining(["googlebot_blocked", "https_redirect", "viewport_missing"]));
+  });
+
+  it("is the old SEO score when nothing new was measured", () => {
+    const pages = [page("https://acme.com/", check({ description: false }))];
+    const { seo, report } = blocks(pages);
+    expect(buildAuditBlock("seo", pages, report, bots())).toEqual(seo);
+    expect(seo.score).toBe(Math.round((40 / 45) * 100));
+  });
+
+  it("sorts the SEO block by severity, then by its own points", () => {
+    const pages = [page("https://acme.com/", { ...check({ hreflang: false }), seo: { ...seoFields, viewportOk: false } })];
+    const b = bots({ site: { https: "missing" } });
+    const report = buildTechnicalIssuesReport(pages, b);
+    const order = buildAuditBlock("seo", pages, report, b).issues.map((i) => i.issue.check);
+    expect(order[0]).toBe("https_redirect");
+    expect(order.indexOf("viewport_missing")).toBeGreaterThan(-1);
+  });
+
+  it("scores a page with its own new checks only, never the site facts", () => {
+    const c = { ...check({ description: false }), seo: { ...seoFields, imagesMissingAlt: 1 } };
+    expect(pageBlockScore(c, "seo")).toBe(Math.round(((40 + 5) / 55) * 100));
+    expect(pageBlockScore(c, "geo")).toBe(pageBlockScore(check({ description: false }), "geo"));
+  });
+});

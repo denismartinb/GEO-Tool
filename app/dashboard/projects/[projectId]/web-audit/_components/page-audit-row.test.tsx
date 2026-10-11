@@ -64,7 +64,32 @@ describe("PageAuditRow", () => {
     const geo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="geo" />);
     const seo = renderToStaticMarkup(<PageAuditRow page={page()} fixContext={fixContext} block="seo" />);
     expect(geo).toContain("Nota GEO de /precios: 82 de 100");
-    expect(seo).toContain("Nota SEO de /precios: 78 de 100");
+    expect(seo).toContain("Salud SEO de /precios: 78 de 100");
+  });
+
+  it("suma los checks nuevos de la Salud SEO de la página, sólo en el bloque SEO (log §278)", () => {
+    const seoCheck = {
+      viewportOk: true,
+      imageCount: 4,
+      imagesMissingAlt: 2,
+      localBusiness: false,
+      titleKey: "t1",
+      descriptionKey: "d1",
+      pageKey: "https://genscore.es/precios"
+    };
+    const withSeo = page({ check: check({ seo: seoCheck }) });
+    // SEO: 35 de 45 + viewport 5 + alt 0 de 5 + únicos 5 → 45 de 60 = 75.
+    const seo = renderToStaticMarkup(<PageAuditRow page={withSeo} fixContext={fixContext} block="seo" duplicate={false} />);
+    expect(seo).toContain("Salud SEO de /precios: 75 de 100");
+    expect(seo).toContain("Imágenes sin texto alternativo");
+    expect(seo).toContain("Títulos y descripciones únicos");
+    expect(seo).toContain("las 2 imágenes que no lo tienen");
+    const geo = renderToStaticMarkup(<PageAuditRow page={withSeo} fixContext={fixContext} block="geo" />);
+    expect(geo).toContain("Nota GEO de /precios: 82 de 100");
+    expect(geo).not.toContain("texto alternativo");
+    // A repeated title adds its guidance line.
+    const dup = renderToStaticMarkup(<PageAuditRow page={withSeo} fixContext={fixContext} block="seo" duplicate />);
+    expect(dup).toContain("Títulos o descripciones repetidos");
   });
 
   it("enseña sólo las comprobaciones y la guía de su bloque", () => {

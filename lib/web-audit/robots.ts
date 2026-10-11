@@ -2,6 +2,7 @@ import "server-only";
 
 import { AUDIT_USER_AGENT, readBodyCapped } from "@/lib/web-audit/fetch-page";
 import { parseSitemap, type SitemapReport } from "@/lib/web-audit/sitemap";
+import type { SiteSeoReport } from "@/lib/web-audit/seo-health";
 
 /**
  * robots.txt / llms.txt access report for the AI bots that matter (WEB-AUDIT-2).
@@ -59,6 +60,13 @@ export type BotAccessReport = {
    * carry two incompatible meanings on its own.
    */
   probes?: { robots: ProbeState; llmsTxt: ProbeState; sitemap: ProbeState };
+  /**
+   * Salud SEO site facts (SEARCH-SEO-1 Fase 2, log §278): Googlebot access,
+   * the http → https redirect and the home page speed. Stored here because
+   * this column already holds the site-level half of the audit, so no
+   * migration was needed. Optional: older snapshots have none of it.
+   */
+  site?: SiteSeoReport;
 };
 
 type RawGroup = { agents: string[]; disallows: string[] };
@@ -99,20 +107,30 @@ function parseGroups(content: string): RawGroup[] {
   return groups;
 }
 
+function agentAllowed(groups: RawGroup[], agent: string): boolean {
+  const token = agent.toLowerCase();
+  const exactGroup = groups.find((g) => g.agents.includes(token));
+  const wildcardGroup = groups.find((g) => g.agents.includes("*"));
+  const group = exactGroup ?? wildcardGroup;
+  const blocked = group ? group.disallows.some((d) => d.trim() === "/") : false;
+  return !blocked;
+}
+
 /** Pure parser: exact-token group beats `*`; `Disallow: /` is the only blocking rule this phase checks. */
 export function resolveBotAccess(content: string): Map<BotAgent, boolean> {
   const groups = parseGroups(content);
   const result = new Map<BotAgent, boolean>();
-
-  for (const agent of TRACKED_BOT_AGENTS) {
-    const token = agent.toLowerCase();
-    const exactGroup = groups.find((g) => g.agents.includes(token));
-    const wildcardGroup = groups.find((g) => g.agents.includes("*"));
-    const group = exactGroup ?? wildcardGroup;
-    const blocked = group ? group.disallows.some((d) => d.trim() === "/") : false;
-    result.set(agent, !blocked);
-  }
+  for (const agent of TRACKED_BOT_AGENTS) result.set(agent, agentAllowed(groups, agent));
   return result;
+}
+
+/**
+ * Whether robots.txt lets Googlebot in (Salud SEO, log §278), with the same
+ * simplified rules as the AI bots. Kept out of `TRACKED_BOT_AGENTS` because
+ * that list is the AI-bot card.
+ */
+export function resolveGooglebotAccess(content: string): boolean {
+  return agentAllowed(parseGroups(content), "Googlebot");
 }
 
 const TXT_FETCH_TIMEOUT_MS = 4_000;
@@ -197,6 +215,16 @@ export async function buildBotAccessReport(domain: string): Promise<BotAccessRep
     // Zero extra network cost: these are the very bytes fetched on the line
     // above, which used to be discarded after the null check.
     sitemap: parseSitemap(sitemapProbe.content),
-    probes: { robots: robotsProbe.state, llmsTxt: llmsProbe.state, sitemap: sitemapProbe.state }
+    probes: { robots: robotsProbe.state, llmsTxt: llmsProbe.state, sitemap: sitemapProbe.state },
+    // No robots.txt (404) lets every crawler in; one we could not read tells
+    // us nothing, so Googlebot is left unmeasured rather than «allowed».
+    site: {
+      googlebotAllowed:
+        robotsProbe.content !== null
+          ? resolveGooglebotAccess(robotsProbe.content)
+          : robotsProbe.state === "absent"
+            ? true
+            : undefined
+    }
   };
 }

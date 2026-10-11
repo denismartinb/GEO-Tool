@@ -3,7 +3,8 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildKeyedPageCheckGuidance } from "@/lib/web-audit/page-checks";
 import { pageCheckStates } from "@/lib/web-audit/issues";
 import { AUDIT_BLOCKS, pageBlockScore, type AuditBlockKey } from "@/lib/web-audit/audit-blocks";
-import { ISSUE_CHECK_META } from "@/lib/web-audit/issue-labels";
+import { ISSUE_CHECK_META, passingCheckLabel } from "@/lib/web-audit/issue-labels";
+import { seoPageExtraStates } from "@/lib/web-audit/seo-health";
 import { buildPageFixes, type PageFixContext } from "@/lib/web-audit/page-fixes";
 import { PageFixBlock } from "../page-fix-block";
 import { formatDate } from "./format";
@@ -58,11 +59,14 @@ export function freshnessLabel(status: "fresh" | "aging" | "stale" | "unknown"):
 export function PageAuditRow({
   page,
   fixContext,
-  block
+  block,
+  duplicate
 }: {
   page: PageAuditEntry;
   fixContext: PageFixContext;
   block: AuditBlockKey;
+  /** SEO block: whether this page repeats another's title or description. Undefined when it could not be compared. */
+  duplicate?: boolean;
 }) {
   let path: string;
   try {
@@ -92,11 +96,17 @@ export function PageAuditRow({
   // checks never measured on this page are left out instead of being shown
   // as broken (legacy pre-R3 snapshots have no indexability/citability; the
   // production crash of 2026-07-12 was reading them unguarded).
-  const states = pageCheckStates(check).filter((state) => inBlock.has(state.check));
+  // The SEO block adds the page's own Salud SEO checks (log §278). The site
+  // facts (speed, Googlebot, HTTPS) are about the site, not this page, so
+  // they count in the block's score and not in each page's.
+  const extraStates =
+    block === "seo" ? seoPageExtraStates(check, duplicate === undefined ? {} : { duplicate }) : [];
+  const states = [...pageCheckStates(check).filter((state) => inBlock.has(state.check)), ...extraStates];
   const failing = states.filter((state) => state.fails).map((state) => state.check);
   const guidance = buildKeyedPageCheckGuidance(check).filter((g) => inBlock.has(g.check));
+  if (duplicate) guidance.push({ check: "duplicate_metadata", line: ISSUE_CHECK_META.duplicate_metadata.guidance });
   const fixes = buildPageFixes(failing, page, fixContext);
-  const score = pageBlockScore(check, block);
+  const score = pageBlockScore(check, block, extraStates);
   // Collapsed by default (WEB-AUDIT-R1): the summary keeps the verdict, the
   // how-to-fix detail is one tap away.
   const failingCount = failing.length;
@@ -117,7 +127,7 @@ export function PageAuditRow({
             <div
               className="sa-track sa-pg-track"
               role="img"
-              aria-label={`Nota ${block === "geo" ? "GEO" : "SEO"} de ${path}: ${score} de 100`}
+              aria-label={`${AUDIT_BLOCKS[block].scoreLabel} de ${path}: ${score} de 100`}
             >
               <div className="sa-fill" style={{ width: `${score}%`, background: scoreColor(score) }} />
             </div>
@@ -134,7 +144,13 @@ export function PageAuditRow({
             <CheckDot
               key={state.check}
               ok={!state.fails}
-              label={state.check === "freshness" ? freshnessLabel(check.freshness.status) : ISSUE_CHECK_META[state.check].label}
+              label={
+                state.check === "freshness"
+                  ? freshnessLabel(check.freshness.status)
+                  : state.fails
+                    ? ISSUE_CHECK_META[state.check].label
+                    : passingCheckLabel(state.check)
+              }
             />
           ))}
         </div>
