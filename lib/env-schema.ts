@@ -99,6 +99,7 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   VERCEL_URL: "la inyecta Vercel; en local no existe y se usa localhost",
   VERCEL_ENV: "la inyecta Vercel; distingue production de preview",
   SENTRY_DSN: "los errores del servidor no llegan a Sentry y los crons no tienen monitor (sólo quedan los correos al operador)",
+  SENTRY_CRON_MONITORS: "sólo el vigilante (scan-watchdog) tiene monitor de cron en Sentry, que es lo que incluye el plan gratuito",
   GEMINI_API_KEY: "Gemini es el motor por defecto: sin clave no hay escaneo",
   GEMINI_MODEL: "se usa el modelo por defecto fijado en código",
   ANTHROPIC_API_KEY: "si Claude está en LLM_SCAN_PROVIDERS, sus llamadas fallan",
@@ -178,6 +179,7 @@ export const envSchema = z.object({
   VERCEL_URL: optionalText,
   VERCEL_ENV: optionalText,
   SENTRY_DSN: optionalText,
+  SENTRY_CRON_MONITORS: optionalText,
 
   GEMINI_API_KEY: optionalText,
   GEMINI_MODEL: optionalText,

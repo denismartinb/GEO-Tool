@@ -25126,3 +25126,32 @@ cambia.
 390×664. En un iPhone SE o con la letra del sistema más grande la lista
 volverá a scrollear, como antes. Las filas de 40px quedan por debajo de los
 44px que recomienda Apple. Se aceptó a cambio de que el menú quepa entero.
+
+## 302. OBSERVABILITY-2: un solo monitor de cron, el del vigilante, para no pagar Sentry (2026-10-11)
+
+**Qué se decidió.** Al desplegar §300, Sentry avisó al fundador de «Cron
+monitors budget consumed»: el plan gratuito incluye un monitor de cron y
+§300 creaba siete. Los otros seis check-ins se rechazaban. El fundador
+preguntó si se podía optimizar el gasto. La decisión es no pagar y quedarse
+con un monitor.
+
+- **Sólo `scan-watchdog` hace check-in por defecto**
+  (`DEFAULT_MONITORED_CRONS`, `isMonitoredCron`). Es el monitor de los
+  monitores: reconcilia los escaneos parados de todos los proyectos y manda
+  todos los avisos al operador, así que si deja de correr se calla todo lo
+  demás.
+- **Los otros seis crons siguen mandando sus errores**: `reportError` en sus
+  `catch` y `captureException` si algo se escapa. Lo único que pierden es
+  enterarse de que un cron no corrió o lo cortó Vercel. Un `scan-continue`
+  caído lo acaba viendo igualmente el vigilante como escaneo parado.
+- **`SENTRY_CRON_MONITORS`** (opcional) amplía la lista (`scan-watchdog,scan-continue`
+  o `all`) si algún día se paga el plan. No hace falta ponerla.
+
+El resto del consumo no da motivo para tocar nada: el día del cambio iban 3
+errores de 5.000 y un 1 % de las trazas del periodo.
+
+**Qué queda pendiente (del fundador).** Borrar en Sentry → Crons el monitor
+que se quedó con la plaza si no es `cron-scan-watchdog`; el bueno se crea
+solo en su siguiente pasada. El plan también incluye un monitor de
+disponibilidad (uptime) gratis, que se configura en el panel sobre
+`https://www.genscore.es` sin código.

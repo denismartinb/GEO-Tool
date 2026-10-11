@@ -38,6 +38,32 @@ export const CRON_MONITORS = {
 
 export type CronPath = keyof typeof CRON_MONITORS;
 
+/**
+ * OBSERVABILITY-2 (log §302): which crons actually check in. Sentry's free
+ * plan includes ONE cron monitor; every further slug is rejected ("Cron
+ * monitors budget consumed", 2026-10-11) and would only work on
+ * pay-as-you-go. The default is the watchdog because it is the monitor of
+ * monitors: it reconciles stalled scans of every project and sends every
+ * operator alert, so if it stops, everything else goes quiet with it. The
+ * other crons still report their errors (`reportError` and the exception
+ * path below); what they lose is only "missed"/"timeout" detection.
+ *
+ * `SENTRY_CRON_MONITORS` (comma-separated names, e.g.
+ * `scan-watchdog,scan-continue`, or `all`) widens it once the plan allows.
+ */
+export const DEFAULT_MONITORED_CRONS = ["scan-watchdog"] as const;
+
+export function isMonitoredCron(path: CronPath, setting: string | undefined): boolean {
+  const name = path.slice("/api/cron/".length);
+  const raw = setting?.trim();
+  if (!raw) return (DEFAULT_MONITORED_CRONS as readonly string[]).includes(name);
+  if (raw === "all") return true;
+  return raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .includes(name);
+}
+
 /** `/api/cron/scan-watchdog` → `cron-scan-watchdog`. */
 export function monitorSlug(path: CronPath): string {
   return `cron-${path.slice("/api/cron/".length)}`;
@@ -56,6 +82,17 @@ export function withCronMonitor(path: CronPath, handler: (request: Request) => P
       process.env.VERCEL_ENV === "production" &&
       isAuthorizedInternalRequest(request, process.env.CRON_SECRET);
     if (!enabled) return handler(request);
+
+    if (!isMonitoredCron(path, process.env.SENTRY_CRON_MONITORS)) {
+      // No check-in, but an exception still reaches Sentry as an error.
+      try {
+        return await handler(request);
+      } catch (error) {
+        Sentry.captureException(error, { tags: { cron: monitorSlug(path) } });
+        await Sentry.flush(2000);
+        throw error;
+      }
+    }
 
     const spec: CronMonitorSpec = CRON_MONITORS[path];
     const monitorSlugValue = monitorSlug(path);
