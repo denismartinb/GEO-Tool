@@ -24325,6 +24325,28 @@ tendrá que reconectar).
 **Regla de premisa.** No se retira ningún camino de recuperación. Si la
 conexión falla, la pantalla dice por qué y ofrece reconectar o desconectar.
 
+**Adenda §284 (2026-10-11, mismo día):** el fundador no entendió «a un paso
+de la página 1». Se cambia por lo que es, «en la página 2 de Google» (puestos
+11 a 20), en la tarjeta de conectar, en la mitad de Google de Visión general,
+en el título del gráfico, en el filtro («Página 2 (puestos 11–20)») y en la
+insignia de cada búsqueda («PÁGINA 2»). Sólo texto. Además, la primera
+conexión real falló con `403 access_denied` porque la app de Google Cloud
+seguía en modo «Prueba»: hay que publicarla («En producción») o añadir al
+usuario como tester. Es configuración de Google, no un fallo del código.
+
+**Adenda 2 §284 (2026-10-11):** las tres líneas de la tarjeta «Conecta tu
+Search Console» pasan al texto que escribió el fundador: el puesto y su
+evolución en el tiempo, las búsquedas en las primeras páginas con las keywords
+más relevantes como oportunidad, y la indexación como complemento de lo que
+ven los motores de IA. Sólo texto.
+
+**Adenda 3 §284 (2026-10-11):** «Conectar con Google» enseña siempre el
+selector de cuentas de Google (`prompt=select_account consent`) y ya no manda
+`login_hint` con el correo de la sesión. Pasó en la primera prueba real: la
+propiedad de Search Console del fundador está en otra cuenta de Google, no en
+la del login. Si la cuenta elegida no tiene una propiedad que cubra el dominio,
+la pantalla ya lo dice con el estado de elegir propiedad.
+
 ---
 
 ## 285. PERPLEXITY-ENGINE-1 Fase 2b: lo que se quedó en tres motores (2026-10-11)

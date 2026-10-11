@@ -156,13 +156,13 @@ export default async function SearchConsolePage({
               <div className="gsc-grid-2">
                 <div className="card">
                   <div className="sa-ch">
-                    <h3>A un paso de la página 1</h3>
+                    <h3>Búsquedas en la página 2 de Google</h3>
                     <span className="sa-src">Cada punto es una búsqueda</span>
                   </div>
                   <NearPageOneScatter queries={state.report.queries} />
                   <p className="sa-note" style={{ marginTop: 8, marginBottom: 0 }}>
                     {state.report.nearPage1.length > 0
-                      ? "Las búsquedas de la franja azul ya salen en la página 2 y hay gente que las ve. Son las más baratas de subir: aquí está tu mejor oportunidad."
+                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20) y hay gente que las ve. Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad."
                       : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
                   </p>
                 </div>

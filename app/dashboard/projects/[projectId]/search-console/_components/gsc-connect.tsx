@@ -32,9 +32,15 @@ export function GscConnect({
         <h3>{title}</h3>
         <p>{lead}</p>
         <ul>
-          <li>En qué puesto sales para cada búsqueda y cómo cambia</li>
-          <li>Las búsquedas a un paso de la página 1</li>
-          <li>Qué páginas tiene Google indexadas y cuáles no</li>
+          <li>En qué puesto sales para cada búsqueda y cómo evoluciona en el tiempo.</li>
+          <li>
+            Las búsquedas en las que sales en las primeras páginas con las keywords más relevantes. Oportunidad de
+            posicionarlas mejor.
+          </li>
+          <li>
+            Qué páginas tiene Google indexadas y cuáles no. Importante para complementar lo que los motores de IA ven de
+            tu marca.
+          </li>
         </ul>
         {/* A plain link, not next/link: it leaves the app for Google's consent screen. */}
         <a className="gsc-gbtn" href={connectHref} rel="nofollow">

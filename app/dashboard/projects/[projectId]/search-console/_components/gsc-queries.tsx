@@ -13,7 +13,7 @@ type Filter = "all" | "p1" | "near";
 const FILTERS: Array<{ key: Filter; label: string }> = [
   { key: "all", label: "Todas" },
   { key: "p1", label: "Página 1" },
-  { key: "near", label: "Casi página 1 (11–20)" }
+  { key: "near", label: "Página 2 (puestos 11–20)" }
 ];
 
 const VISIBLE_ROWS = 50;
@@ -81,7 +81,7 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
                 <tr key={q.query}>
                   <td>
                     <span className="gsc-qq">{q.query}</span>
-                    {q.nearPage1 && <span className="gsc-flag">CASI P1</span>}
+                    {q.nearPage1 && <span className="gsc-flag">PÁGINA 2</span>}
                   </td>
                   <td className="gsc-pos">
                     <b>{fmtPosition(q.position)}</b> <Movement value={q.movement} />
