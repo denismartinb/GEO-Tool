@@ -17,6 +17,9 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
  * elegir una para rellenar la portada sería la métrica falsa que el producto
  * no publica. El antetítulo sólo dice «Estudio GenScore» cuando la cifra es
  * nuestra.
+ *
+ * Un post de lanzamiento sin cifra puede declarar `heroLogos`: el logo de lo
+ * que GenScore conecta junto a su propia marca, en el mismo hueco (log §296).
  */
 export function ArticleHero({ post }: { post: BlogPost }) {
   const cluster = getBlogCluster(post.cluster);
@@ -53,6 +56,30 @@ export function ArticleHero({ post }: { post: BlogPost }) {
               {stat.label}
               <span>{stat.source}</span>
             </p>
+          </div>
+        )}
+
+        {!stat && post.heroLogos && post.heroLogos.length > 0 && (
+          <div className="art-hero-logos">
+            {post.heroLogos.map((group, groupIndex) => (
+              <span key={groupIndex} className="art-hero-logo-pair">
+                {groupIndex > 0 && (
+                  <span className="art-hero-logo-plus" aria-hidden="true">
+                    +
+                  </span>
+                )}
+                {group.map((logo) => (
+                  <figure key={logo.src} className={logo.badge ? "art-hero-logo is-new" : "art-hero-logo"}>
+                    <span className="art-hero-logo-tile">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={logo.src} alt="" width={40} height={40} />
+                      {logo.badge && <span className="art-hero-logo-badge">{logo.badge}</span>}
+                    </span>
+                    <figcaption>{logo.name}</figcaption>
+                  </figure>
+                ))}
+              </span>
+            ))}
           </div>
         )}
 

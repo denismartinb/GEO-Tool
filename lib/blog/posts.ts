@@ -101,6 +101,15 @@ export type BlogPost = {
    * figure rather than one picked to fill the space (log §247).
    */
   heroStat?: { value: string; label: string; source: string };
+  /**
+   * CONTENT-LAUNCH-2 (log §296): for a launch post with no figure to show,
+   * the logos of what the post is about, in the slot `heroStat` would use.
+   * Groups are joined by a «+». Real brand files from `public/brand/engines/`,
+   * never a made-up figure, and never GenScore's own mark next to Google's
+   * «G»: side by side they read as the same logo (founder, 2026-10-11).
+   * Ignored when the post also has `heroStat`.
+   */
+  heroLogos?: { name: string; src: string; badge?: string }[][];
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -513,10 +522,29 @@ export const BLOG_POSTS: BlogPost[] = [
       "Perplexity entra en GenScore como cuarto motor en Pro y Agencia. Qué tiene de distinto un motor que busca en la web y cita sus fuentes, y las tres cosas que conviene mirar en tu primer escaneo.",
     datePublished: "2026-10-11",
     coverImage: "/blog/genscore-ya-mide-perplexity/cover.webp",
+    heroLogos: [[{ name: "ChatGPT", src: "/brand/engines/chatgpt.svg" }, { name: "Gemini", src: "/brand/engines/gemini.svg" }, { name: "Claude", src: "/brand/engines/claude.svg" }, { name: "Perplexity", src: "/brand/engines/perplexity.svg", badge: "Nuevo" }]],
     coverIcon: "search",
     // CONTENT-LAUNCH-1 (log §288): launch post for PERPLEXITY-ENGINE-1 Fase 2
     // (log §283). Product claims trace to that section.
     primaryKeyword: "medir marca en perplexity",
+    cluster: "playbooks"
+  },
+  {
+    slug: "auditoria-seo-y-search-console-en-genscore",
+    title: "Tu posición en Google y en la IA, en el mismo sitio: GenScore conecta tu Search Console",
+    seoTitle: "GenScore y Search Console: tu posición en Google y en la IA",
+    metaDescription:
+      "Conecta tu Search Console a GenScore: tu puesto en Google, tus oportunidades de subir y qué mejorar para Google y para la IA, junto a la Auditoría SEO.",
+    description:
+      "GenScore suma Google a la IA. Conecta tu Search Console y ve tu puesto en Google búsqueda a búsqueda, tus mejores oportunidades y qué mejorar para Google y para ChatGPT, Gemini, Claude y Perplexity, con la Auditoría SEO al lado.",
+    datePublished: "2026-10-11",
+    coverImage: "/blog/auditoria-seo-y-search-console-en-genscore/cover.webp",
+    heroLogos: [[{ name: "Google", src: "/brand/engines/google.svg" }], [{ name: "ChatGPT", src: "/brand/engines/chatgpt.svg" }, { name: "Gemini", src: "/brand/engines/gemini.svg" }, { name: "Claude", src: "/brand/engines/claude.svg" }, { name: "Perplexity", src: "/brand/engines/perplexity.svg" }]],
+    coverIcon: "search",
+    // CONTENT-LAUNCH-2 (log §296): launch post for SEARCH-SEO-1 Fases 2, 3
+    // and 3b (log §281, §284, §287). Product claims trace to those sections;
+    // the figures are mockups with invented data (ADR 0028).
+    primaryKeyword: "search console y posicionamiento en ia",
     cluster: "playbooks"
   }
 ];
