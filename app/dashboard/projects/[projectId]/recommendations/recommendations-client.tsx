@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -29,6 +29,8 @@ import {
   readinessLabel
 } from "@/lib/recommendations/deliverable";
 import { adviceSignal, dataSignal, scopeLine } from "@/lib/recommendations/card-signals";
+import { planGoal } from "./_components/google-rec-copy";
+import { GooglePlanReport, type GooglePlanKind, type GooglePlanState } from "./_components/google-plan-state";
 
 // Re-exported (not redefined) so every existing `import { type GeneratedSolution } from "./recommendations-client"`
 // keeps working unchanged — lib/recommendations/generated-solution.ts is now
@@ -834,6 +836,9 @@ export function RecCard({
               }}
             >
               {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
+              {/* RECS-ONE-QUEUE-1 (log §307): one queue for AI and Google, so a
+                  plan card says where it comes from. */}
+              {priorityRank && <span className="rec2-src rec2-src-ia"><Icon name="sparkles" size={11} />IA</span>}
               {showKind && <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>}
               {priorityLevel(rec) === "high" && <span className={priorityBadgeCls}>Prioridad alta</span>}
               {quickWin && (
@@ -1361,6 +1366,7 @@ function GroupedRecs({
     <div className="rec2-group">
       <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Icon name={open ? "chevDown" : "chevRight"} size={15} />
+        <span className="rec2-src rec2-src-ia"><Icon name="sparkles" size={11} />IA</span>
         <span className="rec2-group-t">{labelForType(type)}</span>
         {joint !== null && joint >= MIN_VISIBLE_POINTS && (
           <span className="rec2-pts" style={{ fontSize: 13 }}>
@@ -1427,7 +1433,12 @@ export function RecommendationsClient({
   jointPointsByType,
   planIds = [],
   planPoints = null,
+  planPointsWithGoogle = null,
+  jointPointsByTypeWithGoogle,
   latestCompletedRunId = null,
+  googleConnected = false,
+  googlePlanSlot = null,
+  googleLaterSlot = null,
 }: {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
@@ -1445,8 +1456,24 @@ export function RecommendationsClient({
    * doesn't pass it (e.g. web-audit's embedded RecCard usage never renders
    * ResolvedHistoryCard, so it never needs this). */
   latestCompletedRunId?: string | null;
+  /** Techo conjunto de las dos primeras, cuando Google ocupa el puesto 2. */
+  planPointsWithGoogle?: number | null;
+  /** Techo por grupo con la tercera del plan de vuelta en «Más adelante». */
+  jointPointsByTypeWithGoogle?: Record<string, number | null>;
+  /** Search Console conectado: el puesto 2 del plan espera a Google. */
+  googleConnected?: boolean;
+  /** Puesto 2 del plan (`GooglePlanSlot`), servido en su propio Suspense. */
+  googlePlanSlot?: ReactNode;
+  /** Fila «Con tus datos de Google» al principio de «Más adelante». */
+  googleLaterSlot?: ReactNode;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
+  // RECS-ONE-QUEUE-1 (log §307): one queue for AI and Google. With Search
+  // Console connected, slot 2 waits for Google ("pending") and is reported by
+  // `GooglePlanMarker` once Google answers: a card kind, or null when there is
+  // none and the third AI action takes the slot back.
+  const [googlePlan, setGooglePlan] = useState<GooglePlanState>(googleConnected ? "pending" : null);
+  const [reportGooglePlan] = useState(() => (kind: GooglePlanKind | null) => setGooglePlan(kind));
 
   const hasTechnical = recommendations.some((r) => categoryForType(r.recommendation_type) === "technical");
 
@@ -1454,9 +1481,15 @@ export function RecommendationsClient({
   // un contrafactual conjunto sobre esas mismas acciones). Sumar aqui los
   // deltas de cada tarjeta contaria dos veces los prompts que comparten
   // (ADR 0017 §3), que es justo el error que se corrigio en los grupos.
-  const plan = planIds.length > 0
+  const fullPlan = planIds.length > 0
     ? (planIds.map((id) => recommendations.find((r) => r.id === id)).filter(Boolean) as Recommendation[])
     : selectPlan(recommendations);
+  const googleInPlan = googlePlan !== null;
+  // Google takes slot 2 and the third AI action waits in «Más adelante».
+  const plan = googleInPlan ? fullPlan.slice(0, 2) : fullPlan;
+  const shownPlanPoints = googleInPlan ? planPointsWithGoogle : planPoints;
+  const groupPoints = googleInPlan ? (jointPointsByTypeWithGoogle ?? jointPointsByType) : jointPointsByType;
+  const summary = planSummary(shownPlanPoints, googlePlan, plan.length);
 
   // RECS-SHORT-CARD-1 (log §303): the list under the plan is «Más adelante»,
   // so it leaves out the plan's own cards. Showing them twice made sense when
@@ -1475,7 +1508,7 @@ export function RecommendationsClient({
   ];
 
   return (
-    <>
+    <GooglePlanReport.Provider value={reportGooglePlan}>
       {/* Victorias recientes (RECS-3) — compact, clickable summary that jumps
           straight to the "Resueltas" tab instead of listing every title inline. */}
       {recentWinsCount > 0 && (
@@ -1512,23 +1545,28 @@ export function RecommendationsClient({
       {/* 4 · The plan — always on top, whatever the filter, in the accent
           treatment so the three that matter carry visible weight. Since
           RECS-SHORT-CARD-1 (log §303) they are left out of «Más adelante»
-          below instead of repeated there. */}
-      {plan.length > 0 && (
+          below instead of repeated there. Since RECS-ONE-QUEUE-1 (log §307)
+          slot 2 can be Google's. */}
+      {(plan.length > 0 || googleInPlan) && (
         <>
           <div className="rec2-plan">
-            {/* Sin punto final: cuando no hay cifra de puntos (una corrida de
-                confianza baja, que hoy es lo normal) el titular se quedaba en
-                "3 acciones prioritarias." y ese punto huérfano cantaba. */}
-            <div className="rec2-plan-t">
-              Tu plan de esta semana
-              {planPoints !== null && planPoints >= MIN_VISIBLE_POINTS ? `. Hasta +${formatPoints(planPoints)} puntos` : ""}
-            </div>
+            <div className="rec2-plan-t">Tu plan de esta semana</div>
+            {summary && <div className="rec2-plan-s">{summary}</div>}
           </div>
-          {plan.map((rec, i) => (
-            <RecCard key={`plan-${rec.id}`} rec={rec} projectId={projectId} priorityRank={i + 1} />
+          {plan[0] && <RecCard key={`plan-${plan[0].id}`} rec={plan[0]} projectId={projectId} priorityRank={1} />}
+          {googleConnected && googlePlanSlot}
+          {plan.slice(1).map((rec, i) => (
+            <RecCard
+              key={`plan-${rec.id}`}
+              rec={rec}
+              projectId={projectId}
+              priorityRank={i + (googleInPlan ? 3 : 2)}
+            />
           ))}
         </>
       )}
+      {/* Without a plan to sit in, the slot still mounts so Google can report. */}
+      {!(plan.length > 0 || googleInPlan) && googleConnected && googlePlanSlot}
 
       {/* 5 · Filters, directly under the priority actions. */}
       <div className="rec2-sec">
@@ -1556,6 +1594,12 @@ export function RecommendationsClient({
           ))}
         </div>
       </div>
+
+      {/* RECS-ONE-QUEUE-1 (log §307): «Más adelante» opens with the rest of
+          the Google cards, one row that scrolls sideways (founder, log §295).
+          Hidden rather than unmounted under the other filters, so a card's
+          «Deshacer» survives switching tabs. */}
+      {googleConnected && googleLaterSlot && <div hidden={filter !== "all"}>{googleLaterSlot}</div>}
 
       {/* 6 · The list.
           Accordions ONLY under "Todas": grouping exists to tame 20+ mixed
@@ -1611,7 +1655,7 @@ export function RecommendationsClient({
               type={type}
               items={items}
               projectId={projectId}
-              jointPointsByType={jointPointsByType}
+              jointPointsByType={groupPoints}
             />
           ))
         ) : (
@@ -1636,6 +1680,23 @@ export function RecommendationsClient({
             </div>
           </div>
         ))}
-    </>
+    </GooglePlanReport.Provider>
   );
+}
+
+/**
+ * The line next to «Tu plan de esta semana» (RECS-ONE-QUEUE-1, log §307). Each
+ * source keeps its own scale: GEO points for the AI cards (a joint ceiling,
+ * never a sum, ADR 0017 §3) and what the Google card moves in Google.
+ */
+export function planSummary(points: number | null, google: GooglePlanState, aiCount: number): string | null {
+  const pts = points !== null && points >= MIN_VISIBLE_POINTS ? `Hasta +${formatPoints(points)} pt GEO` : null;
+  if (google === "push_page_one" || google === "improve_snippet") {
+    const goal = planGoal(google);
+    return pts ? `${pts} y ${goal}` : goal.charAt(0).toUpperCase() + goal.slice(1);
+  }
+  if (!pts) return null;
+  if (google === null && aiCount === 3) return `${pts} si haces las tres`;
+  if (google === null && aiCount === 2) return `${pts} si haces las dos`;
+  return pts;
 }

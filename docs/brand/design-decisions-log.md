@@ -25358,3 +25358,52 @@ externas, identificadores y el escape de `lib/scan/extraction.ts` no se tocan.
 glosario, docs y SVG; correos y panel; prompt de reescritura de
 recomendaciones y pruebas de prevención. Esta fase no toca la prosa interna de
 `CLAUDE.md` ni de las reglas, que también contiene rayas.
+
+## 307. RECS-ONE-QUEUE-1: Recomendaciones en una sola cola de IA y Google (2026-10-11)
+
+**Qué pidió el fundador.** Punto 2 de la línea de mejora de Recomendaciones:
+una sola cola en vez de las pastillas «Mejora IA» / «Mejora Google» de §303.
+Aprobó la maqueta (`docs/design-reference/recs-one-queue-1/`) con «Implementa
+pixel perfect con los mismos detalles de la maqueta. Quita Lo que no entró en
+el plan».
+
+**Qué cambia.**
+- **Sin pastillas.** Se borran `RecsViewTabs` y `.rec2-views`; supersede la
+  parte de §303 que las creaba.
+- **«Tu plan de esta semana» admite una tarjeta de Google, en el puesto 2.**
+  Entra la de «Subir a la página 1» y, si no hay, la de «Título y
+  descripción». «Vigilar en la IA» nunca entra en el plan: no pide cambiar la
+  web. La tercera acción de IA pasa a «Más adelante» y vuelve al plan si Google
+  no trae tarjeta (`GooglePlanMarker` lo comunica al cliente al llegar).
+- **Cada tarjeta dice de dónde sale** con una etiqueta «IA» o «Google»
+  (`.rec2-src`, con icono: destellos para «IA», lupa para «Google»), en el plan y en las cabeceras de grupo.
+- **Cada fuente en su escala.** Las de IA siguen con puntos GEO (ADR 0017).
+  La de Google enseña su puesto en Google («12º · Puesto en Google») o el
+  porcentaje que entra («Entran en Google»), nunca puntos inventados. La línea
+  del plan lo dice así: «Hasta +9 pt GEO y una búsqueda hacia la página 1 de
+  Google» (`planSummary`). El techo de puntos con Google es el conjunto de las
+  dos primeras de IA, y el de cada grupo se recalcula con la tercera dentro;
+  la página calcula los dos casos porque no espera a Google para pintarse.
+- **El detalle de la tarjeta de Google** sigue el de la tarjeta corta de §303:
+  «Lo que vimos» (Dato de Google), «Por qué funciona» (Lo controlas tú), «La
+  búsqueda», «Cómo hacerlo», y «Marcar como hecho» / «Ahora no» con la
+  migración 0042 aplicada. Todo el texto son plantillas sobre las cifras de
+  Search Console (`google-rec-copy.ts`).
+- **«Más adelante» empieza con la fila «Con tus datos de Google»**, el
+  carrusel de §295 con las tarjetas que no entraron en el plan, a 300 px por
+  tarjeta (280 px en móvil). Sólo bajo «Pendientes»; con otro filtro se oculta
+  sin desmontarse, para no perder un «Deshacer».
+- **Sin subtítulo «Lo que no entró en el plan»**, a petición del fundador.
+- **Una sola lectura de Google por petición** (`cache` de React) para las dos
+  ranuras, cada una en su `Suspense` con su esqueleto (§298). Sin lista de IA
+  (sin escaneo o sin recomendaciones), todas las tarjetas de Google van a la
+  fila.
+
+**Qué no cambia.** Lo que se guarda (sólo lo que hizo el cliente, §294), la
+selección de la IA (`selectPlan`), los puntos (ADR 0017) y «Posición en
+Google».
+
+**Pendiente.** Puntos 3 a 6 de la línea de mejora (entregable pregenerado,
+página propia frente a páginas citadas, redacción por LLM, re-comprobación
+al instante). Si Google no trae tarjeta para el plan, la tercera de IA aparece
+cuando llega la respuesta: un salto pequeño y poco frecuente que se acepta.

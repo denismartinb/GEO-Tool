@@ -15,29 +15,24 @@ import type { GoogleRecKind } from "@/lib/search-console/recommendations";
  * render at all.
  */
 
-type Handled = "done" | "dismissed";
+export type Handled = "done" | "dismissed";
 
 const FrameContext = createContext<{ mark: (status: Handled) => void; pending: boolean } | null>(null);
 
-export function GoogleRecFrame({
-  projectId,
-  kind,
-  query,
-  position,
-  impressions,
-  ctr,
-  canPersist,
-  children
-}: {
+type MarkInput = {
   projectId: string;
   kind: GoogleRecKind;
   query: string;
   position: number | null;
   impressions: number | null;
   ctr: number | null;
-  canPersist: boolean;
-  children: ReactNode;
-}) {
+};
+
+/**
+ * The save/undo state of one Google card, shared by the carousel card below
+ * and the plan card (`google-plan-card.tsx`, log §307).
+ */
+export function useGoogleRecMark({ projectId, kind, query, position, impressions, ctr }: MarkInput) {
   const [handled, setHandled] = useState<Handled | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -63,16 +58,36 @@ export function GoogleRecFrame({
     });
   };
 
+  return { handled, error, pending, mark, undo };
+}
+
+/** What a handled card says in its place, with «Deshacer». */
+export function HandledNote({ handled, pending, onUndo }: { handled: Handled; pending: boolean; onUndo: () => void }) {
+  return (
+    <p className="grec-handled">
+      {handled === "done" ? "Marcada como hecha." : "La dejamos para más adelante."} La próxima vez que entres verás
+      otra en su lugar.{" "}
+      <button type="button" className="grec-undo" onClick={onUndo} disabled={pending}>
+        Deshacer
+      </button>
+    </p>
+  );
+}
+
+export function GoogleRecFrame({
+  canPersist,
+  children,
+  ...input
+}: MarkInput & {
+  canPersist: boolean;
+  children: ReactNode;
+}) {
+  const { handled, error, pending, mark, undo } = useGoogleRecMark(input);
+
   if (handled) {
     return (
       <article className="grec-card grec-card-handled">
-        <p className="grec-handled">
-          {handled === "done" ? "Marcada como hecha." : "La dejamos para más adelante."} La próxima vez que entres verás
-          otra en su lugar.{" "}
-          <button type="button" className="grec-undo" onClick={undo} disabled={pending}>
-            Deshacer
-          </button>
-        </p>
+        <HandledNote handled={handled} pending={pending} onUndo={undo} />
         {error && (
           <p className="grec-status grec-status-error" role="alert">
             {error}
@@ -97,11 +112,16 @@ export function GoogleRecFrame({
 }
 
 /** The secondary button of a card. Renders nothing when the state can't be saved. */
-export function GoogleRecMark({ status, label }: { status: Handled; label: string }) {
+export function GoogleRecMark({ status, label, quiet = false }: { status: Handled; label: string; quiet?: boolean }) {
   const ctx = useContext(FrameContext);
   if (!ctx) return null;
   return (
-    <button type="button" className="btn btn-ghost btn-sm" disabled={ctx.pending} onClick={() => ctx.mark(status)}>
+    <button
+      type="button"
+      className={quiet ? "grec-quiet" : "btn btn-ghost btn-sm"}
+      disabled={ctx.pending}
+      onClick={() => ctx.mark(status)}
+    >
       {label}
     </button>
   );

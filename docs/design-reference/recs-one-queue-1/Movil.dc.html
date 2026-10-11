@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Recomendaciones · móvil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f7f8fb}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+button{font-family:inherit}
+</style>
+</helmet>
+<div style="background: #f7f8fb; width: 390px; min-height: 2600px; font-family: Figtree, -apple-system, 'Segoe UI', sans-serif; color: #0b1426">
+<div style="padding: 24px 16px 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: 28px">
+
+  <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 14px; border: 1px dashed #c9d2e0; border-radius: 12px; font-size: 13px; color: #5b6b82">
+    <span style="font-weight: 700">Sólo en la maqueta · ver el caso</span>
+    <button onClick="{{ withG }}" style="{{ withGStyle }}">Con Search Console</button>
+    <button onClick="{{ noG }}" style="{{ noGStyle }}">Sin Search Console</button>
+  </div>
+
+  <header style="display: flex; flex-direction: column; gap: 6px">
+    <div style="font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #5b6b82">tumarca.es · datos de ejemplo</div>
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -.02em">Recomendaciones</h1>
+    <p style="margin: 0; font-size: 15px; color: #3b4759; max-width: 620px">{{ lede }}</p>
+  </header>
+
+  <section style="display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px">
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700">Tu plan de esta semana</h2>
+      <span style="font-size: 13px; color: #5b6b82">{{ planSummary }}</span>
+    </div>
+
+    <sc-for list="{{ plan }}" as="item" hint-placeholder-count="3">
+    <article style="background: #ffffff; border: 1px solid #e7eaf0; border-radius: 16px; box-shadow: 0 1px 2px rgba(11,20,38,.04), 0 6px 18px rgba(11,20,38,.05)">
+      <div style="display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 12px; padding: 16px; align-items: start">
+        <div style="width: 28px; height: 28px; border-radius: 999px; background: #2563eb; color: #ffffff; display: grid; place-items: center; font-size: 13px; font-weight: 700; margin-top: 2px">{{ item.rank }}</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0">
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+            <span style="{{ item.srcStyle }}">{{ item.src }}</span>
+            <span style="font-size: 12px; font-weight: 700; color: #5b6b82; text-transform: uppercase; letter-spacing: .05em">{{ item.kind }}</span>
+          </div>
+          <h3 style="margin: 0; font-size: 18px; line-height: 1.35; font-weight: 700">{{ item.title }}</h3>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; background: #f2f5fb; border-radius: 10px; font-size: 15px; line-height: 1.45; color: #0b1426">
+            <span style="font-weight: 700; color: #1d4ed8; white-space: nowrap">Haz esto</span>
+            <span>{{ item.step }}</span>
+          </div>
+          <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: #3b4759">
+            <span style="display: inline-flex; gap: 4px">
+              <sc-for list="{{ item.engines }}" as="e" hint-placeholder-count="2">
+              <span title="{{ e.name }}" style="width: 22px; height: 22px; border-radius: 999px; background: {{ e.color }}; color: #ffffff; display: inline-grid; place-items: center; font-size: 11px; font-weight: 700">{{ e.letter }}</span>
+              </sc-for>
+            </span>
+            <span>{{ item.scope }}</span>
+          </div>
+        </div>
+        <div style="grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px">
+          <div style="display: flex; align-items: baseline; gap: 6px">
+            <div style="font-family: 'Bricolage Grotesque', sans-serif; font-size: 22px; font-weight: 800; color: {{ item.metricColor }}">{{ item.metric }}</div>
+            <div style="font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: #5b6b82">{{ item.metricLabel }}</div>
+          </div>
+          <button onClick="{{ item.toggle }}" aria-expanded="{{ item.open }}" style="min-height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #d5dbe6; background: #ffffff; color: #0b1426; font-size: 14px; font-weight: 600; cursor: pointer">{{ item.btn }}</button>
+        </div>
+      </div>
+
+      <sc-if value="{{ item.open }}" hint-placeholder-val="{{ false }}">
+      <div style="border-top: 1px solid #eef1f6; padding: 16px; display: flex; flex-direction: column; gap: 22px">
+
+        <div style="display: grid; grid-template-columns: repeat(1, minmax(0, 1fr)); gap: 10px">
+          <div style="border: 1px solid #e7eaf0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+              <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5b6b82">Lo que vimos</span>
+              <span style="font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #e7f6ee; color: #0f6b46">{{ item.dataLevel }}</span>
+            </div>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5">{{ item.seen }}</p>
+            <div style="font-size: 13px; color: #5b6b82">{{ item.dataNote }}</div>
+          </div>
+          <div style="border: 1px solid #e7eaf0; border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px">
+            <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px">
+              <span style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5b6b82">Por qué funciona</span>
+              <span style="font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #eaf0fd; color: #1d4ed8">{{ item.adviceLevel }}</span>
+            </div>
+            <p style="margin: 0; font-size: 15px; line-height: 1.5">{{ item.why }}</p>
+          </div>
+        </div>
+
+        <sc-if value="{{ item.hasQuestions }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5b6b82">{{ item.qLabel }}</div>
+          <sc-for list="{{ item.questions }}" as="q" hint-placeholder-count="2">
+          <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: #f7f8fb">
+            <span style="font-size: 15px">{{ q.text }}</span>
+            <span style="display: inline-flex; flex-wrap: wrap; gap: 6px">
+              <sc-for list="{{ q.engines }}" as="e" hint-placeholder-count="2">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 3px 9px 3px 3px; border-radius: 999px; background: #ffffff; border: 1px solid #e7eaf0; color: #3b4759">
+                <span style="width: 18px; height: 18px; border-radius: 999px; background: {{ e.color }}; color: #ffffff; display: inline-grid; place-items: center; font-size: 10px; font-weight: 700">{{ e.letter }}</span>{{ e.verdict }}
+              </span>
+              </sc-for>
+            </span>
+          </div>
+          </sc-for>
+        </div>
+        </sc-if>
+
+        <div style="display: flex; flex-direction: column; gap: 8px">
+          <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5b6b82">Cómo hacerlo</div>
+          <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 15px; line-height: 1.5">
+            <sc-for list="{{ item.steps }}" as="s" hint-placeholder-count="3">
+            <li>{{ s.text }}</li>
+            </sc-for>
+          </ol>
+        </div>
+
+        <div style="display: flex; flex-direction: column; align-items: stretch; gap: 10px">
+          <sc-if value="{{ item.hasCta }}" hint-placeholder-val="{{ true }}">
+          <button style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 0; background: #2563eb; color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer">{{ item.cta }}</button>
+          </sc-if>
+          <button style="min-height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid #d5dbe6; background: #ffffff; color: #0b1426; font-size: 15px; font-weight: 600; cursor: pointer">Marcar como hecho</button>
+          <sc-if value="{{ item.isGoogle }}" hint-placeholder-val="{{ false }}">
+          <button style="min-height: 44px; padding: 0 14px; border-radius: 10px; border: 0; background: transparent; color: #3b4759; font-size: 15px; font-weight: 600; cursor: pointer">Ahora no</button>
+          </sc-if>
+          <span style="font-size: 13px; color: #5b6b82">{{ item.after }}</span>
+        </div>
+      </div>
+      </sc-if>
+    </article>
+    </sc-for>
+  </section>
+
+  <section style="display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+      <h2 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 20px; font-weight: 700">Más adelante</h2>
+      <span style="font-size: 13px; color: #5b6b82">Lo que no entró en el plan</span>
+    </div>
+
+    <sc-if value="{{ hasGoogleRow }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 15px; font-weight: 700">
+        <span style="font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #e9f5ef; color: #0f6b46">Google</span>
+        Con tus datos de Google
+        <span style="font-size: 13px; font-weight: 500; color: #5b6b82">Search Console · últimos 28 días</span>
+      </div>
+      <div style="display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px">
+        <sc-for list="{{ googleLater }}" as="c" hint-placeholder-count="2">
+        <div style="flex: 0 0 280px; background: #ffffff; border: 1px solid #e7eaf0; border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px">
+          <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #5b6b82">{{ c.kind }}</div>
+          <div style="font-size: 16px; font-weight: 700; line-height: 1.35">{{ c.t }}</div>
+          <div style="font-size: 14px; color: #3b4759; line-height: 1.45">{{ c.d }}</div>
+          <div style="display: flex; gap: 8px; margin-top: auto">
+            <button style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #d5dbe6; background: #ffffff; font-size: 14px; font-weight: 600; color: #0b1426; cursor: pointer">{{ c.cta }}</button>
+            <button style="min-height: 40px; padding: 0 14px; border-radius: 10px; border: 0; background: transparent; font-size: 14px; font-weight: 600; color: #3b4759; cursor: pointer">Ahora no</button>
+          </div>
+        </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+    <sc-for list="{{ later }}" as="g" hint-placeholder-count="3">
+    <div style="background: #ffffff; border: 1px solid #e7eaf0; border-radius: 14px">
+      <button onClick="{{ g.toggle }}" aria-expanded="{{ g.open }}" style="width: 100%; min-height: 56px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; background: transparent; border: 0; cursor: pointer; text-align: left; color: #0b1426">
+        <span style="display: flex; align-items: center; gap: 10px; font-size: 16px; font-weight: 700"><span style="font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #eaf0fd; color: #1d4ed8">IA</span>{{ g.name }} <span style="font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #eef1f6; color: #3b4759">{{ g.count }}</span></span>
+        <span style="display: flex; align-items: center; gap: 12px; font-size: 13px; color: #5b6b82">{{ g.summary }}
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="#3b4759" stroke-width="2" aria-hidden="true" style="{{ g.chev }}"><path d="M4 6l4 4 4-4"/></svg>
+        </span>
+      </button>
+      <sc-if value="{{ g.open }}" hint-placeholder-val="{{ false }}">
+      <div style="border-top: 1px solid #eef1f6; padding: 4px 16px 10px">
+        <sc-for list="{{ g.items }}" as="r" hint-placeholder-count="3">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid #f1f3f7">
+          <span style="font-size: 15px">{{ r.t }}</span>
+          <span style="display: flex; align-items: center; gap: 12px">
+            <span style="font-size: 14px; font-weight: 700; color: #15805a">{{ r.pts }}</span>
+            <a href="#" style="font-size: 14px; font-weight: 600">Ver</a>
+          </span>
+        </div>
+        </sc-for>
+      </div>
+      </sc-if>
+    </div>
+    </sc-for>
+  </section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":2600}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { gsc: true, open: 'g', groups: { contenido: true } };
+  }
+  renderVals() {
+    var self = this;
+    var E = {
+      G: { letter: 'G', name: 'Gemini', color: '#2563eb' },
+      O: { letter: 'C', name: 'ChatGPT', color: '#0b1426' },
+      P: { letter: 'P', name: 'Perplexity', color: '#0e6f7e' }
+    };
+    var GOO = { letter: 'G', name: 'Google', color: '#15805a' };
+    function ev(k, verdict) { return { letter: E[k].letter, name: E[k].name, color: E[k].color, verdict: E[k].name + ' · ' + verdict }; }
+    var chipIA = 'font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #eaf0fd; color: #1d4ed8';
+    var chipG = 'font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; background: #e9f5ef; color: #0f6b46';
+    var iaAfter = 'La verás reflejada en tu próximo escaneo.';
+
+    var ia1 = {
+      id: 'a', src: 'IA', srcStyle: chipIA, kind: 'Crear contenido',
+      metric: '+6', metricLabel: 'Puntos GEO', metricColor: '#15805a',
+      title: 'Crea una página que responda «mejor programa de facturas para autónomos»',
+      step: 'Publica una página con una comparativa, precios y para quién es cada opción.',
+      engines: [E.G, E.O], scope: '2 preguntas · Gemini y ChatGPT',
+      seen: 'En las 2 preguntas, Gemini y ChatGPT recomiendan a otras marcas. A ti no te nombran y no encontramos una página tuya sobre el tema.',
+      dataLevel: 'Dato sólido', dataNote: 'Visto en todos los escaneos de los últimos 14 días.',
+      why: 'Los motores que buscan en la web citan páginas que responden a la pregunta exacta. Sin una página así, no tienen nada tuyo que citar.',
+      adviceLevel: 'Lo controlas tú', qLabel: 'Las preguntas',
+      questions: [
+        { text: '¿Cuál es el mejor programa de facturas para autónomos?', engines: [ev('G', 'no te nombra'), ev('O', 'no te nombra')] },
+        { text: '¿Qué software de facturación recomiendas a un autónomo?', engines: [ev('G', 'no te nombra'), ev('O', 'no te nombra')] }
+      ],
+      steps: [{ text: 'Crea la página en tumarca.es/facturacion-autonomos.' }, { text: 'Pon arriba una respuesta de dos frases y después una tabla: precio, VeriFactu, para quién es.' }, { text: 'Cierra con tres preguntas frecuentes de respuesta corta.' }],
+      cta: 'Generar borrador', after: iaAfter
+    };
+    var gPlan = {
+      id: 'g', src: 'Google', srcStyle: chipG, kind: 'Subir a la página 1', isGoogle: true,
+      metric: '12º', metricLabel: 'Puesto en Google', metricColor: '#0b1426',
+      title: 'Lleva «programa facturas autónomos» a la primera página de Google',
+      step: 'Enlaza tu página de autónomos desde /precios y /blog/verifactu, con ese texto en el enlace.',
+      engines: [GOO], scope: '1 búsqueda · 1.240 impresiones en 28 días',
+      seen: 'Google te enseña en el puesto 12 para esta búsqueda, en la segunda página. En 28 días te vieron 1.240 veces y entraste 9.',
+      dataLevel: 'Dato de Google', dataNote: 'De tu Search Console, últimos 28 días.',
+      why: 'Casi todos los clics se quedan en la primera página. Enlazar desde páginas tuyas que ya están arriba le dice a Google cuál es la página buena para esa búsqueda.',
+      adviceLevel: 'Lo controlas tú', qLabel: 'La búsqueda',
+      questions: [
+        { text: 'programa facturas autónomos', engines: [{ letter: 'G', name: 'Google', color: '#15805a', verdict: 'Puesto 12 · /facturacion-autonomos' }] }
+      ],
+      steps: [{ text: 'Abre tumarca.es/precios y añade un enlace a /facturacion-autonomos con el texto «programa de facturas para autónomos».' }, { text: 'Haz lo mismo en /blog/verifactu, en el párrafo donde hablas de autónomos.' }, { text: 'Revisa que el título de /facturacion-autonomos contenga la búsqueda.' }],
+      hasCta: false, after: 'Se quita sola cuando Google te suba a la página 1.'
+    };
+    var ia2 = {
+      id: 'c', src: 'IA', srcStyle: chipIA, kind: 'Arreglar tu web',
+      metric: '+3', metricLabel: 'Puntos GEO', metricColor: '#15805a',
+      title: 'Deja entrar al rastreador de ChatGPT',
+      step: 'Quita el bloqueo a OAI-SearchBot en tu robots.txt.',
+      engines: [E.O], scope: 'Toda tu web · ChatGPT',
+      seen: 'Tu robots.txt bloquea a OAI-SearchBot, el rastreador con el que ChatGPT busca páginas que citar.',
+      dataLevel: 'Comprobado', dataNote: 'Leído hoy en tumarca.es/robots.txt.',
+      why: 'Si el rastreador no entra, ChatGPT no puede citar tu web aunque tengas la mejor página.',
+      adviceLevel: 'Lo controlas tú', qLabel: 'Las preguntas',
+      questions: [],
+      steps: [{ text: 'Abre robots.txt en tu gestor de contenidos o tu servidor.' }, { text: 'Borra la línea «Disallow: /» del bloque de OAI-SearchBot.' }, { text: 'Guarda. El próximo escaneo lo comprueba solo.' }],
+      cta: 'Copiar la línea correcta', after: iaAfter
+    };
+    var ia3 = {
+      id: 'b', src: 'IA', srcStyle: chipIA, kind: 'Conseguir citas',
+      metric: '+4', metricLabel: 'Puntos GEO · si te citan', metricColor: '#15805a',
+      title: 'Entra en la comparativa que más cita Gemini',
+      step: 'Escribe al autor de la comparativa y propón añadir tu producto.',
+      engines: [E.G], scope: '1 pregunta · Gemini',
+      seen: 'Gemini citó esta comparativa en la mayoría de sus respuestas sobre facturación. No te menciona.',
+      dataLevel: 'Dato medio', dataNote: 'Visto en un solo motor.',
+      why: 'Una página que la IA ya cita es un atajo: si te añaden, entras en sus respuestas sin esperar a que citen tu web.',
+      adviceLevel: 'Depende de terceros', qLabel: 'Las preguntas',
+      questions: [{ text: '¿Qué alternativas hay a los programas de facturación más conocidos?', engines: [ev('G', 'no te nombra')] }],
+      steps: [{ text: 'Abre la comparativa y busca el contacto del autor.' }, { text: 'Envía un correo corto: qué haces distinto y un enlace a tu página de precios.' }, { text: 'Si responde, ofrécele una cuenta de prueba.' }],
+      cta: 'Generar correo', after: iaAfter
+    };
+
+    var gsc = this.state.gsc;
+    var plan = gsc ? [ia1, gPlan, ia2] : [ia1, ia2, ia3];
+    var open = this.state.open;
+    plan = plan.map(function (p, i) {
+      var isOpen = open === p.id;
+      return Object.assign({ hasCta: true, isGoogle: false }, p, {
+        rank: i + 1,
+        open: isOpen,
+        btn: isOpen ? 'Ocultar' : 'Ver cómo',
+        hasQuestions: p.questions.length > 0,
+        toggle: function () { self.setState({ open: isOpen ? null : p.id }); }
+      });
+    });
+
+    var groupsDef = [
+      { id: 'contenido', name: 'Crear contenido', summary: 'hasta +9 pt', items: [
+        { t: 'Página de precios con respuesta directa arriba', pts: '+3' },
+        { t: 'Guía «cómo emitir una factura con VeriFactu»', pts: '+3' },
+        { t: 'Preguntas frecuentes en la página de autónomos', pts: '+2' },
+        { t: 'Comparativa con la alternativa más citada', pts: '+1' }
+      ] },
+      { id: 'citas', name: 'Conseguir citas', summary: gsc ? 'hasta +9 pt' : 'hasta +5 pt', items: (gsc ? [{ t: 'Entra en la comparativa que más cita Gemini', pts: '+4' }] : []).concat([
+        { t: 'Ficha en el directorio de software que cita ChatGPT', pts: '+2' },
+        { t: 'Respuesta en el foro que cita Perplexity', pts: '+2' },
+        { t: 'Artículo invitado en un blog de autónomos', pts: '+1' }
+      ]) },
+      { id: 'web', name: 'Arreglar tu web', summary: 'hasta +2 pt', items: [
+        { t: 'Añade llms.txt', pts: '+1' },
+        { t: 'Título más claro en la página de inicio', pts: '+1' }
+      ] }
+    ];
+    var gs = this.state.groups;
+    var later = groupsDef.map(function (g) {
+      var isOpen = !!gs[g.id];
+      return Object.assign({}, g, {
+        count: g.items.length,
+        open: isOpen,
+        chev: isOpen ? 'transform: rotate(180deg)' : '',
+        toggle: function () { var n = Object.assign({}, self.state.groups); n[g.id] = !isOpen; self.setState({ groups: n }); }
+      });
+    });
+    var googleLater = [
+      { kind: 'Título y descripción', t: '«facturación electrónica gratis»: puesto 4 y pocos clics', d: 'Sales en la primera página, pero entran menos que en tus otras búsquedas de ese puesto. El título no responde a la búsqueda.', cta: 'Marcar como hecho' },
+      { kind: 'Vigilar en la IA', t: '«alternativa a programas de facturas»', d: 'Ya te buscan así en Google. Añádela a tus prompts para ver si la IA te nombra.', cta: 'Vigilar prompt' }
+    ];
+    var on = 'min-height: 32px; padding: 0 12px; border-radius: 999px; border: 0; background: #0b1426; color: #ffffff; font-size: 13px; font-weight: 700; cursor: pointer';
+    var off = 'min-height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid #d5dbe6; background: #ffffff; color: #3b4759; font-size: 13px; font-weight: 600; cursor: pointer';
+    return {
+      plan: plan, later: later, googleLater: googleLater,
+      hasGoogleRow: gsc,
+      lede: gsc ? 'Tres acciones para esta semana, de la IA y de Google. Lo demás espera en «Más adelante».' : 'Tres acciones para esta semana. Lo demás espera en «Más adelante».',
+      planSummary: gsc ? 'Hasta +9 pt GEO y una búsqueda hacia la página 1 de Google' : 'Hasta +13 pt GEO si haces las tres',
+      withGStyle: gsc ? on : off, noGStyle: gsc ? off : on,
+      withG: function () { self.setState({ gsc: true, open: 'g' }); },
+      noG: function () { self.setState({ gsc: false, open: 'a' }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

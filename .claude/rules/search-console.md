@@ -98,11 +98,16 @@ revisión de data-guardian que lo precedió.
   Las inspecciones de indexación van en otra entrada que sólo pide «Posición
   en Google». Recomendaciones llama con `inspect = false`, porque son lo más
   lento de una carga sin caché (log §298).
-- **El bloque de Recomendaciones reserva su sitio.** `GoogleRecsSlot` lee
+- **El bloque de Recomendaciones reserva su sitio.** La página lee
   `isSearchConsoleActive` (nuestra base de datos, sin Google). Sólo si está
-  conectado pinta el esqueleto mientras llega Google. Sin conexión no pinta
-  nada, y así la página no salta en ningún caso (log §298).
+  conectado monta las ranuras, con su esqueleto mientras llega Google. Sin
+  conexión no pinta nada (log §298, ranuras de §307).
 - **El bloque va en un `Suspense`.** Google no puede retrasar las
   recomendaciones de IA.
 - **Una tarjeta de cada tipo como mucho.** La lista completa ya está en
   «Posición en Google».
+- **Las tarjetas se reparten en la cola de Recomendaciones (log §307).** La
+  de la página 1 (o, si no hay, la de título) va al puesto 2 del plan
+  (`GooglePlanSlot`); el resto, a la fila de «Más adelante»
+  (`GoogleLaterSlot`). Las dos ranuras leen Google una sola vez por petición
+  (`cache` de React en `google-recs.tsx`), cada una en su `Suspense`.
