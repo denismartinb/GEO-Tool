@@ -24703,7 +24703,92 @@ Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
 **Pendiente.** Las tarjetas ya guardadas no cambian hasta el siguiente
 escaneo del proyecto, porque el texto se escribe al generarlas.
 
+## 293. SEARCH-SEO-1 Fase 3d: recomendaciones con datos de Google (2026-10-11)
+
+**Qué se decidió.** La pantalla de Recomendaciones gana un bloque «Con tus
+datos de Google», encima de las recomendaciones de IA, sólo cuando el proyecto
+tiene Search Console conectado. Es la segunda mitad del diseño aprobado de
+Fase 3b (`docs/design-reference/search-seo-1/fase-3b/Recs.dc.html`, «Implementa
+todo»). Como mucho hay una tarjeta de cada tipo, la más fuerte:
+
+- **Subir a la página 1:** la búsqueda de la página 2 (puestos 11–20) con más
+  impresiones, con la página que sale y hasta dos páginas de la web que ya
+  están en la página 1 desde las que enlazarla.
+- **Título y descripción:** la primera de «Te ven, pero no entran», comparada
+  con el CTR de las otras búsquedas de la propia web en el mismo tramo, nunca
+  con una curva del sector (§287).
+- **Google + IA:** la primera pregunta de Google que el escaneo todavía no
+  vigila, con «Vigilar prompt», que pasa por `addPrompts` igual que en
+  «Posición en Google» (`useWatchPrompt`, compartido).
+
+**En vivo, sin guardar.** Las tarjetas se calculan en cada carga
+(`buildGoogleRecommendations`, puro) sobre las mismas filas cacheadas 30 min
+de §289, leídas con los mismos datos propios (`readSearchConsoleInputs`), así
+que las dos pantallas comparten caché. No hay migración: una tarjeta existe
+porque Google lo dice hoy y se va sola cuando el dato mejora. Por eso todavía
+no tienen «Marcar como hecho» ni «Ahora no». Se le preguntó al fundador si
+guardarlas (con migración) o calcularlas en vivo, y se construyó la opción
+recomendada mientras contestaba. El bloque va en un `Suspense`, así que un
+Google lento no retrasa las recomendaciones de IA.
+
+**Qué queda pendiente.** «Generar el texto» y las tres propuestas de título
+del diseño necesitan una generación con IA anclada a datos de Google. Es la
+siguiente pieza. Mientras tanto, las tarjetas de página 1 y de título llevan a
+«Posición en Google».
+
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 294. SEARCH-SEO-1 Fase 3e: «Marcar como hecho» y «Ahora no» en las tarjetas de Google (2026-10-11)
+
+**Qué se decidió.** El fundador contestó a la pregunta de §293: «guardamos en
+base de datos, hago migración». Las tarjetas «Con tus datos de Google» ganan
+los dos botones que ya traía el diseño aprobado
+(`docs/design-reference/search-seo-1/fase-3b/Recs.dc.html`): «Marcar como
+hecho» en «Subir a la página 1» y en «Título y descripción», y «Ahora no» en
+«Google + IA», junto a «Vigilar prompt» mientras la pregunta no se vigila.
+
+**Qué se guarda y qué no.** Las tarjetas se siguen calculando en vivo sobre la
+caché de 30 minutos (§289, §293). La migración 0042
+(`search_console_rec_states`) sólo guarda lo que el cliente hizo con una: una
+fila por proyecto, tipo y búsqueda, con `done` o `dismissed`. También copia el
+puesto, las impresiones y el CTR del momento, para que una fase futura pueda
+decir si el cambio funcionó, igual que «Resueltas» (ADR 0041). Ninguna otra
+cosa de Search Console va a la base de datos.
+
+**Cómo se comporta.**
+- Al pulsar, la tarjeta se oculta al momento y deja «Marcada como hecha» o «La
+  dejamos para más adelante», con «Deshacer». Si el guardado falla, la
+  tarjeta vuelve con el error.
+- En la siguiente carga, `buildGoogleRecommendations` salta las tarjetas
+  guardadas (`hidden`, clave `googleRecKey(kind, query)`) y ofrece el
+  siguiente caso del mismo tipo. La misma búsqueda guardada en un tipo sigue
+  pudiendo salir en otro, porque es otro consejo.
+- La tabla la lee el dueño con RLS de sólo lectura. Escriben las server
+  actions `markGoogleRecommendationAction` y `undoGoogleRecommendationAction`
+  con service role, tras comprobar la propiedad del proyecto con el cliente
+  del usuario, y filtrando por proyecto y dueño. Es el mismo patrón que
+  `recommendations` (0002) y `generated_solutions` (0005). En los logs no va
+  la búsqueda, sólo el proyecto, el tipo y el código de error.
+- Sin la migración aplicada, `readRecStates` devuelve `available: false` y las
+  tarjetas salen sin los dos botones: un botón que no puede guardar es peor
+  que ninguno.
+
+**Hay que aplicar a mano** `supabase/migrations/0042_search_console_rec_states.sql`
+en el editor SQL de Supabase. No hace falta antes de desplegar: el código
+tolera que falte.
+
+**Qué queda pendiente.**
+- Comprobar si lo marcado como hecho mejoró (puesto e impresiones de antes
+  frente a los de ahora) y enseñarlo. Los datos ya se guardan; falta la
+  pantalla.
+- «Generar el texto» y las tres propuestas de título siguen siendo la
+  siguiente pieza.
+
+**Regla de premisa.** «Ahora no» oculta una tarjeta sin plazo. La salida es
+«Deshacer», que sólo está en la propia tarjeta hasta recargar. Si alguien
+quiere recuperar una tarjeta apartada después, hoy no hay pantalla para
+hacerlo. La búsqueda sigue viéndose en «Posición en Google», así que no se
+pierde ningún dato.
 
 ## 297. NOTIF-LANES-1: la campana enseña tres avisos como mucho (2026-10-11)
 

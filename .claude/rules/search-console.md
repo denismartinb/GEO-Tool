@@ -75,3 +75,27 @@ revisión de data-guardian que lo precedió.
   `prefers-reduced-motion` se queda quieta en su último fotograma.
 - **«Vigilar prompt» se marca al pulsarlo** y se deshace si `addPrompts`
   falla. Mientras se añade, la fila lo dice («Añadiéndola a tus prompts…»).
+
+## Recomendaciones con datos de Google (log §293, §294)
+
+- **Se calculan en vivo; sólo se guarda lo que el cliente hizo con ellas.**
+  `buildGoogleRecommendations` es pura y trabaja sobre las filas que ya leyó
+  `loadSearchConsoleScreen`. Una tarjeta existe porque Google lo dice hoy.
+  «Marcar como hecho» y «Ahora no» escriben en `search_console_rec_states`
+  (migración 0042, log §294): tipo, búsqueda, estado y las cifras del momento,
+  nada más. Una tarjeta guardada se salta con `hidden` y deja su sitio al
+  siguiente caso del mismo tipo.
+- **Esa tabla se escribe sólo desde las server actions**, con service role,
+  después de comprobar con el cliente del usuario que el proyecto es suyo, y
+  filtrando por `project_id` y `owner_user_id`. El dueño sólo la lee (RLS).
+  La búsqueda no va a los logs.
+- **Sin la migración no hay botones.** `readRecStates` devuelve
+  `available: false` y las tarjetas salen sin «Marcar como hecho» ni «Ahora
+  no».
+- **Las dos pantallas leen los datos propios con `readSearchConsoleInputs`.**
+  Si una pidiera otras URLs auditadas, la clave de caché cambiaría y cada
+  pantalla volvería a llamar a Google.
+- **El bloque va en un `Suspense`.** Google no puede retrasar las
+  recomendaciones de IA.
+- **Una tarjeta de cada tipo como mucho.** La lista completa ya está en
+  «Posición en Google».
