@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
 import { InfoTip } from "@/components/ui/info-tip";
@@ -34,6 +35,7 @@ import { selectPlan } from "@/lib/recommendations/plan";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
+import { GoogleRecs } from "./_components/google-recs";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
 function affectedPromptIds(evidenceJson: unknown): string[] {
@@ -141,7 +143,7 @@ export default async function RecommendationsPage({
 }) {
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
 
   // Dos lecturas de `scan_runs` en paralelo, no tres en fila
   // (PRELAUNCH-HARDENING-1 Fase V, V7). Eran tres `await` encadenados contra
@@ -885,6 +887,13 @@ export default async function RecommendationsPage({
               ))}
             </div>
           )}
+
+          {/* 4 · SEARCH-SEO-1 Fase 3d (log §292): cards from the customer's own
+              Search Console, only when it is connected. Streamed, so Google
+              never holds back the AI recommendations below. */}
+          <Suspense fallback={null}>
+            <GoogleRecs projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
+          </Suspense>
 
           {!latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>

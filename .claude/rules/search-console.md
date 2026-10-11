@@ -75,3 +75,17 @@ revisión de data-guardian que lo precedió.
   `prefers-reduced-motion` se queda quieta en su último fotograma.
 - **«Vigilar prompt» se marca al pulsarlo** y se deshace si `addPrompts`
   falla. Mientras se añade, la fila lo dice («Añadiéndola a tus prompts…»).
+
+## Recomendaciones con datos de Google (log §292)
+
+- **Se calculan en vivo y no se guardan.** `buildGoogleRecommendations` es
+  pura y trabaja sobre las filas que ya leyó `loadSearchConsoleScreen`. Una
+  tarjeta existe porque Google lo dice hoy. Darles estado («Marcar como
+  hecho», «Ahora no») exige guardarlas, y eso es migración y aprobación.
+- **Las dos pantallas leen los datos propios con `readSearchConsoleInputs`.**
+  Si una pidiera otras URLs auditadas, la clave de caché cambiaría y cada
+  pantalla volvería a llamar a Google.
+- **El bloque va en un `Suspense`.** Google no puede retrasar las
+  recomendaciones de IA.
+- **Una tarjeta de cada tipo como mucho.** La lista completa ya está en
+  «Posición en Google».
