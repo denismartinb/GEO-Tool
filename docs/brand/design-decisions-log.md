@@ -23666,8 +23666,9 @@ maqueta, pendiente de elección.
 **Adenda (2026-10-11): `/demo` pasa a la banda oscura.** El fundador eligió la
 opción 2 de la maqueta (`docs/design-reference/demo-affiliates-1/demo-redesign.html`)
 porque la columna de texto dejaba un hueco grande junto al formulario. El
-texto va ahora sobre una banda oscura con tres etiquetas: «ChatGPT, Gemini y
-Claude», «Sin compromiso» y «Oferta de lanzamiento». Por decisión suya se
+texto va ahora sobre una banda oscura con dos etiquetas: «ChatGPT, Gemini y
+Claude» y «Sin compromiso» («Oferta de lanzamiento» se probó y se retiró
+porque no enlazaba a nada). Por decisión suya se
 quitan el horario «L–V, 18:00–21:00» y la línea equivalente de la tarjeta,
 porque los propios huecos ya lo enseñan. La tarjeta de reserva pasa a blanco y
 monta sobre el borde de la banda, y debajo van los tres pasos de la llamada.

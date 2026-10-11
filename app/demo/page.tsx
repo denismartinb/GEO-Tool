@@ -40,7 +40,7 @@ const STEPS = [
   }
 ];
 
-const CHIPS = ["ChatGPT, Gemini y Claude", "Sin compromiso", "Oferta de lanzamiento"];
+const CHIPS = ["ChatGPT, Gemini y Claude", "Sin compromiso"];
 
 export default function DemoPage() {
   return (
