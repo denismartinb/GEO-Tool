@@ -43,6 +43,7 @@ export function ScanMissionRocket({
   prompts,
   samples,
   engines,
+  engineNames = null,
   expectedResponses
 }: {
   projectId: string;
@@ -51,6 +52,8 @@ export function ScanMissionRocket({
   prompts: number | null;
   samples: number | null;
   engines: number | null;
+  /** Labels of the engines this run asks, in scan order. */
+  engineNames?: readonly string[] | null;
   expectedResponses: number | null;
 }) {
   const router = useRouter();
@@ -137,8 +140,10 @@ export function ScanMissionRocket({
           <span className="mrk-eyebrow">{eyebrowFor(beat)}</span>
           <h2 className="mrk-title">{titleFor(beat)}</h2>
           {unitFor(beat) && <p className="mrk-unit">{unitFor(beat)}</p>}
-          {subtitleFor(beat) && <p className="mrk-sub">{subtitleFor(beat)}</p>}
-          {beat.key !== "entrega" && <p className="mrk-joke">{jokeFor(beat)}</p>}
+          {subtitleFor(beat, engineNames) && <p className="mrk-sub">{subtitleFor(beat, engineNames)}</p>}
+          {beat.key !== "entrega" && jokeFor(beat, engineNames) && (
+            <p className="mrk-joke">{jokeFor(beat, engineNames)}</p>
+          )}
         </div>
       </div>
     </section>
@@ -256,12 +261,28 @@ function unitFor(beat: MissionBeat): string {
   return "";
 }
 
-function subtitleFor(beat: MissionBeat): string {
+/** "Gemini", "Gemini y Claude", "Gemini, Claude y ChatGPT"... */
+export function joinEngineNames(names: readonly string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
+
+const ENGINE_COUNT_WORDS: Record<number, string> = { 2: "Los dos", 3: "Los tres", 4: "Los cuatro" };
+
+/**
+ * The ignition lines name the engines the run really asks (PERPLEXITY-ENGINE-1
+ * Fase 2b, log §285): a hardcoded "Gemini, ChatGPT y Claude" told a Pro
+ * account its fourth engine wasn't there. Unknown set → no names, never a
+ * guessed list.
+ */
+export function subtitleFor(beat: MissionBeat, engineNames: readonly string[] | null = null): string {
   switch (beat.key) {
     case "rampa":
       return "Un momento — estamos colocando la cola de trabajo.";
     case "ignicion":
-      return "Gemini, ChatGPT y Claude, preguntados a la vez.";
+      if (!engineNames || engineNames.length === 0) return "Tus motores de IA, preguntados a la vez.";
+      if (engineNames.length === 1) return `${engineNames[0]}, preguntando tus prompts.`;
+      return `${joinEngineNames(engineNames)}, preguntados a la vez.`;
     case "ascenso":
       return "Puedes irte tranquilo: seguimos trabajando aunque cierres esta pestaña.";
     case "orbita":
@@ -271,12 +292,15 @@ function subtitleFor(beat: MissionBeat): string {
   }
 }
 
-function jokeFor(beat: MissionBeat): string {
+export function jokeFor(beat: MissionBeat, engineNames: readonly string[] | null = null): string {
   switch (beat.key) {
     case "rampa":
       return "Tú no tienes que hacer nada.";
-    case "ignicion":
-      return "Los tres a la vez. Sí, se puede.";
+    case "ignicion": {
+      if (engineNames && engineNames.length === 1) return "";
+      const words = engineNames ? ENGINE_COUNT_WORDS[engineNames.length] : undefined;
+      return words ? `${words} a la vez. Sí, se puede.` : "Todos a la vez. Sí, se puede.";
+    }
     case "ascenso":
       return "Esto no se cae.";
     case "orbita":

@@ -24353,6 +24353,15 @@ lector. Se corrigen aquí:
   Pro y Agencia ven cuatro y Starter tres. Los interruptores de `/debug` no
   entran porque el proyecto todavía no existe.
 
+- Misión del primer escaneo, paso «Ignición»: decía siempre «Gemini, ChatGPT
+  y Claude, preguntados a la vez» y «Los tres a la vez». Ahora nombra los
+  motores que de verdad pregunta el run (los mismos que cuenta la barra
+  superior, de `resolveScanProvidersForPlan`) y dice «Los cuatro» en Pro y
+  Agencia. Si no se conocen, no se adivina una lista. Sólo cambia texto: el
+  cohete y su animación no se tocan (`.claude/rules/mission-rocket.md`).
+- Resultado del comprobador gratuito: la lista de lo que mide el escaneo
+  completo (prueba de Pro) suma Perplexity.
+
 **Lo que se deja como está, a propósito.**
 
 - `/blog/que-es-el-geo-score` dice «A diario» en los planes de pago. No es
