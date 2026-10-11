@@ -3,7 +3,7 @@ import type { AuditBlockKey } from "@/lib/web-audit/audit-blocks";
 
 /**
  * «Si arreglas los N problemas que puntúan: X → 100», at the top of each
- * block (log §274). It comes back from the old Problemas tab (founder,
+ * block (log §275). It comes back from the old Problemas tab (founder,
  * 2026-10-10), now in block points. `fromScore`/`toScore` are
  * `buildAuditBlock`'s score and projected score, never an estimate: fixing
  * every scored check of a block is, by definition, its full score.

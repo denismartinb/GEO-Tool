@@ -275,7 +275,7 @@ test("web audit screen renders", async ({ page }, testInfo) => {
       // Anchoring here is exactly what would have turned the 2026-08-02 false
       // PASS into a loud failure: every capture that day showed the
       // "Todavía no has auditado tu web" card instead of these. Since
-      // SEARCH-SEO-1 Fase 1b (log §274) the screen opens on the GEO block.
+      // SEARCH-SEO-1 Fase 1b (log §275) the screen opens on the GEO block.
       describedAs: "el bloque Auditoría GEO con sus pestañas (Problemas · Correcto · Páginas)",
       anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas que puntúan/i }]
     }
@@ -373,7 +373,7 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     }
   }
 
-  // The SEO block is the second half of the same screen (log §274): its own
+  // The SEO block is the second half of the same screen (log §275): its own
   // score, banner and tabs. Switching is a link, so this proves the block
   // card navigates and the SEO tab panel renders with real content.
   const seoBlock = page.locator("a.sa-blk-seo");

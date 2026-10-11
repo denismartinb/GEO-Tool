@@ -442,7 +442,7 @@ export function buildPageCheckResult(html: string, context: PageCheckContext, no
  */
 /**
  * One guidance line and the check it is about, so a screen can show only the
- * lines of one block (Auditoría GEO/SEO, log §274).
+ * lines of one block (Auditoría GEO/SEO, log §275).
  */
 export type PageGuidanceLine = { check: IssueCheckKey; line: string };
 

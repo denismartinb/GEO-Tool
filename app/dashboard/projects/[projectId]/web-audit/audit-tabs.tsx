@@ -11,7 +11,7 @@ import { createContext, useContext, useState, type ReactNode } from "react";
  * History: the three tabs date from WEB-AUDIT-ISSUES-1 fase 2 (founder-
  * approved 2026-08-02). SEARCH-SEO-1 Fase 1b first replaced them with one
  * filtered list; the founder asked for them back (2026-10-10), and they now
- * live inside each block, GEO and SEO (log §274). Switching block is a link,
+ * live inside each block, GEO and SEO (log §275). Switching block is a link,
  * not a tab, and keeps the tab you were on.
  */
 

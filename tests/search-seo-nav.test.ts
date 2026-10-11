@@ -23,7 +23,7 @@ describe("console navigation: two analysis blocks", () => {
     expect(sidebar).not.toContain(">Analizar<");
   });
 
-  it("opens the one audit route from two entries, GEO under IA and SEO under buscadores (log §274)", () => {
+  it("opens the one audit route from two entries, GEO under IA and SEO under buscadores (log §275)", () => {
     const geo = sidebar.indexOf('label: "Auditoría GEO"');
     const seo = sidebar.indexOf('label: "Auditoría SEO"');
     expect(sidebar).toContain('{ segment: "/web-audit", label: "Auditoría GEO", icon: "sparkles", countKey: null, block: "geo" }');

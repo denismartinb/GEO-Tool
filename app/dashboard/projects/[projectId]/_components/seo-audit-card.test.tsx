@@ -58,7 +58,7 @@ describe("SeoAuditCard", () => {
     expect(html).toContain("6 de 10 páginas");
     expect(html).toContain("No encontrado");
     expect(html).toContain("+9 pts");
-    // Structured data and lists are GEO checks; the sitemap is SEO (log §274).
+    // Structured data and lists are GEO checks; the sitemap is SEO (log §275).
     expect(html.match(new RegExp(`href="${HREF}\\?bloque=geo"`, "g"))?.length).toBe(2);
     expect(html.match(new RegExp(`href="${HREF}\\?bloque=seo"`, "g"))?.length).toBe(1);
   });

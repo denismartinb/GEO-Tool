@@ -7,7 +7,7 @@ import type { SitemapStep } from "@/lib/web-audit/sitemap";
 import { IssueRow, PassingRow } from "./issue-rows";
 
 /**
- * The Problemas and Correcto tabs of one audit block (log §274). Server
+ * The Problemas and Correcto tabs of one audit block (log §275). Server
  * components: the tab bar (`audit-tabs.tsx`) only toggles which one is
  * visible.
  */

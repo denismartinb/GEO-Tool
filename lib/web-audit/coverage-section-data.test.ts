@@ -4,7 +4,7 @@ import { NOT_COVERED_NOTE } from "@/lib/web-audit/coverage-map";
 import { fakeSupabase, type TableResult } from "@/lib/web-audit/test-support/fake-supabase";
 
 /**
- * The coverage map got its own loader in SEARCH-SEO-1 Fase 1b (log §274).
+ * The coverage map got its own loader in SEARCH-SEO-1 Fase 1b (log §275).
  * These cases came with it from `page-data.test.ts`: the
  * Pro gate read raw from the plan, a downgraded account keeping its persisted
  * coverage, and an empty project inventing nothing.

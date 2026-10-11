@@ -17,7 +17,7 @@ import { deriveAuditPillState, type AuditPillState } from "@/lib/web-audit/audit
 
 /**
  * The coverage map («¿tu web publica algo sobre cada tema, y la IA lo cita?»)
- * as the Auditoría GEO block shows it (SEARCH-SEO-1 Fase 1b, log §274).
+ * as the Auditoría GEO block shows it (SEARCH-SEO-1 Fase 1b, log §275).
  *
  * It lived inside the Auditoría web loader (`page-data.ts`) until Fase 1b.
  * It was cut out, not rewritten, so the calculations are unchanged, and the

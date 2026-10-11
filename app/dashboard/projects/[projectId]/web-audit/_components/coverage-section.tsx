@@ -9,7 +9,7 @@ import { WebAuditDriveNotice } from "../web-audit-drive-notice";
 
 /**
  * «Cobertura de tu contenido», at the top of the Auditoría GEO block
- * (SEARCH-SEO-1 Fase 1b, log §274). It answers, topic by topic, whether the
+ * (SEARCH-SEO-1 Fase 1b, log §275). It answers, topic by topic, whether the
  * site publishes something about each prompt and whether the AI cites it:
  * the part of the audit that is GEO and nothing else.
  *

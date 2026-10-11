@@ -21,15 +21,18 @@ paths:
 > en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
 > mismo problema.
 >
-> **Desde la Fase 1b (log §274) la pantalla es sólo la parte técnica.** La
-> nota se llama «Salud técnica» y no «Salud SEO» hasta que la fase 2 mida
-> velocidad, móvil y los checks nuevos. Las áreas y la lista de «Qué arreglar»
-> salen de `lib/web-audit/seo-audit-view.ts` sobre `buildTechnicalIssuesReport`;
-> cada check vive en una sola área, y un área sin nada medido no se pinta. El
-> mapa de cobertura (Contenido / Implementado, Evolución, Historial) **vive en
-> Páginas citadas**, con su loader propio (`loadCoverageSectionData`) y el
-> `WebAuditProvider` y `WebAuditDriveNotice` movidos a `citations/`. Las reglas
-> de cobertura de abajo siguen valiendo; sólo cambió dónde se pintan.
+> **Desde la Fase 1b (log §275) la pantalla tiene dos bloques**, «Auditoría
+> GEO» y «Auditoría SEO», con una entrada de menú cada uno y la misma ruta
+> (`?bloque=geo|seo`, GEO por defecto). Qué check va en qué bloque lo decide
+> `AUDIT_BLOCKS` (`lib/web-audit/audit-blocks.ts`), y cada check vive en uno
+> solo. La nota de un bloque es Σ ganado / Σ posible con los pesos de
+> `page-checks.ts`, leídos de `pageCheckStates` (`issues.ts`): **no es una
+> métrica nueva**, y juntas siguen dando la Salud técnica. No le pongas pesos
+> propios a un bloque: separaría su nota del componente técnico del GEO
+> Score. Los checks sin peso siguen sin puntos también dentro del bloque. La
+> cobertura se pinta en el bloque GEO, con su propio cargador
+> (`loadCoverageSectionData`), y `WebAuditDriveNotice` va dentro de su
+> tarjeta.
 
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los
@@ -178,11 +181,9 @@ Consecuencias, y son reglas:
 
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 
-`page.tsx` orquesta datos; los componentes que pintan filas, la nota, las
-áreas y la lista de «Qué arreglar» viven en
-`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83). Los de
-cobertura (tiles, sección y gráfico de tendencia) viven desde §274 en
-`citations/_components/`.
+`page.tsx` orquesta datos; los componentes que pintan bloques, filas,
+pestañas, la cobertura y el gráfico de tendencia viven en
+`app/dashboard/projects/[projectId]/web-audit/_components/` (log §83, §275).
 Componente nuevo de esta pantalla → ahí.
 
 **Cada uno de esos módulos tiene tests de render, y un componente nuevo también

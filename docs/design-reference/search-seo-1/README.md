@@ -26,7 +26,7 @@ el estado «auditoría en marcha». En escritorio, si «Indicadores clave» deja
 hueco, los motores suben a él y la tarjeta va a la derecha del desglose, a
 petición del fundador (log §271).
 
-**Fase 1b (log §274).** La vista Auditoría SEO de `maqueta.html` se
+**Fase 1b (log §275).** La vista Auditoría SEO de `maqueta.html` se
 construyó primero tal cual, con los checks de hoy. Al verla, el fundador echó
 de menos las pestañas, la tarjeta «Si arreglas…», los puntos por problema y
 una auditoría propia de GEO, y eligió partir la pantalla en dos bloques.

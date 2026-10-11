@@ -3,7 +3,7 @@ import { AUDIT_BLOCKS, AUDIT_BLOCK_PARAM, type AuditBlockView } from "@/lib/web-
 import { scoreColor } from "./score-tiles";
 
 /**
- * The two block cards at the top of the audit screen (log §274): GEO and
+ * The two block cards at the top of the audit screen (log §275): GEO and
  * SEO, each with its own score. They are links, not tabs, so the menu entry
  * that opened the screen, the URL and the highlighted card always agree.
  */

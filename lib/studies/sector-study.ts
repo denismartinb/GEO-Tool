@@ -101,10 +101,16 @@ export const SECTORS: SectorConfig[] = [
   }
 ];
 
-export const ENGINES = ["gemini", "openai", "claude"] as const;
+export const ENGINES = ["gemini", "openai", "claude", "perplexity"] as const;
 export type Engine = (typeof ENGINES)[number];
 
-export const ENGINE_LABEL: Record<Engine, string> = { gemini: "Gemini", openai: "ChatGPT", claude: "Claude" };
+export const ENGINE_LABEL: Record<Engine, string> = { gemini: "Gemini", openai: "ChatGPT", claude: "Claude", perplexity: "Perplexity" };
+
+/**
+ * Engines ticked by default. Public studies name ChatGPT, Gemini and Claude
+ * only, so Perplexity is opt-in on the page (PERPLEXITY-ENGINE-1, log §274).
+ */
+export const DEFAULT_ENGINES: Engine[] = ["gemini", "openai", "claude"];
 
 /** Never matches a real brand; extraction requires one. */
 export const STUDY_SENTINEL_BRAND = "Marca de control del estudio";

@@ -9,7 +9,7 @@ import {
 } from "@/lib/web-audit/issues";
 
 /**
- * The two blocks of the audit screen (SEARCH-SEO-1 Fase 1b, log §274, design
+ * The two blocks of the audit screen (SEARCH-SEO-1 Fase 1b, log §275, design
  * in `docs/design-reference/search-seo-1/auditoria-geo-seo.html`): «Auditoría
  * GEO» asks whether the AI can cite the site, «Auditoría SEO» whether Google
  * finds it. Pure, like `buildTechnicalIssuesReport`, which it only splits.

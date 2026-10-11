@@ -61,7 +61,7 @@ describe("IssueRow", () => {
   });
 
   /**
-   * SEARCH-SEO-1 Fase 1b (log §274): vuelven los puntos por fila, en puntos
+   * SEARCH-SEO-1 Fase 1b (log §275): vuelven los puntos por fila, en puntos
    * del bloque. Un check sin peso dice «sin puntos», nunca «+0 pt».
    */
   it("enseña los puntos del bloque, o «sin puntos» si el check no puntúa", () => {

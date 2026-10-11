@@ -23,7 +23,7 @@ import { WebAuditProvider } from "./web-audit-context";
 
 /**
  * Auditoría GEO y Auditoría SEO: one screen, two blocks (SEARCH-SEO-1 Fase
- * 1b, log §274, design in
+ * 1b, log §275, design in
  * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). The menu has
  * an entry for each, `?bloque=geo|seo`, and both read the same technical
  * audit that runs after every scan.

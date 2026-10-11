@@ -16,7 +16,7 @@ import { AudienceTags } from "./audience-tags";
 
 /**
  * The rows of the Problemas and Correcto tabs in each audit block
- * (SEARCH-SEO-1 Fase 1b, log §274, design in
+ * (SEARCH-SEO-1 Fase 1b, log §275, design in
  * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). Native
  * `<details>`, collapsed by default: severity, scope, GOOGLE/IA tags and the
  * block points are always visible; «Por qué importa», «Cómo arreglarlo» and

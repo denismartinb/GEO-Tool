@@ -51,7 +51,7 @@ export function freshnessLabel(status: "fresh" | "aging" | "stale" | "unknown"):
 
 
 /**
- * One page in a block's Páginas tab (log §274): its score within that block,
+ * One page in a block's Páginas tab (log §275): its score within that block,
  * and only that block's checks, guidance and copyable fixes. The same page
  * appears in both blocks with two different numbers, which is the point.
  */

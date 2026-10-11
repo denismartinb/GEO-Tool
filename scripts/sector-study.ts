@@ -42,6 +42,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import {
   aggregateBrands,
+  DEFAULT_ENGINES,
   ENGINES,
   formatReport,
   SECTORS,
@@ -70,7 +71,7 @@ export function parseArgs(argv: string[]): {
     throw new Error("--concurrency must be an integer 1..6");
   }
   const enginesArg = value("--engines");
-  const engines = enginesArg ? (enginesArg.split(",").map((engine) => engine.trim()) as Engine[]) : [...ENGINES];
+  const engines = enginesArg ? (enginesArg.split(",").map((engine) => engine.trim()) as Engine[]) : [...DEFAULT_ENGINES];
   if (engines.length === 0 || engines.some((engine) => !ENGINES.includes(engine))) {
     throw new Error(`--engines must be a comma list of ${ENGINES.join(", ")}`);
   }
@@ -105,7 +106,7 @@ async function main() {
   if (!sector) throw new Error(`Unknown sector "${args.sector}". Run with --list.`);
 
   loadDotEnvLocal();
-  const keyFor: Record<Engine, string> = { gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY", claude: "ANTHROPIC_API_KEY" };
+  const keyFor: Record<Engine, string> = { gemini: "GEMINI_API_KEY", openai: "OPENAI_API_KEY", claude: "ANTHROPIC_API_KEY", perplexity: "PERPLEXITY_API_KEY" };
   const missing = args.engines.map((engine) => keyFor[engine]).filter((key) => !process.env[key]);
   if (missing.length) throw new Error(`Missing ${missing.join(", ")} (put them in .env.local).`);
 

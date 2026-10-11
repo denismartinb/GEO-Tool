@@ -106,7 +106,7 @@ export type WebAuditPageData = {
 
   /**
    * El mapa de cobertura, sus deltas y su campaña tienen su propio cargador
-   * desde SEARCH-SEO-1 Fase 1b (`coverage-section-data.ts`, log §274), que la
+   * desde SEARCH-SEO-1 Fase 1b (`coverage-section-data.ts`, log §275), que la
    * misma pantalla llama para el bloque GEO. De la cobertura aquí sólo queda
    * lo que necesita el llms.txt generado.
    */

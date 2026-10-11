@@ -11,7 +11,7 @@ import { AUDIT_BLOCK_PARAM, auditBlockOf } from "@/lib/web-audit/audit-blocks";
  * It sits under the AI-engine bars, or on desktop beside the GEO Score
  * breakdown when the engine bars move up into the KPI grid. The founder removed the projected-score line and the CTA
  * button from the approved mockup: each listed issue is the link instead,
- * and it opens the audit block the issue belongs to, GEO or SEO (log §274).
+ * and it opens the audit block the issue belongs to, GEO or SEO (log §275).
  */
 
 const SEVERITIES: IssueSeverity[] = ["critical", "warning", "improvement"];

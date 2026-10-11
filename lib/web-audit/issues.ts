@@ -131,7 +131,7 @@ type PageCheckDefinition = {
   gain: (check: PageCheckResult) => number | null;
   /**
    * The check's own share of this page's score, for the Auditoría GEO/SEO
-   * blocks (log §274): what it is worth (`weight`), what the page earns on it
+   * blocks (log §275): what it is worth (`weight`), what the page earns on it
    * now, and how much of it counts towards the page's maximum today. A page
    * with no detected date has `possible: 0` for freshness, the same way
    * `pageScore` leaves those 15 points out of its denominator. `weight` is
@@ -444,7 +444,7 @@ export type PageCheckState = {
 
 /**
  * Every check measured on this page, whether it fails and what it is worth
- * (log §274). The Auditoría GEO/SEO blocks add these up per block, so they
+ * (log §275). The Auditoría GEO/SEO blocks add these up per block, so they
  * never re-derive a predicate or a weight. Never-measured checks are left
  * out, as everywhere else in this module.
  */

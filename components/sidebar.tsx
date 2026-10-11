@@ -36,7 +36,7 @@ type ProjectLink = {
   label: string;
   icon: string;
   countKey: string | null;
-  /** `?bloque=` of the audit screen: two entries, one screen (log §274). */
+  /** `?bloque=` of the audit screen: two entries, one screen (log §275). */
   block?: AuditBlockKey;
 };
 
@@ -49,7 +49,7 @@ const aiLinks: ProjectLink[] = [
 ];
 
 // The route stays `/web-audit`: renaming it would break every notification
-// and email link already sent. SEARCH-SEO-1 Fase 1b (log §274) split the
+// and email link already sent. SEARCH-SEO-1 Fase 1b (log §275) split the
 // screen into a GEO block and an SEO block; each menu entry opens its own.
 const searchLinks: ProjectLink[] = [
   { segment: "/web-audit", label: "Auditoría SEO", icon: "search", countKey: null, block: "seo" },
