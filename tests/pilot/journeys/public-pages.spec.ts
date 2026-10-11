@@ -77,7 +77,7 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "como-aparecer-en-gemini-y-vistas-creadas-con-ia": "playbooks",
   // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity": "playbooks",
-  // CONTENT-LAUNCH-2 (2026-10-13, log §289).
+  // CONTENT-LAUNCH-2 (2026-10-13, log §296).
   "auditoria-seo-y-search-console-en-genscore": "playbooks"
 };
 

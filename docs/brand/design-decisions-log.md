@@ -24536,7 +24536,7 @@ Google está «En producción», porque si no la conexión caduca a los 7 días
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 289. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-13)
+## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-13)
 
 **Qué se decidió.** Segundo artículo de lanzamiento de §288:
 `/blog/auditoria-seo-y-search-console-en-genscore` (cluster `playbooks`), que
@@ -24581,6 +24581,17 @@ colaterales.
 - El autor de todos los artículos (`AuthorBio`) enseña el símbolo de GenScore
   (`BrandMark`) en vez de una «G» de texto. Se retira la prop `initial`, que
   ningún artículo usaba.
+- La cabecera del índice `/blog` pasa a decir sólo «GEO (Generative Engine
+  Optimization): metodología, guías, estudios y análisis.».
+- Los artículos de lanzamiento de Perplexity y de Search Console llevan en la
+  portada, en el hueco de la cifra grande, el símbolo de GenScore junto al
+  logo de lo que conecta (campo nuevo `heroLogos` en `BlogPost`, pintado por
+  `ArticleHero` sólo si no hay `heroStat`). Se reutilizan los SVG de
+  `public/brand/engines/` (Perplexity y la «G» de Google, rotulada «Google
+  Search Console»): no hay un logo propio de Search Console en el repo y no se
+  añade peso a `public/`, que está en el límite de `asset-budget.test.ts`. No
+  es una cifra, así que la regla de §247 («nunca una cifra para rellenar»)
+  sigue intacta. El de Perplexity sale a producción con el merge de este PR.
 
 **Pendiente.** Igual que §288: comprobar antes de publicar que la pantalla de
 consentimiento de Google está «En producción» (§284).

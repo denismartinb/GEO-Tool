@@ -101,6 +101,13 @@ export type BlogPost = {
    * figure rather than one picked to fill the space (log §247).
    */
   heroStat?: { value: string; label: string; source: string };
+  /**
+   * CONTENT-LAUNCH-2 (log §296): for a launch post with no figure to show,
+   * the logos of what GenScore now connects to, next to GenScore's own mark,
+   * in the slot `heroStat` would use. Real brand files from `public/brand/`,
+   * never a made-up figure. Ignored when the post also has `heroStat`.
+   */
+  heroLogos?: { name: string; src: string }[];
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -513,6 +520,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Perplexity entra en GenScore como cuarto motor en Pro y Agencia. Qué tiene de distinto un motor que busca en la web y cita sus fuentes, y las tres cosas que conviene mirar en tu primer escaneo.",
     datePublished: "2026-10-11",
     coverImage: "/blog/genscore-ya-mide-perplexity/cover.webp",
+    heroLogos: [{ name: "Perplexity", src: "/brand/engines/perplexity.svg" }],
     coverIcon: "search",
     // CONTENT-LAUNCH-1 (log §288): launch post for PERPLEXITY-ENGINE-1 Fase 2
     // (log §283). Product claims trace to that section.
@@ -529,8 +537,9 @@ export const BLOG_POSTS: BlogPost[] = [
       "GenScore suma Google a la IA. Conecta tu Search Console y ve tu puesto en Google búsqueda a búsqueda, tus mejores oportunidades y qué mejorar para Google y para ChatGPT, Gemini, Claude y Perplexity, con la Auditoría SEO al lado.",
     datePublished: "2026-10-13",
     coverImage: "/blog/auditoria-seo-y-search-console-en-genscore/cover.webp",
+    heroLogos: [{ name: "Google Search Console", src: "/brand/engines/google.svg" }],
     coverIcon: "search",
-    // CONTENT-LAUNCH-2 (log §289): launch post for SEARCH-SEO-1 Fases 2, 3
+    // CONTENT-LAUNCH-2 (log §296): launch post for SEARCH-SEO-1 Fases 2, 3
     // and 3b (log §281, §284, §287). Product claims trace to those sections;
     // the figures are mockups with invented data (ADR 0028).
     primaryKeyword: "search console y posicionamiento en ia",
