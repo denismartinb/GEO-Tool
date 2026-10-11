@@ -3829,7 +3829,7 @@ textarea.add-prompts-text-input {
   top: calc(100% + 8px);
   right: 0;
   z-index: 210;
-  width: 320px;
+  width: 340px;
   max-width: calc(100vw - 32px);
   background: var(--brand-surface);
   border: 1px solid var(--brand-line);
@@ -3985,6 +3985,31 @@ textarea.add-prompts-text-input {
   font-size: 11.5px;
   color: var(--brand-ink-3);
   margin-top: 1px;
+}
+
+/* NOTIF-LANES-1 (log §297): each item says which of the three lanes it is. */
+.notif-item-lane {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--brand-ink-3);
+  margin-bottom: 2px;
+}
+
+.notif-item-cta {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--brand-ink);
+}
+
+.notif-item-cta.is-urgent {
+  background: var(--brand-neg);
 }
 
 .notif-item-desc {

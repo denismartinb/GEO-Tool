@@ -70,7 +70,7 @@ export function NotificationsPageClient({
           <p className="notif-page-empty-body">
             {tab === "unread"
               ? "No te queda nada por leer. Las nuevas aparecerán aquí y en la campana."
-              : "Te avisaremos cuando termine un escaneo o cambie algo en tu visibilidad."}
+              : "Te avisaremos cuando haya algo que hacer o algo cambie en tu visibilidad."}
           </p>
         </div>
       ) : (

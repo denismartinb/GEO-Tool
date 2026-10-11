@@ -12,6 +12,7 @@ import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { ConsoleHeader } from "@/components/console-header";
 import { NotificationBell } from "@/components/notification-bell";
+import { getAccountNotice } from "@/lib/notifications/account-notice-data";
 import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { DomainOverageGate } from "@/components/billing/domain-overage-gate";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const cookieStore = await cookies();
   const preferredProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
 
+  // NOTIF-LANES-1: the «Tu cuenta» lane of the bell, computed in parallel.
+  const accountNoticePromise = getAccountNotice(supabase, user.id);
+
   const {
     projects,
     promptCountByProject,
@@ -43,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     plan,
     notifications
   } = await getWorkspaceCounters();
+  const accountNotice = await accountNoticePromise;
 
   /* ONBOARDING-TOUR-PERSIST-1 — misma forma que auditFlagRow/samplingFlagRow
      en la página de debug: `onboarding_tour_seen_at` llega en la migración
@@ -119,7 +124,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             latestScanStatusByProject={latestScanStatusByProject}
           />
           <div className="dash-header-actions">
-            <NotificationBell notifications={notifications} projects={projects ?? []} />
+            <NotificationBell notifications={notifications} accountNotice={accountNotice} projects={projects ?? []} />
             <SignOutForm action={signOut}>
               <Button variant="outline" type="submit">
                 <Icon name="settings" size={14} />

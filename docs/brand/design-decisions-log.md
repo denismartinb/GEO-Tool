@@ -24704,3 +24704,54 @@ Salieron cinco fallos, y los cinco se corrigen en este PR por decisión suya
 escaneo del proyecto, porque el texto se escribe al generarlas.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 297. NOTIF-LANES-1: la campana enseña tres avisos como mucho (2026-10-11)
+
+**Qué pidió el fundador.** «Quitaría las recurrentes de escaneo completado.
+Las notificaciones, si son demasiadas ya no se leen. Lo ideal es que como
+mucho se acumulen unas 3», y un aviso de los días que quedan de prueba. La
+propuesta aprobada (maqueta en móvil y escritorio:
+https://claude.ai/artifact/5gk9HZ4XDjK1oMogShtbBT) son tres carriles con un
+aviso cada uno. Esta es su Fase 1.
+
+**Qué cambia.**
+1. **Tres carriles, uno por aviso** (`lib/notifications/lanes.ts`).
+   - «Tu cuenta»: días de prueba o cuenta en solo lectura.
+   - «Tu siguiente paso»: hoy, `gap_pending`.
+   - «Algo ha cambiado»: `ai_bot_blocked`, `page_unreachable`,
+     `emerging_competitor` y `surfacing_dropped`. Si coinciden, gana la más
+     grave en ese orden, no la más reciente.
+   - Un aviso de más de 14 días no sale.
+2. **Fuera de la campana y de la página de notificaciones:** escaneo
+   completado, escaneo fallido, brecha cerrada, `coverage_dropped`,
+   `llms_txt_lost` y `sitemap_lost`. Sus emisores siguen escribiendo la fila:
+   el filtro está en la lectura (`LANE_NOTIFICATION_TYPES` en las dos
+   consultas de `lib/project-workspace.ts`), así que el escaneo no se toca y
+   la Fase 2 puede leer el historial (primer escaneo listo).
+3. **«Tu cuenta» no es una fila.** Se calcula en cada carga con la fecha de
+   fin de la prueba (`account-notice.ts`, `account-notice-data.ts`), así que
+   el número de días siempre es el real y no hace falta cron ni migración.
+   - En prueba: «Te quedan N días de Pro», en tono tranquilo.
+   - En las últimas 24 horas: «Último día de tu prueba de Pro», en rojo, y
+     enciende el punto de la campana hasta que se abre.
+   - En `free`: «Tu puntuación lleva N días sin actualizarse».
+   - Nombra el precio fundador sólo si `getFounderOffer` dice que Pro aún lo
+     cobra. El enlace abre «Cambiar de plan» con Pro marcado (§221).
+   - Una cuenta Pro de pago o comped no ve nada en este carril.
+4. **La campana pierde las pestañas «Todas / No leídas» y los grupos por
+   día:** con tres avisos sobran. Cada aviso dice su carril. El pie pasa a
+   «Ver historial».
+
+**Pendiente (Fase 2 y 3 de la maqueta).** «Tu siguiente paso» con primer
+escaneo listo, «Conecta Search Console» y la mejor oportunidad de la semana
+(alineada con el plan semanal de Recomendaciones). Alertas nuevas de caída en
+Google y acceso de Google retirado, que necesitan ampliar el `CHECK` de
+tipos. `ai_bot_blocked` y `emerging_competitor` ya tienen carril pero nadie
+los emite todavía.
+
+**Regla de premisa.** Se retira un aviso de error: «El escaneo ha fallado».
+La premisa es que el cliente no puede hacer nada con él. Hoy la sostienen el
+reintento automático y el vigilante (§227, §228), que avisan al operador de
+todo run fallido. Si esa premisa falla, la pantalla afectada es Visión
+general, que sigue enseñando el estado del último escaneo
+(`latestScanStatusByProject`); la campana ya no lo dice.
