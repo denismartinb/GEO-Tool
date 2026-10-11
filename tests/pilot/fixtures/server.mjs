@@ -96,7 +96,7 @@ const BLOG_SLUGS = [
   "como-aparecer-en-gemini-y-vistas-creadas-con-ia",
   // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity",
-  // CONTENT-LAUNCH-2 (2026-10-13, log §296).
+  // CONTENT-LAUNCH-2 (2026-10-11, log §296).
   "auditoria-seo-y-search-console-en-genscore"
 ];
 

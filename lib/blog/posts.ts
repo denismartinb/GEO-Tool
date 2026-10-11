@@ -537,7 +537,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Conecta tu Search Console a GenScore: tu puesto en Google, tus oportunidades de subir y qué mejorar para Google y para la IA, junto a la Auditoría SEO.",
     description:
       "GenScore suma Google a la IA. Conecta tu Search Console y ve tu puesto en Google búsqueda a búsqueda, tus mejores oportunidades y qué mejorar para Google y para ChatGPT, Gemini, Claude y Perplexity, con la Auditoría SEO al lado.",
-    datePublished: "2026-10-13",
+    datePublished: "2026-10-11",
     coverImage: "/blog/auditoria-seo-y-search-console-en-genscore/cover.webp",
     heroLogos: [[{ name: "Google", src: "/brand/engines/google.svg" }], [{ name: "ChatGPT", src: "/brand/engines/chatgpt.svg" }, { name: "Gemini", src: "/brand/engines/gemini.svg" }, { name: "Claude", src: "/brand/engines/claude.svg" }, { name: "Perplexity", src: "/brand/engines/perplexity.svg" }]],
     coverIcon: "search",

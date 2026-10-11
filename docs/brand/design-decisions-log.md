@@ -24622,11 +24622,13 @@ dice si se cumplió (§181).
 **Pendiente.** Nada en código. Si en cuatro semanas no aparece, la siguiente
 palanca es la autoridad externa (Fase 7), no más texto en la página.
 
-## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-13)
+## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-11)
 
 **Qué se decidió.** Segundo artículo de lanzamiento de §288:
 `/blog/auditoria-seo-y-search-console-en-genscore` (cluster `playbooks`), que
-sale el martes 13 a las 20:30 con su post de LinkedIn y de X. El fundador fijó
+estaba previsto para el martes 13 a las 20:30 y el fundador lo adelantó al
+mergear el 2026-10-11, así que se publica con esa fecha; los posts de LinkedIn
+y de X siguen esperando su «sí, publica». El fundador fijó
 el enfoque el 2026-10-11: la integración aporta la posición general de la
 marca, oportunidades de mejora globales y qué mejorar para Google y para los
 motores de IA, porque las mejoras de posicionamiento muchas veces son
