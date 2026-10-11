@@ -12,6 +12,7 @@ import { Sidebar } from "@/components/sidebar";
 import { WorkspaceTopbar } from "@/components/workspace-topbar";
 import { ConsoleHeader } from "@/components/console-header";
 import { NotificationBell } from "@/components/notification-bell";
+import { getNextStepNotice } from "@/lib/notifications/next-step-data";
 import { getAccountNotice } from "@/lib/notifications/account-notice-data";
 import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { DomainOverageGate } from "@/components/billing/domain-overage-gate";
@@ -47,7 +48,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     plan,
     notifications
   } = await getWorkspaceCounters();
-  const accountNotice = await accountNoticePromise;
+  // NOTIF-LANES-1: «Tu siguiente paso» is the first action of the active
+  // project's Recomendaciones plan, read with the screen's own `selectPlan`.
+  // The active project is the cookie middleware writes on every project route,
+  // falling back to the most recent one; the item names its domain either way.
+  const nextStepProject =
+    (projects ?? []).find((p) => p.id === preferredProjectId) ?? (projects ?? [])[0] ?? null;
+  const [accountNotice, nextStep] = await Promise.all([
+    accountNoticePromise,
+    nextStepProject ? getNextStepNotice(supabase, nextStepProject) : Promise.resolve(null)
+  ]);
 
   /* ONBOARDING-TOUR-PERSIST-1 — misma forma que auditFlagRow/samplingFlagRow
      en la página de debug: `onboarding_tour_seen_at` llega en la migración
@@ -124,7 +134,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             latestScanStatusByProject={latestScanStatusByProject}
           />
           <div className="dash-header-actions">
-            <NotificationBell notifications={notifications} accountNotice={accountNotice} projects={projects ?? []} />
+            <NotificationBell
+              notifications={notifications}
+              accountNotice={accountNotice}
+              nextStep={nextStep}
+              projects={projects ?? []}
+            />
             <SignOutForm action={signOut}>
               <Button variant="outline" type="submit">
                 <Icon name="settings" size={14} />

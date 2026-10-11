@@ -7,6 +7,7 @@ import { relativeTime, renderNotification, toneClassName, type NotificationRow }
 import { useSeenNotifications } from "@/lib/notifications/use-seen-notifications";
 import { laneForType, type NotificationLane } from "@/lib/notifications/lanes";
 import { renderAccountNotice, type AccountNotice } from "@/lib/notifications/account-notice";
+import { renderNextStep, type NextStepNotice } from "@/lib/notifications/next-step";
 import type { WorkspaceNotification, WorkspaceProjectSummary } from "@/lib/project-workspace";
 
 const LANE_LABEL: Record<NotificationLane, string> = {
@@ -18,11 +19,14 @@ const LANE_LABEL: Record<NotificationLane, string> = {
 export function NotificationBell({
   notifications,
   accountNotice,
+  nextStep,
   projects
 }: {
-  /** Already reduced to one per lane (`selectLaneNotifications`), so at most two. */
+  /** Already reduced by `selectLaneNotifications`: one alert at most. */
   notifications: WorkspaceNotification[];
   accountNotice: AccountNotice | null;
+  /** First action of the active project's Recomendaciones plan. */
+  nextStep: NextStepNotice | null;
   projects: WorkspaceProjectSummary[];
 }) {
   const [open, setOpen] = useState(false);
@@ -44,7 +48,10 @@ export function NotificationBell({
   const renderedAccount = accountNotice ? renderAccountNotice(accountNotice) : null;
   const accountWantsDot = Boolean(renderedAccount?.urgent) && !openedOnce;
   const hasPendingUnread = pendingUnreadCount > 0 || accountWantsDot;
-  const isEmpty = notifications.length === 0 && !renderedAccount;
+  // The next step has no read state and never lights the dot: it is always
+  // there while the plan has actions, so a dot for it would never go out.
+  const renderedNextStep = nextStep ? renderNextStep(nextStep) : null;
+  const isEmpty = notifications.length === 0 && !renderedAccount && !renderedNextStep;
 
   useEffect(() => {
     if (!open) return;
@@ -91,6 +98,19 @@ export function NotificationBell({
                     <div className="notif-item-title">{renderedAccount.title}</div>
                     <p className="notif-item-desc">{renderedAccount.body}</p>
                     <span className={`notif-item-cta${renderedAccount.urgent ? " is-urgent" : ""}`}>{renderedAccount.cta}</span>
+                  </div>
+                </Link>
+              )}
+              {renderedNextStep && (
+                <Link href={renderedNextStep.href ?? "#"} className="notif-item notif-item-link" onClick={() => setOpen(false)}>
+                  <span className={`notif-item-icon ${toneClassName(renderedNextStep.tone)}`}>
+                    <Icon name={renderedNextStep.icon} size={14} />
+                  </span>
+                  <div className="notif-item-body">
+                    <div className="notif-item-lane">{LANE_LABEL.next_step}</div>
+                    <div className="notif-item-title">{renderedNextStep.title}</div>
+                    {renderedNextStep.targetLabel && <div className="notif-item-target">{renderedNextStep.targetLabel}</div>}
+                    <p className="notif-item-desc">{renderedNextStep.body}</p>
                   </div>
                 </Link>
               )}

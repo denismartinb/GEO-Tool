@@ -6,11 +6,16 @@
  * - `account`   — trial days left / read-only account. Never a stored row: it is
  *                 computed on every load from the trial date
  *                 (`account-notice.ts`), so it can never show a stale count.
- * - `next_step` — the one thing worth doing next.
- * - `alert`     — only what asks the user to act.
+ * - `next_step` — the first action of the Recomendaciones plan. Not a stored
+ *                 row either (`next-step-data.ts`): it is `selectPlan`'s first
+ *                 pick, so the bell and the screen always name the same
+ *                 action. The stored `gap_pending` used to fill this lane and
+ *                 could point outside the plan (founder, 2026-10-11).
+ * - `alert`     — only what asks the user to act. The only lane read from
+ *                 stored rows.
  *
- * Every other stored type (scan completed, scan failed, gap resolved, minor
- * audit regressions) is still written by its emitter — that history is cheap
+ * Every other stored type (scan completed, scan failed, gap pending, gap
+ * resolved, minor audit regressions) is still written by its emitter — that history is cheap
  * and Fase 2 reads it — but it never reaches the bell or the notifications
  * page. Pure on purpose: no Supabase, no clock.
  */
@@ -30,10 +35,8 @@ const ALERT_PRIORITY: readonly NotificationType[] = [
   "surfacing_dropped"
 ];
 
-const NEXT_STEP_TYPES: readonly NotificationType[] = ["gap_pending"];
-
 /** Types the bell and the notifications page read. Used as the query filter. */
-export const LANE_NOTIFICATION_TYPES: readonly NotificationType[] = [...NEXT_STEP_TYPES, ...ALERT_PRIORITY];
+export const LANE_NOTIFICATION_TYPES: readonly NotificationType[] = ALERT_PRIORITY;
 
 /**
  * A lane notice older than this no longer describes the present: two weeks
@@ -43,7 +46,6 @@ export const LANE_NOTIFICATION_TYPES: readonly NotificationType[] = [...NEXT_STE
 export const LANE_MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 
 export function laneForType(type: string): NotificationLane | null {
-  if ((NEXT_STEP_TYPES as readonly string[]).includes(type)) return "next_step";
   if ((ALERT_PRIORITY as readonly string[]).includes(type)) return "alert";
   return null;
 }
@@ -55,10 +57,10 @@ function newestFirst<T extends LaneCandidate>(a: T, b: T): number {
 }
 
 /**
- * Picks at most one stored notification per lane, in display order
- * (next step, then alert — the account notice goes above both and is added by
- * the caller). Rows with an unknown type or older than `LANE_MAX_AGE_MS` are
- * dropped.
+ * Picks the one stored notification the bell shows: the most serious fresh
+ * alert. The account notice and the next step are computed, and the caller
+ * puts them above it. Rows with an unknown type or older than
+ * `LANE_MAX_AGE_MS` are dropped.
  */
 export function selectLaneNotifications<T extends LaneCandidate>(rows: readonly T[], now: number): T[] {
   const fresh = rows.filter((row) => {
@@ -66,14 +68,11 @@ export function selectLaneNotifications<T extends LaneCandidate>(rows: readonly 
     return laneForType(row.type) !== null && Number.isFinite(created) && now - created <= LANE_MAX_AGE_MS;
   });
 
-  const nextStep = fresh.filter((row) => laneForType(row.type) === "next_step").sort(newestFirst)[0];
-  const alert = fresh
-    .filter((row) => laneForType(row.type) === "alert")
-    .sort(
-      (a, b) =>
-        ALERT_PRIORITY.indexOf(a.type as NotificationType) - ALERT_PRIORITY.indexOf(b.type as NotificationType) ||
-        newestFirst(a, b)
-    )[0];
+  const alert = [...fresh].sort(
+    (a, b) =>
+      ALERT_PRIORITY.indexOf(a.type as NotificationType) - ALERT_PRIORITY.indexOf(b.type as NotificationType) ||
+      newestFirst(a, b)
+  )[0];
 
-  return [nextStep, alert].filter((row): row is T => Boolean(row));
+  return alert ? [alert] : [];
 }

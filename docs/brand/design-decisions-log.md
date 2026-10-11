@@ -24717,7 +24717,8 @@ aviso cada uno. Esta es su Fase 1.
 **Qué cambia.**
 1. **Tres carriles, uno por aviso** (`lib/notifications/lanes.ts`).
    - «Tu cuenta»: días de prueba o cuenta en solo lectura.
-   - «Tu siguiente paso»: hoy, `gap_pending`.
+   - «Tu siguiente paso»: la primera acción del plan de Recomendaciones
+     (punto 5).
    - «Algo ha cambiado»: `ai_bot_blocked`, `page_unreachable`,
      `emerging_competitor` y `surfacing_dropped`. Si coinciden, gana la más
      grave en ese orden, no la más reciente.
@@ -24727,7 +24728,8 @@ aviso cada uno. Esta es su Fase 1.
    `llms_txt_lost` y `sitemap_lost`. Sus emisores siguen escribiendo la fila:
    el filtro está en la lectura (`LANE_NOTIFICATION_TYPES` en las dos
    consultas de `lib/project-workspace.ts`), así que el escaneo no se toca y
-   la Fase 2 puede leer el historial (primer escaneo listo).
+   la Fase 2 puede leer el historial (primer escaneo listo). `gap_pending`
+   también sale (punto 5).
 3. **«Tu cuenta» no es una fila.** Se calcula en cada carga con la fecha de
    fin de la prueba (`account-notice.ts`, `account-notice-data.ts`), así que
    el número de días siempre es el real y no hace falta cron ni migración.
@@ -24741,6 +24743,24 @@ aviso cada uno. Esta es su Fase 1.
 4. **La campana pierde las pestañas «Todas / No leídas» y los grupos por
    día:** con tres avisos sobran. Cada aviso dice su carril. El pie pasa a
    «Ver historial».
+5. **«Tu siguiente paso» es la acción nº 1 de Recomendaciones.** La primera
+   versión leía `gap_pending`, que el escaneo elige sólo por impacto, y el
+   fundador vio que señalaba una brecha que no estaba entre las acciones
+   prioritarias de la pantalla («si es algo importante debería estar en las
+   recomendaciones prioritarias»). Ahora no es una fila:
+   `next-step-data.ts` lee las mismas filas que la pantalla y el informe
+   (recomendaciones activas del último escaneo completado, puntos de
+   `computeRecommendationPotentialPoints`) y toma `selectPlan(...)[0]`. Así la
+   campana y la pantalla nombran siempre la misma acción. Lleva el dominio,
+   los puntos si la tarjeta los enseña y enlaza a Recomendaciones.
+   - El proyecto es el de la cookie de proyecto activo, o el más reciente.
+     Como el layout no se repinta al navegar, puede ir un paso por detrás
+     tras cambiar de proyecto; por eso nombra el dominio.
+   - No enciende el punto de la campana: está siempre que el plan tenga
+     acciones, y un punto que nunca se apaga no avisa de nada.
+   - Coste: tres lecturas más por carga del layout (último escaneo,
+     recomendaciones y filas del escaneo). El layout no se vuelve a ejecutar
+     en la navegación entre pantallas.
 
 **Pendiente (Fase 2 y 3 de la maqueta).** «Tu siguiente paso» con primer
 escaneo listo, «Conecta Search Console» y la mejor oportunidad de la semana
