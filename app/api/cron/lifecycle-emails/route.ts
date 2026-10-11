@@ -10,6 +10,7 @@ import {
   runTrialEndEmails,
   runWinbackEmails
 } from "@/lib/email/lifecycle/runner";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ export const dynamic = "force-dynamic";
  * `LIFECYCLE_EMAILS_ENABLED`, read inside `runLifecycleEmails`, so the route
  * ships inert until the founder turns it on.
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   if (!isAuthorizedInternalRequest(request, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -40,3 +41,7 @@ export async function GET(request: Request) {
   const failed = [trial, trialEnd, winback, confirmations].some((pass) => pass.status === "query_failed");
   return NextResponse.json({ trial, trialEnd, winback, confirmations }, { status: failed ? 500 : 200 });
 }
+
+// OBSERVABILITY-1 (log §300): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/lifecycle-emails", handleGet);

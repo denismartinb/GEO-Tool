@@ -4,6 +4,8 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { runScanWatchdog } from "@/lib/scan/watchdog";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
+import { reportError } from "@/lib/observability/report-error";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
  * thing it can start — an auto-retry from `reconcileStuckScanRuns` — is the
  * same thing any page view of the project already does.
  */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   if (!isAuthorizedInternalRequest(request, process.env.CRON_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
@@ -31,6 +33,11 @@ export async function GET(request: Request) {
     console.error("[geo:scan:watchdog] pass failed", {
       message: error instanceof Error ? error.message : String(error)
     });
+    await reportError(error, "cron:scan-watchdog");
     return NextResponse.json({ error: "watchdog_failed" }, { status: 500 });
   }
 }
+
+// OBSERVABILITY-1 (log §300): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/scan-watchdog", handleGet);
