@@ -23685,3 +23685,19 @@ a las altas nuevas.
 - El informe toma la cobertura de las 3 últimas filas de `domain_coverage`, mientras que Recomendaciones sólo mira la última. Es una pequeña diferencia de lectura que no se ha tocado.
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.
+
+## 277. OV-ALIGN-1: la panorámica sube junto a Auditoría SEO y la frase del resumen usa todo el ancho (2026-10-11)
+
+**Origen.** El fundador, sobre el preview de AUDIT-TRUTH-1 (§276), con capturas de escritorio: la frase resumen se cortaba antes del borde derecho del recuadro, y pidió subir la panorámica competitiva bajo el desglose del GEO Score, alineada con Auditoría SEO, para que «Último escaneo» y Oportunidades queden también alineados. Dijo que se podía hacer algo más grande si hacía falta.
+
+**Qué se decidió.**
+
+1. **La frase resumen no tiene ancho máximo.** `.ov2-insight-txt` llevaba `max-width: 92ch` desde 1200px, que en pantallas anchas la cortaba a dos tercios del recuadro. Se quita.
+2. **La panorámica se parte en dos desde 1200px.** El gráfico («Tu puesto medio cuando apareces» y el top 5) va bajo el desglose y las dos columnas se estiran hasta terminar a la misma altura que la tarjeta de Auditoría SEO. Si la columna estirada es la de Auditoría SEO, sus filas de «Lo primero que arreglar» se reparten la altura sobrante; si es el gráfico, sus barras crecen manteniendo la proporción (`--h`). La tabla («Último escaneo», con su «Ver todo») abre la fila siguiente, a la misma altura que Oportunidades.
+3. **Sólo cuando la columna derecha lleva motores y Auditoría SEO** (`panoramaUp` en `page.tsx`). Si los motores ya subieron a la rejilla de indicadores (§271), al lado del gráfico no quedaría nada; si no hay auditoría, tampoco. En esos casos se mantiene la colocación anterior.
+4. **Las dos filas usan las mismas columnas** (`2fr / 1fr`, hueco de 22px). Antes, la de abajo era `1.5fr / 1fr`, así que Oportunidades nunca podía alinearse con la columna de motores.
+5. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
+
+**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.
