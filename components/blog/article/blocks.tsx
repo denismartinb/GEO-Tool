@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { BrandMark } from "@/components/ui/brand-logo";
 import type { BlogPost } from "@/lib/blog/posts";
 
 const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric" });
@@ -214,17 +215,15 @@ export function CodeBlock({
 /** Bio de autor — señal E-E-A-T visible, no solo un dato en el JSON-LD. */
 export function AuthorBio({
   name = "Equipo GenScore",
-  initial = "G",
   children
 }: {
   name?: string;
-  initial?: string;
   children: ReactNode;
 }) {
   return (
     <div className="art-bio">
       <span className="art-avatar" aria-hidden="true">
-        {initial}
+        <BrandMark size={26} onDark />
       </span>
       <div>
         <h4>{name}</h4>

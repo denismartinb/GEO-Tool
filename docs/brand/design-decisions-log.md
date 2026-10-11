@@ -24569,6 +24569,19 @@ colaterales.
   Google** (`Recs.dc.html`): es la siguiente fase de §287 y no está
   construida. Si sale antes del martes, se añade.
 
+**Cambios del fundador (2026-10-11, sobre el preview).**
+
+- Texto propio para el resumen y para la lista de oportunidades.
+- La etiqueta de las maquetas pasa de «Ejemplo ilustrativo · cifras
+  inventadas» a «Ejemplo ilustrativo», en las imágenes y en los pies. Las
+  cifras siguen siendo inventadas; sólo cambia cómo se dice.
+- El botón «Vigilar en IA» de «Posición en Google» pasa a llamarse «Vigilar
+  prompt», en el producto (`gsc-questions.tsx`) y en el artículo. Sólo cambia
+  el texto; sigue pasando por `addPrompts`.
+- El autor de todos los artículos (`AuthorBio`) enseña el símbolo de GenScore
+  (`BrandMark`) en vez de una «G» de texto. Se retira la prop `initial`, que
+  ningún artículo usaba.
+
 **Pendiente.** Igual que §288: comprobar antes de publicar que la pantalla de
 consentimiento de Google está «En producción» (§284).
 

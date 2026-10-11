@@ -8,7 +8,7 @@ import { fmtInt, fmtPosition } from "./format";
 
 /**
  * «Preguntas que te hacen en Google» (log §287): queries phrased as a
- * question, and whether the AI scan already tracks them. «Vigilar en IA»
+ * question, and whether the AI scan already tracks them. «Vigilar prompt»
  * goes through `addPrompts` in manual mode, the same path as adding a prompt
  * by hand: plan cap, categorisation and a scan of just that prompt.
  */
@@ -52,7 +52,7 @@ function QuestionRow({ projectId, item }: { projectId: string; item: QuestionQue
         </Link>
       ) : (
         <button type="button" className="gsc-qbtn" onClick={watch} disabled={pending}>
-          {pending ? "Añadiendo…" : "Vigilar en IA"}
+          {pending ? "Añadiendo…" : "Vigilar prompt"}
         </button>
       )}
     </li>
