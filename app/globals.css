@@ -362,6 +362,13 @@ a {
   display: none;
 }
 
+.sb-tour {
+  width: 100%;
+  margin-bottom: 2px;
+  font-size: 12px;
+  text-align: left;
+}
+
 .dash-main {
   display: flex;
   flex-direction: column;
@@ -8318,13 +8325,77 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     border-color: var(--line);
   }
 
+  /* NAV-DRAWER-FIT-1 (log §301): en iPhone el pie fijo medía ~170px
+     (¿Cómo funciona?, cuenta y Cerrar sesión, cada uno en su fila) y tapaba
+     «Manuales y estudios», el último enlace de la lista. El pie pasa a una
+     sola fila —cuenta a la izquierda, ayuda y salir como iconos de 44px a la
+     derecha— y la lista se aprieta un poco (filas de 40px, rótulos más
+     bajos) para que entera quepa en la altura útil de un iPhone con las
+     barras de Safari. */
   .nav-item {
-    min-height: 44px;
+    min-height: 40px;
+  }
+
+  .nav-group-label {
+    padding: 10px 10px 4px;
+  }
+
+  .sb-scroll {
+    padding-top: 4px;
+  }
+
+  .sb-foot {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 8px;
+  }
+
+  .sb-foot .user-chip {
+    order: 0;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .sb-tour,
+  .sb-signout-btn {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    justify-content: center;
+    color: var(--ink-3);
+    cursor: pointer;
+  }
+
+  .sb-tour {
+    order: 1;
+  }
+
+  .sb-tour .ico {
+    width: 18px;
+    height: 18px;
+  }
+
+  .sb-tour-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 
   .sb-signout {
     display: block;
-    margin-top: 6px;
+    order: 2;
+    flex: 0 0 auto;
+  }
+
+  .sb-signout-btn {
+    background: none;
+    border: 0;
   }
 
   /* Same logo-size trim as the marketing nav (founder feedback) — applies

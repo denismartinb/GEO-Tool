@@ -363,3 +363,9 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   Antes de descartar un centrado por «se ve a la izquierda», mide
   `getBoundingClientRect()` de ambos lados y compara los dos números — no la
   captura contra otra captura de una anchura distinta.
+- **El cajón móvil de la consola tiene que caber entero en un iPhone con las
+  barras de Safari (≈390×664).** El pie es una sola fila: la cuenta más dos
+  iconos de 44px, la ayuda y salir. Las filas del menú miden 40px. Si se añade
+  un enlace o una fila al pie, hay que volver a medir esa altura: el último
+  enlace quedaba tapado por un pie de tres filas y nada avisaba de que la
+  lista scrolleaba (log §301).

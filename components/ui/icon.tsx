@@ -106,6 +106,12 @@ export function Icon({ name, size = 16, className = "" }: IconProps) {
         <path d="M5 18l.5 1.5L7 20l-1.5.5L5 22l-.5-1.5L3 20l1.5-.5z" />
       </>
     ),
+    logOut: (
+      <>
+        <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3" />
+        <path d="M10 8l-4 4 4 4M6 12h10" />
+      </>
+    ),
     info: (
       <>
         <circle cx="12" cy="12" r="9" />
