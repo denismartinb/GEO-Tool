@@ -1,7 +1,7 @@
 import "server-only";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { isTrialElapsed, resolvePlan } from "@/lib/billing";
+import { isTrialElapsed, resolveEffectivePlanId, resolvePlan } from "@/lib/billing";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +43,19 @@ export async function GET() {
     .eq("id", user.id)
     .maybeSingle();
 
-  const plan = resolvePlan(isTrialElapsed(profile) ? "free" : profile?.current_plan);
+  // HEADER-CHIP-PLAN-PARITY-1 (log §276): the same effective plan the
+  // console reads (`getPlanForUser`: trial expiry, then comped). The console
+  // seeds the header's identity cache with ITS plan (`SessionCacheSync`), and
+  // the chip is painted from that cache before this answer lands. When the two
+  // disagreed — a comped account is Agencia in the console and was Free here —
+  // every public page painted the chip with its plan badge, then shrank it by
+  // the badge's width a moment later, and Chrome sometimes left the wider
+  // chip's old paint behind the new one: two overlapping chips (founder,
+  // 2026-10-11). Comped is decided by the session's own email, so no extra
+  // column is read.
+  const plan = resolvePlan(
+    resolveEffectivePlanId(isTrialElapsed(profile) ? "free" : profile?.current_plan, user.email)
+  );
 
   return NextResponse.json({
     user: {

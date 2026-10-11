@@ -126,6 +126,20 @@ All three paid plans (Starter/Pro/Agencia) have `caps.engines: 3` (founder
 decision 2026-07-18); Free stays at 1 (Gemini only, via the
 `LLM_SCAN_PROVIDERS` order slice).
 
+### Perplexity (operator tools only since 2026-10-10, PERPLEXITY-ENGINE-1 Fase 1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `PERPLEXITY_API_KEY` | Only to tick Perplexity in `/admin/comparar-modelos` or `/admin/estudio` | Vercel, Production | `pplx-...` |
+| `PERPLEXITY_MODEL` | No — defaults to `perplexity/sonar` | Vercel, optional | An Agent API model id |
+
+`lib/llm/perplexity.ts` calls the Agent API (`/v1/agent`) with the
+`web_search` tool, because Perplexity announced its Sonar Chat Completions
+endpoint supported only until 2026-09-27. **It is not a scan engine:**
+`LLMScanProvider` does not accept `perplexity`, so listing it in
+`LLM_SCAN_PROVIDERS` is ignored. Its search results are final URLs (no
+redirect resolution), and its answers are extracted by Gemini (log §274).
+
 ### Scan engines
 
 | Variable | Required | Where | Expected shape |

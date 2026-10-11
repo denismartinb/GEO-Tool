@@ -20,7 +20,20 @@ import { PROMPT_CATEGORIES } from "@/lib/projects/prompt-categories";
  * (`lib/projects/prompt-suggestions-llm.ts`), so raising this to 15 doesn't
  * change what the model can produce, only what the product asks it for.
  */
-export const MAX_INITIAL_PROMPTS = 15;
+export const MAX_INITIAL_PROMPTS = 17;
+
+/**
+ * SCAN-CADENCE-1 (log §273): 17, not 15, because 17 prompts × 3 engines = 51
+ * answers clears the 50-answer sampling floor (`lib/scan/sampling.ts`) with
+ * one pass per prompt, where 15 × 3 = 45 fell short and doubled every prompt
+ * (90 answers) — more prompts, about half the cost per scan.
+ *
+ * The wizard's "recomendamos al menos N" keeps saying 15 on purpose: the
+ * founder froze every product text on 2026-10-10 until he has seen the new
+ * behaviour run, so the copy number is decoupled from the suggestion count.
+ * 15 stays true (17 ≥ 15).
+ */
+export const RECOMMENDED_MIN_PROMPTS_COPY = 15;
 
 /**
  * How many competitors the system asks Gemini to SUGGEST

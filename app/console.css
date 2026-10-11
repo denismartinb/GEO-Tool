@@ -966,82 +966,7 @@
   place-items: center;
 }
 
-/* "Si arreglas los N problemas técnicos" (TechnicalPotentialBanner).
-   Founder feedback 2026-08-17: la caja plana original no se leía como el
-   titular de la pestaña Problemas. `color-mix` reutiliza --pos-ink en vez de
-   inventar un hex nuevo, mismo patrón que .art-rec-pri. */
-.tech-potential {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-  padding: 18px 20px;
-  border-radius: var(--r-xl);
-  background: linear-gradient(135deg, var(--pos-soft), var(--surface) 130%);
-  border: 1px solid color-mix(in srgb, var(--pos-ink) 16%, transparent);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px color-mix(in srgb, var(--pos-ink) 12%, transparent);
-}
-.tech-potential-badge {
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  border-radius: 11px;
-  background: var(--surface);
-  color: var(--pos-ink);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 10px color-mix(in srgb, var(--pos-ink) 18%, transparent);
-}
-.tech-potential-body { flex: 1; min-width: 0; }
-.tech-potential-label {
-  font-size: 11px;
-  font-weight: 750;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-  color: var(--pos-ink);
-}
-.tech-potential-scores { display: flex; align-items: center; gap: 10px; margin-top: 7px; flex-wrap: wrap; }
-.tech-potential-score {
-  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
-  font-size: 30px;
-  font-weight: 800;
-  letter-spacing: -.02em;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-}
-.tech-potential-score-from { color: var(--ink-3); }
-.tech-potential-score-to { color: var(--pos-ink); }
-.tech-potential-arrow {
-  flex-shrink: 0;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--surface);
-  color: var(--pos-ink);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
-}
-.tech-potential-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--pos-ink);
-  background: var(--surface);
-  border-radius: 999px;
-  padding: 4px 10px;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
-  white-space: nowrap;
-}
-.tech-potential-caption { font-size: 11.5px; font-weight: 650; color: var(--pos-ink); margin-top: 9px; }
-.tech-potential-note { font-size: 10.5px; line-height: 1.5; color: var(--ink-3); margin: 4px 0 0; }
 
-@media (max-width: 420px) {
-  .tech-potential { padding: 16px; }
-  .tech-potential-score { font-size: 26px; }
-}
 
 /* ============================================================
    /debug — pantalla interna (DOMAINS-REDESIGN-1)
@@ -1234,4 +1159,285 @@
     flex-direction: column;
     justify-content: center;
   }
+}
+
+/* ============================================================
+   Auditoría GEO y SEO — SEARCH-SEO-1 Fase 1b (log §275), design in
+   docs/design-reference/search-seo-1/auditoria-geo-seo.html. One screen,
+   two blocks. Lives inside .wa2-scope, so it reads the brand tokens that
+   wrapper re-points. Mobile first; the two-column grid opens at 1200px,
+   where .wa2-page is wide enough. Media queries, not container queries:
+   `container-type` inside .dash-content would capture the fixed overlays
+   (.claude/rules/styles.md).
+   ============================================================ */
+.sa-screen { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
+.sa-screen .card { padding: 15px; border-radius: 14px; min-width: 0; }
+
+/* Block switch: two links that look like cards */
+.sa-blocks { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; }
+.sa-blk {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.sa-blk[aria-current="page"] { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent); }
+.sa-blk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sa-blk-eyb { display: flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.sa-blk-eyb i { width: 8px; height: 8px; border-radius: 50%; }
+.sa-blk-geo .sa-blk-eyb { color: #6d46c8; }
+.sa-blk-geo .sa-blk-eyb i { background: #6d46c8; }
+.sa-blk-seo .sa-blk-eyb { color: #2453c7; }
+.sa-blk-seo .sa-blk-eyb i { background: #2453c7; }
+.sa-blk-q { font-size: 12.5px; color: var(--ink-3); line-height: 1.35; }
+.sa-blk-n { display: flex; align-items: baseline; gap: 4px; margin-top: 2px; }
+.sa-blk-n b { font: 800 30px var(--font-display), "Bricolage Grotesque", sans-serif; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.sa-blk-n span { font-size: 12px; color: var(--ink-3); }
+.sa-blk-meta { font-size: 11.5px; color: var(--ink-3); }
+.sa-blk-crit { color: var(--wa-crit); font-weight: 700; }
+.sa-total { font-size: 12px; color: var(--ink-3); margin: 0; padding: 0 2px; }
+.sa-total b { color: var(--ink-2); }
+.sa-total-delta { display: inline-flex; gap: 4px; align-items: center; margin-left: 6px; font-weight: 600; }
+
+/* "Si arreglas los N problemas que puntúan" (BlockPotentialBanner). Restored
+   from the pre-1b Problemas tab (founder feedback 2026-08-17). `color-mix`
+   reuses --pos-ink instead of inventing a hex, same pattern as .art-rec-pri. */
+.tech-potential {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(135deg, var(--pos-soft), var(--surface) 130%);
+  border: 1px solid color-mix(in srgb, var(--pos-ink) 16%, transparent);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 10px 24px color-mix(in srgb, var(--pos-ink) 12%, transparent);
+}
+.tech-potential-badge {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 4px 10px color-mix(in srgb, var(--pos-ink) 18%, transparent);
+}
+.tech-potential-body { flex: 1; min-width: 0; }
+.tech-potential-label { font-size: 11px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: var(--pos-ink); }
+.tech-potential-scores { display: flex; align-items: center; gap: 10px; margin-top: 7px; flex-wrap: wrap; }
+.tech-potential-score {
+  font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.tech-potential-score-from { color: var(--ink-3); }
+.tech-potential-score-to { color: var(--pos-ink); }
+.tech-potential-arrow {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--pos-ink);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .08);
+}
+.tech-potential-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--pos-ink);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, .06);
+  white-space: nowrap;
+}
+.tech-potential-caption { font-size: 11.5px; font-weight: 650; color: var(--pos-ink); margin-top: 9px; }
+.tech-potential-note { font-size: 11.5px; line-height: 1.5; color: var(--ink-2); margin: 4px 0 0; }
+
+.sa-grid-2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.sa-main, .sa-side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.sa-main > [role="tabpanel"]:not([hidden]) { display: flex; flex-direction: column; gap: 12px; }
+.sa-ch { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.sa-ch h3 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.sa-src { font-size: 11.5px; color: var(--ink-4); }
+.sa-empty, .sa-note { font-size: 12.5px; color: var(--ink-3); margin: 0 0 10px; }
+.sa-cat-v { font: 600 13px var(--mono); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+.sa-track { height: 10px; border-radius: 999px; background: var(--surface-sunk); overflow: hidden; }
+.sa-fill { height: 100%; border-radius: inherit; }
+
+/* GOOGLE / IA tags */
+.sa-who { display: inline-flex; gap: 5px; flex-shrink: 0; }
+.sa-tag { display: inline-flex; align-items: center; font: 600 10px var(--mono); letter-spacing: .04em; padding: 2px 6px; border-radius: 5px; }
+.sa-tag-g { background: #e9f0ff; color: #2453c7; }
+.sa-tag-ia { background: #eee8fb; color: #6d46c8; }
+
+/* Problemas: severity counts and rows */
+.sa-counts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-bottom: 6px; }
+.sa-count { display: flex; flex-direction: column; }
+.sa-count span { font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.sa-count b { font: 800 24px var(--font-display), "Bricolage Grotesque", sans-serif; font-variant-numeric: tabular-nums; }
+.sa-count-critical b { color: var(--wa-crit); }
+.sa-count-warning b { color: var(--warn-ink); }
+.sa-count-improvement b { color: var(--ink-2); }
+.sa-issues { display: flex; flex-direction: column; }
+.sa-iss.wa-details { border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; }
+.sa-iss.wa-details > summary { gap: 10px; padding: 12px 4px 12px 12px; position: relative; }
+.sa-iss.wa-details > summary::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--ink-4);
+}
+.sa-iss[data-sev="critical"] > summary::before { background: var(--wa-crit); }
+.sa-iss[data-sev="warning"] > summary::before { background: var(--warn); }
+.sa-ok { display: flex; align-items: center; gap: 10px; padding: 12px 4px; border-top: 1px solid var(--line-soft); }
+.sa-okic {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--pos-soft);
+  color: var(--pos-ink);
+}
+.sa-iss-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.sa-iss-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sa-iss-top b { color: var(--ink); font-size: 14px; font-weight: 700; }
+.sa-iss-sub { font-size: 12px; color: var(--ink-3); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.sa-sevpill { font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 2px 9px; }
+.sa-sevpill-critical { background: var(--wa-crit-soft); color: var(--wa-crit); }
+.sa-sevpill-warning { background: var(--warn-soft); color: var(--warn-ink); }
+.sa-sevpill-improvement { background: var(--surface-sunk); color: var(--ink-2); }
+.sa-pts {
+  flex-shrink: 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2453c7;
+  background: #e9f0ff;
+  border-radius: 999px;
+  padding: 4px 10px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sa-pts-0 { color: var(--ink-2); background: var(--surface-sunk); font-weight: 600; font-size: 11.5px; }
+.sa-iss .wa-chev { margin-left: 0; }
+.sa-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.sa-iss-in.wa-details-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 4px 4px 16px 16px; border-top: 0; }
+.sa-iss-in h4 { font: 600 10.5px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-4); margin: 0 0 6px; }
+.sa-iss-in h4 + p + h4 { margin-top: 12px; }
+.sa-iss-in p { font-size: 13px; color: var(--ink-2); margin: 0; line-height: 1.5; }
+.sa-urls { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.sa-urls li {
+  font: 500 12px var(--mono);
+  color: var(--ink-2);
+  background: var(--surface-sunk);
+  padding: 5px 8px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Pages reviewed */
+.sa-pg-list { display: flex; flex-direction: column; }
+.sa-pg.wa-details { border: 0; border-top: 1px solid var(--line-soft); border-radius: 0; background: none; }
+.sa-pg.wa-details > summary { display: grid; grid-template-columns: minmax(0, 1fr) 70px 30px 16px; gap: 10px; padding: 9px 2px; }
+.sa-pg-skipped { padding: 9px 2px; border-top: 1px solid var(--line-soft); }
+.sa-pg-n { display: flex; flex-direction: column; min-width: 0; }
+.sa-pg-n code { font: 500 12.5px var(--mono); color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sa-pg-skipped .sa-pg-n code { color: var(--ink-3); }
+.sa-pg-n span { font-size: 11px; color: var(--ink-4); }
+.sa-pg-track { height: 6px; }
+.sa-pg .sa-cat-v { font-size: 12px; }
+.sa-pg-na { grid-column: span 2; font-size: 11px; color: var(--ink-4); text-align: right; }
+
+/* Scope note */
+.sa-scope { background: linear-gradient(120deg, #f2f7ff, #effbfc); border: 1px solid #dbe6fb; border-radius: 14px; padding: 16px 18px; }
+.sa-scope p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
+.sa-scope b { color: var(--ink); }
+
+/* Cobertura de tu contenido (GEO block) */
+.cov-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
+.cov-head h3 {
+  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.cov-head-r { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cov-date { font-size: 11.5px; color: var(--ink-4); }
+.cov-desc { font-size: 12.5px; color: var(--ink-3); margin: 4px 0 0; }
+.cov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
+.cov-empty { font-size: 12.5px; color: var(--ink-3); margin: 10px 0 0; }
+.cov-more.wa-details { margin-top: 10px; border: 0; background: none; }
+.cov-more.wa-details > summary { padding: 8px 0 0; font-size: 12.5px; font-weight: 650; color: var(--ink-2); gap: 6px; justify-content: flex-start; }
+.cov-more .wa-details-body { border-top: 0; padding: 4px 0 0; }
+.cov-blk { margin-top: 12px; }
+.cov-blk-t { font-size: 13px; font-weight: 750; color: var(--ink); margin-bottom: 10px; }
+.cov-legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-3); font-weight: 600; margin: -4px 0 10px; }
+.cov-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+.cov-note { font-size: 12px; color: var(--ink-3); margin: -4px 0 10px; }
+.cov-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.cov-list li { padding: 8px 10px; background: var(--surface-sunk); border-radius: 8px; font-size: 12.5px; color: var(--ink-2); }
+.cov-history { display: flex; flex-direction: column; gap: 6px; }
+.cov-hrow { padding: 8px 10px; border-radius: 8px; background: var(--surface-sunk); }
+.cov-hdate { font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 6px; }
+.cov-hgrid { display: grid; grid-template-columns: 90px minmax(0, 1fr) 92px; gap: 8px; align-items: center; }
+.cov-hgrid > span:not(.cov-hv) { font-size: 10.5px; color: var(--ink-2); }
+.cov-hv { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
+
+@media (max-width: 420px) {
+  .tech-potential { padding: 16px; }
+  .tech-potential-score { font-size: 26px; }
+  .sa-blk-n b { font-size: 26px; }
+}
+@media (max-width: 899px) {
+  .sa-iss-sub .sa-who { display: none; }
+}
+@media (min-width: 900px) {
+  .sa-screen .card { padding: 18px 20px; }
+  .sa-blk { padding: 16px 18px; }
+  .sa-blk-n b { font-size: 38px; }
+  .sa-iss-in.wa-details-body { grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); padding-left: 16px; }
+  .sa-pg.wa-details > summary { grid-template-columns: minmax(0, 1fr) 120px 34px 16px; }
+}
+@media (min-width: 1200px) {
+  .sa-grid-2 { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); align-items: start; }
 }

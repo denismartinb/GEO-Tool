@@ -10,7 +10,7 @@ import {
   TIMEOUT_ERROR_SUMMARIES,
   WATCHDOG_ALERT_LOG_MESSAGE
 } from "@/lib/scan/constants";
-import { RECURRING_CRON_UTC_HOUR, resolveEligibilityCutoffIso } from "@/lib/scan/cron";
+import { RECURRING_CRON_UTC_HOUR, resolveCadencePlanId, resolveEligibilityCutoffIso } from "@/lib/scan/cron";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { analyzeRunHealth, checkAndSendScanHealthAlert, type ScanHealthFinding } from "@/lib/scan/scan-health-alert";
 import type { createServiceClient } from "@/lib/supabase/service";
@@ -440,7 +440,10 @@ async function collectUnalertedStaleProjects(
       {
         email: (row.email as string | null) ?? null,
         // ALERTS-SCOPE-1: effective plan — an expired trial is Free here too.
-        planId: resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id
+        planId: resolvePlan(resolveSystemPlanId(row as Parameters<typeof resolveSystemPlanId>[0]) as string | undefined).id,
+        // SCAN-CADENCE-1: the sweep's own cadence key, so a Pro trial (daily)
+        // and paid Pro (every 2 days) are judged by the cycle they are on.
+        cadencePlanId: resolveCadencePlanId(row as Parameters<typeof resolveSystemPlanId>[0])
       }
     ])
   );
@@ -469,7 +472,7 @@ async function collectUnalertedStaleProjects(
 
     const lastCompleted = runs.find((run) => run.status === "completed");
     const { stale, cutoffIso } = evaluateRecurringFreshness({
-      planId,
+      planId: owner?.cadencePlanId ?? planId,
       lastCompletedAt: lastCompleted?.created_at ?? null,
       now
     });

@@ -4,10 +4,12 @@ import {
   deriveBrandFromDomain,
   isValidDomain,
   languageForCountry,
+  MAX_INITIAL_PROMPTS,
   MAX_USER_COMPETITORS,
   parseInitialCompetitors,
   parseInitialPrompts,
   parseProjectForm,
+  RECOMMENDED_MIN_PROMPTS_COPY,
   sanitizePromptLineText
 } from "./project-form";
 
@@ -100,18 +102,18 @@ describe("parseProjectForm — onboarding input contract", () => {
   });
 
   it("respects a caller-supplied maxPrompts (plan cap) instead of the default MAX_INITIAL_PROMPTS", () => {
-    const promptsInput = Array.from({ length: 17 }, (_, i) => `prompt number ${i}`).join("\n");
+    const promptsInput = Array.from({ length: 20 }, (_, i) => `prompt number ${i}`).join("\n");
 
     const defaultResult = parseProjectForm(form({ domain: "acme.com", country: "ES", initial_prompts: promptsInput }));
     expect(defaultResult.ok).toBe(true);
-    if (defaultResult.ok) expect(defaultResult.value.initialPrompts).toHaveLength(15);
+    if (defaultResult.ok) expect(defaultResult.value.initialPrompts).toHaveLength(17);
 
     const starterResult = parseProjectForm(
       form({ domain: "acme.com", country: "ES", initial_prompts: promptsInput }),
       25
     );
     expect(starterResult.ok).toBe(true);
-    if (starterResult.ok) expect(starterResult.value.initialPrompts).toHaveLength(17);
+    if (starterResult.ok) expect(starterResult.value.initialPrompts).toHaveLength(20);
   });
 
   it("rejects when domain is missing", () => {
@@ -156,16 +158,22 @@ describe("project-form pure helpers", () => {
   });
 
   it("parseInitialPrompts caps at MAX_INITIAL_PROMPTS by default, but respects a higher maxPrompts (plan cap)", () => {
-    const promptsInput = Array.from({ length: 17 }, (_, i) => `prompt number ${i}`).join("\n");
+    const promptsInput = Array.from({ length: 20 }, (_, i) => `prompt number ${i}`).join("\n");
 
     const defaultCapped = parseInitialPrompts(promptsInput);
-    expect(defaultCapped).toHaveLength(15);
+    expect(defaultCapped).toHaveLength(17);
 
-    const planCapped = parseInitialPrompts(promptsInput, undefined, 17);
-    expect(planCapped).toHaveLength(17);
+    const planCapped = parseInitialPrompts(promptsInput, undefined, 20);
+    expect(planCapped).toHaveLength(20);
 
     const lowerCapped = parseInitialPrompts(promptsInput, undefined, 5);
     expect(lowerCapped).toHaveLength(5);
+  });
+
+  it("suggests enough prompts to clear the 50-answer sampling floor in one pass (SCAN-CADENCE-1)", () => {
+    // 17 × 3 engines = 51 ≥ MIN_RESPONSES_PER_RUN, so no prompt is doubled.
+    expect(MAX_INITIAL_PROMPTS * 3).toBeGreaterThanOrEqual(50);
+    expect(RECOMMENDED_MIN_PROMPTS_COPY).toBe(15);
   });
 
   it("parseInitialPrompts assigns categories aligned by line index", () => {

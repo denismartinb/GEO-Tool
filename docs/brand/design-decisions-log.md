@@ -23451,6 +23451,25 @@ pone a mano. Con la segunda, la extracción de los tres motores va a Haiku 5.5,
 que falló 1 de 16 extracciones en esta pasada. Hay que vigilar los errores de
 extracción en los primeros escaneos.
 
+**Gemini con una sola búsqueda (2026-10-10).** Gemini decide cuántas
+búsquedas en Google lanza por respuesta (normalmente dos o más) y cada una se
+paga aparte, así que son el 90 % de su coste. Ninguna opción de la API lo
+limita, así que la única palanca es pedírselo en la instrucción. El catálogo
+gana un candidato de Gemini, «gemini-3.6-flash · una búsqueda»: el mismo
+modelo con una línea más en la instrucción (`singleSearch` en
+`generateGeminiVisibilityAnswer`, que el escaneo nunca pasa). La pasada mide
+si obedece (búsquedas por respuesta) y qué cuesta en fuentes y en nota. Si
+sale bien, llevarlo al escaneo es un cambio aparte, con su ADR (ADR 0042).
+
+**Resultado de la pasada de una búsqueda (2026-10-10, 8 preguntas × 2
+repeticiones, solo Gemini).** Sale «Distinto», no se adopta. Hoy Gemini ya
+hace de media 1,4–1,6 búsquedas por respuesta, no dos o más como se suponía.
+Con la instrucción baja a 1,0 de media, pero no la obedece del todo: 3 de 16
+respuestas hicieron dos búsquedas. El coste por respuesta baja un 30 %
+(2,9 → 2,0 céntimos), pero la nota cae de 57 a 39 cuando el ruido entre dos
+pasadas de hoy es de 1,4 puntos. También pierde una mención y alguna fuente.
+El ahorro no compensa mover la nota así.
+
 ## 270. FREE-REPORT-ASK-REMOVE-1: fuera la barra de búsqueda decorativa de `/gratis/informe-geo` (2026-10-10)
 
 **Qué.** La portada oscura de `/gratis/informe-geo` llevaba, entre la píldora
@@ -23600,7 +23619,247 @@ pero dentro de `headers`, y esa cabecera no sobrevivió al envío de Resend.
 consultar el MX de `genscore.es`. Si no existe, las respuestas rebotarán en vez
 de perderse en noreply.
 
-## 275. DEMO-CALL-1 + AFFILIATES-1: videollamada de 20 minutos y programa de afiliados (2026-10-10)
+## 273. SCAN-CADENCE-1: Pro de pago se escanea cada 2 días y el asistente propone 17 preguntas (2026-10-10)
+
+**Qué se decidió (fundador, 2026-10-10, sobre la propuesta de este hilo).**
+
+1. **El asistente de alta propone 17 preguntas en vez de 15**
+   (`MAX_INITIAL_PROMPTS`, `lib/projects/project-form.ts`; el tope de
+   `suggestPrompts` sigue a esa constante). El suelo de muestra no cambia
+   (`MIN_RESPONSES_PER_RUN = 50`, `lib/scan/sampling.ts`). Con 15 preguntas ×
+   3 motores salían 45 respuestas, por debajo del suelo, así que cada pregunta
+   se repetía y el escaneo hacía 90 respuestas. Con 17 salen 51 y basta una
+   pasada. Son más preguntas y cuestan casi la mitad por escaneo. El tope del
+   plan sigue mandando: `Math.min(plan.caps.prompts, MAX_INITIAL_PROMPTS)`.
+2. **Cadencia del escaneo automático.** Pro de pago pasa a cada 2 días
+   (`RECURRING_INTERVAL_DAYS_BY_PLAN.pro = 2`). La prueba de 7 días sigue
+   diaria con una clave propia, `trial`, que resuelve `resolveCadencePlanId`
+   (`lib/scan/cron.ts`). Es Pro efectivo con `trial_ends_at` y sin
+   suscripción de Stripe. Starter sigue semanal y Agencia diaria. La
+   Puntuación GEO es la mediana de los 3 últimos escaneos comparables
+   (`lib/scoring/score-window.ts`): escanear a diario sobre todo vuelve a
+   medir la misma ventana. El momento «se ha movido» que vende ocurre en la
+   prueba, y por eso la prueba conserva el ritmo diario.
+3. **El vigilante y la columna «Error» de `/admin` usan la misma clave de
+   cadencia.** Así un Pro de pago sin escaneo ayer no salta como «sin datos».
+   Una prueba sin escaneo ayer sí salta. El modelo de coste de `/admin` cuenta
+   15 escaneos al mes para Pro.
+
+**Ningún texto del producto cambia, a propósito.** El fundador lo congeló:
+«de momento no tocamos nada, ningún mensaje en ninguna página… Yo te aviso
+cuando sea necesario». Así que:
+- `/precios` y el modal de planes siguen diciendo «Diario» para Pro
+  (`app/pricing/plans-data.ts`). **Eso ya no es cierto para Pro de pago.** Es
+  una deuda conocida que el fundador cerrará cuando lo decida. Hasta entonces,
+  ningún anuncio ni correo debe prometer escaneo diario en Pro.
+- El asistente sigue diciendo «recomendamos al menos 15». La cifra del texto se
+  separó de la constante (`RECOMMENDED_MIN_PROMPTS_COPY = 15`) y sigue siendo
+  cierta, porque 17 ≥ 15.
+
+**Coste estimado (no medido todavía).** Un dominio Pro típico pasa de unos
+36 $/mes a unos 11 $/mes. La mitad del ahorro viene de la frecuencia y la otra
+mitad de no duplicar preguntas. La cifra real se verá en `/admin` tras unos
+días de barridos.
+
+**Qué queda pendiente.** Alinear el copy de `/precios` (Pro «Cada 2 días» o lo
+que el fundador decida) y el «15» del asistente, cuando el fundador lo pida.
+Los proyectos que ya existen conservan sus 15 preguntas: el cambio sólo afecta
+a las altas nuevas.
+
+## 274. PERPLEXITY-ENGINE-1 Fase 1: Perplexity como motor de las herramientas del operador (2026-10-10)
+
+**Qué pasó.** El fundador pidió una línea de trabajo para incorporar
+Perplexity. Tras ver el plan
+(`/mnt/project-files/perplexity/plan-perplexity-2026-10-10.md`) decidió:
+«Fase 1 y luego en el producto para Pro y Agencia». Eso levanta, para este
+alcance, el «Perplexity runtime» de la lista de lo prohibido en `CLAUDE.md`.
+
+**Qué se decidió.**
+
+- `lib/llm/perplexity.ts` genera la respuesta con la misma instrucción neutra
+  que los otros tres motores (ADR 0007) y devuelve la misma forma.
+- **Usa la Agent API (`/v1/agent`), no Sonar `/chat/completions`.**
+  Perplexity anunció que Sonar Chat Completions solo tendría soporte hasta el
+  27-09-2026. El plan de la mañana todavía lo daba por bueno. El modelo por
+  defecto es `perplexity/sonar`, el propio de Perplexity (0,25/2,50 $ por
+  millón de tokens) y no uno de otro fabricante de los que sirve la misma API.
+  La búsqueda es `web_search` con `search_type: "web"` (2,50 $ por 1.000) y el
+  país del proyecto en `user_location` cuando es un código ISO.
+- **Fuentes:** cuentan los resultados que la respuesta cita con marcas
+  `[n]`/`[web:n]`. Si no hay ninguna marca, cuentan todos. Las marcas se
+  quitan del texto, porque el informe y la extracción citan frases literales.
+  Las URLs son finales: `buildExtractionUpdate` no las resuelve
+  (`groundingUrlsAreFinal`).
+- **No hay extractor de Perplexity.** Sus respuestas las extrae Gemini, igual
+  que hace `resolveExtractionRoute` con un proveedor sin extractor (o el
+  extractor único, cuando se encienda).
+- **Dónde aparece:** solo en `/admin/comparar-modelos` y `/admin/estudio` (y en
+  `pnpm study:sector --engines perplexity`). En las dos páginas sale
+  **desmarcado** por defecto: una comparación hecha como siempre sigue
+  midiendo lo que corre en producción, y los estudios públicos siguen
+  nombrando solo ChatGPT, Gemini y Claude.
+- **No es motor del escaneo.** `LLMScanProvider` no lo admite, así que ningún
+  cliente lo ve ni lo paga.
+
+**Coste estimado** (tarifa × tamaños, sin medir): unos 0,01 $ por respuesta
+con la extracción incluida. En un Pro de pago (17 preguntas, ~15 escaneos al
+mes) serían unos 3 $/mes. La comparación lo mide de verdad al marcarlo.
+
+**Pendiente.**
+
+- `PERPLEXITY_API_KEY` en Vercel: solo puede crearla el fundador.
+- Medir con datos reales cuánto difiere Perplexity de los otros tres, en
+  `/admin/estudio` con la casilla marcada.
+- **Fase 2 (aprobada en principio para Pro y Agencia):** antes, maqueta en
+  artefacto. Después:
+  - motor del escaneo limitado por plan (hoy `caps.engines` cuenta motores, no
+    elige cuáles);
+  - logos y filas en Visión general, Competidores, Prompts y el informe;
+  - marcar el corte de la Puntuación GEO, que se mueve en todos los proyectos
+    al añadir un motor;
+  - los textos que dicen «3 motores», que siguen congelados.
+
+## 275. SEARCH-SEO-1 Fase 1b: la auditoría en dos bloques, GEO y SEO (2026-10-11)
+
+**Qué se decidió.** Segunda mitad de la fase 1 de §271. Primero se construyó
+la vista Auditoría SEO de `docs/design-reference/search-seo-1/maqueta.html`
+tal cual: una nota «Salud técnica», cuatro áreas y una lista «Qué arreglar»
+con filtro, y el mapa de cobertura se mudaba a Páginas citadas. Al ver las
+capturas del build, el fundador echó de menos la organización anterior: las
+pestañas Problemas / Correcto / Páginas, la tarjeta «Si arreglas… 85 → 100»,
+los puntos por problema y, sobre todo, una auditoría propia de GEO, «que es
+nuestra especialidad» (2026-10-10). En una tarjeta de decisión eligió
+**partir la pantalla en dos bloques**, y aprobó la maqueta
+(`auditoria-geo-seo.html`, móvil y escritorio) el 2026-10-11. Esa primera
+versión no llegó a producción; esta entrada describe lo que sí se entrega.
+
+**Una pantalla, dos bloques.** La ruta sigue siendo `/web-audit` (§271) y
+`?bloque=geo|seo` elige el bloque; sin parámetro, o con otro valor, abre GEO.
+
+- **Auditoría GEO** («¿Te puede citar la IA?»): datos estructurados,
+  respuesta al principio, listas o tablas, extensión, frescura, bots de IA,
+  fragmentos bloqueados y llms.txt, más la cobertura de contenido.
+- **Auditoría SEO** («¿Te encuentra Google?»): título, meta description,
+  `<h1>`, `<h2>`, Open Graph, canonical, indexación, hreflang y sitemap.
+- Cada check vive en un solo bloque (`AUDIT_BLOCKS`,
+  `lib/web-audit/audit-blocks.ts`, fijado por test).
+- **Menú:** «Auditoría GEO» al final de Posicionamiento en IA y «Auditoría
+  SEO» en Posicionamiento en buscadores. Las dos van a la misma ruta, y el
+  bloque de la URL decide cuál se ilumina. El fundador dejó abierto unirlas
+  en una sola entrada, «Auditoría técnica», según cómo quede el diseño final.
+  De momento son dos.
+- La tarjeta de Auditoría SEO de Visión general sigue contando los problemas
+  de los dos bloques, como antes. Cada problema enlaza ahora a su bloque.
+
+**Notas por bloque, sin métrica nueva.** La nota de un bloque es la parte de
+sus puntos que ganan las páginas, con los pesos que ya usa `page-checks.ts`:
+55 puntos de GEO y 45 de SEO. Juntas dan la Salud técnica de siempre, que es
+el componente técnico de la Puntuación GEO, así que ninguna cifra existente
+cambia. La pantalla lo dice en una línea bajo los bloques.
+
+- Es Σ ganado / Σ posible sobre las páginas analizadas. Una página sin fecha
+  deja fuera de su máximo los 15 puntos de frescura, igual que `pageScore`.
+- Los puntos de cada problema son exactos: lo que sube la nota del bloque si
+  se arregla sólo ese check. Fechar una página sin fecha también mete esos 15
+  puntos en el máximo, por eso la ganancia es una diferencia de dos cocientes
+  y no un peso.
+- Los checks sin peso (bots, llms.txt, fragmentos y sitemap) siguen sin
+  puntuar y la fila dice «sin puntos» (§131).
+- La gravedad de cada fila es la de `buildTechnicalIssuesReport`, la misma
+  que usa la tarjeta de Visión general.
+- `pageCheckStates` (`issues.ts`) expone por página qué check falla y cuánto
+  vale, para no duplicar predicados ni pesos. `buildKeyedPageCheckGuidance`
+  (`page-checks.ts`) etiqueta cada línea de guía con su check, para que cada
+  bloque muestre sólo la suya.
+
+**Cada bloque, de arriba abajo.**
+
+- La tarjeta **«Si arreglas los N problemas que puntúan: X → 100»**. Vuelve
+  de la pestaña Problemas anterior, ahora en puntos del bloque. Sólo sale si
+  queda algo que ganar.
+- Las **pestañas** Problemas · Correcto · Páginas (`audit-tabs.tsx`, que
+  vuelve).
+  - *Problemas*: recuento por gravedad, y filas con gravedad, alcance,
+    «Solución disponible», etiquetas Google/IA y puntos. Al abrir una fila
+    salen «Por qué importa», «Cómo arreglarlo», el llms.txt o los pasos del
+    sitemap, y las páginas o bots afectados.
+  - *Correcto*: los checks que cumplen todas las páginas medidas. En GEO
+    también los temas que la IA ya cita.
+  - *Páginas*: la nota de cada página en ese bloque, con sólo sus checks,
+    su guía y sus arreglos copiables.
+- En **GEO**, encima de las pestañas, la tarjeta **«Cobertura de tu
+  contenido»** (Contenido / Implementado), con la evolución y el historial
+  plegados. En la columna lateral van la nota de alcance y el acceso de bots.
+
+**La cobertura vuelve a esta pantalla.** Páginas citadas queda como en
+`main`. `loadCoverageSectionData` (`lib/web-audit/coverage-section-data.ts`)
+se queda como cargador propio, llamado junto a `loadWebAuditPageData`.
+`WebAuditProvider` envuelve toda la pantalla, como antes de la fase, y
+`WebAuditDriveNotice` va dentro de la tarjeta de cobertura.
+
+**Lo que no sale todavía, a propósito.** Core Web Vitals, velocidad y móvil
+son la fase 2, porque hoy no hay medición detrás. Search Console es la
+fase 3.
+
+**Regla de premisa (se movió un camino de recuperación).**
+`WebAuditDriveNotice` es el único sitio que pinta el fallo de una campaña de
+cobertura reanudada desde el navegador (ADR 0038).
+
+- *Antes:* se veía arriba de la pantalla en cualquier vista.
+- *Ahora:* sólo se ve dentro de la tarjeta de cobertura del bloque GEO.
+  `WebAuditProvider` sigue montado en toda la pantalla, así que la campaña se
+  reanuda también desde el bloque SEO, pero su fallo sólo se lee en GEO.
+- *Premisa:* el motor es el servidor (encolado tras escaneo y cron cada 10
+  minutos, §261). La pestaña sólo acelera.
+- *Qué la verifica hoy:* `vercel-crons.test.ts`.
+- *Si falla:* quien sólo mire el bloque SEO no ve el error de una campaña de
+  cobertura. La cobertura es de GEO, así que se acepta.
+
+**Pendiente o conocido.**
+
+- Fase 2: Salud SEO, checks nuevos, PageSpeed Insights y la tarjeta
+  «Buscadores». Fase 3: Search Console. Fase 4: artículo y portada.
+- La tarjeta de Visión general sigue enseñando los puntos en escala de Salud
+  técnica («+9 pts»), y la pantalla en escala de bloque («+16 pt»). Son el
+  mismo arreglo medido sobre dos totales distintos. Si confunde, es una
+  decisión aparte.
+- El piloto no tiene historial de cobertura, así que la evolución y el
+  historial sólo los cubren sus tests de render (§87).
+
+## 276. HEADER-CHIP-PLAN-PARITY-1: dos chips de cuenta solapados en la cabecera pública (2026-10-11)
+
+**Qué vio el fundador.** Con sesión iniciada, en la portada, a veces salían
+dos chips de cuenta: uno recortado («CH c») detrás del chip completo. El de
+detrás estaba desplazado 60 px a la izquierda y cortado en plano por arriba.
+
+**Causa.** Dos sitios decían el plan de la cuenta de forma distinta:
+
+- La consola (`getPlanForUser`) aplica la caducidad de la prueba y después
+  las cuentas comped (BILLING-COMPED-1, §222). Una cuenta comped es Agencia.
+  `SessionCacheSync` guarda ese plan en la caché de identidad de la cabecera
+  (§226).
+- `/api/me` aplicaba sólo la caducidad. Para la misma cuenta decía Free.
+
+En cada página pública el chip se pintaba desde la caché con la insignia
+«Agencia» (260 px) y, al llegar `/api/me`, se quedaba en 200 px sin insignia.
+Reproducido en local: el chip pasa de `x=1157, ancho 260` a `x=1217, ancho
+200`, los mismos 60 px de la captura. En el DOM hay un solo chip. Lo que se
+ve detrás es pintura vieja que Chrome no invalidó al encoger el chip; en el
+navegador sin cabeza no se reproduce ese resto de pintura, pero sí el salto
+que lo provoca.
+
+**Arreglo.** `/api/me` resuelve el plan igual que la consola:
+`resolveEffectivePlanId(caducidad aplicada, email de la sesión)`. Sin columna
+nueva en el select ni escrituras. Con caché y respuesta de acuerdo, el chip no
+cambia de tamaño después de pintarse. Efecto colateral correcto: una cuenta
+comped deja de ver la tira de promoción, igual que una de pago.
+
+**Pendiente o conocido.** Si el plan cambia de verdad entre visitas (alguien
+contrata), la primera página pública aún pinta el plan viejo un momento y el
+chip cambia de ancho una vez. No se ha añadido una defensa de CSS contra el
+resto de pintura porque no se puede verificar sin el navegador del fundador.
+
+## 277. DEMO-CALL-1 + AFFILIATES-1: videollamada de 20 minutos y programa de afiliados (2026-10-10)
 
 **Qué se decidió.** El fundador comparó GenScore con Peec AI y GEO Metrics y
 aprobó, sobre la maqueta `docs/design-reference/demo-affiliates-1/

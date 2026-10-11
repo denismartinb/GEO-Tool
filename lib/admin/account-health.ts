@@ -59,6 +59,12 @@ function shortDate(iso: string): string {
 export function deriveAccountHealth(input: {
   /** Effective plan (`resolveSystemPlanId`), never the raw column. */
   planId: string;
+  /**
+   * SCAN-CADENCE-1 (log §273): the sweep's cadence key (`resolveCadencePlanId`)
+   * — differs from `planId` only for an active Pro trial, which is daily while
+   * paid Pro is every 2 days. Defaults to `planId`.
+   */
+  cadencePlanId?: string;
   projects: readonly HealthProject[];
   now: number;
 }): AccountHealth {
@@ -91,7 +97,7 @@ export function deriveAccountHealth(input: {
 
     if (project.recurringEnabled && hasScanningPlan) {
       const lastCompleted = project.runs.find((run) => run.status === "completed")?.created_at ?? null;
-      const { stale } = evaluateRecurringFreshness({ planId: input.planId, lastCompletedAt: lastCompleted, now: input.now });
+      const { stale } = evaluateRecurringFreshness({ planId: input.cadencePlanId ?? input.planId, lastCompletedAt: lastCompleted, now: input.now });
       if (stale) {
         reasons.push(
           lastCompleted

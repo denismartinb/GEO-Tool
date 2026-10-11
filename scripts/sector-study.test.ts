@@ -234,7 +234,9 @@ describe("parseArgs", () => {
       engines: ["gemini", "openai", "claude"]
     });
     expect(parseArgs(["--engines", "gemini,openai"]).engines).toEqual(["gemini", "openai"]);
-    expect(() => parseArgs(["--engines", "perplexity"])).toThrow();
+    expect(parseArgs([]).engines).not.toContain("perplexity");
+    expect(parseArgs(["--engines", "perplexity"]).engines).toEqual(["perplexity"]);
+    expect(() => parseArgs(["--engines", "grok"])).toThrow();
     expect(() => parseArgs(["--samples", "9"])).toThrow();
   });
 });
