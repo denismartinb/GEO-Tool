@@ -1,8 +1,8 @@
 import type { DailyPoint, IndexSummary, SearchConsoleReport } from "@/lib/search-console/report";
-import { fmtDeltaPct, fmtInt, fmtPosition } from "./format";
+import { fmtDeltaPct, fmtInt } from "./format";
 
 /**
- * The four KPI tiles of «Posición en Google» (log §284, design in
+ * The three KPI tiles of «Posición en Google» (log §284, design in
  * docs/design-reference/search-seo-1/maqueta.html, screen "gsc"). Deltas are
  * against the 28 days before; a delta Google cannot support (nothing to
  * compare with) is not shown.
@@ -54,7 +54,6 @@ export function GscKpis({
   index: IndexSummary | null;
   uninspected: number;
 }) {
-  const posDelta = report.position.delta;
   const notIndexed = index ? index.total - index.indexed : 0;
   return (
     <div className="gsc-kpis">
@@ -75,20 +74,6 @@ export function GscKpis({
           tone={pctTone(report.impressions.deltaPct)}
         />
         <Spark values={daily.map((d) => d.impressions)} color="#09c5d6" />
-      </div>
-      <div className="card gsc-kpi">
-        <span className="gsc-kpi-k">Puesto medio</span>
-        <span className="gsc-kpi-v">{report.position.value === null ? "—" : fmtPosition(report.position.value)}</span>
-        <DeltaLine
-          text={
-            posDelta === null
-              ? null
-              : posDelta === 0
-                ? "="
-                : `${posDelta > 0 ? "▲" : "▼"} ${fmtPosition(Math.abs(posDelta))}`
-          }
-          tone={posDelta === null || posDelta === 0 ? "flat" : posDelta > 0 ? "up" : "down"}
-        />
       </div>
       <div className="card gsc-kpi">
         <span className="gsc-kpi-k">Páginas indexadas</span>
