@@ -3,6 +3,7 @@
 import { Suspense, useEffect, type ReactNode } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { PostHog } from "posthog-js";
+import { applyInternalVisitorParam, isInternalVisitor } from "@/lib/analytics/internal-visitor";
 
 /**
  * PLATFORM-COMMERCIAL-1: PostHog EU, cookieless — `persistence: "memory"`
@@ -32,7 +33,11 @@ function loadPostHog(): Promise<PostHog | null> {
   if (posthogPromise) return posthogPromise;
 
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY;
-  if (!key) {
+  // ADMIN-PANEL-1: a team browser sends nothing, so /admin/panel counts only
+  // real visitors (`lib/analytics/internal-visitor.ts`). `?interno=` is read
+  // first so the very visit that sets the flag is not counted either.
+  applyInternalVisitorParam(window.location.search);
+  if (!key || isInternalVisitor()) {
     // Unset (local dev, and every environment before the founder created the
     // account) — resolve once to null so callers can stay uniform and the
     // dynamic import is never even requested.
@@ -77,7 +82,9 @@ function PostHogPageview() {
     if (search) url += `?${search}`;
 
     void loadPostHog().then((posthog) => {
-      if (!posthog || cancelled) return;
+      // Re-checked per page: the flag can be set after PostHog already loaded
+      // in this tab (land on the home page, then sign in to the console).
+      if (!posthog || cancelled || isInternalVisitor()) return;
       posthog.capture("$pageview", { $current_url: url });
     });
 

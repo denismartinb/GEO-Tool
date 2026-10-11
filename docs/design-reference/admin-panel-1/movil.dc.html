@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel de negocio · móvil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f4f6fb}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+.pg{font-family:Figtree,system-ui,sans-serif;color:#0f172a}
+.disp{font-family:"Bricolage Grotesque",Figtree,sans-serif}
+.card{background:#fff;border:1px solid #e3e8f2;border-radius:16px;padding:16px;box-sizing:border-box;min-width:0}
+.ch{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.ch h2{margin:0;font-size:16px;font-weight:700}
+.src{font-size:10.5px;font-weight:600;color:#475569;background:#eef2f8;border-radius:999px;padding:3px 8px;white-space:nowrap}
+.lbl{font-size:12px;color:#475569;font-weight:600}
+.big{font-size:24px;font-weight:700;letter-spacing:-0.02em;line-height:1.15}
+.up{color:#0f766e;font-weight:700;font-size:12px}
+.down{color:#b45309;font-weight:700;font-size:12px}
+.mut{color:#64748b;font-size:12.5px}
+.pill{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:3px 8px}
+.seg{font:600 13px Figtree,sans-serif;border:0;background:transparent;color:#475569;border-radius:8px;padding:0 12px;height:40px;cursor:pointer;white-space:nowrap}
+.seg.on{background:#fff;color:#0f172a;box-shadow:0 1px 2px rgba(15,23,42,.12)}
+</style>
+</helmet>
+<div class="pg" style="width: 390px; height: 3000px; background: #f4f6fb; box-sizing: border-box; overflow: hidden">
+<div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #0b1324; color: #dbe4f5; font-size: 12.5px">
+<span style="font-size: 10px; font-weight: 700; letter-spacing: .1em; background: #f5b54a; color: #1b1206; padding: 3px 7px; border-radius: 5px">OPERADOR</span>
+<button aria-label="Abrir menú de administración" style="display: flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: 10px; height: 40px; padding: 0 12px; font: 600 13px Figtree, sans-serif">Panel <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
+</div>
+
+<div style="padding: 18px 16px 32px; display: flex; flex-direction: column; gap: 14px">
+<div>
+<h1 class="disp" style="margin: 0; font-size: 28px; letter-spacing: -0.02em">Panel de negocio</h1>
+<p class="mut" style="margin: 4px 0 0">Actualizado hace 4 min · sin tráfico propio</p>
+</div>
+<div style="display: flex; gap: 2px; background: #e8edf6; border-radius: 10px; padding: 2px">
+<sc-for list="{{periods}}" as="p" hint-placeholder-count="4"><button class="{{p.cls}}" style="flex: 1 1 0" onClick="{{p.pick}}">{{p.label}}</button></sc-for>
+</div>
+
+<div style="background: #0b1324; color: #fff; border-radius: 16px; padding: 18px">
+<div style="font-size: 11px; font-weight: 700; letter-spacing: .08em; color: #8fe9f2">OBJETIVO DEL SPRINT</div>
+<div class="disp" style="font-size: 19px; font-weight: 700; margin-top: 4px; line-height: 1.25">Primera suscripción de pago antes del 24 de octubre</div>
+<div style="margin-top: 12px; height: 8px; background: rgba(255,255,255,.14); border-radius: 999px; overflow: hidden"><div style="width: 6%; height: 100%; background: #09c5d6"></div></div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 14px">
+<div><div style="font-size: 11.5px; color: #b8c4da">Quedan</div><div class="disp" style="font-size: 22px; font-weight: 700">13 días</div></div>
+<div><div style="font-size: 11.5px; color: #b8c4da">MRR</div><div class="disp" style="font-size: 22px; font-weight: 700">0 €</div></div>
+<div><div style="font-size: 11.5px; color: #b8c4da">Plazas fundador</div><div class="disp" style="font-size: 22px; font-weight: 700">38</div></div>
+</div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px">
+<sc-for list="{{kpis}}" as="k" hint-placeholder-count="6">
+<div class="card" style="padding: 14px">
+<div class="lbl">{{k.label}}</div>
+<div class="big" style="margin-top: 6px">{{k.value}}</div>
+<div class="{{k.cls}}" style="margin-top: 2px">{{k.delta}}</div>
+<svg width="100%" height="28" viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true" style="margin-top: 6px; display: block"><polyline points="{{k.spark}}" fill="none" stroke="#2563eb" stroke-width="2" vector-effect="non-scaling-stroke"></polyline></svg>
+</div>
+</sc-for>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Embudo · 28 días</h2><span class="src">PostHog</span></div>
+<div style="display: flex; flex-direction: column; gap: 10px">
+<sc-for list="{{funnel}}" as="f" hint-placeholder-count="6">
+<div>
+<div style="display: flex; justify-content: space-between; font-size: 13.5px"><span style="font-weight: 600">{{f.label}}</span><span><strong>{{f.value}}</strong> <span class="{{f.rateCls}}">{{f.rate}}</span></span></div>
+<div style="height: 10px; background: #f1f4fa; border-radius: 999px; overflow: hidden; margin-top: 5px"><div style="{{f.bar}}"></div></div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top: 14px; background: #fff7e8; border: 1px solid #f6dcaa; border-radius: 12px; padding: 10px 12px; font-size: 13px; color: #5b3a06"><strong>Mayor fuga:</strong> del primer escaneo al checkout pasa el 16 %.</div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Pruebas Pro en curso</h2><span class="src">Supabase</span></div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{trials}}" as="t" hint-placeholder-count="5">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid #eef2f8">
+<div style="min-width: 0"><div style="font-weight: 600; font-size: 14px">{{t.domain}}</div><div class="mut">Quedan {{t.left}}</div></div>
+<span class="pill" style="{{t.pill}}">{{t.signal}}</span>
+</div>
+</sc-for>
+</div>
+<a href="#" style="display: inline-block; margin-top: 10px; font-size: 13.5px; font-weight: 600; padding: 10px 0">Ver las 11 en Usuarios</a>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Visitas por día</h2><span class="src">PostHog</span></div>
+<svg viewBox="0 0 1000 200" preserveAspectRatio="none" style="width: 100%; height: 120px; display: block" role="img" aria-label="Visitantes diarios de los últimos 28 días">
+<polygon points="0,196 0.0,169.1 37.0,171.8 74.1,162.4 111.1,155.7 148.1,166.5 185.2,170.5 222.2,158.4 259.3,149.0 296.3,154.4 333.3,159.7 370.4,142.3 407.4,145.0 444.4,151.7 481.5,135.6 518.5,126.2 555.6,131.5 592.6,140.9 629.6,115.4 666.7,99.3 703.7,122.1 740.7,130.2 777.8,111.4 814.8,88.6 851.9,10.7 888.9,68.4 925.9,102.0 963.0,107.4 1000.0,96.6 1000,196" fill="rgba(37,99,235,.10)"></polygon>
+<polyline points="0.0,169.1 37.0,171.8 74.1,162.4 111.1,155.7 148.1,166.5 185.2,170.5 222.2,158.4 259.3,149.0 296.3,154.4 333.3,159.7 370.4,142.3 407.4,145.0 444.4,151.7 481.5,135.6 518.5,126.2 555.6,131.5 592.6,140.9 629.6,115.4 666.7,99.3 703.7,122.1 740.7,130.2 777.8,111.4 814.8,88.6 851.9,10.7 888.9,68.4 925.9,102.0 963.0,107.4 1000.0,96.6" fill="none" stroke="#2563eb" stroke-width="2.5" vector-effect="non-scaling-stroke"></polyline>
+</svg>
+<div style="display: flex; justify-content: space-between" class="mut"><span>14 sep</span><span>28 sep</span><span>11 oct</span></div>
+<div class="mut" style="margin-top: 8px">Pico: 9 oct, 138 visitantes (correos + PDF en LinkedIn)</div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Canales</h2><span class="src">PostHog</span></div>
+<sc-for list="{{channels}}" as="c" hint-placeholder-count="6">
+<div style="padding: 8px 0; border-bottom: 1px solid #eef2f8">
+<div style="display: flex; justify-content: space-between; font-size: 13.5px"><span style="font-weight: 600">{{c.name}}</span><span><span class="mut">{{c.visits}} · {{c.signups}} altas ·</span> <strong>{{c.conv}}</strong></span></div>
+<div style="{{c.bar}}"></div>
+</div>
+</sc-for>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Google · genscore.es</h2><span class="src">Search Console</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div><div class="lbl">Clics</div><div class="big">86</div><span class="up">+41 %</span></div>
+<div><div class="lbl">Impresiones</div><div class="big">4.920</div><span class="up">+63 %</span></div>
+<div><div class="lbl">CTR</div><div class="big">1,7 %</div><span class="down">−0,3 pt</span></div>
+<div><div class="lbl">Puesto medio</div><div class="big">18,4</div><span class="up">sube 4,1</span></div>
+</div>
+</div>
+
+<div class="card">
+<div class="ch"><h2>Ingresos</h2><span class="src">Stripe</span></div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px">
+<div><div class="lbl">MRR</div><div class="big">0 €</div></div>
+<div><div class="lbl">Suscripciones</div><div class="big">0</div></div>
+<div><div class="lbl">Checkouts abandonados</div><div class="big">3</div></div>
+<div><div class="lbl">Cobrado en el mes</div><div class="big">0 €</div></div>
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":3000}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { period: '28d' }; }
+  renderVals() {
+    const P = [['hoy','Hoy'],['7d','7 días'],['28d','28 días'],['mes','Mes']];
+    const periods = P.map(([id, label]) => ({ label, cls: 'seg' + (this.state.period === id ? ' on' : ''), pick: () => this.setState({ period: id }) }));
+    const kpis = [
+      { label: 'Visitantes', value: '1.284', delta: '+212 %', cls: 'up', spark: '0.0,26.9 13.3,25.1 26.7,21.7 40.0,23.4 53.3,20.0 66.7,16.6 80.0,18.3 93.3,11.4 106.7,8.0 120.0,9.7' },
+      { label: 'Altas confirmadas', value: '23', delta: '+9', cls: 'up', spark: '0.0,27.2 13.3,32.0 26.7,22.4 40.0,27.2 53.3,22.4 66.7,17.6 80.0,22.4 93.3,12.8 106.7,17.6 120.0,8.0' },
+      { label: 'Visita → alta', value: '1,8 %', delta: '+0,4 pt', cls: 'up', spark: '0.0,16.0 13.3,16.0 26.7,24.0 40.0,8.0 53.3,16.0 66.7,16.0 80.0,8.0 93.3,16.0 106.7,16.0 120.0,16.0' },
+      { label: 'Pruebas activas', value: '11', delta: '4 acaban ya', cls: 'down', spark: '0.0,18.9 13.3,16.7 26.7,16.7 40.0,14.5 53.3,12.4 66.7,12.4 80.0,10.2 93.3,8.0 106.7,8.0 120.0,8.0' },
+      { label: 'Checkouts', value: '3', delta: '0 terminados', cls: 'down', spark: '0.0,32.0 13.3,32.0 26.7,8.0 40.0,32.0 53.3,32.0 66.7,8.0 80.0,32.0 93.3,8.0 106.7,32.0 120.0,32.0' },
+      { label: 'Clientes de pago', value: '0', delta: 'objetivo: 1', cls: 'down', spark: '0,32 120,32' }
+    ];
+    const fun = [['Visitantes','1.284',100,'',''],['Alta enviada','41',36,'3,2 %','up'],['Alta confirmada','23',27,'56 %','up'],['Primer escaneo','19',24,'83 %','up'],['Checkout iniciado','3',10,'16 %','down'],['Pago','0',0,'0 %','down']];
+    const funnel = fun.map(([label, value, w, rate, rateCls], i) => ({ label, value, rate, rateCls, bar: 'height:100%;border-radius:999px;width:' + Math.max(w, 1.5) + '%;background:' + (i === 4 ? '#e0790b' : i === 5 ? '#cbd5e1' : '#2563eb') }));
+    const pill = { hot: 'background:#dcfce7;color:#14532d', warm: 'background:#e0ecff;color:#1e3a8a', cold: 'background:#f1f5f9;color:#475569' };
+    const trials = [
+      ['clinica-ejemplo.es','1 día','Abrió precios','hot'],
+      ['agencia-ejemplo.com','2 días','Checkout sin terminar','hot'],
+      ['tienda-ejemplo.es','3 días','5 escaneos','warm'],
+      ['despacho-ejemplo.es','4 días','Descargó informe','warm'],
+      ['estudio-ejemplo.com','5 días','Sin entrar 3 días','cold']
+    ].map(([domain, left, signal, k]) => ({ domain, left, signal, pill: pill[k] }));
+    const ch = [['LinkedIn',412,6],['Directo',301,5],['Google orgánico',236,4],['Email (outreach)',188,7],['X',48,0],['Asistentes de IA',22,1]];
+    const channels = ch.map(([name, v, s]) => ({ name, visits: String(v), signups: String(s), conv: (s / v * 100).toFixed(1).replace('.', ',') + ' %', bar: 'height:6px;border-radius:999px;background:#2563eb;margin-top:6px;width:' + Math.max(Math.round(v / 412 * 100), 2) + '%' }));
+    return { periods, kpis, funnel, trials, channels };
+  }
+}
+</script>
+</body>
+</html>
