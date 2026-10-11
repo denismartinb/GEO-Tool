@@ -1,0 +1,243 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("auditoria-seo-y-search-console-en-genscore");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿GenScore puede cambiar algo de mi Search Console?",
+    answer:
+      "No. La conexión es de solo lectura: GenScore puede ver tus datos de Search Console, pero no puede cambiar nada de tu cuenta. Puedes desconectarla cuando quieras desde la propia pantalla."
+  },
+  {
+    question: "¿Una web lenta me baja el GEO Score?",
+    answer:
+      "No. La velocidad y las comprobaciones SEO cuentan en tu Salud SEO, no en tu GEO Score. Así, la métrica que mide cómo te ven los motores de IA no se mueve por algo que no tiene que ver con ellos."
+  },
+  {
+    question: "¿Por qué los datos de Google llegan con unos días de retraso?",
+    answer:
+      "Porque Google tarda dos o tres días en consolidar los datos de Search Console. GenScore enseña los últimos 28 días ya consolidados y los compara con los 28 anteriores."
+  },
+  {
+    question: "¿Qué pasa si mi web no está en Search Console?",
+    answer:
+      "Tendrás que darla de alta primero. Es gratis y lo hace el propietario de la web. Mientras tanto, la Auditoría SEO funciona igual, porque no necesita conectar nada."
+  },
+  {
+    question: "¿GenScore guarda mis datos de Search Console?",
+    answer:
+      "No. Los lee en directo cada vez que abres la pantalla y no los guarda. Solo acepta la propiedad que corresponde a tu dominio, para que nunca veas los datos de otra web."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Tu posición en Google y en la IA, por fin en el mismo sitio. Al conectar tu
+Search Console, GenScore te enseña tu puesto en Google búsqueda a búsqueda,
+dónde están tus mejores oportunidades de mejora y qué preguntas de Google
+conviene vigilar también en ChatGPT, Gemini, Claude y Perplexity. La Auditoría
+técnica SEO te dice qué arreglar primero en tu web. Y lo juntamos por una
+razón: las mejoras de posicionamiento en la mayor parte de los casos son
+colaterales.
+
+</KeyTakeaway>
+
+## Por qué juntar Google y la IA
+
+Mucha gente ya pregunta a una IA antes de buscar, pero Google sigue siendo
+donde se decide buena parte de las visitas. Y las dos cosas se tocan más de lo
+que parece: muchas IA buscan en la web antes de responder, una página que
+Google no tiene indexada difícilmente acabará citada, y una respuesta clara en
+las primeras líneas ayuda a subir en Google y a que la IA te tome como fuente.
+Lo contamos en detalle en
+<a href="/blog/como-aparecer-en-gemini-y-vistas-creadas-con-ia">cómo aparecer
+en Gemini y en las Vistas creadas con IA</a>.
+
+Hasta ahora, para ver las dos caras había que abrir dos o tres herramientas.
+En GenScore las tienes juntas: el bloque «Posicionamiento en IA» y, debajo, el
+bloque «Posicionamiento en buscadores».
+
+## Tu posición general en Google
+
+Search Console es la herramienta gratuita de Google para los dueños de una web.
+Al conectarla, la pantalla «Posición en Google» lee tus datos en directo y te
+enseña tu puesto medio y cómo ha cambiado frente a los 28 días anteriores, en
+qué tramo salen tus búsquedas (top 3, resto de la página 1, página 2 o más
+allá) y cómo ha evolucionado tu puesto día a día.
+
+<Figure
+  label="Figura 1."
+  caption="Ejemplo ilustrativo: tu puesto medio, dónde salen tus búsquedas y las búsquedas que te traen visitas, con la página que sale en cada una."
+>
+  <img
+    src="/blog/auditoria-seo-y-search-console-en-genscore/puesto-en-google.webp"
+    alt="Ejemplo de la pantalla Posición en Google: puesto medio con su evolución, reparto de búsquedas por tramos y tabla de búsquedas con su puesto, cambio, clics y página que sale."
+    width={840}
+    height={700}
+    loading="lazy"
+  />
+</Figure>
+
+Debajo, «Las búsquedas que te traen visitas» te dice para cada búsqueda en qué
+puesto sales, cuánto has subido o bajado y qué página tuya es la que enseña
+Google. Y «Tus páginas en Google» cruza tus páginas con más visitas con la
+última Auditoría SEO, para que veas si la página que más te importa tiene
+problemas pendientes.
+
+## Tus oportunidades de mejora
+
+Aquí es donde la integración aporta valor. La pantalla te señala lo que tienes
+más cerca de conseguir:
+
+<Checklist
+  items={[
+    "Las búsquedas en la segunda página de Google: ya estás cerca y casi nadie pasa a la página 2.",
+    "Te ven, pero no entran: búsquedas de la primera página donde entra mucha menos gente de lo habitual en tu propia web para ese puesto.",
+    "Preguntas que ya te hacen en Google, con un botón para vigilarlas también en ChatGPT, Gemini, Claude y Perplexity.",
+    "Tu puesto en móvil y en ordenador por separado.",
+    "Dos páginas tuyas que compiten por la misma búsqueda, y Google no sabe cuál enseñar."
+  ]}
+/>
+
+<Figure
+  label="Figura 2."
+  caption="Ejemplo ilustrativo: búsquedas que te ven pero no entran, preguntas de Google para vigilar en la IA, móvil frente a ordenador y dos páginas que compiten."
+>
+  <img
+    src="/blog/auditoria-seo-y-search-console-en-genscore/oportunidades.webp"
+    alt="Ejemplo de oportunidades en Google: búsquedas con pocos clics para su puesto, preguntas de Google con el botón Vigilar prompt, puesto en móvil y ordenador y dos páginas que compiten por la misma búsqueda."
+    width={840}
+    height={700}
+    loading="lazy"
+  />
+</Figure>
+
+La referencia para decir que una búsqueda tiene pocos clics es siempre tu
+propia web, no una media del sector: comparamos con lo que consiguen tus otras
+búsquedas en el mismo tramo.
+
+## Qué mejorar para Google y para la IA
+
+Las preguntas que la gente ya te hace en Google son las mismas que hace a
+ChatGPT, Gemini, Claude o Perplexity. Con «Vigilar prompt» la añades a tus
+preguntas en GenScore y, desde el siguiente escaneo, ves también si los motores
+de IA te nombran al responderla. Si ya la vigilas, la pantalla te lleva
+directamente a ella.
+
+En sentido contrario pasa lo mismo: lo que tus recomendaciones de IA te piden
+arreglar en una página, como responder la pregunta en las primeras líneas o
+dejar entrar a los rastreadores, también le sirve a Google.
+
+## Auditoría SEO: qué arreglar primero, sin conectar nada
+
+La Auditoría SEO revisa las páginas principales de tu web y te da su propia
+nota, la Salud SEO, con los problemas ordenados por los puntos que te
+devuelven y lo que pasaría si los arreglas. Además mide la velocidad de tu
+página Home en móvil con las Core Web Vitals de Google.
+
+<Figure
+  label="Figura 3."
+  caption="Ejemplo ilustrativo: la Salud SEO, los problemas ordenados por puntos y la velocidad de la página Home en móvil."
+>
+  <img
+    src="/blog/auditoria-seo-y-search-console-en-genscore/auditoria-seo.webp"
+    alt="Ejemplo de la Auditoría SEO: nota de Salud SEO que podría subir a 100, lista de problemas con sus puntos y Core Web Vitals de la Home en móvil."
+    width={840}
+    height={700}
+    loading="lazy"
+  />
+</Figure>
+
+Nada de esto mueve tu GEO Score. Una web lenta es un problema para Google y
+para tus visitas, pero no dice nada de si la IA te recomienda, así que lo
+medimos aparte.
+
+## Qué mirar primero
+
+<NumberedSection n={1} title="Las búsquedas en la segunda página">
+
+Son la oportunidad más rápida que tiene casi cualquier web. El contenido existe
+y Google lo considera relevante, pero casi nadie pasa a la segunda página.
+Mejorar una página que ya está cerca suele costar menos que posicionar una
+nueva desde cero.
+
+<QuickAction>Elige la búsqueda de la segunda página con más impresiones y revisa si la página que sale responde de verdad a esa búsqueda en sus primeras líneas.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Las preguntas que ya te hacen en Google">
+
+Si la gente ya llega a ti con una pregunta en Google, conviene saber si la IA
+también te nombra al responderla.
+
+<QuickAction>Pulsa «Vigilar prompt» en la pregunta con más impresiones que todavía no vigilas.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Las páginas que Google no tiene indexadas">
+
+Una página que Google no tiene indexada no sale en Google, y es difícil que la
+IA la cite. Si una página importante para ti, como la de tus servicios o tus
+precios, no está indexada, ahí tienes la primera tarea. La pantalla revisa la
+indexación de las páginas que ya analiza la Auditoría SEO.
+
+</NumberedSection>
+
+<Verdict title="Solo lectura, y puedes desconectarlo cuando quieras">
+
+GenScore solo puede leer tu Search Console: no cambia nada de tu cuenta y no
+guarda tus datos. Solo acepta la propiedad que corresponde a tu dominio, para
+que nunca veas los datos de otra web. Y desde la misma pantalla puedes
+desconectarlo.
+
+</Verdict>
+
+Si quieres saber qué mirar en la parte de IA, tienes
+<a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>, y
+para entender en qué se parecen y en qué no el SEO y el GEO,
+<a href="/blog/geo-vs-aeo-vs-seo">GEO, AEO y SEO</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA y en buscadores a partir de los datos reales que maneja nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira tu posición en Google y en la IA, juntas"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: conecta tu Search Console y ve en el mismo sitio cómo te encuentran en Google y cómo te recomiendan ChatGPT, Gemini, Claude y Perplexity."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

@@ -64,7 +64,7 @@ revisión de data-guardian que lo precedió.
   `auditedPagesFromSnapshot` reutiliza `pageCheckStates` y
   `seoPageExtraStates` filtrados por `AUDIT_BLOCKS.seo.checks`. Una página
   sin analizar es «Sin auditar», nunca «Correcta».
-- **«Vigilar en IA» pasa por `addPrompts` (modo manual)**, con su tope de
+- **«Vigilar prompt» (antes «Vigilar en IA», renombrado por el fundador el 2026-10-11, log §289) pasa por `addPrompts` (modo manual)**, con su tope de
   plan y su escaneo. No se escribe en `project_prompts` por otro camino.
 - **Sólo se enlaza lo que `isWebUrl` acepta.**
 

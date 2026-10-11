@@ -24622,6 +24622,71 @@ dice si se cumplió (§181).
 **Pendiente.** Nada en código. Si en cuatro semanas no aparece, la siguiente
 palanca es la autoridad externa (Fase 7), no más texto en la página.
 
+## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-11)
+
+**Qué se decidió.** Segundo artículo de lanzamiento de §288:
+`/blog/auditoria-seo-y-search-console-en-genscore` (cluster `playbooks`), que
+estaba previsto para el martes 13 a las 20:30 y el fundador lo adelantó al
+mergear el 2026-10-11, así que se publica con esa fecha; los posts de LinkedIn
+y de X siguen esperando su «sí, publica». El fundador fijó
+el enfoque el 2026-10-11: la integración aporta la posición general de la
+marca, oportunidades de mejora globales y qué mejorar para Google y para los
+motores de IA, porque las mejoras de posicionamiento muchas veces son
+colaterales.
+
+- **Las páginas del carrusel van dentro del artículo** (decisión del fundador,
+  2026-10-11); LinkedIn y X llevan una imagen resumen que enlaza aquí. Son
+  maquetas HTML/CSS con datos inventados y etiquetadas como tales, rasterizadas
+  a WebP: la opción (4) de ADR 0028, nunca una captura de una cuenta real.
+- **Entran tres páginas, no todas, por el presupuesto de `public/`**
+  (`tests/asset-budget.test.ts`): a 840 px y calidad 58 las tres más la
+  portada pesan 81 KB y dejan `public/` justo bajo el tope de 1.792 KB. La
+  página de texto «Lo que mejoras en Google suele ayudarte también en la IA»
+  se cuenta en prosa, y la portada va sólo en WebP (su SVG fuente vive en
+  `/mnt/project-files/contenido/lanzamientos/seo-search-console/`). **Con esto
+  `public/` queda sin margen:** el siguiente artículo con portada romperá el
+  test, y la pregunta que pide su comentario —por qué pesan tanto las
+  portadas del catálogo— hay que contestarla antes de subir el tope.
+- **Cada afirmación de producto sale de §281, §284 y §287**: Salud SEO y
+  Core Web Vitals; conexión de sólo lectura, datos en directo y sin guardar,
+  sólo la propiedad del dominio; puesto medio, tramos, evolución, búsquedas
+  con su página, páginas cruzadas con la auditoría, «Te ven, pero no entran»
+  con la propia web como referencia, «Vigilar en IA», móvil/ordenador y
+  canibalización.
+- **Se queda fuera la página del carrusel de recomendaciones con datos de
+  Google** (`Recs.dc.html`): es la siguiente fase de §287 y no está
+  construida. Si sale antes del martes, se añade.
+
+**Cambios del fundador (2026-10-11, sobre el preview).**
+
+- Texto propio para el resumen y para la lista de oportunidades.
+- La etiqueta de las maquetas pasa de «Ejemplo ilustrativo · cifras
+  inventadas» a «Ejemplo ilustrativo», en las imágenes y en los pies. Las
+  cifras siguen siendo inventadas; sólo cambia cómo se dice.
+- El artículo llama «Vigilar prompt» al botón de «Posición en Google», como
+  el producto desde §289 (el renombre del botón lo hizo esa fase; aquí sólo
+  se alinea el texto del artículo).
+- El autor de todos los artículos (`AuthorBio`) enseña el símbolo de GenScore
+  (`BrandMark`) en vez de una «G» de texto. Se retira la prop `initial`, que
+  ningún artículo usaba.
+- La cabecera del índice `/blog` pasa a decir sólo «GEO (Generative Engine
+  Optimization): metodología, guías, estudios y análisis.».
+- Los artículos de lanzamiento de Perplexity y de Search Console llevan en la
+  portada, en el hueco de la cifra grande, los logos de lo que cuentan (campo
+  nuevo `heroLogos` en `BlogPost`, grupos unidos por «+», pintado por
+  `ArticleHero` sólo si no hay `heroStat`). Perplexity: los cuatro motores,
+  con Perplexity resaltado y la etiqueta «Nuevo». Search Console: «Google» +
+  los cuatro motores, porque el artículo es Google y la IA en el mismo sitio.
+  Se reutilizan los SVG de `public/brand/engines/`, sin añadir peso a
+  `public/` (está en el límite de `asset-budget.test.ts`). La primera versión
+  ponía el símbolo de GenScore junto a la «G» de Google y el fundador lo
+  descartó: uno al lado del otro casi no se distinguen. No es una cifra, así
+  que la regla de §247 sigue intacta. El de Perplexity sale a producción con
+  el merge de este PR.
+
+**Pendiente.** Igual que §288: comprobar antes de publicar que la pantalla de
+consentimiento de Google está «En producción» (§284).
+
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
 ## 291. NAV-SIMPLIFY-1: menú de la consola en cuatro bloques (2026-10-11)
