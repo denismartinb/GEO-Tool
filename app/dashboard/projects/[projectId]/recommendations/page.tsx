@@ -35,6 +35,8 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 import { GoogleRecsSlot } from "./_components/google-recs";
+import { RecsViewTabs } from "./_components/recs-view-tabs";
+import { isSearchConsoleActive } from "@/lib/search-console/load";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
 function affectedPromptIds(evidenceJson: unknown): string[] {
@@ -653,10 +655,15 @@ export default async function RecommendationsPage({
   // Per-type joint ceiling, for the collapsed group rows. Same rule as above:
   // one counterfactual over the union of the group's prompts, never the sum of
   // its members' individual deltas (ADR 0017 §3).
+  // RECS-SHORT-CARD-1 (log §303): the groups sit under «Más adelante», which
+  // leaves out the plan's cards, so their ceiling is computed without them.
+  const plan = selectPlan(recs);
+  const planIdSet = new Set(plan.map((r) => r.id));
   const jointPointsByType: Record<string, number | null> = {};
   if (scoreInputRows.length > 0) {
     const byType = new Map<string, Recommendation[]>();
     for (const rec of recs) {
+      if (planIdSet.has(rec.id)) continue;
       const bucket = byType.get(rec.recommendation_type) ?? [];
       bucket.push(rec);
       byType.set(rec.recommendation_type, bucket);
@@ -679,7 +686,6 @@ export default async function RecommendationsPage({
   // tiene que ser un contrafactual conjunto sobre esas mismas acciones —
   // sumar los deltas de las tres tarjetas contaria dos veces los prompts que
   // compartan (ADR 0017 §3). Calcularlo en cliente obligaria a sumar.
-  const plan = selectPlan(recs);
   const planIds = plan.map((r) => r.id);
   const planJoint =
     scoreInputRows.length > 0 && plan.length > 0
@@ -764,6 +770,61 @@ export default async function RecommendationsPage({
   // takeover owns the screen, so the rocket animation reads as full screen
   // instead of sitting under a second chrome band (founder, 2026-08-25).
   const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
+  // A database read, no Google call (log §298): decides whether the pills exist.
+  const googleConnected = await isSearchConsoleActive(projectId, user.id);
+
+  // The AI half of the screen, shared by both layouts below.
+  const aiContent = !latestCompletedRun ? (
+            <div className="section-empty" style={{ marginTop: 20 }}>
+              <div className="section-empty-title">
+                {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
+              </div>
+              <div className="section-empty-desc">
+                {latestRunFailed
+                  ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
+                  : "Aparecerán en cuanto termine tu primer escaneo."}
+              </div>
+              <Link
+                href={`/dashboard/projects/${projectId}`}
+                className="btn btn-ghost btn-sm"
+                style={{ marginTop: 14, display: "inline-flex" }}
+              >
+                Volver a visión general
+                <Icon name="arrRight" size={14} />
+              </Link>
+            </div>
+          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
+            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
+            // this empty state, same reasoning as Citas — the route is no
+            // longer part of the end-user console, only /debug.
+            //
+            // ACTIONS-OBSERVABLE-1 slice 4a (founder feedback 2026-09-07):
+            // this branch used to fire on `recs.length === 0` alone, which
+            // meant `RecommendationsClient` never even mounted the moment the
+            // last active recommendation was marked done — losing the
+            // "Resueltas" tab (and its data, already fetched) entirely, with
+            // no way back to what the user just did. Now it only fires when
+            // there is truly nothing anywhere, active or historical.
+            <div className="section-empty" style={{ marginTop: 20 }}>
+              <div className="section-empty-title">Nada que corregir ahora mismo</div>
+              <div className="section-empty-desc">
+                Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
+              </div>
+            </div>
+          ) : (
+            <RecommendationsClient
+              recommendations={recs}
+              resolvedHistory={resolvedHistoryForClient}
+              recentWinsCount={recentWins.length}
+              projectId={projectId}
+              jointPoints={jointPoints}
+              jointPointsByType={jointPointsByType}
+              planIds={planIds}
+              planPoints={planPoints}
+              latestCompletedRunId={latestCompletedRun.id}
+            />
+          );
 
   return (
     <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
@@ -887,62 +948,21 @@ export default async function RecommendationsPage({
             </div>
           )}
 
-          {/* 4 · SEARCH-SEO-1 Fase 3d (log §293): cards from the customer's own
-              Search Console, only when it is connected. Streamed behind a
-              skeleton of the same size (log §298), so Google never holds back
-              the AI recommendations below and nothing jumps when it lands. */}
-          <GoogleRecsSlot projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
-
-          {!latestCompletedRun ? (
-            <div className="section-empty" style={{ marginTop: 20 }}>
-              <div className="section-empty-title">
-                {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
-              </div>
-              <div className="section-empty-desc">
-                {latestRunFailed
-                  ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
-                  : "Aparecerán en cuanto termine tu primer escaneo."}
-              </div>
-              <Link
-                href={`/dashboard/projects/${projectId}`}
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 14, display: "inline-flex" }}
-              >
-                Volver a visión general
-                <Icon name="arrRight" size={14} />
-              </Link>
-            </div>
-          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
-            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
-            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
-            // this empty state, same reasoning as Citas — the route is no
-            // longer part of the end-user console, only /debug.
-            //
-            // ACTIONS-OBSERVABLE-1 slice 4a (founder feedback 2026-09-07):
-            // this branch used to fire on `recs.length === 0` alone, which
-            // meant `RecommendationsClient` never even mounted the moment the
-            // last active recommendation was marked done — losing the
-            // "Resueltas" tab (and its data, already fetched) entirely, with
-            // no way back to what the user just did. Now it only fires when
-            // there is truly nothing anywhere, active or historical.
-            <div className="section-empty" style={{ marginTop: 20 }}>
-              <div className="section-empty-title">Nada que corregir ahora mismo</div>
-              <div className="section-empty-desc">
-                Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
-              </div>
-            </div>
-          ) : (
-            <RecommendationsClient
-              recommendations={recs}
-              resolvedHistory={resolvedHistoryForClient}
-              recentWinsCount={recentWins.length}
-              projectId={projectId}
-              jointPoints={jointPoints}
-              jointPointsByType={jointPointsByType}
-              planIds={planIds}
-              planPoints={planPoints}
-              latestCompletedRunId={latestCompletedRun.id}
+          {/* 4 · RECS-SHORT-CARD-1 (log §303): with Search Console connected the
+              screen splits into two pills, «Mejora IA» (default) and «Mejora
+              Google». The Google block is still SEARCH-SEO-1's (log §293,
+              §295, §298), streamed behind its own skeleton; the pills only
+              decide which half is in view. Without a connection there is
+              nothing to switch to, so no pills. */}
+          {googleConnected ? (
+            <RecsViewTabs
+              ai={aiContent}
+              google={
+                <GoogleRecsSlot projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
+              }
             />
+          ) : (
+            aiContent
           )}
         </div>
       )}

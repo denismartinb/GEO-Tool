@@ -73,7 +73,7 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
     `las prioritarias se repiten: ${priorityTitles.join(" | ")}`
   ).toBe(priorityTitles.length);
 
-  // El primer paso ("Empieza por aquí") solo vive en filas generadas por el
+  // El primer paso ("Haz esto") solo vive en filas generadas por el
   // motor ACTUAL: se persiste en recommendations.evidence_json al escanear.
   //
   // La cuenta piloto comparte base de datos con producción, así que un escaneo
@@ -91,7 +91,7 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   const stepCount = await steps.count();
   for (let i = 0; i < stepCount; i++) {
     await expect(steps.nth(i), "el bloque de primer paso se renderiza sin su rótulo").toContainText(
-      "Empieza por aquí"
+      "Haz esto"
     );
   }
 
@@ -136,7 +136,7 @@ test("recomendaciones: acordeones, filtros, detalle, tooltips y exportar respond
   // --- 4 · Filtros: cambian la lista y "Todas" lo incluye todo -------------
   const tabs = page.locator(".filters .seg button");
   const tabLabels = (await tabs.allTextContents()).map((t) => t.trim());
-  expect(tabLabels[0], "el primer filtro debería ser 'Todas'").toContain("Todas");
+  expect(tabLabels[0], "el primer filtro debería ser 'Pendientes'").toContain("Pendientes");
 
   const groupsUnderTodas = await page.locator(".rec2-group").count();
 

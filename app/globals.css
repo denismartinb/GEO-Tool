@@ -11277,6 +11277,93 @@ select.set-field {
 }
 .rec2-step b { color: var(--ink); font-weight: 750; }
 
+/* RECS-SHORT-CARD-1 (log §303) — short card: kind kicker, reach line, and
+   the two confidences side by side in the detail. */
+.rec2-kind {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rec2-reach {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 9px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+.rec2-reach-g { display: inline-flex; gap: 4px; }
+.rec2-reach-g > span,
+.rec2-q-g { display: inline-flex; width: 13px; height: 13px; flex-shrink: 0; }
+.rec2-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rec2-why {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.rec2-why-box {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.rec2-why-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.rec2-why-p { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--ink); }
+.rec2-why-note { font-size: 12px; line-height: 1.5; color: var(--ink-3); }
+.rec2-chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.rec2-chip-strong { background: var(--brand-pos-soft, #e7f6ee); color: #0f6b46; }
+.rec2-chip-medium { background: #fff4dc; color: #8a5a00; }
+.rec2-chip-weak { background: var(--surface-sunk, #f2f4f8); color: var(--ink-2); }
+.rec2-chip-advice { background: var(--brand-blue-soft, rgba(37, 99, 235, .10)); color: #1d4ed8; }
+.rec2-block { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+.rec2-qs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.rec2-q { padding: 8px 10px; border-radius: 8px; background: var(--surface-sunk, #f7f8fb); }
+.rec2-q-t { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.rec2-q-m { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+.rec2-ev-p { margin: 0; font-size: 12.5px; color: var(--ink-3); }
+.rec2-views {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 4px 0 16px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+}
+.rec2-views button {
+  flex: 1;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.rec2-views button.on { background: var(--ink); color: #fff; font-weight: 700; }
+.rec2-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* 7 · Potential points — the reward, in the same column on every card */
 .rec2-pts {
   font-family: var(--font-display), "Bricolage Grotesque", -apple-system, sans-serif;

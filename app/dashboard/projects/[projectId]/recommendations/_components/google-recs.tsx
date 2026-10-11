@@ -9,6 +9,7 @@ import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
 import { fmtInt, fmtPct, fmtPosition } from "../../search-console/_components/format";
 import { GoogleRecFrame, GoogleRecMark } from "./google-rec-frame";
 import { GoogleWatchActions } from "./google-watch";
+import { GoogleRecsPresent } from "./recs-view-tabs";
 
 /**
  * Recomendaciones con tus datos de Google (SEARCH-SEO-1 Fase 3d, log §293,
@@ -165,6 +166,7 @@ export async function GoogleRecs({
 
   return (
     <section className="grec" aria-labelledby="grec-title">
+      <GoogleRecsPresent />
       <GoogleRecsHead />
       <div className="grec-list">
         {recs.map((rec) => (
