@@ -33,7 +33,7 @@ export function GscConnect({
         <p>{lead}</p>
         <ul>
           <li>En qué puesto sales para cada búsqueda y cómo cambia</li>
-          <li>Las búsquedas a un paso de la página 1</li>
+          <li>Las búsquedas en las que sales en la página 2, las más fáciles de subir a la primera</li>
           <li>Qué páginas tiene Google indexadas y cuáles no</li>
         </ul>
         {/* A plain link, not next/link: it leaves the app for Google's consent screen. */}
