@@ -651,3 +651,410 @@
   .adm-aff-table .adm-table th,
   .adm-aff-table .adm-table td { padding: 10px; }
 }
+
+/*
+ * ADMIN-PANEL-1 — /admin/panel. Prefixed `adm-pn-` (design in
+ * docs/design-reference/admin-panel-1/). Fluid: cards wrap to one column
+ * on a phone, wide tables scroll inside their own box.
+ */
+.adm-main.adm-pn {
+  max-width: 1360px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.adm-pn .adm-head { margin-bottom: 0; }
+
+.adm-pn-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adm-pn-seg {
+  display: flex;
+  gap: 2px;
+  background: #e8edf6;
+  border-radius: 10px;
+  padding: 2px;
+}
+
+.adm-pn-seg a {
+  display: inline-flex;
+  align-items: center;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.adm-pn-seg a.adm-pn-seg-on {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, .12);
+}
+
+.adm-pn-btn {
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid #d5dcea;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.adm-pn-btn:hover { border-color: var(--brand-blue); }
+
+.adm-pn-goal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  background: var(--brand-ink);
+  color: #fff;
+  border-radius: 18px;
+  padding: 22px 26px;
+}
+
+.adm-pn-goal-main { flex: 2 1 320px; min-width: 0; }
+
+.adm-pn-goal-kicker {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8fe9f2;
+}
+
+.adm-pn-goal-title {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 6px;
+  line-height: 1.25;
+}
+
+.adm-pn-goal-bar {
+  margin-top: 14px;
+  height: 10px;
+  background: rgba(255, 255, 255, .14);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.adm-pn-goal-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand-cyan);
+  border-radius: 999px;
+}
+
+.adm-pn-goal-note { margin-top: 8px; font-size: 13px; color: #b8c4da; }
+
+.adm-pn-goal-stat {
+  flex: 1 1 140px;
+  border-left: 1px solid rgba(255, 255, 255, .14);
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.adm-pn-goal-stat span { font-size: 12.5px; color: #b8c4da; }
+
+.adm-pn-goal-stat strong {
+  font-family: var(--font-display), var(--font-body), sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+}
+
+.adm-pn-goal-stat small { font-size: 15px; color: #b8c4da; font-weight: 600; }
+
+.adm-pn-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px 22px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.adm-pn-ch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.adm-pn-ch h2 { margin: 0; font-size: 16px; font-weight: 700; }
+
+.adm-pn-src {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-2);
+  background: #eef2f8;
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.adm-pn-lbl { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+.adm-pn-mut { color: var(--ink-3); font-size: 12.5px; }
+.adm-pn-up { color: #0f766e; font-weight: 700; font-size: 12.5px; }
+.adm-pn-down { color: #b45309; font-weight: 700; font-size: 12.5px; }
+.adm-pn-flat { color: var(--ink-3); font-size: 12.5px; }
+
+.adm-pn-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+}
+
+.adm-pn-kpi { padding: 16px 16px 12px; display: flex; flex-direction: column; }
+
+.adm-pn-kpi-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.adm-pn-kpi-top .adm-pn-src { font-size: 10.5px; padding: 2px 7px; }
+
+.adm-pn-big {
+  font-size: 30px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-pn-kpi-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 6px;
+}
+
+.adm-pn-kpi-delta { min-width: 0; }
+
+.adm-pn-spark { width: 110px; height: 32px; flex: 0 0 auto; }
+
+.adm-pn-spark polyline {
+  fill: none;
+  stroke: var(--brand-blue);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.adm-pn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.adm-pn-wide { flex: 999 1 600px; }
+.adm-pn-side { flex: 1 1 360px; }
+.adm-pn-half { flex: 1 1 440px; }
+
+.adm-pn-grid3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px;
+}
+
+.adm-pn-funnel { display: flex; flex-direction: column; gap: 10px; }
+
+.adm-pn-fstep {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 120px;
+  gap: 14px;
+  align-items: center;
+}
+
+.adm-pn-flabel { font-size: 14px; font-weight: 600; display: flex; flex-direction: column; }
+.adm-pn-flabel small { font-size: 11px; font-weight: 500; color: var(--ink-3); }
+
+.adm-pn-fbar { height: 28px; background: #f1f4fa; border-radius: 8px; overflow: hidden; }
+
+.adm-pn-fbar span {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: var(--brand-blue);
+}
+
+.adm-pn-fbar span.adm-pn-fbar-leak { background: #e0790b; }
+
+.adm-pn-fval { text-align: right; display: flex; justify-content: flex-end; gap: 8px; align-items: baseline; }
+.adm-pn-fval strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.adm-pn-fval span { font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+
+.adm-pn-callout {
+  margin: 16px 0 0;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: #fff7e8;
+  border: 1px solid #f6dcaa;
+  border-radius: 12px;
+  padding: 11px 14px;
+  font-size: 13.5px;
+  color: #5b3a06;
+}
+
+.adm-pn-callout strong { white-space: nowrap; }
+
+.adm-pn-foot { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+
+.adm-pn-inline { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-2); }
+.adm-pn-inline strong { color: var(--ink); }
+
+.adm-pn-intro { margin: -6px 0 10px; }
+
+.adm-pn-empty {
+  margin: 0;
+  padding: 18px 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px dashed var(--line);
+  font-size: 13px;
+  color: var(--ink-2);
+}
+
+.adm-pn-table td { vertical-align: middle; }
+
+.adm-pn-cell-main { display: flex; flex-direction: column; min-width: 0; }
+.adm-pn-cell-main small { font-size: 11.5px; color: var(--ink-3); }
+
+.adm-pn-path {
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.adm-pn-pill {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 3px 9px;
+  white-space: nowrap;
+}
+
+.adm-pn-pill-hot { background: #dcfce7; color: #14532d; }
+.adm-pn-pill-warm { background: #e0ecff; color: #1e3a8a; }
+.adm-pn-pill-cold { background: #f1f5f9; color: #475569; }
+
+.adm-pn-link {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 10px 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand-blue);
+}
+
+.adm-pn-legend { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; font-size: 12.5px; }
+.adm-pn-legend span { display: inline-flex; gap: 6px; align-items: center; }
+.adm-pn-legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.adm-pn-key-visits { background: var(--brand-blue); }
+.adm-pn-key-signups { background: #e0790b; }
+
+.adm-pn-chart { width: 100%; height: 220px; display: block; }
+.adm-pn-axis { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.adm-pn-area { fill: rgba(37, 99, 235, .10); }
+
+.adm-pn-line-visits {
+  fill: none;
+  stroke: var(--brand-blue);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.adm-pn-line-signups {
+  fill: none;
+  stroke: #e0790b;
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+  vector-effect: non-scaling-stroke;
+}
+
+.adm-pn-ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
+
+.adm-pn-hbar { display: flex; align-items: center; gap: 8px; min-width: 140px; }
+.adm-pn-hbar span { display: block; height: 8px; border-radius: 999px; background: var(--brand-blue); max-width: 160px; }
+.adm-pn-hbar em { font-style: normal; font-size: 12.5px; color: var(--ink-2); }
+
+.adm-pn-mini {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 18px;
+}
+
+.adm-pn-mini-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+.adm-pn-mini > div { display: flex; flex-direction: column; gap: 2px; }
+
+.adm-pn-mini strong {
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-pn-vitals { display: flex; flex-direction: column; gap: 12px; }
+.adm-pn-vital-head { display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; }
+
+.adm-pn-vital-bar {
+  height: 8px;
+  background: #fde8e8;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 6px;
+  display: flex;
+}
+
+.adm-pn-v-good { background: #0f9d76; }
+.adm-pn-v-mid { background: #f5b54a; }
+
+@media (max-width: 640px) {
+  .adm-main.adm-pn { padding: 18px 16px 48px; gap: 14px; }
+  .adm-pn-controls, .adm-pn-seg, .adm-pn-controls form { width: 100%; }
+  .adm-pn-seg a { flex: 1 1 0; justify-content: center; padding: 0 8px; }
+  .adm-pn-btn { width: 100%; }
+  .adm-pn-goal { padding: 18px; gap: 14px; }
+  .adm-pn-goal-title { font-size: 19px; }
+  .adm-pn-goal-stat { flex: 1 1 30%; padding-left: 12px; }
+  .adm-pn-goal-stat strong { font-size: 22px; }
+  .adm-pn-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .adm-pn-kpi { padding: 14px; }
+  .adm-pn-big { font-size: 24px; }
+  .adm-pn-kpi-foot { flex-direction: column; align-items: stretch; }
+  .adm-pn-spark { width: 100%; height: 26px; }
+  .adm-pn-card { padding: 16px; }
+  .adm-pn-wide, .adm-pn-side, .adm-pn-half { flex-basis: 100%; }
+  .adm-pn-fstep { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .adm-pn-fbar { grid-column: 1 / -1; grid-row: 2; height: 10px; }
+  .adm-pn-chart { height: 140px; }
+  .adm-pn-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-pn-path { max-width: 200px; }
+}

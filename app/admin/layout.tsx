@@ -19,6 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span>{user.email}</span>
         </div>
         <nav className="adm-opbar-links">
+          <Link href="/admin/panel">Panel</Link>
           <Link href="/admin/users">Usuarios</Link>
           <Link href="/admin/estudio">Estudio</Link>
           <Link href="/admin/comparar-modelos">Comparar modelos</Link>

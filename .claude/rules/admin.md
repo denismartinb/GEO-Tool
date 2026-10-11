@@ -228,3 +228,14 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   extracción de producción; sólo el candidato cambia. Su nota es la fórmula de
   la Puntuación GEO sin la parte técnica, y la página no la llama
   «Puntuación GEO» (`docs/brand/design-decisions-log.md` §269).
+- **`/admin/panel` sólo lee, y cada cifra dice de dónde sale.** Lee PostHog
+  por su Query API con una clave personal de sólo lectura
+  (`POSTHOG_PERSONAL_API_KEY`, nunca la `phc_` pública), Supabase con el
+  cliente de `requireOperator()`, Stripe y la conexión de Search Console del
+  propio operador a su proyecto de genscore.es. «Actualizar» sólo vacía la
+  caché de la página (`updateTag("admin-panel")`); no es una escritura. Cada
+  fuente falla por su cuenta y dice que no se pudo leer, nunca un cero. Las
+  cuentas propias (operadores, prueba interna y comped) no cuentan en ninguna
+  cifra (`isCountedAccount`). Una métrica que no se puede atar a una cuenta,
+  como las altas por canal o «abrió precios», no se pinta: la analítica es sin
+  cookies (`docs/brand/design-decisions-log.md` §304).

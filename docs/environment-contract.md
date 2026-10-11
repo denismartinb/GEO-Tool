@@ -394,6 +394,9 @@ Without steps 1–3, the "Continuar con Google" button on `/login` and
 | `SENTRY_ORG` / `SENTRY_PROJECT` / `SENTRY_AUTH_TOKEN` | No | Vercel (build-time) | Enables source-map upload during `next build`; without them the Sentry webpack plugin silently skips upload, the build is unaffected |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | Vercel | PostHog project API key (`phc_...`) |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No (defaults to `https://eu.i.posthog.com`) | Vercel | PostHog ingestion host — keep EU unless the project region changes |
+| `POSTHOG_PERSONAL_API_KEY` | No | Vercel (Production) | PostHog **personal** API key (`phx_...`) with only the `query:read` scope, limited to the GenScore project. Server-only: read by `/admin/panel` (ADMIN-PANEL-1, log §304) to run HogQL; never sent to the browser. Without it the panel's web half says PostHog is not connected |
+| `POSTHOG_PROJECT_ID` | No | Vercel (Production) | Numeric PostHog project id (`220300` today), used in `/api/projects/<id>/query/` |
+| `POSTHOG_API_HOST` | No (defaults to `https://eu.posthog.com`) | Vercel | PostHog **app** host for the Query API — not the `eu.i.` ingestion host |
 
 All five are optional by design: every one of `sentry.server.config.ts`,
 `sentry.edge.config.ts`, `instrumentation-client.ts`, and

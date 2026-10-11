@@ -25208,3 +25208,62 @@ la tarjeta embebida en Auditoría web, que hereda el formato nuevo.
 entregable pregenerado (punto 3); hoy la tarjeta enseña el primer paso, la
 auditoría de cobertura y la acción sugerida cuando existen. Punto 2 (cola
 única IA + Google) cambiará las pastillas.
+
+## 304. ADMIN-PANEL-1 — Panel de negocio en /admin (2026-10-11)
+
+**Qué.** `/admin/panel` es la nueva portada de la consola de operador (`/admin`
+redirige ahí y «Panel» va primero en la barra). Reúne en una página lo que
+hasta ahora había que mirar en cuatro sitios:
+
+- **Objetivo del sprint**: la primera suscripción de pago antes del 24 de
+  octubre, días que quedan, MRR y plazas de precio fundador
+  (`getFounderOffer`).
+- **Seis indicadores** con su fuente: visitas (PostHog), altas (Supabase),
+  visita → alta (aproximada), pruebas Pro activas, checkouts iniciados y
+  suscripciones de pago (Stripe).
+- **Embudo** visita → alta → primer escaneo → checkout → pago, cada paso con
+  su fuente, y la «mayor fuga» marcada.
+- **Pruebas Pro en curso**, ordenadas por días restantes, con una señal que
+  sólo usa hechos que tenemos: checkout de Stripe sin terminar, días sin
+  entrar o número de escaneos.
+- **Visitas y altas por día** (28 días, Madrid), **canales**
+  (`lib/admin/kpi/channels.ts`), **páginas de entrada**, **Google** (la misma
+  lectura de Search Console que la tarjeta de Visión general, sobre el
+  proyecto de genscore.es del operador), **web vitals** con los umbrales de
+  Google, y **ingresos** (MRR, cobrado este mes, checkouts sin terminar).
+
+Periodos: hoy, 7 días, 28 días y este mes, siempre comparados con el periodo
+de la misma duración justo antes (`lib/admin/kpi/period.ts`).
+
+**Por qué en código y no con Claude Dashboards.** El fundador preguntó por la
+función de Dashboards de Claude. Un Claude Dashboard vive en claude.ai y no
+se puede meter dentro de `/admin`, que exige sesión de operador con MFA. Se
+construyó en la propia app.
+
+**Cómo lee PostHog.** Por su Query API (HogQL), desde el servidor, con una
+clave **personal** de sólo lectura (`POSTHOG_PERSONAL_API_KEY`, alcance
+`query:read`), `POSTHOG_PROJECT_ID` y `POSTHOG_API_HOST` (por defecto
+`https://eu.posthog.com`). Sin ellas, la mitad web dice que PostHog no está
+conectado. Las lecturas se guardan 10 minutos (`unstable_cache`, etiqueta
+`admin-panel`); «Actualizar» las vacía con `updateTag`. No escribe nada en la
+base de datos, así que no necesita correo a `OPS_ALERT_EMAIL`.
+
+**Qué cuenta y qué no.** Sólo el sitio público de `www.genscore.es`: fuera la
+consola, `/admin`, `/mfa`, `/auth` y `/informe`. Las cuentas del operador
+(`ADMIN_USER_IDS`), las de prueba internas y las comped no cuentan en
+ninguna cifra. La analítica es sin cookies, así que una «visita» es una
+sesión de PostHog, casi una carga de página, y la pantalla nunca dice
+«usuarios».
+
+**Diferencias con la maqueta aprobada**, todas para no pintar algo que no
+medimos (`docs/design-reference/admin-panel-1/README.md`): los canales no
+tienen altas porque el registro no guarda el canal; «Páginas que traen
+altas» pasa a «Páginas de entrada»; el embudo usa Supabase y Stripe para
+altas, checkout y pago porque los eventos de servidor de PostHog sólo
+existen desde el 2026-10-09 y el de pago no ha saltado nunca; no hay señal
+«Abrió precios».
+
+**Pendiente.** Guardar `utm_source` al registrarse daría altas y conversión
+por canal. Necesita tocar el registro y es una fase aparte. El objetivo del
+sprint está escrito en la página (`SPRINT_GOAL_DEADLINE`): cuando se cumpla
+o cambie, se cambia ahí.
