@@ -52,7 +52,10 @@ export const MARKETING_ENTITY_LINKS: ReadonlyArray<{ href: string; label: string
  * contenido y su test las fija por igualdad exacta.
  */
 export const MARKETING_LEAD_LINKS: ReadonlyArray<{ href: string; label: string }> = [
-  { href: "/gratis/informe-geo", label: "Informe gratis" }
+  { href: "/gratis/informe-geo", label: "Informe gratis" },
+  // AFFILIATES-1: the affiliate programme is acquisition too — through the
+  // people who recommend us — so it lives in this list, in every footer.
+  { href: "/afiliados", label: "Afiliados" }
 ];
 
 /**

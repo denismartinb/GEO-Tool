@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
+import { resolveAffiliateCode } from "@/lib/affiliates/codes";
 import {
   getActivePromoPlanIds,
   getStripeClient,
@@ -314,6 +315,18 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
   // shown price and the charged price cannot drift apart.
   const promoCouponId = (await getActivePromoPlanIds()).includes(planId) ? getPromoCouponIdForPlan(planId) : null;
 
+  // AFFILIATES-1: the affiliate code stored on the account at sign-up travels
+  // to the subscription, where the monthly report reads it. Only a code that
+  // is still approved in AFFILIATE_CODES; anything else is simply left out.
+  const referralCode = resolveAffiliateCode(
+    typeof user.user_metadata?.referral_code === "string" ? user.user_metadata.referral_code : null
+  );
+  const sessionMetadata: Record<string, string> = {
+    user_id: user.id,
+    plan_id: planId,
+    ...(referralCode ? { ref: referralCode } : {})
+  };
+
   // Arrow function expressions (not hoisted `function` declarations) so
   // TypeScript retains the `priceId` non-null narrowing from the early
   // return above — a hoisted declaration is conservative about closures.
@@ -326,8 +339,8 @@ export async function createCheckoutSession(planId: string): Promise<CheckoutSes
     customer_email: customerId ? undefined : (user.email ?? undefined),
     billing_address_collection: "required",
     automatic_tax: { enabled: true },
-    subscription_data: { metadata: { user_id: user.id, plan_id: planId } },
-    metadata: { user_id: user.id, plan_id: planId },
+    subscription_data: { metadata: { ...sessionMetadata } },
+    metadata: { ...sessionMetadata },
     // CHECKOUT-RETURN-1 (log §255): straight to the page that reads
     // `?checkout=`, not through /dashboard/settings/billing — that route's
     // redirect drops the query, so the success notice, the plan poller and the

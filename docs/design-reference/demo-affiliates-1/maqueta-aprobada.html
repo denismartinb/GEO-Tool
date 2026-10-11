@@ -1,0 +1,253 @@
+<title>Demo y afiliados GenScore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a review sheet. Each proposed change gets a row with its desktop and phone frame side by side; GenScore's own brand tokens, light only, because the real site is light. */
+:root{
+  --ink:#0b1426;--ink2:#3b4759;--ink3:#5b6b82;--line:#e7eaf0;--canvas:#f7f8fb;--surface:#fff;
+  --blue:#2563eb;--blue-soft:rgba(37,99,235,.10);--cyan:#09c5d6;--dark:#081223;--dark2:#0f1c33;--pos:#15915a;--pos-soft:#e7f6ee;
+  --sheet:#eceff5;
+  --f-display:"Bricolage Grotesque","Hanken Grotesk",system-ui,sans-serif;
+  --f-body:"Figtree",-apple-system,"Segoe UI",sans-serif;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--sheet);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;padding:32px 16px 64px}
+.wrap{max-width:1320px;margin:0 auto;display:grid;gap:48px}
+.intro h1{font-family:var(--f-display);font-size:34px;line-height:1.1;margin:0 0 8px;text-wrap:balance}
+.intro p{margin:0;max-width:70ch;color:var(--ink2)}
+.change{display:grid;gap:14px}
+.change-h{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.change-h h2{font-family:var(--f-display);font-size:22px;margin:0}
+.tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--blue);background:var(--blue-soft);padding:3px 8px;border-radius:99px}
+.note{margin:0;color:var(--ink2);max-width:80ch}
+.frames{display:flex;gap:24px;align-items:flex-start;overflow-x:auto;padding-bottom:6px}
+.frame{flex:none;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(11,20,38,.06)}
+.frame.d{width:900px}.frame.m{width:375px}
+.label{font-size:12px;color:var(--ink3);padding:6px 12px;border-bottom:1px solid var(--line);background:var(--canvas);font-weight:600}
+/* fake site chrome */
+.nav{display:flex;align-items:center;gap:18px;padding:14px 22px;font-size:13px;color:var(--ink2)}
+.logo{font-family:var(--f-display);font-weight:700;color:var(--ink);font-size:18px;margin-right:auto}
+.logo i{font-style:normal;color:var(--blue)}
+.nav .lead{color:var(--blue);font-weight:600}
+.m .nav{justify-content:center;position:relative}.m .nav .burger{position:absolute;left:16px;font-size:18px}.m .nav .logo{margin:0}
+.hero{background:linear-gradient(160deg,#eaf1ff 0%,#f7fbff 55%,#e6fbfd 100%);padding:44px 40px 40px;text-align:center}
+.m .hero{padding:32px 18px}
+.hero h3{font-family:var(--f-display);font-size:44px;line-height:1.05;margin:0 0 14px;text-wrap:balance}
+.m .hero h3{font-size:32px}
+.hero p{color:var(--ink2);margin:0 auto 20px;max-width:52ch}
+.field{display:flex;max-width:520px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px;gap:6px}
+.field span{flex:1;text-align:left;padding:8px 10px;color:var(--ink3)}
+.btn{display:inline-flex;align-items:center;gap:6px;justify-content:center;font-weight:600;border-radius:10px;padding:10px 16px;font-size:14px;border:0;font-family:inherit}
+.btn.p{background:var(--blue);color:#fff}
+.btn.s{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.btn.w{background:#fff;color:var(--ink)}
+.m .field{flex-direction:column}
+.under{margin-top:12px;font-size:13px;color:var(--ink3)}
+.new{outline:2px dashed var(--cyan);outline-offset:4px;border-radius:8px}
+.democta{display:inline-flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:6px;color:var(--blue);font-weight:600;font-size:14px;margin-top:14px}
+/* /demo page */
+.pg{padding:44px 48px;display:grid;grid-template-columns:1.2fr 1fr;gap:40px;align-items:start}
+.m .pg{grid-template-columns:1fr;padding:28px 18px;gap:24px}
+.eyebrow{font-size:12px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--blue);margin:0 0 10px}
+.pg h3{font-family:var(--f-display);font-size:38px;line-height:1.05;margin:0 0 14px;text-wrap:balance}
+.m .pg h3{font-size:28px}
+.pg p{color:var(--ink2);margin:0 0 16px}
+.list{list-style:none;padding:0;margin:0 0 20px;display:grid;gap:10px}
+.list li{display:flex;gap:10px;align-items:flex-start}
+.list li b{flex:none;width:22px;height:22px;border-radius:50%;background:var(--pos-soft);color:var(--pos);display:grid;place-items:center;font-size:12px}
+.card{background:var(--dark);color:#f7f8fb;border-radius:16px;padding:24px;display:grid;gap:14px}
+.card h4{font-family:var(--f-display);font-size:20px;margin:0}
+.card .meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:#b8c3d6}
+.slots{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.slot{border:1px solid #2a3a58;border-radius:8px;padding:8px;text-align:center;font-size:13px;font-variant-numeric:tabular-nums}
+.slot small{display:block;color:#8d9ab0;font-size:11px}
+.card .fine{font-size:12px;color:#8d9ab0;margin:0}
+/* affiliates */
+.aff-hero{background:var(--dark);color:#f7f8fb;padding:44px 48px}
+.m .aff-hero{padding:30px 18px}
+.aff-hero .eyebrow{color:var(--cyan)}
+.aff-hero h3{font-family:var(--f-display);font-size:40px;line-height:1.05;margin:0 0 12px;max-width:20ch;text-wrap:balance}
+.m .aff-hero h3{font-size:28px}
+.aff-hero p{color:#b8c3d6;max-width:58ch;margin:0 0 20px}
+.big{display:flex;gap:28px;flex-wrap:wrap;margin-bottom:22px}
+.big div{display:grid}
+.big strong{font-family:var(--f-display);font-size:40px;line-height:1;color:#fff}
+.big span{font-size:13px;color:#8d9ab0}
+.m .big strong{font-size:30px}
+.steps{padding:32px 48px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.m .steps{grid-template-columns:1fr;padding:24px 18px}
+.step h5{font-family:var(--f-display);font-size:17px;margin:0 0 6px}
+.step .n{font-family:var(--f-display);color:var(--blue);font-weight:700;font-size:14px}
+.step p{margin:0;color:var(--ink2);font-size:14px}
+.example{margin:0 48px 28px;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:var(--canvas);font-size:14px;color:var(--ink2)}
+.m .example{margin:0 18px 24px}
+.example b{color:var(--ink)}
+.rules{padding:0 48px 36px}
+.m .rules{padding:0 18px 28px}
+.rules h5{font-family:var(--f-display);font-size:17px;margin:0 0 8px}
+.rules ul{margin:0;padding-left:18px;color:var(--ink2);font-size:14px;display:grid;gap:4px}
+.form{display:grid;gap:8px;max-width:440px}
+.inp{background:#0f1c33;border:1px solid #2a3a58;border-radius:10px;padding:10px 12px;color:#8d9ab0;font-size:14px}
+.how{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;max-width:900px}
+.how h3{font-family:var(--f-display);margin:0 0 8px;font-size:18px}
+.how ol{margin:0;padding-left:20px;color:var(--ink2);display:grid;gap:6px}
+code{font-size:13px;background:var(--canvas);padding:1px 5px;border-radius:4px}
+</style>
+
+<div class="wrap">
+  <div class="intro">
+    <h1>Demo agendable y programa de afiliados</h1>
+    <p>Tres cambios para que lo apruebes antes de construirlos. Lo marcado con borde discontinuo es lo nuevo; el resto ya existe y no se toca.</p>
+  </div>
+
+  <section class="change">
+    <div class="change-h"><span class="tag">Cambio 1</span><h2>«Agenda una videollamada» en la portada</h2></div>
+    <p class="note">Una línea bajo el campo del hero, sin competir con el botón principal. También pasan a llevar a <code>/demo</code> «Hablar con ventas» y «Plan Agencia» de /precios, que hoy abren un correo. La cabecera no cambia.</p>
+    <div class="frames">
+      <div class="frame d"><div class="label">Escritorio · portada</div>
+        <div class="nav"><span class="logo">Gen<i>Score</i></span><span>Producto</span><span>Cómo funciona</span><span>Qué es GEO</span><span>Precios</span><span>Blog</span><span class="lead">Informe gratis</span></div>
+        <div class="hero">
+          <h3>¿Sabes si la IA<br>recomienda tu marca?</h3>
+          <p>Analizamos si ChatGPT, Gemini y Claude te recomiendan y cómo puedes mejorar tu visibilidad en los motores de IA.</p>
+          <div class="field"><span>tudominio.com</span><span class="btn p">Analiza gratis</span></div>
+          <div class="under">ChatGPT · Gemini · Claude</div>
+          <div class="democta new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>Agenda una videollamada de 20 min con el equipo de GenScore</div>
+        </div>
+      </div>
+      <div class="frame m"><div class="label">Móvil 375 · portada</div>
+        <div class="nav"><span class="burger">☰</span><span class="logo">Gen<i>Score</i></span></div>
+        <div class="hero">
+          <h3>¿Sabes si la IA<br>recomienda tu marca?</h3>
+          <p>Analizamos si ChatGPT, Gemini y Claude te recomiendan.</p>
+          <div class="field"><span>tudominio.com</span><span class="btn p">Analiza gratis</span></div>
+          <div class="under">ChatGPT · Gemini · Claude</div>
+          <div class="democta new"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="14" height="12" rx="2"/><path d="M16 10l6-3v10l-6-3z"/></svg>Agenda una videollamada de 20 min</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="change">
+    <div class="change-h"><span class="tag">Cambio 2</span><h2>Página nueva /demo</h2></div>
+    <p class="note">Explica qué se ve en la llamada y lleva a tu página de reservas de Google Calendar, que es la que enseña tus huecos reales y manda la invitación. Los huecos de la tarjeta oscura son de ejemplo.</p>
+    <div class="frames">
+      <div class="frame d new"><div class="label">Escritorio · /demo</div>
+        <div class="nav"><span class="logo">Gen<i>Score</i></span><span>Precios</span><span>Blog</span><span class="lead">Informe gratis</span></div>
+        <div class="pg">
+          <div>
+            <p class="eyebrow">Videollamada · 20 minutos</p>
+            <h3>Te enseñamos qué dice la IA de tu marca</h3>
+            <p>Una videollamada corta con el equipo de GenScore. Traes tu web y, si quieres, la de un competidor.</p>
+            <ul class="list">
+              <li><b>✓</b><span>Qué responden ChatGPT, Gemini y Claude a las preguntas principales de búsqueda de tu sector.</span></li>
+              <li><b>✓</b><span>Si te nombran, a quién recomiendan en tu lugar y por qué.</span></li>
+              <li><b>✓</b><span>Qué plan encaja contigo, también si eres agencia y llevas varias marcas.</span></li>
+            </ul>
+            <p style="font-size:13px;color:var(--ink3)">¿Sin tiempo para una llamada? <span style="color:var(--blue);font-weight:600">Pide el informe gratis</span> o <span style="color:var(--blue);font-weight:600">prueba 7 días de Pro</span>.</p>
+          </div>
+          <div class="card">
+            <h4>Elige un hueco</h4>
+            <div class="meta"><span>20 min</span><span>Google Meet</span><span>Hora de Madrid</span></div>
+            <div class="slots">
+              <div class="slot"><small>mar 13</small>18:00</div><div class="slot"><small>mar 13</small>19:30</div><div class="slot"><small>mié 14</small>20:00</div>
+              <div class="slot"><small>jue 15</small>18:30</div><div class="slot"><small>vie 16</small>20:30</div><div class="slot"><small>lun 19</small>19:00</div>
+            </div>
+            <span class="btn w">Ver todos los huecos →</span>
+            <p class="fine">Lunes a viernes, de 18:00 a 21:00. Abre la página de reservas de Google Calendar. Huecos de ejemplo.</p>
+          </div>
+        </div>
+      </div>
+      <div class="frame m new"><div class="label">Móvil 375 · /demo</div>
+        <div class="nav"><span class="burger">☰</span><span class="logo">Gen<i>Score</i></span></div>
+        <div class="pg">
+          <div>
+            <p class="eyebrow">Videollamada · 20 minutos</p>
+            <h3>Te enseñamos qué dice la IA de tu marca</h3>
+            <p>Una videollamada corta con el equipo de GenScore.</p>
+            <ul class="list">
+              <li><b>✓</b><span>Qué responden ChatGPT, Gemini y Claude en tu sector.</span></li>
+              <li><b>✓</b><span>A quién recomiendan en tu lugar y por qué.</span></li>
+              <li><b>✓</b><span>Qué plan encaja contigo.</span></li>
+            </ul>
+          </div>
+          <div class="card">
+            <h4>Elige un hueco</h4>
+            <div class="meta"><span>20 min</span><span>Google Meet</span></div>
+            <span class="btn w">Ver huecos libres →</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="change">
+    <div class="change-h"><span class="tag">Cambio 3</span><h2>Página nueva /afiliados</h2></div>
+    <p class="note">Enlazada desde el pie de todas las páginas públicas. La comisión es del 30 % de lo que paga de verdad cada cuenta Pro referida, durante 12 meses. Los 7 días de prueba no cuentan porque no se cobran. El 30 % y los 12 meses son los mismos que ya ofrecimos a Campamento Web y La Newsletter SEO.</p>
+    <div class="frames">
+      <div class="frame d new"><div class="label">Escritorio · /afiliados</div>
+        <div class="nav"><span class="logo">Gen<i>Score</i></span><span>Precios</span><span>Blog</span><span class="lead">Informe gratis</span></div>
+        <div class="aff-hero">
+          <p class="eyebrow">Programa de afiliados</p>
+          <h3>Recomienda GenScore y cobra cada mes</h3>
+          <p>Para agencias, consultores SEO y creadores que hablan de búsqueda e IA. Tú recomiendas; nosotros nos ocupamos de la prueba, el producto y el soporte.</p>
+          <div class="big">
+            <div><strong>30 %</strong><span>de cada pago de Pro</span></div>
+            <div><strong>12 meses</strong><span>por cada cuenta que traigas</span></div>
+            <div><strong>90 días</strong><span>de validez de tu enlace</span></div>
+          </div>
+          <div class="form">
+            <div class="inp">Tu nombre</div><div class="inp">Email</div><div class="inp">Tu web, newsletter o perfil</div>
+            <span class="btn p">Quiero ser afiliado</span>
+          </div>
+        </div>
+        <div class="steps">
+          <div class="step"><div class="n">Paso 1</div><h5>Te damos tu enlace</h5><p>Revisamos tu solicitud y te mandamos un enlace propio a genscore.es.</p></div>
+          <div class="step"><div class="n">Paso 2</div><h5>Alguien se da de alta</h5><p>Prueba Pro 7 días gratis. Si contrata Pro, la cuenta queda asociada a ti.</p></div>
+          <div class="step"><div class="n">Paso 3</div><h5>Cobras cada mes</h5><p>El día 5 te enviamos el detalle y te pagamos por transferencia lo cobrado el mes anterior.</p></div>
+        </div>
+        <div class="example"><b>Ejemplo:</b> una cuenta Pro a precio fundador paga 69 € al mes con IVA. Tu comisión es el 30 % de la base sin IVA, unos 17 € al mes durante 12 meses.</div>
+        <div class="rules">
+          <h5>Condiciones</h5>
+          <ul>
+            <li>Sólo cuentan las cuentas Pro con pago real. La prueba gratuita, los reembolsos y las devoluciones no generan comisión.</li>
+            <li>La comisión se calcula sobre lo cobrado sin IVA, después de descuentos.</li>
+            <li>Pago a partir de 50 € acumulados, con factura del afiliado.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="frame m new"><div class="label">Móvil 375 · /afiliados</div>
+        <div class="nav"><span class="burger">☰</span><span class="logo">Gen<i>Score</i></span></div>
+        <div class="aff-hero">
+          <p class="eyebrow">Programa de afiliados</p>
+          <h3>Recomienda GenScore y cobra cada mes</h3>
+          <div class="big">
+            <div><strong>30 %</strong><span>de cada pago de Pro</span></div>
+            <div><strong>12 meses</strong><span>por cuenta</span></div>
+          </div>
+          <div class="form">
+            <div class="inp">Tu nombre</div><div class="inp">Email</div><div class="inp">Tu web o perfil</div>
+            <span class="btn p">Quiero ser afiliado</span>
+          </div>
+        </div>
+        <div class="steps">
+          <div class="step"><div class="n">Paso 1</div><h5>Te damos tu enlace</h5></div>
+          <div class="step"><div class="n">Paso 2</div><h5>Alguien contrata Pro</h5></div>
+          <div class="step"><div class="n">Paso 3</div><h5>Cobras cada mes</h5></div>
+        </div>
+        <div class="example"><b>Ejemplo:</b> Pro a 69 € con IVA deja unos 17 € al mes, durante 12 meses.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="how">
+    <h3>Cómo se mide por dentro (sin migración y sin herramienta de pago)</h3>
+    <ol>
+      <li>Un enlace como <code>genscore.es/?ref=campamentoweb</code> guarda el código durante 90 días en el navegador.</li>
+      <li>Al darse de alta, también con Google, el código se guarda en la cuenta.</li>
+      <li>Al contratar, el código viaja a la suscripción de Stripe.</li>
+      <li>El día 5 te llega por correo el resumen de cada afiliado: facturas de Pro pagadas el mes anterior, su base sin IVA y el 30 %. Tú haces la transferencia.</li>
+      <li>Las solicitudes del formulario te llegan por correo, como las del informe gratis. Tú das el visto bueno y yo creo el código.</li>
+    </ol>
+  </section>
+</div>

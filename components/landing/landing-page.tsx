@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
+import { HeroCallPill } from "@/components/landing/hero-call-pill";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { HeroDemo } from "@/components/landing/hero-demo";
 import { HeroDemoScenes } from "@/components/landing/hero-demo-scenes";
@@ -356,6 +357,7 @@ export function LandingPage() {
           <div className="lp-hero-form">
             <HeroDomainField />
           </div>
+          <HeroCallPill />
         </div>
 
         {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.

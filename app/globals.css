@@ -5006,6 +5006,24 @@ a.notif-row:hover {
    una fila desordenada (FREE-CHECKER-1, log §113). */
 .lp-hero-note span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 @media (max-width: 400px) { .lp-hero-note { gap: 8px 14px; } }
+/* DEMO-CALL-1 (2026-10-10, diseño en docs/design-reference/demo-affiliates-1/):
+   la videollamada es una línea secundaria bajo el campo, nunca un segundo
+   botón que compita con «Analiza gratis». Icono de cámara, no flecha ni
+   teléfono: es una videollamada (fundador, 2026-10-10). En móvil la frase se
+   acorta para no partirse en dos líneas. */
+/* DEMO-CALL-1 option A (founder, 2026-10-11): a small, quiet pill under the
+   engines — smaller type than the field, translucent white, the next real
+   slot on the right. It must never compete with «Analiza gratis». */
+.lp-hero-call { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; padding: 4px 11px 4px 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.6); border: 1px solid rgba(11, 20, 38, 0.08); color: var(--brand-ink-2); font-size: 13px; font-weight: 500; line-height: 1.2; text-decoration: none; transition: background-color 0.15s ease, border-color 0.15s ease; }
+.lp-hero-call:hover { background: #fff; border-color: rgba(36, 87, 230, 0.25); }
+.lp-hero-call:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+.lp-hero-call .ic { width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--brand-blue); color: #fff; }
+.lp-hero-call .label { color: var(--brand-ink); font-weight: 600; }
+.lp-hero-call .next { display: inline-flex; align-items: center; gap: 6px; padding-left: 8px; border-left: 1px solid rgba(11, 20, 38, 0.1); color: var(--brand-ink-3); font-variant-numeric: tabular-nums; }
+.lp-hero-call .dot { width: 6px; height: 6px; border-radius: 50%; background: #12a150; box-shadow: 0 0 0 2px rgba(18, 161, 80, 0.16); }
+.lp-hero-call .arr { color: var(--brand-blue); font-weight: 600; }
+.lp-hero-call .k { white-space: pre; }
+@media (max-width: 400px) { .lp-hero-call .k { display: none; } }
 
 .lp-shot { position: relative; z-index: 2; max-width: 1060px; margin: 54px auto 0; }
 /* "Unos pixeles más de aire" entre título, subtítulo, campo y demo — sólo en
