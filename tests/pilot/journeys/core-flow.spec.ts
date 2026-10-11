@@ -271,12 +271,13 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     `/dashboard/projects/${id}/web-audit`,
     "web-audit",
     {
-      // The tabs only exist once `summary` does — i.e. once the project has a
-      // real coverage audit. Anchoring here is exactly what would have turned
-      // the 2026-08-02 false PASS into a loud failure: every capture that day
-      // showed the "Todavía no has auditado tu web" card instead of these.
-      describedAs: "las pestañas de la auditoría (Problemas · Correcto · Páginas)",
-      anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas técnicos/i }]
+      // The block cards and tabs only exist once a technical audit does.
+      // Anchoring here is exactly what would have turned the 2026-08-02 false
+      // PASS into a loud failure: every capture that day showed the
+      // "Todavía no has auditado tu web" card instead of these. Since
+      // SEARCH-SEO-1 Fase 1b (log §275) the screen opens on the GEO block.
+      describedAs: "el bloque Auditoría GEO con sus pestañas (Problemas · Correcto · Páginas)",
+      anyOf: [{ selector: '[role="tablist"]' }, { text: /problemas que puntúan/i }]
     }
   );
   assertPageIsHealthy(findings);
@@ -372,10 +373,19 @@ test("web audit screen renders", async ({ page }, testInfo) => {
     }
   }
 
+  // The SEO block is the second half of the same screen (log §275): its own
+  // score, banner and tabs. Switching is a link, so this proves the block
+  // card navigates and the SEO tab panel renders with real content.
+  const seoBlock = page.locator("a.sa-blk-seo");
+  await seoBlock.click();
+  await expect(page, "the SEO block card did not open the SEO block").toHaveURL(/[?&]bloque=seo/);
+  await expect(seoBlock, "the SEO block card is not marked current").toHaveAttribute("aria-current", "page");
+  await page.getByRole("tab", { name: "Problemas" }).click();
+  await captureInteraction(page, testInfo, "web-audit-seo-block");
+
   // Misma incidencia estructural que las dos anteriores: los pasos del sitemap
   // están dentro de un <details> colapsado, y sin abrirlo la fase no tiene
-  // ninguna evidencia visual. Es el tercer sitio hoy donde el mismo patrón
-  // habría pasado como verde sin enseñar nada.
+  // ninguna evidencia visual. Desde la Fase 1b viven en el bloque SEO.
   const sitemapIssue = page
     .locator('[role="tabpanel"]:not([hidden]) details.wa-details')
     .filter({ hasText: "sitemap.xml" })

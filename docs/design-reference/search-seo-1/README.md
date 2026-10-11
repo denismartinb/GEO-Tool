@@ -25,3 +25,30 @@ aprobada el 2026-10-10 («si perfecto»). Se construyó sin la nota proyectada
 el estado «auditoría en marcha». En escritorio, si «Indicadores clave» deja
 hueco, los motores suben a él y la tarjeta va a la derecha del desglose, a
 petición del fundador (log §271).
+
+**Fase 1b (log §275).** La vista Auditoría SEO de `maqueta.html` se
+construyó primero tal cual, con los checks de hoy. Al verla, el fundador echó
+de menos las pestañas, la tarjeta «Si arreglas…», los puntos por problema y
+una auditoría propia de GEO, y eligió partir la pantalla en dos bloques.
+`auditoria-geo-seo.html` es esa maqueta, aprobada el 2026-10-11 («Apruebo»),
+en móvil (390 px) y escritorio (1280 px). **Sustituye a la vista Auditoría
+SEO de `maqueta.html`.**
+
+- Bloque **GEO** («¿Te puede citar la IA?»): cobertura de contenido, bots de
+  IA, llms.txt, fragmentos, datos estructurados, respuesta al principio,
+  listas o tablas, extensión y frescura.
+- Bloque **SEO** («¿Te encuentra Google?»): título, meta description,
+  encabezados, Open Graph, canonical, indexación, hreflang y sitemap.
+- Cada bloque tiene su nota (con los pesos de siempre, así que juntas dan la
+  Salud técnica), su tarjeta «Si arreglas…» y las pestañas Problemas ·
+  Correcto · Páginas.
+- Menú: «Auditoría GEO» en Posicionamiento en IA y «Auditoría SEO» en
+  Posicionamiento en buscadores, las dos a la misma pantalla con
+  `?bloque=geo|seo`. El fundador dejó abierta la idea de unirlas en una sola
+  entrada, «Auditoría técnica», según cómo quede; de momento son dos.
+
+Lo construido difiere de la maqueta en tres detalles: la evolución y el
+historial de la cobertura, que la maqueta no dibujaba, van plegados dentro de
+la tarjeta de cobertura; los temas que la IA ya cita van en la pestaña
+Correcto del bloque GEO; y el acceso de bots va en la columna lateral del
+bloque GEO.

@@ -43,7 +43,7 @@ export async function GET() {
     .eq("id", user.id)
     .maybeSingle();
 
-  // HEADER-CHIP-PLAN-PARITY-1 (log §275): the same effective plan the
+  // HEADER-CHIP-PLAN-PARITY-1 (log §276): the same effective plan the
   // console reads (`getPlanForUser`: trial expiry, then comped). The console
   // seeds the header's identity cache with ITS plan (`SessionCacheSync`), and
   // the chip is painted from that cache before this answer lands. When the two

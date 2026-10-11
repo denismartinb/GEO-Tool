@@ -52,13 +52,15 @@ describe("SeoAuditCard", () => {
     expect(html).toMatch(/<b>0<\/b><span>Mejoras<\/span>/);
   });
 
-  it("lists the top issues with the Auditoría SEO screen's labels and scopes, each linking there", () => {
+  it("lists the top issues with the audit screen's labels and scopes, each linking to its own block", () => {
     const html = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
     expect(html).toContain("Datos estructurados");
     expect(html).toContain("6 de 10 páginas");
     expect(html).toContain("No encontrado");
     expect(html).toContain("+9 pts");
-    expect(html.match(new RegExp(`href="${HREF}"`, "g"))?.length).toBe(3);
+    // Structured data and lists are GEO checks; the sitemap is SEO (log §275).
+    expect(html.match(new RegExp(`href="${HREF}\\?bloque=geo"`, "g"))?.length).toBe(2);
+    expect(html.match(new RegExp(`href="${HREF}\\?bloque=seo"`, "g"))?.length).toBe(1);
   });
 
   it("never shows points it does not have", () => {

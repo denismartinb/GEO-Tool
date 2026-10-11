@@ -148,7 +148,7 @@ describe("GET /api/me", () => {
       // `current_plan` says free; the console (`getPlanForUser`) reads this
       // account as Agencia and seeds the header cache with it. If this
       // endpoint disagreed, the chip would paint with the badge and then
-      // shrink — the overlapping-chips bug (log §275).
+      // shrink — the overlapping-chips bug (log §276).
       loggedIn({ current_plan: "free", trial_ends_at: null, stripe_subscription_id: null });
 
       const { user } = await (await GET()).json();
