@@ -21,6 +21,8 @@ import { Icon } from "@/components/ui/icon";
 import { MobileShellProvider } from "@/components/mobile-shell";
 import { TourProvider } from "@/components/tour-provider";
 import { SessionCacheSync, SignOutForm } from "@/components/session-cache-sync";
+import { InternalVisitorMark } from "@/components/internal-visitor-mark";
+import { isCountedAccount } from "@/lib/admin/kpi/own-accounts";
 import { signOut } from "./actions";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -97,6 +99,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           instead of flashing the anonymous CTAs. Renders nothing; see
           components/session-cache-sync.tsx. */}
       <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
+      {/* ADMIN-PANEL-1: a team account's browser stops sending web analytics,
+          so /admin/panel counts only real visitors. */}
+      {!isCountedAccount({ id: user.id, email: user.email ?? "" }) && <InternalVisitorMark />}
       {/* Blocking on purpose: no close button, no Escape, no click-outside.
           Rendered above everything else in the console — Sidebar included —
           for as long as the account holds more active domains than its plan
