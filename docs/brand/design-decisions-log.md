@@ -24324,3 +24324,12 @@ tendrá que reconectar).
 
 **Regla de premisa.** No se retira ningún camino de recuperación. Si la
 conexión falla, la pantalla dice por qué y ofrece reconectar o desconectar.
+
+**Adenda §284 (2026-10-11, mismo día):** el fundador no entendió «a un paso
+de la página 1». Se cambia por lo que es, «en la página 2 de Google» (puestos
+11 a 20), en la tarjeta de conectar, en la mitad de Google de Visión general,
+en el título del gráfico, en el filtro («Página 2 (puestos 11–20)») y en la
+insignia de cada búsqueda («PÁGINA 2»). Sólo texto. Además, la primera
+conexión real falló con `403 access_denied` porque la app de Google Cloud
+seguía en modo «Prueba»: hay que publicarla («En producción») o añadir al
+usuario como tester. Es configuración de Google, no un fallo del código.

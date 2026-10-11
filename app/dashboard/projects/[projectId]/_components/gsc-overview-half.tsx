@@ -39,7 +39,7 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
           <p>
             {state.kind === "reconnect"
               ? "La conexión con Search Console se ha perdido. Vuelve a conectar para ver tus clics y tu puesto en Google."
-              : "Conecta tu Search Console para ver tus clics, tu puesto en Google y las búsquedas a un paso de la página 1."}
+              : "Conecta tu Search Console para ver tus clics, tu puesto en Google y las búsquedas en las que sales en la página 2."}
           </p>
           <Link href={screen} className="btn btn-ghost btn-sm">
             {state.kind === "reconnect" ? "Volver a conectar" : "Conectar Search Console"}
@@ -81,8 +81,8 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
         <Link href={screen} className="ov2-gsc-near">
           <span className="nn">{nearPage1.length}</span>
           <p>
-            <b>{nearPage1.length === 1 ? "búsqueda a un paso" : "búsquedas a un paso"} de la página 1</b>. Son las más baratas
-            de subir. <em>Verlas →</em>
+            <b>{nearPage1.length === 1 ? "búsqueda en la página 2" : "búsquedas en la página 2"} de Google</b>. Son las más
+            fáciles de subir a la primera. <em>Verlas →</em>
           </p>
         </Link>
       )}

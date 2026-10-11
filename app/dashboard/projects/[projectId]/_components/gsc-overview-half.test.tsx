@@ -34,7 +34,7 @@ describe("GscOverviewHalfView", () => {
     expect(html).toContain("9,6");
     expect(html).toContain("▲ 1,3");
     expect(html).toContain(">2<");
-    expect(html).toContain("búsquedas a un paso");
+    expect(html).toContain("búsquedas en la página 2");
     expect(html).toContain(`/dashboard/projects/${P}/search-console`);
   });
 
@@ -54,6 +54,6 @@ describe("GscOverviewHalfView", () => {
     const html = render(ready({ clicks: { value: 3, deltaPct: null }, position: { value: 20, delta: null }, nearPage1: [] }));
     expect(html).not.toContain("%");
     expect(html).not.toContain("▲");
-    expect(html).not.toContain("a un paso");
+    expect(html).not.toContain("en la página 2 de Google");
   });
 });
