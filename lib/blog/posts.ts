@@ -518,6 +518,23 @@ export const BLOG_POSTS: BlogPost[] = [
     // (log §283). Product claims trace to that section.
     primaryKeyword: "medir marca en perplexity",
     cluster: "playbooks"
+  },
+  {
+    slug: "auditoria-seo-y-search-console-en-genscore",
+    title: "Tu posición en Google y en la IA, en el mismo sitio: GenScore conecta tu Search Console",
+    seoTitle: "GenScore y Search Console: tu posición en Google y en la IA",
+    metaDescription:
+      "Conecta tu Search Console a GenScore: tu puesto en Google, tus oportunidades de subir y qué mejorar para Google y para la IA, junto a la Auditoría SEO.",
+    description:
+      "GenScore suma Google a la IA. Conecta tu Search Console y ve tu puesto en Google búsqueda a búsqueda, tus mejores oportunidades y qué mejorar para Google y para ChatGPT, Gemini, Claude y Perplexity, con la Auditoría SEO al lado.",
+    datePublished: "2026-10-13",
+    coverImage: "/blog/auditoria-seo-y-search-console-en-genscore/cover.webp",
+    coverIcon: "search",
+    // CONTENT-LAUNCH-2 (log §289): launch post for SEARCH-SEO-1 Fases 2, 3
+    // and 3b (log §281, §284, §287). Product claims trace to those sections;
+    // the figures are mockups with invented data (ADR 0028).
+    primaryKeyword: "search console y posicionamiento en ia",
+    cluster: "playbooks"
   }
 ];
 

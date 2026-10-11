@@ -24535,3 +24535,41 @@ Google está «En producción», porque si no la conexión caduca a los 7 días
 (§284).
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 289. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-13)
+
+**Qué se decidió.** Segundo artículo de lanzamiento de §288:
+`/blog/auditoria-seo-y-search-console-en-genscore` (cluster `playbooks`), que
+sale el martes 13 a las 20:30 con su post de LinkedIn y de X. El fundador fijó
+el enfoque el 2026-10-11: la integración aporta la posición general de la
+marca, oportunidades de mejora globales y qué mejorar para Google y para los
+motores de IA, porque las mejoras de posicionamiento muchas veces son
+colaterales.
+
+- **Las páginas del carrusel van dentro del artículo** (decisión del fundador,
+  2026-10-11); LinkedIn y X llevan una imagen resumen que enlaza aquí. Son
+  maquetas HTML/CSS con datos inventados y etiquetadas como tales, rasterizadas
+  a WebP: la opción (4) de ADR 0028, nunca una captura de una cuenta real.
+- **Entran tres páginas, no todas, por el presupuesto de `public/`**
+  (`tests/asset-budget.test.ts`): a 840 px y calidad 58 las tres más la
+  portada pesan 81 KB y dejan `public/` justo bajo el tope de 1.792 KB. La
+  página de texto «Lo que mejoras en Google suele ayudarte también en la IA»
+  se cuenta en prosa, y la portada va sólo en WebP (su SVG fuente vive en
+  `/mnt/project-files/contenido/lanzamientos/seo-search-console/`). **Con esto
+  `public/` queda sin margen:** el siguiente artículo con portada romperá el
+  test, y la pregunta que pide su comentario —por qué pesan tanto las
+  portadas del catálogo— hay que contestarla antes de subir el tope.
+- **Cada afirmación de producto sale de §281, §284 y §287**: Salud SEO y
+  Core Web Vitals; conexión de sólo lectura, datos en directo y sin guardar,
+  sólo la propiedad del dominio; puesto medio, tramos, evolución, búsquedas
+  con su página, páginas cruzadas con la auditoría, «Te ven, pero no entran»
+  con la propia web como referencia, «Vigilar en IA», móvil/ordenador y
+  canibalización.
+- **Se queda fuera la página del carrusel de recomendaciones con datos de
+  Google** (`Recs.dc.html`): es la siguiente fase de §287 y no está
+  construida. Si sale antes del martes, se añade.
+
+**Pendiente.** Igual que §288: comprobar antes de publicar que la pantalla de
+consentimiento de Google está «En producción» (§284).
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

@@ -76,7 +76,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // GEO-SELF-1 Fase 3 (2026-10-09, log §259).
   "como-aparecer-en-gemini-y-vistas-creadas-con-ia": "playbooks",
   // CONTENT-LAUNCH-1 (2026-10-11, log §288).
-  "genscore-ya-mide-perplexity": "playbooks"
+  "genscore-ya-mide-perplexity": "playbooks",
+  // CONTENT-LAUNCH-2 (2026-10-13, log §289).
+  "auditoria-seo-y-search-console-en-genscore": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
