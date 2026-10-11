@@ -1,0 +1,193 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("genscore-ya-mide-perplexity");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿En qué planes de GenScore está Perplexity?",
+    answer:
+      "En Pro y Agencia, y también en la prueba de Pro de 7 días. El plan Starter sigue midiendo ChatGPT, Gemini y Claude."
+  },
+  {
+    question: "¿Tengo que hacer algo para que mi dominio empiece a medirse en Perplexity?",
+    answer:
+      "No. Si tu plan lo incluye, Perplexity entra solo en el siguiente escaneo, con las mismas preguntas principales de búsqueda que ya tienes y los mismos competidores."
+  },
+  {
+    question: "¿Por qué no veo la comparación con el escaneo anterior en mi GEO Score?",
+    answer:
+      "Porque el primer escaneo con Perplexity mide un motor más que el anterior. Comparar los dos daría una subida o una bajada que no viene de tu marca, sino de haber añadido un motor, así que esa comparación no se muestra hasta que haya dos escaneos con los mismos motores."
+  },
+  {
+    question: "¿Qué tiene de distinto Perplexity frente a ChatGPT, Gemini o Claude?",
+    answer:
+      "Perplexity busca en la web cada vez que responde y enseña sus fuentes junto al texto. Por eso, además de que te nombre, importa mucho que tu web o las páginas que hablan de ti estén entre esas fuentes."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Desde hoy, GenScore mide Perplexity en los planes Pro y Agencia, junto a
+ChatGPT, Gemini y Claude. Perplexity busca en internet cada vez que le haces
+una pregunta y enseña de dónde obtiene todo lo que dice. Por eso, salir ahí
+pide dos cosas a la vez: que te nombre en el texto y que tu web, o las páginas
+que hablan de ti, estén entre sus fuentes. En tu primer escaneo con
+Perplexity, mira tres cosas: si te nombra, a quién recomienda en tu lugar y
+qué páginas cita.
+
+</KeyTakeaway>
+
+## Por qué un cuarto motor
+
+Cada vez más gente pregunta a una IA antes de buscar en Google, y no siempre a
+la misma. Quien está comparando proveedores puede abrir ChatGPT por la mañana y
+Perplexity por la tarde, y lo que uno recomienda no tiene por qué coincidir con
+lo que recomienda el otro. Medir solo uno es mirar una parte del escaparate.
+
+Perplexity tiene además un papel propio: se usa mucho como buscador. Quien lo
+abre suele querer una respuesta con enlaces que pueda comprobar, y eso cambia
+lo que conviene trabajar para aparecer.
+
+## Qué tiene de distinto Perplexity
+
+Un chat conversacional puede responder con lo que aprendió en su
+entrenamiento. Perplexity, en cambio, busca en la web en cada respuesta y pone
+sus fuentes al lado del texto, numeradas. Lo explicamos con detalle en
+<a href="/blog/como-aparecer-en-perplexity">cómo aparecer en Perplexity</a>,
+pero la consecuencia práctica cabe en una frase: en Perplexity compites por que
+te nombren y también por ser una de las páginas que cita.
+
+Hicimos una primera prueba interna con las preguntas de nuestro
+<a href="/blog/que-software-de-facturacion-recomienda-la-ia">estudio de software
+de facturación</a>. Es orientativa, porque fue una sola pasada, pero dejó dos
+pistas. La primera es que Perplexity concentró sus recomendaciones en menos
+marcas que Gemini, que también busca en la web. La segunda es que mandó con
+frecuencia a la fuente oficial, la aplicación gratuita de la Agencia Tributaria.
+Si en tu sector hay una fuente de referencia de ese tipo, cuenta con que
+Perplexity la tenga muy en cuenta.
+
+## Qué ves de Perplexity en GenScore
+
+Perplexity entra en tu escaneo como un motor más, con las mismas preguntas
+principales de búsqueda y los mismos competidores que ya sigues.
+
+<Figure
+  label="Figura 1."
+  wide
+  caption="Lo que GenScore te enseña de Perplexity en cada escaneo, igual que de los otros tres motores."
+>
+
+| Qué ves | Para qué te sirve |
+|---|---|
+| Si te nombra en cada pregunta | Saber en qué preguntas estás y en cuáles no |
+| En qué posición sales | Distinguir si eres la primera opción o una más de la lista |
+| A qué competidores nombra | Ver quién ocupa tu sitio cuando no sales |
+| Qué páginas cita como fuente, y si alguna es tuya | Saber de dónde saca lo que dice de tu sector |
+| Tu GEO Score con los cuatro motores | Una sola cifra para seguir tu evolución |
+
+</Figure>
+
+## Qué mirar en tu primer escaneo con Perplexity
+
+<NumberedSection n={1} title="Si te nombra, y en qué preguntas">
+
+Empieza por lo básico: en qué preguntas te nombra Perplexity y en cuáles no.
+Compáralo con los otros motores. Si sales en ChatGPT y Gemini pero no en
+Perplexity, el problema rara vez es que no te conozca. Lo habitual es que, en
+las páginas que encuentra al buscar, tu marca no esté.
+
+<QuickAction>Apunta las preguntas en las que Perplexity no te nombra y los otros motores sí. Son las que más rápido te dicen qué falta en la web.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Qué páginas cita, y si alguna es tuya">
+
+Es lo más útil de Perplexity. Cada respuesta deja a la vista las páginas en las
+que se apoya: comparadores, medios, foros, directorios o webs de competidores.
+Si alguna es tuya, bien. Si son siempre las mismas y en ninguna sales tú, ya
+sabes dónde conviene estar. No todas son alcanzables, pero ver cuáles cita te
+ahorra adivinar.
+
+<QuickAction>Elige una de las páginas que Perplexity cita a menudo en tu sector y en la que todavía no apareces. Mira qué haría falta para estar en ella de forma legítima.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="A quién recomienda en tu lugar">
+
+Cuando no sales, alguien sale. Mira qué competidores nombra Perplexity y si son
+los mismos que en los otros motores. Si es otro distinto, merece la pena
+entender por qué: suele ser la marca que tiene mejor cubiertas las páginas que
+Perplexity encuentra al buscar.
+
+</NumberedSection>
+
+<Verdict title="Tu GEO Score puede moverse en este primer escaneo">
+
+El primer escaneo con Perplexity mide un motor más que el anterior, así que tu
+GEO Score se calcula sobre algo distinto. Por eso, en ese escaneo no verás la
+comparación con el anterior: compararlos daría una subida o una bajada que no
+viene de tu marca, sino de haber añadido un motor. Desde el segundo escaneo con
+los cuatro motores, la comparación vuelve.
+
+</Verdict>
+
+## Lo que no cambia
+
+<Checklist
+  items={[
+    "Tus preguntas principales de búsqueda y tus competidores siguen siendo los mismos.",
+    "El plan Starter sigue midiendo ChatGPT, Gemini y Claude.",
+    "Las recomendaciones se siguen generando a partir de lo que ves en tus escaneos. Ahora también con la información de Perplexity."
+  ]}
+/>
+
+Si quieres entender cómo leer todas estas cifras sin engañarte, lo contamos en
+<a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué no</a>. Y
+si lo que te interesa es que te citen, tienes
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que la IA te
+cite</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira qué dice Perplexity de tu marca"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas en ChatGPT, Gemini, Claude y Perplexity y te enseñamos si te nombran, a quién recomiendan y qué fuentes citan."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

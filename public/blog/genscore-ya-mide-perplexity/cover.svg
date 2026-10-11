@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="Cuatro motores en fila, el cuarto recién encendido, que pasan por una lente hacia un panel de fuentes citadas con una de ellas marcada como propia">
+  <defs>
+    <linearGradient id="bgPx4" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#081223"/>
+      <stop offset="1" stop-color="#0f1c33"/>
+    </linearGradient>
+    <radialGradient id="glowPx4A" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2563eb" stop-opacity=".45"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowPx4B" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#09c5d6" stop-opacity=".4"/>
+      <stop offset="1" stop-color="#09c5d6" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1200" height="300" fill="url(#bgPx4)"/>
+  <circle cx="230" cy="150" r="230" fill="url(#glowPx4A)"/>
+  <circle cx="1000" cy="150" r="220" fill="url(#glowPx4B)"/>
+  <circle cx="600" cy="150" r="120" fill="url(#glowPx4B)"/>
+
+  <!-- Izquierda: cuatro motores genéricos (sin logotipos). Tres ya medidos,
+       en azul; el cuarto, recién encendido, en cian. -->
+  <g>
+    <rect x="130" y="104" width="300" height="18" rx="9" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+    <circle cx="150" cy="113" r="5" fill="#3b62b8"/>
+    <rect x="166" y="109" width="170" height="8" rx="4" fill="#2b4d8f"/>
+
+    <rect x="130" y="128" width="300" height="18" rx="9" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+    <circle cx="150" cy="137" r="5" fill="#3b62b8"/>
+    <rect x="166" y="133" width="130" height="8" rx="4" fill="#2b4d8f"/>
+
+    <rect x="130" y="152" width="300" height="18" rx="9" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+    <circle cx="150" cy="161" r="5" fill="#3b62b8"/>
+    <rect x="166" y="157" width="150" height="8" rx="4" fill="#2b4d8f"/>
+
+    <rect x="130" y="176" width="300" height="18" rx="9" fill="#0b1f33" stroke="#5de6f2" stroke-width="2"/>
+    <circle cx="150" cy="185" r="5" fill="#5de6f2"/>
+    <rect x="166" y="181" width="190" height="8" rx="4" fill="#5de6f2" opacity=".85"/>
+    <circle cx="410" cy="185" r="4" fill="#5de6f2"/>
+  </g>
+
+  <!-- Flechas hacia la lente. -->
+  <path d="M452 150 h58" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M500 141 l11 9 l-11 9" fill="none" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Centro: lente. -->
+  <g>
+    <circle cx="600" cy="150" r="46" fill="#0b1a33" stroke="#5de6f2" stroke-width="3"/>
+    <circle cx="600" cy="150" r="30" fill="none" stroke="#2563eb" stroke-width="2" opacity=".8"/>
+    <path d="M585 150 h30 M600 135 v30" stroke="#5de6f2" stroke-width="2.5" stroke-linecap="round" opacity=".9"/>
+  </g>
+
+  <path d="M690 150 h44" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round"/>
+  <path d="M724 141 l11 9 l-11 9" fill="none" stroke="#2b4d8f" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Derecha: panel de fuentes citadas, numeradas; la segunda es "la tuya". -->
+  <g>
+    <rect x="770" y="94" width="320" height="112" rx="14" fill="#0d1830" stroke="#1e3a6b" stroke-width="2"/>
+
+    <rect x="792" y="104" width="26" height="18" rx="5" fill="#0b1a33" stroke="#3b62b8" stroke-width="1.5"/>
+    <text x="805" y="117" font-family="ui-monospace, monospace" font-size="12" fill="#8fb0ff" text-anchor="middle">1</text>
+    <rect x="830" y="109" width="200" height="8" rx="4" fill="#2b4d8f"/>
+
+    <rect x="786" y="134" width="288" height="30" rx="8" fill="#0b2233" stroke="#5de6f2" stroke-width="2"/>
+    <rect x="792" y="140" width="26" height="18" rx="5" fill="#0b1a33" stroke="#5de6f2" stroke-width="1.5"/>
+    <text x="805" y="153" font-family="ui-monospace, monospace" font-size="12" fill="#5de6f2" text-anchor="middle">2</text>
+    <rect x="830" y="145" width="170" height="8" rx="4" fill="#5de6f2" opacity=".85"/>
+    <path d="M1040 148 l7 7 l13 -14" fill="none" stroke="#5de6f2" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <rect x="792" y="176" width="26" height="18" rx="5" fill="#0b1a33" stroke="#3b62b8" stroke-width="1.5"/>
+    <text x="805" y="189" font-family="ui-monospace, monospace" font-size="12" fill="#8fb0ff" text-anchor="middle">3</text>
+    <rect x="830" y="181" width="150" height="8" rx="4" fill="#2b4d8f"/>
+  </g>
+</svg>

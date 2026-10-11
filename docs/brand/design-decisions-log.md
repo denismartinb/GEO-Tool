@@ -24505,3 +24505,33 @@ puro.
   apunta a genscore.es.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 288. CONTENT-LAUNCH-1: artículo de lanzamiento de Perplexity (2026-10-11)
+
+**Qué se decidió.** El fundador pidió el 2026-10-11 un artículo de blog por
+cada funcionalidad nueva, con su post de LinkedIn y de X: Perplexity el lunes
+12 a las 20:30 y la Auditoría SEO con Search Console el martes 13 a las 20:30.
+Este PR es el primero: `/blog/genscore-ya-mide-perplexity` (cluster
+`playbooks`). El de Search Console va en un PR aparte, para que cada artículo
+salga el día de su anuncio y no antes.
+
+- **Cada afirmación de producto sale de §283**: Perplexity en Pro, Agencia y
+  la prueba de Pro; Starter con tres motores; mismas preguntas y
+  competidores; menciones, posición, competidores y fuentes citadas; y el
+  delta del GEO Score oculto en el primer escaneo con cuatro motores
+  (`readComparableRun`).
+- **La prueba interna con las preguntas del estudio de facturación se
+  cuenta sin cifras y como orientativa.** Fue una sola pasada, así que no
+  cumple el «múltiples veces en distintos momentos» de §260 y no se publica
+  como estudio. Se cuenta sólo el patrón: Perplexity concentró sus
+  recomendaciones en menos marcas que Gemini y mandó con frecuencia a la
+  fuente oficial.
+- No se explica cómo está montada la medición (qué API, quién extrae), por
+  la regla de §76.
+
+**Pendiente.** El artículo de Auditoría SEO y Search Console, el martes 13.
+Antes de publicarlo hay que comprobar que la pantalla de consentimiento de
+Google está «En producción», porque si no la conexión caduca a los 7 días
+(§284).
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
