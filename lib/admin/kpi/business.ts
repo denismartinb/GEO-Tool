@@ -64,7 +64,18 @@ export type AccountsSection =
       /** Accounts with a Stripe subscription, as /admin/users counts them. */
       payingAccounts: number;
       authUsersTruncated: boolean;
+      /** Search Console connections of counted accounts; null when the table could not be read. */
+      searchConsole: SearchConsoleAdoption | null;
     };
+
+export type SearchConsoleAdoption = {
+  /** Accounts with at least one active connection today. */
+  connectedAccounts: number;
+  /** Of those, how many made their first connection inside the window. */
+  connectedInWindow: number;
+  /** Counted accounts, the denominator for the share. */
+  totalAccounts: number;
+};
 
 export type RevenueSection =
   | { kind: "not_configured" }
@@ -248,9 +259,10 @@ async function loadAccounts(
     .sort((a, b) => Date.parse(a.trialEndsAt as string) - Date.parse(b.trialEndsAt as string));
   const ownerIds = [...new Set([...cohort, ...trialUsers].map((u) => u.id))];
 
-  const [scanned, domains] = await Promise.all([
+  const [scanned, domains, searchConsole] = await Promise.all([
     ownersWithCompletedScan(service, cohort.map((u) => u.id)),
-    firstDomainByOwner(service, ownerIds)
+    firstDomainByOwner(service, ownerIds),
+    searchConsoleAdoption(service, users, window)
   ]);
   const { openCheckoutUserIds } = await stripeData;
 
@@ -278,8 +290,42 @@ async function loadAccounts(
     trialsEndingIn7Days: trials.filter((t) => t.daysLeft <= 7).length,
     trials,
     payingAccounts: users.filter((u) => u.status === "paid").length,
-    authUsersTruncated
+    authUsersTruncated,
+    searchConsole
   };
+}
+
+/**
+ * Who has Search Console connected (SEARCH-SEO-1 Fase 3, migration 0041). Read
+ * on its own because the table is applied by hand: if it is missing or the
+ * read fails, the tile says so instead of showing a zero.
+ */
+async function searchConsoleAdoption(
+  service: ServiceClient,
+  users: AdminUserRow[],
+  window: PanelWindow
+): Promise<SearchConsoleAdoption | null> {
+  const { data, error } = await service
+    .from("search_console_connections")
+    .select("owner_user_id, status, connected_at");
+  if (error) return null;
+  const counted = new Set(users.map((u) => u.id));
+  const firstConnection = new Map<string, number>();
+  const active = new Set<string>();
+  for (const row of data ?? []) {
+    const owner = row.owner_user_id as string;
+    if (!counted.has(owner)) continue;
+    const at = Date.parse(row.connected_at as string);
+    const prev = firstConnection.get(owner);
+    if (prev === undefined || at < prev) firstConnection.set(owner, at);
+    if (row.status === "active") active.add(owner);
+  }
+  let connectedInWindow = 0;
+  for (const owner of active) {
+    const at = firstConnection.get(owner) as number;
+    if (at >= window.from.getTime() && at < window.to.getTime()) connectedInWindow += 1;
+  }
+  return { connectedAccounts: active.size, connectedInWindow, totalAccounts: counted.size };
 }
 
 /** Owners (of the given ids) with at least one completed scan, ever. Null when it could not be read. */

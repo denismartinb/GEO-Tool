@@ -242,6 +242,24 @@ function KpiRow({ web, accounts, revenue }: { web: WebSection; accounts: Account
         }
       />
       <Kpi
+        label="Search Console"
+        source="Supabase"
+        value={accounts.kind === "ready" && accounts.searchConsole ? formatInt(accounts.searchConsole.connectedAccounts) : "—"}
+        delta={
+          accounts.kind === "ready" && accounts.searchConsole ? (
+            <span className="adm-pn-mut">
+              {formatInt(accounts.searchConsole.connectedInWindow)} en el periodo ·{" "}
+              {accounts.searchConsole.totalAccounts > 0
+                ? formatShare(accounts.searchConsole.connectedAccounts / accounts.searchConsole.totalAccounts)
+                : "—"}{" "}
+              de las cuentas
+            </span>
+          ) : accounts.kind === "ready" ? (
+            <span className="adm-pn-mut">no se pudo leer</span>
+          ) : null
+        }
+      />
+      <Kpi
         label="Checkouts iniciados"
         source="Stripe"
         value={revenue.kind === "ready" ? formatInt(revenue.checkoutsStarted) : "—"}

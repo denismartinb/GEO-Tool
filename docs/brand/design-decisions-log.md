@@ -25272,6 +25272,14 @@ La analítica es sin cookies, así que una «visita» es una
 sesión de PostHog, casi una carga de página, y la pantalla nunca dice
 «usuarios».
 
+**Indicador «Search Console»** (pedido por el fundador el mismo día): cuántas
+cuentas que cuentan tienen hoy una conexión activa en
+`search_console_connections`, cuántas conectaron por primera vez dentro del
+periodo y qué parte del total de cuentas son. Lee sólo `owner_user_id`,
+`status` y `connected_at`, nunca el token, en su propia consulta: si la
+migración 0041 faltara o la lectura fallara, la tarjeta dice «no se pudo
+leer», no un cero. Una conexión revocada o con error no cuenta como conectada.
+
 **Diferencias con la maqueta aprobada**, todas para no pintar algo que no
 medimos (`docs/design-reference/admin-panel-1/README.md`): los canales no
 tienen altas porque el registro no guarda el canal; «Páginas que traen

@@ -818,7 +818,7 @@
 
 .adm-pn-kpis {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
 }
 
@@ -1046,6 +1046,7 @@
   .adm-pn-goal-stat { flex: 1 1 30%; padding-left: 12px; }
   .adm-pn-goal-stat strong { font-size: 22px; }
   .adm-pn-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .adm-pn-kpis > .adm-pn-kpi:last-child:nth-child(odd) { grid-column: span 2; }
   .adm-pn-kpi { padding: 14px; }
   .adm-pn-big { font-size: 24px; }
   .adm-pn-kpi-foot { flex-direction: column; align-items: stretch; }
