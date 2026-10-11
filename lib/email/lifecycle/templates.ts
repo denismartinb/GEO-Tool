@@ -256,7 +256,7 @@ export async function sendTrialD1Email(
     ${heading(noDomain ? "Te falta un paso para ver cómo te menciona la IA" : "Tu primer escaneo está a un clic")}
     ${paragraph(
       noDomain
-        ? "Ayer creaste tu cuenta, pero todavía no sabemos qué dominio analizar. Añádelo y en unos minutos verás si ChatGPT, Gemini y Claude te recomiendan, y a quién recomiendan en tu lugar."
+        ? "Ayer creaste tu cuenta, pero todavía no sabemos qué dominio analizar. Añádelo y en unos minutos verás si ChatGPT, Gemini, Claude y Perplexity te recomiendan, y a quién recomiendan en tu lugar."
         : `Ya tienes <b style="color:#0B1426;">${H(input.domain ?? "")}</b> configurado. Solo falta lanzar el escaneo: en unos minutos verás qué responde la IA sobre ti.`
     )}
     ${checklist(

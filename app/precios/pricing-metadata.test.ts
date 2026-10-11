@@ -43,7 +43,8 @@ describe("metadata de la home", () => {
 
   it("no nombra motores que el producto no ejecuta", () => {
     const text = `${String(homeMetadata.title)} ${homeMetadata.description ?? ""}`;
-    expect(text).not.toMatch(/Perplexity|AI Overviews/i);
+    // Perplexity se ejecuta desde PERPLEXITY-ENGINE-1 (Pro y Agencia).
+    expect(text).not.toMatch(/AI Overviews|Copilot/i);
   });
 });
 
@@ -64,6 +65,7 @@ describe("metadata de /precios", () => {
 
   it("no nombra motores que el producto no ejecuta", () => {
     const text = `${String(pricingMetadata.title)} ${pricingMetadata.description ?? ""}`;
-    expect(text).not.toMatch(/Perplexity|AI Overviews/i);
+    // Perplexity se ejecuta desde PERPLEXITY-ENGINE-1 (Pro y Agencia).
+    expect(text).not.toMatch(/AI Overviews|Copilot/i);
   });
 });

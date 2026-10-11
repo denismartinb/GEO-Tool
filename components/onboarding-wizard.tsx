@@ -735,7 +735,7 @@ export function OnboardingWizard({
             <p className="onb2-sub">
               {isPending
                 ? "Buscamos con quién compites y qué te preguntarían de verdad en un chat de IA. Unos 15 segundos — no cierres ni recargues esta pestaña."
-                : "Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo en los tres motores."}
+                : "Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo en los motores de tu plan."}
             </p>
           </div>
           {stepsBar}
@@ -1004,7 +1004,7 @@ export function OnboardingWizard({
         <div>
           <h1 className="onb2-h1">Revisa tus prompts</h1>
           <p className="onb2-sub">
-            Cada prompt se lanza a los tres motores. Quita los que no te representen
+            Cada prompt se lanza a todos los motores de tu plan. Quita los que no te representen
             {promptCap >= RECOMMENDED_MIN_PROMPTS_COPY ? (
               <>
                 {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{RECOMMENDED_MIN_PROMPTS_COPY}</b> para

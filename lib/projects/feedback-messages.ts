@@ -78,5 +78,7 @@ export const feedbackSuccessMessages: Record<string, string> = {
   engine_claude_enabled: "Claude activado. Los próximos escaneos volverán a incluirlo.",
   engine_claude_disabled: "Claude desactivado. Los próximos escaneos no lo usarán.",
   engine_openai_enabled: "OpenAI activado. Los próximos escaneos volverán a incluirlo.",
-  engine_openai_disabled: "OpenAI desactivado. Los próximos escaneos no lo usarán."
+  engine_openai_disabled: "OpenAI desactivado. Los próximos escaneos no lo usarán.",
+  engine_perplexity_enabled: "Perplexity activado. Los próximos escaneos de Pro y Agencia volverán a incluirlo.",
+  engine_perplexity_disabled: "Perplexity desactivado. Los próximos escaneos no lo usarán."
 };

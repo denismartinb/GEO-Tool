@@ -265,6 +265,22 @@ export default async function RunsPage({
     : engineFlagRow?.engine_openai_enabled !== false
     ? "on"
     : "off";
+  /* Perplexity (PERPLEXITY-ENGINE-1 Fase 2, migration 0040) in its own query
+     for the same reason: 0040 is applied by hand, and merging it into the
+     select above would mark the three older switches "unavailable" too. */
+  const { data: perplexityFlagRow, error: perplexityFlagError } = await supabase
+    .from("projects")
+    .select("engine_perplexity_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+  const enginePerplexityState: EngineState = perplexityFlagError
+    ? "unavailable"
+    : perplexityFlagRow?.engine_perplexity_enabled !== false
+    ? "on"
+    : "off";
+  // The "at least one engine" floor counts only the three engines every plan
+  // can run: Perplexity never runs below caps.engines 4, so on Starter it
+  // cannot be the engine that keeps a scan alive.
   const enabledEngineCount = [engineGeminiState, engineClaudeState, engineOpenaiState].filter(
     (s) => s === "on"
   ).length;
@@ -763,9 +779,14 @@ export default async function RunsPage({
         [
           { id: "gemini" as const, state: engineGeminiState, label: "Gemini" },
           { id: "claude" as const, state: engineClaudeState, label: "Claude" },
-          { id: "openai" as const, state: engineOpenaiState, label: "OpenAI" }
+          { id: "openai" as const, state: engineOpenaiState, label: "OpenAI" },
+          { id: "perplexity" as const, state: enginePerplexityState, label: "Perplexity" }
         ]
-      ).map(({ id, state, label }) => (
+      ).map(({ id, state, label }) => {
+        const migration =
+          id === "perplexity" ? "0040_project_engine_perplexity_toggle.sql" : "0033_project_engine_toggles.sql";
+        const isLastCore = id !== "perplexity" && state === "on" && enabledEngineCount <= 1;
+        return (
         <div className="card dbg-switch" key={id}>
           <div className="dbg-switch-ico" data-on={state === "on" ? "true" : "false"}>
             <Icon name="bolt" size={17} />
@@ -775,13 +796,15 @@ export default async function RunsPage({
             <small>
               {state === "unavailable" ? (
                 <>
-                  Falta aplicar la migración <code>0033_project_engine_toggles.sql</code> en Supabase.
+                  Falta aplicar la migración <code>{migration}</code> en Supabase.
                   Hasta entonces {label} sigue encendido en todos los dominios.
                 </>
               ) : (
                 <>
-                  Si está apagado, los próximos escaneos de este dominio no llamarán a {label}. Al
-                  menos un motor tiene que quedar encendido.
+                  Si está apagado, los próximos escaneos de este dominio no llamarán a {label}.{" "}
+                  {id === "perplexity"
+                    ? "Sólo se usa en los planes Pro y Agencia."
+                    : "Al menos uno de Gemini, Claude y OpenAI tiene que quedar encendido."}
                 </>
               )}
             </small>
@@ -799,17 +822,14 @@ export default async function RunsPage({
                 role="switch"
                 aria-checked={state === "on"}
                 aria-label={`Motor: ${label}`}
-                disabled={state === "on" && enabledEngineCount <= 1}
-                title={
-                  state === "on" && enabledEngineCount <= 1
-                    ? "Al menos un motor tiene que quedar encendido"
-                    : undefined
-                }
+                disabled={isLastCore}
+                title={isLastCore ? "Al menos un motor tiene que quedar encendido" : undefined}
               />
             </form>
           )}
         </div>
-      ))}
+        );
+      })}
 
       {/* DOMAINS-REDESIGN-1: el borrado duro del dominio (DATA-MGMT-1) vivía en
           cada tarjeta de la rejilla de Escaneos. La rejilla se fue a Dominios,

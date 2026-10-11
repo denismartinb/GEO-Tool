@@ -104,7 +104,7 @@ export function FreeReportPromoCard() {
         ¿La IA te nombra a ti <span className="fr-grad">o a tu competencia?</span>
       </p>
       <p className="fr-promo-body">
-        Te enviamos un informe de tu marca en ChatGPT, Gemini y Claude. Gratis, en tu correo en 48 h laborables.
+        Te enviamos un informe de tu marca en ChatGPT, Gemini, Claude y Perplexity. Gratis, en tu correo en 48 h laborables.
       </p>
       <Link className="fr-promo-cta" href={freeReportHref(FREE_REPORT_ENTRY.blogCard)}>
         Pedir mi informe gratis

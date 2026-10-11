@@ -269,7 +269,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
       ${eyebrow("Tu prueba Pro · 7 días")}
       ${heading("En 5 minutos sabrás si la IA te recomienda")}
       ${paragraph(
-        `Tu cuenta tiene acceso completo a <b style="color:#0B1426;">Pro</b> hasta el <b style="color:#0B1426;">${endLabel}</b>, sin tarjeta. Tres pasos y verás qué dicen de ti ChatGPT, Gemini y Claude, y a qué competidores recomiendan en tu lugar.`
+        `Tu cuenta tiene acceso completo a <b style="color:#0B1426;">Pro</b> hasta el <b style="color:#0B1426;">${endLabel}</b>, sin tarjeta. Tres pasos y verás qué dicen de ti ChatGPT, Gemini, Claude y Perplexity, y a qué competidores recomiendan en tu lugar.`
       )}
       ${checklist([
         { state: "done", text: "Crear tu cuenta" },
@@ -279,7 +279,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
       ${button("https://www.genscore.es/dashboard/projects/new", "Añadir mi dominio")}
       ${subtext(closing)}
     `,
-      { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini y Claude te recomiendan." }
+      { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini, Claude y Perplexity te recomiendan." }
     )
   );
 }

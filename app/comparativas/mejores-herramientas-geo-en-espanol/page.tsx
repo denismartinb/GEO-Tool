@@ -32,7 +32,7 @@ const faqItems = [
   {
     question: "¿Alguna de estas herramientas tiene interfaz en español?",
     answer:
-      "Dos de las ocho: GenScore y CreceRank. Para Otterly, Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no consta soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: GenScore ejecuta Gemini y Claude además de ChatGPT, y es la única de las dos que genera el borrador de la solución además de medir, con 7 días de Pro gratis, sin tarjeta, para probarlo."
+      "Dos de las ocho: GenScore y CreceRank. Para Otterly, Peec AI, Profound, Scrunch AI, AthenaHQ y Mentio no consta soporte de español — la documentación pública que hemos consultado está en inglés. Entre las dos que sí lo tienen, la diferencia está en los motores y en dónde te dejan: GenScore ejecuta Gemini y Claude además de ChatGPT, y Perplexity en Pro y Agencia, y es la única de las dos que genera el borrador de la solución además de medir, con 7 días de Pro gratis, sin tarjeta, para probarlo."
   }
 ];
 
@@ -147,9 +147,9 @@ export default function MejoresHerramientasGeoPage() {
         </p>
         <ul>
           <li>
-            <strong>¿Dónde preguntan tus clientes?</strong> GenScore ejecuta ChatGPT, Gemini y Claude —
-            los tres en todos los planes de pago, sin add-ons. CreceRank cubre ChatGPT, Perplexity y AI
-            Overviews. No es &ldquo;cuál cubre más&rdquo;, son conjuntos distintos: si tu tráfico viene
+            <strong>¿Dónde preguntan tus clientes?</strong> GenScore ejecuta ChatGPT, Gemini y Claude
+            en todos los planes de pago, sin add-ons, y Perplexity en Pro y Agencia. CreceRank cubre
+            ChatGPT, Perplexity y AI Overviews. No es &ldquo;cuál cubre más&rdquo;, son conjuntos distintos: si tu tráfico viene
             de asistentes conversacionales, el nuestro; si te juegas la partida en resultados de Google
             con IA, el suyo.
           </li>

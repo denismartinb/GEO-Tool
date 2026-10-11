@@ -23,10 +23,11 @@ import "./geo-report.css";
 const ENGINE_LOGO: Record<string, string> = {
   gemini: "/brand/engines/gemini.svg",
   openai: "/brand/engines/chatgpt.svg",
-  claude: "/brand/engines/claude.svg"
+  claude: "/brand/engines/claude.svg",
+  perplexity: "/brand/engines/perplexity.svg"
 };
-const ENGINE_SEG: Record<string, string> = { gemini: "gr-g", openai: "gr-o", claude: "gr-c" };
-const ENGINE_SWATCH: Record<string, string> = { gemini: "#4f7bff", openai: "#0b1426", claude: "#d97757" };
+const ENGINE_SEG: Record<string, string> = { gemini: "gr-g", openai: "gr-o", claude: "gr-c", perplexity: "gr-p" };
+const ENGINE_SWATCH: Record<string, string> = { gemini: "#4f7bff", openai: "#0b1426", claude: "#d97757", perplexity: "#20808d" };
 
 function EngineLogo({ provider, size }: { provider: string; size: number }) {
   const src = ENGINE_LOGO[provider];

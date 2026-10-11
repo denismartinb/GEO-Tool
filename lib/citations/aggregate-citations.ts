@@ -560,7 +560,7 @@ export function aggregateCitations(input: {
   // Canonical provider order (matches lib/scan/engine-meta.ts's ENGINE_META
   // key order) so "Gemini N · ChatGPT M" always renders in the same order
   // regardless of which engine's rows happened to be processed first.
-  const providerOrder = ["gemini", "claude", "openai"];
+  const providerOrder = ["gemini", "claude", "openai", "perplexity"];
   const engineTotals: EngineTotal[] = Array.from(engineTotalsAgg.entries())
     .map(([provider, totals]) => ({
       provider,

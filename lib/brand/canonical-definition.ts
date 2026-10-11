@@ -13,15 +13,21 @@
  *
  * **Los motores que nombra son los que el producto ejecuta.** El consejo
  * externo que originó esta fase proponía una definición con cinco motores
- * —añadía Perplexity y AI Overviews— y eso habría metido el mismo reclamo
+ * —añadía Perplexity y AI Overviews cuando ninguno de los dos se ejecutaba—
+ * y eso habría metido el mismo reclamo
  * falso que PRICING-TRUTH-1 obligó a retirar del producto, multiplicado por
  * todas las superficies donde esta frase se repite. `naming.test.ts` cubre la
  * grafía; `canonical-definition.test.ts` cubre que no aparezca un motor que no
  * ejecutamos.
  */
 
-/** Los motores que GenScore ejecuta hoy (docs/launch-plan.md Fase 8). */
-export const SUPPORTED_ENGINES = ["ChatGPT", "Gemini", "Claude"] as const;
+/**
+ * Los motores que GenScore ejecuta hoy (docs/launch-plan.md Fase 8).
+ * Perplexity entra en PERPLEXITY-ENGINE-1 sólo para Pro y Agencia (y la prueba
+ * de Pro); Starter sigue con los tres primeros. La definición nombra los
+ * cuatro porque describe lo que mide la plataforma, no un plan concreto.
+ */
+export const SUPPORTED_ENGINES = ["ChatGPT", "Gemini", "Claude", "Perplexity"] as const;
 
 /**
  * Una frase. Es la que va en el `description` del schema, en la metadata de la
@@ -29,14 +35,14 @@ export const SUPPORTED_ENGINES = ["ChatGPT", "Gemini", "Claude"] as const;
  * los tres sitios a la vez porque los tres la importan.
  */
 export const CANONICAL_DEFINITION =
-  "GenScore es una plataforma de Generative Engine Optimization (GEO) que mide y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini y Claude.";
+  "GenScore es una plataforma de Generative Engine Optimization (GEO) que mide y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini, Claude y Perplexity.";
 
 /**
  * Versión larga, para cuando hay sitio: añade qué hace después de medir, que
  * es lo que nos separa del resto de la categoría.
  */
 export const CANONICAL_DEFINITION_LONG =
-  "GenScore es una plataforma de Generative Engine Optimization (GEO) que mide y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini y Claude. Lanza los prompts que hacen tus clientes de verdad, mide si el modelo te menciona, en qué posición y si cita tu web, te compara con tus competidores, y genera las acciones concretas para mejorarlo.";
+  "GenScore es una plataforma de Generative Engine Optimization (GEO) que mide y mejora la visibilidad de una marca en las respuestas de ChatGPT, Gemini, Claude y Perplexity. Lanza los prompts que hacen tus clientes de verdad, mide si el modelo te menciona, en qué posición y si cita tu web, te compara con tus competidores, y genera las acciones concretas para mejorarlo.";
 
 /** Categoría de producto, en los términos de schema.org. */
 export const APPLICATION_CATEGORY = "BusinessApplication";

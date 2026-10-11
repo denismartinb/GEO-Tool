@@ -225,11 +225,11 @@ export const ALTERNATIVES: Alternative[] = [
     ours: true,
     solves: ["motores", "accion", "espanol"],
     oneLiner:
-      "Nuestra herramienta. Mide cómo apareces en ChatGPT, Gemini y Claude —los tres incluidos en todos los planes de pago, sin elegir ni pagar complementos— y desde Pro redacta el borrador de la solución: FAQ, datos estructurados y briefs.",
-    pricingNote: `Starter ${STARTER_PRICE} €/mes; Pro ${PRO_PRICE} €/mes con ~${PRO_PROMPTS} prompts en los tres motores y escaneo diario. 7 días de Pro gratis, sin tarjeta.`,
+      "Nuestra herramienta. Mide cómo apareces en ChatGPT, Gemini y Claude, incluidos en todos los planes de pago sin elegir ni pagar complementos, y en Perplexity desde Pro. Desde Pro también redacta el borrador de la solución: FAQ, datos estructurados y briefs.",
+    pricingNote: `Starter ${STARTER_PRICE} €/mes; Pro ${PRO_PRICE} €/mes con ~${PRO_PROMPTS} prompts en cuatro motores y escaneo diario. 7 días de Pro gratis, sin tarjeta.`,
     spanishSupport: "Sí, nativo — interfaz y soporte en castellano.",
     tradeoff:
-      "No ejecuta Perplexity, Copilot ni AI Overviews, y no desglosa la puntuación por país: si mides muchos mercados a la vez, Peec AI desde Pro u Otterly lo cubren mejor. Su plan de Agencia gestiona varios dominios en una cuenta, pero sin marca blanca ni espacios de «pitch» como los de Peec AI.",
+      "No ejecuta Copilot ni AI Overviews, y no desglosa la puntuación por país: si mides muchos mercados a la vez, Peec AI desde Pro u Otterly lo cubren mejor. Su plan de Agencia gestiona varios dominios en una cuenta, pero sin marca blanca ni espacios de «pitch» como los de Peec AI.",
     sources: [],
     comparisonHref: "/comparativas/genscore-vs-peec-ai"
   },
@@ -324,17 +324,17 @@ export const PAGE = {
   h1: "Alternativas a Peec AI en 2026",
   dateLine: `Datos consultados el ${RESEARCH_DATE}. Los importes de Peec AI no están en su web: proceden de un tercero y son orientativos.`,
   keyTakeaway:
-    "Peec AI mide bien y deja entrar a todo el equipo, pero en sus planes de autoservicio eliges tres modelos, Claude queda para Enterprise y su función Actions sugiere sin redactar. GenScore resuelve tres de los cinco motivos para buscar alternativa: incluye ChatGPT, Gemini y Claude en todos los planes de pago, redacta la solución desde Pro y es un producto en castellano.",
+    "Peec AI mide bien y deja entrar a todo el equipo, pero en sus planes de autoservicio eliges tres modelos, Claude queda para Enterprise y su función Actions sugiere sin redactar. GenScore resuelve tres de los cinco motivos para buscar alternativa: incluye ChatGPT, Gemini y Claude en todos los planes de pago (y Perplexity en Pro), redacta la solución desde Pro y es un producto en castellano.",
   verdictTitle: "Por qué GenScore es la respuesta en tres de los cinco casos",
   verdict:
-    `Si los tres modelos se te quedan cortos, GenScore no te hace elegir: ChatGPT, Gemini y Claude van en todos los planes de pago. Si tienes el diagnóstico y te falta el texto, el generador de soluciones redacta el borrador de FAQ, datos estructurados y briefs desde Pro. Y si tu equipo trabaja en castellano, es interfaz y soporte nativos. Pro cuesta ${PRO_PRICE} €/mes y se prueba 7 días sin tarjeta.`,
+    `Si los tres modelos se te quedan cortos, GenScore no te hace elegir: ChatGPT, Gemini y Claude van en todos los planes de pago, y Pro suma Perplexity. Si tienes el diagnóstico y te falta el texto, el generador de soluciones redacta el borrador de FAQ, datos estructurados y briefs desde Pro. Y si tu equipo trabaja en castellano, es interfaz y soporte nativos. Pro cuesta ${PRO_PRICE} €/mes y se prueba 7 días sin tarjeta.`,
   switchingNote:
     "Una cautela para cualquier cambio: el histórico no se migra entre herramientas. Por eso conviene empezar a acumularlo en paralelo —por ejemplo, en los 7 días de prueba de GenScore— antes de mover nada.",
   methodology:
     "Los datos de GenScore vienen de los planes reales del producto, la misma fuente que usa la página de Precios. Los del resto vienen de sus webs oficiales, consultadas en la fecha indicada y enlazadas en «Fuentes». Peec AI y Profound no publican algunos importes: en esos casos citamos a un tercero, con su fecha, y lo marcamos como orientativo. No hemos contratado ninguna de estas herramientas para esta comparativa. Si detectas un dato desactualizado, dínoslo y lo corregimos.",
   cta: {
     title: "Antes de pagar un cuarto modelo, mira cuánto necesitas de verdad",
-    text: "Prueba GenScore 7 días con Pro, sin tarjeta, con ChatGPT, Gemini y Claude incluidos."
+    text: "Prueba GenScore 7 días con Pro, sin tarjeta, con ChatGPT, Gemini, Claude y Perplexity incluidos."
   }
 };
 
@@ -342,7 +342,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "¿Cuál es la mejor alternativa a Peec AI?",
     answer:
-      "Depende del límite que te haya hecho buscar. Si son los motores, la redacción o el idioma, GenScore resuelve los tres: ChatGPT, Gemini y Claude en todos los planes de pago, un generador que redacta la solución desde Pro y producto en castellano. Si lo que necesitas es medir muchos países a la vez, Otterly cubre más de 50 en todos sus planes."
+      "Depende del límite que te haya hecho buscar. Si son los motores, la redacción o el idioma, GenScore resuelve los tres: ChatGPT, Gemini y Claude en todos los planes de pago (y Perplexity en Pro), un generador que redacta la solución desde Pro y producto en castellano. Si lo que necesitas es medir muchos países a la vez, Otterly cubre más de 50 en todos sus planes."
   },
   {
     question: "¿Cuánto cuesta Peec AI?",
@@ -352,7 +352,7 @@ export const FAQ_ITEMS: { question: string; answer: string }[] = [
   {
     question: "¿Peec AI incluye Claude y Perplexity?",
     answer:
-      "No en los planes de autoservicio: en Starter, Pro y Advanced eliges 3 modelos entre ChatGPT, AI Mode, AI Overviews, Copilot, Gemini y Naver AI. Perplexity se añade como modelo de pago y Claude aparece en Enterprise. GenScore incluye Claude, junto a ChatGPT y Gemini, en todos sus planes de pago."
+      "No en los planes de autoservicio: en Starter, Pro y Advanced eliges 3 modelos entre ChatGPT, AI Mode, AI Overviews, Copilot, Gemini y Naver AI. Perplexity se añade como modelo de pago y Claude aparece en Enterprise. GenScore incluye Claude, junto a ChatGPT y Gemini, en todos sus planes de pago, y Perplexity en Pro y Agencia."
   },
   {
     question: "¿Hay alternativas a Peec AI en español?",

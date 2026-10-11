@@ -40,7 +40,7 @@ export const COMPARISON_ROWS: {
   },
   {
     label: "Coste de añadir motores de IA",
-    genscore: "3 motores incluidos sin coste extra desde el plan Starter (Gemini, Claude, ChatGPT)",
+    genscore: "3 motores incluidos sin coste extra desde el plan Starter (ChatGPT, Gemini, Claude) y Perplexity en Pro y Agencia",
     peec:
       "Starter, Pro y Advanced: 3 modelos a elegir entre ChatGPT, AI Mode, AI Overviews, Copilot, Gemini y Naver AI; más modelos como complemento de pago, y Claude sólo en Enterprise",
     genscoreWins: true

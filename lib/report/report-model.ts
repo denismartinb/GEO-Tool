@@ -24,7 +24,7 @@ import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
  *  - a block with no data is omitted (null / empty), never filled in.
  */
 
-export const REPORT_ENGINE_ORDER = ["gemini", "openai", "claude"] as const;
+export const REPORT_ENGINE_ORDER = ["gemini", "openai", "claude", "perplexity"] as const;
 export const QUESTION_SET_LABEL = "preguntas principales de búsqueda";
 export const UNGROUPED_TOPIC = "Otras preguntas";
 

@@ -43,11 +43,12 @@ describe("alternativas-a-otterly", () => {
     const genscore = ALTERNATIVES.find((a) => a.slug === "genscore");
     expect(genscore, "GenScore debe aparecer en la lista").toBeDefined();
 
-    // Perplexity y Copilot no son motores soportados (docs/launch-plan.md Fase
-    // 8) y el GEO Score no se desglosa por país. Son justo las dos cosas que
-    // Otterly sí hace, así que omitirlas sería el sesgo que este test existe
-    // para impedir.
-    expect(genscore?.tradeoff).toMatch(/Perplexity/i);
+    // Copilot y AI Overviews no son motores soportados (docs/launch-plan.md
+    // Fase 8; Perplexity sí lo es desde PERPLEXITY-ENGINE-1, en Pro y Agencia)
+    // y el GEO Score no se desglosa por país. Son justo las cosas que Otterly
+    // sí hace, así que omitirlas sería el sesgo que este test existe para
+    // impedir.
+    expect(genscore?.tradeoff).toMatch(/Copilot/i);
     expect(genscore?.tradeoff).toMatch(/pa[íi]s/i);
   });
 

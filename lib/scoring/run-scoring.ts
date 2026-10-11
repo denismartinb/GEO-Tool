@@ -100,7 +100,9 @@ function hasUntrustedCompetitorSet(results: ScoreInputRow[]): boolean {
  * UI purposes (that module must stay import-free of scoring code). If a
  * provider gains real grounding, update BOTH this set and ENGINE_META.
  */
-export const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai"]);
+// PERPLEXITY-ENGINE-1 Fase 2: Perplexity answers with its own web search and
+// returns the result URLs (lib/llm/perplexity.ts), so it is grounded too.
+export const GROUNDED_PROVIDERS = new Set<string>(["gemini", "openai", "perplexity"]);
 
 /**
  * Minimum share of a run's results that must have extracted cleanly (parsed,

@@ -10,7 +10,7 @@ const SITE_URL = "https://www.genscore.es";
 export const metadata: Metadata = contentMetadata({
   title: "Comparativas de herramientas de GEO (visibilidad en IA) — GenScore",
   description:
-    "Herramientas para medir si ChatGPT, Gemini y Claude nombran tu marca, comparadas fila a fila: precios, motores, idiomas y para quién es cada una.",
+    "Herramientas para medir si ChatGPT, Gemini, Claude y Perplexity nombran tu marca, comparadas fila a fila: precios, motores, idiomas y para quién es cada una.",
   path: "/comparativas"
 });
 

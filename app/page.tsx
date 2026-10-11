@@ -12,14 +12,15 @@ import { contentMetadata } from "@/lib/seo/metadata";
  * cliente de siempre — cero cambios visuales.
  *
  * Keyword primaria "posicionamiento GEO" (docs/seo-positioning-plan.md §3.1).
- * Los motores nombrados son los tres reales de hoy (Gemini, Claude, ChatGPT):
- * nombrar Perplexity aquí repetiría el reclamo falso que PRICING-TRUTH-1
- * limpió del resto del producto.
+ * Los motores nombrados son los que el producto ejecuta hoy: ChatGPT, Gemini,
+ * Claude y, desde PERPLEXITY-ENGINE-1, Perplexity (sólo Pro y Agencia). Nombrar
+ * uno que no se ejecuta (AI Overviews, Copilot) repetiría el reclamo falso que
+ * PRICING-TRUTH-1 limpió del resto del producto.
  */
 export const metadata: Metadata = contentMetadata({
   title: "Posicionamiento GEO: mide si la IA cita tu marca — GenScore",
   description:
-    "GenScore mide si ChatGPT, Gemini y Claude nombran y citan tu marca, te compara con tu competencia y te dice qué cambiar. Prueba Pro 7 días gratis.",
+    "GenScore mide si ChatGPT, Gemini, Claude y Perplexity nombran y citan tu marca, te compara con tu competencia y te dice qué cambiar. Prueba Pro 7 días gratis.",
   path: ""
 });
 

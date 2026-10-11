@@ -39,6 +39,14 @@ export function EngineGlyph({ provider }: { provider: string }) {
           <path d="M12 2.5v19M2.5 12h19M5.4 5.4l13.2 13.2M18.6 5.4L5.4 18.6" />
         </svg>
       );
+    case "perplexity":
+      // A spine with a folded book on each side — evokes the Perplexity mark
+      // with strokes only, like the other three stand-ins.
+      return (
+        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round">
+          <path d="M12 2v20M4.5 7.5h15v8h-15zM4.5 7.5L12 2l7.5 5.5M4.5 15.5L12 22l7.5-6.5" />
+        </svg>
+      );
     default:
       return null;
   }

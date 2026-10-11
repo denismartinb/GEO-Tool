@@ -157,13 +157,13 @@ export const PLANS: Plan[] = [
     ctaStyle: "primary",
     highlights: [
       "5 dominios · ~100 prompts",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
+      "4 motores de IA (ChatGPT, Gemini, Claude y Perplexity) · escaneo diario",
       "Nuevos motores incluidos sin coste extra cuando se publiquen",
       "Bucle de acción completo",
       "Generador de soluciones (FAQ, schema, briefs)"
     ],
-    meter: { projects: "5", prompts: 100, engines: 3, refresh: "Diario" },
-    caps: { projects: 5, prompts: 100, engines: 3 }
+    meter: { projects: "5", prompts: 100, engines: 4, refresh: "Diario" },
+    caps: { projects: 5, prompts: 100, engines: 4 }
   },
   {
     id: "agency",
@@ -177,12 +177,12 @@ export const PLANS: Plan[] = [
     ctaStyle: "ghost",
     highlights: [
       "Dominios y prompts a medida (~300 de referencia)",
-      "3 motores de IA (Gemini, Claude y ChatGPT) · escaneo diario",
+      "4 motores de IA (ChatGPT, Gemini, Claude y Perplexity) · escaneo diario",
       "Volumen y condiciones adaptadas a tu agencia",
       "Onboarding acompañado antes de contratar"
     ],
-    meter: { projects: "A medida", prompts: 300, engines: 3, refresh: "Diario" },
-    caps: { projects: 999, prompts: 300, engines: 3 }
+    meter: { projects: "A medida", prompts: 300, engines: 4, refresh: "Diario" },
+    caps: { projects: 999, prompts: 300, engines: 4 }
   }
 ];
 
@@ -204,7 +204,7 @@ export const PLAN_MATRIX: Array<{ group: string; rows: Array<{ label: string; va
     rows: [
       { label: "Dominios", vals: ["1", "5", "A medida"] },
       { label: "Prompts monitorizados", vals: ["~25", "~100", "~300"] },
-      { label: "Motores de IA", vals: ["3", "3", "3"] },
+      { label: "Motores de IA", vals: ["3", "4", "4"] },
       { label: "Frecuencia de escaneo", vals: ["Semanal", "Diario", "Diario"] },
       { label: "Tendencia temporal", vals: [true, true, true] }
     ]

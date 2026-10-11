@@ -75,7 +75,7 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
           <div className="fr-done-next">
             <strong>Qué pasa ahora</strong>
             <ol>
-              <li>Hacemos las preguntas principales de búsqueda de tu sector a ChatGPT, Gemini y Claude.</li>
+              <li>Hacemos las preguntas principales de búsqueda de tu sector a ChatGPT, Gemini, Claude y Perplexity.</li>
               <li>Una persona revisa los resultados.</li>
               <li>Te llega el PDF con tres acciones para empezar.</li>
             </ol>
@@ -109,7 +109,7 @@ export function FreeReportForm({ children }: { children?: ReactNode }) {
       <section className="fr-hero" ref={topRef}>
         <div className="fr-hero-inner">
           <div className="fr-hero-copy">
-            <span className="fr-pill">Informe gratuito · ChatGPT, Gemini y Claude</span>
+            <span className="fr-pill">Informe gratuito · ChatGPT, Gemini, Claude y Perplexity</span>
             <h1 className="fr-title">
               Cuando tu cliente le pregunta a la IA, <span className="fr-grad">¿te nombra a ti o a tu competencia?</span>
             </h1>

@@ -19,9 +19,15 @@ import type { Plan } from "@/app/pricing/plans-data";
  * (PRELAUNCH-HARDENING-1 Fase R7, log §84).
  */
 
-export type LLMScanProvider = "gemini" | "claude" | "openai";
+/**
+ * PERPLEXITY-ENGINE-1 Fase 2: "perplexity" is a scan engine for the plans
+ * whose `caps.engines` reaches it. It goes LAST in LLM_SCAN_PROVIDERS, so the
+ * `.slice` in `resolveScanProvidersForPlan` gives Starter (cap 3) the other
+ * three and Pro/Agencia (cap 4) all four. Listing it is the on switch.
+ */
+export type LLMScanProvider = "gemini" | "claude" | "openai" | "perplexity";
 
-const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude", "openai"];
+const VALID_LLM_SCAN_PROVIDERS: LLMScanProvider[] = ["gemini", "claude", "openai", "perplexity"];
 
 function parseProviderList(raw: string): LLMScanProvider[] {
   const parsed = raw
@@ -75,11 +81,21 @@ export function getLLMScanProviders(): LLMScanProvider[] {
  * override was read" and changes nothing, so every existing call site keeps
  * today's behaviour without passing the new argument.
  */
+/**
+ * Perplexity is sold with Pro and Agencia (cap 4), never with Starter (cap 3).
+ * Its position at the end of LLM_SCAN_PROVIDERS is not enough on its own:
+ * filter-then-cap would hand it to a Starter project whose operator switched
+ * another engine off in /debug.
+ */
+export const PERPLEXITY_MIN_ENGINE_CAP = 4;
+
 export function resolveScanProvidersForPlan(
   plan: Plan,
   enabledEngines?: readonly LLMScanProvider[]
 ): LLMScanProvider[] {
   const configured = getLLMScanProviders();
-  const filtered = enabledEngines ? configured.filter((p) => enabledEngines.includes(p)) : configured;
+  const filtered = (enabledEngines ? configured.filter((p) => enabledEngines.includes(p)) : configured).filter(
+    (p) => p !== "perplexity" || plan.caps.engines >= PERPLEXITY_MIN_ENGINE_CAP
+  );
   return filtered.slice(0, plan.caps.engines);
 }
