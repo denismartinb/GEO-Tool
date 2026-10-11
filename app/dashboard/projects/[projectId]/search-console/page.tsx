@@ -162,7 +162,7 @@ export default async function SearchConsolePage({
                   <NearPageOneScatter queries={state.report.queries} />
                   <p className="sa-note" style={{ marginTop: 8, marginBottom: 0 }}>
                     {state.report.nearPage1.length > 0
-                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20) y hay gente que las ve. Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad."
+                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20). Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad a corto plazo."
                       : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
                   </p>
                 </div>

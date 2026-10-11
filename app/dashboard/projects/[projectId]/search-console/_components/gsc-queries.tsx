@@ -5,7 +5,7 @@ import type { QueryView } from "@/lib/search-console/report";
 import { fmtInt, fmtPct, fmtPosition } from "./format";
 
 /**
- * «Tus búsquedas» (log §284). Queries come from Google and are untrusted
+ * «Las búsquedas que te traen visitas» (log §284). Queries come from Google and are untrusted
  * text: rendered as text only, never as HTML.
  */
 type Filter = "all" | "p1" | "near";
@@ -44,7 +44,7 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
   return (
     <div className="card">
       <div className="sa-ch">
-        <h3>Tus búsquedas</h3>
+        <h3>Las búsquedas que te traen visitas</h3>
         <span className="sa-src">Datos con 2–3 días de retraso, como en Search Console</span>
       </div>
       <div className="gsc-qfil" role="group" aria-label="Filtrar búsquedas">
@@ -81,7 +81,7 @@ export function GscQueries({ queries }: { queries: QueryView[] }) {
                 <tr key={q.query}>
                   <td>
                     <span className="gsc-qq">{q.query}</span>
-                    {q.nearPage1 && <span className="gsc-flag">PÁGINA 2</span>}
+                    {q.nearPage1 && <span className="gsc-flag">Página 2</span>}
                   </td>
                   <td className="gsc-pos">
                     <b>{fmtPosition(q.position)}</b> <Movement value={q.movement} />

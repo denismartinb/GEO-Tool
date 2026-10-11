@@ -24347,6 +24347,22 @@ propiedad de Search Console del fundador está en otra cuenta de Google, no en
 la del login. Si la cuenta elegida no tiene una propiedad que cubra el dominio,
 la pantalla ya lo dice con el estado de elegir propiedad.
 
+**Adenda 4 §284 (2026-10-11):** tras ver los gráficos con datos reales, el
+fundador pidió leer los datos al pasar el ratón. Los dos gráficos pasan a
+componente de cliente (`gsc-charts.tsx`). El diario enseña la fecha, los clics
+y las impresiones del día con una guía vertical. El de puntos enseña la
+búsqueda, el puesto, las impresiones y los clics. En móvil se abre tocando.
+Los `<title>` se quedan para los lectores de pantalla. La etiqueta «PÁGINA 2»
+dentro de la franja no se entendía: arriba del gráfico van ahora tres
+pestañas, «Página 1», «Página 2» (resaltada) y «Página 3», con líneas en el
+puesto 10,5 y en el 20,5. La insignia de la tabla pasa a «Página 2». La nota
+del gráfico usa el texto del fundador («…tu mejor oportunidad a corto
+plazo.»), y la tabla se llama «Las búsquedas que te traen visitas». No cambia
+ningún dato. Queda pendiente, con maqueta antes de construir: más datos de
+Search Console (páginas, CTR, dispositivos), que alimenten las
+recomendaciones de posicionamiento, y que la pantalla enseñe el puesto como
+tal (reparto por tramos y evolución).
+
 ---
 
 ## 285. PERPLEXITY-ENGINE-1 Fase 2b: lo que se quedó en tres motores (2026-10-11)
