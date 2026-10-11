@@ -24789,3 +24789,31 @@ tolera que falte.
 quiere recuperar una tarjeta apartada después, hoy no hay pantalla para
 hacerlo. La búsqueda sigue viéndose en «Posición en Google», así que no se
 pierde ningún dato.
+
+## 295. SEARCH-SEO-1 Fase 3f: gráficos a dos columnas y recomendaciones de Google en carrusel (2026-10-11)
+
+**Qué se decidió.** Dos ajustes del fundador sobre lo ya publicado.
+
+- En «Posición en Google», la tarjeta «Búsquedas en la página 2 de Google»
+  pasa a llamarse **«Búsquedas por página de Google»** y deja de ocupar todo
+  el ancho. A ancho completo su gráfico (420 unidades de ancho) se estiraba
+  hasta el tamaño de la página, con las etiquetas a 25 px. Desde 1200 px va a
+  dos columnas con «Clics e impresiones» (`.gsc-grid-charts`, 1,3fr y 1fr).
+  En una columna su gráfico tiene un tope de 620 px. Para que quepan a media
+  anchura, «Clics e impresiones» pasa de 860×240 a 640×300 unidades y el
+  gráfico de puestos de 420×270 a 480×280. En el móvil, el gráfico diario sigue
+  desplazándose dentro de su tarjeta (ancho mínimo 520 px).
+- En Recomendaciones, el bloque «Con tus datos de Google» deja de apilar las
+  tarjetas y las pone **en una fila que se desliza** (`.grec-list` con
+  `scroll-snap`). Hay como mucho una por tipo (§293), así que desde 1200 px
+  caben las tres; por debajo se desliza. Los botones quedan al pie de cada
+  tarjeta, y un título largo (las preguntas) se corta a cuatro líneas, con la
+  pregunta entera en el `title`.
+
+**Por qué.** El fundador: «esta sección ha quedado enorme» y «mejor que salgan
+en tarjetas en un carrusel, en una fila». Apiladas, tres tarjetas empujaban el
+plan de IA por debajo del primer pantallazo.
+
+**Qué queda pendiente.** Nada nuevo. El carrusel no tiene flechas: se desliza
+con el dedo, la rueda o la barra, y en escritorio no hace falta porque caben
+las tres.
