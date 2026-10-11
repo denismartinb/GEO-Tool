@@ -1,0 +1,135 @@
+<title>Revisar prompts generados</title>
+<style>
+/* Layout: two frames side by side (desktop modal, phone modal), plus a second state; current console style */
+:root{
+  --bg:#f3f4f7; --surface:#fff; --surface-2:#f8f9fb; --ink:#141824; --ink-2:#4a5263; --ink-4:#8a92a3;
+  --line:#e8eaef; --line-soft:#eef0f4; --line-strong:#d5d9e1; --accent:#2563eb; --accent-soft:#e8efff; --accent-ink:#1d4ed8;
+  --warn-soft:#fff6e5; --warn-ink:#8a5a00; --overlay:rgba(15,18,26,.45);
+  --font:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f121a; --surface:#181c26; --surface-2:#1e2330; --ink:#eef1f6; --ink-2:#b4bccb; --ink-4:#7d8698;
+  --line:#2a3040; --line-soft:#232836; --line-strong:#384055; --accent:#5b8cff; --accent-soft:#1d2a4a; --accent-ink:#a9c2ff;
+  --warn-soft:#3a2d12; --warn-ink:#f2c46b; --overlay:rgba(0,0,0,.55); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f121a; --surface:#181c26; --surface-2:#1e2330; --ink:#eef1f6; --ink-2:#b4bccb; --ink-4:#7d8698;
+  --line:#2a3040; --line-soft:#232836; --line-strong:#384055; --accent:#5b8cff; --accent-soft:#1d2a4a; --accent-ink:#a9c2ff;
+  --warn-soft:#3a2d12; --warn-ink:#f2c46b; --overlay:rgba(0,0,0,.55); color-scheme:dark}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+body{background:var(--bg);color:var(--ink);font-family:var(--font);padding-inline:16px;padding-block:28px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1{font-size:22px;margin:0;text-wrap:balance}
+.lead{color:var(--ink-2);font-size:14.5px;line-height:1.6;margin:0;max-width:68ch}
+.flow{display:flex;flex-wrap:wrap;gap:8px;font-size:12.5px;color:var(--ink-2)}
+.flow span{padding:5px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+.flow span.on{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent;font-weight:600}
+.row{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.frame{display:flex;flex-direction:column;gap:10px;min-width:0}
+.cap{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);font-weight:600}
+.screen{background:var(--overlay);border-radius:14px;padding:28px;display:grid;place-items:center}
+.desk{width:min(720px,100%)}
+.phone{width:375px;max-width:100%;padding:12px;border-radius:28px}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.18);width:100%;max-width:640px;display:flex;flex-direction:column;overflow:hidden}
+.head{display:flex;gap:10px;align-items:flex-start;padding:18px 20px;border-bottom:1px solid var(--line-soft)}
+.icon-btn{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;color:var(--ink-2);flex-shrink:0;font-size:16px}
+.headtext{flex:1;min-width:0}
+.title{font-size:16px;font-weight:750;margin:0 0 2px}
+.sub{font-size:13px;color:var(--ink-2);margin:0}
+.body{padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--ink-2)}
+.pill{display:inline-flex;gap:6px;align-items:center;padding:5px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-ink);font-weight:600;font-size:12px}
+.link{color:var(--accent);font-weight:600;font-size:12.5px}
+.note{background:var(--warn-soft);color:var(--warn-ink);border-radius:8px;padding:9px 12px;font-size:12.5px;line-height:1.5}
+ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+li.off{background:var(--surface-2)}
+li.off .txt{color:var(--ink-4);text-decoration:line-through}
+.check{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line-strong);flex-shrink:0;margin-top:2px;display:grid;place-items:center;font-size:12px;color:#fff}
+.check.on{background:var(--accent);border-color:var(--accent)}
+.check.dis{opacity:.45}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px}
+.txt{font-size:13.5px;line-height:1.5;word-break:break-word}
+.topic{font-size:11.5px;color:var(--ink-4)}
+.edit{font-size:12px;color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;flex-shrink:0;background:var(--surface)}
+textarea{width:100%;box-sizing:border-box;border:1px solid var(--accent);border-radius:6px;padding:7px 10px;font:inherit;font-size:13.5px;line-height:1.5;color:var(--ink);background:var(--surface);resize:none}
+.edit-actions{display:flex;gap:8px;font-size:12px}
+.edit-actions b{color:var(--accent)}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;border-top:1px solid var(--line-soft);flex-wrap:wrap}
+.btn{font:inherit;font-size:13px;font-weight:600;border-radius:8px;padding:8px 14px;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.phone .head,.phone .body,.phone .foot{padding-inline:14px}
+.phone .foot .btn.pri{flex:1;text-align:center}
+.notes{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 20px;max-width:760px}
+.notes h2{font-size:15px;margin:0 0 10px}
+.notes ul{gap:6px}.notes li{border:0;padding:0;background:none;font-size:13.5px;line-height:1.55;color:var(--ink-2);display:list-item;list-style:disc;margin-left:18px}
+</style>
+
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:10px">
+    <h1>Revisar los prompts antes de añadirlos</h1>
+    <p class="lead">Tras «Generar prompts», el modal ya no los añade directamente. Muestra un paso nuevo con los prompts propuestos: cada uno con su casilla, su tema y un botón para editarlo. Sólo se guardan y se escanean los que dejes marcados al pulsar «Añadir».</p>
+    <div class="flow"><span>1 · Método</span><span>2 · Palabras clave</span><span class="on">3 · Revisar (nuevo)</span><span>→ Se añaden y se escanean</span></div>
+  </header>
+
+  <div class="row">
+    <div class="frame">
+      <div class="cap">Escritorio · un prompt en edición</div>
+      <div class="screen desk">
+        <div class="modal">
+          <div class="head">
+            <span class="icon-btn">‹</span>
+            <div class="headtext"><p class="title">Revisa los prompts</p><p class="sub">Desmarca los que no quieras y edita el texto si hace falta.</p></div>
+            <span class="icon-btn">✕</span>
+          </div>
+          <div class="body">
+            <div class="meta"><span class="pill">4 de 5 seleccionados</span><span class="link">Volver a generar</span></div>
+            <ul>
+              <li><span class="check on">✓</span><div class="main"><span class="txt">¿Qué herramientas de GEO hay en España para medir si ChatGPT recomienda mi marca?</span><span class="topic">Tema: Herramientas y comparativas</span></div><span class="edit">Editar</span></li>
+              <li><span class="check on">✓</span><div class="main"><textarea rows="2">¿Cuánto cuesta una herramienta de GEO para una pyme en España?</textarea><div class="edit-actions"><b>Guardar</b><span>Cancelar</span></div><span class="topic">Tema: Precio y planes</span></div></li>
+              <li class="off"><span class="check"></span><div class="main"><span class="txt">¿Qué es el GEO y en qué se diferencia del SEO tradicional?</span><span class="topic">Tema: Definición y concepto</span></div><span class="edit">Editar</span></li>
+              <li><span class="check on">✓</span><div class="main"><span class="txt">¿Cómo optimizar mi web para aparecer en las respuestas de Gemini y Claude?</span><span class="topic">Tema: Cómo hacer</span></div><span class="edit">Editar</span></li>
+              <li><span class="check on">✓</span><div class="main"><span class="txt">¿Qué agencias de GEO en España trabajan con herramientas de medición propias?</span><span class="topic">Tema: Herramientas y comparativas</span></div><span class="edit">Editar</span></li>
+            </ul>
+          </div>
+          <div class="foot"><span class="btn">‹ Atrás</span><span class="btn pri">Añadir 4 prompts</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame">
+      <div class="cap">Móvil · 375 px · cerca del tope del plan</div>
+      <div class="screen phone">
+        <div class="modal">
+          <div class="head">
+            <span class="icon-btn">‹</span>
+            <div class="headtext"><p class="title">Revisa los prompts</p><p class="sub">Desmarca los que no quieras y edita el texto si hace falta.</p></div>
+            <span class="icon-btn">✕</span>
+          </div>
+          <div class="body">
+            <div class="note">Tu plan admite 2 prompts más. Elige cuáles añadir.</div>
+            <div class="meta"><span class="pill">2 de 5 seleccionados</span><span class="link">Volver a generar</span></div>
+            <ul>
+              <li><span class="check on">✓</span><div class="main"><span class="txt">¿Qué herramientas de GEO hay en España para medir si ChatGPT recomienda mi marca?</span><span class="topic">Herramientas y comparativas</span></div><span class="edit">Editar</span></li>
+              <li><span class="check on">✓</span><div class="main"><span class="txt">¿Cuánto cuesta una herramienta de GEO para una pyme en España?</span><span class="topic">Precio y planes</span></div><span class="edit">Editar</span></li>
+              <li class="off"><span class="check dis"></span><div class="main"><span class="txt">¿Qué es el GEO y en qué se diferencia del SEO tradicional?</span><span class="topic">Definición y concepto</span></div><span class="edit">Editar</span></li>
+            </ul>
+          </div>
+          <div class="foot"><span class="btn">‹ Atrás</span><span class="btn pri">Añadir 2 prompts</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="notes">
+    <h2>Cómo se comporta</h2>
+    <ul>
+      <li>Todos llegan marcados. Al llegar al tope del plan, las casillas sin marcar se bloquean hasta que desmarques otra.</li>
+      <li>Editar abre el texto en el sitio. Se exige el mismo largo que a un prompt manual (entre 10 y 300 caracteres) y no se aceptan duplicados de los que ya vigilas.</li>
+      <li>«Volver a generar» repite la generación con las mismas palabras clave; «Atrás» vuelve a ellas sin perderlas.</li>
+      <li>Cerrar el modal descarta la propuesta: nada se guarda ni se escanea hasta pulsar «Añadir».</li>
+      <li>Aplico lo mismo a «Generación automática», que hoy también añade sin preguntar. «Manual» no cambia.</li>
+    </ul>
+  </section>
+</div>

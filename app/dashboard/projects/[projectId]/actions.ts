@@ -6,7 +6,16 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { requireOperator } from "@/lib/admin/operator";
 import { createServiceClient } from "@/lib/supabase/service";
-import { addPromptsCore, addPromptsInputSchema, type AddPromptsResult } from "@/lib/projects/add-prompts";
+import {
+  addPromptsCore,
+  addPromptsInputSchema,
+  addReviewedPromptsCore,
+  addReviewedPromptsInputSchema,
+  generatePromptProposalsCore,
+  generatePromptProposalsInputSchema,
+  type AddPromptsResult,
+  type GeneratePromptProposalsResult
+} from "@/lib/projects/add-prompts";
 import {
   AUDIT_HALF_COLUMN,
   isMissingColumnError,
@@ -712,6 +721,46 @@ export async function addPrompts(input: {
 
   const { supabase, user } = await requireUser();
   const result = await addPromptsCore({ ...parsed.data, supabase, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/debug`);
+  }
+
+  return result;
+}
+
+/**
+ * First half of "Añadir prompts" for auto/keywords (PROMPTS-REVIEW-1):
+ * generates proposals and writes nothing, so there is nothing to revalidate.
+ */
+export async function generatePromptProposals(input: {
+  projectId: string;
+  mode: "auto" | "keywords";
+  keywords?: string[];
+}): Promise<GeneratePromptProposalsResult> {
+  const parsed = generatePromptProposalsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  return generatePromptProposalsCore({ ...parsed.data, supabase, user });
+}
+
+/** Second half: saves and scans the proposals the user kept. */
+export async function addReviewedPrompts(input: {
+  projectId: string;
+  prompts: Array<{ text: string; category: string }>;
+}): Promise<AddPromptsResult> {
+  const parsed = addReviewedPromptsInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const result = await addReviewedPromptsCore({ ...parsed.data, supabase, user });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/prompts`);

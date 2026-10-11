@@ -576,3 +576,180 @@ describe("addPromptsCore", () => {
     });
   });
 });
+
+describe("PROMPTS-REVIEW-1: generate, review, then add", () => {
+  beforeEach(() => {
+    nextId = 1;
+    generateAddedPromptsMock.mockReset();
+    launchScanMock.mockReset();
+    resolveAndCacheBusinessProfileMock.mockReset();
+    resolveAndCacheBusinessProfileMock.mockResolvedValue(null);
+  });
+
+  it("generatePromptProposalsCore returns proposals and writes nothing", async () => {
+    const { generatePromptProposalsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue([
+      { text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" },
+      { text: "¿Qué alternativas hay a los CRM tradicionales?", category: "Alternativas" }
+    ]);
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    const result = await generatePromptProposalsCore({
+      projectId: PROJECT.id,
+      mode: "keywords",
+      keywords: [" crm "],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({
+      success: true,
+      proposals: [
+        { text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" },
+        { text: "¿Qué alternativas hay a los CRM tradicionales?", category: "Alternativas" }
+      ],
+      remainingSlots: 100
+    });
+    expect(generateAddedPromptsMock.mock.calls[0][0]).toMatchObject({ mode: "keywords", keywords: ["crm"] });
+    expect(insertedRows).toHaveLength(0);
+    expect(launchScanMock).not.toHaveBeenCalled();
+  });
+
+  it("generatePromptProposalsCore drops proposals already watched, repeated or out of length", async () => {
+    const { generatePromptProposalsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue([
+      { text: "¿Cuál es el mejor  CRM para pymes?", category: "Comparación" },
+      { text: "corto", category: "X" },
+      { text: "¿Qué CRM usan las agencias pequeñas?", category: "Uso" },
+      { text: "¿qué crm usan las agencias pequeñas?", category: "Uso" }
+    ]);
+    const { client } = makeFakeSupabase({
+      project: PROJECT,
+      activePrompts: [
+        { project_id: PROJECT.id, is_active: true, prompt_text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }
+      ]
+    });
+
+    const result = await generatePromptProposalsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(result).toMatchObject({
+      success: true,
+      proposals: [{ text: "¿Qué CRM usan las agencias pequeñas?", category: "Uso" }],
+      remainingSlots: 99
+    });
+  });
+
+  it("generatePromptProposalsCore refuses without calling the LLM when the plan is full", async () => {
+    const { generatePromptProposalsCore } = await import("@/lib/projects/add-prompts");
+    const activePrompts = Array.from({ length: 10 }, (_, i) => ({ is_active: true, prompt_text: `P ${i}`, category: "C" }));
+    const { client } = makeFakeSupabase({ project: PROJECT, activePrompts, planId: "free" });
+
+    const result = await generatePromptProposalsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(result.success).toBe(false);
+    expect(generateAddedPromptsMock).not.toHaveBeenCalled();
+  });
+
+  it("generatePromptProposalsCore reports the slots left when the plan is nearly full", async () => {
+    const { generatePromptProposalsCore } = await import("@/lib/projects/add-prompts");
+    generateAddedPromptsMock.mockResolvedValue([{ text: "¿Cuál es el mejor CRM para pymes?", category: "Comparación" }]);
+    const activePrompts = Array.from({ length: 8 }, (_, i) => ({ is_active: true, prompt_text: `P ${i}`, category: "C" }));
+    const { client } = makeFakeSupabase({ project: PROJECT, activePrompts, planId: "free" });
+
+    const result = await generatePromptProposalsCore({ projectId: PROJECT.id, mode: "auto", supabase: client, user: USER });
+
+    expect(result).toMatchObject({ success: true, remainingSlots: 2 });
+  });
+
+  it("addReviewedPromptsCore saves exactly the edited proposals and scans only them", async () => {
+    const { addReviewedPromptsCore } = await import("@/lib/projects/add-prompts");
+    launchScanMock.mockResolvedValue({ runId: "run-1", executed: true });
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    const result = await addReviewedPromptsCore({
+      projectId: PROJECT.id,
+      prompts: [{ text: "  ¿Qué CRM   recomiendas a una gestoría?  ", category: "Comparación" }],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({ success: true, addedCount: 1, scanLaunched: true });
+    expect(insertedRows).toEqual([
+      expect.objectContaining({
+        project_id: PROJECT.id,
+        prompt_text: "¿Qué CRM recomiendas a una gestoría?",
+        category: "Comparación",
+        is_active: true
+      })
+    ]);
+    expect(launchScanMock.mock.calls[0][0].onlyPromptIds).toEqual([insertedRows[0].id]);
+    expect(generateAddedPromptsMock).not.toHaveBeenCalled();
+  });
+
+  it("addReviewedPromptsCore refuses more prompts than the plan has room for", async () => {
+    const { addReviewedPromptsCore } = await import("@/lib/projects/add-prompts");
+    const activePrompts = Array.from({ length: 9 }, (_, i) => ({ is_active: true, prompt_text: `P ${i}`, category: "C" }));
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts, planId: "free" });
+
+    const result = await addReviewedPromptsCore({
+      projectId: PROJECT.id,
+      prompts: [
+        { text: "¿Qué CRM recomiendas a una gestoría?", category: "C" },
+        { text: "¿Qué CRM recomiendas a una clínica?", category: "C" }
+      ],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({ success: false, error: "Tu plan admite 1 prompt más. Desmarca alguno para continuar." });
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it("addReviewedPromptsCore rejects a prompt the project already watches", async () => {
+    const { addReviewedPromptsCore } = await import("@/lib/projects/add-prompts");
+    const { client, insertedRows } = makeFakeSupabase({
+      project: PROJECT,
+      activePrompts: [{ project_id: PROJECT.id, is_active: true, prompt_text: "¿Qué CRM recomiendas a una gestoría?", category: "C" }]
+    });
+
+    const result = await addReviewedPromptsCore({
+      projectId: PROJECT.id,
+      prompts: [{ text: "¿qué crm recomiendas a una gestoría?", category: "C" }],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result.success).toBe(false);
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it("addReviewedPromptsCore applies the manual length rule to edited text", async () => {
+    const { addReviewedPromptsCore } = await import("@/lib/projects/add-prompts");
+    const { client, insertedRows } = makeFakeSupabase({ project: PROJECT, activePrompts: [] });
+
+    const result = await addReviewedPromptsCore({
+      projectId: PROJECT.id,
+      prompts: [{ text: "corto", category: "C" }],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result).toEqual({ success: false, error: "Cada prompt debe tener entre 10 y 300 caracteres." });
+    expect(insertedRows).toHaveLength(0);
+  });
+
+  it("addReviewedPromptsCore refuses a project the user does not own", async () => {
+    const { addReviewedPromptsCore } = await import("@/lib/projects/add-prompts");
+    const { client, insertedRows } = makeFakeSupabase({ project: { ...PROJECT, owner_user_id: "other" }, activePrompts: [] });
+
+    const result = await addReviewedPromptsCore({
+      projectId: PROJECT.id,
+      prompts: [{ text: "¿Qué CRM recomiendas a una gestoría?", category: "C" }],
+      supabase: client,
+      user: USER
+    });
+
+    expect(result.success).toBe(false);
+    expect(insertedRows).toHaveLength(0);
+  });
+});
