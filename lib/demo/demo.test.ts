@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createRequestLimiter } from "@/lib/free-report/request";
 import { DEMO_FIELDS, parseDemoForm } from "@/lib/demo/request";
-import { findOfferedSlot, formatDemoSlot, listDemoSlots, madridWallClockToUtc } from "@/lib/demo/slots";
+import { findOfferedSlot, formatDemoSlot, formatDemoSlotShort, listDemoSlots, madridWallClockToUtc } from "@/lib/demo/slots";
 import { DEMO_REQUEST_LIMITS, DEMO_SUBMIT_MESSAGES, submitDemoCore } from "@/lib/demo/submit";
 
 // Saturday 2026-10-10, 23:00 Madrid (CEST, UTC+2).
@@ -46,6 +46,7 @@ describe("listDemoSlots", () => {
 
   it("writes the slot in Spanish, Madrid time", () => {
     expect(formatDemoSlot(slots[0])).toBe("martes, 13 de octubre, 18:00");
+    expect(formatDemoSlotShort(slots[0])).toBe("mar 13, 18:00");
   });
 });
 

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
+import { HeroCallPill } from "@/components/landing/hero-call-pill";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { HeroDemo } from "@/components/landing/hero-demo";
 import { HeroDemoScenes } from "@/components/landing/hero-demo-scenes";
@@ -356,14 +357,7 @@ export function LandingPage() {
           <div className="lp-hero-form">
             <HeroDomainField />
           </div>
-          <Link href="/demo" className="lp-hero-call">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-              <rect x="2" y="6" width="14" height="12" rx="2" />
-              <path d="M16 10l6-3v10l-6-3z" />
-            </svg>
-            <span className="long">Agenda una videollamada de 20 min con el equipo de GenScore</span>
-            <span className="short">Agenda una videollamada de 20 min</span>
-          </Link>
+          <HeroCallPill />
         </div>
 
         {/* LA DEMO DEL HERO — HOME-2026-08 Fase A2.

@@ -129,3 +129,15 @@ export function formatDemoSlot(slot: DemoSlot): string {
   }).format(new Date(slot.id));
   return `${date}, ${slot.time}`;
 }
+
+/** Short form for the home pill: "mar 13, 18:00" (Madrid time). */
+export function formatDemoSlotShort(slot: DemoSlot): string {
+  const date = new Intl.DateTimeFormat("es-ES", {
+    timeZone: DEMO_TIME_ZONE,
+    weekday: "short",
+    day: "numeric"
+  })
+    .format(new Date(slot.id))
+    .replace(".", "");
+  return `${date}, ${slot.time}`;
+}

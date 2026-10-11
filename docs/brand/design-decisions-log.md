@@ -23651,3 +23651,14 @@ maqueta-aprobada.html`, dos de sus palancas comerciales:
   lleva `ref`.
 - Para activar el programa hay que dar de alta los códigos en
   `AFFILIATE_CODES` (Vercel) a medida que el fundador aprueba solicitudes.
+
+**Adenda (2026-10-11): la entrada de la portada pasa a ser una píldora.** El
+fundador eligió, entre tres alternativas, la «píldora con el próximo hueco»,
+pidiéndola más pequeña y menos llamativa que la maqueta. Es
+`components/landing/hero-call-pill.tsx`: texto de 13px, fondo blanco
+translúcido, «Videollamada de 20 min» y el primer hueco libre real
+(`listDemoSlots` + `formatDemoSlotShort`), calculado en el navegador porque la
+portada es estática. Antes de hidratar enseña «L–V, 18:00–21:00», que siempre
+es cierto. Por debajo de 400px se cae el «Próximo hueco:» y se queda la fecha.
+Enlaza a `/demo?desde=portada`. El rediseño del hueco de `/demo` está en
+maqueta, pendiente de elección.
