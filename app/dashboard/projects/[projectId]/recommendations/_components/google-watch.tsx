@@ -2,8 +2,12 @@
 
 import Link from "next/link";
 import { CheckIcon, useWatchPrompt, watchStatusText } from "@/components/search-console/watch-prompt";
+import { GoogleRecMark } from "./google-rec-frame";
 
-/** «Vigilar prompt» on the Google + IA card (log §293), same action as «Posición en Google». */
+/**
+ * «Vigilar prompt» on the Google + IA card (log §293), same action as
+ * «Posición en Google», with «Ahora no» next to it until it is watched (§294).
+ */
 export function GoogleWatchActions({ projectId, query }: { projectId: string; query: string }) {
   const { state, tracked, watch } = useWatchPrompt(projectId, query, false);
   const status = watchStatusText(state);
@@ -16,9 +20,12 @@ export function GoogleWatchActions({ projectId, query }: { projectId: string; qu
             Prompt vigilado
           </Link>
         ) : (
-          <button type="button" className="btn btn-primary btn-sm" onClick={watch}>
-            Vigilar prompt
-          </button>
+          <>
+            <button type="button" className="btn btn-primary btn-sm" onClick={watch}>
+              Vigilar prompt
+            </button>
+            <GoogleRecMark status="dismissed" label="Ahora no" />
+          </>
         )}
       </div>
       {status && (
