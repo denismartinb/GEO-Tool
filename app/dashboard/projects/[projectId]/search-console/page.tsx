@@ -10,7 +10,6 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { ClicksImpressionsChart, NearPageOneScatter } from "./_components/gsc-charts";
 import { GscConnect } from "./_components/gsc-connect";
 import { GscDisconnect } from "./_components/gsc-disconnect";
-import { GscIndexCard } from "./_components/gsc-index";
 import { GscCannibal, GscCtr, GscDevices, GscPages } from "./_components/gsc-insights";
 import { GscKpis } from "./_components/gsc-kpis";
 import { GscOutcome } from "./_components/gsc-outcome";
@@ -164,20 +163,17 @@ export default async function SearchConsolePage({
                 </div>
                 <ClicksImpressionsChart daily={state.report.daily} />
               </div>
-              <div className="gsc-grid-2">
-                <div className="card">
-                  <div className="sa-ch">
-                    <h3>Búsquedas en la página 2 de Google</h3>
-                    <span className="sa-src">Cada punto es una búsqueda</span>
-                  </div>
-                  <NearPageOneScatter queries={state.report.queries} />
-                  <p className="sa-note" style={{ marginTop: 8, marginBottom: 0 }}>
-                    {state.report.nearPage1.length > 0
-                      ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20). Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad a corto plazo."
-                      : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
-                  </p>
+              <div className="card">
+                <div className="sa-ch">
+                  <h3>Búsquedas en la página 2 de Google</h3>
+                  <span className="sa-src">Cada punto es una búsqueda</span>
                 </div>
-                <GscIndexCard index={state.report.index} uninspected={state.uninspected} auditHref={auditHref} />
+                <NearPageOneScatter queries={state.report.queries} />
+                <p className="sa-note" style={{ marginTop: 8, marginBottom: 0 }}>
+                  {state.report.nearPage1.length > 0
+                    ? "Las búsquedas de la franja azul están en la página 2 (puestos 11 a 20). Son las más fáciles de subir a la primera: ahí está tu mejor oportunidad a corto plazo."
+                    : "Ahora mismo no tienes búsquedas en la página 2 de Google."}
+                </p>
               </div>
               <GscQueries queries={state.report.queries} pageByQuery={state.insights.pageByQuery} />
               <GscPages pages={state.insights.pages} auditHref={auditHref} />

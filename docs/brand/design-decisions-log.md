@@ -24536,6 +24536,92 @@ Google está «En producción», porque si no la conexión caduca a los 7 días
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
+---
+
+## 289. SEARCH-SEO-1 Fase 3c: ajustes del fundador a «Posición en Google» (2026-10-11)
+
+**Qué se decidió.** Tras ver la Fase 3b (§287) en producción, el fundador pidió
+estos cambios, todos aplicados:
+
+- El texto bajo el puesto medio pasa a «Es la media de todas las veces que te
+  buscan entre las veces que apareces», con sus palabras.
+- Los tramos se llaman «Top 3 resultados», «Página 1», «Página 2» y «Resto de
+  páginas». Los rangos de puestos no cambian.
+- Sale la tarjeta «Puesto medio» de los indicadores, porque repetía el bloque
+  «Tu posición en Google». Quedan tres: clics, impresiones y páginas
+  indexadas.
+- Sale la tarjeta «Indexación» con el donut, porque repetía «Páginas
+  indexadas». Con ella se va su enlace a la Auditoría SEO, que no era un camino
+  de recuperación: la auditoría sigue en el menú y en «Tus páginas en Google».
+  El gráfico de la página 2 ocupa ahora todo el ancho.
+- En «Móvil y ordenador», el porcentaje de impresiones va en su propia línea.
+- Los botones de «Preguntas que te hacen en Google» pasan a «Vigilar prompt» y
+  «Prompt vigilado» con un check verde. Se ha quitado «ya la vigilas en IA» de
+  la línea y se corrige «1 impresiones».
+- **Añadir era lento.** `addPrompts` categoriza con Gemini y lanza el escaneo
+  del prompt nuevo, y eso son unos segundos. La pantalla lo marca como vigilado
+  al pulsar y dice «Añadiéndola a tus prompts…» hasta que termina; si falla, se
+  deshace y enseña el error. No se toca `addPromptsCore`.
+- **Nueva pantalla de carga con Motion** (dependencia nueva `motion`, pedida
+  por el fundador). Una barra de búsqueda y unos resultados donde «tu web»
+  sube y baja de puesto, en bucle. Es ambiente: no enseña porcentaje ni pasos,
+  porque nada sabe cuánto falta.
+- **Caché de 30 minutos** («cachea en sesión… para que no tarde tanto»). Las
+  filas crudas de Google se guardan en la caché de datos de Next con
+  `unstable_cache`. La clave lleva proyecto, dueño, propiedad, el último día de
+  la ventana y, en la pantalla, un hash de las páginas a inspeccionar. Con un
+  acierto no se llama a Google, ni siquiera para renovar el token. La conexión
+  se sigue leyendo antes: desconectar oculta los datos al momento. Los fallos y
+  los estados que no son «listo» no se guardan. Visión general usa la misma
+  caché con su propia clave. Esto modifica la regla «no hay caché entre
+  peticiones» de §284. Lo que se guarda vive fuera de nuestra base de datos y
+  caduca solo.
+
+**Qué queda pendiente.** Las recomendaciones con datos de Google (siguiente
+fase). Tampoco se ha medido en producción cuánto más rápida carga la pantalla
+con la caché.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: el enlace de
+la tarjeta de indexación llevaba a una pantalla que sigue en el menú.
+
+## 290. GEO-SELF-1 Fase 9: `/geo` responde «¿qué significa GEO?» (2026-10-11)
+
+**Qué se decidió.** El fundador quiso probar en genscore.es una
+recomendación de su propio proyecto en GenScore: aparecer en «que significa
+geo», una consulta en la que no salía ni GenScore ni ningún competidor y cuyas
+fuentes citadas eran diccionarios (RAE, etimologías, WordReference, Fundéu,
+Wikipedia). La recomendación pedía una página nueva. **No se crea**: `/geo` ya
+es la página del sitio sobre el término, está en el menú y recibe los enlaces
+internos (glosario, blog, `llms.txt`), así que una segunda URL competiría con
+ella por la misma búsqueda.
+
+- **H1 en forma de pregunta**: «¿Qué significa GEO?», con un title de 61
+  caracteres y una descripción de 160.
+- **Las dos primeras frases responden**: GEO es Generative Engine
+  Optimization, no tiene que ver con la geolocalización, y fuera del marketing
+  digital «geo» es el prefijo griego de «tierra». Va en ese orden porque la
+  mayoría de quien busca «que significa geo» quiere el prefijo (lo dicen las
+  fuentes que cita la IA hoy), y porque los motores ya confunden «GEO» con
+  geolocalización (§265).
+- **FAQ visible de cinco preguntas con su `FAQPage`**, desde
+  `lib/brand/que-significa-geo-faq.ts`, que también publica `/llms-full.txt`.
+  Un solo origen para la página, el JSON-LD y el texto plano, como el FAQ de
+  `/que-es-genscore` (§256). Google sólo enseña FAQ como resultado
+  enriquecido en webs de salud y de administración, así que el `FAQPage` va
+  por los motores de IA, no por el resultado enriquecido.
+- **Del brief generado se descartó** el «[tu dato adicional aquí]» (no había
+  dato que poner) y el enlace a la RAE como cita a mano: la respuesta dice
+  que el Diccionario de la lengua española recoge «geo-», sin pegar un enlace
+  externo en la página.
+
+**Cómo se mide.** La medición semanal de GEO-SELF-1 (§265) y Search Console
+para «que significa geo» y «qué es geo». En el proyecto del fundador, la
+recomendación se marca como hecha tras el despliegue y el siguiente escaneo
+dice si se cumplió (§181).
+
+**Pendiente.** Nada en código. Si en cuatro semanas no aparece, la siguiente
+palanca es la autoridad externa (Fase 7), no más texto en la página.
+
 ## 296. CONTENT-LAUNCH-2: artículo de lanzamiento de Search Console (2026-10-13)
 
 **Qué se decidió.** Segundo artículo de lanzamiento de §288:
@@ -24575,9 +24661,9 @@ colaterales.
 - La etiqueta de las maquetas pasa de «Ejemplo ilustrativo · cifras
   inventadas» a «Ejemplo ilustrativo», en las imágenes y en los pies. Las
   cifras siguen siendo inventadas; sólo cambia cómo se dice.
-- El botón «Vigilar en IA» de «Posición en Google» pasa a llamarse «Vigilar
-  prompt», en el producto (`gsc-questions.tsx`) y en el artículo. Sólo cambia
-  el texto; sigue pasando por `addPrompts`.
+- El artículo llama «Vigilar prompt» al botón de «Posición en Google», como
+  el producto desde §289 (el renombre del botón lo hizo esa fase; aquí sólo
+  se alinea el texto del artículo).
 - El autor de todos los artículos (`AuthorBio`) enseña el símbolo de GenScore
   (`BrandMark`) en vez de una «G» de texto. Se retira la prop `initial`, que
   ningún artículo usaba.

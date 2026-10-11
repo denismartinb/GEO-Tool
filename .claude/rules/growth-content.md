@@ -344,6 +344,10 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   2026-10-10, Claude y ChatGPT respondieron a «herramientas GEO» con mapas y
   GPS. Un texto que quiera ser citado en esa pregunta dice en su primer
   párrafo que GEO es posicionamiento en motores de IA (log §265).
+- **Un FAQ con `FAQPage` en una página pública sale de un módulo de datos en
+  `lib/brand/`**, que pintan la página, el JSON-LD y `/llms-full.txt`. Así no
+  hay dos redacciones: `que-es-genscore-faq.ts` (§256) y
+  `que-significa-geo-faq.ts` (`/geo`, log §290).
 - **El `title` del layout raíz no se convierte en `{ default, template }` sin
   limpiar antes los 33 títulos públicos que ya escriben «— GenScore» a mano.**
   La plantilla se lo añadiría otra vez a todos («Blog — GenScore — GenScore»), y

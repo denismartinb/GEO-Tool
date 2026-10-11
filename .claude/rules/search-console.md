@@ -31,10 +31,17 @@ revisión de data-guardian que lo precedió.
   dominio del proyecto** (`propertyMatchesDomain`), comprobado contra la
   lista en vivo de Google. Enseñar los datos de otra web sería una métrica
   falsa.
-- **Nada de Search Console se guarda y no hay caché entre peticiones.** Sólo
-  `React.cache` por petición. Una caché compartida tendría que ir por
-  proyecto **y** dueño para no servir los datos de una cuenta a otra, y
-  guardar resultados necesita su propia migración y aprobación.
+- **Nada de Search Console va a nuestra base de datos.** Las filas crudas de
+  Google se reutilizan como mucho `GOOGLE_DATA_TTL_SECONDS` (30 min) en la
+  caché de datos de Next (`withGoogleData`, `lib/search-console/load.ts`), a
+  petición del fundador (log §289). La clave lleva proyecto, dueño y
+  propiedad, siempre los tres; sin ellos una cuenta podría ver los datos de
+  otra. El token vive sólo en el cierre de la función y nunca en la clave.
+  La conexión se lee en cada carga **antes** de la caché: un proyecto
+  desconectado o revocado no enseña nada, haya caché o no. Lo que depende de
+  nuestros datos (páginas auditadas, prompts vigilados) se calcula siempre
+  encima de las filas cacheadas, nunca dentro. Guardar resultados de forma
+  duradera sigue necesitando migración y aprobación.
 - **Cada número sale de Google, y lo que no se pudo leer no se pinta.** Sin
   conexión, la mitad de Google de Visión general invita a conectar; sin
   configuración, sin tabla o con Google fallando, no sale. Un botón que no
@@ -57,6 +64,14 @@ revisión de data-guardian que lo precedió.
   `auditedPagesFromSnapshot` reutiliza `pageCheckStates` y
   `seoPageExtraStates` filtrados por `AUDIT_BLOCKS.seo.checks`. Una página
   sin analizar es «Sin auditar», nunca «Correcta».
-- **«Vigilar prompt» (antes «Vigilar en IA», renombrado por el fundador el 2026-10-11, log §296) pasa por `addPrompts` (modo manual)**, con su tope de
+- **«Vigilar prompt» (antes «Vigilar en IA», renombrado por el fundador el 2026-10-11, log §289) pasa por `addPrompts` (modo manual)**, con su tope de
   plan y su escaneo. No se escribe en `project_prompts` por otro camino.
 - **Sólo se enlaza lo que `isWebUrl` acepta.**
+
+## Ajustes del fundador (log §289)
+
+- **La pantalla de carga es ambiente, no progreso.** `gsc-loading.tsx` no
+  dice cuánto falta ni por qué paso va, porque nada lo sabe. Con
+  `prefers-reduced-motion` se queda quieta en su último fotograma.
+- **«Vigilar prompt» se marca al pulsarlo** y se deshace si `addPrompts`
+  falla. Mientras se añade, la fila lo dice («Añadiéndola a tus prompts…»).
