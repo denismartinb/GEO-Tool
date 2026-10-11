@@ -1815,7 +1815,7 @@
 .grec-status-muted { color: var(--ink-3); }
 .grec-status-ok { color: #0f6b41; }
 .grec-status-error { color: var(--brand-neg); }
-/* Skeleton while the Google rows stream in (log §297): same card, so the plan
+/* Skeleton while the Google rows stream in (log §298): same card, so the plan
    below doesn't move when the block lands. */
 .grec-skel { min-height: 214px; box-shadow: none; }
 .grec-skel-line {

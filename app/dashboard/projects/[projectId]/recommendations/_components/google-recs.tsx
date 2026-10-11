@@ -210,7 +210,7 @@ function GoogleRecsSkeleton() {
 }
 
 /**
- * The block's slot (log §297). Only with Search Console connected (a database
+ * The block's slot (log §298). Only with Search Console connected (a database
  * read, no Google call) does it reserve the space with a skeleton while the
  * Google rows stream in; otherwise nothing, so the page doesn't jump either
  * way.

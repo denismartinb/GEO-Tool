@@ -275,7 +275,7 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
   const { current, previous } = searchWindows(new Date());
   const urls = [...new Set(auditedPages.map((p) => p.url))].slice(0, INSPECTION_LIMIT);
 
-  // Two cache entries (log §297): the search analytics, shared by «Posición en
+  // Two cache entries (log §298): the search analytics, shared by «Posición en
   // Google» and Recomendaciones, and the URL inspections, which only the
   // screen reads and which take most of a miss. Same three-part key prefix.
   const analytics = withGoogleData(

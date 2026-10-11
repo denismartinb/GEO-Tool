@@ -76,7 +76,7 @@ revisión de data-guardian que lo precedió.
 - **«Vigilar prompt» se marca al pulsarlo** y se deshace si `addPrompts`
   falla. Mientras se añade, la fila lo dice («Añadiéndola a tus prompts…»).
 
-## Recomendaciones con datos de Google (log §293, §294, §297)
+## Recomendaciones con datos de Google (log §293, §294, §298)
 
 - **Se calculan en vivo; sólo se guarda lo que el cliente hizo con ellas.**
   `buildGoogleRecommendations` es pura y trabaja sobre las filas que ya leyó
@@ -97,11 +97,11 @@ revisión de data-guardian que lo precedió.
   (`screen-rows`), sin las URL auditadas en la clave, y la comparten las dos.
   Las inspecciones de indexación van en otra entrada que sólo pide «Posición
   en Google». Recomendaciones llama con `inspect = false`, porque son lo más
-  lento de una carga sin caché (log §297).
+  lento de una carga sin caché (log §298).
 - **El bloque de Recomendaciones reserva su sitio.** `GoogleRecsSlot` lee
   `isSearchConsoleActive` (nuestra base de datos, sin Google). Sólo si está
   conectado pinta el esqueleto mientras llega Google. Sin conexión no pinta
-  nada, y así la página no salta en ningún caso (log §297).
+  nada, y así la página no salta en ningún caso (log §298).
 - **El bloque va en un `Suspense`.** Google no puede retrasar las
   recomendaciones de IA.
 - **Una tarjeta de cada tipo como mucho.** La lista completa ya está en

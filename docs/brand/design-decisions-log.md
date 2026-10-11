@@ -24883,7 +24883,78 @@ plan de IA por debajo del primer pantallazo.
 con el dedo, la rueda o la barra, y en escritorio no hace falta porque caben
 las tres.
 
-## 297. SEARCH-SEO-1 Fase 3g: el bloque de Google de Recomendaciones llega antes y sin saltos (2026-10-11)
+## 297. NOTIF-LANES-1: la campana enseña tres avisos como mucho (2026-10-11)
+
+**Qué pidió el fundador.** «Quitaría las recurrentes de escaneo completado.
+Las notificaciones, si son demasiadas ya no se leen. Lo ideal es que como
+mucho se acumulen unas 3», y un aviso de los días que quedan de prueba. La
+propuesta aprobada (maqueta en móvil y escritorio:
+https://claude.ai/artifact/5gk9HZ4XDjK1oMogShtbBT) son tres carriles con un
+aviso cada uno. Esta es su Fase 1.
+
+**Qué cambia.**
+1. **Tres carriles, uno por aviso** (`lib/notifications/lanes.ts`).
+   - «Tu cuenta»: días de prueba o cuenta en solo lectura.
+   - «Tu siguiente paso»: la primera acción del plan de Recomendaciones
+     (punto 5).
+   - «Algo ha cambiado»: `ai_bot_blocked`, `page_unreachable`,
+     `emerging_competitor` y `surfacing_dropped`. Si coinciden, gana la más
+     grave en ese orden, no la más reciente.
+   - Un aviso de más de 14 días no sale.
+2. **Fuera de la campana y de la página de notificaciones:** escaneo
+   completado, escaneo fallido, brecha cerrada, `coverage_dropped`,
+   `llms_txt_lost` y `sitemap_lost`. Sus emisores siguen escribiendo la fila:
+   el filtro está en la lectura (`LANE_NOTIFICATION_TYPES` en las dos
+   consultas de `lib/project-workspace.ts`), así que el escaneo no se toca y
+   la Fase 2 puede leer el historial (primer escaneo listo). `gap_pending`
+   también sale (punto 5).
+3. **«Tu cuenta» no es una fila.** Se calcula en cada carga con la fecha de
+   fin de la prueba (`account-notice.ts`, `account-notice-data.ts`), así que
+   el número de días siempre es el real y no hace falta cron ni migración.
+   - En prueba: «Te quedan N días de Pro», en tono tranquilo.
+   - En las últimas 24 horas: «Último día de tu prueba de Pro», en rojo, y
+     enciende el punto de la campana hasta que se abre.
+   - En `free`: «Tu puntuación lleva N días sin actualizarse».
+   - Nombra el precio fundador sólo si `getFounderOffer` dice que Pro aún lo
+     cobra. El enlace abre «Cambiar de plan» con Pro marcado (§221).
+   - Una cuenta Pro de pago o comped no ve nada en este carril.
+4. **La campana pierde las pestañas «Todas / No leídas» y los grupos por
+   día:** con tres avisos sobran. Cada aviso dice su carril. El pie pasa a
+   «Ver historial».
+5. **«Tu siguiente paso» es la acción nº 1 de Recomendaciones.** La primera
+   versión leía `gap_pending`, que el escaneo elige sólo por impacto, y el
+   fundador vio que señalaba una brecha que no estaba entre las acciones
+   prioritarias de la pantalla («si es algo importante debería estar en las
+   recomendaciones prioritarias»). Ahora no es una fila:
+   `next-step-data.ts` lee las mismas filas que la pantalla y el informe
+   (recomendaciones activas del último escaneo completado, puntos de
+   `computeRecommendationPotentialPoints`) y toma `selectPlan(...)[0]`. Así la
+   campana y la pantalla nombran siempre la misma acción. Lleva el dominio,
+   los puntos si la tarjeta los enseña y enlaza a Recomendaciones.
+   - El proyecto es el de la cookie de proyecto activo, o el más reciente.
+     Como el layout no se repinta al navegar, puede ir un paso por detrás
+     tras cambiar de proyecto; por eso nombra el dominio.
+   - No enciende el punto de la campana: está siempre que el plan tenga
+     acciones, y un punto que nunca se apaga no avisa de nada.
+   - Coste: tres lecturas más por carga del layout (último escaneo,
+     recomendaciones y filas del escaneo). El layout no se vuelve a ejecutar
+     en la navegación entre pantallas.
+
+**Pendiente (Fase 2 y 3 de la maqueta).** «Tu siguiente paso» con primer
+escaneo listo, «Conecta Search Console» y la mejor oportunidad de la semana
+(alineada con el plan semanal de Recomendaciones). Alertas nuevas de caída en
+Google y acceso de Google retirado, que necesitan ampliar el `CHECK` de
+tipos. `ai_bot_blocked` y `emerging_competitor` ya tienen carril pero nadie
+los emite todavía.
+
+**Regla de premisa.** Se retira un aviso de error: «El escaneo ha fallado».
+La premisa es que el cliente no puede hacer nada con él. Hoy la sostienen el
+reintento automático y el vigilante (§227, §228), que avisan al operador de
+todo run fallido. Si esa premisa falla, la pantalla afectada es Visión
+general, que sigue enseñando el estado del último escaneo
+(`latestScanStatusByProject`); la campana ya no lo dice.
+
+## 298. SEARCH-SEO-1 Fase 3g: el bloque de Google de Recomendaciones llega antes y sin saltos (2026-10-11)
 
 **Qué se decidió.** El fundador vio que «Con tus datos de Google» tardaba en
 aparecer y que la pantalla parpadeaba al llegar. Había dos causas, y cada una

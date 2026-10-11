@@ -889,7 +889,7 @@ export default async function RecommendationsPage({
 
           {/* 4 · SEARCH-SEO-1 Fase 3d (log §293): cards from the customer's own
               Search Console, only when it is connected. Streamed behind a
-              skeleton of the same size (log §297), so Google never holds back
+              skeleton of the same size (log §298), so Google never holds back
               the AI recommendations below and nothing jumps when it lands. */}
           <GoogleRecsSlot projectId={projectId} ownerUserId={user.id} domain={project.domain} supabase={supabase} />
 
