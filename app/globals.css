@@ -1047,8 +1047,11 @@ a {
   border-radius: 99px;
   background: var(--line);
 }
-.ie-dot.on-h { background: var(--p-high); }
-.ie-dot.on-m { background: var(--p-med); }
+/* `--p-high`/`--p-med` are never declared anywhere, so the "on" dots painted
+   nothing and Recomendaciones showed only the grey "off" dots (log §291).
+   The fallbacks are what actually paints today. */
+.ie-dot.on-h { background: var(--p-high, var(--accent)); }
+.ie-dot.on-m { background: var(--p-med, var(--ink-3)); }
 .ie-dot.on-l { background: var(--accent); }
 
 /* ============================================================
@@ -1085,8 +1088,8 @@ a {
   height: 26px;
   flex-shrink: 0;
 }
-.rec-rank.high { background: var(--p-high); }
-.rec-rank.med  { background: var(--p-med); }
+.rec-rank.high { background: var(--p-high, var(--accent)); }
+.rec-rank.med  { background: var(--p-med, var(--ink-3)); }
 .rec-rank.low  { background: var(--p-low); }
 .rec-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .rec-title { font-size: 13.5px; font-weight: 700; line-height: 1.35; color: var(--ink); flex: 1; }

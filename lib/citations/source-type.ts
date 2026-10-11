@@ -18,7 +18,7 @@ export type SourceType = "community" | "encyclopedia" | "comparator" | "media" |
 
 export const SOURCE_TYPE_LABEL: Record<SourceType, string> = {
   community: "Comunidad",
-  encyclopedia: "Enciclopedia",
+  encyclopedia: "Diccionario o enciclopedia",
   comparator: "Comparador",
   media: "Medio",
   // "Otras webs", not "Sin clasificar": the bucket is honest either way, but
@@ -51,6 +51,23 @@ const DOMAIN_TYPES: Record<string, SourceType> = {
   "wikipedia.org": "encyclopedia",
   "wikimedia.org": "encyclopedia",
   "britannica.com": "encyclopedia",
+  // Dictionaries and language references (log §291): what the engines cite
+  // for a definitional query («qué significa X»). Same bucket as the
+  // encyclopedias because the play is the same — nobody can pitch the RAE.
+  "rae.es": "encyclopedia",
+  "fundeu.es": "encyclopedia",
+  "wordreference.com": "encyclopedia",
+  "wiktionary.org": "encyclopedia",
+  "etimologias.dechile.net": "encyclopedia",
+  "elcastellano.org": "encyclopedia",
+  "significados.com": "encyclopedia",
+  "definicion.de": "encyclopedia",
+  "spanishdict.com": "encyclopedia",
+  "merriam-webster.com": "encyclopedia",
+  "dictionary.cambridge.org": "encyclopedia",
+  "collinsdictionary.com": "encyclopedia",
+  "oxfordlearnersdictionaries.com": "encyclopedia",
+  "dictionary.com": "encyclopedia",
 
   // Comparators / review aggregators
   "trustpilot.com": "comparator",
