@@ -14,8 +14,8 @@ const NOTES: Record<AuditBlockKey, { caption: string; note: string }> = {
     note: "Lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones."
   },
   seo: {
-    caption: "Nota SEO",
-    note: "Lo que Google necesita para entender tu web e indexarla."
+    caption: "Salud SEO",
+    note: "Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido."
   }
 };
 

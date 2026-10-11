@@ -18,6 +18,9 @@ import { BlockSwitch } from "./_components/block-switch";
 import { BlockPotentialBanner } from "./_components/block-potential-banner";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
 import { CoverageSection } from "./_components/coverage-section";
+import { SpeedCard } from "./_components/speed-card";
+import { SeoWeightsCard } from "./_components/seo-weights-card";
+import { duplicateMetadataUrls } from "@/lib/web-audit/seo-health";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
 
@@ -31,9 +34,12 @@ import { WebAuditProvider } from "./web-audit-context";
  * GEO is «¿te puede citar la IA?»: the coverage map, AI bots, llms.txt and the
  * citable-content checks. SEO is «¿te encuentra Google?»: tags, headings,
  * canonical, indexing, hreflang and sitemap. Each block has its score, its
- * «Si arreglas…» banner and the Problemas / Correcto / Páginas tabs. Speed,
- * mobile and Search Console are Fases 2 and 3 and are not drawn until there
- * is a measurement behind them.
+ * «Si arreglas…» banner and the Problemas / Correcto / Páginas tabs.
+ *
+ * Fase 2 (log §281): the SEO block's score is the «Salud SEO», with six more
+ * checks and the home page speed («Optimización de tu página Home»). Those
+ * count only there, never in the Salud técnica, so the GEO Score does not
+ * move. Search Console is Fase 3 and is not drawn until it exists.
  */
 
 // Same ADR-0003 rationale as the Escaneos page: the screen can wake the audit
@@ -161,16 +167,19 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
         ) : (
           (() => {
             const pages = technicalSnapshot.pages;
-            const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport));
+            const bots = technicalSnapshot.bots;
+            const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport, bots));
             const view = views.find((v) => v.key === activeBlock)!;
             const isGeo = activeBlock === "geo";
+            const duplicates = isGeo ? null : duplicateMetadataUrls(pages);
+            const pageSpeed = bots?.site?.pageSpeed;
             return (
               <div className="sa-screen">
                   <BlockSwitch projectId={projectId} active={activeBlock} blocks={views} />
                   {currentTechnicalReport.actualReadinessScore !== null && (
                     <p className="sa-total">
-                      Juntas forman tu <b>Salud técnica: {currentTechnicalReport.actualReadinessScore}/100</b>, la parte
-                      técnica de tu Puntuación GEO.
+                      Tu Puntuación GEO usa la <b>Salud técnica ({currentTechnicalReport.actualReadinessScore}/100)</b>: los
+                      checks GEO y los SEO de siempre. Las comprobaciones nuevas y la velocidad sólo cuentan en la Salud SEO.
                       {technicalScoreDelta !== null && technicalScoreDelta !== 0 && (
                         <span className="sa-total-delta">
                           <Delta value={technicalScoreDelta} suffix=" pt" /> desde la revisión anterior
@@ -193,6 +202,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                     <div className="sa-grid-2">
                       <div className="sa-main">
                         {isGeo && <CoverageSection data={coverage} />}
+                        {!isGeo && pageSpeed !== undefined && <SpeedCard pageSpeed={pageSpeed} />}
                         <AuditTabPanel id="problemas">
                           <BlockIssuesCard
                             view={view}
@@ -209,7 +219,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                             <div className="sa-ch">
                               <h3>Páginas revisadas</h3>
                               <span className="sa-src">
-                                Nota {isGeo ? "GEO" : "SEO"} de cada página · toca una para ver qué mejorar
+                                {AUDIT_BLOCKS[activeBlock].scoreLabel} de cada página · toca una para ver qué mejorar
                               </span>
                             </div>
                             {new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
@@ -226,6 +236,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                                   page={page}
                                   fixContext={fixContext}
                                   block={activeBlock}
+                                  duplicate={duplicates ? duplicates.has(page.url) : undefined}
                                 />
                               ))}
                             </div>
@@ -240,6 +251,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </p>
                         </div>
                         {isGeo && <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />}
+                        {!isGeo && <SeoWeightsCard />}
                       </div>
                     </div>
                   </AuditTabsProvider>

@@ -6,6 +6,8 @@ import * as fetchPageModule from "./fetch-page";
 import * as robotsModule from "./robots";
 import * as rateLimitModule from "./snapshot-rate-limit";
 import * as citationResolutionModule from "@/lib/scan/citation-resolution";
+import * as httpsCheckModule from "./https-check";
+import * as pageSpeedModule from "./pagespeed";
 
 vi.mock("./fetch-page", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./fetch-page")>();
@@ -19,6 +21,9 @@ vi.mock("./snapshot-rate-limit", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./snapshot-rate-limit")>();
   return { ...actual, checkSnapshotRateLimit: vi.fn() };
 });
+// Salud SEO site facts (log §281): never touch the network from a unit test.
+vi.mock("./https-check", () => ({ checkHttpsRedirect: vi.fn(async () => "ok") }));
+vi.mock("./pagespeed", () => ({ fetchPageSpeed: vi.fn(async () => undefined) }));
 vi.mock("@/lib/scan/citation-resolution", () => ({
   resolveGroundingRedirects: vi.fn(async () => new Map())
 }));
@@ -180,6 +185,8 @@ const mockedFetchPageSafely = vi.mocked(fetchPageModule.fetchPageSafely);
 const mockedBuildBotAccessReport = vi.mocked(robotsModule.buildBotAccessReport);
 const mockedCheckSnapshotRateLimit = vi.mocked(rateLimitModule.checkSnapshotRateLimit);
 const mockedResolveGroundingRedirects = vi.mocked(citationResolutionModule.resolveGroundingRedirects);
+const mockedCheckHttpsRedirect = vi.mocked(httpsCheckModule.checkHttpsRedirect);
+const mockedFetchPageSpeed = vi.mocked(pageSpeedModule.fetchPageSpeed);
 
 describe("runTechnicalAuditCore", () => {
   afterEach(() => {
@@ -316,6 +323,67 @@ describe("runTechnicalAuditCore", () => {
     expect((insertedPayload as { pages: unknown[] }).pages.length).toBe(result.snapshot.pages.length);
 
     dateNowSpy.mockRestore();
+  });
+
+  it("persists the Salud SEO site facts inside bots.site, and reuses a page speed younger than a week (log §281)", async () => {
+    mockedCheckSnapshotRateLimit.mockResolvedValue({ allowed: true, count: 0, limit: 5, remaining: 5, windowStart: new Date().toISOString() });
+    mockedFetchPageSafely.mockResolvedValue({ status: "skipped_offsite" });
+    mockedBuildBotAccessReport.mockResolvedValue({
+      robotsFound: true,
+      bots: [],
+      llmsTxtFound: false,
+      llmsTxtBytes: null,
+      sitemapFound: false,
+      site: { googlebotAllowed: true }
+    });
+    mockedCheckHttpsRedirect.mockResolvedValue("missing");
+    const fresh = {
+      measuredAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      mobile: { source: "field" as const, lcpMs: 2100, inpMs: 120, cls: 0.03 },
+      desktop: null
+    };
+
+    const tables = baseTables({
+      web_audit_snapshots: {
+        select: {
+          data: { scan_id: "scan-OLD", readiness_score: 50, pages: [], bots: { site: { pageSpeed: fresh } }, created_at: new Date().toISOString() },
+          error: null
+        }
+      }
+    });
+    let inserted: { bots: unknown } | null = null;
+    tables.web_audit_snapshots.onInsert = (payload) => {
+      inserted = payload as { bots: unknown };
+    };
+    const supabase = makeClient(tables) as unknown as Supabase;
+    const service = makeClient(tables) as unknown as ServiceClient;
+
+    const result = await runTechnicalAuditCore({ projectId: "project-1", supabase, service, user: { id: "user-1" } as AuthenticatedContext["user"] });
+
+    expect(result.success).toBe(true);
+    expect(mockedFetchPageSpeed).not.toHaveBeenCalled();
+    expect(inserted!.bots).toMatchObject({ site: { googlebotAllowed: true, https: "missing", pageSpeed: fresh } });
+  });
+
+  it("leaves pageSpeed out entirely when it was not measured (no key)", async () => {
+    mockedCheckSnapshotRateLimit.mockResolvedValue({ allowed: true, count: 0, limit: 5, remaining: 5, windowStart: new Date().toISOString() });
+    mockedFetchPageSafely.mockResolvedValue({ status: "skipped_offsite" });
+    mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false });
+    mockedFetchPageSpeed.mockResolvedValue(undefined);
+
+    const tables = baseTables();
+    let inserted: { bots: { site?: Record<string, unknown> } } | null = null;
+    tables.web_audit_snapshots.onInsert = (payload) => {
+      inserted = payload as { bots: { site?: Record<string, unknown> } };
+    };
+    const supabase = makeClient(tables) as unknown as Supabase;
+    const service = makeClient(tables) as unknown as ServiceClient;
+
+    await runTechnicalAuditCore({ projectId: "project-1", supabase, service, user: { id: "user-1" } as AuthenticatedContext["user"] });
+
+    expect(mockedFetchPageSpeed).toHaveBeenCalledWith("https://acme.com/");
+    expect(inserted!.bots.site).toBeDefined();
+    expect("pageSpeed" in inserted!.bots.site!).toBe(false);
   });
 
   it("audits a non-Pro plan instead of refusing it (docs/adr/0035)", async () => {

@@ -15,11 +15,11 @@ paths:
 > `findCitationBlockers` (`lib/recommendations/citation-blockers.ts`), el mismo
 > módulo que Recomendaciones. Una franja propia con otro criterio es justo la
 > discrepancia que se quiere evitar.
-> La tarjeta «Auditoría SEO» de Visión general cuenta los problemas con
-> `buildOverviewSeoSummary`, que pasa por `buildTechnicalIssuesReport`, y los
-> nombra con `lib/web-audit/issue-labels.ts`. Un cálculo o un nombre propio
-> en la tarjeta haría que las dos pantallas contaran o llamaran distinto al
-> mismo problema.
+> La tarjeta «Auditoría SEO» de Visión general es el bloque SEO desde la
+> Fase 2 (log §281): `buildOverviewSeoSummary` llama a `buildAuditBlock("seo",
+> …)` igual que la pantalla, y nombra con `lib/web-audit/issue-labels.ts`. Un
+> cálculo o un nombre propio en la tarjeta haría que las dos pantallas
+> contaran o llamaran distinto al mismo problema.
 >
 > **Desde la Fase 1b (log §275) la pantalla tiene dos bloques**, «Auditoría
 > GEO» y «Auditoría SEO», con una entrada de menú cada uno y la misma ruta
@@ -29,8 +29,21 @@ paths:
 > `page-checks.ts`, leídos de `pageCheckStates` (`issues.ts`): **no es una
 > métrica nueva**, y juntas siguen dando la Salud técnica. No le pongas pesos
 > propios a un bloque: separaría su nota del componente técnico del GEO
-> Score. Los checks sin peso siguen sin puntos también dentro del bloque. La
-> cobertura se pinta en el bloque GEO, con su propio cargador
+> Score. Los checks sin peso siguen sin puntos también dentro del bloque.
+>
+> **Única excepción aprobada: la Salud SEO** (Fase 2, log §281). El bloque SEO
+> suma los checks de `lib/web-audit/seo-health.ts` (velocidad, Googlebot,
+> HTTPS, viewport, texto alternativo, títulos repetidos) con los pesos de
+> `SEO_EXTRA_WEIGHTS`, aprobados por el fundador: 45 + 55 = 100. Esos checks
+> **nunca entran en `pageScore` ni en `readiness_score`**, así que la Salud
+> técnica y la Puntuación GEO no se mueven, y un test lo fija. Un check nuevo
+> que sólo deba contar en la Salud SEO va ahí; uno que deba mover la
+> Puntuación GEO necesita su propia decisión (§131). Los datos de sitio van
+> en `bots.site` y los de página en `PageCheckResult.seo`, los dos opcionales
+> y tri-estado. La velocidad sale de PageSpeed Insights sólo con
+> `PAGESPEED_API_KEY`: sin clave no hay tarjeta ni puntos de velocidad.
+>
+> La cobertura se pinta en el bloque GEO, con su propio cargador
 > (`loadCoverageSectionData`), y `WebAuditDriveNotice` va dentro de su
 > tarjeta.
 

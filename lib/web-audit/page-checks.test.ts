@@ -7,7 +7,8 @@ import {
   checkMetadata,
   checkStructuredData,
   buildPageCheckResult,
-  buildPageCheckGuidance
+  buildPageCheckGuidance,
+  checkSeoPage
 } from "./page-checks";
 
 const NOW = new Date("2026-07-10T00:00:00Z");
@@ -327,6 +328,7 @@ describe("buildPageCheckResult", () => {
 
 describe("buildPageCheckGuidance", () => {
   const fullHtml = `
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>A perfectly reasonable page title</title>
     <meta name="description" content="${"a".repeat(80)}">
     <meta property="og:title" content="A title">
@@ -483,5 +485,44 @@ describe("checkIndexability — directivas que bloquean la cita", () => {
     const blocked = checkIndexability(html, { ...CTX, xRobotsTag: "nosnippet" });
     const allowed = checkIndexability(clean, CTX);
     expect(blocked.points).toBe(allowed.points);
+  });
+});
+
+describe("checkSeoPage (Salud SEO, log §281)", () => {
+  const ctx = { pageUrl: "https://acme.com/servicios?utm=x#top" };
+
+  it("passes the viewport only with width=device-width", () => {
+    expect(checkSeoPage('<meta name="viewport" content="width=device-width, initial-scale=1">', ctx).viewportOk).toBe(true);
+    expect(checkSeoPage('<meta name="viewport" content="initial-scale=1">', ctx).viewportOk).toBe(false);
+    expect(checkSeoPage("<title>x</title>", ctx).viewportOk).toBe(false);
+  });
+
+  it("counts images without an alt attribute, skipping 1×1 pixels; an empty alt is fine", () => {
+    const html = `<img src="a.jpg"><img src="b.jpg" alt=""><img src="c.jpg" alt="Clínica"><img src="p.gif" width="1" height="1">`;
+    expect(checkSeoPage(html, ctx)).toMatchObject({ imageCount: 3, imagesMissingAlt: 1 });
+  });
+
+  it("detects a LocalBusiness type or one of its subtypes", () => {
+    expect(checkSeoPage('<script type="application/ld+json">{"@type":"Dentist"}</script>', ctx).localBusiness).toBe(true);
+    expect(checkSeoPage('<script type="application/ld+json">{"@type":["Organization","LocalBusiness"]}</script>', ctx).localBusiness).toBe(true);
+    expect(checkSeoPage('<script type="application/ld+json">{"@type":"Article"}</script>', ctx).localBusiness).toBe(false);
+  });
+
+  it("stores only short hashes, equal for the same text whatever the case or spacing", () => {
+    const a = checkSeoPage("<title>Clínica  Dental</title>", ctx);
+    const b = checkSeoPage("<title>clínica dental</title>", { pageUrl: "https://acme.com/otra" });
+    expect(a.titleKey).toBe(b.titleKey);
+    expect(a.titleKey).not.toContain("Clínica");
+    expect(a.descriptionKey).toBeNull();
+    expect(a.pageKey).toBe(checkSeoPage("", { pageUrl: "https://acme.com/servicios" }).pageKey);
+  });
+
+  it("is reported on the page but never changes its pageScore", () => {
+    const html = `<title>A perfectly reasonable page title</title><h1>T</h1><img src="a.jpg">`;
+    const withViewport = buildPageCheckResult(`<meta name="viewport" content="width=device-width">${html}`, CTX, NOW);
+    const without = buildPageCheckResult(html, CTX, NOW);
+    expect(without.seo?.viewportOk).toBe(false);
+    expect(without.seo?.imagesMissingAlt).toBe(1);
+    expect(withViewport.pageScore).toBe(without.pageScore);
   });
 });

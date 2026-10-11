@@ -12,6 +12,9 @@ import { parseCoverageMap } from "@/lib/web-audit/coverage-map";
 import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib/web-audit/fetch-page";
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robots";
+import { checkHttpsRedirect } from "@/lib/web-audit/https-check";
+import { fetchPageSpeed } from "@/lib/web-audit/pagespeed";
+import { reusablePageSpeed } from "@/lib/web-audit/seo-health";
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
 import { sanitizeField } from "@/lib/text/sanitize";
 
@@ -436,6 +439,14 @@ export async function runTechnicalAuditCore({
       projectDomainNormalized
     });
 
+    // Salud SEO site facts (log §281), started now so they run alongside the
+    // page fetches and add no wall-clock time: both are bounded below the
+    // page budget. Speed is reused for a week, since it changes when the
+    // site changes and each measurement takes seconds.
+    const reusedPageSpeed = reusablePageSpeed(latestSnapshot?.bots?.site?.pageSpeed, new Date());
+    const pageSpeedPromise = reusedPageSpeed ? Promise.resolve(reusedPageSpeed) : fetchPageSpeed(homepageUrl);
+    const httpsPromise = checkHttpsRedirect(projectDomainNormalized);
+
     const pages: PageAuditEntry[] = [];
     const startedAt = Date.now();
     for (const candidate of candidates) {
@@ -462,7 +473,12 @@ export async function runTechnicalAuditCore({
       }
     }
 
-    const bots = await buildBotAccessReport(projectDomainNormalized);
+    const botReport = await buildBotAccessReport(projectDomainNormalized);
+    const [pageSpeed, https] = await Promise.all([pageSpeedPromise, httpsPromise]);
+    const bots: BotAccessReport = {
+      ...botReport,
+      site: { ...botReport.site, https, ...(pageSpeed !== undefined ? { pageSpeed } : {}) }
+    };
     const readinessScore = computeReadinessScore(pages);
     const generatedAt = new Date().toISOString();
 
