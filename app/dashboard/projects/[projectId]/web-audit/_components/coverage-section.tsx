@@ -2,23 +2,21 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import type { CoverageSectionData } from "@/lib/web-audit/coverage-section-data";
-import { formatDate } from "../../web-audit/_components/format";
+import { formatDate } from "./format";
 import { LockedSubScoreTile, MiniBar, SubScoreTile } from "./coverage-tiles";
 import { TrendChart } from "./trend-chart";
 import { WebAuditDriveNotice } from "../web-audit-drive-notice";
 
 /**
- * «Tu contenido frente a lo que cita la IA»: the coverage map, moved here
- * from Auditoría web (SEARCH-SEO-1 Fase 1b, log §271). It answers, topic by
- * topic, whether the site publishes something about each prompt and whether
- * the AI cites it, which is a question about citations, not about how Google
- * sees the site.
+ * «Cobertura de tu contenido», at the top of the Auditoría GEO block
+ * (SEARCH-SEO-1 Fase 1b, log §274). It answers, topic by topic, whether the
+ * site publishes something about each prompt and whether the AI cites it:
+ * the part of the audit that is GEO and nothing else.
  *
- * The blocks are the ones the old screen had, with the same thresholds:
- * Evolución from 4 audits (two points draw a line that reads as a trend
- * without being one), Historial from 2. The composite «Diagnóstico general»
- * did not come along: it averaged coverage with the technical score, and the
- * technical score now has its own screen.
+ * Same thresholds as before the redesign: Evolución from 4 audits (two points
+ * draw a line that reads as a trend without being one), Historial from 2.
+ * Both sit behind one disclosure so the problems list stays near the top.
+ * The topics the AI already cites are listed in the Correcto tab.
  *
  * Must render inside `WebAuditProvider`: the drive notice reads its state.
  */
@@ -37,14 +35,9 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
   } = data;
 
   return (
-    <section className="cov-sec" aria-labelledby="cov-sec-title">
+    <section className="card cov-sec" aria-labelledby="cov-sec-title">
       <div className="cov-head">
-        <div>
-          <div className="cit2-blk-eyebrow">Cobertura de tu web</div>
-          <h2 id="cov-sec-title" className="cit2-blk-t">
-            Tu contenido frente a lo que cita la IA
-          </h2>
-        </div>
+        <h3 id="cov-sec-title">Cobertura de tu contenido</h3>
         <div className="cov-head-r">
           {canAuditCoverage && auditPillState === "auditing" && <ScanStatePill auditing />}
           {canAuditCoverage && auditPillState === "pending" && <span className="badge">Comprobación pendiente</span>}
@@ -88,9 +81,7 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
           <LockedSubScoreTile label="Implementado" hint="Cuánto de ese contenido cita la IA en sus respuestas" />
         </div>
       ) : !summary ? (
-        <div className="cit2-block cov-empty">
-          Todavía no hemos comprobado tu contenido. Se comprueba sola después de los escaneos.
-        </div>
+        <p className="cov-empty">Todavía no hemos comprobado tu contenido. Se comprueba sola después de los escaneos.</p>
       ) : (
         <>
           <div className="cov-tiles">
@@ -114,9 +105,18 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
             />
           </div>
 
-          {trend.length >= 4 && (
-            <div className="cit2-block">
-              <div className="cit2-blk-t">Evolución entre comprobaciones</div>
+          {trend.length >= 2 && (
+            <details className="wa-details cov-more">
+              <summary>
+                <span>Evolución e historial</span>
+                <span className="wa-chev">
+                  <Icon name="chevDown" size={14} />
+                </span>
+              </summary>
+              <div className="wa-details-body">
+                {trend.length >= 4 && (
+            <div className="cov-blk">
+              <div className="cov-blk-t">Evolución entre comprobaciones</div>
               <div className="cov-legend">
                 <span>
                   <i style={{ background: "var(--accent)" }} />
@@ -129,25 +129,9 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
               </div>
               <TrendChart points={trend} />
             </div>
-          )}
-
-          {grouped.performing.length > 0 && (
-            <div className="cit2-block">
-              <div className="cit2-blk-t">Lo que ya funciona ({grouped.performing.length})</div>
-              <p className="cov-note">
-                Contenido propio que la IA ya cita en sus respuestas. No hay nada que hacer, sólo mantenerlo al día.
-              </p>
-              <ul className="cov-list">
-                {grouped.performing.map((topic) => (
-                  <li key={topic.promptId}>{topic.topic}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          {trend.length >= 2 && (
-            <div className="cit2-block">
-              <div className="cit2-blk-t">Historial de comprobaciones</div>
+                          )}
+            <div className="cov-blk">
+              <div className="cov-blk-t">Historial de comprobaciones</div>
               <p className="cov-note">Una entrada por escaneo comprobado (las 8 más recientes como máximo).</p>
               <div className="cov-history">
                 {[...trend].reverse().map((point) => (
@@ -175,6 +159,8 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
                 ))}
               </div>
             </div>
+                        </div>
+            </details>
           )}
         </>
       )}

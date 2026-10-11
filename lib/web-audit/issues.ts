@@ -113,7 +113,7 @@ const WEIGHT = {
   freshnessAging: 8
 } as const;
 
-type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing">;
+export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing">;
 
 type PageCheckDefinition = {
   key: PageLevelCheckKey;
@@ -129,6 +129,17 @@ type PageCheckDefinition = {
    * handling (a page whose freshness is "unknown").
    */
   gain: (check: PageCheckResult) => number | null;
+  /**
+   * The check's own share of this page's score, for the Auditoría GEO/SEO
+   * blocks (log §274): what it is worth (`weight`), what the page earns on it
+   * now, and how much of it counts towards the page's maximum today. A page
+   * with no detected date has `possible: 0` for freshness, the same way
+   * `pageScore` leaves those 15 points out of its denominator. `weight` is
+   * null for an unscored check; a pass/fail check earns all of it or none,
+   * and only freshness (partial credit for «aging») needs `points`.
+   */
+  weight: number | null;
+  points?: (check: PageCheckResult) => { weight: number | null; earned: number; possible: number };
   /** A hard blocker overrides the point-based severity to "critical" regardless of its computed delta — it doesn't just cost points, it removes the page from citability entirely. */
   hardBlock: boolean;
 };
@@ -200,6 +211,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.structuredData.pass,
     gain: (c) => pointGainForCheck(c, WEIGHT.structuredData),
+    weight: WEIGHT.structuredData,
     hardBlock: false
   },
   {
@@ -207,6 +219,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.answerFormat.hasOneH1,
     gain: (c) => pointGainForCheck(c, WEIGHT.singleH1),
+    weight: WEIGHT.singleH1,
     hardBlock: false
   },
   {
@@ -214,6 +227,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.answerFormat.hasTwoH2,
     gain: (c) => pointGainForCheck(c, WEIGHT.twoH2),
+    weight: WEIGHT.twoH2,
     hardBlock: false
   },
   {
@@ -221,6 +235,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.answerFormat.hasAnswerFirstIntro,
     gain: (c) => pointGainForCheck(c, WEIGHT.answerFirstIntro),
+    weight: WEIGHT.answerFirstIntro,
     hardBlock: false
   },
   {
@@ -228,6 +243,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.metadata.titleOk,
     gain: (c) => pointGainForCheck(c, WEIGHT.titleLength),
+    weight: WEIGHT.titleLength,
     hardBlock: false
   },
   {
@@ -235,6 +251,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: () => true,
     fails: (c) => !c.metadata.descriptionOk,
     gain: (c) => pointGainForCheck(c, WEIGHT.descriptionLength),
+    weight: WEIGHT.descriptionLength,
     hardBlock: false
   },
   {
@@ -245,6 +262,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.metadata.ogOk !== undefined,
     fails: (c) => c.metadata.ogOk === false,
     gain: (c) => pointGainForCheck(c, WEIGHT.openGraph),
+    weight: WEIGHT.openGraph,
     hardBlock: false
   },
   {
@@ -252,6 +270,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.indexability !== undefined,
     fails: (c) => c.indexability!.noindex,
     gain: (c) => pointGainForCheck(c, WEIGHT.indexableNotNoindex),
+    weight: WEIGHT.indexableNotNoindex,
     hardBlock: true
   },
   {
@@ -274,6 +293,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.indexability?.snippetBlocks !== undefined,
     fails: (c) => c.indexability!.snippetBlocks!.length > 0,
     gain: () => null,
+    weight: null,
     hardBlock: true
   },
   {
@@ -281,6 +301,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.indexability !== undefined,
     fails: (c) => !c.indexability!.canonicalOk,
     gain: (c) => pointGainForCheck(c, WEIGHT.canonicalOk),
+    weight: WEIGHT.canonicalOk,
     hardBlock: false
   },
   {
@@ -288,6 +309,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.indexability !== undefined,
     fails: (c) => !c.indexability!.hreflangPresent,
     gain: (c) => pointGainForCheck(c, WEIGHT.hreflangPresent),
+    weight: WEIGHT.hreflangPresent,
     hardBlock: false
   },
   {
@@ -295,6 +317,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.citability !== undefined,
     fails: (c) => !c.citability!.hasListOrTable,
     gain: (c) => pointGainForCheck(c, WEIGHT.listOrTable),
+    weight: WEIGHT.listOrTable,
     hardBlock: false
   },
   {
@@ -302,6 +325,7 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     isMeasured: (c) => c.citability !== undefined,
     fails: (c) => !c.citability!.contentOk,
     gain: (c) => pointGainForCheck(c, WEIGHT.contentLength),
+    weight: WEIGHT.contentLength,
     hardBlock: false
   },
   {
@@ -318,6 +342,13 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
       if (c.freshness.status === "aging") return WEIGHT.freshnessFresh - WEIGHT.freshnessAging;
       if (c.freshness.status === "stale") return WEIGHT.freshnessFresh;
       return null; // "unknown"
+    },
+    weight: WEIGHT.freshnessFresh,
+    points: (c) => {
+      if (c.freshness.status === "unknown") return { weight: WEIGHT.freshnessFresh, earned: 0, possible: 0 };
+      const earned =
+        c.freshness.status === "fresh" ? WEIGHT.freshnessFresh : c.freshness.status === "aging" ? WEIGHT.freshnessAging : 0;
+      return { weight: WEIGHT.freshnessFresh, earned, possible: WEIGHT.freshnessFresh };
     },
     hardBlock: false
   }
@@ -397,7 +428,34 @@ function isAnalyzed(page: PageAuditEntry): page is AnalyzedPage {
  * measured on this page is excluded rather than reported as failing.
  */
 export function failingPageChecks(check: PageCheckResult): PageLevelCheckKey[] {
-  return PAGE_CHECKS.filter((def) => def.isMeasured(check) && def.fails(check)).map((def) => def.key);
+  return pageCheckStates(check)
+    .filter((state) => state.fails)
+    .map((state) => state.check);
+}
+
+export type PageCheckState = {
+  check: PageLevelCheckKey;
+  fails: boolean;
+  /** Null for an unscored check (`snippet_blocked`). */
+  weight: number | null;
+  earned: number;
+  possible: number;
+};
+
+/**
+ * Every check measured on this page, whether it fails and what it is worth
+ * (log §274). The Auditoría GEO/SEO blocks add these up per block, so they
+ * never re-derive a predicate or a weight. Never-measured checks are left
+ * out, as everywhere else in this module.
+ */
+export function pageCheckStates(check: PageCheckResult): PageCheckState[] {
+  return PAGE_CHECKS.filter((def) => def.isMeasured(check)).map((def) => {
+    const fails = def.fails(check);
+    const points = def.points
+      ? def.points(check)
+      : { weight: def.weight, earned: def.weight === null || fails ? 0 : def.weight, possible: def.weight ?? 0 };
+    return { check: def.key, fails, ...points };
+  });
 }
 
 export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAccessReport): TechnicalIssuesReport {

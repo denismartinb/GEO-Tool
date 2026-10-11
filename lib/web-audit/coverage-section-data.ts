@@ -17,13 +17,11 @@ import { deriveAuditPillState, type AuditPillState } from "@/lib/web-audit/audit
 
 /**
  * The coverage map («¿tu web publica algo sobre cada tema, y la IA lo cita?»)
- * as Páginas citadas shows it (SEARCH-SEO-1 Fase 1b, log §271).
+ * as the Auditoría GEO block shows it (SEARCH-SEO-1 Fase 1b, log §274).
  *
- * It lived inside the Auditoría web loader (`page-data.ts`) until the screen
- * became Auditoría SEO. Coverage is about AI answers, not about how Google
- * sees the site, so it moved next to the citations it is cross-checked
- * against. The calculations are unchanged; they were cut out of
- * `loadWebAuditPageData`, not rewritten.
+ * It lived inside the Auditoría web loader (`page-data.ts`) until Fase 1b.
+ * It was cut out, not rewritten, so the calculations are unchanged, and the
+ * screen calls both loaders side by side.
  *
  * Same contract as that loader: it receives an authenticated client and
  * returns data, and it never dispatches anything.

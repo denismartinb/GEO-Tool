@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { Delta } from "@/components/ui/delta";
-import { scoreColor } from "../../web-audit/_components/score-tiles";
+import { scoreColor } from "./score-tiles";
 
 /**
  * The coverage tiles (Contenido / Implementado) and the history bars. They

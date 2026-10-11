@@ -1,5 +1,5 @@
 import { SMALL_SAMPLE_THRESHOLD } from "@/lib/web-audit/sample-confidence";
-import { formatDate } from "../../web-audit/_components/format";
+import { formatDate } from "./format";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R7 — un trozo de la pantalla de Auditoría web.

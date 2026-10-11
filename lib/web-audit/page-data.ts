@@ -105,9 +105,10 @@ export type WebAuditPageData = {
   analyzedPagesCount: number;
 
   /**
-   * El mapa de cobertura, sus deltas y su campaña se fueron a Páginas citadas
-   * con SEARCH-SEO-1 Fase 1b (`coverage-section-data.ts`, log §271). De la
-   * cobertura aquí sólo queda lo que necesita el llms.txt generado.
+   * El mapa de cobertura, sus deltas y su campaña tienen su propio cargador
+   * desde SEARCH-SEO-1 Fase 1b (`coverage-section-data.ts`, log §274), que la
+   * misma pantalla llama para el bloque GEO. De la cobertura aquí sólo queda
+   * lo que necesita el llms.txt generado.
    */
   auditIsRunning: boolean;
 
@@ -182,8 +183,8 @@ export async function loadWebAuditPageData({
         .order("created_at", { ascending: false })
         .limit(5),
       // Sólo el último mapa de cobertura: el llms.txt generado se construye
-      // con sus páginas verificadas (fase 3a). El resto de la cobertura vive en
-      // Páginas citadas desde SEARCH-SEO-1 Fase 1b.
+      // con sus páginas verificadas (fase 3a). El resto de la cobertura lo
+      // carga `coverage-section-data.ts` desde SEARCH-SEO-1 Fase 1b.
       supabase
         .from("generated_solutions")
         .select("sanitized_content, created_at")

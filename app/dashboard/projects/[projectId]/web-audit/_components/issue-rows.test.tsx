@@ -39,39 +39,40 @@ function issue(overrides: Partial<TechnicalIssue> = {}): TechnicalIssue {
 
 describe("IssueRow", () => {
   it("publica el alcance real, no un recuento inventado", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 1, applicableCount: 3 })} />);
+    const html = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 1, applicableCount: 3 })} blockPoints={null} />);
     expect(html).toContain("1 de 3");
   });
 
   it("pluraliza la unidad según el recuento", () => {
-    const one = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 1, applicableCount: 1 })} />);
+    const one = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 1, applicableCount: 1 })} blockPoints={null} />);
     expect(one).toContain("1 de 1 página");
     expect(one).not.toContain("páginas");
 
-    const many = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 2, applicableCount: 4 })} />);
+    const many = renderToStaticMarkup(<IssueRow issue={issue({ affectedCount: 2, applicableCount: 4 })} blockPoints={null} />);
     expect(many).toContain("2 de 4 páginas");
   });
 
   it("cuenta bots, no páginas, cuando la comprobación es de bots", () => {
     const html = renderToStaticMarkup(
-      <IssueRow issue={issue({ check: "bot_blocked", affectedCount: 2, applicableCount: 7, pointDelta: null })} />
+      <IssueRow issue={issue({ check: "bot_blocked", affectedCount: 2, applicableCount: 7, pointDelta: null })} blockPoints={null} />
     );
     expect(html).toContain("2 de 7 bots");
     expect(html).not.toContain("páginas");
   });
 
   /**
-   * SEARCH-SEO-1 Fase 1b: la fila ya no enseña la ganancia en puntos. El
-   * fundador quitó la nota proyectada de la tarjeta de Visión general y el
-   * diseño aprobado no lleva puntos por fila.
+   * SEARCH-SEO-1 Fase 1b (log §274): vuelven los puntos por fila, en puntos
+   * del bloque. Un check sin peso dice «sin puntos», nunca «+0 pt».
    */
-  it("no enseña puntos, haya ganancia o no", () => {
-    expect(renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: 6 })} />)).not.toContain(" pt");
-    expect(renderToStaticMarkup(<IssueRow issue={issue({ pointDelta: null })} />)).not.toContain(" pt");
+  it("enseña los puntos del bloque, o «sin puntos» si el check no puntúa", () => {
+    expect(renderToStaticMarkup(<IssueRow issue={issue()} blockPoints={21.8} />)).toContain("+22 pt");
+    const unscored = renderToStaticMarkup(<IssueRow issue={issue({ check: "bot_blocked" })} blockPoints={null} />);
+    expect(unscored).toContain("sin puntos");
+    expect(unscored).not.toContain("+0");
   });
 
   it("explica por qué importa y dice a quién afecta", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue({ check: "noindex" })} />);
+    const html = renderToStaticMarkup(<IssueRow issue={issue({ check: "noindex" })} blockPoints={null} />);
     expect(html).toContain("Por qué importa");
     expect(html).toContain("Google no muestra la página");
     expect(html).toContain("GOOGLE");
@@ -79,18 +80,18 @@ describe("IssueRow", () => {
   });
 
   it("nombra la gravedad con las mismas palabras que la tarjeta de Visión general", () => {
-    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "warning" })} />)).toContain("Aviso");
-    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "improvement" })} />)).toContain("Mejora");
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "warning" })} blockPoints={null} />)).toContain("Aviso");
+    expect(renderToStaticMarkup(<IssueRow issue={issue({ severity: "improvement" })} blockPoints={null} />)).toContain("Mejora");
   });
 
   it("lleva la guía concreta de la comprobación, no un texto genérico", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue({ check: "noindex" })} />);
+    const html = renderToStaticMarkup(<IssueRow issue={issue({ check: "noindex" })} blockPoints={null} />);
     expect(html).toContain("noindex");
     expect(html).toContain("Página indexable");
   });
 
   it("enumera las páginas afectadas", () => {
-    const html = renderToStaticMarkup(<IssueRow issue={issue()} />);
+    const html = renderToStaticMarkup(<IssueRow issue={issue()} blockPoints={null} />);
     expect(html).toContain("https://example.com/precios");
   });
 
@@ -100,7 +101,7 @@ describe("IssueRow", () => {
    */
   it("no cuenta páginas en las comprobaciones de hecho único", () => {
     const html = renderToStaticMarkup(
-      <IssueRow issue={issue({ check: "sitemap_missing", severity: "warning", pointDelta: null })} />
+      <IssueRow issue={issue({ check: "sitemap_missing", severity: "warning", pointDelta: null })} blockPoints={null} />
     );
     expect(html).toContain("No encontrado");
     expect(html).not.toContain("de 2 páginas");

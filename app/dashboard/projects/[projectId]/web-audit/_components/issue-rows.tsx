@@ -1,5 +1,5 @@
 import { Icon } from "@/components/ui/icon";
-import type { TechnicalIssue, TechnicalPassingCheck, IssueSeverity } from "@/lib/web-audit/issues";
+import type { TechnicalIssue, TechnicalPassingCheck } from "@/lib/web-audit/issues";
 import type { LlmsTxtResult, PublishStep } from "@/lib/web-audit/llms-txt";
 import type { SitemapStep } from "@/lib/web-audit/sitemap";
 import { LlmsTxtBlock } from "../llms-txt-block";
@@ -11,28 +11,31 @@ import {
   issueScopeLabel,
   pluralizeUnit
 } from "@/lib/web-audit/issue-labels";
+import { formatBlockPoints } from "@/lib/web-audit/audit-blocks";
 import { AudienceTags } from "./audience-tags";
 
 /**
- * The rows of «Qué arreglar» on Auditoría SEO (SEARCH-SEO-1 Fase 1b, design
- * in `docs/design-reference/search-seo-1/maqueta.html`). Native `<details>`,
- * collapsed by default: the severity, the GOOGLE/IA tags and the scope are
- * always visible, and «Por qué importa», «Cómo arreglarlo» and the affected
- * pages are one tap away. Pure server components, like every module here.
+ * The rows of the Problemas and Correcto tabs in each audit block
+ * (SEARCH-SEO-1 Fase 1b, log §274, design in
+ * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). Native
+ * `<details>`, collapsed by default: severity, scope, GOOGLE/IA tags and the
+ * block points are always visible; «Por qué importa», «Cómo arreglarlo» and
+ * the affected pages are one tap away. Pure server components.
  *
- * The point gain the old row showed («+6,0 pt») is gone with the redesign:
- * the founder removed the projected score from the same screen's card on
- * Visión general, and the approved design has no per-row points either.
+ * The points are the block's own (`buildAuditBlock`), so they add up to the
+ * «Si arreglas…» banner above the list. An unscored check says «sin puntos»
+ * instead of hiding the column: it is still a problem worth fixing.
  */
-
-const SEVERITY_ICON: Record<IssueSeverity, string> = { critical: "!", warning: "~", improvement: "+" };
 
 export function IssueRow({
   issue,
+  blockPoints,
   llmsTxt,
   sitemap
 }: {
   issue: TechnicalIssue;
+  /** Block points gained by fixing it; null for an unscored check. */
+  blockPoints: number | null;
   /**
    * Fase 3a. Only ever passed for `llms_txt_missing`, and only when there was
    * real coverage data to build a file from — so a project that has never run
@@ -52,13 +55,12 @@ export function IssueRow({
   return (
     <details className="wa-details sa-iss" data-sev={issue.severity}>
       <summary>
-        <span className={`sa-sev sa-sev-${issue.severity}`} aria-hidden="true">
-          {SEVERITY_ICON[issue.severity]}
-        </span>
         <span className="sa-iss-t">
-          <b>{meta.label}</b>
-          <span>
-            <span className="sa-sr">{ISSUE_SEVERITY_LABELS[issue.severity][0]} · </span>
+          <span className="sa-iss-top">
+            <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
+            <b>{meta.label}</b>
+          </span>
+          <span className="sa-iss-sub">
             <span className="sa-iss-scope">{scopeLabel}</span>
             {hasFix && (
               <span className="badge wa2-fix-ready">
@@ -66,9 +68,14 @@ export function IssueRow({
                 Solución disponible
               </span>
             )}
+            <AudienceTags audience={meta.audience} />
           </span>
         </span>
-        <AudienceTags audience={meta.audience} />
+        {blockPoints === null ? (
+          <span className="sa-pts sa-pts-0">sin puntos</span>
+        ) : (
+          <span className="sa-pts">{formatBlockPoints(blockPoints)}</span>
+        )}
         <span className="wa-chev">
           <Icon name="chevDown" size={14} />
         </span>
@@ -98,7 +105,7 @@ export function IssueRow({
   );
 }
 
-/** A check every measured page already passes: «Bien» in the filter. */
+/** A check every measured page already passes: a row of the Correcto tab. */
 export function PassingRow({ passing }: { passing: TechnicalPassingCheck }) {
   const meta = CHECK_META[passing.check];
   const scopeLabel = SINGLE_FACT_CHECKS.has(passing.check)
@@ -106,17 +113,19 @@ export function PassingRow({ passing }: { passing: TechnicalPassingCheck }) {
     : `${passing.passedCount} de ${passing.applicableCount} ${pluralizeUnit(meta.unit, passing.applicableCount)}`;
   return (
     <div className="sa-iss sa-ok" data-sev="ok">
-      <span className="sa-sev sa-sev-ok" aria-hidden="true">
-        ✓
+      <span className="sa-okic" aria-hidden="true">
+        <Icon name="check" size={12} />
       </span>
       <span className="sa-iss-t">
-        <b>{meta.label}</b>
-        <span>
-          <span className="sa-sr">Bien · </span>
+        <span className="sa-iss-top">
+          <b>{meta.label}</b>
+        </span>
+        <span className="sa-iss-sub">
+          <span className="sa-sr">Correcto · </span>
           {scopeLabel}
+          <AudienceTags audience={meta.audience} />
         </span>
       </span>
-      <AudienceTags audience={meta.audience} />
     </div>
   );
 }

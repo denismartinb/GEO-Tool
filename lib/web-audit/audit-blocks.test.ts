@@ -1,0 +1,201 @@
+import { describe, expect, it } from "vitest";
+import { buildTechnicalIssuesReport, type IssueCheckKey } from "@/lib/web-audit/issues";
+import { ISSUE_CHECK_META } from "@/lib/web-audit/issue-labels";
+import type { PageCheckResult } from "@/lib/web-audit/page-checks";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import { TRACKED_BOT_AGENTS, type BotAccessReport } from "@/lib/web-audit/robots";
+import {
+  AUDIT_BLOCKS,
+  AUDIT_BLOCK_ORDER,
+  auditBlockOf,
+  buildAuditBlock,
+  formatBlockPoints,
+  pageBlockScore,
+  parseAuditBlock
+} from "@/lib/web-audit/audit-blocks";
+
+type Overrides = {
+  structured?: boolean;
+  h1?: boolean;
+  h2?: boolean;
+  intro?: boolean;
+  title?: boolean;
+  description?: boolean;
+  og?: boolean;
+  noindex?: boolean;
+  canonical?: boolean;
+  hreflang?: boolean;
+  list?: boolean;
+  content?: boolean;
+  freshness?: "fresh" | "aging" | "stale" | "unknown";
+};
+
+/** A page check with a pageScore computed the way page-checks.ts does. */
+function check(o: Overrides = {}): PageCheckResult {
+  const v = { structured: true, h1: true, h2: true, intro: true, title: true, description: true, og: true, noindex: false, canonical: true, hreflang: true, list: true, content: true, freshness: "fresh" as const, ...o };
+  const baseline =
+    (v.structured ? 15 : 0) +
+    (v.h1 ? 5 : 0) + (v.h2 ? 5 : 0) + (v.intro ? 5 : 0) +
+    (v.title ? 5 : 0) + (v.description ? 5 : 0) + (v.og ? 5 : 0) +
+    (v.noindex ? 0 : 10) + (v.canonical ? 5 : 0) + (v.hreflang ? 5 : 0) +
+    (v.list ? 10 : 0) + (v.content ? 10 : 0);
+  const fresh = v.freshness === "fresh" ? 15 : v.freshness === "aging" ? 8 : 0;
+  const pageScore = v.freshness === "unknown" ? Math.round((baseline / 85) * 100) : baseline + fresh;
+  return {
+    structuredData: { pass: v.structured, matchedTypes: v.structured ? ["Article"] : [] },
+    answerFormat: { points: 0, hasOneH1: v.h1, hasTwoH2: v.h2, hasAnswerFirstIntro: v.intro, h1Count: v.h1 ? 1 : 0, h2Count: v.h2 ? 2 : 0 },
+    metadata: { points: 0, titleOk: v.title, descriptionOk: v.description, ogOk: v.og, titleLength: 40, descriptionLength: 100 },
+    freshness: { status: v.freshness, points: fresh, date: v.freshness === "unknown" ? null : "2026-07-01T00:00:00.000Z" },
+    indexability: { points: 0, canonicalPresent: v.canonical, canonicalOk: v.canonical, canonicalUrl: null, noindex: v.noindex, hreflangPresent: v.hreflang },
+    citability: { points: 0, hasListOrTable: v.list, wordCount: v.content ? 500 : 50, contentOk: v.content },
+    pageScore
+  } as PageCheckResult;
+}
+
+function page(url: string, c: PageCheckResult): PageAuditEntry {
+  return { url, contextLabel: "verificada", status: "analyzed", check: c, fetchMs: 100, htmlBytes: 1000 };
+}
+
+function bots(overrides: Partial<BotAccessReport> = {}): BotAccessReport {
+  return {
+    robotsFound: true,
+    bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: true })),
+    llmsTxtFound: true,
+    llmsTxtBytes: 200,
+    sitemapFound: true,
+    ...overrides
+  };
+}
+
+function blocks(pages: PageAuditEntry[], b = bots()) {
+  const report = buildTechnicalIssuesReport(pages, b);
+  return { report, geo: buildAuditBlock("geo", pages, report), seo: buildAuditBlock("seo", pages, report) };
+}
+
+describe("AUDIT_BLOCKS", () => {
+  it("puts every check in exactly one block", () => {
+    const all = AUDIT_BLOCK_ORDER.flatMap((k) => AUDIT_BLOCKS[k].checks);
+    expect(new Set(all).size).toBe(all.length);
+    expect([...all].sort()).toEqual(Object.keys(ISSUE_CHECK_META).sort());
+  });
+
+  it("files AI access under GEO and Google indexing under SEO", () => {
+    expect(auditBlockOf("bot_blocked")).toBe("geo");
+    expect(auditBlockOf("llms_txt_missing")).toBe("geo");
+    expect(auditBlockOf("noindex")).toBe("seo");
+    expect(auditBlockOf("sitemap_missing")).toBe("seo");
+  });
+});
+
+describe("parseAuditBlock", () => {
+  it("opens SEO only when asked, GEO otherwise", () => {
+    expect(parseAuditBlock("seo")).toBe("seo");
+    expect(parseAuditBlock(["seo", "geo"])).toBe("seo");
+    expect(parseAuditBlock("geo")).toBe("geo");
+    expect(parseAuditBlock("otra")).toBe("geo");
+    expect(parseAuditBlock(undefined)).toBe("geo");
+  });
+});
+
+describe("buildAuditBlock", () => {
+  it("scores 100 in both blocks for a page that passes everything", () => {
+    const { geo, seo } = blocks([page("https://acme.com/", check())]);
+    expect(geo.score).toBe(100);
+    expect(seo.score).toBe(100);
+    expect(geo.issues).toEqual([]);
+  });
+
+  it("weighs the two blocks back into the same technical score (55 GEO + 45 SEO)", () => {
+    const pages = [
+      page("https://acme.com/", check({ structured: false, hreflang: false })),
+      page("https://acme.com/a", check({ freshness: "aging", h2: false, list: false })),
+      page("https://acme.com/b", check({ freshness: "stale", description: false }))
+    ];
+    const { report, geo, seo } = blocks(pages);
+    // Earned GEO points: 40 + 38 + 40 = 118 of 165; SEO: 40 + 40 + 40 = 120 of 135.
+    expect(geo.score).toBe(Math.round((118 / 165) * 100));
+    expect(seo.score).toBe(Math.round((120 / 135) * 100));
+    const combined = (118 + 120) / 3;
+    expect(report.actualReadinessScore).toBe(Math.round(combined));
+  });
+
+  it("gives each issue the block points that fixing it alone adds", () => {
+    const pages = [
+      page("https://acme.com/", check({ structured: false })),
+      page("https://acme.com/a", check()),
+      page("https://acme.com/b", check()),
+      page("https://acme.com/c", check()),
+      page("https://acme.com/d", check())
+    ];
+    const { geo, seo } = blocks(pages);
+    const structured = geo.issues.find((i) => i.issue.check === "structured_data");
+    // 15 of 275 GEO points.
+    expect(structured?.blockPoints).toBe(5.5);
+    expect(geo.score).toBe(95);
+    expect(geo.projectedScore).toBe(100);
+    expect(geo.scoredIssueCount).toBe(1);
+    expect(seo.issues).toEqual([]);
+  });
+
+  it("counts partial freshness credit and the full gain from fresh content", () => {
+    const { geo } = blocks([page("https://acme.com/", check({ freshness: "aging" }))]);
+    expect(geo.score).toBe(Math.round((48 / 55) * 100));
+    expect(geo.issues.find((i) => i.issue.check === "freshness")?.blockPoints).toBe(12.7);
+  });
+
+  it("leaves an undated page's freshness out of the maximum, like pageScore does, and still prices dating it", () => {
+    const { geo } = blocks([
+      page("https://acme.com/", check({ freshness: "unknown", structured: false })),
+      page("https://acme.com/a", check())
+    ]);
+    // Undated page: 25 of 40. Dated: 55 of 55. Together 80 of 95.
+    expect(geo.score).toBe(84);
+    const freshness = geo.issues.find((i) => i.issue.check === "freshness");
+    // Dated too: 95 of 110 = 86.36, from 84.21.
+    expect(freshness?.blockPoints).toBe(2.2);
+    expect(geo.projectedScore).toBe(100);
+  });
+
+  it("keeps bots, llms.txt and sitemap unscored, in their own block", () => {
+    const blocked = bots({
+      bots: TRACKED_BOT_AGENTS.map((agent, i) => ({ agent, allowed: i !== 0 })),
+      probes: { llmsTxt: "absent", sitemap: "absent" }
+    } as Partial<BotAccessReport>);
+    const { geo, seo } = blocks([page("https://acme.com/", check())], blocked);
+    expect(geo.issues.map((i) => [i.issue.check, i.blockPoints])).toEqual([
+      ["bot_blocked", null],
+      ["llms_txt_missing", null]
+    ]);
+    expect(seo.issues.map((i) => [i.issue.check, i.blockPoints])).toEqual([["sitemap_missing", null]]);
+    expect(geo.score).toBe(100);
+    expect(geo.scoredIssueCount).toBe(0);
+  });
+
+  it("lists as passing only the checks every measured instance passes", () => {
+    const { seo } = blocks([page("https://acme.com/", check({ h1: false })), page("https://acme.com/a", check())]);
+    const passing = seo.passing.map((p) => p.check);
+    expect(passing).not.toContain("single_h1" satisfies IssueCheckKey);
+    expect(passing).toContain("title_length");
+  });
+
+  it("has no score without an analyzed page", () => {
+    const { geo } = blocks([]);
+    expect(geo.score).toBeNull();
+    expect(geo.projectedScore).toBeNull();
+  });
+});
+
+describe("pageBlockScore", () => {
+  it("scores one page within one block", () => {
+    const c = check({ structured: false, title: false });
+    expect(pageBlockScore(c, "geo")).toBe(Math.round((40 / 55) * 100));
+    expect(pageBlockScore(c, "seo")).toBe(Math.round((40 / 45) * 100));
+  });
+});
+
+describe("formatBlockPoints", () => {
+  it("rounds to whole points and never shows +0", () => {
+    expect(formatBlockPoints(21.8)).toBe("+22 pt");
+    expect(formatBlockPoints(0.4)).toBe("<1 pt");
+  });
+});

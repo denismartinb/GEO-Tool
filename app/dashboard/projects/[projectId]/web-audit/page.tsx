@@ -7,24 +7,33 @@ import { ReentryMission } from "@/components/reentry-mission";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
-import { buildFixList, buildSeoAreas } from "@/lib/web-audit/seo-audit-view";
+import { loadCoverageSectionData } from "@/lib/web-audit/coverage-section-data";
+import { AUDIT_BLOCKS, AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { Delta } from "@/components/ui/delta";
 import { formatDate } from "./_components/format";
 import { PageAuditRow } from "./_components/page-audit-row";
 import { BotAccessCard } from "./_components/bot-access-card";
-import { SeoAreasCard, SeoScoreCard } from "./_components/seo-summary";
-import { FixListCard } from "./_components/fix-list";
+import { BlockSwitch } from "./_components/block-switch";
+import { BlockPotentialBanner } from "./_components/block-potential-banner";
+import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
+import { CoverageSection } from "./_components/coverage-section";
+import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
+import { WebAuditProvider } from "./web-audit-context";
 
 /**
- * Auditoría SEO (SEARCH-SEO-1, design in
- * `docs/design-reference/search-seo-1/maqueta.html`, log §271). How Google and
- * the AI engines see the site, from the technical audit that runs after every
- * scan: score and areas, «Qué arreglar», and the pages reviewed.
+ * Auditoría GEO y Auditoría SEO: one screen, two blocks (SEARCH-SEO-1 Fase
+ * 1b, log §274, design in
+ * `docs/design-reference/search-seo-1/auditoria-geo-seo.html`). The menu has
+ * an entry for each, `?bloque=geo|seo`, and both read the same technical
+ * audit that runs after every scan.
  *
- * Fase 1b moved the coverage map (Contenido / Implementado, its trend and its
- * history) to Páginas citadas, where the citations it is checked against
- * live. Speed (Core Web Vitals), mobile and «Salud SEO» are Fase 2 and are not
- * drawn here until there is a measurement behind them.
+ * GEO is «¿te puede citar la IA?»: the coverage map, AI bots, llms.txt and the
+ * citable-content checks. SEO is «¿te encuentra Google?»: tags, headings,
+ * canonical, indexing, hreflang and sitemap. Each block has its score, its
+ * «Si arreglas…» banner and the Problemas / Correcto / Páginas tabs. Speed,
+ * mobile and Search Console are Fases 2 and 3 and are not drawn until there
+ * is a measurement behind them.
  */
 
 // Same ADR-0003 rationale as the Escaneos page: the screen can wake the audit
@@ -39,19 +48,23 @@ export const maxDuration = 60;
 const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
 
 // ROOT-METADATA-1: el dominio va en la pestaña.
-export async function generateMetadata({
-  params
-}: {
+type PageProps = {
   params: Promise<{ projectId: string }>;
-}): Promise<Metadata> {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { projectId } = await params;
-  return projectScreenMetadata("Auditoría SEO", async () => (await requireActiveProject(projectId)).domain);
+  const block = parseAuditBlock((await searchParams)[AUDIT_BLOCK_PARAM]);
+  return projectScreenMetadata(AUDIT_BLOCKS[block].label, async () => (await requireActiveProject(projectId)).domain);
 }
 
-export default async function WebAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
+export default async function WebAuditPage({ params, searchParams }: PageProps) {
   const { projectId } = await params;
+  const activeBlock = parseAuditBlock((await searchParams)[AUDIT_BLOCK_PARAM]);
   const project = await requireActiveProject(projectId);
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
+  const coveragePromise = loadCoverageSectionData({ supabase, userId: user.id, project });
 
   const {
     hasCompletedScan,
@@ -66,6 +79,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
     sitemapFixSteps,
     fixContext
   } = await loadWebAuditPageData({ supabase, project });
+  const coverage = await coveragePromise;
 
   // El loader DECIDE si hay una auditoría vencida a la que despertar; actuar es
   // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §106).
@@ -83,7 +97,7 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         <div className="ov-sticky-header">
           <div className="ov-sticky-left">
             <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Auditoría SEO</p>
+              <p className="kicker" style={{ marginBottom: 2 }}>{AUDIT_BLOCKS[activeBlock].label}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
                   {project.name}
@@ -105,7 +119,16 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
         </div>
       )}
 
-      {/* v3 scope + the founder-approved console width ladder (log §5, §178). */}
+      {/* v3 scope + the founder-approved console width ladder (log §5, §178).
+          WebAuditProvider resumes a coverage campaign from the browser as an
+          accelerator (ADR 0038); the cron is the engine. It is a context
+          provider and renders no box, so the mission still hangs from
+          `.page.mrk-fill` through `display: contents` wrappers only. */}
+      <WebAuditProvider
+        projectId={projectId}
+        autoStart={coverage.activeCampaignProgress}
+        canAudit={coverage.canAuditCoverage}
+      >
       <div className={`wa2-scope wa2-page${showMissionTakeover ? " mrk-fill" : ""}`}>
         {activeRun && showMissionTakeover ? (
           /* ONBOARDING-ROCKET-1's ascent beat: safe because `!hasCompletedScan`
@@ -136,68 +159,96 @@ export default async function WebAuditPage({ params }: { params: Promise<{ proje
             </p>
           </div>
         ) : (
-          <div className="sa-screen">
-            <div className="sa-ph">
-              <div className="sa-eyb">
-                <span className="sa-eyb-dot" aria-hidden="true" />
-                Posicionamiento en buscadores
-              </div>
-              <h2>Auditoría SEO</h2>
-              <p>
-                Cómo ven Google y la IA tu web. Revisamos tus páginas después de cada escaneo, sin que tengas que
-                conectar nada.
-              </p>
-            </div>
+          (() => {
+            const pages = technicalSnapshot.pages;
+            const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport));
+            const view = views.find((v) => v.key === activeBlock)!;
+            const isGeo = activeBlock === "geo";
+            return (
+              <div className="sa-screen">
+                  <BlockSwitch projectId={projectId} active={activeBlock} blocks={views} />
+                  {currentTechnicalReport.actualReadinessScore !== null && (
+                    <p className="sa-total">
+                      Juntas forman tu <b>Salud técnica: {currentTechnicalReport.actualReadinessScore}/100</b>, la parte
+                      técnica de tu Puntuación GEO.
+                      {technicalScoreDelta !== null && technicalScoreDelta !== 0 && (
+                        <span className="sa-total-delta">
+                          <Delta value={technicalScoreDelta} suffix=" pt" /> desde la revisión anterior
+                        </span>
+                      )}
+                    </p>
+                  )}
 
-            <div className="sa-grid-hero">
-              <SeoScoreCard
-                score={currentTechnicalReport.actualReadinessScore}
-                delta={technicalScoreDelta}
-                criticalCount={currentTechnicalReport.issues.filter((i) => i.severity === "critical").length}
-                issueCount={currentTechnicalReport.issues.length}
-                analyzedPageCount={currentTechnicalReport.analyzedPageCount}
-              />
-              <SeoAreasCard areas={buildSeoAreas(currentTechnicalReport)} />
-            </div>
+                  {view.score !== null && view.projectedScore !== null && view.projectedScore > view.score && (
+                    <BlockPotentialBanner
+                      block={activeBlock}
+                      issueCount={view.scoredIssueCount}
+                      fromScore={view.score}
+                      toScore={view.projectedScore}
+                    />
+                  )}
 
-            <FixListCard
-              list={buildFixList(currentTechnicalReport)}
-              llmsTxtFile={llmsTxtFile}
-              llmsPublishSteps={llmsPublishSteps}
-              sitemapFixSteps={sitemapFixSteps}
-            />
-
-            <div className="sa-grid-2">
-              <div className="card sa-pages">
-                <div className="sa-ch">
-                  <h3>Páginas revisadas</h3>
-                  <span className="sa-src">Nota técnica por página · toca una para ver qué mejorar</span>
+                  <AuditTabsProvider>
+                    <AuditTabBar />
+                    <div className="sa-grid-2">
+                      <div className="sa-main">
+                        {isGeo && <CoverageSection data={coverage} />}
+                        <AuditTabPanel id="problemas">
+                          <BlockIssuesCard
+                            view={view}
+                            llmsTxtFile={llmsTxtFile}
+                            llmsPublishSteps={llmsPublishSteps}
+                            sitemapFixSteps={sitemapFixSteps}
+                          />
+                        </AuditTabPanel>
+                        <AuditTabPanel id="correcto">
+                          <BlockPassingCard view={view} citedTopics={isGeo ? coverage.grouped.performing : undefined} />
+                        </AuditTabPanel>
+                        <AuditTabPanel id="paginas">
+                          <div className="card sa-pages">
+                            <div className="sa-ch">
+                              <h3>Páginas revisadas</h3>
+                              <span className="sa-src">
+                                Nota {isGeo ? "GEO" : "SEO"} de cada página · toca una para ver qué mejorar
+                              </span>
+                            </div>
+                            {new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
+                              <p className="sa-note">
+                                Esta revisión es anterior al 13 jul 2026, cuando se ampliaron los criterios (canonical,
+                                indexabilidad, hreflang, listas y tablas, contenido, Open Graph). La próxima ya usará los
+                                actuales.
+                              </p>
+                            )}
+                            <div className="sa-pg-list">
+                              {pages.map((page, i) => (
+                                <PageAuditRow
+                                  key={`${page.url}-${i}`}
+                                  page={page}
+                                  fixContext={fixContext}
+                                  block={activeBlock}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        </AuditTabPanel>
+                      </div>
+                      <div className="sa-side">
+                        <div className="sa-scope">
+                          <p>
+                            <b>Esto es lo que vemos desde fuera.</b> Revisamos las páginas clave de tu web: la portada,
+                            las que hemos verificado y las que cita la IA. No rastreamos la web entera.
+                          </p>
+                        </div>
+                        {isGeo && <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />}
+                      </div>
+                    </div>
+                  </AuditTabsProvider>
                 </div>
-                {new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
-                  <p className="sa-note">
-                    Esta revisión es anterior al 13 jul 2026, cuando se ampliaron los criterios (canonical,
-                    indexabilidad, hreflang, listas y tablas, contenido, Open Graph). La próxima ya usará los actuales.
-                  </p>
-                )}
-                <div className="sa-pg-list">
-                  {technicalSnapshot.pages.map((page, i) => (
-                    <PageAuditRow key={`${page.url}-${i}`} page={page} fixContext={fixContext} />
-                  ))}
-                </div>
-              </div>
-              <div className="sa-side">
-                <div className="sa-scope">
-                  <p>
-                    <b>Esto es lo que vemos desde fuera.</b> Revisamos las páginas clave de tu web: la portada, las
-                    que hemos verificado y las que cita la IA. No rastreamos la web entera.
-                  </p>
-                </div>
-                <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
-              </div>
-            </div>
-          </div>
+            );
+          })()
         )}
       </div>
+      </WebAuditProvider>
     </div>
   );
 }

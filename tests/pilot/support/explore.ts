@@ -75,7 +75,7 @@ const EXPLORABLE = [
   // Generic ARIA tab role, not a bespoke .cit2-tab-style class: this is what
   // actually caught PR #289's real coverage gap (2026-08-03) — the
   // Problemas/Correcto/Páginas AuditTabBar on Auditoría web uses `role="tab"`
-  // (`audit-tabs.tsx`, retired with SEARCH-SEO-1 Fase 1b), and
+  // (app/dashboard/projects/[projectId]/web-audit/audit-tabs.tsx), and
   // nothing in this list matched it, so a full ux-pilot design-fidelity
   // review had to report "Correcto y Páginas nunca vistas con datos reales"
   // as an open gap rather than a verified pass — on the very PR that

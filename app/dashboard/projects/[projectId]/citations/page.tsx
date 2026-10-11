@@ -9,9 +9,6 @@ import { ScanInProgress } from "@/components/scan-in-progress";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
 import { CitationsClient } from "./citations-client";
-import { WebAuditProvider } from "./web-audit-context";
-import { CoverageSection } from "./_components/coverage-section";
-import { loadCoverageSectionData } from "@/lib/web-audit/coverage-section-data";
 import {
   aggregateCitations,
   compareOpportunityRows,
@@ -48,11 +45,7 @@ export default async function CitationsPage({
 }) {
   const { projectId } = await params;
   const project = await requireActiveProject(projectId);
-  const { supabase, user } = await requireUser();
-
-  // SEARCH-SEO-1 Fase 1b (log §271): the coverage map moved here from
-  // Auditoría web. Loaded in parallel with this screen's own reads.
-  const coveragePromise = loadCoverageSectionData({ supabase, userId: user.id, project });
+  const { supabase } = await requireUser();
 
   const [{ data: latestRun }, { data: recentRuns }, { data: competitors }, { data: projectPrompts }] =
     await Promise.all([
@@ -172,15 +165,6 @@ export default async function CitationsPage({
       })
     : null;
 
-  const coverage = await coveragePromise;
-  // The coverage section, inside the provider that resumes a running
-  // campaign (an accelerator; the server-side worker is the engine, ADR 0038).
-  const coverageSection = (
-    <WebAuditProvider projectId={projectId} autoStart={coverage.activeCampaignProgress} canAudit={coverage.canAuditCoverage}>
-      <CoverageSection data={coverage} />
-    </WebAuditProvider>
-  );
-
   // Mirrors the FirstScanTakeover condition below — hidden while the mission
   // takeover owns the screen, so the rocket animation reads as full screen
   // instead of sitting under a second chrome band (founder, 2026-08-25).
@@ -246,7 +230,6 @@ export default async function CitationsPage({
         // itself is untouched and stays reachable from /debug, which already
         // links every row by its date; this empty state just stops sending
         // users somewhere the product no longer wants them to go.
-        <>
         <div className="section-empty" style={{ marginTop: 20 }}>
           <div className="section-empty-title">Este escaneo respondió sin citar fuentes</div>
           <div className="section-empty-desc">
@@ -255,8 +238,6 @@ export default async function CitationsPage({
             comprobarlo tras el próximo escaneo.
           </div>
         </div>
-          <div className="cit2-scope cit2-page">{coverageSection}</div>
-        </>
       ) : (
         <CitationsClient
           citationRows={citationRows}
@@ -268,7 +249,6 @@ export default async function CitationsPage({
           yours={yours}
           citationRateAnyDomain={citationRateAnyDomain}
           brandLabel={project.brand}
-          coverageSection={coverageSection}
         />
       )}
     </div>
