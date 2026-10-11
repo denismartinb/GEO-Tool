@@ -145,7 +145,6 @@ export function DemoBooking() {
               </button>
             ))}
           </div>
-          <p className="dm-fine">De lunes a viernes, de 18:00 a 21:00.</p>
         </>
       )}
       {slotError && (

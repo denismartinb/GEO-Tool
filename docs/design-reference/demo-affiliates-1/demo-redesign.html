@@ -1,0 +1,266 @@
+<title>Página de videollamada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: two proposals for /demo, each shown as a desktop frame and a 375px phone frame. Single light look on purpose: it reproduces the real GenScore page. */
+:root {
+  color-scheme: light;
+  --ink: #0b1426;
+  --ink-2: #44506a;
+  --ink-3: #6b7690;
+  --blue: #2457e6;
+  --blue-soft: #e8eefe;
+  --line: #d9e0ee;
+  --canvas: #f5f7fb;
+  --page: #e9edf5;
+  --dark: #0b1426;
+  --dark-2: #121d33;
+  --dark-line: #2a3a58;
+  --on-dark: #eef2fa;
+  --on-dark-2: #b8c3d6;
+  --green: #12a150;
+  --cyan: #38d6e6;
+  --display: "Hanken Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body: "Figtree", "Helvetica Neue", Arial, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font-family: var(--body); }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 64px; padding-inline: 16px; display: grid; gap: 44px; }
+.top h1 { font-family: var(--display); font-size: clamp(26px, 3.4vw, 36px); margin: 0 0 8px; letter-spacing: -0.02em; }
+.top p { margin: 0; color: var(--ink-2); font-size: 16px; line-height: 1.55; max-width: 70ch; }
+.opt { display: grid; gap: 14px; }
+.tag { font-size: 12px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+.opt h2 { margin: 2px 0 4px; font-family: var(--display); font-size: 22px; }
+.opt > p { margin: 0; color: var(--ink-2); font-size: 15px; line-height: 1.5; max-width: 76ch; }
+.frames { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+@media (max-width: 1000px) { .frames { grid-template-columns: minmax(0, 1fr); } .phone { justify-self: center; } }
+.desk { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--canvas); min-width: 0; }
+.bar { height: 44px; background: #fff; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 22px; padding: 0 22px; font-size: 13px; color: var(--ink-2); }
+.bar b { font-family: var(--display); color: var(--blue); font-size: 17px; margin-right: 10px; }
+.bar .cta { margin-left: auto; background: #4f46e5; color: #fff; border-radius: 7px; padding: 6px 11px; font-weight: 600; }
+.phone { width: 320px; max-width: 100%; border: 8px solid #141b2b; border-radius: 30px; overflow: hidden; background: var(--canvas); }
+.phone .bar { height: 40px; justify-content: center; }
+.phone .bar span, .phone .bar .cta { display: none; }
+
+/* shared bits */
+.eyebrow { margin: 0; font-size: 11.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--blue); }
+.title { margin: 0; font-family: var(--display); font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; text-wrap: balance; }
+.lede { margin: 0; color: var(--ink-2); font-size: 15.5px; line-height: 1.55; }
+.alt { margin: 0; font-size: 13.5px; color: var(--ink-3); }
+.alt a { color: var(--blue); font-weight: 600; text-decoration: none; }
+
+/* booking card (same in both) */
+.book { background: var(--dark); color: var(--on-dark); border-radius: 16px; padding: 20px; display: grid; gap: 12px; box-shadow: 0 18px 40px rgba(8,18,35,.18); }
+.book h4 { margin: 0; font-family: var(--display); font-size: 19px; }
+.book .meta { display: flex; gap: 12px; font-size: 12px; color: var(--on-dark-2); }
+.days { display: flex; gap: 6px; overflow: hidden; }
+.day { flex: none; min-width: 52px; border: 1px solid var(--dark-line); border-radius: 9px; padding: 6px 4px; text-align: center; font-size: 12.5px; display: grid; }
+.day small { font-size: 10px; color: #8d9ab0; }
+.day.on, .t.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.t { border: 1px solid var(--dark-line); border-radius: 9px; padding: 7px 0; text-align: center; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.inp { display: grid; gap: 4px; font-size: 11.5px; font-weight: 600; color: #d5dcea; }
+.inp i { display: block; height: 32px; border-radius: 8px; background: var(--dark-2); border: 1px solid var(--dark-line); }
+.go { background: var(--blue); color: #fff; text-align: center; font-weight: 700; font-size: 14px; border-radius: 10px; padding: 11px; }
+.fine { font-size: 11px; color: #8d9ab0; margin: 0; }
+
+/* ---------- Option 1: guion de la llamada ---------- */
+.o1 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; padding: 40px 36px 44px; align-items: start; }
+.o1 .left { display: grid; gap: 16px; }
+.o1 .title { font-size: 38px; }
+.agenda { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 0; }
+.agenda h5 { margin: 0 0 12px; font-size: 13px; font-weight: 700; color: var(--ink); }
+.step { display: grid; grid-template-columns: 54px 16px minmax(0, 1fr); gap: 0 10px; align-items: start; }
+.step .min { font-size: 12px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; padding-top: 1px; }
+.step .rail { position: relative; height: 100%; display: grid; justify-items: center; }
+.step .rail::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); margin-top: 4px; }
+.step .rail::after { content: ""; position: absolute; top: 16px; bottom: -4px; width: 2px; background: var(--blue-soft); }
+.step:last-child .rail::after { display: none; }
+.step p { margin: 0 0 14px; font-size: 13.5px; line-height: 1.45; color: var(--ink-2); }
+.step p strong { color: var(--ink); display: block; font-size: 14px; }
+.sample { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; display: grid; gap: 10px; }
+.sample .hd { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 700; }
+.sample .hd span { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); background: var(--canvas); border: 1px solid var(--line); border-radius: 999px; padding: 3px 8px; }
+.row { display: grid; grid-template-columns: 70px minmax(0, 1fr) 40px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
+.row .track { height: 8px; border-radius: 99px; background: var(--blue-soft); overflow: hidden; }
+.row .track i { display: block; height: 100%; border-radius: 99px; background: var(--blue); }
+.row b { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+.sample small { font-size: 12px; color: var(--ink-3); }
+.phone .o1 { grid-template-columns: 1fr; padding: 24px 16px 28px; gap: 20px; }
+.phone .o1 .title { font-size: 28px; }
+
+/* ---------- Option 2: banda oscura ---------- */
+.o2 .band { background: radial-gradient(120% 140% at 0% 0%, #1d3b8a 0%, #0b1426 55%); color: var(--on-dark); padding: 44px 36px 120px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; }
+.o2 .band .left { display: grid; gap: 14px; align-content: start; }
+.o2 .eyebrow { color: var(--cyan); }
+.o2 .title { font-size: 40px; color: #fff; }
+.o2 .lede { color: var(--on-dark-2); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font-size: 12.5px; color: var(--on-dark); border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.06); border-radius: 999px; padding: 6px 11px; display: inline-flex; gap: 6px; align-items: center; }
+.chip::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); }
+.o2 .bookwrap { margin-bottom: -100px; }
+.o2 .book { background: #fff; color: var(--ink); border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(8,18,35,.28); }
+.o2 .book .meta { color: var(--ink-3); }
+.o2 .day, .o2 .t { border-color: var(--line); }
+.o2 .day small { color: var(--ink-3); }
+.o2 .day.on small { color: #dbe6ff; }
+.o2 .inp { color: var(--ink-2); }
+.o2 .inp i { background: var(--canvas); border-color: var(--line); }
+.o2 .fine { color: var(--ink-3); }
+.o2 .below { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 36px; padding: 32px 36px 40px; }
+.cols { display: grid; gap: 14px; }
+.col { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; align-items: start; }
+.col .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--blue-soft); color: var(--blue); display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 14px; }
+.col p { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.col p strong { display: block; color: var(--ink); font-size: 14px; }
+.phone .o2 .band { grid-template-columns: 1fr; padding: 26px 16px 24px; gap: 18px; }
+.phone .o2 .title { font-size: 28px; }
+.phone .o2 .bookwrap { margin-bottom: 0; }
+.phone .o2 .below { grid-template-columns: 1fr; padding: 22px 16px 28px; }
+
+.rec { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; font-size: 15px; line-height: 1.55; color: var(--ink-2); }
+.rec strong { color: var(--ink); }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <h1>Dos diseños para la página de videollamada</h1>
+    <p>Los dos llenan el hueco que queda bajo el texto mientras el formulario sigue bajando. El formulario y los huecos funcionan igual que ahora; solo cambia lo que lo rodea. A la izquierda, escritorio; a la derecha, móvil.</p>
+  </header>
+
+  <!-- Option 1 -->
+  <section class="opt">
+    <span class="tag">Opción 1</span>
+    <h2>«Así son los 20 minutos» y un ejemplo de lo que verás</h2>
+    <p>La lista de tres puntos se convierte en el guion de la llamada, minuto a minuto, y debajo va una tarjeta con un ejemplo de resultado por motor, marcado como ejemplo. Así la columna izquierda mide lo mismo que el formulario y responde a «qué va a pasar en la llamada».</p>
+    <div class="frames">
+      <div class="desk">
+        <div class="bar"><b>Genscore</b><span>Producto</span><span>Cómo funciona</span><span>Precios</span><span>Blog</span><span class="cta">Prueba gratis</span></div>
+        <div class="o1">
+          <div class="left">
+            <p class="eyebrow">Videollamada · 20 minutos</p>
+            <h3 class="title">Te enseñamos qué dice la IA de tu marca</h3>
+            <p class="lede">Una videollamada corta con el equipo de GenScore. Traes tu web y, si quieres, la de un competidor.</p>
+            <div class="agenda">
+              <h5>Así son los 20 minutos</h5>
+              <div class="step"><span class="min">0–5 min</span><span class="rail"></span><p><strong>Tu marca en ChatGPT, Gemini y Claude</strong>Qué responden a las preguntas principales de búsqueda de tu sector.</p></div>
+              <div class="step"><span class="min">5–15 min</span><span class="rail"></span><p><strong>A quién recomiendan en tu lugar</strong>Qué competidores salen y en qué fuentes se apoya la IA.</p></div>
+              <div class="step"><span class="min">15–20 min</span><span class="rail"></span><p><strong>Qué arreglar primero</strong>Y qué plan encaja contigo, también si eres agencia.</p></div>
+            </div>
+            <div class="sample">
+              <div class="hd">Te nombran en… <span>Ejemplo</span></div>
+              <div class="row">ChatGPT<span class="track"><i style="width:22%"></i></span><b>22 %</b></div>
+              <div class="row">Gemini<span class="track"><i style="width:9%"></i></span><b>9 %</b></div>
+              <div class="row">Claude<span class="track"><i style="width:31%"></i></span><b>31 %</b></div>
+              <small>de las respuestas a las preguntas principales de búsqueda. En la llamada lo verás con tu web.</small>
+            </div>
+            <p class="alt">¿Sin tiempo para una llamada? <a href="#">Pide el informe gratis</a> o <a href="#">prueba 7 días de Pro</a>.</p>
+          </div>
+          <div class="book">
+            <h4>Elige un hueco</h4>
+            <div class="meta"><span>20 min</span><span>Videollamada</span><span>Hora de Madrid</span></div>
+            <div class="days"><span class="day on">Mar 13<small>Oct</small></span><span class="day">Mié 14<small>Oct</small></span><span class="day">Jue 15<small>Oct</small></span><span class="day">Vie 16<small>Oct</small></span><span class="day">Lun 19<small>Oct</small></span></div>
+            <div class="times"><span class="t">18:00</span><span class="t">18:20</span><span class="t">18:40</span><span class="t">19:00</span><span class="t on">19:20</span><span class="t">19:40</span><span class="t">20:00</span><span class="t">20:20</span><span class="t">20:40</span></div>
+            <label class="inp">Nombre<i></i></label>
+            <label class="inp">Email de trabajo<i></i></label>
+            <label class="inp">Tu web<i></i></label>
+            <label class="inp">¿Algo que quieras ver? (opcional)<i></i></label>
+            <span class="go">Pedir videollamada</span>
+            <p class="fine">Te enviamos la invitación con el enlace por correo.</p>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="bar"><b>Genscore</b></div>
+        <div class="o1">
+          <div class="left">
+            <p class="eyebrow">Videollamada · 20 minutos</p>
+            <h3 class="title">Te enseñamos qué dice la IA de tu marca</h3>
+            <p class="lede">Una videollamada corta con el equipo de GenScore.</p>
+          </div>
+          <div class="book">
+            <h4>Elige un hueco</h4>
+            <div class="days"><span class="day on">Mar 13<small>Oct</small></span><span class="day">Mié 14<small>Oct</small></span><span class="day">Jue 15<small>Oct</small></span><span class="day">Vie 16<small>Oct</small></span></div>
+            <div class="times"><span class="t">18:00</span><span class="t">18:20</span><span class="t on">18:40</span><span class="t">19:00</span><span class="t">19:20</span><span class="t">19:40</span></div>
+            <label class="inp">Nombre<i></i></label>
+            <label class="inp">Email de trabajo<i></i></label>
+            <span class="go">Pedir videollamada</span>
+          </div>
+          <div class="agenda">
+            <h5>Así son los 20 minutos</h5>
+            <div class="step"><span class="min">0–5 min</span><span class="rail"></span><p><strong>Tu marca en la IA</strong>ChatGPT, Gemini y Claude.</p></div>
+            <div class="step"><span class="min">5–15 min</span><span class="rail"></span><p><strong>A quién recomiendan</strong>Competidores y fuentes.</p></div>
+            <div class="step"><span class="min">15–20 min</span><span class="rail"></span><p><strong>Qué arreglar primero</strong>Y qué plan te encaja.</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Option 2 -->
+  <section class="opt">
+    <span class="tag">Opción 2</span>
+    <h2>Banda oscura con el formulario flotando</h2>
+    <p>La parte de arriba pasa a una banda oscura, como la portada de los artículos del blog, con el formulario en blanco montado sobre su borde inferior. Debajo, a la izquierda, van los tres pasos de la llamada. Es más llamativa y más «de marca», pero la página se ve distinta del resto de pantallas claras.</p>
+    <div class="frames">
+      <div class="desk">
+        <div class="bar"><b>Genscore</b><span>Producto</span><span>Cómo funciona</span><span>Precios</span><span>Blog</span><span class="cta">Prueba gratis</span></div>
+        <div class="o2">
+          <div class="band">
+            <div class="left">
+              <p class="eyebrow">Videollamada · 20 minutos</p>
+              <h3 class="title">Te enseñamos qué dice la IA de tu marca</h3>
+              <p class="lede">Una videollamada corta con el equipo de GenScore. Traes tu web y, si quieres, la de un competidor.</p>
+              <div class="chips"><span class="chip">ChatGPT, Gemini y Claude</span><span class="chip">Sin compromiso</span><span class="chip">L–V, 18:00–21:00</span></div>
+            </div>
+            <div class="bookwrap"><div class="book">
+              <h4>Elige un hueco</h4>
+              <div class="meta"><span>20 min</span><span>Videollamada</span><span>Hora de Madrid</span></div>
+              <div class="days"><span class="day on">Mar 13<small>Oct</small></span><span class="day">Mié 14<small>Oct</small></span><span class="day">Jue 15<small>Oct</small></span><span class="day">Vie 16<small>Oct</small></span><span class="day">Lun 19<small>Oct</small></span></div>
+              <div class="times"><span class="t">18:00</span><span class="t">18:20</span><span class="t">18:40</span><span class="t">19:00</span><span class="t on">19:20</span><span class="t">19:40</span><span class="t">20:00</span><span class="t">20:20</span><span class="t">20:40</span></div>
+              <label class="inp">Nombre<i></i></label>
+              <label class="inp">Email de trabajo<i></i></label>
+              <label class="inp">Tu web<i></i></label>
+              <span class="go">Pedir videollamada</span>
+              <p class="fine">Te enviamos la invitación con el enlace por correo.</p>
+            </div></div>
+          </div>
+          <div class="below">
+            <div class="cols">
+              <div class="col"><span class="ic">1</span><p><strong>Tu marca en ChatGPT, Gemini y Claude</strong>Qué responden a las preguntas principales de búsqueda de tu sector.</p></div>
+              <div class="col"><span class="ic">2</span><p><strong>A quién recomiendan en tu lugar</strong>Qué competidores salen y en qué fuentes se apoya la IA.</p></div>
+              <div class="col"><span class="ic">3</span><p><strong>Qué arreglar primero</strong>Y qué plan encaja contigo, también si eres agencia.</p></div>
+              <p class="alt">¿Sin tiempo para una llamada? <a href="#">Pide el informe gratis</a>.</p>
+            </div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+      <div class="phone">
+        <div class="bar"><b>Genscore</b></div>
+        <div class="o2">
+          <div class="band">
+            <div class="left">
+              <p class="eyebrow">Videollamada · 20 minutos</p>
+              <h3 class="title">Te enseñamos qué dice la IA de tu marca</h3>
+              <div class="chips"><span class="chip">Sin compromiso</span><span class="chip">L–V, 18:00–21:00</span></div>
+            </div>
+            <div class="bookwrap"><div class="book">
+              <h4>Elige un hueco</h4>
+              <div class="days"><span class="day on">Mar 13<small>Oct</small></span><span class="day">Mié 14<small>Oct</small></span><span class="day">Jue 15<small>Oct</small></span><span class="day">Vie 16<small>Oct</small></span></div>
+              <div class="times"><span class="t">18:00</span><span class="t">18:20</span><span class="t on">18:40</span><span class="t">19:00</span><span class="t">19:20</span><span class="t">19:40</span></div>
+              <label class="inp">Nombre<i></i></label>
+              <span class="go">Pedir videollamada</span>
+            </div></div>
+          </div>
+          <div class="below"><div class="cols">
+            <div class="col"><span class="ic">1</span><p><strong>Tu marca en la IA</strong>ChatGPT, Gemini y Claude.</p></div>
+            <div class="col"><span class="ic">2</span><p><strong>A quién recomiendan</strong>Competidores y fuentes.</p></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="rec">Mi recomendación es la <strong>opción 1</strong>. Llena el hueco con contenido útil (qué pasa en cada tramo de la llamada) y con un ejemplo visual del resultado, y mantiene el estilo claro del resto de la web. La tarjeta de ejemplo va marcada como «Ejemplo» y usa solo porcentajes. En móvil el formulario sube por delante del guion para que no haya que bajar tanto.</div>
+</div>

@@ -25,11 +25,22 @@ export const metadata: Metadata = contentMetadata({
   path: "/demo"
 });
 
-const POINTS = [
-  "Qué responden ChatGPT, Gemini y Claude a las preguntas principales de búsqueda de tu sector.",
-  "Si te nombran, a quién recomiendan en tu lugar y por qué.",
-  "Qué plan encaja contigo, también si eres agencia y llevas varias marcas."
+const STEPS = [
+  {
+    title: "Tu marca en ChatGPT, Gemini y Claude",
+    text: "Qué responden a las preguntas principales de búsqueda de tu sector."
+  },
+  {
+    title: "A quién recomiendan en tu lugar",
+    text: "Qué competidores salen y en qué fuentes se apoya la IA."
+  },
+  {
+    title: "Qué arreglar primero",
+    text: "Y qué plan encaja contigo, también si eres agencia y llevas varias marcas."
+  }
 ];
+
+const CHIPS = ["ChatGPT, Gemini y Claude", "Sin compromiso", "Oferta de lanzamiento"];
 
 export default function DemoPage() {
   return (
@@ -44,24 +55,37 @@ export default function DemoPage() {
             <p className="dm-lede">
               Una videollamada corta con el equipo de GenScore. Traes tu web y, si quieres, la de un competidor.
             </p>
-            <ul className="dm-list">
-              {POINTS.map((point) => (
-                <li key={point}>
-                  <span className="dm-check" aria-hidden="true">
-                    <svg width="12" height="12" viewBox="0 0 20 20">
-                      <path d="M4 10.5 L8 14 L16 6" stroke="currentColor" strokeWidth="2.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  <span>{point}</span>
-                </li>
+            <ul className="dm-chips" aria-label="La videollamada">
+              {CHIPS.map((chip) => (
+                <li key={chip}>{chip}</li>
               ))}
             </ul>
+          </div>
+
+          <div className="dm-book">
+            <DemoBooking />
+          </div>
+
+          <div className="dm-steps">
+            <h2 className="dm-steps-title">En la llamada</h2>
+            <ol className="dm-list">
+              {STEPS.map((step, index) => (
+                <li key={step.title}>
+                  <span className="dm-num" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <p>
+                    <strong>{step.title}</strong>
+                    {step.text}
+                  </p>
+                </li>
+              ))}
+            </ol>
             <p className="dm-alt">
               ¿Sin tiempo para una llamada? <Link href="/gratis/informe-geo?desde=demo">Pide el informe gratis</Link> o{" "}
               <Link href="/signup">prueba 7 días de Pro</Link>.
             </p>
           </div>
-          <DemoBooking />
         </div>
       </main>
 

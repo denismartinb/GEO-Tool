@@ -1,26 +1,58 @@
 /* DEMO-CALL-1 — /demo. Prefixed `dm-` so nothing here can collide with
-   globals.css; design in docs/design-reference/demo-affiliates-1/. */
+   globals.css; design in docs/design-reference/demo-affiliates-1/.
+
+   Layout (founder, 2026-10-11, option 2): a dark band behind the copy, with the
+   white booking card floating over its lower edge. On desktop the band is a
+   fixed-height backdrop (`--dm-band`) and the copy column is at least that tall,
+   so the steps always start on the light canvas. Below 860px the band is the
+   copy block itself and the card follows it. */
 
 .dm-page {
-  padding: 112px 16px 72px;
+  --dm-band: 440px;
+  position: relative;
+  padding: 0 16px 72px;
   background: var(--brand-canvas);
 }
+.dm-page::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: var(--dm-band);
+  background:
+    radial-gradient(60% 70% at 92% 0%, rgba(9, 197, 214, 0.22), transparent 70%),
+    radial-gradient(55% 80% at 0% 100%, rgba(79, 123, 255, 0.24), transparent 70%),
+    var(--brand-canvas-dark);
+  pointer-events: none;
+}
 .dm-inner {
+  position: relative;
   max-width: 1080px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 48px;
+  grid-template-areas:
+    "copy book"
+    "steps book";
+  column-gap: 56px;
   align-items: start;
 }
-.dm-copy { min-width: 0; }
+
+/* Copy on the dark band */
+.dm-copy {
+  grid-area: copy;
+  min-width: 0;
+  min-height: var(--dm-band);
+  box-sizing: border-box;
+  padding: 64px 0 40px;
+  color: var(--brand-ink-on-dark);
+}
 .dm-eyebrow {
-  margin: 0 0 12px;
+  margin: 0 0 14px;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--brand-blue);
+  color: var(--brand-cyan);
 }
 .dm-title {
   margin: 0 0 16px;
@@ -28,65 +60,60 @@
   font-size: clamp(30px, 4.4vw, 46px);
   line-height: 1.05;
   letter-spacing: -0.02em;
-  color: var(--brand-ink);
+  color: #fff;
   text-wrap: balance;
 }
 .dm-lede {
   margin: 0 0 22px;
   font-size: 17px;
   line-height: 1.55;
-  color: var(--brand-ink-2);
-  max-width: 52ch;
+  color: #b8c3d6;
+  max-width: 48ch;
 }
-.dm-list {
+.dm-chips {
   list-style: none;
-  margin: 0 0 24px;
-  padding: 0;
-  display: grid;
-  gap: 12px;
-}
-.dm-list li {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  font-size: 15.5px;
-  line-height: 1.5;
-  color: var(--brand-ink-2);
-}
-.dm-check {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  margin-top: 1px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  background: var(--brand-pos-soft);
-  color: var(--brand-pos);
-}
-.dm-alt {
   margin: 0;
-  font-size: 14px;
-  color: var(--brand-ink-3);
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
-.dm-alt a {
-  color: var(--brand-blue);
-  font-weight: 600;
-  text-decoration: none;
+.dm-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 13.5px;
+  color: var(--brand-ink-on-dark);
 }
-.dm-alt a:hover { text-decoration: underline; }
+.dm-chips li::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand-cyan);
+}
 
-/* The dark card: slot picker + form. */
+/* Booking card, floating over the band edge */
+.dm-book {
+  grid-area: book;
+  min-width: 0;
+  padding-top: 48px;
+}
 .dm-card {
   box-sizing: border-box;
   min-width: 0;
-  background: var(--brand-canvas-dark);
-  color: var(--brand-ink-on-dark);
+  background: #fff;
+  color: var(--brand-ink);
+  border: 1px solid var(--brand-line);
   border-radius: 18px;
   padding: 26px;
   display: grid;
   gap: 16px;
-  box-shadow: 0 18px 40px rgba(8, 18, 35, 0.18);
+  box-shadow: 0 24px 60px rgba(8, 18, 35, 0.22);
 }
 .dm-card-title {
   margin: 0;
@@ -99,7 +126,7 @@
   flex-wrap: wrap;
   gap: 16px;
   font-size: 13px;
-  color: #b8c3d6;
+  color: var(--brand-ink-3);
 }
 .dm-days {
   display: flex;
@@ -112,8 +139,8 @@
 .dm-time {
   font: inherit;
   color: inherit;
-  background: transparent;
-  border: 1px solid #2a3a58;
+  background: #fff;
+  border: 1px solid var(--brand-line);
   border-radius: 10px;
   cursor: pointer;
   font-variant-numeric: tabular-nums;
@@ -130,7 +157,7 @@
 }
 .dm-day small {
   font-size: 11px;
-  color: #8d9ab0;
+  color: var(--brand-ink-3);
 }
 .dm-time {
   padding: 9px 4px;
@@ -143,7 +170,7 @@
   gap: 8px;
 }
 .dm-day:hover,
-.dm-time:hover { border-color: #4f7bff; }
+.dm-time:hover { border-color: var(--brand-blue); }
 .dm-day.is-on,
 .dm-time.is-on {
   background: var(--brand-blue);
@@ -155,7 +182,7 @@
 .dm-time:focus-visible,
 .dm-btn:focus-visible,
 .dm-field input:focus-visible {
-  outline: 2px solid var(--brand-cyan);
+  outline: 2px solid var(--brand-blue);
   outline-offset: 2px;
 }
 .dm-fields {
@@ -168,27 +195,27 @@
   gap: 6px;
   font-size: 13px;
   font-weight: 600;
-  color: #d5dcea;
+  color: var(--brand-ink-2);
 }
-.dm-opt { font-weight: 400; color: #8d9ab0; }
+.dm-opt { font-weight: 400; color: var(--brand-ink-3); }
 .dm-field input {
   box-sizing: border-box;
   width: 100%;
   font: inherit;
   font-weight: 400;
   font-size: 15px;
-  color: var(--brand-ink-on-dark);
-  background: var(--brand-surface-dark);
-  border: 1px solid #2a3a58;
+  color: var(--brand-ink);
+  background: var(--brand-canvas);
+  border: 1px solid var(--brand-line);
   border-radius: 10px;
   padding: 11px 12px;
 }
-.dm-field input::placeholder { color: #6f7d95; }
+.dm-field input::placeholder { color: #8a96ab; }
 .dm-err {
   margin: 0;
   font-size: 13px;
   font-weight: 500;
-  color: #ffb4a8;
+  color: #c2410c;
 }
 .dm-btn {
   display: inline-flex;
@@ -208,8 +235,9 @@
 }
 .dm-btn:hover { background: #1d4fd8; }
 .dm-btn--light {
-  background: #fff;
+  background: var(--brand-canvas);
   color: var(--brand-ink);
+  border: 1px solid var(--brand-line);
   justify-self: start;
 }
 .dm-btn--light:hover { background: #eef2fb; }
@@ -217,11 +245,76 @@
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
-  color: #8d9ab0;
+  color: var(--brand-ink-3);
 }
-.dm-fine a { color: #b8c3d6; }
-.dm-done p { margin: 0; font-size: 15px; line-height: 1.55; color: #d5dcea; }
-.dm-done strong { color: #fff; }
+.dm-fine a { color: var(--brand-ink-2); }
+.dm-done p { margin: 0; font-size: 15px; line-height: 1.55; color: var(--brand-ink-2); }
+.dm-done strong { color: var(--brand-ink); }
+
+/* Steps on the light canvas */
+.dm-steps {
+  grid-area: steps;
+  min-width: 0;
+  padding-top: 36px;
+  display: grid;
+  gap: 18px;
+}
+.dm-steps-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--brand-ink-3);
+}
+.dm-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.dm-list li {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.dm-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #e8eefe;
+  color: var(--brand-blue);
+  font-family: var(--font-display), "Hanken Grotesk", sans-serif;
+  font-weight: 800;
+  font-size: 15px;
+}
+.dm-list p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--brand-ink-2);
+  max-width: 52ch;
+}
+.dm-list strong {
+  display: block;
+  font-size: 16px;
+  color: var(--brand-ink);
+}
+.dm-alt {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--brand-ink-3);
+}
+.dm-alt a {
+  color: var(--brand-blue);
+  font-weight: 600;
+  text-decoration: none;
+}
+.dm-alt a:hover { text-decoration: underline; }
 
 /* Honeypot: off-screen, out of the tab order. */
 .dm-hp {
@@ -233,7 +326,20 @@
 }
 
 @media (max-width: 860px) {
-  .dm-page { padding-top: 96px; }
-  .dm-inner { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  .dm-card { padding: 20px; }
+  .dm-page::before { display: none; }
+  .dm-inner {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "copy" "book" "steps";
+  }
+  .dm-copy {
+    min-height: 0;
+    margin: 0 -16px;
+    padding: 36px 16px 32px;
+    background:
+      radial-gradient(70% 80% at 100% 0%, rgba(9, 197, 214, 0.2), transparent 70%),
+      var(--brand-canvas-dark);
+  }
+  .dm-book { padding-top: 20px; }
+  .dm-card { padding: 20px; box-shadow: 0 14px 34px rgba(8, 18, 35, 0.12); }
+  .dm-steps { padding-top: 32px; }
 }
