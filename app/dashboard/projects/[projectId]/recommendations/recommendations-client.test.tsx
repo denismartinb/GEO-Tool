@@ -557,7 +557,7 @@ describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §306)", () => 
     expect(first).toBeLessThan(slot);
     expect(slot).toBeLessThan(second);
     // The second AI card is number 3 now, and the third left the plan.
-    expect(html).toMatch(/rec2-rank">3<\/span><span class="rec2-src rec2-src-ia">IA<\/span><span class="rec2-kind">/);
+    expect(html).toMatch(/rec2-rank">3<\/span><span class="rec2-src rec2-src-ia"><svg[^]*?<\/svg>IA<\/span><span class="rec2-kind">/);
     expect(html).toContain(labelForType("create_faq_section"));
     expect(html).toContain("Hasta +9 pt GEO");
     expect(html).toContain('id="row-google"');

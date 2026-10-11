@@ -654,7 +654,8 @@ paths:
   es el conjunto de las dos primeras de IA (`planPointsWithGoogle`), y los
   grupos de «Más adelante» se recalculan con la tercera dentro.
 - **Toda tarjeta del plan y toda cabecera de grupo lleva su etiqueta de
-  fuente** (`.rec2-src`, «IA» o «Google»).
+  fuente** (`.rec2-src`, «IA» con el icono `sparkles` o «Google» con
+  `search`; el icono lo pidió el fundador al aprobar).
 - **El cliente sabe si el puesto 2 es de Google por `GooglePlanMarker`**, que
   la ranura monta siempre al resolverse, con o sin tarjeta. La ranura se
   monta aunque no haya plan, para que el marcador llegue.

@@ -1,5 +1,6 @@
 import { Suspense, cache } from "react";
 import type { AuthenticatedContext } from "@/lib/auth";
+import { Icon } from "@/components/ui/icon";
 import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { buildGoogleRecommendations, type GoogleRecommendation } from "@/lib/search-console/recommendations";
 import { readRecStates } from "@/lib/search-console/rec-states";
@@ -104,7 +105,7 @@ export function GoogleLaterCard({
 function GoogleRowHead() {
   return (
     <div className="grec-head" id="grec-title">
-      <span className="rec2-src rec2-src-g">Google</span>
+      <span className="rec2-src rec2-src-g"><Icon name="search" size={11} />Google</span>
       Con tus datos de Google
       <span className="grec-head-sub">Search Console · últimos 28 días</span>
     </div>

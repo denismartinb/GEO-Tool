@@ -25260,7 +25260,7 @@ el plan».
   web. La tercera acción de IA pasa a «Más adelante» y vuelve al plan si Google
   no trae tarjeta (`GooglePlanMarker` lo comunica al cliente al llegar).
 - **Cada tarjeta dice de dónde sale** con una etiqueta «IA» o «Google»
-  (`.rec2-src`), en el plan y en las cabeceras de grupo.
+  (`.rec2-src`, con icono: destellos para «IA», lupa para «Google»), en el plan y en las cabeceras de grupo.
 - **Cada fuente en su escala.** Las de IA siguen con puntos GEO (ADR 0017).
   La de Google enseña su puesto en Google («12º · Puesto en Google») o el
   porcentaje que entra («Entran en Google»), nunca puntos inventados. La línea

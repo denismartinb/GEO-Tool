@@ -1796,7 +1796,7 @@
 
 /* RECS-ONE-QUEUE-1 (log §306): where each card of the queue comes from. */
 .rec2-src {
-  display: inline-flex; align-items: center;
+  display: inline-flex; align-items: center; gap: 4px;
   font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
   padding: 2px 7px; border-radius: 999px; white-space: nowrap; flex-shrink: 0;
 }

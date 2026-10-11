@@ -838,7 +838,7 @@ export function RecCard({
               {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
               {/* RECS-ONE-QUEUE-1 (log §306): one queue for AI and Google, so a
                   plan card says where it comes from. */}
-              {priorityRank && <span className="rec2-src rec2-src-ia">IA</span>}
+              {priorityRank && <span className="rec2-src rec2-src-ia"><Icon name="sparkles" size={11} />IA</span>}
               {showKind && <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>}
               {priorityLevel(rec) === "high" && <span className={priorityBadgeCls}>Prioridad alta</span>}
               {quickWin && (
@@ -1366,7 +1366,7 @@ function GroupedRecs({
     <div className="rec2-group">
       <button type="button" className="rec2-group-h" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
         <Icon name={open ? "chevDown" : "chevRight"} size={15} />
-        <span className="rec2-src rec2-src-ia">IA</span>
+        <span className="rec2-src rec2-src-ia"><Icon name="sparkles" size={11} />IA</span>
         <span className="rec2-group-t">{labelForType(type)}</span>
         {joint !== null && joint >= MIN_VISIBLE_POINTS && (
           <span className="rec2-pts" style={{ fontSize: 13 }}>

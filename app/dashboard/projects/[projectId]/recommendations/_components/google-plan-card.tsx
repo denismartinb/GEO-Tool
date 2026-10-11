@@ -68,7 +68,7 @@ export function GooglePlanCard({
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
             <span className="rec2-rank">{rank}</span>
-            <span className="rec2-src rec2-src-g">Google</span>
+            <span className="rec2-src rec2-src-g"><Icon name="search" size={11} />Google</span>
             <span className="rec2-kind">{copy.kind}</span>
           </div>
           <div className="rec-title">{copy.title}</div>
