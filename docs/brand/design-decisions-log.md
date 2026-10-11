@@ -25053,7 +25053,54 @@ cambian.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 300. NAV-DRAWER-FIT-1: el menú móvil cabe entero en un iPhone (2026-10-11)
+## 300. OBSERVABILITY-1: Sentry de verdad — avisos de crons, errores capturados y datos limpios (2026-10-11)
+
+**Qué se decidió.** El fundador pidió conectar Sentry «por si hay algún error,
+tener monitores y observabilidad». Sentry ya estaba conectado desde el
+2026-07-10 (DSN en Vercel, `docs/launch-plan.md` Fase 3), pero sólo veía lo
+que se escapa de una ruta o del `error.tsx` de la consola. Se cierran cuatro
+huecos:
+
+- **Monitores de los siete crons** (`lib/observability/cron-monitor.ts`).
+  Cada GET de `vercel.json` va envuelto en `withCronMonitor`: avisa a Sentry
+  al empezar y al acabar, y una respuesta 5xx cuenta como fallo. Sentry abre
+  una incidencia si un cron no llega («missed»), si Vercel lo mata a medias
+  («timeout», `maxRuntime` 2 min) o si falla. Es lo que no podían ver los
+  correos al operador: si el cron no corre, no queda código vivo que avise
+  (§227, §262). Los crons frecuentes piden 2–3 fallos seguidos antes de abrir
+  incidencia; los diarios, uno. Sólo en producción, sólo con DSN y sólo con la
+  petición autorizada de Vercel. Un test lee `vercel.json` y falla si un
+  horario se desvía o si un cron nuevo no lleva monitor.
+- **Errores que los crons se tragaban.** `weekly-scans`, `weekly-digest`,
+  `sweep-continue`, `scan-watchdog`, `scan-continue` y `run-audit`
+  respondían un 500 limpio y el error real se quedaba en un log que nadie
+  lee (o en ninguno, con `catch {}`). `reportError` lo manda a Sentry sin
+  cambiar la respuesta.
+- **`app/global-error.tsx`**: un fallo de render fuera de la consola (web
+  pública, layout raíz) no tenía frontera propia con `captureException`.
+- **Qué sale hacia Sentry** (`lib/observability/scrub.ts`, `beforeSend` y
+  `beforeBreadcrumb` en los tres entornos). Fuera la query de cada URL
+  (`/baja?token=`, `?code=&state=` de OAuth, `?next=`), las cabeceras
+  (`Authorization: Bearer <CRON_SECRET>`), cookies y cuerpos; los emails de
+  mensajes y excepciones pasan a `[email]`; del usuario sólo el id. Las
+  opciones de `Sentry.init` viven ya en un solo sitio
+  (`lib/observability/sentry-options.ts`) con `environment` (producción
+  separada de las previews) y `release` (el commit). Las trazas de
+  rendimiento se muestrean al 10 % sólo en producción; los errores nunca se
+  muestrean.
+
+**Qué queda pendiente (del fundador, sin código posible).**
+`SENTRY_ORG`, `SENTRY_PROJECT` y `SENTRY_AUTH_TOKEN` siguen sin poner en
+Vercel, así que las trazas de producción salen minificadas: el fallo de
+Auditoría web del 2026-07-12 nunca se diagnosticó por eso. Con las tres
+puestas, `next.config.ts` sube los mapas y los borra del despliegue. Las
+reglas de aviso por correo de Sentry (incidencia nueva, monitor fallido) se
+configuran en su panel. No se añade `tunnelRoute`: los bloqueadores de
+anuncios se comen parte de los errores del navegador, pero el túnel pasaría
+cada evento por una función de Vercel, que es justo el coste que recortó
+VERCEL-COST-1 (§199).
+
+## 301. NAV-DRAWER-FIT-1: el menú móvil cabe entero en un iPhone (2026-10-11)
 
 **Qué pasaba.** El fundador, en su iPhone: el cajón de la consola cortaba
 «Manuales y estudios», el último enlace, por debajo del pie fijo. Tras

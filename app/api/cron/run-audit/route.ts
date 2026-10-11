@@ -9,6 +9,8 @@ import {
 } from "@/lib/web-audit/audit-job-runner";
 import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
+import { withCronMonitor } from "@/lib/observability/cron-monitor";
+import { reportError } from "@/lib/observability/report-error";
 
 /**
  * `chainIndex` counts self-dispatches within one chain. Absent (or 0) on the
@@ -66,7 +68,7 @@ export async function POST(request: Request) {
 }
 
 /** Vercel's cron entry point. Always starts a fresh chain. */
-export async function GET(request: Request) {
+async function handleGet(request: Request) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
 
@@ -119,6 +121,11 @@ async function runWorker(chainIndex: number) {
     console.error("[geo:audit-after-scan] worker invocation failed", {
       message: error instanceof Error ? error.message : String(error)
     });
+    await reportError(error, "cron:run-audit");
     return NextResponse.json({ processed: 0, error: "run_failed" }, { status: 500 });
   }
 }
+
+// OBSERVABILITY-1 (log §300): Sentry Cron Monitor — missed, timed-out and
+// 5xx runs open an issue (lib/observability/cron-monitor.ts).
+export const GET = withCronMonitor("/api/cron/run-audit", handleGet);

@@ -368,4 +368,4 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   iconos de 44px, la ayuda y salir. Las filas del menú miden 40px. Si se añade
   un enlace o una fila al pie, hay que volver a medir esa altura: el último
   enlace quedaba tapado por un pie de tres filas y nada avisaba de que la
-  lista scrolleaba (log §300).
+  lista scrolleaba (log §301).

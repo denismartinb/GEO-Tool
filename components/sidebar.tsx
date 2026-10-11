@@ -263,7 +263,7 @@ export function Sidebar({
             enlaza en su pie. Se cierra el cajón móvil al abrirlo, o el popup
             saldría detrás del menú. NAV-SIMPLIFY-1 (log §291): se llama
             «¿Cómo funciona?», porque lo que abre es el tour del producto.
-            NAV-DRAWER-FIT-1 (log §300): en el cajón móvil el pie es una sola
+            NAV-DRAWER-FIT-1 (log §301): en el cajón móvil el pie es una sola
             fila y este botón se queda en icono; el texto sigue en el DOM
             (oculto a la vista, no a los lectores de pantalla). */}
         <button

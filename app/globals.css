@@ -8325,7 +8325,7 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
     border-color: var(--line);
   }
 
-  /* NAV-DRAWER-FIT-1 (log §300): en iPhone el pie fijo medía ~170px
+  /* NAV-DRAWER-FIT-1 (log §301): en iPhone el pie fijo medía ~170px
      (¿Cómo funciona?, cuenta y Cerrar sesión, cada uno en su fila) y tapaba
      «Manuales y estudios», el último enlace de la lista. El pie pasa a una
      sola fila —cuenta a la izquierda, ayuda y salir como iconos de 44px a la

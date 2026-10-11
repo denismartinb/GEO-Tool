@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createServiceClient } from "@/lib/supabase/service";
 import { resolveMaxSweepChainInvocations, runDailyCronScan } from "@/lib/scan/cron";
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
+import { reportError } from "@/lib/observability/report-error";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
       chainIndex: parsed.data.chainIndex
     });
     return NextResponse.json({ processed, scanned, results, deferred, continuationScheduled });
-  } catch {
+  } catch (error) {
+    await reportError(error, "cron:sweep-continue");
     return NextResponse.json({ processed: 0, error: "query_failed" }, { status: 500 });
   }
 }

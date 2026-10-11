@@ -40,17 +40,22 @@ const configWithMDX = withMDX(nextConfig);
 
 // VERCEL-COST-1: withSentryConfig's webpack plugin instruments every route
 // at build time (auto error-capture wrapping) independently of whether it
-// ends up uploading a source map — that instrumentation was running on
-// every single build even though no environment has SENTRY_ORG/
-// SENTRY_AUTH_TOKEN set (Sentry isn't live yet, docs/environment-contract.md).
-// Only pay that build cost once those vars exist; revert this gate when
-// Fase 3 of docs/launch-plan.md turns Sentry on for real.
+// ends up uploading a source map, so it only runs once SENTRY_ORG and
+// SENTRY_AUTH_TOKEN exist. OBSERVABILITY-1 (log §300) is the phase that asks
+// the founder to set them: without source maps every production stack trace
+// is minified and unreadable (the 2026-07-12 web-audit crash was never
+// diagnosed for exactly that reason). Error capture itself does NOT depend on
+// this wrapper: it runs from instrumentation.ts / instrumentation-client.ts
+// whenever the DSN is set.
 export default process.env.SENTRY_ORG && process.env.SENTRY_AUTH_TOKEN
   ? withSentryConfig(configWithMDX, {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
       silent: true,
-      widenClientFileUpload: true
+      widenClientFileUpload: true,
+      // Upload the maps to Sentry, then remove them from the deployment so the
+      // original source is never served to the public.
+      sourcemaps: { deleteSourcemapsAfterUpload: true }
     })
   : configWithMDX;
