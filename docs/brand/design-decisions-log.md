@@ -23699,6 +23699,24 @@ a las altas nuevas.
 5. **«Ver todo» en Auditoría SEO**, como el resto de secciones de la pantalla, a petición del fundador (lleva a `/web-audit`). La tarjeta sigue sin botón propio (§271).
 6. **Móvil y tableta no cambian.** El gráfico existe dos veces en el DOM, como los motores en §271, y sólo se ve una copia. Por debajo de 1200px el orden es el de siempre. Lo vigila `tests/search-seo-nav.test.ts`.
 
-**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase.
+**Qué queda pendiente.** El cajón de Prompts («muestra 1 de 5» repetido quince veces) espera la decisión del fundador sobre una maqueta. No se ha tocado en esta fase. *(Resuelto en §278.)*
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.
+
+## 278. PROMPT-DRAWER-ENGINES-1: el cajón de Prompts resume cada motor en una fila (2026-10-11)
+
+**Qué pasaba.** Con pocas preguntas, el escaneo repite cada pregunta hasta cinco veces por motor (SAMPLING-1, ADR 0030). El cajón pintaba una fila por respuesta, así que un proyecto de una pregunta enseñaba quince filas «Gemini · muestra 1 de 5». Las evidencias y las fuentes también se agrupaban por respuesta, con la cabecera del motor repetida cinco veces. El fundador no entendía qué era «1 de 5» (2026-10-11).
+
+**Qué se decidió** (maqueta aprobada en el hilo, https://claude.ai/artifact/CSoYAA5cQ3yXNfdwG2zwHp, v3):
+
+1. **Una fila por motor, en texto.** Debajo del nombre, «Te nombra en N de M respuestas». A la derecha, el sentimiento que más se repite (sólo sobre respuestas que nombran la marca, `computeDominantBrandSentiment`) y «Cita tu web en X de M respuestas» o «No cita tu web». La frase va completa a petición del fundador: «en 3 de 5» suelto no decía de qué. Con una sola respuesta por motor no hay fracción («Te nombra», «Cita tu web»).
+2. **Sin puntos ni desplegable.** Una primera versión de la maqueta llevaba un punto por respuesta y un desplegable por motor; el fundador no entendió los puntos y prefirió sin desplegable. El detalle de cada respuesta vive sólo en la pestaña Respuestas.
+3. **Fuentes sin repetir, por motor.** Cada web sale una vez por motor con «en X de M respuestas». Una web citada dos veces en la misma respuesta cuenta una. Tu web va primero, luego las más usadas; se ven cuatro y el resto tras «Ver N fuentes más de …». Un motor sin fuentes dice «Respondió sin buscar en la web.».
+4. **Evidencias por motor, sin repetir.** La misma frase citada en cinco respuestas sale una vez. La regla de §147 se mantiene: un motor con mención verificada y sin cita textual sigue saliendo con su aviso.
+5. **Respuestas, de una en una.** La tabla y los quince textos seguidos se sustituyen por un selector de motor y unas pastillas «Respuesta 1…5». Cada respuesta lleva «Te nombra»/«No te nombra», el sentimiento, «Cita tu web» y cuántas fuentes usó.
+
+Los recuentos viven en `components/prompts/engine-summary.ts` (puro, con tests). `sampleLabel` («muestra N de M») deja de usarse en el cajón; sigue en `lib/scan/sample-display.ts` con sus tests.
+
+**Qué queda pendiente.** Nada de esta fase. Las cifras absolutas del cajón («3 de 5 respuestas») son dentro del producto, no contenido público, así que no les aplica la norma de sólo porcentajes.
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.

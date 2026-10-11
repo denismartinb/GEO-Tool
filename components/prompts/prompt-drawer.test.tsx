@@ -292,3 +292,39 @@ describe("mentionHint (GS-04)", () => {
     }
   });
 });
+
+describe("PromptDrawer — una fila por motor (log §278)", () => {
+  // Cinco respuestas de Gemini a la misma pregunta: antes eran cinco filas
+  // «Gemini · muestra N de 5».
+  const results = [0, 1, 2, 3, 4].map((i) =>
+    fila({
+      id: `g${i}`,
+      sample_index: i,
+      brand_mentioned: i < 3,
+      sentiment: "positive",
+      extracted_json: {
+        ...extraccion({ marcaMencionada: i < 3, evidenciaMarca: ["GenScore mide tu visibilidad en IA."] }),
+        citations: i < 2 ? [{ domain: "genscore.es", url: "https://genscore.es/" }] : [{ domain: "xataka.com", url: "https://xataka.com/a" }]
+      }
+    })
+  );
+  const html = renderToStaticMarkup(<PromptDrawer {...props} results={results} competitors={[]} />);
+
+  it("folds the five answers into one engine row with full sentences", () => {
+    expect(html).not.toContain("muestra");
+    expect(html).toContain("Cada motor respondió 5 veces en este escaneo");
+    expect(html).toContain("Te nombra en 3 de 5 respuestas");
+    expect(html).toContain("Cita tu web en 2 de 5 respuestas");
+    expect(html.match(/class="pr2-erow"/g)).toHaveLength(1);
+  });
+
+  it("lists each source once with how many answers used it", () => {
+    expect(html.match(/>genscore\.es</g)).toHaveLength(1);
+    expect(html).toContain("en 2 de 5 respuestas");
+    expect(html).toContain("en 3 de 5 respuestas");
+  });
+
+  it("shows a repeated quote once", () => {
+    expect(html.match(/GenScore mide tu visibilidad en IA\./g)).toHaveLength(1);
+  });
+});
