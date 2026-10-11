@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PageView } from "@/lib/search-console/insights";
 import type { QueryView } from "@/lib/search-console/report";
-import { buildGoogleRecommendations } from "@/lib/search-console/recommendations";
+import { buildGoogleRecommendations, googleRecKey } from "@/lib/search-console/recommendations";
 
 const q = (query: string, position: number, impressions: number): QueryView => ({
   query,
@@ -92,5 +92,36 @@ describe("buildGoogleRecommendations", () => {
     expect(
       buildGoogleRecommendations({ ...base, questions: [{ query: "qué es geo", position: 4, impressions: 5, tracked: true }] })
     ).toEqual([]);
+  });
+
+  it("skips a card the customer already handled and offers the next one of the same kind (log §294)", () => {
+    const cards = buildGoogleRecommendations({
+      ...base,
+      report: { nearPage1: [q("primera", 12, 900), q("segunda", 14, 400)], empty: false },
+      ctr: [
+        { query: "precio", position: 3, impressions: 1000, ctr: 0.01, benchmark: 0.1, page: null },
+        { query: "plan", position: 4, impressions: 500, ctr: 0.01, benchmark: 0.1, page: null }
+      ],
+      questions: [
+        { query: "qué es geo", position: 4, impressions: 500, tracked: false },
+        { query: "cómo medir geo", position: 6, impressions: 200, tracked: false }
+      ],
+      hidden: new Set([
+        googleRecKey("push_page_one", "primera"),
+        googleRecKey("improve_snippet", "precio"),
+        googleRecKey("watch_in_ai", "qué es geo")
+      ])
+    });
+    expect(cards.map((c) => c.query)).toEqual(["segunda", "plan", "cómo medir geo"]);
+  });
+
+  it("only hides the same advice: a query handled under one kind still shows under another", () => {
+    const cards = buildGoogleRecommendations({
+      ...base,
+      report: { nearPage1: [q("geo", 12, 900)], empty: false },
+      hidden: new Set([googleRecKey("improve_snippet", "geo")])
+    });
+    expect(cards).toHaveLength(1);
+    expect(cards[0]).toMatchObject({ kind: "push_page_one", query: "geo" });
   });
 });

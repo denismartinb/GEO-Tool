@@ -67,6 +67,13 @@ import {
   removeBrandAliasInputSchema,
   type ManageBrandAliasesResult
 } from "@/lib/brand-aliases/manage-brand-aliases";
+import {
+  markGoogleRecCore,
+  markGoogleRecInputSchema,
+  undoGoogleRecCore,
+  undoGoogleRecInputSchema,
+  type GoogleRecStateResult
+} from "@/lib/search-console/rec-states";
 
 const promptCreateSchema = z.object({
   projectId: z.string().uuid(),
@@ -789,6 +796,43 @@ export async function restoreRecommendationAction(input: {
   const { supabase, user } = await requireUser();
   const service = createServiceClient();
   return restoreRecommendationCore({ ...parsed.data, supabase, service, user });
+}
+
+/**
+ * «Marcar como hecho» / «Ahora no» on a «Con tus datos de Google» card
+ * (SEARCH-SEO-1 Fase 3e, log §294). No `revalidatePath`: the card stays in
+ * place as «Marcada como hecha · Deshacer» until the next load, which then
+ * offers the next case of the same kind.
+ */
+export async function markGoogleRecommendationAction(input: {
+  projectId: string;
+  kind: string;
+  query: string;
+  status: string;
+  position: number | null;
+  impressions: number | null;
+  ctr: number | null;
+}): Promise<GoogleRecStateResult> {
+  const parsed = markGoogleRecInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+  const { supabase, user } = await requireUser();
+  return markGoogleRecCore(parsed.data, { supabase, service: createServiceClient(), user });
+}
+
+/** «Deshacer» right after «Marcar como hecho» / «Ahora no» (log §294). */
+export async function undoGoogleRecommendationAction(input: {
+  projectId: string;
+  kind: string;
+  query: string;
+}): Promise<GoogleRecStateResult> {
+  const parsed = undoGoogleRecInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+  const { supabase, user } = await requireUser();
+  return undoGoogleRecCore(parsed.data, { supabase, service: createServiceClient(), user });
 }
 
 /**

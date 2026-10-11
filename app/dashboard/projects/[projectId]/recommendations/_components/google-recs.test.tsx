@@ -4,12 +4,18 @@ import { renderToStaticMarkup } from "react-dom/server";
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/search-console/load", () => ({ loadSearchConsoleScreen: vi.fn() }));
 vi.mock("@/lib/search-console/screen-inputs", () => ({ readSearchConsoleInputs: vi.fn() }));
-vi.mock("@/app/dashboard/projects/[projectId]/actions", () => ({ addPrompts: vi.fn() }));
+vi.mock("@/lib/search-console/rec-states", () => ({ readRecStates: vi.fn() }));
+vi.mock("@/app/dashboard/projects/[projectId]/actions", () => ({
+  addPrompts: vi.fn(),
+  markGoogleRecommendationAction: vi.fn(),
+  undoGoogleRecommendationAction: vi.fn()
+}));
 
+import type { GoogleRecommendation } from "@/lib/search-console/recommendations";
 import { GoogleRecCard } from "./google-recs";
 
-const render = (rec: Parameters<typeof GoogleRecCard>[0]["rec"]) =>
-  renderToStaticMarkup(<GoogleRecCard rec={rec} projectId="p1" />);
+const render = (rec: Parameters<typeof GoogleRecCard>[0]["rec"], canPersist = false) =>
+  renderToStaticMarkup(<GoogleRecCard rec={rec} projectId="p1" canPersist={canPersist} />);
 
 describe("GoogleRecCard (log §293)", () => {
   it("names the page-2 query, its page and the page-1 pages to link from", () => {
@@ -54,5 +60,14 @@ describe("GoogleRecCard (log §293)", () => {
     expect(html).toContain("Vigila en la IA «cuál es la mejor herramienta geo»");
     expect(html).toContain("(puesto 9,1)");
     expect(html).toContain("Vigilar prompt");
+  });
+
+  it("offers «Marcar como hecho» and «Ahora no» only when the state can be saved (log §294)", () => {
+    const push: GoogleRecommendation = { kind: "push_page_one", query: "x", position: 15, impressions: 1, page: null, linkFrom: [] };
+    const watch: GoogleRecommendation = { kind: "watch_in_ai", query: "y", position: 4, impressions: 3 };
+    expect(render(push, true)).toContain("Marcar como hecho");
+    expect(render(watch, true)).toContain("Ahora no");
+    expect(render(push, false)).not.toContain("Marcar como hecho");
+    expect(render(watch, false)).not.toContain("Ahora no");
   });
 });

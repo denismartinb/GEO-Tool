@@ -1792,3 +1792,13 @@
 .grec-status-muted { color: var(--ink-3); }
 .grec-status-ok { color: #0f6b41; }
 .grec-status-error { color: var(--brand-neg); }
+/* «Marcar como hecho» / «Ahora no» leave this row in the card's place (log §294).
+   On the white card, so --ink-2 for contrast regardless (styles.md). */
+.grec-card.grec-card-handled { box-shadow: none; background: var(--surface); padding: 12px 18px; }
+.grec-handled { margin: 0; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.grec-undo {
+  background: none; border: 0; padding: 0; margin-left: 2px;
+  font: inherit; font-weight: 650; color: var(--brand-blue); text-decoration: underline; cursor: pointer;
+  min-height: 24px;
+}
+.grec-undo:disabled { opacity: .6; cursor: default; }
