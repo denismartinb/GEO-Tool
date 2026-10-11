@@ -3611,7 +3611,7 @@ textarea.add-prompts-text-input {
 }
 
 /* Per-engine breakdown row */
-/* PROMPT-DRAWER-ENGINES-1 (log §279): one row per engine — glyph, name with
+/* PROMPT-DRAWER-ENGINES-1 (log §280): one row per engine — glyph, name with
    "Te nombra en N de M respuestas" under it, then the dominant sentiment and
    the own-site citation line. Below 520px the badges drop under the name. */
 .pr2-erow { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 11px 14px; border-bottom: 1px solid var(--line-soft); }

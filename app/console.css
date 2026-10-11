@@ -411,7 +411,7 @@
 
   .ov2-insight { padding: 17px 20px; }
   /* No max-width: a cap in `ch` stopped the sentence well short of the
-     banner's right edge on wide screens (founder, 2026-10-11, log §278). */
+     banner's right edge on wide screens (founder, 2026-10-11, log §279). */
   .ov2-insight-txt { font-size: 14px; }
 
   /* More room than the 900px step above — the gauge column and its card
@@ -439,7 +439,7 @@
 
   /* Analysis column (panorama) + sticky action rail (oportunidades) */
   /* Same tracks and gap as `.ov2-score-row` above, so Oportunidades lines
-     up with the engine bars and Auditoría SEO column (log §278). */
+     up with the engine bars and Auditoría SEO column (log §279). */
   .ov2-cols {
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -1149,7 +1149,7 @@
    engine bars fill it and the Auditoría SEO card moves up beside the GEO
    Score breakdown. Both engine copies exist in the DOM; exactly one shows.
    Below 1200px nothing moves. */
-/* Panorámica competitiva split (founder, 2026-10-11, log §278). From
+/* Panorámica competitiva split (founder, 2026-10-11, log §279). From
    1200px, when the side column holds the engine bars AND the Auditoría SEO
    card (`is-pano-up`, set in page.tsx), the chart card moves under the GEO
    Score breakdown and both columns stretch so the chart and the SEO card end

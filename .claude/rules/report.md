@@ -59,7 +59,7 @@ histórico (`docs/brand/design-decisions-log.md` §248) o al diseño aprobado
   consola reabre el fallo de §217: los ancestros con
   `overflow`/`transform` deforman las páginas.
 
-## Fuentes y citas (AUDIT-TRUTH-1, log §277)
+## Fuentes y citas (AUDIT-TRUTH-1, log §278)
 
 - **Cada cita del informe pasa por `resolveCitation`**
   (`lib/citations/aggregate-citations.ts`), la misma función de Páginas

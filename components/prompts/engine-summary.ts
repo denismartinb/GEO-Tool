@@ -1,5 +1,5 @@
 /**
- * PROMPT-DRAWER-ENGINES-1 (log §279) — one line per engine in the prompt
+ * PROMPT-DRAWER-ENGINES-1 (log §280) — one line per engine in the prompt
  * drawer, instead of one line per answer.
  *
  * With few prompts a scan asks each engine the same question up to five

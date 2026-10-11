@@ -168,7 +168,7 @@ export async function loadReportInput({
     coverage = {};
     for (const t of coverageMap.topics) {
       // A topic whose only own page is the home is not certified as covered
-      // (GS-03, log §277): same verdict as the Recomendaciones overlay.
+      // (GS-03, log §278): same verdict as the Recomendaciones overlay.
       const homeOnly = t.found && t.pages.length > 0 && t.pages.every((p) => isSiteRoot(p.url));
       coverage[t.promptId] = homeOnly ? "unknown" : t.found ? "yes" : t.note === COULD_NOT_VERIFY_NOTE ? "unknown" : "no";
     }
@@ -190,7 +190,7 @@ export async function loadReportInput({
             ?.deltaPoints ?? null)
         : null
   }));
-  // GS-03 (log §277): the plan's first step goes through the same coverage
+  // GS-03 (log §278): the plan's first step goes through the same coverage
   // overlay as the Recomendaciones card, so the report never says "crea una
   // página" where the screen says "refuerza la que ya tienes".
   const overlayByRecId = computeCoverageOverlay({

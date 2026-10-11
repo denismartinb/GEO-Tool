@@ -34,7 +34,7 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  */
 
 /**
- * `home_only` (AUDIT-TRUTH-1, GS-03, log §277): the only own page Google
+ * `home_only` (AUDIT-TRUTH-1, GS-03, log §278): the only own page Google
  * returned for the topic is the site's home. A home rarely answers one
  * specific question, so it does not certify coverage: the card keeps the
  * "create" advice and says that only the home was found, instead of telling
@@ -157,7 +157,7 @@ export type OverlayCopy = {
   whatWeFound: string;
   whatToDo: string;
   /**
-   * Replaces the card's own `first_step` (GS-03, log §277). The engine writes
+   * Replaces the card's own `first_step` (GS-03, log §278). The engine writes
    * that step before coverage exists, so for `increase_brand_visibility` it
    * always says "Publica una página". Once coverage found a page, the card,
    * its detail and the report must all say the same thing: improve that
