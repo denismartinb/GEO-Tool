@@ -1,12 +1,19 @@
-/* HERO-CALL-MOBILE-1: keep availability readable without changing content. */
-.lp-hero-call.lp-hero-call .dot, .lp-hero-call.lp-hero-call .arr { flex: none; }
-.lp-hero-call.lp-hero-call .k, .lp-hero-call.lp-hero-call .slot { white-space: nowrap; }
+/* HERO-CALL-MOBILE-1: local layout only; copy and availability stay unchanged. */
+.lp-hero-call.lp-hero-call .dot,
+.lp-hero-call.lp-hero-call .arr { flex: none; }
+.lp-hero-call.lp-hero-call .k,
+.lp-hero-call.lp-hero-call .slot { white-space: nowrap; }
 @media (max-width: 600px) {
-  .lp-hero-call.lp-hero-call { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 8px; row-gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; min-height: 44px; padding: 12px 14px; border-radius: 18px; text-align: left; }
+  .lp-hero-call.lp-hero-call { position: relative; display: flex; flex-direction: column; justify-content: center; gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; min-height: 44px; padding: 14px 40px; border-radius: 18px; text-align: center; }
+  .lp-hero-call.lp-hero-call .ic { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); }
   .lp-hero-call.lp-hero-call .label { min-width: 0; line-height: 1.4; }
-  .lp-hero-call.lp-hero-call .next { grid-column: 2; display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px; padding: 0; border: 0; line-height: 1.4; }
+  .lp-hero-call.lp-hero-call .next { display: grid; grid-template-columns: 6px auto; justify-content: center; column-gap: 8px; row-gap: 4px; padding: 0; border: 0; line-height: 1.4; }
   .lp-hero-call.lp-hero-call .dot { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
   .lp-hero-call.lp-hero-call .k { display: block; grid-column: 2; white-space: normal; }
   .lp-hero-call.lp-hero-call .slot { grid-column: 2; }
-  .lp-hero-call.lp-hero-call .arr { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
+  .lp-hero-call.lp-hero-call .arr { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); margin: 0; }
+  .lp-hero-form .lp-engines { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 360px; margin: 20px auto 0; align-items: start; }
+  .lp-hero-form .lp-engine { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 5px; font-size: 12px; line-height: 1.4; white-space: nowrap; }
+  .lp-hero-form .lp-engine img { width: 20px; height: 20px; }
+  .lp-hero-form .lp-engine-new { margin: 0; font-size: 10px; }
 }
