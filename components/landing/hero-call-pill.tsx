@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import "./hero-call-mobile.css";
 import { formatDemoSlotShort, listDemoSlots } from "@/lib/demo/slots";
 
 /**
