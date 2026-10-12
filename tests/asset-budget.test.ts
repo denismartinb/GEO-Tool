@@ -59,7 +59,15 @@ const MAX_FILE_BYTES = 320 * 1024;
  * subir otro cuarto de mega: es por qué una portada del catálogo pesa 88 KB
  * cuando una equivalente cabe en 28.
  */
-const MAX_TOTAL_BYTES = 1.75 * 1024 * 1024;
+/**
+ * Articulo01 (2026-10-12): cinco WebP ilustrativas a 2604px, calidad 90.
+ * Base de public sin PDF de ejemplo: 1.833.690 bytes.
+ * Nuevos assets: 524.010 bytes; total previsto: 2.357.700 bytes.
+ * Denis aprueba ampliar solo el presupuesto total para estas cinco imagenes.
+ * 2304 KiB = 2.359.296 bytes: margen minimo de 1.596 bytes.
+ * No cambian el limite individual de 320 KiB, WebP obligatorio ni el PDF.
+ */
+const MAX_TOTAL_BYTES = 2304 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).
