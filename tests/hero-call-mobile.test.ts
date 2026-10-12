@@ -16,8 +16,10 @@ describe("mobile hero call layout", () => {
   });
   it("keeps label visible and reserves mobile rows and arrow space", () => {
     expect(css).toContain('.lp-hero-call.lp-hero-call .k { display: block; grid-column: 2;');
-    expect(css).toContain('.lp-hero-call.lp-hero-call .k, .lp-hero-call.lp-hero-call .slot { white-space: nowrap; }');
-    expect(css).toContain('grid-template-columns: 6px minmax(0, 1fr) auto');
-    expect(css).toContain('margin-left: 8px');
+    expect(css).toContain('.lp-hero-call.lp-hero-call .slot { white-space: nowrap; }');
+    expect(css).toContain('grid-template-columns: 6px auto');
+    expect(css).toContain('right: 14px');
+    expect(css).toContain('grid-template-columns: repeat(4, minmax(0, 1fr))');
+    expect(css).toContain('text-align: center');
   });
 });
