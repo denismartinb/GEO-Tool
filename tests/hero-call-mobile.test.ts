@@ -19,7 +19,9 @@ describe("mobile hero call layout", () => {
     expect(css).toContain('.lp-hero-call.lp-hero-call .slot { white-space: nowrap; }');
     expect(css).toContain('grid-template-columns: 6px auto');
     expect(css).toContain('right: 14px');
-    expect(css).toContain('grid-template-columns: repeat(4, minmax(0, 1fr))');
+    expect(css).toContain('flex-wrap: nowrap');
+    expect(css).toContain('flex-direction: row');
+    expect(css).toContain('font-size: 11.5px');
     expect(css).toContain('text-align: center');
   });
 });
