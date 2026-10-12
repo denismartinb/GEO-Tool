@@ -17,11 +17,11 @@ describe("mobile hero call layout", () => {
   it("keeps label visible and reserves mobile rows and arrow space", () => {
     expect(css).toContain('.lp-hero-call.lp-hero-call .k { display: block; grid-column: 2;');
     expect(css).toContain('.lp-hero-call.lp-hero-call .slot { white-space: nowrap; }');
-    expect(css).toContain('grid-template-columns: 6px auto');
-    expect(css).toContain('right: 14px');
+    expect(css).toContain('grid-template-columns: 6px auto auto');
+    expect(css).toContain('right: 12px');
     expect(css).toContain('flex-wrap: nowrap');
     expect(css).toContain('flex-direction: row');
     expect(css).toContain('font-size: 11.5px');
-    expect(css).toContain('text-align: center');
+    expect(css).toContain('margin-left: auto');
   });
 });
