@@ -12,7 +12,7 @@
   .lp-hero-call.lp-hero-call .k { display: block; grid-column: 2; white-space: normal; }
   .lp-hero-call.lp-hero-call .slot { grid-column: 2; }
   .lp-hero-call.lp-hero-call .arr { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); margin: 0; }
-  .lp-hero-form .lp-engines { display: flex; flex-wrap: nowrap; justify-content: space-between; gap: 6px; width: 100%; max-width: 360px; margin: 20px auto 0; align-items: start; }
+  .lp-hero-form .lp-engines { display: flex; flex-wrap: nowrap; justify-content: center; gap: 6px; width: 100%; max-width: 360px; margin: 20px auto 0; align-items: start; }
   .lp-hero-form .lp-engine { position: relative; display: flex; flex-direction: row; align-items: center; gap: 3px; padding-bottom: 16px; font-size: 12px; line-height: 1.4; white-space: nowrap; }
   .lp-hero-form .lp-engine img { flex: none; width: 16px; height: 16px; }
   .lp-hero-form .lp-engine-new { position: absolute; left: 19px; top: 20px; margin: 0; font-size: 10px; line-height: 1.2; }
