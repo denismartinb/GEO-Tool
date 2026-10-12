@@ -62,6 +62,16 @@ const MAX_FILE_BYTES = 320 * 1024;
 const MAX_TOTAL_BYTES = 1.75 * 1024 * 1024;
 
 /**
+ * Descarga voluntaria del informe GEO de ejemplo (PR #625).
+ * Sus ocho páginas no se cargan al abrir la landing: se descargan a petición.
+ * El PDF aprobado pesa 946176 bytes y tiene un presupuesto separado de 1 MiB.
+ * Solo esta ruta queda fuera del presupuesto de assets de las páginas;
+ * cualquier otro PDF o asset mantiene los límites originales.
+ */
+const EXAMPLE_REPORT_PATH = "informe-gratis/informe-ejemplo.pdf";
+const MAX_EXAMPLE_REPORT_BYTES = 1024 * 1024;
+
+/**
  * Imágenes de contenido: WebP (raster) o SVG (vectorial).
  *
  * PNG sigue permitido donde **un consumidor externo impone el formato**, que
@@ -109,9 +119,17 @@ const files = walk(publicDir).map((f) => ({
   bytes: statSync(f).size
 }));
 
+const pageAssets = files.filter((f) => f.path !== EXAMPLE_REPORT_PATH);
+
 describe("presupuesto de assets en public/", () => {
+  it("el informe descargable existe y no supera su presupuesto de 1 MiB", () => {
+    const report = files.find((f) => f.path === EXAMPLE_REPORT_PATH);
+    expect(report, "Falta el PDF de ejemplo aprobado").toBeDefined();
+    expect(report?.bytes).toBeGreaterThan(0);
+    expect(report?.bytes).toBeLessThanOrEqual(MAX_EXAMPLE_REPORT_BYTES);
+  });
   it("ningún fichero supera el tope por fichero", () => {
-    const tooBig = files
+    const tooBig = pageAssets
       .filter((f) => f.bytes > MAX_FILE_BYTES)
       .map((f) => `${f.path} (${Math.round(f.bytes / 1024)} KB)`);
 
@@ -126,11 +144,11 @@ describe("presupuesto de assets en public/", () => {
   });
 
   it("el total de public/ se mantiene dentro del presupuesto", () => {
-    const total = files.reduce((sum, f) => sum + f.bytes, 0);
+    const total = pageAssets.reduce((sum, f) => sum + f.bytes, 0);
 
     expect(
       total,
-      `public/ pesa ${Math.round(total / 1024)} KB y el tope son ` +
+      `Los assets de public/ (sin el informe descargable) pesan ${Math.round(total / 1024)} KB y el tope son ` +
         `${Math.round(MAX_TOTAL_BYTES / 1024)} KB. Todo esto se sirve desde el ` +
         "mismo origen que las páginas públicas."
     ).toBeLessThanOrEqual(MAX_TOTAL_BYTES);
