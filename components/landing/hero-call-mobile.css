@@ -1,0 +1,12 @@
+/* HERO-CALL-MOBILE-1: keep availability readable without changing content. */
+.lp-hero-call.lp-hero-call .dot, .lp-hero-call.lp-hero-call .arr { flex: none; }
+.lp-hero-call.lp-hero-call .k, .lp-hero-call.lp-hero-call .slot { white-space: nowrap; }
+@media (max-width: 600px) {
+  .lp-hero-call.lp-hero-call { display: grid; grid-template-columns: 22px minmax(0, 1fr); column-gap: 8px; row-gap: 8px; width: 100%; max-width: 360px; box-sizing: border-box; min-height: 44px; padding: 12px 14px; border-radius: 18px; text-align: left; }
+  .lp-hero-call.lp-hero-call .label { min-width: 0; line-height: 1.4; }
+  .lp-hero-call.lp-hero-call .next { grid-column: 2; display: grid; grid-template-columns: 6px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 4px; padding: 0; border: 0; line-height: 1.4; }
+  .lp-hero-call.lp-hero-call .dot { grid-column: 1; grid-row: 1 / span 2; align-self: center; }
+  .lp-hero-call.lp-hero-call .k { display: block; grid-column: 2; white-space: normal; }
+  .lp-hero-call.lp-hero-call .slot { grid-column: 2; }
+  .lp-hero-call.lp-hero-call .arr { grid-column: 3; grid-row: 1 / span 2; align-self: center; margin-left: 8px; }
+}
