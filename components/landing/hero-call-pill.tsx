@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import "./hero-call-mobile.css";
 import { formatDemoSlotShort, listDemoSlots } from "@/lib/demo/slots";
 
 /**
@@ -34,10 +35,10 @@ export function HeroCallPill() {
         {next ? (
           <>
             <span className="k">Próximo hueco: </span>
-            {next}
+            <span className="slot">{next}</span>
           </>
         ) : (
-          "L–V, 18:00–21:00"
+          <span className="slot">L–V, 18:00–21:00</span>
         )}
         <span className="arr" aria-hidden="true">→</span>
       </span>

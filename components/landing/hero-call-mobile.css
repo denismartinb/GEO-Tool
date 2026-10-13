@@ -1,0 +1,25 @@
+/* HERO-CALL-MOBILE-1: local layout only; copy and availability stay unchanged. */
+.lp-hero-call.lp-hero-call .dot,
+.lp-hero-call.lp-hero-call .arr { flex: none; }
+.lp-hero-call.lp-hero-call .k,
+.lp-hero-call.lp-hero-call .slot { white-space: nowrap; }
+@media (max-width: 600px) {
+  .lp-hero-call.lp-hero-call { position: relative; display: grid; grid-template-columns: 22px auto; justify-content: center; column-gap: 8px; row-gap: 4px; width: max-content; max-width: 100%; margin-left: auto; margin-right: auto; box-sizing: border-box; min-height: 44px; padding: 10px 16px; border-radius: 40px; text-align: left; }
+  .lp-hero-call.lp-hero-call .ic { position: static; grid-column: 1; grid-row: 1 / span 2; align-self: center; transform: none; }
+  .lp-hero-call.lp-hero-call .label { min-width: 0; grid-column: 2; grid-row: 1; font-size: 12px; line-height: 1.4; }
+  .lp-hero-call.lp-hero-call .next { display: grid; grid-column: 2; grid-row: 2; grid-template-columns: 6px auto auto; justify-content: start; align-items: center; column-gap: 4px; padding: 0; border: 0; font-size: 11px; line-height: 1.4; }
+  .lp-hero-call.lp-hero-call .dot { grid-column: 1; grid-row: 1; align-self: center; }
+  .lp-hero-call.lp-hero-call .k { display: block; grid-column: 2; white-space: nowrap; }
+  .lp-hero-call.lp-hero-call .slot { grid-column: 3; grid-row: 1; }
+  .lp-hero-call.lp-hero-call .arr { display: none; }
+  .lp-hero-form .lp-engines { display: flex; flex-wrap: nowrap; justify-content: center; gap: 6px; width: 100%; max-width: 360px; margin: 20px auto 0; align-items: start; }
+  .lp-hero-form .lp-engine { position: relative; display: flex; flex-direction: row; align-items: center; gap: 3px; padding-bottom: 16px; font-size: 12px; line-height: 1.4; white-space: nowrap; }
+  .lp-hero-form .lp-engine img { flex: none; width: 16px; height: 16px; }
+  .lp-hero-form .lp-engine-new { position: absolute; left: 19px; top: 20px; margin: 0; font-size: 10px; line-height: 1.2; }
+}
+@media (max-width: 340px) {
+  .lp-hero-form .lp-engines { gap: 4px; }
+  .lp-hero-form .lp-engine { font-size: 11.5px; }
+  .lp-hero-form .lp-engine img { width: 14px; height: 14px; }
+  .lp-hero-form .lp-engine-new { left: 17px; }
+}
