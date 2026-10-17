@@ -80,7 +80,7 @@ export function AgenticChecker() {
 
   return (
     <div className="ca-checker" id="comprobar">
-      <p className="ca-field-hint">Pega la dirección de un producto de tu tienda, no la portada</p>
+      <p className="ca-field-hint">Escribe la URL de una ficha de producto</p>
       <form className="ca-field" onSubmit={onSubmit} noValidate>
         <input
           ref={inputRef}

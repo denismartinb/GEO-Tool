@@ -25980,7 +25980,7 @@ lo tiene para un agente.
   los 5»). El que no se puede medir sale con el círculo vacío, «En una ficha»
   o «Sin medir», y su panel dice por qué.
 - **Se pide la ficha de un producto de forma explícita.** Encima del campo:
-  «Pega la dirección de un producto de tu tienda, no la portada». Con una
+  «Escribe la URL de una ficha de producto». Con una
   portada o una categoría, el aviso dice «Has pegado una portada o una
   categoría. Para la nota completa, prueba con la ficha de un producto» y
   lleva un botón «Probar con un producto» que devuelve al campo.
