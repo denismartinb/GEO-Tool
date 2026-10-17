@@ -611,6 +611,104 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "páginas rastreó Anthropic por cada visita que mandó a las webs en julio de 2025. Google rastreó 5.",
       source: "Cloudflare Radar, enero a julio de 2025"
     }
+  },
+  {
+    slug: "que-es-el-comercio-agentico",
+    title: "Qué es el comercio agéntico y qué cambia para tu tienda online",
+    seoTitle: "Qué es el comercio agéntico (agentic commerce)",
+    metaDescription:
+      "El comercio agéntico es la venta en la que un agente de IA busca, compara y compra por el cliente. Qué es, quién lo construye y qué cambia para tu web.",
+    description:
+      "El comercio agéntico (agentic commerce) es la compra en la que un agente de IA busca, compara y, si el cliente lo autoriza, paga. Qué es, en qué punto está en 2026, quién lo está construyendo y qué tiene que hacer una tienda online para no quedarse fuera.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/que-es-el-comercio-agentico/cover.webp",
+    coverIcon: "compass",
+    // AGENTIC-POSTS-1 (log §316). OpenAI (Sep 2025, Mar 2026), Google UCP
+    // (Jan 2026) and I/O (May 2026), Shopify (Mar 2026), Sopra Steria (May
+    // 2026). Product claims trace to lib/web-audit/robots.ts and page-checks.ts.
+    primaryKeyword: "comercio agéntico",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "310.000 M€",
+      label: "en compras online en Europa podrían pasar por agentes de IA en los próximos diez años.",
+      source: "Sopra Steria, encuesta a 8.400 consumidores de ocho países europeos (2026)"
+    }
+  },
+  {
+    slug: "como-compra-un-agente-de-ia",
+    title: "Cómo compra un agente de IA: los cinco pasos desde la pregunta hasta el pago",
+    seoTitle: "Cómo compra un agente de IA, paso a paso",
+    metaDescription:
+      "Un agente de IA entiende el encargo, busca, filtra con datos, elige tienda y paga con permiso. Los cinco pasos y dónde puede quedarse fuera tu marca.",
+    description:
+      "Un agente de IA no navega tu web como una persona: interpreta el encargo, lanza muchas búsquedas, filtra con datos estructurados, elige tienda y paga dentro de los límites que le fija el cliente. Los cinco pasos, con lo que publican OpenAI, Google, Visa y Mastercard, y en cuál puede quedarse fuera tu marca.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/como-compra-un-agente-de-ia/cover.webp",
+    coverIcon: "search",
+    // AGENTIC-POSTS-1 (log §316). OpenAI shopping help page, Google UCP and
+    // AP2 (TNW, May 2026), Cloudflare Web Bot Auth (Oct 2025).
+    primaryKeyword: "cómo compra un agente de ia",
+    cluster: "fundamentos"
+  },
+  {
+    slug: "web-preparada-para-el-comercio-agentico",
+    title: "¿Está tu web preparada para el comercio agéntico? 10 comprobaciones",
+    seoTitle: "¿Tu web está preparada para el comercio agéntico?",
+    metaDescription:
+      "Diez comprobaciones para saber si un agente de IA puede encontrar, entender y comprar en tu tienda: bots, datos de producto, feeds, políticas y pago.",
+    description:
+      "Diez comprobaciones para saber si un agente de IA puede encontrar tu tienda, entender tus productos y llegar hasta el pago: acceso de los bots, datos estructurados de producto, feeds, coherencia de precio y stock, políticas legibles, protección anti-bots y si la IA te nombra.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/web-preparada-para-el-comercio-agentico/cover.webp",
+    coverIcon: "shield",
+    // AGENTIC-POSTS-1 (log §316). Adobe (Jan 2026), OpenAI shopping help
+    // page, Google UCP, Cloudflare Web Bot Auth. Product claims trace to
+    // lib/web-audit/robots.ts, lib/web-audit/page-checks.ts and issue-labels.ts.
+    primaryKeyword: "web preparada para el comercio agéntico",
+    cluster: "playbooks",
+    heroStat: {
+      value: "+693%",
+      label: "creció el tráfico que llega desde asistentes de IA a tiendas online de EE. UU. en la campaña de Navidad de 2025, frente al año anterior.",
+      source: "Adobe Analytics, más de un billón de visitas a webs de comercio (2026)"
+    }
+  },
+  {
+    slug: "la-ia-descubre-tu-web-vende",
+    title: "Comprar dentro del chat se ha frenado: la IA descubre y tu web vende",
+    seoTitle: "Comprar en ChatGPT se frena: la IA descubre, tu web vende",
+    metaDescription:
+      "OpenAI aparcó el pago dentro de ChatGPT y apuesta por el descubrimiento. Qué pasó, qué dicen los datos y por qué ahora importa más que la IA te nombre.",
+    description:
+      "OpenAI lanzó el pago dentro de ChatGPT en 2025 y en 2026 lo movió a las apps de cada tienda para centrarse en el descubrimiento de productos. Qué pasó, qué dicen los datos de tráfico y conversión, y por qué eso hace más importante que la IA te nombre al recomendar.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/la-ia-descubre-tu-web-vende/cover.webp",
+    coverIcon: "trendUp",
+    // AGENTIC-POSTS-1 (log §316). OpenAI (Sep 2025), Digital Commerce 360
+    // quoting OpenAI (Mar 2026), Shopify (Mar 2026), Adobe (Jan 2026), Sopra
+    // Steria (May 2026).
+    primaryKeyword: "comprar dentro de chatgpt",
+    cluster: "sectores",
+    heroStat: {
+      value: "31%",
+      label: "más convierten las visitas que llegan desde asistentes de IA que el resto del tráfico de las tiendas online de EE. UU.",
+      source: "Adobe Analytics, campaña de Navidad de 2025, más de un billón de visitas"
+    }
+  },
+  {
+    slug: "protocolos-comercio-agentico-acp-ucp-ap2",
+    title: "ACP, UCP, AP2: los protocolos del comercio agéntico explicados sin tecnicismos",
+    seoTitle: "ACP, UCP y AP2: protocolos del comercio agéntico",
+    metaDescription:
+      "Qué son ACP (OpenAI y Stripe), UCP y AP2 (Google) y los protocolos de Visa y Mastercard para agentes de IA. Qué resuelve cada uno y qué hacer en tu tienda.",
+    description:
+      "ACP, UCP, AP2, Trusted Agent Protocol, Agent Pay: los protocolos con los que los agentes de IA descubren productos, pagan y se identifican. Qué resuelve cada uno, quién está detrás y qué tiene que hacer hoy una tienda online en España.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/protocolos-comercio-agentico-acp-ucp-ap2/cover.webp",
+    coverIcon: "chart",
+    // AGENTIC-POSTS-1 (log §316). OpenAI and Stripe (Sep 2025), Google UCP
+    // (Jan 2026), TNW on I/O 2026 (AP2 v0.2, FIDO), Cloudflare (Oct 2025).
+    primaryKeyword: "protocolos comercio agéntico",
+    cluster: "fundamentos"
   }
 ];
 

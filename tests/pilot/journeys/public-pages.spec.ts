@@ -82,7 +82,13 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // BLOG-ANIM-1 (2026-10-17, log §314).
   "la-ia-no-repite-la-misma-lista-de-marcas": "medicion",
   "query-fan-out-la-ia-no-busca-tu-pregunta": "fundamentos",
-  "bots-de-ia-robots-txt-cuales-dejar-entrar": "playbooks"
+  "bots-de-ia-robots-txt-cuales-dejar-entrar": "playbooks",
+  // AGENTIC-POSTS-1 (2026-10-17, log §316).
+  "que-es-el-comercio-agentico": "fundamentos",
+  "como-compra-un-agente-de-ia": "fundamentos",
+  "web-preparada-para-el-comercio-agentico": "playbooks",
+  "la-ia-descubre-tu-web-vende": "sectores",
+  "protocolos-comercio-agentico-acp-ucp-ap2": "fundamentos"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

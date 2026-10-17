@@ -25746,3 +25746,38 @@ nada (BUILD-BUDGET-1).
 hasta que lleve este commit, su script sigue sin saltar la carpeta. Una vez
 mergeado, se trae `main` a esa rama una vez. No se añade a la comprobación de
 directorios existentes del test porque la carpeta sólo existe en esa rama.
+
+## 316. AGENTIC-POSTS-1: cinco artículos sobre comercio agéntico (2026-10-17)
+
+**Qué.** Cinco artículos para empezar a ocupar «comercio agéntico» antes de que
+haya competencia en castellano, a petición del fundador (2026-10-17), en
+paralelo al hilo que diseña la auditoría de preparación agéntica:
+`que-es-el-comercio-agentico` (fundamentos, pilar), `como-compra-un-agente-de-ia`
+(fundamentos, reutiliza `FanOut`), `web-preparada-para-el-comercio-agentico`
+(playbooks, diez comprobaciones), `la-ia-descubre-tu-web-vende` (sectores, el
+repliegue de Instant Checkout) y `protocolos-comercio-agentico-acp-ucp-ap2`
+(fundamentos). Cinco portadas WebP nuevas en el lenguaje del catálogo; el
+presupuesto de `public/` sube 64 KiB.
+
+**Fuentes.** Sólo primarias o prensa del sector que cita a la empresa: OpenAI
+(Instant Checkout, sept. 2025; centro de ayuda de compras), Digital Commerce
+360 citando a OpenAI (mar. 2026), Google Developers (UCP, ene. 2026), TNW sobre
+I/O 2026 (Universal Cart, AP2 v0.2, FIDO), Cloudflare (Web Bot Auth, Visa y
+Mastercard, oct. 2025), Shopify (Agentic Storefronts, mar. 2026), Adobe
+(Navidad de 2025, más de un billón de visitas), Morgan Stanley (dic. 2025) y
+Sopra Steria (8.400 consumidores de ocho países, feb. 2026). Se descartó el
+estudio de IA de IAB Spain (oct. 2026) porque la nota no publica muestra, y el
+dato de conversión de Walmart en ChatGPT porque sólo aparece de segunda mano.
+
+**Honestidad.** Ningún artículo promete la auditoría agéntica que se está
+diseñando: lo que GenScore hace se traza a `lib/web-audit/robots.ts`
+(bots de IA), `page-checks.ts` (datos estructurados, incluido `Product`, e
+intro respuesta-primero) y al escaneo. Cada artículo dice lo que no revisa
+todavía (feeds, coherencia de precio y stock, protocolos de pago, firma de
+agentes, checkout). Y que el pago con agentes no tiene fecha pública para
+España a octubre de 2026.
+
+**Pendiente.** El enlace de Drive que mandó el fundador no se pudo abrir desde
+la sesión (cuenta distinta del conector), así que no se usó. Si la auditoría
+agéntica sale, estos cinco artículos son los que hay que refrescar en el mismo
+PR para que dejen de decir «no lo revisa todavía».

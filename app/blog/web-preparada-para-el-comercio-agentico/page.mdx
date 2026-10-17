@@ -1,0 +1,259 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  CompareTable,
+  Pill,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("web-preparada-para-el-comercio-agentico");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo sé si mi tienda online está preparada para el comercio agéntico?",
+    answer:
+      "Comprueba cuatro cosas: que los bots de búsqueda de la IA pueden entrar en tu web, que tus productos tienen datos estructurados completos (precio, stock, envío, devoluciones), que esos datos están en los canales que leen los agentes (como Google Merchant Center o el catálogo de tu plataforma) y que la IA te nombra cuando alguien pregunta por lo que vendes."
+  },
+  {
+    question: "¿Tengo que implantar ACP o UCP en mi tienda?",
+    answer:
+      "Si vendes con una plataforma como Shopify, lo normal es que la plataforma lo haga por ti. Si tienes una tienda a medida, hoy en España no hay ningún asistente que cobre dentro del chat de forma general, así que lo urgente no es el protocolo de pago sino que tus datos de producto sean legibles y coherentes."
+  },
+  {
+    question: "¿Debo bloquear a los bots de IA en robots.txt?",
+    answer:
+      "Si quieres que la IA te recomiende, no bloquees los bots que buscan para responder, como OAI-SearchBot o PerplexityBot. Los bots que solo recogen datos para entrenar modelos son otra decisión, y puedes bloquearlos sin dejar de aparecer en las respuestas."
+  },
+  {
+    question: "¿Una protección anti-bots puede impedir que un agente compre en mi web?",
+    answer:
+      "Sí. Si trata igual a todos los programas, también echa a los agentes legítimos. Cloudflare, Visa y Mastercard han definido una forma de que los agentes autorizados se identifiquen con una firma, para que la tienda pueda dejarles pasar sin abrir la puerta a los bots de scraping."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Tu web está preparada para el comercio agéntico si un agente de IA puede hacer
+tres cosas sin ayuda: encontrarte (la IA te nombra y su bot puede entrar),
+entender tus productos (precio, stock, envío y devoluciones escritos en datos
+estructurados y coherentes en todas partes) y llegar hasta el pago (tu
+protección anti-bots no le echa y tu checkout no exige pasos que solo puede
+dar una persona). Abajo tienes diez comprobaciones para revisarlo, ordenadas de
+la más urgente a la que puede esperar.
+
+</KeyTakeaway>
+
+## Por qué revisarlo ahora
+
+El pago hecho por un agente todavía no ha llegado a España, pero las visitas
+que llegan desde la IA sí, y crecen deprisa. En la campaña de Navidad de 2025,
+en Estados Unidos:
+
+<StatGrid label="Visitas desde asistentes de IA a tiendas online de EE. UU.">
+  <Stat value="+693%" label="creció el tráfico que llega desde asistentes de IA a tiendas online, frente al año anterior." source="Adobe Analytics, más de un billón de visitas a webs de comercio (2026)" />
+  <Stat value="31%" label="más convierten esas visitas que el resto del tráfico." source="Adobe Analytics, campaña de Navidad de 2025" tone="cyan" />
+  <Stat value="45%" label="más tiempo pasan en la web que las demás visitas." source="Adobe Analytics, campaña de Navidad de 2025" />
+</StatGrid>
+
+Son datos de un solo estudio y de otro mercado: lo útil es el orden de
+magnitud. Las mismas comprobaciones que preparan tu web para un agente que
+compra sirven ya hoy para la persona que llega desde ChatGPT o Gemini con la
+decisión casi tomada.
+
+## Las diez comprobaciones de un vistazo
+
+<Figure
+  label="Figura 1."
+  caption="Las diez comprobaciones de este artículo, a qué parte de la compra afectan y si GenScore las revisa hoy."
+  wide
+>
+
+<CompareTable>
+
+| Comprobación | Parte de la compra | Lo revisa GenScore |
+|---|---|---|
+| 1. La IA te nombra en tu categoría | Encontrarte | <Pill tone="si">Sí</Pill> |
+| 2. Los bots de búsqueda de la IA pueden entrar | Encontrarte | <Pill tone="si">Sí</Pill> |
+| 3. Datos estructurados de producto | Entenderte | <Pill tone="neutral">En parte</Pill> |
+| 4. Precio y stock iguales en todas partes | Entenderte | <Pill tone="neutral">No</Pill> |
+| 5. Envío y devoluciones legibles | Entenderte | <Pill tone="neutral">No</Pill> |
+| 6. Catálogo en los canales que leen los agentes | Entenderte | <Pill tone="neutral">No</Pill> |
+| 7. Respuestas directas a las dudas de compra | Entenderte | <Pill tone="si">Sí</Pill> |
+| 8. Lo que se dice de ti fuera de tu web | Elegirte | <Pill tone="neutral">En parte</Pill> |
+| 9. La protección anti-bots no echa a los agentes | Comprarte | <Pill tone="neutral">No</Pill> |
+| 10. Un checkout que no exige pasos imposibles | Comprarte | <Pill tone="neutral">No</Pill> |
+
+</CompareTable>
+
+</Figure>
+
+## Que te encuentre
+
+<NumberedSection n={1} title="La IA te nombra cuando preguntan por tu categoría">
+
+Es la comprobación que va primero porque todo lo demás depende de ella. Un
+agente parte de lo que la IA ya sabe y de lo que encuentra al buscar. Haz las
+preguntas que haría un cliente («qué tienda online recomiendas para…»,
+«alternativas a…») en ChatGPT, Gemini y Claude, y mira si sales. Una sola
+respuesta no basta: la IA <a href="/blog/la-ia-no-repite-la-misma-lista-de-marcas">casi
+nunca repite la misma lista de marcas</a>, así que lo que cuenta es en qué
+proporción de respuestas apareces.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Los bots de búsqueda de la IA pueden entrar">
+
+Revisa tu robots.txt. Los bots que buscan para responder, como OAI-SearchBot
+(ChatGPT) o PerplexityBot, tienen que poder leer tus fichas de producto. Los
+que solo recogen datos para entrenar modelos son otra decisión. Tienes el
+detalle de cada uno en <a href="/blog/bots-de-ia-robots-txt-cuales-dejar-entrar">los
+bots de la IA: cuáles dejar entrar</a>.
+
+</NumberedSection>
+
+<QuickAction>Abre tu-dominio.com/robots.txt y busca «Disallow: /» debajo de cualquier bot de IA. Es la forma más común de desaparecer de las respuestas sin saberlo.</QuickAction>
+
+## Que entienda tus productos
+
+<NumberedSection n={3} title="Datos estructurados de producto">
+
+Cada ficha debería llevar datos estructurados de tipo Product (schema.org) con
+nombre, marca, precio, moneda, disponibilidad e identificadores como el código
+de barras. Es lo que permite a un agente comparar sin adivinar y saber que dos
+tiendas venden el mismo artículo.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Precio y stock iguales en todas partes">
+
+Si tu ficha dice 79 euros, tu feed de Google dice 85 y tu marketplace dice
+«agotado», el agente no sabe a quién creer y tiende a descartar. Antes de añadir
+canales, asegúrate de que todos beben de la misma fuente y se actualizan a la
+vez.
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Envío y devoluciones legibles">
+
+Plazos de entrega, coste de envío por destino y condiciones de devolución en
+páginas que se puedan leer sin iniciar sesión y sin abrir ventanas emergentes.
+Si el cliente pidió «que llegue antes del domingo», el agente necesita poder
+comprobarlo.
+
+</NumberedSection>
+
+<NumberedSection n={6} title="Tu catálogo, en los canales que leen los agentes">
+
+Google Merchant Center alimenta las compras de Google. ChatGPT usa datos de
+producto de las tiendas y de terceros, y ofrece a las tiendas un acceso directo
+por feed. Y si vendes con Shopify, desde marzo de 2026 tus productos se pueden
+encontrar en ChatGPT por defecto. Revisa qué canales tienes activos y si los
+datos están completos.
+
+</NumberedSection>
+
+<NumberedSection n={7} title="Respuestas directas a las dudas de compra">
+
+Tallas, compatibilidades, garantía, materiales. Las páginas que responden a la
+duda en el primer párrafo, sin rodeos, son las que la IA cita. Una sección de
+preguntas frecuentes por categoría ayuda a la persona y al agente.
+
+</NumberedSection>
+
+<QuickAction>Elige tus diez productos más vendidos y comprueba, ficha por ficha, que precio, stock, plazo de envío y devoluciones se pueden leer sin hacer clic en nada.</QuickAction>
+
+## Que te elija
+
+<NumberedSection n={8} title="Lo que se dice de ti fuera de tu web">
+
+OpenAI explica que ChatGPT resume opiniones de webs públicas y que no las
+verifica. Las reseñas, las comparativas y los artículos de terceros pesan en
+la elección tanto como tu ficha. Mira qué fuentes cita la IA cuando habla de tu
+categoría: ahí es donde te conviene estar.
+
+</NumberedSection>
+
+## Que pueda comprarte
+
+<NumberedSection n={9} title="La protección anti-bots no echa a los agentes legítimos">
+
+Si tu tienda usa un servicio anti-bots, pregunta si distingue a los agentes
+que se identifican con firma (el sistema Web Bot Auth en el que se apoyan Visa y
+Mastercard) de los bots de scraping. Bloquearlos a todos por igual te protege
+hoy, pero te dejará fuera cuando el pago con agentes llegue.
+
+</NumberedSection>
+
+<NumberedSection n={10} title="Un checkout que no exige pasos imposibles">
+
+Registro obligatorio, captchas en cada paso o formularios que solo funcionan
+con ratón son barreras para un agente. No hace falta rehacer el checkout hoy,
+pero sí apuntarlo: es lo primero que tocará adaptar cuando tu pasarela de pago
+o tu plataforma ofrezcan el pago con agentes en España.
+
+</NumberedSection>
+
+## Qué revisa GenScore y qué no
+
+GenScore cubre las comprobaciones que deciden si te encuentran. Mide si
+ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity te nombran en tus
+preguntas principales de búsqueda, y qué fuentes citan. Su Auditoría técnica
+revisa si tu robots.txt deja entrar a los bots de la IA, si tus páginas llevan
+datos estructurados (también de tipo producto) y si responden en el primer
+párrafo.
+
+Lo específico de la compra (coherencia de precio y stock entre canales, feeds,
+políticas de envío y devolución, protección anti-bots y checkout) no lo revisa
+todavía. Por eso la tabla de arriba lo marca como «No».
+
+<Verdict title="Empieza por las dos primeras">
+
+De las diez comprobaciones, las dos primeras son las únicas que, si fallan,
+anulan todas las demás: si la IA no te nombra y su bot no puede leerte, da
+igual lo perfecto que sea tu checkout. Son también las más rápidas de revisar.
+Las del pago pueden esperar a que tu plataforma las ofrezca; las de encontrarte,
+no.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Revisa las dos primeras comprobaciones hoy"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: te decimos si ChatGPT, Gemini, Claude y Perplexity nombran tu tienda, a quién nombran en tu lugar y si tu web deja entrar a sus bots."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

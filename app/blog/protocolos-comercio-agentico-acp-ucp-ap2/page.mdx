@@ -1,0 +1,211 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("protocolos-comercio-agentico-acp-ucp-ap2");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué es ACP (Agentic Commerce Protocol)?",
+    answer:
+      "Es el protocolo abierto que OpenAI y Stripe publicaron en septiembre de 2025 para que un agente de IA pueda comprar en una tienda. Nació para el pago dentro de ChatGPT; desde marzo de 2026 OpenAI lo mantiene como infraestructura para conectar a usuarios con tiendas, con el pago en las apps de cada tienda."
+  },
+  {
+    question: "¿Qué es UCP (Universal Commerce Protocol)?",
+    answer:
+      "Es el estándar abierto que Google presentó en enero de 2026, desarrollado con Shopify, Etsy, Wayfair, Target y Walmart. La tienda publica en un fichero estándar qué ofrece y cómo se le puede comprar, y los agentes lo leen sin integraciones a medida. Funciona en el Modo IA del buscador y en la app de Gemini."
+  },
+  {
+    question: "¿Qué es AP2 (Agent Payments Protocol)?",
+    answer:
+      "Es el protocolo de pagos para agentes de Google. Usa mandatos, contratos digitales firmados que dicen qué puede comprar el agente y hasta cuánto. Su versión de abril de 2026 permite compras sin la persona delante, y Google lo ha cedido a la FIDO Alliance."
+  },
+  {
+    question: "¿Tengo que implantar estos protocolos en mi tienda?",
+    answer:
+      "Si vendes con una plataforma como Shopify, lo normal es que la plataforma lo haga por ti. Si tu tienda es a medida, hoy en España no hay pago general con agentes, así que lo prioritario es que tus datos de producto sean completos y coherentes, porque es lo que todos estos protocolos leen."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Los protocolos del comercio agéntico son las reglas comunes con las que un
+agente de IA descubre productos, paga y demuestra que es de fiar. Los
+principales son cuatro familias: ACP (OpenAI y Stripe) y UCP (Google) para
+comprar, AP2 (Google) para pagar con permiso del cliente, y los protocolos de
+Visa y Mastercard, sobre Web Bot Auth, para que la tienda sepa quién entra. Una
+tienda pequeña o mediana no tiene que implantarlos a mano: llegarán a través de
+su plataforma y su pasarela. Lo que sí tiene que hacer es tener los datos de
+producto que todos ellos leen.
+
+</KeyTakeaway>
+
+## Por qué hacen falta protocolos
+
+Una persona sabe moverse por cualquier tienda online: encuentra el botón,
+rellena el formulario, mete la tarjeta. Un agente no. Si cada tienda le
+explicara sus productos y su checkout de una forma distinta, haría falta una
+integración a medida por tienda.
+
+Los protocolos resuelven eso: definen cómo una tienda dice qué vende y cómo se
+le compra, cómo un agente demuestra que actúa en nombre de un cliente y cómo
+ese cliente autoriza un pago. Son, en el fondo, lo que fue el HTTPS para el
+comercio electrónico: un acuerdo para que dos desconocidos puedan hacer una
+transacción.
+
+## Los protocolos, uno a uno
+
+<Figure
+  label="Figura 1."
+  caption="Los principales protocolos del comercio agéntico a octubre de 2026, quién los impulsa y qué resuelven. Elaboración propia a partir de los anuncios de OpenAI, Stripe, Google, Cloudflare, Visa y Mastercard."
+  wide
+>
+
+<CompareTable>
+
+| Protocolo | Quién lo impulsa | Qué resuelve | Desde |
+|---|---|---|---|
+| ACP (Agentic Commerce Protocol) | OpenAI y Stripe | Que un agente compre en una tienda | Septiembre de 2025 |
+| UCP (Universal Commerce Protocol) | Google, con Shopify, Etsy, Wayfair, Target y Walmart | Que la tienda publique qué vende y cómo se le compra, para cualquier agente | Enero de 2026 |
+| AP2 (Agent Payments Protocol) | Google, cedido a la FIDO Alliance | Que el cliente autorice qué puede pagar el agente y hasta cuánto | 2025, versión 0.2 en abril de 2026 |
+| Trusted Agent Protocol | Visa | Que la tienda reconozca a un agente autorizado | Octubre de 2025 |
+| Agent Pay | Mastercard | Que la tienda reconozca a un agente autorizado y su pago | Octubre de 2025 |
+| Web Bot Auth | Propuesta de Cloudflare, base de los dos anteriores | Que un agente firme cada petición con una clave pública | Mayo de 2025 |
+
+</CompareTable>
+
+</Figure>
+
+<NumberedSection n={1} title="ACP: el de OpenAI y Stripe">
+
+OpenAI y Stripe lo publicaron como código abierto en septiembre de 2025 para el
+pago dentro de ChatGPT. En marzo de 2026 OpenAI movió ese pago a las apps de
+cada tienda y dijo que el protocolo seguía como infraestructura para conectar
+a usuarios con tiendas. Lo contamos en <a href="/blog/la-ia-descubre-tu-web-vende">comprar
+dentro del chat se ha frenado</a>.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="UCP: el de Google para comprar">
+
+Google lo presentó en enero de 2026, desarrollado con Shopify, Etsy, Wayfair,
+Target y Walmart, y respaldado por más de veinte empresas como Visa,
+Mastercard, Stripe, Adyen y American Express. La idea es sencilla: la tienda
+publica en un fichero estándar de su web qué servicios ofrece, cómo se paga y
+dónde están sus puntos de conexión, y cualquier agente lo lee sin integración a
+medida. Es compatible con AP2 y con MCP, el estándar con el que los agentes se
+conectan a herramientas. Funciona en el Modo IA del buscador y en la app de
+Gemini, por ahora con el pago en Estados Unidos y con Canadá, Australia y Reino
+Unido anunciados.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="AP2: el permiso para pagar">
+
+Si UCP dice cómo comprar, AP2 dice quién da permiso. Funciona con mandatos:
+contratos digitales firmados en los que el cliente fija qué puede comprar el
+agente y hasta cuánto, y que dejan un registro de cada compra. Su versión de
+abril de 2026 añadió las compras sin la persona delante, por ejemplo unas
+entradas en el minuto en que salen a la venta. Google lo ha cedido a la FIDO
+Alliance, la misma organización que está detrás de las claves de acceso sin
+contraseña.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Visa, Mastercard y Web Bot Auth: quién entra en la tienda">
+
+Una tienda online recibe cada día miles de bots, y la mayoría no vienen a
+comprar. Visa (Trusted Agent Protocol) y Mastercard (Agent Pay) han construido
+sus protocolos sobre Web Bot Auth, una propuesta de Cloudflare: el agente firma
+cada petición con una clave pública registrada en un directorio, indica si
+viene a mirar o a pagar, y la tienda (o Cloudflare por ella) comprueba la
+firma. Así puede dejar pasar a los agentes autorizados sin abrir la puerta a
+los de scraping.
+
+</NumberedSection>
+
+## ¿Compiten o se complementan?
+
+Las dos cosas. ACP y UCP cubren un terreno parecido, el de cómo compra un
+agente en una tienda, y detrás hay dos ecosistemas que compiten: el de ChatGPT
+y el de Google. AP2 y los protocolos de Visa y Mastercard, en cambio, resuelven
+otras capas (el permiso del cliente y la identidad del agente) y están pensados
+para funcionar con cualquiera de los dos. Que Visa, Mastercard y Stripe
+aparezcan en varios a la vez es la mejor pista de que nadie quiere apostar a un
+solo caballo.
+
+## Qué tiene que hacer una tienda en España
+
+<Checklist
+  items={[
+    "Si vendes con Shopify u otra plataforma grande, sigue sus anuncios: los protocolos llegarán como un ajuste de tu panel, no como un desarrollo.",
+    "Si tu tienda es a medida, no implantes nada todavía: ningún pago con agentes funciona de forma general en España a octubre de 2026.",
+    "Lo que sí puedes hacer ya es lo que todos estos protocolos leen: datos de producto completos y coherentes (precio, stock, envío, devoluciones).",
+    "Pregunta a tu proveedor anti-bots si reconocerá a los agentes firmados con Web Bot Auth.",
+    "Y antes que todo lo anterior: comprueba si la IA te nombra cuando alguien pregunta por lo que vendes. Ningún protocolo te trae a un agente que no sabe que existes."
+  ]}
+/>
+
+<QuickAction>Si tienes dudas sobre qué revisar primero, empieza por las <a href="/blog/web-preparada-para-el-comercio-agentico">diez comprobaciones para saber si tu web está preparada</a>.</QuickAction>
+
+## Dónde encaja GenScore
+
+GenScore no implanta ni revisa estos protocolos. Mide el paso que va antes de
+todos ellos: si ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity nombran
+tu marca cuando alguien hace tus preguntas principales de búsqueda, y si tu web
+deja entrar a los bots de la IA y lleva datos estructurados. Es la parte del
+comercio agéntico que ya funciona en España.
+
+<Verdict title="Los protocolos son de las plataformas; la recomendación es tuya">
+
+Dentro de unos años, pagar con un agente será tan invisible como pagar con el
+móvil, y casi ninguna tienda tendrá que saber qué siglas hay debajo. Lo que no
+van a resolver las plataformas por ti es que la IA te elija. Si quieres el
+recorrido completo de una compra, sigue con <a href="/blog/como-compra-un-agente-de-ia">cómo
+compra un agente de IA, paso a paso</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Antes del protocolo, la recomendación"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: te decimos si ChatGPT, Gemini, Claude y Perplexity nombran tu marca cuando alguien pregunta por lo que vendes, y qué marcas salen en tu lugar."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

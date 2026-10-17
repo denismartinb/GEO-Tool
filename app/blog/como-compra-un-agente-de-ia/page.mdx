@@ -1,0 +1,225 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  PullQuote,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  FanOut
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-compra-un-agente-de-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cómo elige un agente de IA en qué tienda comprar?",
+    answer:
+      "Según la documentación de compras de ChatGPT, cuando varias tiendas venden el mismo producto pesan factores como la disponibilidad, el precio, la calidad y si la tienda es el vendedor principal. Los resultados no son anuncios: OpenAI dice que se seleccionan de forma independiente y no dependen de acuerdos comerciales."
+  },
+  {
+    question: "¿Puede un agente de IA pagar sin que yo lo apruebe?",
+    answer:
+      "Solo dentro de los límites que el cliente haya firmado antes. El protocolo de pagos de Google (AP2) usa mandatos: un contrato digital firmado que dice qué puede comprar el agente y hasta cuánto, y deja un registro de cada compra. Desde abril de 2026 permite compras sin la persona delante, siempre dentro de ese mandato."
+  },
+  {
+    question: "¿Cómo sabe una tienda que quien entra es un agente de fiar?",
+    answer:
+      "Con firmas criptográficas. El agente firma cada petición con una clave registrada en un directorio público, y la tienda (o su proveedor, como Cloudflare) comprueba la firma. Visa y Mastercard han construido sus protocolos para agentes sobre este sistema, llamado Web Bot Auth."
+  },
+  {
+    question: "¿En qué paso puede quedarse fuera mi marca?",
+    answer:
+      "En el primero que falle. Si la IA no te nombra, el agente no te busca; si su bot no puede leer tu web o tus datos de producto están incompletos, te descarta al filtrar; y si tu protección anti-bots bloquea a los agentes legítimos, no llega al pago."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Un agente de IA compra en cinco pasos: entiende el encargo, busca muchas cosas
+a la vez, filtra con los datos de producto que encuentra, elige tienda y paga
+dentro del límite que le ha dado el cliente. En cada paso puede descartar tu
+tienda por un motivo distinto: que la IA no te conozca, que su bot no pueda
+leer tu web, que tus datos estén incompletos o que tu protección anti-bots le
+cierre la puerta. Ninguno de esos motivos se ve en Google Analytics.
+
+</KeyTakeaway>
+
+## Paso 1: entiende el encargo
+
+Una persona escribe algo como «necesito un regalo para mi padre, que corre
+maratones, unos 80 euros, que llegue antes del domingo». El agente no lo trata
+como una búsqueda de palabras clave. Lo convierte en condiciones: categoría
+(material de running), presupuesto (en torno a 80 euros), fecha límite de
+entrega y un perfil (corredor de fondo).
+
+Esas condiciones son las que luego va a comprobar contra tus datos. Si tu ficha
+no dice cuándo llega el pedido, el agente no puede saber si cumples la tercera.
+
+## Paso 2: busca muchas cosas a la vez
+
+Antes de responder, los buscadores con IA dividen la pregunta en subtemas y
+lanzan muchas búsquedas en paralelo. Es lo que se llama query fan-out, y lo
+explicamos en <a href="/blog/query-fan-out-la-ia-no-busca-tu-pregunta">la IA no busca
+tu pregunta, busca muchas a la vez</a>. Un agente de compras hace lo mismo con
+el encargo.
+
+<Figure
+  label="Figura 1."
+  caption="Ilustración con un encargo inventado. Una sola petición de compra se convierte en varias búsquedas por detrás, y la propuesta final sale de cruzarlas."
+>
+
+<FanOut
+  question="Un regalo para un maratoniano, unos 80 €, que llegue antes del domingo"
+  searches={[
+    "mejores regalos para corredores de maratón",
+    "reloj o accesorio de running por menos de 90 euros",
+    "opiniones de geles y cinturones de hidratación",
+    "tiendas con entrega en 48 horas en España",
+    "política de devoluciones de regalos"
+  ]}
+  answer="Tres propuestas que cumplen precio y plazo, con la tienda que las tiene en stock y cuándo llegan."
+/>
+
+</Figure>
+
+Aquí se decide la lista corta. El agente parte de lo que la IA ya sabe y de lo
+que encuentra en esas búsquedas. Si tu marca no aparece cuando alguien pregunta
+por tu categoría, no entra en el resto del proceso.
+
+## Paso 3: filtra con datos, no con fotos
+
+Una persona mira la foto y lee la ficha. Un agente lee datos. La documentación
+de compras de ChatGPT dice que usa metadatos estructurados de la propia tienda
+y de terceros, como el precio y la descripción del producto, y que resume
+opiniones de webs públicas. Google pide a las tiendas que publiquen qué
+ofrecen en un manifiesto en un formato estándar.
+
+<Checklist
+  items={[
+    "Precio con impuestos y moneda, escrito en la página y en los datos estructurados.",
+    "Disponibilidad real, por talla o variante si aplica.",
+    "Plazo y coste de envío al destino del cliente.",
+    "Política de devoluciones en una página que se pueda leer sin iniciar sesión.",
+    "Identificadores de producto (marca, modelo, código de barras) que permitan saber que dos tiendas venden lo mismo."
+  ]}
+/>
+
+Un dato que falta no se interpreta a tu favor. Si el agente no puede comprobar
+que llegas antes del domingo, elige una tienda que sí lo diga.
+
+## Paso 4: elige tienda
+
+Cuando varias tiendas venden el mismo producto, el agente tiene que elegir. La
+página de ayuda de ChatGPT lo dice así:
+
+<PullQuote cite="OpenAI, centro de ayuda de compras en ChatGPT (traducción propia)">
+
+Las tiendas se ordenan por factores como la disponibilidad, el precio, la
+calidad y si son el vendedor principal.
+
+</PullQuote>
+
+OpenAI añade dos cosas que conviene leer despacio. Los resultados de producto
+no son anuncios ni dependen de acuerdos comerciales. Y las reseñas que resume
+no las verifica: las toma de webs públicas. Es decir, lo que se dice de ti
+fuera de tu web cuenta tanto como tu ficha.
+
+## Paso 5: paga dentro de un límite
+
+El último paso es el que más ha costado. Para que un agente pague hacen falta
+dos cosas: que la tienda sepa que el agente es legítimo y que el cliente haya
+autorizado esa compra.
+
+<NumberedSection n={1} title="La tienda comprueba quién entra">
+
+Visa y Mastercard han construido sus protocolos para agentes (Trusted Agent
+Protocol y Agent Pay) sobre Web Bot Auth, un sistema de firmas que Cloudflare
+valida por las tiendas. El agente firma cada petición con una clave pública
+registrada y la tienda comprueba la firma, si está en plazo y si la petición
+es para mirar o para pagar.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="El cliente firma un mandato">
+
+El protocolo de pagos de Google, AP2, usa mandatos: un contrato digital
+firmado que fija qué puede comprar el agente y hasta cuánto, y deja un registro
+de cada compra. Su versión de abril de 2026 permite comprar sin que la persona
+esté delante, por ejemplo unas entradas en el minuto en que salen a la venta.
+
+</NumberedSection>
+
+Hoy, en España, este último paso no está disponible de forma general: los
+pagos con agentes que se han lanzado empezaron en Estados Unidos. Los cuatro
+primeros pasos, en cambio, ya los recorre cualquiera que pregunta a ChatGPT o
+a Gemini qué comprar.
+
+<QuickAction>Si usas una protección anti-bots en tu tienda, pregunta a tu proveedor si distingue a los agentes firmados de los bots de scraping, o si los bloquea a todos por igual.</QuickAction>
+
+## Dónde se queda fuera una marca
+
+<Checklist
+  tone="evitar"
+  items={[
+    "La IA no te nombra cuando alguien pregunta por tu categoría: no entras en la lista corta del paso 2.",
+    "Tu robots.txt bloquea a los bots de búsqueda de la IA: el agente no puede leer tu web.",
+    "Tu ficha no dice precio, stock o plazo de entrega de forma legible: te descarta en el paso 3.",
+    "Tu protección anti-bots trata igual a un agente firmado que a un bot de scraping: no llega al pago."
+  ]}
+/>
+
+GenScore cubre los dos primeros puntos: mide si ChatGPT, Gemini, Claude y, en
+Pro y Agencia, Perplexity nombran tu marca en tus preguntas principales de
+búsqueda, y su Auditoría técnica revisa si tu robots.txt deja entrar a los bots
+de la IA y si tus páginas llevan datos estructurados. Los feeds de producto,
+los protocolos de pago y la firma de agentes no los revisa todavía.
+
+<Verdict title="El agente compra al final, pero elige al principio">
+
+De los cinco pasos, el pago es el que más titulares se lleva y el que menos
+depende de ti: lo resolverán las pasarelas y las plataformas de ecommerce. Los
+pasos que sí dependen de tu marca son los primeros: que la IA te conozca, que
+pueda leer tu web y que tus datos digan lo que el cliente pidió. Si quieres
+saber cómo tienes esos puntos, sigue con las <a href="/blog/web-preparada-para-el-comercio-agentico">diez
+comprobaciones para saber si tu web está preparada</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira si entras en la lista corta"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity, y te decimos si te nombran, a quién nombran en tu lugar y si tu web deja entrar a sus bots."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>
