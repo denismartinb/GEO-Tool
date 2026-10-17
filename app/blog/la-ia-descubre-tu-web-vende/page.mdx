@@ -1,0 +1,203 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  QuickAction,
+  PullQuote,
+  Checklist,
+  Stat,
+  StatGrid,
+  BarChart,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("la-ia-descubre-tu-web-vende");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Se puede comprar dentro de ChatGPT?",
+    answer:
+      "OpenAI lanzó el pago dentro de ChatGPT (Instant Checkout) en septiembre de 2025, solo en Estados Unidos. En marzo de 2026 anunció que ese pago pasaba a las apps de cada tienda dentro de ChatGPT y que su prioridad era la búsqueda y el descubrimiento de productos. En España no hay pago general dentro del chat a octubre de 2026."
+  },
+  {
+    question: "¿Por qué OpenAI frenó el pago dentro de ChatGPT?",
+    answer:
+      "OpenAI no dio un motivo detallado: dijo que el pago se movía a las apps, donde las compras pueden hacerse de forma más fluida, y que priorizaba que la búsqueda y el descubrimiento de productos funcionaran bien. Los analistas del sector apuntan a la complejidad de gestionar pagos, stock y envíos de miles de tiendas desde un solo chat."
+  },
+  {
+    question: "¿Entonces el comercio agéntico no va a llegar?",
+    answer:
+      "Va a llegar, pero por partes. Descubrir y comparar productos con la IA ya funciona en todo el mundo. El pago hecho por el agente avanza más despacio, a través de las plataformas de ecommerce y de los protocolos de Google, Visa y Mastercard. Mientras tanto, la IA recomienda y la web de la tienda vende."
+  },
+  {
+    question: "¿Qué tiene que hacer una tienda online si la IA solo descubre?",
+    answer:
+      "Asegurarse de que la IA la nombra cuando alguien pregunta por lo que vende y de que la visita que llega desde la IA encuentra en su web lo que la IA prometió: precio, stock y plazos claros. Esas visitas llegan con la decisión casi tomada."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+OpenAI lanzó en 2025 el pago dentro de ChatGPT y en marzo de 2026 lo movió a
+las apps de cada tienda para centrarse en que la búsqueda y el descubrimiento
+de productos funcionen bien. El comercio agéntico no ha muerto: se ha partido
+en dos. La IA decide qué tiendas entran en la lista corta, y la web de la tienda
+cierra la venta. Para una marca, eso hace que lo urgente no sea el protocolo de
+pago, sino que la IA la nombre cuando alguien pregunta qué comprar.
+
+</KeyTakeaway>
+
+## Qué pasó con el pago dentro de ChatGPT
+
+En septiembre de 2025, OpenAI presentó Instant Checkout: comprar sin salir de
+ChatGPT, para usuarios de Estados Unidos, empezando por vendedores de Etsy y
+con más de un millón de tiendas de Shopify anunciadas como próximas. Lo
+acompañaba un protocolo abierto, el Agentic Commerce Protocol, hecho con Stripe.
+
+Seis meses después, el plan cambió. OpenAI lo explicó así a la prensa del
+sector:
+
+<PullQuote cite="OpenAI, citado por Digital Commerce 360, marzo de 2026 (traducción propia)">
+
+Instant Checkout pasa a las apps, donde las compras pueden hacerse de forma
+más fluida. Estamos priorizando que la búsqueda y el descubrimiento de
+productos en ChatGPT funcionen muy bien.
+
+</PullQuote>
+
+El protocolo sigue vivo como infraestructura para conectar a usuarios con
+tiendas, y algunas grandes cadenas, como Target, ya tenían su propia app dentro de ChatGPT. Lo
+que se aparcó es la idea de que cualquier compra empezara y terminara en el
+chat. Ese mismo mes, Shopify hizo que los productos de sus tiendas se pudieran
+encontrar en ChatGPT por defecto: descubrir en la IA, comprar en la tienda.
+
+## Lo que dicen los datos: la IA trae menos visitas, pero mejores
+
+Mientras el pago en el chat se frenaba, las visitas que la IA manda a las
+tiendas no han parado de crecer. Los datos más sólidos son de Estados Unidos:
+
+<StatGrid label="Visitas desde asistentes de IA a tiendas online de EE. UU., Navidad de 2025">
+  <Stat value="+693%" label="creció ese tráfico frente al año anterior." source="Adobe Analytics, más de un billón de visitas a webs de comercio (2026)" />
+  <Stat value="31%" label="más convierte que el resto del tráfico de la tienda." source="Adobe Analytics, campaña de Navidad de 2025" tone="cyan" />
+  <Stat value="33%" label="menos probable es que se vaya nada más entrar." source="Adobe Analytics, campaña de Navidad de 2025" />
+</StatGrid>
+
+Es un solo estudio y de otro mercado, así que lo útil es la dirección, no el
+decimal: quien llega desde la IA ya ha comparado, y entra a comprar.
+
+## Lo que quieren los compradores: que la IA proponga
+
+La otra mitad de la explicación está en los compradores. Una encuesta de
+Sopra Steria a 8.400 consumidores de ocho países europeos, España incluida,
+preguntó en qué compras dejarían decidir a un agente de IA.
+
+<Figure
+  label="Figura 1."
+  caption="Porcentaje de consumidores europeos que delegaría cada tipo de compra en un agente de IA. Fuente: Sopra Steria, «From Click to Agent», encuesta a 8.400 consumidores de ocho países (trabajo de campo de febrero de 2026)."
+>
+
+<BarChart
+  title="Delegaría esta compra en un agente de IA"
+  max={50}
+  rows={[
+    { label: "Electrónica y tecnología", value: 45, highlight: true },
+    { label: "Facturas de energía", value: 39 },
+    { label: "Seguros", value: 36 },
+    { label: "Servicios financieros", value: 22 },
+    { label: "Salud o alimentación", value: 16 }
+  ]}
+/>
+
+</Figure>
+
+Ninguna categoría llega a la mitad. Y en la parte española del estudio, la
+inmensa mayoría pide que el agente proponga opciones y que la decisión final
+sea suya. El comprador de hoy quiere un asistente que le haga la lista corta,
+no un robot que pague por él.
+
+## Y mientras tanto, los agentes salen del chat
+
+Que OpenAI sacara el pago del chat no significa que nadie vaya a comprar con
+IA. En septiembre de 2026 la propia OpenAI lanzó Dots, sus agentes personales,
+y Meta lanzó Muse, que compra pagando con una tarjeta de un solo uso de Link,
+el monedero de Stripe. Grok Bot, Instinct y Tab hacen lo mismo. Ninguno compra
+dentro de una conversación: abren un navegador y compran en la web de la
+tienda.
+
+Es la misma idea de este artículo llevada un paso más allá: la IA decide la
+lista corta y la venta se cierra en tu web, aunque quien la recorra sea un
+agente. Lo contamos en <a href="/blog/agentes-personales-de-ia-que-compran">los
+agentes de IA que ya compran por ti</a>.
+
+## Qué significa para una marca
+
+Si la IA descubre y la web vende, la tienda se juega la venta en dos sitios
+distintos, y solo uno de ellos es suyo.
+
+<Checklist
+  items={[
+    "En la conversación: que la IA te nombre cuando alguien pregunta por lo que vendes. Si no sales en la lista corta, la visita no llega.",
+    "En tu web: que la persona que llega desde la IA encuentre lo que le prometieron, con precio, stock y plazos a la vista.",
+    "En medio: que la IA pueda leer tu web y tus datos de producto, para que lo que dice de ti sea correcto."
+  ]}
+/>
+
+<QuickAction>Mira en tu analítica cuántas visitas te llegan ya desde chatgpt.com, gemini.google.com o perplexity.ai, y cuánto convierten frente al resto. Si no sabes separarlas, empieza por <a href="/blog/como-medir-trafico-chatgpt-ga4">cómo medir el tráfico de ChatGPT en GA4</a>.</QuickAction>
+
+## Dónde encaja GenScore
+
+GenScore mide la primera de esas tres: si ChatGPT, Gemini, Claude y, en Pro y
+Agencia, Perplexity nombran tu marca cuando alguien hace tus preguntas
+principales de búsqueda, en qué proporción de respuestas, y qué marcas salen
+en tu lugar. Su Auditoría técnica revisa también la tercera en lo básico: si tu
+robots.txt deja entrar a los bots de la IA y si tus páginas llevan datos
+estructurados.
+
+<Verdict title="La lista corta se decide antes de la visita">
+
+El pago dentro del chat volverá, probablemente a través de las plataformas de
+ecommerce y con otro nombre. Pero la parte que ya funciona en España es la que
+más depende de tu marca: que la IA te recomiende. Una tienda que espera a que
+llegue el pago con agentes para preocuparse habrá perdido, mientras tanto, a
+todos los clientes que preguntaron a la IA y no la vieron. Si quieres el
+contexto completo, empieza por <a href="/blog/que-es-el-comercio-agentico">qué es
+el comercio agéntico</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Entras en la lista corta de la IA?"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te enseñamos en qué proporción de respuestas sales y qué tiendas salen en tu lugar."
+/>
+
+</div>
+
+<RelatedPosts cluster="sectores" currentSlug={post.slug} />
+
+</BlogPageShell>

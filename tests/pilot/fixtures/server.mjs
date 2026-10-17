@@ -101,7 +101,14 @@ const BLOG_SLUGS = [
   // BLOG-ANIM-1 (2026-10-17, log §314).
   "la-ia-no-repite-la-misma-lista-de-marcas",
   "query-fan-out-la-ia-no-busca-tu-pregunta",
-  "bots-de-ia-robots-txt-cuales-dejar-entrar"
+  "bots-de-ia-robots-txt-cuales-dejar-entrar",
+  // AGENTIC-POSTS-1 (2026-10-17, log §316).
+  "que-es-el-comercio-agentico",
+  "como-compra-un-agente-de-ia",
+  "web-preparada-para-el-comercio-agentico",
+  "la-ia-descubre-tu-web-vende",
+  "protocolos-comercio-agentico-acp-ucp-ap2",
+  "agentes-personales-de-ia-que-compran"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

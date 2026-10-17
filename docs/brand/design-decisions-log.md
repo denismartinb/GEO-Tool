@@ -25746,3 +25746,86 @@ nada (BUILD-BUDGET-1).
 hasta que lleve este commit, su script sigue sin saltar la carpeta. Una vez
 mergeado, se trae `main` a esa rama una vez. No se añade a la comprobación de
 directorios existentes del test porque la carpeta sólo existe en esa rama.
+
+## 316. AGENTIC-POSTS-1: cinco artículos sobre comercio agéntico (2026-10-17)
+
+**Qué.** Cinco artículos para empezar a ocupar «comercio agéntico» antes de que
+haya competencia en castellano, a petición del fundador (2026-10-17), en
+paralelo al hilo que diseña la auditoría de preparación agéntica:
+`que-es-el-comercio-agentico` (fundamentos, pilar), `como-compra-un-agente-de-ia`
+(fundamentos, reutiliza `FanOut`), `web-preparada-para-el-comercio-agentico`
+(playbooks, diez comprobaciones), `la-ia-descubre-tu-web-vende` (sectores, el
+repliegue de Instant Checkout) y `protocolos-comercio-agentico-acp-ucp-ap2`
+(fundamentos). Cinco portadas WebP nuevas en el lenguaje del catálogo; el
+presupuesto de `public/` sube 64 KiB.
+
+**Fuentes.** Sólo primarias o prensa del sector que cita a la empresa: OpenAI
+(Instant Checkout, sept. 2025; centro de ayuda de compras), Digital Commerce
+360 citando a OpenAI (mar. 2026), Google Developers (UCP, ene. 2026), TNW sobre
+I/O 2026 (Universal Cart, AP2 v0.2, FIDO), Cloudflare (Web Bot Auth, Visa y
+Mastercard, oct. 2025), Shopify (Agentic Storefronts, mar. 2026), Adobe
+(Navidad de 2025, más de un billón de visitas), Morgan Stanley (dic. 2025) y
+Sopra Steria (8.400 consumidores de ocho países, feb. 2026). Se descartó el
+estudio de IA de IAB Spain (oct. 2026) porque la nota no publica muestra, y el
+dato de conversión de Walmart en ChatGPT porque sólo aparece de segunda mano.
+
+**Honestidad.** Ningún artículo promete la auditoría agéntica que se está
+diseñando: lo que GenScore hace se traza a `lib/web-audit/robots.ts`
+(bots de IA), `page-checks.ts` (datos estructurados, incluido `Product`, e
+intro respuesta-primero) y al escaneo. Cada artículo dice lo que no revisa
+todavía (feeds, coherencia de precio y stock, protocolos de pago, firma de
+agentes, checkout). Y que el pago con agentes no tiene fecha pública para
+España a octubre de 2026.
+
+**Pendiente.** El enlace de Drive que mandó el fundador no se pudo abrir desde
+la sesión (cuenta distinta del conector), así que no se usó. Si la auditoría
+agéntica sale, estos cinco artículos son los que hay que refrescar en el mismo
+PR para que dejen de decir «no lo revisa todavía».
+
+**Ampliación: agentes personales (mismo día, a petición del fundador).** Sexto
+artículo, `agentes-personales-de-ia-que-compran` (fundamentos), sobre Muse
+(Meta), Dots (OpenAI), Instinct, Grok Bot y Tab, y un párrafo con enlace en los
+otros cinco. Fuentes: Meta (8 sept. 2026), TechCrunch (Instinct, ago. y sept.;
+Dots, 29 sept.; Tab, 7 oct.), WIRED (prueba de Dots, citada por su resultado),
+Shopify vía PYMNTS (checkout para agentes con navegador, 28 sept.), Yahoo
+Finance (Amazon bloquea a Grok Bot, 15 oct.), TeslaNorth (compra de LEGO, 10
+oct.). La disponibilidad por país sólo se afirma donde la empresa la publica
+(Muse: EE. UU. y Canadá; compras de Grok Bot: EE. UU.); del resto se dice «no
+publicado». El fundador pidió relacionarlo con la comprobación agéntica que
+diseña el hilo «Comercio agéntico en GenScore»: los artículos dicen que «estamos
+construyendo» una comprobación y que «todavía no está disponible», sin nombre,
+fecha ni promesa de lo que medirá más allá de leer y comprar. El presupuesto de
+`public/` sube otros 16 KiB por la sexta portada.
+
+**Segunda ampliación: diagramas (mismo día, a petición del fundador).** El
+fundador echó en falta imágenes y propuso usar las oficiales de cada empresa.
+Se descartaron los logotipos y fotos de prensa de terceros: sin permiso de su
+kit de prensa no se publican, y los avatares van con iniciales sobre la
+paleta de la casa. En su lugar, cuatro diagramas propios en
+`components/blog/article/diagrams.tsx` (`StepFlow`, `Timeline`,
+`AgentLineup`, `TwoDoors`), HTML real con animación CSS pura y quietos con
+movimiento reducido, como BLOG-ANIM-1 (§314). En el artículo de los agentes
+van el flujo de compra con los puntos donde se para un agente, las fichas de
+los cinco (sustituyen a la tabla, con el mismo contenido) y Shopify frente a
+Amazon. En el pilar van la misma compra hecha por una persona y por un agente,
+la cronología de hitos y las tres puertas (descubrir, entender, comprar). La
+portada de los agentes se redibuja con sus cinco nombres convergiendo en un
+cursor que pulsa «Comprar» (+8 KiB, dentro del margen del presupuesto).
+El fundador vio la cabecera oscura del artículo igual que antes (la portada
+WebP sólo sale en el índice y en la tarjeta social, §247) y pidió cifra,
+imagen o logos. La cabecera del de los agentes lleva ahora una ficha propia
+por agente (inicial sobre degradado, no su logotipo) y `heroStat` con la
+valoración de Instinct que el artículo ya publica (10.000 M$, Yahoo Finance).
+`ArticleHero` deja de esconder `heroLogos` cuando hay `heroStat`: pinta los
+dos, primero las fichas.
+Después el fundador pidió los iconos oficiales y quitar la cifra grande («es
+demasiado las dos cosas destacadas»). Muse lleva el logo de Meta, Dots el de
+OpenAI (el mismo fichero que ya usa el producto) y Grok Bot el de Grok, de
+paquetes de iconos públicos; Instinct y Tab siguen con inicial porque no hay
+una marca suya alcanzable desde aquí. La valoración de Instinct pasa al
+subtítulo y el post deja de declarar `heroStat`.
+Después el fundador reescribió el subtítulo con sus palabras, ya sin la
+cifra. Los ficheros de Meta y Grok se renombraron porque el navegador seguía
+sirviendo la inicial que tenían antes con el mismo nombre.
+Por último el fundador mandó los logos de Instinct y Tab, que sustituyen a
+las dos iniciales que quedaban.

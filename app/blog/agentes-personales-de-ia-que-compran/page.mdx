@@ -1,0 +1,317 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  PullQuote,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  StepFlow,
+  AgentLineup,
+  TwoDoors
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("agentes-personales-de-ia-que-compran");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué es Muse de Meta?",
+    answer:
+      "Muse es el agente personal de inteligencia artificial que Meta presentó el 8 de septiembre de 2026. No se limita a responder: abre un navegador, rellena formularios, reserva viajes y, con el permiso del usuario, compra pagando con una tarjeta de un solo uso de Link, el monedero de Stripe. A octubre de 2026 funciona en Estados Unidos y Canadá."
+  },
+  {
+    question: "¿Qué es Dots de OpenAI?",
+    answer:
+      "Dots son los agentes personales que OpenAI presentó el 29 de septiembre de 2026. Trabajan en segundo plano hacia objetivos que fija el usuario y se lanzan desde ChatGPT o Codex, en los planes Pro y Business Premium. OpenAI no ha detallado cómo pagan cuando compran."
+  },
+  {
+    question: "¿Qué es Instinct?",
+    answer:
+      "Instinct es un agente personal de una startup de San Francisco que no tiene app: se le habla por SMS, iMessage, WhatsApp o correo. Hace reservas, gestiona el correo y compra, y Shopify ha confirmado que puede pagar con Shop Pay en sus tiendas. A octubre de 2026 funciona por invitación."
+  },
+  {
+    question: "¿Grok Bot puede comprar por internet?",
+    answer:
+      "Sí. Desde finales de agosto de 2026, Grok Bot puede comprar en tiendas online para usuarios de Estados Unidos que conecten su cuenta de Link, el monedero de Stripe. Genera una tarjeta virtual para cada compra y necesita la aprobación del usuario antes de cada cargo."
+  },
+  {
+    question: "¿Estos agentes funcionan en España?",
+    answer:
+      "No de forma general. Muse está en Estados Unidos y Canadá, las compras de Grok Bot se anunciaron para Estados Unidos e Instinct funciona por invitación. Dots y Tab no han publicado una lista de países con compras. Ninguno ha dado una fecha para comprar en España a octubre de 2026."
+  },
+  {
+    question: "¿Puede una tienda online bloquear a estos agentes?",
+    answer:
+      "Sí. Amazon bloqueó a Muse en septiembre de 2026 y los usuarios de Grok Bot denunciaron el mismo bloqueo en octubre. Shopify hizo lo contrario: abrió el pago de las tiendas que lo permiten a los agentes que compran con el permiso del cliente. Es una decisión de negocio, y conviene tomarla a propósito y no por defecto."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son agentes personales de
+inteligencia artificial que se han lanzado o abierto entre agosto y octubre de
+2026. A diferencia de un chat, actúan: abren un navegador en un ordenador en la
+nube, rellenan formularios y, con el permiso del usuario, pagan con una tarjeta
+de un solo uso. Casi todos empezaron en Estados Unidos y ninguno tiene fecha
+para comprar en España. Para una tienda online el cambio es concreto: estos
+agentes entran en tu web como lo haría una persona, así que tu ficha de
+producto, tu protección anti-bots y tu checkout deciden si pueden comprarte.
+
+</KeyTakeaway>
+
+## Qué es un agente personal de IA
+
+Un asistente como ChatGPT o Gemini responde a lo que le preguntas. Un agente
+personal recibe un encargo y lo ejecuta por su cuenta: «reserva mesa para
+cuatro el sábado», «cancela esa suscripción», «cómprame unas zapatillas como
+las que tengo, en mi talla, por menos de 100 euros». Para hacerlo tiene acceso
+a tu correo, tu calendario y, cuando hace falta, a un medio de pago, y te pide
+permiso antes de lo que no se puede deshacer.
+
+El otoño de 2026 ha sido el de su llegada al gran público. En seis semanas han
+salido los de Meta y OpenAI, se ha disparado la valoración de Instinct y han
+aparecido Grok Bot y Tab. Todos prometen lo mismo: que dejes de hacer tú las
+gestiones, también las compras.
+
+Así es una compra hecha por uno de estos agentes, paso a paso, y los puntos
+donde suele quedarse a medias:
+
+<Figure
+  label="Figura 1."
+  caption="Cómo compra un agente personal con navegador, como Muse o Grok Bot, y dónde suele pararse. Elaboración propia a partir de los anuncios de Meta, Stripe y Shopify, de la prueba de WIRED y del bloqueo de Amazon."
+>
+
+<StepFlow
+  lanes={[
+    {
+      steps: [
+        { who: "Tú", title: "Le haces el encargo por chat o por mensaje" },
+        { who: "El agente", title: "Pregunta a la IA y hace una lista corta de tiendas", key: "Si la IA no te nombra, no entras en la lista" },
+        { who: "El agente", title: "Abre un navegador en la nube y entra en tu web", stop: "Protección anti-bots o bloqueo" },
+        { who: "El agente", title: "Lee la ficha: talla, precio final y envío" },
+        { who: "El agente", title: "Rellena el carrito y el checkout", stop: "Captcha o registro obligatorio" },
+        { who: "Tú", title: "Das tu «sí» y paga, a menudo con una tarjeta de un solo uso" }
+      ]
+    }
+  ]}
+/>
+
+</Figure>
+
+## Los cinco agentes de un vistazo
+
+<Figure
+  label="Figura 2."
+  caption="Los agentes personales que compran por el usuario, a octubre de 2026. Las iniciales sustituyen a los logotipos. Elaboración propia a partir de los anuncios de Meta, OpenAI, Shopify y Stripe y de TechCrunch, WIRED y Yahoo Finance."
+>
+
+<AgentLineup
+  agents={[
+    { name: "Muse", maker: "Meta", talk: "App y web", pay: "Tarjeta de un solo uso de Link (Stripe)", where: "EE. UU. y Canadá" },
+    { name: "Dots", maker: "OpenAI", talk: "Desde ChatGPT y Codex", pay: "No publicado", where: "Planes Pro y Business Premium" },
+    { name: "Instinct", maker: "Startup de San Francisco", talk: "SMS, iMessage, WhatsApp o correo", pay: "Shop Pay en tiendas Shopify", where: "Por invitación" },
+    { name: "Grok Bot", maker: "La empresa de Elon Musk", talk: "Chat de Grok", pay: "Tarjeta virtual de Link (Stripe)", where: "EE. UU." },
+    { name: "Tab", maker: "Startup Tab", talk: "iMessage o WhatsApp", pay: "Monedero propio", where: "Países no publicados" }
+  ]}
+/>
+
+</Figure>
+
+<NumberedSection n={1} title="Muse, de Meta">
+
+Meta lo presentó el 8 de septiembre de 2026 como un agente que «no solo
+responde preguntas, hace el trabajo». Funciona en un ordenador propio en la
+nube, abre el navegador, rellena formularios y negocia por el usuario. Para
+pagar usa Link, el monedero de Stripe, que genera una tarjeta distinta para
+cada compra y no enseña la real. Pide permiso antes de comprar.
+
+Dos semanas después llegaron los socios de comercio: Shopify, Walmart, Best
+Buy, Expedia e Instacart. Y llegó el primer portazo: Amazon le bloqueó su
+tienda, como contamos más abajo.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Dots, de OpenAI">
+
+OpenAI presentó Dots el 29 de septiembre de 2026, en su conferencia para
+desarrolladores. Son agentes que trabajan en segundo plano hacia los objetivos
+que fija el usuario, con poca supervisión, y que se pueden multiplicar en
+«especialistas» con sus propias credenciales y herramientas.
+
+WIRED los probó comprando un sofá. El agente hizo una buena lista corta, con
+precios y medidas, pero no llegó a comprar. Y en otra tarea, cancelar una
+suscripción, se quedó parado ante un captcha de la tienda y devolvió el
+encargo a la persona. Es justo el tipo de obstáculo que una tienda pone a
+propósito.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Instinct">
+
+Instinct es el agente que se hizo viral en agosto. No tiene app: se le escribe
+por SMS, iMessage, WhatsApp o correo, como a un asistente de carne y hueso.
+Reserva, ordena el correo, busca vuelos y compra. Shopify confirmó que puede
+pagar con Shop Pay, usando los datos de pago y envío que el usuario ya tiene
+guardados. Según Yahoo Finance, en septiembre cerró una ronda que la valora en
+10.000 millones de dólares.
+
+El 29 de septiembre empezó a recomendar productos sin que se los pidieran: listas
+de restaurantes, viajes y compras elegidas con «expertos» como chefs y
+diseñadores. Según TechCrunch, a muchos usuarios no les gustó: notaron que el
+agente les sugería cosas a partir de su correo y de sus viajes. Instinct no ha
+dicho si cobra a las marcas por aparecer.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Grok Bot">
+
+Grok Bot es la versión agente de Grok, la IA de Elon Musk. Desde el 28 de
+agosto de 2026 puede comprar en tiendas online para usuarios de Estados Unidos
+que conecten Link, el monedero de Stripe: genera una tarjeta virtual para cada
+compra y el usuario aprueba cada cargo. Musk contó el 10 de octubre que le
+había pedido unos LEGO y que Grok los compró en la propia web de LEGO.
+
+Cinco días después, varios usuarios denunciaron que Amazon bloqueaba los
+pedidos de Grok Bot. Musk respondió que quizá deberían montar un competidor de
+Amazon.
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Tab">
+
+Tab salió a la luz el 7 de octubre de 2026 con una valoración de 300 millones
+de dólares, según TechCrunch. Se le escribe por iMessage o WhatsApp y, según
+uno de sus fundadores, tiene su propio número de teléfono, su propio ordenador
+y su propio monedero: paga facturas, hace reservas y compra regalos o la
+compra del súper. Su regla de seguridad es sencilla:
+
+<PullQuote cite="Tab, en TechCrunch, octubre de 2026 (traducción propia)">
+
+Nada que no se pueda deshacer pasa sin tu «sí».
+
+</PullQuote>
+
+</NumberedSection>
+
+## Lo que tienen en común: entran en tu web como una persona
+
+Los protocolos del comercio agéntico (ACP, UCP, AP2) están pensados para que
+el agente hable con la tienda por un canal propio. Estos agentes no esperan a
+eso. Abren un navegador, cargan tu web, leen la ficha, añaden al carrito,
+rellenan el checkout y pagan con una tarjeta que genera el monedero. Si sabes
+cómo se compra en tu tienda, sabes cómo lo intentan.
+
+Ante eso, dos de los nombres más grandes del comercio online han tomado
+caminos opuestos:
+
+<Figure
+  label="Figura 3."
+  caption="Dos respuestas opuestas al mismo tipo de agente. Elaboración propia a partir del anuncio de Shopify (28 de septiembre de 2026) y de lo publicado sobre el bloqueo de Amazon a Muse y a Grok Bot."
+>
+
+<TwoDoors
+  open={{ who: "Shopify", verdict: "Abre la puerta", text: "El 28 de septiembre de 2026 anunció que los agentes con navegador pueden completar el pago en las tiendas que lo permiten, con la autorización del comprador, también con Shop Pay. Por debajo usa el protocolo UCP." }}
+  closed={{ who: "Amazon", verdict: "La cierra", text: "El 21 de septiembre bloqueó a Muse con un aviso de que el acceso de un agente no autorizado incumple sus condiciones de uso. En octubre, los usuarios de Grok Bot denunciaron el mismo bloqueo." }}
+/>
+
+</Figure>
+
+Amazon explicó su postura así:
+
+<PullQuote cite="Amazon, citado por la prensa estadounidense, septiembre de 2026 (traducción propia)">
+
+Los agentes de compra de terceros deberían operar de forma abierta y respetar
+la decisión del proveedor sobre si participar o no.
+
+</PullQuote>
+
+Según Amazon, Meta no le avisó, el agente no se identificaba y parecía guardar
+las credenciales de los clientes. Es la misma discusión que Visa, Mastercard y
+Cloudflare intentan resolver con la firma de los agentes: que una tienda pueda
+saber quién entra antes de decidir si le deja comprar. Lo contamos en <a href="/blog/protocolos-comercio-agentico-acp-ucp-ap2">los
+protocolos del comercio agéntico explicados sin tecnicismos</a>.
+
+## Qué significa para una tienda online en España
+
+Ninguno de estos agentes compra hoy en España de forma general. Pero no van a
+necesitar que tu tienda haga nada para llegar: les basta con un navegador. El
+día que se abran a Europa, entrarán en las webs que ya existen, tal como
+estén. Lo que puedes preparar desde ya:
+
+<Checklist
+  items={[
+    "Decide qué haces con ellos. Bloquearlos, dejarles pasar o dejar pasar solo a los que se identifican es una decisión de negocio. Que la tome tu protección anti-bots por defecto es la peor opción.",
+    "Que tu ficha se entienda sin adivinar: precio final, stock por talla o variante, plazo y coste de envío y política de devoluciones, escritos en la página.",
+    "Un checkout sin trampas para un agente legítimo: registro obligatorio, captchas o ventanas emergentes son los puntos donde se paran.",
+    "Que la IA te conozca. Estos agentes empiezan por una lista corta de tiendas, y esa lista sale de lo que la IA sabe y encuentra. Si no te nombra, el agente no llega a tu web."
+  ]}
+/>
+
+<QuickAction>Haz tú una compra de principio a fin en tu web, desde el móvil y sin iniciar sesión, y apunta cada obstáculo: ventanas emergentes, captchas, registro obligatorio, datos que no encuentras. Cada uno es un punto donde un agente puede pararse.</QuickAction>
+
+Si quieres revisarlo con más detalle, tienes las <a href="/blog/web-preparada-para-el-comercio-agentico">diez
+comprobaciones para saber si tu web está preparada</a> y los <a href="/blog/como-compra-un-agente-de-ia">cinco
+pasos con los que compra un agente</a>.
+
+## Dónde encaja GenScore
+
+GenScore mide hoy el paso que va antes de cualquier agente: si ChatGPT, Gemini,
+Claude y, en Pro y Agencia, Perplexity nombran tu marca cuando alguien hace tus
+preguntas principales de búsqueda, y qué marcas salen en tu lugar. Su
+Auditoría técnica revisa además si dejas entrar a los bots de la IA y si tus
+páginas llevan datos estructurados, también de tipo producto.
+
+Y estamos construyendo una comprobación pensada para estos agentes: si uno
+puede entrar en tu web, entender tus productos y llegar hasta la compra, y qué
+cambiar para que pueda. Todavía no está disponible. La contaremos aquí cuando
+lo esté.
+
+<Verdict title="Los agentes ya compran; en España, todavía no">
+
+En Estados Unidos ya hay agentes que compran en tiendas online con el permiso
+de su usuario, y no han pedido permiso a las tiendas para hacerlo: usan el
+navegador. Cuando lleguen a España harán lo mismo. La tienda que esté
+preparada no será la que haya implantado un protocolo, sino la que tenga una
+ficha clara, un checkout limpio, una decisión tomada sobre los bots y una
+marca que la IA conoce. Si quieres el contexto completo, empieza por <a href="/blog/que-es-el-comercio-agentico">qué
+es el comercio agéntico</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Te conoce la IA antes de que llegue el agente?"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te enseñamos en qué proporción de respuestas sales y qué marcas salen en tu lugar."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

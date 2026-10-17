@@ -22,6 +22,12 @@ posteriores (2.3b, 2.3c...), mismo patrón que GROWTH-1 hizo con el blog.
 | A1 | `/docs` (índice) | — | ✅ Publicado | #291 |
 | A2 | `/docs/empezar/primer-escaneo` | primer escaneo genscore | ✅ Publicado | #291 |
 | A3 | `/docs/informes/overview` | informe overview genscore | ✅ Publicado | #291 |
+| C1 | Qué es el comercio agéntico y qué cambia para tu tienda online (AGENTIC-POSTS-1, log §316) — slug `que-es-el-comercio-agentico` | `fundamentos` | 🟡 En PR (2026-10-17) | — |
+| C2 | Cómo compra un agente de IA: los cinco pasos desde la pregunta hasta el pago (AGENTIC-POSTS-1, log §316) — slug `como-compra-un-agente-de-ia` | `fundamentos` | 🟡 En PR (2026-10-17) | — |
+| C3 | ¿Está tu web preparada para el comercio agéntico? 10 comprobaciones (AGENTIC-POSTS-1, log §316) — slug `web-preparada-para-el-comercio-agentico` | `playbooks` | 🟡 En PR (2026-10-17) | — |
+| C4 | Comprar dentro del chat se ha frenado: la IA descubre y tu web vende (AGENTIC-POSTS-1, log §316) — slug `la-ia-descubre-tu-web-vende` | `sectores` | 🟡 En PR (2026-10-17) | — |
+| C5 | ACP, UCP, AP2: los protocolos del comercio agéntico explicados sin tecnicismos (AGENTIC-POSTS-1, log §316) — slug `protocolos-comercio-agentico-acp-ucp-ap2` | `fundamentos` | 🟡 En PR (2026-10-17) | — |
+| C6 | Muse, Dots, Instinct, Grok Bot y Tab: los agentes de IA que ya compran por ti (AGENTIC-POSTS-1, log §316) — slug `agentes-personales-de-ia-que-compran` | `fundamentos` | 🟡 En PR (2026-10-17) | — |
 | A4 | `/docs/metodologia/geo-score` | geo score metodología | ✅ Publicado | #291 |
 | A5 | `/docs/planes-y-limites` | planes genscore límites | ✅ Publicado | #291 |
 
