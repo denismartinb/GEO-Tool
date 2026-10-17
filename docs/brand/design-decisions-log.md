@@ -25513,3 +25513,51 @@ cuando se descongelen los textos.
 
 **Pendiente.** Nada en el envío: la deduplicación de los correos es otra fase
 (§308, LIFECYCLE-DEDUPE-1).
+
+## 310. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
+
+**Caso.** El 2026-10-12, en el proyecto de prueba `elcorteingles.es`, una
+respuesta de Claude a «¿Qué grandes almacenes tienen variedad de productos para
+el hogar en España?» decía literalmente «El Corte Inglés - La más grande…» y la
+pantalla de Prompts la etiquetaba «No te nombra» (0/8 con marca).
+
+**Causa comprobada en código** (sin acceso a la base de datos de producción):
+
+1. El asistente de alta no pide la marca: la deriva del dominio con
+   `deriveBrandFromDomain`, que para `elcorteingles.es` da `Elcorteingles`, sin
+   espacios.
+2. Los alias se derivan leyendo la portada (`deriveBrandAliases`), y
+   elcorteingles.es bloquea bots: sin portada no hay alias.
+3. `verifyMention` (MENTION-VERIFY-1, ADR 0021) sólo acepta el
+   `display_name_found` del extractor si «nombra plausiblemente» la marca, y
+   eso era contención de claves normalizadas: `el corte ingles` no contiene ni
+   está contenida en `elcorteingles`. La mención correcta del extractor se
+   rebajaba a «no mencionada» y se guardaba así en `brand_mentioned`, del que
+   leen la etiqueta del cajón, el recuento por prompt y la puntuación.
+
+Reproducido con una fixture de esa respuesta en
+`lib/scan/extraction.test.ts`: falla sin el cambio y pasa con él.
+
+**Decisión.** `namesPlausiblyMatch` acepta además el mismo nombre con y sin
+espacios: igualdad EXACTA de las claves sin espacios (mínimo 4 letras), nunca
+contención. «El Corte Inglés Viajes», «Corte Ingles» o «El Corte Ingenioso»
+no cuentan por esta regla, y la comprobación (b), que el nombre esté en el
+texto, no cambia. `matchDisplayName` (sólo presentación) lleva la misma regla.
+
+**Qué no se pudo comprobar.** El nombre de marca y los alias guardados en ese
+proyecto, el `display_name_found` original (al rebajar se pone a `null`) y si
+el extractor marcó `mentioned: true` o ya respondió `false` al ver
+«Elcorteingles». Si fue lo segundo, este cambio no basta para esa fila, y lo
+que lo arreglaría es que la marca guardada sea «El Corte Inglés» (editarla o
+un alias).
+
+**Datos históricos.** Las filas ya guardadas no cambian. Para corregirlas hay
+que volver a extraer las respuestas (`raw_response_text` está guardado) de los
+escaneos afectados y reescribir `brand_mentioned`/`extracted_json`; eso cuesta
+una llamada de LLM por respuesta y mueve puntuaciones pasadas. No se ejecuta
+ni se añade migración: lo decide Denis.
+
+**Pendiente conocido.** La contención previa sigue aceptando una palabra suelta
+contenida en la clave de la marca («Corte» frente a «Elcorteingles»). Es
+anterior a este cambio y no se toca aquí. Tampoco cambia `deriveBrandFromDomain`
+ni la cita literal del informe (`findQuote` busca el nombre guardado).
