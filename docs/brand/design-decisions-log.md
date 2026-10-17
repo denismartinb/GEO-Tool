@@ -25811,3 +25811,10 @@ Amazon. En el pilar van la misma compra hecha por una persona y por un agente,
 la cronología de hitos y las tres puertas (descubrir, entender, comprar). La
 portada de los agentes se redibuja con sus cinco nombres convergiendo en un
 cursor que pulsa «Comprar» (+8 KiB, dentro del margen del presupuesto).
+El fundador vio la cabecera oscura del artículo igual que antes (la portada
+WebP sólo sale en el índice y en la tarjeta social, §247) y pidió cifra,
+imagen o logos. La cabecera del de los agentes lleva ahora una ficha propia
+por agente (inicial sobre degradado, no su logotipo) y `heroStat` con la
+valoración de Instinct que el artículo ya publica (10.000 M$, Yahoo Finance).
+`ArticleHero` deja de esconder `heroLogos` cuando hay `heroStat`: pinta los
+dos, primero las fichas.

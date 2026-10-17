@@ -107,7 +107,9 @@ export type BlogPost = {
    * Groups are joined by a «+». Real brand files from `public/brand/engines/`,
    * never a made-up figure, and never GenScore's own mark next to Google's
    * «G»: side by side they read as the same logo (founder, 2026-10-11).
-   * Ignored when the post also has `heroStat`.
+   * A post about third-party products we have no permission to show uses
+   * its own monogram tiles instead (log §316).
+   * Rendered above `heroStat` when the post has both.
    */
   heroLogos?: { name: string; src: string; badge?: string }[][];
 };
@@ -720,6 +722,13 @@ export const BLOG_POSTS: BlogPost[] = [
       "Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son los agentes personales de IA que en el otoño de 2026 empezaron a comprar por sus usuarios. Qué hace cada uno, cómo paga, dónde funciona, por qué Amazon los bloquea y Shopify les abre la puerta, y qué tiene que preparar una tienda online en España.",
     datePublished: "2026-10-17",
     coverImage: "/blog/agentes-personales-de-ia-que-compran/cover.webp",
+    // Own monogram tiles, not the products' logos (log §316).
+    heroLogos: [[{ name: "Muse", src: "/blog/agentes-personales-de-ia-que-compran/agentes/muse.svg" }, { name: "Dots", src: "/blog/agentes-personales-de-ia-que-compran/agentes/dots.svg" }, { name: "Instinct", src: "/blog/agentes-personales-de-ia-que-compran/agentes/instinct.svg" }, { name: "Grok Bot", src: "/blog/agentes-personales-de-ia-que-compran/agentes/grok-bot.svg" }, { name: "Tab", src: "/blog/agentes-personales-de-ia-que-compran/agentes/tab.svg" }]],
+    heroStat: {
+      value: "10.000 M$",
+      label: "es la valoración de Instinct, el agente al que se le escribe por SMS o WhatsApp, tras su ronda de septiembre de 2026.",
+      source: "Yahoo Finance (septiembre de 2026)"
+    },
     coverIcon: "users",
     // AGENTIC-POSTS-1 (log §316). Meta newsroom (Sep 2026), TechCrunch on
     // Dots, Instinct and Tab (Aug-Oct 2026), WIRED's Dots test (Oct 2026),

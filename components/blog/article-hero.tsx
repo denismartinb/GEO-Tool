@@ -18,8 +18,10 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
  * no publica. El antetítulo sólo dice «Estudio GenScore» cuando la cifra es
  * nuestra.
  *
- * Un post de lanzamiento sin cifra puede declarar `heroLogos`: el logo de lo
- * que GenScore conecta junto a su propia marca, en el mismo hueco (log §296).
+ * Un post puede declarar `heroLogos`: el logo de lo que GenScore conecta junto
+ * a su propia marca (log §296), o, en un artículo sobre productos de terceros,
+ * una ficha propia por producto sin su logotipo (log §316). Con `heroStat` van
+ * los dos: primero las fichas y debajo la cifra.
  */
 export function ArticleHero({ post }: { post: BlogPost }) {
   const cluster = getBlogCluster(post.cluster);
@@ -46,20 +48,7 @@ export function ArticleHero({ post }: { post: BlogPost }) {
         <h1>{post.title}</h1>
         <p className="art-hero-sub">{post.description}</p>
 
-        {stat && (
-          <div className="art-hero-stat">
-            <div className="art-hero-big">
-              {pct ? stat.value.slice(0, -1) : stat.value}
-              {pct && <small>%</small>}
-            </div>
-            <p>
-              {stat.label}
-              <span>{stat.source}</span>
-            </p>
-          </div>
-        )}
-
-        {!stat && post.heroLogos && post.heroLogos.length > 0 && (
+        {post.heroLogos && post.heroLogos.length > 0 && (
           <div className="art-hero-logos">
             {post.heroLogos.map((group, groupIndex) => (
               <span key={groupIndex} className="art-hero-logo-pair">
@@ -80,6 +69,19 @@ export function ArticleHero({ post }: { post: BlogPost }) {
                 ))}
               </span>
             ))}
+          </div>
+        )}
+
+        {stat && (
+          <div className="art-hero-stat">
+            <div className="art-hero-big">
+              {pct ? stat.value.slice(0, -1) : stat.value}
+              {pct && <small>%</small>}
+            </div>
+            <p>
+              {stat.label}
+              <span>{stat.source}</span>
+            </p>
           </div>
         )}
 
