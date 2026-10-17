@@ -20,10 +20,11 @@ export function gscConnectHref(projectId: string) {
   return `/api/search-console/connect?projectId=${projectId}`;
 }
 
+// Copy by the founder (2026-10-17, log §311).
 const GAINS = [
   "En qué puesto sales para cada búsqueda.",
-  "Las búsquedas que están a un paso de la página 1.",
-  "Qué páginas tiene Google indexadas y cuáles no."
+  "Recomendaciones para mejorar en IA y SEO.",
+  "Posicionamiento de prompts SEO y GEO."
 ];
 
 function ConnectButton({ projectId, state }: { projectId: string; state: ConnectInviteState }) {
@@ -50,7 +51,7 @@ export function GscConnectPanel({ projectId, state }: { projectId: string; state
       </ul>
       <div className="gsc-invite-row">
         <ConnectButton projectId={projectId} state={state} />
-        <span className="gsc-invite-fine">Sólo lectura</span>
+        <span className="gsc-invite-fine">Acceso de solo lectura</span>
       </div>
     </div>
   );
@@ -73,13 +74,17 @@ export function GscConnectRow({ projectId, state }: { projectId: string; state: 
           <h4>
             {state === "reconnect"
               ? "Vuelve a conectar Google para recibir sus recomendaciones"
-              : "Aquí saldrán recomendaciones con tus datos de Google"}
+              : "Recomendaciones para mejorar en Google"}
           </h4>
-          <p>Conecta Search Console y te diremos qué búsquedas subir a la página 1 y qué títulos reescribir.</p>
+          <p>
+            Conecta Search Console y te diremos qué búsquedas subir a la página 1 y qué información tienes que
+            optimizar.
+          </p>
           <div className="gsc-invite-kinds">
             <span>Subir a la página 1</span>
-            <span>Título y descripción</span>
-            <span>Vigilar en la IA</span>
+            <span>SEO + GEO</span>
+            <span>Vigilar keywords en la IA</span>
+            <span>Posicionamiento global</span>
           </div>
         </div>
         <ConnectButton projectId={projectId} state={state} />

@@ -25526,8 +25526,13 @@ franja oscura del argumento SEO + GEO. **Eligió la A.**
 **Qué se hizo.**
 - **Visión general.** La mitad de Google de la tarjeta «Auditoría SEO»
   cambia la frase y el botón fantasma de §284 por un panel: «Añade lo que ve
-  Google», tres ventajas (puesto por búsqueda, búsquedas a un paso de la
-  página 1, páginas indexadas) y un botón «Conectar con Google» con el logo.
+  Google», tres ventajas y un botón «Conectar con Google» con el logo. Los
+  textos del panel y de la fila los escribió el fundador al revisar el
+  preview: «En qué puesto sales para cada búsqueda», «Recomendaciones para
+  mejorar en IA y SEO», «Posicionamiento de prompts SEO y GEO» y «Acceso de
+  solo lectura»; en Recomendaciones, «Recomendaciones para mejorar en Google»
+  con las etiquetas «Subir a la página 1», «SEO + GEO», «Vigilar keywords en
+  la IA» y «Posicionamiento global».
   Con la conexión perdida: «Se ha perdido la conexión con Google» y «Volver a
   conectar».
 - **Recomendaciones.** Sin conexión, la fila «Con tus datos de Google» de
