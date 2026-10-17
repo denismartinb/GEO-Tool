@@ -25855,6 +25855,13 @@ en especificidad a `.art-dg-agent` (el contenido quedaba pegado al borde en
 móvil). La regla de logotipos de `growth-content.md` pasa a «sólo con el
 visto bueno del fundador».
 
+El fundador pidió además que «Qué revisa GenScore y qué no» del artículo de
+las diez comprobaciones contara las dos mitades: optimizar la web para la IA
+y la Visibilidad agéntica con sus cinco componentes y recomendaciones
+priorizadas, como `/comercio-agentico`. Los componentes se describen según
+los checks reales de `lib/agentic-audit/score.ts`, y la Auditoría agéntica en
+la consola se dice «próximamente», igual que en la landing.
+
 ## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
 
 **Qué.** Línea nueva de producto sobre comercio agéntico, con el diseño
