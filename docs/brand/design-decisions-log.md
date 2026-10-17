@@ -25477,3 +25477,46 @@ construir.
 formato de la clave, si se extiende a los demás tipos, y verificar el alcance
 real (logs de Vercel con tres invocaciones `vercel-cron/1.0` a las 07:45,
 tres ids en Resend, filas de `email_sends` de esa cuenta).
+
+## 309. LIFECYCLE-DEDUPE-1 (2): la reserva previa a todos los correos de la secuencia y clave de Resend en el resumen semanal (2026-10-17)
+
+**Por qué.** Tras §308 el fundador pidió revisar si el duplicado podía pasar
+en otros correos. Revisión, correo a correo:
+
+- **Mismo fallo que el fin de prueba** (leer, enviar, anotar después): D1, D3,
+  último día (`trial_d5`), D+3, D+10 y primer escaneo.
+- **Sin ningún registro**: el resumen semanal de los lunes
+  (`runWeeklyDigest`). Una entrega duplicada del cron mandaba dos resúmenes
+  a cada cliente. `CRON_DIGEST_ENABLED` existe en Vercel (su valor no se pudo
+  leer, es sensible).
+- **Riesgo bajo**: recordatorio de confirmación (sin registro, pero Supabase
+  limita el reenvío al mismo email; no verificado) y avisos internos al
+  operador (vigilante, informe de afiliados), que como mucho repiten un correo
+  al fundador.
+- **Sin riesgo**: Stripe (registro de eventos, §268), bienvenida (el código
+  del enlace sólo se canjea una vez) y caída de puntuación (una por escaneo
+  finalizado, con lease).
+
+**Qué se decide.**
+
+- **`sendClaimedOnce`** (`lib/email/lifecycle/runner.ts`) es el único camino
+  de envío de la secuencia: reclama la fila, carga el contenido una vez, envía
+  con `lifecycleIdempotencyKey(kind, userId)` y aplica la política de §308.
+  `recordSend` desaparece. Sin migración: todos esos tipos ya tienen su fila
+  única en `email_sends`.
+- **Las plantillas de la secuencia devuelven `SendOutcome`** y aceptan la
+  clave como último parámetro.
+- **Resumen semanal: sólo clave de Resend**, `weekly-digest/<proyecto>/<día
+  UTC de la pasada>` (`weeklyDigestIdempotencyKey`). Reservar fila pediría un
+  tipo nuevo en `email_sends`, es decir migración. Con la clave, una segunda
+  petición en 24 h recibe la respuesta cacheada o un 409, y ninguna de las dos
+  envía. No cubre una segunda pasada con más de 24 h de diferencia, que no es
+  el fallo observado.
+
+**Política de fallos.** La misma de §308, ahora para toda la secuencia y con
+los mismos valores por defecto pendientes del fundador. Un D1 o D3 perdido
+por un fallo ambiguo no se reintenta.
+
+**Fuera.** Recordatorio de confirmación y avisos al operador, por el riesgo
+bajo de arriba. Un bloqueo de todo el cron contra solapes sigue anotado y sin
+construir.

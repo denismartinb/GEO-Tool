@@ -183,7 +183,7 @@ function recommendationCard(rec: TopRecommendation): string {
  * Primer escaneo listo — product alert (`first_scan`), not commercial: the
  * customer launched that scan and is waiting for it. Once per account.
  */
-export async function sendFirstScanReadyEmail(to: string, userId: string, snap: RunSnapshot): Promise<boolean> {
+export async function sendFirstScanReadyEmail(to: string, userId: string, snap: RunSnapshot, options: { idempotencyKey?: string } = {}): Promise<SendOutcome> {
   const domain = H(snap.domain);
   const noMentions = snap.brandMentions === 0;
   const subject = noMentions
@@ -236,17 +236,18 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
         : `Tu primer escaneo ha terminado. Te mencionan en ${snap.brandMentions} de ${snap.answers} respuestas.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D1 · activación. Only reaches someone with no completed scan (schedule.ts). */
 export async function sendTrialD1Email(
   to: string,
   userId: string,
-  input: { variant: "no_domain" | "no_scan"; daysLeft: number; projectId: string | null; domain: string | null }
-): Promise<boolean> {
+  input: { variant: "no_domain" | "no_scan"; daysLeft: number; projectId: string | null; domain: string | null },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const noDomain = input.variant === "no_domain" || !input.projectId;
   const subject = noDomain
@@ -285,7 +286,7 @@ export async function sendTrialD1Email(
       preheader: `Te quedan ${input.daysLeft} días de Pro. En unos minutos sabrás si la IA te recomienda.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D3 · primera acción, with the real top recommendation, or the no-scan variant. */
@@ -298,10 +299,11 @@ export async function sendTrialD3Email(
     domain: string | null;
     recommendation: TopRecommendation | null;
     otherRecommendations: number;
-  }
-): Promise<boolean> {
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   if (input.recommendation && input.projectId && input.domain) {
     const html = wrap(
@@ -318,7 +320,7 @@ export async function sendTrialD3Email(
       `,
       { footerHtml: envelope.footerHtml, preheader: `Una acción concreta para ${input.domain}. Te quedan ${input.daysLeft} días de Pro.` }
     );
-    return sendEmail(to, `Lo primero que cambiaríamos en ${input.domain}`, html, envelope.headers);
+    return sendEmailWithOutcome({ to, subject: `Lo primero que cambiaríamos en ${input.domain}`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -334,7 +336,7 @@ export async function sendTrialD3Email(
     `,
     { footerHtml: envelope.footerHtml, preheader: `Te quedan ${input.daysLeft} días de Pro para saber si la IA te recomienda.` }
   );
-  return sendEmail(to, "Tus clientes ya le preguntan a la IA por tu sector", html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: "Tus clientes ya le preguntan a la IA por tu sector", html, headers: envelope.headers }, options);
 }
 
 /** Where "Ver el informe completo" lands: through /login, which forwards a signed-in reader straight on. */
@@ -440,10 +442,11 @@ export async function sendTrialD5Email(
     pro: PlanOffer;
     starter: PlanOffer;
     lossRows: Array<{ label: string; pro: string; free: string }>;
-  }
-): Promise<boolean> {
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const endDay = formatWeekday(input.trialEndsAt);
   const endDate = formatDateLong(input.trialEndsAt);
@@ -474,7 +477,7 @@ export async function sendTrialD5Email(
       `,
       { footerHtml: envelope.footerHtml, preheader }
     );
-    return sendEmail(to, `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, envelope.headers);
+    return sendEmailWithOutcome({ to, subject: `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -487,7 +490,7 @@ export async function sendTrialD5Email(
     `,
     { footerHtml: envelope.footerHtml, preheader }
   );
-  return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: `Tu prueba de Pro termina el ${endDay}`, html, headers: envelope.headers }, options);
 }
 
 /* ------------------------------------------- fin de prueba y recuperación */
@@ -580,10 +583,11 @@ export async function sendTrialEndedOfferEmail(
 export async function sendWinbackD3Email(
   to: string,
   userId: string,
-  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer }
-): Promise<boolean> {
+  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const snap = input.snapshot;
   const domain = H(snap.domain);
@@ -622,7 +626,7 @@ export async function sendWinbackD3Email(
       preheader: `Es tu último escaneo de ${snap.domain}. Desde entonces no lo estás midiendo.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /**
@@ -635,12 +639,13 @@ export async function sendWinbackD3Email(
 export async function sendWinbackD10Email(
   to: string,
   userId: string,
-  input: { domain: string | null; pro: PlanOffer }
-): Promise<boolean> {
+  input: { domain: string | null; pro: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const promo = input.pro.promo;
-  if (!promo) return false;
+  if (!promo) return "not_sent";
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const plan = H(input.pro.planName);
   const slots = promo.remaining === 1 ? "Queda 1 cuenta" : `Quedan ${promo.remaining} cuentas`;
@@ -659,5 +664,5 @@ export async function sendWinbackD10Email(
       preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
     }
   );
-  return sendEmail(to, `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, headers: envelope.headers }, options);
 }

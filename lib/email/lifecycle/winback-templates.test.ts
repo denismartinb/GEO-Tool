@@ -111,7 +111,7 @@ describe("D+3", () => {
 
 describe("D+10", () => {
   it("is never sent without a founder offer", async () => {
-    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo })).toBe(false);
+    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo })).toBe("not_sent");
     expect(send).not.toHaveBeenCalled();
   });
 
