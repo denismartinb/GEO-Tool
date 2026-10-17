@@ -118,12 +118,22 @@ async function readActive(ids: VerifiedIds): Promise<ActiveConnection | SearchCo
 }
 
 /**
- * Whether Search Console is configured and connected for this project: our
- * database only, no call to Google. Recomendaciones reads it before streaming
- * the Google block, to reserve its space only when the block can appear.
+ * What Recomendaciones can show for Google, from our database only, no call
+ * to Google. The page reads it before streaming the Google block, to reserve
+ * its space only when the block can appear (log §298). "disconnected"/"reconnect" render the invitation to connect
+ * (GSC-CONNECT-CTA-1, log §311); "off" (not configured, migration missing)
+ * renders nothing, because a button that cannot work is worse than none.
  */
-export async function isSearchConsoleActive(projectId: string, ownerUserId: string): Promise<boolean> {
-  return "property" in (await readActive({ projectId, ownerUserId }));
+export type SearchConsoleAvailability = "active" | "disconnected" | "reconnect" | "off";
+
+export async function readSearchConsoleAvailability(
+  projectId: string,
+  ownerUserId: string
+): Promise<SearchConsoleAvailability> {
+  const active = await readActive({ projectId, ownerUserId });
+  if ("property" in active) return "active";
+  if (active.kind === "disconnected" || active.kind === "reconnect") return active.kind;
+  return "off";
 }
 
 /** Refreshes the access token, re-encrypting the refresh token when needed. */

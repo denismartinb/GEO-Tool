@@ -1464,7 +1464,8 @@ export function RecommendationsClient({
   googleConnected?: boolean;
   /** Puesto 2 del plan (`GooglePlanSlot`), servido en su propio Suspense. */
   googlePlanSlot?: ReactNode;
-  /** Fila «Con tus datos de Google» al principio de «Más adelante». */
+  /** Fila «Con tus datos de Google» al principio de «Más adelante», o la
+   * invitación a conectar Search Console si no está conectado (log §311). */
   googleLaterSlot?: ReactNode;
 }) {
   const [filter, setFilter] = useState<FilterMode>("all");
@@ -1599,7 +1600,9 @@ export function RecommendationsClient({
           the Google cards, one row that scrolls sideways (founder, log §295).
           Hidden rather than unmounted under the other filters, so a card's
           «Deshacer» survives switching tabs. */}
-      {googleConnected && googleLaterSlot && <div hidden={filter !== "all"}>{googleLaterSlot}</div>}
+      {/* GSC-CONNECT-CTA-1 (log §311): without Search Console the same slot
+          carries the invitation to connect, so it no longer needs the flag. */}
+      {googleLaterSlot && <div hidden={filter !== "all"}>{googleLaterSlot}</div>}
 
       {/* 6 · The list.
           Accordions ONLY under "Todas": grouping exists to tame 20+ mixed

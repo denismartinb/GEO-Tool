@@ -25513,3 +25513,43 @@ cuando se descongelen los textos.
 
 **Pendiente.** Nada en el envío: la deduplicación de los correos es otra fase
 (§308, LIFECYCLE-DEDUPE-1).
+
+## 311. GSC-CONNECT-CTA-1: invitar a conectar Search Console en Visión general y Recomendaciones (2026-10-17)
+
+**Qué pidió el fundador.** «El SEO es imprescindible para tener GEO»: una
+llamada a conectar Search Console en la tarjeta SEO de Visión general y en
+Recomendaciones cuando el cliente no lo tiene conectado. Se le enseñaron tres
+propuestas en artefacto (`docs/design-reference/gsc-connect-cta-1/`): A
+dentro de la tarjeta, B en el hueco que se llena (recomendada) y C con una
+franja oscura del argumento SEO + GEO. **Eligió la A.**
+
+**Qué se hizo.**
+- **Visión general.** La mitad de Google de la tarjeta «Auditoría SEO»
+  cambia la frase y el botón fantasma de §284 por un panel: «Añade lo que ve
+  Google», tres ventajas (puesto por búsqueda, búsquedas a un paso de la
+  página 1, páginas indexadas) y un botón «Conectar con Google» con el logo.
+  Con la conexión perdida: «Se ha perdido la conexión con Google» y «Volver a
+  conectar».
+- **Recomendaciones.** Sin conexión, la fila «Con tus datos de Google» de
+  «Más adelante» (§307) sale igualmente, con un hueco discontinuo que dice qué
+  tarjetas traerá y el mismo botón. Sin lista de IA, va donde iría la fila.
+  El plan no cambia: la propuesta A no ocupa el puesto 2.
+- **El botón va directo al permiso de Google** (`/api/search-console/connect`)
+  en vez de pasar por «Posición en Google». Esa ruta comprueba la propiedad
+  del proyecto y, al volver, deja al cliente en «Posición en Google» para
+  elegir la propiedad, como antes.
+- `readSearchConsoleAvailability` (`lib/search-console/load.ts`) sustituye a
+  `isSearchConsoleActive`: distingue conectado, sin conectar, por reconectar y
+  apagado (sin configurar o sin migración), leyendo sólo nuestra base de
+  datos. Apagado no enseña nada.
+- Componentes en `app/dashboard/projects/[projectId]/_components/gsc-connect-invite.tsx`; el logo de
+  Google pasa a `components/search-console/google-mark.tsx`, compartido con
+  la caja de conexión de «Posición en Google».
+
+**Qué no cambia.** Ninguna cifra: la invitación no enseña números de ejemplo
+(test). Lo que se guarda, el plan de IA, los puntos y la pantalla «Posición en
+Google».
+
+**Pendiente.** Medir si conecta más gente (el embudo de PostHog no tiene aún
+un evento de conexión de Search Console). B y C quedan descartadas, no
+aplazadas.

@@ -35,7 +35,8 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
 import { GoogleLaterSlot, GooglePlanSlot } from "./_components/google-recs";
-import { isSearchConsoleActive } from "@/lib/search-console/load";
+import { readSearchConsoleAvailability } from "@/lib/search-console/load";
+import { GscConnectRow } from "../_components/gsc-connect-invite";
 
 /** Affected prompt ids off an evidence_json blob, defensively. */
 function affectedPromptIds(evidenceJson: unknown): string[] {
@@ -660,7 +661,14 @@ export default async function RecommendationsPage({
   // RECS-ONE-QUEUE-1 (log §307): with Search Console connected, a Google card
   // can take slot 2 and the third AI action moves to «Más adelante». The page
   // doesn't wait for Google to know which, so it computes both ceilings.
-  const googleConnected = await isSearchConsoleActive(projectId, user.id);
+  const googleAvailability = await readSearchConsoleAvailability(projectId, user.id);
+  const googleConnected = googleAvailability === "active";
+  // GSC-CONNECT-CTA-1 (log §311): without a connection, the row where the
+  // Google cards would sit invites to connect instead.
+  const googleInvite =
+    googleAvailability === "disconnected" || googleAvailability === "reconnect" ? (
+      <GscConnectRow projectId={projectId} state={googleAvailability} />
+    ) : null;
   const groupCeilings = (excluded: Set<string>): Record<string, number | null> => {
     const out: Record<string, number | null> = {};
     if (scoreInputRows.length === 0) return out;
@@ -849,7 +857,7 @@ export default async function RecommendationsPage({
               googlePlanSlot={
                 googleConnected ? <GooglePlanSlot {...googleSlotProps} rank={plan.length > 0 ? 2 : 1} /> : null
               }
-              googleLaterSlot={googleConnected ? <GoogleLaterSlot {...googleSlotProps} /> : null}
+              googleLaterSlot={googleConnected ? <GoogleLaterSlot {...googleSlotProps} /> : googleInvite}
             />
           );
 
@@ -981,6 +989,7 @@ export default async function RecommendationsPage({
               no AI list to sit in, every Google card goes to the row. */}
           {aiContent}
           {googleConnected && !aiHasList && <GoogleLaterSlot {...googleSlotProps} includePlan />}
+          {!aiHasList && googleInvite}
         </div>
       )}
     </div>
