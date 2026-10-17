@@ -38,3 +38,5 @@ export {
   type Column,
   type EngineRow
 } from "./charts";
+
+export { ShuffleRuns, FanOut, CrawlGap, type ShuffleBrand, type CrawlRow } from "./animations";

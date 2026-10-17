@@ -116,6 +116,13 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 
 ## Imágenes
 
+- **Una figura animada enseña un mecanismo y se entiende quieta** (log
+  §313). Va en `components/blog/article/animations.tsx`, con animación CSS
+  pura (sin timers ni JavaScript) y un fotograma con sentido bajo
+  `prefers-reduced-motion`. Las cifras van escritas en texto, nunca sólo en
+  el movimiento, y si la animación usa marcas o datos inventados, el pie lo
+  dice.
+
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0028
   `article-imagery-policy` — renumerado desde 0026, ver su propia nota de
   renumeración; "ADR 0026" a secas hoy es otro documento). Cada imagen es una

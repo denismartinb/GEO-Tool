@@ -67,7 +67,15 @@ const MAX_FILE_BYTES = 320 * 1024;
  * 2304 KiB = 2.359.296 bytes: margen minimo de 1.596 bytes.
  * No cambian el limite individual de 320 KiB, WebP obligatorio ni el PDF.
  */
-const MAX_TOTAL_BYTES = 2304 * 1024;
+/**
+ * BLOG-ANIM-1 (2026-10-17, log §313): tres portadas de blog nuevas, en WebP a
+ * 1200x300 y calidad 90, 37.310 bytes entre las tres (11-13 KB cada una, las
+ * más ligeras del catálogo). Con el margen de 1.596 bytes de arriba no cabía
+ * ni una. Se suben 64 KiB: sitio para estas tres y para unas dos más del
+ * mismo peso. Los SVG de origen no se publican (viven en los ficheros del
+ * proyecto, `contenido/blog/portadas/`).
+ */
+const MAX_TOTAL_BYTES = 2368 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).

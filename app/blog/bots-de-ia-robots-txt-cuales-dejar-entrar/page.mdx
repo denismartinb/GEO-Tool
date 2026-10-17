@@ -1,0 +1,230 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  CrawlGap
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { ROBOTS_TRAINING_OFF_SEARCH_ON } from "@/lib/blog/robots-ai-snippet";
+
+export const post = getBlogPost("bots-de-ia-robots-txt-cuales-dejar-entrar");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Si bloqueo GPTBot dejo de salir en ChatGPT?",
+    answer:
+      "No en las respuestas que buscan en la web: esas dependen de OAI-SearchBot. GPTBot es el bot de entrenamiento, y bloquearlo indica que tu contenido no se use para entrenar futuros modelos. El coste es a más largo plazo: lo que el modelo sabe de tu marca sin buscar en internet viene de su entrenamiento."
+  },
+  {
+    question: "¿Qué bot de IA no debería bloquear nunca si quiero que me citen?",
+    answer:
+      "Los de búsqueda: OAI-SearchBot (ChatGPT), Claude-SearchBot (Claude) y PerplexityBot (Perplexity). OpenAI dice expresamente que las webs que bloquean OAI-SearchBot no se muestran en las respuestas de búsqueda de ChatGPT. Para las Vistas creadas con IA y el Modo IA de Google, lo que cuenta es Googlebot."
+  },
+  {
+    question: "¿Respetan todos los bots de IA el robots.txt?",
+    answer:
+      "No del todo. Los que actúan cuando un usuario pide algo, como ChatGPT-User o Perplexity-User, pueden no seguirlo: OpenAI dice que en ese caso las reglas de robots.txt pueden no aplicarse, y Perplexity, que su bot de usuario generalmente las ignora."
+  },
+  {
+    question: "¿Cuántas veces me rastrea un bot de IA por cada visita que me manda?",
+    answer:
+      "Depende mucho de la empresa. Según Cloudflare, en julio de 2025 Google rastreaba unas 5 páginas por cada visita que enviaba, OpenAI unas 1.091, Perplexity unas 195 y Anthropic unas 38.066."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Los bots de las empresas de IA no son todos iguales, y bloquearlos no tiene el
+mismo efecto. Hay tres tipos: los que leen tu web para entrenar modelos (como
+GPTBot o ClaudeBot), los que la leen para poder citarte en sus respuestas (como
+OAI-SearchBot, Claude-SearchBot o PerplexityBot) y los que entran cuando un
+usuario lo pide. Si quieres salir en las respuestas de la IA, nunca bloquees los
+de búsqueda. Los de entrenamiento son una decisión tuya, con un coste a largo
+plazo. Y conviene saber lo que te llevas a cambio: según Cloudflare, Anthropic
+rastreaba unas 38.000 páginas por cada visita que mandaba a las webs.
+
+</KeyTakeaway>
+
+## El dato curioso: leen mucho, mandan poco
+
+Durante dos décadas, el trato con Google fue sencillo: le dejas leer tu web y a
+cambio te manda visitas. Cloudflare, que ve pasar una parte enorme del tráfico
+de internet, se preguntó en 2025 si ese trato seguía en pie con la IA. Para
+cada empresa, contó cuántas páginas rastreaban sus bots por cada visita que
+llegaba a las webs desde sus productos.
+
+<Figure
+  label="Figura 1."
+  caption="Arriba, ilustración: los bots entran a leer sin parar y, de vez en cuando, llega una persona. Abajo, páginas rastreadas por cada visita enviada en julio de 2025, según Cloudflare Radar. La escala es logarítmica: en una escala normal, todas las barras menos la de Anthropic serían una raya invisible."
+>
+
+<CrawlGap
+  rows={[
+    { name: "Google", ratio: 5.4, display: "5 : 1" },
+    { name: "Microsoft", ratio: 40.7, display: "41 : 1" },
+    { name: "Perplexity", ratio: 194.8, display: "195 : 1" },
+    { name: "OpenAI", ratio: 1091.4, display: "1.091 : 1" },
+    { name: "Anthropic", ratio: 38065.7, display: "38.066 : 1" }
+  ]}
+/>
+
+</Figure>
+
+Dos matices para leer bien estas cifras. Primero, cambian deprisa: la de
+Anthropic bajó un 87% entre enero y julio de 2025, y la de Perplexity subió.
+Segundo, Cloudflare calcula que alrededor del 80% de todo el rastreo de los
+bots de IA es para entrenar modelos, no para buscar. Y un bot que entrena no
+manda visitas por definición: no está respondiendo a nadie.
+
+Por eso la pregunta útil no es «¿bloqueo a la IA sí o no?», sino «¿a qué bot,
+para qué?».
+
+## Los tres tipos de bot de IA
+
+Cada empresa usa nombres distintos, pero todas siguen el mismo esquema. Este es
+el mapa con la documentación oficial de cada una:
+
+<Figure
+  label="Figura 2."
+  wide
+  caption="Bots de las principales empresas de IA según su documentación oficial (OpenAI, Anthropic, Perplexity y Google), consultada en octubre de 2026. Google-Extended no es un bot aparte: es una instrucción que lee Google en tu robots.txt."
+>
+
+| Empresa | Entrena modelos | Busca para citarte | Entra cuando un usuario lo pide |
+|---|---|---|---|
+| OpenAI (ChatGPT) | GPTBot | OAI-SearchBot | ChatGPT-User |
+| Anthropic (Claude) | ClaudeBot | Claude-SearchBot | Claude-User |
+| Perplexity | No entrena, según su documentación | PerplexityBot | Perplexity-User |
+| Google (Gemini) | Google-Extended | Googlebot, el de siempre | — |
+
+</Figure>
+
+## Qué pasa si bloqueas cada uno
+
+<NumberedSection n={1} title="Bots de entrenamiento: decides qué aprende el próximo modelo">
+
+Bloquear GPTBot, ClaudeBot o Google-Extended indica que tu contenido no se use
+para entrenar futuros modelos. No te saca de las respuestas que buscan en
+internet. El precio es otro, y llega más tarde: cuando alguien pregunta sin que
+el motor busque en la web, lo que sabe de tu marca viene de su entrenamiento.
+Si nunca te ha leído, sabrá menos de ti. En el caso de Google, además,
+Google-Extended cubre el uso de tu contenido para responder en la app de
+Gemini.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Bots de búsqueda: decides si te pueden citar hoy">
+
+Aquí no hay matices. OpenAI lo dice así en su documentación: las webs que
+bloquean OAI-SearchBot no se muestran en las respuestas de búsqueda de ChatGPT.
+Anthropic explica que bloquear Claude-SearchBot impide indexar tu contenido
+para su búsqueda, y Perplexity usa PerplexityBot para enlazar webs en sus
+resultados. Si bloqueas estos bots, te borras tú solo de las citas.
+
+<QuickAction>Abre tudominio.com/robots.txt y busca estos nombres. Si alguno aparece con «Disallow: /», ese motor no puede citarte.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Bots de usuario: robots.txt no siempre manda">
+
+ChatGPT-User, Claude-User o Perplexity-User entran cuando una persona le pide
+al asistente que lea una página concreta. Como la visita la pide un usuario,
+OpenAI avisa de que las reglas de robots.txt pueden no aplicarse, y Perplexity
+dice que su bot de usuario generalmente las ignora. Anthropic, en cambio, dice
+que bloquear Claude-User impide que su sistema recupere tu contenido para
+responder.
+
+</NumberedSection>
+
+## Una configuración para cada caso
+
+Si tu prioridad es que la IA te conozca y te cite, lo más sencillo es no
+bloquear a ninguno. Si quieres que no entrenen con tu contenido pero seguir
+saliendo citado, este robots.txt cierra el entrenamiento y deja abierta la
+búsqueda:
+
+<CodeBlock title="robots.txt">{ROBOTS_TRAINING_OFF_SEARCH_ON}</CodeBlock>
+
+<QuickAction>Antes de tocar nada, guarda una copia de tu robots.txt actual. Si algo deja de salir donde salía, volver atrás es pegar la copia.</QuickAction>
+
+<Checklist
+  tone="evitar"
+  items={[
+    "Bloquear «toda la IA» con una regla general sin mirar qué bots incluye. Es la forma más rápida de desaparecer de las citas.",
+    "Copiar un robots.txt de un medio de comunicación. Un medio vive de que no le copien; una marca vive de que la recomienden.",
+    "Pensar que robots.txt protege tu contenido de todo: los bots que actúan por un usuario pueden no seguirlo."
+  ]}
+/>
+
+## Cómo lo revisa GenScore
+
+La Auditoría técnica de GenScore lee tu robots.txt en cada auditoría y te dice,
+bot por bot, si dejas entrar a GPTBot, OAI-SearchBot, Google-Extended,
+PerplexityBot y ClaudeBot, además de Bingbot. Si alguno está bloqueado, lo verás
+en dos sitios:
+
+- **En la Auditoría técnica**, dentro del bloque Auditoría GEO, como un problema
+  con el nombre del bot.
+- **En Visión general**, en la franja «Prioridad 1 · tu web», junto a los otros
+  frenos que impiden que te citen: páginas con noindex o que prohíben mostrar
+  fragmentos.
+
+GenScore marca también los bots de entrenamiento porque su objetivo es que la
+IA te conozca. Si has elegido bloquearlos a propósito, como en el ejemplo de
+arriba, verás ese aviso y puedes tomarlo como lo que es: una decisión tuya, no
+un error. La misma auditoría comprueba si tienes llms.txt, del que hablamos en
+<a href="/blog/llms-txt-guia-practica">la guía práctica de llms.txt</a>.
+
+<Verdict title="Abre la puerta a quien te puede recomendar">
+
+Los bots de entrenamiento leen mucho y no mandan visitas, y es razonable
+pensarse si quieres alimentarlos. Los de búsqueda son otra cosa: son los que
+deciden si apareces citado cuando alguien pregunta por lo que vendes. Bloquear
+esos por error es uno de los fallos más caros y más fáciles de arreglar del
+GEO. Si quieres ir más allá del robots.txt, sigue con
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que la IA te
+cite</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Comprueba qué bots de IA dejas entrar"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: la Auditoría técnica revisa tu robots.txt bot por bot y te avisa si estás cerrando la puerta a ChatGPT, Gemini, Claude o Perplexity."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

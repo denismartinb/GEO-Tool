@@ -25645,3 +25645,41 @@ cada fichero lo colocara a su manera.
 ha publicado; cuando salga, se añade a `PUBLIC_FOOTER_LEGAL_LINKS`. El pie es
 más alto que antes en móvil (unas dos pantallas de iPhone); el fundador lo
 aceptó al elegir la opción A.
+
+## 313. BLOG-ANIM-1: tres artículos con dato de terceros y figuras animadas (2026-10-17)
+
+**Qué pasó.** El fundador pidió tres artículos con gancho, didácticos y
+novedosos, a partir de fuentes relevantes del mundo GEO e IA, hilados con lo
+que GenScore hace bien, «con imágenes chulas o alguna animación si aplica».
+
+**Qué se decidió.**
+- Tres piezas, cada una sobre un dato de terceros verificado en su fuente:
+  - `la-ia-no-repite-la-misma-lista-de-marcas` (`medicion`): estudio de
+    SparkToro y Gumshoe (enero de 2026), la IA repite la misma lista de
+    marcas menos de 1 de cada 100 veces. Producto: medir frecuencia en muchas
+    respuestas, ventana de escaneos (SCORE-WINDOW-1) y suelo de muestra del
+    puesto medio (SAMPLE-FLOOR-1, §175).
+  - `query-fan-out-la-ia-no-busca-tu-pregunta` (`fundamentos`): anuncio de
+    Google del Modo IA (mayo de 2025) y estudio de Ahrefs (agosto de 2025,
+    12% de las citas en el top 10). Producto: Posición en Google (§284),
+    «Vigilar prompt» (§289), prompts por palabras clave con revisión (§305) y
+    Páginas citadas.
+  - `bots-de-ia-robots-txt-cuales-dejar-entrar` (`playbooks`): proporción de
+    rastreo por visita de Cloudflare (agosto de 2025) y documentación oficial
+    de los bots de OpenAI, Anthropic, Perplexity y Google. Producto: la
+    lectura de robots.txt de la Auditoría técnica (`lib/web-audit/robots.ts`)
+    y la franja de frenos de cita (`findCitationBlockers`).
+- **Figuras animadas** (`components/blog/article/animations.tsx`):
+  `ShuffleRuns`, `FanOut` y `CrawlGap`. Animación CSS pura, sin timers ni
+  JavaScript, quieta con `prefers-reduced-motion`; las cifras van siempre en
+  texto. Las marcas de `ShuffleRuns` son inventadas y el pie lo dice, y sus
+  porcentajes se calculan de las mismas cuatro listas que se ven.
+- El robots.txt de ejemplo vive en `lib/blog/robots-ai-snippet.ts` y su test
+  lo pasa por el mismo lector de la Auditoría técnica (mismo patrón que §85).
+- Las portadas siguen el lenguaje del catálogo (piezas, lente, panel), pesan
+  11-13 KB cada una y sus SVG de origen no se publican. El presupuesto de
+  `public/` sube 64 KiB, con la razón escrita en `tests/asset-budget.test.ts`.
+
+**Pendiente.** Sin publicar hasta el visto bueno del fundador. La auditoría
+técnica no lee Claude-SearchBot ni los bots de usuario; el artículo no dice
+que lo haga.
