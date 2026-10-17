@@ -25818,3 +25818,9 @@ por agente (inicial sobre degradado, no su logotipo) y `heroStat` con la
 valoración de Instinct que el artículo ya publica (10.000 M$, Yahoo Finance).
 `ArticleHero` deja de esconder `heroLogos` cuando hay `heroStat`: pinta los
 dos, primero las fichas.
+Después el fundador pidió los iconos oficiales y quitar la cifra grande («es
+demasiado las dos cosas destacadas»). Muse lleva el logo de Meta, Dots el de
+OpenAI (el mismo fichero que ya usa el producto) y Grok Bot el de Grok, de
+paquetes de iconos públicos; Instinct y Tab siguen con inicial porque no hay
+una marca suya alcanzable desde aquí. La valoración de Instinct pasa al
+subtítulo y el post deja de declarar `heroStat`.
