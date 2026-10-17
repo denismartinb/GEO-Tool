@@ -25860,7 +25860,9 @@ las diez comprobaciones contara las dos mitades: optimizar la web para la IA
 y la Visibilidad agéntica con sus componentes y recomendaciones
 priorizadas, como `/comercio-agentico`. Los componentes se describen según
 los checks reales de `lib/agentic-audit/score.ts`, y la Auditoría agéntica en
-la consola se dice «próximamente», igual que en la landing.
+la consola se dice «próximamente», igual que en la landing. Corregido a
+petición del fundador: el texto no dice «próximamente» y presenta la
+comprobación como ya disponible en `/comercio-agentico`.
 
 ## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
 
