@@ -25830,6 +25830,40 @@ sirviendo la inicial que tenían antes con el mismo nombre.
 Por último el fundador mandó los logos de Instinct y Tab, que sustituyen a
 las dos iniciales que quedaban.
 
+Corrección del fundador tras el merge: Tab compra en Estados Unidos. La
+ficha de «Los cinco agentes de un vistazo» y la respuesta del FAQ sobre
+España lo decían como «países no publicados»; ahora dicen Estados Unidos.
+Dots sigue sin lista pública de países.
+
+Al publicarse `/comercio-agentico` (§317) el fundador pidió enlazarla desde los
+seis artículos. Donde decían que la comprobación agéntica estaba «en
+construcción», ahora remiten al comprobador gratuito de esa página y dicen lo
+que revisa y lo que no (protocolos de pago, firma de agentes, coherencia de
+precio y stock entre canales, recorrer el checkout entero). La tabla de las
+diez comprobaciones pasa a «Sí» en datos de producto, envío y devoluciones y
+anti-bots, y a «En parte» en catálogo para agentes (feed) y checkout, según
+lo que mide `lib/agentic-audit/score.ts`. Esto cierra el «refrescar los seis
+artículos» que §317 dejaba pendiente para la Fase 3.
+
+Y en el mismo cambio, a petición del fundador: la ficha de Tab pasa a
+«EE. UU.» como la de Grok Bot; sale del resumen inicial la frase «Casi todos
+empezaron en Estados Unidos y ninguno tiene fecha para comprar en España»;
+las fichas de «Los cinco agentes de un vistazo» llevan los logotipos
+oficiales (los mismos de la portada) en vez de iniciales; y las fichas ganan
+su padding, que `.lp-article .blog-body .art-anim li` dejaba a 0 porque gana
+en especificidad a `.art-dg-agent` (el contenido quedaba pegado al borde en
+móvil). La regla de logotipos de `growth-content.md` pasa a «sólo con el
+visto bueno del fundador».
+
+El fundador pidió además que «Qué revisa GenScore y qué no» del artículo de
+las diez comprobaciones contara las dos mitades: optimizar la web para la IA
+y la Visibilidad agéntica con sus componentes y recomendaciones
+priorizadas, como `/comercio-agentico`. Los componentes se describen según
+los checks reales de `lib/agentic-audit/score.ts`, y la Auditoría agéntica en
+la consola se dice «próximamente», igual que en la landing. Corregido a
+petición del fundador: el texto no dice «próximamente» y presenta la
+comprobación como ya disponible en `/comercio-agentico`.
+
 ## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
 
 **Qué.** Línea nueva de producto sobre comercio agéntico, con el diseño
