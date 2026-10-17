@@ -25827,3 +25827,5 @@ subtítulo y el post deja de declarar `heroStat`.
 Después el fundador reescribió el subtítulo con sus palabras, ya sin la
 cifra. Los ficheros de Meta y Grok se renombraron porque el navegador seguía
 sirviendo la inicial que tenían antes con el mismo nombre.
+Por último el fundador mandó los logos de Instinct y Tab, que sustituyen a
+las dos iniciales que quedaban.
