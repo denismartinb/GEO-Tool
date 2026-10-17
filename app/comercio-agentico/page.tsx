@@ -67,7 +67,7 @@ const AGENTS = [
 
 export default function AgenticCommercePage() {
   return (
-    <div className="lp">
+    <div className="lp ca-lp">
       <PublicHeader activeHref={PAGE_PATH} />
       <BreadcrumbSchema
         items={[

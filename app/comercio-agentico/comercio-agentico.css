@@ -522,6 +522,14 @@
 }
 .ca-g-sub{font-size:11.5px;color:var(--ca-ink-3);margin-top:-6px;text-align:center;line-height:1.3}
 .ca-lhero>.ca-in{max-width:1040px}
+/* The landing's aurora starts under the public header, so the header blends
+   into the hero as on the home page (log §321). The header sits outside
+   main, so the aurora reaches up behind it; .ca-page's overflow-x:clip still
+   trims the blobs sideways, and the header (z-index 50) stays on top. */
+.ca-lhero{overflow:visible}
+.ca-lhero>.ca-aurora{top:-180px}
+/* The promo strip above the header keeps its own band over the aurora. */
+.ca-lp .lp-promo{z-index:1}
 /* the sticky public header must not cover the scan or the result when they scroll into view */
 .ca-scan,.ca-res{scroll-margin-top:84px}
 .ca-res-total>.ca-gw{flex:0 0 auto}
