@@ -25991,3 +25991,22 @@ lo tiene para un agente.
 **Pendiente.** Nada nuevo; Fase 2 sigue igual que en §317.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 320. AGENTIC-PILL-1LINE-1: la pastilla de la portada nunca pasa a dos líneas (2026-10-17)
+
+**Qué se decidió.** En un iPhone la pastilla «Nuevo · Comercio agéntico:
+¿los agentes pueden comprar en tu web?» saltaba a dos líneas dentro de una
+forma pensada para una, y se veía apretada. El fundador pidió: «¿Los agentes
+pueden comprar en tu web?» en una línea, con el sello «Nuevo», y «Comercio
+agéntico» sólo si cabe, nunca a costa de una segunda línea.
+
+- El texto pasa a «¿Los agentes pueden comprar en tu web?», con mayúscula
+  porque ahora abre la frase.
+- «Comercio agéntico:» va delante sólo desde 560 px (`.pre`).
+- La pastilla lleva `white-space: nowrap`. Por debajo de 390 px baja la letra
+  a 12 px; por debajo de 370 px se quita la flecha; por debajo de 340 px, 11 px.
+- Medido con las fuentes reales a 320, 340, 360, 375, 390, 430, 560, 768 y
+  1280 px: alto de 32 px y ningún desbordamiento del texto en todos.
+
+**Qué queda.** Nada. Si el texto cambia, hay que volver a medir a 320 px: el
+`nowrap` no avisa, recorta.
