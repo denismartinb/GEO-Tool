@@ -1,8 +1,8 @@
 # Última entrega editorial
 
 **Fecha:** 2026-10-17
-**Carpeta:** editorial-drops/2026-10-17-tres-articulos-ia/
+**Carpeta:** editorial-drops/2026-10-17-comercio-agentico/
 
-Post de LinkedIn (4 imágenes + enlaces en el primer comentario) e hilo de X de 4 publicaciones sobre tres artículos nuevos del blog.
-Datos: la IA repite su lista de marcas menos del 1% de las veces, solo el 12% de lo que cita está en el top 10 de Google, y los bots de IA rastrean mucho más de lo que devuelven.
-No publicar hasta que los tres artículos (PR #636) estén en producción y Denis dé su «sí, publica».
+Seis textos para LinkedIn y X (uno por día laborable) sobre los seis artículos de comercio agéntico, más una imagen 4:5 para el primero.
+El gancho: Muse, Dots, Instinct, Grok Bot y Tab ya compran por su usuario; Amazon los bloquea y Shopify les abre el checkout.
+No publicar hasta que las seis URL respondan y Denis dé su «sí, publica».
