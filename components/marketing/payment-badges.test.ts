@@ -45,7 +45,7 @@ describe("PAYMENT_BADGES", () => {
 });
 
 describe("pie de página: fila de pagos seguros", () => {
-  // FOOTER-UNIFY-1 (log §308): every shell renders `PublicFooter`, so the
+  // FOOTER-UNIFY-1 (log §312): every shell renders `PublicFooter`, so the
   // payments row only has to live there (marketing-content-links.test.ts
   // checks that each shell renders it).
   it("el pie único renderiza PaymentBadgesRow", () => {

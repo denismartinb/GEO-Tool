@@ -13,6 +13,8 @@ import {
   scoreBar,
   sectionLabel,
   sendEmail,
+  sendEmailWithOutcome,
+  type SendOutcome,
   statCell,
   statRow,
   subtext,
@@ -20,6 +22,7 @@ import {
 } from "@/lib/email/transactional";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { formatShare, type ReportModel } from "@/lib/report/report-model";
+import { hasSufficientSample } from "@/lib/scoring/score-reliability";
 import { SITE_URL } from "@/lib/seo/metadata";
 
 /**
@@ -100,15 +103,23 @@ function lifecycleEnvelope(userId: string): { footerHtml: string; headers: Recor
 
 /* ------------------------------------------------------------------ blocks */
 
+/**
+ * Share of answers that name the brand, as a percentage. Customer-facing
+ * copy never prints «N de M respuestas» (LIFECYCLE-COPY-COHERENCE-1, log
+ * §309): a low absolute count reads as a thin sample, not as a finding.
+ */
+function shareOf(count: number, total: number): string {
+  return formatShare(total > 0 ? count / total : 0);
+}
+
 export function versusBars(rows: Array<{ label: string; count: number; total: number; isBrand: boolean }>, caption: string): string {
-  const max = Math.max(1, ...rows.map((r) => r.count));
   const body = rows
     .map((row) => {
-      const pct = Math.max(2, Math.round((row.count / max) * 100));
+      const pct = Math.max(2, Math.round((row.total > 0 ? row.count / row.total : 0) * 100));
       const color = row.isBrand ? "#2563EB" : "#94A1B5";
       return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;"><tr>
         <td style="font-size:13.5px;color:${row.isBrand ? "#0B1426" : "#3B4759"};font-weight:${row.isBrand ? 800 : 600};">${row.label}</td>
-        <td align="right" style="font-size:13.5px;font-weight:800;color:#0B1426;font-variant-numeric:tabular-nums;">${row.count} <span style="font-weight:500;color:#5B6B82;">de ${row.total}</span></td></tr>
+        <td align="right" style="font-size:13.5px;font-weight:800;color:#0B1426;font-variant-numeric:tabular-nums;">${shareOf(row.count, row.total)}</td></tr>
         <tr><td colspan="2" style="padding-top:6px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
         <td style="background:${color};width:${pct}%;height:8px;font-size:0;border-radius:4px 0 0 4px;">&nbsp;</td>
         <td style="background:#E7EAF0;width:${100 - pct}%;height:8px;font-size:0;border-radius:0 4px 4px 0;">&nbsp;</td></tr></table></td></tr></table>`;
@@ -181,12 +192,12 @@ function recommendationCard(rec: TopRecommendation): string {
  * Primer escaneo listo — product alert (`first_scan`), not commercial: the
  * customer launched that scan and is waiting for it. Once per account.
  */
-export async function sendFirstScanReadyEmail(to: string, userId: string, snap: RunSnapshot): Promise<boolean> {
+export async function sendFirstScanReadyEmail(to: string, userId: string, snap: RunSnapshot, options: { idempotencyKey?: string } = {}): Promise<SendOutcome> {
   const domain = H(snap.domain);
   const noMentions = snap.brandMentions === 0;
   const subject = noMentions
     ? `${snap.domain}: la IA todavía no te nombra`
-    : `${snap.domain}: la IA te menciona en ${snap.brandMentions} de ${snap.answers} respuestas`;
+    : `${snap.domain}: la IA te menciona en el ${shareOf(snap.brandMentions, snap.answers)} de las respuestas`;
 
   const rows = [
     ...(snap.topCompetitor
@@ -223,7 +234,7 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
         ${scoreBar(Math.round(snap.geoScore), "#2563EB")}
       </td></tr>
     </table>
-    ${versusBars(rows, "Respuestas en las que aparece cada marca")}
+    ${versusBars(rows, "Porcentaje de respuestas en las que aparece cada marca")}
     ${comparison}
     ${button(url(`/dashboard/projects/${snap.projectId}`, "first_scan"), "Ver mi informe completo")}
     `,
@@ -231,20 +242,21 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
       footerHtml: envelope.footerHtml,
       preheader: noMentions
         ? "Tu primer escaneo ha terminado. Aún no apareces: esto es lo que puedes hacer."
-        : `Tu primer escaneo ha terminado. Te mencionan en ${snap.brandMentions} de ${snap.answers} respuestas.`
+        : `Tu primer escaneo ha terminado. Te mencionan en el ${shareOf(snap.brandMentions, snap.answers)} de las respuestas.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D1 · activación. Only reaches someone with no completed scan (schedule.ts). */
 export async function sendTrialD1Email(
   to: string,
   userId: string,
-  input: { variant: "no_domain" | "no_scan"; daysLeft: number; projectId: string | null; domain: string | null }
-): Promise<boolean> {
+  input: { variant: "no_domain" | "no_scan"; daysLeft: number; projectId: string | null; domain: string | null },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const noDomain = input.variant === "no_domain" || !input.projectId;
   const subject = noDomain
@@ -283,7 +295,7 @@ export async function sendTrialD1Email(
       preheader: `Te quedan ${input.daysLeft} días de Pro. En unos minutos sabrás si la IA te recomienda.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D3 · primera acción, with the real top recommendation, or the no-scan variant. */
@@ -296,10 +308,11 @@ export async function sendTrialD3Email(
     domain: string | null;
     recommendation: TopRecommendation | null;
     otherRecommendations: number;
-  }
-): Promise<boolean> {
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   if (input.recommendation && input.projectId && input.domain) {
     const html = wrap(
@@ -316,7 +329,7 @@ export async function sendTrialD3Email(
       `,
       { footerHtml: envelope.footerHtml, preheader: `Una acción concreta para ${input.domain}. Te quedan ${input.daysLeft} días de Pro.` }
     );
-    return sendEmail(to, `Lo primero que cambiaríamos en ${input.domain}`, html, envelope.headers);
+    return sendEmailWithOutcome({ to, subject: `Lo primero que cambiaríamos en ${input.domain}`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -332,7 +345,7 @@ export async function sendTrialD3Email(
     `,
     { footerHtml: envelope.footerHtml, preheader: `Te quedan ${input.daysLeft} días de Pro para saber si la IA te recomienda.` }
   );
-  return sendEmail(to, "Tus clientes ya le preguntan a la IA por tu sector", html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: "Tus clientes ya le preguntan a la IA por tu sector", html, headers: envelope.headers }, options);
 }
 
 /** Where "Ver el informe completo" lands: through /login, which forwards a signed-in reader straight on. */
@@ -438,10 +451,11 @@ export async function sendTrialD5Email(
     pro: PlanOffer;
     starter: PlanOffer;
     lossRows: Array<{ label: string; pro: string; free: string }>;
-  }
-): Promise<boolean> {
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const endDay = formatWeekday(input.trialEndsAt);
   const endDate = formatDateLong(input.trialEndsAt);
@@ -472,7 +486,7 @@ export async function sendTrialD5Email(
       `,
       { footerHtml: envelope.footerHtml, preheader }
     );
-    return sendEmail(to, `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, envelope.headers);
+    return sendEmailWithOutcome({ to, subject: `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -485,7 +499,7 @@ export async function sendTrialD5Email(
     `,
     { footerHtml: envelope.footerHtml, preheader }
   );
-  return sendEmail(to, `Tu prueba de Pro termina el ${endDay}`, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: `Tu prueba de Pro termina el ${endDay}`, html, headers: envelope.headers }, options);
 }
 
 /* ------------------------------------------- fin de prueba y recuperación */
@@ -506,7 +520,7 @@ function lastScanBlock(snap: RunSnapshot | null): string {
   const recs = snap.activeRecommendations;
   return `${sectionLabel(`Tu último escaneo · ${dateWithMonth.format(snap.runDate)}`)}${statRow(
     statCell(String(Math.round(snap.geoScore)), "Puntuación GEO", "em-stack-td") +
-      statCell(`${snap.brandMentions} de ${snap.answers}`, "respuestas te mencionan", "em-stack-td em-stack-second") +
+      statCell(shareOf(snap.brandMentions, snap.answers), "de las respuestas te mencionan", "em-stack-td em-stack-second") +
       statCell(String(recs), recs === 1 ? "recomendación abierta" : "recomendaciones abiertas", "em-stack-td em-stack-second")
   )}`;
 }
@@ -520,10 +534,11 @@ function lastScanBlock(snap: RunSnapshot | null): string {
 export async function sendTrialEndedOfferEmail(
   to: string,
   userId: string,
-  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer }
-): Promise<boolean> {
+  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const campaign = input.late ? "trial_ended_late" : "trial_ended";
   const endDate = formatDateLong(input.trialEndsAt);
@@ -566,34 +581,92 @@ export async function sendTrialEndedOfferEmail(
         : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject, html, headers: envelope.headers }, options);
+}
+
+/**
+ * What the D+3 email may claim about the last scan (LIFECYCLE-COPY-COHERENCE-1,
+ * log §309). «Vas por delante» used to be the fallback for «no rival ahead»,
+ * so a brand the AI never named, with no rival named either, read as the
+ * leader (alberdiderma.es, 0 % on its last scan). Same reasoning as the
+ * Overview summary (`lib/metrics/competitive-claim.ts`, log §278): leading is
+ * a comparison, so it needs a named rival behind, the brand named, and a
+ * sample large enough to say so.
+ */
+export type WinbackD3Angle =
+  | { kind: "behind"; rival: string; ratio: number }
+  | { kind: "ahead" }
+  | { kind: "tied"; rival: string }
+  | { kind: "absent" }
+  | { kind: "neutral" };
+
+export function resolveWinbackD3Angle(snap: RunSnapshot): WinbackD3Angle {
+  const rival = snap.topCompetitor;
+  if (rival && rival.mentions > snap.brandMentions) {
+    return {
+      kind: "behind",
+      rival: rival.name,
+      ratio: snap.brandMentions > 0 ? Math.floor(rival.mentions / snap.brandMentions) : 0
+    };
+  }
+  if (snap.brandMentions === 0) return { kind: "absent" };
+  if (!rival || !hasSufficientSample(snap.answers)) return { kind: "neutral" };
+  if (rival.mentions === snap.brandMentions) return { kind: "tied", rival: rival.name };
+  return { kind: "ahead" };
 }
 
 /**
  * D+3 · tus datos siguen aquí. The real gap with the most-mentioned rival of
- * the last scan; when the customer leads, the «vas por delante» variant.
+ * the last scan; the headline says only what `resolveWinbackD3Angle` allows.
  * Needs a scan with a ranking: without one the runner does not call it.
  */
 export async function sendWinbackD3Email(
   to: string,
   userId: string,
-  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer }
-): Promise<boolean> {
+  input: { snapshot: RunSnapshot; pro: PlanOffer; starter: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const snap = input.snapshot;
   const domain = H(snap.domain);
   const rival = snap.topCompetitor;
-  const behind = rival !== null && rival.mentions > snap.brandMentions;
-  const ratio = behind && snap.brandMentions > 0 ? Math.floor(rival.mentions / snap.brandMentions) : 0;
+  const angle = resolveWinbackD3Angle(snap);
 
-  const headline = !behind
-    ? "Vas por delante en la IA. ¿Sigues por delante?"
-    : ratio >= 2
-      ? `${rival.name} aparece ${ratio} veces más que tú`
-      : `${rival.name} aparece en más respuestas que tú`;
-  const subject = behind ? `${headline} en la IA` : headline;
+  let headline: string;
+  let subject: string;
+  let unknown: string;
+  switch (angle.kind) {
+    case "behind":
+      headline =
+        angle.ratio >= 2
+          ? `${angle.rival} aparece ${angle.ratio} veces más que tú`
+          : `${angle.rival} aparece en más respuestas que tú`;
+      subject = `${headline} en la IA`;
+      unknown = "si esa distancia ha crecido o si has empezado a cerrarla";
+      break;
+    case "ahead":
+      headline = "Vas por delante en la IA. ¿Sigues por delante?";
+      subject = headline;
+      unknown = "si alguien te ha adelantado desde entonces";
+      break;
+    case "tied":
+      headline = `Ibas a la par con ${angle.rival} en la IA. ¿Sigue así?`;
+      subject = headline;
+      unknown = "si alguno de los dos se ha separado desde entonces";
+      break;
+    case "absent":
+      headline = "En tu último escaneo, la IA no te nombraba. ¿Ha cambiado?";
+      subject = `${snap.domain}: en tu último escaneo, la IA no te nombraba`;
+      unknown = "si la IA ha empezado a nombrarte ni a quién recomienda en tu lugar";
+      break;
+    case "neutral":
+      headline = `¿Cómo te ve hoy la IA?`;
+      subject = `${snap.domain}: ¿cómo te ve hoy la IA?`;
+      unknown = "cómo ha cambiado desde entonces";
+      break;
+  }
 
   const rows = [
     ...(rival ? [{ label: H(rival.name), count: rival.mentions, total: snap.answers, isBrand: false }] : []),
@@ -604,12 +677,8 @@ export async function sendWinbackD3Email(
     `
     ${eyebrow("Tus datos siguen aquí")}
     ${heading(H(headline))}
-    ${versusBars(rows, `Respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
-    ${paragraph(
-      behind
-        ? `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si esa distancia ha crecido o si has empezado a cerrarla.`
-        : `Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes si alguien te ha adelantado desde entonces.`
-    )}
+    ${versusBars(rows, `Porcentaje de respuestas en las que aparece · escaneo del ${dateWithMonth.format(snap.runDate)}`)}
+    ${paragraph(`Es el último dato que tienes. Desde que terminó tu prueba, ${domain} no se escanea, así que no sabes ${unknown}.`)}
     ${priceBox(input.pro)}
     ${button(url("/dashboard/settings?openPlan=pro", "winback_d3"), "Volver a medir a diario")}
     ${starterLine(input.starter, "winback_d3", "O")}
@@ -619,7 +688,7 @@ export async function sendWinbackD3Email(
       preheader: `Es tu último escaneo de ${snap.domain}. Desde entonces no lo estás midiendo.`
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /**
@@ -632,12 +701,13 @@ export async function sendWinbackD3Email(
 export async function sendWinbackD10Email(
   to: string,
   userId: string,
-  input: { domain: string | null; pro: PlanOffer }
-): Promise<boolean> {
+  input: { domain: string | null; pro: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const promo = input.pro.promo;
-  if (!promo) return false;
+  if (!promo) return "not_sent";
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const plan = H(input.pro.planName);
   const slots = promo.remaining === 1 ? "Queda 1 cuenta" : `Quedan ${promo.remaining} cuentas`;
@@ -656,5 +726,5 @@ export async function sendWinbackD10Email(
       preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
     }
   );
-  return sendEmail(to, `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject: `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, headers: envelope.headers }, options);
 }

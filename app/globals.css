@@ -7758,7 +7758,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .btn-onaccent { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.28); }
 .btn-onaccent:hover { background: rgba(255,255,255,.2); }
 
-/* FOOTER-UNIFY-1 (2026-10-17, log §308): one footer for every public page,
+/* FOOTER-UNIFY-1 (2026-10-17, log §312): one footer for every public page,
    «Opción A · Cuatro columnas» (`components/marketing/public-footer.tsx`,
    `docs/design-reference/footer-unify-1/`). Brand on the left, four titled
    columns, then payments and the legal line. Two columns under 720px. */

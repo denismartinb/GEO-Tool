@@ -51,7 +51,7 @@ describe("MARKETING_CONTENT_LINKS", () => {
 });
 
 /**
- * FOOTER-UNIFY-1 (log §308). Each shell used to write its own `<footer>` and
+ * FOOTER-UNIFY-1 (log §312). Each shell used to write its own `<footer>` and
  * there were seven versions; the rule now is that every shell renders the one
  * `PublicFooter` and none declares a footer of its own.
  */

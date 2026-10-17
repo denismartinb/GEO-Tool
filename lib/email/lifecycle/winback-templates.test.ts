@@ -44,15 +44,16 @@ afterEach(() => {
 describe("fin de prueba", () => {
   it("is not sent without a working unsubscribe", async () => {
     delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
-    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe(false);
+    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe("not_sent");
     expect(send).not.toHaveBeenCalled();
   });
 
   it("quotes the last real scan, the live promo and the one-click unsubscribe", async () => {
-    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe(true);
+    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe("sent");
     const mail = last();
     expect(mail.subject).toBe("Tu prueba ha terminado. Tus datos de clinicaaurora.es siguen aquí");
-    expect(mail.html).toContain("6 de 45");
+    expect(mail.html).toContain("13%");
+    expect(mail.html).not.toMatch(/\d+ de \d+/);
     expect(mail.html).toContain("Volver a Pro por 69 €/mes");
     expect(mail.html).toContain("Quedan 35 cuentas con precio fundador");
     expect(mail.html).not.toMatch(/Disponible hasta|durante \d+ meses/i);
@@ -94,6 +95,37 @@ describe("D+3", () => {
     expect(last().subject).toBe("Vas por delante en la IA. ¿Sigues por delante?");
   });
 
+  it("never says «vas por delante» when the AI did not name the brand and no rival was named (alberdiderma.es)", async () => {
+    await sendWinbackD3Email(TO, USER, {
+      snapshot: { ...snapshot, brandMentions: 0, answers: 1, topCompetitor: null },
+      pro: proWithPromo,
+      starter
+    });
+    expect(last().subject).toBe("clinicaaurora.es: en tu último escaneo, la IA no te nombraba");
+    expect(last().html).not.toContain("delante");
+    expect(last().html).not.toMatch(/\d+ de \d+/);
+    expect(last().html).toContain("0%");
+  });
+
+  it("does not claim the lead on a tie, nor on a sample too small to call it", async () => {
+    await sendWinbackD3Email(TO, USER, { snapshot: { ...snapshot, brandMentions: 19 }, pro: proWithPromo, starter });
+    expect(last().subject).toBe("Ibas a la par con Clínica Sonrisa Norte en la IA. ¿Sigue así?");
+    await sendWinbackD3Email(TO, USER, {
+      snapshot: { ...snapshot, brandMentions: 3, answers: 4, topCompetitor: { name: "Rival", mentions: 1 } },
+      pro: proWithPromo,
+      starter
+    });
+    expect(last().subject).toBe("clinicaaurora.es: ¿cómo te ve hoy la IA?");
+    await sendWinbackD3Email(TO, USER, { snapshot: { ...snapshot, topCompetitor: null }, pro: proWithPromo, starter });
+    expect(last().subject).toBe("clinicaaurora.es: ¿cómo te ve hoy la IA?");
+  });
+
+  it("shows shares, never «N de M»", async () => {
+    await sendWinbackD3Email(TO, USER, { snapshot, pro: proWithPromo, starter });
+    expect(last().html).toContain("42%");
+    expect(last().html).not.toMatch(/\d+ de \d+/);
+  });
+
   it("never claims a multiple it cannot compute", async () => {
     await sendWinbackD3Email(TO, USER, { snapshot: { ...snapshot, brandMentions: 0 }, pro: proWithPromo, starter });
     expect(last().subject).toBe("Clínica Sonrisa Norte aparece en más respuestas que tú en la IA");
@@ -111,7 +143,7 @@ describe("D+3", () => {
 
 describe("D+10", () => {
   it("is never sent without a founder offer", async () => {
-    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo })).toBe(false);
+    expect(await sendWinbackD10Email(TO, USER, { domain: "clinicaaurora.es", pro: proNoPromo })).toBe("not_sent");
     expect(send).not.toHaveBeenCalled();
   });
 

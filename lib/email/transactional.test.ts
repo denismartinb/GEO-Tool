@@ -16,8 +16,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * viene de fuera vaya escapado.
  */
 
-type SendResult = { error: { message: string } | null };
-const send = vi.fn(async (_payload: unknown): Promise<SendResult> => ({ error: null }));
+type SendResult = { error: { message: string; statusCode?: number | null; name?: string } | null };
+const send = vi.fn(async (_payload: unknown, _options?: unknown): Promise<SendResult> => ({ error: null }));
 let clientAvailable = true;
 
 vi.mock("@/lib/email/resend", () => ({
@@ -26,7 +26,10 @@ vi.mock("@/lib/email/resend", () => ({
 }));
 
 import {
+  classifyResendError,
   isOpsAlertConfigured,
+  sendEmailWithOutcome,
+  sendTrialEndedEmail,
   sendLlmIncidentAlertEmail,
   sendNewSignupOpsAlertEmail,
   sendPaymentFailedEmail,
@@ -468,5 +471,43 @@ describe("bienvenida", () => {
     process.env.EMAIL_UNSUBSCRIBE_SECRET = "test-secret-with-enough-entropy-000000";
     await sendWelcomeEmail(CUSTOMER, new Date("2026-09-28T10:00:00Z"));
     expect(lastPayload().html).toContain("Te avisaremos el día antes");
+  });
+});
+
+describe("sendEmailWithOutcome · LIFECYCLE-DEDUPE-1 (log §308)", () => {
+  const message = { to: CUSTOMER, subject: "Asunto", html: "<p>hola</p>" };
+
+  it("tells a definitive rejection from an ambiguous failure", () => {
+    expect(classifyResendError(null)).toBe("sent");
+    expect(classifyResendError({ statusCode: 422, name: "validation_error" })).toBe("not_sent");
+    expect(classifyResendError({ statusCode: 403, name: "invalid_api_key" })).toBe("not_sent");
+    expect(classifyResendError({ statusCode: 429, name: "rate_limit_exceeded" })).toBe("not_sent");
+    // The SDK turns a transport failure into statusCode null: it may have gone out.
+    expect(classifyResendError({ statusCode: null, name: "application_error" })).toBe("ambiguous");
+    expect(classifyResendError({ statusCode: 500, name: "internal_server_error" })).toBe("ambiguous");
+    expect(classifyResendError({ statusCode: 409, name: "concurrent_idempotent_requests" })).toBe("ambiguous");
+    expect(classifyResendError({ name: "application_error" })).toBe("ambiguous");
+  });
+
+  it("sends the idempotency key only when the caller gives one", async () => {
+    await sendEmailWithOutcome(message);
+    expect(send.mock.calls.at(-1)).toHaveLength(1);
+    await sendEmailWithOutcome(message, { idempotencyKey: "lifecycle/trial_ended/u1" });
+    expect(send.mock.calls.at(-1)?.[1]).toEqual({ idempotencyKey: "lifecycle/trial_ended/u1" });
+  });
+
+  it("reports what happened, and never throws", async () => {
+    expect(await sendEmailWithOutcome(message)).toBe("sent");
+    send.mockResolvedValueOnce({ error: { message: "bad", statusCode: 422, name: "validation_error" } });
+    expect(await sendEmailWithOutcome(message)).toBe("not_sent");
+    send.mockRejectedValueOnce(new Error("socket hang up"));
+    expect(await sendEmailWithOutcome(message)).toBe("ambiguous");
+    clientAvailable = false;
+    expect(await sendEmailWithOutcome(message)).toBe("not_sent");
+  });
+
+  it("the plain end-of-trial email carries the key it is given", async () => {
+    expect(await sendTrialEndedEmail(CUSTOMER, { idempotencyKey: "k" })).toBe("sent");
+    expect(send.mock.calls.at(-1)?.[1]).toEqual({ idempotencyKey: "k" });
   });
 });

@@ -6,7 +6,7 @@ import { PUBLIC_FOOTER_GROUPS, PUBLIC_FOOTER_LEGAL_LINKS } from "@/components/ma
 import { SUPPORT_EMAIL } from "@/lib/support";
 
 /**
- * FOOTER-UNIFY-1 (2026-10-17, log §308): the one footer of every public page,
+ * FOOTER-UNIFY-1 (2026-10-17, log §312): the one footer of every public page,
  * founder-approved as «Opción A · Cuatro columnas»
  * (`docs/design-reference/footer-unify-1/`). Pages render this component and
  * never a `<footer>` of their own, which is what let seven versions drift

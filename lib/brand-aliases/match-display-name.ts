@@ -32,7 +32,10 @@ function plausiblyMatches(claimed: string, realName: string): boolean {
   const claimedKey = normalizeName(claimed);
   const realKey = normalizeName(realName);
   if (!claimedKey || !realKey) return false;
-  return claimedKey.includes(realKey) || realKey.includes(claimedKey);
+  if (claimedKey.includes(realKey) || realKey.includes(claimedKey)) return true;
+  // BRAND-SPACING-1, mirrors sameNameIgnoringSpaces in lib/scan/extraction.ts.
+  const compactClaimed = claimedKey.replace(/ /g, "");
+  return compactClaimed.length >= 4 && compactClaimed === realKey.replace(/ /g, "");
 }
 
 export type DisplayNameMatch = {

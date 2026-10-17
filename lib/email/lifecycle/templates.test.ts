@@ -56,13 +56,13 @@ afterEach(() => {
 describe("commercial emails never go out without a working unsubscribe", () => {
   it("D1, D3 and D5 are not sent at all without the secret", async () => {
     delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
-    expect(await sendTrialD1Email(TO, USER, { variant: "no_domain", daysLeft: 6, projectId: null, domain: null })).toBe(false);
+    expect(await sendTrialD1Email(TO, USER, { variant: "no_domain", daysLeft: 6, projectId: null, domain: null })).toBe("not_sent");
     expect(
       await sendTrialD3Email(TO, USER, { daysLeft: 4, projectId: null, domain: null, recommendation: null, otherRecommendations: 0 })
-    ).toBe(false);
+    ).toBe("not_sent");
     expect(
       await sendTrialD5Email(TO, USER, { trialEndsAt: new Date(), projectId: null, domain: null, report: null, pro: proWithPromo, starter, lossRows })
-    ).toBe(false);
+    ).toBe("not_sent");
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -79,7 +79,8 @@ describe("primer escaneo listo", () => {
   it("puts the account's own figures in the subject and the body", async () => {
     await sendFirstScanReadyEmail(TO, USER, snapshot);
     const { subject, html } = last();
-    expect(subject).toBe("clinicaaurora.es: la IA te menciona en 6 de 45 respuestas");
+    expect(subject).toBe("clinicaaurora.es: la IA te menciona en el 13% de las respuestas");
+    expect(html).not.toMatch(/\d+ de \d+/);
     expect(html).toContain("Clínica Sonrisa Norte");
     expect(html).toContain("6 recomendaciones");
     expect(html).toContain("/dashboard/projects/p1");

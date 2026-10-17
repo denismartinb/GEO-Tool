@@ -25408,7 +25408,204 @@ página propia frente a páginas citadas, redacción por LLM, re-comprobación
 al instante). Si Google no trae tarjeta para el plan, la tercera de IA aparece
 cuando llega la respuesta: un salto pequeño y poco frecuente que se acepta.
 
-## 308. FOOTER-UNIFY-1: un solo pie de página para todo el sitio público (2026-10-17)
+## 308. LIFECYCLE-DEDUPE-1: el fin de prueba se reclama antes de enviarse (2026-10-17)
+
+**Qué pasó.** El 2026-10-17 a las 07:45:45 UTC, justo tras el disparo del
+cron `/api/cron/lifecycle-emails`, el correo «Tu prueba ha terminado. Tus
+datos siguen aquí» llegó tres veces, en el mismo segundo, a una cuenta de
+prueba (tres ids de mensaje distintos en Gmail). Alcance en cuentas reales:
+desconocido; confirmarlo pide los logs de Vercel y Resend o la tabla
+`email_sends`.
+
+**Causa demostrada en código.** `sendTrialEndEmailOnce` leía `email_sends`,
+decidía, enviaba y sólo después anotaba (`recordSend`). Toda la llamada a
+Resend quedaba dentro de esa ventana: dos ejecuciones a la vez leían vacío y
+enviaban las dos. Qué disparó tres ejecuciones no está confirmado. La
+hipótesis más probable es la entrega duplicada del cron, que Vercel documenta
+(«cron jobs should be resilient to both missed runs and duplicate runs»); la
+otra es el cruce con `applyTrialExpiry` desde la consola. El arreglo cubre
+las dos porque las dos pasan por la misma función.
+
+**Qué se decide.**
+
+- **Reclamar antes de enviar.** Tras decidir el tipo, se inserta
+  `{ owner_user_id, kind }` con `ignoreDuplicates` y `.select("id")` sobre el
+  índice único de 0037. Sólo quien recibe la fila envía. Sin migración.
+- **Clave de idempotencia de Resend** `lifecycle/<kind>/<userId>`, pasada por
+  llamada (`sendEmailWithOutcome(message, { idempotencyKey })`), nunca por
+  defecto en el envoltorio central. El contenido del correo se carga una vez,
+  para que el reintento mande exactamente el mismo cuerpo.
+- **`sendEmailWithOutcome` distingue** `sent`, `not_sent` (sin cliente, o un
+  4xx que no es 409: validación, clave, cupo, límite) y `ambiguous` (fallo de
+  red, que el SDK devuelve con `statusCode: null`, un 5xx, un 409 de
+  idempotencia o una excepción). `sendEmail` sigue devolviendo `boolean`
+  encima de ella, así que los demás correos no cambian.
+
+**Política de fallos: valores por defecto, pendientes de confirmar por el
+fundador.**
+
+- `not_sent`: se libera la reclamación; el pase siguiente reintenta.
+- `ambiguous`: un reintento con la misma clave. Si sigue ambiguo, se
+  **mantiene** la reclamación: el correo puede perderse, pero nunca sale dos
+  veces. La versión «tardía» no lo recupera, porque la fila ya existe.
+- Caída del proceso entre reclamar y enviar: la reclamación se queda y ese
+  correo se pierde. Fallo aceptado y documentado.
+- Una reclamación mantenida ancla igualmente D+3 y D+10, que salen aunque el
+  fin de prueba no llegara.
+
+**Regla de premisa (camino de recuperación retirado).** Antes, un envío
+fallido de cualquier tipo se reintentaba al día siguiente. Ahora un fallo
+ambiguo que no se resuelve con el reintento ya no se reintenta. Premisa: que
+duplicar es peor que perder un correo de cuenta; la verifica el propio
+incidente (tres copias visibles para el cliente). Si la premisa falla, la
+cuenta se queda sin fin de prueba y nadie lo ve salvo en el log
+`[geo:lifecycle] end-of-trial email may not have gone out`.
+
+**Riesgo residual conocido.** El índice es por tipo: si dos llamadas a la vez
+caen justo a cada lado del umbral de «tardía» (una decide `trial_ended` y
+otra `trial_ended_late`), las dos reclaman y salen dos versiones distintas.
+Ventana de segundos alrededor de una hora concreta; aceptado.
+
+**Fuera de esta fase.** `trial_d1/d3/d5`, D+3, D+10 y primer escaneo siguen
+con anotar-después (mismo patrón, extensible si el fundador lo pide). El
+recordatorio de confirmación no tiene fila que reclamar y deduplicarlo pide
+un tipo nuevo, es decir migración. Un bloqueo de todo el cron contra solapes,
+que es lo que Vercel recomienda como opción mayor, queda anotado y sin
+construir.
+
+**Pendiente del fundador.** Confirmar o cambiar la política de arriba, el
+formato de la clave, si se extiende a los demás tipos, y verificar el alcance
+real (logs de Vercel con tres invocaciones `vercel-cron/1.0` a las 07:45,
+tres ids en Resend, filas de `email_sends` de esa cuenta).
+
+## 309. LIFECYCLE-COPY-COHERENCE-1: el titular de los correos dice lo que dice el dato (2026-10-17)
+
+**Qué pasó.** El correo de recuperación D+3 (§238) llegó a alberdiderma.es con
+«Vas por delante en la IA. ¿Sigues por delante?» encima de una barra que decía
+«0 de 1». La plantilla elegía «vas por delante» siempre que ningún rival
+tuviera más menciones que la marca: sin rival nombrado y con la marca sin
+nombrar, eso era 0 contra nada, y salía el titular de líder. Mismo fallo que
+la frase del resumen de Visión general antes de AUDIT-TRUTH-1 (§278), un nivel
+más allá.
+
+**Qué se decide.**
+- **El D+3 elige su titular con `resolveWinbackD3Angle`**, pura y con tests,
+  con el mismo razonamiento que `competitive-claim.ts`: ir por delante es una
+  comparación, así que exige un rival nombrado por detrás, la marca nombrada y
+  una muestra suficiente (`hasSufficientSample`). Cinco casos: detrás (como
+  antes), delante, «Ibas a la par con X», «En tu último escaneo, la IA no te
+  nombraba» (marca sin nombrar y nadie por delante) y una pregunta neutra
+  («¿Cómo te ve hoy la IA?») sin rival o con muestra pequeña.
+- **Ningún correo de ciclo de vida imprime «N de M respuestas».** Las barras
+  de comparación, el bloque «Tu último escaneo» del fin de prueba y el asunto
+  y la vista previa del correo de primer escaneo pasan a porcentajes con
+  `formatShare`, la misma regla que el informe (`.claude/rules/report.md`) y
+  que el fundador fijó para todo lo que lee un cliente. Las barras pasan a
+  medir la proporción de respuestas, no la distancia al máximo.
+
+**Qué no cambia.** El recuento de plazas del precio fundador («Quedan N
+cuentas») sigue igual: es el dato real de Stripe (§237) y es el mismo texto
+que `/precios`, congelado por el fundador (§273). Tampoco «Volver a medir a
+diario» / «seguir a diario»: Pro de pago escanea cada 2 días desde §273, pero
+`/precios` sigue diciendo «Diario» por decisión del fundador, y los correos
+siguen a `/precios`. Las dos quedan anotadas como incoherencias conocidas para
+cuando se descongelen los textos.
+
+**Pendiente.** Nada en el envío: la deduplicación de los correos es otra fase
+(§308, LIFECYCLE-DEDUPE-1).
+
+## 310. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
+
+**Caso.** El 2026-10-12, en el proyecto de prueba `elcorteingles.es`, una
+respuesta de Claude a «¿Qué grandes almacenes tienen variedad de productos para
+el hogar en España?» decía literalmente «El Corte Inglés - La más grande…» y la
+pantalla de Prompts la etiquetaba «No te nombra» (0/8 con marca).
+
+**Causa comprobada en código** (sin acceso a la base de datos de producción):
+
+1. El asistente de alta no pide la marca: la deriva del dominio con
+   `deriveBrandFromDomain`, que para `elcorteingles.es` da `Elcorteingles`, sin
+   espacios.
+2. Los alias se derivan leyendo la portada (`deriveBrandAliases`), y
+   elcorteingles.es bloquea bots: sin portada no hay alias.
+3. `verifyMention` (MENTION-VERIFY-1, ADR 0021) sólo acepta el
+   `display_name_found` del extractor si «nombra plausiblemente» la marca, y
+   eso era contención de claves normalizadas: `el corte ingles` no contiene ni
+   está contenida en `elcorteingles`. La mención correcta del extractor se
+   rebajaba a «no mencionada» y se guardaba así en `brand_mentioned`, del que
+   leen la etiqueta del cajón, el recuento por prompt y la puntuación.
+
+Reproducido con una fixture de esa respuesta en
+`lib/scan/extraction.test.ts`: falla sin el cambio y pasa con él.
+
+**Decisión.** `namesPlausiblyMatch` acepta además el mismo nombre con y sin
+espacios: igualdad EXACTA de las claves sin espacios (mínimo 4 letras), nunca
+contención. «El Corte Inglés Viajes», «Corte Ingles» o «El Corte Ingenioso»
+no cuentan por esta regla, y la comprobación (b), que el nombre esté en el
+texto, no cambia. `matchDisplayName` (sólo presentación) lleva la misma regla.
+
+**Qué no se pudo comprobar.** El nombre de marca y los alias guardados en ese
+proyecto, el `display_name_found` original (al rebajar se pone a `null`) y si
+el extractor marcó `mentioned: true` o ya respondió `false` al ver
+«Elcorteingles». Si fue lo segundo, este cambio no basta para esa fila, y lo
+que lo arreglaría es que la marca guardada sea «El Corte Inglés» (editarla o
+un alias).
+
+**Datos históricos.** Las filas ya guardadas no cambian. Para corregirlas hay
+que volver a extraer las respuestas (`raw_response_text` está guardado) de los
+escaneos afectados y reescribir `brand_mentioned`/`extracted_json`; eso cuesta
+una llamada de LLM por respuesta y mueve puntuaciones pasadas. No se ejecuta
+ni se añade migración: lo decide Denis.
+
+**Pendiente conocido.** La contención previa sigue aceptando una palabra suelta
+contenida en la clave de la marca («Corte» frente a «Elcorteingles»). Es
+anterior a este cambio y no se toca aquí. Tampoco cambia `deriveBrandFromDomain`
+ni la cita literal del informe (`findQuote` busca el nombre guardado).
+
+## 311. LIFECYCLE-DEDUPE-1 (2): la reserva previa a todos los correos de la secuencia y clave de Resend en el resumen semanal (2026-10-17)
+
+**Por qué.** Tras §308 el fundador pidió revisar si el duplicado podía pasar
+en otros correos. Revisión, correo a correo:
+
+- **Mismo fallo que el fin de prueba** (leer, enviar, anotar después): D1, D3,
+  último día (`trial_d5`), D+3, D+10 y primer escaneo.
+- **Sin ningún registro**: el resumen semanal de los lunes
+  (`runWeeklyDigest`). Una entrega duplicada del cron mandaba dos resúmenes
+  a cada cliente. `CRON_DIGEST_ENABLED` existe en Vercel (su valor no se pudo
+  leer, es sensible).
+- **Riesgo bajo**: recordatorio de confirmación (sin registro, pero Supabase
+  limita el reenvío al mismo email; no verificado) y avisos internos al
+  operador (vigilante, informe de afiliados), que como mucho repiten un correo
+  al fundador.
+- **Sin riesgo**: Stripe (registro de eventos, §268), bienvenida (el código
+  del enlace sólo se canjea una vez) y caída de puntuación (una por escaneo
+  finalizado, con lease).
+
+**Qué se decide.**
+
+- **`sendClaimedOnce`** (`lib/email/lifecycle/runner.ts`) es el único camino
+  de envío de la secuencia: reclama la fila, carga el contenido una vez, envía
+  con `lifecycleIdempotencyKey(kind, userId)` y aplica la política de §308.
+  `recordSend` desaparece. Sin migración: todos esos tipos ya tienen su fila
+  única en `email_sends`.
+- **Las plantillas de la secuencia devuelven `SendOutcome`** y aceptan la
+  clave como último parámetro.
+- **Resumen semanal: sólo clave de Resend**, `weekly-digest/<proyecto>/<día
+  UTC de la pasada>` (`weeklyDigestIdempotencyKey`). Reservar fila pediría un
+  tipo nuevo en `email_sends`, es decir migración. Con la clave, una segunda
+  petición en 24 h recibe la respuesta cacheada o un 409, y ninguna de las dos
+  envía. No cubre una segunda pasada con más de 24 h de diferencia, que no es
+  el fallo observado.
+
+**Política de fallos.** La misma de §308, ahora para toda la secuencia y con
+los mismos valores por defecto pendientes del fundador. Un D1 o D3 perdido
+por un fallo ambiguo no se reintenta.
+
+**Fuera.** Recordatorio de confirmación y avisos al operador, por el riesgo
+bajo de arriba. Un bloqueo de todo el cron contra solapes sigue anotado y sin
+construir.
+
+## 312. FOOTER-UNIFY-1: un solo pie de página para todo el sitio público (2026-10-17)
 
 **Qué pidió el fundador.** Primero, «la landing de afiliación que esté en el
 pie como programa de afiliados». Después, revisar los pies de todas las
