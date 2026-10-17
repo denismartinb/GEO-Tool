@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { MARKETING_SHELLS } from "../marketing-content-links";
 import { PAYMENT_BADGES } from "./payment-badges";
 
 /**
@@ -46,23 +45,13 @@ describe("PAYMENT_BADGES", () => {
 });
 
 describe("pie de página: fila de pagos seguros", () => {
-  for (const shell of MARKETING_SHELLS) {
-    it(`${shell} renderiza PaymentBadgesRow en su pie`, () => {
-      expect(
-        footerBlockOf(shell).includes("<PaymentBadgesRow"),
-        `${shell} no muestra la fila de pagos seguros en el pie`
-      ).toBe(true);
-    });
-  }
-
-  it("app/geo/page.tsx renderiza PaymentBadgesRow en su pie", () => {
-    // No entra en MARKETING_SHELLS: su pie sigue siendo la versión reducida a
-    // mano (sin MARKETING_CONTENT_LINKS/MARKETING_ENTITY_LINKS), divergencia
-    // anterior a esta lista y fuera de lo que aquí se arregla. El fundador
-    // pidió específicamente la fila de pagos, no igualar el resto del pie.
+  // FOOTER-UNIFY-1 (log §308): every shell renders `PublicFooter`, so the
+  // payments row only has to live there (marketing-content-links.test.ts
+  // checks that each shell renders it).
+  it("el pie único renderiza PaymentBadgesRow", () => {
     expect(
-      footerBlockOf("app/geo/page.tsx").includes("<PaymentBadgesRow"),
-      "app/geo/page.tsx no muestra la fila de pagos seguros en el pie"
+      footerBlockOf("components/marketing/public-footer.tsx").includes("<PaymentBadgesRow"),
+      "el pie único no muestra la fila de pagos seguros"
     ).toBe(true);
   });
 

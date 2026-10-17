@@ -25407,3 +25407,44 @@ Google».
 página propia frente a páginas citadas, redacción por LLM, re-comprobación
 al instante). Si Google no trae tarjeta para el plan, la tercera de IA aparece
 cuando llega la respuesta: un salto pequeño y poco frecuente que se acepta.
+
+## 308. FOOTER-UNIFY-1: un solo pie de página para todo el sitio público (2026-10-17)
+
+**Qué pidió el fundador.** Primero, «la landing de afiliación que esté en el
+pie como programa de afiliados». Después, revisar los pies de todas las
+páginas, porque había varios distintos, y proponer uno único con todos los
+enlaces. Se le enseñaron dos opciones (`docs/design-reference/footer-unify-1/
+opciones.html`) y eligió la **A · Cuatro columnas**.
+
+**Qué había.** Siete versiones del pie, cada una escrita a mano en su fichero.
+Ninguna tenía todos los enlaces: el comprobador gratis y `/demo` no salían en
+ninguna, Cookies sólo en portada y precios, y `/geo`, `/demo` y
+`/gratis/informe-geo` llevaban un pie de cinco o seis enlaces. Las listas
+compartidas de §46/§256/§260 resolvieron qué entraba, pero no impedían que
+cada fichero lo colocara a su manera.
+
+**Qué se decidió.**
+- `components/marketing/public-footer.tsx` es el único pie. Las diez páginas
+  de `MARKETING_SHELLS` lo renderizan y ninguna declara su propio `<footer>`;
+  un test recorre `app/` y `components/` para que no vuelva a aparecer uno.
+- Marca y frase a la izquierda; cuatro columnas: **Producto** (Producto, Cómo
+  funciona, Precios, Videollamada de 20 min), **Gratis** (Comprobador gratis,
+  Informe gratis), **Recursos** (Blog, Estudios, Comparativas, Glosario, Docs,
+  Qué es GEO) y **Empresa** (Qué es GenScore, Quiénes somos, Programa de
+  afiliados, correo de soporte). Debajo, los pagos seguros y la línea legal
+  (Privacidad, Cookies, Términos). Dos columnas por debajo de 720px.
+- Las columnas son `PUBLIC_FOOTER_GROUPS`, construidas a partir de las tres
+  listas compartidas: cada enlace de una lista entra exactamente una vez, y lo
+  comprueba el test.
+- «Afiliados» pasa a **«Programa de afiliados»**.
+- Sale «Recomendaciones» (`#pantallas`), un ancla que sólo existía en la
+  portada.
+- Contacto es el correo de soporte porque no hay página de contacto.
+- «Preferencias de cookies» reabre el aviso, pero **sólo se pinta si el aviso
+  existe** (PAID-ADS-1 duerme hasta que haya un id de anuncios); si no, sería
+  un control muerto.
+
+**Pendiente.** El aviso legal no está en la línea legal porque la página no se
+ha publicado; cuando salga, se añade a `PUBLIC_FOOTER_LEGAL_LINKS`. El pie es
+más alto que antes en móvil (unas dos pantallas de iPhone); el fundador lo
+aceptó al elegir la opción A.

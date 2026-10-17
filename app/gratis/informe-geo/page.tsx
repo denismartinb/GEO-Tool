@@ -2,11 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { BrandLogo } from "@/components/ui/brand-logo";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { FreeReportForm } from "@/components/free-report/free-report-form";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * FREE-REPORT-1 Fase 1 — «Pide tu informe GEO gratis».
@@ -225,26 +224,7 @@ export default function FreeReportPage() {
         </FreeReportForm>
       </main>
 
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link href="/" className="lp-logo">
-              <BrandLogo size={19} />
-            </Link>
-            <nav className="links" aria-label="Pie de página">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/precios">Precios</Link>
-              <Link href="/blog">Blog</Link>
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/terminos">Términos</Link>
-            </nav>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

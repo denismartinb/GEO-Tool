@@ -1,15 +1,14 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
 import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { FreeReportPriceLine } from "@/components/free-report/free-report-offers";
 import { PricingFaq } from "@/components/pricing/pricing-faq";
 import { PlanCardCta } from "@/components/pricing/plan-card-cta";
 import { SELLABLE_PLANS, PLAN_MATRIX, type Plan, type PlanCell } from "@/app/pricing/plans-data";
 import { getFounderOffer } from "@/lib/stripe";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * PERPLEXITY-ENGINE-1 Fase 2: Perplexity entra como cuarto motor sólo en Pro y
@@ -297,37 +296,7 @@ export async function PricingPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link className="lp-logo" href="/" aria-label="Inicio de GenScore">
-              <BrandLogo size={19} />
-            </Link>
-            <nav className="links" aria-label="Pie de página">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/#como">Cómo funciona</Link>
-              <Link href="/precios">Precios</Link>
-              {MARKETING_CONTENT_LINKS.map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/cookies">Cookies</Link>
-              <Link href="/terminos">Términos</Link>
-            </nav>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
