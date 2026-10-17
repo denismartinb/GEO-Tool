@@ -25857,7 +25857,7 @@ visto bueno del fundador».
 
 El fundador pidió además que «Qué revisa GenScore y qué no» del artículo de
 las diez comprobaciones contara las dos mitades: optimizar la web para la IA
-y la Visibilidad agéntica con sus cinco componentes y recomendaciones
+y la Visibilidad agéntica con sus componentes y recomendaciones
 priorizadas, como `/comercio-agentico`. Los componentes se describen según
 los checks reales de `lib/agentic-audit/score.ts`, y la Auditoría agéntica en
 la consola se dice «próximamente», igual que en la landing.
