@@ -38,8 +38,13 @@ describe("GscOverviewHalfView", () => {
     expect(html).toContain(`/dashboard/projects/${P}/search-console`);
   });
 
-  it("invites to connect when there is no connection", () => {
-    expect(render({ kind: "disconnected" })).toContain("Conectar Search Console");
+  it("invites to connect when there is no connection, straight to Google", () => {
+    const html = render({ kind: "disconnected" });
+    expect(html).toContain("Añade lo que ve Google");
+    expect(html).toContain("Conectar con Google");
+    expect(html).toContain(`/api/search-console/connect?projectId=${P}`);
+    // GSC-CONNECT-CTA-1 (log §313): no example figures behind the invitation.
+    expect(html.slice(html.indexOf("Añade")).replace(/<[^>]*>/g, "").replace(/página 1/g, "")).not.toMatch(/\d/);
     expect(render({ kind: "reconnect", reason: "revoked" })).toContain("Volver a conectar");
   });
 

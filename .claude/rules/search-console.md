@@ -99,7 +99,7 @@ revisión de data-guardian que lo precedió.
   en Google». Recomendaciones llama con `inspect = false`, porque son lo más
   lento de una carga sin caché (log §298).
 - **El bloque de Recomendaciones reserva su sitio.** La página lee
-  `isSearchConsoleActive` (nuestra base de datos, sin Google). Sólo si está
+  `readSearchConsoleAvailability` (nuestra base de datos, sin Google). Sólo si está
   conectado monta las ranuras, con su esqueleto mientras llega Google. Sin
   conexión no pinta nada (log §298, ranuras de §307).
 - **El bloque va en un `Suspense`.** Google no puede retrasar las
@@ -111,3 +111,17 @@ revisión de data-guardian que lo precedió.
   (`GooglePlanSlot`); el resto, a la fila de «Más adelante»
   (`GoogleLaterSlot`). Las dos ranuras leen Google una sola vez por petición
   (`cache` de React en `google-recs.tsx`), cada una en su `Suspense`.
+
+## Invitación a conectar (GSC-CONNECT-CTA-1, log §313)
+
+- **Se invita a conectar donde saldrían los datos, y sólo ahí.** La mitad de
+  Google de la tarjeta SEO de Visión general (`GscConnectPanel`) y la fila
+  «Con tus datos de Google» de «Más adelante» (`GscConnectRow`), ambas de
+  `app/dashboard/projects/[projectId]/_components/gsc-connect-invite.tsx`. Salen con
+  `disconnected` o `reconnect`; con `off` (sin configurar o sin migración)
+  no sale nada, porque un botón que no puede funcionar es peor que ninguno.
+- **Sin cifras de ejemplo.** La invitación dice qué se gana, nunca enseña
+  números que todavía no existen (lo vigila `gsc-connect-invite.test.tsx`).
+- **El botón va directo a `/api/search-console/connect`**, que comprueba la
+  propiedad del proyecto por su cuenta. Elegir propiedad sigue en «Posición
+  en Google», donde vuelve la conexión.
