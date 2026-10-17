@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { loadSearchConsoleOverview, type SearchConsoleOverview } from "@/lib/search-console/load";
+import { GscConnectPanel } from "./gsc-connect-invite";
 import { fmtDeltaPct, fmtInt, fmtPosition } from "../search-console/_components/format";
 
 /**
  * The Google half of Visión general's Auditoría SEO card (SEARCH-SEO-1 Fase
  * 3, log §284; design: the "Buscadores" card of
- * docs/design-reference/search-seo-1/maqueta.html). Clicks and average
+ * docs/design-reference/search-seo-1/maqueta.html). The invitation to connect
+ * is GSC-CONNECT-CTA-1 (log §313). Clicks and average
  * position of the last 28 days, and how many searches sit on Google's page 2.
  *
  * Rendered inside a Suspense boundary so Google's latency never holds up the
@@ -35,16 +37,9 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
           <b>Google · últimos 28 días</b>
           <span>Search Console</span>
         </div>
-        <div className="ov2-gsc-cta">
-          <p>
-            {state.kind === "reconnect"
-              ? "La conexión con Search Console se ha perdido. Vuelve a conectar para ver tus clics y tu puesto en Google."
-              : "Conecta tu Search Console para ver tus clics, tu puesto en Google y las búsquedas en las que sales en la página 2."}
-          </p>
-          <Link href={screen} className="btn btn-ghost btn-sm">
-            {state.kind === "reconnect" ? "Volver a conectar" : "Conectar Search Console"}
-          </Link>
-        </div>
+        {/* GSC-CONNECT-CTA-1 (log §313): a panel with what Google adds, and a
+            button straight to Google's consent screen. */}
+        <GscConnectPanel projectId={projectId} state={state.kind} />
       </div>
     );
   }

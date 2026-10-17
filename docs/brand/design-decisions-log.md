@@ -25646,6 +25646,51 @@ ha publicado; cuando salga, se añade a `PUBLIC_FOOTER_LEGAL_LINKS`. El pie es
 más alto que antes en móvil (unas dos pantallas de iPhone); el fundador lo
 aceptó al elegir la opción A.
 
+## 313. GSC-CONNECT-CTA-1: invitar a conectar Search Console en Visión general y Recomendaciones (2026-10-17)
+
+**Qué pidió el fundador.** «El SEO es imprescindible para tener GEO»: una
+llamada a conectar Search Console en la tarjeta SEO de Visión general y en
+Recomendaciones cuando el cliente no lo tiene conectado. Se le enseñaron tres
+propuestas en artefacto (`docs/design-reference/gsc-connect-cta-1/`): A
+dentro de la tarjeta, B en el hueco que se llena (recomendada) y C con una
+franja oscura del argumento SEO + GEO. **Eligió la A.**
+
+**Qué se hizo.**
+- **Visión general.** La mitad de Google de la tarjeta «Auditoría SEO»
+  cambia la frase y el botón fantasma de §284 por un panel: «Añade lo que ve
+  Google», tres ventajas y un botón «Conectar con Google» con el logo. Los
+  textos del panel y de la fila los escribió el fundador al revisar el
+  preview: «En qué puesto sales para cada búsqueda», «Recomendaciones para
+  mejorar en IA y SEO», «Posicionamiento de prompts SEO y GEO» y «Acceso de
+  solo lectura»; en Recomendaciones, «Recomendaciones para mejorar en Google»
+  con las etiquetas «Subir a la página 1», «SEO + GEO», «Vigilar keywords en
+  la IA» y «Posicionamiento global».
+  Con la conexión perdida: «Se ha perdido la conexión con Google» y «Volver a
+  conectar».
+- **Recomendaciones.** Sin conexión, la fila «Con tus datos de Google» de
+  «Más adelante» (§307) sale igualmente, con un hueco discontinuo que dice qué
+  tarjetas traerá y el mismo botón. Sin lista de IA, va donde iría la fila.
+  El plan no cambia: la propuesta A no ocupa el puesto 2.
+- **El botón va directo al permiso de Google** (`/api/search-console/connect`)
+  en vez de pasar por «Posición en Google». Esa ruta comprueba la propiedad
+  del proyecto y, al volver, deja al cliente en «Posición en Google» para
+  elegir la propiedad, como antes.
+- `readSearchConsoleAvailability` (`lib/search-console/load.ts`) sustituye a
+  `isSearchConsoleActive`: distingue conectado, sin conectar, por reconectar y
+  apagado (sin configurar o sin migración), leyendo sólo nuestra base de
+  datos. Apagado no enseña nada.
+- Componentes en `app/dashboard/projects/[projectId]/_components/gsc-connect-invite.tsx`; el logo de
+  Google pasa a `components/search-console/google-mark.tsx`, compartido con
+  la caja de conexión de «Posición en Google».
+
+**Qué no cambia.** Ninguna cifra: la invitación no enseña números de ejemplo
+(test). Lo que se guarda, el plan de IA, los puntos y la pantalla «Posición en
+Google».
+
+**Pendiente.** Medir si conecta más gente (el embudo de PostHog no tiene aún
+un evento de conexión de Search Console). B y C quedan descartadas, no
+aplazadas.
+
 ## 314. BLOG-ANIM-1: tres artículos con dato de terceros y figuras animadas (2026-10-17)
 
 **Qué pasó.** El fundador pidió tres artículos con gancho, didácticos y
@@ -25683,3 +25728,21 @@ que GenScore hace bien, «con imágenes chulas o alguna animación si aplica».
 **Pendiente.** Sin publicar hasta el visto bueno del fundador. La auditoría
 técnica no lee Claude-SearchBot ni los bots de usuario; el artículo no dice
 que lo haga.
+
+## 315. EDITORIAL-DROPS-SKIP-1: la rama de material para redes no construye en Vercel (2026-10-17)
+
+**Qué.** `scripts/vercel-should-build.sh` añade `editorial-drops/*` a la lista
+de rutas que no pueden afectar a la app, con su test en
+`scripts/vercel-should-build.test.ts`.
+
+**Por qué.** Desde el 2026-10-17 el material editorial listo para publicar
+(textos, imágenes, calendarios) se entrega en la rama `editorial-drops`, en
+`editorial-drops/AAAA-MM-DD-tema/` más `editorial-drops/LATEST.md`, que vigila
+Instinct, el agente con el que Denis publica. Nada del producto importa esa
+carpeta, así que cada entrega lanzaba un build de preview que no servía para
+nada (BUILD-BUDGET-1).
+
+**Pendiente.** La rama `editorial-drops` nació de `main` antes de este cambio:
+hasta que lleve este commit, su script sigue sin saltar la carpeta. Una vez
+mergeado, se trae `main` a esa rama una vez. No se añade a la comprobación de
+directorios existentes del test porque la carpeta sólo existe en esa rama.
