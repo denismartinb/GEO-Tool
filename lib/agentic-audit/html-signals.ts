@@ -1,5 +1,5 @@
 /**
- * AGENTIC-COMMERCE-1 — what an agent can read from ONE page's HTML, without
+ * AGENTIC-COMMERCE-1: what an agent can read from ONE page's HTML, without
  * running JavaScript. Pure: a string in, facts out. No network, no DOM.
  *
  * It reads what an agent with a plain HTTP client would read: JSON-LD,

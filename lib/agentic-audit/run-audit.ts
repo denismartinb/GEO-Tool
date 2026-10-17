@@ -7,7 +7,7 @@ import { scoreAgenticAudit } from "@/lib/agentic-audit/score";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 
 /**
- * AGENTIC-COMMERCE-1 — runs the free agentic check on one URL.
+ * AGENTIC-COMMERCE-1: runs the free agentic check on one URL.
  *
  * What it requests is a fixed list, all on the store's own domain: the page
  * the visitor gave, robots.txt, sitemap.xml, four well-known files and, on

@@ -1,7 +1,7 @@
 import type { InteropItem } from "@/lib/agentic-audit/api-contract";
 
 /**
- * AGENTIC-COMMERCE-1 — Interoperabilidad: does the store publish a direct
+ * AGENTIC-COMMERCE-1: Interoperabilidad: does the store publish a direct
  * channel for agents? Four items, each read from a fixed, well-known URL on
  * the store's own domain. No link is followed and nothing is discovered:
  * the list of URLs is constant (`interopProbePaths`).

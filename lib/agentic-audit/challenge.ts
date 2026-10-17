@@ -1,5 +1,5 @@
 /**
- * AGENTIC-COMMERCE-1 — did the site answer our bot with a block or a
+ * AGENTIC-COMMERCE-1: did the site answer our bot with a block or a
  * challenge instead of the page? Pure.
  *
  * We ask as GenScore's own, identified bot (`AUDIT_USER_AGENT`), never

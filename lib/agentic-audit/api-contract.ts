@@ -1,5 +1,5 @@
 /**
- * AGENTIC-COMMERCE-1 — what `/api/comercio-agentico/comprobar` answers and
+ * AGENTIC-COMMERCE-1: what `/api/comercio-agentico/comprobar` answers and
  * what the landing renders. Shared by the route and the client, so it holds
  * types and constants only (no server code).
  *

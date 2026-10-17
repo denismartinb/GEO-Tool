@@ -9,7 +9,7 @@ import {
 } from "@/lib/web-audit/fetch-page";
 
 /**
- * AGENTIC-COMMERCE-1 — fetches one URL on the store's own domain and keeps
+ * AGENTIC-COMMERCE-1: fetches one URL on the store's own domain and keeps
  * what `fetchPageSafely` throws away: the status, a few headers and the body
  * of a 403 or 503. Those are exactly what tell a challenge from a page.
  *

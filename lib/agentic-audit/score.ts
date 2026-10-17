@@ -10,7 +10,7 @@ import type {
 import { isProductPage, type PageSignals } from "@/lib/agentic-audit/html-signals";
 
 /**
- * AGENTIC-COMMERCE-1 — the «Visibilidad agéntica» score. Pure.
+ * AGENTIC-COMMERCE-1: the «Visibilidad agéntica» score. Pure.
  *
  * Weights approved by the founder with the design (2026-10-17,
  * `docs/adr/0043`): Descubrimiento 30, Comprensión 30, Confianza 20,

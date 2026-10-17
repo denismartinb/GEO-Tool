@@ -2,7 +2,7 @@ import Link from "next/link";
 import "./agentic-pill.css";
 
 /**
- * AGENTIC-COMMERCE-1 — the home's pill to the agentic-commerce landing,
+ * AGENTIC-COMMERCE-1: the home's pill to the agentic-commerce landing,
  * above the headline. Copy approved by the founder on 2026-10-17.
  */
 export function AgenticPill() {

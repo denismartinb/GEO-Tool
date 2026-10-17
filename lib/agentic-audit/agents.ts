@@ -1,7 +1,7 @@
 import type { AgentAccess, AssistantName } from "@/lib/agentic-audit/api-contract";
 
 /**
- * AGENTIC-COMMERCE-1 — which robots.txt tokens decide whether each
+ * AGENTIC-COMMERCE-1: which robots.txt tokens decide whether each
  * assistant can reach a store. An assistant counts as let in only when
  * every one of its tokens is: blocking the search crawler keeps the store
  * out of the shortlist, blocking the user-action fetcher keeps the agent
