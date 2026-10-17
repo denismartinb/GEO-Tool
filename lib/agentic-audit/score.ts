@@ -305,3 +305,21 @@ export function scoreAgenticAudit(input: ScoreInput): AgenticCheckResult {
     facts: s ? (input.facts ?? null) : null
   };
 }
+
+/**
+ * AGENTIC-COMMERCE-1 Fase 2a (log §322): the total this page would have if the
+ * given checks passed, recomputed with the same arithmetic as the score — not
+ * the sum of the fixes' rounded gains. `null` when the page has no total
+ * (not a product page, or not read), so the console never promises a figure
+ * the engine does not compute.
+ */
+export function scoreIfChecksPass(result: AgenticCheckResult, checkIds: ReadonlySet<string>): number | null {
+  if (result.score === null) return null;
+  const components = result.components.map((c) => ({
+    ...c,
+    score: componentScore(c.checks.map((k) => (checkIds.has(k.id) && k.state !== "unknown" ? { ...k, state: "pass" as const } : k)))
+  }));
+  const scored = components.filter((c) => c.score !== null);
+  const weight = scored.reduce((sum, c) => sum + c.weight, 0);
+  return weight > 0 ? Math.round(scored.reduce((sum, c) => sum + c.weight * (c.score ?? 0), 0) / weight) : null;
+}

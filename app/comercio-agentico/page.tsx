@@ -22,10 +22,11 @@ const PAGE_PATH = "/comercio-agentico";
  * real (`/api/comercio-agentico/comprobar`, no LLM); the scene and the
  * five-component block are illustrations and say so.
  *
- * Copy that differs from the prototype, on purpose: the console part
- * (Auditoría agéntica, Visibilidad en agentes) ships in a later phase, so the
- * page never promises it as available today. The «Auditoría agéntica» card is
- * marked «Próximamente» and the free result has no Pro gate.
+ * Copy that differs from the prototype, on purpose: since Fase 2a (log §322)
+ * the «Auditoría agéntica» card says it is in the Pro console, and describes
+ * only what that screen reviews (one saved product page, no checkout walk).
+ * «Visibilidad en agentes» ships later and is not promised. The free result
+ * has no Pro gate.
  */
 export const metadata: Metadata = contentMetadata({
   title: "Comercio agéntico: ¿los agentes pueden comprar en tu web? · GenScore",
@@ -286,11 +287,11 @@ export default function AgenticCommercePage() {
                 </svg>
               </div>
               <h3 className="ca-card-h">
-                Auditoría agéntica <span className="ca-new">Próximamente</span>
+                Auditoría agéntica <span className="ca-new">Nuevo</span>
               </h3>
               <p>
-                Llegará a tu consola: acceso de cada agente, datos de producto, envío y devoluciones, checkout y protocolos (UCP,
-                ACP, MCP), ficha a ficha.
+                En tu consola de Pro: qué asistentes deja pasar tu robots.txt, datos de producto, envío y devoluciones, la compra
+                en la ficha y protocolos (UCP, MCP, A2A), con lo que más sube tu nota.
               </p>
             </div>
             <div className="ca-card">

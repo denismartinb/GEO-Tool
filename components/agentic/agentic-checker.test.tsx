@@ -108,7 +108,7 @@ describe("AgenticResultView", () => {
     expect(html).toContain("89,95 EUR");
     expect(html).toContain("En la consola lo verás todo en detalle");
     expect(html).toContain("Empezar gratis con Pro");
-    expect(html).toContain("llega muy pronto a la consola de Pro");
+    expect(html).toContain("ya está en la consola de Pro");
   });
 
   it("never writes an em dash nor the retired «sin puntos» wording", () => {

@@ -26032,3 +26032,58 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Nada.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 322. AGENTIC-COMMERCE-1 Fase 2a: «Auditoría agéntica» en la consola de Pro (2026-10-17)
+
+**Qué se decidió.** El fundador aprobó el plan de la Fase 2 («Merge y sigue
+con fase 2», 2026-10-17; maqueta en
+`docs/design-reference/agentic-commerce-1/fase-2a.html`) y esta entrega es
+sólo la 2a:
+
+- Bloque nuevo del menú «Comercio agéntico», con etiqueta «Nuevo», y una
+  entrada, «Auditoría agéntica» (`/dashboard/projects/<id>/agentic-audit`).
+- El cliente pone una vez la URL de una ficha de producto de su dominio y se
+  guarda. «Cambiar» la cambia; «Revisar ahora» la vuelve a revisar, como
+  mucho **5 veces por proyecto cada 24 h** (`AGENTIC_REVIEW_DAILY_LIMIT`). La
+  pantalla dice cuándo se revisó.
+- Enseña la nota, los cinco componentes, los checks de cada uno, el acceso
+  de cada asistente según robots.txt más una fila para el reto anti-bots,
+  los protocolos como «N de 4» y «Qué hacer primero». Es el mismo motor que
+  el comprobador gratuito (`runAgenticAudit`), sin LLM.
+- Pro, Agencia y la prueba de 7 días. Starter ve la invitación a Pro. El plan
+  se lee con `resolveSystemPlanId` y falla cerrado: sin perfil, no se revisa.
+- Migración 0043 (`agentic_audits`): una fila por revisión, RLS de sólo
+  lectura para el dueño, escritura sólo desde la server action con service
+  role filtrando por `project_id` y `owner_user_id`. La fila `pending` se
+  escribe antes de salir a la red, así que el límite cuenta también las
+  revisiones que fallan. **Se aplica a mano antes del merge**; sin ella la
+  pantalla dice «Muy pronto podrás revisar tu tienda aquí», nunca un error.
+- La landing pasa de «llega muy pronto a la consola de Pro» a «ya está en la
+  consola de Pro», y su tarjeta «Auditoría agéntica» de «Próximamente» a
+  «Nuevo» (supera la regla de §318 sobre esa línea).
+
+**Diferencias con el prototipo, a propósito.**
+
+- No hay respuesta de la web por agente: nunca nos hacemos pasar por uno
+  (ADR 0043). El acceso por asistente sale sólo de robots.txt.
+- No hay «compra como invitado» ni recorrido del carrito: sería un crawler.
+- Los checks no enseñan puntos, sólo estados.
+- «Si arreglas…, subes a N» lo calcula el motor (`scoreIfChecksPass`), no se
+  suman ganancias redondeadas.
+- Una sola pantalla; la tarjeta de Visión general y «Visibilidad en agentes»
+  son 2b–2d.
+
+**Menú móvil.** El bloque nuevo (un rótulo y un enlace, 70 px) hacía que la
+lista del cajón scrolleara a 390×664 (regla de §301). Los rótulos de bloque
+pasan a `5px 10px 1px`, el selector de proyecto a márgenes de 6/4 y la lista
+a 2/4 px de relleno: medido, «Manuales y estudios» acaba 6 px por encima del
+pie y la lista no scrollea.
+
+**Qué queda.** 2b, 2c y 2d sin aprobar. Los artículos del blog sobre comercio
+agéntico dicen que la auditoría «está en construcción»: hay que refrescarlos
+cuando esto esté en producción. El check de reto, cuando no se puede medir,
+dice su etiqueta y «No se pudo medir», igual que el comprobador.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: una
+revisión fallida deja la anterior a la vista y «Revisar ahora» sigue
+disponible mientras queden revisiones del día.

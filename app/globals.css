@@ -325,6 +325,14 @@ a {
   color: var(--ink-4);
   padding: 14px 10px 6px;
 }
+/* AGENTIC-COMMERCE-1 Fase 2a (log §322): «Nuevo» next to a menu block's name. */
+.nav-group-new {
+  margin-left: 6px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+}
 
 .nav-item {
   display: flex;
@@ -8439,17 +8447,27 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      sola fila —cuenta a la izquierda, ayuda y salir como iconos de 44px a la
      derecha— y la lista se aprieta un poco (filas de 40px, rótulos más
      bajos) para que entera quepa en la altura útil de un iPhone con las
-     barras de Safari. */
+     barras de Safari.
+     AGENTIC-COMMERCE-1 Fase 2a (log §322): el bloque «Comercio agéntico»
+     añadió un rótulo y un enlace (70px), así que los rótulos de bloque, el
+     margen del selector de proyecto y el relleno inferior de la lista se
+     aprietan otra vez hasta que todo vuelve a caber sin scroll. */
   .nav-item {
     min-height: 40px;
   }
 
   .nav-group-label {
-    padding: 10px 10px 4px;
+    padding: 5px 10px 1px;
   }
 
   .sb-scroll {
-    padding-top: 4px;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  .proj-switch {
+    margin-top: 6px;
+    margin-bottom: 4px;
   }
 
   .sb-foot {

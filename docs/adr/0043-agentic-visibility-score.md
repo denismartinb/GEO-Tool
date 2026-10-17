@@ -72,3 +72,20 @@ goes through the web audit's SSRF guard (imported).
   that ChatGPT is blocked.
 - Changing any weight moves every result. It needs a founder decision and an
   addendum here, like the GEO Score (ADR 0033).
+
+## Addendum: Fase 2a, the console review (2026-10-17, log §322)
+
+- The console runs the same engine on one product page the customer saves.
+  The page must be on the project's domain or a subdomain
+  (`isSameOrSubdomain`), so the fixed-URL list stays on a domain the
+  customer owns.
+- Each review is a row of `agentic_audits` (migration 0043), written
+  `pending` before any request leaves and updated to `completed` or
+  `failed`. Reads go through RLS (owner only); writes only through the
+  server action with the service role, after ownership is checked with the
+  user's client.
+- Limit: 5 reviews per project per 24 h, counted from those rows, failing
+  closed if the count cannot be read.
+- Plan: Pro, Agencia and the Pro trial, read with `resolveSystemPlanId`.
+- The projected score («subes a N») is the engine's own arithmetic with the
+  chosen checks set to pass (`scoreIfChecksPass`). Weights are unchanged.

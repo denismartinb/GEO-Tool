@@ -15,7 +15,7 @@ entre Portada, Landing y Consola, y entre Escritorio y Móvil.
   «Qué es» con las tarjetas Navegador y Protocolo, los cinco agentes con sus
   logos, «Por qué ahora», «Cómo te ayuda GenScore» con los cinco componentes al
   estilo PageSpeed, preguntas y cierre.
-- **Consola** (Fase 2, todavía sin construir): tarjeta en Visión general y la
+- **Consola** (Fase 2; la 2a, «Auditoría agéntica», ya construida): tarjeta en Visión general y la
   sección «Comercio agéntico» con «Visibilidad en agentes» y «Auditoría
   agéntica».
 
@@ -37,3 +37,11 @@ La consola llega en la Fase 2, así que la landing no puede prometerla todavía:
 - El resultado del comprobador es el real (`lib/agentic-audit/`), no el de
   ejemplo del prototipo. El bloque de los cinco componentes de «Cómo te ayuda»
   sigue siendo un ejemplo y lo dice.
+
+## Fase 2a: la consola (aprobada 2026-10-17)
+
+`fase-2a.html` es el plan de la Fase 2 que aprobó el fundador («Merge y
+sigue con fase 2»), con la maqueta de la pantalla «Auditoría agéntica» en
+móvil y escritorio. Sólo se construye la 2a; 2b–2d siguen sin aprobar.
+Diferencias con el prototipo y por qué: `docs/brand/design-decisions-log.md`
+§322.

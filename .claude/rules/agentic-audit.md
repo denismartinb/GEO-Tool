@@ -5,15 +5,16 @@ paths:
   - "app/comercio-agentico/**"
   - "app/api/comercio-agentico/**"
   - "components/agentic/**"
+  - "app/dashboard/projects/*/agentic-audit/**"
 ---
 
 # Comercio agéntico — invariantes
 
 Se inyectan solos al tocar `lib/agentic-audit/**`,
-`app/comercio-agentico/**`, `app/api/comercio-agentico/**` y
-`components/agentic/**`. Cada regla es trazable a
-`docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318 y §319.
+`app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
+`components/agentic/**` y `app/dashboard/projects/*/agentic-audit/**`. Cada
+regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
+`docs/brand/design-decisions-log.md` §317, §318, §319 y §322.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -46,11 +47,11 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
   propios límites (`AGENTIC_CHECK_LIMITS`). El comprobador de ChatGPT excluye
   esas filas: uno no puede gastar los límites del otro. La fila se escribe
   antes de salir a la red y los límites fallan cerrado.
-- **La landing no dice que Pro ya tiene la auditoría agéntica.** «Auditoría
-  agéntica» lleva «Próximamente». El cierre del comprobador invita a probar
-  Pro gratis (fundador, 2026-10-17, log §318), pero siempre con la línea «La
-  auditoría agéntica completa llega muy pronto a la consola de Pro» hasta que
-  la Fase 2 esté en producción.
+- **La landing dice que Pro ya tiene la auditoría agéntica** desde la Fase
+  2a (log §322): «La auditoría agéntica ya está en la consola de Pro» y la
+  tarjeta lleva «Nuevo». Lo que aún no existe («Preguntas de compra», varias
+  fichas a la vez) lleva «Próximamente». No se anuncia nada de 2b–2d hasta
+  que esté en producción.
 - **La animación del comprobador sólo escenifica el ritmo** (log §318).
   Antes de la respuesta, sólo las URL que el servidor pide de verdad
   (`scan-script.ts` las saca de `interopProbePaths` y `ASSISTANT_ROBOTS_TOKENS`).
@@ -59,3 +60,22 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
   cambia con él.
 - **`facts` es texto de terceros.** Se limpia y se recorta en
   `page-facts.ts` y se pinta sólo como texto, nunca como HTML.
+
+## Consola: «Auditoría agéntica» (Fase 2a, log §322)
+
+- **Propiedad antes que nada.** `runConsoleAgenticAuditCore` comprueba con
+  el cliente del usuario que el proyecto es suyo; sólo entonces escribe con
+  service role, siempre filtrando por `project_id` y `owner_user_id`. El
+  dueño sólo lee `agentic_audits` (RLS).
+- **El plan falla cerrado.** `isProOrAbove(resolveSystemPlanId(perfil))`;
+  sin perfil no se revisa. Nunca `getPlanForUser`, que cae a Pro.
+- **Sólo el dominio del proyecto o un subdominio** (`isSameOrSubdomain`).
+- **La fila se escribe antes de salir a la red**, y el límite (5 por
+  proyecto cada 24 h) cuenta todas las filas, también las fallidas. Si no se
+  puede contar, no se revisa.
+- **Sin la migración 0043 la pantalla dice que no está disponible todavía**,
+  nunca un error ni un 404.
+- **Nada por agente salvo robots.txt.** La consola no afirma cómo responde
+  la web a cada agente: ni lo medimos ni podemos sin hacernos pasar por él.
+- **Los checks no enseñan puntos**, sólo estados. «Subes a N» sale de
+  `scoreIfChecksPass`, nunca de sumar ganancias.
