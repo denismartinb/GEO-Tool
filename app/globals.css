@@ -9896,6 +9896,140 @@ select.set-field {
   .art-bars-track { grid-column: 1 / -1; grid-row: 2; height: 12px; }
 }
 
+/* BLOG-ANIM-1 (log §314): figuras animadas de los artículos
+   (`components/blog/article/animations.tsx`). Animación CSS pura, en bucle
+   lento, y quieta con `prefers-reduced-motion` en un fotograma que se sigue
+   entendiendo. Las cifras van siempre en texto: el movimiento enseña el
+   mecanismo, no sustituye al número. */
+.art-anim ul, .art-anim ol { list-style: none; margin: 0; padding: 0; }
+.lp-article .blog-body .art-anim li { margin: 0; padding: 0; }
+.lp-article .blog-body .art-anim li::before { content: none; }
+
+/* La misma pregunta, cuatro respuestas. */
+.art-shuf-q { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+.art-shuf-q-l, .art-fan-l, .art-crawl-side {
+  font-size: 10.5px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--brand-ink-3);
+}
+.lp-article .blog-body .art-shuf-q-t { font-size: 16px; font-weight: 700; color: var(--brand-ink); line-height: 1.35; }
+.art-shuf-run { position: relative; height: 26px; margin-bottom: 10px; }
+.art-shuf-run-n {
+  position: absolute; left: 0; top: 0; display: inline-flex; align-items: center; height: 26px; padding: 0 12px;
+  border-radius: 13px; background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)); color: #fff;
+  font-size: 12.5px; font-weight: 800; opacity: var(--o1);
+  animation: art-shuf-fade 12s infinite;
+}
+.art-shuf-list { position: relative; margin-bottom: 22px !important; }
+.art-shuf-item {
+  position: absolute; left: 0; right: 0; top: 0; height: 38px; display: flex; align-items: center; gap: 10px;
+  padding: 0 14px; border-radius: 10px; background: #f3f6fb; border: 1px solid #e3e8f1;
+  font-size: 14.5px; font-weight: 700; color: var(--brand-ink);
+  transform: translateY(var(--y1)); opacity: var(--o1);
+  animation: art-shuf-move 12s cubic-bezier(.6, 0, .3, 1) infinite;
+}
+.art-shuf-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--brand-blue); flex: none; }
+.art-shuf-sum ul { display: grid; gap: 12px; }
+@keyframes art-shuf-move {
+  0%, 21% { transform: translateY(var(--y1)); opacity: var(--o1); }
+  25%, 46% { transform: translateY(var(--y2)); opacity: var(--o2); }
+  50%, 71% { transform: translateY(var(--y3)); opacity: var(--o3); }
+  75%, 96% { transform: translateY(var(--y4)); opacity: var(--o4); }
+  100% { transform: translateY(var(--y1)); opacity: var(--o1); }
+}
+@keyframes art-shuf-fade {
+  0%, 21% { opacity: var(--o1); }
+  25%, 46% { opacity: var(--o2); }
+  50%, 71% { opacity: var(--o3); }
+  75%, 96% { opacity: var(--o4); }
+  100% { opacity: var(--o1); }
+}
+
+/* Una pregunta que se abre en muchas búsquedas. */
+.art-fan {
+  display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 22px; align-items: center;
+}
+.art-fan-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.lp-article .blog-body .art-fan-card {
+  margin: 0; padding: 14px 16px; border-radius: 12px; background: #f3f6fb; border: 1px solid #e3e8f1;
+  font-size: 14.5px; line-height: 1.4; font-weight: 700; color: var(--brand-ink);
+}
+.art-fan-mid ul { display: grid; gap: 7px; position: relative; padding-left: 16px !important; border-left: 2px solid #dbe3f0; }
+.lp-article .blog-body .art-fan-q {
+  display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 8px;
+  background: #fff; border: 1px solid #dbe3f0; font-size: 13px; line-height: 1.3; color: var(--brand-ink-2);
+  animation: art-fan-in 9s ease-out infinite; animation-delay: calc(var(--i) * .45s);
+}
+.art-fan-mag {
+  flex: none; width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--brand-blue); position: relative;
+}
+.art-fan-mag::after {
+  content: ""; position: absolute; width: 5px; height: 2px; background: var(--brand-blue);
+  right: -5px; bottom: -3px; transform: rotate(45deg); border-radius: 1px;
+}
+.lp-article .blog-body .art-fan-ans {
+  background: linear-gradient(135deg, #eef4ff, #e6fafc); border-color: #c9dbfb;
+  animation: art-fan-ans 9s ease-out infinite;
+}
+@keyframes art-fan-in {
+  0% { opacity: 0; transform: translateX(-10px); }
+  6%, 80% { opacity: 1; transform: none; border-color: #dbe3f0; }
+  10% { border-color: var(--brand-blue); }
+  92%, 100% { opacity: 0; transform: none; }
+}
+@keyframes art-fan-ans {
+  0%, 40% { opacity: .25; transform: scale(.97); }
+  50%, 85% { opacity: 1; transform: none; box-shadow: 0 0 0 4px rgba(9, 197, 214, .14); }
+  95%, 100% { opacity: .25; transform: scale(.97); }
+}
+@media (max-width: 760px) {
+  .art-fan { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+
+/* Bots que leen, personas que no llegan. */
+.art-crawl-lane { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-bottom: 26px; }
+.art-crawl-side-r { text-align: right; }
+.art-crawl-track {
+  position: relative; height: 84px; border-radius: 12px; background: #0b1426; overflow: hidden;
+}
+.art-crawl-site {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2;
+  padding: 7px 14px; border-radius: 9px; background: #13233f; border: 1px solid #2b4d8f;
+  color: #fff; font-size: 12.5px; font-weight: 800; white-space: nowrap;
+}
+.art-crawl-bot {
+  position: absolute; top: var(--t); left: -12px; width: 9px; height: 9px; border-radius: 2px;
+  background: var(--brand-cyan); box-shadow: 0 0 8px rgba(9, 197, 214, .8);
+  animation: art-crawl-bot 2.4s linear infinite; animation-delay: calc(var(--i) * -.24s);
+}
+.art-crawl-human {
+  position: absolute; top: 36px; left: 50%; width: 12px; height: 12px; border-radius: 50%;
+  background: #fff; box-shadow: 0 0 10px rgba(255, 255, 255, .8); opacity: 0;
+  animation: art-crawl-human 9.6s ease-in infinite;
+}
+@keyframes art-crawl-bot {
+  from { left: -12px; opacity: 0; }
+  10%, 80% { opacity: 1; }
+  to { left: 46%; opacity: 0; }
+}
+@keyframes art-crawl-human {
+  0%, 82% { left: 52%; opacity: 0; }
+  86% { opacity: 1; }
+  100% { left: 100%; opacity: 0; }
+}
+.art-crawl-rows { display: grid; gap: 14px; }
+.art-crawl-fill { background: linear-gradient(90deg, var(--brand-blue), var(--brand-cyan)) !important; }
+@media (max-width: 640px) {
+  .art-crawl-lane { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .art-crawl-track { grid-column: 1 / -1; grid-row: 2; }
+  .art-crawl-side-r { grid-row: 1; grid-column: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .art-shuf-item, .art-shuf-run-n, .art-fan-q, .art-fan-ans, .art-crawl-bot { animation: none; }
+  .art-crawl-human { animation: none; opacity: 1; left: 80%; }
+  .art-crawl-bot { left: calc(8% + var(--i) * 4%); }
+}
+
 .art-chartpair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
 @media (max-width: 640px) {
   .art-chartpair { grid-template-columns: minmax(0, 1fr); gap: 32px; }

@@ -78,7 +78,11 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity": "playbooks",
   // CONTENT-LAUNCH-2 (2026-10-11, log §296).
-  "auditoria-seo-y-search-console-en-genscore": "playbooks"
+  "auditoria-seo-y-search-console-en-genscore": "playbooks",
+  // BLOG-ANIM-1 (2026-10-17, log §314).
+  "la-ia-no-repite-la-misma-lista-de-marcas": "medicion",
+  "query-fan-out-la-ia-no-busca-tu-pregunta": "fundamentos",
+  "bots-de-ia-robots-txt-cuales-dejar-entrar": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

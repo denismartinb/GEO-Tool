@@ -1,0 +1,242 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  PullQuote,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart,
+  FanOut
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("query-fan-out-la-ia-no-busca-tu-pregunta");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué es el query fan-out?",
+    answer:
+      "Es la técnica con la que un buscador con IA divide una pregunta en subtemas y lanza muchas búsquedas a la vez, una por subtema, antes de escribir la respuesta. Google la confirmó en mayo de 2025 al presentar el Modo IA, y su modo de investigación profunda puede lanzar cientos de búsquedas para una sola pregunta."
+  },
+  {
+    question: "¿Por qué la IA cita páginas que no están en el top 10 de Google?",
+    answer:
+      "Porque no busca solo tu pregunta: busca sus subpreguntas. Una página puede no posicionar para la pregunta original y sí para una de las búsquedas que el motor lanza por detrás. Ahrefs midió en 2025 que solo el 12% de las páginas que citan los asistentes de IA está en el top 10 de Google para la pregunta original."
+  },
+  {
+    question: "¿Cómo se optimiza el contenido para el query fan-out?",
+    answer:
+      "Cubriendo las preguntas que rodean a la principal: precio, comparativas, alternativas, opiniones, para quién es y cómo se integra. Cada una con una respuesta directa al principio de su sección, y con presencia también en las páginas de terceros que el motor encuentra al buscar, como comparadores, medios o foros."
+  },
+  {
+    question: "¿Sigue sirviendo el SEO si la IA hace sus propias búsquedas?",
+    answer:
+      "Sí. Las búsquedas que lanza el motor siguen leyendo un índice como el de Google, así que posicionar sigue ayudando. Lo que cambia es para qué búsquedas conviene posicionar: no solo la palabra clave principal, sino el conjunto de preguntas que el motor se hace al responder."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+El query fan-out es la técnica con la que un buscador con IA divide tu pregunta
+en subtemas y lanza muchas búsquedas a la vez antes de responder. Google lo
+confirmó al presentar su Modo IA, y su modo de investigación profunda puede
+lanzar cientos de búsquedas para una sola pregunta. La consecuencia es grande:
+según Ahrefs, solo el 12% de las páginas que citan los asistentes de IA está en
+el top 10 de Google para la pregunta original. Para aparecer ya no basta con
+posicionar una palabra clave. Hay que responder las preguntas que el motor se
+hace por detrás.
+
+</KeyTakeaway>
+
+## Qué es el query fan-out, explicado con un ejemplo
+
+Imagina que alguien escribe: «¿Qué CRM me recomiendas para una agencia de diez
+personas?». Un buscador clásico busca esa frase y te devuelve diez enlaces. Un
+motor con IA hace otra cosa. Primero piensa qué necesita saber para responder
+bien: qué CRM existen para agencias, cuánto cuestan por usuario, cuáles se
+integran con el correo, qué opinan quienes los usan, cuáles están en español.
+Después lanza una búsqueda por cada una de esas preguntas, lee los resultados
+y escribe una sola respuesta con lo que ha juntado.
+
+<Figure
+  label="Figura 1."
+  caption="Ilustración. La persona escribe una pregunta; el motor lanza por detrás varias búsquedas distintas y escribe una sola respuesta con lo que encuentra. La persona nunca ve esas búsquedas."
+>
+
+<FanOut
+  question="¿Qué CRM me recomiendas para una agencia de diez personas?"
+  searches={[
+    "mejores CRM para agencias",
+    "CRM precio por usuario al mes",
+    "CRM que se integra con Gmail",
+    "opiniones de CRM para agencias pequeñas",
+    "CRM gratuito frente a CRM de pago",
+    "CRM en español con soporte"
+  ]}
+  answer="Para una agencia de diez personas te encajan tres opciones. Te cuento qué ofrece cada una, cuánto cuesta y para quién es mejor, con enlaces a las fuentes."
+/>
+
+</Figure>
+
+A eso se le llama abanico de consultas, o query fan-out: una pregunta que se
+abre en abanico. Google lo describió así al presentar el Modo IA en mayo de
+2025.
+
+<PullQuote cite="Elizabeth Reid, directora de la Búsqueda de Google, mayo de 2025 (traducción propia)">
+
+Por dentro, el Modo IA usa nuestra técnica de query fan-out: divide tu
+pregunta en subtemas y lanza muchas búsquedas a la vez por ti.
+
+</PullQuote>
+
+En el mismo anuncio, Google explicó que su modo de investigación profunda lleva
+la técnica más lejos y «puede lanzar cientos de búsquedas». Robby Stein,
+vicepresidente de producto de la Búsqueda, lo resumió en una entrevista ese
+verano con un ejemplo: si preguntas qué hacer en una ciudad con un grupo, el
+sistema se plantea preguntas como restaurantes, bares o planes con niños, y
+«empieza a buscar en Google».
+
+Google no es el único. Los asistentes que buscan en la web, como ChatGPT con
+búsqueda o Perplexity, también reformulan la pregunta antes de buscar, aunque
+cada uno a su manera y sin publicar los detalles.
+
+## El dato que lo cambia todo: lo que cita la IA no es el top 10
+
+Si la IA buscara tu pregunta tal cual, citaría lo mismo que sale en la primera
+página de Google. Ahrefs lo comprobó en agosto de 2025 con 15.000 preguntas
+largas: buscó cada una en Google y se la hizo a cuatro asistentes de IA. El
+resultado fue que la mayoría de páginas citadas no estaban ahí.
+
+<Figure
+  label="Figura 2."
+  caption="Porcentaje de páginas citadas por cada asistente que estaban en el top 10 de Google para la pregunta original. Fuente: Ahrefs, 15.000 preguntas largas, agosto de 2025. Es un único estudio: lo utilizable es el orden de magnitud, no el decimal."
+>
+
+<BarChart
+  title="Páginas citadas que están en el top 10 de Google"
+  rows={[
+    { label: "Perplexity", value: 28.6, display: "28,6%", highlight: true },
+    { label: "Media de los cuatro asistentes", value: 12, display: "12%" },
+    { label: "Resto de asistentes", value: 8, display: "~8%" }
+  ]}
+/>
+
+</Figure>
+
+Hay más. Según el mismo estudio, alrededor del 80% de las citas de los
+asistentes venían de páginas que ni siquiera posicionaban en Google para la
+pregunta original. Ahrefs lo explica precisamente por el fan-out: el asistente
+busca variaciones y se queda con las páginas que aparecen bien en varias de
+ellas.
+
+El contraste lo da otro estudio de la misma casa: en las Vistas creadas con IA
+de Google, el 76% de las páginas citadas sí venía del top 10. Es decir, cuanto
+más se parece el sistema a un buscador clásico, más pesa el ranking clásico.
+Cuanto más conversa, más pesa cubrir bien las preguntas que rodean a la tuya.
+
+## Cómo preparar tu web para el query fan-out
+
+<NumberedSection n={1} title="Haz la lista de preguntas que el motor se va a hacer">
+
+Parte de la pregunta principal de tu cliente y apunta las que la rodean. En casi
+cualquier negocio salen las mismas familias: precio, comparativa con
+alternativas, opiniones, para quién es, cómo se usa o se integra, y dudas de
+confianza (garantías, soporte, plazos). Si tu web no responde alguna, en esa
+búsqueda del abanico estará otro.
+
+<QuickAction>Escribe tu pregunta principal en un buscador con IA y en Google, y mira las preguntas relacionadas que te propone cada uno. Son una buena pista de las ramas del abanico.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Responde cada rama arriba del todo">
+
+Cada subpregunta merece su sección, con la respuesta en las primeras líneas y
+el desarrollo después. Si la respuesta a «¿cuánto cuesta?» está en el quinto
+párrafo de una página que habla de otra cosa, el motor que busca precios
+encontrará antes la página de un comparador.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Estate también donde no mandas tú">
+
+Muchas ramas del abanico acaban en páginas de terceros: comparadores, medios,
+foros, directorios. «Opiniones de…» o «alternativas a…» rara vez se resuelven
+con la web de una marca. Aparecer ahí de forma legítima, con información
+correcta y actual, cuenta tanto como tu propia web.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Mide preguntas, no solo palabras clave">
+
+Una palabra clave te dice cómo busca la gente en Google. Una pregunta te dice
+cómo le habla a la IA. Necesitas las dos: la primera para saber qué páginas
+tuyas ya ve Google, y la segunda para saber si, al final del abanico, la IA te
+nombra.
+
+</NumberedSection>
+
+## Cómo te ayuda GenScore con esto
+
+GenScore junta los dos lados del abanico, lo que Google ya ve de tu web y lo
+que la IA acaba diciendo de ti:
+
+- **En Posición en Google**, si conectas tu Search Console, ves las búsquedas
+  reales por las que Google ya te enseña, con tu puesto. Son material directo
+  para las ramas del abanico.
+- **Con «Vigilar prompt»**, una búsqueda de Google se convierte en una de tus
+  preguntas principales de búsqueda, y a partir del siguiente escaneo sabes si
+  la IA te nombra cuando se pregunta eso.
+- **En Prompts, al añadir preguntas basadas en tus palabras clave**, GenScore
+  te propone las preguntas y tú eliges cuáles se quedan antes de guardarlas.
+- **En Páginas citadas** ves qué páginas usan los motores como fuente en tu
+  sector, y si alguna es tuya. Es la forma más rápida de saber en qué ramas
+  del abanico estás y en cuáles está otro.
+
+<Verdict title="El SEO no ha muerto, pero ha cambiado de pregunta">
+
+Las búsquedas que lanza la IA siguen leyendo un índice, así que posicionar sigue
+sirviendo. Lo que cambia es para qué. Ya no compites solo por la palabra clave
+que escribe tu cliente, sino por todas las preguntas que el motor se hace al
+responderle. Si quieres ver cómo se diferencia esto de las Vistas creadas con IA
+de Google, lo contamos en <a href="/blog/ai-overviews-vs-chatgpt-diferencia">la
+diferencia entre las Vistas creadas con IA y ChatGPT</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira en qué ramas del abanico estás"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: conecta tu Search Console, convierte tus búsquedas de Google en preguntas para la IA y mira qué páginas citan ChatGPT, Gemini, Claude y Perplexity en tu sector."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

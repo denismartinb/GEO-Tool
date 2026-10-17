@@ -1,0 +1,244 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  PullQuote,
+  Checklist,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  ShuffleRuns
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("la-ia-no-repite-la-misma-lista-de-marcas");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Por qué ChatGPT me da una lista de marcas distinta cada vez?",
+    answer:
+      "Porque cada respuesta se genera de nuevo: el modelo elige cada palabra entre varias posibles, y si además busca en la web, las páginas que encuentra cambian de un momento a otro. Un estudio de SparkToro y Gumshoe de 2026 midió que ChatGPT y la IA de Google repiten la misma lista de marcas menos de 1 de cada 100 veces."
+  },
+  {
+    question: "¿Sirve de algo saber en qué puesto me pone la IA?",
+    answer:
+      "El puesto de una sola respuesta, no: cambia en la siguiente. Lo que sí es estable es con qué frecuencia apareces cuando se repite la misma intención muchas veces. Un puesto medio solo tiene sentido si se calcula sobre muchas respuestas y se compara con marcas medidas con una muestra parecida."
+  },
+  {
+    question: "¿Cuántas veces hay que preguntar para medir la visibilidad de una marca en la IA?",
+    answer:
+      "No hay una cifra mágica, y los propios autores del estudio lo dejan como pregunta abierta. La regla práctica es repetir cada pregunta en cada motor y en distintos momentos, cubrir varias formas de preguntar lo mismo, y fijarse en la tendencia de varias mediciones antes que en un día suelto."
+  },
+  {
+    question: "¿Una captura de pantalla de ChatGPT demuestra que mi marca aparece?",
+    answer:
+      "Demuestra que apareció en esa respuesta concreta. No dice nada de la siguiente. Para saber si apareces de verdad hay que medir en qué proporción de respuestas sales, no enseñar una."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Si le haces la misma pregunta a la IA dos veces, lo normal es que te dé dos
+listas de marcas distintas. Un estudio de SparkToro y Gumshoe de 2026 lo midió
+con 600 voluntarios: ChatGPT y la IA de Google repitieron la misma lista menos
+de 1 de cada 100 veces, y la misma lista en el mismo orden, cerca de 1 de cada
+1.000. Lo que sí se mantiene es la frecuencia: las marcas fuertes salen en la
+mayoría de las respuestas, aunque cambien de puesto. Por eso la visibilidad en
+la IA se mide en proporción de respuestas, nunca con una captura.
+
+</KeyTakeaway>
+
+## El experimento: la misma pregunta, cientos de veces
+
+Rand Fishkin, cofundador de SparkToro, y Patrick O'Donnell, de Gumshoe,
+pidieron a 600 voluntarios que hicieran las mismas preguntas de recomendación
+a ChatGPT, a Claude y a la IA de Google, y normalizaron cada respuesta como una
+lista ordenada de marcas. Cada pregunta se repitió entre 60 y 100 veces por
+herramienta. Después compararon las listas.
+
+<StatGrid label="Resultados del estudio de SparkToro y Gumshoe">
+  <Stat value="<1%" label="de las veces ChatGPT y la IA de Google repiten la misma lista de marcas para la misma pregunta." source="SparkToro y Gumshoe, 2026" />
+  <Stat value="~0,1%" label="de las veces repiten la misma lista y además en el mismo orden (cerca de 1 de cada 1.000)." source="SparkToro y Gumshoe, 2026" tone="cyan" />
+  <Stat value="55–77%" label="de 994 respuestas sobre auriculares nombran a Bose, Sony, Sennheiser o Apple, aunque casi ninguna pregunta se pareciera." source="SparkToro y Gumshoe, 2026" />
+</StatGrid>
+
+Tres cosas cambiaban casi en cada respuesta: qué marcas salían, en qué orden y
+cuántas. Unas veces la lista tenía dos o tres opciones y otras, diez o más.
+Claude fue algo más propenso que los demás a repetir la misma lista, pero menos
+a repetir el orden. Ninguna herramienta se acercó a lo que los autores
+consideraban una respuesta repetible.
+
+El dato más útil está en el tercer número. Las 142 personas que escribieron su
+propia pregunta sobre auriculares lo hicieron con palabras muy distintas, y aun
+así las mismas cuatro marcas aparecían en la mayoría de respuestas. La
+formulación cambia mucho; la intención, poco. Y la IA responde a la intención.
+
+<PullQuote cite="Rand Fishkin, SparkToro (traducción propia)">
+
+Cualquier herramienta que te dé una «posición en el ranking de la IA» está
+vendiendo humo.
+
+</PullQuote>
+
+## Por qué la IA no se repite
+
+No es un fallo. Es cómo funcionan estos sistemas, y entenderlo evita sacar
+conclusiones equivocadas.
+
+<NumberedSection n={1} title="Cada respuesta se escribe desde cero">
+
+Un modelo de lenguaje no consulta una lista guardada. Escribe la respuesta
+palabra a palabra, y en cada paso elige entre varias continuaciones posibles
+con cierta probabilidad. Cuando la siguiente palabra puede ser «Alfa» o «Brío»
+con probabilidades parecidas, unas veces gana una y otras la otra. A partir de
+ahí, el resto de la lista se escribe sobre esa elección, y las diferencias se
+acumulan.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Si busca en la web, lo que encuentra cambia">
+
+Los motores que buscan en internet antes de responder, como Perplexity o el
+Modo IA de Google, leen páginas distintas según el momento: resultados nuevos,
+otras formas de lanzar la búsqueda, fuentes que entran o salen. Lo explicamos
+en <a href="/blog/query-fan-out-la-ia-no-busca-tu-pregunta">query fan-out: la
+IA no busca tu pregunta, busca muchas a la vez</a>. Si cambian las fuentes,
+cambia la lista.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="El modelo y el contexto también se mueven">
+
+Los proveedores actualizan sus modelos sin avisar, y una conversación con
+historial o memoria no parte del mismo sitio que una nueva. Dos personas que
+escriben exactamente lo mismo no tienen por qué estar preguntando lo mismo al
+sistema.
+
+</NumberedSection>
+
+## Así se ve: cuatro respuestas a la misma pregunta
+
+<Figure
+  label="Figura 1."
+  caption="Ilustración con marcas inventadas. Arriba, cuatro respuestas a la misma pregunta: las marcas cambian de puesto y algunas entran o salen. Abajo, en cuántas de esas cuatro respuestas sale cada una. El puesto baila; la frecuencia es lo que se puede medir."
+>
+
+<ShuffleRuns
+  question="¿Qué programa de reservas me recomiendas para mi restaurante?"
+  brands={[
+    { name: "Alfa", runs: [1, 2, 1, 3] },
+    { name: "Brío", runs: [2, 1, 3, 1] },
+    { name: "Cumbre", runs: [3, null, 2, null] },
+    { name: "Delta", runs: [null, 3, 4, 2] },
+    { name: "Eco", runs: [4, null, null, 4] },
+    { name: "Faro", runs: [null, 4, null, null] }
+  ]}
+/>
+
+</Figure>
+
+Fíjate en Alfa y Brío. Ninguna de las dos es «la primera»: se turnan. Pero las
+dos salen en todas las respuestas, y eso es lo que de verdad significa ser la
+marca que la IA recomienda. Faro, en cambio, aparece una vez. Si alguien de
+Faro hubiera hecho una captura justo en esa respuesta, creería que la IA le
+recomienda. Y la siguiente vez no saldría.
+
+## Tres errores que este estudio desmonta
+
+<Checklist
+  tone="evitar"
+  items={[
+    "Enseñar una captura de pantalla como prueba de que «salimos en ChatGPT». Prueba una respuesta, no la siguiente.",
+    "Hablar de «estamos en el puesto 2 de la IA». En una sola respuesta, el puesto es casi ruido.",
+    "Comparar dos días con una pregunta suelta y concluir que has subido o bajado. Con esta variación, la diferencia puede ser puro azar."
+  ]}
+/>
+
+## Cómo medir bien la visibilidad en la IA
+
+Si una respuesta no vale, ¿qué vale? Lo que el estudio señala como estable es
+la frecuencia con la que apareces cuando se repite la intención muchas veces.
+De ahí salen cinco reglas.
+
+<Checklist
+  items={[
+    "Mide la proporción de respuestas en las que sales, no tu puesto en una.",
+    "Usa varias preguntas por cada intención: así preguntan tus clientes de verdad.",
+    "Repite cada pregunta en cada motor y en distintos momentos del tiempo.",
+    "Mira la tendencia de varias mediciones antes que un día suelto.",
+    "Si comparas puestos, que sea un puesto medio sobre muchas respuestas, y con marcas medidas con una muestra parecida."
+  ]}
+/>
+
+<QuickAction>Antes de contratar cualquier herramienta de visibilidad en IA, pregunta cuántas veces repite cada pregunta y si te enseña frecuencia o un «ranking». Es la pregunta que el propio Fishkin recomienda hacer.</QuickAction>
+
+## Cómo lo resuelve GenScore
+
+GenScore se construyó sobre esta misma idea: una respuesta es una foto, y lo
+que te interesa es la película. En la práctica:
+
+- **Tus preguntas principales de búsqueda se lanzan múltiples veces en cada
+  motor y en distintos momentos del tiempo**, en ChatGPT, Gemini, Claude y,
+  en Pro y Agencia, Perplexity. Cada escaneo es una muestra más, no una
+  respuesta aislada.
+- **En cada pregunta ves en qué proporción de respuestas te nombra cada
+  motor**, y a quién nombra cuando no sales tú.
+- **El GEO Score se calcula sobre tus escaneos recientes, no solo sobre el
+  último**, para que un día con mala suerte no parezca una caída.
+- **En Competidores, el puesto es un puesto medio**, y una media calculada
+  sobre pocas respuestas no adelanta a una calculada sobre muchas. Así no
+  compites contra una marca que salió una vez en el sitio adecuado.
+
+Si solo quieres una primera pista, puedes hacer una
+<a href="/gratis/aparece-mi-marca-en-chatgpt">comprobación gratuita</a> de tu
+marca. Tómala como lo que es: una foto. Para la película, hace falta medir en
+el tiempo.
+
+<Verdict title="La pregunta correcta no es «¿en qué puesto salgo?»">
+
+Es «¿en qué proporción de respuestas salgo, y va a más o a menos?». La IA no
+tiene un ranking fijo que conquistar. Tiene una probabilidad de nombrarte cada
+vez que alguien pregunta por lo que vendes, y esa probabilidad es lo que se
+puede medir y mejorar. Si quieres saber qué cifras mirar y cuáles ignorar,
+sigue con <a href="/blog/metricas-geo-que-medir">métricas GEO: qué medir y qué
+no</a>.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Deja de mirar capturas y mide tu marca"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas principales de búsqueda múltiples veces en ChatGPT, Gemini, Claude y Perplexity y te enseñamos en qué proporción de respuestas sales y quién sale en tu lugar."
+/>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>

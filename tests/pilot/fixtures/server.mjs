@@ -97,7 +97,11 @@ const BLOG_SLUGS = [
   // CONTENT-LAUNCH-1 (2026-10-11, log §288).
   "genscore-ya-mide-perplexity",
   // CONTENT-LAUNCH-2 (2026-10-11, log §296).
-  "auditoria-seo-y-search-console-en-genscore"
+  "auditoria-seo-y-search-console-en-genscore",
+  // BLOG-ANIM-1 (2026-10-17, log §314).
+  "la-ia-no-repite-la-misma-lista-de-marcas",
+  "query-fan-out-la-ia-no-busca-tu-pregunta",
+  "bots-de-ia-robots-txt-cuales-dejar-entrar"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

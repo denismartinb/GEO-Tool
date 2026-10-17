@@ -546,6 +546,71 @@ export const BLOG_POSTS: BlogPost[] = [
     // the figures are mockups with invented data (ADR 0028).
     primaryKeyword: "search console y posicionamiento en ia",
     cluster: "playbooks"
+  },
+  {
+    slug: "la-ia-no-repite-la-misma-lista-de-marcas",
+    title: "Pregunta lo mismo dos veces a la IA: por qué casi nunca te da la misma lista de marcas",
+    seoTitle: "Por qué la IA nunca da la misma lista de marcas dos veces",
+    metaDescription:
+      "La IA repite la misma lista de marcas menos de 1 de cada 100 veces. Por qué pasa, qué sí es estable y cómo medir tu visibilidad sin fiarte de una captura.",
+    description:
+      "Un estudio de SparkToro y Gumshoe midió que ChatGPT y la IA de Google casi nunca repiten la misma lista de marcas. Por qué ocurre, por qué el puesto en una respuesta es casi ruido y cómo medir bien tu visibilidad en la IA.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/la-ia-no-repite-la-misma-lista-de-marcas/cover.webp",
+    coverIcon: "chart",
+    // BLOG-ANIM-1 (log §314). Third-party figures from SparkToro + Gumshoe
+    // (2026); product claims trace to SCORE-WINDOW-1 and SAMPLE-FLOOR-1.
+    primaryKeyword: "por qué la ia da respuestas distintas",
+    cluster: "medicion",
+    heroStat: {
+      value: "<1%",
+      label: "de las veces ChatGPT y la IA de Google repiten la misma lista de marcas cuando se les hace la misma pregunta.",
+      source: "SparkToro y Gumshoe, casi 3.000 respuestas de 600 voluntarios (2026)"
+    }
+  },
+  {
+    slug: "query-fan-out-la-ia-no-busca-tu-pregunta",
+    title: "Query fan-out: la IA no busca tu pregunta, busca muchas a la vez",
+    seoTitle: "Query fan-out: qué es y por qué cambia el SEO para la IA",
+    metaDescription:
+      "La IA divide tu pregunta en subtemas y lanza muchas búsquedas antes de responder. Qué es el query fan-out y cómo preparar tu web para aparecer.",
+    description:
+      "El query fan-out es la técnica con la que un buscador con IA divide una pregunta en subtemas y lanza muchas búsquedas a la vez. Qué es, por qué la IA cita páginas que no están en el top 10 de Google y cómo preparar tu web.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/query-fan-out-la-ia-no-busca-tu-pregunta/cover.webp",
+    coverIcon: "search",
+    // BLOG-ANIM-1 (log §314). Google (Reid, May 2025; Stein, Jul 2025) and
+    // Ahrefs (Aug 2025). Product claims trace to log §284, §287, §289, §305.
+    primaryKeyword: "query fan-out",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "12%",
+      label: "de las páginas que citan los asistentes de IA está entre los diez primeros resultados de Google para la misma pregunta.",
+      source: "Ahrefs, 15.000 preguntas largas (2025)"
+    }
+  },
+  {
+    slug: "bots-de-ia-robots-txt-cuales-dejar-entrar",
+    title: "Los bots de la IA leen tu web miles de veces por cada visita que te mandan: cuáles dejar entrar",
+    seoTitle: "Bots de IA en robots.txt: cuáles bloquear y cuáles no",
+    metaDescription:
+      "GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot: qué hace cada bot de IA, qué pasa si lo bloqueas en robots.txt y cuáles dejar entrar si quieres que te citen.",
+    description:
+      "Hay bots de IA que entrenan modelos, otros que buscan para citarte y otros que entran cuando un usuario lo pide. Qué hace cada uno, qué pasa si lo bloqueas en robots.txt y cuánto rastrean por cada visita que mandan, según Cloudflare.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/bots-de-ia-robots-txt-cuales-dejar-entrar/cover.webp",
+    coverIcon: "shield",
+    // BLOG-ANIM-1 (log §314). Cloudflare Radar (Aug 2025) and each vendor's
+    // bot documentation. Product claims trace to lib/web-audit/robots.ts and
+    // lib/recommendations/citation-blockers.ts; the robots.txt sample is
+    // tested in lib/blog/robots-ai-snippet.test.ts.
+    primaryKeyword: "bots de ia robots.txt",
+    cluster: "playbooks",
+    heroStat: {
+      value: "38.066",
+      label: "páginas rastreó Anthropic por cada visita que mandó a las webs en julio de 2025. Google rastreó 5.",
+      source: "Cloudflare Radar, enero a julio de 2025"
+    }
   }
 ];
 
