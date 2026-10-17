@@ -25829,3 +25829,8 @@ cifra. Los ficheros de Meta y Grok se renombraron porque el navegador seguía
 sirviendo la inicial que tenían antes con el mismo nombre.
 Por último el fundador mandó los logos de Instinct y Tab, que sustituyen a
 las dos iniciales que quedaban.
+
+Corrección del fundador tras el merge: Tab compra en Estados Unidos. La
+ficha de «Los cinco agentes de un vistazo» y la respuesta del FAQ sobre
+España lo decían como «países no publicados»; ahora dicen Estados Unidos.
+Dots sigue sin lista pública de países.
