@@ -48,7 +48,7 @@ export const faqItems = [
   {
     question: "¿Estos agentes funcionan en España?",
     answer:
-      "No de forma general. Muse está en Estados Unidos y Canadá, las compras de Grok Bot se anunciaron para Estados Unidos e Instinct funciona por invitación. Dots y Tab no han publicado una lista de países con compras. Ninguno ha dado una fecha para comprar en España a octubre de 2026."
+      "No de forma general. Muse está en Estados Unidos y Canadá, las compras de Grok Bot se anunciaron para Estados Unidos, Tab funciona en Estados Unidos e Instinct funciona por invitación. Dots no ha publicado una lista de países con compras. Ninguno ha dado una fecha para comprar en España a octubre de 2026."
   },
   {
     question: "¿Puede una tienda online bloquear a estos agentes?",
@@ -73,8 +73,7 @@ Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son agentes personales de
 inteligencia artificial que se han lanzado o abierto entre agosto y octubre de
 2026. A diferencia de un chat, actúan: abren un navegador en un ordenador en la
 nube, rellenan formularios y, con el permiso del usuario, pagan con una tarjeta
-de un solo uso. Casi todos empezaron en Estados Unidos y ninguno tiene fecha
-para comprar en España. Para una tienda online el cambio es concreto: estos
+de un solo uso. Para una tienda online el cambio es concreto: estos
 agentes entran en tu web como lo haría una persona, así que tu ficha de
 producto, tu protección anti-bots y tu checkout deciden si pueden comprarte.
 
@@ -123,16 +122,16 @@ donde suele quedarse a medias:
 
 <Figure
   label="Figura 2."
-  caption="Los agentes personales que compran por el usuario, a octubre de 2026. Las iniciales sustituyen a los logotipos. Elaboración propia a partir de los anuncios de Meta, OpenAI, Shopify y Stripe y de TechCrunch, WIRED y Yahoo Finance."
+  caption="Los agentes personales que compran por el usuario, a octubre de 2026. Elaboración propia a partir de los anuncios de Meta, OpenAI, Shopify y Stripe y de TechCrunch, WIRED y Yahoo Finance."
 >
 
 <AgentLineup
   agents={[
-    { name: "Muse", maker: "Meta", talk: "App y web", pay: "Tarjeta de un solo uso de Link (Stripe)", where: "EE. UU. y Canadá" },
-    { name: "Dots", maker: "OpenAI", talk: "Desde ChatGPT y Codex", pay: "No publicado", where: "Planes Pro y Business Premium" },
-    { name: "Instinct", maker: "Startup de San Francisco", talk: "SMS, iMessage, WhatsApp o correo", pay: "Shop Pay en tiendas Shopify", where: "Por invitación" },
-    { name: "Grok Bot", maker: "La empresa de Elon Musk", talk: "Chat de Grok", pay: "Tarjeta virtual de Link (Stripe)", where: "EE. UU." },
-    { name: "Tab", maker: "Startup Tab", talk: "iMessage o WhatsApp", pay: "Monedero propio", where: "Países no publicados" }
+    { name: "Muse", logo: "/blog/agentes-personales-de-ia-que-compran/agentes/meta.svg", maker: "Meta", talk: "App y web", pay: "Tarjeta de un solo uso de Link (Stripe)", where: "EE. UU. y Canadá" },
+    { name: "Dots", logo: "/brand/engines/chatgpt.svg", maker: "OpenAI", talk: "Desde ChatGPT y Codex", pay: "No publicado", where: "Planes Pro y Business Premium" },
+    { name: "Instinct", logo: "/blog/agentes-personales-de-ia-que-compran/agentes/instinct-logo.webp", maker: "Startup de San Francisco", talk: "SMS, iMessage, WhatsApp o correo", pay: "Shop Pay en tiendas Shopify", where: "Por invitación" },
+    { name: "Grok Bot", logo: "/blog/agentes-personales-de-ia-que-compran/agentes/grok.svg", maker: "La empresa de Elon Musk", talk: "Chat de Grok", pay: "Tarjeta virtual de Link (Stripe)", where: "EE. UU." },
+    { name: "Tab", logo: "/blog/agentes-personales-de-ia-que-compran/agentes/tab-logo.webp", maker: "Startup Tab", talk: "iMessage o WhatsApp", pay: "Monedero propio", where: "EE. UU." }
   ]}
 />
 
@@ -282,19 +281,14 @@ preguntas principales de búsqueda, y qué marcas salen en tu lugar. Su
 Auditoría técnica revisa además si dejas entrar a los bots de la IA y si tus
 páginas llevan datos estructurados, también de tipo producto.
 
-Y estamos construyendo una comprobación pensada para estos agentes: si uno
-puede entrar en tu web, entender tus productos y llegar hasta la compra, y qué
-cambiar para que pueda. Todavía no está disponible. La contaremos aquí cuando
-lo esté.
+Y para estos agentes está el <a href="/comercio-agentico">comprobador gratuito de comercio agéntico</a>: dice si uno puede entrar en tu web,
+entender tus productos y llegar hasta la compra, y qué cambiar para que pueda.
 
-<Verdict title="Los agentes ya compran; en España, todavía no">
+<Verdict title="Los agentes ya hacen compras por ti">
 
 En Estados Unidos ya hay agentes que compran en tiendas online con el permiso
 de su usuario, y no han pedido permiso a las tiendas para hacerlo: usan el
-navegador. Cuando lleguen a España harán lo mismo. La tienda que esté
-preparada no será la que haya implantado un protocolo, sino la que tenga una
-ficha clara, un checkout limpio, una decisión tomada sobre los bots y una
-marca que la IA conoce. Si quieres el contexto completo, empieza por <a href="/blog/que-es-el-comercio-agentico">qué
+navegador. Cuando lleguen a España harán lo mismo. Si quieres el contexto completo, empieza por <a href="/blog/que-es-el-comercio-agentico">qué
 es el comercio agéntico</a>.
 
 </Verdict>

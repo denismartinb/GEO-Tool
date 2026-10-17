@@ -99,14 +99,14 @@ decisión casi tomada.
 |---|---|---|
 | 1. La IA te nombra en tu categoría | Encontrarte | <Pill tone="si">Sí</Pill> |
 | 2. Los bots de búsqueda de la IA pueden entrar | Encontrarte | <Pill tone="si">Sí</Pill> |
-| 3. Datos estructurados de producto | Entenderte | <Pill tone="neutral">En parte</Pill> |
+| 3. Datos estructurados de producto | Entenderte | <Pill tone="si">Sí</Pill> |
 | 4. Precio y stock iguales en todas partes | Entenderte | <Pill tone="neutral">No</Pill> |
-| 5. Envío y devoluciones legibles | Entenderte | <Pill tone="neutral">No</Pill> |
-| 6. Catálogo en los canales que leen los agentes | Entenderte | <Pill tone="neutral">No</Pill> |
+| 5. Envío y devoluciones legibles | Entenderte | <Pill tone="si">Sí</Pill> |
+| 6. Catálogo en los canales que leen los agentes | Entenderte | <Pill tone="neutral">En parte</Pill> |
 | 7. Respuestas directas a las dudas de compra | Entenderte | <Pill tone="si">Sí</Pill> |
 | 8. Lo que se dice de ti fuera de tu web | Elegirte | <Pill tone="neutral">En parte</Pill> |
-| 9. La protección anti-bots no echa a los agentes | Comprarte | <Pill tone="neutral">No</Pill> |
-| 10. Un checkout que no exige pasos imposibles | Comprarte | <Pill tone="neutral">No</Pill> |
+| 9. La protección anti-bots no echa a los agentes | Comprarte | <Pill tone="si">Sí</Pill> |
+| 10. Un checkout que no exige pasos imposibles | Comprarte | <Pill tone="neutral">En parte</Pill> |
 
 </CompareTable>
 
@@ -227,19 +227,35 @@ o tu plataforma ofrezcan el pago con agentes en España.
 
 ## Qué revisa GenScore y qué no
 
-GenScore cubre las comprobaciones que deciden si te encuentran. Mide si
-ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity te nombran en tus
-preguntas principales de búsqueda, y qué fuentes citan. Su Auditoría técnica
-revisa si tu robots.txt deja entrar a los bots de la IA, si tus páginas llevan
-datos estructurados (también de tipo producto) y si responden en el primer
-párrafo.
+GenScore te ayuda con las dos mitades: que la IA te recomiende y que un
+agente pueda comprarte.
 
-Lo específico de la compra (coherencia de precio y stock entre canales, feeds,
-políticas de envío y devolución, protección anti-bots y checkout) no lo revisa
-todavía. Por eso la tabla de arriba lo marca como «No». Estamos construyendo
-una comprobación específica para esa parte, que dirá qué cambiar para que un
-agente pueda leer tu tienda y comprar en ella. La contaremos aquí cuando esté
-lista.
+Para la IA, mide si ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity te
+nombran en tus preguntas principales de búsqueda, y qué fuentes citan. Su
+Auditoría técnica revisa si tu robots.txt deja entrar a los bots de la IA, si
+tus páginas llevan datos estructurados (también de tipo producto) y si
+responden en el primer párrafo.
+
+Para los agentes, calcula tu Visibilidad agéntica mirando estas partes de tu
+tienda:
+
+- **Descubrimiento:** si los agentes pueden entrar en tu web sin toparse con
+  un bloqueo o un reto, y si encuentran tu catálogo.
+- **Comprensión:** si tus fichas declaran el producto, el precio, el stock y
+  sus códigos como datos, y si se leen sin ejecutar JavaScript.
+- **Confianza:** si tus envíos, tus devoluciones, tus reseñas y quién eres se
+  leen como datos.
+- **Compra:** si la ficha deja añadir al carrito y llegar al pago sin un
+  captcha por medio.
+- **Interoperabilidad:** cuántos de los ficheros que leen los agentes publicas
+  ya (perfil UCP, catálogo por MCP, tarjeta de agente y feed de producto).
+
+Cada fallo sale como una recomendación priorizada que dice qué cambiar y
+cuánto sube tu nota. Ya está disponible: compruébalo gratis con una ficha de
+tu tienda en el <a href="/comercio-agentico">comprobador de comercio agéntico</a>. Lo que no
+revisa es si el precio y el stock coinciden en todos tus canales, ni recorre
+el checkout entero; por eso la tabla de arriba marca esas dos como «No» y «En
+parte».
 
 <Verdict title="Empieza por las dos primeras">
 
