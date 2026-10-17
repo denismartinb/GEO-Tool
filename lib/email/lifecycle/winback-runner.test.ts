@@ -339,7 +339,7 @@ describe("runWinbackEmails", () => {
     expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "winback_d10" } }]);
   });
 
-  it("sends D+10 once when the cron run is delivered twice (LIFECYCLE-DEDUPE-1, log §310)", async () => {
+  it("sends D+10 once when the cron run is delivered twice (LIFECYCLE-DEDUPE-1, log §311)", async () => {
     const tables = {
       profiles: { data: [winbackProfile] },
       email_sends: {

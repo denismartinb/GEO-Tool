@@ -154,7 +154,7 @@ describe("runWeeklyDigest", () => {
     expect(result).toEqual({ processed: 1, sent: 1, skipped: 0 });
   });
 
-  it("sends each digest with a per-project, per-day Resend idempotency key (LIFECYCLE-DEDUPE-1, log §310)", async () => {
+  it("sends each digest with a per-project, per-day Resend idempotency key (LIFECYCLE-DEDUPE-1, log §311)", async () => {
     expect(weeklyDigestIdempotencyKey("p1", new Date("2026-10-19T08:00:03Z"))).toBe("weekly-digest/p1/2026-10-19");
     const service = fakeService({
       projects: [{ id: "p1", domain: "acme.com", owner_user_id: "u1" }],

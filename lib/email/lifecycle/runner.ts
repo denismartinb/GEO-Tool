@@ -43,7 +43,7 @@ import {
  * Every figure is read here, from the account's own rows, at send time; the
  * templates never invent one. Every lifecycle email claims its `email_sends`
  * row BEFORE sending and releases it when nothing went out
- * (`sendClaimedOnce`, log §308 and §310), so a duplicated cron run or two
+ * (`sendClaimedOnce`, log §308 and §311), so a duplicated cron run or two
  * paths racing never send the same email twice.
  */
 
@@ -150,7 +150,7 @@ async function loadTopRecommendation(
 }
 
 /**
- * LIFECYCLE-DEDUPE-1 (log §308, extended to every kind in §310). The
+ * LIFECYCLE-DEDUPE-1 (log §308, extended to every kind in §311). The
  * `email_sends` row of a lifecycle email is CLAIMED before sending, not
  * written after. The upsert is
  * `ON CONFLICT DO NOTHING RETURNING id` on the `(owner_user_id, kind)`

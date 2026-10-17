@@ -39,7 +39,7 @@ function fakeService(tables: Tables) {
       const rows = result.data as unknown[];
       return Promise.resolve({ data: Array.isArray(rows) ? (rows[0] ?? null) : rows, error: null });
     };
-    // A claim (LIFECYCLE-DEDUPE-1, log §310): the row is inserted before the
+    // A claim (LIFECYCLE-DEDUPE-1, log §311): the row is inserted before the
     // send and deleted again when nothing went out, so `upserts` is what is
     // left on record once the pass is over.
     // Like the `(owner_user_id, kind)` unique index: a second claim of the
@@ -137,7 +137,7 @@ describe("runLifecycleEmails", () => {
     expect(upserts).toEqual([]);
   });
 
-  it("sends D1 once when the cron run is delivered twice at the same time (LIFECYCLE-DEDUPE-1, log §310)", async () => {
+  it("sends D1 once when the cron run is delivered twice at the same time (LIFECYCLE-DEDUPE-1, log §311)", async () => {
     const { service, upserts } = fakeService({ profiles: { data: [trialProfile(26)] } });
     const results = await Promise.all([runLifecycleEmails({ service, now: NOW }), runLifecycleEmails({ service, now: NOW })]);
     expect(sendTrialD1Email).toHaveBeenCalledTimes(1);

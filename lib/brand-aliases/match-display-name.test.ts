@@ -66,4 +66,9 @@ describe("matchDisplayName", () => {
     expect(matchDisplayName("Mozilla", "Mozilla", [])).toEqual({ matchedName: "Mozilla", isAlias: false });
     expect(matchDisplayName("Firefox", "Mozilla", [])).toBeNull();
   });
+
+  it("matches the same name written without spaces (BRAND-SPACING-1)", () => {
+    expect(matchDisplayName("El Corte Inglés", "Elcorteingles", [])).toEqual({ matchedName: "Elcorteingles", isAlias: false });
+    expect(matchDisplayName("El Corte Inglés Viajes", "Elcorteingles", [])).toBeNull();
+  });
 });

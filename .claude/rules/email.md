@@ -66,7 +66,7 @@ igual.
   antes convierte un fallo de envío en un correo perdido para siempre (§233;
   misma regla que el deduplicado de avisos de `.claude/rules/scan.md`).
   **Excepción: toda la secuencia de `lib/email/lifecycle/` reclama su fila
-  ANTES de enviarse** (§308, §310). Leer y anotar después dejaba abierta toda
+  ANTES de enviarse** (§308, §311). Leer y anotar después dejaba abierta toda
   la llamada a Resend, y una entrega duplicada del cron mandó el mismo correo
   tres veces en un segundo. Se envía sólo por `sendClaimedOnce`: inserta con
   `ignoreDuplicates` + `.select()`, envía sólo quien recibe la fila, la libera
@@ -74,7 +74,7 @@ igual.
   reintento con la misma clave (`lifecycleIdempotencyKey`). Un correo de la
   secuencia que se envíe por otro camino reabre el duplicado.
 - **Un correo enviado por un cron sin fila propia lleva clave de idempotencia
-  de Resend** (§310). Vercel puede entregar un disparo dos veces. El resumen
+  de Resend** (§311). Vercel puede entregar un disparo dos veces. El resumen
   semanal usa `weeklyDigestIdempotencyKey` (proyecto + día de la pasada); un
   correo nuevo de cron hace lo mismo o reclama una fila.
 - **Cifras de verdad o variante sin cifra.** Menciones sobre respuestas, no
