@@ -25796,3 +25796,18 @@ diseña el hilo «Comercio agéntico en GenScore»: los artículos dicen que «e
 construyendo» una comprobación y que «todavía no está disponible», sin nombre,
 fecha ni promesa de lo que medirá más allá de leer y comprar. El presupuesto de
 `public/` sube otros 16 KiB por la sexta portada.
+
+**Segunda ampliación: diagramas (mismo día, a petición del fundador).** El
+fundador echó en falta imágenes y propuso usar las oficiales de cada empresa.
+Se descartaron los logotipos y fotos de prensa de terceros: sin permiso de su
+kit de prensa no se publican, y los avatares van con iniciales sobre la
+paleta de la casa. En su lugar, cuatro diagramas propios en
+`components/blog/article/diagrams.tsx` (`StepFlow`, `Timeline`,
+`AgentLineup`, `TwoDoors`), HTML real con animación CSS pura y quietos con
+movimiento reducido, como BLOG-ANIM-1 (§314). En el artículo de los agentes
+van el flujo de compra con los puntos donde se para un agente, las fichas de
+los cinco (sustituyen a la tabla, con el mismo contenido) y Shopify frente a
+Amazon. En el pilar van la misma compra hecha por una persona y por un agente,
+la cronología de hitos y las tres puertas (descubrir, entender, comprar). La
+portada de los agentes se redibuja con sus cinco nombres convergiendo en un
+cursor que pulsa «Comprar» (+8 KiB, dentro del margen del presupuesto).

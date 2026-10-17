@@ -11,10 +11,12 @@ import {
   QuickAction,
   PullQuote,
   Checklist,
-  CompareTable,
   AuthorBio,
   ArticleCta,
-  Figure
+  Figure,
+  StepFlow,
+  AgentLineup,
+  TwoDoors
 } from "@/components/blog/article";
 import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
@@ -92,25 +94,47 @@ salido los de Meta y OpenAI, se ha disparado la valoración de Instinct y han
 aparecido Grok Bot y Tab. Todos prometen lo mismo: que dejes de hacer tú las
 gestiones, también las compras.
 
-## Los cinco agentes de un vistazo
+Así es una compra hecha por uno de estos agentes, paso a paso, y los puntos
+donde suele quedarse a medias:
 
 <Figure
   label="Figura 1."
-  caption="Los agentes personales que compran por el usuario, a octubre de 2026. Elaboración propia a partir de los anuncios de Meta, OpenAI, Shopify y Stripe y de TechCrunch, WIRED y Yahoo Finance."
-  wide
+  caption="Cómo compra un agente personal con navegador, como Muse o Grok Bot, y dónde suele pararse. Elaboración propia a partir de los anuncios de Meta, Stripe y Shopify, de la prueba de WIRED y del bloqueo de Amazon."
 >
 
-<CompareTable>
+<StepFlow
+  lanes={[
+    {
+      steps: [
+        { who: "Tú", title: "Le haces el encargo por chat o por mensaje" },
+        { who: "El agente", title: "Pregunta a la IA y hace una lista corta de tiendas", key: "Si la IA no te nombra, no entras en la lista" },
+        { who: "El agente", title: "Abre un navegador en la nube y entra en tu web", stop: "Protección anti-bots o bloqueo" },
+        { who: "El agente", title: "Lee la ficha: talla, precio final y envío" },
+        { who: "El agente", title: "Rellena el carrito y el checkout", stop: "Captcha o registro obligatorio" },
+        { who: "Tú", title: "Das tu «sí» y paga, a menudo con una tarjeta de un solo uso" }
+      ]
+    }
+  ]}
+/>
 
-| Agente | Quién está detrás | Cómo se le habla | Cómo paga | Dónde funciona |
-|---|---|---|---|---|
-| Muse | Meta | App y web | Tarjeta de un solo uso de Link (Stripe) | EE. UU. y Canadá |
-| Dots | OpenAI | Desde ChatGPT y Codex | No publicado | Planes Pro y Business Premium |
-| Instinct | Startup de San Francisco | SMS, iMessage, WhatsApp o correo | Shop Pay en tiendas Shopify | Por invitación |
-| Grok Bot | La empresa de Elon Musk | Chat de Grok | Tarjeta virtual de Link (Stripe) | EE. UU. |
-| Tab | Startup Tab | iMessage o WhatsApp | Monedero propio | No publicado |
+</Figure>
 
-</CompareTable>
+## Los cinco agentes de un vistazo
+
+<Figure
+  label="Figura 2."
+  caption="Los agentes personales que compran por el usuario, a octubre de 2026. Las iniciales sustituyen a los logotipos. Elaboración propia a partir de los anuncios de Meta, OpenAI, Shopify y Stripe y de TechCrunch, WIRED y Yahoo Finance."
+>
+
+<AgentLineup
+  agents={[
+    { name: "Muse", maker: "Meta", talk: "App y web", pay: "Tarjeta de un solo uso de Link (Stripe)", where: "EE. UU. y Canadá" },
+    { name: "Dots", maker: "OpenAI", talk: "Desde ChatGPT y Codex", pay: "No publicado", where: "Planes Pro y Business Premium" },
+    { name: "Instinct", maker: "Startup de San Francisco", talk: "SMS, iMessage, WhatsApp o correo", pay: "Shop Pay en tiendas Shopify", where: "Por invitación" },
+    { name: "Grok Bot", maker: "La empresa de Elon Musk", talk: "Chat de Grok", pay: "Tarjeta virtual de Link (Stripe)", where: "EE. UU." },
+    { name: "Tab", maker: "Startup Tab", talk: "iMessage o WhatsApp", pay: "Monedero propio", where: "Países no publicados" }
+  ]}
+/>
 
 </Figure>
 
@@ -201,12 +225,17 @@ cómo se compra en tu tienda, sabes cómo lo intentan.
 Ante eso, dos de los nombres más grandes del comercio online han tomado
 caminos opuestos:
 
-<Checklist
-  items={[
-    "Shopify abre la puerta. El 28 de septiembre de 2026 anunció que los agentes con navegador pueden completar el pago en las tiendas que lo permiten, con la autorización del comprador, también con Shop Pay. Por debajo usa el protocolo UCP.",
-    "Amazon la cierra. El 21 de septiembre bloqueó a Muse con un aviso de que el acceso de un agente no autorizado incumple sus condiciones de uso. En octubre, los usuarios de Grok Bot denunciaron el mismo bloqueo."
-  ]}
+<Figure
+  label="Figura 3."
+  caption="Dos respuestas opuestas al mismo tipo de agente. Elaboración propia a partir del anuncio de Shopify (28 de septiembre de 2026) y de lo publicado sobre el bloqueo de Amazon a Muse y a Grok Bot."
+>
+
+<TwoDoors
+  open={{ who: "Shopify", verdict: "Abre la puerta", text: "El 28 de septiembre de 2026 anunció que los agentes con navegador pueden completar el pago en las tiendas que lo permiten, con la autorización del comprador, también con Shop Pay. Por debajo usa el protocolo UCP." }}
+  closed={{ who: "Amazon", verdict: "La cierra", text: "El 21 de septiembre bloqueó a Muse con un aviso de que el acceso de un agente no autorizado incumple sus condiciones de uso. En octubre, los usuarios de Grok Bot denunciaron el mismo bloqueo." }}
 />
+
+</Figure>
 
 Amazon explicó su postura así:
 

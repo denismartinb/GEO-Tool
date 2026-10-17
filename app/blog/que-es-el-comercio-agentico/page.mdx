@@ -15,7 +15,9 @@ import {
   CompareTable,
   AuthorBio,
   ArticleCta,
-  Figure
+  Figure,
+  StepFlow,
+  Timeline
 } from "@/components/blog/article";
 import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
 
@@ -86,10 +88,44 @@ funcione con dinero de verdad: que el agente encuentre los productos, que los
 entienda sin ambigüedad, que la tienda sepa que quien entra es un agente de
 fiar y no un bot de scraping, y que el pago quede autorizado por el cliente.
 
-## En qué se diferencia del comercio electrónico de siempre
+Así se ve el mismo encargo hecho de las dos maneras:
 
 <Figure
   label="Figura 1."
+  caption="La misma compra hecha por una persona y por un agente de IA. Lo que cambia de verdad está en el segundo paso: la lista corta la hace la IA antes de que nadie visite ninguna tienda. Elaboración propia."
+>
+
+<StepFlow
+  lanes={[
+    {
+      label: "Antes: lo haces tú",
+      steps: [
+        { title: "Buscas en Google o en un marketplace" },
+        { title: "Abres pestañas y comparas fichas" },
+        { title: "Eliges tienda por marca y precio" },
+        { title: "Rellenas el checkout" },
+        { title: "Pagas con tu tarjeta" }
+      ]
+    },
+    {
+      label: "Con un agente",
+      steps: [
+        { title: "Le haces el encargo" },
+        { title: "La IA hace una lista corta de tiendas", key: "Aquí se decide si te nombra" },
+        { title: "El agente compara precio, stock y envío" },
+        { title: "Entra en la tienda elegida" },
+        { title: "Paga dentro del límite que le pones" }
+      ]
+    }
+  ]}
+/>
+
+</Figure>
+
+## En qué se diferencia del comercio electrónico de siempre
+
+<Figure
+  label="Figura 2."
   caption="Qué cambia en cada fase de la compra cuando quien la recorre es un agente de IA. Elaboración propia a partir de la documentación pública de OpenAI, Google y Cloudflare."
   wide
 >
@@ -117,6 +153,24 @@ pregunta por lo que vendes. Si no te nombra, el agente no llega a tu ficha.
 
 El comercio agéntico ya no es una demo, pero tampoco está terminado. Estos son
 los hitos que lo han llevado hasta aquí:
+
+<Figure
+  label="Figura 3."
+  caption="Los hitos del comercio agéntico entre septiembre de 2025 y octubre de 2026. Elaboración propia a partir de los anuncios de OpenAI, Cloudflare, Visa, Mastercard, Google, Shopify, Meta y Stripe."
+>
+
+<Timeline
+  items={[
+    { date: "Sep. 2025", title: "Se puede comprar dentro de ChatGPT" },
+    { date: "Oct. 2025", title: "Los agentes de fiar firman sus visitas" },
+    { date: "Ene. 2026", title: "Google presenta su protocolo UCP" },
+    { date: "Mar. 2026", title: "La IA descubre y la tienda vende" },
+    { date: "May. 2026", title: "Llega el carrito universal" },
+    { date: "Sep.–oct. 2026", title: "Los agentes personales compran por ti", now: true }
+  ]}
+/>
+
+</Figure>
 
 <NumberedSection n={1} title="Septiembre de 2025: comprar dentro de ChatGPT">
 
@@ -196,6 +250,28 @@ realista a corto plazo no es un robot que compra a ciegas, sino un asistente
 que hace la lista corta. Y en esa lista corta hay que estar.
 
 ## Qué cambia para una tienda online
+
+Para comprarte, un agente tiene que cruzar tres puertas, y en este orden. Si
+falla la primera, las otras dos no llegan a importar:
+
+<Figure
+  label="Figura 4."
+  caption="Las tres puertas que cruza un agente antes de comprarte. La primera ya funciona en España; las otras dos llegarán con los agentes y los protocolos de pago. Elaboración propia."
+>
+
+<StepFlow
+  lanes={[
+    {
+      steps: [
+        { who: "Descubrir", title: "La IA te nombra cuando alguien pregunta por lo que vendes", key: "Ya pasa en España, hoy" },
+        { who: "Entender", title: "El agente lee tu ficha sin adivinar: precio, stock, envío y devoluciones" },
+        { who: "Comprar", title: "Tu web le deja llegar al pago y el cliente lo autoriza" }
+      ]
+    }
+  ]}
+/>
+
+</Figure>
 
 <Checklist
   items={[
