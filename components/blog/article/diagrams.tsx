@@ -9,8 +9,8 @@ import type { CSSProperties } from "react";
  * y con `prefers-reduced-motion: reduce` se quedan quietos en un fotograma que
  * cuenta la historia entera (`app/globals.css`, bloque `.art-dg-*`).
  *
- * No hay logotipos ni imágenes de terceros: los avatares son iniciales sobre
- * la paleta de la casa, para no usar marcas ajenas sin permiso.
+ * Los logotipos de terceros sólo con el visto bueno del fundador (log §316):
+ * sin `logo`, la ficha pinta la inicial sobre la paleta de la casa.
  */
 
 type Vars = CSSProperties & Record<`--${string}`, string | number>;
@@ -111,18 +111,27 @@ export type AgentCard = {
   talk: string;
   pay: string;
   where: string;
+  /** Logotipo oficial; sin él, la inicial. */
+  logo?: string;
 };
 
-/** Ficha de cada agente, con avatar de iniciales (no su logotipo). */
+/** Ficha de cada agente, con su logotipo o, si no lo hay, su inicial. */
 export function AgentLineup({ agents }: { agents: AgentCard[] }) {
   return (
     <ul className="art-anim art-dg-agents">
       {agents.map((a, i) => (
         <li key={a.name} className="art-dg-agent" style={{ "--i": i } as Vars}>
           <div className="art-dg-agent-h">
-            <span className="art-dg-avatar" aria-hidden="true">
-              {a.name.slice(0, 1)}
-            </span>
+            {a.logo ? (
+              <span className="art-dg-avatar is-logo" aria-hidden="true">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={a.logo} alt="" width={28} height={28} />
+              </span>
+            ) : (
+              <span className="art-dg-avatar" aria-hidden="true">
+                {a.name.slice(0, 1)}
+              </span>
+            )}
             <span>
               <span className="art-dg-agent-n">{a.name}</span>
               <span className="art-dg-agent-m">{a.maker}</span>

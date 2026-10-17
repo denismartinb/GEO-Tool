@@ -123,10 +123,12 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   el movimiento, y si la animación usa marcas o datos inventados, el pie lo
   dice.
 
-- **Sin logotipos ni imágenes de prensa de terceros sin permiso de su kit de
-  prensa.** Un diagrama propio cuenta lo mismo sin riesgo: los avatares de
-  empresas o agentes son iniciales sobre la paleta de la casa, y el pie lo
-  dice (`components/blog/article/diagrams.tsx`, log §316).
+- **Logotipos de terceros sólo cuando el fundador los pide o los aprueba.**
+  En los artículos de agentes los pidió él (log §316): Meta, OpenAI y Grok de
+  paquetes de iconos públicos, Instinct y Tab enviados por él. Sin ese visto
+  bueno, los avatares de empresas o agentes son iniciales sobre la paleta de
+  la casa (`AgentLineup` sin `logo`, `components/blog/article/diagrams.tsx`).
+  Nunca imágenes de prensa sin permiso de su kit de prensa.
 
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0028
   `article-imagery-policy` — renumerado desde 0026, ver su propia nota de

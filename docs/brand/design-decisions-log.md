@@ -25845,6 +25845,16 @@ anti-bots, y a «En parte» en catálogo para agentes (feed) y checkout, según
 lo que mide `lib/agentic-audit/score.ts`. Esto cierra el «refrescar los seis
 artículos» que §317 dejaba pendiente para la Fase 3.
 
+Y en el mismo cambio, a petición del fundador: la ficha de Tab pasa a
+«EE. UU.» como la de Grok Bot; sale del resumen inicial la frase «Casi todos
+empezaron en Estados Unidos y ninguno tiene fecha para comprar en España»;
+las fichas de «Los cinco agentes de un vistazo» llevan los logotipos
+oficiales (los mismos de la portada) en vez de iniciales; y las fichas ganan
+su padding, que `.lp-article .blog-body .art-anim li` dejaba a 0 porque gana
+en especificidad a `.art-dg-agent` (el contenido quedaba pegado al borde en
+móvil). La regla de logotipos de `growth-content.md` pasa a «sólo con el
+visto bueno del fundador».
+
 ## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
 
 **Qué.** Línea nueva de producto sobre comercio agéntico, con el diseño
