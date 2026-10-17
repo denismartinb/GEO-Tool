@@ -1,7 +1,8 @@
 import { resolveAssistantAccess } from "@/lib/agentic-audit/agents";
-import type { AgenticCheckError, AgenticCheckResult } from "@/lib/agentic-audit/api-contract";
+import type { AgenticCheckError, AgenticCheckResult, AgenticProductFound } from "@/lib/agentic-audit/api-contract";
 import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
-import { extractPageSignals } from "@/lib/agentic-audit/html-signals";
+import { findProductCandidate } from "@/lib/agentic-audit/find-product";
+import { extractPageSignals, isProductPage, type PageSignals } from "@/lib/agentic-audit/html-signals";
 import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { buildInterop, interopProbePaths, type Probe } from "@/lib/agentic-audit/interop";
 import { scoreAgenticAudit } from "@/lib/agentic-audit/score";
@@ -15,6 +16,13 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
  * Shopify or WooCommerce, the public catalogue endpoint. No link is
  * followed and no URL is discovered, so this is not a crawler
  * (`.claude/rules/web-audit.md`, «Antes de ampliar»). No LLM is called.
+ *
+ * With `discover` (the console only, log §323) one more page may be
+ * requested: when the page read is not a product page, `findProductCandidate`
+ * picks one product page from the bytes above (catalogue, sitemap, the page
+ * itself) and that single page is fetched. If it is not a product page
+ * either, no other is tried and the result stays on the first page with
+ * `found: "none"`.
  *
  * The fetcher and the robots parser are injected so the whole flow runs in
  * Vitest without network; the route wires the real ones.
@@ -42,6 +50,10 @@ export type RunAgenticAuditDeps = {
 };
 
 export const AGENTIC_AUDIT_BUDGET_MS = 20_000;
+/** Console budget: the free checker's three rounds plus the one product page. */
+export const AGENTIC_DISCOVER_BUDGET_MS = 24_000;
+/** Below this, the product page is not requested: it would not have time to load. */
+const MIN_PRODUCT_FETCH_MS = 3_000;
 const PAGE_TIMEOUT_MS = 8_000;
 const SMALL_TIMEOUT_MS = 5_000;
 const PAGE_MAX_BYTES = 1024 * 1024;
@@ -92,12 +104,28 @@ export type RunAgenticAuditOutcome =
   | { status: "completed"; result: AgenticCheckResult }
   | { status: "failed"; error: AgenticCheckError };
 
-export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps): Promise<RunAgenticAuditOutcome> {
+export type RunAgenticAuditOptions = {
+  discover?: boolean;
+  /** Overrides the budget, for a caller that splits one budget across two runs. */
+  budgetMs?: number;
+};
+
+function isReadableHtml(page: FetchResponse): boolean {
+  const isHtml = (page.headers["content-type"] ?? "").toLowerCase().includes("html");
+  return page.status >= 200 && page.status < 300 && isHtml;
+}
+
+export async function runAgenticAudit(
+  input: string,
+  deps: RunAgenticAuditDeps,
+  options: RunAgenticAuditOptions = {}
+): Promise<RunAgenticAuditOutcome> {
   const target = normalizeTarget(input);
   if (!target) return { status: "failed", error: "invalid_url" };
 
   const now = deps.now ?? Date.now;
-  const deadlineAt = now() + AGENTIC_AUDIT_BUDGET_MS;
+  const deadlineAt =
+    now() + (options.budgetMs ?? (options.discover ? AGENTIC_DISCOVER_BUDGET_MS : AGENTIC_AUDIT_BUDGET_MS));
   const origin = `https://${target.host}`;
   const small = { timeoutMs: SMALL_TIMEOUT_MS, maxBytes: SMALL_MAX_BYTES, deadlineAt };
   const paths = interopProbePaths(null);
@@ -115,18 +143,53 @@ export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps):
   if (page.kind === "error") return { status: "failed", error: "site_unreachable" };
 
   const challenge = isChallengeResponse(page);
-  let signals = null;
+  let signals: PageSignals | null = null;
   let facts = null;
   if (!challenge) {
-    const isHtml = (page.headers["content-type"] ?? "").toLowerCase().includes("html");
-    if (page.status < 200 || page.status >= 300 || !isHtml) return { status: "failed", error: "site_unreachable" };
+    if (!isReadableHtml(page)) return { status: "failed", error: "site_unreachable" };
     signals = extractPageSignals(page.body);
     facts = extractPageFacts(page.body);
   }
 
   const platform = signals?.platform ?? null;
   const feedPath = interopProbePaths(platform).feed;
-  const feed = feedPath ? toProbe(await deps.fetch(`${origin}${feedPath}`, target.baseDomain, small)) : null;
+  const feedResponse = feedPath ? await deps.fetch(`${origin}${feedPath}`, target.baseDomain, small) : null;
+  const feed = feedResponse ? toProbe(feedResponse) : null;
+
+  let pageUrl = page.finalUrl;
+  let found: AgenticProductFound | undefined;
+  if (options.discover && signals) {
+    found = isProductPage(signals) ? "given" : "none";
+    const candidate =
+      found === "none"
+        ? findProductCandidate({
+            origin,
+            baseDomain: target.baseDomain,
+            currentUrl: page.finalUrl,
+            feedBody: feed?.state === "found" ? feed.body : null,
+            feedPlatform: platform,
+            sitemapBody: sitemap.kind === "response" && sitemap.status >= 200 && sitemap.status < 300 ? sitemap.body : null,
+            pageHtml: page.body
+          })
+        : null;
+    if (candidate && deadlineAt - now() >= MIN_PRODUCT_FETCH_MS) {
+      const product = await deps.fetch(candidate.url, target.baseDomain, {
+        timeoutMs: PAGE_TIMEOUT_MS,
+        maxBytes: PAGE_MAX_BYTES,
+        deadlineAt
+      });
+      if (product.kind === "response" && !isChallengeResponse(product) && isReadableHtml(product)) {
+        const productSignals = extractPageSignals(product.body);
+        // Only one try: a candidate that is not a product page leaves the first page in place.
+        if (isProductPage(productSignals)) {
+          signals = productSignals;
+          facts = extractPageFacts(product.body);
+          pageUrl = product.finalUrl;
+          found = candidate.source;
+        }
+      }
+    }
+  }
 
   const robotsText =
     robots.kind === "response" && robots.status >= 200 && robots.status < 300
@@ -137,7 +200,7 @@ export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps):
 
   const result = scoreAgenticAudit({
     domain: target.baseDomain,
-    url: page.finalUrl,
+    url: pageUrl,
     signals,
     agents: resolveAssistantAccess(robotsText, deps.tokenAllowed),
     challenge,
@@ -153,5 +216,5 @@ export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps):
     })
   });
 
-  return { status: "completed", result };
+  return { status: "completed", result: found ? { ...result, found } : result };
 }

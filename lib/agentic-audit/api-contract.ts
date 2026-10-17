@@ -99,7 +99,16 @@ export type AgenticCheckResult = {
   platform: string | null;
   /** `null` when the page could not be read. */
   facts: AgenticPageFacts | null;
+  /**
+   * Console only (log §323): how the product page was chosen. `given` = the
+   * saved or pasted URL already was one; `catalog`/`sitemap`/`home` = found
+   * automatically there; `none` = no product page found, so the result is
+   * the home page. The free checker never sets it.
+   */
+  found?: AgenticProductFound;
 };
+
+export type AgenticProductFound = "given" | "catalog" | "sitemap" | "home" | "none";
 
 export type AgenticCheckDenial =
   | "global_ceiling_reached"

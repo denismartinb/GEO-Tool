@@ -109,4 +109,96 @@ describe("runAgenticAudit", () => {
     const out = await runAgenticAudit("tienda.es/no-existe", { fetch: fakeFetch({}), tokenAllowed: allowAll });
     expect(out).toEqual({ status: "failed", error: "site_unreachable" });
   });
+
+  it("without discover it never requests a page beyond the fixed list, even on a home page", async () => {
+    const requested: string[] = [];
+    const out = await runAgenticAudit("tienda.es", {
+      fetch: fakeFetch({ "/": { status: 200, body: HOME_HTML }, "/products/gorra": { status: 200, body: PRODUCT_HTML } }, requested),
+      tokenAllowed: allowAll
+    });
+    expect(out.status).toBe("completed");
+    if (out.status !== "completed") return;
+    expect(out.result.found).toBeUndefined();
+    expect(requested.some((u) => u.includes("/products/gorra"))).toBe(false);
+  });
+});
+
+const HOME_HTML = `<html><head><script src="https://cdn.shopify.com/x.js"></script></head>
+<body><a href="/collections/all">Todo</a><a href="/products/gorra">Gorra</a><p>${"Texto ".repeat(50)}</p></body></html>`;
+
+describe("runAgenticAudit with discover (console, log §323)", () => {
+  it("finds the product page in the catalogue and requests exactly one extra page", async () => {
+    const requested: string[] = [];
+    const out = await runAgenticAudit(
+      "tienda.es",
+      {
+        fetch: fakeFetch(
+          {
+            "/": { status: 200, body: HOME_HTML },
+            "/products.json?limit=1": { status: 200, body: '{"products":[{"handle":"camiseta"}]}', type: "application/json" },
+            "/products/camiseta": { status: 200, body: PRODUCT_HTML }
+          },
+          requested
+        ),
+        tokenAllowed: allowAll
+      },
+      { discover: true }
+    );
+    expect(out.status).toBe("completed");
+    if (out.status !== "completed") return;
+    expect(out.result.found).toBe("catalog");
+    expect(out.result.url).toBe("https://tienda.es/products/camiseta");
+    expect(out.result.pageKind).toBe("product");
+    expect(out.result.score).not.toBeNull();
+    // Fixed list (8) + feed + the one product page.
+    expect(requested).toHaveLength(9);
+  });
+
+  it("keeps a page that already is a product page and fetches nothing more", async () => {
+    const requested: string[] = [];
+    const out = await runAgenticAudit(
+      "tienda.es/p",
+      { fetch: fakeFetch({ "/p": { status: 200, body: PRODUCT_HTML } }, requested), tokenAllowed: allowAll },
+      { discover: true }
+    );
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.found).toBe("given");
+    expect(requested).toHaveLength(8);
+  });
+
+  it("tries one candidate only and stays on the home page when it is not a product", async () => {
+    const requested: string[] = [];
+    const home = `<html><body><a href="/producto/uno">Uno</a><a href="/producto/dos">Dos</a><p>${"Texto ".repeat(50)}</p></body></html>`;
+    const out = await runAgenticAudit(
+      "tienda.es",
+      {
+        fetch: fakeFetch(
+          {
+            "/": { status: 200, body: home },
+            "/producto/uno": { status: 200, body: "<html><body>Categoría</body></html>" },
+            "/producto/dos": { status: 200, body: PRODUCT_HTML }
+          },
+          requested
+        ),
+        tokenAllowed: allowAll
+      },
+      { discover: true }
+    );
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.found).toBe("none");
+    expect(out.result.url).toBe("https://tienda.es/");
+    expect(out.result.score).toBeNull();
+    expect(requested.filter((u) => u.includes("/producto/"))).toEqual(["https://tienda.es/producto/uno"]);
+  });
+
+  it("says none when nothing on the site looks like a product", async () => {
+    const out = await runAgenticAudit(
+      "tienda.es",
+      { fetch: fakeFetch({ "/": { status: 200, body: "<html><body><a href='/contacto'>x</a></body></html>" } }), tokenAllowed: allowAll },
+      { discover: true }
+    );
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.found).toBe("none");
+    expect(out.result.pageKind).toBe("other");
+  });
 });

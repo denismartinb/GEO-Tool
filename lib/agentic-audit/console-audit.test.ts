@@ -2,7 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { AGENTIC_REVIEW_DAILY_LIMIT, readAgenticAudits, runConsoleAgenticAuditCore } from "./console-audit";
+import {
+  AGENTIC_REVIEW_DAILY_LIMIT,
+  AGENTIC_SCREEN_MIN_GAP_MS,
+  AGENTIC_SCREEN_STALE_MS,
+  readAgenticAudits,
+  runConsoleAgenticAuditCore,
+  runScheduledAgenticAudit,
+  shouldAutoReview
+} from "./console-audit";
 import type { AgenticFetcher } from "./run-audit";
 
 type Call = [string, unknown[]];
@@ -37,18 +45,24 @@ const PRO = { current_plan: "pro", trial_ends_at: null, stripe_subscription_id: 
 const PRODUCT_HTML = `<html><head><script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":"9","priceCurrency":"EUR","availability":"InStock"}}</script>
 </head><body><form action="/cart/add"><button>Añadir al carrito</button></form><p>${"Texto ".repeat(200)}</p></body></html>`;
 
-function fakeFetch(requested: string[]): AgenticFetcher {
+const HOME_HTML = `<html><body><a href="/p/zapatilla">Zapatilla</a><p>${"Texto ".repeat(50)}</p></body></html>`;
+
+function fakeFetch(requested: string[], pages: Record<string, string> = { "/p/zapatilla": PRODUCT_HTML, "/": HOME_HTML }): AgenticFetcher {
   return async (url) => {
     requested.push(url);
-    const path = new URL(url).pathname;
-    if (path === "/p/zapatilla") {
-      return { kind: "response", status: 200, finalUrl: url, headers: { "content-type": "text/html" }, body: PRODUCT_HTML, ms: 5 };
+    const body = pages[new URL(url).pathname];
+    if (body !== undefined) {
+      return { kind: "response", status: 200, finalUrl: url, headers: { "content-type": "text/html" }, body, ms: 5 };
     }
     return { kind: "response", status: 404, finalUrl: url, headers: {}, body: "", ms: 5 };
   };
 }
 
-function setup(opts: { owns?: boolean; profile?: unknown; count?: number; countError?: unknown } = {}) {
+type Row = { status: string; created_at: string; result: unknown };
+
+function setup(
+  opts: { owns?: boolean; profile?: unknown; count?: number; countError?: unknown; recent?: Row[]; pages?: Record<string, string> } = {}
+) {
   const userCalls: Call[] = [];
   const serviceCalls: Call[] = [];
   const requested: string[] = [];
@@ -63,9 +77,11 @@ function setup(opts: { owns?: boolean; profile?: unknown; count?: number; countE
     {
       agentic_audits: [
         { count: opts.count ?? 0, error: opts.countError ?? null },
+        { data: opts.recent ?? [], error: null },
         { data: { id: "row1" }, error: null },
         { error: null }
-      ]
+      ],
+      profiles: [{ data: opts.profile === undefined ? PRO : opts.profile, error: null }]
     },
     serviceCalls
   );
@@ -77,7 +93,7 @@ function setup(opts: { owns?: boolean; profile?: unknown; count?: number; countE
       supabase: supabase as never,
       service: service as never,
       user,
-      audit: { fetch: fakeFetch(requested), tokenAllowed: () => true },
+      audit: { fetch: fakeFetch(requested, opts.pages), tokenAllowed: () => true },
       now: () => Date.parse("2026-10-17T10:00:00Z")
     }
   };
@@ -114,8 +130,8 @@ describe("runConsoleAgenticAuditCore (log §322)", () => {
       return originalFrom(t);
     };
     await runConsoleAgenticAuditCore({ projectId: PROJECT, url: "tienda.es/p/zapatilla" }, s.deps);
-    expect(order.indexOf("fetch")).toBeGreaterThan(1);
-    expect(order.slice(0, 2)).toEqual(["db", "db"]);
+    expect(order.indexOf("fetch")).toBeGreaterThan(2);
+    expect(order.slice(0, 3)).toEqual(["db", "db", "db"]);
   });
 
   it("refuses a project the user does not own, without writing or fetching", async () => {
@@ -165,7 +181,7 @@ describe("runConsoleAgenticAuditCore (log §322)", () => {
 });
 
 describe("readAgenticAudits", () => {
-  it("returns the last completed review, the saved URL and the reviews of the last 24 hours", async () => {
+  it("returns the last completed review, the newest attempt and the reviews of the last 24 hours", async () => {
     const calls: Call[] = [];
     const now = Date.parse("2026-10-17T10:00:00Z");
     const supabase = client(
@@ -174,9 +190,9 @@ describe("readAgenticAudits", () => {
           { data: { url: "https://tienda.es/p/a", created_at: "2026-10-17T09:00:00Z", result: { score: 54 } }, error: null },
           {
             data: [
-              { url: "https://tienda.es/p/b", created_at: "2026-10-17T09:30:00Z" },
-              { url: "https://tienda.es/p/a", created_at: "2026-10-17T09:00:00Z" },
-              { url: "https://tienda.es/p/a", created_at: "2026-10-15T09:00:00Z" }
+              { status: "failed", created_at: "2026-10-17T09:30:00Z" },
+              { status: "completed", created_at: "2026-10-17T09:00:00Z" },
+              { status: "completed", created_at: "2026-10-15T09:00:00Z" }
             ],
             error: null
           }
@@ -188,7 +204,7 @@ describe("readAgenticAudits", () => {
     expect(read).toEqual({
       available: true,
       latest: { url: "https://tienda.es/p/a", createdAt: "2026-10-17T09:00:00Z", result: { score: 54 } },
-      savedUrl: "https://tienda.es/p/b",
+      lastAttempt: { createdAt: "2026-10-17T09:30:00Z", status: "failed" },
       usedToday: 2
     });
     expect(calls).toContainEqual(["eq", ["owner_user_id", "u1"]]);
@@ -198,5 +214,100 @@ describe("readAgenticAudits", () => {
   it("reports unavailable while migration 0043 is not applied", async () => {
     const supabase = client({ agentic_audits: [{ data: null, error: { code: "42P01" } }, { data: null, error: null }] }, []);
     expect(await readAgenticAudits(supabase as never, PROJECT, "u1")).toEqual({ available: false });
+  });
+});
+
+describe("automatic review (log §323)", () => {
+  const NOW = Date.parse("2026-10-17T10:00:00Z");
+
+  it("finds the product page by itself from the project's domain and remembers how", async () => {
+    const s = setup();
+    const result = await runConsoleAgenticAuditCore({ projectId: PROJECT }, s.deps);
+    expect(result).toEqual({ success: true });
+    expect(s.serviceCalls.find(([m]) => m === "insert")?.[1][0]).toMatchObject({ url: "https://tienda.es/" });
+    const update = s.serviceCalls.find(([m]) => m === "update")?.[1][0] as { url: string; result: { found: string } };
+    expect(update.url).toBe("https://tienda.es/p/zapatilla");
+    expect(update.result.found).toBe("home");
+  });
+
+  it("keeps the product page of the last review and the way it was found", async () => {
+    const s = setup({
+      recent: [
+        {
+          status: "completed",
+          created_at: "2026-10-14T06:00:00Z",
+          result: { url: "https://tienda.es/p/zapatilla", pageKind: "product", found: "catalog" }
+        }
+      ]
+    });
+    await runConsoleAgenticAuditCore({ projectId: PROJECT }, s.deps);
+    expect(s.requested[0]).toBe("https://tienda.es/p/zapatilla");
+    const update = s.serviceCalls.find(([m]) => m === "update")?.[1][0] as { result: { found: string } };
+    expect(update.result.found).toBe("catalog");
+  });
+
+  it("looks again from the home page when the saved product page is gone", async () => {
+    const s = setup({
+      pages: { "/": HOME_HTML.replace("/p/zapatilla", "/p/bota"), "/p/bota": PRODUCT_HTML },
+      recent: [
+        {
+          status: "completed",
+          created_at: "2026-10-14T06:00:00Z",
+          result: { url: "https://tienda.es/p/zapatilla", pageKind: "product", found: "sitemap" }
+        }
+      ]
+    });
+    await runConsoleAgenticAuditCore({ projectId: PROJECT }, s.deps);
+    const update = s.serviceCalls.find(([m]) => m === "update")?.[1][0] as { url: string; result: { found: string } };
+    expect(update.url).toBe("https://tienda.es/p/bota");
+    expect(update.result.found).toBe("home");
+  });
+
+  it("does not start again from the screen when a review started minutes ago", async () => {
+    const s = setup({ recent: [{ status: "pending", created_at: "2026-10-17T09:55:00Z", result: null }] });
+    const result = await runConsoleAgenticAuditCore({ projectId: PROJECT }, s.deps);
+    expect(result).toEqual({ success: true, skipped: "recent" });
+    expect(s.serviceCalls.some(([m]) => m === "insert")).toBe(false);
+    expect(s.requested).toEqual([]);
+  });
+
+  it("after a scan, checks the plan with the server's ids and runs at most once in 20 hours", async () => {
+    const fresh = setup({ recent: [{ status: "completed", created_at: "2026-10-17T00:00:00Z", result: null }] });
+    const skipped = await runScheduledAgenticAudit({
+      service: fresh.deps.service,
+      projectId: PROJECT,
+      ownerUserId: "u1",
+      projectDomain: "tienda.es",
+      audit: fresh.deps.audit,
+      now: fresh.deps.now
+    });
+    expect(skipped).toEqual({ success: true, skipped: "recent" });
+    expect(fresh.requested).toEqual([]);
+
+    const starter = setup({ profile: { ...PRO, current_plan: "starter" } });
+    const refused = await runScheduledAgenticAudit({
+      service: starter.deps.service,
+      projectId: PROJECT,
+      ownerUserId: "u1",
+      projectDomain: "tienda.es",
+      audit: starter.deps.audit
+    });
+    expect(refused).toEqual({ success: false, error: "skipped_plan" });
+    expect(starter.requested).toEqual([]);
+  });
+
+  it("starts from the screen only when there is no review, or it is stale, and never twice in a row", () => {
+    const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0 };
+    expect(shouldAutoReview(base, NOW)).toBe(true);
+    const old = new Date(NOW - AGENTIC_SCREEN_STALE_MS - 1).toISOString();
+    const latest = { url: "u", createdAt: old, result: {} as never };
+    expect(shouldAutoReview({ ...base, latest, lastAttempt: { createdAt: old, status: "completed" } }, NOW)).toBe(true);
+    const recent = new Date(NOW - AGENTIC_SCREEN_MIN_GAP_MS + 1000).toISOString();
+    expect(shouldAutoReview({ ...base, lastAttempt: { createdAt: recent, status: "failed" } }, NOW)).toBe(false);
+    expect(shouldAutoReview({ ...base, usedToday: AGENTIC_REVIEW_DAILY_LIMIT }, NOW)).toBe(false);
+    const yesterday = new Date(NOW - 20 * 60 * 60 * 1000).toISOString();
+    expect(
+      shouldAutoReview({ ...base, latest: { ...latest, createdAt: yesterday }, lastAttempt: { createdAt: yesterday, status: "completed" } }, NOW)
+    ).toBe(false);
   });
 });

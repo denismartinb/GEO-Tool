@@ -19,8 +19,15 @@ export const FIRST_STEPS_MAX = 3;
 const BAND_WORD = { pass: "Bien", avg: "Mejorable", fail: "Falla" } as const;
 const BAND_TONE = { pass: "ok", avg: "warn", fail: "bad" } as const;
 
-export function componentStatus(component: AgenticComponentResult): { tone: Tone; word: string } {
-  if (component.score === null) return { tone: "na", word: "Sin medir" };
+export function componentStatus(
+  component: AgenticComponentResult,
+  result?: Pick<AgenticCheckResult, "pageRead">
+): { tone: Tone; word: string } {
+  if (component.score === null) {
+    // Without a product page (log §323), these two wait for one; they did not fail.
+    const needsProduct = result?.pageRead === true && (component.id === "understanding" || component.id === "purchase");
+    return { tone: "na", word: needsProduct ? "En una ficha" : "Sin medir" };
+  }
   const band = agenticBand(component.score);
   return { tone: BAND_TONE[band], word: BAND_WORD[band] };
 }
@@ -67,6 +74,22 @@ export function projectedSentence(result: AgenticCheckResult, steps: FirstStep[]
   if (projected === null || projected <= result.score) return null;
   const what = COUNT_WORD[steps.length] ?? "lo primero";
   return `Si arreglas ${what} de «Qué hacer primero», subes a ${projected}.`;
+}
+
+const FOUND_SOURCE = { catalog: "tu catálogo", sitemap: "tu sitemap", home: "tu portada" } as const;
+
+/** Where the reviewed page came from (log §323). `null` for reviews stored before it was recorded. */
+export function foundSentence(result: Pick<AgenticCheckResult, "found">): string | null {
+  switch (result.found) {
+    case "catalog":
+    case "sitemap":
+    case "home":
+      return `Elegida automáticamente de ${FOUND_SOURCE[result.found]}.`;
+    case "given":
+      return "La ficha que elegiste.";
+    default:
+      return null;
+  }
 }
 
 /** Which component opens first: the first one with something to fix, else Descubrimiento. */

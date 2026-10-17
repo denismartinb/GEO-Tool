@@ -8,10 +8,10 @@ import type { AgentAccess } from "@/lib/agentic-audit/api-contract";
 import type { PageSignals } from "@/lib/agentic-audit/html-signals";
 import { buildInterop } from "@/lib/agentic-audit/interop";
 import { scoreAgenticAudit, type ScoreInput } from "@/lib/agentic-audit/score";
-import { AgenticAuditForm, AgenticAuditScreen } from "./agentic-audit-screen";
+import { AgenticAuditScreen, AgenticAuditSearching, AgenticAuditUnreachable } from "./agentic-audit-screen";
 
 /**
- * AGENTIC-COMMERCE-1 Fase 2a (log §322): render tests of the console screen.
+ * AGENTIC-COMMERCE-1 Fase 2a (log §322, §323): render tests of the console screen.
  * They pin CONTENT (what is published, what says «Sin medir», what never
  * appears), never classes or looks.
  */
@@ -61,15 +61,9 @@ const INPUT: ScoreInput = {
   })
 };
 
-function render(result: ReturnType<typeof scoreAgenticAudit> | null, remaining = 5) {
+function render(result: ReturnType<typeof scoreAgenticAudit>, remaining = 5) {
   return renderToStaticMarkup(
-    <AgenticAuditScreen
-      projectId="p1"
-      savedUrl="https://tienda.es/p/zapatilla"
-      reviewedLabel="Revisada hoy a las 10:42."
-      result={result}
-      remaining={remaining}
-    />
+    <AgenticAuditScreen projectId="p1" reviewedLabel="Revisada hoy a las 10:42." result={result} remaining={remaining} refresh={false} />
   );
 }
 
@@ -108,20 +102,51 @@ describe("AgenticAuditScreen", () => {
     expect(html).toContain("Reto anti-bots");
   });
 
-  it("asks for a product page when the saved page is not one", () => {
+  it("asks for another product page when the reviewed page is not one", () => {
     const html = render(scoreAgenticAudit({ ...INPUT, signals: { ...SIGNALS, hasProductData: false, hasOffer: false, ogProduct: false } }));
     expect(html).toContain("La nota se calcula sobre una ficha de producto");
+    expect(html).toContain("elige otra ficha");
   });
 
-  it("hides «Revisar ahora» once the daily reviews are used", () => {
-    const html = render(scoreAgenticAudit(INPUT), 0);
+  it("says where the product page came from, with no «Revisar ahora» button", () => {
+    const html = render({ ...scoreAgenticAudit(INPUT), found: "catalog" });
+    expect(html).toContain("Ficha revisada");
+    expect(html).toContain("https://tienda.es/p/zapatilla");
+    expect(html).toContain("Elegida automáticamente de tu catálogo. Revisada hoy a las 10:42.");
+    expect(html).toContain("Elegir otra ficha");
     expect(html).not.toContain("Revisar ahora");
-    expect(html).toContain("podrás volver a revisar mañana");
   });
 
-  it("asks for the first product page when nothing is saved yet", () => {
-    const html = renderToStaticMarkup(<AgenticAuditForm projectId="p1" domain="tienda.es" />);
-    expect(html).toContain("¿Qué ficha revisamos?");
-    expect(html).toContain("Revisar ahora");
+  it("hides «Elegir otra ficha» once the daily reviews are used", () => {
+    const html = render(scoreAgenticAudit(INPUT), 0);
+    expect(html).not.toContain("Elegir otra ficha");
+    expect(html).toContain("podrás elegir otra ficha mañana");
+  });
+
+  it("says plainly when there is no store, without a made-up total", () => {
+    const home = scoreAgenticAudit({
+      ...INPUT,
+      url: "https://tienda.es/",
+      signals: { ...SIGNALS, hasProductData: false, hasOffer: false, ogProduct: false }
+    });
+    const html = render({ ...home, found: "none" });
+    expect(html).toContain("No hemos encontrado una tienda en tu web");
+    expect(html).toContain("¿Vendes online? Indícanos una ficha");
+    expect(html).toContain("En una ficha");
+    expect(html).not.toContain("Visibilidad agéntica:");
+    expect(html).not.toContain("Ficha revisada");
+  });
+
+  it("first visit: a spinner and no fake progress steps", () => {
+    const html = renderToStaticMarkup(<AgenticAuditSearching projectId="p1" />);
+    expect(html).toContain("Buscando una ficha de producto en tu tienda");
+    expect(html).toContain("Al terminar, la pantalla se rellena sola.");
+    expect(html).not.toMatch(/%|paso \d/i);
+  });
+
+  it("when the site could not be opened, offers to point at a product page", () => {
+    const html = renderToStaticMarkup(<AgenticAuditUnreachable projectId="p1" domain="tienda.es" remaining={5} />);
+    expect(html).toContain("No hemos podido abrir tu web");
+    expect(html).toContain("Revisar esta ficha");
   });
 });

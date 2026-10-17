@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AgentAccess } from "./api-contract";
-import { componentLine, componentStatus, firstSteps, initialComponent, projectedSentence } from "./console-model";
+import { componentLine, componentStatus, firstSteps, foundSentence, initialComponent, projectedSentence } from "./console-model";
 import type { PageSignals } from "./html-signals";
 import { buildInterop } from "./interop";
 import { scoreAgenticAudit, scoreIfChecksPass, type ScoreInput } from "./score";
@@ -102,5 +102,23 @@ describe("console model", () => {
   it("opens on the first component with something to fix", () => {
     expect(initialComponent(weak)).toBe(weak.components.find((c) => c.checks.some((k) => k.state !== "pass" && k.state !== "unknown"))!.id);
     expect(initialComponent(scoreAgenticAudit(base))).toBe("discovery");
+  });
+});
+
+describe("found and no-store wording (log §323)", () => {
+  it("says where the product page came from", () => {
+    expect(foundSentence({ found: "catalog" })).toBe("Elegida automáticamente de tu catálogo.");
+    expect(foundSentence({ found: "sitemap" })).toBe("Elegida automáticamente de tu sitemap.");
+    expect(foundSentence({ found: "home" })).toBe("Elegida automáticamente de tu portada.");
+    expect(foundSentence({ found: "given" })).toBe("La ficha que elegiste.");
+    expect(foundSentence({})).toBeNull();
+    expect(foundSentence({ found: "none" })).toBeNull();
+  });
+
+  it("marks Comprensión and Compra as waiting for a product page, not as unmeasured", () => {
+    const empty = { name: "", weight: 30, score: null, checks: [] };
+    expect(componentStatus({ ...empty, id: "understanding" }, { pageRead: true }).word).toBe("En una ficha");
+    expect(componentStatus({ ...empty, id: "discovery" }, { pageRead: true }).word).toBe("Sin medir");
+    expect(componentStatus({ ...empty, id: "purchase" }, { pageRead: false }).word).toBe("Sin medir");
   });
 });

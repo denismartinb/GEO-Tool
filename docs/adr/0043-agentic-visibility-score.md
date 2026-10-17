@@ -75,7 +75,8 @@ goes through the web audit's SSRF guard (imported).
 
 ## Addendum: Fase 2a, the console review (2026-10-17, log §322)
 
-- The console runs the same engine on one product page the customer saves.
+- ~~The console runs the same engine on one product page the customer saves.~~
+  Superseded by the next addendum: the console finds the product page itself.
   The page must be on the project's domain or a subdomain
   (`isSameOrSubdomain`), so the fixed-URL list stays on a domain the
   customer owns.
@@ -89,3 +90,19 @@ goes through the web audit's SSRF guard (imported).
 - Plan: Pro, Agencia and the Pro trial, read with `resolveSystemPlanId`.
 - The projected score («subes a N») is the engine's own arithmetic with the
   chosen checks set to pass (`scoreIfChecksPass`). Weights are unchanged.
+
+## Addendum: the console finds the product page itself (2026-10-17, log §323)
+
+- Founder-approved exception to the fixed-URL list, console only: with
+  `discover`, when the page read is not a product page, the engine picks one
+  product page from bytes it already downloaded (public catalogue, the
+  sitemap's `<loc>` entries, the page's JSON-LD or links;
+  `find-product.ts`) and fetches exactly that one page, on the same domain
+  or a subdomain, through the same SSRF guard. It never follows a second
+  link or opens a sitemap index. The free checker keeps the fixed list.
+- The review runs by itself: after each scan, alongside the technical audit
+  in the web audit job (at most once per 20 h per project), and when the
+  screen opens with no review or one older than 48 h. Its worst case fits
+  inside the technical audit's reserve, so the job budget is unchanged.
+- Weights, the score and the five components are unchanged. Without a
+  product page there is still no total.

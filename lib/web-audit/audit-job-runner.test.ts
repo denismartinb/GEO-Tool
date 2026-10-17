@@ -4,13 +4,16 @@ import * as coverageModule from "@/lib/recommendations/domain-coverage";
 import type { DomainCoverageResult } from "@/lib/recommendations/domain-coverage";
 import * as technicalModule from "@/lib/web-audit/technical-audit";
 import * as emailModule from "@/lib/email/transactional";
+import * as agenticModule from "@/lib/agentic-audit/console-audit";
 import {
   backfillMissingWebAuditJobs,
   claimDueWebAuditJobs,
   enqueueWebAuditJob,
   BACKFILL_GRACE_MS,
   BACKFILL_LOOKBACK_MS,
+  AGENTIC_STEP_MAX_MS,
   MAX_AUDIT_CONTINUATIONS,
+  TECHNICAL_RESERVE_MS,
   processDueWebAuditJobs,
   runWebAuditJob,
   type WebAuditJobRow
@@ -25,10 +28,13 @@ vi.mock("@/lib/web-audit/technical-audit", () => ({
   TECH_AUDIT_TOTAL_BUDGET_MS: 25_000
 }));
 vi.mock("@/lib/email/transactional", () => ({ sendWebAuditFailedAlertEmail: vi.fn(async () => undefined) }));
+vi.mock("@/lib/agentic-audit/console-audit", () => ({ runScheduledAgenticAudit: vi.fn(async () => ({ success: true })) }));
+vi.mock("@/lib/agentic-audit/fetch", () => ({ fetchOnDomain: vi.fn() }));
 
 const mockedCoverage = vi.mocked(coverageModule.auditDomainCoverageCore);
 const mockedTechnical = vi.mocked(technicalModule.runTechnicalAuditCore);
 const mockedAlert = vi.mocked(emailModule.sendWebAuditFailedAlertEmail);
+const mockedAgentic = vi.mocked(agenticModule.runScheduledAgenticAudit);
 
 const NOW = new Date("2026-08-04T10:00:00.000Z");
 
@@ -523,6 +529,45 @@ describe("runWebAuditJob", () => {
 
     expect(outcome).toEqual({ result: "completed" });
     expect(mockedTechnical).not.toHaveBeenCalled();
+  });
+
+  it("runs the agentic review alongside the technical audit, with ids read on the server (log §323)", async () => {
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service } = makeService({});
+
+    await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(mockedTechnical).toHaveBeenCalledOnce();
+    expect(mockedAgentic).toHaveBeenCalledOnce();
+    expect(mockedAgentic.mock.calls[0][0]).toMatchObject({
+      projectId: "project-1",
+      ownerUserId: "user-1",
+      projectDomain: "acme.com"
+    });
+  });
+
+  it("never fails the web audit because the agentic review failed", async () => {
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    mockedAgentic.mockResolvedValueOnce({ success: false, error: "site_unreachable", message: "x" });
+    const { service, recorded } = makeService({});
+
+    const outcome = await runWebAuditJob({ service, job: job(), now: NOW });
+
+    expect(outcome).toEqual({ result: "completed" });
+    expect(jobUpdates(recorded).at(-1)).toMatchObject({ status: "completed" });
+  });
+
+  it("does not start the agentic review when the job parks for lack of time", async () => {
+    mockedCoverage.mockResolvedValue(coverageResult("completed"));
+    const { service } = makeService({});
+
+    await runWebAuditJob({ service, job: job(), now: NOW, budgetMs: 5_000 });
+
+    expect(mockedAgentic).not.toHaveBeenCalled();
+  });
+
+  it("keeps the agentic review inside the technical reserve, so it needs none of its own", () => {
+    expect(AGENTIC_STEP_MAX_MS).toBeLessThanOrEqual(TECHNICAL_RESERVE_MS);
   });
 
   it("cancels without spending anything when both halves were switched off after enqueue", async () => {

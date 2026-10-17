@@ -14,7 +14,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
 `components/agentic/**` y `app/dashboard/projects/*/agentic-audit/**`. Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319 y §322.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322 y §323.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -26,6 +26,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   Shopify o WooCommerce, una URL de catálogo (`interopProbePaths`). Ni un
   enlace seguido: eso sería un crawler, prohibido sin aprobación. Lo fija
   `run-audit.test.ts`. El checkout no se recorre: Compra mide sólo la ficha.
+  **Única excepción, sólo en la consola** (fundador, 2026-10-17, log §323):
+  con `discover`, si la página no es una ficha, se pide **exactamente una**
+  página más, la que `find-product.ts` saca de bytes ya descargados
+  (catálogo, `<loc>` del sitemap, JSON-LD o enlaces de la página). Mismo
+  dominio o subdominio, mismo guardián SSRF, nunca un índice de sitemaps ni
+  un segundo intento. El comprobador gratuito no usa `discover`.
 - **El guardián SSRF se importa de `lib/web-audit/fetch-page.ts`.** Cada salto
   de redirección se verifica antes de seguirlo, sólo https, nada de IP
   literales, sólo el dominio y sus subdominios.
@@ -79,3 +85,24 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   la web a cada agente: ni lo medimos ni podemos sin hacernos pasar por él.
 - **Los checks no enseñan puntos**, sólo estados. «Subes a N» sale de
   `scoreIfChecksPass`, nunca de sumar ganancias.
+
+## Consola automática (log §323)
+
+- **Nadie pega una URL para empezar.** La revisión corre sola tras cada
+  escaneo (`runScheduledAgenticAudit`, desde `audit-job-runner.ts`, como
+  mucho cada 20 h por proyecto) y al abrir la pantalla sin revisión o con una
+  de más de 48 h (`shouldAutoReview`). No hay «Revisar ahora»; «Elegir otra
+  ficha» sí, y cuenta en el tope de 5 al día como cualquier revisión.
+- **Corre en paralelo con la auditoría técnica y nunca hace fallar el
+  trabajo.** Su peor caso (`AGENTIC_STEP_MAX_MS`) cabe en
+  `TECHNICAL_RESERVE_MS`; si el motor gana tiempo, ese test manda.
+  El plan se lee con `resolveSystemPlanId` con service role y los ids del
+  propio trabajo, nunca de fuera.
+- **La misma ficha mientras exista**, y una búsqueda nueva desde la portada
+  sólo si esa ficha responde rápido con error, dentro del mismo presupuesto
+  de `AGENTIC_DISCOVER_BUDGET_MS`.
+- **Sin tienda no hay nota.** `found: "none"` dice «No hemos encontrado una
+  tienda en tu web», y Comprensión y Compra salen «En una ficha», nunca
+  como suspenso.
+- **La espera es un spinner.** «Buscando una ficha de producto en tu
+  tienda», sin pasos ni porcentajes: nada sabe por dónde va.

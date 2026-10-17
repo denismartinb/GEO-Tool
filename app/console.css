@@ -1941,6 +1941,10 @@
 .ag-url-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .ag-busy { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .ag-busy .btn-spinner { border-color: var(--line); border-top-color: var(--accent); }
+.ag-busy b { font-size: 14px; color: var(--ink); }
+.ag-searching { justify-items: start; }
+.ag-link { font: inherit; font-size: 13px; font-weight: 650; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; justify-self: start; text-decoration: underline; text-underline-offset: 2px; }
+.ag-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .ag-score { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 .ag-gauge { width: 76px; height: 76px; flex: 0 0 auto; }

@@ -45,3 +45,8 @@ sigue con fase 2»), con la maqueta de la pantalla «Auditoría agéntica» en
 móvil y escritorio. Sólo se construye la 2a; 2b–2d siguen sin aprobar.
 Diferencias con el prototipo y por qué: `docs/brand/design-decisions-log.md`
 §322.
+
+`fase-2a-auto.html` es el plan v2 que lo sustituye antes del merge (aprobado
+2026-10-17, «Si»): nadie pega una URL, GenScore busca sola una ficha de
+producto y la auditoría aparece hecha, como la técnica. Decisiones y
+diferencias: §323.

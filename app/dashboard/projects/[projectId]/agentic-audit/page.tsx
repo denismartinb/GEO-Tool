@@ -1,17 +1,28 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { AGENTIC_REVIEW_DAILY_LIMIT, readAgenticAudits } from "@/lib/agentic-audit/console-audit";
+import {
+  AGENTIC_REVIEW_DAILY_LIMIT,
+  AGENTIC_SCREEN_MIN_GAP_MS,
+  readAgenticAudits,
+  shouldAutoReview
+} from "@/lib/agentic-audit/console-audit";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { AgenticAuditForm, AgenticAuditScreen } from "./_components/agentic-audit-screen";
+import {
+  AgenticAuditScreen,
+  AgenticAuditSearching,
+  AgenticAuditUnreachable
+} from "./_components/agentic-audit-screen";
 
 /**
- * «Auditoría agéntica» — AGENTIC-COMMERCE-1 Fase 2a (log §322, ADR 0043),
- * design in docs/design-reference/agentic-commerce-1/fase-2a.html. The same
- * engine as the free checker on /comercio-agentico, run on one product page
- * the customer saves, with the last review kept (migration 0043). No LLM.
+ * «Auditoría agéntica» — AGENTIC-COMMERCE-1 Fase 2a (log §322, §323, ADR
+ * 0043), design in docs/design-reference/agentic-commerce-1/fase-2a-auto.html.
+ * The same engine as the free checker on /comercio-agentico, run by itself
+ * after each scan on a product page it finds in the store, with the last
+ * review kept (migration 0043). No LLM, and nobody pastes a URL: the first
+ * visit starts the review if there is none (or it is stale).
  *
  * Pro, Agencia and the Pro trial. Starter sees the screen with the invitation
  * to move to Pro. Without the migration the screen says it is not available
@@ -19,8 +30,9 @@ import { AgenticAuditForm, AgenticAuditScreen } from "./_components/agentic-audi
  */
 
 export const dynamic = "force-dynamic";
-// «Revisar ahora» runs inside this page's function: the engine has a 20 s budget.
-export const maxDuration = 30;
+// The automatic review runs inside this page's function: the engine has a 24 s
+// budget (AGENTIC_DISCOVER_BUDGET_MS) plus its reads and writes.
+export const maxDuration = 40;
 
 export async function generateMetadata({ params }: { params: Promise<{ projectId: string }> }): Promise<Metadata> {
   const { projectId } = await params;
@@ -34,6 +46,7 @@ function reviewedLabel(iso: string, now: Date): string {
   const day = (d: Date) => d.toLocaleDateString("es-ES", { timeZone: TIME_ZONE });
   const time = at.toLocaleTimeString("es-ES", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit" });
   if (day(at) === day(now)) return `Revisada hoy a las ${time}.`;
+  if (day(at) === day(new Date(now.getTime() - 24 * 60 * 60 * 1000))) return `Revisada ayer a las ${time}.`;
   const date = at.toLocaleDateString("es-ES", { timeZone: TIME_ZONE, day: "numeric", month: "long" });
   return `Revisada el ${date} a las ${time}.`;
 }
@@ -48,8 +61,13 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
     readAgenticAudits(supabase, projectId, user.id)
   ]);
   const canRun = isProOrAbove(resolveSystemPlanId(profile as Parameters<typeof resolveSystemPlanId>[0]));
-  // Only a review of the saved page is shown: after «Cambiar» to a page whose review failed, the old result would mislead.
-  const shown = audits.available && audits.latest && audits.latest.url === audits.savedUrl ? audits.latest : null;
+  const now = Date.now();
+  const autoReview = audits.available && shouldAutoReview(audits, now);
+  const inFlight =
+    audits.available &&
+    audits.lastAttempt?.status === "pending" &&
+    now - Date.parse(audits.lastAttempt.createdAt) < AGENTIC_SCREEN_MIN_GAP_MS;
+  const remaining = audits.available ? Math.max(0, AGENTIC_REVIEW_DAILY_LIMIT - audits.usedToday) : 0;
 
   return (
     <div className="page">
@@ -92,16 +110,18 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
                 <Link href="/comercio-agentico">la página de comercio agéntico</Link>.
               </p>
             </div>
-          ) : audits.savedUrl === null ? (
-            <AgenticAuditForm projectId={projectId} domain={project.domain} />
-          ) : (
+          ) : audits.latest ? (
             <AgenticAuditScreen
               projectId={projectId}
-              savedUrl={audits.savedUrl}
-              reviewedLabel={shown ? reviewedLabel(shown.createdAt, new Date()) : null}
-              result={shown?.result ?? null}
-              remaining={Math.max(0, AGENTIC_REVIEW_DAILY_LIMIT - audits.usedToday)}
+              reviewedLabel={reviewedLabel(audits.latest.createdAt, new Date(now))}
+              result={audits.latest.result}
+              remaining={remaining}
+              refresh={autoReview}
             />
+          ) : autoReview || inFlight ? (
+            <AgenticAuditSearching projectId={projectId} />
+          ) : (
+            <AgenticAuditUnreachable projectId={projectId} domain={project.domain} remaining={remaining} />
           )}
         </div>
       </div>
