@@ -340,5 +340,5 @@ worse than no rule, because a future session will obey it anyway.
   exacta.** `namesPlausiblyMatch` acepta «El Corte Inglés» frente a
   «Elcorteingles» (marca derivada del dominio) comparando las claves sin
   espacios, y nada más: nunca contención sin espacios, que confundiría marcas
-  homónimas o más largas (`docs/brand/design-decisions-log.md` §308). La
+  homónimas o más largas (`docs/brand/design-decisions-log.md` §309). La
   comprobación de que el nombre está en el texto sigue intacta.

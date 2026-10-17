@@ -25408,7 +25408,77 @@ página propia frente a páginas citadas, redacción por LLM, re-comprobación
 al instante). Si Google no trae tarjeta para el plan, la tercera de IA aparece
 cuando llega la respuesta: un salto pequeño y poco frecuente que se acepta.
 
-## 308. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
+## 308. LIFECYCLE-DEDUPE-1: el fin de prueba se reclama antes de enviarse (2026-10-17)
+
+**Qué pasó.** El 2026-10-17 a las 07:45:45 UTC, justo tras el disparo del
+cron `/api/cron/lifecycle-emails`, el correo «Tu prueba ha terminado. Tus
+datos siguen aquí» llegó tres veces, en el mismo segundo, a una cuenta de
+prueba (tres ids de mensaje distintos en Gmail). Alcance en cuentas reales:
+desconocido; confirmarlo pide los logs de Vercel y Resend o la tabla
+`email_sends`.
+
+**Causa demostrada en código.** `sendTrialEndEmailOnce` leía `email_sends`,
+decidía, enviaba y sólo después anotaba (`recordSend`). Toda la llamada a
+Resend quedaba dentro de esa ventana: dos ejecuciones a la vez leían vacío y
+enviaban las dos. Qué disparó tres ejecuciones no está confirmado. La
+hipótesis más probable es la entrega duplicada del cron, que Vercel documenta
+(«cron jobs should be resilient to both missed runs and duplicate runs»); la
+otra es el cruce con `applyTrialExpiry` desde la consola. El arreglo cubre
+las dos porque las dos pasan por la misma función.
+
+**Qué se decide.**
+
+- **Reclamar antes de enviar.** Tras decidir el tipo, se inserta
+  `{ owner_user_id, kind }` con `ignoreDuplicates` y `.select("id")` sobre el
+  índice único de 0037. Sólo quien recibe la fila envía. Sin migración.
+- **Clave de idempotencia de Resend** `lifecycle/<kind>/<userId>`, pasada por
+  llamada (`sendEmailWithOutcome(message, { idempotencyKey })`), nunca por
+  defecto en el envoltorio central. El contenido del correo se carga una vez,
+  para que el reintento mande exactamente el mismo cuerpo.
+- **`sendEmailWithOutcome` distingue** `sent`, `not_sent` (sin cliente, o un
+  4xx que no es 409: validación, clave, cupo, límite) y `ambiguous` (fallo de
+  red, que el SDK devuelve con `statusCode: null`, un 5xx, un 409 de
+  idempotencia o una excepción). `sendEmail` sigue devolviendo `boolean`
+  encima de ella, así que los demás correos no cambian.
+
+**Política de fallos: valores por defecto, pendientes de confirmar por el
+fundador.**
+
+- `not_sent`: se libera la reclamación; el pase siguiente reintenta.
+- `ambiguous`: un reintento con la misma clave. Si sigue ambiguo, se
+  **mantiene** la reclamación: el correo puede perderse, pero nunca sale dos
+  veces. La versión «tardía» no lo recupera, porque la fila ya existe.
+- Caída del proceso entre reclamar y enviar: la reclamación se queda y ese
+  correo se pierde. Fallo aceptado y documentado.
+- Una reclamación mantenida ancla igualmente D+3 y D+10, que salen aunque el
+  fin de prueba no llegara.
+
+**Regla de premisa (camino de recuperación retirado).** Antes, un envío
+fallido de cualquier tipo se reintentaba al día siguiente. Ahora un fallo
+ambiguo que no se resuelve con el reintento ya no se reintenta. Premisa: que
+duplicar es peor que perder un correo de cuenta; la verifica el propio
+incidente (tres copias visibles para el cliente). Si la premisa falla, la
+cuenta se queda sin fin de prueba y nadie lo ve salvo en el log
+`[geo:lifecycle] end-of-trial email may not have gone out`.
+
+**Riesgo residual conocido.** El índice es por tipo: si dos llamadas a la vez
+caen justo a cada lado del umbral de «tardía» (una decide `trial_ended` y
+otra `trial_ended_late`), las dos reclaman y salen dos versiones distintas.
+Ventana de segundos alrededor de una hora concreta; aceptado.
+
+**Fuera de esta fase.** `trial_d1/d3/d5`, D+3, D+10 y primer escaneo siguen
+con anotar-después (mismo patrón, extensible si el fundador lo pide). El
+recordatorio de confirmación no tiene fila que reclamar y deduplicarlo pide
+un tipo nuevo, es decir migración. Un bloqueo de todo el cron contra solapes,
+que es lo que Vercel recomienda como opción mayor, queda anotado y sin
+construir.
+
+**Pendiente del fundador.** Confirmar o cambiar la política de arriba, el
+formato de la clave, si se extiende a los demás tipos, y verificar el alcance
+real (logs de Vercel con tres invocaciones `vercel-cron/1.0` a las 07:45,
+tres ids en Resend, filas de `email_sends` de esa cuenta).
+
+## 309. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
 
 **Caso.** El 2026-10-12, en el proyecto de prueba `elcorteingles.es`, una
 respuesta de Claude a «¿Qué grandes almacenes tienen variedad de productos para

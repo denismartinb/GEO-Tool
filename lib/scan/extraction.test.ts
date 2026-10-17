@@ -1171,7 +1171,7 @@ describe("runStructuredExtractionForRun — no row cap (EXTRACTION-RELIABILITY-1
 });
 
 /*
- * BRAND-SPACING-1 (log §308). Observed 2026-10-12 on elcorteingles.es: a
+ * BRAND-SPACING-1 (log §309). Observed 2026-10-12 on elcorteingles.es: a
  * Claude answer that literally says "El Corte Inglés" was labelled «No te
  * nombra». The tracked brand is derived from the domain ("Elcorteingles") and
  * the site blocks bots, so no alias was ever derived; the containment check

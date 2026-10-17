@@ -44,12 +44,12 @@ afterEach(() => {
 describe("fin de prueba", () => {
   it("is not sent without a working unsubscribe", async () => {
     delete process.env.EMAIL_UNSUBSCRIBE_SECRET;
-    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe(false);
+    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe("not_sent");
     expect(send).not.toHaveBeenCalled();
   });
 
   it("quotes the last real scan, the live promo and the one-click unsubscribe", async () => {
-    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe(true);
+    expect(await sendTrialEndedOfferEmail(TO, USER, { late: false, trialEndsAt: END, snapshot, pro: proWithPromo, starter })).toBe("sent");
     const mail = last();
     expect(mail.subject).toBe("Tu prueba ha terminado. Tus datos de clinicaaurora.es siguen aquí");
     expect(mail.html).toContain("6 de 45");
