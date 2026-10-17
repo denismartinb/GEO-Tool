@@ -2,6 +2,7 @@ import { resolveAssistantAccess } from "@/lib/agentic-audit/agents";
 import type { AgenticCheckError, AgenticCheckResult } from "@/lib/agentic-audit/api-contract";
 import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
 import { extractPageSignals } from "@/lib/agentic-audit/html-signals";
+import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { buildInterop, interopProbePaths, type Probe } from "@/lib/agentic-audit/interop";
 import { scoreAgenticAudit } from "@/lib/agentic-audit/score";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
@@ -115,10 +116,12 @@ export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps):
 
   const challenge = isChallengeResponse(page);
   let signals = null;
+  let facts = null;
   if (!challenge) {
     const isHtml = (page.headers["content-type"] ?? "").toLowerCase().includes("html");
     if (page.status < 200 || page.status >= 300 || !isHtml) return { status: "failed", error: "site_unreachable" };
     signals = extractPageSignals(page.body);
+    facts = extractPageFacts(page.body);
   }
 
   const platform = signals?.platform ?? null;
@@ -138,6 +141,7 @@ export async function runAgenticAudit(input: string, deps: RunAgenticAuditDeps):
     signals,
     agents: resolveAssistantAccess(robotsText, deps.tokenAllowed),
     challenge,
+    facts,
     sitemap: sitemapState(sitemap),
     interop: buildInterop({
       ucp: toProbe(ucp),

@@ -51,6 +51,8 @@ export type ScoreInput = {
   challenge: boolean | null;
   sitemap: "found" | "absent" | "unknown";
   interop: AgenticCheckResult["interop"];
+  /** Literal values read from the page; `null` when it could not be read. */
+  facts?: AgenticCheckResult["facts"];
 };
 
 function check(id: string, points: number, state: CheckState, label: string, fix: string): AgenticCheck {
@@ -297,6 +299,7 @@ export function scoreAgenticAudit(input: ScoreInput): AgenticCheckResult {
     agents: input.agents,
     challenge: input.challenge,
     fixes: fixGains(components),
-    platform: s?.platform ?? null
+    platform: s?.platform ?? null,
+    facts: s ? (input.facts ?? null) : null
   };
 }

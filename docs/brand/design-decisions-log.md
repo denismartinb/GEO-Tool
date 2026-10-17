@@ -25875,3 +25875,47 @@ el entorno de desarrollo (sin salida a webs de terceros): la prueba real es el
 preview.
 
 **Regla de premisa.** Esta fase no retira ningún camino de recuperación.
+
+## 318. AGENTIC-CHECKER-2: el comprobador agéntico tarda unos diez segundos, habla de la tienda analizada e invita a Pro (2026-10-17)
+
+**Qué se decidió.** A petición del fundador («más vistoso», unos 10 s, que se
+lea como una comprobación de alto nivel y que el final invite a Pro), con el
+prototipo aprobado («Ok») y una condición añadida: «tiene que ser
+personalizado con palabras y cosas reales del dominio que se está
+analizando».
+
+- La espera es `components/agentic/agentic-scan.tsx`, que reproduce el guion
+  puro de `lib/agentic-audit/scan-script.ts`. Hay un consola oscura con las
+  peticiones y cinco carriles (los cuatro componentes e Interoperabilidad) con
+  sus comprobaciones.
+- **Sólo se escenifica el ritmo.** Antes de la respuesta, el guion enseña sólo
+  las URL que el servidor pide de verdad, con el dominio que escribió el
+  visitante, y el reloj se para en 1,8 s («esperando respuesta de…»). Con la
+  respuesta, todo sale de ella: título de la página, producto, marca, precio,
+  stock y valoración (`facts`, `lib/agentic-audit/page-facts.ts`), qué
+  asistentes deja pasar robots.txt, la plataforma y el estado de cada
+  comprobación, con su color. No hay porcentajes. Un error corta la animación
+  al momento, y con movimiento reducido el resultado sale en cuanto llega.
+- La duración es de 10,2 s, o algo más si el servidor tarda: lo que queda se
+  reproduce en al menos 4 s (`scriptedTime`).
+- `facts` es texto que publicó la tienda: se le quitan etiquetas y controles,
+  se recorta a 80 caracteres y React lo escapa. Es `null` si la página no se
+  pudo leer.
+- El resultado lleva la insignia «Comprobación rápida de una ficha», los datos
+  leídos como pastillas, la frase de lectura de alto nivel y un bloque «En la
+  consola lo verás todo en detalle». El cierre oscuro dice «Optimiza el
+  comercio agéntico de tu web» con «Empezar gratis con Pro», y aclara que la
+  auditoría agéntica completa «llega muy pronto a la consola de Pro».
+
+**Qué cambia de §317.** §317 no mandaba a Pro por nada agéntico hasta la
+Fase 2. El fundador lo pidió explícitamente y el texto lo dice tal cual: Pro
+se prueba gratis hoy y la auditoría agéntica llega después. La regla de ruta
+se actualiza en consecuencia.
+
+**Pendiente.** No se pudo probar contra tiendas reales desde el entorno de
+desarrollo; las capturas usan una respuesta simulada. La prueba real es el
+preview. El extractor de `facts` lee JSON-LD y Open Graph; una tienda que sólo
+pinte el precio con JavaScript no tendrá precio en la animación, igual que no
+lo tiene para un agente.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

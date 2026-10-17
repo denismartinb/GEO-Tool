@@ -55,7 +55,8 @@ const BASE: AgenticCheckResult = {
   ],
   challenge: false,
   fixes: [{ component: "understanding", checkId: "gtin", label: "Declara el GTIN de tus productos", gain: 5 }],
-  platform: "Shopify"
+  platform: "Shopify",
+  facts: { title: "Zapatilla | Tu tienda", productName: "Zapatilla Trail", brand: null, price: "89,95 EUR", availability: "En stock", rating: null }
 };
 
 const render = (result: AgenticCheckResult) => renderToStaticMarkup(<AgenticResultView result={result} play={false} />);
@@ -96,6 +97,16 @@ describe("AgenticResultView", () => {
   it("labels an unmeasured check as such, never as correct", () => {
     const html = render(BASE);
     expect(html).toContain("Reto a las visitas automáticas</b><span class=\"ca-ck-s\">No se pudo medir");
+  });
+
+  it("frames the result as a quick check, shows the store's own data and invites to Pro honestly", () => {
+    const html = render(BASE);
+    expect(html).toContain("Comprobación rápida de una ficha");
+    expect(html).toContain("Zapatilla Trail");
+    expect(html).toContain("89,95 EUR");
+    expect(html).toContain("En la consola lo verás todo en detalle");
+    expect(html).toContain("Empezar gratis con Pro");
+    expect(html).toContain("llega muy pronto a la consola de Pro");
   });
 
   it("never writes an em dash nor the retired «sin puntos» wording", () => {
