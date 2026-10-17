@@ -1,9 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * Cross-nav between the three legal docs. Not part of the unified
@@ -58,36 +56,7 @@ export function LegalPageShell({
         </section>
       </main>
 
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link href="/" className="lp-logo">
-              <BrandLogo size={19} />
-            </Link>
-            <nav className="links" aria-label="Pie de página">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/#como">Cómo funciona</Link>
-              <Link href="/precios">Precios</Link>
-              {MARKETING_CONTENT_LINKS.map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/terminos">Términos</Link>
-            </nav>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

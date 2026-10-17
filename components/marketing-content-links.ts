@@ -55,27 +55,79 @@ export const MARKETING_LEAD_LINKS: ReadonlyArray<{ href: string; label: string }
   { href: "/gratis/informe-geo", label: "Informe gratis" },
   // AFFILIATES-1: the affiliate programme is acquisition too — through the
   // people who recommend us — so it lives in this list, in every footer.
-  { href: "/afiliados", label: "Afiliados" }
+  // FOOTER-UNIFY-1: labelled «Programa de afiliados» at the founder's request.
+  { href: "/afiliados", label: "Programa de afiliados" }
+];
+
+type FooterLink = { href: string; label: string };
+
+function fromList(list: ReadonlyArray<FooterLink>, href: string): FooterLink {
+  const link = list.find((l) => l.href === href);
+  if (!link) throw new Error(`${href} no está en su lista compartida`);
+  return link;
+}
+
+/**
+ * FOOTER-UNIFY-1: the four columns of the one public footer
+ * (`components/marketing/public-footer.tsx`). Every href of the three shared
+ * lists above lands in exactly one column — `marketing-content-links.test.ts`
+ * checks it — so a page added to a list reaches every footer without touching
+ * this layout. Links that are not in a list (anchors, `/precios`, `/demo`,
+ * the checker, `/geo`) are written here, once, instead of once per page.
+ */
+export const PUBLIC_FOOTER_GROUPS: ReadonlyArray<{ title: string; links: ReadonlyArray<FooterLink> }> = [
+  {
+    title: "Producto",
+    links: [
+      { href: "/#producto", label: "Producto" },
+      { href: "/#como", label: "Cómo funciona" },
+      { href: "/precios", label: "Precios" },
+      { href: "/demo", label: "Videollamada de 20 min" }
+    ]
+  },
+  {
+    title: "Gratis",
+    links: [
+      { href: "/gratis/aparece-mi-marca-en-chatgpt", label: "Comprobador gratis" },
+      fromList(MARKETING_LEAD_LINKS, "/gratis/informe-geo")
+    ]
+  },
+  {
+    title: "Recursos",
+    links: [
+      fromList(MARKETING_CONTENT_LINKS, "/blog"),
+      fromList(MARKETING_ENTITY_LINKS, "/estudios"),
+      fromList(MARKETING_CONTENT_LINKS, "/comparativas"),
+      fromList(MARKETING_CONTENT_LINKS, "/glosario"),
+      fromList(MARKETING_CONTENT_LINKS, "/docs"),
+      { href: "/geo", label: "Qué es GEO" }
+    ]
+  },
+  {
+    title: "Empresa",
+    links: [
+      fromList(MARKETING_ENTITY_LINKS, "/que-es-genscore"),
+      fromList(MARKETING_ENTITY_LINKS, "/sobre-genscore"),
+      fromList(MARKETING_LEAD_LINKS, "/afiliados")
+    ]
+  }
+];
+
+/** FOOTER-UNIFY-1: the legal line at the bottom of the public footer. */
+export const PUBLIC_FOOTER_LEGAL_LINKS: ReadonlyArray<FooterLink> = [
+  { href: "/privacidad", label: "Privacidad" },
+  { href: "/cookies", label: "Cookies" },
+  { href: "/terminos", label: "Términos" }
 ];
 
 /**
- * Los shells de marketing con un pie de página público completo — la lista
- * que `marketing-content-links.test.ts` y `payment-badges.test.ts` recorren
- * para comprobar que su footer no se ha quedado atrás. Vive aquí, en el
- * módulo fuente y no en un `.test.ts`, para que los dos tests lean la MISMA
- * lista en vez de mantener cada uno su propia copia — es el mismo argumento
- * por el que `MARKETING_CONTENT_LINKS` existe: una lista compartida, no
- * varias que se desincronizan de una en una (log §46).
- *
- * `components/not-found-mission.tsx` SÍ entra (NOT-FOUND-ROCKET-1): la 404
- * pública tiene su propio shell —no reutiliza `BlogPageShell` porque
- * `.lp-inner` impide la escena a sangre— así que es una superficie más con
- * pie público, justo la clase de sitio donde se olvidan las cuatro capas de
- * contenido.
- *
- * `app/geo/page.tsx` queda fuera a propósito: su pie ya es una versión
- * reducida a mano (sin `MARKETING_CONTENT_LINKS` ni `MARKETING_ENTITY_LINKS`)
- * — una divergencia anterior a esta lista y fuera de lo que aquí se arregla.
+ * Every public page with a marketing footer. FOOTER-UNIFY-1 (2026-10-17):
+ * until then each of these files wrote its own `<footer>` by hand and there
+ * were seven different versions — the checker and `/demo` were in none, and
+ * `/geo`, `/demo` and `/gratis/informe-geo` carried a five-link cut. Now each
+ * renders `<PublicFooter />` and none may declare its own `<footer>`;
+ * `marketing-content-links.test.ts` and `payment-badges.test.ts` walk this
+ * list. It lives here, not in a test, so both tests read the same list.
  */
 export const MARKETING_SHELLS: readonly string[] = [
   "components/landing/landing-page.tsx",
@@ -83,5 +135,9 @@ export const MARKETING_SHELLS: readonly string[] = [
   "components/blog/blog-page-shell.tsx",
   "components/docs/docs-page-shell.tsx",
   "components/legal-page-shell.tsx",
-  "components/not-found-mission.tsx"
+  "components/not-found-mission.tsx",
+  "app/geo/page.tsx",
+  "app/afiliados/page.tsx",
+  "app/demo/page.tsx",
+  "app/gratis/informe-geo/page.tsx"
 ];

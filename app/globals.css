@@ -7758,17 +7758,31 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
 .btn-onaccent { background: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.28); }
 .btn-onaccent:hover { background: rgba(255,255,255,.2); }
 
-.lp-footer { border-top: 1px solid var(--line); padding: 40px 0; }
-.lp-footer .row1 { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-.lp-footer .links { margin-left: auto; display: flex; gap: 22px; flex-wrap: wrap; }
-/* A11Y-PSI-1: el enlace en sí sólo medía la caja del texto (~13px de línea),
-   muy por debajo del área táctil mínima (24x24). El relleno amplía el hit-box
-   sin mover nada visualmente — el margen negativo compensa el padding, así
-   que el texto sigue en el mismo sitio y el hueco entre enlaces (gap: 22px)
-   sigue siendo positivo tras restar los 2x8px del margen. */
-.lp-footer .links a { font-size: 13px; color: var(--ink-3); font-weight: 550; display: inline-block; padding: 8px 6px; margin: -8px -6px; }
-.lp-footer .links a:hover { color: var(--ink); }
-.lp-footer .copy { font-size: 12.5px; color: var(--ink-4); margin-top: 18px; }
+/* FOOTER-UNIFY-1 (2026-10-17, log §312): one footer for every public page,
+   «Opción A · Cuatro columnas» (`components/marketing/public-footer.tsx`,
+   `docs/design-reference/footer-unify-1/`). Brand on the left, four titled
+   columns, then payments and the legal line. Two columns under 720px. */
+.lp-footer { border-top: 1px solid var(--line); padding: 48px 0 28px; }
+.lp-footer .pf-top { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 40px; }
+.lp-footer .pf-brand p { font-size: 13px; line-height: 1.5; color: var(--ink-3); margin: 12px 0 0; max-width: 28ch; }
+.lp-footer .pf-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 24px; }
+.lp-footer .pf-col { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.lp-footer .pf-col h2 { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink); margin: 0 0 6px; }
+/* A11Y-PSI-1: 8px of vertical padding keeps each link's hit-box above 24px
+   tall; the column gap is small to compensate, so the visual rhythm is the
+   same as the mock-up's. */
+.lp-footer .pf-col a { font-size: 13.5px; color: var(--ink-3); font-weight: 550; padding: 5px 0; overflow-wrap: anywhere; }
+.lp-footer .pf-col a:hover, .lp-footer .pf-legal a:hover, .lp-footer .pf-consent:hover { color: var(--ink); }
+.lp-footer .pf-bottom { display: flex; justify-content: space-between; align-items: center; gap: 8px 20px; flex-wrap: wrap; margin-top: 18px; font-size: 12.5px; color: var(--ink-3); }
+.lp-footer .pf-legal { display: flex; flex-wrap: wrap; gap: 0 18px; }
+.lp-footer .pf-legal a, .lp-footer .pf-consent { font-size: 12.5px; color: var(--ink-3); font-weight: 550; padding: 6px 0; }
+.lp-footer .pf-consent { background: none; border: 0; cursor: pointer; font-family: inherit; }
+@media (max-width: 720px) {
+  .lp-footer { padding: 36px 0 24px; }
+  .lp-footer .pf-top { grid-template-columns: 1fr; gap: 28px; }
+  .lp-footer .pf-cols { grid-template-columns: 1fr 1fr; gap: 24px 16px; }
+  .lp-footer .pf-bottom { flex-direction: column; align-items: flex-start; }
+}
 
 /* FOOTER-PAYMENT-TRUST-1 (2026-08-27, log §181). `.price-pay-badges` no trae
    su propio espaciado vertical — en `/precios` lo da la `<section>` que la

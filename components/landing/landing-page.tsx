@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { HeroCallPill } from "@/components/landing/hero-call-pill";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
@@ -17,10 +16,8 @@ import { homeBlogStrip } from "@/lib/landing/home-blog";
 import { FaviconImg } from "@/components/ui/favicon-img";
 import { HeroDomainField } from "@/components/landing/hero-domain-field";
 import { HomeCtaBand } from "@/components/landing/session-ctas";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { FreeReportBand } from "@/components/free-report/free-report-offers";
-
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * HOME-2026-08 Fase B1 — los cuatro pasos de «Mides, entiendes, arreglas y
@@ -1298,38 +1295,7 @@ export function LandingPage() {
       </main>
 
       {/* FOOTER */}
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <div className="lp-logo">
-              <BrandLogo size={19} />
-            </div>
-            <nav className="links" aria-label="Pie de página">
-              <a href="#producto">Producto</a>
-              <a href="#como">Cómo funciona</a>
-              <a href="#pantallas">Recomendaciones</a>
-              <Link href="/geo">Qué es GEO</Link>
-              {MARKETING_CONTENT_LINKS.map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/cookies">Cookies</Link>
-              <Link href="/terminos">Términos</Link>
-            </nav>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }
