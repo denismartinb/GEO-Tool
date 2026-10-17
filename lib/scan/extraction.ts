@@ -61,7 +61,21 @@ function namesPlausiblyMatch(claimed: string, realName: string): boolean {
   const claimedKey = normalizeCompetitorName(claimed);
   const realKey = normalizeCompetitorName(realName);
   if (!claimedKey || !realKey) return false;
-  return claimedKey.includes(realKey) || realKey.includes(claimedKey);
+  return claimedKey.includes(realKey) || realKey.includes(claimedKey) || sameNameIgnoringSpaces(claimedKey, realKey);
+}
+
+/**
+ * BRAND-SPACING-1: the same name written with and without the spaces between
+ * its words. A brand derived from its domain (`deriveBrandFromDomain`) has
+ * none — elcorteingles.es becomes "Elcorteingles" — while the AI writes "El
+ * Corte Inglés", so the containment check above rejected a literal mention.
+ * Exact equality of the space-free keys only, never containment: "El Corte
+ * Inglés Supercor" or "Corte" do not match "Elcorteingles" through this rule.
+ * Takes keys already normalized by normalizeCompetitorName.
+ */
+function sameNameIgnoringSpaces(claimedKey: string, realKey: string): boolean {
+  const compactClaimed = claimedKey.replace(/ /g, "");
+  return compactClaimed.length >= 4 && compactClaimed === realKey.replace(/ /g, "");
 }
 
 type MentionEntity = { mentioned: boolean; display_name_found: string | null; evidence: string[]; position: number | null };

@@ -336,3 +336,9 @@ worse than no rule, because a future session will obey it anyway.
   tres interruptores siguen funcionando. El suelo de «al menos un motor» sólo
   cuenta Gemini, Claude y OpenAI, porque Perplexity solo nunca corre en
   Starter (`docs/brand/design-decisions-log.md` §283).
+- **Un nombre de marca casa con su forma sin espacios sólo por igualdad
+  exacta.** `namesPlausiblyMatch` acepta «El Corte Inglés» frente a
+  «Elcorteingles» (marca derivada del dominio) comparando las claves sin
+  espacios, y nada más: nunca contención sin espacios, que confundiría marcas
+  homónimas o más largas (`docs/brand/design-decisions-log.md` §308). La
+  comprobación de que el nombre está en el texto sigue intacta.
