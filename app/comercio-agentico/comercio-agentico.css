@@ -40,7 +40,7 @@
 .ca-h1 .ca-acc{color:var(--ca-blue)}
 .ca-lead{font-size:18.5px;line-height:1.6;color:var(--ca-ink-2);margin:22px auto 0;max-width:620px}
 .ca-field{display:flex;max-width:520px;margin:30px auto 0;background:#fff;border:1px solid #d9deea;border-radius:999px;padding:6px;box-shadow:0 10px 30px rgba(37,99,235,.10)}
-.ca-field input{flex:1;border:0;outline:0;font:inherit;font-size:15px;padding:0 16px;background:transparent;min-width:0;color:var(--ca-ink)}
+.ca-field input{flex:1;border:0;outline:0;font:inherit;font-size:16px;padding:0 16px;background:transparent;min-width:0;color:var(--ca-ink)}
 .ca-field button{background:var(--ca-blue);color:#fff;border:0;border-radius:999px;padding:12px 20px;font-weight:700;font-size:14px;white-space:nowrap}
 .ca-engines{display:flex;justify-content:center;gap:18px;margin-top:22px;font-size:13px;color:var(--ca-ink-3);flex-wrap:wrap;align-items:center}
 .ca-engines span{display:inline-flex;gap:7px;align-items:center;font-weight:600}
@@ -388,7 +388,10 @@
 .ca-checker{max-width:640px;margin:0 auto;text-align:left}
 .ca-checker .ca-field{max-width:560px}
 .ca-field button:disabled{opacity:.75;cursor:progress}
-.ca-help{text-align:center;font-size:13px;color:var(--ca-ink-3);margin:10px 0 0}
+/* iOS zooms into an input under 16px, which pushed the field past the screen
+   while typing; the ring goes on the pill, not on the input inside it. */
+.ca-page .ca-field input:focus-visible{outline:0}
+.ca-field:focus-within{border-color:var(--ca-blue);box-shadow:0 0 0 3px rgba(37,99,235,.18),0 10px 30px rgba(37,99,235,.10)}
 .ca-err{margin:16px auto 0;max-width:560px;background:#fff;border:1px solid #f3c7cc;color:#9f1d2c;border-radius:12px;padding:10px 14px;font-size:14px;text-align:center}
 .ca-wait{display:flex;gap:14px;align-items:center;margin:18px auto 0;max-width:560px;background:rgba(255,255,255,.85);border:1px solid var(--ca-line);border-radius:16px;padding:14px 16px;box-shadow:var(--ca-sh-card)}
 .ca-wait b{display:block;font-size:14px}

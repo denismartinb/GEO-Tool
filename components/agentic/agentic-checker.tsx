@@ -86,7 +86,6 @@ export function AgenticChecker() {
           {checking ? "Comprobando…" : "Comprobar mi tienda"}
         </button>
       </form>
-      <p className="ca-help">Pega la dirección de una ficha de producto para medirlo todo. Gratis y sin registro.</p>
 
       <div aria-live="polite">
         {checking ? (
