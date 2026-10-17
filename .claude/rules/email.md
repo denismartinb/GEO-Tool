@@ -66,7 +66,7 @@ igual.
   antes convierte un fallo de envío en un correo perdido para siempre (§233;
   misma regla que el deduplicado de avisos de `.claude/rules/scan.md`).
   **Excepción: toda la secuencia de `lib/email/lifecycle/` reclama su fila
-  ANTES de enviarse** (§308, §309). Leer y anotar después dejaba abierta toda
+  ANTES de enviarse** (§308, §310). Leer y anotar después dejaba abierta toda
   la llamada a Resend, y una entrega duplicada del cron mandó el mismo correo
   tres veces en un segundo. Se envía sólo por `sendClaimedOnce`: inserta con
   `ignoreDuplicates` + `.select()`, envía sólo quien recibe la fila, la libera
@@ -74,13 +74,20 @@ igual.
   reintento con la misma clave (`lifecycleIdempotencyKey`). Un correo de la
   secuencia que se envíe por otro camino reabre el duplicado.
 - **Un correo enviado por un cron sin fila propia lleva clave de idempotencia
-  de Resend** (§309). Vercel puede entregar un disparo dos veces. El resumen
+  de Resend** (§310). Vercel puede entregar un disparo dos veces. El resumen
   semanal usa `weeklyDigestIdempotencyKey` (proyecto + día de la pasada); un
   correo nuevo de cron hace lo mismo o reclama una fila.
 - **Cifras de verdad o variante sin cifra.** Menciones sobre respuestas, no
   sobre prompts; la Puntuación GEO con `resolveGeoScore`; precios de `PLANS`
   y promo sólo si `getActivePromoPlanIds()` la incluye. Ninguna plantilla
   tiene un número por defecto (§233, §183, §182).
+- **Porcentajes, nunca «N de M respuestas».** Barras, bloques y asuntos de
+  los correos de ciclo de vida enseñan la proporción con `formatShare`
+  (log §309).
+- **Un titular no afirma más que el dato que tiene debajo.** El D+3 elige su
+  titular con `resolveWinbackD3Angle`: «vas por delante» sólo con un rival
+  nombrado por detrás, la marca nombrada y muestra suficiente (log §309,
+  mismo criterio que `competitive-claim.ts`, §278).
 - **Todo texto que viene de fuera va por `escapeHtml`**: dominio, nombre de
   competidor, título y descripción de una recomendación (§233).
 - **Recordar la confirmación es reenviar la de Supabase, una vez.**

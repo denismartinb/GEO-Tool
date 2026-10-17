@@ -85,7 +85,7 @@ function getTopCompetitorMover(
 }
 
 /**
- * LIFECYCLE-DEDUPE-1 (log §309). The digest keeps no record of what it sent,
+ * LIFECYCLE-DEDUPE-1 (log §310). The digest keeps no record of what it sent,
  * so a cron run delivered twice (Vercel documents it can happen) would send
  * every customer two digests. Resend's `Idempotency-Key` closes that without
  * a migration: the same key within 24 h returns the first answer (identical
