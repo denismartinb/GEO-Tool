@@ -1,0 +1,332 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  Stat,
+  StatGrid,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  StepFlow,
+  Timeline
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-es-el-comercio-agentico");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué es el comercio agéntico?",
+    answer:
+      "Es la compra en la que un agente de inteligencia artificial hace por el cliente parte del trabajo o todo: busca productos, los compara, elige tienda y, si el cliente lo autoriza, paga. En inglés se llama agentic commerce. La diferencia con el comercio electrónico de siempre es quién recorre la tienda: ya no es solo una persona, también un programa que actúa en su nombre."
+  },
+  {
+    question: "¿Ya se puede comprar con un agente de IA en España?",
+    answer:
+      "La parte de descubrir y comparar productos con ChatGPT, Gemini o Perplexity ya funciona en España. El pago completo hecho por el agente arrancó en Estados Unidos, y los anuncios públicos de OpenAI y Google no dan fecha para España a octubre de 2026."
+  },
+  {
+    question: "¿Qué agentes de IA compran ya por el usuario?",
+    answer:
+      "Entre agosto y octubre de 2026 llegaron Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab. Abren un navegador, compran en la web de la tienda y pagan con el permiso del usuario, por ejemplo con una tarjeta de un solo uso de Link, el monedero de Stripe. Empezaron en Estados Unidos y ninguno compra todavía en España de forma general."
+  },
+  {
+    question: "¿En qué se diferencia el comercio agéntico del GEO?",
+    answer:
+      "El GEO (posicionamiento en motores de IA) trata de que la IA te nombre y te cite cuando alguien pregunta. El comercio agéntico va un paso más allá: que el agente, además de nombrarte, pueda entender tus productos y llegar hasta la compra. Sin lo primero no hay lo segundo: un agente no compra en una tienda que no ha encontrado."
+  },
+  {
+    question: "¿Qué tiene que hacer una tienda online para prepararse?",
+    answer:
+      "Lo básico es dejar entrar a los bots de búsqueda de la IA, publicar datos de producto estructurados y coherentes (precio, stock, envío, devoluciones), tener esos datos en los canales que leen los agentes (Google Merchant Center, el catálogo de su plataforma de ecommerce) y medir si la IA la nombra cuando alguien pregunta por lo que vende."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+El comercio agéntico (agentic commerce) es la compra en la que un agente de
+inteligencia artificial hace el trabajo por el cliente: busca, compara, elige
+tienda y, si el cliente lo autoriza, paga. OpenAI, Google, Visa, Mastercard y
+Shopify llevan desde 2025 publicando los estándares para que eso funcione. Para
+una tienda online, el cambio es que una parte de sus visitas ya no serán
+personas, sino programas que leen datos, y que la decisión de compra empieza
+en una conversación con la IA, antes de llegar a su web.
+
+</KeyTakeaway>
+
+## Qué es el comercio agéntico, en una frase
+
+Un agente de IA es un programa que no solo responde: actúa. Si le pides
+«búscame unas zapatillas de trail por menos de 120 euros que lleguen antes del
+viernes», un asistente clásico te devuelve una lista de enlaces. Un agente
+interpreta el encargo, consulta tiendas, descarta las que no tienen tu talla o
+no llegan a tiempo, te propone una y, si le das permiso, la compra.
+
+El comercio agéntico es todo lo que hace falta para que esa última parte
+funcione con dinero de verdad: que el agente encuentre los productos, que los
+entienda sin ambigüedad, que la tienda sepa que quien entra es un agente de
+fiar y no un bot de scraping, y que el pago quede autorizado por el cliente.
+
+Así se ve el mismo encargo hecho de las dos maneras:
+
+<Figure
+  label="Figura 1."
+  caption="La misma compra hecha por una persona y por un agente de IA. Lo que cambia de verdad está en el segundo paso: la lista corta la hace la IA antes de que nadie visite ninguna tienda. Elaboración propia."
+>
+
+<StepFlow
+  lanes={[
+    {
+      label: "Antes: lo haces tú",
+      steps: [
+        { title: "Buscas en Google o en un marketplace" },
+        { title: "Abres pestañas y comparas fichas" },
+        { title: "Eliges tienda por marca y precio" },
+        { title: "Rellenas el checkout" },
+        { title: "Pagas con tu tarjeta" }
+      ]
+    },
+    {
+      label: "Con un agente",
+      steps: [
+        { title: "Le haces el encargo" },
+        { title: "La IA hace una lista corta de tiendas", key: "Aquí se decide si te nombra" },
+        { title: "El agente compara precio, stock y envío" },
+        { title: "Entra en la tienda elegida" },
+        { title: "Paga dentro del límite que le pones" }
+      ]
+    }
+  ]}
+/>
+
+</Figure>
+
+## En qué se diferencia del comercio electrónico de siempre
+
+<Figure
+  label="Figura 2."
+  caption="Qué cambia en cada fase de la compra cuando quien la recorre es un agente de IA. Elaboración propia a partir de la documentación pública de OpenAI, Google y Cloudflare."
+  wide
+>
+
+<CompareTable>
+
+| Fase | Comercio electrónico clásico | Comercio agéntico |
+|---|---|---|
+| Descubrir | La persona busca en Google o en un marketplace | El agente pregunta a la IA y lanza muchas búsquedas por su cuenta |
+| Comparar | La persona abre pestañas y lee fichas | El agente lee datos estructurados: precio, stock, envío, opiniones |
+| Elegir tienda | Marca, confianza, precio visto | Disponibilidad, precio, calidad y si la tienda es el vendedor principal |
+| Entrar en la web | Navegador de una persona | Un programa que se identifica (o no) ante la tienda |
+| Pagar | La persona introduce la tarjeta | El agente paga dentro de un límite que fija el cliente |
+
+</CompareTable>
+
+</Figure>
+
+La fila que más importa a una marca es la primera. En el comercio electrónico
+clásico, la batalla era salir en la primera página de Google. En el agéntico,
+la batalla empieza antes: que la IA te tenga en cuenta cuando alguien le
+pregunta por lo que vendes. Si no te nombra, el agente no llega a tu ficha.
+
+## En qué punto está en 2026
+
+El comercio agéntico ya no es una demo, pero tampoco está terminado. Estos son
+los hitos que lo han llevado hasta aquí:
+
+<Figure
+  label="Figura 3."
+  caption="Los hitos del comercio agéntico entre septiembre de 2025 y octubre de 2026. Elaboración propia a partir de los anuncios de OpenAI, Cloudflare, Visa, Mastercard, Google, Shopify, Meta y Stripe."
+>
+
+<Timeline
+  items={[
+    { date: "Sep. 2025", title: "Se puede comprar dentro de ChatGPT" },
+    { date: "Oct. 2025", title: "Los agentes de fiar firman sus visitas" },
+    { date: "Ene. 2026", title: "Google presenta su protocolo UCP" },
+    { date: "Mar. 2026", title: "La IA descubre y la tienda vende" },
+    { date: "May. 2026", title: "Llega el carrito universal" },
+    { date: "Sep.–oct. 2026", title: "Los agentes personales compran por ti", now: true }
+  ]}
+/>
+
+</Figure>
+
+<NumberedSection n={1} title="Septiembre de 2025: comprar dentro de ChatGPT">
+
+OpenAI presentó Instant Checkout, el pago dentro de ChatGPT para usuarios de
+Estados Unidos, y publicó con Stripe el protocolo que lo hacía posible, el
+Agentic Commerce Protocol (ACP), como código abierto. OpenAI dejó escrito que
+los resultados de producto son orgánicos, no patrocinados, y se ordenan por
+relevancia para el usuario.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Octubre de 2025: identificar a los agentes de fiar">
+
+Cloudflare, Visa y Mastercard anunciaron cómo distinguir a un agente
+autorizado de un bot malicioso: el agente firma cada petición con una clave
+pública registrada, y la tienda puede comprobarlo antes de enseñarle precios o
+cobrarle.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Enero de 2026: Google y su protocolo universal">
+
+Google presentó el Universal Commerce Protocol (UCP), desarrollado con
+Shopify, Etsy, Wayfair, Target y Walmart, y respaldado por más de veinte
+empresas, entre ellas Visa, Mastercard, Stripe y Adyen. Permite comprar a
+tiendas compatibles desde el Modo IA del buscador y desde la app de Gemini.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Marzo de 2026: de comprar en el chat a descubrir en el chat">
+
+OpenAI movió el pago a las apps de cada tienda dentro de ChatGPT y dijo que su
+prioridad pasaba a ser la búsqueda y el descubrimiento de productos. Ese mismo
+mes, Shopify hizo que los productos de sus tiendas se pudieran encontrar en
+ChatGPT por defecto. Lo contamos en <a href="/blog/la-ia-descubre-tu-web-vende">comprar
+dentro del chat se ha frenado: la IA descubre y tu web vende</a>.
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Mayo de 2026: el carrito universal">
+
+En su conferencia anual, Google lanzó en Estados Unidos un carrito que reúne
+productos de su buscador y de Gemini. Un mes antes había publicado una versión
+de su protocolo de pagos (AP2) que permite al agente comprar sin que la persona
+esté delante, dentro de los límites que haya firmado.
+
+</NumberedSection>
+
+<NumberedSection n={6} title="Septiembre y octubre de 2026: los agentes personales">
+
+En seis semanas llegaron los agentes que compran por su usuario sin esperar a
+ningún protocolo: abren un navegador y compran en la web de la tienda. Meta
+lanzó Muse, OpenAI lanzó Dots, Grok Bot empezó a comprar con Link (el monedero
+de Stripe), Instinct se hizo viral y Tab salió a la luz. Shopify abrió el pago
+de sus tiendas a estos agentes y Amazon los bloqueó. Lo contamos en <a href="/blog/agentes-personales-de-ia-que-compran">Muse,
+Dots, Instinct, Grok Bot y Tab: los agentes que ya compran por ti</a>.
+
+</NumberedSection>
+
+Ninguno de estos anuncios da fecha para comprar en España a octubre de 2026.
+Pero el primer paso, que la IA te descubra y te compare, ya funciona aquí hoy.
+
+## Cuánto puede mover
+
+Las cifras de mercado son previsiones, y hay que leerlas como orden de
+magnitud, no como dato. Dos referencias:
+
+<StatGrid label="Previsiones del comercio agéntico">
+  <Stat value="310.000 M€" label="en compras online en Europa podrían pasar por agentes de IA en los próximos diez años." source="Sopra Steria, encuesta a 8.400 consumidores de ocho países europeos (2026)" />
+  <Stat value="10–20%" label="del comercio electrónico de EE. UU. podría hacerse con agentes en 2030, según el escenario." source="Morgan Stanley Research (diciembre de 2025)" tone="cyan" />
+  <Stat value="50%" label="de los españoles encuestados delegaría en un agente de IA sus compras de tecnología." source="Sopra Steria, parte española de la encuesta a 8.400 consumidores (2026)" />
+</StatGrid>
+
+La misma encuesta deja un matiz importante: en España, la gran mayoría quiere
+que el agente proponga y que la decisión final sea suya. El escenario
+realista a corto plazo no es un robot que compra a ciegas, sino un asistente
+que hace la lista corta. Y en esa lista corta hay que estar.
+
+## Qué cambia para una tienda online
+
+Para comprarte, un agente tiene que cruzar tres puertas, y en este orden. Si
+falla la primera, las otras dos no llegan a importar:
+
+<Figure
+  label="Figura 4."
+  caption="Las tres puertas que cruza un agente antes de comprarte. La primera ya funciona en España; las otras dos llegarán con los agentes y los protocolos de pago. Elaboración propia."
+>
+
+<StepFlow
+  lanes={[
+    {
+      steps: [
+        { who: "Descubrir", title: "La IA te nombra cuando alguien pregunta por lo que vendes", key: "Ya pasa en España, hoy" },
+        { who: "Entender", title: "El agente lee tu ficha sin adivinar: precio, stock, envío y devoluciones" },
+        { who: "Comprar", title: "Tu web le deja llegar al pago y el cliente lo autoriza" }
+      ]
+    }
+  ]}
+/>
+
+</Figure>
+
+<Checklist
+  items={[
+    "Tu primer visitante puede ser un programa. Si tu robots.txt o tu protección anti-bots lo echa, no te verá.",
+    "Tus datos de producto pasan a ser tu escaparate: precio, stock, envío y devoluciones tienen que estar escritos, completos y ser coherentes.",
+    "La recomendación ocurre antes de la visita: si la IA no te nombra cuando alguien pregunta por lo que vendes, el agente no llega a ti.",
+    "El tráfico que llega desde la IA es menor pero más decidido: la persona ya ha comparado antes de entrar."
+  ]}
+/>
+
+<QuickAction>Pregunta hoy a ChatGPT y a Gemini por tu categoría de producto, como lo haría un cliente, y apunta qué tiendas nombran. Esa es la lista corta de la que un agente va a partir.</QuickAction>
+
+Si quieres ir al detalle, tienes los <a href="/blog/como-compra-un-agente-de-ia">cinco
+pasos con los que compra un agente</a>, las <a href="/blog/web-preparada-para-el-comercio-agentico">diez
+comprobaciones para saber si tu web está preparada</a> y los <a href="/blog/protocolos-comercio-agentico-acp-ucp-ap2">protocolos
+del comercio agéntico explicados sin tecnicismos</a>.
+
+## Dónde encaja GenScore
+
+GenScore mide la parte del comercio agéntico que ya funciona en España: si
+ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity nombran tu marca cuando
+alguien hace tus preguntas principales de búsqueda, y a quién nombran cuando no
+sales tú. Su Auditoría técnica revisa además si dejas entrar a los bots de la
+IA en tu robots.txt y si tus páginas llevan datos estructurados, también de
+tipo producto.
+
+Lo que no revisa todavía es lo específico de la compra: los feeds de producto,
+los protocolos de pago ni la firma de los agentes. Preferimos decirlo antes
+que dejar que lo supongas. Estamos construyendo una comprobación para eso, que
+dirá si un agente puede entrar en tu web, entender tus productos y llegar a la
+compra. La contaremos aquí cuando esté lista.
+
+<Verdict title="El comercio agéntico empieza por que te encuentren">
+
+Los protocolos de pago tardarán en llegar a España, y cuando lleguen lo harán
+sobre todo a través de las plataformas de ecommerce. Lo que no va a esperar es
+la recomendación: hoy ya hay clientes que preguntan a la IA qué comprar y dónde.
+Una tienda que la IA no nombra no entra en la lista corta, y un agente no compra
+en una tienda que no ha encontrado.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="¿Te nombra la IA cuando alguien busca lo que vendes?"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: lanzamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te enseñamos en qué proporción de respuestas sales y qué tiendas salen en tu lugar."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

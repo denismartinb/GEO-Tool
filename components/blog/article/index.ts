@@ -40,3 +40,4 @@ export {
 } from "./charts";
 
 export { ShuffleRuns, FanOut, CrawlGap, type ShuffleBrand, type CrawlRow } from "./animations";
+export { StepFlow, Timeline, AgentLineup, TwoDoors, type FlowStep, type FlowLane, type Milestone, type AgentCard, type Door } from "./diagrams";

@@ -123,6 +123,11 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
   el movimiento, y si la animación usa marcas o datos inventados, el pie lo
   dice.
 
+- **Sin logotipos ni imágenes de prensa de terceros sin permiso de su kit de
+  prensa.** Un diagrama propio cuenta lo mismo sin riesgo: los avatares de
+  empresas o agentes son iniciales sobre la paleta de la casa, y el pie lo
+  dice (`components/blog/article/diagrams.tsx`, log §316).
+
 - **Ningún visual es decorativo: todos son evidencia** (ADR 0028
   `article-imagery-policy` — renumerado desde 0026, ver su propia nota de
   renumeración; "ADR 0026" a secas hoy es otro documento). Cada imagen es una
