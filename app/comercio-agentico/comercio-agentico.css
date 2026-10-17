@@ -387,6 +387,8 @@
 /* ---- checker ---- */
 .ca-checker{max-width:920px;margin:0 auto;text-align:left}
 .ca-checker .ca-field{max-width:560px}
+.ca-field-hint{margin:28px auto 0;max-width:560px;text-align:center;font-size:14px;font-weight:600;color:var(--ca-ink-2)}
+.ca-checker .ca-field-hint+.ca-field{margin-top:10px}
 .ca-field button:disabled{opacity:.75;cursor:progress}
 /* iOS zooms into an input under 16px, which pushed the field past the screen
    while typing; the ring goes on the pill, not on the input inside it. */
@@ -406,6 +408,8 @@
 .ca-res-dom{display:block;font-family:var(--ca-f-display);font-size:20px;letter-spacing:-.02em}
 .ca-res-url{display:block;font-family:var(--ca-f-mono);font-size:11.5px;color:var(--ca-ink-3);word-break:break-all}
 .ca-res-note{margin:14px 0 0;border-radius:12px;padding:10px 14px;font-size:14px;background:#eef2ff;color:#3730a3}
+.ca-res-note-act{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.ca-res-note-act p{margin:0;flex:1;min-width:200px}
 .ca-res-note-bad{background:var(--ca-warn-soft);color:#7a4a00}
 .ca-res-total{display:flex;gap:18px;align-items:center;margin-top:16px}
 .ca-res-total-k{display:block;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ca-ink-3)}

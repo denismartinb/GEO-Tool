@@ -89,7 +89,9 @@ function discoveryChecks(input: ScoreInput): AgenticCheck[] {
     check(
       "no_challenge",
       40,
-      input.challenge === null ? "unknown" : input.challenge ? "fail" : "pass",
+      // A challenge to OUR identified bot says nothing about what a verified
+      // agent or a browser agent gets, so it is not measured, never a fail (log §319).
+      input.challenge === false ? "pass" : "unknown",
       input.challenge === null
         ? "No pudimos comprobar tu protección anti-bots"
         : input.challenge

@@ -23,7 +23,7 @@ const COMPONENTS: Array<{
   {
     name: "Descubrimiento",
     value: 38,
-    weight: "Pesa 30 de 100 puntos",
+    weight: "",
     description:
       "Si un agente puede entrar en tu web: tu robots.txt, si tu protección anti-bots le deja pasar y si publicas sitemap.",
     audits: [
@@ -35,7 +35,7 @@ const COMPONENTS: Array<{
   {
     name: "Comprensión",
     value: 63,
-    weight: "Pesa 30 de 100 puntos",
+    weight: "",
     description:
       "Si entiende qué vendes sin adivinar: precio, disponibilidad, identificadores y datos estructurados que se leen sin JavaScript.",
     audits: [
@@ -48,7 +48,7 @@ const COMPONENTS: Array<{
   {
     name: "Confianza",
     value: 65,
-    weight: "Pesa 20 de 100 puntos",
+    weight: "",
     description:
       "Si un agente puede fiarse de ti y explicárselo a su usuario: envío, devoluciones, reseñas y quién está detrás de la tienda.",
     audits: [
@@ -61,7 +61,7 @@ const COMPONENTS: Array<{
   {
     name: "Compra",
     value: 40,
-    weight: "Pesa 20 de 100 puntos",
+    weight: "",
     description:
       "Si puede llegar al pago sin chocar en la ficha: botón de compra, captchas y métodos de pago rápidos.",
     audits: [
@@ -142,7 +142,7 @@ export function PsiExample() {
         <div className="ca-pd-t">
           <h4 className="ca-pd-name">{c.name}</h4>
           <p>{c.description}</p>
-          <span className="ca-pd-w">{c.weight}</span>
+          {c.weight ? <span className="ca-pd-w">{c.weight}</span> : null}
         </div>
         <ul className="ca-pd-a">
           {c.audits.map(([mark, text]) => (

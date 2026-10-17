@@ -13,7 +13,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**` y
 `components/agentic/**`. Cada regla es trazable a
 `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317 y §318.
+`docs/brand/design-decisions-log.md` §317, §318 y §319.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -33,7 +33,10 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
   resultados y pide adenda al ADR 0043.
 - **`unknown` no suma ni resta.** Lo que no pudimos medir se queda fuera de
   los dos lados. Un bloqueo a nuestra petición nunca puede leerse como fallo
-  de la tienda.
+  de la tienda: un reto anti-bots a nuestro robot es `unknown`, no `fail`
+  (log §319), porque un agente verificado o con navegador puede pasarlo.
+- **Siempre salen los cinco componentes** (fundador, log §319). El que no se
+  puede medir lleva el círculo vacío y dice por qué; nunca desaparece.
 - **Sin ficha de producto no hay nota total.** Comprensión y Compra se miden
   en una ficha; una portada no las suspende por no tener producto.
 - **Interoperabilidad es «N de 4» y no entra en la nota.** Nunca se escribe

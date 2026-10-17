@@ -85,11 +85,12 @@ describe("scoreAgenticAudit", () => {
     expect(scoreAgenticAudit(input({ interop: withInterop })).score).toBe(scoreAgenticAudit(input()).score);
   });
 
-  it("a challenge costs Descubrimiento and leads the fixes", () => {
+  it("a challenge to our bot is not measured: it neither costs points nor becomes a fix", () => {
     const r = scoreAgenticAudit(input({ challenge: true }));
-    expect(r.components.find((c) => c.id === "discovery")?.score).toBe(60);
-    expect(r.score).toBe(88);
-    expect(r.fixes[0]).toMatchObject({ checkId: "no_challenge", gain: 12 });
+    const check = r.components.find((c) => c.id === "discovery")?.checks.find((c) => c.id === "no_challenge");
+    expect(check?.state).toBe("unknown");
+    expect(r.components.find((c) => c.id === "discovery")?.score).toBe(100);
+    expect(r.fixes.some((f) => f.checkId === "no_challenge")).toBe(false);
   });
 
   it("an unreadable page has no total and no page checks", () => {

@@ -49,8 +49,6 @@ const STATE_TEXT: Record<CheckState, string> = {
   unknown: "No se pudo medir"
 };
 
-const PAGE_LEVEL: AgenticComponentId[] = ["understanding", "purchase"];
-
 function EmptyGauge({ big = false }: { big?: boolean }) {
   return (
     <span className={`ca-gw ca-info${big ? " ca-big" : ""}`} aria-label="Sin medir">
@@ -67,14 +65,24 @@ function stateMark(state: CheckState) {
   return state === "unknown" ? "info" : state;
 }
 
-export function AgenticResultView({ result, play = true }: { result: AgenticCheckResult; play?: boolean }) {
+export function AgenticResultView({
+  result,
+  play = true,
+  onTryProduct
+}: {
+  result: AgenticCheckResult;
+  play?: boolean;
+  /** Takes the visitor back to the field to paste a product page. */
+  onTryProduct?: () => void;
+}) {
   const [selected, setSelected] = useState<AgenticComponentId | "interop">("discovery");
 
   const showTotal = result.pageRead && result.pageKind === "product" && result.score !== null;
-  const hiddenComponents = new Set<AgenticComponentId>(
-    !result.pageRead || result.pageKind === "product" ? [] : PAGE_LEVEL
-  );
-  const components = result.components.filter((c) => !hiddenComponents.has(c.id));
+  // All five always show: one that cannot be measured here says why instead of disappearing.
+  const components = result.components;
+  const emptyReason = result.pageRead
+    ? "Se mide en una ficha de producto."
+    : "No se pudo medir: la protección anti-bots no nos dejó leer la página.";
   const interopValue = result.interop.total > 0 ? (result.interop.found / result.interop.total) * 100 : 0;
   const interopLabel = `${result.interop.found}/${result.interop.total}`;
   const interopText = `${result.interop.found} de ${result.interop.total} protocolos publicados`;
@@ -107,14 +115,19 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
 
       {!result.pageRead ? (
         <p className="ca-res-note ca-res-note-bad">
-          Tu web no nos dejó leer la página: es justo lo que le pasa a un agente. Lo que depende de la página sale como «No se pudo
-          medir».
+          El dominio {result.domain} tiene una protección anti-bots que ha impedido analizar todos los componentes de visibilidad
+          agéntica. Hay agentes verificados que sí podrán leerla, pero generalmente este tipo de medidas empeoran la optimización
+          del comercio agéntico en tu tienda.
         </p>
       ) : result.pageKind === "other" ? (
-        <p className="ca-res-note">
-          Esta página no parece una ficha de producto. Comprensión y Compra se miden en una ficha: pega la dirección de una para
-          medirlo todo.
-        </p>
+        <div className="ca-res-note ca-res-note-act">
+          <p>Has pegado una portada o una categoría. Para la nota completa, prueba con la ficha de un producto.</p>
+          {onTryProduct ? (
+            <button type="button" className="ca-nbtn ca-pri" onClick={onTryProduct}>
+              Probar con un producto
+            </button>
+          ) : null}
+        </div>
       ) : null}
 
       {showTotal ? (
@@ -143,6 +156,7 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
           >
             {c.score === null ? <EmptyGauge /> : <Gauge value={c.score} play={play} />}
             <b>{c.name}</b>
+            {c.checks.length === 0 ? <small className="ca-g-sub">{result.pageRead ? "En una ficha" : "Sin medir"}</small> : null}
           </button>
         ))}
         <button
@@ -196,7 +210,6 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
             <div className="ca-pd-t">
               <h4 className="ca-pd-name">{current.name}</h4>
               <p>{DESCRIPTIONS[current.id]}</p>
-              <span className="ca-pd-w">Pesa {current.weight} de 100 puntos</span>
             </div>
             {current.checks.length > 0 ? (
               <ul className="ca-pd-a">
@@ -214,7 +227,7 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
                 ))}
               </ul>
             ) : (
-              <p className="ca-res-empty">No se pudo medir.</p>
+              <p className="ca-res-empty">{current.checks.length === 0 ? emptyReason : "No se pudo medir."}</p>
             )}
           </>
         ) : null}

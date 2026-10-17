@@ -80,6 +80,7 @@ export function AgenticChecker() {
 
   return (
     <div className="ca-checker" id="comprobar">
+      <p className="ca-field-hint">Escribe la URL de una ficha de producto</p>
       <form className="ca-field" onSubmit={onSubmit} noValidate>
         <input
           ref={inputRef}
@@ -115,7 +116,16 @@ export function AgenticChecker() {
         ) : null}
         {message ? <p className="ca-err">{message}</p> : null}
         {state.kind === "done" && state.response.status === "completed" ? (
-          <AgenticResultView result={state.response} />
+          <AgenticResultView
+            result={state.response}
+            onTryProduct={() => {
+              const input = inputRef.current;
+              if (!input) return;
+              input.scrollIntoView({ block: "center", behavior: "smooth" });
+              input.focus({ preventScroll: true });
+              input.select();
+            }}
+          />
         ) : null}
       </div>
     </div>

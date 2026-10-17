@@ -25958,3 +25958,36 @@ pinte el precio con JavaScript no tendrá precio en la animación, igual que no
 lo tiene para un agente.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 319. AGENTIC-CHECKER-3: un reto anti-bots no resta puntos, siempre salen los cinco componentes y se pide la ficha de un producto (2026-10-17)
+
+**Qué se decidió.** El fundador probó carrefour.es y dia.es en el preview de
+§318.
+
+- **Un reto a nuestro robot es «No se pudo medir», nunca un fallo.** Nuestro
+  robot se identifica como GenScore y no ejecuta JavaScript. Un reto a él no
+  dice qué ve un agente verificado (por IP o firma) ni uno que navega con un
+  navegador real, como Instinct. Antes restaba los 40 puntos de «Retos
+  anti-bots» y Carrefour salía con Descubrimiento 53. La regla `unknown` de
+  §317 ya pedía esto. El aviso dice, con texto del fundador: «El dominio X
+  tiene una protección anti-bots que ha impedido analizar todos los
+  componentes de visibilidad agéntica. Hay agentes verificados que sí podrán
+  leerla, pero generalmente este tipo de medidas empeoran la optimización del
+  comercio agéntico en tu tienda». «Sí podrán leerla» completa la frase
+  original, que se quedaba sin objeto. Sustituye a «es justo lo que le pasa a
+  un agente», que afirmaba más de lo medido.
+- **Siempre se enseñan los cinco componentes** (fundador: «Siempre enseñamos
+  los 5»). El que no se puede medir sale con el círculo vacío, «En una ficha»
+  o «Sin medir», y su panel dice por qué.
+- **Se pide la ficha de un producto de forma explícita.** Encima del campo:
+  «Escribe la URL de una ficha de producto». Con una
+  portada o una categoría, el aviso dice «Has pegado una portada o una
+  categoría. Para la nota completa, prueba con la ficha de un producto» y
+  lleva un botón «Probar con un producto» que devuelve al campo.
+- **No se enseñan los pesos** («Pesa 30 de 100 puntos») ni en el resultado
+  ni en el ejemplo de la landing (fundador: «Quita las ponderaciones»). Los
+  pesos 30/30/20/20 siguen calculando la nota igual; sólo deja de pintarse.
+
+**Pendiente.** Nada nuevo; Fase 2 sigue igual que en §317.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

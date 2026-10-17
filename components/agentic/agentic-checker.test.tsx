@@ -72,7 +72,7 @@ describe("AgenticResultView", () => {
     expect(html).toContain("No se pudo leer");
   });
 
-  it("hides the total and the page-level components when the page is not a product page", () => {
+  it("hides the total but keeps all five components when the page is not a product page", () => {
     const html = render({
       ...BASE,
       pageKind: "other",
@@ -82,16 +82,18 @@ describe("AgenticResultView", () => {
       )
     });
     expect(html).not.toContain("de 100</span>");
-    expect(html).not.toContain(">Comprensión<");
-    expect(html).not.toContain(">Compra<");
-    expect(html).toContain("pega la dirección de una");
+    expect(html).toContain(">Comprensión<");
+    expect(html).toContain(">Compra<");
+    expect(html).toContain("En una ficha");
+    expect(html).toContain("Has pegado una portada o una categoría");
   });
 
   it("says the site did not let us in when the page could not be read", () => {
     const html = render({ ...BASE, pageRead: false, score: null, challenge: true });
     expect(html).not.toContain("61 de 100");
-    expect(html).toContain("Tu web no nos dejó leer la página");
-    expect(html).not.toContain("pega la dirección de una");
+    expect(html).toContain("El dominio tutienda.es tiene una protección anti-bots");
+    expect(html).toContain("Hay agentes verificados que sí podrán leerla");
+    expect(html).not.toContain("Has pegado una portada");
   });
 
   it("labels an unmeasured check as such, never as correct", () => {
