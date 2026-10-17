@@ -26010,3 +26010,25 @@ agéntico» sólo si cabe, nunca a costa de una segunda línea.
 
 **Qué queda.** Nada. Si el texto cambia, hay que volver a medir a 320 px: el
 `nowrap` no avisa, recorta.
+
+## 321. AGENTIC-HEADER-BLEND-1: la cabecera de /comercio-agentico se funde con el hero (2026-10-17)
+
+**Qué se decidió.** En la landing de comercio agéntico la cabecera pública
+salía sobre una franja blanca, encima del degradado del hero, mientras que en
+la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
+`<main className="ca-page">` (dentro, los reseteos `.ca-page a` y
+`.ca-page button` la romperían), así que no se mueve: es el degradado
+(`.ca-aurora`) el que sube 180 px por detrás de ella.
+
+- `.ca-lhero` pasa a `overflow: visible`; el recorte lateral de los halos lo
+  sigue haciendo `overflow-x: clip` de `.ca-page`, que no crea contenedor de
+  scroll y no rompe la cabecera fija.
+- La tira de promoción conserva su banda encima del degradado
+  (`.ca-lp .lp-promo { z-index: 1 }`); la cabecera, con z-index 50, sigue
+  encima de todo y se vuelve blanca al hacer scroll como en el resto.
+- Medido a 390, 768 y 1280 px: sin scroll horizontal y nada del hero sobresale
+  por abajo.
+
+**Qué queda.** Nada.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
