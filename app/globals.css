@@ -9896,7 +9896,7 @@ select.set-field {
   .art-bars-track { grid-column: 1 / -1; grid-row: 2; height: 12px; }
 }
 
-/* BLOG-ANIM-1 (log §313): figuras animadas de los artículos
+/* BLOG-ANIM-1 (log §314): figuras animadas de los artículos
    (`components/blog/article/animations.tsx`). Animación CSS pura, en bucle
    lento, y quieta con `prefers-reduced-motion` en un fotograma que se sigue
    entendiendo. Las cifras van siempre en texto: el movimiento enseña el

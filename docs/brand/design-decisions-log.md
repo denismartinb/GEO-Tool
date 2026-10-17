@@ -25646,7 +25646,7 @@ ha publicado; cuando salga, se añade a `PUBLIC_FOOTER_LEGAL_LINKS`. El pie es
 más alto que antes en móvil (unas dos pantallas de iPhone); el fundador lo
 aceptó al elegir la opción A.
 
-## 313. BLOG-ANIM-1: tres artículos con dato de terceros y figuras animadas (2026-10-17)
+## 314. BLOG-ANIM-1: tres artículos con dato de terceros y figuras animadas (2026-10-17)
 
 **Qué pasó.** El fundador pidió tres artículos con gancho, didácticos y
 novedosos, a partir de fuentes relevantes del mundo GEO e IA, hilados con lo

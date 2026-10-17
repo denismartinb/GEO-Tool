@@ -98,7 +98,7 @@ const BLOG_SLUGS = [
   "genscore-ya-mide-perplexity",
   // CONTENT-LAUNCH-2 (2026-10-11, log §296).
   "auditoria-seo-y-search-console-en-genscore",
-  // BLOG-ANIM-1 (2026-10-17, log §313).
+  // BLOG-ANIM-1 (2026-10-17, log §314).
   "la-ia-no-repite-la-misma-lista-de-marcas",
   "query-fan-out-la-ia-no-busca-tu-pregunta",
   "bots-de-ia-robots-txt-cuales-dejar-entrar"

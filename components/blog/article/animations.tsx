@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
 
 /**
- * BLOG-ANIM-1 — figuras animadas de los artículos (log §313).
+ * BLOG-ANIM-1 — figuras animadas de los artículos (log §314).
  *
  * Misma regla que el resto de la librería: ningún visual es decorativo. Cada
  * animación enseña el mecanismo del que habla el artículo (una lista que se

@@ -558,7 +558,7 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-10-17",
     coverImage: "/blog/la-ia-no-repite-la-misma-lista-de-marcas/cover.webp",
     coverIcon: "chart",
-    // BLOG-ANIM-1 (log §313). Third-party figures from SparkToro + Gumshoe
+    // BLOG-ANIM-1 (log §314). Third-party figures from SparkToro + Gumshoe
     // (2026); product claims trace to SCORE-WINDOW-1 and SAMPLE-FLOOR-1.
     primaryKeyword: "por qué la ia da respuestas distintas",
     cluster: "medicion",
@@ -579,7 +579,7 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-10-17",
     coverImage: "/blog/query-fan-out-la-ia-no-busca-tu-pregunta/cover.webp",
     coverIcon: "search",
-    // BLOG-ANIM-1 (log §313). Google (Reid, May 2025; Stein, Jul 2025) and
+    // BLOG-ANIM-1 (log §314). Google (Reid, May 2025; Stein, Jul 2025) and
     // Ahrefs (Aug 2025). Product claims trace to log §284, §287, §289, §305.
     primaryKeyword: "query fan-out",
     cluster: "fundamentos",
@@ -600,7 +600,7 @@ export const BLOG_POSTS: BlogPost[] = [
     datePublished: "2026-10-17",
     coverImage: "/blog/bots-de-ia-robots-txt-cuales-dejar-entrar/cover.webp",
     coverIcon: "shield",
-    // BLOG-ANIM-1 (log §313). Cloudflare Radar (Aug 2025) and each vendor's
+    // BLOG-ANIM-1 (log §314). Cloudflare Radar (Aug 2025) and each vendor's
     // bot documentation. Product claims trace to lib/web-audit/robots.ts and
     // lib/recommendations/citation-blockers.ts; the robots.txt sample is
     // tested in lib/blog/robots-ai-snippet.test.ts.

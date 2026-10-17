@@ -117,7 +117,7 @@ Historia de decisiones visuales: `docs/brand/design-decisions-log.md` §12 y §1
 ## Imágenes
 
 - **Una figura animada enseña un mecanismo y se entiende quieta** (log
-  §313). Va en `components/blog/article/animations.tsx`, con animación CSS
+  §314). Va en `components/blog/article/animations.tsx`, con animación CSS
   pura (sin timers ni JavaScript) y un fotograma con sentido bajo
   `prefers-reduced-motion`. Las cifras van escritas en texto, nunca sólo en
   el movimiento, y si la animación usa marcas o datos inventados, el pie lo
