@@ -62,6 +62,20 @@ export type AgenticFix = {
 
 export type AgenticPageKind = "product" | "other";
 
+/**
+ * A few literal values the store published on the page (title, product,
+ * price…), read as an agent without JavaScript reads them. The checker shows
+ * them so the result speaks about THIS store. `null` = we could not read it.
+ */
+export type AgenticPageFacts = {
+  title: string | null;
+  productName: string | null;
+  brand: string | null;
+  price: string | null;
+  availability: string | null;
+  rating: string | null;
+};
+
 export type AgenticCheckResult = {
   domain: string;
   /** The page we analysed, after redirects. */
@@ -83,6 +97,8 @@ export type AgenticCheckResult = {
   /** Failing checks ordered by what they add to the total. */
   fixes: AgenticFix[];
   platform: string | null;
+  /** `null` when the page could not be read. */
+  facts: AgenticPageFacts | null;
 };
 
 export type AgenticCheckDenial =

@@ -2,21 +2,25 @@
 
 import { useRef, useState } from "react";
 import { AgenticResultView } from "@/components/agentic/agentic-result-view";
-import type { AgenticCheckResponse } from "@/lib/agentic-audit/api-contract";
+import { AgenticScan } from "@/components/agentic/agentic-scan";
+import type { AgenticCheckResponse, AgenticCheckResult } from "@/lib/agentic-audit/api-contract";
+import { scanTargetFromInput, type ScanTarget } from "@/lib/agentic-audit/scan-script";
 
 /**
  * AGENTIC-COMMERCE-1: the free agentic checker on `/comercio-agentico`.
  *
  * It accepts a product page or a bare domain and asks
- * `/api/comercio-agentico/comprobar`. The wait shows what is being checked,
- * not a bar: the server does it in parallel and nothing here knows how far it
- * has gone, so a percentage would be invented.
+ * `/api/comercio-agentico/comprobar`. The wait (`AgenticScan`) plays for
+ * about ten seconds and fills in with the store's own data once the response
+ * is in; it shows what is being checked, never a percentage, because nothing
+ * here knows how far the server has gone. An error ends it at once, and with
+ * reduced motion the result shows as soon as it arrives.
  */
 
 type State =
   | { kind: "idle" }
   | { kind: "invalid" }
-  | { kind: "checking" }
+  | { kind: "checking"; target: ScanTarget | null; result: AgenticCheckResult | null }
   | { kind: "done"; response: AgenticCheckResponse }
   | { kind: "network" };
 
@@ -30,6 +34,10 @@ export const AGENTIC_FAILURE_COPY: Record<string, string> = {
   limit_check_failed: "Ahora mismo no podemos hacer la comprobación. Inténtalo más tarde.",
   network: "No hemos podido conectar. Inténtalo de nuevo en un momento."
 };
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true;
+}
 
 function looksLikeAddress(value: string) {
   const v = value.trim();
@@ -47,7 +55,8 @@ export function AgenticChecker() {
       setState({ kind: "invalid" });
       return;
     }
-    setState({ kind: "checking" });
+    const target = prefersReducedMotion() ? null : scanTargetFromInput(value);
+    setState({ kind: "checking", target, result: null });
     try {
       const res = await fetch("/api/comercio-agentico/comprobar", {
         method: "POST",
@@ -55,7 +64,8 @@ export function AgenticChecker() {
         body: JSON.stringify({ url: value.trim() })
       });
       const body = (await res.json()) as AgenticCheckResponse;
-      setState({ kind: "done", response: body });
+      if (body.status === "completed" && target) setState({ kind: "checking", target, result: body });
+      else setState({ kind: "done", response: body });
     } catch {
       setState({ kind: "network" });
     }
@@ -86,10 +96,15 @@ export function AgenticChecker() {
           {checking ? "Comprobando…" : "Comprobar mi tienda"}
         </button>
       </form>
-      <p className="ca-help">Pega la dirección de una ficha de producto para medirlo todo. Gratis y sin registro.</p>
 
       <div aria-live="polite">
-        {checking ? (
+        {state.kind === "checking" && state.target ? (
+          <AgenticScan
+            target={state.target}
+            result={state.result}
+            onDone={() => setState((s) => (s.kind === "checking" && s.result ? { kind: "done", response: { status: "completed", ...s.result } } : s))}
+          />
+        ) : checking ? (
           <div className="ca-wait">
             <span className="ca-wait-orb" aria-hidden="true" />
             <div>

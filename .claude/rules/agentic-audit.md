@@ -13,7 +13,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**` y
 `components/agentic/**`. Cada regla es trazable a
 `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317.
+`docs/brand/design-decisions-log.md` §317 y §318.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -43,5 +43,16 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
   propios límites (`AGENTIC_CHECK_LIMITS`). El comprobador de ChatGPT excluye
   esas filas: uno no puede gastar los límites del otro. La fila se escribe
   antes de salir a la red y los límites fallan cerrado.
-- **La landing no promete la consola hasta la Fase 2.** «Auditoría agéntica»
-  lleva «Próximamente» y ningún texto manda a Pro por algo que Pro no tiene.
+- **La landing no dice que Pro ya tiene la auditoría agéntica.** «Auditoría
+  agéntica» lleva «Próximamente». El cierre del comprobador invita a probar
+  Pro gratis (fundador, 2026-10-17, log §318), pero siempre con la línea «La
+  auditoría agéntica completa llega muy pronto a la consola de Pro» hasta que
+  la Fase 2 esté en producción.
+- **La animación del comprobador sólo escenifica el ritmo** (log §318).
+  Antes de la respuesta, sólo las URL que el servidor pide de verdad
+  (`scan-script.ts` las saca de `interopProbePaths` y `ASSISTANT_ROBOTS_TOKENS`).
+  Después, cada dato y cada estado salen de la respuesta. Nunca un porcentaje
+  ni un valor de ejemplo. Si el motor añade o quita una comprobación, el guion
+  cambia con él.
+- **`facts` es texto de terceros.** Se limpia y se recorta en
+  `page-facts.ts` y se pinta sólo como texto, nunca como HTML.

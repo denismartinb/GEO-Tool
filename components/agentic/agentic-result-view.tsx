@@ -18,7 +18,19 @@ import type {
  *
  * Interoperabilidad is shown as «N de 4 protocolos publicados» next to the
  * four scored components; it is part of the reading, not of the total.
+ *
+ * It is framed as a quick, high-level reading of one page: the console
+ * teaser below says what the full audit adds, and the closing CTA invites a
+ * free Pro trial while saying plainly that the full agentic audit is still
+ * on its way to the console (log §318).
  */
+
+const CONSOLE_FEATURES: Array<{ title: string; text: string; rows: number }> = [
+  { title: "Auditoría de cada ficha", text: "Todas tus fichas de producto, cada señal con su estado y lo que falla.", rows: 3 },
+  { title: "Recomendaciones priorizadas", text: "Qué arreglar primero y cuántos puntos suma cada cambio, con el código listo.", rows: 3 },
+  { title: "Preguntas de compra", text: "Si ChatGPT, Gemini, Claude y Perplexity te recomiendan cuando alguien quiere comprar.", rows: 2 },
+  { title: "Seguimiento en el tiempo", text: "Cómo evoluciona tu Visibilidad agéntica después de cada cambio.", rows: 2 }
+];
 
 const DESCRIPTIONS: Record<AgenticComponentId | "interop", string> = {
   discovery: "Si un agente puede entrar en tu web: tu robots.txt, si tu protección anti-bots le deja pasar y si publicas sitemap.",
@@ -68,9 +80,16 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
   const interopText = `${result.interop.found} de ${result.interop.total} protocolos publicados`;
   const current: AgenticComponentResult | undefined = components.find((c) => c.id === selected);
   const fixes = result.fixes.slice(0, 5);
+  const facts = result.facts;
+  const factChips = facts
+    ? [facts.productName, facts.price, facts.availability, facts.rating ? `Valoración media ${facts.rating}` : null].filter(
+        (v): v is string => Boolean(v)
+      )
+    : [];
 
   return (
     <div className="ca-res">
+      <span className="ca-res-kicker">Comprobación rápida de una ficha</span>
       <div className="ca-res-head">
         <div>
           <b className="ca-res-dom">{result.domain}</b>
@@ -78,6 +97,13 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
         </div>
         {result.platform ? <span className="ca-chip ca-c-blue">{result.platform}</span> : null}
       </div>
+      {factChips.length > 0 ? (
+        <div className="ca-res-facts" aria-label="Lo que leímos en la página">
+          {factChips.map((chip) => (
+            <span key={chip}>{chip}</span>
+          ))}
+        </div>
+      ) : null}
 
       {!result.pageRead ? (
         <p className="ca-res-note ca-res-note-bad">
@@ -97,6 +123,10 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
           <div>
             <span className="ca-res-total-k">Visibilidad agéntica</span>
             <span className="ca-res-total-v">{result.score} de 100</span>
+            <p className="ca-res-lead">
+              Una primera lectura de alto nivel: cómo ve un agente esta ficha. La auditoría completa analiza tu catálogo entero, ficha
+              a ficha.
+            </p>
           </div>
         </div>
       ) : null}
@@ -215,7 +245,7 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
         </div>
 
         <div className="ca-res-box">
-          <h4 className="ca-res-h">Qué arreglar primero</h4>
+          <h4 className="ca-res-h">Lo primero que arreglaría</h4>
           {fixes.length > 0 ? (
             fixes.map((fix) => (
               <div className="ca-fix" key={`${fix.component}-${fix.checkId}`}>
@@ -230,14 +260,34 @@ export function AgenticResultView({ result, play = true }: { result: AgenticChec
         </div>
       </div>
 
+      <div className="ca-more">
+        <h3>En la consola lo verás todo en detalle</h3>
+        <p>Esto es una muestra. Con GenScore Pro tienes la auditoría agéntica completa de tu web y te decimos qué cambiar primero.</p>
+        <div className="ca-feats">
+          {CONSOLE_FEATURES.map((feature) => (
+            <div className="ca-feat" key={feature.title}>
+              <h4>
+                <span className="ca-feat-dot" aria-hidden="true" />
+                {feature.title}
+              </h4>
+              <p>{feature.text}</p>
+              <div className="ca-ghost" aria-hidden="true">
+                {Array.from({ length: feature.rows }, (_, i) => (
+                  <span key={i} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <div className="ca-res-cta">
-        <p>
-          <b>¿Y la IA te nombra?</b> Prueba Pro 7 días, sin tarjeta: te decimos si ChatGPT, Gemini, Claude y Perplexity
-          recomiendan tu tienda.
-        </p>
-        <Link className="ca-nbtn ca-pri" href="/signup">
-          Probar Pro 7 días
+        <h3>Optimiza el comercio agéntico de tu web</h3>
+        <p>Prueba GenScore Pro gratis durante 7 días, sin tarjeta, y prepara tu tienda para los agentes que ya compran.</p>
+        <Link className="ca-res-cta-btn" href="/signup">
+          Empezar gratis con Pro
         </Link>
+        <small>La auditoría agéntica completa llega muy pronto a la consola de Pro.</small>
       </div>
     </div>
   );
