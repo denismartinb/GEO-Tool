@@ -25864,6 +25864,11 @@ la consola se dice «próximamente», igual que en la landing. Corregido a
 petición del fundador: el texto no dice «próximamente» y presenta la
 comprobación como ya disponible en `/comercio-agentico`.
 
+Tras el merge de #640 el fundador pidió dos cambios más en el veredicto del
+artículo de agentes: el título pasa a «Los agentes ya hacen compras por ti» y
+sale la frase «La tienda que esté preparada no será la que haya implantado un
+protocolo, sino…».
+
 ## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
 
 **Qué.** Línea nueva de producto sobre comercio agéntico, con el diseño
