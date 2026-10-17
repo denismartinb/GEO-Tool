@@ -69,6 +69,13 @@ igual.
   sobre prompts; la Puntuación GEO con `resolveGeoScore`; precios de `PLANS`
   y promo sólo si `getActivePromoPlanIds()` la incluye. Ninguna plantilla
   tiene un número por defecto (§233, §183, §182).
+- **Porcentajes, nunca «N de M respuestas».** Barras, bloques y asuntos de
+  los correos de ciclo de vida enseñan la proporción con `formatShare`
+  (log §309).
+- **Un titular no afirma más que el dato que tiene debajo.** El D+3 elige su
+  titular con `resolveWinbackD3Angle`: «vas por delante» sólo con un rival
+  nombrado por detrás, la marca nombrada y muestra suficiente (log §309,
+  mismo criterio que `competitive-claim.ts`, §278).
 - **Todo texto que viene de fuera va por `escapeHtml`**: dominio, nombre de
   competidor, título y descripción de una recomendación (§233).
 - **Recordar la confirmación es reenviar la de Supabase, una vez.**
