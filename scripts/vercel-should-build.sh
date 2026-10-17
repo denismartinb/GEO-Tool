@@ -97,7 +97,9 @@ while IFS= read -r file; do
     # el del 2026-08-05 con el barrido. Los demás workflows sí se saltan:
     # corren por `push`/`pull_request` y no necesitan un preview.
     .github/workflows/ux-pilot.yml) run "${file} changes the pilot workflow, which only ever runs against a preview" ;;
-    docs/* | .claude/* | .github/* | tests/* | agents/*) ;;
+    # Material editorial (textos e imágenes para redes) que Instinct recoge de
+    # la rama `editorial-drops`; nada del producto lo importa (log §315).
+    docs/* | .claude/* | .github/* | tests/* | agents/* | editorial-drops/*) ;;
     # Root-level prose only (CLAUDE.md, README.md, PRD.md…). A nested .md may
     # be routed content — pageExtensions in next.config.ts includes "md".
     */*) run "${file} affects the build" ;;

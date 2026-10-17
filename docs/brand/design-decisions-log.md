@@ -25690,3 +25690,21 @@ Google».
 **Pendiente.** Medir si conecta más gente (el embudo de PostHog no tiene aún
 un evento de conexión de Search Console). B y C quedan descartadas, no
 aplazadas.
+
+## 315. EDITORIAL-DROPS-SKIP-1: la rama de material para redes no construye en Vercel (2026-10-17)
+
+**Qué.** `scripts/vercel-should-build.sh` añade `editorial-drops/*` a la lista
+de rutas que no pueden afectar a la app, con su test en
+`scripts/vercel-should-build.test.ts`.
+
+**Por qué.** Desde el 2026-10-17 el material editorial listo para publicar
+(textos, imágenes, calendarios) se entrega en la rama `editorial-drops`, en
+`editorial-drops/AAAA-MM-DD-tema/` más `editorial-drops/LATEST.md`, que vigila
+Instinct, el agente con el que Denis publica. Nada del producto importa esa
+carpeta, así que cada entrega lanzaba un build de preview que no servía para
+nada (BUILD-BUDGET-1).
+
+**Pendiente.** La rama `editorial-drops` nació de `main` antes de este cambio:
+hasta que lleve este commit, su script sigue sin saltar la carpeta. Una vez
+mergeado, se trae `main` a esa rama una vez. No se añade a la comprobación de
+directorios existentes del test porque la carpeta sólo existe en esa rama.

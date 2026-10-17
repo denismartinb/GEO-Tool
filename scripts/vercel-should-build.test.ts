@@ -232,6 +232,15 @@ describe("vercel-should-build", () => {
     }
   });
 
+  it("skips the editorial-drops/ material (log §315)", () => {
+    expect(
+      decideFor([
+        "editorial-drops/LATEST.md",
+        "editorial-drops/2026-10-17-tres-articulos-ia/00-resumen.png"
+      ]).code
+    ).toBe(SKIP);
+  });
+
   it("skips the agents/ prose directory", () => {
     expect(decideFor(["agents/product-director.md"]).code).toBe(SKIP);
   });
