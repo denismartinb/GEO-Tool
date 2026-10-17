@@ -25829,3 +25829,49 @@ cifra. Los ficheros de Meta y Grok se renombraron porque el navegador seguía
 sirviendo la inicial que tenían antes con el mismo nombre.
 Por último el fundador mandó los logos de Instinct y Tab, que sustituyen a
 las dos iniciales que quedaban.
+
+## 317. AGENTIC-COMMERCE-1 Fases 0 y 1: motor de la Visibilidad agéntica y landing `/comercio-agentico` (2026-10-17)
+
+**Qué.** Línea nueva de producto sobre comercio agéntico, con el diseño
+aprobado por el fundador el 2026-10-17 («Aprobado. Implementa»; prototipo en
+`docs/design-reference/agentic-commerce-1/`).
+
+- **Fase 0, el motor** (`lib/agentic-audit/`). Lee una página como la leería
+  un agente sin JavaScript (JSON-LD, microdatos, Open Graph, enlaces, texto
+  visible), robots.txt por asistente, el sitemap, si la web pone un reto a las
+  visitas automáticas y cuatro ficheros `/.well-known/` para la
+  interoperabilidad. Puntúa la «Visibilidad agéntica» con los pesos aprobados
+  (Descubrimiento 30, Comprensión 30, Confianza 20, Compra 20), e
+  Interoperabilidad como «N de 4». Decisión y aritmética en ADR 0043.
+- **Fase 1, la cara pública.** Landing `/comercio-agentico` con el comprobador
+  real (`/api/comercio-agentico/comprobar`, sin LLM), la pastilla de la
+  portada encima del titular y «Comercio agéntico» con etiqueta «Nuevo» en el
+  menú público.
+
+**Dos ajustes respecto a la propuesta, aceptados por el fundador («Sí»,
+2026-10-17).** El acceso por agente se mide sólo con robots.txt, más una fila
+«Tu web pone un reto a las visitas automáticas», porque copiar el user-agent
+de un agente no reproduce lo que su anti-bots le responde. Y Compra mide sólo
+lo que enseña la ficha (plataforma, añadir al carrito, pagos rápidos, captcha
+en la página), porque recorrer el checkout sería un crawler.
+
+**Límites del comprobador sin migración.** Cuenta en `public_checks` con
+`engine = 'agentic'` y límites propios (1.000 al día, 5 por IP, 5 por
+dominio). `checkPublicCheckLimits` filtra por motor: el comprobador de ChatGPT
+ya no cuenta esas filas, y el agéntico sólo cuenta las suyas.
+
+**Lo que cambia de la landing frente al prototipo, y por qué.** La consola
+llega en la Fase 2, así que se quita la línea que mandaba el resto del
+resultado a Pro, «Auditoría agéntica» lleva «Próximamente» y el cierre invita
+a Pro por lo que Pro ya hace. El bloque de cinco componentes de «Cómo te
+ayuda» es un ejemplo y lo dice; el resultado del comprobador es real.
+
+**Pendiente.** Fase 2 (tarjeta en Visión general y sección «Comercio
+agéntico» en la consola) necesita la migración 0043 y su propia aprobación.
+Fase 3: «Preguntas de compra» en Pro, recomendaciones agénticas en la cola y
+refrescar los seis artículos de comercio agéntico (dicen que la comprobación
+«todavía no está disponible»). No se pudo probar contra tiendas reales desde
+el entorno de desarrollo (sin salida a webs de terceros): la prueba real es el
+preview.
+
+**Regla de premisa.** Esta fase no retira ningún camino de recuperación.

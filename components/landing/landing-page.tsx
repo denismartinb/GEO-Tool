@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { HeroCallPill } from "@/components/landing/hero-call-pill";
+import { AgenticPill } from "@/components/landing/agentic-pill";
 import { RevealOnScroll } from "@/components/landing/reveal-on-scroll";
 import { HeroDemo } from "@/components/landing/hero-demo";
 import { HeroDemoScenes } from "@/components/landing/hero-demo-scenes";
@@ -330,6 +331,7 @@ export function LandingPage() {
         <PublicHeader hero />
 
         <div className="lp-hero-content">
+          <AgenticPill />
           {/* HOME-2026-08 Fase A: titular y bajada del diseño aprobado
               (`docs/design-reference/home-2026-08/`). El titular es una
               pregunta a propósito: es la que se hace quien llega, y es la que

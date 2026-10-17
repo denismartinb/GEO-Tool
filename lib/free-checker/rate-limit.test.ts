@@ -30,7 +30,10 @@ function fakeService(results: CountResult[]) {
     const result = queue.shift() ?? { count: 0, error: null };
     const thenable = {
       gte: () => thenable,
+      neq: () => thenable,
       eq: (column: string, value: string) => {
+        // El filtro de motor del comprobador agéntico no es una de las tres ventanas.
+        if (column === "engine") return thenable;
         call.column = column;
         call.value = value;
         return thenable;

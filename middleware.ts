@@ -146,8 +146,11 @@ export const config = {
      *
      *   AFFILIATES-1 adds afiliados, same check: static page, no session
      *   read; its application form is a server action that reads no session.
+     *
+     *   AGENTIC-COMMERCE-1 adds comercio-agentico and its API, same check:
+     *   static page, and a route that reads no session.
      */
-    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore|estudios|afiliados)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon\\.ico|(?:api/gratis|api/comercio-agentico|comercio-agentico|comparativas|docs|glosario|gratis|geo|cookies|privacidad|terminos|que-es-genscore|sobre-genscore|estudios|afiliados)(?:/|$)|feed\\.xml$|llms\\.txt$|llms-full\\.txt$|indexnow-key\\.txt$|robots\\.txt$|sitemap\\.xml$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
     /*
      * AFFILIATES-1 — an affiliate link may land on ANY page, including the
      * public ones the entry above skips (a comparativa, the free report,

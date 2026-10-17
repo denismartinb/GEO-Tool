@@ -5029,6 +5029,21 @@ a.notif-row:hover {
 .lp-nav-links a { padding: 7px 12px; border-radius: 8px; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
 .lp-nav-links a:hover { background: var(--surface-2); color: var(--ink); }
 .lp-nav-links a.active { background: var(--accent-soft); color: var(--accent-ink); }
+/* AGENTIC-COMMERCE-1 (log §317): with «Comercio agéntico» the nav has seven
+   links, and wrapping labels onto two lines broke the bar at 1280px. Labels
+   never wrap; between the burger breakpoint and 1360px the links tighten. */
+.lp-nav-links a { white-space: nowrap; }
+@media (min-width: 901px) and (max-width: 1360px) {
+  .lp-nav-links { gap: 0; margin-left: 14px; }
+  .lp-nav-links a { padding: 7px 8px; }
+}
+/* Below 1200px the seven labels and the two buttons do not fit even tight:
+   the «Nuevo» tags go (the drawer keeps the full list) and the type steps down. */
+@media (min-width: 901px) and (max-width: 1199px) {
+  .lp-nav-links { margin-left: 8px; }
+  .lp-nav-links a { padding: 7px 6px; font-size: 12.5px; }
+  .lp-nav-links .lp-nav-new { display: none; }
+}
 .lp-nav-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 
 /* --- Mobile nav: hamburger + slide-in drawer, same look and feel as the
