@@ -4,7 +4,7 @@ import { GscConnectPanel, GscConnectRow } from "./gsc-connect-invite";
 
 const P = "11111111-1111-4111-8111-111111111111";
 
-describe("Search Console invitation (GSC-CONNECT-CTA-1, log §311)", () => {
+describe("Search Console invitation (GSC-CONNECT-CTA-1, log §313)", () => {
   it("sends both surfaces straight to Google's consent screen", () => {
     for (const html of [
       renderToStaticMarkup(<GscConnectPanel projectId={P} state="disconnected" />),

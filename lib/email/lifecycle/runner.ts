@@ -41,10 +41,10 @@ import {
  * while `isLifecycleEmailEnabled()` is false.
  *
  * Every figure is read here, from the account's own rows, at send time; the
- * templates never invent one. A send is recorded in `email_sends` only after
- * Resend accepted it, so a failed send is retried by the next pass. The
- * exception is the end-of-trial email, which claims its row BEFORE sending
- * and releases it if nothing went out (`sendTrialEndEmailOnce`, log §308).
+ * templates never invent one. Every lifecycle email claims its `email_sends`
+ * row BEFORE sending and releases it when nothing went out
+ * (`sendClaimedOnce`, log §308 and §311), so a duplicated cron run or two
+ * paths racing never send the same email twice.
  */
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -149,15 +149,96 @@ async function loadTopRecommendation(
   };
 }
 
-async function recordSend(service: Service, ownerUserId: string, kind: string): Promise<void> {
-  const { error } = await service
+/**
+ * LIFECYCLE-DEDUPE-1 (log §308, extended to every kind in §311). The
+ * `email_sends` row of a lifecycle email is CLAIMED before sending, not
+ * written after. The upsert is
+ * `ON CONFLICT DO NOTHING RETURNING id` on the `(owner_user_id, kind)`
+ * unique index (0037): of N concurrent callers, exactly one gets a row back,
+ * and only that one sends. Reading `email_sends` and recording after Resend
+ * left a window of the whole send open, and on 2026-10-17 the same email
+ * reached one inbox three times in the same second (log §308). Vercel
+ * documents that a cron run can be delivered more than once.
+ *
+ * Returns the claim's id, `null` when someone else holds it, `undefined`
+ * when the claim itself failed (nothing sent, the next pass retries).
+ */
+async function claimSend(service: Service, ownerUserId: string, kind: string): Promise<string | null | undefined> {
+  const { data, error } = await service
     .from("email_sends")
-    .upsert({ owner_user_id: ownerUserId, kind }, { onConflict: "owner_user_id,kind", ignoreDuplicates: true });
+    .upsert({ owner_user_id: ownerUserId, kind }, { onConflict: "owner_user_id,kind", ignoreDuplicates: true })
+    .select("id");
   if (error) {
-    // The email already went out; a missing row means the next pass could
-    // send it again, so this is worth an operator's eye in the logs.
-    console.error("[geo:lifecycle] email sent but not recorded", { kind, message: error.message });
+    console.error("[geo:lifecycle] could not claim the send; not sending", { kind, message: error.message });
+    return undefined;
   }
+  const row = (data as Array<{ id: string }> | null)?.[0];
+  return row ? row.id : null;
+}
+
+/** Frees a claim whose email surely did not go out, so the next pass can try again. */
+async function releaseClaim(service: Service, claimId: string, kind: string): Promise<void> {
+  const { error } = await service.from("email_sends").delete().eq("id", claimId);
+  if (error) {
+    // The row stays: this email will not be retried. Worth an operator's eye.
+    console.error("[geo:lifecycle] email not sent and its claim not released", { kind, message: error.message });
+  }
+}
+
+/**
+ * Resend's `Idempotency-Key` for a lifecycle email: one per account and kind.
+ * The same key and payload within 24 h return the first answer instead of
+ * sending again, which is what makes the retry after an ambiguous failure safe.
+ */
+export function lifecycleIdempotencyKey(kind: string, userId: string): string {
+  return `lifecycle/${kind}/${userId}`;
+}
+
+type ComposeSend = () => Promise<(options: { idempotencyKey: string }) => Promise<SendOutcome>>;
+
+/**
+ * One lifecycle email, at most once per account and kind: claim the row,
+ * load what the email says (once, so a retry sends the same payload), send.
+ *
+ * Failure policy (log §308; defaults pending the founder's decision):
+ * - `not_sent` (no client, a 4xx): the claim is released; the next pass retries.
+ * - `ambiguous` (transport, 5xx, 409, throw): one retry with the same
+ *   idempotency key and payload. Still ambiguous, the claim is KEPT: the
+ *   email may be lost, but it is never sent twice.
+ * - A crash between the claim and the send leaves the claim: that email is
+ *   lost, accepted and documented.
+ * - A throw while loading the content releases the claim and rethrows.
+ *
+ * `taken`: someone else holds the claim (or it could not be written), nothing sent.
+ */
+async function sendClaimedOnce(
+  service: Service,
+  ownerUserId: string,
+  kind: string,
+  compose: ComposeSend
+): Promise<"sent" | "taken" | "failed"> {
+  const claimId = await claimSend(service, ownerUserId, kind);
+  if (!claimId) return "taken";
+
+  let send: Awaited<ReturnType<ComposeSend>>;
+  try {
+    send = await compose();
+  } catch (loadError) {
+    await releaseClaim(service, claimId, kind);
+    throw loadError;
+  }
+
+  const idempotencyKey = lifecycleIdempotencyKey(kind, ownerUserId);
+  let outcome = await send({ idempotencyKey });
+  if (outcome === "ambiguous") outcome = await send({ idempotencyKey });
+
+  if (outcome === "sent") return "sent";
+  if (outcome === "not_sent") {
+    await releaseClaim(service, claimId, kind);
+    return "failed";
+  }
+  console.error("[geo:lifecycle] email may not have gone out; keeping the claim so it is never sent twice", { kind });
+  return "failed";
 }
 
 /* ------------------------------------------------------ primer escaneo */
@@ -204,8 +285,9 @@ export async function maybeSendFirstScanReadyEmail(
     const snapshot = await loadRunSnapshot(service, input.projectId, input.projectDomain);
     if (!snapshot) return;
 
-    const sent = await sendFirstScanReadyEmail(profile.email as string, input.ownerUserId, snapshot);
-    if (sent) await recordSend(service, input.ownerUserId, "first_scan");
+    await sendClaimedOnce(service, input.ownerUserId, "first_scan", async () => (options) =>
+      sendFirstScanReadyEmail(profile.email as string, input.ownerUserId, snapshot, options)
+    );
   } catch (error) {
     console.error("[geo:lifecycle] first-scan email failed; the scan itself completed", {
       projectId: input.projectId,
@@ -306,28 +388,26 @@ export async function runLifecycleEmails({
     );
     if (!decision) continue;
 
-    const delivered = await sendDecision(service, decision, {
-      email: profile.email as string,
-      userId: profile.id,
-      trialEndsAt: new Date(profile.trial_ends_at as string),
-      project: mainProject
-        ? {
-            id: mainProject.id as string,
-            name: (mainProject.name as string | null) ?? (mainProject.domain as string),
-            brand: (mainProject.brand as string | null) ?? null,
-            domain: mainProject.domain as string,
-            scanned: Boolean(scannedProject)
-          }
-        : null,
-      now
-    });
+    const result = await sendClaimedOnce(service, profile.id, decision.kind, () =>
+      composeDecision(service, decision, {
+        email: profile.email as string,
+        userId: profile.id,
+        trialEndsAt: new Date(profile.trial_ends_at as string),
+        project: mainProject
+          ? {
+              id: mainProject.id as string,
+              name: (mainProject.name as string | null) ?? (mainProject.domain as string),
+              brand: (mainProject.brand as string | null) ?? null,
+              domain: mainProject.domain as string,
+              scanned: Boolean(scannedProject)
+            }
+          : null,
+        now
+      })
+    );
 
-    if (delivered) {
-      await recordSend(service, profile.id, decision.kind);
-      sent += 1;
-    } else {
-      failed += 1;
-    }
+    if (result === "sent") sent += 1;
+    else if (result === "failed") failed += 1;
   }
 
   return { status: "ok", considered: candidates.length, sent, failed, deferred };
@@ -358,34 +438,37 @@ async function loadReportForEmail(service: Service, project: EmailProject): Prom
   }
 }
 
-async function sendDecision(
+/** Loads what the decided email says and returns the call that sends it. */
+async function composeDecision(
   service: Service,
   decision: TrialEmailDecision,
   ctx: { email: string; userId: string; trialEndsAt: Date; project: EmailProject | null; now: Date }
-): Promise<boolean> {
+): Promise<(options: { idempotencyKey: string }) => Promise<SendOutcome>> {
   const daysLeft = trialDaysLeft(ctx.trialEndsAt, ctx.now);
 
   if (decision.kind === "trial_d1") {
-    return sendTrialD1Email(ctx.email, ctx.userId, {
+    const input = {
       variant: decision.variant,
       daysLeft,
       projectId: ctx.project?.id ?? null,
       domain: ctx.project?.domain ?? null
-    });
+    };
+    return (options) => sendTrialD1Email(ctx.email, ctx.userId, input, options);
   }
 
   if (decision.kind === "trial_d3") {
     const top = decision.variant === "with_scan" && ctx.project ? await loadTopRecommendation(service, ctx.project.id) : null;
-    return sendTrialD3Email(ctx.email, ctx.userId, {
+    const input = {
       daysLeft,
       projectId: ctx.project?.id ?? null,
       domain: ctx.project?.domain ?? null,
       recommendation: top?.recommendation ?? null,
       otherRecommendations: top?.others ?? 0
-    });
+    };
+    return (options) => sendTrialD3Email(ctx.email, ctx.userId, input, options);
   }
 
-  return sendTrialD5Email(ctx.email, ctx.userId, {
+  const input = {
     trialEndsAt: ctx.trialEndsAt,
     projectId: ctx.project?.id ?? null,
     domain: ctx.project?.domain ?? null,
@@ -393,7 +476,8 @@ async function sendDecision(
     pro: await resolvePlanOffer("pro"),
     starter: await resolvePlanOffer("starter"),
     lossRows: proVsFreeRows()
-  });
+  };
+  return (options) => sendTrialD5Email(ctx.email, ctx.userId, input, options);
 }
 
 type SendRow = { owner_user_id: string; kind: string; sent_at: string };
@@ -431,50 +515,6 @@ type TrialEndTarget = {
   hasSubscription: boolean;
   lifecycleOptIn: boolean;
 };
-
-/**
- * LIFECYCLE-DEDUPE-1. The `email_sends` row of an end-of-trial email is
- * CLAIMED before sending, not written after. The upsert is
- * `ON CONFLICT DO NOTHING RETURNING id` on the `(owner_user_id, kind)`
- * unique index (0037): of N concurrent callers, exactly one gets a row back,
- * and only that one sends. Reading `email_sends` and recording after Resend
- * left a window of the whole send open, and on 2026-10-17 the same email
- * reached one inbox three times in the same second (log §308). Vercel
- * documents that a cron run can be delivered more than once.
- *
- * Returns the claim's id, `null` when someone else holds it, `undefined`
- * when the claim itself failed (nothing sent, the next pass retries).
- */
-async function claimSend(service: Service, ownerUserId: string, kind: string): Promise<string | null | undefined> {
-  const { data, error } = await service
-    .from("email_sends")
-    .upsert({ owner_user_id: ownerUserId, kind }, { onConflict: "owner_user_id,kind", ignoreDuplicates: true })
-    .select("id");
-  if (error) {
-    console.error("[geo:lifecycle] could not claim the send; not sending", { kind, message: error.message });
-    return undefined;
-  }
-  const row = (data as Array<{ id: string }> | null)?.[0];
-  return row ? row.id : null;
-}
-
-/** Frees a claim whose email surely did not go out, so the next pass can try again. */
-async function releaseClaim(service: Service, claimId: string, kind: string): Promise<void> {
-  const { error } = await service.from("email_sends").delete().eq("id", claimId);
-  if (error) {
-    // The row stays: this email will not be retried. Worth an operator's eye.
-    console.error("[geo:lifecycle] email not sent and its claim not released", { kind, message: error.message });
-  }
-}
-
-/**
- * Resend's `Idempotency-Key` for a lifecycle email: one per account and kind.
- * The same key and payload within 24 h return the first answer instead of
- * sending again, which is what makes the retry after an ambiguous failure safe.
- */
-export function lifecycleIdempotencyKey(kind: string, userId: string): string {
-  return `lifecycle/${kind}/${userId}`;
-}
 
 /**
  * LIFECYCLE-WINBACK-1 (log §238). Sends the end-of-trial email once, either
@@ -516,44 +556,18 @@ export async function sendTrialEndEmailOnce(
   if (!decision) return false;
 
   // The read above is only the cheap filter. The claim is the gate.
-  const claimId = await claimSend(service, target.userId, decision.kind);
-  if (!claimId) return false;
-
-  const idempotencyKey = lifecycleIdempotencyKey(decision.kind, target.userId);
-  let send: () => Promise<SendOutcome>;
-  try {
-    // Everything the email says is loaded once, so a retry sends the exact
-    // same payload — Resend only dedupes a key with an identical body.
-    if (target.lifecycleOptIn) {
-      const input = {
-        late: decision.kind === "trial_ended_late",
-        trialEndsAt: target.trialEndsAt,
-        snapshot: await loadMainSnapshot(service, target.userId),
-        pro: await resolvePlanOffer("pro"),
-        starter: await resolvePlanOffer("starter")
-      };
-      send = () => sendTrialEndedOfferEmail(target.email, target.userId, input, { idempotencyKey });
-    } else {
-      send = () => sendTrialEndedEmail(target.email, { idempotencyKey });
-    }
-  } catch (loadError) {
-    // Nothing was sent: free the claim and let the caller see the failure.
-    await releaseClaim(service, claimId, decision.kind);
-    throw loadError;
-  }
-
-  let outcome = await send();
-  if (outcome === "ambiguous") outcome = await send();
-
-  if (outcome === "sent") return true;
-  if (outcome === "not_sent") {
-    await releaseClaim(service, claimId, decision.kind);
-    return false;
-  }
-  console.error("[geo:lifecycle] end-of-trial email may not have gone out; keeping the claim so it is never sent twice", {
-    kind: decision.kind
+  const result = await sendClaimedOnce(service, target.userId, decision.kind, async () => {
+    if (!target.lifecycleOptIn) return (options) => sendTrialEndedEmail(target.email, options);
+    const input = {
+      late: decision.kind === "trial_ended_late",
+      trialEndsAt: target.trialEndsAt,
+      snapshot: await loadMainSnapshot(service, target.userId),
+      pro: await resolvePlanOffer("pro"),
+      starter: await resolvePlanOffer("starter")
+    };
+    return (options) => sendTrialEndedOfferEmail(target.email, target.userId, input, options);
   });
-  return false;
+  return result === "sent";
 }
 
 /**
@@ -707,21 +721,18 @@ export async function runWinbackEmails({
     if (!decision) continue;
 
     const snapshot = await loadMainSnapshot(service, profile.id);
-    let delivered = false;
-    if (decision.kind === "winback_d3") {
-      // Its whole content is the last scan's ranking; without one, nothing to say.
-      if (!snapshot) continue;
-      delivered = await sendWinbackD3Email(profile.email, profile.id, { snapshot, pro, starter });
-    } else {
-      delivered = await sendWinbackD10Email(profile.email, profile.id, { domain: snapshot?.domain ?? null, pro });
-    }
+    // D+3's whole content is the last scan's ranking; without one, nothing to say.
+    if (decision.kind === "winback_d3" && !snapshot) continue;
 
-    if (delivered) {
-      await recordSend(service, profile.id, decision.kind);
-      sent += 1;
-    } else {
-      failed += 1;
-    }
+    const email = profile.email;
+    const result = await sendClaimedOnce(service, profile.id, decision.kind, async () =>
+      decision.kind === "winback_d3" && snapshot
+        ? (options) => sendWinbackD3Email(email, profile.id, { snapshot, pro, starter }, options)
+        : (options) => sendWinbackD10Email(email, profile.id, { domain: snapshot?.domain ?? null, pro }, options)
+    );
+
+    if (result === "sent") sent += 1;
+    else if (result === "failed") failed += 1;
   }
 
   return { status: "ok", sent, failed, deferred };

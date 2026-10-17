@@ -1,11 +1,13 @@
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   MARKETING_CONTENT_LINKS,
   MARKETING_ENTITY_LINKS,
   MARKETING_LEAD_LINKS,
-  MARKETING_SHELLS
+  MARKETING_SHELLS,
+  PUBLIC_FOOTER_GROUPS,
+  PUBLIC_FOOTER_LEGAL_LINKS
 } from "./marketing-content-links";
 
 /**
@@ -48,38 +50,75 @@ describe("MARKETING_CONTENT_LINKS", () => {
   });
 });
 
-/** El bloque `<footer>…</footer>` del shell, que es donde aplica la regla. */
-function footerBlockOf(shell: string): string {
-  const source = readFileSync(join(ROOT, shell), "utf8");
-  const start = source.indexOf("<footer");
-  const end = source.indexOf("</footer>", start);
-  if (start === -1 || end === -1) {
-    throw new Error(`${shell} no tiene un bloque <footer> reconocible`);
-  }
-  return source.slice(start, end);
-}
+/**
+ * FOOTER-UNIFY-1 (log §312). Each shell used to write its own `<footer>` and
+ * there were seven versions; the rule now is that every shell renders the one
+ * `PublicFooter` and none declares a footer of its own.
+ */
+const FOOTER_COMPONENT = "components/marketing/public-footer.tsx";
+const FOOTER_HREFS = PUBLIC_FOOTER_GROUPS.flatMap((g) => g.links.map((l) => l.href));
 
 describe("pies de página de marketing", () => {
   for (const shell of MARKETING_SHELLS) {
-    it(`${shell} renderiza la lista compartida en su pie`, () => {
-      expect(
-        footerBlockOf(shell).includes("MARKETING_CONTENT_LINKS"),
-        `${shell} no usa MARKETING_CONTENT_LINKS en el pie`
-      ).toBe(true);
-    });
-
-    it(`${shell} no duplica a mano un enlace que ya aporta la lista`, () => {
-      const footer = footerBlockOf(shell);
-      for (const link of MARKETING_CONTENT_LINKS) {
-        // Solo dentro del pie: las navegaciones de cabecera enlazan /blog o
-        // /docs a propósito y eso no es una duplicación.
-        expect(
-          footer.includes(`href="${link.href}"`),
-          `${shell} enlaza ${link.href} a mano en el pie además de por la lista`
-        ).toBe(false);
-      }
+    it(`${shell} renderiza el pie único`, () => {
+      const source = readFileSync(join(ROOT, shell), "utf8");
+      expect(source.includes("<PublicFooter />"), `${shell} no renderiza <PublicFooter />`).toBe(true);
+      expect(source.includes("<footer"), `${shell} declara su propio <footer>`).toBe(false);
     });
   }
+
+  it("ninguna otra página pública escribe un <footer> a mano", () => {
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
+        const rel = `${dir}/${entry.name}`;
+        if (entry.isDirectory()) {
+          // The console, the operator pages and the printable report have no public footer.
+          if (!/^app\/(dashboard|admin|informe|api)$/.test(rel)) walk(rel);
+        } else if (rel.endsWith(".tsx") && !rel.endsWith(".test.tsx") && rel !== FOOTER_COMPONENT) {
+          if (readFileSync(join(ROOT, rel), "utf8").includes("<footer")) offenders.push(rel);
+        }
+      }
+    };
+    walk("app");
+    walk("components");
+    expect(offenders).toEqual([]);
+  });
+
+  it("el pie pinta las columnas y la línea legal compartidas", () => {
+    const source = readFileSync(join(ROOT, FOOTER_COMPONENT), "utf8");
+    expect(source).toContain("PUBLIC_FOOTER_GROUPS");
+    expect(source).toContain("PUBLIC_FOOTER_LEGAL_LINKS");
+  });
+
+  it("cada enlace de las tres listas compartidas está en el pie una sola vez", () => {
+    for (const link of [...MARKETING_CONTENT_LINKS, ...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS]) {
+      expect(FOOTER_HREFS.filter((h) => h === link.href).length, `${link.href} en el pie`).toBe(1);
+    }
+  });
+
+  it("no repite ningún enlace", () => {
+    const all = [...FOOTER_HREFS, ...PUBLIC_FOOTER_LEGAL_LINKS.map((l) => l.href)];
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it("incluye el comprobador, la videollamada, Cookies y el programa de afiliados", () => {
+    expect(FOOTER_HREFS).toContain("/gratis/aparece-mi-marca-en-chatgpt");
+    expect(FOOTER_HREFS).toContain("/demo");
+    expect(FOOTER_HREFS).toContain("/afiliados");
+    expect(PUBLIC_FOOTER_LEGAL_LINKS.map((l) => l.href)).toContain("/cookies");
+    expect(MARKETING_LEAD_LINKS.find((l) => l.href === "/afiliados")?.label).toBe("Programa de afiliados");
+  });
+
+  it("cada ruta del pie existe de verdad", () => {
+    const paths = [...FOOTER_HREFS, ...PUBLIC_FOOTER_LEGAL_LINKS.map((l) => l.href)]
+      .filter((h) => !h.startsWith("/#"));
+    for (const href of paths) {
+      const dir = join(ROOT, "app", href.replace(/^\//, ""));
+      const hasPage = existsSync(join(dir, "page.tsx")) || existsSync(join(dir, "page.mdx"));
+      expect(hasPage, `${href} no tiene página en app/`).toBe(true);
+    }
+  });
 });
 
 /**
@@ -133,21 +172,11 @@ describe("MARKETING_ENTITY_LINKS", () => {
     }
   });
 
-  for (const shell of MARKETING_SHELLS) {
-    it(`${shell} renderiza la lista de entidad en su pie`, () => {
-      expect(
-        footerBlockOf(shell).includes("MARKETING_ENTITY_LINKS"),
-        `${shell} no usa MARKETING_ENTITY_LINKS en el pie, así que la página de entidad ` +
-          "pierde su enlace entrante desde esa superficie"
-      ).toBe(true);
-    });
-  }
 });
 
 /**
  * FREE-REPORT-2 (log §252) and AFFILIATES-1: the acquisition pages. Every
- * shell renders this list next to the entity list, so an entry here reaches
- * every public footer without touching a shell by hand.
+ * entry lands in `PUBLIC_FOOTER_GROUPS`, so it reaches every public footer.
  */
 describe("MARKETING_LEAD_LINKS", () => {
   it("contiene el informe gratis y el programa de afiliados", () => {
@@ -163,9 +192,4 @@ describe("MARKETING_LEAD_LINKS", () => {
     }
   });
 
-  for (const shell of MARKETING_SHELLS) {
-    it(`${shell} renderiza la lista de captación en su pie`, () => {
-      expect(footerBlockOf(shell).includes("MARKETING_LEAD_LINKS"), `${shell} no usa MARKETING_LEAD_LINKS`).toBe(true);
-    });
-  }
 });

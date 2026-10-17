@@ -112,7 +112,7 @@ revisión de data-guardian que lo precedió.
   (`GoogleLaterSlot`). Las dos ranuras leen Google una sola vez por petición
   (`cache` de React en `google-recs.tsx`), cada una en su `Suspense`.
 
-## Invitación a conectar (GSC-CONNECT-CTA-1, log §311)
+## Invitación a conectar (GSC-CONNECT-CTA-1, log §313)
 
 - **Se invita a conectar donde saldrían los datos, y sólo ahí.** La mitad de
   Google de la tarjeta SEO de Visión general (`GscConnectPanel`) y la fila

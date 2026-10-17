@@ -663,7 +663,7 @@ export default async function RecommendationsPage({
   // doesn't wait for Google to know which, so it computes both ceilings.
   const googleAvailability = await readSearchConsoleAvailability(projectId, user.id);
   const googleConnected = googleAvailability === "active";
-  // GSC-CONNECT-CTA-1 (log §311): without a connection, the row where the
+  // GSC-CONNECT-CTA-1 (log §313): without a connection, the row where the
   // Google cards would sit invites to connect instead.
   const googleInvite =
     googleAvailability === "disconnected" || googleAvailability === "reconnect" ? (

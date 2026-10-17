@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { BrandLogo } from "@/components/ui/brand-logo";
 import { MarketingMobileNav } from "@/components/marketing-mobile-nav";
-import { MARKETING_CONTENT_LINKS, MARKETING_ENTITY_LINKS, MARKETING_LEAD_LINKS } from "@/components/marketing-content-links";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
+import { MARKETING_CONTENT_LINKS } from "@/components/marketing-content-links";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * NOT-FOUND-ROCKET-1 — la 404 pública, «Fuera de trayectoria».
@@ -114,38 +114,7 @@ export function NotFoundMission() {
         </div>
       </div>
 
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link href="/" className="lp-logo">
-              <BrandLogo size={19} />
-            </Link>
-            <div className="links">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/geo">Qué es GEO</Link>
-              <Link href="/precios">Precios</Link>
-              {MARKETING_CONTENT_LINKS.map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              {[...MARKETING_ENTITY_LINKS, ...MARKETING_LEAD_LINKS].map((l) => (
-                <Link key={l.href} href={l.href}>
-                  {l.label}
-                </Link>
-              ))}
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/terminos">Términos</Link>
-            </div>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">
-            © 2026 GenScore · Generative Engine Optimization para empresas y agencias.
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

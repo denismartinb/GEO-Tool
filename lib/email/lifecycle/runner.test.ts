@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const sendTrialD1Email = vi.fn(async (..._args: unknown[]) => true);
-const sendTrialD3Email = vi.fn(async (..._args: unknown[]) => true);
-const sendTrialD5Email = vi.fn(async (..._args: unknown[]) => true);
-const sendFirstScanReadyEmail = vi.fn(async (..._args: unknown[]) => true);
+const sendTrialD1Email = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
+const sendTrialD3Email = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
+const sendTrialD5Email = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
+const sendFirstScanReadyEmail = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
 vi.mock("@/lib/email/lifecycle/templates", () => ({
   sendTrialD1Email: (...a: unknown[]) => sendTrialD1Email(...a),
   sendTrialD3Email: (...a: unknown[]) => sendTrialD3Email(...a),
@@ -30,6 +30,7 @@ type Tables = Record<string, { data?: unknown; count?: number }>;
 
 function fakeService(tables: Tables) {
   const upserts: Array<{ table: string; row: unknown }> = [];
+  const claimIds = new Map<string, { table: string; row: unknown }>();
   const chain = (table: string): unknown => {
     const result = { data: tables[table]?.data ?? [], error: null, count: tables[table]?.count ?? null };
     const node: Record<string, unknown> = {};
@@ -38,10 +39,36 @@ function fakeService(tables: Tables) {
       const rows = result.data as unknown[];
       return Promise.resolve({ data: Array.isArray(rows) ? (rows[0] ?? null) : rows, error: null });
     };
-    node.upsert = (row: unknown) => {
-      upserts.push({ table, row });
-      return Promise.resolve({ error: null });
+    // A claim (LIFECYCLE-DEDUPE-1, log §311): the row is inserted before the
+    // send and deleted again when nothing went out, so `upserts` is what is
+    // left on record once the pass is over.
+    // Like the `(owner_user_id, kind)` unique index: a second claim of the
+    // same key gets no row back.
+    node.upsert = (row: { owner_user_id: string; kind: string }) => {
+      const claim = Promise.resolve().then(() => {
+        const taken = upserts.some((e) => {
+          const r = e.row as { owner_user_id: string; kind: string };
+          return r.owner_user_id === row.owner_user_id && r.kind === row.kind;
+        });
+        if (taken) return null;
+        const entry = { table, row };
+        const id = `claim-${claimIds.size}`;
+        claimIds.set(id, entry);
+        upserts.push(entry);
+        return id;
+      });
+      return {
+        select: () => claim.then((id) => ({ data: id ? [{ id }] : [], error: null })),
+        then: (resolve: (v: unknown) => unknown) => claim.then(() => resolve({ error: null }))
+      };
     };
+    node.delete = () => ({
+      eq: (_column: string, id: string) => {
+        const entry = claimIds.get(id);
+        if (entry) upserts.splice(upserts.indexOf(entry), 1);
+        return Promise.resolve({ error: null });
+      }
+    });
     node.then = (resolve: (v: unknown) => unknown) => resolve(result);
     return node;
   };
@@ -97,15 +124,37 @@ describe("runLifecycleEmails", () => {
     const result = await runLifecycleEmails({ service, now: NOW });
 
     expect(result).toMatchObject({ status: "ok", sent: 1, failed: 0 });
-    expect(sendTrialD1Email).toHaveBeenCalledWith("cliente@ejemplo.com", USER, expect.objectContaining({ variant: "no_domain" }));
+    expect(sendTrialD1Email).toHaveBeenCalledWith("cliente@ejemplo.com", USER, expect.objectContaining({ variant: "no_domain" }), {
+      idempotencyKey: `lifecycle/trial_d1/${USER}`
+    });
     expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "trial_d1" } }]);
   });
 
   it("does not record a send that Resend did not accept", async () => {
-    sendTrialD1Email.mockResolvedValueOnce(false);
+    sendTrialD1Email.mockResolvedValueOnce("not_sent");
     const { service, upserts } = fakeService({ profiles: { data: [trialProfile(26)] } });
     expect(await runLifecycleEmails({ service, now: NOW })).toMatchObject({ sent: 0, failed: 1 });
     expect(upserts).toEqual([]);
+  });
+
+  it("sends D1 once when the cron run is delivered twice at the same time (LIFECYCLE-DEDUPE-1, log §311)", async () => {
+    const { service, upserts } = fakeService({ profiles: { data: [trialProfile(26)] } });
+    const results = await Promise.all([runLifecycleEmails({ service, now: NOW }), runLifecycleEmails({ service, now: NOW })]);
+    expect(sendTrialD1Email).toHaveBeenCalledTimes(1);
+    expect(results.map((r) => (r as { sent: number }).sent).sort()).toEqual([0, 1]);
+    expect(results.every((r) => (r as { failed: number }).failed === 0)).toBe(true);
+    expect(upserts).toHaveLength(1);
+  });
+
+  it("keeps the claim when the send stays ambiguous after one same-key retry", async () => {
+    sendTrialD1Email.mockResolvedValueOnce("ambiguous").mockResolvedValueOnce("ambiguous");
+    const { service, upserts } = fakeService({ profiles: { data: [trialProfile(26)] } });
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await runLifecycleEmails({ service, now: NOW })).toMatchObject({ sent: 0, failed: 1 });
+    spy.mockRestore();
+    expect(sendTrialD1Email).toHaveBeenCalledTimes(2);
+    expect(sendTrialD1Email.mock.calls[1][3]).toEqual(sendTrialD1Email.mock.calls[0][3]);
+    expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "trial_d1" } }]);
   });
 
   it("never considers a comped account", async () => {
@@ -186,6 +235,13 @@ describe("maybeSendFirstScanReadyEmail", () => {
     expect(snap.answers).toBe(45);
     expect(snap.topCompetitor.name).toBe("Sonrisa Norte");
     expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "first_scan" } }]);
+  });
+
+  it("sends once when two scans of the account finish at the same time", async () => {
+    const { service } = fakeService({ ...snapshotTables, email_sends: { data: [] }, scan_runs: { count: 1 } });
+    const input = { ownerUserId: USER, projectId: "p1", projectDomain: "clinicaaurora.es" };
+    await Promise.all([maybeSendFirstScanReadyEmail(service, input), maybeSendFirstScanReadyEmail(service, input)]);
+    expect(sendFirstScanReadyEmail).toHaveBeenCalledTimes(1);
   });
 
   it("stays silent on any later scan of an account that already scanned before", async () => {

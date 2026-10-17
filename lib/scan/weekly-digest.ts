@@ -85,6 +85,18 @@ function getTopCompetitorMover(
 }
 
 /**
+ * LIFECYCLE-DEDUPE-1 (log §311). The digest keeps no record of what it sent,
+ * so a cron run delivered twice (Vercel documents it can happen) would send
+ * every customer two digests. Resend's `Idempotency-Key` closes that without
+ * a migration: the same key within 24 h returns the first answer (identical
+ * payload) or a 409 (another request in flight, or a different payload), and
+ * neither sends again. One key per project and UTC day of the pass.
+ */
+export function weeklyDigestIdempotencyKey(projectId: string, passStartedAt: Date): string {
+  return `weekly-digest/${projectId}/${passStartedAt.toISOString().slice(0, 10)}`;
+}
+
+/**
  * Weekly digest per project (ALERTS-1 Fase 6b, expanded 2026-07-19 to
  * surface a real snapshot of every core-flow section — Overview,
  * Competitors, Recommendations, Escaneos — instead of just the score
@@ -201,7 +213,7 @@ export async function runWeeklyDigest({
       promptsCount: promptsCount ?? 0,
       competitorsCount: competitorsCount ?? 0,
       scansThisWeek: scansThisWeek ?? 0
-    }, project.owner_user_id as string);
+    }, project.owner_user_id as string, { idempotencyKey: weeklyDigestIdempotencyKey(project.id as string, new Date(startedAt)) });
     sent += 1;
   }
 

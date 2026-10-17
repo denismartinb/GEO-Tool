@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { reconcileExtractedCompetitors, runStructuredExtractionForRun, verifyExtractedMentions } from "./extraction";
+import { buildExtractionUpdate, reconcileExtractedCompetitors, runStructuredExtractionForRun, verifyExtractedMentions } from "./extraction";
+import { deriveBrandFromDomain } from "@/lib/projects/project-form";
+import { mentionLine, summarizeEngines } from "@/components/prompts/engine-summary";
 import { EXTRACTION_CONCURRENCY, EXTRACTION_VERSION } from "./constants";
 import { ExtractionError } from "@/lib/llm/extraction-errors";
 import type { ExtractionOutput } from "@/lib/extraction/schema";
@@ -1165,5 +1167,117 @@ describe("runStructuredExtractionForRun — no row cap (EXTRACTION-RELIABILITY-1
     // every pass's budget and starve rows nothing has looked at yet.
     expect(summary.attempted).toBe(1);
     expect(vi.mocked(extractGeminiStructuredData)).toHaveBeenCalledTimes(1);
+  });
+});
+
+/*
+ * BRAND-SPACING-1 (log §310). Observed 2026-10-12 on elcorteingles.es: a
+ * Claude answer that literally says "El Corte Inglés" was labelled «No te
+ * nombra». The tracked brand is derived from the domain ("Elcorteingles") and
+ * the site blocks bots, so no alias was ever derived; the containment check
+ * of namesPlausiblyMatch rejected the model's correct claim.
+ */
+describe("verifyExtractedMentions — brand written without spaces (BRAND-SPACING-1)", () => {
+  // Fixture: the sentence quoted from the real Claude answer shown on screen.
+  const ECI_ANSWER =
+    "Estos son los grandes almacenes con mas variedad para el hogar en Espana:\n" +
+    "1. El Corte Inglés - La más grande, con amplia selección de muebles, decoración, electrodomésticos y artículos de cocina.\n" +
+    "2. IKEA - Muebles y accesorios a precios asequibles.";
+  const BRAND = deriveBrandFromDomain("elcorteingles.es");
+
+  function claim(displayName: string | null, mentioned = true): ExtractionOutput {
+    return {
+      brand: { mentioned, display_name_found: displayName, evidence: [], position: mentioned ? 1 : null },
+      competitors: [],
+      citations: [],
+      sentiment: "positive",
+      sentiment_drivers: [],
+      other_brands_mentioned: [],
+      summary: "",
+      confidence: "high",
+      notes: []
+    };
+  }
+
+  it("derives the tracked brand without spaces, which is what made the case fail", () => {
+    expect(BRAND).toBe("Elcorteingles");
+  });
+
+  it("counts «El Corte Inglés» against a brand stored as «Elcorteingles»", () => {
+    const result = verifyExtractedMentions(claim("El Corte Inglés"), ECI_ANSWER, BRAND);
+    expect(result.brand.mentioned).toBe(true);
+    expect(result.brand.position).toBe(1);
+  });
+
+  it.each([
+    ["El Corte Ingles", "1. El Corte Ingles - La mas grande."],
+    ["EL CORTE INGLÉS", "1. EL CORTE INGLÉS - La más grande."],
+    ["El  Corte   Inglés", "1. El  Corte   Inglés - La más grande."],
+    // Same text in NFD (decomposed accent) — Unicode-equivalent to the NFC form.
+    ["El Corte Ingle\u0301s", "1. El Corte Ingle\u0301s - La más grande."],
+    ["Elcorteingles", "Compra en Elcorteingles con envio gratis."]
+  ])("counts the spelling %j", (displayName, text) => {
+    expect(verifyExtractedMentions(claim(displayName), text, BRAND).brand.mentioned).toBe(true);
+  });
+
+  it("matches a brand stored with spaces against the space-free spelling", () => {
+    const result = verifyExtractedMentions(claim("Elcorteingles"), "Compra en Elcorteingles hoy.", "El Corte Inglés");
+    expect(result.brand.mentioned).toBe(true);
+  });
+
+  it.each([
+    // A partial name that only becomes a substring once its spaces go.
+    // (A single bare word like "Corte" already passes the pre-existing
+    // containment check against "elcorteingles"; that looseness predates
+    // this rule and is not changed here.)
+    ["Corte Ingles", "Corte Ingles Peluqueros abre en Madrid."],
+    // A different business whose space-free form is longer, not equal.
+    ["El Corte Inglés Viajes", "Reserva con El Corte Inglés Viajes."],
+    // Similar but different letters.
+    ["El Corte Ingenioso", "El Corte Ingenioso es una sastreria."],
+    // A different brand altogether.
+    ["IKEA", ECI_ANSWER]
+  ])("does not count %j", (displayName, text) => {
+    expect(verifyExtractedMentions(claim(displayName), text, BRAND).brand.mentioned).toBe(false);
+  });
+
+  it("still requires the claimed name to be in the raw text", () => {
+    const result = verifyExtractedMentions(claim("El Corte Inglés"), "IKEA y Leroy Merlin son las opciones.", BRAND);
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("does not turn a model non-mention into a mention", () => {
+    const result = verifyExtractedMentions(claim(null, false), ECI_ANSWER, BRAND);
+    expect(result.brand.mentioned).toBe(false);
+  });
+
+  it("does not let a short space-free key match by coincidence", () => {
+    // "B B C" vs "Bbc" would be equal; keys under 4 letters stay on containment only.
+    expect(verifyExtractedMentions(claim("B B C"), "La B B C informa.", "Bbc").brand.mentioned).toBe(false);
+  });
+
+  it("keeps the stored row, its label and the drawer aggregate in agreement, once per answer", async () => {
+    // The name appears twice in the answer; it is still one answer that names the brand.
+    const text = `${ECI_ANSWER}\nEn resumen, El Corte Inglés es la opcion mas completa.`;
+    const update = await buildExtractionUpdate({
+      extracted: claim("El Corte Inglés"),
+      rawResponseText: text,
+      brand: BRAND,
+      brandAliases: [],
+      competitors: [],
+      groundingChunks: [],
+      provider: "claude"
+    });
+    expect(update.brand_mentioned).toBe(true);
+    expect(update.extracted_json.brand.mentioned).toBe(true);
+
+    const rows = [
+      { id: "r1", provider: "claude", sample_index: 0, brand_mentioned: update.brand_mentioned, sentiment: update.sentiment },
+      { id: "r2", provider: "claude", sample_index: 1, brand_mentioned: false, sentiment: "neutral" }
+    ];
+    const [summary] = summarizeEngines(rows, [update.extracted_json as never, null], "elcorteingles.es");
+    expect(summary.answers).toBe(2);
+    expect(summary.mentioned).toBe(1);
+    expect(mentionLine(summary)).toBe("Te nombra en 1 de 2 respuestas");
   });
 });

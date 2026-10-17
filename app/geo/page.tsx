@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { BrandLogo } from "@/components/ui/brand-logo";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { ProcessFlow } from "@/components/blog/process-flow";
 import { FaqAccordion } from "@/components/landing/faq-accordion";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { QUE_SIGNIFICA_GEO_FAQ } from "@/lib/brand/que-significa-geo-faq";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 export const metadata: Metadata = contentMetadata({
   title: "¿Qué significa GEO? Generative Engine Optimization · GenScore",
@@ -405,27 +404,7 @@ export default function GeoExplainerPage() {
       </section>
 
       {/* FOOTER */}
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link href="/" className="lp-logo">
-              <BrandLogo size={19} />
-            </Link>
-            <div className="links">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/geo">Qué es GEO</Link>
-              <Link href="/precios">Precios</Link>
-              <Link href="/blog">Blog</Link>
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/terminos">Términos</Link>
-            </div>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

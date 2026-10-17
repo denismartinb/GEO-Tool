@@ -2,7 +2,7 @@
 
 Tres propuestas presentadas al fundador el 2026-10-17 (artefacto
 https://claude.ai/artifact/FMhLLzgWUR3PwiaDy6MMST). **Elegida: A · Dentro de
-la tarjeta** («La a», 2026-10-17). Log §311.
+la tarjeta** («La a», 2026-10-17). Log §313.
 
 - `propuestas.html`: las tres propuestas, escritorio (1280) y móvil (390), para
   Visión general y Recomendaciones. Abre en la A; el selector de arriba cambia

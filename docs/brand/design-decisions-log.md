@@ -25514,7 +25514,139 @@ cuando se descongelen los textos.
 **Pendiente.** Nada en el envío: la deduplicación de los correos es otra fase
 (§308, LIFECYCLE-DEDUPE-1).
 
-## 311. GSC-CONNECT-CTA-1: invitar a conectar Search Console en Visión general y Recomendaciones (2026-10-17)
+## 310. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
+
+**Caso.** El 2026-10-12, en el proyecto de prueba `elcorteingles.es`, una
+respuesta de Claude a «¿Qué grandes almacenes tienen variedad de productos para
+el hogar en España?» decía literalmente «El Corte Inglés - La más grande…» y la
+pantalla de Prompts la etiquetaba «No te nombra» (0/8 con marca).
+
+**Causa comprobada en código** (sin acceso a la base de datos de producción):
+
+1. El asistente de alta no pide la marca: la deriva del dominio con
+   `deriveBrandFromDomain`, que para `elcorteingles.es` da `Elcorteingles`, sin
+   espacios.
+2. Los alias se derivan leyendo la portada (`deriveBrandAliases`), y
+   elcorteingles.es bloquea bots: sin portada no hay alias.
+3. `verifyMention` (MENTION-VERIFY-1, ADR 0021) sólo acepta el
+   `display_name_found` del extractor si «nombra plausiblemente» la marca, y
+   eso era contención de claves normalizadas: `el corte ingles` no contiene ni
+   está contenida en `elcorteingles`. La mención correcta del extractor se
+   rebajaba a «no mencionada» y se guardaba así en `brand_mentioned`, del que
+   leen la etiqueta del cajón, el recuento por prompt y la puntuación.
+
+Reproducido con una fixture de esa respuesta en
+`lib/scan/extraction.test.ts`: falla sin el cambio y pasa con él.
+
+**Decisión.** `namesPlausiblyMatch` acepta además el mismo nombre con y sin
+espacios: igualdad EXACTA de las claves sin espacios (mínimo 4 letras), nunca
+contención. «El Corte Inglés Viajes», «Corte Ingles» o «El Corte Ingenioso»
+no cuentan por esta regla, y la comprobación (b), que el nombre esté en el
+texto, no cambia. `matchDisplayName` (sólo presentación) lleva la misma regla.
+
+**Qué no se pudo comprobar.** El nombre de marca y los alias guardados en ese
+proyecto, el `display_name_found` original (al rebajar se pone a `null`) y si
+el extractor marcó `mentioned: true` o ya respondió `false` al ver
+«Elcorteingles». Si fue lo segundo, este cambio no basta para esa fila, y lo
+que lo arreglaría es que la marca guardada sea «El Corte Inglés» (editarla o
+un alias).
+
+**Datos históricos.** Las filas ya guardadas no cambian. Para corregirlas hay
+que volver a extraer las respuestas (`raw_response_text` está guardado) de los
+escaneos afectados y reescribir `brand_mentioned`/`extracted_json`; eso cuesta
+una llamada de LLM por respuesta y mueve puntuaciones pasadas. No se ejecuta
+ni se añade migración: lo decide Denis.
+
+**Pendiente conocido.** La contención previa sigue aceptando una palabra suelta
+contenida en la clave de la marca («Corte» frente a «Elcorteingles»). Es
+anterior a este cambio y no se toca aquí. Tampoco cambia `deriveBrandFromDomain`
+ni la cita literal del informe (`findQuote` busca el nombre guardado).
+
+## 311. LIFECYCLE-DEDUPE-1 (2): la reserva previa a todos los correos de la secuencia y clave de Resend en el resumen semanal (2026-10-17)
+
+**Por qué.** Tras §308 el fundador pidió revisar si el duplicado podía pasar
+en otros correos. Revisión, correo a correo:
+
+- **Mismo fallo que el fin de prueba** (leer, enviar, anotar después): D1, D3,
+  último día (`trial_d5`), D+3, D+10 y primer escaneo.
+- **Sin ningún registro**: el resumen semanal de los lunes
+  (`runWeeklyDigest`). Una entrega duplicada del cron mandaba dos resúmenes
+  a cada cliente. `CRON_DIGEST_ENABLED` existe en Vercel (su valor no se pudo
+  leer, es sensible).
+- **Riesgo bajo**: recordatorio de confirmación (sin registro, pero Supabase
+  limita el reenvío al mismo email; no verificado) y avisos internos al
+  operador (vigilante, informe de afiliados), que como mucho repiten un correo
+  al fundador.
+- **Sin riesgo**: Stripe (registro de eventos, §268), bienvenida (el código
+  del enlace sólo se canjea una vez) y caída de puntuación (una por escaneo
+  finalizado, con lease).
+
+**Qué se decide.**
+
+- **`sendClaimedOnce`** (`lib/email/lifecycle/runner.ts`) es el único camino
+  de envío de la secuencia: reclama la fila, carga el contenido una vez, envía
+  con `lifecycleIdempotencyKey(kind, userId)` y aplica la política de §308.
+  `recordSend` desaparece. Sin migración: todos esos tipos ya tienen su fila
+  única en `email_sends`.
+- **Las plantillas de la secuencia devuelven `SendOutcome`** y aceptan la
+  clave como último parámetro.
+- **Resumen semanal: sólo clave de Resend**, `weekly-digest/<proyecto>/<día
+  UTC de la pasada>` (`weeklyDigestIdempotencyKey`). Reservar fila pediría un
+  tipo nuevo en `email_sends`, es decir migración. Con la clave, una segunda
+  petición en 24 h recibe la respuesta cacheada o un 409, y ninguna de las dos
+  envía. No cubre una segunda pasada con más de 24 h de diferencia, que no es
+  el fallo observado.
+
+**Política de fallos.** La misma de §308, ahora para toda la secuencia y con
+los mismos valores por defecto pendientes del fundador. Un D1 o D3 perdido
+por un fallo ambiguo no se reintenta.
+
+**Fuera.** Recordatorio de confirmación y avisos al operador, por el riesgo
+bajo de arriba. Un bloqueo de todo el cron contra solapes sigue anotado y sin
+construir.
+
+## 312. FOOTER-UNIFY-1: un solo pie de página para todo el sitio público (2026-10-17)
+
+**Qué pidió el fundador.** Primero, «la landing de afiliación que esté en el
+pie como programa de afiliados». Después, revisar los pies de todas las
+páginas, porque había varios distintos, y proponer uno único con todos los
+enlaces. Se le enseñaron dos opciones (`docs/design-reference/footer-unify-1/
+opciones.html`) y eligió la **A · Cuatro columnas**.
+
+**Qué había.** Siete versiones del pie, cada una escrita a mano en su fichero.
+Ninguna tenía todos los enlaces: el comprobador gratis y `/demo` no salían en
+ninguna, Cookies sólo en portada y precios, y `/geo`, `/demo` y
+`/gratis/informe-geo` llevaban un pie de cinco o seis enlaces. Las listas
+compartidas de §46/§256/§260 resolvieron qué entraba, pero no impedían que
+cada fichero lo colocara a su manera.
+
+**Qué se decidió.**
+- `components/marketing/public-footer.tsx` es el único pie. Las diez páginas
+  de `MARKETING_SHELLS` lo renderizan y ninguna declara su propio `<footer>`;
+  un test recorre `app/` y `components/` para que no vuelva a aparecer uno.
+- Marca y frase a la izquierda; cuatro columnas: **Producto** (Producto, Cómo
+  funciona, Precios, Videollamada de 20 min), **Gratis** (Comprobador gratis,
+  Informe gratis), **Recursos** (Blog, Estudios, Comparativas, Glosario, Docs,
+  Qué es GEO) y **Empresa** (Qué es GenScore, Quiénes somos, Programa de
+  afiliados, correo de soporte). Debajo, los pagos seguros y la línea legal
+  (Privacidad, Cookies, Términos). Dos columnas por debajo de 720px.
+- Las columnas son `PUBLIC_FOOTER_GROUPS`, construidas a partir de las tres
+  listas compartidas: cada enlace de una lista entra exactamente una vez, y lo
+  comprueba el test.
+- «Afiliados» pasa a **«Programa de afiliados»**.
+- Sale «Recomendaciones» (`#pantallas`), un ancla que sólo existía en la
+  portada.
+- Contacto es el correo de soporte porque no hay página de contacto.
+- «Preferencias de cookies» reabre el aviso, pero **sólo se pinta si el aviso
+  existe** (PAID-ADS-1 duerme hasta que haya un id de anuncios); si no, sería
+  un control muerto.
+
+**Pendiente.** El aviso legal no está en la línea legal porque la página no se
+ha publicado; cuando salga, se añade a `PUBLIC_FOOTER_LEGAL_LINKS`. El pie es
+más alto que antes en móvil (unas dos pantallas de iPhone); el fundador lo
+aceptó al elegir la opción A.
+
+## 313. GSC-CONNECT-CTA-1: invitar a conectar Search Console en Visión general y Recomendaciones (2026-10-17)
 
 **Qué pidió el fundador.** «El SEO es imprescindible para tener GEO»: una
 llamada a conectar Search Console en la tarjeta SEO de Visión general y en

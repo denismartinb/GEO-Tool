@@ -369,3 +369,9 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   un enlace o una fila al pie, hay que volver a medir esa altura: el último
   enlace quedaba tapado por un pie de tres filas y nada avisaba de que la
   lista scrolleaba (log §301).
+- **El sitio público tiene un solo pie: `PublicFooter`.** Ninguna página
+  escribe su propio `<footer>`; así llegó a haber siete versiones distintas y
+  el comprobador y la videollamada no salían en ninguna (log §312). Un enlace
+  nuevo va a una de las listas de `components/marketing-content-links.ts` o a
+  `PUBLIC_FOOTER_GROUPS`, nunca a una página. Lo vigila
+  `marketing-content-links.test.ts`.

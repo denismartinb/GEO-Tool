@@ -1,11 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader } from "@/components/marketing/public-header";
-import { BrandLogo } from "@/components/ui/brand-logo";
-import { PaymentBadgesRow } from "@/components/marketing/payment-badges";
 import { DemoBooking } from "@/components/demo/demo-booking";
 import { contentMetadata } from "@/lib/seo/metadata";
 import "./demo.css";
+import { PublicFooter } from "@/components/marketing/public-footer";
 
 /**
  * DEMO-CALL-1 — «Agenda una videollamada de 20 min con el equipo de GenScore».
@@ -89,26 +88,7 @@ export default function DemoPage() {
         </div>
       </main>
 
-      <footer className="lp-footer">
-        <div className="lp-inner">
-          <div className="row1">
-            <Link href="/" className="lp-logo">
-              <BrandLogo size={19} />
-            </Link>
-            <nav className="links" aria-label="Pie de página">
-              <Link href="/#producto">Producto</Link>
-              <Link href="/precios">Precios</Link>
-              <Link href="/blog">Blog</Link>
-              <Link href="/privacidad">Privacidad</Link>
-              <Link href="/terminos">Términos</Link>
-            </nav>
-          </div>
-          <div className="lp-footer-pay">
-            <PaymentBadgesRow />
-          </div>
-          <div className="copy">© 2026 GenScore · Generative Engine Optimization para empresas y agencias.</div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   );
 }

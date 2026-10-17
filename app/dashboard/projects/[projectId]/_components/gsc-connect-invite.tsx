@@ -2,7 +2,7 @@ import { Icon } from "@/components/ui/icon";
 import { GoogleMark } from "@/components/search-console/google-mark";
 
 /**
- * GSC-CONNECT-CTA-1 (log §311, design: docs/design-reference/gsc-connect-cta-1/,
+ * GSC-CONNECT-CTA-1 (log §313, design: docs/design-reference/gsc-connect-cta-1/,
  * proposal A). The invitation to connect Search Console, where its data
  * would appear: the Google half of Visión general's SEO card and the
  * «Con tus datos de Google» row of Recomendaciones. Only rendered while the
@@ -20,7 +20,7 @@ export function gscConnectHref(projectId: string) {
   return `/api/search-console/connect?projectId=${projectId}`;
 }
 
-// Copy by the founder (2026-10-17, log §311).
+// Copy by the founder (2026-10-17, log §313).
 const GAINS = [
   "En qué puesto sales para cada búsqueda.",
   "Recomendaciones para mejorar en IA y SEO.",
