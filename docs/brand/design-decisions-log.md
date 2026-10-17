@@ -25824,3 +25824,6 @@ OpenAI (el mismo fichero que ya usa el producto) y Grok Bot el de Grok, de
 paquetes de iconos públicos; Instinct y Tab siguen con inicial porque no hay
 una marca suya alcanzable desde aquí. La valoración de Instinct pasa al
 subtítulo y el post deja de declarar `heroStat`.
+Después el fundador reescribió el subtítulo con sus palabras, ya sin la
+cifra. Los ficheros de Meta y Grok se renombraron porque el navegador seguía
+sirviendo la inicial que tenían antes con el mismo nombre.

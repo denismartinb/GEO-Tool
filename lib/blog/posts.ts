@@ -719,12 +719,12 @@ export const BLOG_POSTS: BlogPost[] = [
     metaDescription:
       "Meta, OpenAI, Instinct, Grok y Tab ya tienen agentes que compran por ti. Qué hace cada uno, cómo pagan, si llegan a España y qué debe preparar tu tienda.",
     description:
-      "Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son los agentes personales de IA que en el otoño de 2026 empezaron a comprar por sus usuarios, y uno de ellos, Instinct, ya está valorado en 10.000 millones de dólares. Qué hace cada uno, cómo paga, dónde funciona, por qué Amazon los bloquea y Shopify les abre la puerta, y qué tiene que preparar una tienda online en España.",
+      "Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son los agentes personales de IA que en el otoño de 2026 empezaron a comprar por sus usuarios. ¿Qué hace cada uno? ¿Cómo pagan? ¿Por qué Amazon los bloquea y Shopify les abre la puerta? ¿Qué tiene que preparar una tienda online en España?",
     datePublished: "2026-10-17",
     coverImage: "/blog/agentes-personales-de-ia-que-compran/cover.webp",
     // Official logos where a published mark exists (Meta, OpenAI, Grok);
     // Instinct and Tab keep monogram tiles (log §316).
-    heroLogos: [[{ name: "Muse", src: "/blog/agentes-personales-de-ia-que-compran/agentes/muse.svg" }, { name: "Dots", src: "/brand/engines/chatgpt.svg" }, { name: "Instinct", src: "/blog/agentes-personales-de-ia-que-compran/agentes/instinct.svg" }, { name: "Grok Bot", src: "/blog/agentes-personales-de-ia-que-compran/agentes/grok-bot.svg" }, { name: "Tab", src: "/blog/agentes-personales-de-ia-que-compran/agentes/tab.svg" }]],
+    heroLogos: [[{ name: "Muse", src: "/blog/agentes-personales-de-ia-que-compran/agentes/meta.svg" }, { name: "Dots", src: "/brand/engines/chatgpt.svg" }, { name: "Instinct", src: "/blog/agentes-personales-de-ia-que-compran/agentes/instinct.svg" }, { name: "Grok Bot", src: "/blog/agentes-personales-de-ia-que-compran/agentes/grok.svg" }, { name: "Tab", src: "/blog/agentes-personales-de-ia-que-compran/agentes/tab.svg" }]],
     coverIcon: "users",
     // AGENTIC-POSTS-1 (log §316). Meta newsroom (Sep 2026), TechCrunch on
     // Dots, Instinct and Tab (Aug-Oct 2026), WIRED's Dots test (Oct 2026),
