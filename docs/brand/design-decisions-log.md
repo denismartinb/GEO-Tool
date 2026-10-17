@@ -25478,7 +25478,43 @@ formato de la clave, si se extiende a los demás tipos, y verificar el alcance
 real (logs de Vercel con tres invocaciones `vercel-cron/1.0` a las 07:45,
 tres ids en Resend, filas de `email_sends` de esa cuenta).
 
-## 309. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
+## 309. LIFECYCLE-COPY-COHERENCE-1: el titular de los correos dice lo que dice el dato (2026-10-17)
+
+**Qué pasó.** El correo de recuperación D+3 (§238) llegó a alberdiderma.es con
+«Vas por delante en la IA. ¿Sigues por delante?» encima de una barra que decía
+«0 de 1». La plantilla elegía «vas por delante» siempre que ningún rival
+tuviera más menciones que la marca: sin rival nombrado y con la marca sin
+nombrar, eso era 0 contra nada, y salía el titular de líder. Mismo fallo que
+la frase del resumen de Visión general antes de AUDIT-TRUTH-1 (§278), un nivel
+más allá.
+
+**Qué se decide.**
+- **El D+3 elige su titular con `resolveWinbackD3Angle`**, pura y con tests,
+  con el mismo razonamiento que `competitive-claim.ts`: ir por delante es una
+  comparación, así que exige un rival nombrado por detrás, la marca nombrada y
+  una muestra suficiente (`hasSufficientSample`). Cinco casos: detrás (como
+  antes), delante, «Ibas a la par con X», «En tu último escaneo, la IA no te
+  nombraba» (marca sin nombrar y nadie por delante) y una pregunta neutra
+  («¿Cómo te ve hoy la IA?») sin rival o con muestra pequeña.
+- **Ningún correo de ciclo de vida imprime «N de M respuestas».** Las barras
+  de comparación, el bloque «Tu último escaneo» del fin de prueba y el asunto
+  y la vista previa del correo de primer escaneo pasan a porcentajes con
+  `formatShare`, la misma regla que el informe (`.claude/rules/report.md`) y
+  que el fundador fijó para todo lo que lee un cliente. Las barras pasan a
+  medir la proporción de respuestas, no la distancia al máximo.
+
+**Qué no cambia.** El recuento de plazas del precio fundador («Quedan N
+cuentas») sigue igual: es el dato real de Stripe (§237) y es el mismo texto
+que `/precios`, congelado por el fundador (§273). Tampoco «Volver a medir a
+diario» / «seguir a diario»: Pro de pago escanea cada 2 días desde §273, pero
+`/precios` sigue diciendo «Diario» por decisión del fundador, y los correos
+siguen a `/precios`. Las dos quedan anotadas como incoherencias conocidas para
+cuando se descongelen los textos.
+
+**Pendiente.** Nada en el envío: la deduplicación de los correos es otra fase
+(§308, LIFECYCLE-DEDUPE-1).
+
+## 310. BRAND-SPACING-1: la marca escrita sin espacios ya no tumba una mención literal (2026-10-17)
 
 **Caso.** El 2026-10-12, en el proyecto de prueba `elcorteingles.es`, una
 respuesta de Claude a «¿Qué grandes almacenes tienen variedad de productos para

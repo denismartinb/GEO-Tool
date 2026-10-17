@@ -79,7 +79,8 @@ describe("primer escaneo listo", () => {
   it("puts the account's own figures in the subject and the body", async () => {
     await sendFirstScanReadyEmail(TO, USER, snapshot);
     const { subject, html } = last();
-    expect(subject).toBe("clinicaaurora.es: la IA te menciona en 6 de 45 respuestas");
+    expect(subject).toBe("clinicaaurora.es: la IA te menciona en el 13% de las respuestas");
+    expect(html).not.toMatch(/\d+ de \d+/);
     expect(html).toContain("Clínica Sonrisa Norte");
     expect(html).toContain("6 recomendaciones");
     expect(html).toContain("/dashboard/projects/p1");
