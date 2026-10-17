@@ -29,30 +29,82 @@ export async function sendEmail(
   headers?: Record<string, string>,
   replyTo: string = SUPPORT_EMAIL
 ): Promise<boolean> {
-  const resend = getResendClient();
-  if (!resend) return false;
+  return (await sendEmailWithOutcome({ to, subject, html, headers, replyTo })) === "sent";
+}
 
+/**
+ * LIFECYCLE-DEDUPE-1. What happened to a send, for the callers that have to
+ * act on it (`sendTrialEndEmailOnce` releases or keeps its claim):
+ *
+ * - `sent`: Resend accepted it.
+ * - `not_sent`: nothing went out, for sure. No client configured, or Resend
+ *   answered with a 4xx that is not an idempotency conflict (validation,
+ *   key, quota, rate limit). Safe to try again later.
+ * - `ambiguous`: it may or may not have gone out. A transport failure (the
+ *   SDK reports it as `statusCode: null`), a 5xx, a 409 on the idempotency
+ *   key, or a throw. Only a retry with the SAME idempotency key is safe.
+ */
+export type SendOutcome = "sent" | "not_sent" | "ambiguous";
+
+export function classifyResendError(error: { statusCode?: number | null; name?: string } | null): SendOutcome {
+  if (!error) return "sent";
+  const status = error.statusCode;
+  if (typeof status === "number" && status >= 400 && status < 500 && status !== 409) return "not_sent";
+  return "ambiguous";
+}
+
+export type EmailMessage = {
+  to: string;
+  subject: string;
+  html: string;
+  headers?: Record<string, string>;
+  replyTo?: string;
+};
+
+/**
+ * `idempotencyKey` goes to Resend as `Idempotency-Key`: the same key and the
+ * same payload within 24 h return the first answer without sending again.
+ * It is per call, never set here by default, because only a caller that
+ * retries knows what "the same email" means.
+ */
+export async function sendEmailWithOutcome(
+  message: EmailMessage,
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
+  const resend = getResendClient();
+  if (!resend) return "not_sent";
+
+  const { to, subject, html, headers, replyTo = SUPPORT_EMAIL } = message;
   try {
-    const { error } = await resend.emails.send({
+    const payload = {
       from: getEmailFromAddress(),
       to,
       replyTo,
       subject,
       html,
       ...(headers ? { headers } : {})
-    });
+    };
+    const { error } = options.idempotencyKey
+      ? await resend.emails.send(payload, { idempotencyKey: options.idempotencyKey })
+      : await resend.emails.send(payload);
+    const outcome = classifyResendError(error);
     if (error) {
-      console.error("[geo:email] Resend rejected the send", { to, subject, message: error.message });
-      return false;
+      console.error("[geo:email] Resend rejected the send", {
+        to,
+        subject,
+        outcome,
+        status: error.statusCode,
+        message: error.message
+      });
     }
-    return true;
+    return outcome;
   } catch (sendError) {
     console.error("[geo:email] failed to send", {
       to,
       subject,
       message: sendError instanceof Error ? sendError.message : String(sendError)
     });
-    return false;
+    return "ambiguous";
   }
 }
 
@@ -331,11 +383,12 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
   );
 }
 
-export async function sendTrialEndedEmail(to: string): Promise<boolean> {
-  return sendEmail(
-    to,
-    "Tu prueba de Pro ha terminado",
-    wrap(
+export async function sendTrialEndedEmail(to: string, options: { idempotencyKey?: string } = {}): Promise<SendOutcome> {
+  return sendEmailWithOutcome(
+    {
+      to,
+      subject: "Tu prueba de Pro ha terminado",
+      html: wrap(
       `
       ${eyebrow("Tu prueba ha terminado", "#5B6B82")}
       ${heading("Se acabaron tus 7 días de Pro")}
@@ -345,8 +398,10 @@ export async function sendTrialEndedEmail(to: string): Promise<boolean> {
       ${paragraph("¿Te ha resultado útil ver cómo te menciona la IA? Elige un plan y volvemos a escanear desde donde lo dejaste.")}
       ${button("https://www.genscore.es/dashboard/settings?openPlan=pro#plan", "Elegir plan")}
     `,
-      { preheader: "Tu cuenta está en solo lectura — tus datos siguen intactos." }
-    )
+        { preheader: "Tu cuenta está en solo lectura — tus datos siguen intactos." }
+      )
+    },
+    options
   );
 }
 
