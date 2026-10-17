@@ -53,6 +53,22 @@ export const DEFAULT_PUBLIC_CHECK_LIMITS: PublicCheckLimits = {
   perDomainPerDay: 3
 };
 
+/**
+ * AGENTIC-COMMERCE-1: el comprobador agéntico (`/comercio-agentico`) cuenta
+ * en esta misma tabla, con `engine = AGENTIC_CHECK_ENGINE`, para no pedir una
+ * migración. No gasta LLM, así que tiene sus propios límites y **no puede
+ * comerse los del comprobador de ChatGPT**: cada uno cuenta sólo sus filas.
+ */
+export const AGENTIC_CHECK_ENGINE = "agentic";
+
+export const AGENTIC_CHECK_LIMITS: PublicCheckLimits = {
+  // Sin LLM: el techo acota cuántas peticiones salen de nuestros servidores
+  // hacia webs de terceros, no una factura.
+  globalPerDay: 1000,
+  perIpPerDay: 5,
+  perDomainPerDay: 5
+};
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_PREFIX = "[geo:free-checker-rate-limit]";
 
@@ -74,6 +90,11 @@ export type PublicCheckLimitResult =
 export type PublicCheckLimitDeps = {
   now?: () => number;
   limits?: PublicCheckLimits;
+  /**
+   * Qué filas cuentan. Sin valor, las del comprobador de ChatGPT (todo lo que
+   * no sea agéntico); con `AGENTIC_CHECK_ENGINE`, sólo las agénticas.
+   */
+  engine?: typeof AGENTIC_CHECK_ENGINE;
 };
 
 /**
@@ -139,6 +160,7 @@ export async function checkPublicCheckLimits(
       .from("public_checks")
       .select("id", { count: "exact", head: true })
       .gte("created_at", windowStart);
+    query = deps.engine ? query.eq("engine", deps.engine) : query.neq("engine", AGENTIC_CHECK_ENGINE);
     if (column && value !== undefined) query = query.eq(column, value);
     return query;
   };
