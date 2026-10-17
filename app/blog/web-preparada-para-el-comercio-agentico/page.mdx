@@ -99,14 +99,14 @@ decisión casi tomada.
 |---|---|---|
 | 1. La IA te nombra en tu categoría | Encontrarte | <Pill tone="si">Sí</Pill> |
 | 2. Los bots de búsqueda de la IA pueden entrar | Encontrarte | <Pill tone="si">Sí</Pill> |
-| 3. Datos estructurados de producto | Entenderte | <Pill tone="neutral">En parte</Pill> |
+| 3. Datos estructurados de producto | Entenderte | <Pill tone="si">Sí</Pill> |
 | 4. Precio y stock iguales en todas partes | Entenderte | <Pill tone="neutral">No</Pill> |
-| 5. Envío y devoluciones legibles | Entenderte | <Pill tone="neutral">No</Pill> |
-| 6. Catálogo en los canales que leen los agentes | Entenderte | <Pill tone="neutral">No</Pill> |
+| 5. Envío y devoluciones legibles | Entenderte | <Pill tone="si">Sí</Pill> |
+| 6. Catálogo en los canales que leen los agentes | Entenderte | <Pill tone="neutral">En parte</Pill> |
 | 7. Respuestas directas a las dudas de compra | Entenderte | <Pill tone="si">Sí</Pill> |
 | 8. Lo que se dice de ti fuera de tu web | Elegirte | <Pill tone="neutral">En parte</Pill> |
-| 9. La protección anti-bots no echa a los agentes | Comprarte | <Pill tone="neutral">No</Pill> |
-| 10. Un checkout que no exige pasos imposibles | Comprarte | <Pill tone="neutral">No</Pill> |
+| 9. La protección anti-bots no echa a los agentes | Comprarte | <Pill tone="si">Sí</Pill> |
+| 10. Un checkout que no exige pasos imposibles | Comprarte | <Pill tone="neutral">En parte</Pill> |
 
 </CompareTable>
 
@@ -234,12 +234,13 @@ revisa si tu robots.txt deja entrar a los bots de la IA, si tus páginas llevan
 datos estructurados (también de tipo producto) y si responden en el primer
 párrafo.
 
-Lo específico de la compra (coherencia de precio y stock entre canales, feeds,
-políticas de envío y devolución, protección anti-bots y checkout) no lo revisa
-todavía. Por eso la tabla de arriba lo marca como «No». Estamos construyendo
-una comprobación específica para esa parte, que dirá qué cambiar para que un
-agente pueda leer tu tienda y comprar en ella. La contaremos aquí cuando esté
-lista.
+Lo específico de la compra lo revisa el <a href="/comercio-agentico">comprobador gratuito de comercio agéntico</a>: si tu web pone un reto a las
+visitas automáticas, si tus fichas declaran precio, stock, envío y
+devoluciones como datos, si publicas un feed de producto y qué enseña la ficha
+antes del pago. Te dice qué cambiar para que un agente pueda leer tu tienda y
+comprar en ella. Lo que no revisa es si el precio y el stock coinciden en todos
+tus canales, ni recorre el checkout entero; por eso la tabla de arriba marca
+esas dos como «No» y «En parte».
 
 <Verdict title="Empieza por las dos primeras">
 

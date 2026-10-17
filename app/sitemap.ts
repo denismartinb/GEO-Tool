@@ -52,6 +52,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/gratis/informe-geo", lastModified: "2026-10-09" },
   { path: "/demo", lastModified: "2026-10-10" },
   { path: "/afiliados", lastModified: "2026-10-10" },
+  { path: "/comercio-agentico", lastModified: "2026-10-17" },
   { path: "/que-es-genscore", lastModified: "2026-08-15" },
   { path: "/sobre-genscore", lastModified: "2026-10-09" },
   { path: "/estudios", lastModified: studiesLastModified() },

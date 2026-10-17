@@ -11,7 +11,9 @@ import { avatarInitials, showsPlanBadge } from "@/lib/account-chip";
 import { useSessionUser, type SessionUser } from "@/lib/use-session-user";
 import { FREE_REPORT_PATH } from "@/lib/free-report/promo";
 
-type NavItem = { anchor: string; label: string } | { href: string; label: string; lead?: boolean };
+type NavItem =
+  | { anchor: string; label: string }
+  | { href: string; label: string; lead?: boolean; isNew?: boolean };
 
 
 /**
@@ -98,6 +100,9 @@ const PUBLIC_NAV_ITEMS: NavItem[] = [
   { anchor: "producto", label: "Producto" },
   { anchor: "como", label: "Cómo funciona" },
   { href: "/geo", label: "Qué es GEO" },
+  // AGENTIC-COMMERCE-1: the agentic-commerce landing, tagged «Nuevo» but not
+  // highlighted (the highlight belongs to the free report).
+  { href: "/comercio-agentico", label: "Comercio agéntico", isNew: true },
   { href: "/precios", label: "Precios" },
   { href: "/blog", label: "Blog" },
   // FREE-REPORT-2 (log §252): the free report, highlighted and last, on every
@@ -165,7 +170,13 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
   const links = PUBLIC_NAV_ITEMS.map((item) =>
     "anchor" in item
       ? { href: isHome ? `#${item.anchor}` : `/#${item.anchor}`, label: item.label, isAnchor: true }
-      : { href: item.href, label: item.label, isAnchor: false, lead: "lead" in item && item.lead === true }
+      : {
+          href: item.href,
+          label: item.label,
+          isAnchor: false,
+          lead: "lead" in item && item.lead === true,
+          isNew: "isNew" in item && item.isNew === true
+        }
   );
 
   return (
@@ -205,7 +216,7 @@ export function PublicHeader({ hero = false, activeHref }: { hero?: boolean; act
                 .join(" ")}
             >
               {l.label}
-              {"lead" in l && l.lead ? <span className="lp-nav-new">Nuevo</span> : null}
+              {("lead" in l && l.lead) || ("isNew" in l && l.isNew) ? <span className="lp-nav-new">Nuevo</span> : null}
             </Link>
           )
         )}

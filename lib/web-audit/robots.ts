@@ -133,6 +133,15 @@ export function resolveGooglebotAccess(content: string): boolean {
   return agentAllowed(parseGroups(content), "Googlebot");
 }
 
+/**
+ * Same simplified rules for any user-agent token. The agentic audit
+ * (AGENTIC-COMMERCE-1) asks about the assistants' own tokens
+ * (`ChatGPT-User`, `Claude-User`…), which are not AI-bot-card entries.
+ */
+export function resolveAgentTokenAccess(content: string, token: string): boolean {
+  return agentAllowed(parseGroups(content), token);
+}
+
 const TXT_FETCH_TIMEOUT_MS = 4_000;
 const TXT_MAX_BYTES = 128 * 1024;
 
