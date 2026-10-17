@@ -17,7 +17,7 @@ import {
   trialDaysLeft,
   type TrialEmailDecision
 } from "@/lib/email/lifecycle/schedule";
-import { sendTrialEndedEmail } from "@/lib/email/transactional";
+import { sendTrialEndedEmail, type SendOutcome } from "@/lib/email/transactional";
 import { getSiteUrl } from "@/lib/site-url";
 import { proVsFreeRows, resolvePlanOffer } from "@/lib/email/lifecycle/offers";
 import { loadReportInput } from "@/lib/report/report-data";
@@ -42,7 +42,9 @@ import {
  *
  * Every figure is read here, from the account's own rows, at send time; the
  * templates never invent one. A send is recorded in `email_sends` only after
- * Resend accepted it, so a failed send is retried by the next pass.
+ * Resend accepted it, so a failed send is retried by the next pass. The
+ * exception is the end-of-trial email, which claims its row BEFORE sending
+ * and releases it if nothing went out (`sendTrialEndEmailOnce`, log §308).
  */
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -431,13 +433,66 @@ type TrialEndTarget = {
 };
 
 /**
+ * LIFECYCLE-DEDUPE-1. The `email_sends` row of an end-of-trial email is
+ * CLAIMED before sending, not written after. The upsert is
+ * `ON CONFLICT DO NOTHING RETURNING id` on the `(owner_user_id, kind)`
+ * unique index (0037): of N concurrent callers, exactly one gets a row back,
+ * and only that one sends. Reading `email_sends` and recording after Resend
+ * left a window of the whole send open, and on 2026-10-17 the same email
+ * reached one inbox three times in the same second (log §308). Vercel
+ * documents that a cron run can be delivered more than once.
+ *
+ * Returns the claim's id, `null` when someone else holds it, `undefined`
+ * when the claim itself failed (nothing sent, the next pass retries).
+ */
+async function claimSend(service: Service, ownerUserId: string, kind: string): Promise<string | null | undefined> {
+  const { data, error } = await service
+    .from("email_sends")
+    .upsert({ owner_user_id: ownerUserId, kind }, { onConflict: "owner_user_id,kind", ignoreDuplicates: true })
+    .select("id");
+  if (error) {
+    console.error("[geo:lifecycle] could not claim the send; not sending", { kind, message: error.message });
+    return undefined;
+  }
+  const row = (data as Array<{ id: string }> | null)?.[0];
+  return row ? row.id : null;
+}
+
+/** Frees a claim whose email surely did not go out, so the next pass can try again. */
+async function releaseClaim(service: Service, claimId: string, kind: string): Promise<void> {
+  const { error } = await service.from("email_sends").delete().eq("id", claimId);
+  if (error) {
+    // The row stays: this email will not be retried. Worth an operator's eye.
+    console.error("[geo:lifecycle] email not sent and its claim not released", { kind, message: error.message });
+  }
+}
+
+/**
+ * Resend's `Idempotency-Key` for a lifecycle email: one per account and kind.
+ * The same key and payload within 24 h return the first answer instead of
+ * sending again, which is what makes the retry after an ambiguous failure safe.
+ */
+export function lifecycleIdempotencyKey(kind: string, userId: string): string {
+  return `lifecycle/${kind}/${userId}`;
+}
+
+/**
  * LIFECYCLE-WINBACK-1 (log §238). Sends the end-of-trial email once, either
  * version, and records it — which is what anchors D+3 and D+10. Shared by
  * the daily cron and by `applyTrialExpiry` (the customer opening the console
- * after the end), so whichever gets there first sends it and the other sees
- * the `email_sends` row. Whoever opted out of "consejos y ofertas" gets the
- * plain service email without an offer (log §232), recorded the same way so
+ * after the end), so whichever gets there first claims it and the other
+ * finds the claim taken. Whoever opted out of "consejos y ofertas" gets the
+ * plain service email without an offer (log §232), claimed the same way so
  * it is not repeated; the win-back emails then skip them.
+ *
+ * Failure policy (LIFECYCLE-DEDUPE-1, log §308; defaults pending the
+ * founder's decision):
+ * - `not_sent` (no client, a 4xx): the claim is released; the next pass retries.
+ * - `ambiguous` (transport, 5xx, 409, throw): one retry with the same
+ *   idempotency key and the same payload. Still ambiguous, the claim is
+ *   KEPT: the email may be lost, but it is never sent twice.
+ * - A crash between the claim and the send leaves the claim: that email is
+ *   lost, accepted and documented. The «tardía» version does not recover it.
  *
  * Returns whether an email went out.
  */
@@ -460,17 +515,45 @@ export async function sendTrialEndEmailOnce(
   );
   if (!decision) return false;
 
-  const delivered = target.lifecycleOptIn
-    ? await sendTrialEndedOfferEmail(target.email, target.userId, {
+  // The read above is only the cheap filter. The claim is the gate.
+  const claimId = await claimSend(service, target.userId, decision.kind);
+  if (!claimId) return false;
+
+  const idempotencyKey = lifecycleIdempotencyKey(decision.kind, target.userId);
+  let send: () => Promise<SendOutcome>;
+  try {
+    // Everything the email says is loaded once, so a retry sends the exact
+    // same payload — Resend only dedupes a key with an identical body.
+    if (target.lifecycleOptIn) {
+      const input = {
         late: decision.kind === "trial_ended_late",
         trialEndsAt: target.trialEndsAt,
         snapshot: await loadMainSnapshot(service, target.userId),
         pro: await resolvePlanOffer("pro"),
         starter: await resolvePlanOffer("starter")
-      })
-    : await sendTrialEndedEmail(target.email);
-  if (delivered) await recordSend(service, target.userId, decision.kind);
-  return delivered;
+      };
+      send = () => sendTrialEndedOfferEmail(target.email, target.userId, input, { idempotencyKey });
+    } else {
+      send = () => sendTrialEndedEmail(target.email, { idempotencyKey });
+    }
+  } catch (loadError) {
+    // Nothing was sent: free the claim and let the caller see the failure.
+    await releaseClaim(service, claimId, decision.kind);
+    throw loadError;
+  }
+
+  let outcome = await send();
+  if (outcome === "ambiguous") outcome = await send();
+
+  if (outcome === "sent") return true;
+  if (outcome === "not_sent") {
+    await releaseClaim(service, claimId, decision.kind);
+    return false;
+  }
+  console.error("[geo:lifecycle] end-of-trial email may not have gone out; keeping the claim so it is never sent twice", {
+    kind: decision.kind
+  });
+  return false;
 }
 
 /**

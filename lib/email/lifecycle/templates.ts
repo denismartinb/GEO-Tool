@@ -13,6 +13,8 @@ import {
   scoreBar,
   sectionLabel,
   sendEmail,
+  sendEmailWithOutcome,
+  type SendOutcome,
   statCell,
   statRow,
   subtext,
@@ -529,10 +531,11 @@ function lastScanBlock(snap: RunSnapshot | null): string {
 export async function sendTrialEndedOfferEmail(
   to: string,
   userId: string,
-  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer }
-): Promise<boolean> {
+  input: { late: boolean; trialEndsAt: Date; snapshot: RunSnapshot | null; pro: PlanOffer; starter: PlanOffer },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = lifecycleEnvelope(userId);
-  if (!envelope) return false;
+  if (!envelope) return "not_sent";
 
   const campaign = input.late ? "trial_ended_late" : "trial_ended";
   const endDate = formatDateLong(input.trialEndsAt);
@@ -575,7 +578,7 @@ export async function sendTrialEndedOfferEmail(
         : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
     }
   );
-  return sendEmail(to, subject, html, envelope.headers);
+  return sendEmailWithOutcome({ to, subject, html, headers: envelope.headers }, options);
 }
 
 /**
