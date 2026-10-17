@@ -65,6 +65,14 @@ igual.
 - **Un envío se anota en `email_sends` sólo si Resend lo aceptó.** Anotar
   antes convierte un fallo de envío en un correo perdido para siempre (§233;
   misma regla que el deduplicado de avisos de `.claude/rules/scan.md`).
+  **Excepción: el fin de prueba se reclama ANTES de enviarse** (§308). Leer y
+  anotar después dejaba abierta toda la llamada a Resend, y una entrega
+  duplicada del cron mandó el mismo correo tres veces en un segundo. La fila
+  se inserta con `ignoreDuplicates` + `.select()` y sólo envía quien la
+  recibe; se libera si el envío es `not_sent`, y se mantiene si sigue
+  `ambiguous` tras un reintento con la misma clave de idempotencia
+  (`lifecycleIdempotencyKey`). Un correo nuevo que necesite «una vez, gane
+  quien gane» copia este patrón, no el de anotar después.
 - **Cifras de verdad o variante sin cifra.** Menciones sobre respuestas, no
   sobre prompts; la Puntuación GEO con `resolveGeoScore`; precios de `PLANS`
   y promo sólo si `getActivePromoPlanIds()` la incluye. Ninguna plantilla
