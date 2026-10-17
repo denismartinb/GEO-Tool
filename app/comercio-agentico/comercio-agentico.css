@@ -256,9 +256,6 @@
 .ca-door b{display:flex;justify-content:space-between;gap:8px;font-size:14px}
 .ca-door p{margin:6px 0 0;font-size:13px;color:#b9c5e2}
 .ca-v-open{color:#6ee7b7}.ca-v-closed{color:#fca5a5}
-.ca-faq details{background:#fff;border:1px solid var(--ca-line);border-radius:14px;padding:14px 16px;margin-bottom:10px}
-.ca-faq summary{font-weight:700;cursor:pointer;font-size:15px}
-.ca-faq p{color:var(--ca-ink-2);margin:10px 0 0}
 .ca-cta-band{background:linear-gradient(135deg,#eef2ff,#e6f9fb);border:1px solid #dbe4f7;border-radius:24px;padding:40px;text-align:center}
 
 .ca-result{display:none;margin:22px auto 0;max-width:620px;text-align:left}
@@ -380,8 +377,7 @@
 .ca-kick-night{color:#7fdbe6}
 .ca-agents,.ca-how{margin-top:28px}
 .ca-page .ca-psi{margin-top:18px}
-.ca-faq-head{margin-bottom:22px}
-.ca-faq-more{text-align:center;color:var(--ca-ink-3);font-size:13.5px;margin:16px 0 0}
+.ca-faq-more{text-align:center;color:var(--ca-ink-3);font-size:13.5px;margin:28px 0 0}
 .ca-faq-more a{color:var(--ca-blue);font-weight:650}
 .ca-cta-h{font-size:36px}
 .ca-cta-band .ca-sub{margin:0 auto 18px}

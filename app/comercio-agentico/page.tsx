@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { FaqAccordion } from "@/components/landing/faq-accordion";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { PublicFooter } from "@/components/marketing/public-footer";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
@@ -61,7 +62,7 @@ const AGENTS = [
   { name: "Dots", by: "OpenAI", logo: "/comercio-agentico/chatgpt.svg", full: false, pays: "No publicado", where: "Planes Pro y Business Premium" },
   { name: "Instinct", by: "Startup", logo: "/comercio-agentico/instinct-logo.webp", full: true, pays: "Shop Pay en tiendas Shopify", where: "Por invitación" },
   { name: "Grok Bot", by: "xAI", logo: "/comercio-agentico/grok-bot.svg", full: false, pays: "Tarjeta virtual de Link", where: "EE. UU." },
-  { name: "Tab", by: "Startup", logo: "/comercio-agentico/tab-logo.webp", full: true, pays: "Monedero propio", where: "Países no publicados" }
+  { name: "Tab", by: "Startup", logo: "/comercio-agentico/tab-logo.webp", full: true, pays: "Monedero propio", where: "EE. UU." }
 ];
 
 export default function AgenticCommercePage() {
@@ -144,7 +145,7 @@ export default function AgenticCommercePage() {
                 <div className="ca-mode-tx">
                   <span className="ca-mode-k">Ya pasa hoy, en cualquier tienda</span>
                   <h3 className="ca-mode-h">Con navegador</h3>
-                  <p>El agente abre tu web como una persona, lee la ficha y rellena el checkout. No necesita que hagas nada para intentarlo.</p>
+                  <p>El agente abre tu web como una persona, lee la ficha y rellena el checkout. Tu tienda debe estar optimizada para permitir la navegación agéntica sin obstáculos.</p>
                 </div>
               </div>
               <div className="ca-mode">
@@ -308,17 +309,27 @@ export default function AgenticCommercePage() {
           <PsiExample />
         </section>
 
-        <section className="ca-sec ca-sec-tight ca-faq">
-          <div className="ca-center ca-faq-head">
-            <div className="ca-kick">Preguntas</div>
-            <h2 className="ca-h2">Lo que nos preguntan</h2>
+        {/* Same accordion as the home FAQ (`lp-faq-item` + `FaqAccordion`), at
+            the founder's request: open list on desktop, accordion on mobile. */}
+        <section className="ca-sec ca-sec-tight ca-faq lp-faq-sec">
+          <div className="lp-sec-head">
+            <div className="lp-kicker">Preguntas frecuentes</div>
+            <h2 className="lp-h2">Lo que nos preguntan</h2>
           </div>
-          {FAQ_ITEMS.map((item, i) => (
-            <details key={item.question} open={i === 0}>
-              <summary>{item.question}</summary>
-              <p>{item.answer}</p>
-            </details>
-          ))}
+          <div className="lp-faq">
+            {FAQ_ITEMS.map((item) => (
+              <details className="lp-faq-item" key={item.question} open>
+                <summary>
+                  <span>{item.question}</span>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </summary>
+                <p>{item.answer}</p>
+              </details>
+            ))}
+          </div>
+          <FaqAccordion selector=".lp-faq-item" />
           <p className="ca-faq-more">
             ¿Quieres saber más? Lee <Link href="/blog/que-es-el-comercio-agentico">qué es el comercio agéntico</Link> y{" "}
             <Link href="/blog/web-preparada-para-el-comercio-agentico">cómo preparar tu web</Link>.
