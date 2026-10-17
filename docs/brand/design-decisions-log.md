@@ -25781,3 +25781,18 @@ España a octubre de 2026.
 la sesión (cuenta distinta del conector), así que no se usó. Si la auditoría
 agéntica sale, estos cinco artículos son los que hay que refrescar en el mismo
 PR para que dejen de decir «no lo revisa todavía».
+
+**Ampliación: agentes personales (mismo día, a petición del fundador).** Sexto
+artículo, `agentes-personales-de-ia-que-compran` (fundamentos), sobre Muse
+(Meta), Dots (OpenAI), Instinct, Grok Bot y Tab, y un párrafo con enlace en los
+otros cinco. Fuentes: Meta (8 sept. 2026), TechCrunch (Instinct, ago. y sept.;
+Dots, 29 sept.; Tab, 7 oct.), WIRED (prueba de Dots, citada por su resultado),
+Shopify vía PYMNTS (checkout para agentes con navegador, 28 sept.), Yahoo
+Finance (Amazon bloquea a Grok Bot, 15 oct.), TeslaNorth (compra de LEGO, 10
+oct.). La disponibilidad por país sólo se afirma donde la empresa la publica
+(Muse: EE. UU. y Canadá; compras de Grok Bot: EE. UU.); del resto se dice «no
+publicado». El fundador pidió relacionarlo con la comprobación agéntica que
+diseña el hilo «Comercio agéntico en GenScore»: los artículos dicen que «estamos
+construyendo» una comprobación y que «todavía no está disponible», sin nombre,
+fecha ni promesa de lo que medirá más allá de leer y comprar. El presupuesto de
+`public/` sube otros 16 KiB por la sexta portada.

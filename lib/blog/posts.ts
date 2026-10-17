@@ -709,6 +709,25 @@ export const BLOG_POSTS: BlogPost[] = [
     // (Jan 2026), TNW on I/O 2026 (AP2 v0.2, FIDO), Cloudflare (Oct 2025).
     primaryKeyword: "protocolos comercio agéntico",
     cluster: "fundamentos"
+  },
+  {
+    slug: "agentes-personales-de-ia-que-compran",
+    title: "Muse, Dots, Instinct, Grok Bot y Tab: los agentes de IA que ya compran por ti",
+    seoTitle: "Muse, Dots, Instinct, Grok Bot y Tab: agentes que compran",
+    metaDescription:
+      "Meta, OpenAI, Instinct, Grok y Tab ya tienen agentes que compran por ti. Qué hace cada uno, cómo pagan, si llegan a España y qué debe preparar tu tienda.",
+    description:
+      "Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son los agentes personales de IA que en el otoño de 2026 empezaron a comprar por sus usuarios. Qué hace cada uno, cómo paga, dónde funciona, por qué Amazon los bloquea y Shopify les abre la puerta, y qué tiene que preparar una tienda online en España.",
+    datePublished: "2026-10-17",
+    coverImage: "/blog/agentes-personales-de-ia-que-compran/cover.webp",
+    coverIcon: "users",
+    // AGENTIC-POSTS-1 (log §316). Meta newsroom (Sep 2026), TechCrunch on
+    // Dots, Instinct and Tab (Aug-Oct 2026), WIRED's Dots test (Oct 2026),
+    // Shopify via PYMNTS (Sep 2026), Yahoo Finance on Amazon blocking Grok
+    // Bot (Oct 2026). The upcoming agentic check is described as "not yet
+    // available": refresh this post when it ships.
+    primaryKeyword: "agentes personales de ia",
+    cluster: "fundamentos"
   }
 ];
 

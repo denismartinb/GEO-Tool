@@ -35,6 +35,11 @@ export const faqItems = [
       "La parte de descubrir y comparar productos con ChatGPT, Gemini o Perplexity ya funciona en España. El pago completo hecho por el agente arrancó en Estados Unidos, y los anuncios públicos de OpenAI y Google no dan fecha para España a octubre de 2026."
   },
   {
+    question: "¿Qué agentes de IA compran ya por el usuario?",
+    answer:
+      "Entre agosto y octubre de 2026 llegaron Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab. Abren un navegador, compran en la web de la tienda y pagan con el permiso del usuario, por ejemplo con una tarjeta de un solo uso de Link, el monedero de Stripe. Empezaron en Estados Unidos y ninguno compra todavía en España de forma general."
+  },
+  {
     question: "¿En qué se diferencia el comercio agéntico del GEO?",
     answer:
       "El GEO (posicionamiento en motores de IA) trata de que la IA te nombre y te cite cuando alguien pregunta. El comercio agéntico va un paso más allá: que el agente, además de nombrarte, pueda entender tus productos y llegar hasta la compra. Sin lo primero no hay lo segundo: un agente no compra en una tienda que no ha encontrado."
@@ -160,8 +165,19 @@ esté delante, dentro de los límites que haya firmado.
 
 </NumberedSection>
 
-Ninguno de estos anuncios da fecha para España a octubre de 2026. Pero el
-primer paso, que la IA te descubra y te compare, ya funciona aquí hoy.
+<NumberedSection n={6} title="Septiembre y octubre de 2026: los agentes personales">
+
+En seis semanas llegaron los agentes que compran por su usuario sin esperar a
+ningún protocolo: abren un navegador y compran en la web de la tienda. Meta
+lanzó Muse, OpenAI lanzó Dots, Grok Bot empezó a comprar con Link (el monedero
+de Stripe), Instinct se hizo viral y Tab salió a la luz. Shopify abrió el pago
+de sus tiendas a estos agentes y Amazon los bloqueó. Lo contamos en <a href="/blog/agentes-personales-de-ia-que-compran">Muse,
+Dots, Instinct, Grok Bot y Tab: los agentes que ya compran por ti</a>.
+
+</NumberedSection>
+
+Ninguno de estos anuncios da fecha para comprar en España a octubre de 2026.
+Pero el primer paso, que la IA te descubra y te compare, ya funciona aquí hoy.
 
 ## Cuánto puede mover
 
@@ -208,7 +224,9 @@ tipo producto.
 
 Lo que no revisa todavía es lo específico de la compra: los feeds de producto,
 los protocolos de pago ni la firma de los agentes. Preferimos decirlo antes
-que dejar que lo supongas.
+que dejar que lo supongas. Estamos construyendo una comprobación para eso, que
+dirá si un agente puede entrar en tu web, entender tus productos y llegar a la
+compra. La contaremos aquí cuando esté lista.
 
 <Verdict title="El comercio agéntico empieza por que te encuentren">
 

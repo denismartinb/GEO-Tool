@@ -207,12 +207,19 @@ que se identifican con firma (el sistema Web Bot Auth en el que se apoyan Visa y
 Mastercard) de los bots de scraping. Bloquearlos a todos por igual te protege
 hoy, pero te dejará fuera cuando el pago con agentes llegue.
 
+No es una decisión técnica sino de negocio, y los grandes ya la han tomado en
+direcciones opuestas: en septiembre de 2026 Amazon bloqueó a Muse, el agente
+de Meta, y Shopify abrió el pago de sus tiendas a los agentes que compran con
+permiso del cliente. Lo contamos en <a href="/blog/agentes-personales-de-ia-que-compran">los
+agentes de IA que ya compran por ti</a>.
+
 </NumberedSection>
 
 <NumberedSection n={10} title="Un checkout que no exige pasos imposibles">
 
 Registro obligatorio, captchas en cada paso o formularios que solo funcionan
-con ratón son barreras para un agente. No hace falta rehacer el checkout hoy,
+con ratón son barreras para un agente. Cuando WIRED probó Dots, el agente de
+OpenAI, se quedó parado ante un captcha y devolvió la tarea a la persona. No hace falta rehacer el checkout hoy,
 pero sí apuntarlo: es lo primero que tocará adaptar cuando tu pasarela de pago
 o tu plataforma ofrezcan el pago con agentes en España.
 
@@ -229,7 +236,10 @@ párrafo.
 
 Lo específico de la compra (coherencia de precio y stock entre canales, feeds,
 políticas de envío y devolución, protección anti-bots y checkout) no lo revisa
-todavía. Por eso la tabla de arriba lo marca como «No».
+todavía. Por eso la tabla de arriba lo marca como «No». Estamos construyendo
+una comprobación específica para esa parte, que dirá qué cambiar para que un
+agente pueda leer tu tienda y comprar en ella. La contaremos aquí cuando esté
+lista.
 
 <Verdict title="Empieza por las dos primeras">
 

@@ -107,7 +107,8 @@ const BLOG_SLUGS = [
   "como-compra-un-agente-de-ia",
   "web-preparada-para-el-comercio-agentico",
   "la-ia-descubre-tu-web-vende",
-  "protocolos-comercio-agentico-acp-ucp-ap2"
+  "protocolos-comercio-agentico-acp-ucp-ap2",
+  "agentes-personales-de-ia-que-compran"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

@@ -79,9 +79,10 @@ const MAX_FILE_BYTES = 320 * 1024;
  * AGENTIC-POSTS-1 (2026-10-17, log §316): cinco portadas más, WebP 1200x300 a
  * calidad 90, 57.530 bytes entre las cinco (10-13 KB cada una). Se suben
  * 64 KiB más por la misma razón que arriba; los SVG de origen viven en los
- * ficheros del proyecto (`contenido/blog/portadas/`).
+ * ficheros del proyecto (`contenido/blog/portadas/`). La sexta portada
+ * (`agentes-personales-de-ia-que-compran`, 11.786 bytes) suma 16 KiB más.
  */
-const MAX_TOTAL_BYTES = 2432 * 1024;
+const MAX_TOTAL_BYTES = 2448 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).
