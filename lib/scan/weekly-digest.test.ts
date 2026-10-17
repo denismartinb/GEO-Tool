@@ -5,7 +5,7 @@ vi.mock("@/lib/email/transactional", () => ({
   sendWeeklyDigestEmail: (...args: unknown[]) => sendWeeklyDigestEmail(...args)
 }));
 
-import { runWeeklyDigest } from "./weekly-digest";
+import { runWeeklyDigest, weeklyDigestIdempotencyKey } from "./weekly-digest";
 
 type Row = Record<string, unknown>;
 
@@ -150,8 +150,25 @@ describe("runWeeklyDigest", () => {
       promptsCount: 8,
       competitorsCount: 4,
       scansThisWeek: 2
-    }, expect.any(String));
+    }, expect.any(String), expect.anything());
     expect(result).toEqual({ processed: 1, sent: 1, skipped: 0 });
+  });
+
+  it("sends each digest with a per-project, per-day Resend idempotency key (LIFECYCLE-DEDUPE-1, log §311)", async () => {
+    expect(weeklyDigestIdempotencyKey("p1", new Date("2026-10-19T08:00:03Z"))).toBe("weekly-digest/p1/2026-10-19");
+    const service = fakeService({
+      projects: [{ id: "p1", domain: "acme.com", owner_user_id: "u1" }],
+      profiles: [{ id: "u1", email: "founder@example.com", notify_weekly_digest: true }],
+      runScoresByProject: {
+        p1: [
+          { run_id: "r2", visibility_score: 70, citation_score: 40, details_json: null },
+          { run_id: "r1", visibility_score: 80, citation_score: 50, details_json: null }
+        ]
+      }
+    });
+    await runWeeklyDigest({ service: service as never });
+    const [, , , , options] = vi.mocked(sendWeeklyDigestEmail).mock.calls.at(-1) as unknown[];
+    expect(options).toEqual({ idempotencyKey: weeklyDigestIdempotencyKey("p1", new Date()) });
   });
 
   it("reads standing from geo_score.components when present", async () => {
@@ -177,7 +194,7 @@ describe("runWeeklyDigest", () => {
     expect(sendWeeklyDigestEmail).toHaveBeenCalledWith(
       "founder@example.com",
       "acme.com",
-      expect.objectContaining({ subScores: { visibility: 70, citation: 40, standing: 55.5 } }), expect.any(String)
+      expect.objectContaining({ subScores: { visibility: 70, citation: 40, standing: 55.5 } }), expect.any(String), expect.anything()
     );
   });
 
@@ -212,7 +229,7 @@ describe("runWeeklyDigest", () => {
       expect.objectContaining({
         subScores: { visibility: 70, citation: 40, standing: 55.5 },
         previousSubScores: { visibility: 80, citation: 50, standing: 33.2 }
-      }), expect.any(String)
+      }), expect.any(String), expect.anything()
     );
   });
 
@@ -265,7 +282,7 @@ describe("runWeeklyDigest", () => {
         previousScore: 80,
         topMover: { name: "Rival", mentionDelta: 5 },
         recommendation: { title: "Añade una página de comparativa", description: "..." }
-      }), expect.any(String)
+      }), expect.any(String), expect.anything()
     );
   });
 
@@ -345,6 +362,6 @@ describe("runWeeklyDigest", () => {
 
     await runWeeklyDigest({ service: service as never });
 
-    expect(sendWeeklyDigestEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", expect.objectContaining(ZERO_EXTRAS), expect.any(String));
+    expect(sendWeeklyDigestEmail).toHaveBeenCalledWith("founder@example.com", "acme.com", expect.objectContaining(ZERO_EXTRAS), expect.any(String), expect.anything());
   });
 });

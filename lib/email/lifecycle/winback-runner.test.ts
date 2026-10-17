@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const sendTrialEndedOfferEmail = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
-const sendWinbackD3Email = vi.fn(async (..._args: unknown[]) => true);
-const sendWinbackD10Email = vi.fn(async (..._args: unknown[]) => true);
+const sendWinbackD3Email = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
+const sendWinbackD10Email = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
 const sendTrialEndedEmail = vi.fn(async (..._args: unknown[]): Promise<string> => "sent");
 vi.mock("@/lib/email/lifecycle/templates", () => ({
   sendTrialEndedOfferEmail: (...a: unknown[]) => sendTrialEndedOfferEmail(...a),
@@ -337,6 +337,22 @@ describe("runWinbackEmails", () => {
     await runWinbackEmails({ service, now: NOW });
     expect(sendWinbackD10Email).toHaveBeenCalled();
     expect(upserts).toEqual([{ table: "email_sends", row: { owner_user_id: USER, kind: "winback_d10" } }]);
+  });
+
+  it("sends D+10 once when the cron run is delivered twice (LIFECYCLE-DEDUPE-1, log §311)", async () => {
+    const tables = {
+      profiles: { data: [winbackProfile] },
+      email_sends: {
+        data: [
+          { owner_user_id: USER, kind: "trial_ended", sent_at: ago(250) },
+          { owner_user_id: USER, kind: "winback_d3", sent_at: ago(170) }
+        ]
+      }
+    };
+    const { service } = fakeService(tables);
+    await Promise.all([runWinbackEmails({ service, now: NOW }), runWinbackEmails({ service, now: NOW })]);
+    expect(sendWinbackD10Email).toHaveBeenCalledTimes(1);
+    expect(sendWinbackD10Email.mock.calls[0][3]).toEqual({ idempotencyKey: lifecycleIdempotencyKey("winback_d10", USER) });
   });
 
   it("sends no D+10 once the founder slots are gone", async () => {

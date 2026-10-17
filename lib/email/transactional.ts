@@ -550,8 +550,9 @@ export async function sendWeeklyDigestEmail(
     competitorsCount: number;
     scansThisWeek: number;
   },
-  userId?: string
-): Promise<void> {
+  userId?: string,
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
   const envelope = optionalEmailEnvelope(userId, "weekly_digest");
   const delta = Math.round(digest.currentScore) - Math.round(digest.previousScore);
   const pill = deltaPill(delta);
@@ -643,10 +644,11 @@ export async function sendWeeklyDigestEmail(
       ${moreRecommendationsHtml}`
     : "";
 
-  await sendEmail(
-    to,
-    `Tu resumen semanal de ${projectDomain}`,
-    wrap(
+  return sendEmailWithOutcome(
+    {
+      to,
+      subject: `Tu resumen semanal de ${projectDomain}`,
+      html: wrap(
       `
       ${eyebrow("Resumen semanal")}
       ${heading(`Cómo ha ido ${projectDomain} esta semana`)}
@@ -672,8 +674,10 @@ export async function sendWeeklyDigestEmail(
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
     `,
       { footerHtml: envelope.footerHtml, preheader: `Puntuación de este escaneo: ${Math.round(digest.currentScore)} — revisa qué ha cambiado esta semana.` }
-    ),
-    envelope.headers
+      ),
+      headers: envelope.headers
+    },
+    options
   );
 }
 
