@@ -26849,8 +26849,9 @@ debe salir la invitación a pasar a pro».
 5. La revisión semanal que pedía la 2b en `fase-2a.html` ya la cubre la
    auditoría automática tras cada escaneo (§323). Sin migración.
 
-**Qué no cambia.** La Visibilidad agéntica no entra en la Puntuación GEO, y la
-tarjeta lo dice. Ningún arreglo enseña puntos.
+**Qué no cambia.** La Visibilidad agéntica no entra en la Puntuación GEO. La
+tarjeta no lo dice: Denis pidió quitar esa frase al revisar el preview. Ningún
+arreglo enseña puntos.
 
 **Qué queda.** 2c (varias fichas a la vez y «Marcar como hecho») necesita
 migración y no está aprobada. La línea de `/precios` sigue bloqueada por la

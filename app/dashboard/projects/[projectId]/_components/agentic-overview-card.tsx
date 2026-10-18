@@ -106,7 +106,7 @@ export function AgenticOverviewCardView({ projectId, card }: { projectId: string
           <Link className="ovag-go" href={href}>
             Ver visibilidad en agentes →
           </Link>
-          <p className="ovag-foot">Mide si un agente de IA puede encontrarte, entenderte y comprarte. No entra en tu Puntuación GEO.</p>
+          <p className="ovag-foot">Mide si un agente de IA puede encontrarte, entenderte y comprarte.</p>
         </div>
       )}
     </div>

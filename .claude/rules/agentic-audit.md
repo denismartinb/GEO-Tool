@@ -175,6 +175,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   si no, no sale nada. Starter ve la invitación a Pro (fundador, 2026-10-18);
   cualquier otro plan, nada. Sin perfil, falla cerrado.
 - **Sin puntos por arreglo y sin Interoperabilidad**, igual que en
-  «Visibilidad en agentes». La tarjeta dice que no entra en la Puntuación GEO.
+  «Visibilidad en agentes». La tarjeta no menciona la Puntuación GEO: el
+  fundador quitó esa frase (log §340).
 - **Va en su propio `Suspense`.** La auditoría agéntica no puede retrasar
   Visión general.

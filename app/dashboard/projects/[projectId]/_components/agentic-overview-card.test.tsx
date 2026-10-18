@@ -49,6 +49,6 @@ describe("AgenticOverviewCardView", () => {
     expect(html).not.toMatch(/\+\d/);
     expect(html).not.toContain("Interoperabilidad");
     expect(html).toContain('href="/dashboard/projects/p1/agentic-visibility"');
-    expect(html).toContain("No entra en tu Puntuación GEO");
+    expect(html).not.toContain("Puntuación GEO");
   });
 });
