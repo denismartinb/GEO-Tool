@@ -26819,3 +26819,40 @@ ese competidor en el sitemap.
 **Qué queda.** Que la página exista no dice que esté bien hecha. Comprobar su
 estructura (respuesta en las dos primeras frases, titular en pregunta) exigiría
 leer la página, y eso sigue sin aprobar.
+
+## 340. AGENTIC-COMMERCE-1 Fase 2b: tarjeta «Comercio agéntico» en Visión general
+
+**Fecha:** 2026-10-18. **Zona:** Comercio agéntico (también Visión general).
+**Origen:** Denis eligió «2b: tarjeta» y aprobó la maqueta
+(`docs/design-reference/agentic-commerce-1/fase-2b.html`) con «Sí. En starter
+debe salir la invitación a pasar a pro».
+
+**Qué se decidió.**
+
+1. La tarjeta del prototipo va en la columna derecha de Visión general, debajo
+   de Auditoría SEO; en móvil y tableta, justo detrás de esa tarjeta. Lleva el
+   anillo con la nota sobre 100, la frase de resumen (`visibilityHeadline`),
+   los cuatro componentes con sus puntos (14/30), «Lo primero» (el primer
+   arreglo de `firstSteps`, sin puntos) y el botón «Ver visibilidad en
+   agentes →». Interoperabilidad no sale: no suma nota.
+2. Pro, Agencia y la prueba la ven sólo cuando la última auditoría agéntica
+   encontró algo que vendes y le puso nota. Sin revisión, con `found: "none"`
+   o sin nota, no sale nada.
+3. Starter ve una invitación a pasar a Pro con el enlace
+   `?openPlan=pro#plan`, como las dos pantallas del bloque. Una cuenta `free`
+   (solo lectura) no ve nada: ya tiene sus avisos de plan.
+4. La decide una función pura (`overviewAgenticCard`,
+   `lib/agentic-audit/visibility-model.ts`) y la pinta
+   `agentic-overview-card.tsx`, que lee el plan con `resolveSystemPlanId` y la
+   última revisión con `readAgenticAudits`, en su propio `Suspense`. Sin
+   perfil, sin plan: falla cerrado.
+5. La revisión semanal que pedía la 2b en `fase-2a.html` ya la cubre la
+   auditoría automática tras cada escaneo (§323). Sin migración.
+
+**Qué no cambia.** La Visibilidad agéntica no entra en la Puntuación GEO. La
+tarjeta no lo dice: Denis pidió quitar esa frase al revisar el preview. Ningún
+arreglo enseña puntos.
+
+**Qué queda.** 2c (varias fichas a la vez y «Marcar como hecho») necesita
+migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
+congelación de textos.

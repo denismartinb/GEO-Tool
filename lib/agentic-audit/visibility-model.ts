@@ -1,5 +1,5 @@
 import type { AgenticCheckResult, AgenticComponentId, AgenticComponentResult } from "@/lib/agentic-audit/api-contract";
-import { componentLine, componentStatus, type FirstStep, type Tone } from "@/lib/agentic-audit/console-model";
+import { componentLine, componentStatus, firstSteps, type FirstStep, type Tone } from "@/lib/agentic-audit/console-model";
 import type { PurchaseQuestionsReport } from "@/lib/agentic-audit/purchase-questions";
 import { scoreIfChecksPass } from "@/lib/agentic-audit/score";
 import { formatShare } from "@/lib/report/report-model";
@@ -141,4 +141,40 @@ export function reviewedPill(iso: string, now: Date): string {
 function joinList(items: string[]): string {
   if (items.length <= 1) return items.join("");
   return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
+}
+
+/**
+ * The card on Visión general (AGENTIC-COMMERCE-1 Fase 2b, log §340): Pro,
+ * Agencia and the trial see it only when the latest review found something
+ * the site sells and could score it; Starter sees an invitation to Pro
+ * (founder, 2026-10-18). Any other plan, nothing. No points per fix.
+ */
+export type OverviewAgenticCard =
+  | { kind: "hidden" }
+  | { kind: "upsell" }
+  | {
+      kind: "card";
+      score: number;
+      headline: string;
+      components: Array<{ id: AgenticComponentId; name: string; points: number | null; weight: number; percent: number }>;
+      first: { title: string; tone: Tone } | null;
+    };
+
+export function overviewAgenticCard(planId: string | null | undefined, result: AgenticCheckResult | null): OverviewAgenticCard {
+  if (planId === "starter") return { kind: "upsell" };
+  if (planId !== "pro" && planId !== "agency") return { kind: "hidden" };
+  if (!result || result.found === "none" || result.score === null) return { kind: "hidden" };
+  const components = STEPS.flatMap(({ id }) => {
+    const component = result.components.find((c) => c.id === id);
+    if (!component) return [];
+    return [{ id, name: component.name, points: componentPoints(component), weight: component.weight, percent: component.score ?? 0 }];
+  });
+  const [step] = firstSteps(result, 1);
+  return {
+    kind: "card",
+    score: result.score,
+    headline: visibilityHeadline(result),
+    components,
+    first: step ? { title: step.title, tone: stepTone(result, step) } : null
+  };
 }

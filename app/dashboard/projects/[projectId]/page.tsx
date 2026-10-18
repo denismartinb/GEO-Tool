@@ -56,6 +56,7 @@ import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 import { SeoAuditCard } from "./_components/seo-audit-card";
+import { AgenticOverviewCard } from "./_components/agentic-overview-card";
 import { GscOverviewHalf } from "./_components/gsc-overview-half";
 import { resolveCompetitiveClaim } from "@/lib/metrics/competitive-claim";
 import {
@@ -1598,6 +1599,13 @@ export default async function ProjectDetailPage({
               </SeoAuditCard>
             </div>
           ) : null}
+          {/* Comercio agéntico (AGENTIC-COMMERCE-1 Fase 2b, log §340): under
+              Auditoría SEO. Pro, Agencia and the trial see it once the
+              agentic review found something the site sells; Starter sees an
+              invitation to Pro. Streamed, so it never holds up the page. */}
+          <Suspense fallback={null}>
+            <AgenticOverviewCard projectId={projectId} />
+          </Suspense>
           </div>
           </div>
 
