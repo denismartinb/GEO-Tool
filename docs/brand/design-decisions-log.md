@@ -26284,10 +26284,18 @@ fichas. En las diez comprobaciones, «Compra» pasa de «añadir al carrito» a
 calendario los marca publicados y refrescados.
 
 **Qué no cambia.** El resto de cada artículo sigue hablando de tiendas, que es
-su tema. Las limitaciones declaradas siguen igual: no revisamos protocolos de
-pago ni la firma de los agentes, ni si el precio y el stock coinciden en todos
-los canales, ni recorremos el checkout. «Preguntas de compra» y «Visibilidad
-en agentes» (2d) no se anuncian.
+su tema. «Preguntas de compra» y «Visibilidad en agentes» (2d) no se anuncian.
+
+**Sin frases sobre lo que GenScore todavía no revisa** (fundador, 2026-10-18:
+«esto básicamente echa para atrás»). Se retiran de los artículos «Lo que
+todavía no revisa son los protocolos de pago ni la firma de los agentes.
+Preferimos decirlo…», su equivalente en cómo compra un agente, el cierre de las
+diez comprobaciones sobre precio, stock y checkout, y el «no implanta ni
+revisa estos protocolos» del de protocolos; «Qué revisa GenScore y qué no»
+pasa a «Qué revisa GenScore». Nada de lo que queda afirma que se revisen: la
+tabla de las diez comprobaciones sigue marcando «No» y «En parte» donde toca.
+Los límites de motores (Copilot, AI Overviews) no son de este tipo y siguen
+declarados donde la regla de `growth-content.md` los exige.
 
 **Pendiente.** Si se aprueba 2b, 2c o 2d, esta misma sección se vuelve a
 tocar en el PR que lo lleve a producción.
