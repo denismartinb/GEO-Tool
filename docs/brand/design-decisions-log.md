@@ -26335,9 +26335,8 @@ escanea, las de quien va a comprar, y qué hacen los motores con ellas.
   la regla se midió sobre las preguntas de cuatro estudios (facturación, La
   Fábrica del SEO, clínicas de Madrid y Valencia), que genera el mismo
   sistema. La ancha deja entrar un 63%; la estricta (sólo dónde y precio), un
-  18%, con lo que muchos proyectos no llegarían al mínimo. Se construye con
-  la ancha, la recomendada, y la elección queda en una tarjeta de decisión
-  del fundador; si elige la estricta, basta con quitar `CHOOSE` de la regla.
+  18%, con lo que muchos proyectos no llegarían al mínimo. El fundador eligió
+  la ancha en la tarjeta de decisión (2026-10-18).
 - **Tres cifras, del último escaneo.** «Te nombran» (la mención de
   `extracted_json.brand.mentioned`, como Visión general), «Citan tu web»
   (citas de grounding de tu dominio, sólo en Gemini, ChatGPT y Perplexity,
