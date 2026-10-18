@@ -62,6 +62,7 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/glosario", lastModified: GLOSSARY_LAST_MODIFIED },
   { path: "/comparativas", lastModified: "2026-10-09" },
   { path: "/comparativas/genscore-vs-otterly", lastModified: "2026-10-09" },
+  { path: "/comparativas/genscore-vs-rankscale", lastModified: "2026-10-18" },
   { path: "/comparativas/genscore-vs-peec-ai", lastModified: "2026-10-09" },
   { path: "/comparativas/mejores-herramientas-geo-en-espanol", lastModified: "2026-10-09" },
   { path: "/comparativas/genscore-vs-profound", lastModified: "2026-10-09" },

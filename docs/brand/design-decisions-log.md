@@ -26032,3 +26032,25 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Nada.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 324. RECS-TEST-1: la comparativa GenScore vs Peec AI gana FAQ y `FAQPage` (2026-10-18)
+
+**Qué.** Primera recomendación de la consola para genscore.es («Crea una página comparativa frente a Peec AI»), implementada como experimento de medición pedido por el fundador. La consola no vio que ya existían `/comparativas/genscore-vs-peec-ai` (con tabla) y `/comparativas/alternativas-a-peec-ai` (con FAQ y schema). Lo que faltaba era la FAQ con `FAQPage` en la primera: cuatro preguntas que formulan los propios motores, respondidas sólo con hechos de la tabla de esa página.
+
+**Por qué.** Medir si seguir las recomendaciones mueve la visibilidad. Línea base: `/mnt/project-files/geo-propio/medicion/2026-10-10.md` más una foto nueva antes de fusionar.
+
+**Recomendación 2** («Aparece en ¿Cómo puedo conseguir que Gemini mencione mi empresa…?»). La consola dijo «sí tienes página» y señaló `/blog` (el índice) en vez de la guía `como-aparecer-en-gemini-y-vistas-creadas-con-ia`. Se refuerza esa guía: sección con la pregunta exacta y respuesta directa en las dos primeras frases, y la misma pregunta como primera entrada de su FAQ (`FAQPage`). No se sigue la plantilla de la consola sobre JSON-LD como palanca, porque Google dice que no hay requisitos de marcado.
+
+**Recomendación 3** («Añade un bloque de preguntas y respuestas»). Se añaden dos preguntas literales al FAQ de `/que-es-genscore` (`lib/brand/que-es-genscore-faq.ts`, que alimenta también `FAQPage` y `/llms-full.txt`): la de Gemini y la de medir visibilidad en ChatGPT y Perplexity. No se copia el borrador de la consola, que prometía «marcado esquemático» como palanca y nombraba competidores.
+
+**Recomendación 4** («Optimizar genscore.es para responder a ¿Cómo salgo mejor en las IAs?», aparecida tras un escaneo nuevo el mismo día). Misma palanca otra vez. Se refuerza `mi-marca-no-aparece-en-chatgpt-por-que` (sección con la pregunta literal y respuesta directa, y primera entrada de su FAQ) en vez de crear una página nueva.
+
+**Recomendación 6** («Estrategia para disputar a Otterly.ai… página de comparación directa», +26 pt). Igual que la de Peec AI: `/comparativas/genscore-vs-otterly` ya existía sin FAQ. Se añade FAQ con `FAQPage`, con hechos de su tabla. No se copia el dato «Otterly monitorea 15 prompts» del borrador de la consola, sin fuente.
+
+**Recomendación 7** («Crea una página de comparativa Genscore vs RankScale», +5 pt). Aquí sí faltaba la página: se crea `/comparativas/genscore-vs-rankscale` con datos sólo de rankscale.ai y su página de precios (consultadas el 2026-10-18, en la sección «Fuentes»). Lo que su web no dice (idioma de la interfaz, tarjeta en la prueba, generador de soluciones) figura como «no consta». Gana RankScale en precio de entrada, motores y regiones; GenScore en castellano y bucle de acción. Registrada en índice, sitemap, `llms.txt`, piloto y `promise-parity`.
+
+**Recomendación 8** («Aparece en las fuentes web que la IA cita», outreach). No se implementa: es trabajo fuera de la web y depende de terceros. Hallazgos en `aprendizajes.md` (P29 a P32).
+
+**Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.

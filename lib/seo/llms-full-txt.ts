@@ -13,6 +13,10 @@ import {
   COMPARISON_ROWS as OTTERLY_ROWS,
   OTTERLY_RESEARCH_DATE
 } from "@/lib/comparativas/genscore-vs-otterly";
+import {
+  COMPARISON_ROWS as RANKSCALE_ROWS,
+  RANKSCALE_RESEARCH_DATE
+} from "@/lib/comparativas/genscore-vs-rankscale";
 import { COMPARISON_ROWS as PEEC_ROWS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
 import {
   COMPARISON_ROWS as PROFOUND_ROWS,
@@ -185,6 +189,8 @@ ${PEEC_ALTERNATIVES.map(
 ${pillarBlock}
 
 ${headToHead("/comparativas/genscore-vs-otterly", "Otterly", OTTERLY_RESEARCH_DATE, OTTERLY_ROWS, "otterly", "otterlyWins")}
+
+${headToHead("/comparativas/genscore-vs-rankscale", "RankScale", RANKSCALE_RESEARCH_DATE, RANKSCALE_ROWS, "rankscale", "rankscaleWins")}
 
 ${headToHead("/comparativas/genscore-vs-peec-ai", "Peec AI", PEEC_RESEARCH_DATE, PEEC_ROWS, "peec", "peecWins")}
 

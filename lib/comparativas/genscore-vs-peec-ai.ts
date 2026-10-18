@@ -70,3 +70,31 @@ export const COMPARISON_ROWS: {
     genscoreWins: true
   }
 ];
+
+/**
+ * Preguntas que ya hacen los motores de IA al evaluar herramientas de GEO
+ * (recomendación nº 1 de la consola, 2026-10-18). Cada respuesta usa sólo
+ * hechos de la tabla de arriba: nada nuevo sobre Peec AI.
+ */
+export const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    question: "¿Qué diferencia a una herramienta de SEO tradicional de una plataforma especializada en GEO?",
+    answer:
+      "El SEO tradicional mide posiciones en buscadores. Una plataforma de GEO (optimización para motores de IA) mide si ChatGPT, Gemini, Claude o Perplexity nombran o citan tu marca al responder preguntas de tus clientes. GenScore y Peec AI pertenecen a la segunda categoría."
+  },
+  {
+    question: "¿Cómo puedo medir la visibilidad de mi marca en las respuestas de ChatGPT y Perplexity?",
+    answer:
+      "Lanzando de forma recurrente las preguntas que haría tu cliente a cada motor y contando en qué porcentaje de respuestas aparece tu marca, en qué puesto y qué páginas se citan. GenScore lo hace con ChatGPT, Gemini y Claude desde el plan Starter, y con Perplexity en Pro y Agencia."
+  },
+  {
+    question: "¿Existen plataformas que comparen las respuestas de ChatGPT y Perplexity sobre mi producto?",
+    answer:
+      "Sí. Peec AI te hace elegir tres modelos entre ChatGPT, AI Mode, AI Overviews, Copilot, Gemini y Naver AI. GenScore incluye ChatGPT, Gemini y Claude sin elegir, y Perplexity en Pro y Agencia."
+  },
+  {
+    question: "¿Qué alternativas hay a las herramientas tradicionales de SEO para optimizar la presencia en chatbots?",
+    answer:
+      "Herramientas específicas de GEO como GenScore y Peec AI. Peec AI destaca en usuarios ilimitados y en medición por país e idioma; GenScore, en el idioma (castellano), en no cobrar motores como extra y en generar el borrador de FAQ, schema y briefs desde el plan Pro."
+  }
+];

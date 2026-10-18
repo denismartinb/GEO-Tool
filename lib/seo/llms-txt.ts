@@ -30,6 +30,11 @@ export const COMPARATIVAS = [
     note: "comparativa honesta, incluidas las filas donde gana Otterly."
   },
   {
+    path: "/comparativas/genscore-vs-rankscale",
+    title: "GenScore vs RankScale",
+    note: "comparativa honesta, incluidas las filas donde gana RankScale."
+  },
+  {
     path: "/comparativas/genscore-vs-peec-ai",
     title: "GenScore vs Peec AI",
     note: "comparativa honesta, incluidas las filas donde gana Peec AI."
