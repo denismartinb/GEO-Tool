@@ -4,6 +4,7 @@ import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
+import { isOutreachTarget } from "@/lib/recommendations/outreach-targets";
 
 type ProjectInput = {
   brand: string;
@@ -764,10 +765,15 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     // a subdomain or the same brand on another TLD is the brand's own site.
     if (normalizedBrand && normalizedDomains.some((d) => isBrandDomain(d, normalizedBrand))) continue; // brand already cited here
 
+    // RECS-OUTREACH-TARGETS-1 (log §335): documentation and other brands'
+    // own sites are not something to pitch, so they never count.
+    const extracted = getExtracted(result);
+    const brandsInAnswer = [...ev.competitors, ...(extracted?.other_brands_mentioned ?? [])];
     const seenInThisPrompt = new Set<string>();
     for (const page of promptCitationPages(result)) {
       const key = normalizeDomainValue(page.domain);
       if (!key || (normalizedBrand && isBrandDomain(key, normalizedBrand)) || seenInThisPrompt.has(key)) continue;
+      if (!isOutreachTarget(key, brandsInAnswer)) continue;
       seenInThisPrompt.add(key);
       const entry = bySource.get(key) ?? { domain: page.domain, prompts: [], examplePage: null };
       entry.prompts.push(result);
