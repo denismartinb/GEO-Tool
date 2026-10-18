@@ -103,9 +103,9 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
   const competitor = input.dominantCompetitor ?? input.mentionedCompetitors[0] ?? "el competidor";
   switch (input.recommendationType) {
     case "close_competitor_gap":
-      return `ASSET FOCUS — comparison page: build the plan around a "${input.brand} vs ${competitor}" or "alternativa a ${competitor}" page. Provide as examples a page outline (H1 + H2/H3 sections) and a short comparison table (rows = criteria; columns = ${input.brand} and ${competitor} only), using only the given facts and [tu dato aquí] placeholders.`;
+      return `ASSET FOCUS — comparison page: build the plan around a "${input.brand} vs ${competitor}" or "alternativa a ${competitor}" page. Provide as examples a page outline (H1 + H2/H3 sections) and a short comparison table (at most 4 criteria rows; columns = ${input.brand} and ${competitor} only). The ${competitor} cells follow the competitor-fact rule above; the ${input.brand} cells use only the given facts or a [tu dato aquí] placeholder.`;
     case "add_comparison_content":
-      return `ASSET FOCUS — comparison: provide as examples a concise comparison table (rows = criteria; one column for ${input.brand} and one per named competitor only) and a FAQPage JSON-LD snippet answering the comparative query.`;
+      return `ASSET FOCUS — comparison: provide as examples a concise comparison table (at most 4 criteria rows; one column for ${input.brand} and one per named competitor only, every competitor cell following the competitor-fact rule above) and a FAQPage JSON-LD snippet answering the comparative query.`;
     case "create_faq_section":
       return "ASSET FOCUS — FAQ: provide as examples 2-4 concise question/answer pairs matching the affected prompts, plus a FAQPage JSON-LD snippet wrapping them.";
     case "strengthen_brand_entity_clarity":
@@ -173,6 +173,14 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     "Turn the generic recommendation below into a specific, complete plan this exact brand can act on immediately.",
     "You MUST use ONLY the facts listed below. Do NOT invent any fact, statistic, competitor name, domain, page or detail not explicitly given.",
     "Where a specific value (a number, a price, a date) would be needed but is not in the facts, write a clearly-marked placeholder like [tu dato aquí]. NEVER invent the value.",
+    // RECS-TEMPLATES-1 (log §331): five rules from the founder's real test on
+    // genscore.es, where plans left «máximo [tu dato aquí] palabras», asked for
+    // prices in an answer that was not about prices, filled a rival's column
+    // with unsourced claims and had an outreach email say "I read your article".
+    "A placeholder is ONLY for a fact about the brand that only the brand knows (its price, a date, a figure, a name). Editorial guidance is NEVER a placeholder: give the concrete recommended value yourself (for example 'una introducción de 40 a 60 palabras', 'de 3 a 5 subtítulos H2', 'una tabla de 4 criterios').",
+    "Ask only for the data the affected questions need. Do not ask for prices, plans, discounts or figures in a page answering a question that is not about them.",
+    "NEVER state any fact about a competitor: no feature, price, limit, yes/no, or number of prompts, engines or users. You do not know them, and publishing a rival's data without a source exposes the brand. In a comparison table use at most 4 criteria rows; each competitor cell is the placeholder [dato de su web, con enlace y fecha], and the steps MUST include one step to check every competitor fact on its own website and write the link and the date next to it.",
+    "In an outreach template NEVER claim the sender read, used or liked something (an article, a list, a tool): you do not know it. Write that sentence as a placeholder the user only keeps if it is true, such as [si lo has leído: qué te aportó su artículo]. Never name or list competitors in a message to a third party.",
     "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
     // RECS-USEFULNESS-1 Fase C (log §128). C1 lo vuelve a comprobar en el
     // servidor sobre una lista cerrada; C2 y C3 son reglas BLANDAS y sólo
@@ -182,7 +190,7 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     "Whenever an example is FAQPage (or any schema whose content is user-visible), the plan MUST state that the questions and answers have to be visible on the page itself — structured data describing content that is not on the page is treated as spam by search engines and cannot be corroborated by AI engines. Never promise FAQ rich results in Google: Google only shows them for well-known government and health sites; the markup is there so AI engines can read the questions and answers.",
     "Do NOT mention any domain or URL other than the ones explicitly listed under 'Domains you may mention'.",
     "If no competitors or domains are listed below, do not invent or imply any.",
-    `Write entirely in this language: ${input.language}.`,
+    `Write entirely in this language: ${input.language}. Never copy English words from these instructions (such as 'facts', 'placeholder', 'evidence', 'snippet') into the output.`,
     'Return ONLY valid JSON with this exact shape: { "title": string, "summary": string, "steps": string[], "examples": { "label": string, "content": string }[] }.',
     '"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.',
     '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
@@ -202,6 +210,8 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     `LENGTH BUDGET — prose artifacts (a paragraph, an outline, an outreach template): up to ${PROSE_ARTIFACT_MAX} characters. Code artifacts (JSON-LD, an HTML snippet): up to ${CODE_ARTIFACT_MAX} characters, because a FAQPage with two answered questions does not fit in less.`,
     "COMPLETENESS BEATS COVERAGE — a code artifact MUST be syntactically complete and valid on its own: every brace, bracket, quote and tag closed, no ellipsis, never stopped mid-sentence. If the full artifact would not fit in its budget, produce a SMALLER but complete one (e.g. a FAQPage with two questions instead of four) — never a truncated larger one. A JSON-LD block that does not parse is worse than no example at all, and it will be discarded.",
     "In any example (especially JSON-LD), the ONLY URLs/domains you may use are the brand domain above and schema.org (for @context). For any other URL — social profiles, third-party pages — use a placeholder like https://[tu-dominio]/pagina; NEVER write a real third-party or competitor domain.",
+    "An example is the exact text to paste, nothing else: never put advice or instructions for the user inside it (such as 'este texto debe estar visible en la página'). That advice goes in a step. Inside JSON-LD, an answer text is only the answer a reader would see.",
+    "Never invent a path on the brand domain either: you do not know which pages it has. Link the bare brand domain only when the home page is the right destination; for a specific page write a placeholder such as [enlace a tu página de tarifas], never a made-up path after the brand domain.",
     ...(playbook ? ["", playbook] : []),
     "",
     `Brand: ${input.brand}`,

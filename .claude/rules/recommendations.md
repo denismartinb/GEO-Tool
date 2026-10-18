@@ -733,3 +733,21 @@ log §306).
   otro rival no la cubre.
 - **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
   la tarjeta.** Lo que la IA responde no cambia porque exista la página.
+
+## Plantillas generadas (RECS-TEMPLATES-1, log §331)
+
+- **Un hueco `[...]` es un dato de la marca, nunca una pauta editorial.** El
+  prompt da los valores editoriales (longitud, número de subtítulos) y sólo
+  deja hueco para lo que sólo sabe la marca.
+- **Ningún dato de un competidor sale del plan.** Cada celda de un rival en
+  una tabla es el hueco «[dato de su web, con enlace y fecha]» y el plan pide
+  comprobarlo en su web. Afirmar una función o un precio ajeno sin fuente es
+  la misma invención que prohíbe `CLAUDE.md`.
+- **Ninguna URL inventada en el dominio propio.** O el dominio a secas, o el
+  hueco «[enlace a tu página de …]»; nunca «https://marca.es/pagina».
+- **Un ejemplo es sólo el texto que se pega.** Ningún consejo al usuario
+  dentro de él (tampoco en la respuesta de un JSON-LD); va en un paso.
+- **Una plantilla de contacto no afirma lo que no sabemos** (que el remitente
+  leyó algo) ni nombra competidores.
+- Son reglas blandas del prompt, fijadas por `rewrite-template-rules.test.ts`.
+  Si alguna pasa a comprobarse en servidor, se dice aquí.
