@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -10,7 +10,8 @@ import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/
 import {
   rewriteRecommendationAction,
   dismissRecommendationAction,
-  restoreRecommendationAction
+  restoreRecommendationAction,
+  addEmergingCompetitorAction
 } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import { groupPromptDetails } from "@/lib/recommendations/prompt-details";
@@ -28,7 +29,18 @@ import {
   pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
-import { adviceSignal, dataSignal, scopeLine } from "@/lib/recommendations/card-signals";
+import { adviceSignal, dataSignal, emergingCompetitorReach, scopeLine } from "@/lib/recommendations/card-signals";
+import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
+import { parseCompetitorDomain } from "@/lib/competitors/competitor-domain";
+import {
+  DEFINITION_LEVER_NOTE,
+  LEVER_TYPE,
+  leverFirstStep,
+  leverPointsCaption,
+  leverReach,
+  leverTitle,
+  type LeverView
+} from "@/lib/recommendations/levers";
 import { planGoal } from "./_components/google-rec-copy";
 import { GooglePlanReport, type GooglePlanKind, type GooglePlanState } from "./_components/google-plan-state";
 
@@ -57,6 +69,10 @@ type EvidenceJson = {
   first_step?: string;
   /** log §292 — "definition" for a «qué significa X» query. */
   query_shape?: string;
+  /** track_emerging_competitor: the brand the AI named (RECS-4A). */
+  emerging_competitor?: string;
+  /** RECS-ADD-COMPETITOR-1 — its website, when a cited source matched the name. */
+  emerging_competitor_domain?: string | null;
 };
 
 /**
@@ -448,7 +464,14 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
  * ready-to-paste example artifact with its own copy button. All content is
  * already sanitized server-side; it is rendered as plain React text.
  */
-export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+export function SolutionPanel({
+  solution,
+  recommendationType
+}: {
+  solution: GeneratedSolution;
+  /** Decides whether a ready plan reads "Listo para copiar" or "Plan listo" (log §326). */
+  recommendationType?: string;
+}) {
   // RECS-ACCION-1 — cuánto trabajo queda antes de poder publicar esto. NO es
   // una estimación: el prompt de reescritura obliga a marcar con un
   // placeholder todo valor que no esté en la evidencia en vez de inventarlo,
@@ -483,7 +506,7 @@ export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
           className={readiness.kind === "ready" ? "badge badge-pos" : "badge badge-warn"}
           style={{ marginLeft: "auto", textTransform: "none", letterSpacing: 0 }}
         >
-          {readinessLabel(readiness)}
+          {readinessLabel(readiness, recommendationType ? deliverableForType(recommendationType).control : "own_site")}
         </span>
       </div>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{solution.title}</div>
@@ -688,19 +711,164 @@ export function ResolvedHistoryCard({
 }
 
 /**
+ * RECS-ADD-COMPETITOR-1 — a `track_emerging_competitor` card is one action, so
+ * it renders as one button: no "Ver cómo", no generated plan, no points
+ * (founder, 2026-10-18; mockup approved the same day). The website comes from
+ * the cited sources when one matches the brand exactly; otherwise the card
+ * asks for it rather than guessing. After a success the card stays green for
+ * a moment, then the refresh moves it to "Resueltas".
+ */
+export const EMERGING_SUCCESS_HOLD_MS = 4000;
+
+export function EmergingCompetitorCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+  const router = useRouter();
+  const ev: EvidenceJson = rec.evidence_json ?? {};
+  const name = (ev.emerging_competitor ?? "").trim();
+  const knownDomain = ev.emerging_competitor_domain ?? (name ? domainForBrandName(name, ev.citation_domains ?? []) : null);
+  const [editing, setEditing] = useState(!knownDomain);
+  const [domainInput, setDomainInput] = useState(knownDomain ?? "");
+  const [done, setDone] = useState<{ alreadyTracked: boolean } | null>(null);
+  const feedback = useActionFeedback();
+
+  useEffect(() => {
+    if (!done) return;
+    const timer = window.setTimeout(() => router.refresh(), EMERGING_SUCCESS_HOLD_MS);
+    return () => window.clearTimeout(timer);
+  }, [done, router]);
+
+  const domain = parseCompetitorDomain(domainInput);
+  const pending = feedback.state.status === "pending";
+  const providers = Array.from(new Set(groupPromptDetails(ev.affected_prompt_details ?? []).flatMap((p) => p.providers)));
+  const questionCount = groupPromptDetails(ev.affected_prompt_details ?? []).length;
+  const reach = emergingCompetitorReach(questionCount);
+  const inputId = `rec-web-${rec.id}`;
+  const competitorsHref = `/dashboard/projects/${projectId}/competitors`;
+
+  function handleAdd() {
+    if (!domain || !name) return;
+    feedback.run(
+      async () => {
+        const result = await addEmergingCompetitorAction({ projectId, recommendationId: rec.id, domain });
+        if (result.success) setDone({ alreadyTracked: result.alreadyTracked });
+        return result;
+      },
+      { successMessage: `${name} añadida a tus competidores.` }
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="rec-card rec2-addcomp rec2-addcomp-ok" role="status" aria-live="polite">
+        <div className="rec2-addcomp-okh">
+          <Icon name="check" size={15} />
+          {done.alreadyTracked ? `Ya seguías a ${name}` : `${name} ya está en tus competidores`}
+        </div>
+        <div className="rec2-addcomp-meta">
+          {done.alreadyTracked ? "Damos esta tarjeta por hecha." : "El próximo escaneo medirá cuánto aparece frente a ti."}
+        </div>
+        <a className="rec2-addcomp-link" href={competitorsHref}>
+          Ver competidores
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div id={`rec-${rec.id}`} className="rec-card rec2-addcomp">
+      <div className="rec2-addcomp-main">
+        <div className="rec2-addcomp-info">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>
+            <span className="badge badge-outline">
+              <Icon name="robot" size={11} />
+              {CONTROL_LABEL.in_app}
+            </span>
+          </div>
+          <div className="rec-title">{rec.title}</div>
+          {reach && (
+            <div className="rec2-reach" style={{ marginTop: 0 }}>
+              {providers.length > 0 && (
+                <span className="rec2-reach-g" aria-hidden="true">
+                  {providers.map((provider) => (
+                    <span key={provider} style={{ color: getEngineMeta(provider).color }} title={getEngineMeta(provider).label}>
+                      <EngineGlyph provider={provider} />
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span>{reach}</span>
+            </div>
+          )}
+        </div>
+        <div className="rec2-addcomp-act">
+          {editing && (
+            <div className="rec2-addcomp-field">
+              <label htmlFor={inputId}>Web de {name}</label>
+              <input
+                id={inputId}
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                placeholder="ejemplo.com"
+                value={domainInput}
+                disabled={pending}
+                onChange={(e) => {
+                  setDomainInput(e.target.value);
+                  if (feedback.state.status === "error") feedback.reset();
+                }}
+              />
+            </div>
+          )}
+          {editing && domainInput.trim() !== "" && !domain && (
+            <div className="rec2-addcomp-err" role="alert">
+              El dominio no es válido.
+            </div>
+          )}
+          <button type="button" className="btn btn-primary rec2-addcomp-btn" disabled={!domain || !name || pending} onClick={handleAdd}>
+            {pending ? (
+              <>
+                <span className="btn-spinner" aria-hidden="true" />
+                Añadiendo {name}…
+              </>
+            ) : (
+              `Añadir ${name} a competidores`
+            )}
+          </button>
+          {!editing && domain && !pending && (
+            <div className="rec2-addcomp-meta">
+              Con su web {domain} ·{" "}
+              <button type="button" className="rec2-addcomp-link" onClick={() => setEditing(true)}>
+                Cambiar
+              </button>
+            </div>
+          )}
+          {feedback.state.status === "error" && (
+            <div className="rec2-addcomp-err" role="alert">
+              {feedback.state.message}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Exported (WEB-AUDIT-R5) so the "Auditoría web" page's Plan de acción can
  * embed the SAME interactive card — evidence, "Generar propuesta con IA",
  * "Marcar como hecho" — for a matched recommendation instead of linking out
  * to this page. Self-contained: owns its own open/close state and calls the
  * same server actions regardless of which page renders it.
  */
-export function RecCard({
-  rec,
-  projectId,
-  compact = false,
-  showOwnStep = false,
-  priorityRank,
-}: {
+export function RecCard(props: RecCardProps) {
+  // RECS-ADD-COMPETITOR-1: this type is a button, not a plan.
+  if (props.rec.recommendation_type === "track_emerging_competitor") {
+    return <EmergingCompetitorCard rec={props.rec} projectId={props.projectId} />;
+  }
+  return <StandardRecCard {...props} />;
+}
+
+type RecCardProps = {
   rec: Recommendation;
   projectId: string;
   /**
@@ -718,7 +886,9 @@ export function RecCard({
   compact?: boolean;
   /** Inside a group whose members do NOT share a step (GS-03): show this card's own. */
   showOwnStep?: boolean;
-}) {
+};
+
+function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false, priorityRank }: RecCardProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -1294,7 +1464,7 @@ export function RecCard({
           {/* Plan de acción — asset saneado generado por IA, aditivo: no
               sustituye el título/descripción de la regla, que sigue siendo el
               planteamiento del problema. */}
-          {rec.solution && <SolutionPanel solution={rec.solution} />}
+          {rec.solution && <SolutionPanel solution={rec.solution} recommendationType={rec.recommendation_type} />}
 
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (
@@ -1324,6 +1494,284 @@ export function RecCard({
               </p>
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * One question of a lever, as the lever card lists it: the prompt once, every
+ * engine that left the brand out, and how long its card has been open.
+ */
+export type LeverQuestion = { key: string; prompt: string; providers: string[]; runsOpen: number };
+
+export function leverQuestions(members: Recommendation[]): LeverQuestion[] {
+  const byPrompt = new Map<string, LeverQuestion>();
+  for (const rec of members) {
+    const ev: EvidenceJson = rec.evidence_json ?? {};
+    const details = groupPromptDetails(ev.affected_prompt_details ?? []);
+    const entries =
+      details.length > 0
+        ? details.map((d) => ({ prompt: d.prompt, providers: d.providers }))
+        : (ev.affected_prompts ?? []).map((prompt) => ({ prompt, providers: [] as string[] }));
+    for (const entry of entries) {
+      const key = entry.prompt.trim().toLowerCase();
+      if (!key) continue;
+      const runsOpen = rec.consecutive_runs_open ?? 1;
+      const seen = byPrompt.get(key);
+      if (seen) {
+        seen.providers = Array.from(new Set([...seen.providers, ...entry.providers]));
+        seen.runsOpen = Math.max(seen.runsOpen, runsOpen);
+      } else {
+        byPrompt.set(key, { key, prompt: entry.prompt, providers: entry.providers, runsOpen });
+      }
+    }
+  }
+  // Longest-open first: those are the questions the lever has failed longest.
+  return [...byPrompt.values()].sort((a, b) => b.runsOpen - a.runsOpen);
+}
+
+/**
+ * RECS-ONE-LEVER-1 — the card for a whole lever: every visibility card of one
+ * topic, shown as one task with its questions inside, one plan and one joint
+ * figure. «Marcar como hecho» closes every member; «Resueltas» still checks
+ * them one by one.
+ */
+export function LeverCard({
+  lever,
+  members,
+  projectId,
+  priorityRank,
+  solution,
+}: {
+  lever: LeverView;
+  members: Recommendation[];
+  projectId: string;
+  priorityRank?: number;
+  /** The plan for this lever: a lever plan with 2+ members, else the card's own. */
+  solution: GeneratedSolution | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+  const router = useRouter();
+  const rewriteFeedback = useActionFeedback();
+  const dismissFeedback = useActionFeedback();
+
+  const others = lever.memberIds.filter((id) => id !== lever.representativeId);
+  const questions = leverQuestions(members);
+  const providers = Array.from(new Set(questions.flatMap((q) => q.providers)));
+  const visible = showAll ? questions : questions.slice(0, GROUP_PREVIEW_SIZE);
+  const hiddenCount = questions.length - visible.length;
+  const isDefinition = lever.theme.kind === "definition";
+  const { cta } = deliverableForType(LEVER_TYPE);
+  const toggleLabel = questions.length === 1 ? "Ver la pregunta y el plan" : `Ver las ${questions.length} preguntas y el plan`;
+
+  function handleRewrite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    rewriteFeedback.run(
+      () =>
+        rewriteRecommendationAction({
+          projectId,
+          recommendationId: lever.representativeId,
+          ...(others.length > 0 ? { leverMemberIds: others } : {}),
+        }),
+      { successMessage: "Propuesta generada.", onSuccess: () => router.refresh() },
+    );
+  }
+
+  function handleDismiss(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    dismissFeedback.run(
+      () =>
+        dismissRecommendationAction({
+          projectId,
+          recommendationId: lever.representativeId,
+          ...(others.length > 0 ? { leverMemberIds: others } : {}),
+        }),
+      { successMessage: "Marcada como hecha.", onSuccess: () => router.refresh() },
+    );
+  }
+
+  const impact = members.some((m) => m.impact === "medium" || m.impact === "high") ? "Impacto medio" : "Impacto bajo";
+
+  return (
+    <div
+      id={priorityRank ? undefined : `lever-${lever.key}`}
+      className={`rec-card rec2-lever${open ? " open" : ""}${priorityRank ? " rec2-priority" : ""}`}
+    >
+      <div
+        className="rec-main"
+        onClick={() => setOpen((o) => !o)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
+        aria-expanded={open}
+      >
+        <div style={{ minWidth: 0, flex: 1 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6, flexWrap: "wrap" }}>
+            {priorityRank && <span className="rec2-rank">{priorityRank}</span>}
+            <span className="rec2-src rec2-src-ia">
+              <Icon name="sparkles" size={11} />
+              IA
+            </span>
+            <span className="rec2-kind">Contenido en tu web</span>
+          </div>
+          <div className="rec-title">{leverTitle(lever.theme)}</div>
+          <div className="rec2-step">
+            <Icon name="arrRight" size={13} />
+            <span>
+              <b>Haz esto.</b> {leverFirstStep(lever.theme)}
+            </span>
+          </div>
+          <div className="rec2-reach">
+            {providers.length > 0 && (
+              <span className="rec2-reach-g" aria-hidden="true">
+                {providers.map((provider) => (
+                  <span key={provider} style={{ color: getEngineMeta(provider).color }} title={getEngineMeta(provider).label}>
+                    <EngineGlyph provider={provider} />
+                  </span>
+                ))}
+              </span>
+            )}
+            <span>{leverReach(lever.theme, questions.length)}</span>
+          </div>
+          {isDefinition && <div className="rec2-lever-note">{DEFINITION_LEVER_NOTE}</div>}
+        </div>
+
+        <div
+          className="rec-side"
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: 10,
+            flexShrink: 0,
+          }}
+        >
+          <div style={{ textAlign: "right" }}>
+            {lever.points !== null && lever.points >= MIN_VISIBLE_POINTS ? (
+              <>
+                <div className="rec2-pts">hasta +{formatPoints(lever.points)} pt</div>
+                <div className="rec2-pts-l">{leverPointsCaption(lever.theme)}</div>
+              </>
+            ) : (
+              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                {impact}
+              </div>
+            )}
+          </div>
+          <button
+            className="btn btn-ghost btn-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen((o) => !o);
+            }}
+          >
+            {open ? "Ocultar" : toggleLabel}
+            <Icon name={open ? "chevDown" : "chevRight"} size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="rec-detail">
+        <div className="rec-detail-inner">
+          {questions.length > 0 && (
+            <div className="rec2-block">
+              <div className="rec2-label">{questions.length === 1 ? "La pregunta" : "Las preguntas"}</div>
+              <ul className="rec2-qs">
+                {visible.map((q) => (
+                  <li key={q.key} className="rec2-q">
+                    <div className="rec2-q-t">
+                      {q.providers.map((provider) => (
+                        <span
+                          key={provider}
+                          className="rec2-q-g"
+                          style={{ color: getEngineMeta(provider).color }}
+                          title={getEngineMeta(provider).label}
+                        >
+                          <EngineGlyph provider={provider} />
+                        </span>
+                      ))}
+                      <span>{q.prompt}</span>
+                    </div>
+                    {q.runsOpen > 1 && <div className="rec2-q-m">Abierta {q.runsOpen} escaneos</div>}
+                  </li>
+                ))}
+              </ul>
+              {hiddenCount > 0 && (
+                <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 6 }} onClick={() => setShowAll(true)}>
+                  <Icon name="chevDown" size={13} />
+                  Ver las otras {hiddenCount}
+                </button>
+              )}
+            </div>
+          )}
+
+          <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            {!solution ? (
+              <>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={handleRewrite}
+                  disabled={rewriteFeedback.isPending}
+                >
+                  {rewriteFeedback.isPending ? (
+                    <>
+                      <span className="btn-spinner" /> Generando…
+                    </>
+                  ) : (
+                    <>
+                      <Icon name="sparkles" size={13} />
+                      {cta}
+                    </>
+                  )}
+                </button>
+                <ActionAnnouncement state={rewriteFeedback.state} />
+              </>
+            ) : (
+              <span className="badge badge-outline">
+                <Icon name="sparkles" size={11} />
+                Propuesta generada
+              </span>
+            )}
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              onClick={handleDismiss}
+              disabled={dismissFeedback.isPending}
+            >
+              {dismissFeedback.isPending ? (
+                <>
+                  <span className="btn-spinner" /> Actualizando…
+                </>
+              ) : (
+                <>
+                  <Icon name="check" size={13} />
+                  Marcar como hecho
+                </>
+              )}
+            </button>
+            <ActionAnnouncement state={dismissFeedback.state} />
+            {dismissFeedback.state.status === "idle" && (
+              <p style={{ margin: 0, fontSize: 11.5, color: "var(--ink-4)" }}>
+                {questions.length > 1
+                  ? "Cierra todas sus preguntas. Cada una se comprueba en tu próximo escaneo."
+                  : "La verás reflejada en tu próximo escaneo."}
+              </p>
+            )}
+          </div>
+
+          {solution && <SolutionPanel solution={solution} />}
         </div>
       </div>
     </div>
@@ -1404,7 +1852,7 @@ function GroupedRecs({
       </button>
       {open && (
         <div className="rec2-group-body">
-          {!single && (
+          {!single && type !== "track_emerging_competitor" && (
             <div style={{ padding: "12px 4px 2px" }}>
               <div className="rec-problem" style={{ marginTop: 0 }}>
                 {shared.description}
@@ -1459,6 +1907,8 @@ export function RecommendationsClient({
   jointPoints = null,
   jointPointsByType,
   planIds = [],
+  levers = [],
+  leverSolutions = {},
   planPoints = null,
   planPointsWithGoogle = null,
   jointPointsByTypeWithGoogle,
@@ -1476,6 +1926,10 @@ export function RecommendationsClient({
   jointPointsByType?: Record<string, number | null>;
   /** Ids de las acciones del plan, en orden, seleccionadas en el servidor. */
   planIds?: string[];
+  /** RECS-ONE-LEVER-1: the visibility cards grouped by topic, server-side. */
+  levers?: LeverView[];
+  /** Lever plans keyed by representative id (only levers of 2+ cards). */
+  leverSolutions?: Record<string, GeneratedSolution>;
   /** Techo CONJUNTO del plan (nunca la suma de sus tarjetas). */
   planPoints?: number | null;
   /** Gates "Deshacer" on a dismissed row in "Resueltas" — see
@@ -1525,8 +1979,37 @@ export function RecommendationsClient({
   // actions can wait. Supersedes the "repetition is fine" rule of §115, and
   // with it the "Alta prioridad" filter, which only repeated the plan.
   const planIdSet = new Set(plan.map((r) => r.id));
+  // RECS-ONE-LEVER-1: a lever's members live on its card, never as cards of
+  // their own, in the plan or in «Más adelante».
+  const leverByRep = new Map(levers.map((l) => [l.representativeId, l]));
+  const leverMemberSet = new Set(levers.flatMap((l) => l.memberIds));
+  const recById = new Map(recommendations.map((r) => [r.id, r]));
+  const leverMembers = (lever: LeverView) =>
+    lever.memberIds.map((id) => recById.get(id)).filter((r): r is Recommendation => Boolean(r));
+  const leverSolution = (lever: LeverView) =>
+    lever.memberIds.length > 1
+      ? (leverSolutions[lever.representativeId] ?? null)
+      : (recById.get(lever.representativeId)?.solution ?? null);
+  const renderPlanCard = (rec: Recommendation, rank: number) => {
+    const lever = leverByRep.get(rec.id);
+    return lever ? (
+      <LeverCard
+        key={`plan-${rec.id}`}
+        lever={lever}
+        members={leverMembers(lever)}
+        projectId={projectId}
+        priorityRank={rank}
+        solution={leverSolution(lever)}
+      />
+    ) : (
+      <RecCard key={`plan-${rec.id}`} rec={rec} projectId={projectId} priorityRank={rank} />
+    );
+  };
+  const laterLevers = filter === "all" ? levers.filter((l) => !planIdSet.has(l.representativeId)) : [];
   const filtered = recommendations.filter((r) =>
-    filter === "technical" ? categoryForType(r.recommendation_type) === "technical" : !planIdSet.has(r.id),
+    filter === "technical"
+      ? categoryForType(r.recommendation_type) === "technical"
+      : !planIdSet.has(r.id) && !leverMemberSet.has(r.id),
   );
 
   const tabs: [FilterMode, string][] = [
@@ -1581,16 +2064,9 @@ export function RecommendationsClient({
             <div className="rec2-plan-t">Tu plan de esta semana</div>
             {summary && <div className="rec2-plan-s">{summary}</div>}
           </div>
-          {plan[0] && <RecCard key={`plan-${plan[0].id}`} rec={plan[0]} projectId={projectId} priorityRank={1} />}
+          {plan[0] && renderPlanCard(plan[0], 1)}
           {googleConnected && googlePlanSlot}
-          {plan.slice(1).map((rec, i) => (
-            <RecCard
-              key={`plan-${rec.id}`}
-              rec={rec}
-              projectId={projectId}
-              priorityRank={i + (googleInPlan ? 3 : 2)}
-            />
-          ))}
+          {plan.slice(1).map((rec, i) => renderPlanCard(rec, i + (googleInPlan ? 3 : 2)))}
         </>
       )}
       {/* Without a plan to sit in, the slot still mounts so Google can report. */}
@@ -1638,7 +2114,7 @@ export function RecommendationsClient({
           labelled by category to reach the actions is the same choice asked
           twice (founder review). Filtered views list their actions directly. */}
       {filter !== "resolved" &&
-        (filtered.length === 0 ? (
+        (filtered.length === 0 && laterLevers.length === 0 ? (
           <div className="section-empty">
             {filter === "all" ? (
               <>
@@ -1679,15 +2155,26 @@ export function RecommendationsClient({
             )}
           </div>
         ) : filter === "all" ? (
-          groupByType(filtered).map(({ type, items }) => (
-            <GroupedRecs
-              key={type}
-              type={type}
-              items={items}
-              projectId={projectId}
-              jointPointsByType={groupPoints}
-            />
-          ))
+          <>
+            {laterLevers.map((lever) => (
+              <LeverCard
+                key={`lever-${lever.key}`}
+                lever={lever}
+                members={leverMembers(lever)}
+                projectId={projectId}
+                solution={leverSolution(lever)}
+              />
+            ))}
+            {groupByType(filtered).map(({ type, items }) => (
+              <GroupedRecs
+                key={type}
+                type={type}
+                items={items}
+                projectId={projectId}
+                jointPointsByType={groupPoints}
+              />
+            ))}
+          </>
         ) : (
           filtered.map((rec) => <RecCard key={`f-${rec.id}`} rec={rec} projectId={projectId} />)
         ))}

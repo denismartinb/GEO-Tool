@@ -672,6 +672,51 @@ consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externa
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
 
+## Canal del plan (RECS-MIXED-CHANNEL-1, log §326)
+
+- **El paso «hazlo legible por máquina» sólo va en acciones de la propia
+  web.** `buildRecommendationRewritePrompt` lo decide con
+  `deliverableForType(tipo).control`: `own_site` (o sin clasificar) lo lleva;
+  `third_party` e `in_app` llevan la instrucción contraria, sin pasos de la
+  web ni ejemplos de JSON-LD. Un tipo nuevo de terceros hereda esto al
+  declarar su control en `deliverable.ts`.
+- **Cada familia `pursue_*` tiene su playbook.** Sin él, el tipo cae al
+  prompt genérico, que está pensado para contenido propio.
+- **«Listo para copiar» sólo en la propia web.** Fuera de ella, un plan sin
+  huecos es «Plan listo».
+
+## Añadir competidor (RECS-ADD-COMPETITOR-1, log §327)
+
+- **`track_emerging_competitor` se pinta como un botón, nunca como plan.**
+  `RecCard` lo desvía a `EmergingCompetitorCard`: sin «Ver cómo», sin
+  generación de IA, sin puntos. La acción entera es añadir el competidor.
+- **El alta pasa por `createCompetitorCore`**, el mismo camino que el
+  formulario de Competidores. No se escribe en `project_competitors` por otro
+  lado. Después la tarjeta se marca hecha con `dismissRecommendationCore`.
+- **El nombre se lee de `evidence_json.emerging_competitor` en el servidor.**
+  La action no acepta un nombre del navegador; sólo el id y la web.
+- **La web sólo se propone con igualdad exacta de etiqueta**
+  (`domainForBrandName`). Sin coincidencia se pide; nunca se adivina. El
+  navegador y el servidor validan con la misma `parseCompetitorDomain`.
+
+## Una tarjeta por palanca (RECS-ONE-LEVER-1, log §328)
+
+- **Las tarjetas `increase_brand_visibility` se pintan agrupadas por tema,
+  nunca sueltas.** El motor sigue emitiendo una por prompt (log §115 punto
+  6); `lib/recommendations/levers.ts` las agrupa por `project_prompts.category`
+  al cargar la pantalla, y las de definición van siempre aparte.
+- **Una palanca tiene una sola cifra**, el contrafactual conjunto de todos sus
+  miembros (ADR 0017 §3). Nunca la suma de los miembros.
+- **Una palanca ocupa un solo puesto del plan.** El plan se elige sobre
+  `collapseLeversForPlan`; todo techo que incluya una palanca se calcula con
+  todos sus miembros (`expandLeverIds`).
+- **El plan de una palanca se marca `lever: true` y nunca sustituye al de una
+  pregunta, ni al revés.** Los miembros se vuelven a leer en servidor con el
+  cliente del usuario, del mismo proyecto y tipo; el título lo pone el
+  servidor.
+- **«Marcar como hecho» de una palanca cierra todos sus miembros**, cada uno
+  con su propia comprobación de propiedad (`dismissRecommendationsCore`).
+
 ## Cobertura: índices y comparativas (RECS-COVERAGE-1, log §330)
 
 - **Un índice nunca es «tu página».** `isAnswerPage` excluye portada, foros

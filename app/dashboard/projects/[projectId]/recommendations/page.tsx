@@ -38,6 +38,13 @@ import {
   findCitationBlockers
 } from "@/lib/recommendations/citation-blockers";
 import { selectPlan } from "@/lib/recommendations/plan";
+import {
+  collapseLeversForPlan,
+  expandLeverIds,
+  groupLevers,
+  themeForRec,
+  type LeverView,
+} from "@/lib/recommendations/levers";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
@@ -482,10 +489,13 @@ export default async function RecommendationsPage({
   // recommendation row); the owner SELECT policy on that table makes this a
   // plain user-context read. Only completed + sanitized rows are renderable.
   const solutionByRecId = new Map<string, GeneratedSolution>();
+  // RECS-ONE-LEVER-1: a plan generated for a whole lever is flagged in its
+  // evidence and only ever shown on that lever's card, never on a single one.
+  const leverSolutionByRecId = new Map<string, GeneratedSolution>();
   if (baseRecs.length > 0) {
     const { data: solutionRows } = await supabase
       .from("generated_solutions")
-      .select("recommendation_id, sanitized_content, created_at")
+      .select("recommendation_id, sanitized_content, evidence_json, created_at")
       .eq("project_id", projectId)
       .eq("status", "completed")
       .eq("is_sanitized", true)
@@ -498,11 +508,13 @@ export default async function RecommendationsPage({
     for (const row of (solutionRows ?? []) as Array<{
       recommendation_id: string;
       sanitized_content: string | null;
+      evidence_json?: { lever?: unknown } | null;
     }>) {
       // Newest-first order means the first row seen per recommendation wins.
-      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
+      const target = row.evidence_json?.lever === true ? leverSolutionByRecId : solutionByRecId;
+      if (target.has(row.recommendation_id) || !row.sanitized_content) continue;
       const parsed = parseGeneratedSolution(row.sanitized_content);
-      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
+      if (parsed) target.set(row.recommendation_id, parsed);
     }
   }
 
@@ -605,7 +617,7 @@ export default async function RecommendationsPage({
    * null for non-quantifiable types or a low-confidence run, in which case
    * the card shows a qualitative impact instead of an invented number.
    */
-  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }] =
+  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }, { data: promptCategoryRows }] =
     latestCompletedRun
       ? await Promise.all([
           supabase
@@ -616,7 +628,7 @@ export default async function RecommendationsPage({
           supabase
             .from("scan_prompt_results")
             .select(
-              "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, brand_snapshot, provider, extraction_version",
+              "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, brand_snapshot, provider, extraction_version",
             )
             .eq("project_id", projectId)
             .eq("run_id", latestCompletedRun.id),
@@ -631,8 +643,11 @@ export default async function RecommendationsPage({
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
+          // RECS-ONE-LEVER-1: the topic of each prompt, to group the
+          // visibility cards into one card per topic.
+          supabase.from("project_prompts").select("id, category").eq("project_id", projectId),
         ])
-      : [{ data: null }, { data: null }, { data: null }];
+      : [{ data: null }, { data: null }, { data: null }, { data: null }];
 
   const pillars = readPillars((runScoreRow as { details_json?: unknown } | null)?.details_json);
 
@@ -671,6 +686,50 @@ export default async function RecommendationsPage({
         : null,
   }));
 
+  // RECS-ONE-LEVER-1: the visibility cards grouped by topic, one card per
+  // topic in presentation only (every member stays its own row). Each lever
+  // gets one joint counterfactual over all its members (ADR 0017 §3).
+  const categoryByPromptId = new Map(
+    ((promptCategoryRows ?? []) as Array<{ id: string; category: string | null }>).map((row) => [row.id, row.category]),
+  );
+  const categoryByResultId = new Map<string, string | null>(
+    ((allPromptResults ?? []) as Array<{ id: string; prompt_id?: string | null }>).map((row) => [
+      row.id,
+      row.prompt_id ? (categoryByPromptId.get(row.prompt_id) ?? null) : null,
+    ]),
+  );
+  const levers: LeverView[] = groupLevers(recs, (r) => themeForRec(r.evidence_json, categoryByResultId))
+    .map((group) => {
+      const joint =
+        scoreInputRows.length > 0
+          ? computeJointPotentialPoints(
+              scoreInputRows,
+              project.domain,
+              group.members.map((r) => ({
+                recommendationType: r.recommendation_type,
+                affectedPromptIds: affectedPromptIds(r.evidence_json),
+              })),
+            )
+          : null;
+      return {
+        key: group.key,
+        theme: group.theme,
+        representativeId: group.representative.id,
+        memberIds: group.members.map((r) => r.id),
+        points: joint ? joint.deltaPoints : null,
+      };
+    })
+    .sort((a, b) => (b.points ?? -1) - (a.points ?? -1));
+  const leverIdSet = new Set(levers.flatMap((l) => l.memberIds));
+  const recById = new Map(recs.map((r) => [r.id, r]));
+  const expandRecs = (items: Recommendation[]): Recommendation[] =>
+    expandLeverIds(
+      items.map((r) => r.id),
+      levers,
+    )
+      .map((id) => recById.get(id))
+      .filter((r): r is Recommendation => Boolean(r));
+
   // Joint ceiling across every active recommendation — never the sum of the
   // per-card deltas, which double-counts prompts shared by two rules (ADR 0017 §3).
   const jointPotential =
@@ -692,7 +751,9 @@ export default async function RecommendationsPage({
   // its members' individual deltas (ADR 0017 §3).
   // RECS-SHORT-CARD-1 (log §303): the groups sit under «Más adelante», which
   // leaves out the plan's cards, so their ceiling is computed without them.
-  const plan = selectPlan(recs);
+  // A lever takes one plan slot, through its representative carrying the
+  // lever's joint points (RECS-ONE-LEVER-1).
+  const plan = selectPlan(collapseLeversForPlan(recs, levers));
   // RECS-ONE-QUEUE-1 (log §307): with Search Console connected, a Google card
   // can take slot 2 and the third AI action moves to «Más adelante». The page
   // doesn't wait for Google to know which, so it computes both ceilings.
@@ -709,7 +770,8 @@ export default async function RecommendationsPage({
     if (scoreInputRows.length === 0) return out;
     const byType = new Map<string, Recommendation[]>();
     for (const rec of recs) {
-      if (excluded.has(rec.id)) continue;
+      // Levers carry their own figure; their type is no longer a group.
+      if (excluded.has(rec.id) || leverIdSet.has(rec.id)) continue;
       const bucket = byType.get(rec.recommendation_type) ?? [];
       bucket.push(rec);
       byType.set(rec.recommendation_type, bucket);
@@ -728,9 +790,9 @@ export default async function RecommendationsPage({
     }
     return out;
   };
-  const jointPointsByType = groupCeilings(new Set(plan.map((r) => r.id)));
+  const jointPointsByType = groupCeilings(new Set(expandRecs(plan).map((r) => r.id)));
   const jointPointsByTypeWithGoogle = googleConnected
-    ? groupCeilings(new Set(plan.slice(0, 2).map((r) => r.id)))
+    ? groupCeilings(new Set(expandRecs(plan.slice(0, 2)).map((r) => r.id)))
     : undefined;
 
   // El plan se selecciona AQUI, no en el cliente, porque su techo de puntos
@@ -743,7 +805,7 @@ export default async function RecommendationsPage({
       ? computeJointPotentialPoints(
           scoreInputRows,
           project.domain,
-          plan.map((r) => ({
+          expandRecs(plan).map((r) => ({
             recommendationType: r.recommendation_type,
             affectedPromptIds: affectedPromptIds(r.evidence_json),
           })),
@@ -755,7 +817,7 @@ export default async function RecommendationsPage({
       ? computeJointPotentialPoints(
           scoreInputRows,
           project.domain,
-          plan.slice(0, 2).map((r) => ({
+          expandRecs(plan.slice(0, 2)).map((r) => ({
             recommendationType: r.recommendation_type,
             affectedPromptIds: affectedPromptIds(r.evidence_json),
           })),
@@ -884,6 +946,13 @@ export default async function RecommendationsPage({
               jointPoints={jointPoints}
               jointPointsByType={jointPointsByType}
               planIds={planIds}
+              levers={levers}
+              leverSolutions={Object.fromEntries(
+                levers.flatMap((l) => {
+                  const solution = leverSolutionByRecId.get(l.representativeId);
+                  return solution ? [[l.representativeId, solution]] : [];
+                }),
+              )}
               planPoints={planPoints}
               planPointsWithGoogle={planPointsWithGoogle}
               jointPointsByTypeWithGoogle={jointPointsByTypeWithGoogle}

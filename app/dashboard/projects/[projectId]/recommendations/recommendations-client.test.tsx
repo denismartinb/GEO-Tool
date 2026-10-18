@@ -66,6 +66,17 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
     expect(html).not.toContain("por rellenar");
   });
 
+  it("dice «Plan listo» en una acción fuera de tu web, donde no hay nada que pegar (log §326)", () => {
+    const html = renderToStaticMarkup(
+      <SolutionPanel
+        recommendationType="pursue_community_sources"
+        solution={{ title: "Participa en YouTube", summary: "Resumen", steps: ["Responde en el vídeo más citado."], examples: [] }}
+      />
+    );
+    expect(html).toContain("Plan listo");
+    expect(html).not.toContain("Listo para copiar");
+  });
+
   it("cuenta los huecos reales del artefacto y de los pasos", () => {
     const html = renderToStaticMarkup(
       <SolutionPanel
@@ -203,6 +214,39 @@ describe("RecCard — CTA y chip de control", () => {
   it("marca como interno lo que se resuelve dentro del producto", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "track_emerging_competitor" })} />);
     expect(html).toContain("Aquí en GenScore");
+  });
+});
+
+/**
+ * RECS-ADD-COMPETITOR-1 (log §327). El clic no se puede probar por render; sí
+ * que la tarjeta es un botón y no un plan, y de dónde sale la web.
+ */
+describe("RecCard — «Añadir X a competidores»", () => {
+  const emerging = (evidence: Record<string, unknown>) =>
+    baseRec({
+      recommendation_type: "track_emerging_competitor",
+      title: "Añade Semrush a tus competidores",
+      evidence_json: { emerging_competitor: "Semrush", ...evidence }
+    });
+
+  it("es un botón con la web encontrada, sin plan ni «Ver cómo»", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ emerging_competitor_domain: "semrush.com" })} />);
+    expect(html).toContain("Añadir Semrush a competidores");
+    expect(html).toContain("Con su web semrush.com");
+    expect(html).not.toContain("Ver cómo");
+    expect(html).not.toContain("Listo para copiar");
+    expect(html).not.toContain("Añadir a competidores</");
+  });
+
+  it("en una tarjeta guardada antes del cambio, saca la web de los dominios citados", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["es.semrush.com"] })} />);
+    expect(html).toContain("Con su web semrush.com");
+  });
+
+  it("sin coincidencia exacta pide la web y deja el botón desactivado", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["semrushtools.com"] })} />);
+    expect(html).toContain("Web de Semrush");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Añadir Semrush a competidores/);
   });
 });
 
@@ -593,5 +637,65 @@ describe("planSummary — cada fuente en su escala (log §307)", () => {
     expect(planSummary(5, null, 2)).toBe("Hasta +5 pt GEO si haces las dos");
     expect(planSummary(null, null, 3)).toBeNull();
     expect(planSummary(9, "pending", 2)).toBe("Hasta +9 pt GEO");
+  });
+});
+
+describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
+  const q = (id: string, prompt: string, runs = 1, provider = "gemini") =>
+    baseRec({
+      id,
+      title: `Aparece en "${prompt}"`,
+      consecutive_runs_open: runs,
+      evidence_json: {
+        affected_prompts: [prompt],
+        affected_prompt_details: [{ id: `${id}-row`, prompt, competitors: [], domains: [], snippet: null, provider }]
+      }
+    } as Partial<Recommendation>);
+  const recs = [
+    baseRec({ id: "gap", recommendation_type: "close_competitor_gap", title: "Compárate con Peec AI" }),
+    q("h1", "¿Qué pasos sigo para optimizar mi GEO?", 13, "openai"),
+    q("h2", "¿Cómo salgo mejor en ChatGPT?", 9),
+    q("h3", "¿Cuánto tarda el GEO?"),
+    q("d1", "qué es llmo"),
+    q("d2", "que significa geo")
+  ];
+  const levers = [
+    {
+      key: "category:Cómo hacer / guía",
+      theme: { kind: "category" as const, category: "Cómo hacer / guía" },
+      representativeId: "h1",
+      memberIds: ["h1", "h2", "h3"],
+      points: 9
+    },
+    { key: "definition", theme: { kind: "definition" as const }, representativeId: "d1", memberIds: ["d1", "d2"], points: 4 }
+  ];
+  const html = renderToStaticMarkup(
+    <RecommendationsClient recommendations={recs} projectId="p1" planIds={["gap", "h1"]} levers={levers} />
+  );
+
+  it("pinta una tarjeta por tema y ninguna «Aparece en…» suelta", () => {
+    expect(html).not.toContain("Aparece en");
+    expect(html.split("Una guía que responda a tus preguntas de «Cómo hacer»").length - 1).toBe(1);
+    expect(html).toContain("Define en tu web los términos que te preguntan");
+  });
+
+  it("lleva dentro sus preguntas, con su antigüedad, y una sola cifra", () => {
+    expect(html).toContain("¿Qué pasos sigo para optimizar mi GEO?");
+    expect(html).toContain("¿Cuánto tarda el GEO?");
+    expect(html).toContain("Abierta 13 escaneos");
+    expect(html).toContain("Ver las 3 preguntas y el plan");
+    expect(html).toContain("hasta +9 pt");
+    expect(html).toContain("si te nombran en estas preguntas");
+    expect(html).not.toContain("+2 pt");
+  });
+
+  it("la de definiciones conserva su aviso", () => {
+    expect(html).toContain("lo realista es que te citen, no que te nombren");
+  });
+
+  it("entra en el plan con su número de puesto", () => {
+    const planPart = html.slice(0, html.indexOf("Más adelante"));
+    expect(planPart).toContain("Una guía que responda a tus preguntas de «Cómo hacer»");
+    expect(planPart).not.toContain("Define en tu web");
   });
 });
