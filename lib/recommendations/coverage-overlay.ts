@@ -1,4 +1,5 @@
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
+import { findOwnComparisonPages, matchComparisonPages } from "@/lib/recommendations/own-comparison-pages";
 
 /**
  * RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
@@ -47,11 +48,20 @@ import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE, type DomainCoverageTopic } fro
  * writes, so "refuerza tu página" would send the user to edit a complaint
  * thread. Same treatment as `home_only`: coverage is not certified.
  */
+/**
+ * `listing_only` (RECS-COVERAGE-1, log §330): the only own pages Google
+ * returned are indexes (the blog home, a category or tag page, a section
+ * listing like `/comparativas`). An index links to answers but answers none,
+ * so it does not certify coverage either: in the real test the card linked
+ * `genscore.es/blog` as "Tu página" while the guide that answered the
+ * question lived one level below.
+ */
 export type CoverageOverlayState =
   | "confirmed_surfacing_gap"
   | "possible_content_gap"
   | "home_only"
   | "no_editable_page"
+  | "listing_only"
   | "none";
 
 export type CoverageOverlayEntry = {
@@ -117,9 +127,77 @@ export function isCommunityPage(url: string): boolean {
   }
 }
 
+/**
+ * Section names that, as the last segment of a short path, are an index of
+ * other pages rather than a page of their own (`/blog`, `/es/guias`,
+ * `/comparativas`).
+ */
+const LISTING_SEGMENTS = new Set([
+  "blog",
+  "blogs",
+  "noticias",
+  "news",
+  "articulos",
+  "articles",
+  "comparativas",
+  "comparisons",
+  "guias",
+  "guides",
+  "recursos",
+  "resources",
+  "docs",
+  "documentacion",
+  "glosario",
+  "glossary",
+  "estudios",
+  "insights",
+  "archivo",
+  "archive"
+]);
+
+/** Taxonomy segments whose next segment names a group, not a page. */
+const TAXONOMY_SEGMENTS = new Set([
+  "categoria",
+  "categorias",
+  "category",
+  "categories",
+  "tag",
+  "tags",
+  "etiqueta",
+  "etiquetas",
+  "autor",
+  "author"
+]);
+
+/** True for `/blog`, `/blog/`, `/en/blog`, `/blog/categoria/geo`, `/blog/page/2`. */
+export function isListingPage(url: string): boolean {
+  try {
+    const segments = new URL(url).pathname
+      .split("/")
+      .filter(Boolean)
+      .map((segment) => segment.toLowerCase());
+    if (segments.length === 0) return false;
+    const last = segments[segments.length - 1];
+    if (segments.length <= 2 && LISTING_SEGMENTS.has(last)) return true;
+    if (/^\d+$/.test(last) && (segments[segments.length - 2] === "page" || segments[segments.length - 2] === "pagina")) {
+      return true;
+    }
+    return segments.some((segment, i) => TAXONOMY_SEGMENTS.has(segment) && i >= segments.length - 2);
+  } catch {
+    return false;
+  }
+}
+
 /** A page that can answer one question and that the brand can edit. */
 export function isAnswerPage(url: string): boolean {
-  return !isSiteRoot(url) && !isCommunityPage(url);
+  return !isSiteRoot(url) && !isCommunityPage(url) && !isListingPage(url);
+}
+
+/** The state when Google found own pages but none of them answers the question. */
+function nonAnswerState(urls: string[]): "home_only" | "no_editable_page" | "listing_only" {
+  if (urls.every((url) => isSiteRoot(url))) return "home_only";
+  if (urls.some((url) => isCommunityPage(url))) return "no_editable_page";
+  return "listing_only";
 }
 
 function bumpConfidence(confidence: "low" | "medium" | "high"): "low" | "medium" | "high" {
@@ -168,10 +246,10 @@ export function computeCoverageOverlay(params: {
 
     const answerPages = topic.pages.filter((p) => isAnswerPage(p.url));
     if (topic.found && topic.pages.length > 0 && answerPages.length === 0) {
-      const homeOnly = topic.pages.every((p) => isSiteRoot(p.url));
+      const state = nonAnswerState(topic.pages.map((p) => p.url));
       overlay.set(rec.id, {
-        state: homeOnly ? "home_only" : "no_editable_page",
-        verifiedPage: homeOnly ? topic.pages[0] : null,
+        state,
+        verifiedPage: state === "home_only" ? topic.pages[0] : null,
         confidenceOverride: null
       });
     } else if (topic.found) {
@@ -191,6 +269,51 @@ export function computeCoverageOverlay(params: {
   return overlay;
 }
 
+
+/**
+ * RECS-COVERAGE-1 (log §330): comparison cards whose comparison already lives
+ * on the brand's site. The evidence is the URLs we already hold for the site
+ * (its sitemap from the technical audit, plus the pages coverage found), so
+ * the verdict says "this page exists", never "this page is good". Same state
+ * as a covered prompt: the card keeps its place and its points, and its
+ * advice turns from "publish" into "strengthen the one you have".
+ */
+export function computeComparisonOverlay(params: {
+  recommendations: Array<{
+    id: string;
+    recommendationType: string;
+    confidence: "low" | "medium" | "high";
+    competitor: string | null;
+    mentionedCompetitors: readonly string[];
+  }>;
+  siteUrls: readonly string[];
+  projectDomain: string;
+}): Map<string, CoverageOverlayEntry> {
+  const overlay = new Map<string, CoverageOverlayEntry>();
+  const pages = findOwnComparisonPages(params.siteUrls, params.projectDomain);
+  const matched = matchComparisonPages(params.recommendations, pages);
+  for (const rec of params.recommendations) {
+    const url = matched.get(rec.id);
+    if (!url) continue;
+    overlay.set(rec.id, {
+      state: "confirmed_surfacing_gap",
+      verifiedPage: { url, title: "" },
+      confidenceOverride: bumpConfidence(rec.confidence)
+    });
+  }
+  return overlay;
+}
+
+/** Inputs of `computeComparisonOverlay` read from a card's evidence. */
+export function comparisonFieldsFromEvidence(evidence: unknown): { competitor: string | null; mentionedCompetitors: string[] } {
+  const e = (evidence ?? {}) as { dominant_competitor?: unknown; mentioned_competitors?: unknown };
+  return {
+    competitor: typeof e.dominant_competitor === "string" && e.dominant_competitor.trim() ? e.dominant_competitor : null,
+    mentionedCompetitors: Array.isArray(e.mentioned_competitors)
+      ? e.mentioned_competitors.filter((n): n is string => typeof n === "string")
+      : []
+  };
+}
 
 /**
  * Plain-language explanation shown on the card once an overlay state is
@@ -239,6 +362,16 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
         whatToDo:
           "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.",
         firstStep: "Añade a tu página sobre este tema un dato concreto con fecha y fuente (precio, cifra, plazo)."
+      };
+    }
+    if (recommendationType === "close_competitor_gap" || recommendationType === "add_comparison_content") {
+      return {
+        whatWeFound:
+          "El mapa de tu web (sitemap) incluye una comparativa tuya con este competidor. El problema no es que te falte, sino que la IA no la está usando en estas respuestas.",
+        whatToDo:
+          "no publiques otra. Refuerza la que ya tienes: una tabla con criterios claros, datos con fecha y la respuesta a la pregunta en las dos primeras frases.",
+        firstStep:
+          "Refuerza tu comparativa: una tabla con criterios claros y la respuesta a la pregunta en sus dos primeras frases."
       };
     }
     return {
@@ -298,6 +431,19 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
         recommendationType === "add_citation_block"
           ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
           : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+    };
+  }
+
+  if (state === "listing_only") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció una página índice, como la portada de tu blog o un listado. Un índice enlaza a otras páginas pero no responde la pregunta, así que no la damos por cubierta.",
+      whatToDo:
+        "si ya tienes un artículo que responda esta pregunta, refuérzalo: la respuesta en las dos primeras frases y el titular en forma de pregunta. Si no lo tienes, publícalo.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Busca tu artículo sobre este tema y añádele un dato concreto con fecha y fuente; si no existe, publícalo."
+          : "Busca tu artículo sobre este tema y responde la pregunta en sus dos primeras frases; si no existe, publícalo."
     };
   }
 

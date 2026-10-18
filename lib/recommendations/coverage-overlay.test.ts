@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeCoverageOverlay, overlayCopy } from "./coverage-overlay";
+import { computeCoverageOverlay, isAnswerPage, isListingPage, overlayCopy } from "./coverage-overlay";
 import { NOT_COVERED_NOTE, COULD_NOT_VERIFY_NOTE } from "./domain-coverage";
 
 function rec(overrides: Partial<{
@@ -276,6 +276,84 @@ describe("no_editable_page (RECS-DIAGNOSIS-1, log §299)", () => {
       const copy = overlayCopy(type, "no_editable_page");
       expect(copy?.firstStep).toMatch(/^Publica/);
       expect(copy?.whatToDo).not.toContain("no crees una página nueva");
+    }
+  });
+});
+
+describe("listing_only (RECS-COVERAGE-1, log §330)", () => {
+  function overlayFor(pages: Array<{ url: string; title: string }>) {
+    return computeCoverageOverlay({
+      recommendations: [rec({ recommendationType: "increase_brand_visibility" })],
+      resultIdToPromptId: new Map([["result-1", "prompt-1"]]),
+      coverageTopics: [{ promptId: "prompt-1", topic: "x", found: true, pages, note: "n" }]
+    }).get("rec-1");
+  }
+
+  it("treats blog homes, section indexes, taxonomy and pagination pages as listings", () => {
+    for (const url of [
+      "https://genscore.es/blog",
+      "https://genscore.es/blog/",
+      "https://acme.es/en/blog",
+      "https://genscore.es/comparativas",
+      "https://acme.es/blog/categoria/geo",
+      "https://acme.es/tag/seo",
+      "https://acme.es/blog/page/2"
+    ]) {
+      expect(isListingPage(url), url).toBe(true);
+      expect(isAnswerPage(url), url).toBe(false);
+    }
+  });
+
+  it("keeps articles and pages below an index as answer pages", () => {
+    for (const url of [
+      "https://genscore.es/blog/que-es-el-geo",
+      "https://genscore.es/comparativas/genscore-vs-peec-ai",
+      "https://genscore.es/docs/empezar/primer-escaneo",
+      "https://acme.es/precios",
+      "https://acme.es/pagina/sobre-nosotros"
+    ]) {
+      expect(isListingPage(url), url).toBe(false);
+      expect(isAnswerPage(url), url).toBe(true);
+    }
+  });
+
+  it("does not certify coverage when Google only returned an index (the /blog case of the real test)", () => {
+    const entry = overlayFor([{ url: "https://genscore.es/blog", title: "Blog" }]);
+    expect(entry?.state).toBe("listing_only");
+    expect(entry?.verifiedPage).toBeNull();
+  });
+
+  it("an index next to the real article links the article, never the index", () => {
+    const entry = overlayFor([
+      { url: "https://genscore.es/blog", title: "Blog" },
+      { url: "https://genscore.es/blog/que-es-el-geo", title: "Qué es el GEO" }
+    ]);
+    expect(entry?.state).toBe("confirmed_surfacing_gap");
+    expect(entry?.verifiedPage?.url).toBe("https://genscore.es/blog/que-es-el-geo");
+  });
+
+  it("home plus index is a listing, home alone stays home_only, a forum wins over an index", () => {
+    expect(
+      overlayFor([
+        { url: "https://genscore.es/", title: "Inicio" },
+        { url: "https://genscore.es/blog", title: "Blog" }
+      ])?.state
+    ).toBe("listing_only");
+    expect(overlayFor([{ url: "https://genscore.es/", title: "Inicio" }])?.state).toBe("home_only");
+    expect(
+      overlayFor([
+        { url: "https://acme.es/blog", title: "Blog" },
+        { url: "https://acme.es/foro/tema-1", title: "Foro" }
+      ])?.state
+    ).toBe("no_editable_page");
+  });
+
+  it("its advice never tells the user the question is already covered", () => {
+    for (const type of ["increase_brand_visibility", "add_citation_block"]) {
+      const copy = overlayCopy(type, "listing_only");
+      expect(copy?.whatToDo).not.toContain("no crees una página nueva");
+      expect(copy?.firstStep).toMatch(/si no existe, publícalo\.$/);
+      expect(copy?.whatWeFound).not.toContain("—");
     }
   });
 });

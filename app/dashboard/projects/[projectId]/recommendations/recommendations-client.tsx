@@ -84,7 +84,7 @@ type EvidenceJson = {
  * exactly as before" — coverage data is optional and sparse by design.
  */
 export type CoverageOverlay = {
-  state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "no_editable_page" | "none";
+  state: "confirmed_surfacing_gap" | "possible_content_gap" | "home_only" | "no_editable_page" | "listing_only" | "none";
   verifiedPage: { url: string; title: string } | null;
   confidenceOverride: "low" | "medium" | "high" | null;
 };
@@ -138,6 +138,16 @@ export function overlayCopyLocal(
         whatToDo:
           "no crees una página nueva. Refuerza la que ya tienes para que sea fácil de citar — añade un bloque con datos concretos (cifras, fechas, hechos verificables) que la IA pueda referenciar.",
         firstStep: "Añade a tu página sobre este tema un dato concreto con fecha y fuente (precio, cifra, plazo)."
+      };
+    }
+    if (recommendationType === "close_competitor_gap" || recommendationType === "add_comparison_content") {
+      return {
+        whatWeFound:
+          "El mapa de tu web (sitemap) incluye una comparativa tuya con este competidor. El problema no es que te falte, sino que la IA no la está usando en estas respuestas.",
+        whatToDo:
+          "no publiques otra. Refuerza la que ya tienes: una tabla con criterios claros, datos con fecha y la respuesta a la pregunta en las dos primeras frases.",
+        firstStep:
+          "Refuerza tu comparativa: una tabla con criterios claros y la respuesta a la pregunta en sus dos primeras frases."
       };
     }
     return {
@@ -197,6 +207,19 @@ export function overlayCopyLocal(
         recommendationType === "add_citation_block"
           ? "Publica una página que responda esta consulta e incluye en ella un dato concreto con fecha y fuente (precio, cifra, plazo)."
           : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta."
+    };
+  }
+
+  if (state === "listing_only") {
+    return {
+      whatWeFound:
+        "Buscamos en Google dentro de tu dominio y sólo apareció una página índice, como la portada de tu blog o un listado. Un índice enlaza a otras páginas pero no responde la pregunta, así que no la damos por cubierta.",
+      whatToDo:
+        "si ya tienes un artículo que responda esta pregunta, refuérzalo: la respuesta en las dos primeras frases y el titular en forma de pregunta. Si no lo tienes, publícalo.",
+      firstStep:
+        recommendationType === "add_citation_block"
+          ? "Busca tu artículo sobre este tema y añádele un dato concreto con fecha y fuente; si no existe, publícalo."
+          : "Busca tu artículo sobre este tema y responde la pregunta en sus dos primeras frases; si no existe, publícalo."
     };
   }
 
@@ -1225,7 +1248,7 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
               </p>
             </div>
           )}
-          {(overlay?.state === "home_only" || overlay?.state === "no_editable_page") && (
+          {(overlay?.state === "home_only" || overlay?.state === "no_editable_page" || overlay?.state === "listing_only") && (
             <div
               style={{
                 marginBottom: 14,
@@ -1252,7 +1275,11 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
                 Auditoría de tu web
               </div>
               <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>
-                {overlay.state === "home_only" ? "Sólo encontramos tu portada" : "Sólo encontramos foros o comunidad"}
+                {overlay.state === "home_only"
+                  ? "Sólo encontramos tu portada"
+                  : overlay.state === "listing_only"
+                    ? "Sólo encontramos una página índice"
+                    : "Sólo encontramos foros o comunidad"}
               </div>
               <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
                 {overlayCopyLocal(rec.recommendation_type, overlay.state)?.whatWeFound}
