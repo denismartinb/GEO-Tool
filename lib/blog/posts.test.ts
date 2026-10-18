@@ -153,6 +153,8 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
    * Añadir una entrada aquí es parte del PR que hace el refresco, no un
    * trámite posterior: si el cuerpo del artículo no cambió, no es un refresco.
    */
+  const AGENTIC_POSTS_2 =
+    "La sección «Dónde encaja GenScore» dice que Pro y Agencia ya tienen la Auditoría agéntica y que mide lo que vendes, no sólo fichas. Log §326.";
   const REFRESCOS_REALES: Record<string, string> = {
     "que-es-el-geo-score":
       "GEO-SCORE-V4 (ADR 0033) añadió el componente técnico y reescaló los pesos; " +
@@ -163,7 +165,13 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
     "como-aparecer-en-gemini-y-vistas-creadas-con-ia":
       "Gana la sección y la FAQ con la pregunta exacta «cómo conseguir que Gemini mencione mi empresa», con respuesta directa. Log §324.",
     "mi-marca-no-aparece-en-chatgpt-por-que":
-      "Gana la sección y la FAQ con la pregunta literal «¿Cómo salgo mejor en las IAs?», con respuesta directa. Log §324."
+      "Gana la sección y la FAQ con la pregunta literal «¿Cómo salgo mejor en las IAs?», con respuesta directa. Log §324.",
+    "que-es-el-comercio-agentico": AGENTIC_POSTS_2,
+    "como-compra-un-agente-de-ia": AGENTIC_POSTS_2,
+    "web-preparada-para-el-comercio-agentico": AGENTIC_POSTS_2,
+    "la-ia-descubre-tu-web-vende": AGENTIC_POSTS_2,
+    "protocolos-comercio-agentico-acp-ucp-ap2": AGENTIC_POSTS_2,
+    "agentes-personales-de-ia-que-compran": AGENTIC_POSTS_2
   };
 
   it("todo dateUpdated corresponde a un refresco documentado", () => {

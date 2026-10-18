@@ -26268,3 +26268,26 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 **Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
+
+## 326. AGENTIC-POSTS-2: los artículos de comercio agéntico dicen que Pro ya tiene la auditoría (2026-10-18)
+
+**Qué.** Los seis artículos de AGENTIC-POSTS-1 (§316) se escribieron cuando
+la auditoría agéntica sólo existía como comprobador gratuito y medía fichas de
+tienda. Con la Fase 2a en producción (#646, §322, §323, §325), su sección
+«Dónde encaja GenScore» añade que en Pro y Agencia la Auditoría agéntica de la
+consola hace esa revisión sola después de cada escaneo, sobre la página donde
+vendes (una ficha, tus precios, un servicio o tus reservas). Donde el texto
+decía «tus productos» o «tu tienda» para describir lo que revisa GenScore,
+pasa a «lo que vendes» o «tu web», porque desde §325 el motor ya no mide sólo
+fichas. En las diez comprobaciones, «Compra» pasa de «añadir al carrito» a
+«comprar, contratar o reservar». `dateUpdated` de los seis es 2026-10-18 y el
+calendario los marca publicados y refrescados.
+
+**Qué no cambia.** El resto de cada artículo sigue hablando de tiendas, que es
+su tema. Las limitaciones declaradas siguen igual: no revisamos protocolos de
+pago ni la firma de los agentes, ni si el precio y el stock coinciden en todos
+los canales, ni recorremos el checkout. «Preguntas de compra» y «Visibilidad
+en agentes» (2d) no se anuncian.
+
+**Pendiente.** Si se aprueba 2b, 2c o 2d, esta misma sección se vuelve a
+tocar en el PR que lo lleve a producción.
