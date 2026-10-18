@@ -154,7 +154,7 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
    * trámite posterior: si el cuerpo del artículo no cambió, no es un refresco.
    */
   const AGENTIC_POSTS_2 =
-    "La sección «Dónde encaja GenScore» dice que Pro y Agencia ya tienen la Auditoría agéntica y que mide lo que vendes, no sólo fichas. Log §326.";
+    "La sección «Dónde encaja GenScore» dice que Pro y Agencia ya tienen la Auditoría agéntica y que mide lo que vendes, no sólo fichas. Log §333.";
   const REFRESCOS_REALES: Record<string, string> = {
     "que-es-el-geo-score":
       "GEO-SCORE-V4 (ADR 0033) añadió el componente técnico y reescaló los pesos; " +

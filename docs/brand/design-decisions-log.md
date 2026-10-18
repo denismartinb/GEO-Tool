@@ -26269,7 +26269,7 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
 
-## 326. AGENTIC-POSTS-2: los artículos de comercio agéntico dicen que Pro ya tiene la auditoría (2026-10-18)
+## 333. AGENTIC-POSTS-2: los artículos de comercio agéntico dicen que Pro ya tiene la auditoría (2026-10-18)
 
 **Qué.** Los seis artículos de AGENTIC-POSTS-1 (§316) se escribieron cuando
 la auditoría agéntica sólo existía como comprobador gratuito y medía fichas de
