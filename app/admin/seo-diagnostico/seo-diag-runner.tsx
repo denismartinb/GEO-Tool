@@ -3,11 +3,14 @@
 import { useState } from "react";
 import {
   MAX_GAP_COMPETITORS,
+  MAX_LINK_GAP_TARGETS,
   MAX_SEEDS,
   MAX_SERP,
+  MAX_VOLUME_KEYWORDS,
   type BacklinkSummary,
   type GapKeyword,
   type KeywordIdea,
+  type LinkGapDomain,
   type OrganicCompetitor,
   type RankedKeyword,
   type SerpResult
@@ -33,6 +36,8 @@ type Diagnosis = {
   ideas: KeywordIdea[] | null;
   serps: SerpResult[];
   backlinks: { domain: string; summary: BacklinkSummary }[];
+  volumes?: KeywordIdea[] | null;
+  linkGap?: { competitors: string[]; total: number | null; items: LinkGapDomain[] } | null;
   steps: StepLog[];
 };
 
@@ -47,6 +52,72 @@ const DEFAULT_SERP = [
   "auditoría geo",
   "visibilidad en ia"
 ];
+
+/**
+ * SEO-RESEARCH-1: the keyword list the SEO plan for genscore.es needs volumes
+ * for, and the GEO tools whose linking sites are outreach prospects. Both are
+ * editable; they only prefill the boxes.
+ */
+const DEFAULT_VOLUME_KEYWORDS = [
+  "herramienta geo",
+  "herramientas geo",
+  "mejores herramientas geo",
+  "herramientas de visibilidad en ia",
+  "herramienta seo para ia",
+  "qué es geo",
+  "que significa geo",
+  "geo seo",
+  "geo marketing digital",
+  "posicionamiento geo",
+  "posicionamiento en ia",
+  "posicionamiento en inteligencia artificial",
+  "posicionamiento en chatgpt",
+  "cómo aparecer en chatgpt",
+  "aparecer en chatgpt",
+  "cómo aparecer en gemini",
+  "cómo aparecer en perplexity",
+  "seo para chatgpt",
+  "seo para ia",
+  "seo ia",
+  "aeo",
+  "qué es aeo",
+  "geo vs seo",
+  "diferencia entre seo y geo",
+  "generative engine optimization",
+  "optimización para motores generativos",
+  "auditoría geo",
+  "auditoría geo gratis",
+  "auditoría seo ia",
+  "visibilidad en ia",
+  "visibilidad de marca en ia",
+  "medir visibilidad en ia",
+  "monitorizar marca en chatgpt",
+  "aparece mi marca en chatgpt",
+  "chatgpt recomienda mi empresa",
+  "llms.txt",
+  "qué es llms.txt",
+  "ai overviews",
+  "modo ia google",
+  "share of voice ia",
+  "geo score",
+  "llmo",
+  "peec ai",
+  "otterly ai",
+  "profound ai",
+  "alternativas a peec ai",
+  "comercio agéntico",
+  "agentic commerce",
+  "tráfico de chatgpt en ga4",
+  "bots de ia robots.txt",
+  "gptbot",
+  "query fan out",
+  "agencia geo",
+  "consultor geo",
+  "geo para ecommerce",
+  "posicionamiento en ia para empresas",
+  "herramienta gratuita visibilidad ia"
+];
+const DEFAULT_LINK_GAP = ["peec.ai", "otterly.ai"];
 
 const lines = (text: string) => text.split("\n").map((line) => line.trim()).filter(Boolean);
 const usd = (value: number) => `${value.toLocaleString("es-ES", { minimumFractionDigits: 3, maximumFractionDigits: 4 })} $`;
@@ -66,14 +137,19 @@ export function SeoDiagRunner() {
   const [seedsText, setSeedsText] = useState(DEFAULT_SEEDS.join("\n"));
   const [serpText, setSerpText] = useState(DEFAULT_SERP.join("\n"));
   const [competitorsText, setCompetitorsText] = useState("");
+  const [volumeText, setVolumeText] = useState(DEFAULT_VOLUME_KEYWORDS.join("\n"));
+  const [linkGapText, setLinkGapText] = useState(DEFAULT_LINK_GAP.join("\n"));
   const [running, setRunning] = useState(false);
   const [phase, setPhase] = useState<string | null>(null);
   const [diag, setDiag] = useState<Diagnosis | null>(null);
 
   const seeds = lines(seedsText).slice(0, MAX_SEEDS);
   const serpKeywords = lines(serpText).slice(0, MAX_SERP);
+  const volumeKeywords = lines(volumeText).slice(0, MAX_VOLUME_KEYWORDS);
+  const linkGapTargets = lines(linkGapText).slice(0, MAX_LINK_GAP_TARGETS);
 
-  async function run() {
+  /** "full" is the SEO-DIAG-0 diagnosis; "research" runs only the two SEO-RESEARCH-1 calls. */
+  async function run(mode: "full" | "research") {
     setRunning(true);
     const result: Diagnosis = {
       domain: domain.trim(),
@@ -105,6 +181,19 @@ export function SeoDiagRunner() {
 
     try {
       result.balanceBefore = await step<number>("Saldo inicial", { kind: "balance" });
+      if (mode === "research") {
+        if (volumeKeywords.length) result.volumes = await step<KeywordIdea[]>("Volumen de tus palabras", { kind: "volume", keywords: volumeKeywords });
+        if (linkGapTargets.length >= 2) {
+          const gap = await step<{ total: number | null; items: LinkGapDomain[] }>("Webs que enlazan a tus competidores y no a ti", {
+            kind: "linkgap",
+            domain,
+            competitors: linkGapTargets
+          });
+          if (gap) result.linkGap = { competitors: linkGapTargets, ...gap };
+        }
+        result.balanceAfter = await step<number>("Saldo final", { kind: "balance" });
+        return;
+      }
       result.ranked = await step("Palabras en las que ya sale", { kind: "ranked", domain });
       result.competitors = await step("Competidores orgánicos", { kind: "competitors", domain });
 
@@ -156,10 +245,28 @@ export function SeoDiagRunner() {
           Competidores para comparar, uno por línea (si lo dejas vacío, los {MAX_GAP_COMPETITORS} primeros que encuentre DataForSEO)
           <textarea rows={3} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
         </label>
+        <h2 className="adm-h2">Investigación</h2>
+        <label>
+          Palabras de las que quieres el volumen, una por línea (máximo {MAX_VOLUME_KEYWORDS}, una sola llamada)
+          <textarea rows={6} value={volumeText} onChange={(event) => setVolumeText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+        </label>
+        <label>
+          Competidores cuyas webs enlazadoras quieres ver, uno por línea (entre 2 y {MAX_LINK_GAP_TARGETS}; salen las webs que enlazan a todos ellos y no a
+          tu dominio)
+          <textarea rows={3} value={linkGapText} onChange={(event) => setLinkGapText(event.target.value)} disabled={running} style={{ width: "100%" }} />
+        </label>
       </div>
       <div className="adm-toolbar" style={{ gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-        <button type="button" className="btn btn-primary" onClick={run} disabled={running || !domain.trim()}>
+        <button type="button" className="btn btn-primary" onClick={() => run("full")} disabled={running || !domain.trim()}>
           {running ? "Ejecutando…" : `Lanzar diagnóstico (hasta ${worstCalls} llamadas)`}
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost"
+          onClick={() => run("research")}
+          disabled={running || !domain.trim() || (volumeKeywords.length === 0 && linkGapTargets.length < 2)}
+        >
+          Lanzar sólo la investigación (2 llamadas)
         </button>
         {diag && !running ? (
           <button type="button" className="btn btn-ghost" onClick={() => download(`seo-${diag.domain}-${diag.date}.json`, JSON.stringify(diag, null, 2))}>
@@ -239,6 +346,22 @@ export function SeoDiagRunner() {
                 serp.hasLocalPack ? "Sí" : "No",
                 serp.organic.slice(0, 5).map((row) => row.domain).join(", ") || "—"
               ])}
+            />
+          ) : null}
+          {diag.volumes ? (
+            <Table
+              title="Volumen de tus palabras"
+              head={["Palabra", "Búsq./mes", "Dificultad", "Intención"]}
+              rows={[...diag.volumes]
+                .sort((a, b) => (b.volume ?? -1) - (a.volume ?? -1))
+                .map((row) => [row.keyword, n(row.volume), n(row.difficulty), row.intent ?? "—"])}
+            />
+          ) : null}
+          {diag.linkGap ? (
+            <Table
+              title={`Webs que enlazan a ${diag.linkGap.competitors.join(", ")} y no a ${diag.domain} (${n(diag.linkGap.total)} en total)`}
+              head={["Web", "Rango", "Enlaza a", "Enlaces", "Spam"]}
+              rows={diag.linkGap.items.map((row) => [row.domain, n(row.rank), String(row.linkedTargets), n(row.backlinks), n(row.spamScore)])}
             />
           ) : null}
           {diag.backlinks.length ? (
