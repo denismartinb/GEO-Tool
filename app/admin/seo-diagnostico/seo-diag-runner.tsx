@@ -153,7 +153,7 @@ export function SeoDiagRunner() {
           <textarea rows={6} value={serpText} onChange={(event) => setSerpText(event.target.value)} disabled={running} style={{ width: "100%" }} />
         </label>
         <label>
-          Competidores para comparar, uno por línea (si lo dejas vacío, los {MAX_GAP_COMPETITORS} primeros que encuentre DataForSEO)
+          Dominios de competidores para comparar, uno por línea, como otterly.ai (si lo dejas vacío, los {MAX_GAP_COMPETITORS} primeros que encuentre DataForSEO)
           <textarea rows={3} value={competitorsText} onChange={(event) => setCompetitorsText(event.target.value)} disabled={running} style={{ width: "100%" }} />
         </label>
       </div>
