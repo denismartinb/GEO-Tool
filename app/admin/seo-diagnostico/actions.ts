@@ -14,7 +14,7 @@ import {
 import { normalizeStudyDomain } from "@/lib/studies/sector-study";
 
 /**
- * SEO-DIAG-0 (log §339): one step of the operator SEO diagnosis. The browser
+ * SEO-DIAG-0 (log §338): one step of the operator SEO diagnosis. The browser
  * drives the steps so each one gets its own 60 s invocation; every step is
  * revalidated here and bounded by fixed `limit`s and `MAX_SEEDS` topics. The
  * runner sends at most `MAX_SERP` searches, so the worst case is known
