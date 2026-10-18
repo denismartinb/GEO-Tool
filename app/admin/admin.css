@@ -1059,3 +1059,6 @@
   .adm-pn-mini { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .adm-pn-path { max-width: 200px; }
 }
+
+/* SEO-DIAG-0 (log §338): /admin/seo-diagnostico section titles. */
+.adm-study .adm-h2 { font-size: 15px; font-weight: 700; margin: 0 0 8px; color: var(--ink); }
