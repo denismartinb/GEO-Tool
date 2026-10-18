@@ -26406,6 +26406,8 @@ escanea, las de quien va a comprar, y qué hacen los motores con ellas.
   2026-10-18). Queda «Elegir otra página» como enlace. Si la página no se
   pudo leer o no tiene nota, sigue «Página revisada» con la URL, porque ahí
   el cliente necesita saber qué página se miró.
+- **«Elegir otra página» abre la caja vacía**, no con la URL ya revisada
+  (fundador, 2026-10-18).
 - **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
   36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
 - Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La

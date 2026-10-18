@@ -229,7 +229,7 @@ export function AgenticAuditScreen({
   const current = result.components.find((c) => c.id === selected);
   const noStore = result.found === "none";
   const picker = editing ? (
-    <UrlForm projectId={projectId} initialUrl={noStore ? "" : result.url} onCancel={() => setEditing(false)} />
+    <UrlForm projectId={projectId} initialUrl="" onCancel={() => setEditing(false)} />
   ) : null;
   const limitNote = remaining > 0 ? null : " Has usado las revisiones de hoy; podrás elegir otra página mañana.";
   const kindChip = offerLabel(result);
