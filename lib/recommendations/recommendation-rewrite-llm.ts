@@ -105,13 +105,13 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
     case "close_competitor_gap":
       return `ASSET FOCUS — comparison page: build the plan around a "${input.brand} vs ${competitor}" or "alternativa a ${competitor}" page. Provide as examples a page outline (H1 + H2/H3 sections) and a short comparison table (at most 4 criteria rows; columns = ${input.brand} and ${competitor} only). The ${competitor} cells follow the competitor-fact rule above; the ${input.brand} cells use only the given facts or a [tu dato aquí] placeholder.`;
     case "add_comparison_content":
-      return `ASSET FOCUS — comparison: provide as examples a concise comparison table (at most 4 criteria rows; one column for ${input.brand} and one per named competitor only, every competitor cell following the competitor-fact rule above) and a FAQPage JSON-LD snippet answering the comparative query.`;
+      return `ASSET FOCUS — comparison: provide as examples a concise comparison table (at most 4 criteria rows; one column for ${input.brand} and one per named competitor only, every competitor cell following the competitor-fact rule above) and, optionally, a FAQPage JSON-LD snippet answering the comparative query.`;
     case "create_faq_section":
-      return "ASSET FOCUS — FAQ: provide as examples 2-4 concise question/answer pairs matching the affected prompts, plus a FAQPage JSON-LD snippet wrapping them.";
+      return "ASSET FOCUS — FAQ: provide as examples 2-4 concise question/answer pairs, each question taken from the affected prompts, and, optionally, a FAQPage JSON-LD snippet wrapping those same pairs.";
     case "strengthen_brand_entity_clarity":
       return `ASSET FOCUS — entity clarity: provide as examples an Organization JSON-LD snippet (name "${input.brand}", url the brand domain, a short description, its category) and a brief "Acerca de" page outline stating the brand's category and key descriptors.`;
     case "add_citation_block":
-      return "ASSET FOCUS — citable block: provide as examples a factual, directly-extractable paragraph answering the affected query, and an Article or FAQPage JSON-LD snippet.";
+      return "ASSET FOCUS — citable block: provide as examples a factual, directly-extractable paragraph answering the affected query and, optionally, an Article or FAQPage JSON-LD snippet.";
     case "address_negative_narrative":
       return "ASSET FOCUS — counter-narrative: AI answers carry a recurring negative perception of the brand around the theme in the facts below. Provide as examples (1) a content brief to counter it — target page, angle, and the factual points/proof to publish (use only given facts; [tu dato aquí] for any specific metric), and (2) a short, citable factual paragraph that directly addresses that theme. Stay factual and respectful: correct with evidence, never deny, attack, or invent figures.";
     case "update_stale_content":
@@ -181,6 +181,11 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     "Ask only for the data the affected questions need. Do not ask for prices, plans, discounts or figures in a page answering a question that is not about them.",
     "NEVER state any fact about a competitor: no feature, price, limit, yes/no, or number of prompts, engines or users. You do not know them, and publishing a rival's data without a source exposes the brand. In a comparison table use at most 4 criteria rows; each competitor cell is the placeholder [dato de su web, con enlace y fecha], and the steps MUST include one step to check every competitor fact on its own website and write the link and the date next to it.",
     "In an outreach template NEVER claim the sender read, used or liked something (an article, a list, a tool): you do not know it. Write that sentence as a placeholder the user only keeps if it is true, such as [si lo has leído: qué te aportó su artículo]. Never name or list competitors in a message to a third party.",
+    // RECS-JSONLD-LEVER-1 (log §334): P32 (a FAQ of product definitions nobody
+    // asked) and P36 (a FAQ answer saying GenScore analyses Perplexity, which
+    // only Pro and Agencia include).
+    `Every question in a FAQ (and in a FAQPage) is one of the real affected prompts below, reworded at most for grammar. Never invent a question, and never add a "what is ${input.brand}" question unless it is among them.`,
+    "Never describe what the brand's product does, which plans include what, or which channels, engines, markets or integrations it covers, beyond the facts below. A feature that only some plans include is never written as if every customer had it. Write such a claim as a placeholder like [qué incluye tu producto y en qué planes].",
     "Do NOT mention any competitor name other than the ones explicitly listed under 'Competitors you may mention'.",
     // RECS-USEFULNESS-1 Fase C (log §128). C1 lo vuelve a comprobar en el
     // servidor sobre una lista cerrada; C2 y C3 son reglas BLANDAS y sólo
@@ -204,7 +209,11 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
           "IMPORTANT: this action happens OUTSIDE the brand's website (on the third-party sources below, or inside this tool). There is no page of the brand to publish or restructure here. Do NOT include steps about the brand's own website, semantic HTML, headings, crawlability, JSON-LD or any schema markup, and do NOT provide a JSON-LD or HTML example. Every step must be something done on the named source itself."
         ]
       : [
-          "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'."
+          "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose it for AI — the answer as real visible text in the first sentences under a heading that repeats the question, clear semantic HTML, and content crawlable as real text (not hidden behind scripts, images or logins). Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
+          // RECS-JSONLD-LEVER-1 (log §334): the founder's test on genscore.es
+          // (P10) got plans that sold FAQPage markup as the thing that gets you
+          // cited, against GenScore's own blog guide.
+          "Structured data (JSON-LD such as FAQPage, Article or Organization) is optional help that only describes text already visible on the page. NEVER present it as the lever, as a step of its own that will get the brand cited or recommended, or as something AI engines require: Google states its AI features need no special markup. If you include it, it is the last step and says it is optional."
         ]),
     `"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text.`,
     `LENGTH BUDGET — prose artifacts (a paragraph, an outline, an outreach template): up to ${PROSE_ARTIFACT_MAX} characters. Code artifacts (JSON-LD, an HTML snippet): up to ${CODE_ARTIFACT_MAX} characters, because a FAQPage with two answered questions does not fit in less.`,

@@ -751,3 +751,14 @@ log §306).
   leyó algo) ni nombra competidores.
 - Son reglas blandas del prompt, fijadas por `rewrite-template-rules.test.ts`.
   Si alguna pasa a comprobarse en servidor, se dice aquí.
+
+## Datos estructurados (RECS-JSONLD-LEVER-1, log §334)
+
+- **El JSON-LD nunca es la palanca.** El paso de «legible» de la propia web
+  pide texto visible; los datos estructurados son opcionales, van al final y
+  sólo describen lo que ya se ve. Google dice que sus funciones de IA no
+  necesitan marcado especial, y lo dice también nuestra guía del blog.
+- **Cada pregunta de un FAQ sale de los prompts afectados reales.**
+- **Nunca se afirma qué incluye el producto o cada plan más allá de los
+  datos.** Si no está en los datos, es un hueco.
+- Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
