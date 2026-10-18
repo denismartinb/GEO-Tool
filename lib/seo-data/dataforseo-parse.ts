@@ -124,6 +124,8 @@ export type SerpResult = {
   ownPosition: number | null;
   /** The page of the own domain that ranks, when it is in the results. */
   ownUrl: string | null;
+  /** The title Google shows for that page, as DataForSEO saw it. */
+  ownTitle: string | null;
   hasLocalPack: boolean;
   questions: string[];
 };
@@ -147,6 +149,7 @@ export function readSerp(result: Obj | null, keyword: string, ownDomain: string)
     organic,
     ownPosition: mine?.position ?? null,
     ownUrl: mine?.url ?? null,
+    ownTitle: mine?.title ?? null,
     hasLocalPack: items.some((item) => item.type === "local_pack" || item.type === "map"),
     questions
   };

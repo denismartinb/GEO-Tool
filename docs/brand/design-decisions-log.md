@@ -26735,6 +26735,10 @@ escritorio.
 4. **Top 20, no Top 100.** Cuesta 0,004 $, lo medido en §338. El puesto propio
    ya sale de Search Console. El Task Intake decía «Fuera del Top 100»; la
    pantalla dirá «Fuera del Top 20».
+   La foto guarda también el título con el que sale la página propia
+   (`own_title`, hasta 300 caracteres). Viene en la misma llamada, sin coste,
+   y es lo que deja al «Qué hacer» del PR B comparar tu título con los del
+   Top 10 (aprobado por el fundador con el prototipo v6, 2026-10-18).
 5. **Topes por plan** (`lib/seo-tracking/caps.ts`), con el plan efectivo:
 
    | Plan | Palabras | Rivales |

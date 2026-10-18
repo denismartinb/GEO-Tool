@@ -33,6 +33,7 @@ export type SnapshotRow = {
   error: string | null;
   own_position: number | null;
   own_url: string | null;
+  own_title: string | null;
   top10: { position: number; domain: string; url: string; title: string | null }[];
   has_local_pack: boolean | null;
   questions: string[];
@@ -70,6 +71,8 @@ const STAGGER_MS = 250;
 /** Unit price of a Top 20 SERP call (log §338). */
 export const TIMEOUT_CHARGE_USD = 0.004;
 const DEFAULT_CONCURRENCY = 4;
+/** Matches the length check on `seo_serp_snapshots.own_title`. */
+export const OWN_TITLE_MAX = 300;
 
 export function snapshotFromSerp(keyword: PendingKeyword, weekStart: string, serp: SerpResult, cost: number): SnapshotRow {
   return {
@@ -81,6 +84,7 @@ export function snapshotFromSerp(keyword: PendingKeyword, weekStart: string, ser
     error: null,
     own_position: serp.ownPosition,
     own_url: serp.ownUrl,
+    own_title: serp.ownTitle ? serp.ownTitle.slice(0, OWN_TITLE_MAX) : null,
     top10: serp.organic.filter((row) => row.position <= 10).slice(0, 10),
     has_local_pack: serp.hasLocalPack,
     questions: serp.questions.slice(0, 8),
@@ -98,6 +102,7 @@ function errorRow(keyword: PendingKeyword, weekStart: string, category: SeoError
     error: SEO_ERROR_MESSAGES[category],
     own_position: null,
     own_url: null,
+    own_title: null,
     top10: [],
     has_local_pack: null,
     questions: [],

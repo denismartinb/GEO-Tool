@@ -70,6 +70,7 @@ create table if not exists public.seo_serp_snapshots (
   error text,
   own_position integer,
   own_url text,
+  own_title text,
   top10 jsonb not null default '[]'::jsonb,
   has_local_pack boolean,
   questions jsonb not null default '[]'::jsonb,
@@ -77,6 +78,7 @@ create table if not exists public.seo_serp_snapshots (
   created_at timestamptz not null default now(),
   constraint seo_serp_snapshots_status_chk check (status in ('ok', 'error')),
   constraint seo_serp_snapshots_error_chk check (error is null or char_length(error) <= 200),
+  constraint seo_serp_snapshots_own_title_chk check (own_title is null or char_length(own_title) <= 300),
   constraint seo_serp_snapshots_uniq unique (keyword_id, week_start)
 );
 

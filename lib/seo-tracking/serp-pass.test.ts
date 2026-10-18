@@ -9,6 +9,7 @@ const serp = (keyword: string): SerpResult => ({
   organic: Array.from({ length: 15 }, (_, i) => ({ position: i + 1, domain: `d${i}.es`, url: `https://d${i}.es/`, title: null })),
   ownPosition: 12,
   ownUrl: "https://genscore.es/geo",
+  ownTitle: "Qué es GEO · GenScore",
   hasLocalPack: false,
   questions: ["¿Qué es GEO?"]
 });
@@ -44,7 +45,7 @@ describe("runSerpPass", () => {
     const h = harness({ pending: [kw(1), kw(2)] });
     const result = await runSerpPass(h.deps);
     expect(result).toMatchObject({ saved: 2, deferred: 0, stoppedBy: "done" });
-    expect(h.saved[0]).toMatchObject({ keyword_id: "k1", week_start: "2026-10-19", status: "ok", own_position: 12, own_url: "https://genscore.es/geo" });
+    expect(h.saved[0]).toMatchObject({ keyword_id: "k1", week_start: "2026-10-19", status: "ok", own_position: 12, own_url: "https://genscore.es/geo", own_title: "Qué es GEO · GenScore" });
     expect(h.saved[0].top10).toHaveLength(10);
     expect(result.spentUsd).toBeCloseTo(0.008);
   });

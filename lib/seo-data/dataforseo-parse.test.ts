@@ -81,6 +81,7 @@ describe("readers", () => {
       "genscore.es"
     );
     expect(serp.ownPosition).toBe(2);
+    expect(serp.ownTitle).toBe("GEO");
     expect(serp.hasLocalPack).toBe(true);
     expect(serp.questions).toEqual(["¿Qué es GEO?"]);
     expect(serp.organic).toHaveLength(2);
