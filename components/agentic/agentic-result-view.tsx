@@ -23,12 +23,13 @@ import type {
  * teaser below says what the console audit adds (what is still to come
  * carries «Próximamente»), and the closing CTA invites a free Pro trial and
  * says the agentic audit is already in the Pro console (log §318, §322).
+ * «Preguntas de compra» lost «Próximamente» when it shipped (log §330).
  */
 
 const CONSOLE_FEATURES: Array<{ title: string; text: string; rows: number; soon?: boolean }> = [
   { title: "Tu ficha, revisada a fondo", text: "Guarda una ficha y revísala cuando quieras: cada señal con su estado y lo que falla.", rows: 3 },
   { title: "Qué hacer primero", text: "Lo que más sube tu nota y la nota que tendrías al arreglarlo.", rows: 3 },
-  { title: "Preguntas de compra", text: "Si ChatGPT, Gemini, Claude y Perplexity te recomiendan cuando alguien quiere comprar.", rows: 2, soon: true },
+  { title: "Preguntas de compra", text: "Si ChatGPT, Gemini, Claude y Perplexity te nombran, citan tu web o mandan a un marketplace cuando alguien quiere comprar.", rows: 2 },
   { title: "Varias fichas a la vez", text: "Las fichas de tu tienda que ya revisa la auditoría técnica, en una tabla.", rows: 2, soon: true }
 ];
 

@@ -6,15 +6,17 @@ paths:
   - "app/api/comercio-agentico/**"
   - "components/agentic/**"
   - "app/dashboard/projects/*/agentic-audit/**"
+  - "app/dashboard/projects/*/agentic-visibility/**"
 ---
 
 # Comercio agéntico — invariantes
 
 Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
-`components/agentic/**` y `app/dashboard/projects/*/agentic-audit/**`. Cada
+`components/agentic/**`, `app/dashboard/projects/*/agentic-audit/**` y
+`app/dashboard/projects/*/agentic-visibility/**`. Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323 y §325.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325 y §330.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -57,9 +59,9 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   antes de salir a la red y los límites fallan cerrado.
 - **La landing dice que Pro ya tiene la auditoría agéntica** desde la Fase
   2a (log §322): «La auditoría agéntica ya está en la consola de Pro» y la
-  tarjeta lleva «Nuevo». Lo que aún no existe («Preguntas de compra», varias
-  fichas a la vez) lleva «Próximamente». No se anuncia nada de 2b–2d hasta
-  que esté en producción.
+  tarjeta lleva «Nuevo». Lo que aún no existe (varias fichas a la vez) lleva
+  «Próximamente»; «Preguntas de compra» lo perdió al llegar (§330). No se
+  anuncia nada de 2b–2c hasta que esté en producción.
 - **La animación del comprobador sólo escenifica el ritmo** (log §318).
   Antes de la respuesta, sólo las URL que el servidor pide de verdad
   (`scan-script.ts` las saca de `interopProbePaths` y `ASSISTANT_ROBOTS_TOKENS`).
@@ -132,3 +134,27 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   `findProductCandidate` no da nada, y saca la página de los mismos bytes.
 - **`pageKind: "product"` significa «vende algo».** No se renombra: las
   revisiones guardadas sin `offerKind` se leen como producto físico.
+
+## Preguntas de compra y Visibilidad en agentes (log §330)
+
+- **Una pregunta de compra se reconoce con una regla fija, sin IA**
+  (`classifyPurchaseQuestion`). Dónde comprar o contratar, precio, o qué
+  elegir para comprarlo; nunca el cómo, el qué es, las diferencias o las
+  opiniones salvo que también pidan dónde o cuánto. Cambiar la regla cambia
+  todas las cifras: se vuelve a medir sobre preguntas reales y se anota en el
+  histórico. La pantalla dice qué cuenta (`PURCHASE_RULE_SENTENCE`).
+- **Las tres cifras salen del último escaneo y de sus dueños.** La mención es
+  `extracted_json.brand.mentioned`; «Citan tu web» sólo cuenta citas de
+  grounding de tu dominio (`isBrandDomain`) y sólo en motores de
+  `GROUNDED_PROVIDERS`: Claude sale como «No busca en la web», nunca como 0%.
+  Una respuesta sin extracción no entra. No suman 100.
+- **Marketplace es una lista fija** (`MARKETPLACES`), por dominio citado o
+  por nombre como palabra con su mayúscula. Tu propio marketplace no cuenta.
+- **Por debajo del suelo** (`PURCHASE_MIN_QUESTIONS`, `PURCHASE_MIN_ANSWERS`)
+  se listan las preguntas, pero no sale ningún porcentaje.
+- **«Te encuentra» no lleva color**: nada dice qué porcentaje es bueno.
+- **Preguntas de compra no entra en la Visibilidad agéntica ni en la
+  Puntuación GEO.** Los pesos 30/30/20/20 no cambian.
+- **Una sola entrada de menú para las dos pantallas**, con pestañas
+  (`AgenticTabs`), porque el cajón móvil no admite otra fila (log §301). Una
+  pantalla nueva de esta zona va como pestaña, no como enlace.

@@ -34,7 +34,7 @@ const INTEROP_MARK = { found: "✓", absent: "✕", unknown: "i" } as const;
 
 const RING = 201;
 
-function ScoreGauge({ score }: { score: number }) {
+export function ScoreGauge({ score }: { score: number }) {
   const tone = componentStatus({ id: "discovery", name: "", weight: 0, score, checks: [] }).tone;
   return (
     <svg className={`ag-gauge is-${tone}`} viewBox="0 0 80 80" role="img" aria-label={`${score} de 100`}>

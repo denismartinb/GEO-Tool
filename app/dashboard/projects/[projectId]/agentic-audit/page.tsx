@@ -10,6 +10,7 @@ import {
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { AgenticTabs } from "../_components/agentic-tabs";
 import {
   AgenticAuditScreen,
   AgenticAuditSearching,
@@ -91,6 +92,7 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
 
       <div className="ag-page">
         <div className="ag-screen">
+          <AgenticTabs projectId={projectId} current="audit" />
           <p className="ag-intro">Si un agente de IA puede encontrar tu web, entender lo que vendes, fiarse y llegar a comprar o reservar.</p>
 
           {!canRun ? (

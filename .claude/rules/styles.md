@@ -370,7 +370,9 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   enlace quedaba tapado por un pie de tres filas y nada avisaba de que la
   lista scrolleaba (log §301). Con cinco bloques (desde «Comercio agéntico»,
   log §322) no queda margen: rótulos de `5px 10px 1px` y el último enlace a
-  6 px del pie. Otro enlace más obliga a otra solución, no a apretar más.
+  6 px del pie. Otro enlace más obliga a otra solución, no a apretar más: la
+  2d metió «Visibilidad en agentes» como la única entrada del bloque, con
+  pestañas hacia «Auditoría agéntica» (log §330).
 - **El sitio público tiene un solo pie: `PublicFooter`.** Ninguna página
   escribe su propio `<footer>`; así llegó a haber siete versiones distintas y
   el comprobador y la videollamada no salían en ninguna (log §312). Un enlace

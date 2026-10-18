@@ -55,3 +55,10 @@ diferencias: §323.
 2026-10-18, log §325): la auditoría detecta software, servicios, cursos,
 reservas, entradas y suscripciones además de fichas de producto, y adapta
 las comprobaciones a cada tipo. Sus datos son de ejemplo, no medidos.
+
+## Fase 2d: Preguntas de compra y Visibilidad en agentes (aprobada 2026-10-18)
+
+`fase-2d.html` es el plan que aprobó el fundador («Ok»), con la maqueta de
+«Visibilidad en agentes» en móvil y escritorio. Cómo se reconoce una
+pregunta de compra, qué cifras salen y qué cambia respecto al prototipo:
+`docs/brand/design-decisions-log.md` §330. Sus datos son de ejemplo.

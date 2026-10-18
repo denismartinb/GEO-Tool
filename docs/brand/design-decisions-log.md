@@ -26311,3 +26311,58 @@ impresiones en móvil. Las demás tablas de la pantalla (páginas) siguen
 ocultando columnas en móvil.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 330. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el plan de la 2d («Ok», diseño en
+`docs/design-reference/agentic-commerce-1/fase-2d.html`). Llega la segunda
+pantalla del prototipo, «Visibilidad en agentes». Resume la auditoría
+agéntica como el camino de un agente (Te encuentra, Entra, Entiende, Se fía,
+Compra) y añade «Preguntas de compra»: de las preguntas que el proyecto ya
+escanea, las de quien va a comprar, y qué hacen los motores con ellas.
+
+- **Cómo se reconoce una pregunta de compra.** Una regla fija sobre el texto
+  (`classifyPurchaseQuestion`, `lib/agentic-audit/purchase-questions.ts`),
+  sin IA. Cuenta si pide dónde comprar, contratar o reservar; un precio u
+  oferta (o está en el tema «Precio y planes»); o qué elegir para comprarlo
+  («recomiéndame», «el mejor», «busco»). No cuentan el cómo, el qué es, las
+  diferencias, las opiniones ni las comparativas, salvo que también pidan
+  dónde o cuánto. «online» solo no basta: colaba «reputación online».
+  Descartadas: que la IA etiquete cada pregunta (migración y llamada por
+  pregunta) y que juzgue cada respuesta en el escaneo (toca la extracción
+  compartida y el coste).
+- **Medida antes de construir.** Esta sesión no lee la base de datos, así que
+  la regla se midió sobre las preguntas de cuatro estudios (facturación, La
+  Fábrica del SEO, clínicas de Madrid y Valencia), que genera el mismo
+  sistema. La ancha deja entrar un 63%; la estricta (sólo dónde y precio), un
+  18%, con lo que muchos proyectos no llegarían al mínimo. Se construye con
+  la ancha, la recomendada, y la elección queda en una tarjeta de decisión
+  del fundador; si elige la estricta, basta con quitar `CHOOSE` de la regla.
+- **Tres cifras, del último escaneo.** «Te nombran» (la mención de
+  `extracted_json.brand.mentioned`, como Visión general), «Citan tu web»
+  (citas de grounding de tu dominio, sólo en Gemini, ChatGPT y Perplexity,
+  que buscan en la web) y «Mandan a un marketplace» (una lista fija de
+  `MARKETPLACES`, por dominio citado o por nombre en la respuesta; tu propio
+  marketplace no cuenta). No suman 100 y la pantalla lo dice. El plan decía
+  «los mismos escaneos que la Puntuación GEO»; se cambió a un solo escaneo
+  para que la lista de preguntas y las cifras describan las mismas
+  respuestas.
+- **Suelo de muestra.** Con menos de 3 preguntas de compra o 10 respuestas
+  salen las preguntas, pero no los porcentajes, con un botón a Prompts.
+- **«Te encuentra» va sin color.** Nada dice qué porcentaje es bueno.
+- **Una sola entrada de menú.** El plan ponía dos entradas, pero el cajón
+  móvil no admite otra fila (log §301, §322). «Visibilidad en agentes» es la
+  entrada y se enciende también en `/agentic-audit` (`alsoActive`); las dos
+  pantallas llevan pestañas (`AgenticTabs`).
+- Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
+  landing quita «Próximamente» a «Preguntas de compra».
+
+**Regla de premisa.** No se retira ningún camino de recuperación. La
+auditoría agéntica deja de tener entrada propia en el menú; se llega a ella
+por la pestaña y por «Ver la auditoría». Si las pestañas desaparecieran, la
+pantalla de la auditoría seguiría existiendo, pero sin camino desde el menú.
+
+**Qué queda.** Marcar una pregunta como de compra a mano (necesita
+columna nueva, aprobación aparte). Medir la regla sobre proyectos reales: lo
+enseña la propia pantalla, que lista qué preguntas cuentan. 2b (tarjeta en
+Visión general y revisión semanal) y 2c (varias fichas) siguen sin aprobar.
