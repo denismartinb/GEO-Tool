@@ -76,7 +76,7 @@ const deliverableByType: Record<string, DeliverableSpec> = {
   pursue_media_sources: { cta: "Generar pitch", control: "third_party" },
 
   // --- Se resuelve aquí dentro ---
-  track_emerging_competitor: { cta: "Generar informe", control: "in_app" }
+  track_emerging_competitor: { cta: "Añadir a competidores", control: "in_app" }
 };
 
 /**

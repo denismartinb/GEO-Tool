@@ -3,6 +3,7 @@ import { classifySourceType, type SourceType } from "@/lib/citations/source-type
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
 
 type ProjectInput = {
   brand: string;
@@ -1065,8 +1066,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // severity so it never crowds out an actual gap-fix card.
   const emergingCompetitors = computeEmergingCompetitors(promptResults, input.competitors, input.project.brand);
   for (const entry of emergingCompetitors) {
+    // RECS-ADD-COMPETITOR-1: the card is a one-tap "add" button, so it needs
+    // the brand's website. Taken from every source cited alongside it (not the
+    // 8-item aggregate), and only on an exact brand-label match; null means
+    // the screen asks for it.
+    const emergingDomain = domainForBrandName(
+      entry.competitor,
+      entry.prompts.flatMap((p) => promptEvidence(p).domains)
+    );
     candidates.push({
-      title: `Añade a ${entry.competitor} como competidor`,
+      title: `Añade ${entry.competitor} a tus competidores`,
       description: `La IA la nombra en ${entry.prompts.length} respuestas de tu categoría y no la estás siguiendo. Añádela y sabrás cuánto terreno te quita.`,
       rule_id: "rule_emerging_competitor_001",
       recommendation_type: "track_emerging_competitor",
@@ -1087,7 +1096,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ],
         whyThisMatters: `Si la IA ya la trata como alternativa a ti, te interesa medirla: hoy no aparece en ninguna de tus comparativas de competencia.`,
         firstStep: `Añade ${entry.competitor} en la pestaña Competidores. El próximo escaneo ya la medirá.`,
-        extra: { emerging_competitor: entry.competitor },
+        extra: { emerging_competitor: entry.competitor, emerging_competitor_domain: emergingDomain },
         snippetSource: "none"
       })
     });

@@ -51,6 +51,11 @@ import {
   executePendingScan,
   getActionErrorCode
 } from "@/lib/scan/scan-runner";
+import {
+  addEmergingCompetitorCore,
+  addEmergingCompetitorInputSchema,
+  type AddEmergingCompetitorResult
+} from "@/lib/recommendations/add-emerging-competitor";
 import { canStartAnotherScanInvocation } from "@/lib/scan/drive-budget";
 import {
   createCompetitorCore,
@@ -819,6 +824,33 @@ export async function dismissRecommendationAction(input: {
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+  }
+
+  return result;
+}
+
+/**
+ * "Añadir X a competidores" on a track_emerging_competitor card
+ * (RECS-ADD-COMPETITOR-1). Revalidates both screens it changes.
+ */
+export async function addEmergingCompetitorAction(input: {
+  projectId: string;
+  recommendationId: string;
+  domain: string;
+}): Promise<AddEmergingCompetitorResult> {
+  const parsed = addEmergingCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await addEmergingCompetitorCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
   }
 
   return result;

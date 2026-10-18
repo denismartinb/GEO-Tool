@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { normalizeDomain } from "@/lib/domains/brand-domain";
+import { COMPETITOR_DOMAIN_FORMAT } from "@/lib/competitors/competitor-domain";
 import { isGenericEntity } from "@/lib/entity-hygiene/generic-entities";
 import type { AuthenticatedContext } from "@/lib/auth";
 
@@ -18,13 +19,12 @@ import type { AuthenticatedContext } from "@/lib/auth";
  * instead of a bare RLS-denied null.
  */
 
-const DOMAIN_FORMAT = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 
 const domainSchema = z
   .string()
   .transform((v) => normalizeDomain(v))
   .refine((v) => v.length >= 3 && v.length <= 255, "El dominio no es válido.")
-  .refine((v) => DOMAIN_FORMAT.test(v), "El dominio no es válido.");
+  .refine((v) => COMPETITOR_DOMAIN_FORMAT.test(v), "El dominio no es válido.");
 
 const nameSchema = z.string().trim().min(1, "El nombre es obligatorio.").max(120, "El nombre es demasiado largo.");
 
@@ -58,6 +58,9 @@ export type CreateCompetitorResult =
 export type UpdateCompetitorResult = { success: true; competitor: CompetitorRecord } | { success: false; error: string };
 
 export type DeactivateCompetitorResult = { success: true } | { success: false; error: string };
+
+/** Exported so a caller can tell "already tracked" from a real failure (RECS-ADD-COMPETITOR-1). */
+export const ALREADY_TRACKED_ERROR = "Ya estás siguiendo este dominio.";
 
 const GENERIC_WRITE_FAILURE = "No se pudo guardar el cambio. Inténtalo de nuevo en unos minutos.";
 const PROJECT_NOT_FOUND = "No se ha encontrado el proyecto.";
@@ -108,7 +111,7 @@ export async function createCompetitorCore(input: {
 
   if (existing) {
     if ((existing as { is_active: boolean }).is_active) {
-      return { success: false, error: "Ya estás siguiendo este dominio." };
+      return { success: false, error: ALREADY_TRACKED_ERROR };
     }
 
     // Reactivate rather than insert — a second row with the same
