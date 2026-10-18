@@ -78,3 +78,31 @@ export const COMPARISON_ROWS: {
     otterlyWins: true
   }
 ];
+
+/**
+ * Preguntas que ya hacen los motores de IA al evaluar herramientas de GEO
+ * (recomendación de la consola, 2026-10-18). Cada respuesta usa sólo hechos
+ * de la tabla de arriba: nada nuevo sobre Otterly.
+ */
+export const FAQ_ITEMS: { question: string; answer: string }[] = [
+  {
+    question: "¿Cuál es la mejor herramienta para rastrear cómo citan los agentes de IA a mi competencia?",
+    answer:
+      "Depende de qué necesites. Otterly cubre más de 50 mercados y deja usuarios ilimitados desde su plan de entrada. GenScore mide ChatGPT, Gemini y Claude sin complementos (y Perplexity en Pro y Agencia), está en castellano y genera el borrador de FAQ, schema y briefs para corregir lo que detecta."
+  },
+  {
+    question: "¿Qué motores de IA cubren GenScore y Otterly?",
+    answer:
+      "Otterly incluye ChatGPT, AI Overviews, Perplexity y Microsoft Copilot en todos sus planes, y cobra aparte Google AI Mode, Gemini y Claude. GenScore incluye ChatGPT, Gemini y Claude en todos los planes de pago y Perplexity en Pro y Agencia; no mide AI Overviews ni Copilot."
+  },
+  {
+    question: "¿En qué se diferencia una herramienta de GEO de una de SEO tradicional?",
+    answer:
+      "Una herramienta de SEO mide posiciones en buscadores. Una de GEO, como GenScore u Otterly, mide si los asistentes de IA nombran o citan tu marca al responder a tus clientes."
+  },
+  {
+    question: "¿Cuánto cuestan GenScore y Otterly?",
+    answer:
+      `Otterly empieza en 29 $ al mes. GenScore empieza en ${STARTER_PRICE} € al mes, con 7 días de Pro gratis y sin tarjeta para probar. Las diferencias de precio por volumen de preguntas están en la tabla de arriba.`
+  }
+];

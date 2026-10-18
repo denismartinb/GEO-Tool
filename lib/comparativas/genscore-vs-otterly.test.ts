@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { COMPARISON_ROWS } from "./genscore-vs-otterly";
+import { COMPARISON_ROWS, FAQ_ITEMS } from "./genscore-vs-otterly";
 
 describe("COMPARISON_ROWS (genscore-vs-otterly)", () => {
   it("has at least one row", () => {
@@ -34,6 +34,17 @@ describe("COMPARISON_ROWS (genscore-vs-otterly)", () => {
   it("ninguna fila se marca como victoria de los dos a la vez", () => {
     for (const row of COMPARISON_ROWS) {
       expect(row.genscoreWins && row.otterlyWins, `${row.label}: marcada para ambos`).toBeFalsy();
+    }
+  });
+});
+
+describe("FAQ_ITEMS (genscore-vs-otterly)", () => {
+  it("tiene preguntas con respuesta y sin cifras absolutas de preguntas o respuestas", () => {
+    expect(FAQ_ITEMS.length).toBeGreaterThan(0);
+    for (const item of FAQ_ITEMS) {
+      expect(item.question.endsWith("?")).toBe(true);
+      expect(item.answer.length).toBeGreaterThan(40);
+      expect(item.answer).not.toMatch(/\d+ (preguntas|respuestas)/i);
     }
   });
 });

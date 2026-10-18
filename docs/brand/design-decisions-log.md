@@ -26045,6 +26045,8 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Recomendación 4** («Optimizar genscore.es para responder a ¿Cómo salgo mejor en las IAs?», aparecida tras un escaneo nuevo el mismo día). Misma palanca otra vez. Se refuerza `mi-marca-no-aparece-en-chatgpt-por-que` (sección con la pregunta literal y respuesta directa, y primera entrada de su FAQ) en vez de crear una página nueva.
 
+**Recomendación 6** («Estrategia para disputar a Otterly.ai… página de comparación directa», +26 pt). Igual que la de Peec AI: `/comparativas/genscore-vs-otterly` ya existía sin FAQ. Se añade FAQ con `FAQPage`, con hechos de su tabla. No se copia el dato «Otterly monitorea 15 prompts» del borrador de la consola, sin fuente.
+
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
