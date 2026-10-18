@@ -179,6 +179,8 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     `LENGTH BUDGET — prose artifacts (a paragraph, an outline, an outreach template): up to ${PROSE_ARTIFACT_MAX} characters. Code artifacts (JSON-LD, an HTML snippet): up to ${CODE_ARTIFACT_MAX} characters, because a FAQPage with two answered questions does not fit in less.`,
     "COMPLETENESS BEATS COVERAGE — a code artifact MUST be syntactically complete and valid on its own: every brace, bracket, quote and tag closed, no ellipsis, never stopped mid-sentence. If the full artifact would not fit in its budget, produce a SMALLER but complete one (e.g. a FAQPage with two questions instead of four) — never a truncated larger one. A JSON-LD block that does not parse is worse than no example at all, and it will be discarded.",
     "In any example (especially JSON-LD), the ONLY URLs/domains you may use are the brand domain above and schema.org (for @context). For any other URL — social profiles, third-party pages — use a placeholder like https://[tu-dominio]/pagina; NEVER write a real third-party or competitor domain.",
+    "An example is the exact text to paste, nothing else: never put advice or instructions for the user inside it (such as 'este texto debe estar visible en la página'). That advice goes in a step. Inside JSON-LD, an answer text is only the answer a reader would see.",
+    "Never invent a path on the brand domain either: you do not know which pages it has. Link the bare brand domain only when the home page is the right destination; for a specific page write a placeholder such as [enlace a tu página de tarifas], never a made-up path after the brand domain.",
     ...(playbook ? ["", playbook] : []),
     "",
     `Brand: ${input.brand}`,

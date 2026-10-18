@@ -26329,6 +26329,17 @@ vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
 4. Una plantilla de contacto nunca afirma que el remitente leyó, usó o le
    gustó algo, y nunca nombra competidores.
 5. Ninguna palabra inglesa de las instrucciones pasa al texto.
+6. Nunca una ruta inventada en el dominio de la marca. El fundador probó el
+   preview y la plantilla de contacto enlazaba «https://movistar.es/pagina»:
+   el prompt decía «usa https://[tu-dominio]/pagina» para otras webs y el
+   modelo lo rellenó con el dominio propio. Ahora, o el dominio a secas
+   (si la portada es el destino), o un hueco «[enlace a tu página de …]».
+   En esa misma prueba el plan de contacto traía un JSON-LD `FAQPage`: eso
+   lo corrige RECS-MIXED-CHANNEL-1 (§326, PR #649), no este PR.
+7. Un ejemplo es sólo el texto que se pega. En la misma prueba, la respuesta
+   del JSON-LD `FAQPage` terminaba con un consejo para el usuario («Los
+   textos y precios marcados deben estar visibles… en el HTML»), que habría
+   acabado publicado como respuesta. Los consejos van en los pasos.
 
 **Lo que no cambia, y por qué.**
 

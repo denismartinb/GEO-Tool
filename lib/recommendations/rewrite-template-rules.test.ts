@@ -47,6 +47,15 @@ describe("rewrite prompt: template rules", () => {
     expect(text).toMatch(/Never name or list competitors in a message to a third party/);
   });
 
+  it("never invents a path on the brand's own domain (preview test, 2026-10-18)", () => {
+    expect(text).toMatch(/Never invent a path on the brand domain either/);
+    expect(text).toContain("[enlace a tu página de tarifas]");
+  });
+
+  it("keeps advice for the user out of the pasteable example (preview test, 2026-10-18)", () => {
+    expect(text).toMatch(/An example is the exact text to paste, nothing else/);
+  });
+
   it("forbids English words from the instructions in a Spanish plan (P2)", () => {
     expect(text).toMatch(/Never copy English words from these instructions \(such as 'facts'/);
   });
