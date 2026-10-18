@@ -26032,3 +26032,13 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Nada.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 324. RECS-TEST-1: la comparativa GenScore vs Peec AI gana FAQ y `FAQPage` (2026-10-18)
+
+**Qué.** Primera recomendación de la consola para genscore.es («Crea una página comparativa frente a Peec AI»), implementada como experimento de medición pedido por el fundador. La consola no vio que ya existían `/comparativas/genscore-vs-peec-ai` (con tabla) y `/comparativas/alternativas-a-peec-ai` (con FAQ y schema). Lo que faltaba era la FAQ con `FAQPage` en la primera: cuatro preguntas que formulan los propios motores, respondidas sólo con hechos de la tabla de esa página.
+
+**Por qué.** Medir si seguir las recomendaciones mueve la visibilidad. Línea base: `/mnt/project-files/geo-propio/medicion/2026-10-10.md` más una foto nueva antes de fusionar.
+
+**Qué queda.** Recomendaciones 2 y 3 pendientes. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
