@@ -3,7 +3,7 @@
 import type { ActionType } from "@/lib/seo-tracking/topic-actions";
 import type { KeywordView, TopicView } from "@/lib/seo-tracking/view-model";
 
-/** SEO-TRACK-1 PR B (log §341): small pieces shared by the tabs of «Posición en Google». */
+/** SEO-TRACK-1 PR B (log §342): small pieces shared by the tabs of «Posición en Google». */
 
 export const ACTION_TYPE: Record<ActionType, { label: string; cls: string }> = {
   content: { label: "Contenido", cls: "skw-chip-blue" },

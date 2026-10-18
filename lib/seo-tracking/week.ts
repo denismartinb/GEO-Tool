@@ -1,5 +1,5 @@
 /**
- * SEO-TRACK-1 (log §340): the week a SERP snapshot belongs to is the UTC date
+ * SEO-TRACK-1 (log §341): the week a SERP snapshot belongs to is the UTC date
  * of its Monday. One snapshot per keyword and week (`seo_serp_snapshots_uniq`),
  * so every pass of the Monday cron asks the same question: which tracked
  * keywords have no row for THIS week yet. Anchored to the calendar, never to

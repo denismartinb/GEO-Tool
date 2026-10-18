@@ -10,7 +10,7 @@ import { weekStartUtc } from "@/lib/seo-tracking/week";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 (log §340): one run of `/api/cron/seo-serp`. Every Monday the
+ * SEO-TRACK-1 (log §341): one run of `/api/cron/seo-serp`. Every Monday the
  * cron fires every 10 minutes from 05:00 to 06:50 UTC; each pass takes what is
  * still pending for this week, so a pass that runs out of time or budget just
  * leaves the rest to the next one. The cron is the engine; there is no chain

@@ -1,5 +1,5 @@
 /**
- * SEO-TRACK-1 PR B (log §341): what «Posición en Google» shows of the tracked
+ * SEO-TRACK-1 PR B (log §342): what «Posición en Google» shows of the tracked
  * keywords, built from the stored weekly snapshots. Pure: no Supabase, no
  * clock. The loader decides which rows; this decides what they say.
  *

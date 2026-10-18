@@ -1,5 +1,5 @@
 /**
- * SEO-TRACK-1 (log §340): one spelling per keyword, so «Herramienta  GEO » and
+ * SEO-TRACK-1 (log §341): one spelling per keyword, so «Herramienta  GEO » and
  * «herramienta geo» are the same row (`seo_keywords_uniq` is on the stored
  * text). Google treats case and repeated spaces as the same search.
  */

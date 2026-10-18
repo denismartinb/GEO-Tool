@@ -10,7 +10,7 @@ import { SeoSetup, type ProposedRival } from "./seo-setup";
 import { SeoTopics } from "./seo-topics";
 
 /**
- * SEO-TRACK-1 PR B (log §341): «Posición en Google» with keyword tracking.
+ * SEO-TRACK-1 PR B (log §342): «Posición en Google» with keyword tracking.
  * Design approved by the founder as prototype v6
  * (docs/design-reference/seo-track-1/posicion-google-v6.html): three tabs,
  * Resumen · Temas · Descubrir palabras; each topic opens in a side panel with

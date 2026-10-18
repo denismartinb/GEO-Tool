@@ -1,7 +1,7 @@
 import { normalizeStudyDomain } from "@/lib/studies/sector-study";
 
 /**
- * SEO-TRACK-1 (log §340): what changes when a customer sets their rival
+ * SEO-TRACK-1 (log §341): what changes when a customer sets their rival
  * domains. Pure, so the rules are testable: domains are normalized
  * (`https://www.Acme.es/x` → `acme.es`), the project's own domain and its
  * subdomains are never a rival, duplicates collapse, and the list is cut to

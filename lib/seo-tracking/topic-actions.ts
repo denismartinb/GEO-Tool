@@ -1,7 +1,7 @@
 import type { KeywordView, TopResult, TopicView } from "@/lib/seo-tracking/view-model";
 
 /**
- * SEO-TRACK-1 PR B (log §341): the «Qué hacer» of each topic, approved by the
+ * SEO-TRACK-1 PR B (log §342): the «Qué hacer» of each topic, approved by the
  * founder with prototype v6 (docs/design-reference/seo-track-1/).
  *
  * Every step is a rule over data we already hold: the Monday Top 20 (titles,

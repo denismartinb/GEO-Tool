@@ -1,0 +1,403 @@
+<title>Preguntas de compra</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: plan en una columna de lectura; la maqueta sale en dos marcos (escritorio y móvil) uno junto al otro. */
+:root{
+  --bg:#f5f7fb; --paper:#ffffff; --ink:#0f1b2d; --ink-2:#3a4a62; --ink-3:#5b6b82; --line:#dfe5ee;
+  --blue:#2563eb; --blue-soft:#e8efff; --cyan:#09c5d6;
+  --ok:#14804a; --ok-bg:#e5f6ec; --warn:#a15c00; --warn-bg:#fff3dc; --bad:#c0362c; --bad-bg:#fdeceb; --na:#6b7280; --na-bg:#eef1f5;
+  --console:#f3f5f9;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:40px}
+.read{max-width:720px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4vw,38px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.lede{color:var(--ink-2);font-size:17px;margin-top:12px}
+.ask{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:12px;padding:18px 20px;display:grid;gap:8px}
+.ask b{font-size:17px}
+section{display:grid;gap:14px}
+ol.slices{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.slice{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:6px}
+.slice .tag{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.slice.now{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.slice ul{margin:4px 0 0;padding-left:20px;color:var(--ink-2)}
+.slice li+li{margin-top:4px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);vertical-align:middle}
+table.diff{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border-radius:12px;overflow:hidden}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.diff th,table.diff td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.diff tr:last-child td{border-bottom:0}
+table.diff th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+table.diff td:first-child{font-weight:600;min-width:180px}
+.muted{color:var(--ink-3)}
+code{font-family:var(--f-mono);font-size:13px;background:var(--na-bg);padding:1px 5px;border-radius:5px}
+.defaults{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.defaults li{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:2px}
+.defaults li span{color:var(--ink-2)}
+
+/* Maqueta */
+.mock-row{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+@media (max-width:900px){.mock-row{grid-template-columns:1fr}.phone{justify-self:center}}
+.frame{background:var(--console);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.frame-bar{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--paper)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.desk{display:grid;grid-template-columns:200px minmax(0,1fr)}
+@media (max-width:640px){.desk{grid-template-columns:1fr}.side{display:none}}
+.side{background:var(--paper);border-right:1px solid var(--line);padding:14px 10px;font-size:13px;display:grid;gap:2px;align-content:start}
+.side .grp{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:12px 8px 4px}
+.side a{color:var(--ink-2);text-decoration:none;padding:6px 8px;border-radius:7px;display:flex;justify-content:space-between;align-items:center}
+.side a.on{background:var(--blue-soft);color:var(--blue);font-weight:700}
+.side .new{font-size:10px;font-weight:700;color:var(--blue)}
+.main{padding:18px;display:grid;gap:14px;min-width:0}
+.ph{padding:14px;display:grid;gap:12px}
+.mh h4{margin:0;font-size:20px;font-weight:800}
+.mh p{color:var(--ink-3);font-size:13px;margin-top:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.urlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+.urlrow .u{font-family:var(--f-mono);font-size:12px;background:var(--na-bg);padding:6px 10px;border-radius:8px;flex:1 1 180px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:7px 12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.score{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.gauge{width:76px;height:76px;flex:0 0 auto}
+.gauge circle{fill:none;stroke-width:8}
+.gauge .t{stroke:var(--line)}
+.gauge .v{stroke:var(--warn);stroke-linecap:round}
+.gauge text{fill:var(--ink);font-family:var(--f-body);font-weight:800;font-size:22px}
+.score .what{display:grid;gap:4px;flex:1 1 220px;min-width:0}
+.score .what b{font-size:15px}
+.score .what span{font-size:13px;color:var(--ink-2)}
+.comp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.comp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.phone .comp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.c{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;font-size:12px}
+.c b{font-size:13px}
+.c .st{font-weight:700}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.na{color:var(--na)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}
+.mk{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+.mk.ok{background:var(--ok-bg);color:var(--ok)}.mk.warn{background:var(--warn-bg);color:var(--warn)}.mk.bad{background:var(--bad-bg);color:var(--bad)}.mk.na{background:var(--na-bg);color:var(--na)}
+.checks small{display:block;color:var(--ink-3);font-size:12px}
+.agents{width:100%;border-collapse:collapse;font-size:12px}
+.agents td,.agents th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.agents th{color:var(--ink-3);font-weight:700}
+.chip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.na{background:var(--na-bg);color:var(--na)}
+.fix{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px;font-size:13px}
+.fix:first-of-type{border-top:0;padding-top:0}
+.fix b{font-size:14px}
+.ct{font-size:13px;font-weight:700;color:var(--ink-2)}
+.phone{width:340px;max-width:100%;border:1px solid var(--line);border-radius:28px;background:var(--console);overflow:hidden}
+.phone .top{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--paper);border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+.cap{font-size:13px;color:var(--ink-3);margin-top:8px}
+</style><style>
+.fig3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fig{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:2px}
+.fig b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.fig span{font-size:12px;color:var(--ink-2)}
+.fig small{font-size:11px;color:var(--ink-3)}
+.path{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.path{grid-template-columns:1fr}}
+.phone .path{grid-template-columns:1fr}
+.path li{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;font-size:12px;align-content:start}
+.path li b{font-size:13px}
+.path .head{display:flex;gap:6px;align-items:center}
+.mk.neu{background:var(--blue-soft);color:var(--blue)}
+.qs{width:100%;border-collapse:collapse;font-size:12px}
+.qs th,.qs td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.qs th{color:var(--ink-3);font-weight:700;font-size:11px}
+.qs td.e{text-align:center;white-space:nowrap}
+.qs tr:last-child td{border-bottom:0}
+.dot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:6px;font-size:10px;font-weight:800}
+.dot.n{background:var(--ok-bg);color:var(--ok)}
+.dot.c{background:var(--blue-soft);color:var(--blue)}
+.dot.m{background:var(--warn-bg);color:var(--warn)}
+.dot.x{background:var(--na-bg);color:var(--na)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--ink-3)}
+.legend span{display:flex;gap:4px;align-items:center}
+.eng{width:100%;border-collapse:collapse;font-size:12px}
+.eng td,.eng th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-variant-numeric:tabular-nums}
+.eng th{color:var(--ink-3);font-weight:700;font-size:11px}
+.eng tr:last-child td{border-bottom:0}
+.note{font-size:12px;color:var(--ink-3)}
+.ex{font-size:13px;background:var(--na-bg);border-radius:8px;padding:8px 10px}
+.rule{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.rule li{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:4px}
+.rule li span{color:var(--ink-2);font-size:15px}
+.rule .yes{font-family:var(--f-mono);font-size:12px;color:var(--ok)}
+.rule .no{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.scroll-x{overflow-x:auto}
+</style>
+
+<div class="wrap">
+  <header class="read">
+    <p class="eyebrow">Comercio agéntico · Fase 2d</p>
+    <h1>Preguntas de compra y Visibilidad en agentes</h1>
+    <p class="lede">La segunda pantalla del prototipo. Junta lo que ya mide la auditoría agéntica con una cosa nueva: de las preguntas que ya escaneas, separar las de quien va a comprar y ver si la IA te nombra, cita tu web o manda a un marketplace. Sale de los escaneos que ya haces, sin preguntar nada más a ninguna IA, sin migración y sin trabajo programado.</p>
+  </header>
+
+  <div class="ask read">
+    <b>Aprobado el 2026-10-18</b>
+    <p>Plan aprobado por el fundador («Ok»). Medida sobre las preguntas de cuatro estudios, la regla ancha deja entrar un 63% de las preguntas y la estricta (sólo dónde comprar y precio) un 18%. El fundador eligió la regla ancha en la tarjeta de decisión. Hay dos cambios respecto a la primera versión de este plan: el menú tenía una sola entrada, con pestañas entre las dos pantallas (el fundador lo corrigió al ver el preview: la pantalla construida sigue el prototipo, con dos entradas y cada una con su aspecto, log §332); y las cifras salen del último escaneo, para que la lista de preguntas y los porcentajes describan las mismas respuestas.</p>
+  </div>
+
+  <section class="read">
+    <h2>Cómo se reconoce una pregunta de compra</h2>
+    <p>Recomiendo una regla fija sobre el texto de la pregunta. Una pregunta cuenta como de compra si pide una de estas cuatro cosas:</p>
+    <ul class="rule">
+      <li><b>Dónde comprar o contratar</b><span>Comprar, tienda, online, envío, pedir, contratar, reservar, pedir cita, suscribirse.</span><span class="yes">«¿Dónde comprar zapatillas de trail con envío en 24 h?»</span></li>
+      <li><b>Precio u oferta</b><span>Precio, cuánto cuesta, barato, oferta, descuento, «por menos de 100 €». También toda pregunta del tema «Precio y planes».</span><span class="yes">«Zapatillas de trail baratas para empezar»</span></li>
+      <li><b>Qué elegir para comprarlo</b><span>«Qué me compro», «cuál comprar», «recomiéndame un», «mejor X para» cuando va con un uso o un presupuesto.</span><span class="yes">«¿Qué zapatillas de trail me recomiendas para ultras?»</span></li>
+      <li><b>Lo que no cuenta</b><span>Cómo se hace algo, qué es algo, opiniones generales y comparaciones sin intención de comprar.</span><span class="no">«¿Cómo elegir la talla de unas zapatillas de trail?»</span></li>
+    </ul>
+    <p class="muted">Funciona en castellano y en inglés desde el primer día, y la pantalla dice en una línea qué cuenta como pregunta de compra.</p>
+
+    <div class="tbl"><table class="diff">
+      <thead><tr><th>Alternativa</th><th>Por qué no ahora</th></tr></thead>
+      <tbody>
+        <tr><td>Regla fija sobre el texto <span class="pill">Recomendada</span></td><td>Da siempre la misma respuesta, se explica en pantalla, funciona con los escaneos que ya existen y se prueba con tests. Su límite: alguna pregunta de compra escrita de forma rara se quedará fuera, y por eso la mido antes.</td></tr>
+        <tr><td>Que la IA etiquete cada pregunta al crearla</td><td>Necesita una columna nueva (migración) y una llamada a la IA por pregunta, y las preguntas que ya existen se quedarían sin etiqueta hasta reetiquetarlas.</td></tr>
+        <tr><td>Que la IA juzgue cada respuesta durante el escaneo</td><td>Toca la extracción que comparten todas las pantallas, sube el coste de cada escaneo y obliga a repetir la prueba de calidad de la extracción.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="read">
+    <h2>Qué se mide</h2>
+    <div class="tbl"><table class="diff">
+      <thead><tr><th>Cifra</th><th>Cómo se calcula</th></tr></thead>
+      <tbody>
+        <tr><td>Te nombran</td><td>De las respuestas a preguntas de compra, las que nombran tu marca. La misma comprobación que Visión general.</td></tr>
+        <tr><td>Citan tu web</td><td>De las respuestas de los motores que buscan en la web (Gemini, ChatGPT y Perplexity), las que enlazan una página de tu dominio. Claude no busca en la web, así que no entra en esta cifra, igual que en Recomendaciones.</td></tr>
+        <tr><td>Mandan a un marketplace</td><td>Las respuestas que citan o nombran un marketplace de una lista fija: Amazon, eBay, AliExpress, Temu, Miravia, Zalando, Etsy, Wallapop, Vinted, PcComponentes, MediaMarkt, Fnac, Booking, Airbnb, TheFork, Doctoralia, Treatwell y similares. Si tu propia web es uno de ellos, no se cuenta.</td></tr>
+      </tbody>
+    </table></div>
+    <ul class="defaults">
+      <li><b>Las tres no suman 100</b><span>Una respuesta puede nombrarte y mandar a Amazon a la vez. La pantalla lo dice.</span></li>
+      <li><b>Del último escaneo</b><span>La lista de preguntas y las cifras describen las mismas respuestas.</span></li>
+      <li><b>Con poca muestra no hay porcentajes</b><span>Hacen falta al menos 3 preguntas de compra y 10 respuestas. Por debajo se ven las preguntas, pero no las cifras, con un botón para añadir preguntas de compra desde Prompts.</span></li>
+      <li><b>Una frase por pregunta, sacada de los datos</b><span>«¿Dónde comprar…?»: Gemini cita tu web; ChatGPT manda a Amazon. Plantilla sobre datos, nunca texto inventado.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="read"><h2>La pantalla</h2><p class="muted" style="margin-top:6px">Datos de ejemplo para enseñar la forma. En la consola saldrán los de cada cliente.</p></div>
+    <div class="mock-row">
+      <div class="frame">
+        <div class="frame-bar"><i></i><i></i><i></i></div>
+        <div class="desk">
+          <nav class="side" aria-label="Menú de la maqueta">
+            <span class="grp">Posicionamiento en la IA</span>
+            <a href="#">Visión general</a><a href="#">Prompts</a><a href="#">Competidores</a><a href="#">Páginas citadas</a>
+            <span class="grp">Posicionamiento global</span>
+            <a href="#">Auditoría técnica</a><a href="#">Posición en Google</a>
+            <span class="grp">Comercio agéntico <span class="new">Nuevo</span></span>
+            <a href="#" class="on">Visibilidad en agentes</a>
+            <span class="grp">Actuar</span>
+            <a href="#">Recomendaciones</a>
+          </nav>
+          <div class="main">
+            <div class="mh"><h4>Visibilidad en agentes</h4><p>Si un agente de IA puede encontrarte, entrar, entender lo que vendes, fiarse y llegar a comprar.</p></div>
+            <div class="urlrow"><span class="btn pri">Visibilidad en agentes</span><span class="btn">Auditoría agéntica</span></div>
+
+            <div class="card">
+              <div class="score">
+                <svg class="gauge" viewBox="0 0 80 80" aria-label="54 de 100"><circle class="t" cx="40" cy="40" r="34"/><circle class="v" cx="40" cy="40" r="34" stroke-dasharray="115 214" transform="rotate(-90 40 40)"/><text x="40" y="47" text-anchor="middle">54</text></svg>
+                <div class="what">
+                  <b>Visibilidad agéntica · 54 de 100</b>
+                  <span>Te nombran en algunas preguntas de compra, pero tu web pone un reto a las visitas automáticas y a tu ficha le falta el stock por talla.</span>
+                  <span>Si arreglas el reto anti-bots y el stock por talla, subes de 54 a 77.</span>
+                </div>
+              </div>
+              <div class="urlrow"><span class="muted">Ficha revisada hoy · monteratrail.es/cumbre-trail-3</span><a class="lnk" href="#">Ver la auditoría →</a></div>
+            </div>
+
+            <div class="card">
+              <span class="ct">El camino de un agente por tu tienda</span>
+              <ol class="path">
+                <li><span class="head"><span class="mk neu">1</span><b>Te encuentra</b></span>Te nombran en el 34% de las preguntas de compra</li>
+                <li><span class="head"><span class="mk bad">!</span><b>Entra</b></span>Tu web pone un reto a las visitas automáticas</li>
+                <li><span class="head"><span class="mk warn">!</span><b>Entiende</b></span>Falta el stock por talla</li>
+                <li><span class="head"><span class="mk ok">✓</span><b>Se fía</b></span>Envío y devoluciones claros</li>
+                <li><span class="head"><span class="mk warn">!</span><b>Compra</b></span>Parece exigir registro para pagar</li>
+              </ol>
+            </div>
+
+            <div class="card">
+              <div class="urlrow" style="justify-content:space-between"><span class="ct">Preguntas de compra</span><span class="muted">6 de tus 17 preguntas</span></div>
+              <div class="fig3">
+                <div class="fig"><b>34%</b><span>Te nombran</span></div>
+                <div class="fig"><b>12%</b><span>Citan tu web</span><small>Gemini, ChatGPT y Perplexity</small></div>
+                <div class="fig"><b>52%</b><span>Mandan a un marketplace</span></div>
+              </div>
+              <p class="note">Una respuesta puede hacer varias cosas a la vez, así que no suman 100.</p>
+              <div class="scroll-x"><table class="eng">
+                <thead><tr><th>Motor</th><th>Te nombra</th><th>Cita tu web</th><th>Marketplace</th></tr></thead>
+                <tbody>
+                  <tr><td>ChatGPT</td><td>28%</td><td>6%</td><td>67%</td></tr>
+                  <tr><td>Gemini</td><td>44%</td><td>22%</td><td>39%</td></tr>
+                  <tr><td>Claude</td><td>39%</td><td class="muted">No busca</td><td>44%</td></tr>
+                  <tr><td>Perplexity</td><td>25%</td><td>8%</td><td>58%</td></tr>
+                </tbody>
+              </table></div>
+              <div class="scroll-x"><table class="qs">
+                <thead><tr><th>Pregunta</th><th class="e">ChatGPT</th><th class="e">Gemini</th><th class="e">Claude</th><th class="e">Perplexity</th></tr></thead>
+                <tbody>
+                  <tr><td>¿Dónde comprar zapatillas de trail baratas?</td><td class="e"><span class="dot m">A</span></td><td class="e"><span class="dot c">W</span></td><td class="e"><span class="dot x">–</span></td><td class="e"><span class="dot m">A</span></td></tr>
+                  <tr><td>Mejores zapatillas de trail para ultras por menos de 150 €</td><td class="e"><span class="dot n">N</span></td><td class="e"><span class="dot n">N</span></td><td class="e"><span class="dot n">N</span></td><td class="e"><span class="dot m">A</span></td></tr>
+                  <tr><td>¿Qué zapatillas de trail me compro para empezar?</td><td class="e"><span class="dot m">A</span></td><td class="e"><span class="dot x">–</span></td><td class="e"><span class="dot n">N</span></td><td class="e"><span class="dot x">–</span></td></tr>
+                </tbody>
+              </table></div>
+              <div class="legend"><span><span class="dot n">N</span>Te nombra</span><span><span class="dot c">W</span>Cita tu web</span><span><span class="dot m">A</span>Manda a un marketplace</span><span><span class="dot x">–</span>Nada de eso</span></div>
+              <p class="ex">«¿Dónde comprar zapatillas de trail baratas?»: Gemini cita tu web; ChatGPT y Perplexity mandan a Amazon.</p>
+              <p class="note">Cuenta como pregunta de compra la que pide dónde comprar, un precio o qué elegir para comprarlo.</p>
+            </div>
+
+            <div class="card">
+              <span class="ct">Qué hacer primero</span>
+              <div class="fix"><b>Deja pasar a los agentes identificados en tu anti-bots</b><span class="muted">Descubrimiento · Si se arregla, subes a 66</span></div>
+              <div class="fix"><b>Declara el stock de cada talla en tus fichas</b><span class="muted">Comprensión</span></div>
+              <div class="fix"><b>Marca tu política de devoluciones</b><span class="muted">Confianza</span></div>
+              <a class="lnk" href="#">Ver la auditoría completa →</a>
+            </div>
+            <p class="note">Preguntas de compra sale de los escaneos que ya haces y no entra en la Visibilidad agéntica ni en la Puntuación GEO.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone">
+        <div class="top"><span>☰ Visibilidad en agentes</span><span class="muted">DM</span></div>
+        <div class="ph">
+          <div class="urlrow"><span class="btn pri">Visibilidad en agentes</span><span class="btn">Auditoría agéntica</span></div>
+          <div class="card">
+            <div class="score">
+              <svg class="gauge" viewBox="0 0 80 80" aria-label="54 de 100"><circle class="t" cx="40" cy="40" r="34"/><circle class="v" cx="40" cy="40" r="34" stroke-dasharray="115 214" transform="rotate(-90 40 40)"/><text x="40" y="47" text-anchor="middle">54</text></svg>
+              <div class="what"><b>Visibilidad agéntica</b><span>Si arreglas el reto anti-bots y el stock por talla, subes de 54 a 77.</span></div>
+            </div>
+            <a class="lnk" href="#">Ver la auditoría →</a>
+          </div>
+          <div class="card">
+            <span class="ct">El camino de un agente</span>
+            <ol class="path">
+              <li><span class="head"><span class="mk neu">1</span><b>Te encuentra</b></span>Te nombran en el 34% de las preguntas de compra</li>
+              <li><span class="head"><span class="mk bad">!</span><b>Entra</b></span>Reto a las visitas automáticas</li>
+              <li><span class="head"><span class="mk warn">!</span><b>Entiende</b></span>Falta el stock por talla</li>
+              <li><span class="head"><span class="mk ok">✓</span><b>Se fía</b></span>Envío y devoluciones claros</li>
+              <li><span class="head"><span class="mk warn">!</span><b>Compra</b></span>Parece exigir registro</li>
+            </ol>
+          </div>
+          <div class="card">
+            <span class="ct">Preguntas de compra</span>
+            <div class="fig3">
+              <div class="fig"><b>34%</b><span>Te nombran</span></div>
+              <div class="fig"><b>12%</b><span>Citan tu web</span></div>
+              <div class="fig"><b>52%</b><span>Marketplace</span></div>
+            </div>
+            <p class="note">No suman 100: una respuesta puede hacer varias cosas.</p>
+            <p class="ex">«¿Dónde comprar zapatillas de trail baratas?»: Gemini cita tu web; ChatGPT y Perplexity mandan a Amazon.</p>
+            <a class="lnk" href="#">Ver las 6 preguntas por motor →</a>
+          </div>
+          <div class="card">
+            <span class="ct">Qué hacer primero</span>
+            <div class="fix"><b>Deja pasar a los agentes identificados</b><span class="muted">Descubrimiento</span></div>
+            <div class="fix"><b>Declara el stock de cada talla</b><span class="muted">Comprensión</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap read">En móvil, la tabla por motor y la lista de preguntas se abren desde «Ver las 6 preguntas por motor», para no obligar a desplazar en horizontal.</p>
+  </section>
+
+  <section>
+    <div class="read"><h2>Los otros estados</h2></div>
+    <div class="states">
+      <div>
+        <p class="st-h">Pocas preguntas de compra</p>
+        <div class="card">
+          <span class="ct">Preguntas de compra</span>
+          <p style="font-size:13px">Sólo 1 de tus preguntas es de quien va a comprar. Con menos de 3 no damos porcentajes, porque cambiarían mucho de un escaneo a otro.</p>
+          <p class="note">«¿Dónde comprar zapatillas de trail baratas?»: Gemini cita tu web.</p>
+          <button class="btn pri" type="button">Añadir preguntas de compra</button>
+        </div>
+      </div>
+      <div>
+        <p class="st-h">Sin página de venta encontrada</p>
+        <div class="card">
+          <span class="ct">Visibilidad agéntica</span>
+          <p style="font-size:13px">No hemos encontrado qué vendes en tu web, así que no hay nota todavía. Preguntas de compra sí se ve, porque sale de tus escaneos.</p>
+          <a class="lnk" href="#">Elegir otra página →</a>
+        </div>
+      </div>
+      <div>
+        <p class="st-h">Plan Starter</p>
+        <div class="card">
+          <span class="ct">Visibilidad en agentes está en Pro y Agencia</span>
+          <p style="font-size:13px">Mira si la IA te nombra cuando alguien va a comprar, o si le manda a un marketplace, junto a lo que ve un agente en tu tienda.</p>
+          <button class="btn pri" type="button">Pasar a Pro</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="read">
+    <h2>Qué cambia respecto al prototipo, y por qué</h2>
+    <div class="tbl"><table class="diff">
+      <thead><tr><th>En el prototipo</th><th>En la consola</th><th>Por qué</th></tr></thead>
+      <tbody>
+        <tr><td>«Citan tu ficha»</td><td>«Citan tu web»</td><td>Sabemos que la IA enlaza tu dominio, no si la página enlazada es una ficha de producto.</td></tr>
+        <tr><td>«El anti-bots frena a 3 de los agentes revisados»</td><td>«Tu web pone un reto a las visitas automáticas»</td><td>No medimos la respuesta a cada agente: haría falta hacernos pasar por él. Es lo mismo que ya decidimos en la auditoría.</td></tr>
+        <tr><td>«+12», «+11» en cada arreglo</td><td>Sin puntos por arreglo; sólo «subes a N» en el primero</td><td>Igual que la pantalla de la auditoría, que enseña estados y no puntos.</td></tr>
+        <tr><td>«Te encuentra» con un estado de color</td><td>El porcentaje, sin color</td><td>No hay una cifra de referencia que diga qué porcentaje es bueno. Ponerle verde o rojo sería inventarlo.</td></tr>
+        <tr><td>Sólo tiendas</td><td>Cualquier cosa que se venda</td><td>La regla incluye contratar, reservar y suscribirse, como la auditoría desde la versión 3.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="read">
+    <h2>Qué entra en este PR y qué no</h2>
+    <ol class="slices">
+      <li class="slice now">
+        <span class="tag">2d · ahora</span>
+        <h3>Preguntas de compra y la pantalla</h3>
+        <ul>
+          <li>La regla y las tres cifras en un módulo sin IA, con tests de lo que cuenta y lo que no.</li>
+          <li>La pantalla «Visibilidad en agentes», primera entrada del bloque «Comercio agéntico».</li>
+          <li>La landing de comercio agéntico quita «Próximamente» a Preguntas de compra en el mismo PR.</li>
+          <li>Pro, Agencia y la prueba de 7 días. Starter ve la invitación a pasar a Pro.</li>
+          <li>Sin migración, sin llamadas nuevas a ninguna IA, sin trabajo programado y sin rastrear nada.</li>
+        </ul>
+      </li>
+      <li class="slice">
+        <span class="tag">Más adelante, con su propia aprobación</span>
+        <h3>Marcar una pregunta como de compra a mano</h3>
+        <ul>
+          <li>Por si la regla se equivoca en una pregunta concreta. Necesita una columna nueva, así que va aparte.</li>
+          <li>La tarjeta de Visión general sigue siendo la 2b, y varias fichas la 2c.</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="muted">Los artículos del blog sobre comercio agéntico no cambian con esta fase: los revisamos juntos con el PR que ya está abierto.</p>
+  </section>
+
+  <div class="ask read">
+    <b>Construido en la Fase 2d</b>
+    <p>Histórico: <code>docs/brand/design-decisions-log.md</code> §332. Los datos de esta maqueta son de ejemplo.</p>
+  </div>
+</div>

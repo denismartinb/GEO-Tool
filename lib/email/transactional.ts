@@ -1321,7 +1321,7 @@ export async function sendWatchdogAlertEmail(input: {
 }
 
 /**
- * SEO-TRACK-1 (log §340): the weekly SERP cron stopped because DataForSEO
+ * SEO-TRACK-1 (log §341): the weekly SERP cron stopped because DataForSEO
  * rejected the credentials or the balance ran out. Both are the operator's to
  * fix and every other keyword of the week would fail the same way. One email
  * per category and week: the cron only calls this when no error row of that

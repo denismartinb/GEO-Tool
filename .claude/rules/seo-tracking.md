@@ -1,7 +1,7 @@
 # Seguimiento de palabras (SEO-TRACK-1) — invariantes
 
 Se inyectan solos al tocar `lib/seo-tracking/**` y `app/api/cron/seo-serp/**`.
-Cada regla es trazable a `docs/brand/design-decisions-log.md` §340.
+Cada regla es trazable a `docs/brand/design-decisions-log.md` §341.
 
 - **Lo que se guarda es DataForSEO, nunca Search Console.** Las tablas `seo_*`
   guardan resultados públicos de Google vistos por DataForSEO. De Search
@@ -35,7 +35,7 @@ Cada regla es trazable a `docs/brand/design-decisions-log.md` §340.
 - **Top 20 (`SERP_DEPTH`).** Subir la profundidad multiplica el coste por
   palabra: se mide antes y se apunta en el histórico.
 
-## Pantalla (PR B, log §341)
+## Pantalla (PR B, log §342)
 
 - **«Qué hacer» sale de reglas, nunca de un LLM** (`topic-actions.ts`, pura).
   Cada paso cita su dato: Top 10, preguntas de Google, mapa local, URL y

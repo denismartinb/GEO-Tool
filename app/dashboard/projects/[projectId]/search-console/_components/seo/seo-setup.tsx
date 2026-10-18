@@ -7,7 +7,7 @@ import { setupSeoTrackingAction } from "../../seo-actions";
 import { fmtInt, fmtPosition } from "../format";
 
 /**
- * First use of keyword tracking (SEO-TRACK-1 PR B, log §341). Rivals come
+ * First use of keyword tracking (SEO-TRACK-1 PR B, log §342). Rivals come
  * from the project's AI competitors that have a domain; topics and keywords
  * from the customer's own Search Console (one topic per page). Nothing is
  * saved until «Guardar y empezar»; nothing is ticked beyond what the plan

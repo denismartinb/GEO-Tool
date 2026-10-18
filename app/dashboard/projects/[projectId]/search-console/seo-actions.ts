@@ -22,7 +22,7 @@ import {
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 PR B (log §341): the writes of «Posición en Google». Each one
+ * SEO-TRACK-1 PR B (log §342): the writes of «Posición en Google». Each one
  * validates with zod, proves identity and ownership (`requireUser` +
  * `requireActiveProject`), reads the user's own effective plan, and hands
  * verified ids to the service-role cores in `lib/seo-tracking/manage.ts`

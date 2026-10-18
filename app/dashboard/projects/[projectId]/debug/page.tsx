@@ -238,7 +238,7 @@ export default async function RunsPage({
     ? "on"
     : "off";
 
-  /* SEO-TRACK-1 PR B (log §341) — own query, own migration guard (0044).
+  /* SEO-TRACK-1 PR B (log §342) — own query, own migration guard (0044).
      Default is on, so anything but an explicit false reads as on. */
   const { data: seoFlagRow, error: seoFlagError } = await supabase
     .from("projects")
@@ -781,7 +781,7 @@ export default async function RunsPage({
         )}
       </div>
 
-      {/* SEO-TRACK-1 PR B (log §341) — seguimiento de palabras de «Posición
+      {/* SEO-TRACK-1 PR B (log §342) — seguimiento de palabras de «Posición
           en Google». Apagado, el proyecto no entra en la foto del lunes ni
           enseña el bloque; no se borra nada. */}
       <div className="card dbg-switch">

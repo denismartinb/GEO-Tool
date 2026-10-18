@@ -1,7 +1,7 @@
 -- 0044_seo_tracking.sql
 --
 -- Phase: SEO-TRACK-1 fase 1, PR A (Task Intake approved by the founder on
--- 2026-10-18, docs/brand/design-decisions-log.md §340).
+-- 2026-10-18, docs/brand/design-decisions-log.md §341).
 --
 -- Purpose: «Posición en Google» grows from a live Search Console read into
 -- keyword tracking. The customer groups keywords into topics, picks up to three

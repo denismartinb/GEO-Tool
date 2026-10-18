@@ -8,7 +8,7 @@ import { fmtInt, fmtPosition } from "../format";
 import type { ReadyData } from "./seo-tracking";
 
 /**
- * «Descubrir palabras» (SEO-TRACK-1 PR B, log §341). Three sources:
+ * «Descubrir palabras» (SEO-TRACK-1 PR B, log §342). Three sources:
  * a seed word (DataForSEO keyword ideas), «Ya casi» (Search Console, free)
  * and the rivals' keywords (DataForSEO). The two paid searches share five a
  * day per account. Results are shown, never stored: only what the customer
