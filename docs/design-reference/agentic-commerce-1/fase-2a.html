@@ -1,0 +1,287 @@
+<title>Auditoría agéntica en la consola</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: plan en una columna de lectura; la maqueta sale en dos marcos (escritorio y móvil) uno junto al otro. */
+:root{
+  --bg:#f5f7fb; --paper:#ffffff; --ink:#0f1b2d; --ink-2:#3a4a62; --ink-3:#5b6b82; --line:#dfe5ee;
+  --blue:#2563eb; --blue-soft:#e8efff; --cyan:#09c5d6;
+  --ok:#14804a; --ok-bg:#e5f6ec; --warn:#a15c00; --warn-bg:#fff3dc; --bad:#c0362c; --bad-bg:#fdeceb; --na:#6b7280; --na-bg:#eef1f5;
+  --console:#f3f5f9;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:40px}
+.read{max-width:720px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4vw,38px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.lede{color:var(--ink-2);font-size:17px;margin-top:12px}
+.ask{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:12px;padding:18px 20px;display:grid;gap:8px}
+.ask b{font-size:17px}
+section{display:grid;gap:14px}
+ol.slices{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.slice{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:6px}
+.slice .tag{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.slice.now{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.slice ul{margin:4px 0 0;padding-left:20px;color:var(--ink-2)}
+.slice li+li{margin-top:4px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);vertical-align:middle}
+table.diff{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border-radius:12px;overflow:hidden}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.diff th,table.diff td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.diff tr:last-child td{border-bottom:0}
+table.diff th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+table.diff td:first-child{font-weight:600;min-width:180px}
+.muted{color:var(--ink-3)}
+code{font-family:var(--f-mono);font-size:13px;background:var(--na-bg);padding:1px 5px;border-radius:5px}
+.defaults{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.defaults li{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:2px}
+.defaults li span{color:var(--ink-2)}
+
+/* Maqueta */
+.mock-row{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+@media (max-width:900px){.mock-row{grid-template-columns:1fr}.phone{justify-self:center}}
+.frame{background:var(--console);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.frame-bar{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--paper)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.desk{display:grid;grid-template-columns:200px minmax(0,1fr)}
+@media (max-width:640px){.desk{grid-template-columns:1fr}.side{display:none}}
+.side{background:var(--paper);border-right:1px solid var(--line);padding:14px 10px;font-size:13px;display:grid;gap:2px;align-content:start}
+.side .grp{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:12px 8px 4px}
+.side a{color:var(--ink-2);text-decoration:none;padding:6px 8px;border-radius:7px;display:flex;justify-content:space-between;align-items:center}
+.side a.on{background:var(--blue-soft);color:var(--blue);font-weight:700}
+.side .new{font-size:10px;font-weight:700;color:var(--blue)}
+.main{padding:18px;display:grid;gap:14px;min-width:0}
+.ph{padding:14px;display:grid;gap:12px}
+.mh h4{margin:0;font-size:20px;font-weight:800}
+.mh p{color:var(--ink-3);font-size:13px;margin-top:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.urlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+.urlrow .u{font-family:var(--f-mono);font-size:12px;background:var(--na-bg);padding:6px 10px;border-radius:8px;flex:1 1 180px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:7px 12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.score{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.gauge{width:76px;height:76px;flex:0 0 auto}
+.gauge circle{fill:none;stroke-width:8}
+.gauge .t{stroke:var(--line)}
+.gauge .v{stroke:var(--warn);stroke-linecap:round}
+.gauge text{fill:var(--ink);font-family:var(--f-body);font-weight:800;font-size:22px}
+.score .what{display:grid;gap:4px;flex:1 1 220px;min-width:0}
+.score .what b{font-size:15px}
+.score .what span{font-size:13px;color:var(--ink-2)}
+.comp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.comp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.phone .comp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.c{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;font-size:12px}
+.c b{font-size:13px}
+.c .st{font-weight:700}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.na{color:var(--na)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}
+.mk{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+.mk.ok{background:var(--ok-bg);color:var(--ok)}.mk.warn{background:var(--warn-bg);color:var(--warn)}.mk.bad{background:var(--bad-bg);color:var(--bad)}.mk.na{background:var(--na-bg);color:var(--na)}
+.checks small{display:block;color:var(--ink-3);font-size:12px}
+.agents{width:100%;border-collapse:collapse;font-size:12px}
+.agents td,.agents th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.agents th{color:var(--ink-3);font-weight:700}
+.chip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.na{background:var(--na-bg);color:var(--na)}
+.fix{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px;font-size:13px}
+.fix:first-of-type{border-top:0;padding-top:0}
+.fix b{font-size:14px}
+.ct{font-size:13px;font-weight:700;color:var(--ink-2)}
+.phone{width:340px;max-width:100%;border:1px solid var(--line);border-radius:28px;background:var(--console);overflow:hidden}
+.phone .top{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--paper);border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+.cap{font-size:13px;color:var(--ink-3);margin-top:8px}
+</style>
+
+<div class="wrap">
+  <header class="read">
+    <p class="eyebrow">Comercio agéntico · Fase 2</p>
+    <h1>Auditoría agéntica en la consola</h1>
+    <p class="lede">El plan para llevar a la consola de Pro lo que hoy hace el comprobador de /comercio-agentico. El diseño está aprobado en el prototipo. Aquí verás qué se construye primero, qué cambia respecto al prototipo para no enseñar nada que no medimos y qué necesito que apruebes.</p>
+  </header>
+
+  <div class="ask read">
+    <b>Qué necesito de ti</b>
+    <p>Que apruebes la primera entrega (2a) y la migración 0043, que crea una tabla nueva para guardar los resultados. Tendrás que aplicar la migración a mano antes del merge, como con las anteriores.</p>
+  </div>
+
+  <section>
+    <h2 class="read">Cuatro entregas, una detrás de otra</h2>
+    <ol class="slices">
+      <li class="slice now">
+        <span class="tag">2a · esta</span>
+        <h3>Pantalla «Auditoría agéntica» en Pro <span class="pill">Recomendada</span></h3>
+        <ul>
+          <li>Nuevo bloque «Comercio agéntico» en el menú de la consola, con la etiqueta «Nuevo».</li>
+          <li>El cliente escribe una vez la URL de una ficha de su tienda, y se guarda en el proyecto. Si cambia de dominio o la ficha deja de existir, puede cambiarla.</li>
+          <li>Botón «Revisar ahora», con un límite diario por proyecto, y la fecha de la última revisión.</li>
+          <li>Nota, cinco componentes, comprobaciones, acceso por asistente según robots.txt, protocolos «N de 4» y «Qué hacer primero». Sale del mismo motor que el comprobador gratuito, sin llamadas a ninguna IA.</li>
+          <li>Pro, Agencia y la prueba de 7 días. Starter ve la pantalla con la invitación a pasar a Pro.</li>
+          <li>La landing cambia «llega muy pronto a la consola de Pro» por «ya está en la consola de Pro» en el mismo PR.</li>
+        </ul>
+      </li>
+      <li class="slice">
+        <span class="tag">2b</span>
+        <h3>Tarjeta en Visión general y revisión semanal</h3>
+        <ul>
+          <li>La tarjeta del prototipo, sólo cuando la última revisión encontró una ficha de producto.</li>
+          <li>Revisión automática una vez por semana, colgada del cron de auditoría que ya existe. Necesita tu visto bueno aparte, porque es trabajo programado.</li>
+        </ul>
+      </li>
+      <li class="slice">
+        <span class="tag">2c</span>
+        <h3>Varias fichas y «Marcar como hecho»</h3>
+        <ul>
+          <li>La tabla de fichas del prototipo, con las páginas que ya visita la auditoría técnica, sin rastrear el catálogo.</li>
+          <li>Recomendaciones con bloque para pegar y «Marcar como hecho», como en Recomendaciones.</li>
+        </ul>
+      </li>
+      <li class="slice">
+        <span class="tag">2d</span>
+        <h3>«Preguntas de compra» y «Visibilidad en agentes»</h3>
+        <ul>
+          <li>Separar en los escaneos las preguntas de quien va a comprar y medir si te nombran o mandan a un marketplace. Hace falta decidir cómo se reconoce una pregunta de compra, así que va con su propio plan.</li>
+          <li>Hasta entonces el bloque del menú tiene una sola entrada. «Visibilidad en agentes» depende de este dato y llegaría con él.</li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2 class="read">Qué cambia respecto al prototipo, y por qué</h2>
+    <div class="tbl">
+      <table class="diff">
+        <thead><tr><th>En el prototipo</th><th>En la consola</th><th>Por qué</th></tr></thead>
+        <tbody>
+          <tr><td>«Agentes que entran: 5 de 8», con la respuesta de tu web a cada agente</td><td>Qué deja pasar robots.txt a cada asistente, y una sola fila para el reto anti-bots a las visitas automáticas</td><td>Ver la respuesta a cada agente exige hacerse pasar por él. Los anti-bots verifican por IP, así que el dato sería falso, y la regla del comprobador lo prohíbe.</td></tr>
+          <tr><td>«Compra como invitado» y «Carrito sin reto anti-bots»</td><td>Fuera</td><td>Hay que recorrer el carrito y el pago, y eso es un rastreador, que necesita aprobación aparte. Compra mide lo que muestra la ficha.</td></tr>
+          <tr><td>Puntos por comprobación («6/6», «0/12»)</td><td>Sólo el estado de cada comprobación</td><td>Igual que quitaste «Pesa N de 100» en el comprobador. Los pesos siguen calculando la nota.</td></tr>
+          <tr><td>«Si arreglas tres cosas, subes de 54 a 77»</td><td>Se mantiene, calculado de verdad</td><td>El motor vuelve a puntuar la ficha dando esas comprobaciones por buenas. Si la nota no existe porque no es una ficha, la frase no sale.</td></tr>
+          <tr><td>Dos pantallas, «Visibilidad en agentes» y «Auditoría agéntica»</td><td>Una sola en 2a</td><td>La primera depende de «Preguntas de compra» (2d).</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2 class="read">Cómo se vería la entrega 2a</h2>
+    <p class="read muted">Datos de ejemplo para enseñar la forma. En la consola saldrán los de la tienda del cliente.</p>
+    <div class="mock-row">
+      <div class="frame" aria-label="Maqueta de escritorio">
+        <div class="frame-bar"><i></i><i></i><i></i></div>
+        <div class="desk">
+          <nav class="side" aria-label="Menú de ejemplo">
+            <span class="grp">Posicionamiento en la IA</span>
+            <a href="#m">Visión general</a><a href="#m">Prompts</a><a href="#m">Competidores</a><a href="#m">Páginas citadas</a>
+            <span class="grp">Posicionamiento global</span>
+            <a href="#m">Auditoría técnica</a><a href="#m">Posición en Google</a>
+            <span class="grp">Comercio agéntico <span class="new">Nuevo</span></span>
+            <a class="on" href="#m">Auditoría agéntica</a>
+            <span class="grp">Actuar</span>
+            <a href="#m">Recomendaciones</a>
+          </nav>
+          <div class="main" id="m">
+            <div class="mh"><h4>Auditoría agéntica</h4><p>Si un agente de IA puede encontrar tu tienda, entender tus productos, fiarse y llegar al pago.</p></div>
+            <div class="card">
+              <div class="urlrow"><span class="ct">Ficha revisada</span><span class="u">monteratrail.es/cumbre-trail-3</span><button class="btn" type="button">Cambiar</button><button class="btn pri" type="button">Revisar ahora</button></div>
+              <span class="muted" style="font-size:12px">Revisada hoy a las 10:42</span>
+            </div>
+            <div class="card">
+              <div class="score">
+                <svg class="gauge" viewBox="0 0 80 80" aria-label="54 de 100"><circle class="t" cx="40" cy="40" r="32"/><circle class="v" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="92" transform="rotate(-90 40 40)"/><text x="40" y="48" text-anchor="middle">54</text></svg>
+                <div class="what"><b>Visibilidad agéntica: 54 de 100</b><span>Tu ficha se entiende casi entera. Si arreglas el stock por talla y la política de devoluciones, subes a 71.</span></div>
+              </div>
+              <div class="comp">
+                <div class="c"><b>Descubrimiento</b><span class="st na">Sin medir</span><span class="muted">Tu anti-bots no dejó leer la página a nuestro robot</span></div>
+                <div class="c"><b>Comprensión</b><span class="st warn">Mejorable</span><span class="muted">Falta el stock por talla</span></div>
+                <div class="c"><b>Confianza</b><span class="st warn">Mejorable</span><span class="muted">Devoluciones sin marcar</span></div>
+                <div class="c"><b>Compra</b><span class="st ok">Bien</span><span class="muted">Botón de cesta en el HTML</span></div>
+                <div class="c"><b>Interoperabilidad</b><span class="st">2 de 4</span><span class="muted">Protocolos publicados</span></div>
+              </div>
+            </div>
+            <div class="card">
+              <span class="ct">Asistentes según tu robots.txt</span>
+              <table class="agents"><thead><tr><th>Asistente</th><th>robots.txt</th></tr></thead><tbody>
+                <tr><td>ChatGPT</td><td><span class="chip ok">Permitido</span></td></tr>
+                <tr><td>Claude</td><td><span class="chip ok">Permitido</span></td></tr>
+                <tr><td>Perplexity</td><td><span class="chip ok">Permitido</span></td></tr>
+                <tr><td>Visitas automáticas</td><td><span class="chip na">Reto anti-bots</span></td></tr>
+              </tbody></table>
+            </div>
+            <div class="card">
+              <span class="ct">Qué hacer primero</span>
+              <div class="fix"><b>Declara el stock de cada talla</b><span class="muted">Tu ficha dice «en stock», pero un agente no sabe si queda la 42.</span></div>
+              <div class="fix"><b>Marca tu política de devoluciones</b><span class="muted">La página existe, pero no está como dato estructurado.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="phone" aria-label="Maqueta de móvil">
+        <div class="top"><span>☰ monteratrail.es</span><span class="muted">DM</span></div>
+        <div class="ph">
+          <div class="mh"><h4>Auditoría agéntica</h4><p>Si un agente de IA puede comprar en tu tienda.</p></div>
+          <div class="card">
+            <span class="ct">Ficha revisada</span>
+            <span class="urlrow"><span class="u">monteratrail.es/cumbre-trail-3</span></span>
+            <div style="display:flex;gap:8px"><button class="btn" type="button">Cambiar</button><button class="btn pri" type="button">Revisar ahora</button></div>
+          </div>
+          <div class="card">
+            <div class="score">
+              <svg class="gauge" viewBox="0 0 80 80" aria-label="54 de 100"><circle class="t" cx="40" cy="40" r="32"/><circle class="v" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="92" transform="rotate(-90 40 40)"/><text x="40" y="48" text-anchor="middle">54</text></svg>
+              <div class="what"><b>54 de 100</b><span>Si arreglas dos cosas, subes a 71.</span></div>
+            </div>
+            <div class="comp">
+              <div class="c"><b>Descubrimiento</b><span class="st na">Sin medir</span></div>
+              <div class="c"><b>Comprensión</b><span class="st warn">Mejorable</span></div>
+              <div class="c"><b>Confianza</b><span class="st warn">Mejorable</span></div>
+              <div class="c"><b>Compra</b><span class="st ok">Bien</span></div>
+              <div class="c"><b>Interoperabilidad</b><span class="st">2 de 4</span></div>
+            </div>
+          </div>
+          <div class="card">
+            <span class="ct">Comprensión</span>
+            <ul class="checks">
+              <li><span class="mk ok">✓</span><span>Datos de producto y oferta</span></li>
+              <li><span class="mk ok">✓</span><span>Precio y moneda como dato</span></li>
+              <li><span class="mk warn">!</span><span>Disponibilidad<small>No se declara por talla</small></span></li>
+              <li><span class="mk bad">✕</span><span>GTIN</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap read">Al pulsar un componente se abren sus comprobaciones, como en el comprobador.</p>
+  </section>
+
+  <section class="read">
+    <h2>Lo que he decidido por defecto</h2>
+    <ul class="defaults">
+      <li><b>Qué se guarda</b><span>Una fila por revisión: proyecto, dueño, URL, fecha y el resultado del motor. Sólo el dueño puede leerla, y se escribe desde el servidor tras comprobar que el proyecto es suyo, igual que en la migración 0042.</span></li>
+      <li><b>Sin la migración aplicada</b><span>La pantalla dice que todavía no está disponible. Nunca da un error.</span></li>
+      <li><b>Límite de «Revisar ahora»</b><span>5 revisiones al día por proyecto. Cada una son unas diez peticiones a la tienda, sin coste de IA.</span></li>
+      <li><b>Una web sin productos</b><span>La pantalla explica que la nota se calcula sobre una ficha. No se oculta el bloque en 2a; en 2b la tarjeta de Visión general sí sale sólo para tiendas.</span></li>
+    </ul>
+  </section>
+
+  <div class="ask read">
+    <b>¿Apruebas este plan? No implementaré hasta que lo confirmes.</b>
+    <p class="muted">Si quieres cambiar algo (por ejemplo, abrirlo también a Starter o empezar por la tarjeta de Visión general), dímelo y ajusto el plan.</p>
+  </div>
+</div>

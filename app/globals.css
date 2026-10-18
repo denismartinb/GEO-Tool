@@ -325,6 +325,14 @@ a {
   color: var(--ink-4);
   padding: 14px 10px 6px;
 }
+/* AGENTIC-COMMERCE-1 Fase 2a (log §322): «Nuevo» next to a menu block's name. */
+.nav-group-new {
+  margin-left: 6px;
+  font-size: 10px;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--accent);
+}
 
 .nav-item {
   display: flex;
@@ -8439,17 +8447,27 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      sola fila —cuenta a la izquierda, ayuda y salir como iconos de 44px a la
      derecha— y la lista se aprieta un poco (filas de 40px, rótulos más
      bajos) para que entera quepa en la altura útil de un iPhone con las
-     barras de Safari. */
+     barras de Safari.
+     AGENTIC-COMMERCE-1 Fase 2a (log §322): el bloque «Comercio agéntico»
+     añadió un rótulo y un enlace (70px), así que los rótulos de bloque, el
+     margen del selector de proyecto y el relleno inferior de la lista se
+     aprietan otra vez hasta que todo vuelve a caber sin scroll. */
   .nav-item {
     min-height: 40px;
   }
 
   .nav-group-label {
-    padding: 10px 10px 4px;
+    padding: 5px 10px 1px;
   }
 
   .sb-scroll {
-    padding-top: 4px;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  .proj-switch {
+    margin-top: 6px;
+    margin-bottom: 4px;
   }
 
   .sb-foot {
@@ -12602,3 +12620,40 @@ select.set-field {
   .fcr-actions { flex-direction: column; }
   .fcr-btn { width: 100%; }
 }
+
+/* AGENTIC-OFFER-1 (log §325): ambient wait of the agentic audit and checker,
+   in the spirit of .gsc-load. Literal colours so it reads the same in the
+   console and on /comercio-agentico. Prefixed als-. */
+.als { width: min(100%, 380px); display: flex; flex-direction: column; gap: 12px; margin: 0 auto; font-family: var(--font-body), "Figtree", system-ui, sans-serif; }
+.als-window { border: 1px solid #e3e7ee; border-radius: 14px; background: #fff; box-shadow: 0 10px 28px rgba(15, 23, 41, .08); overflow: hidden; }
+.als-bar { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid #eef1f5; background: #f8fafc; }
+.als-dots { display: flex; gap: 4px; }
+.als-dots i { width: 7px; height: 7px; border-radius: 50%; background: #dbe1ea; }
+.als-url { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 10px; border-radius: 999px; background: #fff; border: 1px solid #e6eaf0; color: #94a3b8; }
+.als-typed { display: block; height: 6px; border-radius: 3px; background: linear-gradient(90deg, #c7d7fb, #a5c0f8); }
+.als-agent { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #2563eb, #09c5d6); }
+.als-page { position: relative; display: grid; grid-template-columns: 38% minmax(0, 1fr); gap: 14px; padding: 16px 14px 18px; }
+.als-media { position: relative; overflow: hidden; border-radius: 10px; min-height: 108px; background: linear-gradient(135deg, #eef3fb, #e2e9f5); }
+.als-shine { position: absolute; inset: 0 auto 0 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent); }
+.als-info { display: flex; flex-direction: column; gap: 8px; padding-top: 2px; }
+.als-line { display: block; height: 8px; border-radius: 4px; background: #d5dae3; }
+.als-thin { height: 6px; background: #e4e8ee; }
+.als-light { background: rgba(255, 255, 255, .85); }
+.als-w70 { width: 70%; } .als-w60 { width: 60%; } .als-w55 { width: 55%; } .als-w40 { width: 40%; } .als-w30 { width: 30%; }
+.als-price, .als-buy, .als-data { position: relative; display: flex; align-items: center; gap: 6px; border-radius: 8px; transition: box-shadow .25s ease, background-color .25s ease; }
+.als-price { width: fit-content; min-width: 46%; padding: 6px 8px; background: #f1f5fb; }
+.als-price .als-line { background: #93b4f5; height: 9px; }
+.als-buy { width: fit-content; min-width: 58%; padding: 9px 12px; margin-top: 2px; background: #2563eb; }
+.als-data { position: absolute; top: 10px; right: 12px; padding: 2px 8px; font: 700 11px ui-monospace, Menlo, monospace; color: #64748b; background: #f1f5f9; }
+.als-price.is-hit, .als-data.is-hit { box-shadow: 0 0 0 2px #09c5d6; background: #e8fbfd; }
+.als-buy.is-hit { box-shadow: 0 0 0 3px rgba(9, 197, 214, .45); }
+.als-tick { position: absolute; top: -7px; right: -7px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 800; color: #fff; background: #14804a; box-shadow: 0 0 0 2px #fff; }
+.als-cursor { position: absolute; z-index: 2; width: 0; height: 0; color: #0f1b2d; pointer-events: none; }
+.als-cursor svg { position: absolute; left: -3px; top: -2px; filter: drop-shadow(0 2px 3px rgba(15, 23, 41, .25)); }
+.als-ripple { position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; border-radius: 50%; border: 2px solid #09c5d6; }
+.als-kinds { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.als-kind { font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; color: #64748b; background: #f1f5f9; transition: color .25s ease, background-color .25s ease; }
+.als-kind.is-on { color: #fff; background: #2563eb; }
+.als-compact { width: min(100%, 320px); }
+.als-compact .als-media { min-height: 84px; }
+.als-compact .als-kinds { display: none; }

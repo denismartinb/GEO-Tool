@@ -26033,6 +26033,127 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
+## 322. AGENTIC-COMMERCE-1 Fase 2a: «Auditoría agéntica» en la consola de Pro (2026-10-17)
+
+**Qué se decidió.** El fundador aprobó el plan de la Fase 2 («Merge y sigue
+con fase 2», 2026-10-17; maqueta en
+`docs/design-reference/agentic-commerce-1/fase-2a.html`) y esta entrega es
+sólo la 2a:
+
+- Bloque nuevo del menú «Comercio agéntico», con etiqueta «Nuevo», y una
+  entrada, «Auditoría agéntica» (`/dashboard/projects/<id>/agentic-audit`).
+- ~~El cliente pone una vez la URL de una ficha de producto de su dominio y se
+  guarda. «Cambiar» la cambia; «Revisar ahora» la vuelve a revisar~~
+  (superseded por §323 antes del merge: la auditoría se hace sola). Sigue el
+  tope de **5 revisiones por proyecto cada 24 h** (`AGENTIC_REVIEW_DAILY_LIMIT`).
+  La pantalla dice cuándo se revisó.
+- Enseña la nota, los cinco componentes, los checks de cada uno, el acceso
+  de cada asistente según robots.txt más una fila para el reto anti-bots,
+  los protocolos como «N de 4» y «Qué hacer primero». Es el mismo motor que
+  el comprobador gratuito (`runAgenticAudit`), sin LLM.
+- Pro, Agencia y la prueba de 7 días. Starter ve la invitación a Pro. El plan
+  se lee con `resolveSystemPlanId` y falla cerrado: sin perfil, no se revisa.
+- Migración 0043 (`agentic_audits`): una fila por revisión, RLS de sólo
+  lectura para el dueño, escritura sólo desde la server action con service
+  role filtrando por `project_id` y `owner_user_id`. La fila `pending` se
+  escribe antes de salir a la red, así que el límite cuenta también las
+  revisiones que fallan. **Se aplica a mano antes del merge**; sin ella la
+  pantalla dice «Muy pronto podrás revisar tu tienda aquí», nunca un error.
+- La landing pasa de «llega muy pronto a la consola de Pro» a «ya está en la
+  consola de Pro», y su tarjeta «Auditoría agéntica» de «Próximamente» a
+  «Nuevo» (supera la regla de §318 sobre esa línea).
+
+**Diferencias con el prototipo, a propósito.**
+
+- No hay respuesta de la web por agente: nunca nos hacemos pasar por uno
+  (ADR 0043). El acceso por asistente sale sólo de robots.txt.
+- No hay «compra como invitado» ni recorrido del carrito: sería un crawler.
+- Los checks no enseñan puntos, sólo estados.
+- «Si arreglas…, subes a N» lo calcula el motor (`scoreIfChecksPass`), no se
+  suman ganancias redondeadas.
+- Una sola pantalla; la tarjeta de Visión general y «Visibilidad en agentes»
+  son 2b–2d.
+
+**Menú móvil.** El bloque nuevo (un rótulo y un enlace, 70 px) hacía que la
+lista del cajón scrolleara a 390×664 (regla de §301). Los rótulos de bloque
+pasan a `5px 10px 1px`, el selector de proyecto a márgenes de 6/4 y la lista
+a 2/4 px de relleno: medido, «Manuales y estudios» acaba 6 px por encima del
+pie y la lista no scrollea.
+
+**Qué queda.** 2b, 2c y 2d sin aprobar. Los artículos del blog sobre comercio
+agéntico dicen que la auditoría «está en construcción»: hay que refrescarlos
+cuando esto esté en producción. El check de reto, cuando no se puede medir,
+dice su etiqueta y «No se pudo medir», igual que el comprobador.
+
+**Regla de premisa.** No se retira ningún camino de recuperación: una
+revisión fallida deja la anterior a la vista y «Revisar ahora» sigue
+disponible mientras queden revisiones del día.
+
+## 323. AGENTIC-COMMERCE-1 Fase 2a, versión automática: la auditoría agéntica se hace sola (2026-10-17)
+
+**Qué se decidió.** Al ver la primera versión de §322 en el preview, el
+fundador la rechazó: «No me gusta que si ya hay un dominio cargado, el
+usuario tenga que poner a mano una URL de la ficha. […] la auditoría agentica
+tiene que aparecer hecha de forma automática. La misma experiencia que la
+auditoría técnica». Aprobó el plan v2 («Si», 2026-10-17; maqueta en
+`docs/design-reference/agentic-commerce-1/fase-2a-auto.html`), **incluida una
+excepción a la lista fija de URLs**: una página más por revisión.
+
+- **Búsqueda de la ficha** (`lib/agentic-audit/find-product.ts`, pura). Sólo
+  con bytes que el motor ya descargó, en este orden: el catálogo público
+  (Shopify `/products.json` → `/products/<handle>`, WooCommerce Store API →
+  `permalink`), los `<loc>` de `/sitemap.xml` con forma de ficha (nunca se
+  abre un índice de sitemaps) y la propia página (un `Product` del JSON-LD
+  con `url`, o un enlace con forma de ficha). Gana el primero, no «el mejor».
+  Siempre https, del dominio o un subdominio, y nunca la página ya leída.
+- **Una sola petición más** (`runAgenticAudit(…, { discover: true })`), con el
+  mismo guardián SSRF. Si la página no resulta ser una ficha no se prueba otra:
+  la revisión se queda en la portada con `found: "none"`. El comprobador
+  gratuito no cambia (sin `discover`, la lista sigue siendo fija).
+- **Cuándo.** Tras cada escaneo, dentro del trabajo de auditoría web
+  (`audit-job-runner.ts`), **en paralelo** con la auditoría técnica, como
+  mucho una vez cada 20 h por proyecto (`AGENTIC_SCHEDULED_MIN_GAP_MS`). Y al
+  abrir la pantalla si no hay ninguna revisión o la última tiene más de 48 h
+  (`shouldAutoReview`), con «Buscando una ficha de producto en tu tienda» y
+  un spinner, sin pasos de progreso inventados.
+- **La misma ficha mientras exista.** La siguiente revisión empieza por la
+  ficha de la última que encontró producto. Si responde rápido con error, se
+  busca otra desde la portada una vez, dentro del mismo presupuesto de 24 s
+  (`AGENTIC_DISCOVER_BUDGET_MS`).
+- **Sin «Revisar ahora».** Queda «Elegir otra ficha», con el tope de 5 al día.
+- **Sin tienda.** «No hemos encontrado una tienda en tu web», con
+  Descubrimiento, Confianza y protocolos medidos en la portada, Comprensión y
+  Compra marcadas «En una ficha» y el enlace «¿Vendes online? Indícanos una
+  ficha». Sin nota total.
+- La pantalla dice de dónde salió la ficha («Elegida automáticamente de tu
+  catálogo / tu sitemap / tu portada», o «La ficha que elegiste»), guardado
+  en `result.found`. Sin migración nueva: la 0043 sirve tal cual.
+
+**Presupuesto del trabajo.** La revisión agéntica corre junto a la técnica,
+no después, así que no necesita reserva propia: su peor caso
+(`AGENTIC_STEP_MAX_MS` = 24 s + 4 s de lecturas y escrituras) cabe en
+`TECHNICAL_RESERVE_MS` (31 s), y un test lo fija. `MIN_JOB_BUDGET_MS` no se
+toca. Nunca hace fallar el trabajo de auditoría web.
+
+**¿Qué la reintenta si la invocación muere?** Nada desde el trabajo: la fila
+`pending` ya escrita impide repetirla en 20 h. La red es la pantalla: si no
+hay revisión o la última tiene más de 48 h, la lanza al abrirse.
+
+**Diferencia con la maqueta.** Se omite «tras el escaneo» en «Revisada hoy a
+las…»: no guardamos qué disparó cada revisión y no se añade una columna por
+eso.
+
+**Qué queda.** 2b (tarjeta en Visión general), 2c y 2d sin aprobar. Los
+artículos del blog que dicen que la auditoría «está en construcción» se
+refrescan cuando esto esté en producción.
+
+**Regla de premisa.** Se retira «Revisar ahora». Premisa: la revisión se hace
+sola tras cada escaneo y al abrir la pantalla si falta o tiene más de 48 h.
+Lo verifican `audit-job-runner.test.ts` y `console-audit.test.ts`
+(`shouldAutoReview`). Si fallan las dos vías, la pantalla enseña la última
+revisión con su fecha (nunca un dato falso) y, sin ninguna, «No hemos podido
+abrir tu web» con el formulario para indicar una ficha.
+
 ## 324. RECS-TEST-1: la comparativa GenScore vs Peec AI gana FAQ y `FAQPage` (2026-10-18)
 
 **Qué.** Primera recomendación de la consola para genscore.es («Crea una página comparativa frente a Peec AI»), implementada como experimento de medición pedido por el fundador. La consola no vio que ya existían `/comparativas/genscore-vs-peec-ai` (con tabla) y `/comparativas/alternativas-a-peec-ai` (con FAQ y schema). Lo que faltaba era la FAQ con `FAQPage` en la primera: cuatro preguntas que formulan los propios motores, respondidas sólo con hechos de la tabla de esa página.
@@ -26054,3 +26175,96 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 325. AGENTIC-OFFER-1: la auditoría agéntica detecta lo que vendes, no sólo fichas de tienda (2026-10-18)
+
+**Qué se decidió.** En el preview de §323, genscore.es salía con «No hemos
+encontrado una tienda en tu web»: el motor sólo aceptaba una página con
+`Product` u `og:type=product`, y GenScore vende software (su portada declara
+`SoftwareApplication` con su `Offer`). El fundador pidió que cubra también
+productos digitales y servicios: «Es mejor detectar de más que de menos».
+Aprobó el plan v3 («Apruebo», 2026-10-18; maqueta en
+`docs/design-reference/agentic-commerce-1/fase-2a-lo-que-vendes.html`) y, en
+el mismo mensaje, una animación de espera «como en Search Console».
+
+- **Qué se vende** (`classifyOffer`, `lib/agentic-audit/html-signals.ts`):
+  producto físico, software, servicio, curso, reserva o cita, entradas y
+  eventos, suscripción, y `offer` como red de seguridad (precio visible y un
+  botón de comprar, contratar, empezar, reservar o pedir presupuesto). Orden:
+  datos estructurados (software gana a un `Product` cuando trae oferta),
+  precio por mes o año en una página de precios, la ruta (`/precios`,
+  `/servicios/…`, `/cursos/…`, `/reservar`, `/entradas`, `/suscripcion`…), un
+  widget de reservas (Calendly, Doctoralia, TheFork…) y la red de seguridad.
+  En una página de una plataforma de tienda (Shopify, WooCommerce…) que no es
+  ficha, la ruta y la red de seguridad no cuentan: ahí la página buena es una
+  ficha.
+- **Qué página elige la consola**, con la misma única petición de más de
+  §323: si la página leída no vende nada, o es la portada y no es una ficha,
+  busca primero una ficha (`findProductCandidate`) y si no hay, una página de
+  venta en los enlaces de la página y luego en el sitemap
+  (`findSellCandidate`: precios primero, luego reservas, eventos, cursos,
+  suscripción y servicios). Si esa página no vende nada, se queda la primera
+  si vende algo (`found: "home"` en la portada, `given` en otra) y si no,
+  `found: "none"`. En genscore.es eso es `/precios` desde la portada.
+- **Las comprobaciones se adaptan** (`score.ts`): stock sólo en producto
+  físico y entradas; identificadores y envío sólo en producto físico;
+  «devoluciones» pasa a «cancelación o reembolso» (`cancellation`) en
+  software, servicios, cursos, reservas, suscripciones y `offer`; «añadir al
+  carrito» pasa a un botón para comprar, contratar, reservar… (`buy_button`);
+  pagos rápidos no se piden a servicios ni reservas; la plataforma reconoce
+  también Stripe, Paddle, Lemon Squeezy, Gumroad, Hotmart, Teachable,
+  Thinkific, Kajabi, Eventbrite, Chargebee y los sistemas de reservas. Lo que
+  no aplica sale de la lista y nunca resta. Los pesos 30/30/20/20 no cambian
+  (sin adenda de pesos al ADR 0043).
+- **Resultado.** `offerKind` y `pricingPage` nuevos en el resultado.
+  `pageKind: "product"` pasa a significar «página que vende algo» y no se
+  renombra, para no romper las revisiones guardadas (sin `offerKind`, se leen
+  como producto físico). Sin migración.
+- **Consola.** «Página revisada» con chip del tipo («Software · página de
+  precios»), «Elegir otra página», «Buscando qué vendes en tu web», «No hemos
+  encontrado qué vendes en tu web», «¿Vendes algo? Indícanos la página» y
+  una línea de lo que no aplica («Stock, identificadores y envío no aplican a
+  un software, así que no cuentan.»). Comprensión y Compra sin página de
+  venta dicen «Al vender» (antes «En una ficha»).
+- **Comprobador gratuito.** Mismo motor, así que una página de precios o de
+  reservas ya tiene nota. Pista: «Escribe la URL de un producto, servicio o
+  página de precios». Además de la pista, se tocan las frases que el motor
+  nuevo dejaba falsas («Se mide en una ficha de producto», «Has pegado una
+  portada o una categoría»): fuera de eso, la landing no cambia.
+- **Animación de espera** (`components/agentic/agentic-loading-scene.tsx`,
+  CSS `.als-*` en `globals.css`): una ventana con una página esquemática por
+  la que pasa el cursor de un agente (precio, botón, datos) mientras se
+  iluminan los tipos que buscamos. Ambiente, como `gsc-loading.tsx` (§289):
+  no dice cuánto falta ni enseña datos de la web. Con movimiento reducido se
+  queda quieta en su último fotograma. Va en la espera de la consola y, en
+  pequeño, junto a la cabecera del comprobador, sin tocar su guion (§318).
+
+**Riesgo aceptado.** Detectar de más puede elegir una página que no es la
+mejor (un artículo con un precio y «Empieza» acaba como `offer`). Lo corrige
+«Elegir otra página»; una pantalla vacía no tenía salida mejor.
+
+**Ajuste del fundador (2026-10-18): «no hemos encontrado qué vendes» se
+relanza en cada visita.** En la vista previa, genscore.es seguía mostrando el
+«none» que el motor viejo guardó antes del despliegue, y con la regla de 48 h
+se iba a quedar así dos días. Ahora `shouldAutoReview` relanza la revisión
+cada vez que se abre la pantalla si la última no encontró nada, con la misma
+separación de 10 minutos para que una recarga o dos pestañas no la repitan, y
+la página enseña la escena de búsqueda en vez del «none» viejo mientras
+tanto. Para que esos relanzamientos no gasten las 5 revisiones del cliente,
+las automáticas (tras escanear y al abrir la pantalla) tienen su propio tope,
+`AGENTIC_AUTO_DAILY_LIMIT` (30 al día por proyecto), y se marcan en
+`result` desde que se escribe la fila (`{ automatic: true }`, también si
+falla), sin columna nueva ni migración. Una fila sin la marca cuenta como del
+cliente, que es la dirección segura.
+
+*Premisa (regla de cierre de fase 4).* Esto cambia un camino de recuperación:
+antes, salir de «none» dependía del siguiente escaneo o de «Elegir otra
+página». Ahora la salida es la propia visita. La sostiene que la revisión
+automática tenga cupo (30 al día, contados en `readAgenticAudits`); lo
+verifica `console-audit.test.ts`. Si el cupo se agota, la pantalla vuelve a
+enseñar el último «none» y la única salida es «Elegir otra página» (cupo
+propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
+
+**Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
+comercio agéntico hablan de tiendas; se revisan cuando esto esté en
+producción.

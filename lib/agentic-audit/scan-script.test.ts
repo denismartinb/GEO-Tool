@@ -88,7 +88,7 @@ describe("buildScanScript", () => {
 
   it("says a page-level lane needs a product page instead of inventing checks", () => {
     const script = buildScanScript(target, { ...RESULT, pageKind: "other", components: RESULT.components.map((c) => ({ ...c, checks: c.id === "discovery" ? c.checks : [] })) });
-    expect(script.lanes.find((l) => l.id === "understanding")!.note).toBe("Se mide en una ficha de producto");
+    expect(script.lanes.find((l) => l.id === "understanding")!.note).toBe("Se mide en una página donde vendas algo");
   });
 
   it("never prints a percentage nor an em dash", () => {
