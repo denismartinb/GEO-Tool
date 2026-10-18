@@ -26505,3 +26505,37 @@ igual.
 afirmaciones de producto ni el origen de las preguntas. El motor tampoco sabe
 qué incluye cada plan de una marca cliente; para genscore.es esos datos viven
 en `plans-data.ts`, pero no se pasan al prompt.
+
+## 336. RECS-LABELS-1: las etiquetas de la tarjeta dejan de contradecirse (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) varias tarjetas se contradecían a sí
+mismas:
+
+- «Victoria rápida» y «Prioridad alta» sobre una acción que «Depende de
+  terceros» y valía +2 pt (P38).
+- Una tarjeta enseñaba «Impacto medio» al lado de otras con «+N pt», como si
+  fuera la misma escala (P13).
+- La tarjeta de competidor decía «abre una respuesta y mira qué páginas
+  cita» y su plan, «crea una página» (P3).
+- La tarjeta de comunidades pedía «busca el hilo más citado en youtube.com»:
+  YouTube no tiene hilos (P37). La mitad del P37 que mezclaba JSON-LD en la
+  web propia ya la cerró §326.
+
+**Qué se decidió.**
+
+1. Lo que depende de un tercero (control `third_party`) nunca lleva
+   «Prioridad alta» ni «Victoria rápida». Es el mismo techo que `planScore`
+   ya le pone a su puesto (§140).
+2. Un impacto sin cifra lleva debajo «sin cifra calculable», para que no se
+   lea como un «+N pt».
+3. El primer paso de `close_competitor_gap` es el de su plan: «Publica una
+   comparativa entre tu marca y X que responda a estas preguntas con tus
+   datos». Si la comparativa ya existe, la cobertura (§330) lo cambia.
+4. El primer paso de `pursue_community_sources` depende del sitio
+   (`communityKind`): en una plataforma de vídeo, un comentario útil o un
+   vídeo propio; en una red social, responder a la publicación; en un foro,
+   el hilo.
+
+**Qué queda.** La lista de plataformas de vídeo y de redes es corta y a mano,
+como la de `source-type.ts`; lo que no esté en ella se trata como foro.

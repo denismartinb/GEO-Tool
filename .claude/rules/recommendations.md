@@ -762,3 +762,16 @@ log §306).
 - **Nunca se afirma qué incluye el producto o cada plan más allá de los
   datos.** Si no está en los datos, es un hueco.
 - Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
+
+## Etiquetas coherentes (RECS-LABELS-1, log §336)
+
+- **Lo que depende de un tercero nunca es «Prioridad alta» ni «Victoria
+  rápida».** `priorityLevel` e `isQuickWin` excluyen el control
+  `third_party`, como `planScore` ya lo baja en el plan. Matiza la regla de
+  «Alta prioridad es un único criterio»: el criterio sigue siendo uno, con
+  ese techo.
+- **Un impacto sin cifra dice «sin cifra calculable».** Nunca sólo la
+  palabra al lado de tarjetas con «+N pt».
+- **El primer paso de la tarjeta y el de su plan son la misma acción.**
+- **Una comunidad se nombra por lo que es** (`communityKind`): vídeo,
+  publicación o hilo.

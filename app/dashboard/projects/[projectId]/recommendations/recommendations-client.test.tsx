@@ -699,3 +699,30 @@ describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
     expect(planPart).not.toContain("Define en tu web");
   });
 });
+
+describe("RecCard: etiquetas coherentes (RECS-LABELS-1, log §336)", () => {
+  it("lo que depende de terceros no es «Prioridad alta» ni «Victoria rápida» (P38)", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "pursue_community_sources", impact: "high", effort: "low", confidence: "high" })}
+      />
+    );
+    expect(html).not.toContain("Prioridad alta");
+    expect(html).not.toContain("Victoria rápida");
+  });
+
+  it("en tu web siguen saliendo", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section", impact: "high", effort: "low", confidence: "high" })} />
+    );
+    expect(html).toContain("Prioridad alta");
+    expect(html).toContain("Victoria rápida");
+  });
+
+  it("un impacto sin cifra dice que no la tiene (P13)", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section" })} />);
+    expect(html).toContain("Impacto medio");
+    expect(html).toContain("sin cifra calculable");
+  });
+});
