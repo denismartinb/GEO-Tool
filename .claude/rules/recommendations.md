@@ -672,6 +672,19 @@ consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externa
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
 
+## Canal del plan (RECS-MIXED-CHANNEL-1, log §326)
+
+- **El paso «hazlo legible por máquina» sólo va en acciones de la propia
+  web.** `buildRecommendationRewritePrompt` lo decide con
+  `deliverableForType(tipo).control`: `own_site` (o sin clasificar) lo lleva;
+  `third_party` e `in_app` llevan la instrucción contraria, sin pasos de la
+  web ni ejemplos de JSON-LD. Un tipo nuevo de terceros hereda esto al
+  declarar su control en `deliverable.ts`.
+- **Cada familia `pursue_*` tiene su playbook.** Sin él, el tipo cae al
+  prompt genérico, que está pensado para contenido propio.
+- **«Listo para copiar» sólo en la propia web.** Fuera de ella, un plan sin
+  huecos es «Plan listo».
+
 ## Añadir competidor (RECS-ADD-COMPETITOR-1, log §327)
 
 - **`track_emerging_competitor` se pinta como un botón, nunca como plan.**
@@ -685,3 +698,67 @@ log §306).
 - **La web sólo se propone con igualdad exacta de etiqueta**
   (`domainForBrandName`). Sin coincidencia se pide; nunca se adivina. El
   navegador y el servidor validan con la misma `parseCompetitorDomain`.
+
+## Una tarjeta por palanca (RECS-ONE-LEVER-1, log §328)
+
+- **Las tarjetas `increase_brand_visibility` se pintan agrupadas por tema,
+  nunca sueltas.** El motor sigue emitiendo una por prompt (log §115 punto
+  6); `lib/recommendations/levers.ts` las agrupa por `project_prompts.category`
+  al cargar la pantalla, y las de definición van siempre aparte.
+- **Una palanca tiene una sola cifra**, el contrafactual conjunto de todos sus
+  miembros (ADR 0017 §3). Nunca la suma de los miembros.
+- **Una palanca ocupa un solo puesto del plan.** El plan se elige sobre
+  `collapseLeversForPlan`; todo techo que incluya una palanca se calcula con
+  todos sus miembros (`expandLeverIds`).
+- **El plan de una palanca se marca `lever: true` y nunca sustituye al de una
+  pregunta, ni al revés.** Los miembros se vuelven a leer en servidor con el
+  cliente del usuario, del mismo proyecto y tipo; el título lo pone el
+  servidor.
+- **«Marcar como hecho» de una palanca cierra todos sus miembros**, cada uno
+  con su propia comprobación de propiedad (`dismissRecommendationsCore`).
+
+## Cobertura: índices y comparativas (RECS-COVERAGE-1, log §330)
+
+- **Un índice nunca es «tu página».** `isAnswerPage` excluye portada, foros
+  e índices (`isListingPage`: portada de sección, categoría, etiqueta, autor,
+  paginación). Sólo índices da `listing_only`, que no certifica cobertura.
+  El informe usa la misma función: no le pongas un criterio propio.
+- **Las tarjetas de comparativa se comprueban contra las URL que ya
+  tenemos**, el sitemap guardado por la auditoría técnica más las páginas de
+  la cobertura (`computeComparisonOverlay`). Nada de fetch nuevo: leer la
+  página sería un rastreador. El texto dice lo que se vio («el mapa de tu
+  web incluye una comparativa»), nunca que la página sea buena.
+- **El competidor casa por palabras enteras del slug**, y una tarjeta de un
+  competidor sólo acepta la página de ese competidor. Una comparativa con
+  otro rival no la cubre.
+- **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
+  la tarjeta.** Lo que la IA responde no cambia porque exista la página.
+
+## Plantillas generadas (RECS-TEMPLATES-1, log §331)
+
+- **Un hueco `[...]` es un dato de la marca, nunca una pauta editorial.** El
+  prompt da los valores editoriales (longitud, número de subtítulos) y sólo
+  deja hueco para lo que sólo sabe la marca.
+- **Ningún dato de un competidor sale del plan.** Cada celda de un rival en
+  una tabla es el hueco «[dato de su web, con enlace y fecha]» y el plan pide
+  comprobarlo en su web. Afirmar una función o un precio ajeno sin fuente es
+  la misma invención que prohíbe `CLAUDE.md`.
+- **Ninguna URL inventada en el dominio propio.** O el dominio a secas, o el
+  hueco «[enlace a tu página de …]»; nunca «https://marca.es/pagina».
+- **Un ejemplo es sólo el texto que se pega.** Ningún consejo al usuario
+  dentro de él (tampoco en la respuesta de un JSON-LD); va en un paso.
+- **Una plantilla de contacto no afirma lo que no sabemos** (que el remitente
+  leyó algo) ni nombra competidores.
+- Son reglas blandas del prompt, fijadas por `rewrite-template-rules.test.ts`.
+  Si alguna pasa a comprobarse en servidor, se dice aquí.
+
+## Datos estructurados (RECS-JSONLD-LEVER-1, log §334)
+
+- **El JSON-LD nunca es la palanca.** El paso de «legible» de la propia web
+  pide texto visible; los datos estructurados son opcionales, van al final y
+  sólo describen lo que ya se ve. Google dice que sus funciones de IA no
+  necesitan marcado especial, y lo dice también nuestra guía del blog.
+- **Cada pregunta de un FAQ sale de los prompts afectados reales.**
+- **Nunca se afirma qué incluye el producto o cada plan más allá de los
+  datos.** Si no está en los datos, es un hueco.
+- Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
