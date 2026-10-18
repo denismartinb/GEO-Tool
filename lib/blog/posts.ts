@@ -625,6 +625,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "El comercio agéntico (agentic commerce) es la compra en la que un agente de IA busca, compara y, si el cliente lo autoriza, paga. Qué es, en qué punto está en 2026, quién lo está construyendo y qué tiene que hacer una tienda online para no quedarse fuera.",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/que-es-el-comercio-agentico/cover.webp",
     coverIcon: "compass",
     // AGENTIC-POSTS-1 (log §316). OpenAI (Sep 2025, Mar 2026), Google UCP
@@ -647,6 +648,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Un agente de IA no navega tu web como una persona: interpreta el encargo, lanza muchas búsquedas, filtra con datos estructurados, elige tienda y paga dentro de los límites que le fija el cliente. Los cinco pasos, con lo que publican OpenAI, Google, Visa y Mastercard, y en cuál puede quedarse fuera tu marca.",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/como-compra-un-agente-de-ia/cover.webp",
     coverIcon: "search",
     // AGENTIC-POSTS-1 (log §316). OpenAI shopping help page, Google UCP and
@@ -663,6 +665,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Diez comprobaciones para saber si un agente de IA puede encontrar tu tienda, entender tus productos y llegar hasta el pago: acceso de los bots, datos estructurados de producto, feeds, coherencia de precio y stock, políticas legibles, protección anti-bots y si la IA te nombra.",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/web-preparada-para-el-comercio-agentico/cover.webp",
     coverIcon: "shield",
     // AGENTIC-POSTS-1 (log §316). Adobe (Jan 2026), OpenAI shopping help
@@ -685,6 +688,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "OpenAI lanzó el pago dentro de ChatGPT en 2025 y en 2026 lo movió a las apps de cada tienda para centrarse en el descubrimiento de productos. Qué pasó, qué dicen los datos de tráfico y conversión, y por qué eso hace más importante que la IA te nombre al recomendar.",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/la-ia-descubre-tu-web-vende/cover.webp",
     coverIcon: "trendUp",
     // AGENTIC-POSTS-1 (log §316). OpenAI (Sep 2025), Digital Commerce 360
@@ -707,6 +711,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "ACP, UCP, AP2, Trusted Agent Protocol, Agent Pay: los protocolos con los que los agentes de IA descubren productos, pagan y se identifican. Qué resuelve cada uno, quién está detrás y qué tiene que hacer hoy una tienda online en España.",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/protocolos-comercio-agentico-acp-ucp-ap2/cover.webp",
     coverIcon: "chart",
     // AGENTIC-POSTS-1 (log §316). OpenAI and Stripe (Sep 2025), Google UCP
@@ -723,6 +728,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Muse (Meta), Dots (OpenAI), Instinct, Grok Bot y Tab son los agentes personales de IA que en el otoño de 2026 empezaron a comprar por sus usuarios. ¿Qué hace cada uno? ¿Cómo pagan? ¿Por qué Amazon los bloquea y Shopify les abre la puerta? ¿Qué tiene que preparar una tienda online en España?",
     datePublished: "2026-10-17",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/agentes-personales-de-ia-que-compran/cover.webp",
     // Official logos: Meta, OpenAI and Grok from public icon packs, Instinct
     // and Tab supplied by the founder (log §316).

@@ -26295,6 +26295,37 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
 
+## 333. AGENTIC-POSTS-2: los artículos de comercio agéntico dicen que Pro ya tiene la auditoría (2026-10-18)
+
+**Qué.** Los seis artículos de AGENTIC-POSTS-1 (§316) se escribieron cuando
+la auditoría agéntica sólo existía como comprobador gratuito y medía fichas de
+tienda. Con la Fase 2a en producción (#646, §322, §323, §325), su sección
+«Dónde encaja GenScore» añade que en Pro y Agencia la Auditoría agéntica de la
+consola hace esa revisión sola después de cada escaneo, sobre la página donde
+vendes (una ficha, tus precios, un servicio o tus reservas). Donde el texto
+decía «tus productos» o «tu tienda» para describir lo que revisa GenScore,
+pasa a «lo que vendes» o «tu web», porque desde §325 el motor ya no mide sólo
+fichas. En las diez comprobaciones, «Compra» pasa de «añadir al carrito» a
+«comprar, contratar o reservar». `dateUpdated` de los seis es 2026-10-18 y el
+calendario los marca publicados y refrescados.
+
+**Qué no cambia.** El resto de cada artículo sigue hablando de tiendas, que es
+su tema. «Preguntas de compra» y «Visibilidad en agentes» (2d) no se anuncian.
+
+**Sin frases sobre lo que GenScore todavía no revisa** (fundador, 2026-10-18:
+«esto básicamente echa para atrás»). Se retiran de los artículos «Lo que
+todavía no revisa son los protocolos de pago ni la firma de los agentes.
+Preferimos decirlo…», su equivalente en cómo compra un agente, el cierre de las
+diez comprobaciones sobre precio, stock y checkout, y el «no implanta ni
+revisa estos protocolos» del de protocolos; «Qué revisa GenScore y qué no»
+pasa a «Qué revisa GenScore». Nada de lo que queda afirma que se revisen: la
+tabla de las diez comprobaciones sigue marcando «No» y «En parte» donde toca.
+Los límites de motores (Copilot, AI Overviews) no son de este tipo y siguen
+declarados donde la regla de `growth-content.md` los exige.
+
+**Pendiente.** Si se aprueba 2b, 2c o 2d, esta misma sección se vuelve a
+tocar en el PR que lo lleve a producción.
+
 ## 328. RECS-ONE-LEVER-1: una tarjeta por palanca, no una por pregunta (2026-10-18)
 
 **Qué.** Las tarjetas `increase_brand_visibility` («Aparece en "…"») se agrupan por el tema que el usuario ya dio a cada prompt (`project_prompts.category`): una tarjeta por tema, con sus preguntas dentro, un solo «Haz esto» (una página con cada pregunta como subtítulo; si ya existe una, reforzarla), un solo plan generado y una sola cifra. Las preguntas de definición (log §292) van siempre en su propia tarjeta y conservan el aviso «lo realista es que te citen, no que te nombren». Los prompts sin tema van juntos en «tus otras preguntas». Módulo puro `lib/recommendations/levers.ts`; tarjeta `LeverCard` en `recommendations-client.tsx`.
