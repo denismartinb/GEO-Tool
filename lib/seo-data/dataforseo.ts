@@ -3,7 +3,7 @@ import "server-only";
 import { readEnvelope, type DfsEnvelope } from "@/lib/seo-data/dataforseo-parse";
 
 /**
- * SEO-DIAG-0 (log §338): DataForSEO transport. Basic auth from
+ * SEO-DIAG-0 (log §339): DataForSEO transport. Basic auth from
  * `DATAFORSEO_LOGIN` + `DATAFORSEO_PASSWORD` (the API password from the
  * dashboard, not the account password). Without them nothing is called.
  *

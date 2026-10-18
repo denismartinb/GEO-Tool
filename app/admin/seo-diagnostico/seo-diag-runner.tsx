@@ -15,7 +15,7 @@ import {
 import { runSeoDiagStep, type SeoDiagResult, type SeoDiagStep } from "./actions";
 
 /**
- * SEO-DIAG-0 (log §338): drives the diagnosis one DataForSEO call at a time
+ * SEO-DIAG-0 (log §339): drives the diagnosis one DataForSEO call at a time
  * and keeps every result, including failures and what each call cost, so the
  * downloaded JSON is the whole record of the run.
  */

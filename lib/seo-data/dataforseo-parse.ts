@@ -1,5 +1,5 @@
 /**
- * SEO-DIAG-0 (log §338): pure readers for DataForSEO responses. They keep only
+ * SEO-DIAG-0 (log §339): pure readers for DataForSEO responses. They keep only
  * what the operator diagnosis shows and never invent a value: a field the
  * response does not carry stays `null`, so the page prints «—» instead of 0.
  *

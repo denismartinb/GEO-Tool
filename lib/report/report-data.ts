@@ -10,6 +10,7 @@ import {
   comparisonFieldsFromEvidence,
   computeComparisonOverlay,
   computeCoverageOverlay,
+  isAlreadyCovered,
   isAnswerPage,
   overlayCopy
 } from "@/lib/recommendations/coverage-overlay";
@@ -229,7 +230,11 @@ export async function loadReportInput({
   })) {
     overlayByRecId.set(recId, entry);
   }
-  const plan: ReportPlanItem[] = selectPlan(recs).map((r) => {
+  // RECS-ALREADY-DONE-1 (log §339): the plan leaves out what the screen
+  // shows under «Resueltas» because its page already exists.
+  const plan: ReportPlanItem[] = selectPlan(
+    recs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlayByRecId.get(r.id)))
+  ).map((r) => {
     const overlay = overlayByRecId.get(r.id);
     const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
     const topics = new Set<string>();

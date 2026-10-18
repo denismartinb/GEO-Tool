@@ -733,6 +733,8 @@ log §306).
   otro rival no la cubre.
 - **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
   la tarjeta.** Lo que la IA responde no cambia porque exista la página.
+  Excepción desde §339: si la tarjeta sólo pedía publicar esa página, pasa a
+  «Resueltas» (sección de abajo).
 
 ## Plantillas generadas (RECS-TEMPLATES-1, log §331)
 
@@ -796,3 +798,19 @@ log §306).
   y cuenta el resto.
 - **Que no salga ningún competidor no es una oportunidad segura.** El texto
   dice lo observado y que también puede ser una pregunta sin marcas.
+
+## Ya lo tienes (RECS-ALREADY-DONE-1, log §339)
+
+- **Si la acción entera era publicar una página que la cobertura ya
+  encontró, la tarjeta sale de la lista activa y va a «Resueltas», tachada.**
+  Pasa con «Ya lo tienes» y el enlace (`isAlreadyCovered`, tipos de
+  `PUBLISH_PAGE_TYPES`). `add_citation_block` no entra: su acción es añadir
+  un dato y la página no dice si está.
+- **Se calcula al leer, nunca se guarda.** Sin estado nuevo ni «Deshacer».
+  El siguiente escaneo decide otra vez.
+- **Toda vista que liste tarjetas lee el overlay con `loadCoverageOverlays`
+  y filtra con `isAlreadyCovered`.** Hoy lo hacen Recomendaciones, Visión
+  general y la campana. El informe usa la misma función sobre su overlay.
+  Una vista nueva que se lo salte enseñaría como pendiente lo que la
+  pantalla da por hecho.
+- **Sólo se enlaza una dirección `http(s)`.**
