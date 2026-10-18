@@ -234,6 +234,8 @@ export function AgenticAuditScreen({
   const limitNote = remaining > 0 ? null : " Has usado las revisiones de hoy; podrás elegir otra página mañana.";
   const kindChip = offerLabel(result);
   const naNote = notApplicableNote(result);
+  // Read and scored: the URL adds nothing, a check says it went well (Denis, log §332).
+  const analyzed = !noStore && result.pageRead && result.score !== null;
 
   return (
     <>
@@ -257,23 +259,47 @@ export function AgenticAuditScreen({
         ) : (
           <>
             <div className="ag-head-row">
-              <h2 className="ag-h">Página revisada</h2>
+              {analyzed ? (
+                <h2 className="ag-h ag-done">
+                  <svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true">
+                    <circle cx="10" cy="10" r="10" fill="currentColor" />
+                    <path
+                      d="M6 10.4l2.6 2.6L14.2 7.4"
+                      fill="none"
+                      stroke="#fff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </svg>
+                  Tienda analizada
+                </h2>
+              ) : (
+                <h2 className="ag-h">Página revisada</h2>
+              )}
               {kindChip ? <span className="ag-kind">{kindChip}</span> : null}
             </div>
-            {picker ?? (
-              <div className="ag-url">
-                <span className="ag-url-box" title={result.url}>
-                  {result.url}
-                </span>
-                {remaining > 0 ? (
-                  <div className="ag-url-actions">
-                    <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>
-                      Elegir otra página
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            )}
+            {picker ??
+              (analyzed ? (
+                remaining > 0 ? (
+                  <button type="button" className="ag-link" onClick={() => setEditing(true)}>
+                    Elegir otra página
+                  </button>
+                ) : null
+              ) : (
+                <div className="ag-url">
+                  <span className="ag-url-box" title={result.url}>
+                    {result.url}
+                  </span>
+                  {remaining > 0 ? (
+                    <div className="ag-url-actions">
+                      <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>
+                        Elegir otra página
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
             <p className="ag-muted">
               {[foundSentence(result), reviewedLabel].filter(Boolean).join(" ")}
               {limitNote}

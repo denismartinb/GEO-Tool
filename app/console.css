@@ -1970,6 +1970,8 @@
 .ag-screen .card { padding: 15px; border-radius: 14px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .ag-intro { margin: 0; font-size: 13.5px; color: var(--ink-3); }
 .ag-h { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.ag-h.ag-done { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.ag-h.ag-done svg { color: var(--pos-ink); flex: none; }
 .ag-muted { margin: 0; font-size: 12.5px; color: var(--ink-3); }
 .ag-error { margin: 0; font-size: 13px; color: var(--neg-ink); }
 

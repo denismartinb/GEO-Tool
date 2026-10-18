@@ -26401,6 +26401,11 @@ escanea, las de quien va a comprar, y qué hacen los motores con ellas.
   columna de la tarjeta era `auto` y crecía hasta el ancho de la URL entera;
   pasa a `minmax(0, 1fr)` y la URL se corta con puntos suspensivos (fundador,
   2026-10-18, con captura).
+- **Si todo ha ido bien, «Tienda analizada» con un check verde y sin URL.**
+  Con la página leída y con nota, la URL no aporta nada (fundador,
+  2026-10-18). Queda «Elegir otra página» como enlace. Si la página no se
+  pudo leer o no tiene nota, sigue «Página revisada» con la URL, porque ahí
+  el cliente necesita saber qué página se miró.
 - **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
   36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
 - Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La

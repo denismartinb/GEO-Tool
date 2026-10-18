@@ -162,3 +162,6 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   `?componente=`, que la página valida contra la lista fija.
 - **«Qué hacer primero» no enseña puntos por arreglo**, aunque el prototipo
   los pintara: la cifra es la de la franja, de `scoreIfChecksPass`.
+- **La URL revisada sólo se enseña cuando algo no fue bien.** Con la página
+  leída y con nota, la tarjeta dice «Tienda analizada» con un check; sin
+  lectura o sin nota, «Página revisada» con la URL (log §332).
