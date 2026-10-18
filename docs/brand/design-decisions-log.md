@@ -26269,6 +26269,34 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
 
+## 329. GSC-QUERIES-SORT-1: la tabla de búsquedas de «Posición en Google» se ordena por columnas (2026-10-18)
+
+**Qué se decidió.** El fundador preguntó, desde el móvil, si de verdad salía
+primero en búsquedas con puesto 1,0 y 0 clics, y pidió poder ordenar la tabla
+por búsqueda, puesto y clics. En móvil la tabla ocultaba impresiones, CTR y
+página (`gsc-hide-m`), así que un 1,0 de una o dos impresiones se leía como
+un primer puesto firme. Primero vio una propuesta de fichas por búsqueda y la
+descartó: quiere en móvil el mismo formato de tabla que en escritorio
+(maqueta aprobada en `docs/design-reference/gsc-queries-sort-1/`).
+
+- «Búsqueda», «Puesto», «Clics» e «Impresiones» son botones en la cabecera,
+  con ↕ siempre visible y ↑/↓ en la columna activa (`aria-sort`). La primera
+  pulsación ordena como se espera (A–Z, mejor puesto primero, más clics o
+  impresiones primero) y la segunda invierte. Empate: más impresiones, luego
+  la búsqueda. Lógica pura en `sortQueries` (`gsc-queries.tsx`), con test.
+- El conjunto mostrado no cambia: siguen siendo las 50 búsquedas con más
+  impresiones del filtro; la columna elegida sólo las reordena, así que la
+  nota «Mostramos las 50 búsquedas con más impresiones» sigue siendo cierta.
+- En móvil salen todas las columnas: la tabla se desliza en horizontal dentro
+  de su caja y la columna de la búsqueda se queda fija a la izquierda.
+
+**Qué queda.** La propuesta de marcar en ámbar las búsquedas con menos de 10
+impresiones no se implementa: el fundador eligió ver la columna de
+impresiones en móvil. Las demás tablas de la pantalla (páginas) siguen
+ocultando columnas en móvil.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
 ## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
 
 **Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/

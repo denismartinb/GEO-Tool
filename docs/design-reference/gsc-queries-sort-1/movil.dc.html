@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Búsquedas ordenables, móvil</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;800&amp;family=JetBrains+Mono:wght@600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2b59e8}a:hover{color:#1d40b0}
+.sb{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:4px;font:700 10px 'JetBrains Mono',monospace;letter-spacing:.1em;text-transform:uppercase;color:#6b7385;padding:6px 0;white-space:nowrap}
+.sb .ar{color:#98a0b0}
+.sb.on,.sb.on .ar{color:#0f1729}
+.sb:focus-visible{outline:2px solid #2b59e8;outline-offset:2px;border-radius:4px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid #e8eaef;font-weight:400;background:#fff}
+th.n{text-align:right}
+td{padding:10px 8px;border-bottom:1px solid #eef0f4;vertical-align:middle;font-size:13px;background:#fff}
+td.n{text-align:right;font:600 12.5px 'JetBrains Mono',monospace;white-space:nowrap}
+.stick{position:sticky;left:0;z-index:1;box-shadow:1px 0 0 #e8eaef}
+</style>
+</helmet>
+<div style="width:390px;min-height:980px;box-sizing:border-box;background:#f6f7fa;font-family:Figtree,sans-serif;color:#0f1729;padding:16px">
+  <div style="background:#fff;border:1px solid #e8eaef;border-radius:14px;padding:16px 12px">
+    <h3 style="margin:0 0 4px;font-size:16px;font-weight:700">Las búsquedas que te traen visitas</h3>
+    <p style="margin:0 0 12px;font-size:12px;color:#6b7385">Datos con 2–3 días de retraso, como en Search Console</p>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-size:12.5px;font-weight:600;border:1px solid #0f1729;background:#0f1729;color:#fff;padding:6px 11px;border-radius:999px">Todas <b style="font:700 11px 'JetBrains Mono',monospace">7</b></span>
+      <span style="font-size:12.5px;font-weight:600;border:1px solid #e8eaef;color:#475067;padding:6px 11px;border-radius:999px">Página 1 <b style="font:700 11px 'JetBrains Mono',monospace">5</b></span>
+      <span style="font-size:12.5px;font-weight:600;border:1px solid #e8eaef;color:#475067;padding:6px 11px;border-radius:999px">Página 2 (puestos 11–20) <b style="font:700 11px 'JetBrains Mono',monospace">0</b></span>
+    </div>
+    <div style="overflow-x:auto;margin:0 -12px;padding:0 0 4px">
+      <table style="border-collapse:collapse;min-width:640px">
+        <thead>
+          <tr>
+            <th class="stick" style="width:180px"><button class="{{cls.query}}" onClick="{{sortQuery}}">Búsqueda <span class="ar" aria-hidden="true">{{arrow.query}}</span></button></th>
+            <th><button class="{{cls.position}}" onClick="{{sortPosition}}">Puesto <span class="ar" aria-hidden="true">{{arrow.position}}</span></button></th>
+            <th class="n"><button class="{{cls.clicks}}" onClick="{{sortClicks}}">Clics <span class="ar" aria-hidden="true">{{arrow.clicks}}</span></button></th>
+            <th class="n"><button class="{{cls.impressions}}" onClick="{{sortImpr}}">Impresiones <span class="ar" aria-hidden="true">{{arrow.impressions}}</span></button></th>
+            <th class="n"><span class="sb">CTR</span></th>
+            <th><span class="sb">Página que sale</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="7">
+            <tr>
+              <td class="stick" style="width:180px;min-width:180px"><span style="font-weight:600;font-size:13px;line-height:1.35;overflow-wrap:anywhere">{{r.query}}</span></td>
+              <td style="white-space:nowrap">
+                <span style="display:inline-flex;align-items:center;justify-content:center;min-width:42px;height:28px;padding:0 7px;border-radius:8px;box-sizing:border-box;font:800 15px/1 Figtree,sans-serif;background:{{r.bg}};color:{{r.fg}}">{{r.pos}}</span>
+                <span style="margin-left:5px;font:600 11px 'JetBrains Mono',monospace;color:{{r.mvColor}}">{{r.mv}}</span>
+              </td>
+              <td class="n">{{r.clicks}}</td>
+              <td class="n">{{r.impressions}}</td>
+              <td class="n">{{r.ctr}}</td>
+              <td style="white-space:nowrap"><a href="https://www.genscore.es/" style="font-size:12.5px">{{r.page}}</a></td>
+            </tr>
+          </sc-for>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin:12px 0 0;font-size:11px;color:#6b7385">Datos de ejemplo. Desliza la tabla a la izquierda para ver impresiones, CTR y página; la columna de la búsqueda se queda fija.</p>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":980}}'>
+class Component extends DCLogic {
+  constructor(p){ super(p); this.state = { key: 'impressions', dir: 'desc' }; }
+  sortBy(key){
+    const first = key === 'query' || key === 'position' ? 'asc' : 'desc';
+    this.setState((s) => s.key === key ? { key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key, dir: first });
+  }
+  renderVals(){
+    const data = [
+      { query: 'como director de una empresa de limpieza… ¿cómo sé si nuestra empresa de limpieza está apareciendo o no cuando los clientes preguntan a chatgpt por servicios de limpieza?', position: 1, mv: null, clicks: 0, impressions: 1, page: '/blog/como-saber-si-aparece…' },
+      { query: 'como socio director de una consultora… ¿cómo puedo saber qué dice chatgpt cuando alguien le pide que recomiende una consultora en nuestra especialidad?', position: 1, mv: null, clicks: 0, impressions: 1, page: '/blog/como-saber-si-aparece…' },
+      { query: 'que significan las siglas geo', position: 1, mv: null, clicks: 0, impressions: 2, page: '/geo' },
+      { query: 'geo vs aeo', position: 3, mv: 3, clicks: 0, impressions: 4, page: '/blog/geo-vs-aeo-vs-seo' },
+      { query: 'genscore', position: 1.2, mv: 0, clicks: 9, impressions: 38, page: '/' },
+      { query: 'aeo vs seo vs geo: ¿qué diferencia hay?', position: 22, mv: null, clicks: 0, impressions: 6, page: '/blog/geo-vs-aeo-vs-seo' },
+      { query: 'llmso', position: 35, mv: null, clicks: 0, impressions: 3, page: '/glosario' }
+    ];
+    const { key, dir } = this.state;
+    const m = dir === 'asc' ? 1 : -1;
+    const rows = data.slice().sort((a, b) => {
+      if (key === 'query') return m * a.query.localeCompare(b.query, 'es');
+      return m * (a[key] - b[key]) || b.impressions - a.impressions;
+    }).map((r) => {
+      const t = r.position <= 3 ? ['#e6f6ee', '#0f6b41'] : r.position <= 10 ? ['#eef7f1', '#12774a'] : r.position <= 20 ? ['#eaf1ff', '#1d4ed8'] : ['#f1f3f6', '#4a5363'];
+      return {
+        query: r.query, page: r.page,
+        pos: r.position.toFixed(1).replace('.', ','),
+        bg: t[0], fg: t[1],
+        mv: r.mv === null ? 'nueva' : r.mv === 0 ? '=' : '▲' + r.mv.toFixed(1).replace('.', ','),
+        mvColor: r.mv ? '#12774a' : '#6b7385',
+        clicks: String(r.clicks),
+        impressions: String(r.impressions),
+        ctr: (r.clicks / r.impressions * 100).toFixed(1).replace('.', ',') + ' %'
+      };
+    });
+    const arrow = { query: '↕', position: '↕', clicks: '↕', impressions: '↕' };
+    const cls = { query: 'sb', position: 'sb', clicks: 'sb', impressions: 'sb' };
+    arrow[key] = dir === 'asc' ? '↑' : '↓'; cls[key] = 'sb on';
+    return {
+      rows, arrow, cls,
+      sortQuery: () => this.sortBy('query'),
+      sortPosition: () => this.sortBy('position'),
+      sortClicks: () => this.sortBy('clicks'),
+      sortImpr: () => this.sortBy('impressions')
+    };
+  }
+}
+</script>
+</body>
+</html>
