@@ -25,6 +25,9 @@ export const feedbackErrorMessages: Record<string, string> = {
   sampling_update_failed: "No se ha podido actualizar el suelo de muestreo. Vuelve a intentarlo.",
   sampling_migration_pending:
     "El suelo de muestreo todavía no se puede desactivar: falta aplicar la migración 0032 en Supabase.",
+  seo_tracking_update_failed: "No se ha podido actualizar el seguimiento de palabras. Vuelve a intentarlo.",
+  seo_tracking_migration_pending:
+    "El seguimiento de palabras todavía no se puede configurar: falta aplicar la migración 0044 en Supabase.",
   engine_toggle_update_failed: "No se ha podido actualizar el motor. Vuelve a intentarlo.",
   engine_toggle_migration_pending:
     "Los motores todavía no se pueden activar/desactivar por separado: falta aplicar la migración 0033 en Supabase.",
@@ -70,6 +73,9 @@ export const feedbackSuccessMessages: Record<string, string> = {
   // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
   sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",
   sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts.",
+  // SEO-TRACK-1 PR B: apagarlo no borra nada, sólo saca el proyecto del cron del lunes.
+  seo_tracking_enabled: "Seguimiento de palabras activado. Entra en la foto de Google del próximo lunes.",
+  seo_tracking_disabled: "Seguimiento de palabras desactivado. Sus palabras y su historial se conservan.",
   // ENGINE-DEBUG-TOGGLE-1: una clave por motor, igual que las dos mitades de
   // auditoría — el fundador necesita saber cuál tocó, no solo que "un motor"
   // cambió.

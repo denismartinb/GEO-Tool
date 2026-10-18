@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
+import { getPlanForUser } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { propertyLabel } from "@/lib/search-console/property";
 import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
+import { loadSeoTracking, weeklyTodo } from "@/lib/seo-tracking/screen";
+import { buildSetupProposal } from "@/lib/seo-tracking/setup-proposal";
+import { normalizeKeyword } from "@/lib/seo-tracking/keyword-text";
+import { pagePath } from "@/lib/seo-tracking/topic-actions";
+import { weeklySummary } from "@/lib/seo-tracking/view-model";
+import { weekStartUtc } from "@/lib/seo-tracking/week";
 import { AUDIT_BLOCK_PARAM } from "@/lib/web-audit/audit-blocks";
+import { fmtDay } from "./_components/format";
 import { ClicksImpressionsChart, NearPageOneScatter } from "./_components/gsc-charts";
 import { GscConnect } from "./_components/gsc-connect";
 import { GscDisconnect } from "./_components/gsc-disconnect";
@@ -16,6 +24,7 @@ import { GscPickProperty } from "./_components/gsc-pick-property";
 import { GscPosition } from "./_components/gsc-position";
 import { GscQueries } from "./_components/gsc-queries";
 import { GscQuestions } from "./_components/gsc-questions";
+import { SeoTracking, type SeoView } from "./_components/seo/seo-tracking";
 
 /**
  * «Posición en Google» — SEARCH-SEO-1 Fase 3 (log §284), design in
@@ -30,6 +39,17 @@ import { GscQuestions } from "./_components/gsc-questions";
 
 export const dynamic = "force-dynamic";
 
+const VIEWS: SeoView[] = ["resumen", "temas", "descubrir"];
+
+/** The Monday cron takes its photo between 05:00 and 07:00 UTC (vercel.json). */
+function nextSnapshotLabel(now: Date, latestWeek: string | null): string {
+  const week = weekStartUtc(now);
+  if (latestWeek !== week && now.getUTCDay() === 1 && now.getUTCHours() < 7) return "hoy por la mañana";
+  const next = new Date(`${week}T00:00:00Z`);
+  next.setUTCDate(next.getUTCDate() + 7);
+  return `el lunes ${fmtDay(next.toISOString().slice(0, 10))}`;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ projectId: string }> }): Promise<Metadata> {
   const { projectId } = await params;
   return projectScreenMetadata("Posición en Google", async () => (await requireActiveProject(projectId)).domain);
@@ -40,51 +60,32 @@ export default async function SearchConsolePage({
   searchParams
 }: {
   params: Promise<{ projectId: string }>;
-  searchParams: Promise<{ gsc?: string }>;
+  searchParams: Promise<{ gsc?: string; vista?: string }>;
 }) {
-  const [{ projectId }, { gsc }] = await Promise.all([params, searchParams]);
+  const [{ projectId }, { gsc, vista }] = await Promise.all([params, searchParams]);
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
   const { auditedPages, trackedPrompts } = await readSearchConsoleInputs(supabase, projectId);
 
-  const state = await loadSearchConsoleScreen(projectId, user.id, project.domain, auditedPages, trackedPrompts);
+  const [state, plan, competitors] = await Promise.all([
+    loadSearchConsoleScreen(projectId, user.id, project.domain, auditedPages, trackedPrompts),
+    getPlanForUser(supabase, user.id),
+    supabase.from("project_competitors").select("name, domain").eq("project_id", projectId).eq("is_active", true)
+  ]);
+  const ready = state.kind === "ready" && !state.report.empty ? state : null;
+  const seo = await loadSeoTracking(supabase, {
+    projectId,
+    ownerUserId: user.id,
+    ownDomain: project.domain,
+    planId: plan.id,
+    ctr: ready ? ready.insights.ctr.map((c) => ({ query: c.query, page: c.page, position: c.position })) : []
+  });
   const connectHref = `/api/search-console/connect?projectId=${projectId}`;
   const auditHref = `/dashboard/projects/${projectId}/web-audit?${AUDIT_BLOCK_PARAM}=seo`;
 
-  return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Posición en Google</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
-            </div>
-          </div>
-        </div>
-        {state.kind === "ready" && (
-          <div className="ov-sticky-right">
-            <span className="gsc-chip">
-              <span className="gsc-live" aria-hidden="true" />
-              <span className="gsc-chip-full">Search Console conectado · últimos 28 días</span>
-              <span className="gsc-chip-compact">Últimos 28 días</span>
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="gsc-page">
-        <div className="gsc-screen">
-          <div className="gsc-intro">
-            <p>En qué puesto sales en Google, para qué búsquedas y qué hacer para subir.</p>
-          </div>
-          <GscOutcome code={gsc} />
+  const gscContent = (
+    <>
 
           {state.kind === "not_configured" || state.kind === "unavailable" ? (
             <div className="card gsc-pick">
@@ -181,6 +182,107 @@ export default async function SearchConsolePage({
               <GscDisconnect projectId={projectId} />
             </p>
           )}
+    </>
+  );
+
+  let seoContent = gscContent;
+  if (seo.kind === "setup" || seo.kind === "ready") {
+    const keywords = seo.topics.flatMap((t) => t.keywords);
+    const tracked = new Set(keywords.map((k) => k.keyword));
+    const topicByPath = new Map(seo.topics.filter((t) => t.targetUrl).map((t) => [pagePath(t.targetUrl as string), t.id]));
+    const queries = ready?.report.queries ?? [];
+    const pageByQuery = ready?.insights.pageByQuery ?? {};
+    const near = queries
+      .filter((q) => q.position >= 4 && q.position <= 20 && !tracked.has(normalizeKeyword(q.query) ?? ""))
+      .sort((a, b) => b.impressions - a.impressions)
+      .slice(0, 30)
+      .map((q) => ({
+        keyword: normalizeKeyword(q.query) ?? q.query,
+        position: q.position,
+        impressions: q.impressions,
+        topicId: pageByQuery[q.query] ? topicByPath.get(pagePath(pageByQuery[q.query])) ?? null : null
+      }));
+    const gscPositions = Object.fromEntries(queries.map((q) => [normalizeKeyword(q.query) ?? q.query, q.position]));
+    const proposal = {
+      topics:
+        seo.kind === "setup"
+          ? buildSetupProposal({
+              queries: queries.map((q) => ({ query: q.query, position: q.position, impressions: q.impressions })),
+              pageByQuery,
+              brandTerms: [project.name, project.brand, project.domain.replace(/^www\./, "").split(".")[0]].filter((t): t is string => Boolean(t)),
+              keywordCap: seo.caps.keywords
+            })
+          : [],
+      rivals: (competitors.data ?? [])
+        .filter((c): c is { name: string; domain: string } => Boolean(c.domain) && typeof c.name === "string")
+        .map((c) => ({ domain: c.domain.replace(/^www\./, ""), name: c.name }))
+        .slice(0, 10)
+    };
+    seoContent = (
+      <SeoTracking
+        projectId={projectId}
+        ownDomain={project.domain}
+        data={seo}
+        todo={weeklyTodo(seo.topics)}
+        summary={weeklySummary(keywords)}
+        gsc={
+          ready
+            ? {
+                clicks: ready.report.clicks.value,
+                impressions: ready.report.impressions.value,
+                position: ready.report.position.value,
+                nearPage1: ready.report.nearPage1.length
+              }
+            : null
+        }
+        near={near}
+        gscPositions={gscPositions}
+        proposal={proposal}
+        nextSnapshot={nextSnapshotLabel(new Date(), seo.latestWeek)}
+        lastSnapshot={seo.latestWeek ? `del lunes ${fmtDay(seo.latestWeek)}` : null}
+        initialView={VIEWS.includes(vista as SeoView) ? (vista as SeoView) : "resumen"}
+      >
+        <div id="google-detalle" className="skw-detail">
+          {gscContent}
+        </div>
+      </SeoTracking>
+    );
+  }
+
+  return (
+    <div className="page">
+      <div className="ov-sticky-header">
+        <div className="ov-sticky-left">
+          <div>
+            <p className="kicker" style={{ marginBottom: 2 }}>Posición en Google</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
+                {project.name}
+              </span>
+              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
+                {project.domain}
+              </span>
+            </div>
+          </div>
+        </div>
+        {state.kind === "ready" && (
+          <div className="ov-sticky-right">
+            <span className="gsc-chip">
+              <span className="gsc-live" aria-hidden="true" />
+              <span className="gsc-chip-full">Search Console conectado · últimos 28 días</span>
+              <span className="gsc-chip-compact">Últimos 28 días</span>
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="gsc-page">
+        <div className="gsc-screen">
+          <div className="gsc-intro">
+            <p>En qué puesto sales en Google, para qué búsquedas y qué hacer para subir.</p>
+          </div>
+          <GscOutcome code={gsc} />
+          {seoContent}
         </div>
       </div>
     </div>

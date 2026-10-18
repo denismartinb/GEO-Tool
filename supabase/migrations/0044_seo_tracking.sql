@@ -15,6 +15,10 @@
 --                       categorized error
 --   seo_competitors     rival domains (and one `is_own` row for the project's
 --                       own domain) with their monthly backlink summary
+--   seo_action_states   the «Qué hacer» steps of a topic the customer marked
+--                       as done (PR B, approved with prototype v6)
+--   seo_discovery_runs  one row per «Descubrir palabras» search, for the
+--                       5-a-day limit and its cost
 --
 -- What is stored is DataForSEO's view of public Google results, never Search
 -- Console rows. The only thing that may come from Search Console is a keyword
@@ -53,7 +57,7 @@ create table if not exists public.seo_keywords (
   tracked boolean not null default true,
   created_at timestamptz not null default now(),
   constraint seo_keywords_keyword_chk check (char_length(keyword) between 1 and 200),
-  constraint seo_keywords_source_chk check (source in ('search_console', 'competitor_gap', 'manual')),
+  constraint seo_keywords_source_chk check (source in ('search_console', 'competitor_gap', 'keyword_ideas', 'manual')),
   constraint seo_keywords_uniq unique (project_id, keyword)
 );
 
@@ -130,6 +134,50 @@ for select to authenticated using (owner_user_id = auth.uid());
 
 -- No INSERT/UPDATE/DELETE policy for `authenticated`: writes go through server
 -- code with the service role, which re-verifies ownership first.
+
+-- «Marcar como hecho» on a topic step. The steps themselves are computed live
+-- from the snapshots; only what the customer did with one is stored, like
+-- search_console_rec_states (0042). `action_key` is a code-built key (rule and
+-- subject), never free text from the customer.
+create table if not exists public.seo_action_states (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  owner_user_id uuid not null references auth.users(id) on delete cascade,
+  topic_id uuid not null references public.seo_topics(id) on delete cascade,
+  action_key text not null,
+  status text not null default 'done',
+  created_at timestamptz not null default now(),
+  constraint seo_action_states_key_chk check (char_length(action_key) between 1 and 300),
+  constraint seo_action_states_status_chk check (status in ('done')),
+  constraint seo_action_states_uniq unique (topic_id, action_key)
+);
+
+create index if not exists seo_action_states_project_idx on public.seo_action_states (project_id, owner_user_id);
+
+-- Each «Descubrir palabras» search that reached DataForSEO, for the limit of
+-- five a day per account and to know what it cost. Results are not stored.
+create table if not exists public.seo_discovery_runs (
+  id uuid primary key default gen_random_uuid(),
+  project_id uuid not null references public.projects(id) on delete cascade,
+  owner_user_id uuid not null references auth.users(id) on delete cascade,
+  kind text not null,
+  cost_usd numeric,
+  created_at timestamptz not null default now(),
+  constraint seo_discovery_runs_kind_chk check (kind in ('seed', 'rivals'))
+);
+
+create index if not exists seo_discovery_runs_owner_idx on public.seo_discovery_runs (owner_user_id, created_at);
+
+alter table public.seo_action_states enable row level security;
+alter table public.seo_discovery_runs enable row level security;
+
+drop policy if exists seo_action_states_select_owner on public.seo_action_states;
+create policy seo_action_states_select_owner on public.seo_action_states
+for select to authenticated using (owner_user_id = auth.uid());
+
+drop policy if exists seo_discovery_runs_select_owner on public.seo_discovery_runs;
+create policy seo_discovery_runs_select_owner on public.seo_discovery_runs
+for select to authenticated using (owner_user_id = auth.uid());
 
 -- Ops alerts already sent (one per category and week). Written only after the
 -- email went out, so a failed send is retried by the next pass. Internal: RLS

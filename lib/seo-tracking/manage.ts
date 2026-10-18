@@ -12,16 +12,16 @@ import type { createServiceClient } from "@/lib/supabase/service";
  * (`requireActiveProject(projectId)` + `requireUser().user.id`) and pass the
  * plan from the user's own plan read. These functions re-check that the
  * project belongs to that owner and filter every write by `project_id` AND
- * `owner_user_id` (`.claude/rules/seo-tracking.md`). The server actions that
- * call them land with the screen (PR B).
+ * `owner_user_id` (`.claude/rules/seo-tracking.md`). Called from the server
+ * actions of the screen (PR B, log §341).
  */
 
 type Service = ReturnType<typeof createServiceClient>;
 
-export type KeywordSource = "search_console" | "competitor_gap" | "manual";
+export type KeywordSource = "search_console" | "competitor_gap" | "keyword_ideas" | "manual";
 
 export type AddKeywordsResult =
-  | { status: "ok"; added: string[]; duplicates: string[]; overCap: string[] }
+  | { status: "ok"; added: string[]; retracked: string[]; duplicates: string[]; overCap: string[] }
   | { status: "unavailable" }
   | { status: "not_found" }
   | { status: "failed" };
@@ -37,6 +37,23 @@ async function ownedProjectDomain(service: Service, projectId: string, ownerUser
   return (data?.domain as string | undefined) ?? null;
 }
 
+async function ownedTopic(service: Service, projectId: string, ownerUserId: string, topicId: string): Promise<boolean> {
+  const { data } = await service
+    .from("seo_topics")
+    .select("id")
+    .eq("id", topicId)
+    .eq("project_id", projectId)
+    .eq("owner_user_id", ownerUserId)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * Tracks keywords under the plan's cap. A keyword the project stopped
+ * tracking (`tracked=false`) is tracked again, keeping its history, and counts
+ * against the cap like a new one (log §341). One already tracked is reported
+ * as a duplicate; with a topic given it moves to that topic.
+ */
 export async function addTrackedKeywordsCore(
   service: Service,
   input: { projectId: string; ownerUserId: string; planId: string | null | undefined; keywords: string[]; source: KeywordSource; topicId?: string | null }
@@ -46,31 +63,25 @@ export async function addTrackedKeywordsCore(
 
   const { data: existing, error } = await service
     .from("seo_keywords")
-    .select("keyword, tracked")
+    .select("id, keyword, tracked")
     .eq("project_id", input.projectId)
     .eq("owner_user_id", input.ownerUserId);
   if (error) return isMissingTable(error) ? { status: "unavailable" } : { status: "failed" };
 
-  if (input.topicId) {
-    const { data: topic } = await service
-      .from("seo_topics")
-      .select("id")
-      .eq("id", input.topicId)
-      .eq("project_id", input.projectId)
-      .eq("owner_user_id", input.ownerUserId)
-      .maybeSingle();
-    if (!topic) return { status: "not_found" };
-  }
+  if (input.topicId && !(await ownedTopic(service, input.projectId, input.ownerUserId, input.topicId))) return { status: "not_found" };
 
-  const known = new Set((existing ?? []).map((row) => row.keyword as string));
-  const duplicates = wanted.filter((keyword) => known.has(keyword));
-  const fresh = wanted.filter((keyword) => !known.has(keyword));
-  const trackedCount = (existing ?? []).filter((row) => row.tracked === true).length;
-  const { accepted, rejected } = fitUnderCap(trackedCount, seoTrackingCapsFor(input.planId).keywords, fresh);
+  const rows = (existing ?? []) as Array<{ id: string; keyword: string; tracked: boolean }>;
+  const byKeyword = new Map(rows.map((row) => [row.keyword, row]));
+  const duplicates = wanted.filter((keyword) => byKeyword.get(keyword)?.tracked === true);
+  const candidates = wanted.filter((keyword) => byKeyword.get(keyword)?.tracked !== true);
+  const trackedCount = rows.filter((row) => row.tracked === true).length;
+  const { accepted, rejected } = fitUnderCap(trackedCount, seoTrackingCapsFor(input.planId).keywords, candidates);
+  const retracked = accepted.filter((keyword) => byKeyword.has(keyword));
+  const fresh = accepted.filter((keyword) => !byKeyword.has(keyword));
 
-  if (accepted.length > 0) {
+  if (fresh.length > 0) {
     const { error: insertError } = await service.from("seo_keywords").insert(
-      accepted.map((keyword) => ({
+      fresh.map((keyword) => ({
         project_id: input.projectId,
         owner_user_id: input.ownerUserId,
         topic_id: input.topicId ?? null,
@@ -81,7 +92,113 @@ export async function addTrackedKeywordsCore(
     );
     if (insertError) return { status: "failed" };
   }
-  return { status: "ok", added: accepted, duplicates, overCap: rejected };
+  const moved = [...retracked, ...(input.topicId ? duplicates : [])];
+  if (moved.length > 0) {
+    const patch: Record<string, unknown> = { tracked: true };
+    if (input.topicId) patch.topic_id = input.topicId;
+    const { error: updateError } = await service
+      .from("seo_keywords")
+      .update(patch)
+      .eq("project_id", input.projectId)
+      .eq("owner_user_id", input.ownerUserId)
+      .in("id", moved.map((keyword) => byKeyword.get(keyword)!.id));
+    if (updateError) return { status: "failed" };
+  }
+  return { status: "ok", added: fresh, retracked, duplicates, overCap: rejected };
+}
+
+export type SimpleResult = { status: "ok" } | { status: "unavailable" } | { status: "not_found" } | { status: "failed" };
+
+/** Stops tracking a keyword. Never deletes: the cascade would take its snapshot history (log §340). */
+export async function untrackKeywordCore(service: Service, input: { projectId: string; ownerUserId: string; keywordId: string }): Promise<SimpleResult> {
+  const { data, error } = await service
+    .from("seo_keywords")
+    .update({ tracked: false })
+    .eq("id", input.keywordId)
+    .eq("project_id", input.projectId)
+    .eq("owner_user_id", input.ownerUserId)
+    .select("id")
+    .maybeSingle();
+  if (error) return isMissingTable(error) ? { status: "unavailable" } : { status: "failed" };
+  return data ? { status: "ok" } : { status: "not_found" };
+}
+
+export const MAX_TOPIC_NAME = 80;
+
+export type TopicResult = { status: "ok"; topicId: string } | { status: "unavailable" } | { status: "not_found" } | { status: "invalid" } | { status: "failed" };
+
+/** Returns the project's topic with that name, creating it when missing. */
+export async function ensureTopicCore(
+  service: Service,
+  input: { projectId: string; ownerUserId: string; name: string; targetUrl?: string | null }
+): Promise<TopicResult> {
+  const name = input.name.normalize("NFC").trim().replace(/\s+/g, " ");
+  if (!name || name.length > MAX_TOPIC_NAME) return { status: "invalid" };
+  if (!(await ownedProjectDomain(service, input.projectId, input.ownerUserId))) return { status: "not_found" };
+  const { data: found, error } = await service
+    .from("seo_topics")
+    .select("id")
+    .eq("project_id", input.projectId)
+    .eq("owner_user_id", input.ownerUserId)
+    .eq("name", name)
+    .maybeSingle();
+  if (error) return isMissingTable(error) ? { status: "unavailable" } : { status: "failed" };
+  if (found) return { status: "ok", topicId: found.id as string };
+  const { data, error: insertError } = await service
+    .from("seo_topics")
+    .insert({ project_id: input.projectId, owner_user_id: input.ownerUserId, name, target_url: input.targetUrl ?? null })
+    .select("id")
+    .single();
+  if (insertError || !data) return { status: "failed" };
+  return { status: "ok", topicId: data.id as string };
+}
+
+/** «Marcar como hecho» / «Deshacer» on a topic step. Only the key is stored; the step is recomputed live. */
+export async function setActionDoneCore(
+  service: Service,
+  input: { projectId: string; ownerUserId: string; topicId: string; actionKey: string; done: boolean }
+): Promise<SimpleResult> {
+  if (!(await ownedTopic(service, input.projectId, input.ownerUserId, input.topicId))) return { status: "not_found" };
+  const query = input.done
+    ? service
+        .from("seo_action_states")
+        .upsert(
+          { project_id: input.projectId, owner_user_id: input.ownerUserId, topic_id: input.topicId, action_key: input.actionKey, status: "done" },
+          { onConflict: "topic_id,action_key", ignoreDuplicates: true }
+        )
+    : service
+        .from("seo_action_states")
+        .delete()
+        .eq("project_id", input.projectId)
+        .eq("owner_user_id", input.ownerUserId)
+        .eq("topic_id", input.topicId)
+        .eq("action_key", input.actionKey);
+  const { error } = await query;
+  if (error) return isMissingTable(error) ? { status: "unavailable" } : { status: "failed" };
+  return { status: "ok" };
+}
+
+/** Searches of «Descubrir palabras» an account may run per UTC day, across its projects. */
+export const DISCOVERY_DAILY_LIMIT = 5;
+
+export async function discoveryRunsToday(service: Service, ownerUserId: string, now: Date): Promise<number | null> {
+  const since = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  const { count, error } = await service
+    .from("seo_discovery_runs")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_user_id", ownerUserId)
+    .gte("created_at", since);
+  return error ? null : count ?? 0;
+}
+
+export async function recordDiscoveryRun(
+  service: Service,
+  input: { projectId: string; ownerUserId: string; kind: "seed" | "rivals"; costUsd: number }
+): Promise<boolean> {
+  const { error } = await service
+    .from("seo_discovery_runs")
+    .insert({ project_id: input.projectId, owner_user_id: input.ownerUserId, kind: input.kind, cost_usd: input.costUsd });
+  return !error;
 }
 
 export type SetCompetitorsResult =

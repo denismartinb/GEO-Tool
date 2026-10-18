@@ -26719,7 +26719,8 @@ llega en el PR B, después de que el fundador vea un artefacto en móvil y
 escritorio.
 
 1. **Migración 0044** (`seo_topics`, `seo_keywords`, `seo_serp_snapshots`,
-   `seo_competitors`, `seo_tracking_alerts` y `projects.seo_tracking_enabled`).
+   `seo_competitors`, `seo_tracking_alerts`, `projects.seo_tracking_enabled` y,
+   desde el PR B (§341), `seo_action_states` y `seo_discovery_runs`).
    Cada `create policy` va precedido de `drop policy if exists`, para que
    repetir la migración a mano no falle. El dueño solo lee.
    Escribe el servidor con service role, filtrando por proyecto y dueño, igual
@@ -26778,11 +26779,64 @@ escritorio.
 - Fase 2: pestaña Plan con borradores y comparativa Google frente a IA.
 - Sin aprobar: leer el contenido del Top 10, rastrear la web propia y Google
   Business Profile.
-- PR B: una palabra con `tracked=false` hoy cuenta como duplicada al
-  añadirla. Necesita un camino para volver a vigilarla dentro del tope, y
-  dejar de vigilar nunca borra (el borrado arrastra su historial).
+- ~~PR B: una palabra con `tracked=false` hoy cuenta como duplicada al
+  añadirla.~~ Resuelto en §341: vuelve a vigilarse dentro del tope.
 - **Medir la cola estándar de DataForSEO** (más barata) antes de abrir la
   función a clientes.
 - Recargar DataForSEO. Quedaban 0,78 $.
 
 **Premisa.** No retira ningún camino de recuperación.
+
+## 341. SEO-TRACK-1 fase 1 (PR B): la pantalla de palabras vigiladas, con «Qué hacer» por tema (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el prototipo v6 el 2026-10-18
+(`docs/design-reference/seo-track-1/posicion-google-v6.html`) tras tres
+rondas: leyenda en las barras de cada tema, «Descubrir palabras» como pestaña
+propia con «A partir de una palabra», el detalle del tema en un panel lateral
+con ✕ (sin «atrás» dentro de una pestaña) y, sobre todo, **qué hacer en cada
+tema para subir**.
+
+1. **Tres pestañas sobre «Posición en Google»**: Resumen, Temas y «Descubrir
+   palabras» (`?vista=temas|descubrir`). Lo que ya existía de Search Console
+   se queda debajo del Resumen (`#google-detalle`). Sin la migración 0044, con
+   el interruptor apagado o sin plan, la pantalla sigue exactamente como
+   antes.
+2. **Primer uso.** Rivales propuestos desde los competidores del proyecto que
+   tienen web, y un tema por cada página tuya que ya sale en Google con sus
+   búsquedas de Search Console (`buildSetupProposal`: puesto ≤30, ≥5
+   impresiones, sin búsquedas de marca, como mucho 6 temas × 8 palabras y 20
+   marcadas). Sin Search Console, un tema escrito a mano. Nada se guarda hasta
+   «Guardar y empezar».
+3. **«Qué hacer» por tema, con reglas y sin LLM** (`topic-actions.ts`, pura y
+   con tests). Cada paso sale de un dato que ya tenemos: títulos y dominios del
+   Top 10, preguntas de Google, mapa local, la URL y el título propios
+   (`own_title`, §340), enlaces de rivales y el CTR de Search Console. Reglas
+   en orden: crear página, rozar la página 1, dos páginas tuyas para lo mismo,
+   CTR bajo, palabra que lleva el Top 10 y falta en tu título, caída, mapa
+   local, preguntas y enlaces. Como mucho 4 por tema. No se lee ninguna página
+   de terceros (sería un rastreador, no aprobado).
+4. **«Marcar como hecho»** guarda sólo la clave del paso en
+   `seo_action_states` (tema + clave, sin texto). Si el paso deja de salir, la
+   marca deja de verse. El Resumen enseña «Qué hacer esta semana»: el primer
+   paso abierto de los tres temas más urgentes.
+5. **«Descubrir palabras»**: «A partir de una palabra» (DataForSEO keyword
+   suggestions), «Ya casi» (Search Console, puestos 4–20, gratis) y «Las de tus
+   rivales» (domain intersection). Las dos de pago comparten **5 búsquedas al
+   día por cuenta**, contadas en `seo_discovery_runs` en cuanto la llamada
+   llega a DataForSEO (también si falla, porque puede cobrarse). Los
+   resultados se enseñan y no se guardan.
+6. **Dejar de vigilar es `tracked=false`** y volver a añadirla la recupera
+   dentro del tope, con su historial. Añadir una palabra ya vigilada a otro
+   tema la mueve.
+7. **Interruptor en `/debug`** («Seguimiento de palabras en Google»), con su
+   consulta aparte y «Sin migrar» si falta la columna.
+
+**Qué queda.**
+- El fundador tiene que aplicar la versión actual de 0044 (con
+  `seo_action_states` y `seo_discovery_runs`) antes del merge del PR A.
+- Recargar DataForSEO antes de la primera foto.
+- Medir el coste real de una búsqueda de «Descubrir» y apuntarlo aquí.
+- Fase 2: pestaña Plan con borradores y Google frente a IA.
+
+**Premisa.** No retira ningún camino de recuperación: la pantalla de Search
+Console sigue entera, debajo del Resumen.

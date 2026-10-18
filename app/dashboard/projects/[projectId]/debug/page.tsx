@@ -29,7 +29,7 @@ import { deriveRunAuditStatus, type RunAuditStatus } from "@/lib/web-audit/run-a
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
 import { createServiceClient } from "@/lib/supabase/service";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled } from "../actions";
+import { setAutoAuditHalf, setEngineEnabled, setRecurringScans, setSamplingEnabled, setSeoTrackingEnabled } from "../actions";
 import { DeleteDomainButton } from "./delete-domain-button";
 import { MaturityBannerToggle } from "./maturity-banner-toggle";
 
@@ -237,6 +237,19 @@ export default async function RunsPage({
     : samplingFlagRow?.sampling_enabled === true
     ? "on"
     : "off";
+
+  /* SEO-TRACK-1 PR B (log §341) — own query, own migration guard (0044).
+     Default is on, so anything but an explicit false reads as on. */
+  const { data: seoFlagRow, error: seoFlagError } = await supabase
+    .from("projects")
+    .select("seo_tracking_enabled")
+    .eq("id", projectId)
+    .maybeSingle();
+  const seoTrackingState: SamplingState = seoFlagError
+    ? "unavailable"
+    : seoFlagRow?.seo_tracking_enabled === false
+    ? "off"
+    : "on";
 
   /* ENGINE-DEBUG-TOGGLE-1 — same "own query, own migration guard" shape as
      auditFlagRow/samplingFlagRow above, for the same reason: migration 0033
@@ -763,6 +776,46 @@ export default async function RunsPage({
               role="switch"
               aria-checked={samplingState === "on"}
               aria-label="Suelo de muestreo en escaneos"
+            />
+          </form>
+        )}
+      </div>
+
+      {/* SEO-TRACK-1 PR B (log §341) — seguimiento de palabras de «Posición
+          en Google». Apagado, el proyecto no entra en la foto del lunes ni
+          enseña el bloque; no se borra nada. */}
+      <div className="card dbg-switch">
+        <div className="dbg-switch-ico" data-on={seoTrackingState === "on" ? "true" : "false"}>
+          <Icon name="search" size={17} />
+        </div>
+        <div className="dbg-switch-txt">
+          <b>Seguimiento de palabras en Google</b>
+          <small>
+            {seoTrackingState === "unavailable" ? (
+              <>
+                Falta aplicar la migración <code>0044_seo_tracking.sql</code> en Supabase. Hasta entonces
+                «Posición en Google» sigue como antes.
+              </>
+            ) : (
+              <>
+                Foto semanal del Top 20 de Google (DataForSEO) de las palabras que vigila el cliente.
+                Apagarlo saca el proyecto del cron del lunes y oculta el bloque; no borra nada.
+              </>
+            )}
+          </small>
+        </div>
+        {seoTrackingState === "unavailable" ? (
+          <span className="badge badge-neutral">Sin migrar</span>
+        ) : (
+          <form action={setSeoTrackingEnabled}>
+            <input type="hidden" name="projectId" value={projectId} />
+            <input type="hidden" name="enabled" value={seoTrackingState === "on" ? "false" : "true"} />
+            <button
+              type="submit"
+              className={`switch-toggle ${seoTrackingState === "on" ? "on" : ""}`}
+              role="switch"
+              aria-checked={seoTrackingState === "on"}
+              aria-label="Seguimiento de palabras en Google"
             />
           </form>
         )}
