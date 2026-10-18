@@ -7,6 +7,7 @@ import {
   readAgenticAudits,
   shouldAutoReview
 } from "@/lib/agentic-audit/console-audit";
+import type { AgenticComponentId } from "@/lib/agentic-audit/api-contract";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -53,8 +54,19 @@ function reviewedLabel(iso: string, now: Date): string {
   return `Revisada el ${date} a las ${time}.`;
 }
 
-export default async function AgenticAuditPage({ params }: { params: Promise<{ projectId: string }> }) {
+const COMPONENT_PARAM: ReadonlyArray<AgenticComponentId | "interop"> = ["discovery", "understanding", "trust", "purchase", "interop"];
+
+export default async function AgenticAuditPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ projectId: string }>;
+  searchParams: Promise<{ componente?: string }>;
+}) {
   const { projectId } = await params;
+  // A component card on «Visibilidad en agentes» opens this screen on that component (log §332).
+  const asked = (await searchParams).componente;
+  const openOn = COMPONENT_PARAM.find((id) => id === asked);
   const project = await requireActiveProject(projectId);
   const { supabase, user } = await requireUser();
 
@@ -119,6 +131,7 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
               result={audits.latest.result}
               remaining={remaining}
               refresh={autoReview}
+              openOn={openOn}
             />
           ) : autoReview || inFlight ? (
             <AgenticAuditSearching projectId={projectId} />

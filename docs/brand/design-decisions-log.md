@@ -26341,6 +26341,86 @@ ocultando columnas en móvil.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
+## 332. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el plan de la 2d («Ok», diseño en
+`docs/design-reference/agentic-commerce-1/fase-2d.html`). Llega la segunda
+pantalla del prototipo, «Visibilidad en agentes». Resume la auditoría
+agéntica como el camino de un agente (Te encuentra, Entra, Entiende, Se fía,
+Compra) y añade «Preguntas de compra»: de las preguntas que el proyecto ya
+escanea, las de quien va a comprar, y qué hacen los motores con ellas.
+
+- **Cómo se reconoce una pregunta de compra.** Una regla fija sobre el texto
+  (`classifyPurchaseQuestion`, `lib/agentic-audit/purchase-questions.ts`),
+  sin IA. Cuenta si pide dónde comprar, contratar o reservar; un precio u
+  oferta (o está en el tema «Precio y planes»); o qué elegir para comprarlo
+  («recomiéndame», «el mejor», «busco»). No cuentan el cómo, el qué es, las
+  diferencias, las opiniones ni las comparativas, salvo que también pidan
+  dónde o cuánto. «online» solo no basta: colaba «reputación online».
+  Descartadas: que la IA etiquete cada pregunta (migración y llamada por
+  pregunta) y que juzgue cada respuesta en el escaneo (toca la extracción
+  compartida y el coste).
+- **Medida antes de construir.** Esta sesión no lee la base de datos, así que
+  la regla se midió sobre las preguntas de cuatro estudios (facturación, La
+  Fábrica del SEO, clínicas de Madrid y Valencia), que genera el mismo
+  sistema. La ancha deja entrar un 63%; la estricta (sólo dónde y precio), un
+  18%, con lo que muchos proyectos no llegarían al mínimo. El fundador eligió
+  la ancha en la tarjeta de decisión (2026-10-18).
+- **Tres cifras, del último escaneo.** «Te nombran» (la mención de
+  `extracted_json.brand.mentioned`, como Visión general), «Citan tu web»
+  (citas de grounding de tu dominio, sólo en Gemini, ChatGPT y Perplexity,
+  que buscan en la web) y «Mandan a un marketplace» (una lista fija de
+  `MARKETPLACES`, por dominio citado o por nombre en la respuesta; tu propio
+  marketplace no cuenta). No suman 100 y la pantalla lo dice. El plan decía
+  «los mismos escaneos que la Puntuación GEO»; se cambió a un solo escaneo
+  para que la lista de preguntas y las cifras describan las mismas
+  respuestas.
+- **Suelo de muestra.** Con menos de 3 preguntas de compra o 10 respuestas
+  salen las preguntas, pero no los porcentajes, con un botón a Prompts.
+- **«Te encuentra» va sin color.** Nada dice qué porcentaje es bueno.
+- **Dos entradas de menú, como en el prototipo.** La primera versión de esta
+  fase juntó las dos pantallas en una entrada con pestañas para ahorrar una
+  fila en el cajón móvil. El fundador la rechazó al verla en el preview
+  (2026-10-18: «había dos secciones en el menú, cada una con una estética
+  distinta y definida»), así que se vuelve a lo aprobado en
+  `docs/design-reference/agentic-commerce-1/prototipo.html`: «Visibilidad en
+  agentes» y «Auditoría agéntica», cada una con su entrada y sin pestañas.
+- **«Visibilidad en agentes» tiene su propio aspecto**, el del prototipo
+  (clases `av-*` en `app/console.css`): anillo con la nota, una frase sobre lo
+  que más frena a un agente (`visibilityHeadline`), la franja «Si arreglas…,
+  subes de N a M» (`fixbarLine`, con `scoreIfChecksPass`), el camino del
+  agente en cinco círculos, las cinco tarjetas de componente (puntos sobre su
+  peso; Interoperabilidad «N de 4») y, abajo, «Preguntas de compra» junto a
+  «Qué hacer primero». La auditoría conserva su aspecto técnico de la 2a.
+  Cada tarjeta de componente abre la auditoría por ese componente
+  (`?componente=`). La tabla por motor y la lista de preguntas van dentro de
+  «Ver las N preguntas por motor». «Qué hacer primero» no enseña puntos por
+  arreglo (los checks sólo enseñan estados, §322), aunque el prototipo los
+  pintaba.
+- **La URL de «Página revisada» ya no se sale de la tarjeta en el móvil.** La
+  columna de la tarjeta era `auto` y crecía hasta el ancho de la URL entera;
+  pasa a `minmax(0, 1fr)` y la URL se corta con puntos suspensivos (fundador,
+  2026-10-18, con captura).
+- **Si todo ha ido bien, «Tienda analizada» con un check verde y sin URL.**
+  Con la página leída y con nota, la URL no aporta nada (fundador,
+  2026-10-18). Queda «Elegir otra página» como enlace. Si la página no se
+  pudo leer o no tiene nota, sigue «Página revisada» con la URL, porque ahí
+  el cliente necesita saber qué página se miró.
+- **«Elegir otra página» abre la caja vacía**, no con la URL ya revisada
+  (fundador, 2026-10-18).
+- **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
+  36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
+- Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
+  landing quita «Próximamente» a «Preguntas de compra».
+
+**Regla de premisa.** No se retira ningún camino de recuperación: las dos
+pantallas tienen su entrada de menú.
+
+**Qué queda.** Marcar una pregunta como de compra a mano (necesita
+columna nueva, aprobación aparte). Medir la regla sobre proyectos reales: lo
+enseña la propia pantalla, que lista qué preguntas cuentan. 2b (tarjeta en
+Visión general y revisión semanal) y 2c (varias fichas) siguen sin aprobar.
+
 ## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
 
 **Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
