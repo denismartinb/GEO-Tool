@@ -26708,3 +26708,77 @@ ese competidor en el sitemap.
 **Qué queda.** Que la página exista no dice que esté bien hecha. Comprobar su
 estructura (respuesta en las dos primeras frases, titular en pregunta) exigiría
 leer la página, y eso sigue sin aprobar.
+
+## 340. SEO-TRACK-1 fase 1 (PR A): palabras vigiladas, Top 20 semanal y enlaces de rivales (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el Task Intake el 2026-10-18
+(`/mnt/project-files/estrategia/seo-google/task-intake-fase1.md`). «Posición
+en Google» deja de ser solo una lectura de Search Console y pasa a seguir
+palabras. Este PR trae los datos y el cron, sin cambios visibles. La pantalla
+llega en el PR B, después de que el fundador vea un artefacto en móvil y
+escritorio.
+
+1. **Migración 0044** (`seo_topics`, `seo_keywords`, `seo_serp_snapshots`,
+   `seo_competitors`, `seo_tracking_alerts` y `projects.seo_tracking_enabled`).
+   Cada `create policy` va precedido de `drop policy if exists`, para que
+   repetir la migración a mano no falle. El dueño solo lee.
+   Escribe el servidor con service role, filtrando por proyecto y dueño, igual
+   que 0042 (§294).
+2. **Se guarda lo que DataForSEO ve de Google**, nunca filas de Search
+   Console. Lo único que puede venir de Search Console es la palabra que el
+   cliente decide vigilar, como ya hace «Marcar como hecho».
+3. **Cron `/api/cron/seo-serp`**, los lunes cada 10 minutos de 05:00 a 06:50
+   UTC. Cada pasada toma las palabras sin foto de la semana
+   (`weekStartUtc`, anclado al calendario, §192). Tiene presupuesto de 48 s y
+   techo de 2 $ por pasada, nunca un tope de filas. Lo que no le cabe queda
+   para la siguiente pasada. El motor es el cron, no una cadena (§261, §262).
+4. **Top 20, no Top 100.** Cuesta 0,004 $, lo medido en §338. El puesto propio
+   ya sale de Search Console. El Task Intake decía «Fuera del Top 100»; la
+   pantalla dirá «Fuera del Top 20».
+5. **Topes por plan** (`lib/seo-tracking/caps.ts`), con el plan efectivo:
+
+   | Plan | Palabras | Rivales |
+   |---|---|---|
+   | Starter | 15 | 1 |
+   | Pro y prueba | 50 | 3 |
+   | Agencia | 150 por dominio | 3 |
+
+   Un plan `free` o desconocido no tiene nada. Si un plan baja, se siguen las
+   palabras más antiguas hasta el nuevo tope.
+6. **Errores con categoría propia** (`auth`, `balance`, `timeout`,
+   `provider`):
+   - Un reintento para `timeout` y `provider`.
+   - `auth` y `balance` paran la pasada y mandan un correo al operador, uno
+     por categoría y semana. No se guardan como error de la palabra: la
+     palabra sigue pendiente, así que una recarga el mismo lunes la recupera.
+     El deduplicado es `seo_tracking_alerts`, que se escribe sólo si el correo
+     salió (regla de `scan.md`: si el canal falla, la siguiente pasada repite).
+   - Un `timeout` causado por nuestro presupuesto recortado no se guarda
+     (§228).
+   - Un `timeout` cuenta como 0,004 $ para el techo, aunque la respuesta diga
+     0: la tarea abortada puede cobrarse.
+   - El interruptor por proyecto sólo cuenta como encendido si falta la
+     columna. Cualquier otro error de lectura deja la pasada sin nada que
+     buscar, porque encendido significa pagar por lo que el operador apagó.
+7. **Enlaces mensuales.** Si sobra tiempo, la pasada refresca el resumen de
+   enlaces de los rivales y del propio dominio (fila `is_own`) que tengan más
+   de 28 días. Sólo los rivales que el plan cubre (los más antiguos hasta el
+   tope) y sólo filas cuyo dueño es el dueño real del proyecto.
+8. **Escrituras del cliente** (`lib/seo-tracking/manage.ts`): añadir palabras
+   con tope, y fijar los rivales normalizados y sin el propio dominio. Se
+   llaman desde las server actions del PR B, que verifican identidad antes.
+
+**Qué queda.**
+- PR B: la pantalla (Resumen, Temas, «Descubrir palabras»), las server
+  actions y el interruptor de `/debug`.
+- Fase 2: pestaña Plan con borradores y comparativa Google frente a IA.
+- Sin aprobar: leer el contenido del Top 10, rastrear la web propia y Google
+  Business Profile.
+- PR B: una palabra con `tracked=false` hoy cuenta como duplicada al
+  añadirla. Necesita un camino para volver a vigilarla dentro del tope, y
+  dejar de vigilar nunca borra (el borrado arrastra su historial).
+- **Medir la cola estándar de DataForSEO** (más barata) antes de abrir la
+  función a clientes.
+- Recargar DataForSEO. Quedaban 0,78 $.
+
+**Premisa.** No retira ningún camino de recuperación.

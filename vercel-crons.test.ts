@@ -74,6 +74,13 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
     // The 5th, not the 1st: late renewals and refunds of the previous month
     // have had a few days to settle, and the page promises «el día 5».
     why: "monthly affiliate commissions to the operator — AFFILIATES-1"
+  },
+  {
+    path: "/api/cron/seo-serp",
+    schedule: "*/10 5-6 * * 1",
+    // Mondays, twelve passes: each takes what is still pending for the week,
+    // so the cron is the engine and no self-call chain can break (log §261).
+    why: "weekly Google Top 20 of tracked keywords — SEO-TRACK-1, log §340"
   }
 ];
 

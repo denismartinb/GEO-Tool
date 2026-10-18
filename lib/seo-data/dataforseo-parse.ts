@@ -122,6 +122,8 @@ export type SerpResult = {
   keyword: string;
   organic: { position: number; domain: string; url: string; title: string | null }[];
   ownPosition: number | null;
+  /** The page of the own domain that ranks, when it is in the results. */
+  ownUrl: string | null;
   hasLocalPack: boolean;
   questions: string[];
 };
@@ -144,6 +146,7 @@ export function readSerp(result: Obj | null, keyword: string, ownDomain: string)
     keyword,
     organic,
     ownPosition: mine?.position ?? null,
+    ownUrl: mine?.url ?? null,
     hasLocalPack: items.some((item) => item.type === "local_pack" || item.type === "map"),
     questions
   };

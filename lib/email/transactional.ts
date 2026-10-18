@@ -1319,3 +1319,45 @@ export async function sendWatchdogAlertEmail(input: {
     )
   );
 }
+
+/**
+ * SEO-TRACK-1 (log §340): the weekly SERP cron stopped because DataForSEO
+ * rejected the credentials or the balance ran out. Both are the operator's to
+ * fix and every other keyword of the week would fail the same way. One email
+ * per category and week: the cron only calls this when no error row of that
+ * category exists yet for the week.
+ */
+export async function sendSeoTrackingAlertEmail(input: {
+  category: "auth" | "balance" | "timeout" | "provider";
+  weekStart: string;
+  saved: number;
+  deferred: number;
+  spentUsd: number;
+}): Promise<boolean> {
+  const to = getOpsAlertAddress();
+  if (!to) return false;
+
+  const what =
+    input.category === "balance"
+      ? "DataForSEO se ha quedado sin saldo. Recarga la cuenta y el seguimiento sigue en la siguiente pasada de los lunes."
+      : "DataForSEO ha rechazado las credenciales. Revisa DATAFORSEO_LOGIN y DATAFORSEO_PASSWORD en Vercel.";
+  const row = (label: string, value: string) =>
+    `<tr><td style="padding:4px 12px 4px 0;color:#5B6B82;font-size:13px;white-space:nowrap;">${label}</td>` +
+    `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
+
+  return sendEmail(
+    to,
+    `[GenScore] Seguimiento de palabras parado: ${input.category === "balance" ? "sin saldo" : "credenciales"}`,
+    `<!doctype html><html><head><meta charset="utf-8"></head>
+     <body style="margin:0;padding:24px;background:#FFFFFF;font-family:${FONT_STACK};color:#0B1426;">
+       <h1 style="margin:0 0 6px;font-size:17px;">Seguimiento de palabras parado</h1>
+       <p style="margin:0 0 18px;font-size:13.5px;color:#5B6B82;">${escapeHtml(what)}</p>
+       <table role="presentation" cellpadding="0" cellspacing="0">
+         ${row("Semana", input.weekStart)}
+         ${row("Guardadas en esta pasada", String(input.saved))}
+         ${row("Pendientes", String(input.deferred))}
+         ${row("Gasto de la pasada", `${input.spentUsd.toFixed(3)} $`)}
+       </table>
+     </body></html>`
+  );
+}
