@@ -26462,3 +26462,37 @@ vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
 - Las reglas son blandas, como las de §128: viven sólo en el prompt. La
   única comprobación en servidor sigue siendo la de competidores y dominios
   permitidos.
+
+## 335. RECS-OUTREACH-TARGETS-1: la tarjeta de fuentes sólo cuenta webs a las que se puede escribir (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) la tarjeta decía «Consigue que 5 webs
+te mencionen» y el propio plan descartaba cuatro (P29). Dos eran la web de
+otras herramientas (llmpulse.ai, dageno.ai) y dos documentación oficial
+(help.openai.com, developers.google.com). El «Haz esto» pedía contactar con
+quien publica el centro de ayuda de OpenAI, que es imposible. Además la
+insignia «Abierta 14 escaneos» salía en una acción que depende de terceros:
+castigaba al usuario por algo que no puede cerrar (P30).
+
+**Qué se decidió.**
+
+1. El motor (`computeCitationSourceGap`) descarta antes de contar, con
+   `isOutreachTarget` (`lib/recommendations/outreach-targets.ts`):
+   - la documentación y los centros de ayuda (`help.`, `support.`, `docs.`,
+     `developers.`, `learn.`, `ayuda.`, `soporte.` y similares, siempre como
+     subdominio);
+   - una web sin clasificar cuyo dominio es una marca nombrada en esa misma
+     respuesta. Es la web de esa empresa, no un medio. Igualdad exacta de
+     etiqueta, como «Añadir competidor» (§327); nunca contención. Un
+     comparador, un medio o una comunidad conservan su familia aunque la
+     respuesta los nombre.
+   Así el titular, las webs del plan y el primer paso sólo hablan de webs a
+   las que se puede escribir, y una descartada no ocupa uno de los seis
+   huecos.
+2. La insignia «Abierta N escaneos» no sale en tarjetas de control
+   `third_party`. En lo propio de la web sigue igual.
+
+**Qué queda.** La web de una herramienta que la respuesta no nombra sigue
+contando: sin leer la página no hay forma honrada de saber que es una
+empresa. Los dominios de las respuestas que ve el modelo al generar el plan no
+cambian, así que el plan puede seguir mencionándolas para descartarlas.
