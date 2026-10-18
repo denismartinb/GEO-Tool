@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractPageSignals, flattenNodes, isProductPage, parseJsonLd, visibleText } from "./html-signals";
+import { classifyOffer, extractPageSignals, flattenNodes, isProductPage, parseJsonLd, visibleText } from "./html-signals";
 
 const PRODUCT_LD = {
   "@context": "https://schema.org",
@@ -62,7 +62,7 @@ describe("extractPageSignals", () => {
       captcha: null
     });
     expect(s.quickPay).toContain("Shop Pay");
-    expect(s.links).toEqual({ returns: true, shipping: false, legal: true, contact: true });
+    expect(s.links).toEqual({ returns: true, shipping: false, legal: true, contact: true, cancellation: false });
     expect(isProductPage(s)).toBe(true);
   });
 
@@ -104,5 +104,52 @@ describe("extractPageSignals", () => {
 describe("visibleText", () => {
   it("drops scripts, styles and tags", () => {
     expect(visibleText("<style>.a{}</style><p>Hola <b>mundo</b></p><script>var x</script>")).toBe("Hola mundo");
+  });
+});
+
+describe("classifyOffer (log §325)", () => {
+  const ld = (node: object) => `<script type="application/ld+json">${JSON.stringify(node)}</script>`;
+  const read = (body: string, url = "https://x.es/", head = "") => classifyOffer(extractPageSignals(page(body, head)), url);
+
+  it("a physical product stays physical", () => {
+    expect(read(ld(PRODUCT_LD), "https://x.es/p/1")).toEqual({ kind: "physical", pricingPage: false });
+  });
+
+  it("a home page that declares software with a price is a software page (the genscore.es case)", () => {
+    const sw = { "@type": "SoftwareApplication", name: "GenScore", offers: { "@type": "Offer", price: "29", priceCurrency: "EUR" } };
+    expect(read(ld(sw))).toEqual({ kind: "software", pricingPage: false });
+    expect(extractPageSignals(page(ld(sw))).structuredPrice).toBe(true);
+  });
+
+  it("reads services, courses, events and bookings from their data", () => {
+    expect(read(ld({ "@type": "Service", name: "Auditoría" }))?.kind).toBe("service");
+    expect(read(ld({ "@type": "Course", name: "GEO" }))?.kind).toBe("course");
+    expect(read(ld({ "@type": "MusicEvent", name: "Concierto" }))?.kind).toBe("event");
+    expect(read(ld({ "@type": "Restaurant", acceptsReservations: true }))?.kind).toBe("booking");
+  });
+
+  it("a pricing page with monthly prices is a subscription pricing page", () => {
+    expect(read("<p>Pro 99 € al mes</p>", "https://x.es/precios")).toEqual({ kind: "subscription", pricingPage: true });
+  });
+
+  it("reads the path, a booking widget, and the safety net of price plus button", () => {
+    expect(read("<p>Hola</p>", "https://x.es/servicios/seo")?.kind).toBe("service");
+    expect(read('<a href="https://calendly.com/x">Agenda</a>')?.kind).toBe("booking");
+    expect(read("<p>Desde 450 €</p><a href='/c'>Pedir presupuesto</a>")?.kind).toBe("offer");
+  });
+
+  it("a page with nothing to sell is null, and so is a store's home with a product grid", () => {
+    expect(read("<p>Quiénes somos</p><a href='/contacto'>Contacto</a>")).toBeNull();
+    expect(
+      read(
+        "<p>Gorra 19,00 €</p><a href='/products/gorra'>Comprar</a>",
+        "https://x.es/",
+        '<script src="https://cdn.shopify.com/x.js"></script>'
+      )
+    ).toBeNull();
+  });
+
+  it("a blog link called «Entradas» is not a buy button", () => {
+    expect(extractPageSignals(page("<a href='/blog'>Entradas</a>")).buyCta).toBe(false);
   });
 });

@@ -50,7 +50,8 @@ const COLUMNS = [
   ".rec2-scope",
   ".dm2-page",
   ".wa2-page",
-  ".gsc-page"
+  ".gsc-page",
+  ".ag-page"
 ] as const;
 
 const SHEETS = ["app/globals.css", "app/console.css"] as const;

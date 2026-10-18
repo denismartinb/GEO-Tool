@@ -262,6 +262,13 @@ Cualquier fase que añada trabajo por trabajo (más lotes, otro núcleo de
 auditoría) tiene que reajustar `MIN_JOB_BUDGET_MS` y el reserve, no sólo
 subir el límite del lote.
 
+La revisión agéntica (log §323) es la excepción que confirma la regla: corre
+**en paralelo** con la auditoría técnica, no detrás, y su peor caso
+(`AGENTIC_STEP_MAX_MS`) cabe dentro de `TECHNICAL_RESERVE_MS`, así que no
+mueve ni el reserve ni `MIN_JOB_BUDGET_MS`. Lo fija un test del runner; si el
+motor agéntico gana tiempo, hay que volver a hacer esta cuenta. Su fallo
+nunca falla el trabajo.
+
 ### Reclamar un trabajo abandonado consume intento
 
 En `claimDueWebAuditJobs`, la rama que rescata trabajos varados en `running`

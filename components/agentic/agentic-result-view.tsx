@@ -20,16 +20,16 @@ import type {
  * four scored components; it is part of the reading, not of the total.
  *
  * It is framed as a quick, high-level reading of one page: the console
- * teaser below says what the full audit adds, and the closing CTA invites a
- * free Pro trial while saying plainly that the full agentic audit is still
- * on its way to the console (log §318).
+ * teaser below says what the console audit adds (what is still to come
+ * carries «Próximamente»), and the closing CTA invites a free Pro trial and
+ * says the agentic audit is already in the Pro console (log §318, §322).
  */
 
-const CONSOLE_FEATURES: Array<{ title: string; text: string; rows: number }> = [
-  { title: "Auditoría de cada ficha", text: "Todas tus fichas de producto, cada señal con su estado y lo que falla.", rows: 3 },
-  { title: "Recomendaciones priorizadas", text: "Qué arreglar primero y cuántos puntos suma cada cambio, con el código listo.", rows: 3 },
-  { title: "Preguntas de compra", text: "Si ChatGPT, Gemini, Claude y Perplexity te recomiendan cuando alguien quiere comprar.", rows: 2 },
-  { title: "Seguimiento en el tiempo", text: "Cómo evoluciona tu Visibilidad agéntica después de cada cambio.", rows: 2 }
+const CONSOLE_FEATURES: Array<{ title: string; text: string; rows: number; soon?: boolean }> = [
+  { title: "Tu ficha, revisada a fondo", text: "Guarda una ficha y revísala cuando quieras: cada señal con su estado y lo que falla.", rows: 3 },
+  { title: "Qué hacer primero", text: "Lo que más sube tu nota y la nota que tendrías al arreglarlo.", rows: 3 },
+  { title: "Preguntas de compra", text: "Si ChatGPT, Gemini, Claude y Perplexity te recomiendan cuando alguien quiere comprar.", rows: 2, soon: true },
+  { title: "Varias fichas a la vez", text: "Las fichas de tu tienda que ya revisa la auditoría técnica, en una tabla.", rows: 2, soon: true }
 ];
 
 const DESCRIPTIONS: Record<AgenticComponentId | "interop", string> = {
@@ -37,7 +37,7 @@ const DESCRIPTIONS: Record<AgenticComponentId | "interop", string> = {
   understanding:
     "Si entiende qué vendes sin adivinar: precio, disponibilidad, identificadores y datos estructurados que se leen sin JavaScript.",
   trust: "Si un agente puede fiarse de ti y explicárselo a su usuario: envío, devoluciones, reseñas y quién está detrás de la tienda.",
-  purchase: "Si puede llegar al pago sin chocar en la ficha: botón de compra, captchas y métodos de pago rápidos.",
+  purchase: "Si puede llegar a comprar o reservar sin chocar: botón de compra, captchas y métodos de pago rápidos.",
   interop:
     "Si tienes un canal directo para que los agentes consulten tu catálogo y compren sin pasar por la web: UCP, MCP, la tarjeta de agente A2A y un catálogo público."
 };
@@ -81,7 +81,7 @@ export function AgenticResultView({
   // All five always show: one that cannot be measured here says why instead of disappearing.
   const components = result.components;
   const emptyReason = result.pageRead
-    ? "Se mide en una ficha de producto."
+    ? "Se mide en una página donde vendas algo."
     : "No se pudo medir: la protección anti-bots no nos dejó leer la página.";
   const interopValue = result.interop.total > 0 ? (result.interop.found / result.interop.total) * 100 : 0;
   const interopLabel = `${result.interop.found}/${result.interop.total}`;
@@ -97,7 +97,7 @@ export function AgenticResultView({
 
   return (
     <div className="ca-res">
-      <span className="ca-res-kicker">Comprobación rápida de una ficha</span>
+      <span className="ca-res-kicker">Comprobación rápida de una página</span>
       <div className="ca-res-head">
         <div>
           <b className="ca-res-dom">{result.domain}</b>
@@ -121,10 +121,10 @@ export function AgenticResultView({
         </p>
       ) : result.pageKind === "other" ? (
         <div className="ca-res-note ca-res-note-act">
-          <p>Has pegado una portada o una categoría. Para la nota completa, prueba con la ficha de un producto.</p>
+          <p>En esta página no vemos nada a la venta. Para la nota completa, prueba con un producto, un servicio o tu página de precios.</p>
           {onTryProduct ? (
             <button type="button" className="ca-nbtn ca-pri" onClick={onTryProduct}>
-              Probar con un producto
+              Probar con otra página
             </button>
           ) : null}
         </div>
@@ -137,8 +137,7 @@ export function AgenticResultView({
             <span className="ca-res-total-k">Visibilidad agéntica</span>
             <span className="ca-res-total-v">{result.score} de 100</span>
             <p className="ca-res-lead">
-              Una primera lectura de alto nivel: cómo ve un agente esta ficha. La auditoría completa analiza tu catálogo entero, ficha
-              a ficha.
+              Una primera lectura de alto nivel: cómo ve un agente esta página. La auditoría de la consola la repite sola tras cada escaneo.
             </p>
           </div>
         </div>
@@ -156,7 +155,7 @@ export function AgenticResultView({
           >
             {c.score === null ? <EmptyGauge /> : <Gauge value={c.score} play={play} />}
             <b>{c.name}</b>
-            {c.checks.length === 0 ? <small className="ca-g-sub">{result.pageRead ? "En una ficha" : "Sin medir"}</small> : null}
+            {c.checks.length === 0 ? <small className="ca-g-sub">{result.pageRead ? "Al vender" : "Sin medir"}</small> : null}
           </button>
         ))}
         <button
@@ -275,13 +274,14 @@ export function AgenticResultView({
 
       <div className="ca-more">
         <h3>En la consola lo verás todo en detalle</h3>
-        <p>Esto es una muestra. Con GenScore Pro tienes la auditoría agéntica completa de tu web y te decimos qué cambiar primero.</p>
+        <p>Esto es una muestra. Con GenScore Pro tienes la auditoría agéntica en tu consola y te decimos qué cambiar primero.</p>
         <div className="ca-feats">
           {CONSOLE_FEATURES.map((feature) => (
             <div className="ca-feat" key={feature.title}>
               <h4>
                 <span className="ca-feat-dot" aria-hidden="true" />
                 {feature.title}
+                {feature.soon ? <span className="ca-new">Próximamente</span> : null}
               </h4>
               <p>{feature.text}</p>
               <div className="ca-ghost" aria-hidden="true">
@@ -300,7 +300,7 @@ export function AgenticResultView({
         <Link className="ca-res-cta-btn" href="/signup">
           Empezar gratis con Pro
         </Link>
-        <small>La auditoría agéntica completa llega muy pronto a la consola de Pro.</small>
+        <small>La auditoría agéntica ya está en la consola de Pro.</small>
       </div>
     </div>
   );

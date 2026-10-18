@@ -1,0 +1,218 @@
+<title>Auditoría agéntica automática</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: plan en una columna de lectura; la maqueta sale en dos marcos (escritorio y móvil) uno junto al otro. */
+:root{
+  --bg:#f5f7fb; --paper:#ffffff; --ink:#0f1b2d; --ink-2:#3a4a62; --ink-3:#5b6b82; --line:#dfe5ee;
+  --blue:#2563eb; --blue-soft:#e8efff; --cyan:#09c5d6;
+  --ok:#14804a; --ok-bg:#e5f6ec; --warn:#a15c00; --warn-bg:#fff3dc; --bad:#c0362c; --bad-bg:#fdeceb; --na:#6b7280; --na-bg:#eef1f5;
+  --console:#f3f5f9;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --line:#26324a;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --na:#9aa6b8; --na-bg:#1d2638; --console:#0f1726; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:40px}
+.read{max-width:720px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4vw,38px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:22px;font-weight:700}
+h3{font-size:16px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.lede{color:var(--ink-2);font-size:17px;margin-top:12px}
+.ask{background:var(--paper);border:1px solid var(--line);border-left:4px solid var(--blue);border-radius:12px;padding:18px 20px;display:grid;gap:8px}
+.ask b{font-size:17px}
+section{display:grid;gap:14px}
+ol.slices{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.slice{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:16px 18px;display:grid;gap:6px}
+.slice .tag{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.slice.now{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue) inset}
+.slice ul{margin:4px 0 0;padding-left:20px;color:var(--ink-2)}
+.slice li+li{margin-top:4px}
+.pill{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--blue-soft);color:var(--blue);vertical-align:middle}
+table.diff{width:100%;border-collapse:collapse;font-size:15px;background:var(--paper);border-radius:12px;overflow:hidden}
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px}
+table.diff th,table.diff td{padding:12px 14px;text-align:left;vertical-align:top;border-bottom:1px solid var(--line)}
+table.diff tr:last-child td{border-bottom:0}
+table.diff th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+table.diff td:first-child{font-weight:600;min-width:180px}
+.muted{color:var(--ink-3)}
+code{font-family:var(--f-mono);font-size:13px;background:var(--na-bg);padding:1px 5px;border-radius:5px}
+.defaults{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.defaults li{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 16px;display:grid;gap:2px}
+.defaults li span{color:var(--ink-2)}
+
+/* Maqueta */
+.mock-row{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+@media (max-width:900px){.mock-row{grid-template-columns:1fr}.phone{justify-self:center}}
+.frame{background:var(--console);border:1px solid var(--line);border-radius:14px;overflow:hidden;min-width:0}
+.frame-bar{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--paper)}
+.frame-bar i{width:10px;height:10px;border-radius:50%;background:var(--line)}
+.desk{display:grid;grid-template-columns:200px minmax(0,1fr)}
+@media (max-width:640px){.desk{grid-template-columns:1fr}.side{display:none}}
+.side{background:var(--paper);border-right:1px solid var(--line);padding:14px 10px;font-size:13px;display:grid;gap:2px;align-content:start}
+.side .grp{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding:12px 8px 4px}
+.side a{color:var(--ink-2);text-decoration:none;padding:6px 8px;border-radius:7px;display:flex;justify-content:space-between;align-items:center}
+.side a.on{background:var(--blue-soft);color:var(--blue);font-weight:700}
+.side .new{font-size:10px;font-weight:700;color:var(--blue)}
+.main{padding:18px;display:grid;gap:14px;min-width:0}
+.ph{padding:14px;display:grid;gap:12px}
+.mh h4{margin:0;font-size:20px;font-weight:800}
+.mh p{color:var(--ink-3);font-size:13px;margin-top:2px}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px;display:grid;gap:10px;min-width:0}
+.urlrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:13px}
+.urlrow .u{font-family:var(--f-mono);font-size:12px;background:var(--na-bg);padding:6px 10px;border-radius:8px;flex:1 1 180px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn{font:inherit;font-size:13px;font-weight:700;border-radius:9px;padding:7px 12px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.score{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.gauge{width:76px;height:76px;flex:0 0 auto}
+.gauge circle{fill:none;stroke-width:8}
+.gauge .t{stroke:var(--line)}
+.gauge .v{stroke:var(--warn);stroke-linecap:round}
+.gauge text{fill:var(--ink);font-family:var(--f-body);font-weight:800;font-size:22px}
+.score .what{display:grid;gap:4px;flex:1 1 220px;min-width:0}
+.score .what b{font-size:15px}
+.score .what span{font-size:13px;color:var(--ink-2)}
+.comp{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (max-width:760px){.comp{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.phone .comp{grid-template-columns:repeat(2,minmax(0,1fr))}
+.c{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:4px;font-size:12px}
+.c b{font-size:13px}
+.c .st{font-weight:700}
+.st.ok{color:var(--ok)}.st.warn{color:var(--warn)}.st.bad{color:var(--bad)}.st.na{color:var(--na)}
+.checks{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.checks li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;align-items:start}
+.mk{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:800}
+.mk.ok{background:var(--ok-bg);color:var(--ok)}.mk.warn{background:var(--warn-bg);color:var(--warn)}.mk.bad{background:var(--bad-bg);color:var(--bad)}.mk.na{background:var(--na-bg);color:var(--na)}
+.checks small{display:block;color:var(--ink-3);font-size:12px}
+.agents{width:100%;border-collapse:collapse;font-size:12px}
+.agents td,.agents th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.agents th{color:var(--ink-3);font-weight:700}
+.chip{font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px}
+.chip.ok{background:var(--ok-bg);color:var(--ok)}.chip.bad{background:var(--bad-bg);color:var(--bad)}.chip.na{background:var(--na-bg);color:var(--na)}
+.fix{display:grid;gap:4px;border-top:1px solid var(--line);padding-top:10px;font-size:13px}
+.fix:first-of-type{border-top:0;padding-top:0}
+.fix b{font-size:14px}
+.ct{font-size:13px;font-weight:700;color:var(--ink-2)}
+.phone{width:340px;max-width:100%;border:1px solid var(--line);border-radius:28px;background:var(--console);overflow:hidden}
+.phone .top{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;background:var(--paper);border-bottom:1px solid var(--line);font-size:13px;font-weight:700}
+.cap{font-size:13px;color:var(--ink-3);margin-top:8px}
+</style>
+
+<style>
+.states{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:900px){.states{grid-template-columns:1fr}}
+.st-h{font-size:13px;font-weight:700;color:var(--ink-3);margin-bottom:6px}
+.auto{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px}
+.auto .u{font-family:var(--f-mono);font-size:12px;background:var(--na-bg);padding:4px 8px;border-radius:7px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.lnk{color:var(--blue);font-weight:700;font-size:13px;text-decoration:none}
+.spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--blue)}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13px}
+.steps li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px}
+</style>
+<div class="wrap">
+  <header class="read">
+    <p class="eyebrow">Comercio agéntico · Fase 2a, versión 2</p>
+    <h1>Auditoría agéntica automática</h1>
+    <p class="lede">Tu cambio: que el cliente no tenga que pegar ninguna URL. GenScore busca solo una ficha de producto en el dominio del proyecto y la auditoría aparece hecha, igual que la auditoría técnica. Rehago la Fase 2a en el mismo PR, sin mergear la versión manual.</p>
+  </header>
+
+  <div class="ask read">
+    <b>Qué necesito de ti</b>
+    <p>Dos aprobaciones. La primera es este flujo automático. La segunda es una excepción a una regla: hasta hoy el motor nunca pide una página que no le hayan dado. Para elegir la ficha solo tiene que pedir <b>una página más</b>: una ficha de producto de tu propio dominio, sacada de tu portada, de tu sitemap o de tu catálogo público. Sin seguir más enlaces ni recorrer el catálogo. La migración 0043 sirve tal cual: no hace falta otra.</p>
+  </div>
+
+  <section class="read">
+    <h2>Cómo encuentra la ficha</h2>
+    <ol class="slices">
+      <li class="slice"><span class="tag">1 · sin peticiones nuevas</span><h3>Lee lo que ya descarga</h3>
+        <ul>
+          <li>En Shopify y WooCommerce el motor ya pide el catálogo público (para «N de 4»). De ahí sale el primer producto, con su enlace.</li>
+          <li>Si no, busca en el sitemap que ya descarga una dirección con forma de ficha (<code>/products/</code>, <code>/producto/</code>, <code>/p/</code>…).</li>
+          <li>Si no, busca en la portada un producto marcado como dato o un enlace a una ficha.</li>
+        </ul></li>
+      <li class="slice"><span class="tag">2 · una petición más</span><h3>Revisa esa ficha con el mismo motor</h3>
+        <ul><li>Siempre del mismo dominio o un subdominio, con el mismo guardián de seguridad. Si la página resulta no ser una ficha, no prueba otra: lo dice.</li></ul></li>
+      <li class="slice"><span class="tag">3 · si no hay tienda</span><h3>Lo dice, sin nota inventada</h3>
+        <ul><li>«No hemos encontrado una tienda en tu web». Se ven Descubrimiento, Confianza y protocolos medidos sobre la portada, y un enlace «¿Vendes online? Indícanos una ficha» por si nos equivocamos.</li></ul></li>
+    </ol>
+  </section>
+
+  <section class="read">
+    <h2>Cuándo se hace</h2>
+    <ul class="defaults">
+      <li><b>Tras cada escaneo, junto a la auditoría técnica</b><span>Se cuelga del mismo trabajo en segundo plano que ya audita la web después de cada escaneo, con sus reintentos y su aviso al operador. No es un programador nuevo. Como mucho una vez al día por proyecto: unas once peticiones a la tienda y ninguna llamada a una IA.</span></li>
+      <li><b>La primera vez que se abre la pantalla</b><span>Si el proyecto aún no tiene ninguna, se lanza sola al abrirla y se ve «Buscando una ficha de producto en tu tienda». Así nadie espera al siguiente escaneo.</span></li>
+      <li><b>Pro, Agencia y la prueba</b><span>Igual que antes. Starter ve la invitación a Pro y no se le hace la auditoría.</span></li>
+      <li><b>Sin botón «Revisar ahora»</b><span>Como en la auditoría técnica. Queda «Elegir otra ficha», con el límite de 5 al día, para quien quiera otra o si la automática falla.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h2 class="read">Cómo se vería</h2>
+    <p class="read muted">Datos de ejemplo. El resto de la pantalla (nota, componentes, asistentes, «Qué hacer primero») no cambia respecto a lo que ya viste en el preview.</p>
+    <div class="states">
+      <div>
+        <p class="st-h">Con tienda</p>
+        <div class="card">
+          <span class="ct">Ficha revisada</span>
+          <div class="auto"><span class="u">monteratrail.es/products/cumbre-trail-3</span></div>
+          <span class="muted" style="font-size:12px">Elegida automáticamente de tu catálogo. Revisada hoy a las 06:42, tras el escaneo.</span>
+          <a class="lnk" href="#e">Elegir otra ficha</a>
+        </div>
+        <div class="card" style="margin-top:10px">
+          <div class="score">
+            <svg class="gauge" viewBox="0 0 80 80" aria-label="54 de 100"><circle class="t" cx="40" cy="40" r="32"/><circle class="v" cx="40" cy="40" r="32" stroke-dasharray="201" stroke-dashoffset="92" transform="rotate(-90 40 40)"/><text x="40" y="48" text-anchor="middle">54</text></svg>
+            <div class="what"><b>Visibilidad agéntica: 54 de 100</b><span>Si arreglas las dos primeras cosas, subes a 71.</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="st-h">Primera vez</p>
+        <div class="card" style="justify-items:start">
+          <div class="spin" aria-hidden="true"></div>
+          <b>Buscando una ficha de producto en tu tienda</b>
+          
+          <span class="muted" style="font-size:12px">Tarda unos segundos. Al terminar, la pantalla se rellena sola.</span>
+        </div>
+      </div>
+      <div>
+        <p class="st-h">Sin tienda</p>
+        <div class="card">
+          <b>No hemos encontrado una tienda en tu web</b>
+          <span class="muted" style="font-size:13px">Ni en tu portada, ni en tu sitemap, ni en un catálogo público. Te enseñamos lo que sí se mide sin productos.</span>
+          <div class="comp" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+            <div class="c"><b>Descubrimiento</b><span class="st ok">Bien</span></div>
+            <div class="c"><b>Confianza</b><span class="st warn">Mejorable</span></div>
+            <div class="c"><b>Comprensión</b><span class="st na">En una ficha</span></div>
+            <div class="c"><b>Compra</b><span class="st na">En una ficha</span></div>
+          </div>
+          <a class="lnk" href="#e">¿Vendes online? Indícanos una ficha</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="read">
+    <h2>Lo que he decidido por defecto</h2>
+    <ul class="defaults">
+      <li><b>Mismo PR</b><span>Cambio el PR abierto de la Fase 2a en vez de mergear la versión manual y rehacerla.</span></li>
+      <li><b>Qué ficha</b><span>La primera que aparezca en el catálogo o el sitemap, sin elegir «la mejor». La misma mientras siga existiendo, para que las notas de un día y otro sean comparables.</span></li>
+      <li><b>Visión general</b><span>La tarjeta sigue siendo la 2b, aparte.</span></li>
+    </ul>
+  </section>
+
+  <div class="ask read">
+    <b>¿Apruebas este plan, incluida la página extra por revisión? No implementaré hasta que lo confirmes.</b>
+  </div>
+</div>
