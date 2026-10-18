@@ -159,7 +159,9 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
       "el artículo seguía publicando los cuatro de v2. Refrescado en SEO-POS-1 S6, log §72.",
     "como-aparecer-en-perplexity":
       "PERPLEXITY-ENGINE-1 Fase 2b: el ejemplo de frase citable hablaba de un plan Starter a 49 €, " +
-      "confundible con el nuestro; pasa a una gestoría inventada. Log §287."
+      "confundible con el nuestro; pasa a una gestoría inventada. Log §287.",
+    "como-aparecer-en-gemini-y-vistas-creadas-con-ia":
+      "Gana la sección y la FAQ con la pregunta exacta «cómo conseguir que Gemini mencione mi empresa», con respuesta directa. Log §324."
   };
 
   it("todo dateUpdated corresponde a un refresco documentado", () => {

@@ -375,6 +375,7 @@ export const BLOG_POSTS: BlogPost[] = [
     metaDescription:
       "Cómo aparecer en las Vistas creadas con IA, el Modo IA y Gemini: lo que Google dice oficialmente, qué revisar y qué no funciona.",
     datePublished: "2026-10-09",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/como-aparecer-en-gemini-y-vistas-creadas-con-ia/cover.webp",
     coverIcon: "search",
     primaryKeyword: "cómo aparecer en ai overviews",

@@ -26039,6 +26039,8 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Por qué.** Medir si seguir las recomendaciones mueve la visibilidad. Línea base: `/mnt/project-files/geo-propio/medicion/2026-10-10.md` más una foto nueva antes de fusionar.
 
-**Qué queda.** Recomendaciones 2 y 3 pendientes. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
+**Recomendación 2** («Aparece en ¿Cómo puedo conseguir que Gemini mencione mi empresa…?»). La consola dijo «sí tienes página» y señaló `/blog` (el índice) en vez de la guía `como-aparecer-en-gemini-y-vistas-creadas-con-ia`. Se refuerza esa guía: sección con la pregunta exacta y respuesta directa en las dos primeras frases, y la misma pregunta como primera entrada de su FAQ (`FAQPage`). No se sigue la plantilla de la consola sobre JSON-LD como palanca, porque Google dice que no hay requisitos de marcado.
+
+**Qué queda.** Recomendación 3 pendiente. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
