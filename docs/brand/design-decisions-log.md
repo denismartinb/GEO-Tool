@@ -26397,6 +26397,10 @@ escanea, las de quien va a comprar, y qué hacen los motores con ellas.
   «Ver las N preguntas por motor». «Qué hacer primero» no enseña puntos por
   arreglo (los checks sólo enseñan estados, §322), aunque el prototipo los
   pintaba.
+- **La URL de «Página revisada» ya no se sale de la tarjeta en el móvil.** La
+  columna de la tarjeta era `auto` y crecía hasta el ancho de la URL entera;
+  pasa a `minmax(0, 1fr)` y la URL se corta con puntos suspensivos (fundador,
+  2026-10-18, con captura).
 - **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
   36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
 - Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
