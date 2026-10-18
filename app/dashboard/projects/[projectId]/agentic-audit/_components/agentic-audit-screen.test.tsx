@@ -112,12 +112,16 @@ describe("AgenticAuditScreen", () => {
     const html = render(scoreAgenticAudit({ ...INPUT, signals: { ...SIGNALS, hasProductData: false, hasOffer: false, ogProduct: false } }));
     expect(html).toContain("La nota se calcula sobre la página donde vendes algo");
     expect(html).toContain("elige otra página");
+    expect(html).toContain("Página revisada");
+    expect(html).toContain("https://tienda.es/p/zapatilla");
+    expect(html).not.toContain("Tienda analizada");
   });
 
   it("says where the product page came from, with no «Revisar ahora» button", () => {
     const html = render({ ...scoreAgenticAudit(INPUT), found: "catalog" });
-    expect(html).toContain("Página revisada");
-    expect(html).toContain("https://tienda.es/p/zapatilla");
+    expect(html).toContain("Tienda analizada");
+    expect(html).not.toContain("Página revisada");
+    expect(html).not.toContain("https://tienda.es/p/zapatilla");
     expect(html).toContain("Elegida automáticamente de tu catálogo. Revisada hoy a las 10:42.");
     expect(html).toContain("Elegir otra página");
     expect(html).not.toContain("Revisar ahora");

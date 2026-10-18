@@ -1965,9 +1965,13 @@
   .ag-page { max-width: 1280px; }
 }
 .ag-screen { display: flex; flex-direction: column; gap: 12px; margin-top: 14px; }
-.ag-screen .card { padding: 15px; border-radius: 14px; min-width: 0; display: grid; gap: 10px; }
+/* minmax(0, 1fr): an auto track grows to the URL's nowrap width and the
+   reviewed-page box spilled out of the card on a phone (log §332). */
+.ag-screen .card { padding: 15px; border-radius: 14px; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
 .ag-intro { margin: 0; font-size: 13.5px; color: var(--ink-3); }
 .ag-h { margin: 0; font-size: 13px; font-weight: 700; color: var(--ink-2); }
+.ag-h.ag-done { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink); }
+.ag-h.ag-done svg { color: var(--pos-ink); flex: none; }
 .ag-muted { margin: 0; font-size: 12.5px; color: var(--ink-3); }
 .ag-error { margin: 0; font-size: 13px; color: var(--neg-ink); }
 
@@ -2037,6 +2041,141 @@
 .ag-fix b { font-size: 14px; color: var(--ink); }
 .ag-fix span { color: var(--ink-3); }
 
+/* Visibilidad en agentes — AGENTIC-COMMERCE-1 Fase 2d (log §332), laid out as
+   the approved prototype (docs/design-reference/agentic-commerce-1/
+   prototipo.html, «Consola · Visibilidad en agentes»): its own look, apart
+   from the technical screen. Single column under 1200px, like the prototype's
+   mobile console. */
+.av-page { --av-track: #eef1f6; margin-top: 18px; }
+.av-ph { display: flex; justify-content: space-between; gap: 12px 16px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 18px; }
+.av-ph h1 { font-family: var(--font-display); font-weight: 800; letter-spacing: -.03em; font-size: 24px; line-height: 1.1; margin: 0; color: var(--ink); }
+.av-ph p { margin: 6px 0 0; color: var(--ink-2); font-size: 14px; max-width: 640px; }
+.av-date { font-size: 12px; color: var(--ink-3); border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; background: var(--surface); white-space: nowrap; }
+.av-box { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px; box-shadow: var(--sh-1); min-width: 0; }
+.av-box h3 { margin: 0 0 4px; font-size: 15px; color: var(--ink); display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.av-hs { font-size: 12.5px; color: var(--ink-3); margin: 0 0 12px; }
+.av-lbl { font-size: 12px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin: 22px 0 10px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 8px; }
+.av-lbl span { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.av-summary { display: flex; gap: 18px 22px; align-items: center; flex-wrap: wrap; }
+.av-ring { width: 110px; height: 110px; flex: 0 0 auto; }
+.av-ring-n { font-family: var(--font-display); font-weight: 800; fill: var(--ink); }
+.av-ring-s { font-family: var(--font-body); font-weight: 600; fill: var(--ink-3); }
+.av-summary-copy { flex: 1; min-width: 200px; }
+.av-eyebrow { font-size: 12px; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.av-headline { font-family: var(--font-display); font-weight: 800; font-size: 21px; letter-spacing: -.02em; line-height: 1.2; margin: 4px 0 6px; color: var(--ink); }
+.av-detail { color: var(--ink-2); font-size: 13.5px; }
+.av-fixbar { flex-basis: 100%; display: flex; gap: 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; background: linear-gradient(90deg, #eef2ff, #e6f9fb); border: 1px solid #dbe4f7; border-radius: 14px; padding: 12px 16px; font-size: 13.5px; color: var(--ink-2); }
+.av-fixbar b { color: var(--ink); }
+.av-btn { flex: 0 0 auto; }
+.av-journey { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.av-jn { display: grid; grid-template-columns: 50px minmax(0, 1fr); gap: 12px; align-items: center; position: relative; }
+.av-jn-c { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--surface); border: 2px solid var(--brand-pos); color: var(--brand-pos); position: relative; z-index: 1; }
+.av-jn-c svg { width: 22px; height: 22px; }
+.av-jn.is-warn .av-jn-c { border-color: #e59a1a; color: #b26a00; }
+.av-jn.is-bad .av-jn-c { border-color: var(--brand-neg); color: var(--brand-neg); background: var(--brand-neg-soft); }
+.av-jn.is-na .av-jn-c { border-color: var(--ink-4); color: var(--ink-4); border-style: dashed; }
+.av-jn.is-neutral .av-jn-c { border-color: var(--brand-blue); color: var(--brand-blue); background: var(--accent-soft); }
+.av-jn b { display: block; font-size: 13px; color: var(--ink); }
+.av-jn small { display: block; font-size: 11.5px; color: var(--ink-3); }
+.av-comps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.av-cc { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-width: 0; box-shadow: var(--sh-1); display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; transition: border-color .15s; }
+.av-cc:hover { border-color: #c9d3ea; }
+.av-cc:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.av-cc.is-na { border-style: dashed; background: #fafbfd; }
+.av-cc-t { font-weight: 700; font-size: 13.5px; color: var(--ink); }
+.av-cc-sc { font-family: var(--font-display); font-weight: 800; font-size: 26px; letter-spacing: -.03em; color: var(--ink); line-height: 1.1; }
+.av-cc-sc small { font-size: 12px; color: var(--ink-4); font-weight: 700; }
+.av-cc p { margin: 0; font-size: 12px; color: var(--ink-3); }
+.av-cc-find { font-size: 12px; color: var(--ink-2); border-top: 1px solid var(--line-soft); padding-top: 8px; margin-top: auto; overflow-wrap: anywhere; }
+.av-cc-find .av-dot { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.av-track { display: block; height: 8px; border-radius: 8px; background: var(--av-track); overflow: hidden; }
+.av-track > span { display: block; height: 100%; border-radius: 8px; background: var(--brand-blue); }
+.av-track.is-cyan > span { background: var(--brand-cyan); }
+.av-dot { width: 9px; height: 9px; border-radius: 50%; flex: 0 0 auto; }
+.av-dot.is-ok { background: var(--brand-pos); }
+.av-dot.is-warn { background: #e59a1a; }
+.av-dot.is-bad { background: var(--brand-neg); }
+.av-dot.is-na { background: var(--ink-4); }
+.av-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; margin-top: 14px; }
+.av-bars { display: grid; gap: 10px; }
+.av-bar { display: grid; grid-template-columns: 96px minmax(0, 1fr) 36px; gap: 10px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
+.av-val { text-align: right; font-family: var(--mono); font-size: 12px; color: var(--ink); }
+.av-note { margin: 10px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.av-fix { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 10px; align-items: center; border-top: 1px solid var(--line-soft); padding: 10px 0; font-size: 13px; color: var(--ink); }
+.av-hs + .av-fix { border-top: 0; }
+.av-pq .av-fix { margin-top: 8px; }
+.av-go { display: inline-block; margin-top: 4px; color: var(--brand-blue); font-weight: 650; font-size: 13px; text-decoration: none; }
+.av-go:hover { text-decoration: underline; }
+.av-empty { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
+.av-muted { color: var(--ink-3); }
+.av-more { margin-top: 6px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.av-more summary { cursor: pointer; font-size: 13px; font-weight: 650; color: var(--brand-blue); }
+.av-more summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.av-more[open] summary { margin-bottom: 10px; }
+.av-tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; margin-bottom: 10px; }
+.av-tbl table { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.av-tbl th, .av-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); text-align: left; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.av-tbl thead th { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); background: #fbfbfd; font-weight: 700; }
+.av-tbl tr:last-child td, .av-tbl tr:last-child th { border-bottom: 0; }
+.av-qs { list-style: none; margin: 0; padding: 0; }
+.av-qs li { display: grid; gap: 6px; padding: 9px 0; border-bottom: 1px solid var(--line-soft); }
+.av-qs li:last-child { border-bottom: 0; }
+.av-q-text { font-size: 13px; color: var(--ink); overflow-wrap: anywhere; }
+.av-q-engines { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.av-q-engine { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.av-q-name { margin-right: 2px; }
+.av-mk { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 6px; font-size: 10px; font-weight: 800; }
+.av-mk.is-named { background: var(--pos-soft); color: var(--pos-ink); }
+.av-mk.is-cited { background: var(--accent-soft); color: var(--brand-blue); }
+.av-mk.is-market { background: #e3f8fa; color: #067a85; }
+.av-mk.is-none { background: var(--surface-sunk); color: var(--ink-2); }
+.av-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 8px; font-size: 11.5px; color: var(--ink-2); }
+.av-legend > span { display: inline-flex; align-items: center; gap: 4px; }
+.av-pq > .btn { margin-top: 10px; }
+.av-rule { margin: 12px 0 0; font-size: 11.5px; color: var(--ink-3); }
+.av-ex { font-size: 11px; color: var(--ink-4); margin: 10px 0 0; }
+@media (min-width: 1200px) {
+  .av-ph h1 { font-size: 30px; }
+  .av-ring { width: 140px; height: 140px; }
+  .av-headline { font-size: 24px; }
+  .av-journey { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin-top: 6px; }
+  .av-jn { display: block; text-align: center; padding: 0 6px; }
+  .av-jn-c { margin: 0 auto 8px; }
+  .av-jn::before { content: ""; position: absolute; top: 25px; left: -50%; right: 50%; height: 2px; background: #dfe5f0; }
+  .av-jn:first-child::before { display: none; }
+  .av-comps { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .av-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .av-bar { grid-template-columns: 130px minmax(0, 1fr) 44px; }
+}
+
 .ag-upsell { display: grid; gap: 10px; justify-items: start; }
 .ag-upsell h3 { margin: 0; font-size: 16px; color: var(--ink); }
 .ag-upsell p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+
+/* AGENTIC-COMMERCE-1 Fase 2b (log §340): «Comercio agéntico» on Visión
+   general, under Auditoría SEO. Reuses the av-* track, dot and ring text;
+   --av-track is scoped here because .av-page does not wrap this card. */
+.ovag { --av-track: #eef1f6; }
+.ovag-lbl { margin-top: 24px; }
+.ovag-lbl .sa-new { margin-left: 4px; }
+.ovag-card { padding: 16px 18px; display: grid; gap: 12px; }
+.ovag-top { display: flex; align-items: center; gap: 14px; }
+.ovag-ring { width: 76px; height: 76px; flex: 0 0 auto; }
+.ovag-head { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--ink); min-width: 0; }
+.ovag-mini { display: grid; gap: 7px; }
+.ovag-r { display: grid; grid-template-columns: 108px minmax(0, 1fr) 44px; gap: 8px; align-items: center; font-size: 12.5px; color: var(--ink-2); }
+.ovag-r .av-track { height: 6px; }
+.ovag-v { text-align: right; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ovag-v small { color: var(--ink-4); font-weight: 500; }
+.ovag-first { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: start; border-radius: 10px; padding: 9px 11px; font-size: 13px; color: var(--ink); background: var(--surface-sunk); }
+.ovag-first .av-dot { margin-top: 5px; }
+.ovag-first.is-bad { background: var(--neg-soft); }
+.ovag-first.is-warn { background: var(--warn-soft); }
+.ovag-k { display: block; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); }
+.ovag-go { display: block; text-align: center; font-size: 13.5px; font-weight: 700; color: var(--brand-blue); background: var(--brand-blue-soft); border-radius: 10px; padding: 9px 12px; text-decoration: none; }
+.ovag-go:hover { filter: brightness(.97); }
+.ovag-go:focus-visible { outline: 2px solid var(--brand-blue); outline-offset: 2px; }
+.ovag-foot { margin: 0; font-size: 11.5px; color: var(--ink-3); }
+.ovag-upsell { justify-items: start; gap: 10px; }
+.ovag-upsell h3 { margin: 0; font-size: 15px; color: var(--ink); }
+.ovag-upsell p { margin: 0; font-size: 13.5px; color: var(--ink-2); }

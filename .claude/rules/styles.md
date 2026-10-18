@@ -365,12 +365,16 @@ peor que ninguna, porque una sesión futura la obedecerá igual.
   captura contra otra captura de una anchura distinta.
 - **El cajón móvil de la consola tiene que caber entero en un iPhone con las
   barras de Safari (≈390×664).** El pie es una sola fila: la cuenta más dos
-  iconos de 44px, la ayuda y salir. Las filas del menú miden 40px. Si se añade
+  iconos de 44px, la ayuda y salir. Las filas del menú miden 36px. Si se añade
   un enlace o una fila al pie, hay que volver a medir esa altura: el último
   enlace quedaba tapado por un pie de tres filas y nada avisaba de que la
   lista scrolleaba (log §301). Con cinco bloques (desde «Comercio agéntico»,
   log §322) no queda margen: rótulos de `5px 10px 1px` y el último enlace a
-  6 px del pie. Otro enlace más obliga a otra solución, no a apretar más.
+  6 px del pie. La 2d (log §332) añadió «Auditoría agéntica» como segunda
+  entrada del bloque, como en el prototipo, y pagó la fila bajando todas de
+  40 a 36px: diez de 36 miden lo mismo que nueve de 40. No queda otro
+  recorte de ese tipo: 36px es el contenido de la fila sin aire. Otro enlace
+  más obliga a otra solución.
 - **El sitio público tiene un solo pie: `PublicFooter`.** Ninguna página
   escribe su propio `<footer>`; así llegó a haber siete versiones distintas y
   el comprobador y la videollamada no salían en ninguna (log §312). Un enlace

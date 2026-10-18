@@ -26295,6 +26295,37 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
 
+## 333. AGENTIC-POSTS-2: los artículos de comercio agéntico dicen que Pro ya tiene la auditoría (2026-10-18)
+
+**Qué.** Los seis artículos de AGENTIC-POSTS-1 (§316) se escribieron cuando
+la auditoría agéntica sólo existía como comprobador gratuito y medía fichas de
+tienda. Con la Fase 2a en producción (#646, §322, §323, §325), su sección
+«Dónde encaja GenScore» añade que en Pro y Agencia la Auditoría agéntica de la
+consola hace esa revisión sola después de cada escaneo, sobre la página donde
+vendes (una ficha, tus precios, un servicio o tus reservas). Donde el texto
+decía «tus productos» o «tu tienda» para describir lo que revisa GenScore,
+pasa a «lo que vendes» o «tu web», porque desde §325 el motor ya no mide sólo
+fichas. En las diez comprobaciones, «Compra» pasa de «añadir al carrito» a
+«comprar, contratar o reservar». `dateUpdated` de los seis es 2026-10-18 y el
+calendario los marca publicados y refrescados.
+
+**Qué no cambia.** El resto de cada artículo sigue hablando de tiendas, que es
+su tema. «Preguntas de compra» y «Visibilidad en agentes» (2d) no se anuncian.
+
+**Sin frases sobre lo que GenScore todavía no revisa** (fundador, 2026-10-18:
+«esto básicamente echa para atrás»). Se retiran de los artículos «Lo que
+todavía no revisa son los protocolos de pago ni la firma de los agentes.
+Preferimos decirlo…», su equivalente en cómo compra un agente, el cierre de las
+diez comprobaciones sobre precio, stock y checkout, y el «no implanta ni
+revisa estos protocolos» del de protocolos; «Qué revisa GenScore y qué no»
+pasa a «Qué revisa GenScore». Nada de lo que queda afirma que se revisen: la
+tabla de las diez comprobaciones sigue marcando «No» y «En parte» donde toca.
+Los límites de motores (Copilot, AI Overviews) no son de este tipo y siguen
+declarados donde la regla de `growth-content.md` los exige.
+
+**Pendiente.** Si se aprueba 2b, 2c o 2d, esta misma sección se vuelve a
+tocar en el PR que lo lleve a producción.
+
 ## 328. RECS-ONE-LEVER-1: una tarjeta por palanca, no una por pregunta (2026-10-18)
 
 **Qué.** Las tarjetas `increase_brand_visibility` («Aparece en "…"») se agrupan por el tema que el usuario ya dio a cada prompt (`project_prompts.category`): una tarjeta por tema, con sus preguntas dentro, un solo «Haz esto» (una página con cada pregunta como subtítulo; si ya existe una, reforzarla), un solo plan generado y una sola cifra. Las preguntas de definición (log §292) van siempre en su propia tarjeta y conservan el aviso «lo realista es que te citen, no que te nombren». Los prompts sin tema van juntos en «tus otras preguntas». Módulo puro `lib/recommendations/levers.ts`; tarjeta `LeverCard` en `recommendations-client.tsx`.
@@ -26340,6 +26371,86 @@ impresiones en móvil. Las demás tablas de la pantalla (páginas) siguen
 ocultando columnas en móvil.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 332. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el plan de la 2d («Ok», diseño en
+`docs/design-reference/agentic-commerce-1/fase-2d.html`). Llega la segunda
+pantalla del prototipo, «Visibilidad en agentes». Resume la auditoría
+agéntica como el camino de un agente (Te encuentra, Entra, Entiende, Se fía,
+Compra) y añade «Preguntas de compra»: de las preguntas que el proyecto ya
+escanea, las de quien va a comprar, y qué hacen los motores con ellas.
+
+- **Cómo se reconoce una pregunta de compra.** Una regla fija sobre el texto
+  (`classifyPurchaseQuestion`, `lib/agentic-audit/purchase-questions.ts`),
+  sin IA. Cuenta si pide dónde comprar, contratar o reservar; un precio u
+  oferta (o está en el tema «Precio y planes»); o qué elegir para comprarlo
+  («recomiéndame», «el mejor», «busco»). No cuentan el cómo, el qué es, las
+  diferencias, las opiniones ni las comparativas, salvo que también pidan
+  dónde o cuánto. «online» solo no basta: colaba «reputación online».
+  Descartadas: que la IA etiquete cada pregunta (migración y llamada por
+  pregunta) y que juzgue cada respuesta en el escaneo (toca la extracción
+  compartida y el coste).
+- **Medida antes de construir.** Esta sesión no lee la base de datos, así que
+  la regla se midió sobre las preguntas de cuatro estudios (facturación, La
+  Fábrica del SEO, clínicas de Madrid y Valencia), que genera el mismo
+  sistema. La ancha deja entrar un 63%; la estricta (sólo dónde y precio), un
+  18%, con lo que muchos proyectos no llegarían al mínimo. El fundador eligió
+  la ancha en la tarjeta de decisión (2026-10-18).
+- **Tres cifras, del último escaneo.** «Te nombran» (la mención de
+  `extracted_json.brand.mentioned`, como Visión general), «Citan tu web»
+  (citas de grounding de tu dominio, sólo en Gemini, ChatGPT y Perplexity,
+  que buscan en la web) y «Mandan a un marketplace» (una lista fija de
+  `MARKETPLACES`, por dominio citado o por nombre en la respuesta; tu propio
+  marketplace no cuenta). No suman 100 y la pantalla lo dice. El plan decía
+  «los mismos escaneos que la Puntuación GEO»; se cambió a un solo escaneo
+  para que la lista de preguntas y las cifras describan las mismas
+  respuestas.
+- **Suelo de muestra.** Con menos de 3 preguntas de compra o 10 respuestas
+  salen las preguntas, pero no los porcentajes, con un botón a Prompts.
+- **«Te encuentra» va sin color.** Nada dice qué porcentaje es bueno.
+- **Dos entradas de menú, como en el prototipo.** La primera versión de esta
+  fase juntó las dos pantallas en una entrada con pestañas para ahorrar una
+  fila en el cajón móvil. El fundador la rechazó al verla en el preview
+  (2026-10-18: «había dos secciones en el menú, cada una con una estética
+  distinta y definida»), así que se vuelve a lo aprobado en
+  `docs/design-reference/agentic-commerce-1/prototipo.html`: «Visibilidad en
+  agentes» y «Auditoría agéntica», cada una con su entrada y sin pestañas.
+- **«Visibilidad en agentes» tiene su propio aspecto**, el del prototipo
+  (clases `av-*` en `app/console.css`): anillo con la nota, una frase sobre lo
+  que más frena a un agente (`visibilityHeadline`), la franja «Si arreglas…,
+  subes de N a M» (`fixbarLine`, con `scoreIfChecksPass`), el camino del
+  agente en cinco círculos, las cinco tarjetas de componente (puntos sobre su
+  peso; Interoperabilidad «N de 4») y, abajo, «Preguntas de compra» junto a
+  «Qué hacer primero». La auditoría conserva su aspecto técnico de la 2a.
+  Cada tarjeta de componente abre la auditoría por ese componente
+  (`?componente=`). La tabla por motor y la lista de preguntas van dentro de
+  «Ver las N preguntas por motor». «Qué hacer primero» no enseña puntos por
+  arreglo (los checks sólo enseñan estados, §322), aunque el prototipo los
+  pintaba.
+- **La URL de «Página revisada» ya no se sale de la tarjeta en el móvil.** La
+  columna de la tarjeta era `auto` y crecía hasta el ancho de la URL entera;
+  pasa a `minmax(0, 1fr)` y la URL se corta con puntos suspensivos (fundador,
+  2026-10-18, con captura).
+- **Si todo ha ido bien, «Tienda analizada» con un check verde y sin URL.**
+  Con la página leída y con nota, la URL no aporta nada (fundador,
+  2026-10-18). Queda «Elegir otra página» como enlace. Si la página no se
+  pudo leer o no tiene nota, sigue «Página revisada» con la URL, porque ahí
+  el cliente necesita saber qué página se miró.
+- **«Elegir otra página» abre la caja vacía**, no con la URL ya revisada
+  (fundador, 2026-10-18).
+- **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
+  36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
+- Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
+  landing quita «Próximamente» a «Preguntas de compra».
+
+**Regla de premisa.** No se retira ningún camino de recuperación: las dos
+pantallas tienen su entrada de menú.
+
+**Qué queda.** Marcar una pregunta como de compra a mano (necesita
+columna nueva, aprobación aparte). Medir la regla sobre proyectos reales: lo
+enseña la propia pantalla, que lista qué preguntas cuentan. 2b (tarjeta en
+Visión general y revisión semanal) y 2c (varias fichas) siguen sin aprobar.
 
 ## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
 
@@ -26709,7 +26820,44 @@ ese competidor en el sitemap.
 estructura (respuesta en las dos primeras frases, titular en pregunta) exigiría
 leer la página, y eso sigue sin aprobar.
 
-## 340. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
+## 340. AGENTIC-COMMERCE-1 Fase 2b: tarjeta «Comercio agéntico» en Visión general
+
+**Fecha:** 2026-10-18. **Zona:** Comercio agéntico (también Visión general).
+**Origen:** Denis eligió «2b: tarjeta» y aprobó la maqueta
+(`docs/design-reference/agentic-commerce-1/fase-2b.html`) con «Sí. En starter
+debe salir la invitación a pasar a pro».
+
+**Qué se decidió.**
+
+1. La tarjeta del prototipo va en la columna derecha de Visión general, debajo
+   de Auditoría SEO; en móvil y tableta, justo detrás de esa tarjeta. Lleva el
+   anillo con la nota sobre 100, la frase de resumen (`visibilityHeadline`),
+   los cuatro componentes con sus puntos (14/30), «Lo primero» (el primer
+   arreglo de `firstSteps`, sin puntos) y el botón «Ver visibilidad en
+   agentes →». Interoperabilidad no sale: no suma nota.
+2. Pro, Agencia y la prueba la ven sólo cuando la última auditoría agéntica
+   encontró algo que vendes y le puso nota. Sin revisión, con `found: "none"`
+   o sin nota, no sale nada.
+3. Starter ve una invitación a pasar a Pro con el enlace
+   `?openPlan=pro#plan`, como las dos pantallas del bloque. Una cuenta `free`
+   (solo lectura) no ve nada: ya tiene sus avisos de plan.
+4. La decide una función pura (`overviewAgenticCard`,
+   `lib/agentic-audit/visibility-model.ts`) y la pinta
+   `agentic-overview-card.tsx`, que lee el plan con `resolveSystemPlanId` y la
+   última revisión con `readAgenticAudits`, en su propio `Suspense`. Sin
+   perfil, sin plan: falla cerrado.
+5. La revisión semanal que pedía la 2b en `fase-2a.html` ya la cubre la
+   auditoría automática tras cada escaneo (§323). Sin migración.
+
+**Qué no cambia.** La Visibilidad agéntica no entra en la Puntuación GEO. La
+tarjeta no lo dice: Denis pidió quitar esa frase al revisar el preview. Ningún
+arreglo enseña puntos.
+
+**Qué queda.** 2c (varias fichas a la vez y «Marcar como hecho») necesita
+migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
+congelación de textos.
+
+## 341. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
 
 **Qué se decidió.** `/admin/seo-diagnostico` gana un bloque «Investigación»
 con su propio botón («Lanzar sólo la investigación»), que no repite el
