@@ -5,6 +5,7 @@ import {
   readEnvelope,
   readKeywordGap,
   readKeywordIdeas,
+  readLinkGap,
   readRankedKeywords,
   readSerp
 } from "./dataforseo-parse";
@@ -95,5 +96,33 @@ describe("readers", () => {
   it("backlink summary", () => {
     expect(readBacklinkSummary({ backlinks: 40, referring_domains: 12, rank: 80 })).toEqual({ backlinks: 40, referringDomains: 12, rank: 80 });
     expect(readBacklinkSummary(null)).toEqual({ backlinks: null, referringDomains: null, rank: null });
+  });
+});
+
+describe("readLinkGap", () => {
+  it("names the referring site and counts the competitors it links to", () => {
+    const parsed = readLinkGap({
+      total_count: 7,
+      items: [
+        {
+          domain_intersection: {
+            "1": { target: "blog.example.es", rank: 310, backlinks: 4, backlinks_spam_score: 2 },
+            "2": { target: "blog.example.es", rank: 310, backlinks: 0, backlinks_spam_score: 2 }
+          }
+        },
+        { domain_intersection: { "1": { rank: 10 } } },
+        null
+      ]
+    });
+    expect(parsed).toEqual({
+      total: 7,
+      items: [{ domain: "blog.example.es", rank: 310, spamScore: 2, linkedTargets: 1, backlinks: 4 }]
+    });
+  });
+
+  it("keeps an unknown count as null, never 0", () => {
+    const parsed = readLinkGap({ items: [{ domain_intersection: { "1": { target: "a.es" } } }] });
+    expect(parsed.total).toBeNull();
+    expect(parsed.items[0]).toMatchObject({ rank: null, backlinks: null, spamScore: null, linkedTargets: 0 });
   });
 });

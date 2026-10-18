@@ -12,6 +12,10 @@
 export const MAX_SERP = 10;
 export const MAX_SEEDS = 5;
 export const MAX_GAP_COMPETITORS = 3;
+/** SEO-RESEARCH-1: one keyword_overview call and one backlinks intersection. */
+export const MAX_VOLUME_KEYWORDS = 200;
+export const MAX_LINK_GAP_TARGETS = 5;
+export const LINK_GAP_LIMIT = 300;
 
 export type DfsEnvelope = { ok: true; cost: number; result: Record<string, unknown> | null } | { ok: false; cost: number; code: number | null; message: string };
 
@@ -118,6 +122,13 @@ export function readKeywordIdeas(result: Obj | null): KeywordIdea[] {
   });
 }
 
+/**
+ * dataforseo_labs/google/keyword_overview: the same item shape as
+ * keyword_ideas (keyword, keyword_info, keyword_properties,
+ * search_intent_info), for a list the operator chose instead of a topic.
+ */
+export const readKeywordOverview = readKeywordIdeas;
+
 export type SerpResult = {
   keyword: string;
   organic: { position: number; domain: string; url: string; title: string | null }[];
@@ -154,4 +165,36 @@ export type BacklinkSummary = { backlinks: number | null; referringDomains: numb
 /** backlinks/summary: how many sites link to a domain. */
 export function readBacklinkSummary(result: Obj | null): BacklinkSummary {
   return { backlinks: num(result?.backlinks), referringDomains: num(result?.referring_domains), rank: num(result?.rank) };
+}
+
+export type LinkGapDomain = { domain: string; rank: number | null; spamScore: number | null; linkedTargets: number; backlinks: number | null };
+
+/**
+ * backlinks/domain_intersection with our domain in exclude_targets: sites that
+ * link to the competitors and not to us. Each item carries one entry per
+ * target ("1", "2"…) whose `target` is the referring domain; an entry with no
+ * backlinks means that site does not link to that competitor.
+ */
+export function readLinkGap(result: Obj | null): { total: number | null; items: LinkGapDomain[] } {
+  const items = arr(result?.items).flatMap((raw) => {
+    const entries = Object.values(obj(obj(raw)?.domain_intersection) ?? {})
+      .map(obj)
+      .filter((entry): entry is Obj => entry !== null);
+    const domain = entries.map((entry) => str(entry.target)).find(Boolean);
+    if (!domain) return [];
+    const linking = entries.filter((entry) => (num(entry.backlinks) ?? 0) > 0);
+    const counts = linking.map((entry) => num(entry.backlinks)).filter((value): value is number => value !== null);
+    const ranks = entries.map((entry) => num(entry.rank)).filter((value): value is number => value !== null);
+    const spam = entries.map((entry) => num(entry.backlinks_spam_score)).filter((value): value is number => value !== null);
+    return [
+      {
+        domain,
+        rank: ranks.length ? Math.max(...ranks) : null,
+        spamScore: spam.length ? Math.max(...spam) : null,
+        linkedTargets: linking.length,
+        backlinks: counts.length ? counts.reduce((sum, value) => sum + value, 0) : null
+      }
+    ];
+  });
+  return { total: num(result?.total_count), items };
 }

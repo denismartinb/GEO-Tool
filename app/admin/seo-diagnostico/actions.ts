@@ -3,11 +3,16 @@
 import { requireOperator } from "@/lib/admin/operator";
 import { callDataForSeo, readBalance, SPAIN } from "@/lib/seo-data/dataforseo";
 import {
+  LINK_GAP_LIMIT,
+  MAX_LINK_GAP_TARGETS,
   MAX_SEEDS,
+  MAX_VOLUME_KEYWORDS,
   readBacklinkSummary,
   readCompetitors,
   readKeywordGap,
   readKeywordIdeas,
+  readKeywordOverview,
+  readLinkGap,
   readRankedKeywords,
   readSerp
 } from "@/lib/seo-data/dataforseo-parse";
@@ -33,7 +38,9 @@ export type SeoDiagStep =
   | { kind: "gap"; domain: string; competitor: string }
   | { kind: "ideas"; seeds: string[] }
   | { kind: "serp"; domain: string; keyword: string }
-  | { kind: "backlinks"; domain: string };
+  | { kind: "backlinks"; domain: string }
+  | { kind: "volume"; keywords: string[] }
+  | { kind: "linkgap"; domain: string; competitors: string[] };
 
 export type SeoDiagResult = { ok: true; cost: number; data: unknown } | { ok: false; cost: number; message: string };
 
@@ -60,7 +67,29 @@ export async function runSeoDiagStep(step: SeoDiagStep): Promise<SeoDiagResult> 
     return reply.ok ? { ok: true, cost: reply.cost, data: readKeywordIdeas(reply.result) } : { ok: false, cost: reply.cost, message: reply.message };
   }
 
+  if (step.kind === "volume") {
+    const keywords = [...new Set(step.keywords.map((keyword) => cleanText(keyword).toLowerCase()).filter(Boolean))].slice(0, MAX_VOLUME_KEYWORDS);
+    if (keywords.length === 0) throw new Error("no_keywords");
+    const reply = await callDataForSeo("dataforseo_labs/google/keyword_overview/live", { keywords, ...SPAIN });
+    return reply.ok ? { ok: true, cost: reply.cost, data: readKeywordOverview(reply.result) } : { ok: false, cost: reply.cost, message: reply.message };
+  }
+
   const domain = domainOrThrow(step.domain);
+
+  if (step.kind === "linkgap") {
+    const competitors = [...new Set(step.competitors.map(normalizeStudyDomain).filter((value): value is string => Boolean(value)))]
+      .filter((competitor) => competitor !== domain)
+      .slice(0, MAX_LINK_GAP_TARGETS);
+    if (competitors.length < 2) return { ok: false, cost: 0, message: "Hacen falta al menos dos dominios de competidores, como otterly.ai" };
+    const targets = Object.fromEntries(competitors.map((competitor, index) => [String(index + 1), competitor]));
+    const reply = await callDataForSeo("backlinks/domain_intersection/live", {
+      targets,
+      exclude_targets: [domain],
+      limit: LINK_GAP_LIMIT,
+      order_by: ["1.rank,desc"]
+    });
+    return reply.ok ? { ok: true, cost: reply.cost, data: readLinkGap(reply.result) } : { ok: false, cost: reply.cost, message: reply.message };
+  }
 
   if (step.kind === "ranked") {
     const reply = await callDataForSeo("dataforseo_labs/google/ranked_keywords/live", {

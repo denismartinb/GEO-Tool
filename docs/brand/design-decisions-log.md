@@ -26856,3 +26856,32 @@ arreglo enseña puntos.
 **Qué queda.** 2c (varias fichas a la vez y «Marcar como hecho») necesita
 migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
 congelación de textos.
+
+## 343. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
+
+**Qué se decidió.** `/admin/seo-diagnostico` gana un bloque «Investigación»
+con su propio botón («Lanzar sólo la investigación»), que no repite el
+diagnóstico de §338:
+
+1. **Volumen de una lista elegida** (Labs `keyword_overview`, hasta 200
+   palabras en una llamada): volumen, dificultad e intención. Viene prellenada
+   con las búsquedas del plan SEO de genscore.es.
+2. **Hueco de enlaces** (`backlinks/domain_intersection`, entre 2 y 5
+   competidores, con nuestro dominio en `exclude_targets`, 300 filas por
+   rango): webs que enlazan a esos competidores y no a nosotros. Cada fila dice
+   a cuántos de ellos enlaza; es la lista de prospección de enlaces.
+
+Mismas reglas que §338: sólo operador, sin escribir en la base de datos, el
+coste de cada paso a la vista y «—» cuando un dato no viene. Ambos resultados
+entran en el JSON descargable.
+
+**Por qué.** El plan de mejora SEO de genscore.es (hilo «Plan de mejora SEO
+de GenScore») necesita volúmenes reales de las palabras candidatas antes de
+decidir qué página trabaja cada una, y una lista de webs que ya enlazan a
+herramientas GEO, que son las más probables de enlazarnos. El contenedor de
+los agentes no llega a `api.dataforseo.com`, así que la llamada tiene que
+vivir aquí.
+
+**Qué queda.** No se ha probado contra la API real: lo lanza el fundador. Si
+`domain_intersection` exige la suscripción de Backlinks, el paso sale como
+error con su mensaje y coste 0.
