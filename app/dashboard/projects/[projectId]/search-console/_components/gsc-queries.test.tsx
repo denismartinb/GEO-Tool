@@ -15,7 +15,7 @@ const q = (query: string, position: number, clicks: number, impressions: number)
 
 const ROWS = [q("geo vs aeo", 3, 0, 4), q("genscore", 1.2, 9, 38), q("llmso", 35, 0, 3), q("aeo", 1, 1, 2)];
 
-describe("sortQueries (log §326)", () => {
+describe("sortQueries (log §329)", () => {
   it("sorts by query A–Z and back", () => {
     expect(sortQueries(ROWS, "query", "asc").map((r) => r.query)).toEqual(["aeo", "genscore", "geo vs aeo", "llmso"]);
     expect(sortQueries(ROWS, "query", "desc").map((r) => r.query)).toEqual(["llmso", "geo vs aeo", "genscore", "aeo"]);

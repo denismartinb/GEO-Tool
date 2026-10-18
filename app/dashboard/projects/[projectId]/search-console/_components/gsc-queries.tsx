@@ -21,7 +21,7 @@ const FILTERS: Array<{ key: Filter; label: string }> = [
 const VISIBLE_ROWS = 50;
 
 /**
- * Sortable columns (GSC-QUERIES-SORT-1, log §326). The first press sorts the way a reader
+ * Sortable columns (GSC-QUERIES-SORT-1, log §329). The first press sorts the way a reader
  * expects (A–Z, best position first, most clicks/impressions first); a second press inverts it.
  */
 export type SortKey = "query" | "position" | "clicks" | "impressions";

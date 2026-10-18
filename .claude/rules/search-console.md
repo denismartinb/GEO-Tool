@@ -126,7 +126,7 @@ revisión de data-guardian que lo precedió.
   propiedad del proyecto por su cuenta. Elegir propiedad sigue en «Posición
   en Google», donde vuelve la conexión.
 
-## Tabla de búsquedas (GSC-QUERIES-SORT-1, log §326)
+## Tabla de búsquedas (GSC-QUERIES-SORT-1, log §329)
 
 - **Ordenar sólo reordena.** El conjunto visible son las 50 búsquedas con más
   impresiones del filtro; la columna elegida (`sortQueries`) las reordena

@@ -26055,7 +26055,7 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 326. GSC-QUERIES-SORT-1: la tabla de búsquedas de «Posición en Google» se ordena por columnas (2026-10-18)
+## 329. GSC-QUERIES-SORT-1: la tabla de búsquedas de «Posición en Google» se ordena por columnas (2026-10-18)
 
 **Qué se decidió.** El fundador preguntó, desde el móvil, si de verdad salía
 primero en búsquedas con puesto 1,0 y 0 clics, y pidió poder ordenar la tabla
