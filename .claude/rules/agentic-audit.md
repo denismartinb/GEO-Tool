@@ -155,6 +155,10 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **«Te encuentra» no lleva color**: nada dice qué porcentaje es bueno.
 - **Preguntas de compra no entra en la Visibilidad agéntica ni en la
   Puntuación GEO.** Los pesos 30/30/20/20 no cambian.
-- **Una sola entrada de menú para las dos pantallas**, con pestañas
-  (`AgenticTabs`), porque el cajón móvil no admite otra fila (log §301). Una
-  pantalla nueva de esta zona va como pestaña, no como enlace.
+- **Dos entradas de menú, dos aspectos** (fundador, 2026-10-18, §332):
+  «Visibilidad en agentes» es el resumen con el aspecto del prototipo
+  (`av-*`) y «Auditoría agéntica» la pantalla técnica de la 2a. No se juntan
+  en pestañas. Las tarjetas de componente enlazan a la auditoría con
+  `?componente=`, que la página valida contra la lista fija.
+- **«Qué hacer primero» no enseña puntos por arreglo**, aunque el prototipo
+  los pintara: la cifra es la de la franja, de `scoreIfChecksPass`.

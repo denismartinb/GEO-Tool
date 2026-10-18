@@ -38,8 +38,6 @@ type ProjectLink = {
   label: string;
   icon: string;
   countKey: string | null;
-  /** Other segments that light this entry up: one entry for two screens joined by tabs. */
-  alsoActive?: string[];
 };
 
 const aiLinks: ProjectLink[] = [
@@ -60,17 +58,11 @@ const globalLinks: ProjectLink[] = [
 ];
 
 // AGENTIC-COMMERCE-1 Fase 2a (log §322): «Comercio agéntico», its own block
-// with «Nuevo». Fase 2d (log §332): one entry for «Visibilidad en agentes» and
-// «Auditoría agéntica», joined by tabs on both screens, because the mobile
-// drawer has no room for another row (log §301).
+// with «Nuevo». Fase 2d (log §332): two entries, as in the approved prototype:
+// the summary («Visibilidad en agentes») and the technical review.
 const agenticLinks: ProjectLink[] = [
-  {
-    segment: "/agentic-visibility",
-    label: "Visibilidad en agentes",
-    icon: "cart",
-    countKey: null,
-    alsoActive: ["/agentic-audit"]
-  },
+  { segment: "/agentic-visibility", label: "Visibilidad en agentes", icon: "robot", countKey: null },
+  { segment: "/agentic-audit", label: "Auditoría agéntica", icon: "cart", countKey: null },
 ];
 
 const actLinks: ProjectLink[] = [
@@ -163,10 +155,9 @@ export function Sidebar({
     const href = project ? `/dashboard/projects/${project.id}${link.segment}` : null;
     // The overview is the project root: matching its prefix would light it up
     // on every other screen of the project.
-    const matches = (target: string) => pathname === target || pathname.startsWith(`${target}/`);
     const active = href
       ? link.segment
-        ? matches(href) || (link.alsoActive ?? []).some((seg) => matches(`/dashboard/projects/${project?.id}${seg}`))
+        ? pathname === href || pathname.startsWith(`${href}/`)
         : pathname === href
       : false;
     const count = project ? getCount(project.id, link.countKey) : 0;

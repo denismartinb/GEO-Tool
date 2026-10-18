@@ -60,4 +60,10 @@ describe("PurchaseQuestionsCard", () => {
     expect(html).toContain("Ninguna de tus preguntas es de quien va a comprar");
     expect(html).toContain("/dashboard/projects/p1/prompts");
   });
+
+  it("before the first scan says where the questions will come from", () => {
+    const html = renderToStaticMarkup(<PurchaseQuestionsCard projectId="p1" report={null} />);
+    expect(html).toContain("Saldrán de tu primer escaneo");
+    expect(html).not.toMatch(/\d+%/);
+  });
 });

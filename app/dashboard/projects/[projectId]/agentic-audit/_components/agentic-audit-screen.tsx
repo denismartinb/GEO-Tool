@@ -207,7 +207,8 @@ export function AgenticAuditScreen({
   reviewedLabel,
   result,
   remaining,
-  refresh
+  refresh,
+  openOn
 }: {
   projectId: string;
   /** «Revisada hoy a las 10:42.», formatted on the server in Europe/Madrid. */
@@ -217,9 +218,11 @@ export function AgenticAuditScreen({
   remaining: number;
   /** The review is stale: start a new one quietly and refresh when it ends. */
   refresh: boolean;
+  /** The component to open first, from a card on «Visibilidad en agentes». */
+  openOn?: AgenticComponentId | "interop";
 }) {
   const [editing, setEditing] = useState(false);
-  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => initialComponent(result));
+  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? initialComponent(result));
 
   const steps = firstSteps(result);
   const projected = projectedSentence(result, steps);

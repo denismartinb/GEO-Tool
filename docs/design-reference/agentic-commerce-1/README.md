@@ -62,3 +62,10 @@ las comprobaciones a cada tipo. Sus datos son de ejemplo, no medidos.
 «Visibilidad en agentes» en móvil y escritorio. Cómo se reconoce una
 pregunta de compra, qué cifras salen y qué cambia respecto al prototipo:
 `docs/brand/design-decisions-log.md` §332. Sus datos son de ejemplo.
+
+Corrección del fundador al ver el preview (2026-10-18, §332): la maqueta de
+`fase-2d.html` juntaba las dos pantallas en una entrada con pestañas, y eso
+no era lo aprobado. La pantalla construida sigue `prototipo.html`
+(«Consola · Visibilidad en agentes»): dos entradas de menú, cada pantalla con
+su propio aspecto. De `fase-2d.html` vale la parte de «Preguntas de compra»
+(regla, cifras y suelo de muestra), no la de pestañas ni su aspecto.

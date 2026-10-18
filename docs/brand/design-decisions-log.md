@@ -26349,17 +26349,32 @@ escanea, las de quien va a comprar, y qué hacen los motores con ellas.
 - **Suelo de muestra.** Con menos de 3 preguntas de compra o 10 respuestas
   salen las preguntas, pero no los porcentajes, con un botón a Prompts.
 - **«Te encuentra» va sin color.** Nada dice qué porcentaje es bueno.
-- **Una sola entrada de menú.** El plan ponía dos entradas, pero el cajón
-  móvil no admite otra fila (log §301, §322). «Visibilidad en agentes» es la
-  entrada y se enciende también en `/agentic-audit` (`alsoActive`); las dos
-  pantallas llevan pestañas (`AgenticTabs`).
+- **Dos entradas de menú, como en el prototipo.** La primera versión de esta
+  fase juntó las dos pantallas en una entrada con pestañas para ahorrar una
+  fila en el cajón móvil. El fundador la rechazó al verla en el preview
+  (2026-10-18: «había dos secciones en el menú, cada una con una estética
+  distinta y definida»), así que se vuelve a lo aprobado en
+  `docs/design-reference/agentic-commerce-1/prototipo.html`: «Visibilidad en
+  agentes» y «Auditoría agéntica», cada una con su entrada y sin pestañas.
+- **«Visibilidad en agentes» tiene su propio aspecto**, el del prototipo
+  (clases `av-*` en `app/console.css`): anillo con la nota, una frase sobre lo
+  que más frena a un agente (`visibilityHeadline`), la franja «Si arreglas…,
+  subes de N a M» (`fixbarLine`, con `scoreIfChecksPass`), el camino del
+  agente en cinco círculos, las cinco tarjetas de componente (puntos sobre su
+  peso; Interoperabilidad «N de 4») y, abajo, «Preguntas de compra» junto a
+  «Qué hacer primero». La auditoría conserva su aspecto técnico de la 2a.
+  Cada tarjeta de componente abre la auditoría por ese componente
+  (`?componente=`). La tabla por motor y la lista de preguntas van dentro de
+  «Ver las N preguntas por motor». «Qué hacer primero» no enseña puntos por
+  arreglo (los checks sólo enseñan estados, §322), aunque el prototipo los
+  pintaba.
+- **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
+  36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
 - Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
   landing quita «Próximamente» a «Preguntas de compra».
 
-**Regla de premisa.** No se retira ningún camino de recuperación. La
-auditoría agéntica deja de tener entrada propia en el menú; se llega a ella
-por la pestaña y por «Ver la auditoría». Si las pestañas desaparecieran, la
-pantalla de la auditoría seguiría existiendo, pero sin camino desde el menú.
+**Regla de premisa.** No se retira ningún camino de recuperación: las dos
+pantallas tienen su entrada de menú.
 
 **Qué queda.** Marcar una pregunta como de compra a mano (necesita
 columna nueva, aprobación aparte). Medir la regla sobre proyectos reales: lo
