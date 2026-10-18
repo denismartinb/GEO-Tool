@@ -1831,6 +1831,30 @@
 .grec-quiet:disabled { opacity: .6; cursor: default; }
 
 /* RECS-ONE-QUEUE-1 (log §307): where each card of the queue comes from. */
+/* RECS-ADD-COMPETITOR-1 (log §327): "Añadir X a competidores" is a button,
+   not a plan. Info left, action right; the action stacks under 640px. */
+.rec-card.rec2-addcomp { padding: 16px 18px; }
+.rec2-addcomp-main { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; }
+.rec2-addcomp-info { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+.rec2-addcomp-act { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; max-width: 300px; }
+.rec2-addcomp-btn { min-height: 44px; }
+.rec2-addcomp-field { display: flex; flex-direction: column; gap: 5px; width: 100%; }
+.rec2-addcomp-field label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.rec2-addcomp-field input {
+  font: inherit; font-size: 14px; padding: 10px 12px; min-height: 44px; width: 100%;
+  border-radius: var(--r-sm); border: 1px solid var(--line-strong, var(--line)); background: var(--surface); color: var(--ink);
+}
+.rec2-addcomp-meta { font-size: 12px; color: var(--ink-3); }
+.rec2-addcomp-link { font: inherit; font-size: 12px; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; }
+.rec2-addcomp-err { font-size: 12.5px; color: var(--neg, #b42318); background: var(--neg-soft, #fdecea); border-radius: 8px; padding: 7px 10px; width: 100%; }
+.rec-card.rec2-addcomp-ok { background: var(--pos-soft, #e9f5ef); border-color: transparent; display: flex; flex-direction: column; gap: 6px; }
+.rec2-addcomp-okh { display: flex; align-items: center; gap: 7px; font-weight: 700; color: var(--pos-ink, #15805a); }
+.rec2-addcomp-ok .rec2-addcomp-meta { color: var(--ink-2); font-size: 13px; }
+@media (max-width: 640px) {
+  .rec2-addcomp-main { flex-direction: column; gap: 12px; }
+  .rec2-addcomp-act { align-items: stretch; max-width: none; width: 100%; }
+}
+
 .rec2-src {
   display: inline-flex; align-items: center; gap: 4px;
   font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;

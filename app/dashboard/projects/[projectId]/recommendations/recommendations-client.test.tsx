@@ -66,6 +66,17 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
     expect(html).not.toContain("por rellenar");
   });
 
+  it("dice «Plan listo» en una acción fuera de tu web, donde no hay nada que pegar (log §326)", () => {
+    const html = renderToStaticMarkup(
+      <SolutionPanel
+        recommendationType="pursue_community_sources"
+        solution={{ title: "Participa en YouTube", summary: "Resumen", steps: ["Responde en el vídeo más citado."], examples: [] }}
+      />
+    );
+    expect(html).toContain("Plan listo");
+    expect(html).not.toContain("Listo para copiar");
+  });
+
   it("cuenta los huecos reales del artefacto y de los pasos", () => {
     const html = renderToStaticMarkup(
       <SolutionPanel
@@ -203,6 +214,39 @@ describe("RecCard — CTA y chip de control", () => {
   it("marca como interno lo que se resuelve dentro del producto", () => {
     const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "track_emerging_competitor" })} />);
     expect(html).toContain("Aquí en GenScore");
+  });
+});
+
+/**
+ * RECS-ADD-COMPETITOR-1 (log §327). El clic no se puede probar por render; sí
+ * que la tarjeta es un botón y no un plan, y de dónde sale la web.
+ */
+describe("RecCard — «Añadir X a competidores»", () => {
+  const emerging = (evidence: Record<string, unknown>) =>
+    baseRec({
+      recommendation_type: "track_emerging_competitor",
+      title: "Añade Semrush a tus competidores",
+      evidence_json: { emerging_competitor: "Semrush", ...evidence }
+    });
+
+  it("es un botón con la web encontrada, sin plan ni «Ver cómo»", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ emerging_competitor_domain: "semrush.com" })} />);
+    expect(html).toContain("Añadir Semrush a competidores");
+    expect(html).toContain("Con su web semrush.com");
+    expect(html).not.toContain("Ver cómo");
+    expect(html).not.toContain("Listo para copiar");
+    expect(html).not.toContain("Añadir a competidores</");
+  });
+
+  it("en una tarjeta guardada antes del cambio, saca la web de los dominios citados", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["es.semrush.com"] })} />);
+    expect(html).toContain("Con su web semrush.com");
+  });
+
+  it("sin coincidencia exacta pide la web y deja el botón desactivado", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["semrushtools.com"] })} />);
+    expect(html).toContain("Web de Semrush");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Añadir Semrush a competidores/);
   });
 });
 

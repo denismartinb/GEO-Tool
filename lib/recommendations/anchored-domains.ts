@@ -196,3 +196,25 @@ export function competitorsAnchoredByDomain(trackedCompetitors: string[], anchor
     return key.length > 0 && keys.has(key);
   });
 }
+
+/**
+ * La web de una marca que la IA nombró, sacada de las fuentes que citó junto a
+ * ella (RECS-ADD-COMPETITOR-1): `es.semrush.com` entre los dominios y «Semrush»
+ * como nombre dan `semrush.com`. Mismo emparejado que
+ * `competitorsAnchoredByDomain`, igualdad exacta de etiqueta, así que
+ * `semrushtools.com` no vale para «Semrush». Sin coincidencia devuelve `null`
+ * y la pantalla pide la web: nunca se adivina.
+ */
+export function domainForBrandName(name: string, domains: readonly string[]): string | null {
+  const key = compact(name);
+  if (!key) return null;
+  for (const raw of domains) {
+    const domain = normalizeDomain(raw);
+    const parts = domain.split(".").filter(Boolean);
+    const label = brandLabel(domain);
+    if (!label) continue;
+    const registrable = parts.slice(parts.lastIndexOf(label)).join(".");
+    if (compact(label) === key || compact(registrable) === key) return registrable;
+  }
+  return null;
+}
