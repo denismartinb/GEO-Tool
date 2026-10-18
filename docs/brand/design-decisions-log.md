@@ -26041,6 +26041,8 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Recomendación 2** («Aparece en ¿Cómo puedo conseguir que Gemini mencione mi empresa…?»). La consola dijo «sí tienes página» y señaló `/blog` (el índice) en vez de la guía `como-aparecer-en-gemini-y-vistas-creadas-con-ia`. Se refuerza esa guía: sección con la pregunta exacta y respuesta directa en las dos primeras frases, y la misma pregunta como primera entrada de su FAQ (`FAQPage`). No se sigue la plantilla de la consola sobre JSON-LD como palanca, porque Google dice que no hay requisitos de marcado.
 
-**Qué queda.** Recomendación 3 pendiente. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
+**Recomendación 3** («Añade un bloque de preguntas y respuestas»). Se añaden dos preguntas literales al FAQ de `/que-es-genscore` (`lib/brand/que-es-genscore-faq.ts`, que alimenta también `FAQPage` y `/llms-full.txt`): la de Gemini y la de medir visibilidad en ChatGPT y Perplexity. No se copia el borrador de la consola, que prometía «marcado esquemático» como palanca y nombraba competidores.
+
+**Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
