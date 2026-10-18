@@ -207,6 +207,39 @@ describe("RecCard — CTA y chip de control", () => {
 });
 
 /**
+ * RECS-ADD-COMPETITOR-1 (log §325). El clic no se puede probar por render; sí
+ * que la tarjeta es un botón y no un plan, y de dónde sale la web.
+ */
+describe("RecCard — «Añadir X a competidores»", () => {
+  const emerging = (evidence: Record<string, unknown>) =>
+    baseRec({
+      recommendation_type: "track_emerging_competitor",
+      title: "Añade Semrush a tus competidores",
+      evidence_json: { emerging_competitor: "Semrush", ...evidence }
+    });
+
+  it("es un botón con la web encontrada, sin plan ni «Ver cómo»", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ emerging_competitor_domain: "semrush.com" })} />);
+    expect(html).toContain("Añadir Semrush a competidores");
+    expect(html).toContain("Con su web semrush.com");
+    expect(html).not.toContain("Ver cómo");
+    expect(html).not.toContain("Listo para copiar");
+    expect(html).not.toContain("Añadir a competidores</");
+  });
+
+  it("en una tarjeta guardada antes del cambio, saca la web de los dominios citados", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["es.semrush.com"] })} />);
+    expect(html).toContain("Con su web semrush.com");
+  });
+
+  it("sin coincidencia exacta pide la web y deja el botón desactivado", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={emerging({ citation_domains: ["semrushtools.com"] })} />);
+    expect(html).toContain("Web de Semrush");
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Añadir Semrush a competidores/);
+  });
+});
+
+/**
  * AUDIT-RECS-JOIN-1 Fase B. `overlayCopyLocal` (cliente) es una copia
  * verbatim de `overlayCopy` (lib/recommendations/coverage-overlay.ts,
  * server-only) — el mismo patrón que ya usaba `CoverageOverlay`/

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { EngineGlyph } from "@/components/ui/engine-glyph";
@@ -10,7 +10,8 @@ import { categoryForType, labelForType, type AffectedPromptDetail } from "@/lib/
 import {
   rewriteRecommendationAction,
   dismissRecommendationAction,
-  restoreRecommendationAction
+  restoreRecommendationAction,
+  addEmergingCompetitorAction
 } from "@/app/dashboard/projects/[projectId]/actions";
 import type { GeneratedSolution, GeneratedSolutionExample } from "@/lib/recommendations/generated-solution";
 import { groupPromptDetails } from "@/lib/recommendations/prompt-details";
@@ -28,7 +29,9 @@ import {
   pointsCaption,
   readinessLabel
 } from "@/lib/recommendations/deliverable";
-import { adviceSignal, dataSignal, scopeLine } from "@/lib/recommendations/card-signals";
+import { adviceSignal, dataSignal, emergingCompetitorReach, scopeLine } from "@/lib/recommendations/card-signals";
+import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
+import { parseCompetitorDomain } from "@/lib/competitors/competitor-domain";
 import { planGoal } from "./_components/google-rec-copy";
 import { GooglePlanReport, type GooglePlanKind, type GooglePlanState } from "./_components/google-plan-state";
 
@@ -57,6 +60,10 @@ type EvidenceJson = {
   first_step?: string;
   /** log §292 — "definition" for a «qué significa X» query. */
   query_shape?: string;
+  /** track_emerging_competitor: the brand the AI named (RECS-4A). */
+  emerging_competitor?: string;
+  /** RECS-ADD-COMPETITOR-1 — its website, when a cited source matched the name. */
+  emerging_competitor_domain?: string | null;
 };
 
 /**
@@ -665,19 +672,164 @@ export function ResolvedHistoryCard({
 }
 
 /**
+ * RECS-ADD-COMPETITOR-1 — a `track_emerging_competitor` card is one action, so
+ * it renders as one button: no "Ver cómo", no generated plan, no points
+ * (founder, 2026-10-18; mockup approved the same day). The website comes from
+ * the cited sources when one matches the brand exactly; otherwise the card
+ * asks for it rather than guessing. After a success the card stays green for
+ * a moment, then the refresh moves it to "Resueltas".
+ */
+export const EMERGING_SUCCESS_HOLD_MS = 4000;
+
+export function EmergingCompetitorCard({ rec, projectId }: { rec: Recommendation; projectId: string }) {
+  const router = useRouter();
+  const ev: EvidenceJson = rec.evidence_json ?? {};
+  const name = (ev.emerging_competitor ?? "").trim();
+  const knownDomain = ev.emerging_competitor_domain ?? (name ? domainForBrandName(name, ev.citation_domains ?? []) : null);
+  const [editing, setEditing] = useState(!knownDomain);
+  const [domainInput, setDomainInput] = useState(knownDomain ?? "");
+  const [done, setDone] = useState<{ alreadyTracked: boolean } | null>(null);
+  const feedback = useActionFeedback();
+
+  useEffect(() => {
+    if (!done) return;
+    const timer = window.setTimeout(() => router.refresh(), EMERGING_SUCCESS_HOLD_MS);
+    return () => window.clearTimeout(timer);
+  }, [done, router]);
+
+  const domain = parseCompetitorDomain(domainInput);
+  const pending = feedback.state.status === "pending";
+  const providers = Array.from(new Set(groupPromptDetails(ev.affected_prompt_details ?? []).flatMap((p) => p.providers)));
+  const questionCount = groupPromptDetails(ev.affected_prompt_details ?? []).length;
+  const reach = emergingCompetitorReach(questionCount);
+  const inputId = `rec-web-${rec.id}`;
+  const competitorsHref = `/dashboard/projects/${projectId}/competitors`;
+
+  function handleAdd() {
+    if (!domain || !name) return;
+    feedback.run(
+      async () => {
+        const result = await addEmergingCompetitorAction({ projectId, recommendationId: rec.id, domain });
+        if (result.success) setDone({ alreadyTracked: result.alreadyTracked });
+        return result;
+      },
+      { successMessage: `${name} añadida a tus competidores.` }
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="rec-card rec2-addcomp rec2-addcomp-ok" role="status" aria-live="polite">
+        <div className="rec2-addcomp-okh">
+          <Icon name="check" size={15} />
+          {done.alreadyTracked ? `Ya seguías a ${name}` : `${name} ya está en tus competidores`}
+        </div>
+        <div className="rec2-addcomp-meta">
+          {done.alreadyTracked ? "Damos esta tarjeta por hecha." : "El próximo escaneo medirá cuánto aparece frente a ti."}
+        </div>
+        <a className="rec2-addcomp-link" href={competitorsHref}>
+          Ver competidores
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div id={`rec-${rec.id}`} className="rec-card rec2-addcomp">
+      <div className="rec2-addcomp-main">
+        <div className="rec2-addcomp-info">
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+            <span className="rec2-kind">{labelForType(rec.recommendation_type)}</span>
+            <span className="badge badge-outline">
+              <Icon name="robot" size={11} />
+              {CONTROL_LABEL.in_app}
+            </span>
+          </div>
+          <div className="rec-title">{rec.title}</div>
+          {reach && (
+            <div className="rec2-reach" style={{ marginTop: 0 }}>
+              {providers.length > 0 && (
+                <span className="rec2-reach-g" aria-hidden="true">
+                  {providers.map((provider) => (
+                    <span key={provider} style={{ color: getEngineMeta(provider).color }} title={getEngineMeta(provider).label}>
+                      <EngineGlyph provider={provider} />
+                    </span>
+                  ))}
+                </span>
+              )}
+              <span>{reach}</span>
+            </div>
+          )}
+        </div>
+        <div className="rec2-addcomp-act">
+          {editing && (
+            <div className="rec2-addcomp-field">
+              <label htmlFor={inputId}>Web de {name}</label>
+              <input
+                id={inputId}
+                type="text"
+                inputMode="url"
+                autoComplete="off"
+                placeholder="ejemplo.com"
+                value={domainInput}
+                disabled={pending}
+                onChange={(e) => {
+                  setDomainInput(e.target.value);
+                  if (feedback.state.status === "error") feedback.reset();
+                }}
+              />
+            </div>
+          )}
+          {editing && domainInput.trim() !== "" && !domain && (
+            <div className="rec2-addcomp-err" role="alert">
+              El dominio no es válido.
+            </div>
+          )}
+          <button type="button" className="btn btn-primary rec2-addcomp-btn" disabled={!domain || !name || pending} onClick={handleAdd}>
+            {pending ? (
+              <>
+                <span className="btn-spinner" aria-hidden="true" />
+                Añadiendo {name}…
+              </>
+            ) : (
+              `Añadir ${name} a competidores`
+            )}
+          </button>
+          {!editing && domain && !pending && (
+            <div className="rec2-addcomp-meta">
+              Con su web {domain} ·{" "}
+              <button type="button" className="rec2-addcomp-link" onClick={() => setEditing(true)}>
+                Cambiar
+              </button>
+            </div>
+          )}
+          {feedback.state.status === "error" && (
+            <div className="rec2-addcomp-err" role="alert">
+              {feedback.state.message}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Exported (WEB-AUDIT-R5) so the "Auditoría web" page's Plan de acción can
  * embed the SAME interactive card — evidence, "Generar propuesta con IA",
  * "Marcar como hecho" — for a matched recommendation instead of linking out
  * to this page. Self-contained: owns its own open/close state and calls the
  * same server actions regardless of which page renders it.
  */
-export function RecCard({
-  rec,
-  projectId,
-  compact = false,
-  showOwnStep = false,
-  priorityRank,
-}: {
+export function RecCard(props: RecCardProps) {
+  // RECS-ADD-COMPETITOR-1: this type is a button, not a plan.
+  if (props.rec.recommendation_type === "track_emerging_competitor") {
+    return <EmergingCompetitorCard rec={props.rec} projectId={props.projectId} />;
+  }
+  return <StandardRecCard {...props} />;
+}
+
+type RecCardProps = {
   rec: Recommendation;
   projectId: string;
   /**
@@ -695,7 +847,9 @@ export function RecCard({
   compact?: boolean;
   /** Inside a group whose members do NOT share a step (GS-03): show this card's own. */
   showOwnStep?: boolean;
-}) {
+};
+
+function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false, priorityRank }: RecCardProps) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
@@ -1377,7 +1531,7 @@ function GroupedRecs({
       </button>
       {open && (
         <div className="rec2-group-body">
-          {!single && (
+          {!single && type !== "track_emerging_competitor" && (
             <div style={{ padding: "12px 4px 2px" }}>
               <div className="rec-problem" style={{ marginTop: 0 }}>
                 {shared.description}

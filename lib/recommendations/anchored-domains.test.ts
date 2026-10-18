@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   collectAnchoredDomains,
   competitorsAnchoredByDomain,
+  domainForBrandName,
   domainsShownInPrompt
 } from "@/lib/recommendations/anchored-domains";
 import { buildRecommendationRewritePrompt } from "@/lib/recommendations/recommendation-rewrite-llm";
@@ -207,3 +208,19 @@ describe("domainsShownInPrompt", () => {
     expect(shown.sort()).toEqual(["genscore.es", "schema.org"]);
   });
 });
+
+describe("domainForBrandName (RECS-ADD-COMPETITOR-1)", () => {
+  it("returns the registrable domain whose brand label equals the name", () => {
+    expect(domainForBrandName("Semrush", ["ahrefs.com", "es.semrush.com"])).toBe("semrush.com");
+    expect(domainForBrandName("SE Ranking", ["seranking.com"])).toBe("seranking.com");
+    expect(domainForBrandName("Delve AI", ["delve.ai"])).toBe("delve.ai");
+    expect(domainForBrandName("Rastro", ["www.rastro.co.uk"])).toBe("rastro.co.uk");
+  });
+
+  it("never matches by containment, so it never guesses", () => {
+    expect(domainForBrandName("Semrush", ["semrushtools.com", "notsemrush.io"])).toBeNull();
+    expect(domainForBrandName("Semrush", [])).toBeNull();
+    expect(domainForBrandName("", ["semrush.com"])).toBeNull();
+  });
+});
+

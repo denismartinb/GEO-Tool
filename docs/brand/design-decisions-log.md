@@ -26054,3 +26054,19 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 325. RECS-ADD-COMPETITOR-1: «Añadir X a competidores» es un botón, no un plan (2026-10-18)
+
+**Qué.** La tarjeta `track_emerging_competitor` («Añade Semrush a tus competidores») deja de abrir un plan generado por IA y pasa a ser un botón en la propia tarjeta (`EmergingCompetitorCard`). Sin «Ver cómo», sin puntos, sin «Listo para copiar». Al pulsar, la marca entra en Competidores por `createCompetitorCore` (el mismo alta que el formulario de Competidores, con su comprobación de propiedad y su rechazo de asistentes de IA y términos genéricos) y la tarjeta se marca como hecha por `dismissRecommendationCore`: se queda verde unos segundos y pasa a «Resueltas», con su «Deshacer» de siempre. Si ya la seguías, la tarjeta se da por hecha. Server action `addEmergingCompetitorAction`, núcleo `lib/recommendations/add-emerging-competitor.ts`.
+
+**La web no se inventa.** El motor guarda `emerging_competitor_domain` cuando un dominio citado junto a la marca casa exactamente con su nombre (`domainForBrandName`, misma igualdad de etiqueta que `competitorsAnchoredByDomain`: `es.semrush.com` da `semrush.com`, `semrushtools.com` no vale). Las tarjetas guardadas antes de este cambio lo calculan en pantalla sobre sus `citation_domains`. Sin coincidencia, la tarjeta pide la web con un campo y el botón se activa cuando el dominio es válido (`parseCompetitorDomain`, la misma regla que valida el servidor, extraída a `lib/competitors/competitor-domain.ts`).
+
+**El nombre sale de la evidencia guardada, nunca del navegador.** La action recibe sólo el id de la recomendación y la web; el nombre lo lee de `evidence_json.emerging_competitor` con el cliente del usuario.
+
+**Por qué.** Prueba real sobre genscore.es (hallazgo P33, `prueba-recomendaciones/aprendizajes.md`): la acción era un clic y la tarjeta la convertía en cuatro párrafos («Configura el perfil de Semrush dentro del módulo…»). Fundador, 2026-10-18: «un botón de añadir a competidores y ya está, no tanta literatura». Maqueta aprobada el mismo día (https://claude.ai/artifact/FzK8kCeToUc1XY8zPwnX5z).
+
+**Sin migración.** El título pasa a «Añade X a tus competidores»; las filas antiguas conservan el suyo hasta el siguiente escaneo. El CTA de `deliverable.ts` pasa a «Añadir a competidores» y el playbook de reescritura se queda sin uso en pantalla.
+
+**Qué queda.** El resto del plan de correcciones de Recomendaciones (`prueba-recomendaciones/plan-correcciones.md`), un PR por cambio.
+
+**Regla de premisa.** Se retira el «Generar informe» de este tipo. La premisa: la acción completa es añadir el competidor, y eso lo hace el botón. Si el alta falla, la tarjeta enseña el motivo y el usuario conserva la vía de siempre, el formulario de Competidores.
