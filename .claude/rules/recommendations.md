@@ -671,3 +671,20 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Cobertura: índices y comparativas (RECS-COVERAGE-1, log §330)
+
+- **Un índice nunca es «tu página».** `isAnswerPage` excluye portada, foros
+  e índices (`isListingPage`: portada de sección, categoría, etiqueta, autor,
+  paginación). Sólo índices da `listing_only`, que no certifica cobertura.
+  El informe usa la misma función: no le pongas un criterio propio.
+- **Las tarjetas de comparativa se comprueban contra las URL que ya
+  tenemos**, el sitemap guardado por la auditoría técnica más las páginas de
+  la cobertura (`computeComparisonOverlay`). Nada de fetch nuevo: leer la
+  página sería un rastreador. El texto dice lo que se vio («el mapa de tu
+  web incluye una comparativa»), nunca que la página sea buena.
+- **El competidor casa por palabras enteras del slug**, y una tarjeta de un
+  competidor sólo acepta la página de ese competidor. Una comparativa con
+  otro rival no la cubre.
+- **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
+  la tarjeta.** Lo que la IA responde no cambia porque exista la página.

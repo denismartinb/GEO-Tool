@@ -26268,3 +26268,64 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 **Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
+
+## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) salieron dos fallos de cobertura:
+
+- Tres tarjetas pedían publicar comparativas que llevaban semanas en
+  `/comparativas/` (Peec AI, Otterly, RankScale; P1, P28, P34). Ni
+  `close_competitor_gap` ni `add_comparison_content` miraban la web: el motor
+  las escribe al cerrar el escaneo, antes de que exista auditoría, y
+  `COVERAGE_OVERLAY_TYPES` sólo cubría las dos tarjetas por pregunta.
+- Una tarjeta daba `genscore.es/blog`, el índice del blog, como «Tu página»
+  (P8). `isAnswerPage` sólo descartaba la portada y los foros, así que
+  cualquier listado contaba como página que responde, y se enlazaba el
+  primero que devolvía Google.
+
+**Qué se decidió.**
+
+1. **Un índice no certifica cobertura** (`isListingPage`,
+   `lib/recommendations/coverage-overlay.ts`): la portada de una sección
+   (`/blog`, `/es/guias`, `/comparativas`, `/docs`, `/glosario`, `/estudios`
+   y equivalentes en inglés), una página de categoría, etiqueta o autor y una
+   paginación (`/page/2`). Si Google sólo devuelve índices, el estado es
+   `listing_only`: «Sólo encontramos una página índice», con el consejo de
+   reforzar el artículo si existe o publicarlo si no. Si hay un artículo
+   junto al índice, se enlaza el artículo. El informe hereda el criterio
+   porque lee el mismo `isAnswerPage`.
+2. **Una tarjeta de comparativa mira si la comparativa ya existe**
+   (`lib/recommendations/own-comparison-pages.ts` +
+   `computeComparisonOverlay`). La prueba es la lista de URL que ya tenemos
+   de la web: el sitemap que guarda la auditoría técnica
+   (`bots.sitemap.locs`, hasta 500, sin fetch nuevo) más las páginas que
+   encontró la cobertura. Cuenta como comparativa una URL propia bajo una
+   sección de comparativas o con un slug `x-vs-y` / `alternativas-a-x`, y
+   casa con un competidor si su nombre aparece como palabras enteras del
+   último tramo de la URL («Otter» no casa con `genscore-vs-otterly`). Una
+   tarjeta de un competidor necesita la página de ese competidor; la genérica,
+   la de cualquier competidor de sus respuestas. Con página, la tarjeta pasa
+   al mismo estado que una pregunta cubierta: «Sí tienes una página sobre
+   este tema», «no publiques otra, refuerza la que ya tienes» y el enlace.
+   Mantiene su sitio y sus puntos, porque lo que la IA responde no ha
+   cambiado.
+
+**Por qué por URL y no por contenido.** Leer la página sería un fetch más
+por tarjeta, y esta zona es adyacente a «crawler» (`CLAUDE.md`). La URL dice
+lo que se comprobó: existe una página tuya cuyo nombre es esa comparativa.
+Por eso el texto habla del «mapa de tu web» y no promete que la página sea
+buena.
+
+**Qué queda.**
+
+- Un sitemap índice (`<sitemapindex>`, habitual en WordPress) no trae
+  páginas, así que esas webs sólo se benefician de lo que encuentre la
+  cobertura. Seguir los sitemaps hijos sería recorrer enlaces: fase aparte.
+- P11 y P23 (una tarjeta sigue «Abierta N escaneos» sobre algo hecho) no se
+  tocan: la tarjeta se cierra cuando la IA deja de reproducir el hueco, y la
+  cobertura sólo cambia el consejo. Darle al cliente un «ya existe» que
+  cierre la tarjeta es una decisión de producto propia.
+- La cobertura sigue buscando con Google una vez por semana (§253): una
+  página publicada después tarda hasta una semana en verse, salvo las
+  comparativas, que salen del sitemap de la última auditoría técnica.

@@ -217,8 +217,21 @@ describe("RecCard — CTA y chip de control", () => {
  * duplicación sin test es la que se queda atrás en silencio.
  */
 describe("overlayCopyLocal — en paridad con el servidor", () => {
-  const TYPES = ["add_citation_block", "increase_brand_visibility", "algún_tipo_sin_clasificar"] as const;
-  const STATES = ["confirmed_surfacing_gap", "possible_content_gap", "home_only", "no_editable_page", "none"] as const;
+  const TYPES = [
+    "add_citation_block",
+    "increase_brand_visibility",
+    "close_competitor_gap",
+    "add_comparison_content",
+    "algún_tipo_sin_clasificar"
+  ] as const;
+  const STATES = [
+    "confirmed_surfacing_gap",
+    "possible_content_gap",
+    "home_only",
+    "no_editable_page",
+    "listing_only",
+    "none"
+  ] as const;
 
   it("coincide literalmente con overlayCopy para cada combinación de tipo y estado", () => {
     for (const type of TYPES) {

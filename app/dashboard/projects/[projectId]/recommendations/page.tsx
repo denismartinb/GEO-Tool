@@ -6,7 +6,14 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { COVERAGE_OVERLAY_TYPES, computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
+import {
+  COVERAGE_OVERLAY_TYPES,
+  comparisonFieldsFromEvidence,
+  computeComparisonOverlay,
+  computeCoverageOverlay,
+  type CoverageOverlayEntry
+} from "@/lib/recommendations/coverage-overlay";
+import { COMPARISON_REC_TYPES, sitemapLocsFromBots } from "@/lib/recommendations/own-comparison-pages";
 import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import {
@@ -508,6 +515,7 @@ export default async function RecommendationsPage({
   // prompt and can therefore ever match a coverage topic.
   const overlayEligibleRecs = baseRecs.filter((r) => COVERAGE_OVERLAY_TYPES.has(r.recommendation_type));
   const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
+  const coveragePageUrls: string[] = [];
   if (overlayEligibleRecs.length > 0 && latestCompletedRun) {
     const resultIds = overlayEligibleRecs
       .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
@@ -547,6 +555,7 @@ export default async function RecommendationsPage({
     // Only a coverage row derived from THIS scan counts — a cached row from an
     // older scan (before the user re-ran "Auditar cobertura") never enriches.
     const coverageTopics = coverage && coverage.scanId === latestCompletedRun.id ? coverage.topics : [];
+    for (const topic of coverageTopics) for (const page of topic.pages) coveragePageUrls.push(page.url);
 
     for (const [recId, entry] of computeCoverageOverlay({
       recommendations: baseRecs.map((r) => ({
@@ -557,6 +566,32 @@ export default async function RecommendationsPage({
       })),
       resultIdToPromptId,
       coverageTopics,
+    })) {
+      coverageOverlayByRecId.set(recId, entry);
+    }
+  }
+
+  // RECS-COVERAGE-1 (log §330): a comparison card whose comparison already
+  // lives on the site. Read from the sitemap the technical audit keeps (no
+  // fetch) plus the pages coverage found; see own-comparison-pages.ts.
+  const comparisonRecs = baseRecs.filter((r) => COMPARISON_REC_TYPES.has(r.recommendation_type));
+  if (comparisonRecs.length > 0) {
+    const { data: snapshotRow } = await supabase
+      .from("web_audit_snapshots")
+      .select("bots")
+      .eq("project_id", projectId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    for (const [recId, entry] of computeComparisonOverlay({
+      recommendations: comparisonRecs.map((r) => ({
+        id: r.id,
+        recommendationType: r.recommendation_type,
+        confidence: r.confidence as "low" | "medium" | "high",
+        ...comparisonFieldsFromEvidence(r.evidence_json),
+      })),
+      siteUrls: [...sitemapLocsFromBots((snapshotRow as { bots?: unknown } | null)?.bots), ...coveragePageUrls],
+      projectDomain: project.domain,
     })) {
       coverageOverlayByRecId.set(recId, entry);
     }
