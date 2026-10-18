@@ -84,8 +84,8 @@ describe("AgenticResultView", () => {
     expect(html).not.toContain("de 100</span>");
     expect(html).toContain(">Comprensión<");
     expect(html).toContain(">Compra<");
-    expect(html).toContain("En una ficha");
-    expect(html).toContain("Has pegado una portada o una categoría");
+    expect(html).toContain("Al vender");
+    expect(html).toContain("En esta página no vemos nada a la venta");
   });
 
   it("says the site did not let us in when the page could not be read", () => {
@@ -103,12 +103,12 @@ describe("AgenticResultView", () => {
 
   it("frames the result as a quick check, shows the store's own data and invites to Pro honestly", () => {
     const html = render(BASE);
-    expect(html).toContain("Comprobación rápida de una ficha");
+    expect(html).toContain("Comprobación rápida de una página");
     expect(html).toContain("Zapatilla Trail");
     expect(html).toContain("89,95 EUR");
     expect(html).toContain("En la consola lo verás todo en detalle");
     expect(html).toContain("Empezar gratis con Pro");
-    expect(html).toContain("llega muy pronto a la consola de Pro");
+    expect(html).toContain("ya está en la consola de Pro");
   });
 
   it("never writes an em dash nor the retired «sin puntos» wording", () => {

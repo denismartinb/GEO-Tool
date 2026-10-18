@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AgenticLoadingScene } from "@/components/agentic/agentic-loading-scene";
 import type { AgenticCheckResult } from "@/lib/agentic-audit/api-contract";
 import {
   buildScanScript,
@@ -84,12 +85,15 @@ export function AgenticScan({
 
   return (
     <div className="ca-scan" ref={rootRef} aria-busy="true">
-      <div className="ca-scan-head">
-        <span className="ca-scan-orb" aria-hidden="true" />
-        <div>
-          <b className="ca-scan-t">Analizando {target.host}</b>
-          <span className="ca-scan-s">{phrase}</span>
+      <div className="ca-scan-top">
+        <div className="ca-scan-head">
+          <span className="ca-scan-orb" aria-hidden="true" />
+          <div>
+            <b className="ca-scan-t">Analizando {target.host}</b>
+            <span className="ca-scan-s">{phrase}</span>
+          </div>
         </div>
+        <AgenticLoadingScene compact />
       </div>
 
       <div className="ca-scan-tk" aria-hidden="true">

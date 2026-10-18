@@ -72,3 +72,50 @@ goes through the web audit's SSRF guard (imported).
   that ChatGPT is blocked.
 - Changing any weight moves every result. It needs a founder decision and an
   addendum here, like the GEO Score (ADR 0033).
+
+## Addendum: Fase 2a, the console review (2026-10-17, log §322)
+
+- ~~The console runs the same engine on one product page the customer saves.~~
+  Superseded by the next addendum: the console finds the product page itself.
+  The page must be on the project's domain or a subdomain
+  (`isSameOrSubdomain`), so the fixed-URL list stays on a domain the
+  customer owns.
+- Each review is a row of `agentic_audits` (migration 0043), written
+  `pending` before any request leaves and updated to `completed` or
+  `failed`. Reads go through RLS (owner only); writes only through the
+  server action with the service role, after ownership is checked with the
+  user's client.
+- Limit: 5 reviews per project per 24 h, counted from those rows, failing
+  closed if the count cannot be read.
+- Plan: Pro, Agencia and the Pro trial, read with `resolveSystemPlanId`.
+- The projected score («subes a N») is the engine's own arithmetic with the
+  chosen checks set to pass (`scoreIfChecksPass`). Weights are unchanged.
+
+## Addendum: the console finds the product page itself (2026-10-17, log §323)
+
+- Founder-approved exception to the fixed-URL list, console only: with
+  `discover`, when the page read is not a product page, the engine picks one
+  product page from bytes it already downloaded (public catalogue, the
+  sitemap's `<loc>` entries, the page's JSON-LD or links;
+  `find-product.ts`) and fetches exactly that one page, on the same domain
+  or a subdomain, through the same SSRF guard. It never follows a second
+  link or opens a sitemap index. The free checker keeps the fixed list.
+- The review runs by itself: after each scan, alongside the technical audit
+  in the web audit job (at most once per 20 h per project), and when the
+  screen opens with no review or one older than 48 h. Its worst case fits
+  inside the technical audit's reserve, so the job budget is unchanged.
+- Weights, the score and the five components are unchanged. Without a
+  product page there is still no total.
+
+## Addendum: any selling page, not only product pages (2026-10-18, log §325)
+
+The total now exists for any page that sells something, not only a page
+declaring a `Product`: software, services, courses, bookings, events,
+subscriptions and a safety net of a visible price plus a buy button
+(`classifyOffer`). The component weights do not change. Inside Comprensión,
+Confianza and Compra, checks that do not apply to what is sold (stock,
+identifiers, shipping, quick pay) are left out of the component, the same
+way `unknown` already is, so they never subtract; returns become
+cancellation or refund and «add to cart» becomes a buy, hire or book button
+for non-physical offers. The console still requests at most one extra page:
+a selling page is looked for only when no product page is found.
