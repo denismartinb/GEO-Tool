@@ -141,6 +141,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   GOOGLE_SITE_VERIFICATION: "no se emite la meta de verificación de Search Console",
   BING_SITE_VERIFICATION: "no se emite la meta msvalidate.01 de Bing Webmaster Tools",
   INDEXNOW_KEY: "/indexnow-key.txt responde 404 y `pnpm indexnow:ping` no envía nada",
+  DATAFORSEO_LOGIN: "/admin/seo-diagnostico no puede llamar a DataForSEO",
+  DATAFORSEO_PASSWORD: "/admin/seo-diagnostico no puede llamar a DataForSEO",
   PAGESPEED_API_KEY: "la auditoría no mide la velocidad de la portada: sin tarjeta «Optimización de tu página Home» y la Salud SEO se calcula sin ella",
   INTERNAL_TEST_ACCOUNT_EMAILS:
     "ninguna cuenta queda exenta: todo alta nueva recibe los defaults de producción (sampling y auditoría por IA encendidos)",
@@ -228,6 +230,8 @@ export const envSchema = z.object({
   BING_SITE_VERIFICATION: optionalText,
   INDEXNOW_KEY: optionalText,
   PAGESPEED_API_KEY: optionalText,
+  DATAFORSEO_LOGIN: optionalText,
+  DATAFORSEO_PASSWORD: optionalText,
   INTERNAL_TEST_ACCOUNT_EMAILS: optionalText,
   COMPED_ACCOUNT_EMAILS: optionalText,
   AFFILIATE_CODES: optionalText,

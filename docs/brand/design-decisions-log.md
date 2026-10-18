@@ -26612,3 +26612,46 @@ plan):
 - P20 (el plan cambia entre generaciones): el plan generado se guarda y no
   cambia hasta que se genera otro. Hacer el modelo determinista no es posible
   desde este prompt.
+
+## 338. SEO-DIAG-0: diagnóstico SEO con DataForSEO desde la consola de operador (2026-10-18)
+
+**Por qué.** Denis quiere que «Posicionamiento en Google» ayude de verdad a
+posicionar una web (prototipo v3 en el hilo «Auditoría de keywords SEO»), y
+genscore.es es el primer caso. Antes de construir nada para clientes había
+que medir dos cosas con datos reales: cuánto cuesta cada consulta de
+DataForSEO y qué sale para genscore.es. El entorno de las sesiones bloquea
+`api.dataforseo.com` y las claves sólo viven en Vercel, así que las llamadas
+tienen que salir del servidor.
+
+**Qué se decidió.**
+
+1. Página de operador `/admin/seo-diagnostico`, con `requireOperator()` en la
+   página y en la acción, como `/admin/estudio`. No escribe en la base de
+   datos ni envía nada fuera de DataForSEO.
+2. Un diagnóstico son llamadas en vivo, una por paso, lanzadas desde el
+   navegador:
+   - saldo;
+   - palabras en las que ya sale el dominio (Labs `ranked_keywords`, 200);
+   - competidores orgánicos (Labs `competitors_domain`, 10);
+   - palabras de hasta 3 competidores que él no tiene
+     (`domain_intersection` con `intersections: false`, 100 cada una);
+   - ideas por tema (`keyword_ideas`, hasta 5 temas, 100);
+   - Top 20 de hasta 10 búsquedas (SERP `organic/live/advanced`, con mapa y
+     «Otras preguntas»);
+   - enlaces del dominio y de esos competidores (`backlinks/summary`).
+3. Cada paso enseña lo que costó (el campo `cost` de la respuesta) y si
+   falló. Un dato que no viene sale «—», nunca 0. El resultado entero se
+   descarga en JSON.
+4. Mercado fijo: Google España, en español (`location_code` 2724).
+5. Credenciales en `DATAFORSEO_LOGIN` y `DATAFORSEO_PASSWORD` (el «API login»
+   y el «API password» del panel, no el email ni la contraseña de la web).
+   Nunca se registran en logs.
+
+**Qué queda.** Es la base del cliente de DataForSEO que usará la fase 1, no
+la fase 1. Falta:
+
+- ver si `backlinks/summary` funciona sin la suscripción mensual de
+  Backlinks;
+- fijar topes por plan con el coste medido;
+- la migración y el cron semanal del historial de posiciones, que necesitan
+  su propio Task Intake.
