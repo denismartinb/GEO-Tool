@@ -143,7 +143,7 @@ describe("AgenticAuditScreen", () => {
     expect(html).not.toContain("Página revisada");
   });
 
-  it("first visit: an ambient scene and no fake progress steps (log §324)", () => {
+  it("first visit: an ambient scene and no fake progress steps (log §325)", () => {
     const html = renderToStaticMarkup(<AgenticAuditSearching projectId="p1" />);
     const text = html.replace(/<[^>]+>/g, " ");
     expect(html).toContain("Buscando qué vendes en tu web");
@@ -152,7 +152,7 @@ describe("AgenticAuditScreen", () => {
     expect(text).not.toMatch(/%|paso \d|\d+ de \d+/i);
   });
 
-  it("shows what the page sells and which checks do not apply (log §324)", () => {
+  it("shows what the page sells and which checks do not apply (log §325)", () => {
     const html = render(
       scoreAgenticAudit({ ...INPUT, url: "https://tienda.es/precios", offer: { kind: "software", pricingPage: true }, signals: { ...SIGNALS, buyCta: true } })
     );

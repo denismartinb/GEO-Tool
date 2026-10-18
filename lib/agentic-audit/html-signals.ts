@@ -42,7 +42,7 @@ export type PageSignals = ProductSignals & {
   /** A store platform (Shopify, WooCommerce…). Drives the catalogue probe. */
   platform: string | null;
   /**
-   * Log §324: what the page sells according to its structured data, besides
+   * Log §325: what the page sells according to its structured data, besides
    * a physical product (software, service, course, event, booking).
    */
   offerTypes: AgenticOfferKind[];
@@ -139,7 +139,7 @@ const SERVICE_TYPES = new Set(["service", "professionalservice", "financialprodu
 const COURSE_TYPES = new Set(["course", "courseinstance", "educationaloccupationalprogram"]);
 const OFFER_TYPES = new Set(["offer", "aggregateoffer", "offercatalog"]);
 
-/** Log §324: what the structured data says the page sells, besides a physical product. */
+/** Log §325: what the structured data says the page sells, besides a physical product. */
 function offerTypesFromJsonLd(nodes: JsonNode[]): { kinds: AgenticOfferKind[]; anyOffer: boolean; anyPrice: boolean; recurring: boolean } {
   const kinds = new Set<AgenticOfferKind>();
   for (const node of nodes) {
@@ -259,7 +259,7 @@ export function detectPlatform(html: string): string | null {
   return null;
 }
 
-/** Log §324: selling platforms that are not a store, for software, courses, events and bookings. */
+/** Log §325: selling platforms that are not a store, for software, courses, events and bookings. */
 const PAYMENT_PLATFORMS: Array<[string, RegExp]> = [
   ["Stripe", /js\.stripe\.com|checkout\.stripe\.com|buy\.stripe\.com|billing\.stripe\.com/i],
   ["Paddle", /cdn\.paddle\.com|paddle\.js|checkout\.paddle\.com/i],
@@ -381,7 +381,7 @@ export function isProductPage(signals: Pick<PageSignals, "hasProductData" | "ogP
 /** Pricing and plans pages, in Spanish and English. */
 export const PRICING_PATH = /\/(?:precios?|pricing|prices|planes|plans|tarifas?)\/?$/i;
 
-/** Log §324: paths that usually sell one kind of thing, checked after the structured data. */
+/** Log §325: paths that usually sell one kind of thing, checked after the structured data. */
 export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
   ["booking", /\/(?:reservar?|reservas|cita|citas|pedir-cita|pide-cita|cita-previa|booking|book|reserve|appointment)(?:\/|$)/i],
   ["event", /\/(?:entradas|tickets|eventos?|events?|conciertos?)\/[^/]+|\/(?:entradas|tickets)\/?$/i],
@@ -393,7 +393,7 @@ export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
 export type OfferReading = { kind: AgenticOfferKind; pricingPage: boolean };
 
 /**
- * Log §324: what this page sells, or `null` when it sells nothing we can
+ * Log §325: what this page sells, or `null` when it sells nothing we can
  * see. It detects generously on purpose (founder, 2026-10-18: «mejor detectar
  * de más que de menos»): a wrong page is fixed with «Elegir otra página», an
  * empty screen is not.

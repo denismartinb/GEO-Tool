@@ -12621,7 +12621,7 @@ select.set-field {
   .fcr-btn { width: 100%; }
 }
 
-/* AGENTIC-OFFER-1 (log §324): ambient wait of the agentic audit and checker,
+/* AGENTIC-OFFER-1 (log §325): ambient wait of the agentic audit and checker,
    in the spirit of .gsc-load. Literal colours so it reads the same in the
    console and on /comercio-agentico. Prefixed als-. */
 .als { width: min(100%, 380px); display: flex; flex-direction: column; gap: 12px; margin: 0 auto; font-family: var(--font-body), "Figtree", system-ui, sans-serif; }

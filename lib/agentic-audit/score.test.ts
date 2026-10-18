@@ -142,7 +142,7 @@ describe("componentScore", () => {
   });
 });
 
-describe("checks by what is sold (log §324)", () => {
+describe("checks by what is sold (log §325)", () => {
   const ids = (r: ReturnType<typeof scoreAgenticAudit>, id: string) =>
     r.components.find((c) => c.id === id)!.checks.map((k) => k.id);
 

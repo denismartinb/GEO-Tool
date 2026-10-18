@@ -352,7 +352,7 @@ describe("automatic review (log §323)", () => {
     ).toBe(false);
   });
 
-  it("starts again on every visit while the last review found nothing to sell (log §324)", () => {
+  it("starts again on every visit while the last review found nothing to sell (log §325)", () => {
     const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0, autoToday: 0 };
     const hourAgo = new Date(NOW - 60 * 60 * 1000).toISOString();
     const none = { url: "u", createdAt: hourAgo, result: { found: "none" } as never };

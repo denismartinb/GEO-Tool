@@ -202,7 +202,7 @@ describe("runAgenticAudit with discover (console, log §323)", () => {
     expect(out.result.pageKind).toBe("other");
   });
 
-  it("from a home page that sells software, prefers the pricing page it links to (log §324)", async () => {
+  it("from a home page that sells software, prefers the pricing page it links to (log §325)", async () => {
     const requested: string[] = [];
     const home = `<html><head><script type="application/ld+json">{"@type":"SoftwareApplication","name":"App","offers":{"@type":"Offer","price":"29","priceCurrency":"EUR"}}</script></head>
 <body><a href="/blog/x">Blog</a><a href="/precios">Precios</a><p>${"Texto ".repeat(150)}</p></body></html>`;

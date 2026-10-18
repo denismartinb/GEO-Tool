@@ -24,7 +24,7 @@ import {
  * review kept (migration 0043). No LLM, and nobody pastes a URL: the first
  * visit starts the review if there is none (or it is stale). A review that
  * found nothing to sell is started again on every visit, behind the search
- * scene instead of the old «No hemos encontrado qué vendes» (log §324).
+ * scene instead of the old «No hemos encontrado qué vendes» (log §325).
  *
  * Pro, Agencia and the Pro trial. Starter sees the screen with the invitation
  * to move to Pro. Without the migration the screen says it is not available

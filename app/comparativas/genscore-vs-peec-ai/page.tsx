@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
 import { COMPARATIVAS_BREADCRUMB } from "@/lib/comparativas";
 import { KeyTakeaway, Verdict, CompareTable, Pill, ArticleCta } from "@/components/blog/article";
-import { COMPARISON_ROWS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
+import { COMPARISON_ROWS, FAQ_ITEMS, PEEC_RESEARCH_DATE } from "@/lib/comparativas/genscore-vs-peec-ai";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
@@ -40,6 +41,7 @@ export default function GenscoreVsPeecAiPage() {
         ]}
       />
       {itemListSchema()}
+      <FaqPageSchema items={FAQ_ITEMS} />
       <h1 className="lp-h2">GenScore vs Peec AI</h1>
       <p className="legal-updated" style={{ marginBottom: 32 }}>
         Datos de Peec AI revisados el {PEEC_RESEARCH_DATE} en su propia web. Su página de precios no
@@ -103,6 +105,14 @@ export default function GenscoreVsPeecAiPage() {
           necesitas no es solo una lista priorizada de oportunidades sino contenido ya generado y listo
           para publicar (FAQ, schema, briefs), GenScore está construido específicamente para eso.
         </Verdict>
+
+        <h2>Preguntas frecuentes</h2>
+        {FAQ_ITEMS.map((item) => (
+          <div key={item.question}>
+            <h3>{item.question}</h3>
+            <p>{item.answer}</p>
+          </div>
+        ))}
 
         <h2>Metodología</h2>
         <p>

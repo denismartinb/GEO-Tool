@@ -23,7 +23,7 @@ import { parseSitemap } from "@/lib/web-audit/sitemap";
  * never the page we already have. A wrong guess costs one request and is
  * caught by `classifyOffer` on the fetched page.
  *
- * Log §324: when there is no product page, `findSellCandidate` looks for the
+ * Log §325: when there is no product page, `findSellCandidate` looks for the
  * page where the site sells something else, in the same bytes: a pricing or
  * plans page first, then a service, course, event, booking or subscription
  * page. It is the same single extra request, never a second one.
@@ -149,7 +149,7 @@ function sellRank(pathname: string): number | null {
 }
 
 /**
- * Log §324: the best selling page that is not a product page, from the page's
+ * Log §325: the best selling page that is not a product page, from the page's
  * own links first (what the site puts in front of a visitor) and then the
  * sitemap. Lowest rank wins; ties keep the first seen.
  */

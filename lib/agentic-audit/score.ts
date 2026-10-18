@@ -26,7 +26,7 @@ import { classifyOffer, type OfferReading, type PageSignals } from "@/lib/agenti
  * Comprensión and Compra are about what is sold, and a page that sells
  * nothing is not failing them.
  *
- * Log §324: what is sold decides which checks apply. Stock, identifiers and
+ * Log §325: what is sold decides which checks apply. Stock, identifiers and
  * shipping are for physical products (stock also for tickets); software,
  * services and subscriptions get «cancelación o reembolso» instead of
  * returns, and a buy, hire or book button instead of «añadir al carrito». A

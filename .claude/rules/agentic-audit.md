@@ -14,7 +14,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
 `components/agentic/**` y `app/dashboard/projects/*/agentic-audit/**`. Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323 y §324.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323 y §325.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -37,7 +37,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   literales, sólo el dominio y sus subdominios.
 - **Los pesos son del fundador**: 30/30/20/20 (`COMPONENT_WEIGHTS`), y dentro
   de cada componente los checks suman 100 en un producto físico (en otros tipos,
-  lo que no aplica sale de la cuenta, §324). Cambiarlos mueve todos los
+  lo que no aplica sale de la cuenta, §325). Cambiarlos mueve todos los
   resultados y pide adenda al ADR 0043.
 - **`unknown` no suma ni resta.** Lo que no pudimos medir se queda fuera de
   los dos lados. Un bloqueo a nuestra petición nunca puede leerse como fallo
@@ -80,7 +80,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **Sólo el dominio del proyecto o un subdominio** (`isSameOrSubdomain`).
 - **La fila se escribe antes de salir a la red**, y los límites cuentan
   también las filas fallidas. Si no se puede contar, no se revisa. Son dos
-  (§324): 5 al día las que pide el cliente («Elegir otra página») y 30 al día
+  (§325): 5 al día las que pide el cliente («Elegir otra página») y 30 al día
   las automáticas (`AGENTIC_AUTO_DAILY_LIMIT`). Una automática lleva
   `{ automatic: true }` en `result` desde el insert; una fila sin la marca
   cuenta como del cliente.
@@ -99,7 +99,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   de más de 48 h (`shouldAutoReview`). No hay «Revisar ahora»; «Elegir otra
   página» sí, con su tope de 5 al día.
 - **Si la última revisión no encontró nada, cada visita la relanza**
-  (fundador, 2026-10-18, §324), con la separación de 10 minutos
+  (fundador, 2026-10-18, §325), con la separación de 10 minutos
   (`AGENTIC_SCREEN_MIN_GAP_MS`) y detrás de la escena de búsqueda, nunca
   enseñando el «none» viejo mientras corre. Sin eso la pantalla se quedaba
   bloqueada dos días.
@@ -113,12 +113,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   de `AGENTIC_DISCOVER_BUDGET_MS`.
 - **Sin nada a la venta no hay nota.** `found: "none"` dice «No hemos
   encontrado qué vendes en tu web», y Comprensión y Compra salen «Al
-  vender», nunca como suspenso (§324).
+  vender», nunca como suspenso (§325).
 - **La espera es ambiente.** «Buscando qué vendes en tu web» con
   `AgenticLoadingScene`: ni pasos, ni porcentajes, ni datos de la web, porque
-  nada sabe por dónde va. Quieta con movimiento reducido (§324).
+  nada sabe por dónde va. Quieta con movimiento reducido (§325).
 
-## Lo que vendes (log §324)
+## Lo que vendes (log §325)
 
 - **Detectar de más.** `classifyOffer` reconoce producto físico, software,
   servicio, curso, reserva, entradas, suscripción y la red de seguridad

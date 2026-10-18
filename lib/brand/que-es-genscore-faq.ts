@@ -27,6 +27,16 @@ export const QUE_ES_GENSCORE_FAQ: { question: string; answer: string }[] = [
       "GenScore es la plataforma de Generative Engine Optimization disponible en genscore.es, desarrollada en España y en castellano. El nombre coincide con el de productos de otros sectores sin ninguna relación —bioinformática, salud mental, evaluación de riesgo entre empresas—: si has llegado buscando alguno de ésos, no es éste."
   },
   {
+    question: "¿Cómo puedo conseguir que Gemini mencione mi empresa cuando los usuarios buscan mis servicios?",
+    answer:
+      "Para que Gemini pueda mencionar tu empresa, tu web tiene que estar indexada en Google y tener una página que responda de forma directa a lo que pregunta tu cliente: qué ofreces, para quién y dónde. No hay marcado ni fichero que lo garantice, así que lo que decide es que haya una página clara que pueda leer y citar."
+  },
+  {
+    question: "¿Cómo puedo medir la visibilidad de mi marca en respuestas de ChatGPT y Perplexity?",
+    answer:
+      "Lanzando las preguntas que haría tu cliente a cada motor, múltiples veces y en distintos momentos del tiempo, y viendo en qué porcentaje de respuestas te nombran, en qué posición y qué fuentes citan. GenScore lo hace con ChatGPT, Gemini y Claude, y con Perplexity en los planes Pro y Agencia."
+  },
+  {
     question: "¿Se puede probar sin pagar?",
     answer:
       "Sí. Cada cuenta nueva tiene 7 días de Pro gratis, sin tarjeta, con escaneos reales (no es una demo) en ChatGPT, Gemini, Claude y Perplexity. Si no contratas, no se cobra nada y la cuenta pasa a solo lectura: sigues viendo tus datos, pero no lanzas escaneos nuevos. Además, el comprobador anónimo de ChatGPT es gratuito y no pide registro."

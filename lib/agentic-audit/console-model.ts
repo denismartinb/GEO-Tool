@@ -25,7 +25,7 @@ export function componentStatus(
   result?: Pick<AgenticCheckResult, "pageRead">
 ): { tone: Tone; word: string } {
   if (component.score === null) {
-    // Without a page that sells something (log §323, §324), these two wait for one; they did not fail.
+    // Without a page that sells something (log §323, §325), these two wait for one; they did not fail.
     const needsProduct = result?.pageRead === true && (component.id === "understanding" || component.id === "purchase");
     return { tone: "na", word: needsProduct ? "Al vender" : "Sin medir" };
   }
@@ -110,10 +110,10 @@ const KIND_LABEL: Record<AgenticOfferKind, string> = {
   offer: "Página de venta"
 };
 
-/** Log §324: the chip next to the reviewed page, «Software · página de precios». `null` when the page sells nothing. */
+/** Log §325: the chip next to the reviewed page, «Software · página de precios». `null` when the page sells nothing. */
 export function offerLabel(result: Pick<AgenticCheckResult, "pageKind" | "offerKind" | "pricingPage">): string | null {
   if (result.pageKind !== "product") return null;
-  // Reviews stored before §324 only ever chose physical products.
+  // Reviews stored before §325 only ever chose physical products.
   const label = KIND_LABEL[result.offerKind ?? "physical"];
   return result.pricingPage ? `${label} · página de precios` : label;
 }
@@ -128,7 +128,7 @@ const NOT_APPLICABLE: Partial<Record<AgenticOfferKind, string>> = {
   offer: "Stock, identificadores y envío sólo se piden a un producto físico, así que no cuentan."
 };
 
-/** Log §324: which checks were left out for what this page sells. `null` for a physical product. */
+/** Log §325: which checks were left out for what this page sells. `null` for a physical product. */
 export function notApplicableNote(result: Pick<AgenticCheckResult, "pageKind" | "offerKind">): string | null {
   if (result.pageKind !== "product" || !result.offerKind) return null;
   return NOT_APPLICABLE[result.offerKind] ?? null;

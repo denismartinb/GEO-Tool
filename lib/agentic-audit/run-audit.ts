@@ -22,7 +22,7 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
  * not a product page, `findProductCandidate` picks one product page from the
  * bytes above (catalogue, sitemap, the page itself) or, without one,
  * `findSellCandidate` picks a pricing, service, course, event, booking or
- * subscription page (log §324). That single page is fetched. If it sells
+ * subscription page (log §325). That single page is fetched. If it sells
  * nothing either, no other is tried: the result stays on the first page,
  * which still counts if it sells something itself, else `found: "none"`.
  *

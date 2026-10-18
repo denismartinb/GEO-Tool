@@ -50,6 +50,7 @@ const PRICE_QUOTING_FILES = [
   "app/precios/page.tsx",
   "components/landing/session-ctas.tsx",
   "lib/comparativas/genscore-vs-otterly.ts",
+  "lib/comparativas/genscore-vs-rankscale.ts",
   "lib/comparativas/alternativas-a-otterly.ts",
   "lib/comparativas/mejores-herramientas-geo.ts",
   "lib/comparativas/profound-vs-peec-ai-vs-otterly.ts",

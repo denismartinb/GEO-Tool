@@ -46,7 +46,7 @@ export const AGENTIC_REVIEW_DAILY_LIMIT = 5;
 /**
  * Automatic reviews per project in any 24 hours (after a scan, on opening the
  * screen). Separate from the customer's 5 so that relaunching a review that
- * found nothing never uses up «Elegir otra página» (log §324). Each review is
+ * found nothing never uses up «Elegir otra página» (log §325). Each review is
  * about ten requests to the customer's own site, with no AI cost, and two are
  * never less than AGENTIC_SCREEN_MIN_GAP_MS apart.
  */
@@ -148,7 +148,7 @@ const RECENT_LIMIT = AGENTIC_REVIEW_DAILY_LIMIT + AGENTIC_AUTO_DAILY_LIMIT + 5;
 /**
  * Whether opening the screen should start a review by itself. Pure, so the
  * page and its test agree. A review that found nothing to sell is started
- * again on every visit (founder, 2026-10-18, log §324): otherwise a site that
+ * again on every visit (founder, 2026-10-18, log §325): otherwise a site that
  * changed, or a review made by an older engine, stays stuck on «No hemos
  * encontrado qué vendes» for two days. The 10-minute gap keeps a reload or a
  * second tab from starting another.

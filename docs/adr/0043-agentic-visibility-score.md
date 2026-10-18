@@ -107,7 +107,7 @@ goes through the web audit's SSRF guard (imported).
 - Weights, the score and the five components are unchanged. Without a
   product page there is still no total.
 
-## Addendum: any selling page, not only product pages (2026-10-18, log §324)
+## Addendum: any selling page, not only product pages (2026-10-18, log §325)
 
 The total now exists for any page that sells something, not only a page
 declaring a `Product`: software, services, courses, bookings, events,

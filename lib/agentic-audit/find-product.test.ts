@@ -61,7 +61,7 @@ describe("findProductCandidate", () => {
   });
 });
 
-describe("findSellCandidate (log §324)", () => {
+describe("findSellCandidate (log §325)", () => {
   it("prefers a pricing page over a service page, from the page links first", () => {
     expect(
       findSellCandidate({

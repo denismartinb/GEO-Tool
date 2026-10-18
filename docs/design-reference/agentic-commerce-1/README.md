@@ -52,6 +52,6 @@ producto y la auditoría aparece hecha, como la técnica. Decisiones y
 diferencias: §323.
 
 `fase-2a-lo-que-vendes.html` es el plan v3 (aprobado por el fundador el
-2026-10-18, log §324): la auditoría detecta software, servicios, cursos,
+2026-10-18, log §325): la auditoría detecta software, servicios, cursos,
 reservas, entradas y suscripciones además de fichas de producto, y adapta
 las comprobaciones a cada tipo. Sus datos son de ejemplo, no medidos.

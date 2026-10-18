@@ -167,7 +167,7 @@ function AutoReview({ projectId, onStuck }: { projectId: string; onStuck?: (mess
 
 /**
  * First visit: no review yet, so it starts by itself. The scene is ambient
- * (log §324), like the wait of «Posición en Google»: nothing in it says how
+ * (log §325), like the wait of «Posición en Google»: nothing in it says how
  * far along the review is, because nothing here knows.
  */
 export function AgenticAuditSearching({ projectId }: { projectId: string }) {

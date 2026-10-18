@@ -128,6 +128,7 @@ const PUBLIC_PAGES = new Map([
   ["/glosario", "Glosario GEO — GenScore"],
   ["/comparativas", "Comparativas — GenScore"],
   ["/comparativas/genscore-vs-otterly", "GenScore vs Otterly — GenScore"],
+  ["/comparativas/genscore-vs-rankscale", "GenScore vs RankScale — GenScore"],
   ["/comparativas/genscore-vs-peec-ai", "GenScore vs Peec AI — GenScore"],
   ["/comparativas/genscore-vs-profound", "GenScore vs Profound — GenScore"],
   ["/comparativas/alternativas-a-otterly", "Alternativas a Otterly en 2026 — GenScore"],

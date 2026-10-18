@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { useEffect, useState } from "react";
 
 /**
- * The wait of the agentic audit and checker (log §324), in the spirit of the
+ * The wait of the agentic audit and checker (log §325), in the spirit of the
  * «Posición en Google» loading scene (log §289): an agent's cursor walks a
  * page, lands on the price, the buy button and the structured data, while the
  * kinds of things GenScore looks for light up in turn.

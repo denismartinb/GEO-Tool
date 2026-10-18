@@ -107,7 +107,7 @@ describe("visibleText", () => {
   });
 });
 
-describe("classifyOffer (log §324)", () => {
+describe("classifyOffer (log §325)", () => {
   const ld = (node: object) => `<script type="application/ld+json">${JSON.stringify(node)}</script>`;
   const read = (body: string, url = "https://x.es/", head = "") => classifyOffer(extractPageSignals(page(body, head)), url);
 

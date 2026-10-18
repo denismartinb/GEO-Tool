@@ -61,7 +61,7 @@ export type AgenticFix = {
 };
 
 /**
- * `product` = a page that sells something we could read (log §324): a
+ * `product` = a page that sells something we could read (log §325): a
  * physical product, but also software, a service, a course, a booking, an
  * event, a subscription or any page with a price and a buy button. The name
  * stays for stored reviews; `offerKind` says what it sells.
@@ -69,7 +69,7 @@ export type AgenticFix = {
 export type AgenticPageKind = "product" | "other";
 
 /**
- * What a selling page sells (log §324). `offer` = the safety net: a visible
+ * What a selling page sells (log §325). `offer` = the safety net: a visible
  * price and a buy button, with nothing declared that says more.
  */
 export type AgenticOfferKind =
@@ -127,7 +127,7 @@ export type AgenticCheckResult = {
    */
   found?: AgenticProductFound;
   /**
-   * What the page sells (log §324). Absent on reviews stored before it was
+   * What the page sells (log §325). Absent on reviews stored before it was
    * recorded; with `pageKind: "product"` those were physical products.
    */
   offerKind?: AgenticOfferKind;
