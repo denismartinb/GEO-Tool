@@ -78,9 +78,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **El plan falla cerrado.** `isProOrAbove(resolveSystemPlanId(perfil))`;
   sin perfil no se revisa. Nunca `getPlanForUser`, que cae a Pro.
 - **Sólo el dominio del proyecto o un subdominio** (`isSameOrSubdomain`).
-- **La fila se escribe antes de salir a la red**, y el límite (5 por
-  proyecto cada 24 h) cuenta todas las filas, también las fallidas. Si no se
-  puede contar, no se revisa.
+- **La fila se escribe antes de salir a la red**, y los límites cuentan
+  también las filas fallidas. Si no se puede contar, no se revisa. Son dos
+  (§324): 5 al día las que pide el cliente («Elegir otra página») y 30 al día
+  las automáticas (`AGENTIC_AUTO_DAILY_LIMIT`). Una automática lleva
+  `{ automatic: true }` en `result` desde el insert; una fila sin la marca
+  cuenta como del cliente.
 - **Sin la migración 0043 la pantalla dice que no está disponible todavía**,
   nunca un error ni un 404.
 - **Nada por agente salvo robots.txt.** La consola no afirma cómo responde
@@ -94,7 +97,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   escaneo (`runScheduledAgenticAudit`, desde `audit-job-runner.ts`, como
   mucho cada 20 h por proyecto) y al abrir la pantalla sin revisión o con una
   de más de 48 h (`shouldAutoReview`). No hay «Revisar ahora»; «Elegir otra
-  ficha» sí, y cuenta en el tope de 5 al día como cualquier revisión.
+  página» sí, con su tope de 5 al día.
+- **Si la última revisión no encontró nada, cada visita la relanza**
+  (fundador, 2026-10-18, §324), con la separación de 10 minutos
+  (`AGENTIC_SCREEN_MIN_GAP_MS`) y detrás de la escena de búsqueda, nunca
+  enseñando el «none» viejo mientras corre. Sin eso la pantalla se quedaba
+  bloqueada dos días.
 - **Corre en paralelo con la auditoría técnica y nunca hace fallar el
   trabajo.** Su peor caso (`AGENTIC_STEP_MAX_MS`) cabe en
   `TECHNICAL_RESERVE_MS`; si el motor gana tiempo, ese test manda.

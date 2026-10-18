@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import {
+  AGENTIC_AUTO_DAILY_LIMIT,
   AGENTIC_REVIEW_DAILY_LIMIT,
   AGENTIC_SCREEN_MIN_GAP_MS,
   AGENTIC_SCREEN_STALE_MS,
@@ -61,7 +62,16 @@ function fakeFetch(requested: string[], pages: Record<string, string> = { "/p/za
 type Row = { status: string; created_at: string; result: unknown };
 
 function setup(
-  opts: { owns?: boolean; profile?: unknown; count?: number; countError?: unknown; recent?: Row[]; pages?: Record<string, string> } = {}
+  opts: {
+    owns?: boolean;
+    profile?: unknown;
+    /** Rows of the last 24 hours as the limit query reads them. */
+    today?: Array<{ status: string; created_at: string; automatic?: unknown }>;
+    count?: number;
+    countError?: unknown;
+    recent?: Row[];
+    pages?: Record<string, string>;
+  } = {}
 ) {
   const userCalls: Call[] = [];
   const serviceCalls: Call[] = [];
@@ -76,7 +86,12 @@ function setup(
   const service = client(
     {
       agentic_audits: [
-        { count: opts.count ?? 0, error: opts.countError ?? null },
+        {
+          data:
+            opts.today ??
+            Array.from({ length: opts.count ?? 0 }, () => ({ status: "completed", created_at: "2026-10-17T08:00:00Z", automatic: null })),
+          error: opts.countError ?? null
+        },
         { data: opts.recent ?? [], error: null },
         { data: { id: "row1" }, error: null },
         { error: null }
@@ -172,6 +187,28 @@ describe("runConsoleAgenticAuditCore (log §322)", () => {
     expect(s.requested).toEqual([]);
   });
 
+  it("does not count automatic reviews against the customer's limit, and marks its own rows", async () => {
+    const auto = Array.from({ length: 12 }, () => ({ status: "completed", created_at: "2026-10-17T08:00:00Z", automatic: true }));
+    const manual = setup({ today: auto });
+    expect(await runConsoleAgenticAuditCore({ projectId: PROJECT, url: "tienda.es/p/zapatilla" }, manual.deps)).toEqual({ success: true });
+    expect(manual.serviceCalls.find(([m]) => m === "insert")?.[1][0]).not.toHaveProperty("result");
+
+    const automatic = setup({ today: Array.from({ length: AGENTIC_REVIEW_DAILY_LIMIT }, () => ({ status: "failed", created_at: "2026-10-17T08:00:00Z" })) });
+    expect(await runConsoleAgenticAuditCore({ projectId: PROJECT }, automatic.deps)).toEqual({ success: true });
+    expect(automatic.serviceCalls.find(([m]) => m === "insert")?.[1][0]).toMatchObject({ result: { automatic: true } });
+    const update = automatic.serviceCalls.find(([m]) => m === "update")?.[1][0] as { result: { automatic: boolean; found: string } };
+    expect(update.result).toMatchObject({ automatic: true, found: "home" });
+  });
+
+  it("stops automatic reviews at their own daily limit, without writing or fetching", async () => {
+    const s = setup({
+      today: Array.from({ length: AGENTIC_AUTO_DAILY_LIMIT }, () => ({ status: "completed", created_at: "2026-10-17T06:00:00Z", automatic: true }))
+    });
+    expect(await runConsoleAgenticAuditCore({ projectId: PROJECT }, s.deps)).toEqual({ success: true, skipped: "recent" });
+    expect(s.serviceCalls.some(([m]) => m === "insert")).toBe(false);
+    expect(s.requested).toEqual([]);
+  });
+
   it("says not available while migration 0043 is not applied", async () => {
     const s = setup({ countError: { code: "42P01" } });
     const result = await runConsoleAgenticAuditCore({ projectId: PROJECT, url: "tienda.es/p/zapatilla" }, s.deps);
@@ -190,9 +227,10 @@ describe("readAgenticAudits", () => {
           { data: { url: "https://tienda.es/p/a", created_at: "2026-10-17T09:00:00Z", result: { score: 54 } }, error: null },
           {
             data: [
-              { status: "failed", created_at: "2026-10-17T09:30:00Z" },
-              { status: "completed", created_at: "2026-10-17T09:00:00Z" },
-              { status: "completed", created_at: "2026-10-15T09:00:00Z" }
+              { status: "failed", created_at: "2026-10-17T09:30:00Z", automatic: null },
+              { status: "completed", created_at: "2026-10-17T09:00:00Z", automatic: null },
+              { status: "completed", created_at: "2026-10-17T08:00:00Z", automatic: true },
+              { status: "completed", created_at: "2026-10-15T09:00:00Z", automatic: null }
             ],
             error: null
           }
@@ -205,7 +243,8 @@ describe("readAgenticAudits", () => {
       available: true,
       latest: { url: "https://tienda.es/p/a", createdAt: "2026-10-17T09:00:00Z", result: { score: 54 } },
       lastAttempt: { createdAt: "2026-10-17T09:30:00Z", status: "failed" },
-      usedToday: 2
+      usedToday: 2,
+      autoToday: 1
     });
     expect(calls).toContainEqual(["eq", ["owner_user_id", "u1"]]);
     expect(calls).toContainEqual(["eq", ["project_id", PROJECT]]);
@@ -297,17 +336,32 @@ describe("automatic review (log §323)", () => {
   });
 
   it("starts from the screen only when there is no review, or it is stale, and never twice in a row", () => {
-    const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0 };
+    const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0, autoToday: 0 };
     expect(shouldAutoReview(base, NOW)).toBe(true);
     const old = new Date(NOW - AGENTIC_SCREEN_STALE_MS - 1).toISOString();
     const latest = { url: "u", createdAt: old, result: {} as never };
     expect(shouldAutoReview({ ...base, latest, lastAttempt: { createdAt: old, status: "completed" } }, NOW)).toBe(true);
     const recent = new Date(NOW - AGENTIC_SCREEN_MIN_GAP_MS + 1000).toISOString();
     expect(shouldAutoReview({ ...base, lastAttempt: { createdAt: recent, status: "failed" } }, NOW)).toBe(false);
-    expect(shouldAutoReview({ ...base, usedToday: AGENTIC_REVIEW_DAILY_LIMIT }, NOW)).toBe(false);
+    // The customer's own picks never block the automatic review; its own limit does.
+    expect(shouldAutoReview({ ...base, usedToday: AGENTIC_REVIEW_DAILY_LIMIT }, NOW)).toBe(true);
+    expect(shouldAutoReview({ ...base, autoToday: AGENTIC_AUTO_DAILY_LIMIT }, NOW)).toBe(false);
     const yesterday = new Date(NOW - 20 * 60 * 60 * 1000).toISOString();
     expect(
       shouldAutoReview({ ...base, latest: { ...latest, createdAt: yesterday }, lastAttempt: { createdAt: yesterday, status: "completed" } }, NOW)
     ).toBe(false);
+  });
+
+  it("starts again on every visit while the last review found nothing to sell (log §324)", () => {
+    const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0, autoToday: 0 };
+    const hourAgo = new Date(NOW - 60 * 60 * 1000).toISOString();
+    const none = { url: "u", createdAt: hourAgo, result: { found: "none" } as never };
+    expect(shouldAutoReview({ ...base, latest: none, lastAttempt: { createdAt: hourAgo, status: "completed" } }, NOW)).toBe(true);
+    const minutesAgo = new Date(NOW - 2 * 60 * 1000).toISOString();
+    expect(
+      shouldAutoReview({ ...base, latest: { ...none, createdAt: minutesAgo }, lastAttempt: { createdAt: minutesAgo, status: "completed" } }, NOW)
+    ).toBe(false);
+    const found = { ...none, result: { found: "home" } as never };
+    expect(shouldAutoReview({ ...base, latest: found, lastAttempt: { createdAt: hourAgo, status: "completed" } }, NOW)).toBe(false);
   });
 });

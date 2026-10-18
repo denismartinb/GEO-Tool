@@ -26221,6 +26221,28 @@ el mismo mensaje, una animación de espera «como en Search Console».
 mejor (un artículo con un precio y «Empieza» acaba como `offer`). Lo corrige
 «Elegir otra página»; una pantalla vacía no tenía salida mejor.
 
+**Ajuste del fundador (2026-10-18): «no hemos encontrado qué vendes» se
+relanza en cada visita.** En la vista previa, genscore.es seguía mostrando el
+«none» que el motor viejo guardó antes del despliegue, y con la regla de 48 h
+se iba a quedar así dos días. Ahora `shouldAutoReview` relanza la revisión
+cada vez que se abre la pantalla si la última no encontró nada, con la misma
+separación de 10 minutos para que una recarga o dos pestañas no la repitan, y
+la página enseña la escena de búsqueda en vez del «none» viejo mientras
+tanto. Para que esos relanzamientos no gasten las 5 revisiones del cliente,
+las automáticas (tras escanear y al abrir la pantalla) tienen su propio tope,
+`AGENTIC_AUTO_DAILY_LIMIT` (30 al día por proyecto), y se marcan en
+`result` desde que se escribe la fila (`{ automatic: true }`, también si
+falla), sin columna nueva ni migración. Una fila sin la marca cuenta como del
+cliente, que es la dirección segura.
+
+*Premisa (regla de cierre de fase 4).* Esto cambia un camino de recuperación:
+antes, salir de «none» dependía del siguiente escaneo o de «Elegir otra
+página». Ahora la salida es la propia visita. La sostiene que la revisión
+automática tenga cupo (30 al día, contados en `readAgenticAudits`); lo
+verifica `console-audit.test.ts`. Si el cupo se agota, la pantalla vuelve a
+enseñar el último «none» y la única salida es «Elegir otra página» (cupo
+propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
+
 **Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.

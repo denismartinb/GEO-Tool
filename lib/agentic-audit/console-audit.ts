@@ -41,8 +41,16 @@ import type { createServiceClient } from "@/lib/supabase/service";
 const TABLE = "agentic_audits";
 const LOG_PREFIX = "[agentic-audit:console]";
 
-/** Reviews per project in any 24 hours. Each one is about ten requests to the store, with no AI cost. */
+/** Reviews the customer asks for («Elegir otra página») per project in any 24 hours. */
 export const AGENTIC_REVIEW_DAILY_LIMIT = 5;
+/**
+ * Automatic reviews per project in any 24 hours (after a scan, on opening the
+ * screen). Separate from the customer's 5 so that relaunching a review that
+ * found nothing never uses up «Elegir otra página» (log §324). Each review is
+ * about ten requests to the customer's own site, with no AI cost, and two are
+ * never less than AGENTIC_SCREEN_MIN_GAP_MS apart.
+ */
+export const AGENTIC_AUTO_DAILY_LIMIT = 30;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 function isMissingTable(error: { code?: string } | null): boolean {
@@ -58,8 +66,22 @@ export type AgenticAuditsRead =
       latest: StoredAgenticAudit | null;
       /** The newest row of any status: a review in flight or one that failed is newer than `latest`. */
       lastAttempt: { createdAt: string; status: "pending" | "completed" | "failed" } | null;
+      /** Reviews the customer asked for in the last 24 hours (failed and in flight included). */
       usedToday: number;
+      /** Automatic reviews in the last 24 hours. */
+      autoToday: number;
     };
+
+/**
+ * An automatic review is marked in `result` from the moment its row is
+ * written (`{ automatic: true }` while pending, kept on the completed result
+ * and on a failed row), so the two limits can be told apart without a new
+ * column. Only completed rows are ever read as a result. A row without the
+ * mark counts as the customer's, which is the safe direction.
+ */
+type RecentRow = { status: "pending" | "completed" | "failed"; created_at: string; automatic: unknown };
+const RECENT_COLUMNS = "status, created_at, automatic:result->automatic";
+const isAutomaticRow = (r: RecentRow) => r.automatic === true;
 
 /** The screen starts a review by itself when there is none, or the last one is older than this. */
 export const AGENTIC_SCREEN_STALE_MS = 48 * 60 * 60 * 1000;
@@ -97,11 +119,11 @@ export async function readAgenticAudits(
       .maybeSingle(),
     supabase
       .from(TABLE)
-      .select("status, created_at")
+      .select(RECENT_COLUMNS)
       .eq("project_id", projectId)
       .eq("owner_user_id", ownerUserId)
       .order("created_at", { ascending: false })
-      .limit(50)
+      .limit(RECENT_LIMIT)
   ]);
   const error = latestRes.error ?? recentRes.error;
   if (error) {
@@ -109,20 +131,33 @@ export async function readAgenticAudits(
     return { available: false };
   }
   const row = latestRes.data as { url: string; created_at: string; result: AgenticCheckResult | null } | null;
-  const recent = (recentRes.data ?? []) as Array<{ status: "pending" | "completed" | "failed"; created_at: string }>;
+  const recent = (recentRes.data ?? []) as RecentRow[];
+  const today = recent.filter((r) => r.created_at >= since);
   return {
     available: true,
     latest: row?.result ? { url: row.url, createdAt: row.created_at, result: row.result } : null,
     lastAttempt: recent[0] ? { createdAt: recent[0].created_at, status: recent[0].status } : null,
-    usedToday: recent.filter((r) => r.created_at >= since).length
+    usedToday: today.filter((r) => !isAutomaticRow(r)).length,
+    autoToday: today.filter(isAutomaticRow).length
   };
 }
 
-/** Whether opening the screen should start a review by itself. Pure, so the page and its test agree. */
+/** Enough rows to cover both limits in 24 hours. */
+const RECENT_LIMIT = AGENTIC_REVIEW_DAILY_LIMIT + AGENTIC_AUTO_DAILY_LIMIT + 5;
+
+/**
+ * Whether opening the screen should start a review by itself. Pure, so the
+ * page and its test agree. A review that found nothing to sell is started
+ * again on every visit (founder, 2026-10-18, log §324): otherwise a site that
+ * changed, or a review made by an older engine, stays stuck on «No hemos
+ * encontrado qué vendes» for two days. The 10-minute gap keeps a reload or a
+ * second tab from starting another.
+ */
 export function shouldAutoReview(read: Extract<AgenticAuditsRead, { available: true }>, now: number): boolean {
-  if (read.usedToday >= AGENTIC_REVIEW_DAILY_LIMIT) return false;
+  if (read.autoToday >= AGENTIC_AUTO_DAILY_LIMIT) return false;
   if (read.lastAttempt && now - Date.parse(read.lastAttempt.createdAt) < AGENTIC_SCREEN_MIN_GAP_MS) return false;
-  return read.latest === null || now - Date.parse(read.latest.createdAt) >= AGENTIC_SCREEN_STALE_MS;
+  if (read.latest === null || read.latest.result.found === "none") return true;
+  return now - Date.parse(read.latest.createdAt) >= AGENTIC_SCREEN_STALE_MS;
 }
 
 export const runConsoleAgenticAuditInputSchema = z.object({
@@ -191,14 +226,17 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
     manualTarget = target.url;
   }
 
+  const automatic = args.url === null;
   const since = new Date(args.now() - DAY_MS).toISOString();
   const [countRes, recentRes] = await Promise.all([
     service
       .from(TABLE)
-      .select("id", { count: "exact", head: true })
+      .select(RECENT_COLUMNS)
       .eq("project_id", projectId)
       .eq("owner_user_id", ownerUserId)
-      .gte("created_at", since),
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(RECENT_LIMIT),
     service
       .from(TABLE)
       .select("status, created_at, result")
@@ -216,7 +254,12 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
   if (args.minGapMs !== null && recent[0] && args.now() - Date.parse(recent[0].created_at) < args.minGapMs) {
     return { success: true, skipped: "recent" };
   }
-  if ((countRes.count ?? 0) >= AGENTIC_REVIEW_DAILY_LIMIT) return fail("limit_reached");
+  const today = (countRes.data ?? []) as RecentRow[];
+  if (automatic) {
+    if (today.filter(isAutomaticRow).length >= AGENTIC_AUTO_DAILY_LIMIT) return { success: true, skipped: "recent" };
+  } else if (today.filter((r) => !isAutomaticRow(r)).length >= AGENTIC_REVIEW_DAILY_LIMIT) {
+    return fail("limit_reached");
+  }
 
   // The same product page while it still is one: the last review that found a product.
   const previous = recent.find((r) => r.status === "completed" && r.result && r.result.found !== "none")?.result ?? null;
@@ -227,7 +270,13 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
 
   const { data: inserted, error: insertError } = await service
     .from(TABLE)
-    .insert({ project_id: projectId, owner_user_id: ownerUserId, url: startUrl, status: "pending" })
+    .insert({
+      project_id: projectId,
+      owner_user_id: ownerUserId,
+      url: startUrl,
+      status: "pending",
+      ...(automatic ? { result: { automatic: true } } : {})
+    })
     .select("id")
     .single();
   if (insertError || !inserted) {
@@ -254,7 +303,13 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
     .from(TABLE)
     .update(
       outcome.status === "completed"
-        ? { status: "completed", url: outcome.result.url, score: outcome.result.score, result: outcome.result, error_category: null }
+        ? {
+            status: "completed",
+            url: outcome.result.url,
+            score: outcome.result.score,
+            result: automatic ? { ...outcome.result, automatic: true } : outcome.result,
+            error_category: null
+          }
         : { status: "failed", error_category: outcome.error }
     )
     .eq("id", (inserted as { id: string }).id)

@@ -22,7 +22,9 @@ import {
  * The same engine as the free checker on /comercio-agentico, run by itself
  * after each scan on a product page it finds in the store, with the last
  * review kept (migration 0043). No LLM, and nobody pastes a URL: the first
- * visit starts the review if there is none (or it is stale).
+ * visit starts the review if there is none (or it is stale). A review that
+ * found nothing to sell is started again on every visit, behind the search
+ * scene instead of the old «No hemos encontrado qué vendes» (log §324).
  *
  * Pro, Agencia and the Pro trial. Starter sees the screen with the invitation
  * to move to Pro. Without the migration the screen says it is not available
@@ -110,7 +112,7 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
                 <Link href="/comercio-agentico">la página de comercio agéntico</Link>.
               </p>
             </div>
-          ) : audits.latest ? (
+          ) : audits.latest && !(autoReview && audits.latest.result.found === "none") ? (
             <AgenticAuditScreen
               projectId={projectId}
               reviewedLabel={reviewedLabel(audits.latest.createdAt, new Date(now))}
