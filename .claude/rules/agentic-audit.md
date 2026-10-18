@@ -16,7 +16,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `components/agentic/**`, `app/dashboard/projects/*/agentic-audit/**` y
 `app/dashboard/projects/*/agentic-visibility/**`. Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325 y §330.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325 y §332.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -60,7 +60,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **La landing dice que Pro ya tiene la auditoría agéntica** desde la Fase
   2a (log §322): «La auditoría agéntica ya está en la consola de Pro» y la
   tarjeta lleva «Nuevo». Lo que aún no existe (varias fichas a la vez) lleva
-  «Próximamente»; «Preguntas de compra» lo perdió al llegar (§330). No se
+  «Próximamente»; «Preguntas de compra» lo perdió al llegar (§332). No se
   anuncia nada de 2b–2c hasta que esté en producción.
 - **La animación del comprobador sólo escenifica el ritmo** (log §318).
   Antes de la respuesta, sólo las URL que el servidor pide de verdad
@@ -135,7 +135,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **`pageKind: "product"` significa «vende algo».** No se renombra: las
   revisiones guardadas sin `offerKind` se leen como producto físico.
 
-## Preguntas de compra y Visibilidad en agentes (log §330)
+## Preguntas de compra y Visibilidad en agentes (log §332)
 
 - **Una pregunta de compra se reconoce con una regla fija, sin IA**
   (`classifyPurchaseQuestion`). Dónde comprar o contratar, precio, o qué

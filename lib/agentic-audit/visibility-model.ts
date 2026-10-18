@@ -4,7 +4,7 @@ import type { PurchaseQuestionsReport } from "@/lib/agentic-audit/purchase-quest
 import { formatShare } from "@/lib/report/report-model";
 
 /**
- * «Visibilidad en agentes» (AGENTIC-COMMERCE-1 Fase 2d, log §330): the path
+ * «Visibilidad en agentes» (AGENTIC-COMMERCE-1 Fase 2d, log §332): the path
  * an agent takes through the site. The first step comes from the purchase
  * questions, the other four from the stored agentic review. Pure, so Vitest
  * covers every line the screen prints.
@@ -20,7 +20,7 @@ const STEPS: Array<{ id: AgenticComponentId; title: string }> = [
   { id: "purchase", title: "Compra" }
 ];
 
-/** The first step: the share, with no colour, because nothing says what share is good (log §330). */
+/** The first step: the share, with no colour, because nothing says what share is good (log §332). */
 export function findLine(purchase: PurchaseQuestionsReport | null): string {
   if (!purchase) return "Aparecerá tras tu primer escaneo";
   if (purchase.figures) return `Te nombran en el ${formatShare(purchase.figures.named)} de las preguntas de compra`;

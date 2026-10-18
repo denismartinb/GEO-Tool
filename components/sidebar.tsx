@@ -60,7 +60,7 @@ const globalLinks: ProjectLink[] = [
 ];
 
 // AGENTIC-COMMERCE-1 Fase 2a (log §322): «Comercio agéntico», its own block
-// with «Nuevo». Fase 2d (log §330): one entry for «Visibilidad en agentes» and
+// with «Nuevo». Fase 2d (log §332): one entry for «Visibilidad en agentes» and
 // «Auditoría agéntica», joined by tabs on both screens, because the mobile
 // drawer has no room for another row (log §301).
 const agenticLinks: ProjectLink[] = [

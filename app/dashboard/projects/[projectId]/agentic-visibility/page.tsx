@@ -13,7 +13,7 @@ import { ScoreGauge } from "../agentic-audit/_components/agentic-audit-screen";
 import { PurchaseQuestionsCard } from "./_components/purchase-questions-card";
 
 /**
- * «Visibilidad en agentes»: AGENTIC-COMMERCE-1 Fase 2d (log §330), design in
+ * «Visibilidad en agentes»: AGENTIC-COMMERCE-1 Fase 2d (log §332), design in
  * docs/design-reference/agentic-commerce-1/fase-2d.html. The agentic review
  * (Fase 2a) summed up as the path an agent takes, plus «Preguntas de compra»
  * from the latest scan. Reads only: the review itself runs on «Auditoría

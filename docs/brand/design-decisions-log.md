@@ -26312,7 +26312,7 @@ ocultando columnas en móvil.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 330. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
+## 332. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
 
 **Qué se decidió.** El fundador aprobó el plan de la 2d («Ok», diseño en
 `docs/design-reference/agentic-commerce-1/fase-2d.html`). Llega la segunda

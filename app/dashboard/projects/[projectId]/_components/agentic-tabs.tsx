@@ -2,7 +2,7 @@ import Link from "next/link";
 
 /**
  * «Visibilidad en agentes» and «Auditoría agéntica» share one menu entry
- * (AGENTIC-COMMERCE-1 Fase 2d, log §330): the mobile drawer has no room for
+ * (AGENTIC-COMMERCE-1 Fase 2d, log §332): the mobile drawer has no room for
  * another row (log §301), so these two tabs switch between the screens.
  */
 export function AgenticTabs({ projectId, current }: { projectId: string; current: "visibility" | "audit" }) {

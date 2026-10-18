@@ -22,7 +22,7 @@ export type PurchaseQuestionsLoad =
   | { state: "ready"; report: PurchaseQuestionsReport; scannedAt: string };
 
 /**
- * «Preguntas de compra» (log §330) of the project's latest completed scan,
+ * «Preguntas de compra» (log §332) of the project's latest completed scan,
  * read with the user's own client (RLS). One scan, so the per-question table
  * and the three figures always describe the same answers.
  */

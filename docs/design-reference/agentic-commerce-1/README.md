@@ -61,4 +61,4 @@ las comprobaciones a cada tipo. Sus datos son de ejemplo, no medidos.
 `fase-2d.html` es el plan que aprobó el fundador («Ok»), con la maqueta de
 «Visibilidad en agentes» en móvil y escritorio. Cómo se reconoce una
 pregunta de compra, qué cifras salen y qué cambia respecto al prototipo:
-`docs/brand/design-decisions-log.md` §330. Sus datos son de ejemplo.
+`docs/brand/design-decisions-log.md` §332. Sus datos son de ejemplo.

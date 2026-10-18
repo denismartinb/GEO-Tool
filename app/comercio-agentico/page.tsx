@@ -25,7 +25,7 @@ const PAGE_PATH = "/comercio-agentico";
  * Copy that differs from the prototype, on purpose: since Fase 2a (log §322)
  * the «Auditoría agéntica» card says it is in the Pro console, and describes
  * only what that screen reviews (one saved product page, no checkout walk).
- * «Preguntas de compra» is in the Pro console since Fase 2d (log §330). The
+ * «Preguntas de compra» is in the Pro console since Fase 2d (log §332). The
  * free result has no Pro gate.
  */
 export const metadata: Metadata = contentMetadata({

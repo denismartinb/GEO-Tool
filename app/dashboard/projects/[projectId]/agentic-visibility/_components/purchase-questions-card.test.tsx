@@ -4,7 +4,7 @@ import { buildPurchaseQuestions, type PurchaseAnswer } from "@/lib/agentic-audit
 import { PurchaseQuestionsCard } from "./purchase-questions-card";
 
 /**
- * AGENTIC-COMMERCE-1 Fase 2d (log §330): render tests of «Preguntas de compra».
+ * AGENTIC-COMMERCE-1 Fase 2d (log §332): render tests of «Preguntas de compra».
  * They pin content (figures only above the floor, the rule sentence, the
  * engine that does not search), never classes or looks.
  */

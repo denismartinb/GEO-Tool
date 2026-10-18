@@ -2037,7 +2037,7 @@
 .ag-fix b { font-size: 14px; color: var(--ink); }
 .ag-fix span { color: var(--ink-3); }
 
-/* Visibilidad en agentes — AGENTIC-COMMERCE-1 Fase 2d (log §330), design in
+/* Visibilidad en agentes — AGENTIC-COMMERCE-1 Fase 2d (log §332), design in
    docs/design-reference/agentic-commerce-1/fase-2d.html. */
 .ag-tabs { display: flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface-sunk); align-self: flex-start; max-width: 100%; overflow-x: auto; }
 .ag-tab { font-size: 13px; font-weight: 650; color: var(--ink-2); padding: 7px 12px; border-radius: 9px; text-decoration: none; white-space: nowrap; }

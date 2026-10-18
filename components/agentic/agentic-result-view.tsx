@@ -23,7 +23,7 @@ import type {
  * teaser below says what the console audit adds (what is still to come
  * carries «Próximamente»), and the closing CTA invites a free Pro trial and
  * says the agentic audit is already in the Pro console (log §318, §322).
- * «Preguntas de compra» lost «Próximamente» when it shipped (log §330).
+ * «Preguntas de compra» lost «Próximamente» when it shipped (log §332).
  */
 
 const CONSOLE_FEATURES: Array<{ title: string; text: string; rows: number; soon?: boolean }> = [

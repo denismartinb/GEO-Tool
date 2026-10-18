@@ -3,7 +3,7 @@ import { getEngineMeta, normalizeProvider } from "@/lib/scan/engine-meta";
 import { GROUNDED_PROVIDERS } from "@/lib/scoring/run-scoring";
 
 /**
- * AGENTIC-COMMERCE-1 Fase 2d (log §330): «Preguntas de compra». Of the
+ * AGENTIC-COMMERCE-1 Fase 2d (log §332): «Preguntas de compra». Of the
  * questions a project already scans, the ones asked by someone about to buy,
  * and what the engines do with them: name the brand, cite its site, or send
  * the buyer to a marketplace. Pure and rule-based: no LLM, no extra call, the

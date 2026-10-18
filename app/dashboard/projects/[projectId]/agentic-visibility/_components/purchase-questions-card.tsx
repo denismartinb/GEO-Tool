@@ -11,7 +11,7 @@ import { formatShare } from "@/lib/report/report-model";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 
 /**
- * «Preguntas de compra» (AGENTIC-COMMERCE-1 Fase 2d, log §330), design in
+ * «Preguntas de compra» (AGENTIC-COMMERCE-1 Fase 2d, log §332), design in
  * docs/design-reference/agentic-commerce-1/fase-2d.html. Every figure comes
  * from `buildPurchaseQuestions`; below the sample floor the questions show
  * but no percentage does.
