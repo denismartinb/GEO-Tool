@@ -775,6 +775,19 @@ log §306).
   nombrada.** Sólo la familia «Otras webs».
 - **La antigüedad («Abierta N escaneos») no sale en tarjetas `third_party`.**
 
+## Etiquetas coherentes (RECS-LABELS-1, log §336)
+
+- **Lo que depende de un tercero nunca es «Prioridad alta» ni «Victoria
+  rápida».** `priorityLevel` e `isQuickWin` excluyen el control
+  `third_party`, como `planScore` ya lo baja en el plan. Matiza la regla de
+  «Alta prioridad es un único criterio»: el criterio sigue siendo uno, con
+  ese techo.
+- **Un impacto sin cifra dice «sin cifra calculable».** Nunca sólo la
+  palabra al lado de tarjetas con «+N pt».
+- **El primer paso de la tarjeta y el de su plan son la misma acción.**
+- **Una comunidad se nombra por lo que es** (`communityKind`): vídeo,
+  publicación o hilo.
+
 ## Evidencia legible (RECS-MINORS-1, log §337)
 
 - **Una cita se pinta con `plainSnippet`**, sin marcas de Markdown. Lo

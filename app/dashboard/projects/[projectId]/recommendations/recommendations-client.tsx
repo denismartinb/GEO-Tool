@@ -424,13 +424,20 @@ function priorityLevel(rec: Recommendation): "high" | "med" | "low" {
   // A confirmed surfacing gap (RECS-COVERAGE-OVERLAY-1) bumps the effective
   // confidence used everywhere, since the assumption became verified evidence.
   const confidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
-  if (rec.impact === "high" && confidence !== "low") return "high";
+  // RECS-LABELS-1 (log §336): what depends on a third party is never «Prioridad
+  // alta», the same ceiling `planScore` already applies to its place (P38).
+  if (rec.impact === "high" && confidence !== "low" && !dependsOnThirdParty(rec)) return "high";
   if (rec.impact === "high" || rec.impact === "medium") return "med";
   return "low";
 }
 
 function isQuickWin(rec: Recommendation): boolean {
-  return rec.impact === "high" && rec.effort === "low";
+  // RECS-LABELS-1 (log §336): nothing that waits on someone else is quick.
+  return rec.impact === "high" && rec.effort === "low" && !dependsOnThirdParty(rec);
+}
+
+function dependsOnThirdParty(rec: Recommendation): boolean {
+  return deliverableForType(rec.recommendation_type).control === "third_party";
 }
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
@@ -1120,9 +1127,15 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
                 <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type, ev.query_shape)}</div>
               </>
             ) : (
-              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
-                {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
-              </div>
+              <>
+                <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                  {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
+                </div>
+                {/* RECS-LABELS-1 (log §336): next to cards with «+N pt» a bare
+                    word read as the same scale (P13). It says why it has no
+                    figure. */}
+                <div className="rec2-pts-l">sin cifra calculable</div>
+              </>
             )}
           </div>
           <button
