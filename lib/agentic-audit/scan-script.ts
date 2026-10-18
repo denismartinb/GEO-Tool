@@ -153,7 +153,7 @@ function resultLanes(result: AgenticCheckResult): ScanLane[] {
         state: c.state
       }));
       if (items.length === 0) {
-        note = result.pageRead ? "Se mide en una ficha de producto" : "Tu web no nos dejó leer la página";
+        note = result.pageRead ? "Se mide en una página donde vendas algo" : "Tu web no nos dejó leer la página";
       }
     }
     return { ...lane, items, note };
@@ -214,7 +214,7 @@ function resultLines(target: ScanTarget, result: AgenticCheckResult): ScanLine[]
     if (f?.availability) understanding.push(["info", `stock · ${f.availability}`]);
     understanding.push(...checkLines(componentItems(result, "understanding")));
   } else if (result.pageRead) {
-    understanding.push(["info", "leyendo JSON-LD · microdatos · Open Graph"], ["info", "esta página no es una ficha de producto"]);
+    understanding.push(["info", "leyendo JSON-LD · microdatos · Open Graph"], ["info", "en esta página no vemos nada a la venta"]);
   } else {
     understanding.push(["bad", "sin la página no se puede leer el producto"]);
   }
@@ -229,7 +229,7 @@ function resultLines(target: ScanTarget, result: AgenticCheckResult): ScanLine[]
   const purchase: Array<[ScanTone, string]> = [];
   if (result.platform) purchase.push(["info", `plataforma · ${result.platform}`]);
   purchase.push(...checkLines(componentItems(result, "purchase")));
-  if (purchase.length === 0) purchase.push(["info", "el camino al pago se mide en una ficha de producto"]);
+  if (purchase.length === 0) purchase.push(["info", "el camino al pago se mide donde vendes algo"]);
   lines.push(...spread(purchase, 7.35, 8.7), { at: 8.8, tone: "ok", text: "✓ Compra" });
 
   const interop: Array<[ScanTone, string]> = [];

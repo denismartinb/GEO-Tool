@@ -3,6 +3,10 @@ import "server-only";
 import { auditDomainCoverageCore } from "@/lib/recommendations/domain-coverage";
 import { runTechnicalAuditCore, TECH_AUDIT_TOTAL_BUDGET_MS } from "@/lib/web-audit/technical-audit";
 import { REGRESSION_ALERTS_BUDGET_MS } from "@/lib/web-audit/regression-alerts";
+import { resolveAgentTokenAccess } from "@/lib/web-audit/robots";
+import { fetchOnDomain } from "@/lib/agentic-audit/fetch";
+import { runScheduledAgenticAudit } from "@/lib/agentic-audit/console-audit";
+import { AGENTIC_DISCOVER_BUDGET_MS } from "@/lib/agentic-audit/run-audit";
 import { isTerminalAuditFailure, type AuditFailureReason } from "@/lib/web-audit/audit-failure";
 import {
   nextAuditJobState,
@@ -162,7 +166,15 @@ const MIN_JOB_BUDGET_MS = 34_000;
  * and a job claimed with that little simply never starts the technical audit
  * — the reserve check below parks it as a continuation instead.
  */
-const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + REGRESSION_ALERTS_BUDGET_MS + 2_000;
+export const TECHNICAL_RESERVE_MS = TECH_AUDIT_TOTAL_BUDGET_MS + REGRESSION_ALERTS_BUDGET_MS + 2_000;
+
+/**
+ * Worst case of the agentic review that runs alongside the technical audit
+ * (log §323): the engine's budget plus its reads and writes of
+ * `agentic_audits`. Must stay within TECHNICAL_RESERVE_MS, which is why the
+ * review adds no reserve and leaves MIN_JOB_BUDGET_MS alone.
+ */
+export const AGENTIC_STEP_MAX_MS = AGENTIC_DISCOVER_BUDGET_MS + 4_000;
 
 /**
  * Re-exported from `audit-job.ts`, where it moved in WEB-AUDIT-DRIVE-1 so the
@@ -755,12 +767,28 @@ export async function runWebAuditJob({
     // The switch is checked before the budget reserve, not after
     // (WEB-AUDIT-AUTO-SPLIT-1): a job whose technical half is off must never
     // park itself waiting for room to run something it is never going to run.
+    //
+    // AGENTIC-COMMERCE-1 (log §323): the agentic review of the store runs
+    // ALONGSIDE the technical audit, not after it, so it needs no reserve of
+    // its own: its whole worst case (AGENTIC_STEP_MAX_MS) fits inside
+    // TECHNICAL_RESERVE_MS, which the test pins. It never fails the job and
+    // is never retried from here: if this invocation dies, the screen starts
+    // the review itself when it is missing or stale (`shouldAutoReview`).
+    const agentic = () =>
+      runScheduledAgenticAudit({
+        service,
+        projectId: job.project_id,
+        ownerUserId: project.ownerUserId,
+        projectDomain: project.domain,
+        audit: { fetch: fetchOnDomain, tokenAllowed: resolveAgentTokenAccess }
+      });
+
     if (project.technicalEnabled) {
       if (Date.now() - startedAt > budgetMs - TECHNICAL_RESERVE_MS) {
         return finishContinuation(service, job, continuations + 1, now);
       }
 
-      const technical = await runTechnicalAuditCore(coreArgs);
+      const [technical] = await Promise.all([runTechnicalAuditCore(coreArgs), agentic()]);
 
       if (!technical.success) {
         if (isTerminalAuditFailure(technical.reason)) {
@@ -768,6 +796,9 @@ export async function runWebAuditJob({
         }
         return finishAttempt(service, job, `technical: ${technical.reason}`, now);
       }
+    } else if (Date.now() - startedAt <= budgetMs - TECHNICAL_RESERVE_MS) {
+      // Without the technical half there is nothing to park for: skip if it does not fit.
+      await agentic();
     }
 
     await service

@@ -57,6 +57,13 @@ const globalLinks: ProjectLink[] = [
   { segment: "/search-console", label: "Posición en Google", icon: "trendUp", countKey: null },
 ];
 
+// AGENTIC-COMMERCE-1 Fase 2a (log §322): «Comercio agéntico», its own block
+// with «Nuevo». One entry for now; «Visibilidad en agentes» comes with the
+// buying-intent questions (Fase 2d).
+const agenticLinks: ProjectLink[] = [
+  { segment: "/agentic-audit", label: "Auditoría agéntica", icon: "cart", countKey: null },
+];
+
 const actLinks: ProjectLink[] = [
   { segment: "/recommendations", label: "Recomendaciones", icon: "recs", countKey: "recs" },
 ];
@@ -234,6 +241,11 @@ export function Sidebar({
 
         <div className="nav-group-label hide-collapsed">Posicionamiento global</div>
         {globalLinks.map(renderProjectLink)}
+
+        <div className="nav-group-label hide-collapsed">
+          Comercio agéntico<span className="nav-group-new">Nuevo</span>
+        </div>
+        {agenticLinks.map(renderProjectLink)}
 
         <div className="nav-group-label hide-collapsed">Actuar</div>
         {actLinks.map(renderProjectLink)}
