@@ -26463,6 +26463,49 @@ vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
   única comprobación en servidor sigue siendo la de competidores y dominios
   permitidos.
 
+## 334. RECS-JSONLD-LEVER-1: el JSON-LD deja de venderse como palanca (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) los planes generados tenían tres
+vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
+
+- Presentaban el `FAQPage` en JSON-LD como lo que hace que te citen (P10).
+  Google dice que sus funciones de IA no necesitan marcado especial, y
+  nuestra propia guía del blog lo dice: el producto contradecía su
+  documentación. El paso obligatorio de «hazlo legible por máquina» lo
+  ponía al mismo nivel que el texto visible, y los playbooks de FAQ, bloque
+  citable y comparativa lo pedían como entregable fijo.
+- El FAQ del ejemplo era una definición de producto que ningún usuario había
+  preguntado (P32).
+- Una respuesta del FAQ decía que GenScore analiza Perplexity sin matizar que
+  sólo lo incluyen Pro y Agencia (P36).
+
+**Qué se decidió.** Reglas blandas del prompt, con test
+(`jsonld-lever.test.ts`):
+
+1. El paso de «legible» pide el texto visible: la respuesta en las primeras
+   frases bajo un titular con la pregunta, HTML semántico y contenido que se
+   pueda rastrear.
+2. Los datos estructurados son una ayuda opcional que sólo describe texto que
+   ya se ve. Nunca son la palanca ni un paso que vaya a conseguir la cita, y
+   si salen, van al final y dicen que son opcionales. Los playbooks de FAQ,
+   bloque citable y comparativa piden el JSON-LD «opcionalmente».
+3. Cada pregunta de un FAQ sale de los prompts afectados reales; nunca una
+   pregunta inventada ni un «qué es <marca>» que no esté entre ellos.
+4. Nunca se describe qué hace el producto, qué incluye cada plan ni qué
+   motores, canales o mercados cubre más allá de los datos. Lo que sólo
+   incluyen algunos planes no se escribe como si lo tuviera todo cliente. Va
+   como hueco «[qué incluye tu producto y en qué planes]».
+
+Los planes fuera de la web siguen sin JSON-LD (§326). La regla de que un
+`FAQPage` exige que las preguntas estén visibles en la página (§128) sigue
+igual.
+
+**Qué queda.** Son reglas blandas: el guardián del servidor no comprueba
+afirmaciones de producto ni el origen de las preguntas. El motor tampoco sabe
+qué incluye cada plan de una marca cliente; para genscore.es esos datos viven
+en `plans-data.ts`, pero no se pasan al prompt.
+
 ## 335. RECS-OUTREACH-TARGETS-1: la tarjeta de fuentes sólo cuenta webs a las que se puede escribir (2026-10-18)
 
 **Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
