@@ -6,7 +6,15 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
 import { selectPlan } from "@/lib/recommendations/plan";
-import { computeCoverageOverlay, isAnswerPage, overlayCopy } from "@/lib/recommendations/coverage-overlay";
+import {
+  comparisonFieldsFromEvidence,
+  computeComparisonOverlay,
+  computeCoverageOverlay,
+  isAlreadyCovered,
+  isAnswerPage,
+  overlayCopy
+} from "@/lib/recommendations/coverage-overlay";
+import { sitemapLocsFromBots } from "@/lib/recommendations/own-comparison-pages";
 import { GEO_SCORE_LOOKBACK_ROWS, resolveGeoScore, type GeoScoreRunRow } from "@/lib/metrics/run-metrics";
 import { buildReportTechChecks } from "@/lib/report/report-tech";
 import type { ReportAnswer, ReportCoverage, ReportInput, ReportPlanItem } from "@/lib/report/report-model";
@@ -206,7 +214,27 @@ export async function loadReportInput({
     ),
     coverageTopics: coverageMap?.topics ?? []
   });
-  const plan: ReportPlanItem[] = selectPlan(recs).map((r) => {
+  // RECS-COVERAGE-1 (log §330): same comparison check as the card.
+  for (const [recId, entry] of computeComparisonOverlay({
+    recommendations: recs.map((r) => ({
+      id: r.id,
+      recommendationType: r.recommendation_type,
+      confidence: r.confidence === "high" || r.confidence === "medium" ? r.confidence : "low",
+      ...comparisonFieldsFromEvidence(r.evidence_json)
+    })),
+    siteUrls: [
+      ...sitemapLocsFromBots(audit?.bots),
+      ...(coverageMap?.topics ?? []).flatMap((t) => t.pages.map((p) => p.url))
+    ],
+    projectDomain: project.domain
+  })) {
+    overlayByRecId.set(recId, entry);
+  }
+  // RECS-ALREADY-DONE-1 (log §339): the plan leaves out what the screen
+  // shows under «Resueltas» because its page already exists.
+  const plan: ReportPlanItem[] = selectPlan(
+    recs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlayByRecId.get(r.id)))
+  ).map((r) => {
     const overlay = overlayByRecId.get(r.id);
     const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
     const topics = new Set<string>();

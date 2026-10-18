@@ -6,8 +6,8 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import { COVERAGE_OVERLAY_TYPES, computeCoverageOverlay, type CoverageOverlayEntry } from "@/lib/recommendations/coverage-overlay";
-import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
+import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
+import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import {
   verifyRecommendationPredictions,
@@ -31,6 +31,13 @@ import {
   findCitationBlockers
 } from "@/lib/recommendations/citation-blockers";
 import { selectPlan } from "@/lib/recommendations/plan";
+import {
+  collapseLeversForPlan,
+  expandLeverIds,
+  groupLevers,
+  themeForRec,
+  type LeverView,
+} from "@/lib/recommendations/levers";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
@@ -91,29 +98,6 @@ function readPillars(details: unknown): GeoPillar[] {
     }
   }
   return out;
-}
-
-/**
- * Parses a `domain_coverage` generated_solutions row's sanitized_content
- * (DOMAIN-COVERAGE-1's DomainCoverageMap shape) defensively — same pattern as
- * parseGeneratedSolution below. Not imported from lib/recommendations/domain-
- * coverage.ts (server-only module already used for its type + constants here,
- * but this parser mirrors its private one to keep this file's error handling
- * self-contained).
- */
-function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainCoverageTopic[] } | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.scanId !== "string" || !Array.isArray(parsed.topics)) return null;
-    const topics = parsed.topics.filter((t): t is DomainCoverageTopic => {
-      const c = t as Record<string, unknown> | null;
-      return Boolean(c) && typeof c?.promptId === "string" && typeof c?.found === "boolean";
-    });
-    return { scanId: parsed.scanId, topics };
-  } catch {
-    return null;
-  }
 }
 
 // Server Actions inherit the maxDuration of the page they're invoked from.
@@ -475,10 +459,13 @@ export default async function RecommendationsPage({
   // recommendation row); the owner SELECT policy on that table makes this a
   // plain user-context read. Only completed + sanitized rows are renderable.
   const solutionByRecId = new Map<string, GeneratedSolution>();
+  // RECS-ONE-LEVER-1: a plan generated for a whole lever is flagged in its
+  // evidence and only ever shown on that lever's card, never on a single one.
+  const leverSolutionByRecId = new Map<string, GeneratedSolution>();
   if (baseRecs.length > 0) {
     const { data: solutionRows } = await supabase
       .from("generated_solutions")
-      .select("recommendation_id, sanitized_content, created_at")
+      .select("recommendation_id, sanitized_content, evidence_json, created_at")
       .eq("project_id", projectId)
       .eq("status", "completed")
       .eq("is_sanitized", true)
@@ -491,76 +478,26 @@ export default async function RecommendationsPage({
     for (const row of (solutionRows ?? []) as Array<{
       recommendation_id: string;
       sanitized_content: string | null;
+      evidence_json?: { lever?: unknown } | null;
     }>) {
       // Newest-first order means the first row seen per recommendation wins.
-      if (solutionByRecId.has(row.recommendation_id) || !row.sanitized_content) continue;
+      const target = row.evidence_json?.lever === true ? leverSolutionByRecId : solutionByRecId;
+      if (target.has(row.recommendation_id) || !row.sanitized_content) continue;
       const parsed = parseGeneratedSolution(row.sanitized_content);
-      if (parsed) solutionByRecId.set(row.recommendation_id, parsed);
+      if (parsed) target.set(row.recommendation_id, parsed);
     }
   }
 
-  // RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
-  // enrichment of COVERAGE_OVERLAY_TYPES cards with already-persisted domain-
-  // coverage data (DOMAIN-COVERAGE-1) for the CURRENT scan only — never the
-  // recommendation engine or scan pipeline. See
-  // lib/recommendations/coverage-overlay.ts for the join/degradation rules
-  // and for why only these two (of fifteen) types are anchored to a single
-  // prompt and can therefore ever match a coverage topic.
-  const overlayEligibleRecs = baseRecs.filter((r) => COVERAGE_OVERLAY_TYPES.has(r.recommendation_type));
-  const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
-  if (overlayEligibleRecs.length > 0 && latestCompletedRun) {
-    const resultIds = overlayEligibleRecs
-      .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
-      .filter((id): id is string => Boolean(id));
-
-    const [{ data: resultRows }, { data: coverageRow }] = await Promise.all([
-      resultIds.length > 0
-        ? supabase
-            .from("scan_prompt_results")
-            .select("id, prompt_id")
-            .eq("project_id", projectId)
-            .eq("run_id", latestCompletedRun.id)
-            .in("id", resultIds)
-        : Promise.resolve({ data: [] as Array<{ id: string; prompt_id: string | null }> }),
-      supabase
-        .from("generated_solutions")
-        .select("sanitized_content")
-        .eq("project_id", projectId)
-        .eq("generation_type", "domain_coverage")
-        .is("recommendation_id", null)
-        .eq("status", "completed")
-        .eq("is_sanitized", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-
-    const resultIdToPromptId = new Map(
-      ((resultRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
-        .filter((row): row is { id: string; prompt_id: string } => Boolean(row.prompt_id))
-        .map((row) => [row.id, row.prompt_id]),
-    );
-
-    const coverage = parseCoverageMap(
-      (coverageRow as { sanitized_content: string | null } | null)?.sanitized_content ?? null,
-    );
-    // Only a coverage row derived from THIS scan counts — a cached row from an
-    // older scan (before the user re-ran "Auditar cobertura") never enriches.
-    const coverageTopics = coverage && coverage.scanId === latestCompletedRun.id ? coverage.topics : [];
-
-    for (const [recId, entry] of computeCoverageOverlay({
-      recommendations: baseRecs.map((r) => ({
-        id: r.id,
-        recommendationType: r.recommendation_type,
-        resultId: r.evidence_json?.affected_prompt_details?.[0]?.id ?? null,
-        confidence: r.confidence as "low" | "medium" | "high",
-      })),
-      resultIdToPromptId,
-      coverageTopics,
-    })) {
-      coverageOverlayByRecId.set(recId, entry);
-    }
-  }
+  // RECS-COVERAGE-OVERLAY-1, RECS-COVERAGE-1 (log §330): read-time coverage
+  // verdict of each card, from rows we already hold (coverage map of this
+  // scan, the sitemap the technical audit keeps). Same loader as Visión
+  // general and the bell (RECS-ALREADY-DONE-1, log §339).
+  const coverageOverlayByRecId = await loadCoverageOverlays(supabase, {
+    projectId,
+    runId: latestCompletedRun?.id ?? null,
+    projectDomain: project.domain,
+    recs: baseRecs,
+  });
 
   /* ---- RECS-REDESIGN-1: potential points on the Recomendaciones page ----
    * These already existed (RECS-POTENTIAL-1 / ADR 0017) but only ever
@@ -570,7 +507,7 @@ export default async function RecommendationsPage({
    * null for non-quantifiable types or a low-confidence run, in which case
    * the card shows a qualitative impact instead of an invented number.
    */
-  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }] =
+  const [{ data: runScoreRow }, { data: allPromptResults }, { data: auditRow }, { data: promptCategoryRows }] =
     latestCompletedRun
       ? await Promise.all([
           supabase
@@ -581,7 +518,7 @@ export default async function RecommendationsPage({
           supabase
             .from("scan_prompt_results")
             .select(
-              "id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, brand_snapshot, provider, extraction_version",
+              "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, mentioned_competitors_count, citations_count, sentiment, extracted_json, extraction_error, brand_snapshot, provider, extraction_version",
             )
             .eq("project_id", projectId)
             .eq("run_id", latestCompletedRun.id),
@@ -596,8 +533,11 @@ export default async function RecommendationsPage({
             .order("created_at", { ascending: false })
             .limit(1)
             .maybeSingle(),
+          // RECS-ONE-LEVER-1: the topic of each prompt, to group the
+          // visibility cards into one card per topic.
+          supabase.from("project_prompts").select("id, category").eq("project_id", projectId),
         ])
-      : [{ data: null }, { data: null }, { data: null }];
+      : [{ data: null }, { data: null }, { data: null }, { data: null }];
 
   const pillars = readPillars((runScoreRow as { details_json?: unknown } | null)?.details_json);
 
@@ -616,7 +556,7 @@ export default async function RecommendationsPage({
     extraction_version: r.extraction_version,
   }));
 
-  const recs: Recommendation[] = baseRecs.map((r) => ({
+  const allRecs: Recommendation[] = baseRecs.map((r) => ({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
     coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
@@ -635,6 +575,72 @@ export default async function RecommendationsPage({
           )?.deltaPoints ?? null)
         : null,
   }));
+
+  // RECS-ALREADY-DONE-1 (log §339): a card whose only action is to publish a
+  // page that coverage already found has nothing left to do. It leaves the
+  // active list, the plan and every ceiling, and shows under «Resueltas»
+  // crossed out, with the page we found. Nothing is written: the next scan
+  // regenerates the card and coverage decides again.
+  const recs = allRecs.filter((r) => !isAlreadyCovered(r.recommendation_type, r.coverageOverlay));
+  const coveredForClient = allRecs
+    .filter((r) => isAlreadyCovered(r.recommendation_type, r.coverageOverlay))
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      recommendation_type: r.recommendation_type,
+      status: "covered" as const,
+      updated_at: latestCompletedRun?.finished_at ?? latestCompletedRun?.created_at ?? new Date().toISOString(),
+      run_id: latestCompletedRun?.id ?? "",
+      verification: null,
+      recurrence: null,
+      coveredPageUrl: r.coverageOverlay?.verifiedPage?.url ?? null,
+    }));
+  const historyForClient = [...coveredForClient, ...resolvedHistoryForClient];
+
+  // RECS-ONE-LEVER-1: the visibility cards grouped by topic, one card per
+  // topic in presentation only (every member stays its own row). Each lever
+  // gets one joint counterfactual over all its members (ADR 0017 §3).
+  const categoryByPromptId = new Map(
+    ((promptCategoryRows ?? []) as Array<{ id: string; category: string | null }>).map((row) => [row.id, row.category]),
+  );
+  const categoryByResultId = new Map<string, string | null>(
+    ((allPromptResults ?? []) as Array<{ id: string; prompt_id?: string | null }>).map((row) => [
+      row.id,
+      row.prompt_id ? (categoryByPromptId.get(row.prompt_id) ?? null) : null,
+    ]),
+  );
+  const levers: LeverView[] = groupLevers(recs, (r) => themeForRec(r.evidence_json, categoryByResultId))
+    .map((group) => {
+      const joint =
+        scoreInputRows.length > 0
+          ? computeJointPotentialPoints(
+              scoreInputRows,
+              project.domain,
+              group.members.map((r) => ({
+                recommendationType: r.recommendation_type,
+                affectedPromptIds: affectedPromptIds(r.evidence_json),
+              })),
+            )
+          : null;
+      return {
+        key: group.key,
+        theme: group.theme,
+        representativeId: group.representative.id,
+        memberIds: group.members.map((r) => r.id),
+        points: joint ? joint.deltaPoints : null,
+      };
+    })
+    .sort((a, b) => (b.points ?? -1) - (a.points ?? -1));
+  const leverIdSet = new Set(levers.flatMap((l) => l.memberIds));
+  const recById = new Map(recs.map((r) => [r.id, r]));
+  const expandRecs = (items: Recommendation[]): Recommendation[] =>
+    expandLeverIds(
+      items.map((r) => r.id),
+      levers,
+    )
+      .map((id) => recById.get(id))
+      .filter((r): r is Recommendation => Boolean(r));
 
   // Joint ceiling across every active recommendation — never the sum of the
   // per-card deltas, which double-counts prompts shared by two rules (ADR 0017 §3).
@@ -657,7 +663,9 @@ export default async function RecommendationsPage({
   // its members' individual deltas (ADR 0017 §3).
   // RECS-SHORT-CARD-1 (log §303): the groups sit under «Más adelante», which
   // leaves out the plan's cards, so their ceiling is computed without them.
-  const plan = selectPlan(recs);
+  // A lever takes one plan slot, through its representative carrying the
+  // lever's joint points (RECS-ONE-LEVER-1).
+  const plan = selectPlan(collapseLeversForPlan(recs, levers));
   // RECS-ONE-QUEUE-1 (log §307): with Search Console connected, a Google card
   // can take slot 2 and the third AI action moves to «Más adelante». The page
   // doesn't wait for Google to know which, so it computes both ceilings.
@@ -674,7 +682,8 @@ export default async function RecommendationsPage({
     if (scoreInputRows.length === 0) return out;
     const byType = new Map<string, Recommendation[]>();
     for (const rec of recs) {
-      if (excluded.has(rec.id)) continue;
+      // Levers carry their own figure; their type is no longer a group.
+      if (excluded.has(rec.id) || leverIdSet.has(rec.id)) continue;
       const bucket = byType.get(rec.recommendation_type) ?? [];
       bucket.push(rec);
       byType.set(rec.recommendation_type, bucket);
@@ -693,9 +702,9 @@ export default async function RecommendationsPage({
     }
     return out;
   };
-  const jointPointsByType = groupCeilings(new Set(plan.map((r) => r.id)));
+  const jointPointsByType = groupCeilings(new Set(expandRecs(plan).map((r) => r.id)));
   const jointPointsByTypeWithGoogle = googleConnected
-    ? groupCeilings(new Set(plan.slice(0, 2).map((r) => r.id)))
+    ? groupCeilings(new Set(expandRecs(plan.slice(0, 2)).map((r) => r.id)))
     : undefined;
 
   // El plan se selecciona AQUI, no en el cliente, porque su techo de puntos
@@ -708,7 +717,7 @@ export default async function RecommendationsPage({
       ? computeJointPotentialPoints(
           scoreInputRows,
           project.domain,
-          plan.map((r) => ({
+          expandRecs(plan).map((r) => ({
             recommendationType: r.recommendation_type,
             affectedPromptIds: affectedPromptIds(r.evidence_json),
           })),
@@ -720,7 +729,7 @@ export default async function RecommendationsPage({
       ? computeJointPotentialPoints(
           scoreInputRows,
           project.domain,
-          plan.slice(0, 2).map((r) => ({
+          expandRecs(plan.slice(0, 2)).map((r) => ({
             recommendationType: r.recommendation_type,
             affectedPromptIds: affectedPromptIds(r.evidence_json),
           })),
@@ -801,7 +810,7 @@ export default async function RecommendationsPage({
   const googleSlotProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
 
   // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §307).
-  const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || resolvedHistoryForClient.length > 0);
+  const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || historyForClient.length > 0);
   const aiContent = !latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">
@@ -821,7 +830,7 @@ export default async function RecommendationsPage({
                 <Icon name="arrRight" size={14} />
               </Link>
             </div>
-          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
+          ) : recs.length === 0 && historyForClient.length === 0 ? (
             // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
             // "Ver detalle del escaneo" link to /runs/[runId] is retired from
             // this empty state, same reasoning as Citas — the route is no
@@ -843,12 +852,19 @@ export default async function RecommendationsPage({
           ) : (
             <RecommendationsClient
               recommendations={recs}
-              resolvedHistory={resolvedHistoryForClient}
+              resolvedHistory={historyForClient}
               recentWinsCount={recentWins.length}
               projectId={projectId}
               jointPoints={jointPoints}
               jointPointsByType={jointPointsByType}
               planIds={planIds}
+              levers={levers}
+              leverSolutions={Object.fromEntries(
+                levers.flatMap((l) => {
+                  const solution = leverSolutionByRecId.get(l.representativeId);
+                  return solution ? [[l.representativeId, solution]] : [];
+                }),
+              )}
               planPoints={planPoints}
               planPointsWithGoogle={planPointsWithGoogle}
               jointPointsByTypeWithGoogle={jointPointsByTypeWithGoogle}

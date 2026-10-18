@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { rewriteRecommendation } from "@/lib/llm/gemini";
 import { buildRecommendationRewritePrompt } from "@/lib/recommendations/recommendation-rewrite-llm";
+import { LEVER_TYPE } from "@/lib/recommendations/levers";
 import { validateRewriteAgainstEvidence } from "@/lib/recommendations/rewrite-validation";
 import {
   collectAnchoredDomains,
@@ -42,10 +43,37 @@ import { type ArtifactRejection, checkPasteableArtifact } from "@/lib/recommenda
  * (.claude/rules/gemini.md, .claude/rules/server-actions.md).
  */
 
+/** How many cards one lever plan may cover; far above any real project. */
+export const LEVER_MEMBER_CAP = 60;
+
 export const rewriteRecommendationInputSchema = z.object({
   projectId: z.string().uuid(),
-  recommendationId: z.string().uuid()
+  recommendationId: z.string().uuid(),
+  /**
+   * RECS-ONE-LEVER-1: the other cards of the same lever. With two or more, one
+   * plan is generated for all their questions and stored on
+   * `recommendationId` flagged `lever: true`.
+   */
+  leverMemberIds: z.array(z.string().uuid()).max(LEVER_MEMBER_CAP).optional()
 });
+
+/**
+ * The evidence of several cards of one lever folded into one: every question,
+ * every cited domain and competitor once. Only what the cards' own evidence
+ * holds, so the guard still admits nothing the prompt did not show.
+ */
+export function mergeLeverEvidence(items: readonly EvidenceJson[]): EvidenceJson {
+  const union = (pick: (e: EvidenceJson) => string[] | undefined) =>
+    Array.from(new Set(items.flatMap((e) => pick(e) ?? [])));
+  return {
+    why_this_matters: items[0]?.why_this_matters,
+    query_shape: items.length > 0 && items.every((e) => e.query_shape === "definition") ? "definition" : undefined,
+    affected_prompts: union((e) => e.affected_prompts),
+    mentioned_competitors: union((e) => e.mentioned_competitors),
+    citation_domains: union((e) => e.citation_domains),
+    evidence_snippets: union((e) => e.evidence_snippets).slice(0, 8)
+  };
+}
 
 export type GeneratedSolutionExample = { label: string; content: string };
 
@@ -60,7 +88,7 @@ export type RewriteRecommendationResult =
   | { success: true; solution: GeneratedSolution }
   | { success: false; error: string };
 
-type EvidenceJson = {
+export type EvidenceJson = {
   why_this_matters?: string;
   /** log §292 — "definition" for a «qué significa X» query. */
   query_shape?: string;
@@ -315,12 +343,14 @@ function parseSolutionContent(raw: string | null): SolutionContent | null {
 export async function rewriteRecommendationCore({
   projectId,
   recommendationId,
+  leverMemberIds,
   supabase,
   service,
   user
 }: {
   projectId: string;
   recommendationId: string;
+  leverMemberIds?: string[];
   supabase: AuthenticatedContext["supabase"];
   service: ReturnType<typeof createServiceClient>;
   user: AuthenticatedContext["user"];
@@ -364,14 +394,39 @@ export async function rewriteRecommendationCore({
       return { success: false, error: "No se ha encontrado la recomendación solicitada." };
     }
 
+    // RECS-ONE-LEVER-1: a lever plan covers every card of the lever. The
+    // members are re-read with the user's client, scoped to this project and
+    // to the lever type, so only cards the user owns can join the plan.
+    let leverEvidence: EvidenceJson | null = null;
+    const requestedMembers = Array.from(new Set([recommendationId, ...(leverMemberIds ?? [])]));
+    if (requestedMembers.length > 1 && recommendation.recommendation_type === LEVER_TYPE) {
+      stage = "load_lever_members";
+      const { data: memberRows } = await withTimeout(
+        supabase
+          .from("recommendations")
+          .select("id, evidence_json")
+          .eq("project_id", projectId)
+          .eq("recommendation_type", LEVER_TYPE)
+          .in("id", requestedMembers),
+        stage
+      );
+      const members = ((memberRows ?? []) as unknown as Array<{ id: string; evidence_json: EvidenceJson | null }>).filter(
+        (row) => requestedMembers.includes(row.id)
+      );
+      if (members.length > 1) {
+        leverEvidence = mergeLeverEvidence(members.map((row) => row.evidence_json ?? {}));
+      }
+    }
+    const leverMode = leverEvidence !== null;
+
     // Idempotency: a completed, sanitized solution already exists -> return it,
     // no second Gemini call. Read via the service client (the same trusted path
     // that writes it).
     stage = "load_existing_solution";
-    const { data: existingRaw } = await withTimeout(
+    const { data: existingRows } = await withTimeout(
       service
         .from("generated_solutions")
-        .select("sanitized_content")
+        .select("sanitized_content, evidence_json")
         .eq("project_id", projectId)
         .eq("recommendation_id", recommendationId)
         // Scoped to this generation_type: RECS-4B added a second type
@@ -384,14 +439,16 @@ export async function rewriteRecommendationCore({
         .eq("status", "completed")
         .eq("is_sanitized", true)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(5),
       stage
     );
 
-    const existing = parseSolutionContent(
-      (existingRaw as unknown as { sanitized_content: string | null } | null)?.sanitized_content ?? null
-    );
+    // A lever plan and a single-question plan never stand in for each other.
+    const existingRaw = ((existingRows ?? []) as unknown as Array<{
+      sanitized_content: string | null;
+      evidence_json?: { lever?: unknown } | null;
+    }>).find((row) => (row.evidence_json?.lever === true) === leverMode);
+    const existing = parseSolutionContent(existingRaw?.sanitized_content ?? null);
     if (existing) {
       return { success: true, solution: existing };
     }
@@ -416,7 +473,7 @@ export async function rewriteRecommendationCore({
       };
     }
 
-    const evidence: EvidenceJson = recommendation.evidence_json ?? {};
+    const evidence: EvidenceJson = leverEvidence ?? recommendation.evidence_json ?? {};
     const mentionedCompetitors = evidence.mentioned_competitors ?? [];
     const citationDomains = evidence.citation_domains ?? [];
     // The ONE closed set of domains this card's evidence anchors. The prompt's
@@ -464,8 +521,10 @@ export async function rewriteRecommendationCore({
       domain: project.domain,
       language: project.language,
       recommendationType: recommendation.recommendation_type,
-      ruleTitle: recommendation.title,
+      // A lever's own title would come from the browser; this one is ours.
+      ruleTitle: leverMode ? "Una sola página que responda a estas preguntas" : recommendation.title,
       ruleDescription: recommendation.description,
+      lever: leverMode,
       whyThisMatters: evidence.why_this_matters ?? "",
       // One line per prompt: the list holds one entry per engine row, and the
       // same question four times in the prompt reads as four questions (§292).
@@ -606,7 +665,8 @@ export async function rewriteRecommendationCore({
             // from the row instead of from a runtime log.
             anchored_domains: domainsInPrompt,
             dominant_competitor: evidence.dominant_competitor ?? null,
-            affected_prompts: evidence.affected_prompts ?? []
+            affected_prompts: evidence.affected_prompts ?? [],
+            ...(leverMode ? { lever: true, lever_member_ids: requestedMembers } : {})
           }
         })
         .select("id")

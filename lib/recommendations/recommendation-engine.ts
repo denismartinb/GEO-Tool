@@ -3,6 +3,8 @@ import { classifySourceType, type SourceType } from "@/lib/citations/source-type
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
+import { isOutreachTarget } from "@/lib/recommendations/outreach-targets";
 
 type ProjectInput = {
   brand: string;
@@ -643,7 +645,7 @@ function perPromptGapCards(opts: {
         title: `Aparece en "${label}"`,
         description: isDefinition
           ? "Es una pregunta de definición: la IA responde con diccionarios y enciclopedias, no con marcas. Lo realista aquí es que cite tu web como fuente, no que te recomiende."
-          : `En ${answersLabel(visibilityAffected.length)}${enginesPhrase(visibilityAffected)} a esta pregunta, la IA no te nombró ni a ti ni a ningún competidor. Sin nadie por delante, una página que responda bien la pregunta lo tiene más fácil.`,
+          : `En ${answersLabel(visibilityAffected.length)}${enginesPhrase(visibilityAffected)} a esta pregunta, la IA no te nombró ni a ti ni a ningún competidor. Puede ser un hueco libre o una pregunta en la que la IA no recomienda marcas; una página que la responda bien es la forma de comprobarlo.`,
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
@@ -663,7 +665,9 @@ function perPromptGapCards(opts: {
             : ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
           whyThisMatters: isDefinition
             ? "Una pregunta de definición rara vez acaba en una recomendación de marca, pero sí en una fuente citada. Si la explicación más clara está en tu web, la IA puede citarla."
-            : "En estas respuestas no aparece ningún competidor. Entrar ahora es más barato que disputarla cuando uno ya se haya asentado.",
+            : // RECS-MINORS-1 (log §337): no rival in the answer is not proof of an
+              // opportunity; it can also be a question where the AI names nobody (P19).
+              "Que no salga ningún competidor no asegura que esta pregunta premie a una marca: puede que la IA no recomiende a nadie aquí. Si lo hace, una respuesta clara en tu web es lo que necesita para nombrarte.",
           firstStep: isDefinition
             ? "Responde la definición en las dos primeras frases de tu página sobre el tema, con el titular en forma de pregunta. Si el término tiene otros significados, acláralo en esa misma frase."
             : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",
@@ -752,6 +756,18 @@ function promptCitationPages(result: PromptResultInput): Array<{ domain: string;
  * both fields present) so the asset can target a specific article, not just a
  * bare domain name.
  */
+const VIDEO_PLATFORMS = ["youtube.com", "tiktok.com", "vimeo.com"];
+const SOCIAL_NETWORKS = ["x.com", "twitter.com", "linkedin.com", "facebook.com", "instagram.com", "threads.net"];
+
+/** RECS-LABELS-1 (log §336): what kind of place a community source is. */
+export function communityKind(domain: string): "video" | "social" | "forum" {
+  const d = normalizeDomainValue(domain);
+  const on = (list: string[]) => list.some((root) => d === root || d.endsWith(`.${root}`));
+  if (on(VIDEO_PLATFORMS)) return "video";
+  if (on(SOCIAL_NETWORKS)) return "social";
+  return "forum";
+}
+
 function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomain: string): CitationSource[] {
   const normalizedBrand = normalizeDomainValue(brandDomain);
   const bySource = new Map<string, CitationSource>();
@@ -763,10 +779,15 @@ function computeCitationSourceGap(promptResults: PromptResultInput[], brandDomai
     // a subdomain or the same brand on another TLD is the brand's own site.
     if (normalizedBrand && normalizedDomains.some((d) => isBrandDomain(d, normalizedBrand))) continue; // brand already cited here
 
+    // RECS-OUTREACH-TARGETS-1 (log §335): documentation and other brands'
+    // own sites are not something to pitch, so they never count.
+    const extracted = getExtracted(result);
+    const brandsInAnswer = [...ev.competitors, ...(extracted?.other_brands_mentioned ?? [])];
     const seenInThisPrompt = new Set<string>();
     for (const page of promptCitationPages(result)) {
       const key = normalizeDomainValue(page.domain);
       if (!key || (normalizedBrand && isBrandDomain(key, normalizedBrand)) || seenInThisPrompt.has(key)) continue;
+      if (!isOutreachTarget(key, brandsInAnswer)) continue;
       seenInThisPrompt.add(key);
       const entry = bySource.get(key) ?? { domain: page.domain, prompts: [], examplePage: null };
       entry.prompts.push(result);
@@ -989,7 +1010,10 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           affected: entry.prompts,
           assumptions: [`${entry.competitor} aparece de forma recurrente en prompts donde tu marca no se menciona.`],
           whyThisMatters: `Cuando la IA responde con ${entry.competitor} y no contigo, la decisión se toma sin que llegues a estar en la lista.`,
-          firstStep: `Abre una de estas respuestas y mira qué páginas cita para ${entry.competitor}: ahí está el listón que tienes que superar.`,
+          // RECS-LABELS-1 (log §336): the card said «look at what it cites» and
+          // the plan said «publish a comparison page» (P3). One first step, the
+          // plan's own.
+          firstStep: `Publica una comparativa entre tu marca y ${entry.competitor} que responda a estas preguntas con tus datos.`,
           extra: { dominant_competitor: entry.competitor },
           snippetSource: "competitor"
         })
@@ -1065,8 +1089,16 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
   // severity so it never crowds out an actual gap-fix card.
   const emergingCompetitors = computeEmergingCompetitors(promptResults, input.competitors, input.project.brand);
   for (const entry of emergingCompetitors) {
+    // RECS-ADD-COMPETITOR-1: the card is a one-tap "add" button, so it needs
+    // the brand's website. Taken from every source cited alongside it (not the
+    // 8-item aggregate), and only on an exact brand-label match; null means
+    // the screen asks for it.
+    const emergingDomain = domainForBrandName(
+      entry.competitor,
+      entry.prompts.flatMap((p) => promptEvidence(p).domains)
+    );
     candidates.push({
-      title: `Añade a ${entry.competitor} como competidor`,
+      title: `Añade ${entry.competitor} a tus competidores`,
       description: `La IA la nombra en ${entry.prompts.length} respuestas de tu categoría y no la estás siguiendo. Añádela y sabrás cuánto terreno te quita.`,
       rule_id: "rule_emerging_competitor_001",
       recommendation_type: "track_emerging_competitor",
@@ -1087,7 +1119,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         ],
         whyThisMatters: `Si la IA ya la trata como alternativa a ti, te interesa medirla: hoy no aparece en ninguna de tus comparativas de competencia.`,
         firstStep: `Añade ${entry.competitor} en la pestaña Competidores. El próximo escaneo ya la medirá.`,
-        extra: { emerging_competitor: entry.competitor },
+        extra: { emerging_competitor: entry.competitor, emerging_competitor_domain: emergingDomain },
         snippetSource: "none"
       })
     });
@@ -1231,10 +1263,25 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         description: (domains) =>
           `La IA cita conversaciones de ${domains.slice(0, 3).join(", ")} donde tu marca no sale. Una respuesta útil y honesta ahí acaba en la respuesta de la IA.`,
         why: "Los foros pesan mucho en las respuestas de IA porque se leen como opinión real de usuarios, no como marketing.",
-        firstStep: (top, domains) =>
-          top
+        // RECS-LABELS-1 (log §336): «busca el hilo más citado en youtube.com»
+        // (P37). A video platform has videos and a social network has posts.
+        firstStep: (top, domains) => {
+          const domain = top?.domain ?? domains[0];
+          const kind = communityKind(domain);
+          if (kind === "video") {
+            return top
+              ? `Mira "${top.title}" (${top.domain}) y deja un comentario útil con datos concretos, o publica tu propio vídeo respondiendo a la pregunta.`
+              : `Busca el vídeo más citado en ${domain} y deja un comentario útil con datos concretos, o publica tu propio vídeo respondiendo a la pregunta.`;
+          }
+          if (kind === "social") {
+            return top
+              ? `Entra en "${top.title}" (${top.domain}) y responde a la publicación aportando datos concretos, sin tono comercial.`
+              : `Busca la publicación más citada en ${domain} y responde aportando datos concretos, sin tono comercial.`;
+          }
+          return top
             ? `Entra en "${top.title}" (${top.domain}) y responde aportando datos concretos, sin tono comercial.`
-            : `Busca el hilo más citado en ${domains[0]} y responde aportando datos concretos, sin tono comercial.`,
+            : `Busca el hilo más citado en ${domain} y responde aportando datos concretos, sin tono comercial.`;
+        },
         effort: "low"
       },
       media: {

@@ -27,7 +27,7 @@ import {
   type RewriteRecommendationResult
 } from "@/lib/recommendations/rewrite-recommendation";
 import {
-  dismissRecommendationCore,
+  dismissRecommendationsCore,
   dismissRecommendationInputSchema,
   type DismissRecommendationResult
 } from "@/lib/recommendations/dismiss-recommendation";
@@ -51,6 +51,11 @@ import {
   executePendingScan,
   getActionErrorCode
 } from "@/lib/scan/scan-runner";
+import {
+  addEmergingCompetitorCore,
+  addEmergingCompetitorInputSchema,
+  type AddEmergingCompetitorResult
+} from "@/lib/recommendations/add-emerging-competitor";
 import { canStartAnotherScanInvocation } from "@/lib/scan/drive-budget";
 import {
   createCompetitorCore,
@@ -782,6 +787,7 @@ export async function addReviewedPrompts(input: {
 export async function rewriteRecommendationAction(input: {
   projectId: string;
   recommendationId: string;
+  leverMemberIds?: string[];
 }): Promise<RewriteRecommendationResult> {
   const parsed = rewriteRecommendationInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -807,6 +813,8 @@ export async function rewriteRecommendationAction(input: {
 export async function dismissRecommendationAction(input: {
   projectId: string;
   recommendationId: string;
+  /** RECS-ONE-LEVER-1: the other cards of a lever, marked done together. */
+  leverMemberIds?: string[];
 }): Promise<DismissRecommendationResult> {
   const parsed = dismissRecommendationInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -815,10 +823,43 @@ export async function dismissRecommendationAction(input: {
 
   const { supabase, user } = await requireUser();
   const service = createServiceClient();
-  const result = await dismissRecommendationCore({ ...parsed.data, supabase, service, user });
+  const result = await dismissRecommendationsCore({
+    projectId: parsed.data.projectId,
+    recommendationIds: [parsed.data.recommendationId, ...(parsed.data.leverMemberIds ?? [])],
+    supabase,
+    service,
+    user,
+  });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+  }
+
+  return result;
+}
+
+/**
+ * "Añadir X a competidores" on a track_emerging_competitor card
+ * (RECS-ADD-COMPETITOR-1). Revalidates both screens it changes.
+ */
+export async function addEmergingCompetitorAction(input: {
+  projectId: string;
+  recommendationId: string;
+  domain: string;
+}): Promise<AddEmergingCompetitorResult> {
+  const parsed = addEmergingCompetitorInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: "Datos de solicitud no válidos." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const service = createServiceClient();
+  const result = await addEmergingCompetitorCore({ ...parsed.data, supabase, service, user });
+
+  if (result.success) {
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}/competitors`);
+    revalidatePath(`/dashboard/projects/${parsed.data.projectId}`);
   }
 
   return result;

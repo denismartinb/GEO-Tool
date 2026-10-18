@@ -26176,6 +26176,32 @@ abrir tu web» con el formulario para indicar una ficha.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
+## 327. RECS-ADD-COMPETITOR-1: «Añadir X a competidores» es un botón, no un plan (2026-10-18)
+
+**Qué.** La tarjeta `track_emerging_competitor` («Añade Semrush a tus competidores») deja de abrir un plan generado por IA y pasa a ser un botón en la propia tarjeta (`EmergingCompetitorCard`). Sin «Ver cómo», sin puntos, sin «Listo para copiar». Al pulsar, la marca entra en Competidores por `createCompetitorCore` (el mismo alta que el formulario de Competidores, con su comprobación de propiedad y su rechazo de asistentes de IA y términos genéricos) y la tarjeta se marca como hecha por `dismissRecommendationCore`: se queda verde unos segundos y pasa a «Resueltas», con su «Deshacer» de siempre. Si ya la seguías, la tarjeta se da por hecha. Server action `addEmergingCompetitorAction`, núcleo `lib/recommendations/add-emerging-competitor.ts`.
+
+**La web no se inventa.** El motor guarda `emerging_competitor_domain` cuando un dominio citado junto a la marca casa exactamente con su nombre (`domainForBrandName`, misma igualdad de etiqueta que `competitorsAnchoredByDomain`: `es.semrush.com` da `semrush.com`, `semrushtools.com` no vale). Las tarjetas guardadas antes de este cambio lo calculan en pantalla sobre sus `citation_domains`. Sin coincidencia, la tarjeta pide la web con un campo y el botón se activa cuando el dominio es válido (`parseCompetitorDomain`, la misma regla que valida el servidor, extraída a `lib/competitors/competitor-domain.ts`).
+
+**El nombre sale de la evidencia guardada, nunca del navegador.** La action recibe sólo el id de la recomendación y la web; el nombre lo lee de `evidence_json.emerging_competitor` con el cliente del usuario.
+
+**Por qué.** Prueba real sobre genscore.es (hallazgo P33, `prueba-recomendaciones/aprendizajes.md`): la acción era un clic y la tarjeta la convertía en cuatro párrafos («Configura el perfil de Semrush dentro del módulo…»). Fundador, 2026-10-18: «un botón de añadir a competidores y ya está, no tanta literatura». Maqueta aprobada el mismo día (https://claude.ai/artifact/FzK8kCeToUc1XY8zPwnX5z).
+
+**Sin migración.** El título pasa a «Añade X a tus competidores»; las filas antiguas conservan el suyo hasta el siguiente escaneo. El CTA de `deliverable.ts` pasa a «Añadir a competidores» y el playbook de reescritura se queda sin uso en pantalla.
+
+**Qué queda.** El resto del plan de correcciones de Recomendaciones (`prueba-recomendaciones/plan-correcciones.md`), un PR por cambio.
+
+**Regla de premisa.** Se retira el «Generar informe» de este tipo. La premisa: la acción completa es añadir el competidor, y eso lo hace el botón. Si el alta falla, la tarjeta enseña el motivo y el usuario conserva la vía de siempre, el formulario de Competidores.
+
+## 326. RECS-MIXED-CHANNEL-1: un plan fuera de tu web ya no pide HTML ni JSON-LD en tu web (2026-10-18)
+
+**Qué.** El prompt de «Generar propuesta» llevaba una instrucción obligatoria para todos los tipos: al menos un paso sobre cómo hacer el contenido legible por máquina (HTML semántico, JSON-LD `FAQPage`, contenido rastreable). Pensada para la propia web, se aplicaba también a los tipos de terceros y al de dentro de la app. La tarjeta «Participar en youtube.com» salía con «Implementa el esquema JSON-LD de tipo FAQPage en genscore.es». Ahora esa instrucción sólo va cuando `deliverableForType(tipo).control === "own_site"` (y en un tipo sin clasificar, que conserva lo de antes). En `third_party` e `in_app` va la contraria: sin pasos sobre la web de la marca y sin ejemplos de JSON-LD ni HTML. Además, `pursue_community_sources`, `pursue_comparator_sources` y `pursue_media_sources`, que no tenían playbook y caían al prompt genérico, tienen el suyo: participar en la comunidad (con aviso de que comentar en un vídeo no es spam ni garantiza la cita), darse de alta o completar el perfil en el comparador, y proponer una colaboración al medio sin afirmar que se ha leído un artículo que no esté en la evidencia.
+
+**Insignia.** Un plan sin huecos fuera de la propia web dice «Plan listo», no «Listo para copiar»: no hay nada que pegar (`readinessLabel(readiness, control)`). Decisión recomendada al fundador el 2026-10-18 («Haz los cambios»).
+
+**Por qué.** Prueba real sobre genscore.es (P37 y parte de P32, P31 de `prueba-recomendaciones/aprendizajes.md`) y el informe RECS-MIXED-CHANNEL-1 que adjuntó el fundador, con la causa verificada en `recommendation-rewrite-llm.ts`.
+
+**Qué queda.** Las propuestas ya generadas con la mezcla siguen guardadas hasta que el usuario las regenere; regenerarlas gasta una llamada y su cupo diario, así que no se hace en lote. El copy de la tarjeta de comunidad («La IA cita conversaciones de X») sigue igual para YouTube; suavizarlo es decisión aparte del fundador.
+
 ## 325. AGENTIC-OFFER-1: la auditoría agéntica detecta lo que vendes, no sólo fichas de tienda (2026-10-18)
 
 **Qué se decidió.** En el preview de §323, genscore.es salía con «No hemos
@@ -26299,3 +26325,497 @@ declarados donde la regla de `growth-content.md` los exige.
 
 **Pendiente.** Si se aprueba 2b, 2c o 2d, esta misma sección se vuelve a
 tocar en el PR que lo lleve a producción.
+
+## 328. RECS-ONE-LEVER-1: una tarjeta por palanca, no una por pregunta (2026-10-18)
+
+**Qué.** Las tarjetas `increase_brand_visibility` («Aparece en "…"») se agrupan por el tema que el usuario ya dio a cada prompt (`project_prompts.category`): una tarjeta por tema, con sus preguntas dentro, un solo «Haz esto» (una página con cada pregunta como subtítulo; si ya existe una, reforzarla), un solo plan generado y una sola cifra. Las preguntas de definición (log §292) van siempre en su propia tarjeta y conservan el aviso «lo realista es que te citen, no que te nombren». Los prompts sin tema van juntos en «tus otras preguntas». Módulo puro `lib/recommendations/levers.ts`; tarjeta `LeverCard` en `recommendations-client.tsx`.
+
+**La cifra.** «hasta +N pt · si te nombran en estas preguntas»: un contrafactual conjunto sobre todas las preguntas del tema (ADR 0017 §3), calculado una vez en `page.tsx`. Nunca la suma de los +2 de cada tarjeta. Es un techo y lo dice.
+
+**El plan.** Una palanca ocupa un solo puesto: `collapseLeversForPlan` deja en el plan a su representante (su mejor miembro) con los puntos de la palanca, y el techo del plan y de los grupos de «Más adelante» se calcula con todos sus miembros (`expandLeverIds`). Así el plan deja de ofrecer tres preguntas del mismo tema y entra otra acción. Los temas que no entran salen en «Más adelante» como tarjetas plegadas, antes de los grupos.
+
+**Un plan por tema.** «Generar…» en una palanca de dos o más tarjetas llama a la reescritura con `leverMemberIds`. El servidor vuelve a leer esos miembros con el cliente del usuario, del mismo proyecto y del mismo tipo, une sus preguntas, dominios y fragmentos (`mergeLeverEvidence`) y usa un título propio, nunca uno del navegador. El playbook pide UNA página para todas. Se guarda en `generated_solutions` sobre el representante con `evidence_json.lever = true`, y un plan de palanca y uno de una sola pregunta no se sustituyen nunca (ni en la idempotencia del servidor ni al leerlos en `page.tsx`).
+
+**Marcar como hecho.** Cierra todos los miembros (`dismissRecommendationsCore`, que pasa cada id por `dismissRecommendationCore` con su comprobación de propiedad). «Resueltas» sigue verificando pregunta a pregunta.
+
+**Por qué.** Prueba real sobre genscore.es (P12, P17, P25, P26, P39, P40 de `prueba-recomendaciones/aprendizajes.md`): 21 tarjetas casi iguales y un «+31 pt» que se leía como 31 puntos alcanzables con 21 tareas. Maqueta aprobada por el fundador el 2026-10-18 (`docs/design-reference/recs-one-lever-1/maqueta.html`).
+
+**Sin migración.** Por dentro sigue habiendo una recomendación por pregunta: el `dedupe_key` por prompt, la resolución automática y el «Deshacer» no cambian (log §115 punto 6). El tema se lee de `scan_prompt_results.prompt_id` → `project_prompts.category` al cargar la pantalla.
+
+**Qué queda.** La maqueta enseñaba «Ahora no» en la tarjeta; no se construye porque las tarjetas de IA no lo tienen y sería un estado nuevo. El informe (`/informe`) sigue listando acciones como antes. Los tipos que también salen uno por pregunta (`add_citation_block`) siguen en su grupo de siempre.
+
+## 329. GSC-QUERIES-SORT-1: la tabla de búsquedas de «Posición en Google» se ordena por columnas (2026-10-18)
+
+**Qué se decidió.** El fundador preguntó, desde el móvil, si de verdad salía
+primero en búsquedas con puesto 1,0 y 0 clics, y pidió poder ordenar la tabla
+por búsqueda, puesto y clics. En móvil la tabla ocultaba impresiones, CTR y
+página (`gsc-hide-m`), así que un 1,0 de una o dos impresiones se leía como
+un primer puesto firme. Primero vio una propuesta de fichas por búsqueda y la
+descartó: quiere en móvil el mismo formato de tabla que en escritorio
+(maqueta aprobada en `docs/design-reference/gsc-queries-sort-1/`).
+
+- «Búsqueda», «Puesto», «Clics» e «Impresiones» son botones en la cabecera,
+  con ↕ siempre visible y ↑/↓ en la columna activa (`aria-sort`). La primera
+  pulsación ordena como se espera (A–Z, mejor puesto primero, más clics o
+  impresiones primero) y la segunda invierte. Empate: más impresiones, luego
+  la búsqueda. Lógica pura en `sortQueries` (`gsc-queries.tsx`), con test.
+- El conjunto mostrado no cambia: siguen siendo las 50 búsquedas con más
+  impresiones del filtro; la columna elegida sólo las reordena, así que la
+  nota «Mostramos las 50 búsquedas con más impresiones» sigue siendo cierta.
+- En móvil salen todas las columnas: la tabla se desliza en horizontal dentro
+  de su caja y la columna de la búsqueda se queda fija a la izquierda.
+
+**Qué queda.** La propuesta de marcar en ámbar las búsquedas con menos de 10
+impresiones no se implementa: el fundador eligió ver la columna de
+impresiones en móvil. Las demás tablas de la pantalla (páginas) siguen
+ocultando columnas en móvil.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 332. AGENTIC-COMMERCE-1 Fase 2d: «Preguntas de compra» y «Visibilidad en agentes» (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el plan de la 2d («Ok», diseño en
+`docs/design-reference/agentic-commerce-1/fase-2d.html`). Llega la segunda
+pantalla del prototipo, «Visibilidad en agentes». Resume la auditoría
+agéntica como el camino de un agente (Te encuentra, Entra, Entiende, Se fía,
+Compra) y añade «Preguntas de compra»: de las preguntas que el proyecto ya
+escanea, las de quien va a comprar, y qué hacen los motores con ellas.
+
+- **Cómo se reconoce una pregunta de compra.** Una regla fija sobre el texto
+  (`classifyPurchaseQuestion`, `lib/agentic-audit/purchase-questions.ts`),
+  sin IA. Cuenta si pide dónde comprar, contratar o reservar; un precio u
+  oferta (o está en el tema «Precio y planes»); o qué elegir para comprarlo
+  («recomiéndame», «el mejor», «busco»). No cuentan el cómo, el qué es, las
+  diferencias, las opiniones ni las comparativas, salvo que también pidan
+  dónde o cuánto. «online» solo no basta: colaba «reputación online».
+  Descartadas: que la IA etiquete cada pregunta (migración y llamada por
+  pregunta) y que juzgue cada respuesta en el escaneo (toca la extracción
+  compartida y el coste).
+- **Medida antes de construir.** Esta sesión no lee la base de datos, así que
+  la regla se midió sobre las preguntas de cuatro estudios (facturación, La
+  Fábrica del SEO, clínicas de Madrid y Valencia), que genera el mismo
+  sistema. La ancha deja entrar un 63%; la estricta (sólo dónde y precio), un
+  18%, con lo que muchos proyectos no llegarían al mínimo. El fundador eligió
+  la ancha en la tarjeta de decisión (2026-10-18).
+- **Tres cifras, del último escaneo.** «Te nombran» (la mención de
+  `extracted_json.brand.mentioned`, como Visión general), «Citan tu web»
+  (citas de grounding de tu dominio, sólo en Gemini, ChatGPT y Perplexity,
+  que buscan en la web) y «Mandan a un marketplace» (una lista fija de
+  `MARKETPLACES`, por dominio citado o por nombre en la respuesta; tu propio
+  marketplace no cuenta). No suman 100 y la pantalla lo dice. El plan decía
+  «los mismos escaneos que la Puntuación GEO»; se cambió a un solo escaneo
+  para que la lista de preguntas y las cifras describan las mismas
+  respuestas.
+- **Suelo de muestra.** Con menos de 3 preguntas de compra o 10 respuestas
+  salen las preguntas, pero no los porcentajes, con un botón a Prompts.
+- **«Te encuentra» va sin color.** Nada dice qué porcentaje es bueno.
+- **Dos entradas de menú, como en el prototipo.** La primera versión de esta
+  fase juntó las dos pantallas en una entrada con pestañas para ahorrar una
+  fila en el cajón móvil. El fundador la rechazó al verla en el preview
+  (2026-10-18: «había dos secciones en el menú, cada una con una estética
+  distinta y definida»), así que se vuelve a lo aprobado en
+  `docs/design-reference/agentic-commerce-1/prototipo.html`: «Visibilidad en
+  agentes» y «Auditoría agéntica», cada una con su entrada y sin pestañas.
+- **«Visibilidad en agentes» tiene su propio aspecto**, el del prototipo
+  (clases `av-*` en `app/console.css`): anillo con la nota, una frase sobre lo
+  que más frena a un agente (`visibilityHeadline`), la franja «Si arreglas…,
+  subes de N a M» (`fixbarLine`, con `scoreIfChecksPass`), el camino del
+  agente en cinco círculos, las cinco tarjetas de componente (puntos sobre su
+  peso; Interoperabilidad «N de 4») y, abajo, «Preguntas de compra» junto a
+  «Qué hacer primero». La auditoría conserva su aspecto técnico de la 2a.
+  Cada tarjeta de componente abre la auditoría por ese componente
+  (`?componente=`). La tabla por motor y la lista de preguntas van dentro de
+  «Ver las N preguntas por motor». «Qué hacer primero» no enseña puntos por
+  arreglo (los checks sólo enseñan estados, §322), aunque el prototipo los
+  pintaba.
+- **La URL de «Página revisada» ya no se sale de la tarjeta en el móvil.** La
+  columna de la tarjeta era `auto` y crecía hasta el ancho de la URL entera;
+  pasa a `minmax(0, 1fr)` y la URL se corta con puntos suspensivos (fundador,
+  2026-10-18, con captura).
+- **Si todo ha ido bien, «Tienda analizada» con un check verde y sin URL.**
+  Con la página leída y con nota, la URL no aporta nada (fundador,
+  2026-10-18). Queda «Elegir otra página» como enlace. Si la página no se
+  pudo leer o no tiene nota, sigue «Página revisada» con la URL, porque ahí
+  el cliente necesita saber qué página se miró.
+- **«Elegir otra página» abre la caja vacía**, no con la URL ya revisada
+  (fundador, 2026-10-18).
+- **El cajón móvil cabe igual.** Sus filas pasan de 40 a 36px: diez filas de
+  36 miden lo mismo que las nueve de 40 que ya cabían a 390×664.
+- Pro, Agencia y la prueba. Starter ve la invitación a pasar a Pro. La
+  landing quita «Próximamente» a «Preguntas de compra».
+
+**Regla de premisa.** No se retira ningún camino de recuperación: las dos
+pantallas tienen su entrada de menú.
+
+**Qué queda.** Marcar una pregunta como de compra a mano (necesita
+columna nueva, aprobación aparte). Medir la regla sobre proyectos reales: lo
+enseña la propia pantalla, que lista qué preguntas cuentan. 2b (tarjeta en
+Visión general y revisión semanal) y 2c (varias fichas) siguen sin aprobar.
+
+## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) salieron dos fallos de cobertura:
+
+- Tres tarjetas pedían publicar comparativas que llevaban semanas en
+  `/comparativas/` (Peec AI, Otterly, RankScale; P1, P28, P34). Ni
+  `close_competitor_gap` ni `add_comparison_content` miraban la web: el motor
+  las escribe al cerrar el escaneo, antes de que exista auditoría, y
+  `COVERAGE_OVERLAY_TYPES` sólo cubría las dos tarjetas por pregunta.
+- Una tarjeta daba `genscore.es/blog`, el índice del blog, como «Tu página»
+  (P8). `isAnswerPage` sólo descartaba la portada y los foros, así que
+  cualquier listado contaba como página que responde, y se enlazaba el
+  primero que devolvía Google.
+
+**Qué se decidió.**
+
+1. **Un índice no certifica cobertura** (`isListingPage`,
+   `lib/recommendations/coverage-overlay.ts`): la portada de una sección
+   (`/blog`, `/es/guias`, `/comparativas`, `/docs`, `/glosario`, `/estudios`
+   y equivalentes en inglés), una página de categoría, etiqueta o autor y una
+   paginación (`/page/2`). Si Google sólo devuelve índices, el estado es
+   `listing_only`: «Sólo encontramos una página índice», con el consejo de
+   reforzar el artículo si existe o publicarlo si no. Si hay un artículo
+   junto al índice, se enlaza el artículo. El informe hereda el criterio
+   porque lee el mismo `isAnswerPage`.
+2. **Una tarjeta de comparativa mira si la comparativa ya existe**
+   (`lib/recommendations/own-comparison-pages.ts` +
+   `computeComparisonOverlay`). La prueba es la lista de URL que ya tenemos
+   de la web: el sitemap que guarda la auditoría técnica
+   (`bots.sitemap.locs`, hasta 500, sin fetch nuevo) más las páginas que
+   encontró la cobertura. Cuenta como comparativa una URL propia bajo una
+   sección de comparativas o con un slug `x-vs-y` / `alternativas-a-x`, y
+   casa con un competidor si su nombre aparece como palabras enteras del
+   último tramo de la URL («Otter» no casa con `genscore-vs-otterly`). Una
+   tarjeta de un competidor necesita la página de ese competidor; la genérica,
+   la de cualquier competidor de sus respuestas. Con página, la tarjeta pasa
+   al mismo estado que una pregunta cubierta: «Sí tienes una página sobre
+   este tema», «no publiques otra, refuerza la que ya tienes» y el enlace.
+   Mantiene su sitio y sus puntos, porque lo que la IA responde no ha
+   cambiado.
+
+**Por qué por URL y no por contenido.** Leer la página sería un fetch más
+por tarjeta, y esta zona es adyacente a «crawler» (`CLAUDE.md`). La URL dice
+lo que se comprobó: existe una página tuya cuyo nombre es esa comparativa.
+Por eso el texto habla del «mapa de tu web» y no promete que la página sea
+buena.
+
+**Qué queda.**
+
+- Un sitemap índice (`<sitemapindex>`, habitual en WordPress) no trae
+  páginas, así que esas webs sólo se benefician de lo que encuentre la
+  cobertura. Seguir los sitemaps hijos sería recorrer enlaces: fase aparte.
+- P11 y P23 (una tarjeta sigue «Abierta N escaneos» sobre algo hecho) no se
+  tocan: la tarjeta se cierra cuando la IA deja de reproducir el hueco, y la
+  cobertura sólo cambia el consejo. Darle al cliente un «ya existe» que
+  cierre la tarjeta es una decisión de producto propia.
+- La cobertura sigue buscando con Google una vez por semana (§253): una
+  página publicada después tarda hasta una semana en verse, salvo las
+  comparativas, que salen del sitemap de la última auditoría técnica.
+
+## 331. RECS-TEMPLATES-1: las plantillas dejan de pedir lo que ya sabemos e inventar lo que no (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) los planes generados tenían cinco
+vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
+
+- Huecos donde el dato era nuestro y no del cliente: «máximo [tu dato aquí]
+  palabras» (P18).
+- Pedían «precios desde» en una pregunta que no trataba de precios (P9).
+- La tabla de comparativa rellenaba la columna del competidor con
+  afirmaciones sin fuente («Monitorea 15 prompts», «RankScale: Sí»; P27,
+  P35). Publicarla sería publicar datos ajenos inventados.
+- La plantilla de contacto decía «he leído su artículo» y enumeraba
+  competidores (P31).
+- Mezclaba inglés en el texto («donde no haya datos facts», P2).
+
+**Qué se decidió.** Cinco reglas nuevas en el prompt, con test
+(`rewrite-template-rules.test.ts`):
+
+1. Un hueco es sólo para un dato de la marca que sólo ella sabe (precio,
+   fecha, cifra, nombre). Las pautas editoriales las da el plan (por ejemplo
+   «una introducción de 40 a 60 palabras»).
+2. Sólo se piden los datos que necesita la pregunta: nada de precios en una
+   respuesta que no va de precios.
+3. Nunca un dato de un competidor. En una tabla comparativa (cuatro criterios
+   como mucho) cada celda del competidor es el hueco «[dato de su web, con
+   enlace y fecha]» y el plan incluye un paso para comprobarlo en su web y
+   anotar enlace y fecha. Vale también para la tarjeta genérica de
+   comparativa.
+4. Una plantilla de contacto nunca afirma que el remitente leyó, usó o le
+   gustó algo, y nunca nombra competidores.
+5. Ninguna palabra inglesa de las instrucciones pasa al texto.
+6. Nunca una ruta inventada en el dominio de la marca. El fundador probó el
+   preview y la plantilla de contacto enlazaba «https://movistar.es/pagina»:
+   el prompt decía «usa https://[tu-dominio]/pagina» para otras webs y el
+   modelo lo rellenó con el dominio propio. Ahora, o el dominio a secas
+   (si la portada es el destino), o un hueco «[enlace a tu página de …]».
+   En esa misma prueba el plan de contacto traía un JSON-LD `FAQPage`: eso
+   lo corrige RECS-MIXED-CHANNEL-1 (§326, PR #649), no este PR.
+7. Un ejemplo es sólo el texto que se pega. En la misma prueba, la respuesta
+   del JSON-LD `FAQPage` terminaba con un consejo para el usuario («Los
+   textos y precios marcados deben estar visibles… en el HTML»), que habría
+   acabado publicado como respuesta. Los consejos van en los pasos.
+
+**Lo que no cambia, y por qué.**
+
+- **«Listo para copiar» con huecos (P14, P35) no se reproduce en el código.**
+  La insignia ya cuenta los huecos sobre el texto real
+  (`classifySolutionReadiness`, RECS-ACCION-1). Con la tabla de P35 (18
+  celdas) dice «18 huecos por rellenar», y queda fijado por test. Si vuelve a
+  verse, hace falta el texto exacto del plan para reproducirlo.
+- **Precios reales.** El plan no conoce los precios de un cliente: el hueco
+  de precio sigue siendo legítimo cuando la pregunta va de precios. Sólo
+  genscore.es tiene sus precios en el código (`plans-data.ts`), y meter un
+  caso especial para nuestra propia web no arregla nada para los clientes.
+- **Los planes ya generados no se rehacen solos.** Un plan es idempotente por
+  tarjeta, así que las reglas valen para lo que se genere a partir de ahora.
+- Las reglas son blandas, como las de §128: viven sólo en el prompt. La
+  única comprobación en servidor sigue siendo la de competidores y dominios
+  permitidos.
+
+## 334. RECS-JSONLD-LEVER-1: el JSON-LD deja de venderse como palanca (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) los planes generados tenían tres
+vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
+
+- Presentaban el `FAQPage` en JSON-LD como lo que hace que te citen (P10).
+  Google dice que sus funciones de IA no necesitan marcado especial, y
+  nuestra propia guía del blog lo dice: el producto contradecía su
+  documentación. El paso obligatorio de «hazlo legible por máquina» lo
+  ponía al mismo nivel que el texto visible, y los playbooks de FAQ, bloque
+  citable y comparativa lo pedían como entregable fijo.
+- El FAQ del ejemplo era una definición de producto que ningún usuario había
+  preguntado (P32).
+- Una respuesta del FAQ decía que GenScore analiza Perplexity sin matizar que
+  sólo lo incluyen Pro y Agencia (P36).
+
+**Qué se decidió.** Reglas blandas del prompt, con test
+(`jsonld-lever.test.ts`):
+
+1. El paso de «legible» pide el texto visible: la respuesta en las primeras
+   frases bajo un titular con la pregunta, HTML semántico y contenido que se
+   pueda rastrear.
+2. Los datos estructurados son una ayuda opcional que sólo describe texto que
+   ya se ve. Nunca son la palanca ni un paso que vaya a conseguir la cita, y
+   si salen, van al final y dicen que son opcionales. Los playbooks de FAQ,
+   bloque citable y comparativa piden el JSON-LD «opcionalmente».
+3. Cada pregunta de un FAQ sale de los prompts afectados reales; nunca una
+   pregunta inventada ni un «qué es <marca>» que no esté entre ellos.
+4. Nunca se describe qué hace el producto, qué incluye cada plan ni qué
+   motores, canales o mercados cubre más allá de los datos. Lo que sólo
+   incluyen algunos planes no se escribe como si lo tuviera todo cliente. Va
+   como hueco «[qué incluye tu producto y en qué planes]».
+
+Los planes fuera de la web siguen sin JSON-LD (§326). La regla de que un
+`FAQPage` exige que las preguntas estén visibles en la página (§128) sigue
+igual.
+
+**Qué queda.** Son reglas blandas: el guardián del servidor no comprueba
+afirmaciones de producto ni el origen de las preguntas. El motor tampoco sabe
+qué incluye cada plan de una marca cliente; para genscore.es esos datos viven
+en `plans-data.ts`, pero no se pasan al prompt.
+
+## 335. RECS-OUTREACH-TARGETS-1: la tarjeta de fuentes sólo cuenta webs a las que se puede escribir (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) la tarjeta decía «Consigue que 5 webs
+te mencionen» y el propio plan descartaba cuatro (P29). Dos eran la web de
+otras herramientas (llmpulse.ai, dageno.ai) y dos documentación oficial
+(help.openai.com, developers.google.com). El «Haz esto» pedía contactar con
+quien publica el centro de ayuda de OpenAI, que es imposible. Además la
+insignia «Abierta 14 escaneos» salía en una acción que depende de terceros:
+castigaba al usuario por algo que no puede cerrar (P30).
+
+**Qué se decidió.**
+
+1. El motor (`computeCitationSourceGap`) descarta antes de contar, con
+   `isOutreachTarget` (`lib/recommendations/outreach-targets.ts`):
+   - la documentación y los centros de ayuda (`help.`, `support.`, `docs.`,
+     `developers.`, `learn.`, `ayuda.`, `soporte.` y similares, siempre como
+     subdominio);
+   - una web sin clasificar cuyo dominio es una marca nombrada en esa misma
+     respuesta. Es la web de esa empresa, no un medio. Igualdad exacta de
+     etiqueta, como «Añadir competidor» (§327); nunca contención. Un
+     comparador, un medio o una comunidad conservan su familia aunque la
+     respuesta los nombre.
+   Así el titular, las webs del plan y el primer paso sólo hablan de webs a
+   las que se puede escribir, y una descartada no ocupa uno de los seis
+   huecos.
+2. La insignia «Abierta N escaneos» no sale en tarjetas de control
+   `third_party`. En lo propio de la web sigue igual.
+
+**Qué queda.** La web de una herramienta que la respuesta no nombra sigue
+contando: sin leer la página no hay forma honrada de saber que es una
+empresa. Los dominios de las respuestas que ve el modelo al generar el plan no
+cambian, así que el plan puede seguir mencionándolas para descartarlas.
+
+## 336. RECS-LABELS-1: las etiquetas de la tarjeta dejan de contradecirse (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) varias tarjetas se contradecían a sí
+mismas:
+
+- «Victoria rápida» y «Prioridad alta» sobre una acción que «Depende de
+  terceros» y valía +2 pt (P38).
+- Una tarjeta enseñaba «Impacto medio» al lado de otras con «+N pt», como si
+  fuera la misma escala (P13).
+- La tarjeta de competidor decía «abre una respuesta y mira qué páginas
+  cita» y su plan, «crea una página» (P3).
+- La tarjeta de comunidades pedía «busca el hilo más citado en youtube.com»:
+  YouTube no tiene hilos (P37). La mitad del P37 que mezclaba JSON-LD en la
+  web propia ya la cerró §326.
+
+**Qué se decidió.**
+
+1. Lo que depende de un tercero (control `third_party`) nunca lleva
+   «Prioridad alta» ni «Victoria rápida». Es el mismo techo que `planScore`
+   ya le pone a su puesto (§140).
+2. Un impacto sin cifra lleva debajo «sin cifra calculable», para que no se
+   lea como un «+N pt».
+3. El primer paso de `close_competitor_gap` es el de su plan: «Publica una
+   comparativa entre tu marca y X que responda a estas preguntas con tus
+   datos». Si la comparativa ya existe, la cobertura (§330) lo cambia.
+4. El primer paso de `pursue_community_sources` depende del sitio
+   (`communityKind`): en una plataforma de vídeo, un comentario útil o un
+   vídeo propio; en una red social, responder a la publicación; en un foro,
+   el hilo.
+
+**Qué queda.** La lista de plataformas de vídeo y de redes es corta y a mano,
+como la de `source-type.ts`; lo que no esté en ella se trata como foro.
+
+## 337. RECS-MINORS-1: evidencia legible y sin vender huecos como oportunidades seguras (2026-10-18)
+
+**Qué pasó.** Hallazgos menores de la prueba real sobre genscore.es
+(`/mnt/project-files/prueba-recomendaciones/aprendizajes.md`, punto 8 del
+plan):
+
+- Las citas de evidencia enseñaban Markdown sin pintar («**Peec AI**», P5).
+- La lista de dominios citados tenía decenas de entradas: un muro de texto en
+  el móvil (P6).
+- «La IA no te nombró ni a ti ni a ningún competidor» se presentaba como
+  oportunidad segura («lo tiene más fácil», «entrar ahora es más barato»),
+  cuando también puede ser una pregunta en la que la IA no recomienda a nadie
+  (P19).
+
+**Qué se decidió.**
+
+1. La cita se pinta sin marcas de formato (`plainSnippet`,
+   `lib/recommendations/plain-snippet.ts`): se quitan negritas, cursivas,
+   enlaces, código y viñetas. Las palabras se quedan tal cual, y lo guardado
+   no cambia.
+2. Los dominios se cortan en seis y el resto se cuenta: «y N más»
+   (`shortDomainList`).
+3. La tarjeta de visibilidad sin rivales dice lo observado y las dos
+   lecturas posibles: puede ser un hueco libre o una pregunta sin marcas, y
+   una buena página es la forma de comprobarlo.
+
+**Lo que no se cambia, y por qué.**
+
+- P4 (cifras que no cuadran): desde §299 el título cuenta preguntas
+  distintas y la tarjeta enseña respuestas con su nombre. No se ha podido
+  reproducir con datos actuales.
+- P7 («Abierta 9 escaneos» el mismo día): se ha verificado que cuenta
+  escaneos, no días, y aquel día se lanzaron varios de prueba. La etiqueta
+  dice «escaneos» y es cierta.
+- P15: lo cerró la tarjeta por palanca (§328).
+- P20 (el plan cambia entre generaciones): el plan generado se guarda y no
+  cambia hasta que se genera otro. Hacer el modelo determinista no es posible
+  desde este prompt.
+
+## 338. SEO-DIAG-0: diagnóstico SEO con DataForSEO desde la consola de operador (2026-10-18)
+
+**Por qué.** Denis quiere que «Posicionamiento en Google» ayude de verdad a
+posicionar una web (prototipo v3 en el hilo «Auditoría de keywords SEO»), y
+genscore.es es el primer caso. Antes de construir nada para clientes había
+que medir dos cosas con datos reales: cuánto cuesta cada consulta de
+DataForSEO y qué sale para genscore.es. El entorno de las sesiones bloquea
+`api.dataforseo.com` y las claves sólo viven en Vercel, así que las llamadas
+tienen que salir del servidor.
+
+**Qué se decidió.**
+
+1. Página de operador `/admin/seo-diagnostico`, con `requireOperator()` en la
+   página y en la acción, como `/admin/estudio`. No escribe en la base de
+   datos ni envía nada fuera de DataForSEO.
+2. Un diagnóstico son llamadas en vivo, una por paso, lanzadas desde el
+   navegador:
+   - saldo;
+   - palabras en las que ya sale el dominio (Labs `ranked_keywords`, 200);
+   - competidores orgánicos (Labs `competitors_domain`, 10);
+   - palabras de hasta 3 competidores que él no tiene
+     (`domain_intersection` con `intersections: false`, 100 cada una);
+   - ideas por tema (`keyword_ideas`, hasta 5 temas, 100);
+   - Top 20 de hasta 10 búsquedas (SERP `organic/live/advanced`, con mapa y
+     «Otras preguntas»);
+   - enlaces del dominio y de esos competidores (`backlinks/summary`).
+3. Cada paso enseña lo que costó (el campo `cost` de la respuesta) y si
+   falló. Un dato que no viene sale «—», nunca 0. El resultado entero se
+   descarga en JSON.
+4. Mercado fijo: Google España, en español (`location_code` 2724).
+5. Credenciales en `DATAFORSEO_LOGIN` y `DATAFORSEO_PASSWORD` (el «API login»
+   y el «API password» del panel, no el email ni la contraseña de la web).
+   Nunca se registran en logs.
+
+**Qué queda.** Es la base del cliente de DataForSEO que usará la fase 1, no
+la fase 1. Falta:
+
+- ver si `backlinks/summary` funciona sin la suscripción mensual de
+  Backlinks;
+- fijar topes por plan con el coste medido;
+- la migración y el cron semanal del historial de posiciones, que necesitan
+  su propio Task Intake.
+
+## 339. RECS-ALREADY-DONE-1: una tarjeta cuya página ya existe pasa sola a «Resueltas»
+
+**Fecha:** 2026-10-18. **Zona:** Recomendaciones (también Visión general, el
+informe y la campana). **Origen:** prueba real en genscore.es, P11, P22 y P23
+de `prueba-recomendaciones/aprendizajes.md`. Denis: «si ya lo tengo hecho esas
+tarjetas no deberían aparecer, deberían aparecer en la pestaña de resueltas ya
+tachadas». Sustituye a la idea de un botón «Ya existe», que no llegó a
+construirse.
+
+**Qué se decidió.**
+
+1. Si la única acción de la tarjeta es publicar una página y la cobertura ya
+   la encontró, la tarjeta sale de la lista activa y aparece en «Resueltas»,
+   tachada, con la insignia «Ya lo tienes» y el enlace a la página. Cuenta
+   para tres tipos (`PUBLISH_PAGE_TYPES`):
+   - `increase_brand_visibility`, cuando hay una página de respuesta propia;
+   - `close_competitor_gap` y `add_comparison_content`, cuando la comparativa
+     con ese competidor está en el sitemap.
+2. `add_citation_block` se queda activa. Su acción es añadir un dato citable
+   a la página, y encontrar la página no dice si ese dato está.
+3. Sólo certifica el estado `confirmed_surfacing_gap` con página. La portada,
+   un índice o un foro (§278, §299, §330) siguen sin contar.
+4. No se escribe nada, ni estado ni migración. Se calcula al leer, como el
+   overlay. El siguiente escaneo vuelve a generar la tarjeta y la cobertura
+   decide otra vez. Por eso no hay «Deshacer»: no hay nada que deshacer.
+5. Mismo criterio en todas las vistas, con un solo cargador
+   (`loadCoverageOverlays`, `lib/recommendations/coverage-overlay-data.ts`):
+   - la pantalla, con su plan, techos, palancas y grupos;
+   - las Oportunidades de Visión general;
+   - el «Tu siguiente paso» de la campana.
+
+   El informe aplica la misma función sobre el overlay que ya calculaba.
+
+**Corrige §330.** La regla «un veredicto de cobertura cambia el consejo, no
+los puntos ni el sitio de la tarjeta» deja de valer para estos tres tipos. Para
+ellos, el veredicto saca la tarjeta del plan. Para `add_citation_block` sigue
+igual.
+
+**Premisa.** Esta fase quita una tarjeta activa, así que depende de algo. La
+premisa es que la cobertura sólo da `confirmed_surfacing_gap` con una página
+propia que responde a la pregunta (`isAnswerPage`) o con la comparativa con
+ese competidor en el sitemap.
+- Hoy lo verifican `coverage-overlay.test.ts` y `already-done.test.tsx`.
+- Si la premisa falla, la cobertura tomaría por buena una página que no
+  responde. Entonces la tarjeta se iría a «Resueltas» sin estar hecha, y la
+  única salida es mirar la página enlazada.
+- Lo que la IA responde no cambia porque exista la página. Si sigue sin
+  nombrarte, se ve en Prompts.
+
+**Qué queda.** Que la página exista no dice que esté bien hecha. Comprobar su
+estructura (respuesta en las dos primeras frases, titular en pregunta) exigiría
+leer la página, y eso sigue sin aprobar.

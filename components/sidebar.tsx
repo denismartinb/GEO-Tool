@@ -58,9 +58,10 @@ const globalLinks: ProjectLink[] = [
 ];
 
 // AGENTIC-COMMERCE-1 Fase 2a (log §322): «Comercio agéntico», its own block
-// with «Nuevo». One entry for now; «Visibilidad en agentes» comes with the
-// buying-intent questions (Fase 2d).
+// with «Nuevo». Fase 2d (log §332): two entries, as in the approved prototype:
+// the summary («Visibilidad en agentes») and the technical review.
 const agenticLinks: ProjectLink[] = [
+  { segment: "/agentic-visibility", label: "Visibilidad en agentes", icon: "robot", countKey: null },
   { segment: "/agentic-audit", label: "Auditoría agéntica", icon: "cart", countKey: null },
 ];
 

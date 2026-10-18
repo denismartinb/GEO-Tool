@@ -671,3 +671,146 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Canal del plan (RECS-MIXED-CHANNEL-1, log §326)
+
+- **El paso «hazlo legible por máquina» sólo va en acciones de la propia
+  web.** `buildRecommendationRewritePrompt` lo decide con
+  `deliverableForType(tipo).control`: `own_site` (o sin clasificar) lo lleva;
+  `third_party` e `in_app` llevan la instrucción contraria, sin pasos de la
+  web ni ejemplos de JSON-LD. Un tipo nuevo de terceros hereda esto al
+  declarar su control en `deliverable.ts`.
+- **Cada familia `pursue_*` tiene su playbook.** Sin él, el tipo cae al
+  prompt genérico, que está pensado para contenido propio.
+- **«Listo para copiar» sólo en la propia web.** Fuera de ella, un plan sin
+  huecos es «Plan listo».
+
+## Añadir competidor (RECS-ADD-COMPETITOR-1, log §327)
+
+- **`track_emerging_competitor` se pinta como un botón, nunca como plan.**
+  `RecCard` lo desvía a `EmergingCompetitorCard`: sin «Ver cómo», sin
+  generación de IA, sin puntos. La acción entera es añadir el competidor.
+- **El alta pasa por `createCompetitorCore`**, el mismo camino que el
+  formulario de Competidores. No se escribe en `project_competitors` por otro
+  lado. Después la tarjeta se marca hecha con `dismissRecommendationCore`.
+- **El nombre se lee de `evidence_json.emerging_competitor` en el servidor.**
+  La action no acepta un nombre del navegador; sólo el id y la web.
+- **La web sólo se propone con igualdad exacta de etiqueta**
+  (`domainForBrandName`). Sin coincidencia se pide; nunca se adivina. El
+  navegador y el servidor validan con la misma `parseCompetitorDomain`.
+
+## Una tarjeta por palanca (RECS-ONE-LEVER-1, log §328)
+
+- **Las tarjetas `increase_brand_visibility` se pintan agrupadas por tema,
+  nunca sueltas.** El motor sigue emitiendo una por prompt (log §115 punto
+  6); `lib/recommendations/levers.ts` las agrupa por `project_prompts.category`
+  al cargar la pantalla, y las de definición van siempre aparte.
+- **Una palanca tiene una sola cifra**, el contrafactual conjunto de todos sus
+  miembros (ADR 0017 §3). Nunca la suma de los miembros.
+- **Una palanca ocupa un solo puesto del plan.** El plan se elige sobre
+  `collapseLeversForPlan`; todo techo que incluya una palanca se calcula con
+  todos sus miembros (`expandLeverIds`).
+- **El plan de una palanca se marca `lever: true` y nunca sustituye al de una
+  pregunta, ni al revés.** Los miembros se vuelven a leer en servidor con el
+  cliente del usuario, del mismo proyecto y tipo; el título lo pone el
+  servidor.
+- **«Marcar como hecho» de una palanca cierra todos sus miembros**, cada uno
+  con su propia comprobación de propiedad (`dismissRecommendationsCore`).
+
+## Cobertura: índices y comparativas (RECS-COVERAGE-1, log §330)
+
+- **Un índice nunca es «tu página».** `isAnswerPage` excluye portada, foros
+  e índices (`isListingPage`: portada de sección, categoría, etiqueta, autor,
+  paginación). Sólo índices da `listing_only`, que no certifica cobertura.
+  El informe usa la misma función: no le pongas un criterio propio.
+- **Las tarjetas de comparativa se comprueban contra las URL que ya
+  tenemos**, el sitemap guardado por la auditoría técnica más las páginas de
+  la cobertura (`computeComparisonOverlay`). Nada de fetch nuevo: leer la
+  página sería un rastreador. El texto dice lo que se vio («el mapa de tu
+  web incluye una comparativa»), nunca que la página sea buena.
+- **El competidor casa por palabras enteras del slug**, y una tarjeta de un
+  competidor sólo acepta la página de ese competidor. Una comparativa con
+  otro rival no la cubre.
+- **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
+  la tarjeta.** Lo que la IA responde no cambia porque exista la página.
+  Excepción desde §339: si la tarjeta sólo pedía publicar esa página, pasa a
+  «Resueltas» (sección de abajo).
+
+## Plantillas generadas (RECS-TEMPLATES-1, log §331)
+
+- **Un hueco `[...]` es un dato de la marca, nunca una pauta editorial.** El
+  prompt da los valores editoriales (longitud, número de subtítulos) y sólo
+  deja hueco para lo que sólo sabe la marca.
+- **Ningún dato de un competidor sale del plan.** Cada celda de un rival en
+  una tabla es el hueco «[dato de su web, con enlace y fecha]» y el plan pide
+  comprobarlo en su web. Afirmar una función o un precio ajeno sin fuente es
+  la misma invención que prohíbe `CLAUDE.md`.
+- **Ninguna URL inventada en el dominio propio.** O el dominio a secas, o el
+  hueco «[enlace a tu página de …]»; nunca «https://marca.es/pagina».
+- **Un ejemplo es sólo el texto que se pega.** Ningún consejo al usuario
+  dentro de él (tampoco en la respuesta de un JSON-LD); va en un paso.
+- **Una plantilla de contacto no afirma lo que no sabemos** (que el remitente
+  leyó algo) ni nombra competidores.
+- Son reglas blandas del prompt, fijadas por `rewrite-template-rules.test.ts`.
+  Si alguna pasa a comprobarse en servidor, se dice aquí.
+
+## Datos estructurados (RECS-JSONLD-LEVER-1, log §334)
+
+- **El JSON-LD nunca es la palanca.** El paso de «legible» de la propia web
+  pide texto visible; los datos estructurados son opcionales, van al final y
+  sólo describen lo que ya se ve. Google dice que sus funciones de IA no
+  necesitan marcado especial, y lo dice también nuestra guía del blog.
+- **Cada pregunta de un FAQ sale de los prompts afectados reales.**
+- **Nunca se afirma qué incluye el producto o cada plan más allá de los
+  datos.** Si no está en los datos, es un hueco.
+- Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
+
+## Fuentes a las que escribir (RECS-OUTREACH-TARGETS-1, log §335)
+
+- **La tarjeta de fuentes sólo cuenta webs a las que se puede escribir.**
+  `computeCitationSourceGap` filtra con `isOutreachTarget` antes de contar:
+  fuera la documentación y los centros de ayuda, y fuera la web sin
+  clasificar de una marca nombrada en la misma respuesta (igualdad exacta de
+  etiqueta, nunca contención). El titular y el primer paso salen de lo que
+  queda.
+- **Un comparador, un medio o una comunidad no se descartan por ser una marca
+  nombrada.** Sólo la familia «Otras webs».
+- **La antigüedad («Abierta N escaneos») no sale en tarjetas `third_party`.**
+
+## Etiquetas coherentes (RECS-LABELS-1, log §336)
+
+- **Lo que depende de un tercero nunca es «Prioridad alta» ni «Victoria
+  rápida».** `priorityLevel` e `isQuickWin` excluyen el control
+  `third_party`, como `planScore` ya lo baja en el plan. Matiza la regla de
+  «Alta prioridad es un único criterio»: el criterio sigue siendo uno, con
+  ese techo.
+- **Un impacto sin cifra dice «sin cifra calculable».** Nunca sólo la
+  palabra al lado de tarjetas con «+N pt».
+- **El primer paso de la tarjeta y el de su plan son la misma acción.**
+- **Una comunidad se nombra por lo que es** (`communityKind`): vídeo,
+  publicación o hilo.
+
+## Evidencia legible (RECS-MINORS-1, log §337)
+
+- **Una cita se pinta con `plainSnippet`**, sin marcas de Markdown. Lo
+  guardado no se toca.
+- **Una lista de dominios en la tarjeta se corta en seis** (`shortDomainList`)
+  y cuenta el resto.
+- **Que no salga ningún competidor no es una oportunidad segura.** El texto
+  dice lo observado y que también puede ser una pregunta sin marcas.
+
+## Ya lo tienes (RECS-ALREADY-DONE-1, log §339)
+
+- **Si la acción entera era publicar una página que la cobertura ya
+  encontró, la tarjeta sale de la lista activa y va a «Resueltas», tachada.**
+  Pasa con «Ya lo tienes» y el enlace (`isAlreadyCovered`, tipos de
+  `PUBLISH_PAGE_TYPES`). `add_citation_block` no entra: su acción es añadir
+  un dato y la página no dice si está.
+- **Se calcula al leer, nunca se guarda.** Sin estado nuevo ni «Deshacer».
+  El siguiente escaneo decide otra vez.
+- **Toda vista que liste tarjetas lee el overlay con `loadCoverageOverlays`
+  y filtra con `isAlreadyCovered`.** Hoy lo hacen Recomendaciones, Visión
+  general y la campana. El informe usa la misma función sobre su overlay.
+  Una vista nueva que se lo salte enseñaría como pendiente lo que la
+  pantalla da por hecho.
+- **Sólo se enlaza una dirección `http(s)`.**

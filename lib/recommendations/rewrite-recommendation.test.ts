@@ -34,11 +34,14 @@ function makeFakeSupabase({
   project,
   recommendation,
   competitors,
+  members = [],
   hangOnCompetitors = false
 }: {
   project: Row | null;
   recommendation: Row | null;
   competitors: Row[];
+  /** Rows the lever-member read (`.in("id", …)`) can return. */
+  members?: Row[];
   hangOnCompetitors?: boolean;
 }) {
   const client = {
@@ -75,6 +78,12 @@ function makeFakeSupabase({
                 const match =
                   recommendation && filters.every(([col, val]) => recommendation[col] === val) ? recommendation : null;
                 return Promise.resolve({ data: match, error: null });
+              },
+              in(col: string, vals: unknown[]) {
+                const data = members.filter(
+                  (row) => vals.includes(row[col]) && filters.every(([c, v]) => row[c] === v)
+                );
+                return Promise.resolve({ data, error: null });
               }
             };
             return builder;
@@ -121,11 +130,14 @@ function makeFakeSupabase({
  */
 function makeFakeService({
   existingSolution = null,
+  existingSolutions,
   rateCount = 0,
   rateError = null,
   insertError = false
 }: {
   existingSolution?: GeneratedSolution | null;
+  /** Raw rows of the idempotency read, newest first (overrides existingSolution). */
+  existingSolutions?: Row[];
   rateCount?: number;
   rateError?: { message: string } | null;
   insertError?: boolean;
@@ -156,7 +168,8 @@ function makeFakeService({
             };
             return builder;
           }
-          // Idempotency read branch: .eq×N.order.limit.maybeSingle().
+          // Idempotency read branch: .eq×N.order.limit, then awaited (the
+          // newest few rows, so a lever plan and a single plan stay apart).
           const builder = {
             eq() {
               return builder;
@@ -167,11 +180,9 @@ function makeFakeService({
             limit() {
               return builder;
             },
-            maybeSingle() {
-              return Promise.resolve({
-                data: existingSolution ? { sanitized_content: JSON.stringify(existingSolution) } : null,
-                error: null
-              });
+            then(resolve: (v: { data: Row[]; error: null }) => unknown) {
+              const rows: Row[] = existingSolutions ?? (existingSolution ? [{ sanitized_content: JSON.stringify(existingSolution) }] : []);
+              return Promise.resolve({ data: rows, error: null }).then(resolve);
             }
           };
           return builder;
@@ -860,5 +871,107 @@ describe("rewriteRecommendationCore", () => {
 
     const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
     expect(evidence.domain_anchored_competitors).toEqual(["SE Ranking"]);
+  });
+
+  describe("one plan per lever (RECS-ONE-LEVER-1)", () => {
+    const leverRec = (id: string, prompt: string, domain: string) => ({
+      id,
+      project_id: PROJECT.id,
+      title: `Aparece en "${prompt}"`,
+      description: "La IA no te nombró ni a ti ni a ningún competidor.",
+      recommendation_type: "increase_brand_visibility",
+      source_type: "rule",
+      evidence_json: {
+        why_this_matters: "Entrar ahora es más barato.",
+        affected_prompts: [prompt, prompt],
+        mentioned_competitors: [],
+        citation_domains: [domain],
+        evidence_snippets: []
+      }
+    });
+    const A = leverRec("11111111-1111-4111-8111-111111111111", "¿cómo optimizo mi geo?", "a.com");
+    const B = leverRec("22222222-2222-4222-8222-222222222222", "¿cómo salgo en chatgpt?", "b.com");
+    const FOREIGN = { ...leverRec("33333333-3333-4333-8333-333333333333", "otra", "c.com"), project_id: "other" };
+
+    it("generates one plan over every member's questions, with our own title, and flags it", async () => {
+      const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+      rewriteRecommendationMock.mockResolvedValue(REWRITE);
+      validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+      const { client } = makeFakeSupabase({ project: PROJECT, recommendation: A, competitors: [], members: [A, B, FOREIGN] });
+      const { service, getInserted } = makeFakeService();
+
+      const result = await rewriteRecommendationCore({
+        projectId: PROJECT.id,
+        recommendationId: A.id,
+        leverMemberIds: [B.id, FOREIGN.id],
+        supabase: client,
+        service,
+        user: USER
+      });
+
+      expect(result.success).toBe(true);
+      const args = rewriteRecommendationMock.mock.calls[0][0];
+      expect(args.affectedPrompts).toEqual(["¿cómo optimizo mi geo?", "¿cómo salgo en chatgpt?"]);
+      expect(args.citationDomains).toEqual(expect.arrayContaining(["a.com", "b.com"]));
+      expect(args.citationDomains).not.toContain("c.com");
+      expect(args.ruleTitle).toBe("Una sola página que responda a estas preguntas");
+      expect(args.lever).toBe(true);
+      const evidence = getInserted()[0].evidence_json as Record<string, unknown>;
+      expect(evidence.lever).toBe(true);
+      expect(getInserted()[0].recommendation_id).toBe(A.id);
+    });
+
+    it("never returns a single-question plan for a lever, nor a lever plan for a single card", async () => {
+      const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+      rewriteRecommendationMock.mockResolvedValue(REWRITE);
+      validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+      const single = { ...REWRITE, title: "Plan de una pregunta" };
+      const lever = { ...REWRITE, title: "Plan del tema" };
+      const rows = [
+        { sanitized_content: JSON.stringify(single), evidence_json: {} },
+        { sanitized_content: JSON.stringify(lever), evidence_json: { lever: true } }
+      ];
+      const { client } = makeFakeSupabase({ project: PROJECT, recommendation: A, competitors: [], members: [A, B] });
+
+      const asLever = await rewriteRecommendationCore({
+        projectId: PROJECT.id,
+        recommendationId: A.id,
+        leverMemberIds: [B.id],
+        supabase: client,
+        service: makeFakeService({ existingSolutions: rows }).service,
+        user: USER
+      });
+      expect(asLever).toEqual({ success: true, solution: lever });
+
+      const asSingle = await rewriteRecommendationCore({
+        projectId: PROJECT.id,
+        recommendationId: A.id,
+        supabase: client,
+        service: makeFakeService({ existingSolutions: [rows[1]] }).service,
+        user: USER
+      });
+      expect(asSingle.success).toBe(true);
+      expect(rewriteRecommendationMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("ignores member ids on any other type", async () => {
+      const { rewriteRecommendationCore } = await import("@/lib/recommendations/rewrite-recommendation");
+      rewriteRecommendationMock.mockResolvedValue(REWRITE);
+      validateRewriteAgainstEvidenceMock.mockReturnValue({ valid: true });
+      const { client } = makeFakeSupabase({ project: PROJECT, recommendation: RULE_RECOMMENDATION, competitors: [], members: [A, B] });
+      const { service, getInserted } = makeFakeService();
+
+      await rewriteRecommendationCore({
+        projectId: PROJECT.id,
+        recommendationId: RULE_RECOMMENDATION.id,
+        leverMemberIds: [A.id, B.id],
+        supabase: client,
+        service,
+        user: USER
+      });
+
+      expect(rewriteRecommendationMock.mock.calls[0][0].lever).toBe(false);
+      expect((getInserted()[0].evidence_json as Record<string, unknown>).lever).toBeUndefined();
+    });
   });
 });

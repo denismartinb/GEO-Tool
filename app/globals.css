@@ -8451,9 +8451,12 @@ h1 + .blog-post-meta { margin: 0 0 34px; }
      AGENTIC-COMMERCE-1 Fase 2a (log §322): el bloque «Comercio agéntico»
      añadió un rótulo y un enlace (70px), así que los rótulos de bloque, el
      margen del selector de proyecto y el relleno inferior de la lista se
-     aprietan otra vez hasta que todo vuelve a caber sin scroll. */
+     aprietan otra vez hasta que todo vuelve a caber sin scroll.
+     Fase 2d (log §332): el bloque gana su segunda entrada, como en el
+     prototipo aprobado. Las filas pasan de 40 a 36px: diez filas de 36 miden
+     lo mismo que las nueve de 40 que ya cabían a 390×664. */
   .nav-item {
-    min-height: 40px;
+    min-height: 36px;
   }
 
   .nav-group-label {
@@ -11706,6 +11709,18 @@ select.set-field {
   color: var(--ink-2);
 }
 .rec2-step b { color: var(--ink); font-weight: 750; }
+
+/* RECS-ONE-LEVER-1 — a definition lever keeps the single card's honest note
+   (log §292): what is winnable there is a citation, not a mention. */
+.rec2-lever-note {
+  margin-top: 8px;
+  padding: 7px 11px;
+  border-radius: var(--r-sm);
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 
 /* RECS-SHORT-CARD-1 (log §303) — short card: kind kicker, reach line, and
    the two confidences side by side in the detail. */
