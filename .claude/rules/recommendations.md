@@ -787,3 +787,12 @@ log §306).
 - **El primer paso de la tarjeta y el de su plan son la misma acción.**
 - **Una comunidad se nombra por lo que es** (`communityKind`): vídeo,
   publicación o hilo.
+
+## Evidencia legible (RECS-MINORS-1, log §337)
+
+- **Una cita se pinta con `plainSnippet`**, sin marcas de Markdown. Lo
+  guardado no se toca.
+- **Una lista de dominios en la tarjeta se corta en seis** (`shortDomainList`)
+  y cuenta el resto.
+- **Que no salga ningún competidor no es una oportunidad segura.** El texto
+  dice lo observado y que también puede ser una pregunta sin marcas.

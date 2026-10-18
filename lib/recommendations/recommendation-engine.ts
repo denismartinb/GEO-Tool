@@ -645,7 +645,7 @@ function perPromptGapCards(opts: {
         title: `Aparece en "${label}"`,
         description: isDefinition
           ? "Es una pregunta de definición: la IA responde con diccionarios y enciclopedias, no con marcas. Lo realista aquí es que cite tu web como fuente, no que te recomiende."
-          : `En ${answersLabel(visibilityAffected.length)}${enginesPhrase(visibilityAffected)} a esta pregunta, la IA no te nombró ni a ti ni a ningún competidor. Sin nadie por delante, una página que responda bien la pregunta lo tiene más fácil.`,
+          : `En ${answersLabel(visibilityAffected.length)}${enginesPhrase(visibilityAffected)} a esta pregunta, la IA no te nombró ni a ti ni a ningún competidor. Puede ser un hueco libre o una pregunta en la que la IA no recomienda marcas; una página que la responda bien es la forma de comprobarlo.`,
         rule_id: "rule_visibility_001",
         recommendation_type: "increase_brand_visibility",
         dedupeKey: `increase_brand_visibility:${stableId}`,
@@ -665,7 +665,9 @@ function perPromptGapCards(opts: {
             : ["La marca debería aparecer en la respuesta a esta consulta objetivo."],
           whyThisMatters: isDefinition
             ? "Una pregunta de definición rara vez acaba en una recomendación de marca, pero sí en una fuente citada. Si la explicación más clara está en tu web, la IA puede citarla."
-            : "En estas respuestas no aparece ningún competidor. Entrar ahora es más barato que disputarla cuando uno ya se haya asentado.",
+            : // RECS-MINORS-1 (log §337): no rival in the answer is not proof of an
+              // opportunity; it can also be a question where the AI names nobody (P19).
+              "Que no salga ningún competidor no asegura que esta pregunta premie a una marca: puede que la IA no recomiende a nadie aquí. Si lo hace, una respuesta clara en tu web es lo que necesita para nombrarte.",
           firstStep: isDefinition
             ? "Responde la definición en las dos primeras frases de tu página sobre el tema, con el titular en forma de pregunta. Si el término tiene otros significados, acláralo en esa misma frase."
             : "Publica una página que responda esta pregunta en las dos primeras frases, con el titular en forma de pregunta.",

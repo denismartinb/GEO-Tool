@@ -26573,3 +26573,42 @@ mismas:
 
 **Qué queda.** La lista de plataformas de vídeo y de redes es corta y a mano,
 como la de `source-type.ts`; lo que no esté en ella se trata como foro.
+
+## 337. RECS-MINORS-1: evidencia legible y sin vender huecos como oportunidades seguras (2026-10-18)
+
+**Qué pasó.** Hallazgos menores de la prueba real sobre genscore.es
+(`/mnt/project-files/prueba-recomendaciones/aprendizajes.md`, punto 8 del
+plan):
+
+- Las citas de evidencia enseñaban Markdown sin pintar («**Peec AI**», P5).
+- La lista de dominios citados tenía decenas de entradas: un muro de texto en
+  el móvil (P6).
+- «La IA no te nombró ni a ti ni a ningún competidor» se presentaba como
+  oportunidad segura («lo tiene más fácil», «entrar ahora es más barato»),
+  cuando también puede ser una pregunta en la que la IA no recomienda a nadie
+  (P19).
+
+**Qué se decidió.**
+
+1. La cita se pinta sin marcas de formato (`plainSnippet`,
+   `lib/recommendations/plain-snippet.ts`): se quitan negritas, cursivas,
+   enlaces, código y viñetas. Las palabras se quedan tal cual, y lo guardado
+   no cambia.
+2. Los dominios se cortan en seis y el resto se cuenta: «y N más»
+   (`shortDomainList`).
+3. La tarjeta de visibilidad sin rivales dice lo observado y las dos
+   lecturas posibles: puede ser un hueco libre o una pregunta sin marcas, y
+   una buena página es la forma de comprobarlo.
+
+**Lo que no se cambia, y por qué.**
+
+- P4 (cifras que no cuadran): desde §299 el título cuenta preguntas
+  distintas y la tarjeta enseña respuestas con su nombre. No se ha podido
+  reproducir con datos actuales.
+- P7 («Abierta 9 escaneos» el mismo día): se ha verificado que cuenta
+  escaneos, no días, y aquel día se lanzaron varios de prueba. La etiqueta
+  dice «escaneos» y es cierta.
+- P15: lo cerró la tarjeta por palanca (§328).
+- P20 (el plan cambia entre generaciones): el plan generado se guarda y no
+  cambia hasta que se genera otro. Hacer el modelo determinista no es posible
+  desde este prompt.
