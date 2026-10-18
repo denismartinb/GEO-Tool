@@ -774,3 +774,12 @@ log §306).
 - **Un comparador, un medio o una comunidad no se descartan por ser una marca
   nombrada.** Sólo la familia «Otras webs».
 - **La antigüedad («Abierta N escaneos») no sale en tarjetas `third_party`.**
+
+## Evidencia legible (RECS-MINORS-1, log §337)
+
+- **Una cita se pinta con `plainSnippet`**, sin marcas de Markdown. Lo
+  guardado no se toca.
+- **Una lista de dominios en la tarjeta se corta en seis** (`shortDomainList`)
+  y cuenta el resto.
+- **Que no salga ningún competidor no es una oportunidad segura.** El texto
+  dice lo observado y que también puede ser una pregunta sin marcas.

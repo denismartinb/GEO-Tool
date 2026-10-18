@@ -32,6 +32,7 @@ import {
 import { adviceSignal, dataSignal, emergingCompetitorReach, scopeLine } from "@/lib/recommendations/card-signals";
 import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
 import { parseCompetitorDomain } from "@/lib/competitors/competitor-domain";
+import { plainSnippet, shortDomainList } from "@/lib/recommendations/plain-snippet";
 import {
   DEFINITION_LEVER_NOTE,
   LEVER_TYPE,
@@ -1345,7 +1346,7 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
             <div className="rec2-block">
               <div className="rec2-label">Evidencia</div>
               {displaySnippets.slice(0, 3).map((snippet, i) => (
-                <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
+                <div key={i} className="rec-snippet">&ldquo;{plainSnippet(snippet)}&rdquo;</div>
               ))}
               {sentimentDrivers.length > 0 && (
                 <p className="rec2-ev-p">
@@ -1362,7 +1363,8 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
               {domains.length > 0 && (
                 <p className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Dominios: </span>
-                  {domains.join(", ")}
+                  {shortDomainList(domains).shown.join(", ")}
+                  {shortDomainList(domains).hidden > 0 && ` y ${shortDomainList(domains).hidden} más`}
                 </p>
               )}
               {citationPages.length > 0 && (
