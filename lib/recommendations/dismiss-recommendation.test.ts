@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AuthenticatedContext } from "@/lib/auth";
 import type { createServiceClient } from "@/lib/supabase/service";
-import { dismissRecommendationCore } from "./dismiss-recommendation";
+import { dismissRecommendationCore, dismissRecommendationsCore } from "./dismiss-recommendation";
 
 type SupabaseClient = AuthenticatedContext["supabase"];
 type ServiceClient = ReturnType<typeof createServiceClient>;
@@ -177,5 +177,35 @@ describe("dismissRecommendationCore", () => {
       success: false,
       error: "No se ha podido actualizar la recomendación en este momento. Inténtalo de nuevo en unos minutos."
     });
+  });
+});
+
+describe("dismissRecommendationsCore (RECS-ONE-LEVER-1)", () => {
+  it("marks every card of a lever, each one checked on its own", async () => {
+    const supabase = makeFakeSupabase({ project: PROJECT, recommendation: RECOMMENDATION });
+    const { client: service, updates } = makeFakeService();
+    const result = await dismissRecommendationsCore({
+      projectId: "project-1",
+      recommendationIds: ["rec-1", "rec-1"],
+      supabase,
+      service,
+      user: USER
+    });
+    expect(result).toEqual({ success: true });
+    expect(updates).toHaveLength(1);
+  });
+
+  it("refuses an id the user does not own, like a single card would", async () => {
+    const supabase = makeFakeSupabase({ project: PROJECT, recommendation: RECOMMENDATION });
+    const { client: service, updates } = makeFakeService();
+    const result = await dismissRecommendationsCore({
+      projectId: "project-1",
+      recommendationIds: ["rec-1", "rec-forged"],
+      supabase,
+      service,
+      user: USER
+    });
+    expect(result.success).toBe(false);
+    expect(updates.map((u) => u.id)).toEqual(["rec-1"]);
   });
 });

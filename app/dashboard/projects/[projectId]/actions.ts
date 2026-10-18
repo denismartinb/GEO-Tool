@@ -27,7 +27,7 @@ import {
   type RewriteRecommendationResult
 } from "@/lib/recommendations/rewrite-recommendation";
 import {
-  dismissRecommendationCore,
+  dismissRecommendationsCore,
   dismissRecommendationInputSchema,
   type DismissRecommendationResult
 } from "@/lib/recommendations/dismiss-recommendation";
@@ -782,6 +782,7 @@ export async function addReviewedPrompts(input: {
 export async function rewriteRecommendationAction(input: {
   projectId: string;
   recommendationId: string;
+  leverMemberIds?: string[];
 }): Promise<RewriteRecommendationResult> {
   const parsed = rewriteRecommendationInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -807,6 +808,8 @@ export async function rewriteRecommendationAction(input: {
 export async function dismissRecommendationAction(input: {
   projectId: string;
   recommendationId: string;
+  /** RECS-ONE-LEVER-1: the other cards of a lever, marked done together. */
+  leverMemberIds?: string[];
 }): Promise<DismissRecommendationResult> {
   const parsed = dismissRecommendationInputSchema.safeParse(input);
   if (!parsed.success) {
@@ -815,7 +818,13 @@ export async function dismissRecommendationAction(input: {
 
   const { supabase, user } = await requireUser();
   const service = createServiceClient();
-  const result = await dismissRecommendationCore({ ...parsed.data, supabase, service, user });
+  const result = await dismissRecommendationsCore({
+    projectId: parsed.data.projectId,
+    recommendationIds: [parsed.data.recommendationId, ...(parsed.data.leverMemberIds ?? [])],
+    supabase,
+    service,
+    user,
+  });
 
   if (result.success) {
     revalidatePath(`/dashboard/projects/${parsed.data.projectId}/recommendations`);

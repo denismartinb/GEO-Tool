@@ -26268,3 +26268,21 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 **Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
+
+## 328. RECS-ONE-LEVER-1: una tarjeta por palanca, no una por pregunta (2026-10-18)
+
+**Qué.** Las tarjetas `increase_brand_visibility` («Aparece en "…"») se agrupan por el tema que el usuario ya dio a cada prompt (`project_prompts.category`): una tarjeta por tema, con sus preguntas dentro, un solo «Haz esto» (una página con cada pregunta como subtítulo; si ya existe una, reforzarla), un solo plan generado y una sola cifra. Las preguntas de definición (log §292) van siempre en su propia tarjeta y conservan el aviso «lo realista es que te citen, no que te nombren». Los prompts sin tema van juntos en «tus otras preguntas». Módulo puro `lib/recommendations/levers.ts`; tarjeta `LeverCard` en `recommendations-client.tsx`.
+
+**La cifra.** «hasta +N pt · si te nombran en estas preguntas»: un contrafactual conjunto sobre todas las preguntas del tema (ADR 0017 §3), calculado una vez en `page.tsx`. Nunca la suma de los +2 de cada tarjeta. Es un techo y lo dice.
+
+**El plan.** Una palanca ocupa un solo puesto: `collapseLeversForPlan` deja en el plan a su representante (su mejor miembro) con los puntos de la palanca, y el techo del plan y de los grupos de «Más adelante» se calcula con todos sus miembros (`expandLeverIds`). Así el plan deja de ofrecer tres preguntas del mismo tema y entra otra acción. Los temas que no entran salen en «Más adelante» como tarjetas plegadas, antes de los grupos.
+
+**Un plan por tema.** «Generar…» en una palanca de dos o más tarjetas llama a la reescritura con `leverMemberIds`. El servidor vuelve a leer esos miembros con el cliente del usuario, del mismo proyecto y del mismo tipo, une sus preguntas, dominios y fragmentos (`mergeLeverEvidence`) y usa un título propio, nunca uno del navegador. El playbook pide UNA página para todas. Se guarda en `generated_solutions` sobre el representante con `evidence_json.lever = true`, y un plan de palanca y uno de una sola pregunta no se sustituyen nunca (ni en la idempotencia del servidor ni al leerlos en `page.tsx`).
+
+**Marcar como hecho.** Cierra todos los miembros (`dismissRecommendationsCore`, que pasa cada id por `dismissRecommendationCore` con su comprobación de propiedad). «Resueltas» sigue verificando pregunta a pregunta.
+
+**Por qué.** Prueba real sobre genscore.es (P12, P17, P25, P26, P39, P40 de `prueba-recomendaciones/aprendizajes.md`): 21 tarjetas casi iguales y un «+31 pt» que se leía como 31 puntos alcanzables con 21 tareas. Maqueta aprobada por el fundador el 2026-10-18 (`docs/design-reference/recs-one-lever-1/maqueta.html`).
+
+**Sin migración.** Por dentro sigue habiendo una recomendación por pregunta: el `dedupe_key` por prompt, la resolución automática y el «Deshacer» no cambian (log §115 punto 6). El tema se lee de `scan_prompt_results.prompt_id` → `project_prompts.category` al cargar la pantalla.
+
+**Qué queda.** La maqueta enseñaba «Ahora no» en la tarjeta; no se construye porque las tarjetas de IA no lo tienen y sería un estado nuevo. El informe (`/informe`) sigue listando acciones como antes. Los tipos que también salen uno por pregunta (`add_citation_block`) siguen en su grupo de siempre.

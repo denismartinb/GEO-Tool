@@ -582,3 +582,63 @@ describe("planSummary — cada fuente en su escala (log §307)", () => {
     expect(planSummary(9, "pending", 2)).toBe("Hasta +9 pt GEO");
   });
 });
+
+describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
+  const q = (id: string, prompt: string, runs = 1, provider = "gemini") =>
+    baseRec({
+      id,
+      title: `Aparece en "${prompt}"`,
+      consecutive_runs_open: runs,
+      evidence_json: {
+        affected_prompts: [prompt],
+        affected_prompt_details: [{ id: `${id}-row`, prompt, competitors: [], domains: [], snippet: null, provider }]
+      }
+    } as Partial<Recommendation>);
+  const recs = [
+    baseRec({ id: "gap", recommendation_type: "close_competitor_gap", title: "Compárate con Peec AI" }),
+    q("h1", "¿Qué pasos sigo para optimizar mi GEO?", 13, "openai"),
+    q("h2", "¿Cómo salgo mejor en ChatGPT?", 9),
+    q("h3", "¿Cuánto tarda el GEO?"),
+    q("d1", "qué es llmo"),
+    q("d2", "que significa geo")
+  ];
+  const levers = [
+    {
+      key: "category:Cómo hacer / guía",
+      theme: { kind: "category" as const, category: "Cómo hacer / guía" },
+      representativeId: "h1",
+      memberIds: ["h1", "h2", "h3"],
+      points: 9
+    },
+    { key: "definition", theme: { kind: "definition" as const }, representativeId: "d1", memberIds: ["d1", "d2"], points: 4 }
+  ];
+  const html = renderToStaticMarkup(
+    <RecommendationsClient recommendations={recs} projectId="p1" planIds={["gap", "h1"]} levers={levers} />
+  );
+
+  it("pinta una tarjeta por tema y ninguna «Aparece en…» suelta", () => {
+    expect(html).not.toContain("Aparece en");
+    expect(html.split("Una guía que responda a tus preguntas de «Cómo hacer»").length - 1).toBe(1);
+    expect(html).toContain("Define en tu web los términos que te preguntan");
+  });
+
+  it("lleva dentro sus preguntas, con su antigüedad, y una sola cifra", () => {
+    expect(html).toContain("¿Qué pasos sigo para optimizar mi GEO?");
+    expect(html).toContain("¿Cuánto tarda el GEO?");
+    expect(html).toContain("Abierta 13 escaneos");
+    expect(html).toContain("Ver las 3 preguntas y el plan");
+    expect(html).toContain("hasta +9 pt");
+    expect(html).toContain("si te nombran en estas preguntas");
+    expect(html).not.toContain("+2 pt");
+  });
+
+  it("la de definiciones conserva su aviso", () => {
+    expect(html).toContain("lo realista es que te citen, no que te nombren");
+  });
+
+  it("entra en el plan con su número de puesto", () => {
+    const planPart = html.slice(0, html.indexOf("Más adelante"));
+    expect(planPart).toContain("Una guía que responda a tus preguntas de «Cómo hacer»");
+    expect(planPart).not.toContain("Define en tu web");
+  });
+});

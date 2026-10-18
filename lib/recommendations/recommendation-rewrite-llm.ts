@@ -46,6 +46,11 @@ export type RecommendationRewriteInput = {
    * («qué significa X»), answered with dictionaries rather than brands.
    */
   queryShape?: "definition";
+  /**
+   * RECS-ONE-LEVER-1: the affected prompts are several questions of one topic,
+   * to be answered by one page instead of one page each.
+   */
+  lever?: boolean;
 };
 
 export type RecommendationRewrite = {
@@ -119,8 +124,11 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       // term was ambiguous.
       const base =
         "ASSET FOCUS — content brief: provide as examples a content brief (target query, search intent, H1 + H2 outline, key entities) and a concise citable intro paragraph for the page. If the brand domain is likely to already have a page on this topic, the first step is to strengthen THAT page (question-shaped heading, answer in the first two sentences) instead of publishing a new URL: two pages on the same topic compete with each other.";
-      if (input.queryShape !== "definition") return base;
-      return `${base} This is a DEFINITIONAL query: AI answers to it lean on dictionaries and encyclopedias and rarely name a brand. Set the goal as being cited as the clearest source, never as being recommended, and do not promise the brand will be named. The intro paragraph must open with the definition itself. If the term has other common meanings (for example an everyday or etymological sense alongside a technical one), name them and disambiguate in the first two sentences.`;
+      const leverLine = input.lever
+        ? " These are SEVERAL related questions of one topic: plan ONE page (or strengthen ONE existing page) that answers all of them, each question as its own H2 with the answer in its first two sentences. Never propose one page per question."
+        : "";
+      if (input.queryShape !== "definition") return `${base}${leverLine}`;
+      return `${base}${leverLine} This is a DEFINITIONAL query: AI answers to it lean on dictionaries and encyclopedias and rarely name a brand. Set the goal as being cited as the clearest source, never as being recommended, and do not promise the brand will be named. The intro paragraph must open with the definition itself. If the term has other common meanings (for example an everyday or etymological sense alongside a technical one), name them and disambiguate in the first two sentences.`;
     }
     case "increase_brand_prominence":
       return `ASSET FOCUS — prominence: the brand is mentioned but ${input.dominantCompetitor ?? "a competitor"} consistently appears first or more prominently in the same answers. Provide as examples (1) a revised opening/lead paragraph structure for the relevant page that leads with the brand's strongest differentiator and direct answer first (front-load the key fact, don't bury it), and (2) a short outline of what to add so the brand reads as the primary, most complete answer rather than a secondary mention. Use only the given facts; [tu dato aquí] for any missing specific value.`;

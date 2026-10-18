@@ -671,3 +671,21 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Una tarjeta por palanca (RECS-ONE-LEVER-1, log §328)
+
+- **Las tarjetas `increase_brand_visibility` se pintan agrupadas por tema,
+  nunca sueltas.** El motor sigue emitiendo una por prompt (log §115 punto
+  6); `lib/recommendations/levers.ts` las agrupa por `project_prompts.category`
+  al cargar la pantalla, y las de definición van siempre aparte.
+- **Una palanca tiene una sola cifra**, el contrafactual conjunto de todos sus
+  miembros (ADR 0017 §3). Nunca la suma de los miembros.
+- **Una palanca ocupa un solo puesto del plan.** El plan se elige sobre
+  `collapseLeversForPlan`; todo techo que incluya una palanca se calcula con
+  todos sus miembros (`expandLeverIds`).
+- **El plan de una palanca se marca `lever: true` y nunca sustituye al de una
+  pregunta, ni al revés.** Los miembros se vuelven a leer en servidor con el
+  cliente del usuario, del mismo proyecto y tipo; el título lo pone el
+  servidor.
+- **«Marcar como hecho» de una palanca cierra todos sus miembros**, cada uno
+  con su propia comprobación de propiedad (`dismissRecommendationsCore`).
