@@ -26043,6 +26043,8 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Recomendación 3** («Añade un bloque de preguntas y respuestas»). Se añaden dos preguntas literales al FAQ de `/que-es-genscore` (`lib/brand/que-es-genscore-faq.ts`, que alimenta también `FAQPage` y `/llms-full.txt`): la de Gemini y la de medir visibilidad en ChatGPT y Perplexity. No se copia el borrador de la consola, que prometía «marcado esquemático» como palanca y nombraba competidores.
 
+**Recomendación 4** («Optimizar genscore.es para responder a ¿Cómo salgo mejor en las IAs?», aparecida tras un escaneo nuevo el mismo día). Misma palanca otra vez. Se refuerza `mi-marca-no-aparece-en-chatgpt-por-que` (sección con la pregunta literal y respuesta directa, y primera entrada de su FAQ) en vez de crear una página nueva.
+
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.

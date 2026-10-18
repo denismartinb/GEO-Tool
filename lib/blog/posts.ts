@@ -395,6 +395,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Cero menciones no es un fallo, es el punto de partida. Los pasos reales para que un motor generativo empiece a reconocer tu marca: entidad, primeras fuentes, y por qué tarda.",
     datePublished: "2026-09-19",
+    dateUpdated: "2026-10-18",
     coverImage: "/blog/mi-marca-no-aparece-en-chatgpt-por-que/cover.webp",
     coverIcon: "compass",
     primaryKeyword: "mi marca no aparece en chatgpt por qué",
