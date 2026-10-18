@@ -1096,6 +1096,33 @@ describe("generateRecommendationsForRun", () => {
     expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
   });
 
+  it("stores the emerging brand's website only when a cited domain matches its name exactly (RECS-ADD-COMPETITOR-1)", () => {
+    const withCitations = (domains: string[]) => ({
+      ...extractedWith({ otherBrandsMentioned: ["Conforama"] }),
+      citations: domains.map((domain) => ({ source: "grounding", domain }))
+    });
+    const matched = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "mejores tiendas de muebles", extracted_json: withCitations(["ikea.com"]) }),
+        prompt({ id: "p2", prompt_text_snapshot: "dónde comprar sofás", extracted_json: withCitations(["www.conforama.es"]) })
+      ],
+      {},
+      ["Ikea"]
+    ).find((r) => r.recommendation_type === "track_emerging_competitor");
+    expect(matched!.title).toBe("Añade Conforama a tus competidores");
+    expect(matched!.evidence_json.emerging_competitor_domain).toBe("conforama.es");
+
+    const unmatched = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "mejores tiendas de muebles", extracted_json: withCitations(["conforamaofertas.com"]) }),
+        prompt({ id: "p2", prompt_text_snapshot: "dónde comprar sofás", extracted_json: withCitations([]) })
+      ],
+      {},
+      ["Ikea"]
+    ).find((r) => r.recommendation_type === "track_emerging_competitor");
+    expect(unmatched!.evidence_json.emerging_competitor_domain).toBeNull();
+  });
+
   it("does not surface an already-tracked competitor as emerging, case-insensitively (N6)", () => {
     const recs = run(
       [

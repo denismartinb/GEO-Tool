@@ -23,7 +23,8 @@ import type { AuthenticatedContext } from "@/lib/auth";
 
 export const dismissRecommendationInputSchema = z.object({
   projectId: z.string().uuid(),
-  recommendationId: z.string().uuid()
+  recommendationId: z.string().uuid(),
+  leverMemberIds: z.array(z.string().uuid()).max(60).optional()
 });
 
 export type DismissRecommendationResult = { success: true } | { success: false; error: string };
@@ -98,4 +99,30 @@ export async function dismissRecommendationCore({
     });
     return { success: false, error: GENERIC_DISMISS_FAILURE };
   }
+}
+
+/**
+ * RECS-ONE-LEVER-1: «Marcar como hecho» on a lever card closes every card of
+ * the lever. Each one goes through `dismissRecommendationCore`, with its own
+ * ownership check, so a forged id is refused like on a single card. Stops at
+ * the first failure; the ones already done stay done and show in «Resueltas».
+ */
+export async function dismissRecommendationsCore({
+  projectId,
+  recommendationIds,
+  supabase,
+  service,
+  user
+}: {
+  projectId: string;
+  recommendationIds: string[];
+  supabase: AuthenticatedContext["supabase"];
+  service: ReturnType<typeof createServiceClient>;
+  user: AuthenticatedContext["user"];
+}): Promise<DismissRecommendationResult> {
+  for (const recommendationId of Array.from(new Set(recommendationIds))) {
+    const result = await dismissRecommendationCore({ projectId, recommendationId, supabase, service, user });
+    if (!result.success) return result;
+  }
+  return { success: true };
 }

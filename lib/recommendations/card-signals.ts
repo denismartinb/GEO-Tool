@@ -94,3 +94,11 @@ export function adviceSignal(control: DeliverableControl | null, queryShape?: st
   }
   return null;
 }
+
+/**
+ * The scope line of a "Añadir X a competidores" card (RECS-ADD-COMPETITOR-1):
+ * "La IA la nombra en 11 preguntas y no la sigues". Null without questions.
+ */
+export function emergingCompetitorReach(questionCount: number): string | null {
+  return questionCount > 0 ? `La IA la nombra en ${questionsText(questionCount)} y no la sigues` : null;
+}

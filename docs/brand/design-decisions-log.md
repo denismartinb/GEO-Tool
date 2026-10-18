@@ -26176,6 +26176,32 @@ abrir tu web» con el formulario para indicar una ficha.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
+## 327. RECS-ADD-COMPETITOR-1: «Añadir X a competidores» es un botón, no un plan (2026-10-18)
+
+**Qué.** La tarjeta `track_emerging_competitor` («Añade Semrush a tus competidores») deja de abrir un plan generado por IA y pasa a ser un botón en la propia tarjeta (`EmergingCompetitorCard`). Sin «Ver cómo», sin puntos, sin «Listo para copiar». Al pulsar, la marca entra en Competidores por `createCompetitorCore` (el mismo alta que el formulario de Competidores, con su comprobación de propiedad y su rechazo de asistentes de IA y términos genéricos) y la tarjeta se marca como hecha por `dismissRecommendationCore`: se queda verde unos segundos y pasa a «Resueltas», con su «Deshacer» de siempre. Si ya la seguías, la tarjeta se da por hecha. Server action `addEmergingCompetitorAction`, núcleo `lib/recommendations/add-emerging-competitor.ts`.
+
+**La web no se inventa.** El motor guarda `emerging_competitor_domain` cuando un dominio citado junto a la marca casa exactamente con su nombre (`domainForBrandName`, misma igualdad de etiqueta que `competitorsAnchoredByDomain`: `es.semrush.com` da `semrush.com`, `semrushtools.com` no vale). Las tarjetas guardadas antes de este cambio lo calculan en pantalla sobre sus `citation_domains`. Sin coincidencia, la tarjeta pide la web con un campo y el botón se activa cuando el dominio es válido (`parseCompetitorDomain`, la misma regla que valida el servidor, extraída a `lib/competitors/competitor-domain.ts`).
+
+**El nombre sale de la evidencia guardada, nunca del navegador.** La action recibe sólo el id de la recomendación y la web; el nombre lo lee de `evidence_json.emerging_competitor` con el cliente del usuario.
+
+**Por qué.** Prueba real sobre genscore.es (hallazgo P33, `prueba-recomendaciones/aprendizajes.md`): la acción era un clic y la tarjeta la convertía en cuatro párrafos («Configura el perfil de Semrush dentro del módulo…»). Fundador, 2026-10-18: «un botón de añadir a competidores y ya está, no tanta literatura». Maqueta aprobada el mismo día (https://claude.ai/artifact/FzK8kCeToUc1XY8zPwnX5z).
+
+**Sin migración.** El título pasa a «Añade X a tus competidores»; las filas antiguas conservan el suyo hasta el siguiente escaneo. El CTA de `deliverable.ts` pasa a «Añadir a competidores» y el playbook de reescritura se queda sin uso en pantalla.
+
+**Qué queda.** El resto del plan de correcciones de Recomendaciones (`prueba-recomendaciones/plan-correcciones.md`), un PR por cambio.
+
+**Regla de premisa.** Se retira el «Generar informe» de este tipo. La premisa: la acción completa es añadir el competidor, y eso lo hace el botón. Si el alta falla, la tarjeta enseña el motivo y el usuario conserva la vía de siempre, el formulario de Competidores.
+
+## 326. RECS-MIXED-CHANNEL-1: un plan fuera de tu web ya no pide HTML ni JSON-LD en tu web (2026-10-18)
+
+**Qué.** El prompt de «Generar propuesta» llevaba una instrucción obligatoria para todos los tipos: al menos un paso sobre cómo hacer el contenido legible por máquina (HTML semántico, JSON-LD `FAQPage`, contenido rastreable). Pensada para la propia web, se aplicaba también a los tipos de terceros y al de dentro de la app. La tarjeta «Participar en youtube.com» salía con «Implementa el esquema JSON-LD de tipo FAQPage en genscore.es». Ahora esa instrucción sólo va cuando `deliverableForType(tipo).control === "own_site"` (y en un tipo sin clasificar, que conserva lo de antes). En `third_party` e `in_app` va la contraria: sin pasos sobre la web de la marca y sin ejemplos de JSON-LD ni HTML. Además, `pursue_community_sources`, `pursue_comparator_sources` y `pursue_media_sources`, que no tenían playbook y caían al prompt genérico, tienen el suyo: participar en la comunidad (con aviso de que comentar en un vídeo no es spam ni garantiza la cita), darse de alta o completar el perfil en el comparador, y proponer una colaboración al medio sin afirmar que se ha leído un artículo que no esté en la evidencia.
+
+**Insignia.** Un plan sin huecos fuera de la propia web dice «Plan listo», no «Listo para copiar»: no hay nada que pegar (`readinessLabel(readiness, control)`). Decisión recomendada al fundador el 2026-10-18 («Haz los cambios»).
+
+**Por qué.** Prueba real sobre genscore.es (P37 y parte de P32, P31 de `prueba-recomendaciones/aprendizajes.md`) y el informe RECS-MIXED-CHANNEL-1 que adjuntó el fundador, con la causa verificada en `recommendation-rewrite-llm.ts`.
+
+**Qué queda.** Las propuestas ya generadas con la mezcla siguen guardadas hasta que el usuario las regenere; regenerarlas gasta una llamada y su cupo diario, así que no se hace en lote. El copy de la tarjeta de comunidad («La IA cita conversaciones de X») sigue igual para YouTube; suavizarlo es decisión aparte del fundador.
+
 ## 325. AGENTIC-OFFER-1: la auditoría agéntica detecta lo que vendes, no sólo fichas de tienda (2026-10-18)
 
 **Qué se decidió.** En el preview de §323, genscore.es salía con «No hemos
@@ -26269,6 +26295,24 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
 
+## 328. RECS-ONE-LEVER-1: una tarjeta por palanca, no una por pregunta (2026-10-18)
+
+**Qué.** Las tarjetas `increase_brand_visibility` («Aparece en "…"») se agrupan por el tema que el usuario ya dio a cada prompt (`project_prompts.category`): una tarjeta por tema, con sus preguntas dentro, un solo «Haz esto» (una página con cada pregunta como subtítulo; si ya existe una, reforzarla), un solo plan generado y una sola cifra. Las preguntas de definición (log §292) van siempre en su propia tarjeta y conservan el aviso «lo realista es que te citen, no que te nombren». Los prompts sin tema van juntos en «tus otras preguntas». Módulo puro `lib/recommendations/levers.ts`; tarjeta `LeverCard` en `recommendations-client.tsx`.
+
+**La cifra.** «hasta +N pt · si te nombran en estas preguntas»: un contrafactual conjunto sobre todas las preguntas del tema (ADR 0017 §3), calculado una vez en `page.tsx`. Nunca la suma de los +2 de cada tarjeta. Es un techo y lo dice.
+
+**El plan.** Una palanca ocupa un solo puesto: `collapseLeversForPlan` deja en el plan a su representante (su mejor miembro) con los puntos de la palanca, y el techo del plan y de los grupos de «Más adelante» se calcula con todos sus miembros (`expandLeverIds`). Así el plan deja de ofrecer tres preguntas del mismo tema y entra otra acción. Los temas que no entran salen en «Más adelante» como tarjetas plegadas, antes de los grupos.
+
+**Un plan por tema.** «Generar…» en una palanca de dos o más tarjetas llama a la reescritura con `leverMemberIds`. El servidor vuelve a leer esos miembros con el cliente del usuario, del mismo proyecto y del mismo tipo, une sus preguntas, dominios y fragmentos (`mergeLeverEvidence`) y usa un título propio, nunca uno del navegador. El playbook pide UNA página para todas. Se guarda en `generated_solutions` sobre el representante con `evidence_json.lever = true`, y un plan de palanca y uno de una sola pregunta no se sustituyen nunca (ni en la idempotencia del servidor ni al leerlos en `page.tsx`).
+
+**Marcar como hecho.** Cierra todos los miembros (`dismissRecommendationsCore`, que pasa cada id por `dismissRecommendationCore` con su comprobación de propiedad). «Resueltas» sigue verificando pregunta a pregunta.
+
+**Por qué.** Prueba real sobre genscore.es (P12, P17, P25, P26, P39, P40 de `prueba-recomendaciones/aprendizajes.md`): 21 tarjetas casi iguales y un «+31 pt» que se leía como 31 puntos alcanzables con 21 tareas. Maqueta aprobada por el fundador el 2026-10-18 (`docs/design-reference/recs-one-lever-1/maqueta.html`).
+
+**Sin migración.** Por dentro sigue habiendo una recomendación por pregunta: el `dedupe_key` por prompt, la resolución automática y el «Deshacer» no cambian (log §115 punto 6). El tema se lee de `scan_prompt_results.prompt_id` → `project_prompts.category` al cargar la pantalla.
+
+**Qué queda.** La maqueta enseñaba «Ahora no» en la tarjeta; no se construye porque las tarjetas de IA no lo tienen y sería un estado nuevo. El informe (`/informe`) sigue listando acciones como antes. Los tipos que también salen uno por pregunta (`add_citation_block`) siguen en su grupo de siempre.
+
 ## 329. GSC-QUERIES-SORT-1: la tabla de búsquedas de «Posición en Google» se ordena por columnas (2026-10-18)
 
 **Qué se decidió.** El fundador preguntó, desde el móvil, si de verdad salía
@@ -26296,6 +26340,67 @@ impresiones en móvil. Las demás tablas de la pantalla (páginas) siguen
 ocultando columnas en móvil.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 330. RECS-COVERAGE-1: tus comparativas y tus índices ya no engañan a Recomendaciones (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) salieron dos fallos de cobertura:
+
+- Tres tarjetas pedían publicar comparativas que llevaban semanas en
+  `/comparativas/` (Peec AI, Otterly, RankScale; P1, P28, P34). Ni
+  `close_competitor_gap` ni `add_comparison_content` miraban la web: el motor
+  las escribe al cerrar el escaneo, antes de que exista auditoría, y
+  `COVERAGE_OVERLAY_TYPES` sólo cubría las dos tarjetas por pregunta.
+- Una tarjeta daba `genscore.es/blog`, el índice del blog, como «Tu página»
+  (P8). `isAnswerPage` sólo descartaba la portada y los foros, así que
+  cualquier listado contaba como página que responde, y se enlazaba el
+  primero que devolvía Google.
+
+**Qué se decidió.**
+
+1. **Un índice no certifica cobertura** (`isListingPage`,
+   `lib/recommendations/coverage-overlay.ts`): la portada de una sección
+   (`/blog`, `/es/guias`, `/comparativas`, `/docs`, `/glosario`, `/estudios`
+   y equivalentes en inglés), una página de categoría, etiqueta o autor y una
+   paginación (`/page/2`). Si Google sólo devuelve índices, el estado es
+   `listing_only`: «Sólo encontramos una página índice», con el consejo de
+   reforzar el artículo si existe o publicarlo si no. Si hay un artículo
+   junto al índice, se enlaza el artículo. El informe hereda el criterio
+   porque lee el mismo `isAnswerPage`.
+2. **Una tarjeta de comparativa mira si la comparativa ya existe**
+   (`lib/recommendations/own-comparison-pages.ts` +
+   `computeComparisonOverlay`). La prueba es la lista de URL que ya tenemos
+   de la web: el sitemap que guarda la auditoría técnica
+   (`bots.sitemap.locs`, hasta 500, sin fetch nuevo) más las páginas que
+   encontró la cobertura. Cuenta como comparativa una URL propia bajo una
+   sección de comparativas o con un slug `x-vs-y` / `alternativas-a-x`, y
+   casa con un competidor si su nombre aparece como palabras enteras del
+   último tramo de la URL («Otter» no casa con `genscore-vs-otterly`). Una
+   tarjeta de un competidor necesita la página de ese competidor; la genérica,
+   la de cualquier competidor de sus respuestas. Con página, la tarjeta pasa
+   al mismo estado que una pregunta cubierta: «Sí tienes una página sobre
+   este tema», «no publiques otra, refuerza la que ya tienes» y el enlace.
+   Mantiene su sitio y sus puntos, porque lo que la IA responde no ha
+   cambiado.
+
+**Por qué por URL y no por contenido.** Leer la página sería un fetch más
+por tarjeta, y esta zona es adyacente a «crawler» (`CLAUDE.md`). La URL dice
+lo que se comprobó: existe una página tuya cuyo nombre es esa comparativa.
+Por eso el texto habla del «mapa de tu web» y no promete que la página sea
+buena.
+
+**Qué queda.**
+
+- Un sitemap índice (`<sitemapindex>`, habitual en WordPress) no trae
+  páginas, así que esas webs sólo se benefician de lo que encuentre la
+  cobertura. Seguir los sitemaps hijos sería recorrer enlaces: fase aparte.
+- P11 y P23 (una tarjeta sigue «Abierta N escaneos» sobre algo hecho) no se
+  tocan: la tarjeta se cierra cuando la IA deja de reproducir el hueco, y la
+  cobertura sólo cambia el consejo. Darle al cliente un «ya existe» que
+  cierre la tarjeta es una decisión de producto propia.
+- La cobertura sigue buscando con Google una vez por semana (§253): una
+  página publicada después tarda hasta una semana en verse, salvo las
+  comparativas, que salen del sitemap de la última auditoría técnica.
 
 ## 331. RECS-TEMPLATES-1: las plantillas dejan de pedir lo que ya sabemos e inventar lo que no (2026-10-18)
 
