@@ -106,3 +106,16 @@ goes through the web audit's SSRF guard (imported).
   inside the technical audit's reserve, so the job budget is unchanged.
 - Weights, the score and the five components are unchanged. Without a
   product page there is still no total.
+
+## Addendum: any selling page, not only product pages (2026-10-18, log §324)
+
+The total now exists for any page that sells something, not only a page
+declaring a `Product`: software, services, courses, bookings, events,
+subscriptions and a safety net of a visible price plus a buy button
+(`classifyOffer`). The component weights do not change. Inside Comprensión,
+Confianza and Compra, checks that do not apply to what is sold (stock,
+identifiers, shipping, quick pay) are left out of the component, the same
+way `unknown` already is, so they never subtract; returns become
+cancellation or refund and «add to cart» becomes a buy, hire or book button
+for non-physical offers. The console still requests at most one extra page:
+a selling page is looked for only when no product page is found.

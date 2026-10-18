@@ -25,7 +25,7 @@ type State =
   | { kind: "network" };
 
 export const AGENTIC_FAILURE_COPY: Record<string, string> = {
-  invalid_url: "Esa dirección no parece una web. Prueba con algo como tutienda.es/una-ficha-de-producto.",
+  invalid_url: "Esa dirección no parece una web. Prueba con algo como tuweb.es/precios.",
   site_unreachable:
     "No hemos podido abrir esa página. Comprueba que la dirección es pública y empieza por tu dominio.",
   ip_limit_reached: "Ya has hecho las comprobaciones de hoy desde esta conexión. Vuelve mañana.",
@@ -80,12 +80,12 @@ export function AgenticChecker() {
 
   return (
     <div className="ca-checker" id="comprobar">
-      <p className="ca-field-hint">Escribe la URL de una ficha de producto</p>
+      <p className="ca-field-hint">Escribe la URL de un producto, servicio o página de precios</p>
       <form className="ca-field" onSubmit={onSubmit} noValidate>
         <input
           ref={inputRef}
-          aria-label="Dirección de tu tienda o de una ficha de producto"
-          placeholder="tutienda.es/una-ficha-de-producto"
+          aria-label="Dirección de un producto, un servicio o tu página de precios"
+          placeholder="tuweb.es/precios"
           inputMode="url"
           autoComplete="url"
           autoCapitalize="none"
@@ -110,7 +110,7 @@ export function AgenticChecker() {
             <span className="ca-wait-orb" aria-hidden="true" />
             <div>
               <b>Entrando en tu web como lo haría un agente</b>
-              <span>Leemos tu robots.txt, la página, sus datos de producto y los protocolos para agentes.</span>
+              <span>Leemos tu robots.txt, la página, lo que vende y los protocolos para agentes.</span>
             </div>
           </div>
         ) : null}

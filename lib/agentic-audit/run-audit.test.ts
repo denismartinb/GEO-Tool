@@ -201,4 +201,53 @@ describe("runAgenticAudit with discover (console, log §323)", () => {
     expect(out.result.found).toBe("none");
     expect(out.result.pageKind).toBe("other");
   });
+
+  it("from a home page that sells software, prefers the pricing page it links to (log §324)", async () => {
+    const requested: string[] = [];
+    const home = `<html><head><script type="application/ld+json">{"@type":"SoftwareApplication","name":"App","offers":{"@type":"Offer","price":"29","priceCurrency":"EUR"}}</script></head>
+<body><a href="/blog/x">Blog</a><a href="/precios">Precios</a><p>${"Texto ".repeat(150)}</p></body></html>`;
+    const pricing = `<html><body><h1>Planes</h1><p>Starter 29 € al mes</p><a href="/signup">Empieza gratis</a>
+<script src="https://js.stripe.com/v3"></script><p>${"Texto ".repeat(150)}</p></body></html>`;
+    const out = await runAgenticAudit(
+      "app.es",
+      {
+        fetch: fakeFetch({ "/": { status: 200, body: home }, "/precios": { status: 200, body: pricing } }, requested),
+        tokenAllowed: allowAll
+      },
+      { discover: true }
+    );
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.url).toBe("https://app.es/precios");
+    expect(out.result.found).toBe("home");
+    expect(out.result.offerKind).toBe("subscription");
+    expect(out.result.pricingPage).toBe(true);
+    expect(out.result.score).not.toBeNull();
+    expect(requested.filter((u) => !/robots|sitemap|well-known/.test(u))).toEqual(["https://app.es/", "https://app.es/precios"]);
+  });
+
+  it("keeps the home page when it sells something and the one candidate sells nothing", async () => {
+    const home = `<html><head><script type="application/ld+json">{"@type":"SoftwareApplication","offers":{"@type":"Offer","price":"29","priceCurrency":"EUR"}}</script></head>
+<body><a href="/precios">Precios</a><p>${"Texto ".repeat(150)}</p></body></html>`;
+    const out = await runAgenticAudit(
+      "app.es",
+      { fetch: fakeFetch({ "/": { status: 200, body: home }, "/precios": { status: 500 } }), tokenAllowed: allowAll },
+      { discover: true }
+    );
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.url).toBe("https://app.es/");
+    expect(out.result.found).toBe("home");
+    expect(out.result.offerKind).toBe("software");
+  });
+
+  it("the free checker scores a booking page without discover", async () => {
+    const page = `<html><body><h1>Pide cita</h1><a href="https://www.doctoralia.es/x">Reservar cita</a><p>${"Texto ".repeat(150)}</p></body></html>`;
+    const out = await runAgenticAudit("clinica.es/reservar-cita", {
+      fetch: fakeFetch({ "/reservar-cita": { status: 200, body: page } }),
+      tokenAllowed: allowAll
+    });
+    if (out.status !== "completed") throw new Error("expected completed");
+    expect(out.result.offerKind).toBe("booking");
+    expect(out.result.pageKind).toBe("product");
+    expect(out.result.found).toBeUndefined();
+  });
 });

@@ -1,8 +1,8 @@
 import { resolveAssistantAccess } from "@/lib/agentic-audit/agents";
 import type { AgenticCheckError, AgenticCheckResult, AgenticProductFound } from "@/lib/agentic-audit/api-contract";
 import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
-import { findProductCandidate } from "@/lib/agentic-audit/find-product";
-import { extractPageSignals, isProductPage, type PageSignals } from "@/lib/agentic-audit/html-signals";
+import { findProductCandidate, findSellCandidate } from "@/lib/agentic-audit/find-product";
+import { classifyOffer, extractPageSignals, type OfferReading, type PageSignals } from "@/lib/agentic-audit/html-signals";
 import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { buildInterop, interopProbePaths, type Probe } from "@/lib/agentic-audit/interop";
 import { scoreAgenticAudit } from "@/lib/agentic-audit/score";
@@ -18,11 +18,13 @@ import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
  * (`.claude/rules/web-audit.md`, «Antes de ampliar»). No LLM is called.
  *
  * With `discover` (the console only, log §323) one more page may be
- * requested: when the page read is not a product page, `findProductCandidate`
- * picks one product page from the bytes above (catalogue, sitemap, the page
- * itself) and that single page is fetched. If it is not a product page
- * either, no other is tried and the result stays on the first page with
- * `found: "none"`.
+ * requested: when the page read sells nothing, or is the home page and is
+ * not a product page, `findProductCandidate` picks one product page from the
+ * bytes above (catalogue, sitemap, the page itself) or, without one,
+ * `findSellCandidate` picks a pricing, service, course, event, booking or
+ * subscription page (log §324). That single page is fetched. If it sells
+ * nothing either, no other is tried: the result stays on the first page,
+ * which still counts if it sells something itself, else `found: "none"`.
  *
  * The fetcher and the robots parser are injected so the whole flow runs in
  * Vitest without network; the route wires the real ones.
@@ -115,6 +117,14 @@ function isReadableHtml(page: FetchResponse): boolean {
   return page.status >= 200 && page.status < 300 && isHtml;
 }
 
+function isRootPath(url: string): boolean {
+  try {
+    return new URL(url).pathname.replace(/\/+$/, "") === "";
+  } catch {
+    return false;
+  }
+}
+
 export async function runAgenticAudit(
   input: string,
   deps: RunAgenticAuditDeps,
@@ -157,21 +167,26 @@ export async function runAgenticAudit(
   const feed = feedResponse ? toProbe(feedResponse) : null;
 
   let pageUrl = page.finalUrl;
+  let offer: OfferReading | null = signals ? classifyOffer(signals, page.finalUrl) : null;
   let found: AgenticProductFound | undefined;
   if (options.discover && signals) {
-    found = isProductPage(signals) ? "given" : "none";
-    const candidate =
-      found === "none"
-        ? findProductCandidate({
-            origin,
-            baseDomain: target.baseDomain,
-            currentUrl: page.finalUrl,
-            feedBody: feed?.state === "found" ? feed.body : null,
-            feedPlatform: platform,
-            sitemapBody: sitemap.kind === "response" && sitemap.status >= 200 && sitemap.status < 300 ? sitemap.body : null,
-            pageHtml: page.body
-          })
-        : null;
+    const atRoot = isRootPath(page.finalUrl);
+    // The page itself counts: «given» when it was asked for, «home» when it is the home page we started from.
+    found = offer ? (atRoot ? "home" : "given") : "none";
+    const search = offer === null || (atRoot && offer.kind !== "physical");
+    const sitemapBody = sitemap.kind === "response" && sitemap.status >= 200 && sitemap.status < 300 ? sitemap.body : null;
+    const candidate = search
+      ? (findProductCandidate({
+          origin,
+          baseDomain: target.baseDomain,
+          currentUrl: page.finalUrl,
+          feedBody: feed?.state === "found" ? feed.body : null,
+          feedPlatform: platform,
+          sitemapBody,
+          pageHtml: page.body
+        }) ??
+        findSellCandidate({ origin, baseDomain: target.baseDomain, currentUrl: page.finalUrl, sitemapBody, pageHtml: page.body }))
+      : null;
     if (candidate && deadlineAt - now() >= MIN_PRODUCT_FETCH_MS) {
       const product = await deps.fetch(candidate.url, target.baseDomain, {
         timeoutMs: PAGE_TIMEOUT_MS,
@@ -180,9 +195,11 @@ export async function runAgenticAudit(
       });
       if (product.kind === "response" && !isChallengeResponse(product) && isReadableHtml(product)) {
         const productSignals = extractPageSignals(product.body);
-        // Only one try: a candidate that is not a product page leaves the first page in place.
-        if (isProductPage(productSignals)) {
+        const productOffer = classifyOffer(productSignals, product.finalUrl);
+        // Only one try: a candidate that sells nothing leaves the first page in place.
+        if (productOffer) {
           signals = productSignals;
+          offer = productOffer;
           facts = extractPageFacts(product.body);
           pageUrl = product.finalUrl;
           found = candidate.source;
@@ -202,6 +219,7 @@ export async function runAgenticAudit(
     domain: target.baseDomain,
     url: pageUrl,
     signals,
+    offer,
     agents: resolveAssistantAccess(robotsText, deps.tokenAllowed),
     challenge,
     facts,

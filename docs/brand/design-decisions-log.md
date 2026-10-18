@@ -26153,3 +26153,74 @@ Lo verifican `audit-job-runner.test.ts` y `console-audit.test.ts`
 (`shouldAutoReview`). Si fallan las dos vías, la pantalla enseña la última
 revisión con su fecha (nunca un dato falso) y, sin ninguna, «No hemos podido
 abrir tu web» con el formulario para indicar una ficha.
+
+## 324. AGENTIC-OFFER-1: la auditoría agéntica detecta lo que vendes, no sólo fichas de tienda (2026-10-18)
+
+**Qué se decidió.** En el preview de §323, genscore.es salía con «No hemos
+encontrado una tienda en tu web»: el motor sólo aceptaba una página con
+`Product` u `og:type=product`, y GenScore vende software (su portada declara
+`SoftwareApplication` con su `Offer`). El fundador pidió que cubra también
+productos digitales y servicios: «Es mejor detectar de más que de menos».
+Aprobó el plan v3 («Apruebo», 2026-10-18; maqueta en
+`docs/design-reference/agentic-commerce-1/fase-2a-lo-que-vendes.html`) y, en
+el mismo mensaje, una animación de espera «como en Search Console».
+
+- **Qué se vende** (`classifyOffer`, `lib/agentic-audit/html-signals.ts`):
+  producto físico, software, servicio, curso, reserva o cita, entradas y
+  eventos, suscripción, y `offer` como red de seguridad (precio visible y un
+  botón de comprar, contratar, empezar, reservar o pedir presupuesto). Orden:
+  datos estructurados (software gana a un `Product` cuando trae oferta),
+  precio por mes o año en una página de precios, la ruta (`/precios`,
+  `/servicios/…`, `/cursos/…`, `/reservar`, `/entradas`, `/suscripcion`…), un
+  widget de reservas (Calendly, Doctoralia, TheFork…) y la red de seguridad.
+  En una página de una plataforma de tienda (Shopify, WooCommerce…) que no es
+  ficha, la ruta y la red de seguridad no cuentan: ahí la página buena es una
+  ficha.
+- **Qué página elige la consola**, con la misma única petición de más de
+  §323: si la página leída no vende nada, o es la portada y no es una ficha,
+  busca primero una ficha (`findProductCandidate`) y si no hay, una página de
+  venta en los enlaces de la página y luego en el sitemap
+  (`findSellCandidate`: precios primero, luego reservas, eventos, cursos,
+  suscripción y servicios). Si esa página no vende nada, se queda la primera
+  si vende algo (`found: "home"` en la portada, `given` en otra) y si no,
+  `found: "none"`. En genscore.es eso es `/precios` desde la portada.
+- **Las comprobaciones se adaptan** (`score.ts`): stock sólo en producto
+  físico y entradas; identificadores y envío sólo en producto físico;
+  «devoluciones» pasa a «cancelación o reembolso» (`cancellation`) en
+  software, servicios, cursos, reservas, suscripciones y `offer`; «añadir al
+  carrito» pasa a un botón para comprar, contratar, reservar… (`buy_button`);
+  pagos rápidos no se piden a servicios ni reservas; la plataforma reconoce
+  también Stripe, Paddle, Lemon Squeezy, Gumroad, Hotmart, Teachable,
+  Thinkific, Kajabi, Eventbrite, Chargebee y los sistemas de reservas. Lo que
+  no aplica sale de la lista y nunca resta. Los pesos 30/30/20/20 no cambian
+  (sin adenda de pesos al ADR 0043).
+- **Resultado.** `offerKind` y `pricingPage` nuevos en el resultado.
+  `pageKind: "product"` pasa a significar «página que vende algo» y no se
+  renombra, para no romper las revisiones guardadas (sin `offerKind`, se leen
+  como producto físico). Sin migración.
+- **Consola.** «Página revisada» con chip del tipo («Software · página de
+  precios»), «Elegir otra página», «Buscando qué vendes en tu web», «No hemos
+  encontrado qué vendes en tu web», «¿Vendes algo? Indícanos la página» y
+  una línea de lo que no aplica («Stock, identificadores y envío no aplican a
+  un software, así que no cuentan.»). Comprensión y Compra sin página de
+  venta dicen «Al vender» (antes «En una ficha»).
+- **Comprobador gratuito.** Mismo motor, así que una página de precios o de
+  reservas ya tiene nota. Pista: «Escribe la URL de un producto, servicio o
+  página de precios». Además de la pista, se tocan las frases que el motor
+  nuevo dejaba falsas («Se mide en una ficha de producto», «Has pegado una
+  portada o una categoría»): fuera de eso, la landing no cambia.
+- **Animación de espera** (`components/agentic/agentic-loading-scene.tsx`,
+  CSS `.als-*` en `globals.css`): una ventana con una página esquemática por
+  la que pasa el cursor de un agente (precio, botón, datos) mientras se
+  iluminan los tipos que buscamos. Ambiente, como `gsc-loading.tsx` (§289):
+  no dice cuánto falta ni enseña datos de la web. Con movimiento reducido se
+  queda quieta en su último fotograma. Va en la espera de la consola y, en
+  pequeño, junto a la cabecera del comprobador, sin tocar su guion (§318).
+
+**Riesgo aceptado.** Detectar de más puede elegir una página que no es la
+mejor (un artículo con un precio y «Empieza» acaba como `offer`). Lo corrige
+«Elegir otra página»; una pantalla vacía no tenía salida mejor.
+
+**Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
+comercio agéntico hablan de tiendas; se revisan cuando esto esté en
+producción.

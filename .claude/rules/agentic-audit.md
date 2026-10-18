@@ -14,7 +14,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
 `components/agentic/**` y `app/dashboard/projects/*/agentic-audit/**`. Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322 y §323.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323 y §324.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -36,7 +36,8 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   de redirección se verifica antes de seguirlo, sólo https, nada de IP
   literales, sólo el dominio y sus subdominios.
 - **Los pesos son del fundador**: 30/30/20/20 (`COMPONENT_WEIGHTS`), y dentro
-  de cada componente los checks suman 100. Cambiarlos mueve todos los
+  de cada componente los checks suman 100 en un producto físico (en otros tipos,
+  lo que no aplica sale de la cuenta, §324). Cambiarlos mueve todos los
   resultados y pide adenda al ADR 0043.
 - **`unknown` no suma ni resta.** Lo que no pudimos medir se queda fuera de
   los dos lados. Un bloqueo a nuestra petición nunca puede leerse como fallo
@@ -44,8 +45,9 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   (log §319), porque un agente verificado o con navegador puede pasarlo.
 - **Siempre salen los cinco componentes** (fundador, log §319). El que no se
   puede medir lleva el círculo vacío y dice por qué; nunca desaparece.
-- **Sin ficha de producto no hay nota total.** Comprensión y Compra se miden
-  en una ficha; una portada no las suspende por no tener producto.
+- **Sin página de venta no hay nota total.** Comprensión y Compra se miden
+  en una página que vende algo (`classifyOffer`); una página que no vende
+  nada no las suspende.
 - **Interoperabilidad es «N de 4» y no entra en la nota.** Nunca se escribe
   «sin puntos» ni «informativo» (fundador, 2026-10-17). Un feed que no se ve
   desde fuera es `unknown`, nunca `absent`.
@@ -101,8 +103,24 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **La misma ficha mientras exista**, y una búsqueda nueva desde la portada
   sólo si esa ficha responde rápido con error, dentro del mismo presupuesto
   de `AGENTIC_DISCOVER_BUDGET_MS`.
-- **Sin tienda no hay nota.** `found: "none"` dice «No hemos encontrado una
-  tienda en tu web», y Comprensión y Compra salen «En una ficha», nunca
-  como suspenso.
-- **La espera es un spinner.** «Buscando una ficha de producto en tu
-  tienda», sin pasos ni porcentajes: nada sabe por dónde va.
+- **Sin nada a la venta no hay nota.** `found: "none"` dice «No hemos
+  encontrado qué vendes en tu web», y Comprensión y Compra salen «Al
+  vender», nunca como suspenso (§324).
+- **La espera es ambiente.** «Buscando qué vendes en tu web» con
+  `AgenticLoadingScene`: ni pasos, ni porcentajes, ni datos de la web, porque
+  nada sabe por dónde va. Quieta con movimiento reducido (§324).
+
+## Lo que vendes (log §324)
+
+- **Detectar de más.** `classifyOffer` reconoce producto físico, software,
+  servicio, curso, reserva, entradas, suscripción y la red de seguridad
+  `offer` (precio y botón de compra). Ante la duda, cuenta. La excepción: en
+  una plataforma de tienda, una página que no es ficha no cuenta por ruta ni
+  por red de seguridad.
+- **Lo que no aplica no resta.** Stock (físico y entradas), identificadores y
+  envío (sólo físico), pagos rápidos (no en servicios ni reservas) salen de
+  la lista según `offerKind`. Los pesos 30/30/20/20 no cambian.
+- **Sigue siendo una sola página más.** `findSellCandidate` sólo se usa si
+  `findProductCandidate` no da nada, y saca la página de los mismos bytes.
+- **`pageKind: "product"` significa «vende algo».** No se renombra: las
+  revisiones guardadas sin `offerKind` se leen como producto físico.

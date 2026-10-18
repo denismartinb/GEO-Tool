@@ -28,7 +28,7 @@ import type { createServiceClient } from "@/lib/supabase/service";
  * audit job, `runScheduledAgenticAudit`) and the first time the screen opens
  * (`runConsoleAgenticAuditCore` without `url`). It keeps the same product
  * page while it still is one, so one day's score compares with the next.
- * «Elegir otra ficha» passes a `url` and counts against the daily limit like
+ * «Elegir otra página» passes a `url` and counts against the daily limit like
  * every other review.
  *
  * The owner can read `agentic_audits` (RLS select policy). Writes go through
@@ -127,7 +127,7 @@ export function shouldAutoReview(read: Extract<AgenticAuditsRead, { available: t
 
 export const runConsoleAgenticAuditInputSchema = z.object({
   projectId: z.string().uuid(),
-  /** Present only for «Elegir otra ficha». Without it the review finds the product page by itself. */
+  /** Present only for «Elegir otra página». Without it the review finds the product page by itself. */
   url: z.string().trim().min(1).max(2048).optional()
 });
 
@@ -148,8 +148,8 @@ export type ConsoleAgenticAuditResult =
 const MESSAGES: Record<ConsoleAgenticAuditError, string> = {
   project_not_found: feedbackErrorMessages.project_not_found,
   plan_required: "La auditoría agéntica está en Pro y Agencia.",
-  invalid_url: "Escribe la dirección completa de una ficha de producto de tu tienda.",
-  other_domain: "La ficha tiene que ser de tu dominio o de un subdominio suyo.",
+  invalid_url: "Escribe la dirección completa de una página de tu web.",
+  other_domain: "La página tiene que ser de tu dominio o de un subdominio suyo.",
   limit_reached: `Ya has hecho ${AGENTIC_REVIEW_DAILY_LIMIT} revisiones en las últimas 24 horas. Vuelve a intentarlo mañana.`,
   unavailable: "La auditoría agéntica todavía no está disponible. Vuelve a intentarlo en un rato.",
   site_unreachable: "No hemos podido abrir esa página. Comprueba que la dirección es correcta y que la página está publicada.",

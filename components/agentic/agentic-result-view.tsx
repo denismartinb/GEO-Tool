@@ -37,7 +37,7 @@ const DESCRIPTIONS: Record<AgenticComponentId | "interop", string> = {
   understanding:
     "Si entiende qué vendes sin adivinar: precio, disponibilidad, identificadores y datos estructurados que se leen sin JavaScript.",
   trust: "Si un agente puede fiarse de ti y explicárselo a su usuario: envío, devoluciones, reseñas y quién está detrás de la tienda.",
-  purchase: "Si puede llegar al pago sin chocar en la ficha: botón de compra, captchas y métodos de pago rápidos.",
+  purchase: "Si puede llegar a comprar o reservar sin chocar: botón de compra, captchas y métodos de pago rápidos.",
   interop:
     "Si tienes un canal directo para que los agentes consulten tu catálogo y compren sin pasar por la web: UCP, MCP, la tarjeta de agente A2A y un catálogo público."
 };
@@ -81,7 +81,7 @@ export function AgenticResultView({
   // All five always show: one that cannot be measured here says why instead of disappearing.
   const components = result.components;
   const emptyReason = result.pageRead
-    ? "Se mide en una ficha de producto."
+    ? "Se mide en una página donde vendas algo."
     : "No se pudo medir: la protección anti-bots no nos dejó leer la página.";
   const interopValue = result.interop.total > 0 ? (result.interop.found / result.interop.total) * 100 : 0;
   const interopLabel = `${result.interop.found}/${result.interop.total}`;
@@ -97,7 +97,7 @@ export function AgenticResultView({
 
   return (
     <div className="ca-res">
-      <span className="ca-res-kicker">Comprobación rápida de una ficha</span>
+      <span className="ca-res-kicker">Comprobación rápida de una página</span>
       <div className="ca-res-head">
         <div>
           <b className="ca-res-dom">{result.domain}</b>
@@ -121,10 +121,10 @@ export function AgenticResultView({
         </p>
       ) : result.pageKind === "other" ? (
         <div className="ca-res-note ca-res-note-act">
-          <p>Has pegado una portada o una categoría. Para la nota completa, prueba con la ficha de un producto.</p>
+          <p>En esta página no vemos nada a la venta. Para la nota completa, prueba con un producto, un servicio o tu página de precios.</p>
           {onTryProduct ? (
             <button type="button" className="ca-nbtn ca-pri" onClick={onTryProduct}>
-              Probar con un producto
+              Probar con otra página
             </button>
           ) : null}
         </div>
@@ -137,8 +137,7 @@ export function AgenticResultView({
             <span className="ca-res-total-k">Visibilidad agéntica</span>
             <span className="ca-res-total-v">{result.score} de 100</span>
             <p className="ca-res-lead">
-              Una primera lectura de alto nivel: cómo ve un agente esta ficha. La auditoría completa analiza tu catálogo entero, ficha
-              a ficha.
+              Una primera lectura de alto nivel: cómo ve un agente esta página. La auditoría de la consola la repite sola tras cada escaneo.
             </p>
           </div>
         </div>
@@ -156,7 +155,7 @@ export function AgenticResultView({
           >
             {c.score === null ? <EmptyGauge /> : <Gauge value={c.score} play={play} />}
             <b>{c.name}</b>
-            {c.checks.length === 0 ? <small className="ca-g-sub">{result.pageRead ? "En una ficha" : "Sin medir"}</small> : null}
+            {c.checks.length === 0 ? <small className="ca-g-sub">{result.pageRead ? "Al vender" : "Sin medir"}</small> : null}
           </button>
         ))}
         <button

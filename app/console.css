@@ -1942,7 +1942,12 @@
 .ag-busy { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .ag-busy .btn-spinner { border-color: var(--line); border-top-color: var(--accent); }
 .ag-busy b { font-size: 14px; color: var(--ink); }
-.ag-searching { justify-items: start; }
+.ag-screen .ag-searching { justify-items: center; text-align: center; gap: 18px; padding: 32px 20px 28px; }
+.ag-searching-copy { display: flex; flex-direction: column; gap: 4px; }
+.ag-searching-copy b { font-size: 15px; color: var(--ink); }
+.ag-searching-copy span { font-size: 13px; color: var(--ink-2); }
+.ag-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.ag-kind { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; color: #1d4ed8; background: #eaf1ff; }
 .ag-link { font: inherit; font-size: 13px; font-weight: 650; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; justify-self: start; text-decoration: underline; text-underline-offset: 2px; }
 .ag-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 

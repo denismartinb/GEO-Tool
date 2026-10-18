@@ -1,4 +1,4 @@
-import { flattenNodes, parseJsonLd } from "@/lib/agentic-audit/html-signals";
+import { flattenNodes, parseJsonLd, PATH_KINDS, PRICING_PATH } from "@/lib/agentic-audit/html-signals";
 import { parseJsonObject } from "@/lib/agentic-audit/interop";
 import { isSameOrSubdomain, normalizeDomain } from "@/lib/domains/brand-domain";
 import { parseSitemap } from "@/lib/web-audit/sitemap";
@@ -21,7 +21,12 @@ import { parseSitemap } from "@/lib/web-audit/sitemap";
  *
  * Every candidate must be https on the store's domain or a subdomain, and
  * never the page we already have. A wrong guess costs one request and is
- * caught by `isProductPage` on the fetched page.
+ * caught by `classifyOffer` on the fetched page.
+ *
+ * Log §324: when there is no product page, `findSellCandidate` looks for the
+ * page where the site sells something else, in the same bytes: a pricing or
+ * plans page first, then a service, course, event, booking or subscription
+ * page. It is the same single extra request, never a second one.
  */
 
 export type ProductSource = "catalog" | "sitemap" | "home";
@@ -132,6 +137,44 @@ function fromPage(input: FindProductInput, base: URL): string | null {
     if (url && PRODUCT_PATH.test(url.pathname) && !sameAs(url, input.currentUrl)) return url.toString();
   }
   return null;
+}
+
+export type SellCandidate = { url: string; source: "sitemap" | "home" };
+
+/** Rank of a path for `findSellCandidate`: pricing first, then `PATH_KINDS` in order. `null` = not a selling path. */
+function sellRank(pathname: string): number | null {
+  if (PRICING_PATH.test(pathname)) return 0;
+  const i = PATH_KINDS.findIndex(([, re]) => re.test(pathname));
+  return i === -1 ? null : i + 1;
+}
+
+/**
+ * Log §324: the best selling page that is not a product page, from the page's
+ * own links first (what the site puts in front of a visitor) and then the
+ * sitemap. Lowest rank wins; ties keep the first seen.
+ */
+export function findSellCandidate(input: Omit<FindProductInput, "feedBody" | "feedPlatform">): SellCandidate | null {
+  let base: URL;
+  try {
+    base = new URL(input.currentUrl);
+  } catch {
+    return null;
+  }
+  let best: (SellCandidate & { rank: number }) | null = null;
+  const consider = (raw: string, source: SellCandidate["source"]) => {
+    const url = onStore(raw, base, input.baseDomain);
+    if (!url || sameAs(url, input.currentUrl)) return;
+    const rank = sellRank(url.pathname);
+    if (rank === null || (best && best.rank <= rank)) return;
+    best = { url: url.toString(), source, rank };
+  };
+  if (input.pageHtml) {
+    for (const match of input.pageHtml.matchAll(HREF_RE)) consider(match[1].replace(/&amp;/g, "&").trim(), "home");
+  }
+  const report = parseSitemap(input.sitemapBody);
+  if (report && report.kind === "urlset") for (const loc of report.locs) consider(loc, "sitemap");
+  const found = best as (SellCandidate & { rank: number }) | null;
+  return found ? { url: found.url, source: found.source } : null;
 }
 
 export function findProductCandidate(input: FindProductInput): ProductCandidate | null {

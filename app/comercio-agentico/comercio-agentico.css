@@ -455,6 +455,9 @@
 /* ---- scan (the ~10 s wait, log §318) ---- */
 .ca-scan{max-width:920px;margin:20px auto 0;background:#fff;border:1px solid var(--ca-line);border-radius:22px;padding:24px;box-shadow:var(--ca-sh-card);text-align:left;animation:ca-fade .3s ease}
 .ca-scan-head{display:flex;gap:16px;align-items:center}
+.ca-scan-top{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:center}
+.ca-scan-top .als{margin:0}
+@media (max-width:700px){.ca-scan-top{grid-template-columns:1fr}.ca-scan-top .als{margin:0 auto}}
 .ca-scan-orb{position:relative;width:60px;height:60px;flex:0 0 auto}
 .ca-scan-orb::before,.ca-scan-orb::after{content:"";position:absolute;inset:0;border-radius:50%}
 .ca-scan-orb::before{background:conic-gradient(from 0deg,var(--ca-blue),var(--ca-cyan),#a78bfa,var(--ca-blue));animation:ca-scspin 2.2s linear infinite;-webkit-mask:radial-gradient(circle,transparent 55%,#000 57%);mask:radial-gradient(circle,transparent 55%,#000 57%)}

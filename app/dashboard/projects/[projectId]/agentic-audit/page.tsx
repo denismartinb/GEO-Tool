@@ -89,14 +89,14 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
 
       <div className="ag-page">
         <div className="ag-screen">
-          <p className="ag-intro">Si un agente de IA puede encontrar tu tienda, entender tus productos, fiarse y llegar al pago.</p>
+          <p className="ag-intro">Si un agente de IA puede encontrar tu web, entender lo que vendes, fiarse y llegar a comprar o reservar.</p>
 
           {!canRun ? (
             <div className="card ag-upsell">
               <h3>La auditoría agéntica está en Pro y Agencia</h3>
               <p>
-                Revisa una ficha de tu tienda como la leería un agente de IA: si puede entrar, si entiende el producto, si puede
-                fiarse y si llega al pago, con lo que más sube tu nota.
+                Revisa la página donde vendes como la leería un agente de IA: si puede entrar, si entiende lo que vendes, si
+                puede fiarse y si llega a comprar o reservar, con lo que más sube tu nota.
               </p>
               <Link className="btn btn-primary" href="/dashboard/settings?openPlan=pro#plan">
                 Pasar a Pro
@@ -104,7 +104,7 @@ export default async function AgenticAuditPage({ params }: { params: Promise<{ p
             </div>
           ) : !audits.available ? (
             <div className="card">
-              <h2 className="ag-h">Muy pronto podrás revisar tu tienda aquí</h2>
+              <h2 className="ag-h">Muy pronto podrás revisar tu web aquí</h2>
               <p className="ag-muted">
                 Estamos terminando de activar la auditoría agéntica. Mientras tanto puedes hacer una comprobación rápida en{" "}
                 <Link href="/comercio-agentico">la página de comercio agéntico</Link>.

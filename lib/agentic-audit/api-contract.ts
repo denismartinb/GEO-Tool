@@ -60,7 +60,27 @@ export type AgenticFix = {
   gain: number;
 };
 
+/**
+ * `product` = a page that sells something we could read (log §324): a
+ * physical product, but also software, a service, a course, a booking, an
+ * event, a subscription or any page with a price and a buy button. The name
+ * stays for stored reviews; `offerKind` says what it sells.
+ */
 export type AgenticPageKind = "product" | "other";
+
+/**
+ * What a selling page sells (log §324). `offer` = the safety net: a visible
+ * price and a buy button, with nothing declared that says more.
+ */
+export type AgenticOfferKind =
+  | "physical"
+  | "software"
+  | "service"
+  | "course"
+  | "booking"
+  | "event"
+  | "subscription"
+  | "offer";
 
 /**
  * A few literal values the store published on the page (title, product,
@@ -87,7 +107,7 @@ export type AgenticCheckResult = {
    * and the landing says the site did not let us in, not «paste a product page».
    */
   pageRead: boolean;
-  /** 0–100. `null` when the page is not a product page: Comprensión and Compra are measured on a product page. */
+  /** 0–100. `null` when the page sells nothing we could see: Comprensión and Compra are measured on a selling page. */
   score: number | null;
   components: AgenticComponentResult[];
   interop: { found: number; total: number; items: InteropItem[] };
@@ -106,6 +126,13 @@ export type AgenticCheckResult = {
    * the home page. The free checker never sets it.
    */
   found?: AgenticProductFound;
+  /**
+   * What the page sells (log §324). Absent on reviews stored before it was
+   * recorded; with `pageKind: "product"` those were physical products.
+   */
+  offerKind?: AgenticOfferKind;
+  /** The page is a pricing or plans page (`/precios`, `/pricing`…). */
+  pricingPage?: boolean;
 };
 
 export type AgenticProductFound = "given" | "catalog" | "sitemap" | "home" | "none";

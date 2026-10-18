@@ -1,6 +1,7 @@
 import {
   agenticBand,
   type AgenticCheckResult,
+  type AgenticOfferKind,
   type AgenticComponentId,
   type AgenticComponentResult
 } from "@/lib/agentic-audit/api-contract";
@@ -24,9 +25,9 @@ export function componentStatus(
   result?: Pick<AgenticCheckResult, "pageRead">
 ): { tone: Tone; word: string } {
   if (component.score === null) {
-    // Without a product page (log §323), these two wait for one; they did not fail.
+    // Without a page that sells something (log §323, §324), these two wait for one; they did not fail.
     const needsProduct = result?.pageRead === true && (component.id === "understanding" || component.id === "purchase");
-    return { tone: "na", word: needsProduct ? "En una ficha" : "Sin medir" };
+    return { tone: "na", word: needsProduct ? "Al vender" : "Sin medir" };
   }
   const band = agenticBand(component.score);
   return { tone: BAND_TONE[band], word: BAND_WORD[band] };
@@ -35,7 +36,7 @@ export function componentStatus(
 /** Why a component has no reading: the page was not read, or it is not a product page. */
 export function unmeasuredReason(result: AgenticCheckResult, id: AgenticComponentId): string {
   if (!result.pageRead) return "Tu protección anti-bots no dejó leer la página a nuestro robot";
-  if (id === "understanding" || id === "purchase") return "Se mide en una ficha de producto";
+  if (id === "understanding" || id === "purchase") return "Se mide en una página donde vendas algo";
   return "No se pudo medir";
 }
 
@@ -86,7 +87,7 @@ export function foundSentence(result: Pick<AgenticCheckResult, "found">): string
     case "home":
       return `Elegida automáticamente de ${FOUND_SOURCE[result.found]}.`;
     case "given":
-      return "La ficha que elegiste.";
+      return "La página que elegiste.";
     default:
       return null;
   }
@@ -96,4 +97,39 @@ export function foundSentence(result: Pick<AgenticCheckResult, "found">): string
 export function initialComponent(result: AgenticCheckResult): AgenticComponentId {
   const withIssue = result.components.find((c) => c.checks.some((k) => k.state === "fail" || k.state === "avg"));
   return withIssue?.id ?? "discovery";
+}
+
+const KIND_LABEL: Record<AgenticOfferKind, string> = {
+  physical: "Producto físico",
+  software: "Software",
+  service: "Servicio",
+  course: "Curso o formación",
+  booking: "Reserva o cita",
+  event: "Entradas y eventos",
+  subscription: "Suscripción",
+  offer: "Página de venta"
+};
+
+/** Log §324: the chip next to the reviewed page, «Software · página de precios». `null` when the page sells nothing. */
+export function offerLabel(result: Pick<AgenticCheckResult, "pageKind" | "offerKind" | "pricingPage">): string | null {
+  if (result.pageKind !== "product") return null;
+  // Reviews stored before §324 only ever chose physical products.
+  const label = KIND_LABEL[result.offerKind ?? "physical"];
+  return result.pricingPage ? `${label} · página de precios` : label;
+}
+
+const NOT_APPLICABLE: Partial<Record<AgenticOfferKind, string>> = {
+  software: "Stock, identificadores y envío no aplican a un software, así que no cuentan.",
+  service: "Stock, identificadores y envío no aplican a un servicio, así que no cuentan.",
+  course: "Stock, identificadores y envío no aplican a un curso, así que no cuentan.",
+  booking: "Stock, identificadores y envío no aplican a una reserva, así que no cuentan.",
+  event: "Identificadores y envío no aplican a unas entradas, así que no cuentan.",
+  subscription: "Stock, identificadores y envío no aplican a una suscripción, así que no cuentan.",
+  offer: "Stock, identificadores y envío sólo se piden a un producto físico, así que no cuentan."
+};
+
+/** Log §324: which checks were left out for what this page sells. `null` for a physical product. */
+export function notApplicableNote(result: Pick<AgenticCheckResult, "pageKind" | "offerKind">): string | null {
+  if (result.pageKind !== "product" || !result.offerKind) return null;
+  return NOT_APPLICABLE[result.offerKind] ?? null;
 }

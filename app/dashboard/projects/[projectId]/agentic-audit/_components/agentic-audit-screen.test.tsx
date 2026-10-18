@@ -30,11 +30,17 @@ const SIGNALS: PageSignals = {
   organizationData: true,
   ogProduct: true,
   visibleTextChars: 2000,
-  links: { returns: true, shipping: true, legal: true, contact: true },
+  links: { returns: true, shipping: true, legal: true, contact: true, cancellation: true },
   platform: "Shopify",
   addToCart: true,
   quickPay: ["Shop Pay"],
-  captcha: null
+  captcha: null,
+  offerTypes: [],
+  anyOffer: true,
+  recurringPrice: false,
+  buyCta: false,
+  bookingWidget: null,
+  paymentPlatform: null
 };
 
 const AGENTS: AgentAccess[] = [
@@ -104,23 +110,23 @@ describe("AgenticAuditScreen", () => {
 
   it("asks for another product page when the reviewed page is not one", () => {
     const html = render(scoreAgenticAudit({ ...INPUT, signals: { ...SIGNALS, hasProductData: false, hasOffer: false, ogProduct: false } }));
-    expect(html).toContain("La nota se calcula sobre una ficha de producto");
-    expect(html).toContain("elige otra ficha");
+    expect(html).toContain("La nota se calcula sobre la página donde vendes algo");
+    expect(html).toContain("elige otra página");
   });
 
   it("says where the product page came from, with no «Revisar ahora» button", () => {
     const html = render({ ...scoreAgenticAudit(INPUT), found: "catalog" });
-    expect(html).toContain("Ficha revisada");
+    expect(html).toContain("Página revisada");
     expect(html).toContain("https://tienda.es/p/zapatilla");
     expect(html).toContain("Elegida automáticamente de tu catálogo. Revisada hoy a las 10:42.");
-    expect(html).toContain("Elegir otra ficha");
+    expect(html).toContain("Elegir otra página");
     expect(html).not.toContain("Revisar ahora");
   });
 
-  it("hides «Elegir otra ficha» once the daily reviews are used", () => {
+  it("hides «Elegir otra página» once the daily reviews are used", () => {
     const html = render(scoreAgenticAudit(INPUT), 0);
-    expect(html).not.toContain("Elegir otra ficha");
-    expect(html).toContain("podrás elegir otra ficha mañana");
+    expect(html).not.toContain("Elegir otra página");
+    expect(html).toContain("podrás elegir otra página mañana");
   });
 
   it("says plainly when there is no store, without a made-up total", () => {
@@ -130,23 +136,33 @@ describe("AgenticAuditScreen", () => {
       signals: { ...SIGNALS, hasProductData: false, hasOffer: false, ogProduct: false }
     });
     const html = render({ ...home, found: "none" });
-    expect(html).toContain("No hemos encontrado una tienda en tu web");
-    expect(html).toContain("¿Vendes online? Indícanos una ficha");
-    expect(html).toContain("En una ficha");
+    expect(html).toContain("No hemos encontrado qué vendes en tu web");
+    expect(html).toContain("¿Vendes algo? Indícanos la página");
+    expect(html).toContain("Al vender");
     expect(html).not.toContain("Visibilidad agéntica:");
-    expect(html).not.toContain("Ficha revisada");
+    expect(html).not.toContain("Página revisada");
   });
 
-  it("first visit: a spinner and no fake progress steps", () => {
+  it("first visit: an ambient scene and no fake progress steps (log §324)", () => {
     const html = renderToStaticMarkup(<AgenticAuditSearching projectId="p1" />);
-    expect(html).toContain("Buscando una ficha de producto en tu tienda");
+    const text = html.replace(/<[^>]+>/g, " ");
+    expect(html).toContain("Buscando qué vendes en tu web");
     expect(html).toContain("Al terminar, la pantalla se rellena sola.");
-    expect(html).not.toMatch(/%|paso \d/i);
+    expect(html).toContain('class="als"');
+    expect(text).not.toMatch(/%|paso \d|\d+ de \d+/i);
   });
 
-  it("when the site could not be opened, offers to point at a product page", () => {
+  it("shows what the page sells and which checks do not apply (log §324)", () => {
+    const html = render(
+      scoreAgenticAudit({ ...INPUT, url: "https://tienda.es/precios", offer: { kind: "software", pricingPage: true }, signals: { ...SIGNALS, buyCta: true } })
+    );
+    expect(html).toContain("Software · página de precios");
+    expect(html).toContain("Stock, identificadores y envío no aplican a un software");
+  });
+
+  it("when the site could not be opened, offers to point at a selling page", () => {
     const html = renderToStaticMarkup(<AgenticAuditUnreachable projectId="p1" domain="tienda.es" remaining={5} />);
     expect(html).toContain("No hemos podido abrir tu web");
-    expect(html).toContain("Revisar esta ficha");
+    expect(html).toContain("Revisar esta página");
   });
 });

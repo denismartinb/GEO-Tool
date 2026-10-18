@@ -20,7 +20,7 @@ import { resolveAgentTokenAccess } from "@/lib/web-audit/robots";
 export async function runAgenticAuditAction(input: { projectId: string; url?: string }): Promise<ConsoleAgenticAuditResult> {
   const parsed = runConsoleAgenticAuditInputSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "invalid_url", message: "Escribe la dirección completa de una ficha de producto de tu tienda." };
+    return { success: false, error: "invalid_url", message: "Escribe la dirección completa de una página de tu web." };
   }
   const { supabase, user } = await requireUser();
   const result = await runConsoleAgenticAuditCore(parsed.data, {

@@ -12,6 +12,8 @@
  * not see it", which stays true; claiming a signal we did not see would not.
  */
 
+import type { AgenticOfferKind } from "@/lib/agentic-audit/api-contract";
+
 type JsonNode = Record<string, unknown>;
 
 export type ProductSignals = {
@@ -36,8 +38,24 @@ export type ProductSignals = {
 
 export type PageSignals = ProductSignals & {
   visibleTextChars: number;
-  links: { returns: boolean; shipping: boolean; legal: boolean; contact: boolean };
+  links: { returns: boolean; shipping: boolean; legal: boolean; contact: boolean; cancellation: boolean };
+  /** A store platform (Shopify, WooCommerce…). Drives the catalogue probe. */
   platform: string | null;
+  /**
+   * Log §324: what the page sells according to its structured data, besides
+   * a physical product (software, service, course, event, booking).
+   */
+  offerTypes: AgenticOfferKind[];
+  /** Any Offer anywhere in the structured data, whatever it is attached to. */
+  anyOffer: boolean;
+  /** A price per month or per year, in the data or the text. */
+  recurringPrice: boolean;
+  /** A buy, hire, start, book or quote button or link in the HTML. */
+  buyCta: boolean;
+  /** A booking widget or link (Calendly, Doctoralia, TheFork…). */
+  bookingWidget: string | null;
+  /** A checkout or selling platform that is not a store (Stripe, Paddle, Eventbrite…). */
+  paymentPlatform: string | null;
   addToCart: boolean;
   quickPay: string[];
   captcha: string | null;
@@ -116,6 +134,33 @@ function offerHasPrice(offer: JsonNode): boolean {
   return hasValue(price) && hasValue(currency);
 }
 
+const SOFTWARE_TYPES = new Set(["softwareapplication", "webapplication", "mobileapplication", "videogame"]);
+const SERVICE_TYPES = new Set(["service", "professionalservice", "financialproduct", "broadcastservice", "cableorsatelliteservice", "governmentservice", "taxiservice", "foodservice"]);
+const COURSE_TYPES = new Set(["course", "courseinstance", "educationaloccupationalprogram"]);
+const OFFER_TYPES = new Set(["offer", "aggregateoffer", "offercatalog"]);
+
+/** Log §324: what the structured data says the page sells, besides a physical product. */
+function offerTypesFromJsonLd(nodes: JsonNode[]): { kinds: AgenticOfferKind[]; anyOffer: boolean; anyPrice: boolean; recurring: boolean } {
+  const kinds = new Set<AgenticOfferKind>();
+  for (const node of nodes) {
+    const types = typesOf(node);
+    if (types.some((t) => SOFTWARE_TYPES.has(t))) kinds.add("software");
+    if (types.some((t) => COURSE_TYPES.has(t))) kinds.add("course");
+    if (types.some((t) => t.endsWith("event"))) kinds.add("event");
+    if (types.some((t) => SERVICE_TYPES.has(t))) kinds.add("service");
+    if (types.includes("reserveaction") || node.acceptsReservations === true || /^(?:true|yes|s[ií])$/i.test(String(node.acceptsReservations ?? "")))
+      kinds.add("booking");
+    const action = node.potentialAction;
+    if (asList(action).some((a) => isObject(a) && typesOf(a).includes("reserveaction"))) kinds.add("booking");
+  }
+  const offers = nodes.filter((n) => typesOf(n).some((t) => OFFER_TYPES.has(t)) || hasValue(n.priceSpecification));
+  const specs = nodes.filter((n) => typesOf(n).some((t) => t.endsWith("pricespecification")));
+  const recurring =
+    specs.some((n) => hasValue(n.billingDuration) || /^(?:mon|ann|month|year)/i.test(String(n.unitCode ?? n.unitText ?? ""))) ||
+    offers.some((n) => /^(?:mon|ann)$/i.test(String(n.unitCode ?? "")));
+  return { kinds: [...kinds], anyOffer: offers.length > 0, anyPrice: offers.some(offerHasPrice), recurring };
+}
+
 function productSignalsFromJsonLd(nodes: JsonNode[]): Omit<ProductSignals, "ogProduct" | "textPrice"> {
   const products = nodes.filter((n) => typesOf(n).some((t) => PRODUCT_TYPES.has(t)));
   // A ProductGroup's variants carry the offers; they are already in `nodes`
@@ -172,12 +217,17 @@ export function visibleText(html: string): string {
     .trim();
 }
 
-const PRICE_IN_TEXT = /(?:\d{1,3}(?:[.\s]\d{3})*|\d+)[.,]\d{2}\s?(?:€|eur\b)|€\s?\d+(?:[.,]\d{2})?/i;
+const PRICE_IN_TEXT =
+  /(?:\d{1,3}(?:[.\s]\d{3})*|\d+)(?:[.,]\d{2})?\s?(?:€|eur\b|euros?\b)|€\s?\d+(?:[.,]\d{2})?|\$\s?\d+(?:[.,]\d{2})?/i;
+
+/** A price per month or year: «29 €/mes», «al mes», «/año», «per month». */
+const RECURRING_IN_TEXT =
+  /(?:€|eur\b|euros?\b|\$)\s*(?:\/|al|por|a\s+la|per)\s*(?:mes|año|ano|month|year|mo\b|semana)|\b(?:al mes|al año|mensuales?|anuales?|per month|per year|\/mes|\/año|\/month|\/year)\b/i;
 
 type LinkFlags = PageSignals["links"];
 
 function linkFlags(html: string): LinkFlags {
-  const flags: LinkFlags = { returns: false, shipping: false, legal: false, contact: false };
+  const flags: LinkFlags = { returns: false, shipping: false, legal: false, contact: false, cancellation: false };
   const re = /<a\b[^>]*href\s*=\s*["']([^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
   let match: RegExpExecArray | null;
   while ((match = re.exec(html)) !== null) {
@@ -187,6 +237,7 @@ function linkFlags(html: string): LinkFlags {
     if (/aviso[- ]legal|legal[- ]notice|imprint|impressum|condiciones[- ]generales|terminos|términos|terms/.test(haystack))
       flags.legal = true;
     if (/contact/.test(haystack)) flags.contact = true;
+    if (/cancelaci|cancela|cancel|reembolso|refund|darse de baja|garant[ií]a de devoluci/.test(haystack)) flags.cancellation = true;
   }
   return flags;
 }
@@ -207,6 +258,53 @@ export function detectPlatform(html: string): string | null {
   for (const [name, re] of PLATFORMS) if (re.test(html)) return name;
   return null;
 }
+
+/** Log §324: selling platforms that are not a store, for software, courses, events and bookings. */
+const PAYMENT_PLATFORMS: Array<[string, RegExp]> = [
+  ["Stripe", /js\.stripe\.com|checkout\.stripe\.com|buy\.stripe\.com|billing\.stripe\.com/i],
+  ["Paddle", /cdn\.paddle\.com|paddle\.js|checkout\.paddle\.com/i],
+  ["Lemon Squeezy", /lemonsqueezy\.com/i],
+  ["Gumroad", /gumroad\.com/i],
+  ["Hotmart", /hotmart\.com/i],
+  ["Teachable", /teachable\.com/i],
+  ["Thinkific", /thinkific\.com/i],
+  ["Kajabi", /kajabi(?:-cdn)?\.com/i],
+  ["Eventbrite", /eventbrite\.(?:com|es)/i],
+  ["Chargebee", /chargebee\.com/i]
+];
+
+const BOOKING_WIDGETS: Array<[string, RegExp]> = [
+  ["Calendly", /calendly\.com/i],
+  ["Cal.com", /\bcal\.com\//i],
+  ["Doctoralia", /doctoralia\.(?:es|com)/i],
+  ["TheFork", /thefork\.|eltenedor\./i],
+  ["OpenTable", /opentable\./i],
+  ["Booksy", /booksy\.com/i],
+  ["Treatwell", /treatwell\./i],
+  ["SimplyBook", /simplybook\./i],
+  ["Acuity", /acuityscheduling\.com/i],
+  ["Bookitit", /bookitit\.com/i],
+  ["Reservio", /reservio\.com/i],
+  ["CoverManager", /covermanager\.com/i],
+  ["Mirai", /mirai\.com/i],
+  ["SiteMinder", /siteminder\.com|thebookingbutton/i],
+  ["Cloudbeds", /cloudbeds\.com/i],
+  ["SynXis", /synxis\.com/i]
+];
+
+/** Visible text of every link, button and submit input. */
+function ctaTexts(html: string): string[] {
+  const out: string[] = [];
+  for (const m of html.matchAll(/<(a|button)\b[^>]*>([\s\S]*?)<\/\1>/gi)) out.push(m[2].replace(/<[^>]+>/g, " "));
+  for (const m of html.matchAll(/<input\b[^>]*type\s*=\s*["']?submit["']?[^>]*>/gi)) {
+    const value = m[0].match(/value\s*=\s*["']([^"']*)["']/i)?.[1];
+    if (value) out.push(value);
+  }
+  return out.map((t) => t.replace(/\s+/g, " ").trim().toLowerCase()).filter((t) => t.length > 0 && t.length <= 60);
+}
+
+const BUY_CTA =
+  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|prueba gratis|probar gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
 
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;
@@ -237,11 +335,18 @@ export function extractPageSignals(html: string): PageSignals {
   const microPrice = hasItemprop(html, "price") && hasItemprop(html, "priceCurrency");
   const ogType = metaContent(html, "og:type");
   const text = visibleText(html);
+  const offered = offerTypesFromJsonLd(nodes);
+  const microTypes: AgenticOfferKind[] = [];
+  if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/(?:Service|ProfessionalService)["']/i.test(html)) microTypes.push("service");
+  if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/(?:SoftwareApplication|WebApplication)["']/i.test(html)) microTypes.push("software");
+  if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/Course["']/i.test(html)) microTypes.push("course");
+  if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/\w*Event["']/i.test(html)) microTypes.push("event");
+  const bookingWidget = BOOKING_WIDGETS.find(([, re]) => re.test(html))?.[0] ?? null;
 
   return {
     hasProductData: ld.hasProductData || microProduct,
     hasOffer: ld.hasOffer || microOffer,
-    structuredPrice: ld.structuredPrice || microPrice,
+    structuredPrice: ld.structuredPrice || offered.anyPrice || microPrice,
     textPrice:
       Boolean(metaContent(html, "product:price:amount") || metaContent(html, "og:price:amount")) ||
       PRICE_IN_TEXT.test(text),
@@ -258,11 +363,69 @@ export function extractPageSignals(html: string): PageSignals {
     platform: detectPlatform(html),
     addToCart: ADD_TO_CART.test(html),
     quickPay: QUICK_PAY.filter(([, re]) => re.test(html)).map(([name]) => name),
-    captcha: CAPTCHAS.find(([, re]) => re.test(html))?.[0] ?? null
+    captcha: CAPTCHAS.find(([, re]) => re.test(html))?.[0] ?? null,
+    offerTypes: [...new Set([...offered.kinds, ...microTypes])],
+    anyOffer: ld.hasOffer || offered.anyOffer || microOffer,
+    recurringPrice: offered.recurring || RECURRING_IN_TEXT.test(text),
+    buyCta: ctaTexts(html).some((t) => BUY_CTA.test(t)),
+    bookingWidget,
+    paymentPlatform: PAYMENT_PLATFORMS.find(([, re]) => re.test(html))?.[0] ?? null
   };
 }
 
 /** A product page is one that declares a product. A grid with «add to cart» buttons is not enough. */
 export function isProductPage(signals: Pick<PageSignals, "hasProductData" | "ogProduct">): boolean {
   return signals.hasProductData || signals.ogProduct;
+}
+
+/** Pricing and plans pages, in Spanish and English. */
+export const PRICING_PATH = /\/(?:precios?|pricing|prices|planes|plans|tarifas?)\/?$/i;
+
+/** Log §324: paths that usually sell one kind of thing, checked after the structured data. */
+export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
+  ["booking", /\/(?:reservar?|reservas|cita|citas|pedir-cita|pide-cita|cita-previa|booking|book|reserve|appointment)(?:\/|$)/i],
+  ["event", /\/(?:entradas|tickets|eventos?|events?|conciertos?)\/[^/]+|\/(?:entradas|tickets)\/?$/i],
+  ["course", /\/(?:cursos?|courses?|formacion|formaci%c3%b3n|masters?|academia)\/[^/]+/i],
+  ["subscription", /\/(?:suscripci[oó]n|suscripcion|suscribete|subscribe|subscription|membres[ií]a|membership|hazte-socio|socios)\/?$/i],
+  ["service", /\/(?:servicios?|services?)\/[^/]+|\/(?:presupuesto|solicitar-presupuesto|quote)\/?$/i]
+];
+
+export type OfferReading = { kind: AgenticOfferKind; pricingPage: boolean };
+
+/**
+ * Log §324: what this page sells, or `null` when it sells nothing we can
+ * see. It detects generously on purpose (founder, 2026-10-18: «mejor detectar
+ * de más que de menos»): a wrong page is fixed with «Elegir otra página», an
+ * empty screen is not.
+ *
+ * Order: a declared product, then the other declared types, a price per
+ * month or year, the path, a booking widget, and the safety net (a visible
+ * price and a buy button). The path and the safety net are not used on a
+ * store platform page that is not a product: on a shop, a category or a home
+ * with prices is not the page to judge; a product page is.
+ */
+export function classifyOffer(signals: PageSignals, url: string): OfferReading | null {
+  let path = "/";
+  try {
+    path = new URL(url).pathname;
+  } catch {
+    // keep "/"
+  }
+  const pricingPage = PRICING_PATH.test(path);
+  const declared = (kind: AgenticOfferKind): OfferReading => ({ kind, pricingPage });
+
+  if (signals.offerTypes.includes("software") && (signals.anyOffer || pricingPage)) return declared("software");
+  if (isProductPage(signals)) return declared("physical");
+  for (const kind of ["event", "course", "booking", "service", "software"] as const) {
+    if (signals.offerTypes.includes(kind)) return declared(kind);
+  }
+  if (signals.platform) return null;
+
+  const priced = signals.structuredPrice || signals.textPrice;
+  if (pricingPage) return declared(signals.recurringPrice ? "subscription" : signals.offerTypes.includes("software") ? "software" : "offer");
+  for (const [kind, re] of PATH_KINDS) if (re.test(path)) return declared(kind);
+  if (signals.bookingWidget) return declared("booking");
+  if (priced && signals.recurringPrice && signals.buyCta) return declared("subscription");
+  if (priced && signals.buyCta) return declared("offer");
+  return null;
 }

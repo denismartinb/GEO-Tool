@@ -9,17 +9,20 @@ import {
   firstSteps,
   foundSentence,
   initialComponent,
+  notApplicableNote,
+  offerLabel,
   projectedSentence,
   unmeasuredReason,
   type Tone
 } from "@/lib/agentic-audit/console-model";
+import { AgenticLoadingScene } from "@/components/agentic/agentic-loading-scene";
 import { runAgenticAuditAction } from "../actions";
 
 /**
  * «Auditoría agéntica» (AGENTIC-COMMERCE-1 Fase 2a, log §322), design in
  * docs/design-reference/agentic-commerce-1/fase-2a-auto.html (log §323).
  * Pure presentation of the last stored review, which GenScore makes by itself
- * after each scan, plus «Elegir otra ficha». Every state and label comes from
+ * after each scan, plus «Elegir otra página». Every state and label comes from
  * the engine's result; what we could not measure says «Sin medir», never
  * «Bien».
  */
@@ -86,8 +89,8 @@ function UrlForm({
         type="text"
         inputMode="url"
         autoComplete="url"
-        aria-label="Dirección de una ficha de producto"
-        placeholder="https://tutienda.es/producto"
+        aria-label="Dirección de una página donde vendas algo"
+        placeholder="https://tuweb.es/precios"
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         disabled={pending}
@@ -100,13 +103,13 @@ function UrlForm({
           </button>
         ) : null}
         <button type="submit" className="btn btn-primary" disabled={pending || url.trim().length === 0}>
-          Revisar esta ficha
+          Revisar esta página
         </button>
       </div>
       {pending ? (
         <span className="ag-busy" role="status">
           <span className="btn-spinner" aria-hidden="true" />
-          Revisando la ficha. Tarda unos segundos.
+          Revisando la página. Tarda unos segundos.
         </span>
       ) : null}
       {error ? (
@@ -162,17 +165,21 @@ function AutoReview({ projectId, onStuck }: { projectId: string; onStuck?: (mess
   return null;
 }
 
-/** First visit: no review yet, so it starts by itself. A spinner and nothing that pretends to be progress. */
+/**
+ * First visit: no review yet, so it starts by itself. The scene is ambient
+ * (log §324), like the wait of «Posición en Google»: nothing in it says how
+ * far along the review is, because nothing here knows.
+ */
 export function AgenticAuditSearching({ projectId }: { projectId: string }) {
   const [stuck, setStuck] = useState<string | null>(null);
   return (
     <div className="card ag-searching">
       <AutoReview projectId={projectId} onStuck={setStuck} />
-      <span className="ag-busy" role="status">
-        <span className="btn-spinner" aria-hidden="true" />
-        <b>Buscando una ficha de producto en tu tienda</b>
-      </span>
-      <p className="ag-muted">{stuck ?? "Tarda unos segundos. Al terminar, la pantalla se rellena sola."}</p>
+      <AgenticLoadingScene />
+      <div className="ag-searching-copy" role="status">
+        <b>Buscando qué vendes en tu web</b>
+        <span>{stuck ?? "Tarda unos segundos. Al terminar, la pantalla se rellena sola."}</span>
+      </div>
     </div>
   );
 }
@@ -183,8 +190,8 @@ export function AgenticAuditUnreachable({ projectId, domain, remaining }: { proj
     <div className="card">
       <h2 className="ag-h">No hemos podido abrir tu web</h2>
       <p className="ag-muted">
-        Lo volveremos a intentar tras tu próximo escaneo. Si vendes online, también puedes indicarnos una ficha de producto de{" "}
-        {domain}.
+        Lo volveremos a intentar tras tu próximo escaneo. También puedes indicarnos la página de {domain} donde vendes algo:
+        un producto, tus precios, un servicio o tus reservas.
       </p>
       {remaining > 0 ? (
         <UrlForm projectId={projectId} initialUrl="" />
@@ -221,7 +228,9 @@ export function AgenticAuditScreen({
   const picker = editing ? (
     <UrlForm projectId={projectId} initialUrl={noStore ? "" : result.url} onCancel={() => setEditing(false)} />
   ) : null;
-  const limitNote = remaining > 0 ? null : " Has usado las revisiones de hoy; podrás elegir otra ficha mañana.";
+  const limitNote = remaining > 0 ? null : " Has usado las revisiones de hoy; podrás elegir otra página mañana.";
+  const kindChip = offerLabel(result);
+  const naNote = notApplicableNote(result);
 
   return (
     <>
@@ -229,22 +238,25 @@ export function AgenticAuditScreen({
       <div className="card">
         {noStore ? (
           <>
-            <h2 className="ag-h">No hemos encontrado una tienda en tu web</h2>
+            <h2 className="ag-h">No hemos encontrado qué vendes en tu web</h2>
             <p className="ag-muted">
-              Ni en tu portada, ni en tu sitemap, ni en un catálogo público. Te enseñamos lo que sí se mide sin productos.{" "}
+              Ni productos, ni precios, ni servicios, ni reservas. Te enseñamos lo que sí se mide en tu portada.{" "}
               {reviewedLabel}
               {limitNote}
             </p>
             {picker ??
               (remaining > 0 ? (
                 <button type="button" className="ag-link" onClick={() => setEditing(true)}>
-                  ¿Vendes online? Indícanos una ficha
+                  ¿Vendes algo? Indícanos la página
                 </button>
               ) : null)}
           </>
         ) : (
           <>
-            <h2 className="ag-h">Ficha revisada</h2>
+            <div className="ag-head-row">
+              <h2 className="ag-h">Página revisada</h2>
+              {kindChip ? <span className="ag-kind">{kindChip}</span> : null}
+            </div>
             {picker ?? (
               <div className="ag-url">
                 <span className="ag-url-box" title={result.url}>
@@ -253,7 +265,7 @@ export function AgenticAuditScreen({
                 {remaining > 0 ? (
                   <div className="ag-url-actions">
                     <button type="button" className="btn btn-ghost" onClick={() => setEditing(true)}>
-                      Elegir otra ficha
+                      Elegir otra página
                     </button>
                   </div>
                 ) : null}
@@ -281,8 +293,8 @@ export function AgenticAuditScreen({
             {!result.pageRead
               ? "Tu protección anti-bots no dejó leer la página a nuestro robot, así que no hay nota. Hay agentes verificados que sí podrán leerla."
               : noStore
-                ? "La nota se calcula sobre una ficha de producto. Sin tienda, medimos lo que se puede ver en tu portada."
-                : "La nota se calcula sobre una ficha de producto. Esta página no lo parece: elige otra ficha."}
+                ? "La nota se calcula sobre la página donde vendes algo. Sin ella, medimos lo que se puede ver en tu portada."
+                : "La nota se calcula sobre la página donde vendes algo. Esta no lo parece: elige otra página."}
           </p>
         )}
         <div className="ag-comps">
@@ -315,6 +327,7 @@ export function AgenticAuditScreen({
             <span className="ag-comp-line">Protocolos publicados</span>
           </button>
         </div>
+        {naNote ? <p className="ag-muted">{naNote}</p> : null}
       </div>
 
       <div className="card">

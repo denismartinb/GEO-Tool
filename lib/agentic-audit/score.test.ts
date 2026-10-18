@@ -18,11 +18,17 @@ const FULL: PageSignals = {
   organizationData: true,
   ogProduct: true,
   visibleTextChars: 2000,
-  links: { returns: true, shipping: true, legal: true, contact: true },
+  links: { returns: true, shipping: true, legal: true, contact: true, cancellation: true },
   platform: "Shopify",
   addToCart: true,
   quickPay: ["Shop Pay"],
-  captcha: null
+  captcha: null,
+  offerTypes: [],
+  anyOffer: true,
+  recurringPrice: false,
+  buyCta: false,
+  bookingWidget: null,
+  paymentPlatform: null
 };
 
 const ALL_IN: AgentAccess[] = (["ChatGPT", "Claude", "Perplexity", "Gemini"] as const).map((assistant) => ({
@@ -133,5 +139,43 @@ describe("scoreAgenticAudit", () => {
 describe("componentScore", () => {
   it("is null when nothing was measurable", () => {
     expect(componentScore([{ id: "x", points: 100, state: "unknown", label: "" }])).toBeNull();
+  });
+});
+
+describe("checks by what is sold (log §324)", () => {
+  const ids = (r: ReturnType<typeof scoreAgenticAudit>, id: string) =>
+    r.components.find((c) => c.id === id)!.checks.map((k) => k.id);
+
+  it("software leaves out stock, identifiers and shipping, and asks for cancellation and a buy button", () => {
+    const r = scoreAgenticAudit(input({ offer: { kind: "software", pricingPage: true }, signals: { ...FULL, buyCta: true } }));
+    expect(r.offerKind).toBe("software");
+    expect(r.pricingPage).toBe(true);
+    expect(ids(r, "understanding")).toEqual(["product_data", "price", "readable_text"]);
+    expect(ids(r, "trust")).toEqual(["cancellation", "reviews", "identity"]);
+    expect(ids(r, "purchase")).toEqual(["buy_button", "no_captcha", "quick_pay", "platform"]);
+    expect(r.score).not.toBeNull();
+  });
+
+  it("a missing check that does not apply never subtracts", () => {
+    const physical = scoreAgenticAudit(input({ signals: { ...FULL, gtin: false, skuOrMpn: false } }));
+    const service = scoreAgenticAudit(input({ offer: { kind: "service", pricingPage: false }, signals: { ...FULL, gtin: false, skuOrMpn: false, buyCta: true } }));
+    expect(physical.components.find((c) => c.id === "understanding")!.score).toBeLessThan(100);
+    expect(service.components.find((c) => c.id === "understanding")!.score).toBe(100);
+  });
+
+  it("a booking counts its widget as the button and names its booking system", () => {
+    const r = scoreAgenticAudit(
+      input({ offer: { kind: "booking", pricingPage: false }, signals: { ...FULL, platform: null, bookingWidget: "Doctoralia" } })
+    );
+    const purchase = r.components.find((c) => c.id === "purchase")!.checks;
+    expect(purchase.find((k) => k.id === "buy_button")?.state).toBe("pass");
+    expect(purchase.find((k) => k.id === "platform")?.label).toBe("Reservas con Doctoralia");
+    expect(purchase.some((k) => k.id === "quick_pay")).toBe(false);
+  });
+
+  it("a page that sells nothing has no total", () => {
+    const r = scoreAgenticAudit(input({ offer: null }));
+    expect(r.score).toBeNull();
+    expect(r.pageKind).toBe("other");
   });
 });

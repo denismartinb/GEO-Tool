@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findProductCandidate, type FindProductInput } from "./find-product";
+import { findProductCandidate, findSellCandidate, type FindProductInput } from "./find-product";
 
 const base: FindProductInput = {
   origin: "https://www.tienda.es",
@@ -58,5 +58,32 @@ describe("findProductCandidate", () => {
       findProductCandidate({ ...base, currentUrl: "https://www.tienda.es/products/a", pageHtml: '<a href="/products/a/">a</a>' })
     ).toBeNull();
     expect(findProductCandidate({ ...base, pageHtml: '<a href="/contacto">c</a>' })).toBeNull();
+  });
+});
+
+describe("findSellCandidate (log §324)", () => {
+  it("prefers a pricing page over a service page, from the page links first", () => {
+    expect(
+      findSellCandidate({
+        ...base,
+        pageHtml: '<a href="/servicios/seo">SEO</a><a href="/blog/x">Blog</a><a href="/precios">Precios</a>',
+        sitemapBody: "<urlset><url><loc>https://www.tienda.es/pricing</loc></url></urlset>"
+      })
+    ).toEqual({ url: "https://www.tienda.es/precios", source: "home" });
+  });
+
+  it("falls back to the sitemap, and never leaves the domain or returns the current page", () => {
+    expect(
+      findSellCandidate({
+        ...base,
+        currentUrl: "https://www.tienda.es/reservar",
+        pageHtml: '<a href="https://otra.es/precios">x</a><a href="/reservar">y</a>',
+        sitemapBody: "<urlset><url><loc>https://www.tienda.es/cursos/geo</loc></url></urlset>"
+      })
+    ).toEqual({ url: "https://www.tienda.es/cursos/geo", source: "sitemap" });
+  });
+
+  it("returns null when nothing looks like a selling page", () => {
+    expect(findSellCandidate({ ...base, pageHtml: '<a href="/contacto">x</a><a href="/servicios">y</a>' })).toBeNull();
   });
 });

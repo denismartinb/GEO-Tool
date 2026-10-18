@@ -19,11 +19,17 @@ const FULL: PageSignals = {
   organizationData: true,
   ogProduct: true,
   visibleTextChars: 2000,
-  links: { returns: true, shipping: true, legal: true, contact: true },
+  links: { returns: true, shipping: true, legal: true, contact: true, cancellation: true },
   platform: "Shopify",
   addToCart: true,
   quickPay: ["Shop Pay"],
-  captcha: null
+  captcha: null,
+  offerTypes: [],
+  anyOffer: true,
+  recurringPrice: false,
+  buyCta: false,
+  bookingWidget: null,
+  paymentPlatform: null
 };
 
 const ALL_IN: AgentAccess[] = (["ChatGPT", "Claude", "Perplexity", "Gemini"] as const).map((assistant) => ({
@@ -96,7 +102,7 @@ describe("console model", () => {
 
     const home = scoreAgenticAudit({ ...base, signals: { ...FULL, hasProductData: false, hasOffer: false, ogProduct: false } });
     const purchase = home.components.find((c) => c.id === "purchase")!;
-    expect(componentLine(home, purchase)).toBe("Se mide en una ficha de producto");
+    expect(componentLine(home, purchase)).toBe("Se mide en una página donde vendas algo");
   });
 
   it("opens on the first component with something to fix", () => {
@@ -110,14 +116,14 @@ describe("found and no-store wording (log §323)", () => {
     expect(foundSentence({ found: "catalog" })).toBe("Elegida automáticamente de tu catálogo.");
     expect(foundSentence({ found: "sitemap" })).toBe("Elegida automáticamente de tu sitemap.");
     expect(foundSentence({ found: "home" })).toBe("Elegida automáticamente de tu portada.");
-    expect(foundSentence({ found: "given" })).toBe("La ficha que elegiste.");
+    expect(foundSentence({ found: "given" })).toBe("La página que elegiste.");
     expect(foundSentence({})).toBeNull();
     expect(foundSentence({ found: "none" })).toBeNull();
   });
 
   it("marks Comprensión and Compra as waiting for a product page, not as unmeasured", () => {
     const empty = { name: "", weight: 30, score: null, checks: [] };
-    expect(componentStatus({ ...empty, id: "understanding" }, { pageRead: true }).word).toBe("En una ficha");
+    expect(componentStatus({ ...empty, id: "understanding" }, { pageRead: true }).word).toBe("Al vender");
     expect(componentStatus({ ...empty, id: "discovery" }, { pageRead: true }).word).toBe("Sin medir");
     expect(componentStatus({ ...empty, id: "purchase" }, { pageRead: false }).word).toBe("Sin medir");
   });
