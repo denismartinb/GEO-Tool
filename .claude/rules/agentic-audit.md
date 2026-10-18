@@ -7,16 +7,18 @@ paths:
   - "components/agentic/**"
   - "app/dashboard/projects/*/agentic-audit/**"
   - "app/dashboard/projects/*/agentic-visibility/**"
+  - "app/dashboard/projects/*/_components/agentic-overview-card*"
 ---
 
 # Comercio agéntico — invariantes
 
 Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/comercio-agentico/**`, `app/api/comercio-agentico/**`,
-`components/agentic/**`, `app/dashboard/projects/*/agentic-audit/**` y
-`app/dashboard/projects/*/agentic-visibility/**`. Cada
+`components/agentic/**`, `app/dashboard/projects/*/agentic-audit/**`,
+`app/dashboard/projects/*/agentic-visibility/**` y la tarjeta de Visión
+general (`_components/agentic-overview-card*`). Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325 y §332.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325, §332 y §340.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -165,3 +167,14 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **La URL revisada sólo se enseña cuando algo no fue bien.** Con la página
   leída y con nota, la tarjeta dice «Tienda analizada» con un check; sin
   lectura o sin nota, «Página revisada» con la URL (log §332).
+
+## Tarjeta en Visión general (log §340)
+
+- **La tarjeta la decide `overviewAgenticCard`, y sólo ella.** Pro, Agencia y
+  la prueba la ven con una revisión que encontró algo que vendes y tiene nota;
+  si no, no sale nada. Starter ve la invitación a Pro (fundador, 2026-10-18);
+  cualquier otro plan, nada. Sin perfil, falla cerrado.
+- **Sin puntos por arreglo y sin Interoperabilidad**, igual que en
+  «Visibilidad en agentes». La tarjeta dice que no entra en la Puntuación GEO.
+- **Va en su propio `Suspense`.** La auditoría agéntica no puede retrasar
+  Visión general.

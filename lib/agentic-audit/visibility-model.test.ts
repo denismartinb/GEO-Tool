@@ -11,6 +11,7 @@ import {
   findLine,
   fixbarLine,
   interopLine,
+  overviewAgenticCard,
   reviewedPill,
   stepTone,
   visibilityDetail,
@@ -131,5 +132,35 @@ describe("reviewedPill", () => {
     expect(reviewedPill("2026-10-18T08:00:00Z", now)).toBe("Revisado · hoy");
     expect(reviewedPill("2026-10-17T08:00:00Z", now)).toBe("Revisado · ayer");
     expect(reviewedPill("2026-10-12T08:00:00Z", now)).toBe("Revisado · 12 oct");
+  });
+});
+
+describe("overviewAgenticCard", () => {
+  it("Starter gets the invitation to Pro, whatever the review says", () => {
+    expect(overviewAgenticCard("starter", null)).toEqual({ kind: "upsell" });
+    expect(overviewAgenticCard("starter", weak)).toEqual({ kind: "upsell" });
+  });
+
+  it("any other plan without the agentic audit sees nothing", () => {
+    expect(overviewAgenticCard("free", weak).kind).toBe("hidden");
+    expect(overviewAgenticCard(null, weak).kind).toBe("hidden");
+    expect(overviewAgenticCard(undefined, weak).kind).toBe("hidden");
+  });
+
+  it("Pro and Agencia see nothing until the review found something it sells and scored it", () => {
+    expect(overviewAgenticCard("pro", null).kind).toBe("hidden");
+    expect(overviewAgenticCard("agency", { ...weak, found: "none" }).kind).toBe("hidden");
+    expect(overviewAgenticCard("pro", { ...weak, score: null }).kind).toBe("hidden");
+  });
+
+  it("the card carries the score, the headline, four components and the first fix with no points", () => {
+    const card = overviewAgenticCard("pro", weak);
+    if (card.kind !== "card") throw new Error("expected a card");
+    expect(card.score).toBe(weak.score);
+    expect(card.headline).toBe(visibilityHeadline(weak));
+    expect(card.components.map((c) => c.id)).toEqual(["discovery", "understanding", "trust", "purchase"]);
+    expect(card.components.map((c) => c.weight)).toEqual([30, 30, 20, 20]);
+    expect(card.first?.title).toBe(firstSteps(weak, 1)[0].title);
+    expect(card.first && "points" in card.first).toBe(false);
   });
 });

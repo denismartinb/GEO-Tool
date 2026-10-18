@@ -1,0 +1,186 @@
+<title>Tarjeta de comercio agéntico</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: plan en una columna de lectura; debajo, la maqueta de Visión general en escritorio y en móvil. */
+:root{
+  --bg:#f5f7fb; --paper:#ffffff; --ink:#0f1b2d; --ink-2:#3a4a62; --ink-3:#5b6b82; --ink-4:#8794a8; --line:#dfe5ee; --track:#eef1f6;
+  --blue:#2563eb; --blue-soft:#e8efff;
+  --ok:#14804a; --ok-bg:#e5f6ec; --warn:#a15c00; --warn-bg:#fff3dc; --bad:#c0362c; --bad-bg:#fdeceb;
+  --console:#f3f5f9;
+  --f-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --ink-4:#6c7a92; --line:#26324a; --track:#1f2a40;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --console:#0f1726; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1320; --paper:#131c2c; --ink:#e8eef8; --ink-2:#c0cbdc; --ink-3:#8d9bb2; --ink-4:#6c7a92; --line:#26324a; --track:#1f2a40;
+  --blue:#6c9bff; --blue-soft:#1b2a4a; --ok:#4fd18b; --ok-bg:#12301f; --warn:#f2b44c; --warn-bg:#33270f; --bad:#ff7a70; --bad-bg:#3a1a18; --console:#0f1726; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 64px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:36px}
+.read{max-width:720px;display:grid;gap:14px}
+h1,h2,h3{text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:clamp(28px,4vw,36px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:21px;font-weight:700}
+p{margin:0}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.lede{color:var(--ink-2);font-size:17px}
+ul.rules{margin:0;padding-left:20px;color:var(--ink-2);display:grid;gap:6px}
+.frames{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start}
+@media (max-width:980px){.frames{grid-template-columns:minmax(0,1fr)}}
+.frame{display:grid;gap:8px;min-width:0}
+.cap{font-size:13px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em}
+.screen{background:var(--console);border:1px solid var(--line);border-radius:14px;padding:20px;overflow:hidden}
+.mobile .screen{max-width:360px;border-radius:26px;padding:16px 14px}
+.ex{font-size:13px;color:var(--ink-3)}
+
+/* Console pieces */
+.ph{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:14px}
+.ph h3{font-size:20px;font-weight:800}
+.ph p{font-size:13px;color:var(--ink-3)}
+.date{font-size:12px;color:var(--ink-3);background:var(--paper);border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.cols{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px;align-items:start}
+.stack{display:grid;gap:14px;min-width:0}
+.lbl{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin-bottom:6px}
+.lbl a{font-size:12px;text-transform:none;letter-spacing:0;color:var(--blue);text-decoration:none;font-weight:600}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.brow{display:grid;grid-template-columns:28px minmax(0,1fr) 120px;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.brow:last-child{border-bottom:0}
+.ico{width:28px;height:28px;border-radius:8px;background:var(--blue-soft)}
+.brow b{font-size:13px;display:block}
+.brow small{font-size:12px;color:var(--ink-3);display:block}
+.track{height:6px;border-radius:99px;background:var(--track);overflow:hidden}
+.track i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.meter{display:grid;gap:4px;text-align:right;font-size:12px;font-variant-numeric:tabular-nums}
+.ghost{height:10px;border-radius:6px;background:var(--track);margin:7px 0}
+.ghost.s{width:60%}
+
+/* The new card */
+.new{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:var(--blue-soft);color:var(--blue);border-radius:999px;padding:2px 7px;margin-left:6px;vertical-align:middle}
+.ag{display:grid;gap:12px}
+.ag-top{display:flex;gap:14px;align-items:center}
+.ring{width:76px;height:76px;flex:none}
+.ring text{fill:var(--ink);font-family:var(--f-body);font-weight:800}
+.ring .s{fill:var(--ink-3);font-weight:600}
+.ag-head{font-size:14px;font-weight:700;line-height:1.35;min-width:0}
+.mini{display:grid;gap:7px}
+.mini .r{display:grid;grid-template-columns:104px minmax(0,1fr) 44px;gap:8px;align-items:center;font-size:12.5px;color:var(--ink-2)}
+.mini .v{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--ink)}
+.mini .v small{color:var(--ink-4);font-weight:500}
+.first{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:start;background:var(--bad-bg);border-radius:10px;padding:9px 11px;font-size:13px}
+.first .k{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--bad);display:block}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--bad);margin-top:6px}
+.go{display:block;width:100%;text-align:center;font:inherit;font-size:13.5px;font-weight:700;color:var(--blue);background:var(--blue-soft);border:0;border-radius:10px;padding:9px 12px;cursor:pointer}
+.go:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.foot{font-size:11.5px;color:var(--ink-3)}
+.hl{box-shadow:0 0 0 2px var(--blue);border-radius:12px}
+</style>
+
+<div class="wrap">
+  <div class="read">
+    <div class="eyebrow">Comercio agéntico · Fase 2b</div>
+    <h1>Tarjeta de comercio agéntico en Visión general</h1>
+    <p class="lede">La tarjeta del prototipo, en la columna derecha de Visión general, debajo de Auditoría SEO. Lee la última auditoría agéntica, que ya se hace sola tras cada escaneo, así que no hay nada nuevo que configurar.</p>
+    <ul class="rules">
+      <li>Sale sólo si la auditoría encontró algo que vendes (ficha, precios o página de venta). Si no lo encontró, no sale nada.</li>
+      <li>Sólo en Pro, Agencia y la prueba, igual que las dos pantallas del bloque. En Starter sale una invitación a pasar a Pro (fundador, 2026-10-18, al aprobar la maqueta).</li>
+      <li>Anillo con la nota sobre 100, la frase de resumen y los cuatro componentes con sus puntos (14 de 30). Interoperabilidad no va aquí: no suma nota.</li>
+      <li>«Lo primero» es el primer arreglo de la auditoría, sin puntos por arreglo.</li>
+      <li>El botón lleva a «Visibilidad en agentes». La nota no entra en la Puntuación GEO y la tarjeta lo dice.</li>
+    </ul>
+  </div>
+
+  <div class="frames">
+    <div class="frame">
+      <div class="cap">Escritorio</div>
+      <div class="screen">
+        <div class="ph"><div><h3>Visión general</h3><p>Cómo te ven ChatGPT, Gemini, Claude y Perplexity.</p></div><span class="date">Último escaneo · hoy</span></div>
+        <div class="cols">
+          <div class="stack">
+            <div>
+              <div class="lbl">Desglose del GEO Score <span style="color:var(--ink-4);text-transform:none;letter-spacing:0">63/100</span></div>
+              <div class="card" style="padding:4px 16px">
+                <div class="brow"><span class="ico"></span><div><b>Presencia</b><small>Cuánto te nombran</small></div><div class="meter"><div class="track"><i style="width:58%"></i></div>58/100</div></div>
+                <div class="brow"><span class="ico"></span><div><b>Prominencia</b><small>En qué puesto sales</small></div><div class="meter"><div class="track"><i style="width:66%"></i></div>66/100</div></div>
+                <div class="brow"><span class="ico"></span><div><b>Reputación</b><small>Cómo hablan de ti</small></div><div class="meter"><div class="track"><i style="width:81%"></i></div>81/100</div></div>
+                <div class="brow"><span class="ico"></span><div><b>Autoridad</b><small>Si citan tu web</small></div><div class="meter"><div class="track"><i style="width:44%"></i></div>44/100</div></div>
+                <div class="brow"><span class="ico"></span><div><b>Salud técnica</b><small>Si la IA puede leerte</small></div><div class="meter"><div class="track"><i style="width:72%"></i></div>72/100</div></div>
+              </div>
+            </div>
+            <div><div class="lbl">Panorámica competitiva</div><div class="card"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div></div></div>
+          </div>
+          <div class="stack">
+            <div><div class="lbl">Posicionamiento por motores de IA</div><div class="card"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div><div class="ghost s"></div></div></div>
+            <div><div class="lbl">Auditoría SEO <a href="#">Ver todo</a></div><div class="card"><div class="ghost s"></div><div class="ghost"></div><div class="ghost"></div></div></div>
+            <div class="hl">
+              <div class="lbl" style="margin-bottom:6px">Comercio agéntico<span class="new">Nuevo</span><a href="#" style="margin-left:auto">Ver todo</a></div>
+              <div class="card ag">
+                <div class="ag-top">
+                  <svg class="ring" viewBox="0 0 110 110" role="img" aria-label="Visibilidad agéntica 54 de 100"><circle cx="55" cy="55" r="46" fill="none" stroke="var(--track)" stroke-width="10"/><circle cx="55" cy="55" r="46" fill="none" stroke="var(--blue)" stroke-width="10" stroke-linecap="round" stroke-dasharray="156 289" transform="rotate(-90 55 55)"/><text x="55" y="60" text-anchor="middle" font-size="30">54</text><text class="s" x="55" y="78" text-anchor="middle" font-size="11">de 100</text></svg>
+                  <p class="ag-head">Te entienden, pero a muchos agentes les cuesta entrar en tu web.</p>
+                </div>
+                <div class="mini">
+                  <div class="r"><span>Descubrimiento</span><div class="track"><i style="width:47%"></i></div><span class="v">14<small>/30</small></span></div>
+                  <div class="r"><span>Comprensión</span><div class="track"><i style="width:63%"></i></div><span class="v">19<small>/30</small></span></div>
+                  <div class="r"><span>Confianza</span><div class="track"><i style="width:65%"></i></div><span class="v">13<small>/20</small></span></div>
+                  <div class="r"><span>Compra</span><div class="track"><i style="width:40%"></i></div><span class="v">8<small>/20</small></span></div>
+                </div>
+                <div class="first"><span class="dot"></span><span><span class="k">Lo primero</span>Deja pasar a los asistentes de compra en tu protección anti-bots</span></div>
+                <button class="go" type="button">Ver visibilidad en agentes →</button>
+                <p class="foot">Mide si un agente de IA puede encontrarte, entenderte y comprarte. No entra en tu Puntuación GEO.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="frame mobile">
+      <div class="cap">Móvil</div>
+      <div class="screen">
+        <div style="opacity:.55">
+          <div class="lbl">Auditoría SEO <a href="#">Ver todo</a></div>
+          <div class="card"><div class="ghost s"></div><div class="ghost"></div></div>
+        </div>
+        <div style="margin-top:16px">
+          <div class="lbl">Comercio agéntico<span class="new">Nuevo</span><a href="#" style="margin-left:auto">Ver todo</a></div>
+          <div class="card ag">
+            <div class="ag-top">
+              <svg class="ring" viewBox="0 0 110 110" role="img" aria-label="Visibilidad agéntica 54 de 100"><circle cx="55" cy="55" r="46" fill="none" stroke="var(--track)" stroke-width="10"/><circle cx="55" cy="55" r="46" fill="none" stroke="var(--blue)" stroke-width="10" stroke-linecap="round" stroke-dasharray="156 289" transform="rotate(-90 55 55)"/><text x="55" y="60" text-anchor="middle" font-size="30">54</text><text class="s" x="55" y="78" text-anchor="middle" font-size="11">de 100</text></svg>
+              <p class="ag-head">Te entienden, pero a muchos agentes les cuesta entrar en tu web.</p>
+            </div>
+            <div class="mini">
+              <div class="r"><span>Descubrimiento</span><div class="track"><i style="width:47%"></i></div><span class="v">14<small>/30</small></span></div>
+              <div class="r"><span>Comprensión</span><div class="track"><i style="width:63%"></i></div><span class="v">19<small>/30</small></span></div>
+              <div class="r"><span>Confianza</span><div class="track"><i style="width:65%"></i></div><span class="v">13<small>/20</small></span></div>
+              <div class="r"><span>Compra</span><div class="track"><i style="width:40%"></i></div><span class="v">8<small>/20</small></span></div>
+            </div>
+            <div class="first"><span class="dot"></span><span><span class="k">Lo primero</span>Deja pasar a los asistentes de compra en tu protección anti-bots</span></div>
+            <button class="go" type="button">Ver visibilidad en agentes →</button>
+            <p class="foot">Mide si un agente de IA puede encontrarte, entenderte y comprarte. No entra en tu Puntuación GEO.</p>
+          </div>
+        </div>
+        <div style="margin-top:16px;opacity:.55">
+          <div class="lbl">Panorámica competitiva</div>
+          <div class="card"><div class="ghost"></div><div class="ghost s"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="frame mobile">
+    <div class="cap">Starter</div>
+    <div class="screen">
+      <div class="lbl">Comercio agéntico<span class="new">Nuevo</span></div>
+      <div class="card ag">
+        <h3 style="font-size:15px">¿Puede un agente de IA comprar en tu web?</h3>
+        <p style="font-size:13.5px;color:var(--ink-2)">Con Pro, GenScore revisa tu web tras cada escaneo y te dice si un agente de IA puede encontrarte, entenderte y llegar a comprar, y qué arreglar primero.</p>
+        <button class="go" type="button" style="width:auto;justify-self:start;background:var(--blue);color:#fff">Pasar a Pro</button>
+      </div>
+    </div>
+  </div>
+  <p class="ex">Datos de ejemplo. En la consola, la frase, los puntos y «Lo primero» salen de la última auditoría agéntica de tu web.</p>
+</div>
