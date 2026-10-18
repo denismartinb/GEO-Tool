@@ -66,6 +66,17 @@ describe("SolutionPanel — insignia de estado del artefacto", () => {
     expect(html).not.toContain("por rellenar");
   });
 
+  it("dice «Plan listo» en una acción fuera de tu web, donde no hay nada que pegar (log §326)", () => {
+    const html = renderToStaticMarkup(
+      <SolutionPanel
+        recommendationType="pursue_community_sources"
+        solution={{ title: "Participa en YouTube", summary: "Resumen", steps: ["Responde en el vídeo más citado."], examples: [] }}
+      />
+    );
+    expect(html).toContain("Plan listo");
+    expect(html).not.toContain("Listo para copiar");
+  });
+
   it("cuenta los huecos reales del artefacto y de los pasos", () => {
     const html = renderToStaticMarkup(
       <SolutionPanel

@@ -26191,6 +26191,17 @@ abrir tu web» con el formulario para indicar una ficha.
 **Qué queda.** El resto del plan de correcciones de Recomendaciones (`prueba-recomendaciones/plan-correcciones.md`), un PR por cambio.
 
 **Regla de premisa.** Se retira el «Generar informe» de este tipo. La premisa: la acción completa es añadir el competidor, y eso lo hace el botón. Si el alta falla, la tarjeta enseña el motivo y el usuario conserva la vía de siempre, el formulario de Competidores.
+
+## 326. RECS-MIXED-CHANNEL-1: un plan fuera de tu web ya no pide HTML ni JSON-LD en tu web (2026-10-18)
+
+**Qué.** El prompt de «Generar propuesta» llevaba una instrucción obligatoria para todos los tipos: al menos un paso sobre cómo hacer el contenido legible por máquina (HTML semántico, JSON-LD `FAQPage`, contenido rastreable). Pensada para la propia web, se aplicaba también a los tipos de terceros y al de dentro de la app. La tarjeta «Participar en youtube.com» salía con «Implementa el esquema JSON-LD de tipo FAQPage en genscore.es». Ahora esa instrucción sólo va cuando `deliverableForType(tipo).control === "own_site"` (y en un tipo sin clasificar, que conserva lo de antes). En `third_party` e `in_app` va la contraria: sin pasos sobre la web de la marca y sin ejemplos de JSON-LD ni HTML. Además, `pursue_community_sources`, `pursue_comparator_sources` y `pursue_media_sources`, que no tenían playbook y caían al prompt genérico, tienen el suyo: participar en la comunidad (con aviso de que comentar en un vídeo no es spam ni garantiza la cita), darse de alta o completar el perfil en el comparador, y proponer una colaboración al medio sin afirmar que se ha leído un artículo que no esté en la evidencia.
+
+**Insignia.** Un plan sin huecos fuera de la propia web dice «Plan listo», no «Listo para copiar»: no hay nada que pegar (`readinessLabel(readiness, control)`). Decisión recomendada al fundador el 2026-10-18 («Haz los cambios»).
+
+**Por qué.** Prueba real sobre genscore.es (P37 y parte de P32, P31 de `prueba-recomendaciones/aprendizajes.md`) y el informe RECS-MIXED-CHANNEL-1 que adjuntó el fundador, con la causa verificada en `recommendation-rewrite-llm.ts`.
+
+**Qué queda.** Las propuestas ya generadas con la mezcla siguen guardadas hasta que el usuario las regenere; regenerarlas gasta una llamada y su cupo diario, así que no se hace en lote. El copy de la tarjeta de comunidad («La IA cita conversaciones de X») sigue igual para YouTube; suavizarlo es decisión aparte del fundador.
+
 ## 325. AGENTIC-OFFER-1: la auditoría agéntica detecta lo que vendes, no sólo fichas de tienda (2026-10-18)
 
 **Qué se decidió.** En el preview de §323, genscore.es salía con «No hemos
