@@ -26857,7 +26857,7 @@ arreglo enseña puntos.
 migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
 congelación de textos.
 
-## 341. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
+## 343. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
 
 **Qué se decidió.** `/admin/seo-diagnostico` gana un bloque «Investigación»
 con su propio botón («Lanzar sólo la investigación»), que no repite el

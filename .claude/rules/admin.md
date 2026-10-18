@@ -245,7 +245,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
 - **`/admin/seo-diagnostico` sólo llama a DataForSEO y no escribe nada.**
   Cada paso es una llamada en vivo con `requireOperator()` como primera línea
   de la acción. Valida el dominio (`normalizeStudyDomain`), los temas
-  (`MAX_SEEDS`, y en la investigación de §341 `MAX_VOLUME_KEYWORDS` y
+  (`MAX_SEEDS`, y en la investigación de §343 `MAX_VOLUME_KEYWORDS` y
   `MAX_LINK_GAP_TARGETS`) y el texto de cada búsqueda en el servidor, y usa `limit`
   fijos, así que el coste máximo de una pasada se conoce antes de pulsar. El
   coste de cada paso sale del campo `cost` de la respuesta, nunca de una
