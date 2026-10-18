@@ -1047,7 +1047,10 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
                   Victoria rápida
                 </span>
               )}
-              {(rec.consecutive_runs_open ?? 1) > 1 && (
+              {/* RECS-OUTREACH-TARGETS-1 (log §335): on work that depends on a
+                  third party the age only blames the user for what they cannot
+                  close (P30). */}
+              {(rec.consecutive_runs_open ?? 1) > 1 && control !== "third_party" && (
                 <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
               )}
               {/* RECS-LOOP-1 Fase B — this exact gap was marked done before and

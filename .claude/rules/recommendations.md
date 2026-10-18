@@ -763,6 +763,18 @@ log §306).
   datos.** Si no está en los datos, es un hueco.
 - Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
 
+## Fuentes a las que escribir (RECS-OUTREACH-TARGETS-1, log §335)
+
+- **La tarjeta de fuentes sólo cuenta webs a las que se puede escribir.**
+  `computeCitationSourceGap` filtra con `isOutreachTarget` antes de contar:
+  fuera la documentación y los centros de ayuda, y fuera la web sin
+  clasificar de una marca nombrada en la misma respuesta (igualdad exacta de
+  etiqueta, nunca contención). El titular y el primer paso salen de lo que
+  queda.
+- **Un comparador, un medio o una comunidad no se descartan por ser una marca
+  nombrada.** Sólo la familia «Otras webs».
+- **La antigüedad («Abierta N escaneos») no sale en tarjetas `third_party`.**
+
 ## Etiquetas coherentes (RECS-LABELS-1, log §336)
 
 - **Lo que depende de un tercero nunca es «Prioridad alta» ni «Victoria
