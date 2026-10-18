@@ -26656,7 +26656,60 @@ la fase 1. Falta:
 - la migración y el cron semanal del historial de posiciones, que necesitan
   su propio Task Intake.
 
-## 339. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
+## 339. RECS-ALREADY-DONE-1: una tarjeta cuya página ya existe pasa sola a «Resueltas»
+
+**Fecha:** 2026-10-18. **Zona:** Recomendaciones (también Visión general, el
+informe y la campana). **Origen:** prueba real en genscore.es, P11, P22 y P23
+de `prueba-recomendaciones/aprendizajes.md`. Denis: «si ya lo tengo hecho esas
+tarjetas no deberían aparecer, deberían aparecer en la pestaña de resueltas ya
+tachadas». Sustituye a la idea de un botón «Ya existe», que no llegó a
+construirse.
+
+**Qué se decidió.**
+
+1. Si la única acción de la tarjeta es publicar una página y la cobertura ya
+   la encontró, la tarjeta sale de la lista activa y aparece en «Resueltas»,
+   tachada, con la insignia «Ya lo tienes» y el enlace a la página. Cuenta
+   para tres tipos (`PUBLISH_PAGE_TYPES`):
+   - `increase_brand_visibility`, cuando hay una página de respuesta propia;
+   - `close_competitor_gap` y `add_comparison_content`, cuando la comparativa
+     con ese competidor está en el sitemap.
+2. `add_citation_block` se queda activa. Su acción es añadir un dato citable
+   a la página, y encontrar la página no dice si ese dato está.
+3. Sólo certifica el estado `confirmed_surfacing_gap` con página. La portada,
+   un índice o un foro (§278, §299, §330) siguen sin contar.
+4. No se escribe nada, ni estado ni migración. Se calcula al leer, como el
+   overlay. El siguiente escaneo vuelve a generar la tarjeta y la cobertura
+   decide otra vez. Por eso no hay «Deshacer»: no hay nada que deshacer.
+5. Mismo criterio en todas las vistas, con un solo cargador
+   (`loadCoverageOverlays`, `lib/recommendations/coverage-overlay-data.ts`):
+   - la pantalla, con su plan, techos, palancas y grupos;
+   - las Oportunidades de Visión general;
+   - el «Tu siguiente paso» de la campana.
+
+   El informe aplica la misma función sobre el overlay que ya calculaba.
+
+**Corrige §330.** La regla «un veredicto de cobertura cambia el consejo, no
+los puntos ni el sitio de la tarjeta» deja de valer para estos tres tipos. Para
+ellos, el veredicto saca la tarjeta del plan. Para `add_citation_block` sigue
+igual.
+
+**Premisa.** Esta fase quita una tarjeta activa, así que depende de algo. La
+premisa es que la cobertura sólo da `confirmed_surfacing_gap` con una página
+propia que responde a la pregunta (`isAnswerPage`) o con la comparativa con
+ese competidor en el sitemap.
+- Hoy lo verifican `coverage-overlay.test.ts` y `already-done.test.tsx`.
+- Si la premisa falla, la cobertura tomaría por buena una página que no
+  responde. Entonces la tarjeta se iría a «Resueltas» sin estar hecha, y la
+  única salida es mirar la página enlazada.
+- Lo que la IA responde no cambia porque exista la página. Si sigue sin
+  nombrarte, se ve en Prompts.
+
+**Qué queda.** Que la página exista no dice que esté bien hecha. Comprobar su
+estructura (respuesta en las dos primeras frases, titular en pregunta) exigiría
+leer la página, y eso sigue sin aprobar.
+
+## 340. SEO-RESEARCH-1: volumen de palabras y hueco de enlaces en el diagnóstico SEO (2026-10-18)
 
 **Qué se decidió.** `/admin/seo-diagnostico` gana un bloque «Investigación»
 con su propio botón («Lanzar sólo la investigación»), que no repite el

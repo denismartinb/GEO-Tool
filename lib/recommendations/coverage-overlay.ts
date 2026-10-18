@@ -449,3 +449,26 @@ export function overlayCopy(recommendationType: string, state: CoverageOverlaySt
 
   return null;
 }
+
+/**
+ * RECS-ALREADY-DONE-1 (log §339): card types whose whole action is "publish a
+ * page". When coverage found that page (an answer page on the brand's domain,
+ * or the comparison in its sitemap), there is nothing left to do, so the card
+ * leaves the active list and shows under «Resueltas» instead. `add_citation_block`
+ * is not here: its action is to add a citable fact to the page, and finding
+ * the page says nothing about whether that fact is there.
+ */
+export const PUBLISH_PAGE_TYPES: ReadonlySet<string> = new Set([
+  "increase_brand_visibility",
+  "close_competitor_gap",
+  "add_comparison_content"
+]);
+
+/** True when coverage shows the page this card asks to publish already exists. */
+export function isAlreadyCovered(recommendationType: string, overlay: CoverageOverlayEntry | null | undefined): boolean {
+  return (
+    PUBLISH_PAGE_TYPES.has(recommendationType) &&
+    overlay?.state === "confirmed_surfacing_gap" &&
+    Boolean(overlay.verifiedPage?.url)
+  );
+}

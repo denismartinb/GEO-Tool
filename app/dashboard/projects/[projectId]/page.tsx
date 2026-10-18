@@ -50,6 +50,8 @@ import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
+import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
+import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
@@ -353,7 +355,7 @@ export default async function ProjectDetailPage({
   const [
     { data: latestScore },
     { data: allPromptResults },
-    { data: activeRecommendations },
+    { data: activeRecommendationsRaw },
     { data: trendHistoryDesc },
     { data: latestAuditSnapshot }
   ] =
@@ -430,6 +432,19 @@ export default async function ProjectDetailPage({
       })
     : null;
 
+  // RECS-ALREADY-DONE-1 (log §339): what Recomendaciones shows under
+  // «Resueltas» because its page already exists is not an opportunity here.
+  const coverageOverlays = activeRecommendationsRaw
+    ? await loadCoverageOverlays(supabase, {
+        projectId,
+        runId: latestCompletedRun?.id ?? null,
+        projectDomain: project.domain,
+        recs: activeRecommendationsRaw
+      })
+    : null;
+  const activeRecommendations = activeRecommendationsRaw
+    ? activeRecommendationsRaw.filter((r) => !isAlreadyCovered(r.recommendation_type, coverageOverlays?.get(r.id)))
+    : null;
   const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
   const activeRecommendationsCount = activeRecommendations?.length ?? null;
 
