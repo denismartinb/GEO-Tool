@@ -684,3 +684,17 @@ log §306).
   prompt genérico, que está pensado para contenido propio.
 - **«Listo para copiar» sólo en la propia web.** Fuera de ella, un plan sin
   huecos es «Plan listo».
+
+## Añadir competidor (RECS-ADD-COMPETITOR-1, log §327)
+
+- **`track_emerging_competitor` se pinta como un botón, nunca como plan.**
+  `RecCard` lo desvía a `EmergingCompetitorCard`: sin «Ver cómo», sin
+  generación de IA, sin puntos. La acción entera es añadir el competidor.
+- **El alta pasa por `createCompetitorCore`**, el mismo camino que el
+  formulario de Competidores. No se escribe en `project_competitors` por otro
+  lado. Después la tarjeta se marca hecha con `dismissRecommendationCore`.
+- **El nombre se lee de `evidence_json.emerging_competitor` en el servidor.**
+  La action no acepta un nombre del navegador; sólo el id y la web.
+- **La web sólo se propone con igualdad exacta de etiqueta**
+  (`domainForBrandName`). Sin coincidencia se pide; nunca se adivina. El
+  navegador y el servidor validan con la misma `parseCompetitorDomain`.
