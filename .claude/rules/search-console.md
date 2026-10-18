@@ -125,3 +125,13 @@ revisión de data-guardian que lo precedió.
 - **El botón va directo a `/api/search-console/connect`**, que comprueba la
   propiedad del proyecto por su cuenta. Elegir propiedad sigue en «Posición
   en Google», donde vuelve la conexión.
+
+## Tabla de búsquedas (GSC-QUERIES-SORT-1, log §329)
+
+- **Ordenar sólo reordena.** El conjunto visible son las 50 búsquedas con más
+  impresiones del filtro; la columna elegida (`sortQueries`) las reordena
+  dentro de ese conjunto. Ordenar antes de recortar enseñaría otro conjunto y
+  la nota de «las 50 con más impresiones» mentiría.
+- **En móvil no se oculta ninguna columna de esta tabla.** Un puesto sin sus
+  impresiones al lado engaña (un 1,0 de una impresión parece un primer puesto
+  firme). La tabla se desliza en horizontal con la búsqueda fija.
