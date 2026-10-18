@@ -671,3 +671,17 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Plantillas generadas (RECS-TEMPLATES-1, log §331)
+
+- **Un hueco `[...]` es un dato de la marca, nunca una pauta editorial.** El
+  prompt da los valores editoriales (longitud, número de subtítulos) y sólo
+  deja hueco para lo que sólo sabe la marca.
+- **Ningún dato de un competidor sale del plan.** Cada celda de un rival en
+  una tabla es el hueco «[dato de su web, con enlace y fecha]» y el plan pide
+  comprobarlo en su web. Afirmar una función o un precio ajeno sin fuente es
+  la misma invención que prohíbe `CLAUDE.md`.
+- **Una plantilla de contacto no afirma lo que no sabemos** (que el remitente
+  leyó algo) ni nombra competidores.
+- Son reglas blandas del prompt, fijadas por `rewrite-template-rules.test.ts`.
+  Si alguna pasa a comprobarse en servidor, se dice aquí.

@@ -26268,3 +26268,53 @@ propio de 5) o esperar al día siguiente, nunca una pantalla sin botón.
 **Qué queda.** 2b, 2c y 2d siguen sin aprobar. Los artículos del blog de
 comercio agéntico hablan de tiendas; se revisan cuando esto esté en
 producción.
+
+## 331. RECS-TEMPLATES-1: las plantillas dejan de pedir lo que ya sabemos e inventar lo que no (2026-10-18)
+
+**Qué pasó.** En la prueba real sobre genscore.es (`/mnt/project-files/
+prueba-recomendaciones/aprendizajes.md`) los planes generados tenían cinco
+vicios, todos del prompt de reescritura (`recommendation-rewrite-llm.ts`):
+
+- Huecos donde el dato era nuestro y no del cliente: «máximo [tu dato aquí]
+  palabras» (P18).
+- Pedían «precios desde» en una pregunta que no trataba de precios (P9).
+- La tabla de comparativa rellenaba la columna del competidor con
+  afirmaciones sin fuente («Monitorea 15 prompts», «RankScale: Sí»; P27,
+  P35). Publicarla sería publicar datos ajenos inventados.
+- La plantilla de contacto decía «he leído su artículo» y enumeraba
+  competidores (P31).
+- Mezclaba inglés en el texto («donde no haya datos facts», P2).
+
+**Qué se decidió.** Cinco reglas nuevas en el prompt, con test
+(`rewrite-template-rules.test.ts`):
+
+1. Un hueco es sólo para un dato de la marca que sólo ella sabe (precio,
+   fecha, cifra, nombre). Las pautas editoriales las da el plan (por ejemplo
+   «una introducción de 40 a 60 palabras»).
+2. Sólo se piden los datos que necesita la pregunta: nada de precios en una
+   respuesta que no va de precios.
+3. Nunca un dato de un competidor. En una tabla comparativa (cuatro criterios
+   como mucho) cada celda del competidor es el hueco «[dato de su web, con
+   enlace y fecha]» y el plan incluye un paso para comprobarlo en su web y
+   anotar enlace y fecha. Vale también para la tarjeta genérica de
+   comparativa.
+4. Una plantilla de contacto nunca afirma que el remitente leyó, usó o le
+   gustó algo, y nunca nombra competidores.
+5. Ninguna palabra inglesa de las instrucciones pasa al texto.
+
+**Lo que no cambia, y por qué.**
+
+- **«Listo para copiar» con huecos (P14, P35) no se reproduce en el código.**
+  La insignia ya cuenta los huecos sobre el texto real
+  (`classifySolutionReadiness`, RECS-ACCION-1). Con la tabla de P35 (18
+  celdas) dice «18 huecos por rellenar», y queda fijado por test. Si vuelve a
+  verse, hace falta el texto exacto del plan para reproducirlo.
+- **Precios reales.** El plan no conoce los precios de un cliente: el hueco
+  de precio sigue siendo legítimo cuando la pregunta va de precios. Sólo
+  genscore.es tiene sus precios en el código (`plans-data.ts`), y meter un
+  caso especial para nuestra propia web no arregla nada para los clientes.
+- **Los planes ya generados no se rehacen solos.** Un plan es idempotente por
+  tarjeta, así que las reglas valen para lo que se genere a partir de ahora.
+- Las reglas son blandas, como las de §128: viven sólo en el prompt. La
+  única comprobación en servidor sigue siendo la de competidores y dominios
+  permitidos.
