@@ -223,4 +223,3 @@ describe("domainForBrandName (RECS-ADD-COMPETITOR-1)", () => {
     expect(domainForBrandName("", ["semrush.com"])).toBeNull();
   });
 });
-

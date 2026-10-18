@@ -672,7 +672,7 @@ consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externa
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
 
-## Añadir competidor (RECS-ADD-COMPETITOR-1, log §325)
+## Añadir competidor (RECS-ADD-COMPETITOR-1, log §327)
 
 - **`track_emerging_competitor` se pinta como un botón, nunca como plan.**
   `RecCard` lo desvía a `EmergingCompetitorCard`: sin «Ver cómo», sin

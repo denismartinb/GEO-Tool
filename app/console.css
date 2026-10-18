@@ -1819,7 +1819,7 @@
 .grec-quiet:disabled { opacity: .6; cursor: default; }
 
 /* RECS-ONE-QUEUE-1 (log §307): where each card of the queue comes from. */
-/* RECS-ADD-COMPETITOR-1 (log §325): "Añadir X a competidores" is a button,
+/* RECS-ADD-COMPETITOR-1 (log §327): "Añadir X a competidores" is a button,
    not a plan. Info left, action right; the action stacks under 640px. */
 .rec-card.rec2-addcomp { padding: 16px 18px; }
 .rec2-addcomp-main { display: flex; gap: 20px; align-items: flex-start; justify-content: space-between; }

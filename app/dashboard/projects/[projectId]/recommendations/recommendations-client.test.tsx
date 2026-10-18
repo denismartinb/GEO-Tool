@@ -207,7 +207,7 @@ describe("RecCard — CTA y chip de control", () => {
 });
 
 /**
- * RECS-ADD-COMPETITOR-1 (log §325). El clic no se puede probar por render; sí
+ * RECS-ADD-COMPETITOR-1 (log §327). El clic no se puede probar por render; sí
  * que la tarjeta es un botón y no un plan, y de dónde sale la web.
  */
 describe("RecCard — «Añadir X a competidores»", () => {

@@ -26055,7 +26055,7 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
 
-## 325. RECS-ADD-COMPETITOR-1: «Añadir X a competidores» es un botón, no un plan (2026-10-18)
+## 327. RECS-ADD-COMPETITOR-1: «Añadir X a competidores» es un botón, no un plan (2026-10-18)
 
 **Qué.** La tarjeta `track_emerging_competitor` («Añade Semrush a tus competidores») deja de abrir un plan generado por IA y pasa a ser un botón en la propia tarjeta (`EmergingCompetitorCard`). Sin «Ver cómo», sin puntos, sin «Listo para copiar». Al pulsar, la marca entra en Competidores por `createCompetitorCore` (el mismo alta que el formulario de Competidores, con su comprobación de propiedad y su rechazo de asistentes de IA y términos genéricos) y la tarjeta se marca como hecha por `dismissRecommendationCore`: se queda verde unos segundos y pasa a «Resueltas», con su «Deshacer» de siempre. Si ya la seguías, la tarjeta se da por hecha. Server action `addEmergingCompetitorAction`, núcleo `lib/recommendations/add-emerging-competitor.ts`.
 
