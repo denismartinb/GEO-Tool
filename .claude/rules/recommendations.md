@@ -671,3 +671,16 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Canal del plan (RECS-MIXED-CHANNEL-1, log §326)
+
+- **El paso «hazlo legible por máquina» sólo va en acciones de la propia
+  web.** `buildRecommendationRewritePrompt` lo decide con
+  `deliverableForType(tipo).control`: `own_site` (o sin clasificar) lo lleva;
+  `third_party` e `in_app` llevan la instrucción contraria, sin pasos de la
+  web ni ejemplos de JSON-LD. Un tipo nuevo de terceros hereda esto al
+  declarar su control en `deliverable.ts`.
+- **Cada familia `pursue_*` tiene su playbook.** Sin él, el tipo cae al
+  prompt genérico, que está pensado para contenido propio.
+- **«Listo para copiar» sólo en la propia web.** Fuera de ella, un plan sin
+  huecos es «Plan listo».

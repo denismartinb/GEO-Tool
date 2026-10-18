@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 import { generateGeminiJson } from "@/lib/llm/gemini-client";
 import { CODE_ARTIFACT_MAX, PROSE_ARTIFACT_MAX } from "@/lib/recommendations/pasteable-artifact";
+import { deliverableForType } from "@/lib/recommendations/deliverable";
 
 /**
  * PRELAUNCH-HARDENING-1 Fase R5 (2/2) — la reescritura de recomendaciones, en
@@ -112,6 +113,16 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
       return "ASSET FOCUS — freshness update: the AI is citing outdated information about the brand. Provide as examples (1) a list of the specific facts or figures that appear stale based on the evidence snippets (use only what is given; [tu dato aquí] for any updated value to fill in), and (2) a concise, up-to-date factual paragraph the brand can publish so models start citing current information. Never invent dates or numbers — mark every unknown value with a clearly-labelled placeholder.";
     case "pursue_citation_sources":
       return `ASSET FOCUS — digital PR / get cited by your sources: the domains below are sources the AI already trusts in this space that do not mention the brand. Do NOT assume they are all press to email — infer each one's likely type from the domain and give the RIGHT play: publication/blog/listicle/media -> pitch a contribution or request inclusion; marketplace/comparator/directory -> get listed or claim a profile; community/forum (e.g. reddit, quora) -> participate helpfully, never a cold email; an apparent company/provider or a competitor of the brand, or a clearly out-of-market site (a country TLD that does not match the brand's market) -> mark it 'no es un objetivo de outreach' and exclude it from the plan.${input.citationPages?.length ? " When a source has a specific example page listed under 'Example pages already cited', name that exact page/article in the plan instead of only the bare domain — it is a stronger, more concrete PR target." : ""} Examples to provide: (1) a prioritized list of ONLY the relevant sources, each tagged with its type and its specific play (name the specific cited page when one is given for that domain); (2) ONE adaptable outreach template ONLY for the sources where outreach actually applies (publications) — placeholders for names/links, never invent metrics. Use ONLY the domains and pages given.`;
+    // RECS-MIXED-CHANNEL-1 (log §326). These three had no playbook, fell to the
+    // generic prompt and came back with "semantic HTML + FAQPage on your site"
+    // steps on a plan about YouTube or a comparator. Each one is a play ON the
+    // third-party source, named by its domain.
+    case "pursue_community_sources":
+      return "ASSET FOCUS — community participation: the AI cites conversations on the community or video platforms listed below for these queries. The play is to take part there helpfully under the brand's real identity: find the threads or videos that match the affected queries, answer the actual question with useful, verifiable information, and disclose the affiliation. Adapt the play to each platform (a forum or Q&A site takes an answer in a thread; a video platform takes a useful comment or the brand's own video answering the question, never comment spam). Examples to provide: (1) a short list of where to participate, one line per listed domain with its specific play; (2) ONE adaptable answer template for the most relevant query, with placeholders for anything not in the facts. Never promise that participating will get the brand cited.";
+    case "pursue_comparator_sources":
+      return "ASSET FOCUS — comparators and directories: the AI cites the comparison sites, marketplaces or directories listed below for these queries. The play is to get the brand listed or to claim and complete its profile there. Examples to provide: (1) a short checklist per listed domain (does a profile exist, what to fill in, which category to choose); (2) ONE adaptable profile description using only the given facts, with placeholders for anything else.";
+    case "pursue_media_sources":
+      return "ASSET FOCUS — media pitch: the AI cites the publications listed below for these queries. The play is to offer them something worth publishing: a contribution, a data point or an expert comment on the affected queries. Examples to provide: (1) a prioritized list of the listed publications with the angle that fits each; (2) ONE adaptable pitch email with placeholders for names, links and any figure not in the facts. Never claim the sender has read a specific article unless it is listed under 'Example pages already cited'.";
     case "increase_brand_visibility": {
       // log §292. Both lines come from the founder's own test of this card on
       // genscore.es («que significa geo», 2026-10-11): the plan said "create a
@@ -147,6 +158,8 @@ function assetPlaybook(input: RecommendationRewriteInput): string | null {
  */
 export function buildRecommendationRewritePrompt(input: RecommendationRewriteInput): string {
   const playbook = assetPlaybook(input);
+  const control = deliverableForType(input.recommendationType).control;
+  const offSite = control === "third_party" || control === "in_app";
   const promptBlock = [
     "You are a senior GEO (Generative Engine Optimization) consultant writing one concrete, copy-paste-ready action plan on a brand's dashboard.",
     "Turn the generic recommendation below into a specific, complete plan this exact brand can act on immediately.",
@@ -166,7 +179,17 @@ export function buildRecommendationRewritePrompt(input: RecommendationRewriteInp
     '"title": a single concise, specific sentence, max 140 characters, no surrounding quotes.',
     '"summary": 1-2 sentences, max 400 characters, why this matters for this brand given the facts.',
     '"steps": 3 to 6 concrete, specific actions (each max 200 characters) the brand should take, grounded in the real prompts/competitors below.',
-    "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'.",
+    // RECS-MIXED-CHANNEL-1 (log §326): the machine-readable step only makes
+    // sense for work on the brand's own site. On a third-party or in-app
+    // action it injected "semantic HTML + FAQPage on your site" into a plan
+    // about YouTube. An unclassified type keeps the old behaviour.
+    ...(offSite
+      ? [
+          "IMPORTANT: this action happens OUTSIDE the brand's website (on the third-party sources below, or inside this tool). There is no page of the brand to publish or restructure here. Do NOT include steps about the brand's own website, semantic HTML, headings, crawlability, JSON-LD or any schema markup, and do NOT provide a JSON-LD or HTML example. Every step must be something done on the named source itself."
+        ]
+      : [
+          "IMPORTANT: the brand may ALREADY have this information on its site but in a form AI engines cannot read. So the steps MUST cover not just creating content but making it machine-readable: at least one step on HOW to expose/structure it for AI — clear semantic HTML and descriptive headings, structured data (JSON-LD schema such as FAQPage/Article/Organization) where relevant, content crawlable as real text (not hidden behind scripts, images or logins), and concise directly-extractable answers. Phrase it as 'if you already have this, expose it like this; if not, create it like this'."
+        ]),
     `"examples": 1 to 3 ready-to-paste TEMPLATE artifacts the user adapts before publishing — one per distinct deliverable the steps call for (e.g. a citable factual paragraph, a short FAQ, a JSON-LD schema snippet). Each is an example to review and fill in, never a verified fact. Each item: "label" names it (max 80 chars); "content" is the pasteable text.`,
     `LENGTH BUDGET — prose artifacts (a paragraph, an outline, an outreach template): up to ${PROSE_ARTIFACT_MAX} characters. Code artifacts (JSON-LD, an HTML snippet): up to ${CODE_ARTIFACT_MAX} characters, because a FAQPage with two answered questions does not fit in less.`,
     "COMPLETENESS BEATS COVERAGE — a code artifact MUST be syntactically complete and valid on its own: every brace, bracket, quote and tag closed, no ellipsis, never stopped mid-sentence. If the full artifact would not fit in its budget, produce a SMALLER but complete one (e.g. a FAQPage with two questions instead of four) — never a truncated larger one. A JSON-LD block that does not parse is worse than no example at all, and it will be discarded.",

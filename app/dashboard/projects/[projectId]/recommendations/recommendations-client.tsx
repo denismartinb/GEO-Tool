@@ -425,7 +425,14 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
  * ready-to-paste example artifact with its own copy button. All content is
  * already sanitized server-side; it is rendered as plain React text.
  */
-export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
+export function SolutionPanel({
+  solution,
+  recommendationType
+}: {
+  solution: GeneratedSolution;
+  /** Decides whether a ready plan reads "Listo para copiar" or "Plan listo" (log §326). */
+  recommendationType?: string;
+}) {
   // RECS-ACCION-1 — cuánto trabajo queda antes de poder publicar esto. NO es
   // una estimación: el prompt de reescritura obliga a marcar con un
   // placeholder todo valor que no esté en la evidencia en vez de inventarlo,
@@ -460,7 +467,7 @@ export function SolutionPanel({ solution }: { solution: GeneratedSolution }) {
           className={readiness.kind === "ready" ? "badge badge-pos" : "badge badge-warn"}
           style={{ marginLeft: "auto", textTransform: "none", letterSpacing: 0 }}
         >
-          {readinessLabel(readiness)}
+          {readinessLabel(readiness, recommendationType ? deliverableForType(recommendationType).control : "own_site")}
         </span>
       </div>
       <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)", marginBottom: 4 }}>{solution.title}</div>
@@ -1267,7 +1274,7 @@ export function RecCard({
           {/* Plan de acción — asset saneado generado por IA, aditivo: no
               sustituye el título/descripción de la regla, que sigue siendo el
               planteamiento del problema. */}
-          {rec.solution && <SolutionPanel solution={rec.solution} />}
+          {rec.solution && <SolutionPanel solution={rec.solution} recommendationType={rec.recommendation_type} />}
 
           {/* Acción sugerida — solo si existe en evidence_json */}
           {ev.action_suggested && (

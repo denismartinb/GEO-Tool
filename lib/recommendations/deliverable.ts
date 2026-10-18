@@ -162,7 +162,10 @@ export function pointsCaption(type: string, queryShape?: string | null): string 
 }
 
 /** Copy de la insignia de estado del artefacto generado. */
-export function readinessLabel(readiness: SolutionReadiness): string {
-  if (readiness.kind === "ready") return "Listo para copiar";
+export function readinessLabel(readiness: SolutionReadiness, control: DeliverableControl | null = "own_site"): string {
+  // RECS-MIXED-CHANNEL-1 (log §326): outside the brand's own site there is no
+  // page to paste into, so a plan without blanks is "Plan listo", not
+  // "Listo para copiar".
+  if (readiness.kind === "ready") return control === "own_site" || control === null ? "Listo para copiar" : "Plan listo";
   return readiness.blanks === 1 ? "1 hueco por rellenar" : `${readiness.blanks} huecos por rellenar`;
 }

@@ -26054,3 +26054,15 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.
+
+## 326. RECS-MIXED-CHANNEL-1: un plan fuera de tu web ya no pide HTML ni JSON-LD en tu web (2026-10-18)
+
+**Qué.** El prompt de «Generar propuesta» llevaba una instrucción obligatoria para todos los tipos: al menos un paso sobre cómo hacer el contenido legible por máquina (HTML semántico, JSON-LD `FAQPage`, contenido rastreable). Pensada para la propia web, se aplicaba también a los tipos de terceros y al de dentro de la app. La tarjeta «Participar en youtube.com» salía con «Implementa el esquema JSON-LD de tipo FAQPage en genscore.es». Ahora esa instrucción sólo va cuando `deliverableForType(tipo).control === "own_site"` (y en un tipo sin clasificar, que conserva lo de antes). En `third_party` e `in_app` va la contraria: sin pasos sobre la web de la marca y sin ejemplos de JSON-LD ni HTML. Además, `pursue_community_sources`, `pursue_comparator_sources` y `pursue_media_sources`, que no tenían playbook y caían al prompt genérico, tienen el suyo: participar en la comunidad (con aviso de que comentar en un vídeo no es spam ni garantiza la cita), darse de alta o completar el perfil en el comparador, y proponer una colaboración al medio sin afirmar que se ha leído un artículo que no esté en la evidencia.
+
+**Insignia.** Un plan sin huecos fuera de la propia web dice «Plan listo», no «Listo para copiar»: no hay nada que pegar (`readinessLabel(readiness, control)`). Decisión recomendada al fundador el 2026-10-18 («Haz los cambios»).
+
+**Por qué.** Prueba real sobre genscore.es (P37 y parte de P32, P31 de `prueba-recomendaciones/aprendizajes.md`) y el informe RECS-MIXED-CHANNEL-1 que adjuntó el fundador, con la causa verificada en `recommendation-rewrite-llm.ts`.
+
+**Qué queda.** Las propuestas ya generadas con la mezcla siguen guardadas hasta que el usuario las regenere; regenerarlas gasta una llamada y su cupo diario, así que no se hace en lote. El copy de la tarjeta de comunidad («La IA cita conversaciones de X») sigue igual para YouTube; suavizarlo es decisión aparte del fundador.
+
+**Regla de premisa.** No se retira ningún camino de recuperación.
