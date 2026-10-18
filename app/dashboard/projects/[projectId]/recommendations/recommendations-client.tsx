@@ -32,6 +32,7 @@ import {
 import { adviceSignal, dataSignal, emergingCompetitorReach, scopeLine } from "@/lib/recommendations/card-signals";
 import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
 import { parseCompetitorDomain } from "@/lib/competitors/competitor-domain";
+import { plainSnippet, shortDomainList } from "@/lib/recommendations/plain-snippet";
 import {
   DEFINITION_LEVER_NOTE,
   LEVER_TYPE,
@@ -305,8 +306,12 @@ export type ResolvedHistoryItem = {
   title: string;
   description: string;
   recommendation_type: string;
-  status: "resolved" | "dismissed";
+  /** "covered" (RECS-ALREADY-DONE-1, log §339): an active card whose page
+   * coverage already found. Computed at read time, never a stored status. */
+  status: "resolved" | "dismissed" | "covered";
   updated_at: string;
+  /** Only for status="covered": the page coverage found. */
+  coveredPageUrl?: string | null;
   /** Only ever set for status="resolved" — the specific-mutation check
    * (RECS-LOOP-1 Fase A), or for a "dismissed" row whose gap did NOT recur
    * (Fase B: recurrence.status === "did_not_recur"). Never both a "came
@@ -387,6 +392,7 @@ function verdictClause(kind: PredictionVerdict["kind"], fulfilledCount: number, 
  * invented or placeholder line.
  */
 export function predictionVerdictLine(item: ResolvedHistoryItem): string | null {
+  if (item.status === "covered") return null;
   if (item.status === "resolved") {
     if (!item.verification || item.verification.status !== "verified") return null;
     const { kind, fulfilledCount, totalCount } = item.verification.verdict;
@@ -423,13 +429,20 @@ function priorityLevel(rec: Recommendation): "high" | "med" | "low" {
   // A confirmed surfacing gap (RECS-COVERAGE-OVERLAY-1) bumps the effective
   // confidence used everywhere, since the assumption became verified evidence.
   const confidence = rec.coverageOverlay?.confidenceOverride ?? rec.confidence;
-  if (rec.impact === "high" && confidence !== "low") return "high";
+  // RECS-LABELS-1 (log §336): what depends on a third party is never «Prioridad
+  // alta», the same ceiling `planScore` already applies to its place (P38).
+  if (rec.impact === "high" && confidence !== "low" && !dependsOnThirdParty(rec)) return "high";
   if (rec.impact === "high" || rec.impact === "medium") return "med";
   return "low";
 }
 
 function isQuickWin(rec: Recommendation): boolean {
-  return rec.impact === "high" && rec.effort === "low";
+  // RECS-LABELS-1 (log §336): nothing that waits on someone else is quick.
+  return rec.impact === "high" && rec.effort === "low" && !dependsOnThirdParty(rec);
+}
+
+function dependsOnThirdParty(rec: Recommendation): boolean {
+  return deliverableForType(rec.recommendation_type).control === "third_party";
 }
 
 function CopyButton({ text, label }: { text: string; label?: string }) {
@@ -607,6 +620,23 @@ function ExampleBlock({ example, showCaption }: { example: GeneratedSolutionExam
   );
 }
 
+/** What coverage found, in the words of the card it closes (log §339). */
+export function coveredPageLead(recommendationType: string): string {
+  return recommendationType === "increase_brand_visibility"
+    ? "Ya tienes una página que responde a esta pregunta:"
+    : "Ya tienes una comparativa con este competidor:";
+}
+
+/** "genscore.es/geo" for "https://www.genscore.es/geo/". */
+export function displayPageUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname.replace(/^www\./, "")}${parsed.pathname.replace(/\/+$/, "")}`;
+  } catch {
+    return url;
+  }
+}
+
 /**
  * Read-only row for the "Resueltas" tab (RECS-3) — no expand, no evidence.
  * Covers both automatically-resolved (the gap stopped recurring in a later
@@ -667,7 +697,11 @@ export function ResolvedHistoryCard({
               <Icon name="check" size={12} />
             </span>
             <span className="badge badge-pos">
-              {item.status === "resolved" ? "Resuelta automáticamente" : "Marcada como hecha"}
+              {item.status === "covered"
+                ? "Ya lo tienes"
+                : item.status === "resolved"
+                  ? "Resuelta automáticamente"
+                  : "Marcada como hecha"}
             </span>
             <span className="badge badge-outline">{labelForType(item.recommendation_type)}</span>
           </div>
@@ -675,6 +709,14 @@ export function ResolvedHistoryCard({
             {item.title}
           </div>
           <div className="rec-problem">{dateLabel}</div>
+          {item.status === "covered" && item.coveredPageUrl && /^https?:\/\//i.test(item.coveredPageUrl) && (
+            <div className="rec-problem" style={{ marginTop: 4, color: "var(--ink-3)" }}>
+              {coveredPageLead(item.recommendation_type)}{" "}
+              <a href={item.coveredPageUrl} target="_blank" rel="noopener noreferrer">
+                {displayPageUrl(item.coveredPageUrl)}
+              </a>
+            </div>
+          )}
           {verdictLine && (
             <div className="rec-problem" style={{ marginTop: 4, color: "var(--ink-3)" }}>
               {verdictLine}
@@ -1040,7 +1082,10 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
                   Victoria rápida
                 </span>
               )}
-              {(rec.consecutive_runs_open ?? 1) > 1 && (
+              {/* RECS-OUTREACH-TARGETS-1 (log §335): on work that depends on a
+                  third party the age only blames the user for what they cannot
+                  close (P30). */}
+              {(rec.consecutive_runs_open ?? 1) > 1 && control !== "third_party" && (
                 <span className="badge badge-outline">Abierta {rec.consecutive_runs_open} escaneos</span>
               )}
               {/* RECS-LOOP-1 Fase B — this exact gap was marked done before and
@@ -1116,9 +1161,15 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
                 <div className="rec2-pts-l">{pointsCaption(rec.recommendation_type, ev.query_shape)}</div>
               </>
             ) : (
-              <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
-                {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
-              </div>
+              <>
+                <div className="rec2-pts" style={{ color: "var(--ink-2)", fontSize: 13 }}>
+                  {rec.impact === "high" ? "Impacto alto" : rec.impact === "medium" ? "Impacto medio" : "Impacto bajo"}
+                </div>
+                {/* RECS-LABELS-1 (log §336): next to cards with «+N pt» a bare
+                    word read as the same scale (P13). It says why it has no
+                    figure. */}
+                <div className="rec2-pts-l">sin cifra calculable</div>
+              </>
             )}
           </div>
           <button
@@ -1342,7 +1393,7 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
             <div className="rec2-block">
               <div className="rec2-label">Evidencia</div>
               {displaySnippets.slice(0, 3).map((snippet, i) => (
-                <div key={i} className="rec-snippet">&ldquo;{snippet}&rdquo;</div>
+                <div key={i} className="rec-snippet">&ldquo;{plainSnippet(snippet)}&rdquo;</div>
               ))}
               {sentimentDrivers.length > 0 && (
                 <p className="rec2-ev-p">
@@ -1359,7 +1410,8 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
               {domains.length > 0 && (
                 <p className="rec2-ev-p">
                   <span style={{ fontWeight: 600 }}>Dominios: </span>
-                  {domains.join(", ")}
+                  {shortDomainList(domains).shown.join(", ")}
+                  {shortDomainList(domains).hidden > 0 && ` y ${shortDomainList(domains).hidden} más`}
                 </p>
               )}
               {citationPages.length > 0 && (

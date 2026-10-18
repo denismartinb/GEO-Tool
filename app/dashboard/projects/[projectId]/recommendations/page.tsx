@@ -6,15 +6,8 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { ScanStatePill } from "@/components/scan-state-pill";
-import {
-  COVERAGE_OVERLAY_TYPES,
-  comparisonFieldsFromEvidence,
-  computeComparisonOverlay,
-  computeCoverageOverlay,
-  type CoverageOverlayEntry
-} from "@/lib/recommendations/coverage-overlay";
-import { COMPARISON_REC_TYPES, sitemapLocsFromBots } from "@/lib/recommendations/own-comparison-pages";
-import type { DomainCoverageTopic } from "@/lib/recommendations/domain-coverage";
+import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
+import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
 import {
   verifyRecommendationPredictions,
@@ -105,29 +98,6 @@ function readPillars(details: unknown): GeoPillar[] {
     }
   }
   return out;
-}
-
-/**
- * Parses a `domain_coverage` generated_solutions row's sanitized_content
- * (DOMAIN-COVERAGE-1's DomainCoverageMap shape) defensively — same pattern as
- * parseGeneratedSolution below. Not imported from lib/recommendations/domain-
- * coverage.ts (server-only module already used for its type + constants here,
- * but this parser mirrors its private one to keep this file's error handling
- * self-contained).
- */
-function parseCoverageMap(raw: string | null): { scanId: string; topics: DomainCoverageTopic[] } | null {
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.scanId !== "string" || !Array.isArray(parsed.topics)) return null;
-    const topics = parsed.topics.filter((t): t is DomainCoverageTopic => {
-      const c = t as Record<string, unknown> | null;
-      return Boolean(c) && typeof c?.promptId === "string" && typeof c?.found === "boolean";
-    });
-    return { scanId: parsed.scanId, topics };
-  } catch {
-    return null;
-  }
 }
 
 // Server Actions inherit the maxDuration of the page they're invoked from.
@@ -518,96 +488,16 @@ export default async function RecommendationsPage({
     }
   }
 
-  // RECS-COVERAGE-OVERLAY-1 (extended in AUDIT-RECS-JOIN-1 Fase B): read-time
-  // enrichment of COVERAGE_OVERLAY_TYPES cards with already-persisted domain-
-  // coverage data (DOMAIN-COVERAGE-1) for the CURRENT scan only — never the
-  // recommendation engine or scan pipeline. See
-  // lib/recommendations/coverage-overlay.ts for the join/degradation rules
-  // and for why only these two (of fifteen) types are anchored to a single
-  // prompt and can therefore ever match a coverage topic.
-  const overlayEligibleRecs = baseRecs.filter((r) => COVERAGE_OVERLAY_TYPES.has(r.recommendation_type));
-  const coverageOverlayByRecId = new Map<string, CoverageOverlayEntry>();
-  const coveragePageUrls: string[] = [];
-  if (overlayEligibleRecs.length > 0 && latestCompletedRun) {
-    const resultIds = overlayEligibleRecs
-      .map((r) => r.evidence_json?.affected_prompt_details?.[0]?.id)
-      .filter((id): id is string => Boolean(id));
-
-    const [{ data: resultRows }, { data: coverageRow }] = await Promise.all([
-      resultIds.length > 0
-        ? supabase
-            .from("scan_prompt_results")
-            .select("id, prompt_id")
-            .eq("project_id", projectId)
-            .eq("run_id", latestCompletedRun.id)
-            .in("id", resultIds)
-        : Promise.resolve({ data: [] as Array<{ id: string; prompt_id: string | null }> }),
-      supabase
-        .from("generated_solutions")
-        .select("sanitized_content")
-        .eq("project_id", projectId)
-        .eq("generation_type", "domain_coverage")
-        .is("recommendation_id", null)
-        .eq("status", "completed")
-        .eq("is_sanitized", true)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
-    ]);
-
-    const resultIdToPromptId = new Map(
-      ((resultRows ?? []) as Array<{ id: string; prompt_id: string | null }>)
-        .filter((row): row is { id: string; prompt_id: string } => Boolean(row.prompt_id))
-        .map((row) => [row.id, row.prompt_id]),
-    );
-
-    const coverage = parseCoverageMap(
-      (coverageRow as { sanitized_content: string | null } | null)?.sanitized_content ?? null,
-    );
-    // Only a coverage row derived from THIS scan counts — a cached row from an
-    // older scan (before the user re-ran "Auditar cobertura") never enriches.
-    const coverageTopics = coverage && coverage.scanId === latestCompletedRun.id ? coverage.topics : [];
-    for (const topic of coverageTopics) for (const page of topic.pages) coveragePageUrls.push(page.url);
-
-    for (const [recId, entry] of computeCoverageOverlay({
-      recommendations: baseRecs.map((r) => ({
-        id: r.id,
-        recommendationType: r.recommendation_type,
-        resultId: r.evidence_json?.affected_prompt_details?.[0]?.id ?? null,
-        confidence: r.confidence as "low" | "medium" | "high",
-      })),
-      resultIdToPromptId,
-      coverageTopics,
-    })) {
-      coverageOverlayByRecId.set(recId, entry);
-    }
-  }
-
-  // RECS-COVERAGE-1 (log §330): a comparison card whose comparison already
-  // lives on the site. Read from the sitemap the technical audit keeps (no
-  // fetch) plus the pages coverage found; see own-comparison-pages.ts.
-  const comparisonRecs = baseRecs.filter((r) => COMPARISON_REC_TYPES.has(r.recommendation_type));
-  if (comparisonRecs.length > 0) {
-    const { data: snapshotRow } = await supabase
-      .from("web_audit_snapshots")
-      .select("bots")
-      .eq("project_id", projectId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    for (const [recId, entry] of computeComparisonOverlay({
-      recommendations: comparisonRecs.map((r) => ({
-        id: r.id,
-        recommendationType: r.recommendation_type,
-        confidence: r.confidence as "low" | "medium" | "high",
-        ...comparisonFieldsFromEvidence(r.evidence_json),
-      })),
-      siteUrls: [...sitemapLocsFromBots((snapshotRow as { bots?: unknown } | null)?.bots), ...coveragePageUrls],
-      projectDomain: project.domain,
-    })) {
-      coverageOverlayByRecId.set(recId, entry);
-    }
-  }
+  // RECS-COVERAGE-OVERLAY-1, RECS-COVERAGE-1 (log §330): read-time coverage
+  // verdict of each card, from rows we already hold (coverage map of this
+  // scan, the sitemap the technical audit keeps). Same loader as Visión
+  // general and the bell (RECS-ALREADY-DONE-1, log §339).
+  const coverageOverlayByRecId = await loadCoverageOverlays(supabase, {
+    projectId,
+    runId: latestCompletedRun?.id ?? null,
+    projectDomain: project.domain,
+    recs: baseRecs,
+  });
 
   /* ---- RECS-REDESIGN-1: potential points on the Recomendaciones page ----
    * These already existed (RECS-POTENTIAL-1 / ADR 0017) but only ever
@@ -666,7 +556,7 @@ export default async function RecommendationsPage({
     extraction_version: r.extraction_version,
   }));
 
-  const recs: Recommendation[] = baseRecs.map((r) => ({
+  const allRecs: Recommendation[] = baseRecs.map((r) => ({
     ...r,
     solution: solutionByRecId.get(r.id) ?? null,
     coverageOverlay: coverageOverlayByRecId.get(r.id) ?? null,
@@ -685,6 +575,28 @@ export default async function RecommendationsPage({
           )?.deltaPoints ?? null)
         : null,
   }));
+
+  // RECS-ALREADY-DONE-1 (log §339): a card whose only action is to publish a
+  // page that coverage already found has nothing left to do. It leaves the
+  // active list, the plan and every ceiling, and shows under «Resueltas»
+  // crossed out, with the page we found. Nothing is written: the next scan
+  // regenerates the card and coverage decides again.
+  const recs = allRecs.filter((r) => !isAlreadyCovered(r.recommendation_type, r.coverageOverlay));
+  const coveredForClient = allRecs
+    .filter((r) => isAlreadyCovered(r.recommendation_type, r.coverageOverlay))
+    .map((r) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      recommendation_type: r.recommendation_type,
+      status: "covered" as const,
+      updated_at: latestCompletedRun?.finished_at ?? latestCompletedRun?.created_at ?? new Date().toISOString(),
+      run_id: latestCompletedRun?.id ?? "",
+      verification: null,
+      recurrence: null,
+      coveredPageUrl: r.coverageOverlay?.verifiedPage?.url ?? null,
+    }));
+  const historyForClient = [...coveredForClient, ...resolvedHistoryForClient];
 
   // RECS-ONE-LEVER-1: the visibility cards grouped by topic, one card per
   // topic in presentation only (every member stays its own row). Each lever
@@ -898,7 +810,7 @@ export default async function RecommendationsPage({
   const googleSlotProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
 
   // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §307).
-  const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || resolvedHistoryForClient.length > 0);
+  const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || historyForClient.length > 0);
   const aiContent = !latestCompletedRun ? (
             <div className="section-empty" style={{ marginTop: 20 }}>
               <div className="section-empty-title">
@@ -918,7 +830,7 @@ export default async function RecommendationsPage({
                 <Icon name="arrRight" size={14} />
               </Link>
             </div>
-          ) : recs.length === 0 && resolvedHistoryForClient.length === 0 ? (
+          ) : recs.length === 0 && historyForClient.length === 0 ? (
             // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
             // "Ver detalle del escaneo" link to /runs/[runId] is retired from
             // this empty state, same reasoning as Citas — the route is no
@@ -940,7 +852,7 @@ export default async function RecommendationsPage({
           ) : (
             <RecommendationsClient
               recommendations={recs}
-              resolvedHistory={resolvedHistoryForClient}
+              resolvedHistory={historyForClient}
               recentWinsCount={recentWins.length}
               projectId={projectId}
               jointPoints={jointPoints}

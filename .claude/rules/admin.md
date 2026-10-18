@@ -242,3 +242,12 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   quita esa marca, el panel vuelve a contar nuestras visitas. Una métrica que no se puede atar a una cuenta,
   como las altas por canal o «abrió precios», no se pinta: la analítica es sin
   cookies (`docs/brand/design-decisions-log.md` §304).
+- **`/admin/seo-diagnostico` sólo llama a DataForSEO y no escribe nada.**
+  Cada paso es una llamada en vivo con `requireOperator()` como primera línea
+  de la acción. Valida el dominio (`normalizeStudyDomain`), los temas
+  (`MAX_SEEDS`) y el texto de cada búsqueda en el servidor, y usa `limit`
+  fijos, así que el coste máximo de una pasada se conoce antes de pulsar. El
+  coste de cada paso sale del campo `cost` de la respuesta, nunca de una
+  tarifa copiada. Si algún día guarda resultados, eso es una escritura y
+  necesita su Task Intake y su correo a `OPS_ALERT_EMAIL`
+  (`docs/brand/design-decisions-log.md` §338).

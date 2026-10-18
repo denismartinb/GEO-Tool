@@ -733,6 +733,8 @@ log §306).
   otro rival no la cubre.
 - **Un veredicto de cobertura cambia el consejo, no los puntos ni el sitio de
   la tarjeta.** Lo que la IA responde no cambia porque exista la página.
+  Excepción desde §339: si la tarjeta sólo pedía publicar esa página, pasa a
+  «Resueltas» (sección de abajo).
 
 ## Plantillas generadas (RECS-TEMPLATES-1, log §331)
 
@@ -762,3 +764,53 @@ log §306).
 - **Nunca se afirma qué incluye el producto o cada plan más allá de los
   datos.** Si no está en los datos, es un hueco.
 - Son reglas blandas del prompt, fijadas por `jsonld-lever.test.ts`.
+
+## Fuentes a las que escribir (RECS-OUTREACH-TARGETS-1, log §335)
+
+- **La tarjeta de fuentes sólo cuenta webs a las que se puede escribir.**
+  `computeCitationSourceGap` filtra con `isOutreachTarget` antes de contar:
+  fuera la documentación y los centros de ayuda, y fuera la web sin
+  clasificar de una marca nombrada en la misma respuesta (igualdad exacta de
+  etiqueta, nunca contención). El titular y el primer paso salen de lo que
+  queda.
+- **Un comparador, un medio o una comunidad no se descartan por ser una marca
+  nombrada.** Sólo la familia «Otras webs».
+- **La antigüedad («Abierta N escaneos») no sale en tarjetas `third_party`.**
+
+## Etiquetas coherentes (RECS-LABELS-1, log §336)
+
+- **Lo que depende de un tercero nunca es «Prioridad alta» ni «Victoria
+  rápida».** `priorityLevel` e `isQuickWin` excluyen el control
+  `third_party`, como `planScore` ya lo baja en el plan. Matiza la regla de
+  «Alta prioridad es un único criterio»: el criterio sigue siendo uno, con
+  ese techo.
+- **Un impacto sin cifra dice «sin cifra calculable».** Nunca sólo la
+  palabra al lado de tarjetas con «+N pt».
+- **El primer paso de la tarjeta y el de su plan son la misma acción.**
+- **Una comunidad se nombra por lo que es** (`communityKind`): vídeo,
+  publicación o hilo.
+
+## Evidencia legible (RECS-MINORS-1, log §337)
+
+- **Una cita se pinta con `plainSnippet`**, sin marcas de Markdown. Lo
+  guardado no se toca.
+- **Una lista de dominios en la tarjeta se corta en seis** (`shortDomainList`)
+  y cuenta el resto.
+- **Que no salga ningún competidor no es una oportunidad segura.** El texto
+  dice lo observado y que también puede ser una pregunta sin marcas.
+
+## Ya lo tienes (RECS-ALREADY-DONE-1, log §339)
+
+- **Si la acción entera era publicar una página que la cobertura ya
+  encontró, la tarjeta sale de la lista activa y va a «Resueltas», tachada.**
+  Pasa con «Ya lo tienes» y el enlace (`isAlreadyCovered`, tipos de
+  `PUBLISH_PAGE_TYPES`). `add_citation_block` no entra: su acción es añadir
+  un dato y la página no dice si está.
+- **Se calcula al leer, nunca se guarda.** Sin estado nuevo ni «Deshacer».
+  El siguiente escaneo decide otra vez.
+- **Toda vista que liste tarjetas lee el overlay con `loadCoverageOverlays`
+  y filtra con `isAlreadyCovered`.** Hoy lo hacen Recomendaciones, Visión
+  general y la campana. El informe usa la misma función sobre su overlay.
+  Una vista nueva que se lo salte enseñaría como pendiente lo que la
+  pantalla da por hecho.
+- **Sólo se enlaza una dirección `http(s)`.**

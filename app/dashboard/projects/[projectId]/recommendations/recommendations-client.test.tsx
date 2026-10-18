@@ -699,3 +699,46 @@ describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
     expect(planPart).not.toContain("Define en tu web");
   });
 });
+
+describe("RecCard: antigüedad de la tarjeta (RECS-OUTREACH-TARGETS-1, log §335)", () => {
+  it("no culpa al usuario de lo que depende de un tercero (P30)", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ recommendation_type: "pursue_citation_sources", consecutive_runs_open: 14 })} />
+    );
+    expect(html).not.toContain("Abierta 14 escaneos");
+  });
+
+  it("la sigue enseñando en lo que es de tu web", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section", consecutive_runs_open: 14 })} />
+    );
+    expect(html).toContain("Abierta 14 escaneos");
+  });
+});
+
+describe("RecCard: etiquetas coherentes (RECS-LABELS-1, log §336)", () => {
+  it("lo que depende de terceros no es «Prioridad alta» ni «Victoria rápida» (P38)", () => {
+    const html = renderToStaticMarkup(
+      <RecCard
+        projectId="p1"
+        rec={baseRec({ recommendation_type: "pursue_community_sources", impact: "high", effort: "low", confidence: "high" })}
+      />
+    );
+    expect(html).not.toContain("Prioridad alta");
+    expect(html).not.toContain("Victoria rápida");
+  });
+
+  it("en tu web siguen saliendo", () => {
+    const html = renderToStaticMarkup(
+      <RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section", impact: "high", effort: "low", confidence: "high" })} />
+    );
+    expect(html).toContain("Prioridad alta");
+    expect(html).toContain("Victoria rápida");
+  });
+
+  it("un impacto sin cifra dice que no la tiene (P13)", () => {
+    const html = renderToStaticMarkup(<RecCard projectId="p1" rec={baseRec({ recommendation_type: "create_faq_section" })} />);
+    expect(html).toContain("Impacto medio");
+    expect(html).toContain("sin cifra calculable");
+  });
+});
