@@ -2,6 +2,8 @@ import "server-only";
 
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
 import { selectPlan } from "@/lib/recommendations/plan";
+import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
+import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import type { AuthenticatedContext } from "@/lib/auth";
 import type { NextStepNotice } from "@/lib/notifications/next-step";
 
@@ -12,6 +14,7 @@ type RecRow = {
   impact: string;
   effort: string;
   priority_rank: number;
+  confidence: string;
   consecutive_runs_open?: number;
   evidence_json: { affected_prompt_ids?: unknown } | null;
 };
@@ -52,7 +55,7 @@ export async function getNextStepNotice(
     const [{ data: recRows }, { data: resultRows }] = await Promise.all([
       supabase
         .from("recommendations")
-        .select("id, title, recommendation_type, impact, effort, priority_rank, consecutive_runs_open, evidence_json")
+        .select("id, title, recommendation_type, impact, effort, confidence, priority_rank, consecutive_runs_open, evidence_json")
         .eq("project_id", project.id)
         .eq("run_id", run.id)
         .eq("status", "active")
@@ -66,7 +69,16 @@ export async function getNextStepNotice(
         .eq("run_id", run.id)
     ]);
 
-    const recs = (recRows ?? []) as RecRow[];
+    // RECS-ALREADY-DONE-1 (log §339): a card whose page already exists is
+    // under «Resueltas» on the screen, so it is never the next step either.
+    const activeRecs = (recRows ?? []) as RecRow[];
+    const overlays = await loadCoverageOverlays(supabase, {
+      projectId: project.id,
+      runId: run.id,
+      projectDomain: project.domain,
+      recs: activeRecs
+    });
+    const recs = activeRecs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlays.get(r.id)));
     if (recs.length === 0) return null;
 
     const results = ((resultRows ?? []) as ScoreInputRow[]).map((r) => ({

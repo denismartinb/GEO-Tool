@@ -152,9 +152,9 @@ describe("loadReportInput", () => {
       return tables;
     }
 
-    it("says improve when the screen says improve", async () => {
+    it("leaves a card whose page already exists out of the plan, as the screen does (log §339)", async () => {
       const input = (await loadReportInput({ supabase: fakeSupabase(withPage("https://acme.es/servicios")), project: PROJECT }))!;
-      expect(input.plan[0].firstStep).toMatch(/^Refuerza tu página/);
+      expect(input.plan).toHaveLength(0);
       expect(input.coverage?.q1).toBe("yes");
     });
 
