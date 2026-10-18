@@ -26047,6 +26047,10 @@ la portada se funde con él. El fundador lo señaló. La cabecera vive fuera de
 
 **Recomendación 6** («Estrategia para disputar a Otterly.ai… página de comparación directa», +26 pt). Igual que la de Peec AI: `/comparativas/genscore-vs-otterly` ya existía sin FAQ. Se añade FAQ con `FAQPage`, con hechos de su tabla. No se copia el dato «Otterly monitorea 15 prompts» del borrador de la consola, sin fuente.
 
+**Recomendación 7** («Crea una página de comparativa Genscore vs RankScale», +5 pt). Aquí sí faltaba la página: se crea `/comparativas/genscore-vs-rankscale` con datos sólo de rankscale.ai y su página de precios (consultadas el 2026-10-18, en la sección «Fuentes»). Lo que su web no dice (idioma de la interfaz, tarjeta en la prueba, generador de soluciones) figura como «no consta». Gana RankScale en precio de entrada, motores y regiones; GenScore en castellano y bucle de acción. Registrada en índice, sitemap, `llms.txt`, piloto y `promise-parity`.
+
+**Recomendación 8** («Aparece en las fuentes web que la IA cita», outreach). No se implementa: es trabajo fuera de la web y depende de terceros. Hallazgos en `aprendizajes.md` (P29 a P32).
+
 **Qué queda.** Foto nueva (lunes 19) antes de fusionar y medición a la semana del despliegue. Hallazgo para producto: la recomendación se emitió sin reconocer una cobertura que ya existía en `/comparativas`.
 
 **Regla de premisa.** No se retira ningún camino de recuperación.

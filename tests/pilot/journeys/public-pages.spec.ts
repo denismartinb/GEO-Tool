@@ -316,6 +316,17 @@ test("/comparativas/genscore-vs-otterly renders and has its own canonical", asyn
   await assertCanonical(page, "/comparativas/genscore-vs-otterly");
 });
 
+test("/comparativas/genscore-vs-rankscale renders and has its own canonical", async ({ page }, testInfo) => {
+  const findings = await visitAsUser(
+    page,
+    testInfo,
+    "/comparativas/genscore-vs-rankscale",
+    "comparativas-genscore-vs-rankscale"
+  );
+  assertPageIsHealthy(findings);
+  await assertCanonical(page, "/comparativas/genscore-vs-rankscale");
+});
+
 test("/comparativas/genscore-vs-peec-ai renders and has its own canonical", async ({ page }, testInfo) => {
   const findings = await visitAsUser(
     page,

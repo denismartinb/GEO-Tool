@@ -27,6 +27,11 @@ export const COMPARATIVAS_INDEX: ComparativaLink[] = [
     blurb: "Precio de entrada, motores de IA cubiertos, cobertura multi-país e idioma, comparados fila a fila."
   },
   {
+    href: "/comparativas/genscore-vs-rankscale",
+    title: "GenScore vs RankScale",
+    blurb: "Precio, motores de IA, regiones e idioma, con fuentes de la web de RankScale."
+  },
+  {
     href: "/comparativas/genscore-vs-peec-ai",
     title: "GenScore vs Peec AI",
     blurb: "Precio de entrada, coste de motores adicionales y usuarios de equipo, comparados fila a fila."
