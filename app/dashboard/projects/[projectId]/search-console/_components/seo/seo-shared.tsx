@@ -38,7 +38,7 @@ export function PositionCell({ k }: { k: KeywordView }) {
 /** Stacked bar of where the topic's keywords are: page 1, page 2, outside the Top 20. */
 export function DistBar({ topic }: { topic: TopicView }) {
   const n = topic.pageOne + topic.pageTwo + topic.outside;
-  if (n === 0) return <span className="skw-distl">Primera foto el lunes</span>;
+  if (n === 0) return <span className="skw-distl">Sin foto todavía</span>;
   const seg = (v: number, cls: string) => (v ? <i className={cls} style={{ width: `${(v / n) * 100}%` }} /> : null);
   return (
     <>

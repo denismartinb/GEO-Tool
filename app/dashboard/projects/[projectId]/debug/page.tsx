@@ -782,7 +782,7 @@ export default async function RunsPage({
       </div>
 
       {/* SEO-TRACK-1 PR B (log §342) — seguimiento de palabras de «Posición
-          en Google». Apagado, el proyecto no entra en la foto del lunes ni
+          en Google». Apagado, el proyecto no entra en las fotos de Google ni
           enseña el bloque; no se borra nada. */}
       <div className="card dbg-switch">
         <div className="dbg-switch-ico" data-on={seoTrackingState === "on" ? "true" : "false"}>
@@ -799,7 +799,7 @@ export default async function RunsPage({
             ) : (
               <>
                 Foto semanal del Top 20 de Google (DataForSEO) de las palabras que vigila el cliente.
-                Apagarlo saca el proyecto del cron del lunes y oculta el bloque; no borra nada.
+                Apagarlo saca el proyecto del cron de seguimiento y oculta el bloque; no borra nada.
               </>
             )}
           </small>

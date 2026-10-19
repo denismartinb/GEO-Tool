@@ -11,9 +11,7 @@ import { buildSetupProposal } from "@/lib/seo-tracking/setup-proposal";
 import { normalizeKeyword } from "@/lib/seo-tracking/keyword-text";
 import { pagePath } from "@/lib/seo-tracking/topic-actions";
 import { weeklySummary } from "@/lib/seo-tracking/view-model";
-import { weekStartUtc } from "@/lib/seo-tracking/week";
 import { AUDIT_BLOCK_PARAM } from "@/lib/web-audit/audit-blocks";
-import { fmtDay } from "./_components/format";
 import { ClicksImpressionsChart, NearPageOneScatter } from "./_components/gsc-charts";
 import { GscConnect } from "./_components/gsc-connect";
 import { GscDisconnect } from "./_components/gsc-disconnect";
@@ -38,17 +36,10 @@ import { SeoTracking, type SeoView } from "./_components/seo/seo-tracking";
  */
 
 export const dynamic = "force-dynamic";
+// The server actions of this page run the first Google snapshot in `after()` (log §342).
+export const maxDuration = 60;
 
 const VIEWS: SeoView[] = ["resumen", "temas", "descubrir"];
-
-/** The Monday cron takes its photo between 05:00 and 07:00 UTC (vercel.json). */
-function nextSnapshotLabel(now: Date, latestWeek: string | null): string {
-  const week = weekStartUtc(now);
-  if (latestWeek !== week && now.getUTCDay() === 1 && now.getUTCHours() < 7) return "hoy por la mañana";
-  const next = new Date(`${week}T00:00:00Z`);
-  next.setUTCDate(next.getUTCDate() + 7);
-  return `el lunes ${fmtDay(next.toISOString().slice(0, 10))}`;
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ projectId: string }> }): Promise<Metadata> {
   const { projectId } = await params;
@@ -238,8 +229,6 @@ export default async function SearchConsolePage({
         near={near}
         gscPositions={gscPositions}
         proposal={proposal}
-        nextSnapshot={nextSnapshotLabel(new Date(), seo.latestWeek)}
-        lastSnapshot={seo.latestWeek ? `del lunes ${fmtDay(seo.latestWeek)}` : null}
         initialView={VIEWS.includes(vista as SeoView) ? (vista as SeoView) : "resumen"}
       >
         <div id="google-detalle" className="skw-detail">

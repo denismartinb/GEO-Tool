@@ -32,7 +32,7 @@ function ActionCard({
       </div>
       <h4>{action.title}</h4>
       {action.done ? (
-        <p className="skw-why">Lo verás en las próximas fotos del lunes, en el puesto de las palabras del tema.</p>
+        <p className="skw-why">Lo verás en las próximas fotos, en el puesto de las palabras del tema.</p>
       ) : (
         <>
           <p className="skw-why">{action.why}</p>
@@ -92,7 +92,7 @@ function TopicDrawer(props: {
         props.onToast(r.error);
         return;
       }
-      props.onToast(next ? "Hecho. Lo verás en las próximas fotos del lunes." : "Vuelve a la lista.");
+      props.onToast(next ? "Hecho. Lo verás en las próximas fotos." : "Vuelve a la lista.");
     });
   };
 
@@ -112,7 +112,7 @@ function TopicDrawer(props: {
           <div>
             <h2 id="skw-topic-t">{topic.name}</h2>
             <div className="skw-dsub">
-              Página: {topic.targetUrl ? pathOf(topic.targetUrl) : "sin página elegida"} · Top 10 revisado el lunes
+              Página: {topic.targetUrl ? pathOf(topic.targetUrl) : "sin página elegida"} · Top 10 de la última foto
             </div>
           </div>
           <button ref={closeRef} type="button" className="skw-x" onClick={props.onClose} aria-label="Cerrar">
@@ -154,9 +154,9 @@ function TopicDrawer(props: {
                 </span>
               </div>
               {props.firstWeek ? (
-                <p className="sa-empty">Te lo decimos el lunes, cuando tengamos la primera foto del Top 20.</p>
+                <p className="sa-empty">Te lo decimos en cuanto tengamos la primera foto del Top 20.</p>
               ) : actions.length === 0 ? (
-                <p className="sa-empty">Esta semana no vemos nada concreto que cambiar en este tema. Sigue midiéndolo cada lunes.</p>
+                <p className="sa-empty">Esta semana no vemos nada concreto que cambiar en este tema. Lo seguimos midiendo.</p>
               ) : (
                 <div className="skw-acts">
                   {[...open, ...done].map((a) => (
@@ -165,7 +165,7 @@ function TopicDrawer(props: {
                 </div>
               )}
               <p className="sa-note" style={{ marginTop: 10, marginBottom: 0 }}>
-                Los cambios en Google tardan semanas. Ningún paso garantiza un puesto; lo medimos cada lunes.
+                Los cambios en Google tardan semanas. Ningún paso garantiza un puesto; lo seguimos midiendo.
               </p>
             </div>
           )}
@@ -221,7 +221,7 @@ function TopicDrawer(props: {
                 </button>
               </div>
               {k.state !== "ok" ? (
-                <p className="sa-empty">{k.state === "pending" ? "Lo verás el lunes, con la próxima foto." : "Esta semana no pudimos leer esta búsqueda. Lo volvemos a intentar el lunes."}</p>
+                <p className="sa-empty">{k.state === "pending" ? "Estamos mirando su puesto en Google. Sale aquí en cuanto lo tengamos." : "No pudimos leer esta búsqueda en la última foto. Lo volvemos a intentar en la próxima."}</p>
               ) : (
                 <>
                   {k.top10.map((r) => {

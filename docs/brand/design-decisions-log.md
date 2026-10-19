@@ -26876,8 +26876,8 @@ escritorio.
 2. **Se guarda lo que DataForSEO ve de Google**, nunca filas de Search
    Console. Lo único que puede venir de Search Console es la palabra que el
    cliente decide vigilar, como ya hace «Marcar como hecho».
-3. **Cron `/api/cron/seo-serp`**, los lunes cada 10 minutos de 05:00 a 06:50
-   UTC. Cada pasada toma las palabras sin foto de la semana
+3. **Cron `/api/cron/seo-serp`**, ~~los lunes cada 10 minutos de 05:00 a 06:50
+   UTC~~ cada 10 minutos todos los días desde §342 (punto 8). Cada pasada toma las palabras sin foto de la semana
    (`weekStartUtc`, anclado al calendario, §192). Tiene presupuesto de 48 s y
    techo de 2 $ por pasada, nunca un tope de filas. Lo que no le cabe queda
    para la siguiente pasada. El motor es el cron, no una cadena (§261, §262).
@@ -26978,10 +26978,28 @@ tema para subir**.
    tema la mueve.
 7. **Interruptor en `/debug`** («Seguimiento de palabras en Google»), con su
    consulta aparte y «Sin migrar» si falta la columna.
+8. **La primera foto se toma al guardar, y la pantalla no dice qué día se
+   refresca** (fundador, 2026-10-19: «si un cliente se registra ahora, tenga
+   la primera foto de sus datos ahora y no tenga que esperar una semana»; «no
+   es necesario decir cuándo»).
+   - Al guardar palabras o rivales, la server action lanza en `after()` la
+     misma pasada del cron limitada a ese proyecto
+     (`runWeeklySeoTracking(..., { projectId })`, 40 s, 8 a la vez). Es un
+     acelerador: lo que no termine sigue pendiente.
+   - El cron pasa a `*/10 * * * *`. Sólo trabaja lo pendiente de la semana
+     (palabras nuevas, o todas tras el lunes 00:00 UTC), así que una pasada
+     sin nada pendiente no llama a DataForSEO y el coste no cambia. Es lo que
+     recoge en 10 minutos lo que la pasada inmediata no alcanzó.
+   - Mientras haya palabras sin foto, la pantalla se relee cada 10 s durante
+     unos 3 minutos. Si sigue sin foto dice que tarda más de lo normal y que
+     lo seguimos intentando, nunca que ha fallado.
+   - Ningún texto del cliente menciona el lunes ni la hora; «Comparados con la
+     foto anterior». La foto sigue siendo semanal por dentro (`weekStartUtc`).
 
 **Qué queda.**
-- El fundador tiene que aplicar la versión actual de 0044 (con
-  `seo_action_states` y `seo_discovery_runs`) antes del merge del PR A.
+- ~~El fundador tiene que aplicar la versión actual de 0044 (con
+  `seo_action_states` y `seo_discovery_runs`) antes del merge del PR A.~~
+  Aplicada (2026-10-19).
 - Recargar DataForSEO antes de la primera foto.
 - Medir el coste real de una búsqueda de «Descubrir» y apuntarlo aquí.
 - Fase 2: pestaña Plan con borradores y Google frente a IA.

@@ -2238,6 +2238,7 @@
 .skw-minis-2 { margin-bottom: 12px; }
 .skw-notice { margin: 4px 0 0; background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
 .skw-notice b { color: var(--ink); }
+.skw-notice .skw-spin { display: inline-block; width: 13px; height: 13px; margin-right: 7px; vertical-align: -2px; }
 .skw-mv { display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%; text-align: left; border: 0; background: none; font: inherit; font-size: 13.5px; color: var(--ink); padding: 8px 0; border-bottom: 1px solid var(--line-soft); cursor: pointer; }
 .skw-mv:last-of-type { border-bottom: 0; }
 .skw-mv > span:first-child { min-width: 0; overflow-wrap: anywhere; }

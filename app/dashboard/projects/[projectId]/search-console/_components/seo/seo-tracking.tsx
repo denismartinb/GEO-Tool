@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import type { TopicWithActions, SeoTrackingData } from "@/lib/seo-tracking/screen";
 import type { ProposedTopic } from "@/lib/seo-tracking/setup-proposal";
@@ -27,6 +28,33 @@ const TABS: Array<{ id: SeoView; label: string }> = [
   { id: "descubrir", label: "Descubrir palabras" }
 ];
 
+/** About three minutes: the run after a save usually lands well inside it. */
+const REFRESH_EVERY_MS = 10_000;
+const REFRESH_TRIES = 18;
+
+/**
+ * While saved keywords have no snapshot yet, re-reads the screen every few
+ * seconds so the first Google photo appears on its own (log §342). It stops
+ * after a few minutes and says it is slow, never that it failed: the cron
+ * keeps trying in the background.
+ */
+function useRefreshWhileWaiting(waiting: number): boolean {
+  const router = useRouter();
+  const [tries, setTries] = useState(0);
+  useEffect(() => {
+    if (waiting === 0 || tries >= REFRESH_TRIES) return;
+    const t = setTimeout(() => {
+      setTries((n) => n + 1);
+      router.refresh();
+    }, REFRESH_EVERY_MS);
+    return () => clearTimeout(t);
+  }, [waiting, tries, router]);
+  useEffect(() => {
+    if (waiting === 0) setTries(0);
+  }, [waiting]);
+  return waiting > 0 && tries >= REFRESH_TRIES;
+}
+
 export function SeoTracking(props: {
   projectId: string;
   ownDomain: string;
@@ -37,8 +65,6 @@ export function SeoTracking(props: {
   near: NearKeyword[];
   gscPositions: Record<string, number>;
   proposal: { topics: ProposedTopic[]; rivals: ProposedRival[] };
-  nextSnapshot: string;
-  lastSnapshot: string | null;
   initialView: SeoView;
   children: ReactNode;
 }) {
@@ -47,6 +73,8 @@ export function SeoTracking(props: {
   const [topicId, setTopicId] = useState<string | null>(null);
   const [keywordId, setKeywordId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const waiting = data.kind === "ready" ? data.topics.reduce((a, t) => a + t.keywords.filter((k) => k.state === "pending").length, 0) : 0;
+  const slow = useRefreshWhileWaiting(waiting);
 
   useEffect(() => {
     if (!toast) return;
@@ -112,8 +140,8 @@ export function SeoTracking(props: {
           todo={props.todo}
           summary={props.summary}
           gsc={props.gsc}
-          nextSnapshot={props.nextSnapshot}
-          lastSnapshot={props.lastSnapshot}
+          waiting={waiting}
+          slow={slow}
           onOpenTopic={openTopic}
           onGo={go}
           onToast={setToast}

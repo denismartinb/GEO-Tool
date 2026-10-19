@@ -46,8 +46,8 @@ const TITLE_TERM_SHARE = 0.5;
 const LINK_GAP_RATIO = 3;
 const DROP_MIN = 3;
 
-const SRC_TOP = "Top 10 de Google del lunes";
-const SRC_TOP20 = "Top 20 de Google del lunes";
+const SRC_TOP = "Top 10 de Google";
+const SRC_TOP20 = "Top 20 de Google";
 const SRC_PAGES = "Tus páginas en el Top 20";
 const SRC_LINKS = "Enlaces según DataForSEO";
 const SRC_GSC = "Tu Search Console, últimos 28 días";

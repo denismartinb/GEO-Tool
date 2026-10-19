@@ -74,16 +74,12 @@ async function disabledProjectIds(service: Service, projectIds: string[]): Promi
  * whose owner's effective plan still covers them. A downgraded plan keeps
  * the oldest keywords up to its cap; the rest are counted, not fetched.
  */
-export async function loadPendingKeywords(service: Service, weekStart: string): Promise<PendingLoad> {
-  const keywords = await readAll<KeywordRow>((from, to) =>
-    service
-      .from("seo_keywords")
-      .select("id, project_id, owner_user_id, keyword, created_at")
-      .eq("tracked", true)
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true })
-      .range(from, to)
-  );
+export async function loadPendingKeywords(service: Service, weekStart: string, opts: { projectId?: string } = {}): Promise<PendingLoad> {
+  const keywords = await readAll<KeywordRow>((from, to) => {
+    let query = service.from("seo_keywords").select("id, project_id, owner_user_id, keyword, created_at").eq("tracked", true);
+    if (opts.projectId) query = query.eq("project_id", opts.projectId);
+    return query.order("created_at", { ascending: true }).order("id", { ascending: true }).range(from, to);
+  });
   if (keywords.error) {
     if (isMissingTable(keywords.error)) return { available: false };
     console.error(`${LOG_PREFIX} keywords read failed`, { code: keywords.error.code });
@@ -91,9 +87,11 @@ export async function loadPendingKeywords(service: Service, weekStart: string): 
   }
   if (keywords.rows.length === 0) return nothingPending();
 
-  const done = await readAll<{ keyword_id: string }>((from, to) =>
-    service.from("seo_serp_snapshots").select("keyword_id").eq("week_start", weekStart).range(from, to)
-  );
+  const done = await readAll<{ keyword_id: string }>((from, to) => {
+    let query = service.from("seo_serp_snapshots").select("keyword_id").eq("week_start", weekStart);
+    if (opts.projectId) query = query.eq("project_id", opts.projectId);
+    return query.range(from, to);
+  });
   if (done.error) {
     console.error(`${LOG_PREFIX} snapshots read failed`, { code: done.error.code });
     return nothingPending();

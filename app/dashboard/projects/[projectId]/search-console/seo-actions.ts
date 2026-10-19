@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
@@ -19,6 +20,7 @@ import {
   untrackKeywordCore,
   type KeywordSource
 } from "@/lib/seo-tracking/manage";
+import { IMMEDIATE_BUDGET_MS, IMMEDIATE_CONCURRENCY, runWeeklySeoTracking } from "@/lib/seo-tracking/weekly";
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -51,6 +53,23 @@ function done(id: string) {
   revalidatePath(screenPath(id));
 }
 
+/**
+ * Takes the first Google snapshot of what was just saved, after the response
+ * (log §342): a customer who sets up tracking sees their data in minutes, not
+ * next week. Scoped to this verified project and its owner's plan caps, the
+ * same pass the cron runs. It is an accelerator: whatever it does not reach
+ * stays pending and the cron picks it up within 10 minutes.
+ */
+function takeFirstSnapshot(id: string) {
+  after(async () => {
+    try {
+      await runWeeklySeoTracking(createServiceClient(), { projectId: id, budgetMs: IMMEDIATE_BUDGET_MS, concurrency: IMMEDIATE_CONCURRENCY });
+    } catch {
+      console.error("[geo:seo-serp] immediate pass failed", { projectId: id });
+    }
+  });
+}
+
 async function resolveTopic(
   service: ReturnType<typeof createServiceClient>,
   ids: { projectId: string; ownerUserId: string },
@@ -66,7 +85,7 @@ async function resolveTopic(
 function capMessage(added: number, overCap: number, cap: number): string {
   const head = added === 1 ? "Vigilas 1 palabra más." : `Vigilas ${added} palabras más.`;
   const tail = overCap > 0 ? ` ${overCap === 1 ? "Una no entraba" : `${overCap} no entraban`}: tu plan llega a ${cap}.` : "";
-  return `${added > 0 ? head : "No se ha añadido ninguna palabra."}${tail}${added > 0 ? " Su primera foto llega el lunes." : ""}`;
+  return `${added > 0 ? head : "No se ha añadido ninguna palabra."}${tail}${added > 0 ? " Estamos mirando ahora su puesto en Google." : ""}`;
 }
 
 const addSchema = z.object({
@@ -102,6 +121,7 @@ export async function addSeoKeywordsAction(input: z.input<typeof addSchema>): Pr
     overCap += result.overCap.length;
   }
   done(parsed.data.projectId);
+  if (added > 0) takeFirstSnapshot(parsed.data.projectId);
   return { ok: true, message: capMessage(added, overCap, seoTrackingCapsFor(planId).keywords) };
 }
 
@@ -137,6 +157,7 @@ export async function setupSeoTrackingAction(input: z.input<typeof setupSchema>)
     overCap += result.overCap.length;
   }
   done(parsed.data.projectId);
+  if (added > 0) takeFirstSnapshot(parsed.data.projectId);
   return { ok: true, message: capMessage(added, overCap, seoTrackingCapsFor(planId).keywords) };
 }
 
@@ -161,11 +182,12 @@ export async function setSeoRivalsAction(input: z.input<typeof rivalsSchema>): P
   const result = await setCompetitorsCore(createServiceClient(), { projectId: parsed.data.projectId, ownerUserId, planId, domains: parsed.data.domains });
   if (result.status !== "ok") return { ok: false, error: result.status === "unavailable" ? UNAVAILABLE : FAILED };
   done(parsed.data.projectId);
+  if (result.added.length) takeFirstSnapshot(parsed.data.projectId);
   const skipped = result.rejected.length;
   return {
     ok: true,
     message: `Rivales guardados.${skipped ? ` ${skipped === 1 ? "Un dominio no era válido o no entraba en tu plan" : `${skipped} dominios no eran válidos o no entraban en tu plan`}.` : ""}${
-      result.added.length ? " Los enlaces de un rival nuevo llegan el lunes." : ""
+      result.added.length ? " Estamos mirando ahora sus enlaces." : ""
     }`
   };
 }

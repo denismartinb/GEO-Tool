@@ -52,3 +52,11 @@ Cada regla es trazable a `docs/brand/design-decisions-log.md` §341.
   tope.** Añadirla a otro tema la mueve. Nunca se borra.
 - **Sin migración, apagado o sin plan, la pantalla de Search Console sigue
   exactamente igual.** El bloque nuevo nunca sustituye a lo que ya había.
+- **La primera foto se toma al guardar** (log §342, punto 8): las acciones
+  que añaden palabras o rivales lanzan en `after()` la pasada del cron
+  limitada a ese proyecto ya verificado. Es un acelerador, el motor sigue
+  siendo el cron (`*/10 * * * *`), que sólo trabaja lo pendiente de la
+  semana. Nunca una cadena de auto-llamadas.
+- **El cliente no ve qué día se refresca.** Ningún texto dice «lunes» ni una
+  hora; se habla de «la última foto» y «la foto anterior». Si la primera foto
+  tarda, se dice que tarda, nunca que ha fallado.

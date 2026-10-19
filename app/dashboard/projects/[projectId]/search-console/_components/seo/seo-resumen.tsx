@@ -37,7 +37,7 @@ function LinkStrip({ data, ownDomain, onRivals }: { data: ReadyData; ownDomain: 
     return (
       <div className="card">
         {head}
-        <p className="skw-p">Medimos los enlaces de {ownDomain} y de tus rivales el lunes, junto con la foto de Google.</p>
+        <p className="skw-p">Estamos midiendo los enlaces de {ownDomain} y de tus rivales. Salen aquí en cuanto los tengamos.</p>
       </div>
     );
   }
@@ -76,8 +76,9 @@ export function SeoResumen(props: {
   todo: TodoItem[];
   summary: ReturnType<typeof weeklySummary>;
   gsc: GscMini | null;
-  nextSnapshot: string;
-  lastSnapshot: string | null;
+  /** Keywords saved but not yet seen in Google, and whether that is taking long. */
+  waiting: number;
+  slow: boolean;
   onOpenTopic: (id: string, keywordId?: string) => void;
   onGo: (v: SeoView) => void;
   onToast: (m: string) => void;
@@ -122,9 +123,20 @@ export function SeoResumen(props: {
               <div className="sa-ch">
                 <h3>Tus palabras</h3>
               </div>
-              <p className="skw-notice">
-                <b>Tu primera foto de Google llega {props.nextSnapshot}.</b> Revisamos el Top 20 de tus {summary.total}{" "}
-                {summary.total === 1 ? "palabra" : "palabras"} cada lunes por la mañana. Mientras tanto, abajo tienes lo que ya dice tu Search Console.
+              <p className="skw-notice" role="status">
+                {props.slow ? (
+                  <>
+                    <b>La primera foto de Google está tardando más de lo normal.</b> Lo seguimos intentando solos; vuelve en un rato. Mientras tanto,
+                    abajo tienes lo que ya dice tu Search Console.
+                  </>
+                ) : (
+                  <>
+                    <span className="skw-spin" aria-hidden="true" />
+                    <b>Estamos tomando la primera foto de Google.</b> Revisamos el Top 20 de tus {summary.total}{" "}
+                    {summary.total === 1 ? "palabra" : "palabras"}; tarda un par de minutos y la pantalla se actualiza sola. Mientras tanto, abajo tienes
+                    lo que ya dice tu Search Console.
+                  </>
+                )}
               </p>
             </>
           ) : (
@@ -172,7 +184,8 @@ export function SeoResumen(props: {
                 </>
               )}
               <p className="sa-note" style={{ marginTop: 10, marginBottom: 0 }}>
-                Puestos de Google España en ordenador, foto {props.lastSnapshot}. Comparados con el lunes anterior.
+                Puestos de Google España en ordenador, en la última foto. Comparados con la foto anterior.
+                {props.waiting > 0 && !props.slow && ` Estamos mirando ${props.waiting === 1 ? "una palabra nueva" : `${props.waiting} palabras nuevas`}; salen en un par de minutos.`}
               </p>
             </>
           )}

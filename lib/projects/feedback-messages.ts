@@ -73,7 +73,7 @@ export const feedbackSuccessMessages: Record<string, string> = {
   // pasada por su set de prompts, sin intentar llegar a 50 respuestas.
   sampling_enabled: "Suelo de muestreo activado. Los próximos escaneos repetirán su set de prompts hasta llegar a 50 respuestas.",
   sampling_disabled: "Suelo de muestreo desactivado. Los próximos escaneos harán una sola pasada por su set de prompts.",
-  // SEO-TRACK-1 PR B: apagarlo no borra nada, sólo saca el proyecto del cron del lunes.
+  // SEO-TRACK-1 PR B: apagarlo no borra nada, sólo saca el proyecto del cron de seguimiento.
   seo_tracking_enabled: "Seguimiento de palabras activado. Entra en la foto de Google del próximo lunes.",
   seo_tracking_disabled: "Seguimiento de palabras desactivado. Sus palabras y su historial se conservan.",
   // ENGINE-DEBUG-TOGGLE-1: una clave por motor, igual que las dos mitades de

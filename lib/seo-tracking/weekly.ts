@@ -10,11 +10,17 @@ import { weekStartUtc } from "@/lib/seo-tracking/week";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 (log §341): one run of `/api/cron/seo-serp`. Every Monday the
- * cron fires every 10 minutes from 05:00 to 06:50 UTC; each pass takes what is
- * still pending for this week, so a pass that runs out of time or budget just
- * leaves the rest to the next one. The cron is the engine; there is no chain
+ * SEO-TRACK-1 (log §341, §342): one pass of keyword tracking. The cron
+ * (`/api/cron/seo-serp`) fires every 10 minutes; each pass takes what is still
+ * pending for this week (a keyword with no snapshot since Monday UTC), so a
+ * pass that runs out of time or budget just leaves the rest to the next one,
+ * and a quiet pass costs nothing. The cron is the engine; there is no chain
  * of self-calls to break (log §261, §262).
+ *
+ * The same pass, scoped to one project, runs right after a customer saves
+ * keywords or rivals (`after()` in the server actions), so the first snapshot
+ * exists within minutes instead of next week. That run is an accelerator:
+ * whatever it cannot finish is still pending for the cron.
  *
  * After the SERPs, if time and money are left, it refreshes the monthly
  * backlink summaries of the projects it served.
@@ -41,14 +47,28 @@ export type WeeklyRunSummary =
       alerted: SeoErrorCategory | null;
     };
 
-export async function runWeeklySeoTracking(service: Service, startedAt = Date.now()): Promise<WeeklyRunSummary> {
+export type SeoTrackingRunOptions = {
+  startedAt?: number;
+  /** Only this project's keywords and rivals (the run after a customer saves). */
+  projectId?: string;
+  /** Wall-clock budget for the pass; defaults to the cron's. */
+  budgetMs?: number;
+  concurrency?: number;
+};
+
+/** The run after a save shares its invocation with the action's response. */
+export const IMMEDIATE_BUDGET_MS = 40_000;
+export const IMMEDIATE_CONCURRENCY = 8;
+
+export async function runWeeklySeoTracking(service: Service, opts: SeoTrackingRunOptions = {}): Promise<WeeklyRunSummary> {
   if (!dataForSeoConfigured()) return { status: "not_configured" };
 
+  const startedAt = opts.startedAt ?? Date.now();
   const now = new Date(startedAt);
   const weekStart = weekStartUtc(now);
-  const deadline = startedAt + PASS_BUDGET_MS;
+  const deadline = startedAt + Math.min(opts.budgetMs ?? PASS_BUDGET_MS, PASS_BUDGET_MS);
 
-  const load = await loadPendingKeywords(service, weekStart);
+  const load = await loadPendingKeywords(service, weekStart, { projectId: opts.projectId });
   if (!load.available) return { status: "tables_missing" };
 
   const serp = await runSerpPass({
@@ -59,7 +79,8 @@ export async function runWeeklySeoTracking(service: Service, startedAt = Date.no
     now: Date.now,
     sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
     deadline,
-    spendCeilingUsd: PASS_SPEND_CEILING_USD
+    spendCeilingUsd: PASS_SPEND_CEILING_USD,
+    concurrency: opts.concurrency
   });
 
   let backlinksRefreshed = 0;

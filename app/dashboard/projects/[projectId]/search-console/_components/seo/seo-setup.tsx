@@ -101,7 +101,7 @@ export function SeoSetup(props: {
         setError(result.error);
         return;
       }
-      props.onToast(result.message ?? "Guardado. Tu primera foto de Google llega el lunes.");
+      props.onToast(result.message ?? "Guardado. Estamos tomando la primera foto de Google.");
     });
   };
 

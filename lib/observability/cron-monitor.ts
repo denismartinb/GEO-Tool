@@ -34,7 +34,7 @@ export const CRON_MONITORS = {
   "/api/cron/lifecycle-emails": { schedule: "45 7 * * *", checkinMargin: 15, failureIssueThreshold: 1 },
   "/api/cron/scan-continue": { schedule: "*/5 * * * *", checkinMargin: 3, failureIssueThreshold: 3 },
   "/api/cron/affiliate-report": { schedule: "0 7 5 * *", checkinMargin: 30, failureIssueThreshold: 1 },
-  "/api/cron/seo-serp": { schedule: "*/10 5-6 * * 1", checkinMargin: 5, failureIssueThreshold: 3 }
+  "/api/cron/seo-serp": { schedule: "*/10 * * * *", checkinMargin: 5, failureIssueThreshold: 3 }
 } as const satisfies Record<string, CronMonitorSpec>;
 
 export type CronPath = keyof typeof CRON_MONITORS;

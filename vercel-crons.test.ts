@@ -77,9 +77,11 @@ const REQUIRED_CRONS: Array<{ path: string; schedule: string; why: string }> = [
   },
   {
     path: "/api/cron/seo-serp",
-    schedule: "*/10 5-6 * * 1",
-    // Mondays, twelve passes: each takes what is still pending for the week,
-    // so the cron is the engine and no self-call chain can break (log §261).
+    schedule: "*/10 * * * *",
+    // Each pass takes what is still pending for the week (new keywords, or all
+    // of them after Monday 00:00 UTC) and a quiet pass makes no provider call.
+    // The cron is the engine; the run after a save is only an accelerator, so
+    // a keyword it could not reach is picked up within 10 minutes (log §342).
     why: "weekly Google Top 20 of tracked keywords — SEO-TRACK-1, log §341"
   }
 ];
