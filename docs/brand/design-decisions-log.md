@@ -26993,6 +26993,12 @@ tema para subir**.
    - Mientras haya palabras sin foto, la pantalla se relee cada 10 s durante
      unos 3 minutos. Si sigue sin foto dice que tarda más de lo normal y que
      lo seguimos intentando, nunca que ha fallado.
+   - Si a los 50 s de abrir la pantalla siguen palabras sin foto, la pantalla
+     pide una vez por visita la misma pasada (`kickSeoTrackingAction`). Cubre
+     las palabras guardadas antes de este cambio (las del fundador se quedaron
+     esperando en la preview) y una pasada que murió. Espera a que acabe la
+     del guardado para no pagar dos veces la misma búsqueda. Cada pasada
+     inmediata deja una línea `[geo:seo-serp] immediate pass` en los logs.
    - Ningún texto del cliente menciona el lunes ni la hora; «Comparados con la
      foto anterior». La foto sigue siendo semanal por dentro (`weekStartUtc`).
 

@@ -63,7 +63,14 @@ function done(id: string) {
 function takeFirstSnapshot(id: string) {
   after(async () => {
     try {
-      await runWeeklySeoTracking(createServiceClient(), { projectId: id, budgetMs: IMMEDIATE_BUDGET_MS, concurrency: IMMEDIATE_CONCURRENCY });
+      const summary = await runWeeklySeoTracking(createServiceClient(), { projectId: id, budgetMs: IMMEDIATE_BUDGET_MS, concurrency: IMMEDIATE_CONCURRENCY });
+      console.info("[geo:seo-serp] immediate pass", {
+        projectId: id,
+        status: summary.status,
+        ...(summary.status === "ran"
+          ? { pending: summary.pending, saved: summary.serp.saved, deferred: summary.serp.deferred, errors: summary.serp.errors, stoppedBy: summary.serp.stoppedBy, backlinks: summary.backlinksRefreshed }
+          : {})
+      });
     } catch {
       console.error("[geo:seo-serp] immediate pass failed", { projectId: id });
     }
@@ -86,6 +93,21 @@ function capMessage(added: number, overCap: number, cap: number): string {
   const head = added === 1 ? "Vigilas 1 palabra más." : `Vigilas ${added} palabras más.`;
   const tail = overCap > 0 ? ` ${overCap === 1 ? "Una no entraba" : `${overCap} no entraban`}: tu plan llega a ${cap}.` : "";
   return `${added > 0 ? head : "No se ha añadido ninguna palabra."}${tail}${added > 0 ? " Estamos mirando ahora su puesto en Google." : ""}`;
+}
+
+const kickSchema = z.object({ projectId });
+
+/**
+ * The screen calls this once per visit while saved keywords still have no
+ * snapshot: keywords saved before the immediate run existed, or a run that
+ * died, get their first photo without waiting for the cron (log §342).
+ */
+export async function kickSeoTrackingAction(input: z.input<typeof kickSchema>): Promise<SeoActionResult> {
+  const parsed = kickSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: FAILED };
+  await verified(parsed.data.projectId);
+  takeFirstSnapshot(parsed.data.projectId);
+  return { ok: true };
 }
 
 const addSchema = z.object({

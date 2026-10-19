@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { TopicWithActions, SeoTrackingData } from "@/lib/seo-tracking/screen";
 import type { ProposedTopic } from "@/lib/seo-tracking/setup-proposal";
 import type { weeklySummary } from "@/lib/seo-tracking/view-model";
+import { kickSeoTrackingAction } from "../../seo-actions";
 import { SeoDiscover, type NearKeyword } from "./seo-discover";
 import { SeoResumen, type GscMini, type TodoItem } from "./seo-resumen";
 import { SeoSetup, type ProposedRival } from "./seo-setup";
@@ -31,6 +32,7 @@ const TABS: Array<{ id: SeoView; label: string }> = [
 /** About three minutes: the run after a save usually lands well inside it. */
 const REFRESH_EVERY_MS = 10_000;
 const REFRESH_TRIES = 18;
+const KICK_AFTER_TRIES = 5;
 
 /**
  * While saved keywords have no snapshot yet, re-reads the screen every few
@@ -38,9 +40,19 @@ const REFRESH_TRIES = 18;
  * after a few minutes and says it is slow, never that it failed: the cron
  * keeps trying in the background.
  */
-function useRefreshWhileWaiting(waiting: number): boolean {
+function useRefreshWhileWaiting(projectId: string, waiting: number): boolean {
   const router = useRouter();
   const [tries, setTries] = useState(0);
+  const kicked = useRef(false);
+  // Once per visit, if keywords are still waiting after the run-on-save has
+  // had its time (40 s), ask the server to take what is missing: keywords
+  // saved before that run existed, or a run that died, do not wait for the
+  // cron. Waiting first avoids paying twice for a run still in flight.
+  useEffect(() => {
+    if (waiting === 0 || kicked.current || tries < KICK_AFTER_TRIES) return;
+    kicked.current = true;
+    void kickSeoTrackingAction({ projectId }).catch(() => undefined);
+  }, [waiting, tries, projectId]);
   useEffect(() => {
     if (waiting === 0 || tries >= REFRESH_TRIES) return;
     const t = setTimeout(() => {
@@ -74,7 +86,7 @@ export function SeoTracking(props: {
   const [keywordId, setKeywordId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const waiting = data.kind === "ready" ? data.topics.reduce((a, t) => a + t.keywords.filter((k) => k.state === "pending").length, 0) : 0;
-  const slow = useRefreshWhileWaiting(waiting);
+  const slow = useRefreshWhileWaiting(props.projectId, waiting);
 
   useEffect(() => {
     if (!toast) return;
