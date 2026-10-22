@@ -741,6 +741,29 @@ export const BLOG_POSTS: BlogPost[] = [
     // available": refresh this post when it ships.
     primaryKeyword: "agentes personales de ia",
     cluster: "fundamentos"
+  },
+  {
+    slug: "que-fuentes-cita-la-ia",
+    title: "Qué fuentes cita la IA: el 84% de sus enlaces no lo publicas tú",
+    seoTitle: "Qué fuentes cita la IA y cómo entrar en ellas",
+    metaDescription:
+      "ChatGPT, Gemini y Claude citan sobre todo medios ganados: el 84% de sus enlaces, según Muck Rack. Qué fuentes pesan y cómo conseguir que hablen de ti.",
+    description:
+      "Cuando ChatGPT, Gemini o Claude responden sobre tu marca, citan sobre todo lo que otros publican: prensa, comparadores, foros y reseñas. Qué fuentes cita la IA según el estudio de Muck Rack sobre más de 25 millones de enlaces, por qué la publicidad apenas cuenta y cómo entrar en las fuentes que la IA ya lee.",
+    datePublished: "2026-10-22",
+    coverImage: "/blog/que-fuentes-cita-la-ia/cover.webp",
+    coverIcon: "search",
+    // BLOG-CITES-1 (log §341). Muck Rack, What Is AI Reading? (May 2026) and
+    // Leoprd's Reputation to Revenue 2026 via PRovoke Media (Sep 2026).
+    // Product claims trace to the Páginas citadas screen
+    // (app/dashboard/projects/[projectId]/citations/, lib/citations/).
+    primaryKeyword: "qué fuentes cita la ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "84%",
+      label: "de los enlaces que citan ChatGPT, Gemini y Claude son medios ganados: lo publica otro, no tu web ni tu publicidad.",
+      source: "Muck Rack, What Is AI Reading?, más de 25 millones de enlaces (mayo de 2026)"
+    }
   }
 ];
 
