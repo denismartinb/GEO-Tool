@@ -26856,3 +26856,32 @@ arreglo enseña puntos.
 **Qué queda.** 2c (varias fichas a la vez y «Marcar como hecho») necesita
 migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
 congelación de textos.
+
+## 341. BLOG-CITES-1: qué fuentes cita la IA, con la figura «CitationMix» (2026-10-22)
+
+**Qué.** Artículo `que-fuentes-cita-la-ia` (clúster `playbooks`): ChatGPT,
+Gemini y Claude citan sobre todo medios ganados (84% de los enlaces, periodismo
+27%, lo pagado 0,3%), con el informe *What Is AI Reading?* de Muck Rack (mayo
+de 2026, más de 25 millones de enlaces) y el *Reputation to Revenue 2026* de
+Leoprd vía PRovoke Media (31.200 respuestas, Australia y Gran Bretaña) como
+fuentes. Cinco pasos para entrar en esas fuentes y cómo se ve en Páginas
+citadas. Es el primer post de la rutina «Post del blog cada dos días» que pidió
+el fundador el 2026-10-17.
+
+**Figura nueva.** `CitationMix` (`components/blog/article/animations.tsx`):
+100 casillas que se encienden por grupos, en el orden de la leyenda, con cada
+cifra escrita al lado. Las casillas redondean; el texto no. Quieta y encendida
+con `prefers-reduced-motion`. Mismas reglas que las figuras de §314.
+
+**Lo que el producto afirma, trazado.** Citas propias, tipo de fuente y
+«Fuentes alcanzables» (webs de terceros citadas en respuestas donde la marca no
+aparece, agrupadas por dominio con motores y preguntas) salen de
+`app/dashboard/projects/[projectId]/citations/` y `lib/citations/`
+(`groupOpportunitiesByDomain`, `SOURCE_TYPE_LABEL`). El artículo no dice que
+GenScore lea el contenido de las páginas citadas, porque no lo hace
+(`.claude/rules/citations.md`). Perplexity se nombra sólo para Pro y Agencia
+(§283).
+
+**Pendiente.** La cifra del 84% es de un solo informe y de enlaces en inglés
+mayoritariamente; si Muck Rack publica una edición nueva, se refresca.
+

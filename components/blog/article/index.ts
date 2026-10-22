@@ -39,5 +39,5 @@ export {
   type EngineRow
 } from "./charts";
 
-export { ShuffleRuns, FanOut, CrawlGap, type ShuffleBrand, type CrawlRow } from "./animations";
+export { ShuffleRuns, FanOut, CrawlGap, CitationMix, type ShuffleBrand, type CrawlRow, type CitationShare } from "./animations";
 export { StepFlow, Timeline, AgentLineup, TwoDoors, type FlowStep, type FlowLane, type Milestone, type AgentCard, type Door } from "./diagrams";

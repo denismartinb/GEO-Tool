@@ -183,3 +183,42 @@ export function CrawlGap({ rows }: { rows: CrawlRow[] }) {
     </div>
   );
 }
+
+export type CitationShare = {
+  label: string;
+  /** Porcentaje de las citas, tal cual lo publica la fuente. */
+  share: number;
+  /** `brand` = lo que la marca controla; se pinta apagado. */
+  tone: "hl" | "earned" | "brand";
+};
+
+/**
+ * De cada 100 enlaces que cita la IA, de dónde sale cada uno. Las casillas se
+ * encienden por grupos, en el orden de la leyenda, y cada grupo lleva su cifra
+ * escrita al lado: el dibujo redondea a casillas enteras, el texto no.
+ */
+export function CitationMix({ shares }: { shares: CitationShare[] }) {
+  const cells: CitationShare["tone"][] = [];
+  shares.forEach((s) => {
+    for (let i = 0; i < Math.round(s.share); i += 1) cells.push(s.tone);
+  });
+  while (cells.length < 100) cells.push(shares[shares.length - 1].tone);
+  return (
+    <div className="art-anim art-mix">
+      <ol className="art-mix-grid" aria-hidden="true">
+        {cells.slice(0, 100).map((tone, i) => (
+          <li key={i} className={`art-mix-cell is-${tone}`} style={{ "--i": i } as Vars} />
+        ))}
+      </ol>
+      <ul className="art-mix-legend">
+        {shares.map((s) => (
+          <li key={s.label} className={`art-mix-key is-${s.tone}`}>
+            <span className="art-mix-sw" aria-hidden="true" />
+            <span className="art-mix-v">{s.share.toLocaleString("es-ES")}%</span>
+            <span className="art-mix-l">{s.label}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

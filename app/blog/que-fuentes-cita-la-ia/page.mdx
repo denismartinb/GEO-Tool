@@ -1,0 +1,218 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  CitationMix
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("que-fuentes-cita-la-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Qué fuentes cita más la IA?",
+    answer:
+      "Sobre todo medios ganados, es decir, lo que otros publican: según Muck Rack, que analizó más de 25 millones de enlaces citados por ChatGPT, Gemini y Claude, son el 84% de las citas. El periodismo por sí solo es el 27%. Lo que publica la propia marca y lo pagado suman el 16% restante."
+  },
+  {
+    question: "¿Sirve pagar un publirreportaje para que la IA me cite?",
+    answer:
+      "Apenas. En el mismo estudio de Muck Rack, el contenido pagado y los publirreportajes son el 0,3% de las citas. La IA cita lo que otros publican por iniciativa propia."
+  },
+  {
+    question: "¿Cuánto tiempo sigue citando la IA un artículo?",
+    answer:
+      "Poco. Más de la mitad de los artículos periodísticos que cita la IA se publicaron en los últimos doce meses, y las citas caen con fuerza a partir del sexto mes, según Muck Rack (mayo de 2026). Una aparición en prensa no dura para siempre."
+  },
+  {
+    question: "¿Cómo sé qué fuentes cita la IA cuando preguntan por lo que vendo?",
+    answer:
+      "Preguntando a los motores lo que preguntan tus clientes y anotando los enlaces de cada respuesta, múltiples veces, porque cambian. GenScore lo hace en cada escaneo: la pantalla Páginas citadas reúne las páginas que citan los motores, separa las tuyas de las de terceros y lista las webs que la IA ya cita en respuestas donde todavía no apareces."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+ChatGPT, Gemini y Claude citan sobre todo lo que otros publican: el 84% de sus
+enlaces son medios ganados, según Muck Rack, que analizó más de 25 millones de
+enlaces en mayo de 2026. El periodismo por sí solo es el 27%. Lo que publica la
+marca y lo que paga se reparten el 16% restante, y la publicidad pagada no
+llega al 1%. Para salir en las respuestas de la IA no basta con mejorar tu web:
+hay que estar en las fuentes que la IA ya lee cuando alguien pregunta por lo
+que vendes.
+
+</KeyTakeaway>
+
+## Qué fuentes cita la IA, en cifras
+
+Muck Rack, una empresa de software para relaciones con medios, publica cada
+pocos meses su informe *What Is AI Reading?*. En la edición de mayo de 2026
+analizó más de 25 millones de enlaces citados en respuestas de ChatGPT, Gemini
+y Claude, en 17 sectores. El reparto es claro:
+
+<Figure
+  label="Figura 1."
+  caption="De cada 100 enlaces que citan ChatGPT, Gemini y Claude, de qué tipo de fuente salen. Las casillas redondean; las cifras son las publicadas. Fuente: Muck Rack, What Is AI Reading?, más de 25 millones de enlaces citados (mayo de 2026). Medios ganados son los que publica un tercero por iniciativa propia; el periodismo es una parte de ellos."
+>
+
+<CitationMix
+  shares={[
+    { label: "Periodismo: noticias, análisis y reportajes", share: 27, tone: "hl" },
+    { label: "Otros medios ganados: comparadores, foros, enciclopedias, reseñas y webs de terceros", share: 57, tone: "earned" },
+    { label: "Lo que publica la propia marca y lo pagado (lo pagado es el 0,3%)", share: 16, tone: "brand" }
+  ]}
+/>
+
+</Figure>
+
+Dos datos del mismo informe cambian cómo hay que trabajar esto:
+
+- **La IA cita lo reciente.** Más de la mitad de los artículos periodísticos
+  citados se publicaron en los últimos doce meses, y las citas caen con fuerza a
+  partir del sexto mes. Una entrevista de hace tres años pesa poco.
+- **Cada motor cita de forma distinta.** ChatGPT pone fuentes en el 96% de sus
+  respuestas, con unas cinco de media. Gemini, en el 82%, con unas ocho. Claude
+  cita en el 55% de las respuestas, pero cuando lo hace pone unas trece.
+
+## El matiz: que te citen no basta para que te elijan
+
+Otro estudio reciente apunta en la misma dirección y añade un aviso. Leoprd
+analizó 31.200 respuestas de ocho plataformas de IA en Australia y Gran Bretaña
+para su informe *Reputation to Revenue 2026*, recogido por PRovoke Media. El 86%
+de las citas venía de fuera de las webs de las marcas. Y tener más citas no
+garantizaba ser la recomendación: las marcas que la IA mencionaba pero no
+elegía tenían de media más citas que las que elegía.
+
+Lo que pesa es qué dicen esas fuentes. En el mismo estudio, cuando la pregunta
+buscaba señales de alarma sobre una empresa, las reseñas pasaban del 11% de las
+citas al 33%. Si las opiniones sobre tu marca son malas, la IA las encuentra.
+Lo contamos con más detalle en
+<a href="/blog/la-ia-te-menciona-pero-recomienda-a-otro">la IA te menciona pero
+recomienda a otro</a>.
+
+## Cómo entrar en las fuentes que cita la IA
+
+<NumberedSection n={1} title="Averigua qué fuentes cita la IA para tus preguntas">
+
+No sirven las listas genéricas de «los dominios más citados»: lo que importa es
+qué webs aparecen cuando alguien pregunta por lo que vendes, en tu sector y en
+tu idioma. Haz las preguntas que hacen tus clientes en ChatGPT, Gemini y Claude
+y apunta los enlaces de cada respuesta. Repítelo en distintos días, porque las
+fuentes cambian de una respuesta a otra.
+
+<QuickAction>Elige las cinco preguntas que más dinero te traerían y apunta qué webs cita cada motor al responderlas. Las que se repiten son tu lista de prioridades.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Empieza por las fuentes que la IA cita y donde tú no sales">
+
+Un comparador, un medio del sector o un foro que la IA ya usa para responder
+sobre lo tuyo, y en el que tu marca no aparece, es la oportunidad más directa.
+Son webs que ya tienen la confianza del motor: si te incluyen, la IA tiene de
+dónde sacar tu nombre.
+
+<QuickAction>Para cada web de tu lista, comprueba si te nombra. Si no, busca la vía de entrar: una ficha en el comparador, una propuesta al periodista que firma el artículo o una respuesta útil en el foro.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Dale a la prensa algo que merezca la pena citar">
+
+El periodismo es más de una cuarta parte de lo que cita la IA, y caduca en
+meses. Un comunicado genérico no lo cubre nadie. Un dato propio sí: un pequeño
+estudio de tu sector, una cifra que nadie más tiene, una opinión con
+argumentos. Cuenta el dato con su fuente y su método, como hacemos en nuestros
+<a href="/estudios">estudios</a>.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Cuida las reseñas antes de que las lea la IA">
+
+Las reseñas suben cuando alguien pregunta si puede fiarse de una empresa.
+Responder a las críticas, pedir opinión a los clientes contentos y corregir lo
+que se repite en las quejas es trabajo de reputación de siempre, y ahora
+también de GEO.
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Tu web sigue contando, aunque cite menos">
+
+Lo que publica la marca es una parte pequeña de las citas, pero es la única que
+controlas del todo. Que los bots de búsqueda puedan leerla y que cada página
+responda una pregunta concreta sigue siendo la base. Lo explicamos en
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que la IA te
+cite</a> y en <a href="/blog/bots-de-ia-robots-txt-cuales-dejar-entrar">qué bots
+de IA dejar entrar</a>.
+
+</NumberedSection>
+
+<Checklist
+  tone="evitar"
+  items={[
+    "Pagar publirreportajes para salir en la IA: según Muck Rack, lo pagado es el 0,3% de las citas.",
+    "Fiarte de una aparición en prensa de hace años: más de la mitad de los artículos que cita la IA son del último año.",
+    "Trabajar con una lista de dominios de otro país o de otro sector: las fuentes cambian con la pregunta."
+  ]}
+/>
+
+## Cómo lo ves en GenScore
+
+En cada escaneo, GenScore hace a ChatGPT, Gemini, Claude y, en Pro y Agencia,
+Perplexity tus preguntas principales de búsqueda y guarda los enlaces de cada
+respuesta. La pantalla **Páginas citadas** los reúne:
+
+- **Citas propias**: cuántas de esas citas apuntan a una página tuya.
+- **Tipo de fuente**: qué parte son medios, comparadores, comunidades,
+  enciclopedias u otras webs.
+- **Fuentes alcanzables**: las webs de terceros que la IA cita en respuestas
+  donde tu marca no aparece, agrupadas por dominio, con los motores que las
+  citan y las preguntas en las que salen. Es la lista del paso 2, hecha sola y
+  actualizada con cada escaneo.
+
+<Verdict title="El GEO también se hace fuera de tu web">
+
+La IA responde sobre tu marca con lo que otros publican de ella. Mejorar tu web
+es necesario, pero la mayor parte de las citas se decide en medios,
+comparadores, foros y reseñas. Empieza por saber cuáles son las tuyas: las que
+la IA cita cuando alguien pregunta por lo que vendes.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre qué fuentes cita la IA cuando preguntan por lo tuyo"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: Páginas citadas te enseña qué webs citan ChatGPT, Gemini, Claude y Perplexity en tus preguntas principales de búsqueda, y en cuáles todavía no sales."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

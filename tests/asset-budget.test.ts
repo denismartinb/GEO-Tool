@@ -82,7 +82,13 @@ const MAX_FILE_BYTES = 320 * 1024;
  * ficheros del proyecto (`contenido/blog/portadas/`). La sexta portada
  * (`agentes-personales-de-ia-que-compran`, 11.786 bytes) suma 16 KiB más.
  */
-const MAX_TOTAL_BYTES = 2448 * 1024;
+/**
+ * BLOG-CITES-1 (2026-10-22, log §341): la rutina de un post cada dos días que
+ * pidió el fundador suma una portada (~13 KB, WebP a calidad 85) cada pasada.
+ * Esta primera dejaba el margen a cero; se suben 64 KiB, sitio para unas cinco
+ * portadas más. Cuando se agote, se sube igual y se anota aquí.
+ */
+const MAX_TOTAL_BYTES = 2512 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).
