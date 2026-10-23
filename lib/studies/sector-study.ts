@@ -98,6 +98,82 @@ export const SECTORS: SectorConfig[] = [
       "Verti",
       "Pelayo"
     ]
+  },
+  {
+    id: "hoteles-madrid",
+    label: "hoteles en Madrid",
+    country: "ES",
+    language: "es",
+    prompts: [
+      "¿Cuál es el mejor hotel de Madrid para una escapada de fin de semana?",
+      "¿Qué hotel me recomiendas en el centro de Madrid para ir a ver museos?",
+      "Hotel de lujo en Madrid, ¿cuál merece la pena?",
+      "¿Qué hotel con buena relación calidad-precio me recomiendas en Madrid?",
+      "Busco un hotel boutique con encanto en Madrid, ¿cuál me recomiendas?",
+      "¿Qué hotel de Madrid es mejor para un viaje de negocios?",
+      "Hotel en Madrid con piscina en la azotea, ¿cuál elijo?",
+      "¿Dónde alojarse en Madrid con niños? Recomiéndame hoteles.",
+      "¿Qué hotel de Madrid me recomiendas para una ocasión especial en pareja?",
+      "Hotel cerca de la estación de Atocha o del parque del Retiro, ¿cuál me recomiendas?",
+      "¿Qué hoteles de Madrid tienen las mejores valoraciones de los huéspedes?",
+      "Hotel de diseño en Madrid para gente joven, ¿cuál me recomiendas?"
+    ],
+    seedBrands: [
+      "Meliá",
+      "NH",
+      "Barceló",
+      "Iberostar",
+      "Room Mate",
+      "Only YOU",
+      "VP Hoteles",
+      "Four Seasons Madrid",
+      "Rosewood Villa Magna",
+      "Mandarin Oriental Ritz",
+      "The Westin Palace",
+      "Hotel Urban",
+      "Hotel Único",
+      "Hotel Orfila",
+      "Hotel Wellington",
+      "Pestana"
+    ]
+  },
+  {
+    id: "hoteles-barcelona",
+    label: "hoteles en Barcelona",
+    country: "ES",
+    language: "es",
+    prompts: [
+      "¿Cuál es el mejor hotel de Barcelona para una escapada de fin de semana?",
+      "¿Qué hotel me recomiendas en el centro de Barcelona para visitar la ciudad a pie?",
+      "Hotel de lujo en Barcelona, ¿cuál merece la pena?",
+      "¿Qué hotel con buena relación calidad-precio me recomiendas en Barcelona?",
+      "Busco un hotel boutique con encanto en Barcelona, ¿cuál me recomiendas?",
+      "¿Qué hotel de Barcelona es mejor para un viaje de negocios?",
+      "Hotel en Barcelona cerca de la playa, ¿cuál elijo?",
+      "¿Dónde alojarse en Barcelona con niños? Recomiéndame hoteles.",
+      "¿Qué hotel de Barcelona me recomiendas para una ocasión especial en pareja?",
+      "Hotel cerca de la Sagrada Familia o del Barrio Gótico, ¿cuál me recomiendas?",
+      "¿Qué hoteles de Barcelona tienen las mejores valoraciones de los huéspedes?",
+      "Hotel con piscina en la azotea en Barcelona, ¿cuál me recomiendas?"
+    ],
+    seedBrands: [
+      "Meliá",
+      "NH",
+      "Barceló",
+      "H10",
+      "Catalonia",
+      "Hotel Arts",
+      "W Barcelona",
+      "Mandarin Oriental Barcelona",
+      "Cotton House",
+      "Casa Fuster",
+      "Hotel Casa Camper",
+      "Majestic Hotel & Spa",
+      "Hotel Neri",
+      "Ohla Barcelona",
+      "Yurbban",
+      "Generator"
+    ]
   }
 ];
 
