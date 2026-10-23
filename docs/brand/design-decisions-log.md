@@ -26885,3 +26885,24 @@ GenScore lea el contenido de las páginas citadas, porque no lo hace
 **Pendiente.** La cifra del 84% es de un solo informe y de enlaces en inglés
 mayoritariamente; si Muck Rack publica una edición nueva, se refresca.
 
+## 344. HOTEL-STUDY-1: sectores «hoteles en Madrid» y «hoteles en Barcelona» en `/admin/estudio` (2026-10-23)
+
+**Qué.** Dos sectores nuevos en `SECTORS` (`lib/studies/sector-study.ts`),
+cada uno con doce preguntas neutrales de viajero (escapada, centro, lujo,
+calidad-precio, boutique, negocios, niños, pareja, zona concreta, valoraciones)
+y dieciséis marcas candidatas que mezclan cadenas (Meliá, NH, Barceló…) e
+independientes. Ninguna pregunta nombra una marca, como ya exige
+`scripts/sector-study.test.ts` para todos los sectores.
+
+**Por qué.** TecnoHotel (Peldaño) aceptó publicar en exclusiva qué hoteles
+recomienda la IA en Madrid y Barcelona, si favorece a cadenas o a
+independientes y qué fuentes usa. El estudio lo lanza el fundador desde
+`/admin/estudio`; sin un sector de hoteles la página no podía hacerlo.
+
+**Qué queda.** Las marcas candidatas sólo son las que se buscan de forma
+literal: el informe ya recoge aparte cualquier otra marca nombrada. La
+clasificación cadena/independiente se hace al redactar la pieza, sobre el JSON
+descargado; no hay campo para ello en el código. El título del `.md` sigue la
+plantilla «marcas españolas de…», que no encaja con hoteles internacionales:
+es un borrador interno, la pieza publicada se redacta aparte.
+
