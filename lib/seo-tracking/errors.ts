@@ -1,5 +1,5 @@
 /**
- * SEO-TRACK-1 (log §341): what a failed DataForSEO call is persisted as.
+ * SEO-TRACK-1 (log §345): what a failed DataForSEO call is persisted as.
  * `category: message`, both written here, never the provider's own text
  * (`.claude/rules/scan.md`, «Persist categorized, self-authored error
  * messages»).

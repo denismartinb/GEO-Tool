@@ -2,7 +2,7 @@ import type { SerpResult } from "@/lib/seo-data/dataforseo-parse";
 import { isRetryable, needsOperator, SEO_ERROR_MESSAGES, type SeoErrorCategory } from "@/lib/seo-tracking/errors";
 
 /**
- * SEO-TRACK-1 (log §341): one pass of the weekly SERP cron, with every side
+ * SEO-TRACK-1 (log §345): one pass of the weekly SERP cron, with every side
  * effect injected so the scheduling rules are testable without a database or
  * a provider. The rules are the scan pipeline's, applied one level down:
  *

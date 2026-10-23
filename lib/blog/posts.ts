@@ -741,6 +741,54 @@ export const BLOG_POSTS: BlogPost[] = [
     // available": refresh this post when it ships.
     primaryKeyword: "agentes personales de ia",
     cluster: "fundamentos"
+  },
+  {
+    slug: "que-fuentes-cita-la-ia",
+    title: "Qué fuentes cita la IA: el 84% de sus enlaces no lo publicas tú",
+    seoTitle: "Qué fuentes cita la IA y cómo entrar en ellas",
+    metaDescription:
+      "ChatGPT, Gemini y Claude citan sobre todo medios ganados: el 84% de sus enlaces, según Muck Rack. Qué fuentes pesan y cómo conseguir que hablen de ti.",
+    description:
+      "Cuando ChatGPT, Gemini o Claude responden sobre tu marca, citan sobre todo lo que otros publican: prensa, comparadores, foros y reseñas. Qué fuentes cita la IA según el estudio de Muck Rack sobre más de 25 millones de enlaces, por qué la publicidad apenas cuenta y cómo entrar en las fuentes que la IA ya lee.",
+    datePublished: "2026-10-22",
+    coverImage: "/blog/que-fuentes-cita-la-ia/cover.webp",
+    coverIcon: "search",
+    // BLOG-CITES-1 (log §341). Muck Rack, What Is AI Reading? (May 2026) and
+    // Leoprd's Reputation to Revenue 2026 via PRovoke Media (Sep 2026).
+    // Product claims trace to the Páginas citadas screen
+    // (app/dashboard/projects/[projectId]/citations/, lib/citations/).
+    primaryKeyword: "qué fuentes cita la ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "84%",
+      label: "de los enlaces que citan ChatGPT, Gemini y Claude son medios ganados: lo publica otro, no tu web ni tu publicidad.",
+      source: "Muck Rack, What Is AI Reading?, más de 25 millones de enlaces (mayo de 2026)"
+    }
+  },
+  {
+    slug: "black-friday-agentes-de-ia",
+    title: "Black Friday con agentes de IA: qué revisar en tu tienda antes del 27 de noviembre",
+    seoTitle: "Black Friday y agentes de IA: qué revisar en tu tienda",
+    metaDescription:
+      "Al 55% de los españoles le parece bien que la IA le recomiende qué comprar. Seis comprobaciones para que un agente lea bien tus ofertas este Black Friday.",
+    description:
+      "Este Black Friday muchos clientes preguntarán a la IA antes de entrar en tu tienda. Qué dicen los datos de Shopify y Adobe, el calendario de la campaña y seis comprobaciones para que ChatGPT, Gemini y Claude te nombren y un agente lea bien tu precio rebajado, tu stock, tus envíos y tus devoluciones.",
+    datePublished: "2026-10-23",
+    coverImage: "/blog/black-friday-agentes-de-ia/cover.webp",
+    coverIcon: "calendar",
+    // BLOG-BF-AGENTS-1 (log §342). Shopify Holiday Retail 2026 (Sapio
+    // Research, July 2026), Adobe holiday forecast (Sep 2026), Google
+    // merchant listing docs, Ley 7/1996 art. 20. The JSON-LD example lives in
+    // lib/blog/black-friday-offer-jsonld.ts and is tested against
+    // lib/agentic-audit/html-signals.ts. Product claims trace to
+    // lib/agentic-audit/score.ts and lib/web-audit/robots.ts.
+    primaryKeyword: "black friday agentes de ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "30%",
+      label: "de los consumidores españoles confían en que la IA haga una compra por ellos estas fiestas.",
+      source: "Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)"
+    }
   }
 ];
 

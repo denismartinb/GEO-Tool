@@ -18,7 +18,7 @@ import {
 import { weekStartUtc } from "@/lib/seo-tracking/week";
 
 /**
- * SEO-TRACK-1 PR B (log §342): what «Posición en Google» reads of the tracked
+ * SEO-TRACK-1 PR B (log §346): what «Posición en Google» reads of the tracked
  * keywords. Reads go through the user's own client (RLS: the owner reads its
  * rows), filtered by project too. Writes never happen here.
  */

@@ -2,7 +2,7 @@ import type { GapKeyword, KeywordIdea } from "@/lib/seo-data/dataforseo-parse";
 import { normalizeKeyword } from "@/lib/seo-tracking/keyword-text";
 
 /**
- * SEO-TRACK-1 PR B (log §342): «Descubrir palabras», the pure half. Results
+ * SEO-TRACK-1 PR B (log §346): «Descubrir palabras», the pure half. Results
  * are shown, never stored; the customer ticks what to track.
  */
 

@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 /**
- * SEO-TRACK-1 (log §341, §342). Every 10 minutes ("*\/10 * * * *",
+ * SEO-TRACK-1 (log §345, §346). Every 10 minutes ("*\/10 * * * *",
  * `vercel.json`): the weekly Google Top 20 of every tracked keyword, from
  * DataForSEO. Each pass takes what is still pending for the week (new
  * keywords, or all of them once a new week starts on Monday UTC); a pass with

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { setSeoRivalsAction } from "../../seo-actions";
 
-/** «Cambiar rivales» (log §342): up to the plan's cap, own domain refused by the core too. */
+/** «Cambiar rivales» (log §346): up to the plan's cap, own domain refused by the core too. */
 export function SeoRivalsModal(props: {
   projectId: string;
   ownDomain: string;

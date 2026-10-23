@@ -513,7 +513,7 @@ export async function setSamplingEnabled(formData: FormData) {
 }
 
 /**
- * SEO-TRACK-1 PR B (log §342) — per-project switch for keyword tracking in
+ * SEO-TRACK-1 PR B (log §346) — per-project switch for keyword tracking in
  * «Posición en Google» (migration 0044). Same shape as `setSamplingEnabled`.
  * Off hides the tracking block and leaves the project out of the Monday cron
  * (`lib/seo-tracking/serp-pass.ts`); nothing tracked is deleted.

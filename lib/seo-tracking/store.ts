@@ -7,7 +7,7 @@ import type { PendingKeyword, SnapshotRow } from "@/lib/seo-tracking/serp-pass";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 (log §341): the cron's reads and writes, service role, system
+ * SEO-TRACK-1 (log §345): the cron's reads and writes, service role, system
  * code with no user session. Every row read is re-checked against its
  * project's real owner and effective plan here; nothing trusts a column the
  * customer could have influenced.

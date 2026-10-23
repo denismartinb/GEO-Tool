@@ -24,7 +24,7 @@ import { IMMEDIATE_BUDGET_MS, IMMEDIATE_CONCURRENCY, runWeeklySeoTracking } from
 import { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 PR B (log §342): the writes of «Posición en Google». Each one
+ * SEO-TRACK-1 PR B (log §346): the writes of «Posición en Google». Each one
  * validates with zod, proves identity and ownership (`requireUser` +
  * `requireActiveProject`), reads the user's own effective plan, and hands
  * verified ids to the service-role cores in `lib/seo-tracking/manage.ts`
@@ -55,7 +55,7 @@ function done(id: string) {
 
 /**
  * Takes the first Google snapshot of what was just saved, after the response
- * (log §342): a customer who sets up tracking sees their data in minutes, not
+ * (log §346): a customer who sets up tracking sees their data in minutes, not
  * next week. Scoped to this verified project and its owner's plan caps, the
  * same pass the cron runs. It is an accelerator: whatever it does not reach
  * stays pending and the cron picks it up within 10 minutes.
@@ -100,7 +100,7 @@ const kickSchema = z.object({ projectId });
 /**
  * The screen calls this once per visit while saved keywords still have no
  * snapshot: keywords saved before the immediate run existed, or a run that
- * died, get their first photo without waiting for the cron (log §342).
+ * died, get their first photo without waiting for the cron (log §346).
  */
 export async function kickSeoTrackingAction(input: z.input<typeof kickSchema>): Promise<SeoActionResult> {
   const parsed = kickSchema.safeParse(input);

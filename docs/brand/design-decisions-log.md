@@ -26857,7 +26857,88 @@ arreglo enseña puntos.
 migración y no está aprobada. La línea de `/precios` sigue bloqueada por la
 congelación de textos.
 
-## 341. SEO-TRACK-1 fase 1 (PR A): palabras vigiladas, Top 20 semanal y enlaces de rivales (2026-10-18)
+## 341. BLOG-CITES-1: qué fuentes cita la IA, con la figura «CitationMix» (2026-10-22)
+
+**Qué.** Artículo `que-fuentes-cita-la-ia` (clúster `playbooks`): ChatGPT,
+Gemini y Claude citan sobre todo medios ganados (84% de los enlaces, periodismo
+27%, lo pagado 0,3%), con el informe *What Is AI Reading?* de Muck Rack (mayo
+de 2026, más de 25 millones de enlaces) y el *Reputation to Revenue 2026* de
+Leoprd vía PRovoke Media (31.200 respuestas, Australia y Gran Bretaña) como
+fuentes. Cinco pasos para entrar en esas fuentes y cómo se ve en Páginas
+citadas. Es el primer post de la rutina «Post del blog cada dos días» que pidió
+el fundador el 2026-10-17.
+
+**Figura nueva.** `CitationMix` (`components/blog/article/animations.tsx`):
+100 casillas que se encienden por grupos, en el orden de la leyenda, con cada
+cifra escrita al lado. Las casillas redondean; el texto no. Quieta y encendida
+con `prefers-reduced-motion`. Mismas reglas que las figuras de §314.
+
+**Lo que el producto afirma, trazado.** Citas propias, tipo de fuente y
+«Fuentes alcanzables» (webs de terceros citadas en respuestas donde la marca no
+aparece, agrupadas por dominio con motores y preguntas) salen de
+`app/dashboard/projects/[projectId]/citations/` y `lib/citations/`
+(`groupOpportunitiesByDomain`, `SOURCE_TYPE_LABEL`). El artículo no dice que
+GenScore lea el contenido de las páginas citadas, porque no lo hace
+(`.claude/rules/citations.md`). Perplexity se nombra sólo para Pro y Agencia
+(§283).
+
+**Pendiente.** La cifra del 84% es de un solo informe y de enlaces en inglés
+mayoritariamente; si Muck Rack publica una edición nueva, se refresca.
+
+## 342. BLOG-BF-AGENTS-1: Black Friday con agentes de IA (2026-10-23)
+
+**Qué.** Artículo `black-friday-agentes-de-ia` (clúster `playbooks`), segundo
+post de la rutina de cada dos días: seis comprobaciones para que la IA nombre
+a una tienda y un agente lea bien sus ofertas antes del 27 de noviembre, más
+lo que hay que deshacer el 1 de diciembre. Fuentes: Shopify *Holiday Retail
+2026* (Sapio Research, 18.000 consumidores de nueve países, 2.000 en España,
+julio de 2026), la previsión de Navidad de Adobe (septiembre de 2026, más de un
+billón de visitas a webs de comercio de EE. UU.), la documentación de Google
+sobre datos de producto (`StrikethroughPrice`, `priceValidUntil`) y el
+artículo 20 de la Ley de Ordenación del Comercio Minorista (precio anterior =
+el más bajo de los 30 días previos). No dice que en España se pague dentro de
+un chat.
+
+**Bloque que el lector copia, atado con un test.** El JSON-LD de ejemplo vive
+en `lib/blog/black-friday-offer-jsonld.ts` y el MDX lo pinta como expresión,
+igual que el robots.txt de §314. `black-friday-offer-jsonld.test.ts` lo pasa
+por `extractPageSignals` (el lector de la Auditoría agéntica) y comprueba
+precio, stock, código de barras, envío y devoluciones, además de que el precio
+tachado va como `StrikethroughPrice` y el activo sin `priceType`.
+
+**Lo que el producto afirma, trazado.** La Auditoría agéntica revisa precio,
+stock, envío, devoluciones y retos anti-bots (`lib/agentic-audit/score.ts`,
+`html-signals.ts`, `challenge.ts`), sola tras cada escaneo en Pro y Agencia
+(§333). La Auditoría técnica revisa robots.txt (`lib/web-audit/robots.ts`).
+El artículo no dice que GenScore revise el precio tachado ni la fecha de fin
+de oferta, porque no lo hace.
+
+**Pendiente.** El 1 de diciembre el artículo sigue siendo válido para la
+campaña de 2027 si se cambian las fechas; conviene refrescarlo en octubre de
+2027 con la encuesta nueva de Shopify.
+
+## 344. HOTEL-STUDY-1: sectores «hoteles en Madrid» y «hoteles en Barcelona» en `/admin/estudio` (2026-10-23)
+
+**Qué.** Dos sectores nuevos en `SECTORS` (`lib/studies/sector-study.ts`),
+cada uno con doce preguntas neutrales de viajero (escapada, centro, lujo,
+calidad-precio, boutique, negocios, niños, pareja, zona concreta, valoraciones)
+y dieciséis marcas candidatas que mezclan cadenas (Meliá, NH, Barceló…) e
+independientes. Ninguna pregunta nombra una marca, como ya exige
+`scripts/sector-study.test.ts` para todos los sectores.
+
+**Por qué.** TecnoHotel (Peldaño) aceptó publicar en exclusiva qué hoteles
+recomienda la IA en Madrid y Barcelona, si favorece a cadenas o a
+independientes y qué fuentes usa. El estudio lo lanza el fundador desde
+`/admin/estudio`; sin un sector de hoteles la página no podía hacerlo.
+
+**Qué queda.** Las marcas candidatas sólo son las que se buscan de forma
+literal: el informe ya recoge aparte cualquier otra marca nombrada. La
+clasificación cadena/independiente se hace al redactar la pieza, sobre el JSON
+descargado; no hay campo para ello en el código. El título del `.md` sigue la
+plantilla «marcas españolas de…», que no encaja con hoteles internacionales:
+es un borrador interno, la pieza publicada se redacta aparte.
+
+## 345. SEO-TRACK-1 fase 1 (PR A): palabras vigiladas, Top 20 semanal y enlaces de rivales (2026-10-18)
 
 **Qué se decidió.** El fundador aprobó el Task Intake el 2026-10-18
 (`/mnt/project-files/estrategia/seo-google/task-intake-fase1.md`). «Posición
@@ -26868,7 +26949,7 @@ escritorio.
 
 1. **Migración 0044** (`seo_topics`, `seo_keywords`, `seo_serp_snapshots`,
    `seo_competitors`, `seo_tracking_alerts`, `projects.seo_tracking_enabled` y,
-   desde el PR B (§342), `seo_action_states` y `seo_discovery_runs`).
+   desde el PR B (§346), `seo_action_states` y `seo_discovery_runs`).
    Cada `create policy` va precedido de `drop policy if exists`, para que
    repetir la migración a mano no falle. El dueño solo lee.
    Escribe el servidor con service role, filtrando por proyecto y dueño, igual
@@ -26877,7 +26958,7 @@ escritorio.
    Console. Lo único que puede venir de Search Console es la palabra que el
    cliente decide vigilar, como ya hace «Marcar como hecho».
 3. **Cron `/api/cron/seo-serp`**, ~~los lunes cada 10 minutos de 05:00 a 06:50
-   UTC~~ cada 10 minutos todos los días desde §342 (punto 8). Cada pasada toma las palabras sin foto de la semana
+   UTC~~ cada 10 minutos todos los días desde §346 (punto 8). Cada pasada toma las palabras sin foto de la semana
    (`weekStartUtc`, anclado al calendario, §192). Tiene presupuesto de 48 s y
    techo de 2 $ por pasada, nunca un tope de filas. Lo que no le cabe queda
    para la siguiente pasada. El motor es el cron, no una cadena (§261, §262).
@@ -26928,14 +27009,14 @@ escritorio.
 - Sin aprobar: leer el contenido del Top 10, rastrear la web propia y Google
   Business Profile.
 - ~~PR B: una palabra con `tracked=false` hoy cuenta como duplicada al
-  añadirla.~~ Resuelto en §342: vuelve a vigilarse dentro del tope.
+  añadirla.~~ Resuelto en §346: vuelve a vigilarse dentro del tope.
 - **Medir la cola estándar de DataForSEO** (más barata) antes de abrir la
   función a clientes.
 - Recargar DataForSEO. Quedaban 0,78 $.
 
 **Premisa.** No retira ningún camino de recuperación.
 
-## 342. SEO-TRACK-1 fase 1 (PR B): la pantalla de palabras vigiladas, con «Qué hacer» por tema (2026-10-18)
+## 346. SEO-TRACK-1 fase 1 (PR B): la pantalla de palabras vigiladas, con «Qué hacer» por tema (2026-10-18)
 
 **Qué se decidió.** El fundador aprobó el prototipo v6 el 2026-10-18
 (`docs/design-reference/seo-track-1/posicion-google-v6.html`) tras tres
@@ -26958,7 +27039,7 @@ tema para subir**.
 3. **«Qué hacer» por tema, con reglas y sin LLM** (`topic-actions.ts`, pura y
    con tests). Cada paso sale de un dato que ya tenemos: títulos y dominios del
    Top 10, preguntas de Google, mapa local, la URL y el título propios
-   (`own_title`, §341), enlaces de rivales y el CTR de Search Console. Reglas
+   (`own_title`, §345), enlaces de rivales y el CTR de Search Console. Reglas
    en orden: crear página, rozar la página 1, dos páginas tuyas para lo mismo,
    CTR bajo, palabra que lleva el Top 10 y falta en tu título, caída, mapa
    local, preguntas y enlaces. Como mucho 4 por tema. No se lee ninguna página

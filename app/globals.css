@@ -10066,6 +10066,36 @@ select.set-field {
   .art-crawl-bot { left: calc(8% + var(--i) * 4%); }
 }
 
+/* BLOG-CITES-1 (log §341): de cada 100 enlaces que cita la IA, de dónde sale
+   cada uno (`CitationMix`). Las casillas se encienden en el orden de la
+   leyenda; quietas con movimiento reducido, todas encendidas. */
+.art-mix { display: grid; grid-template-columns: minmax(0, 300px) minmax(0, 1fr); gap: 28px; align-items: center; }
+.art-mix-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+.art-mix-cell {
+  aspect-ratio: 1; border-radius: 4px; background: #dfe4ec;
+  animation: art-mix-cell 9s ease-out infinite; animation-delay: calc(var(--i) * .03s);
+}
+.art-mix-cell.is-hl, .art-mix-key.is-hl .art-mix-sw { background: var(--brand-blue); }
+.art-mix-cell.is-earned, .art-mix-key.is-earned .art-mix-sw { background: var(--brand-cyan); }
+.art-mix-cell.is-brand, .art-mix-key.is-brand .art-mix-sw { background: #c3cad6; }
+@keyframes art-mix-cell {
+  0% { opacity: .12; transform: scale(.55); }
+  5%, 88% { opacity: 1; transform: scale(1); }
+  100% { opacity: .12; transform: scale(.55); }
+}
+.art-mix-legend { display: grid; gap: 16px; }
+.art-mix-key { display: grid; grid-template-columns: 14px auto minmax(0, 1fr); gap: 4px 12px; align-items: center; }
+.art-mix-sw { width: 14px; height: 14px; border-radius: 4px; }
+.art-mix-v { font-family: var(--font-display), "Bricolage Grotesque", sans-serif; font-size: 26px; font-weight: 800; color: var(--brand-ink); }
+.lp-article .blog-body .art-mix-l { font-size: 14px; line-height: 1.4; color: var(--brand-ink-2); }
+@media (max-width: 640px) {
+  .art-mix { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .art-mix-grid { max-width: 300px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .art-mix-cell { animation: none; }
+}
+
 /* AGENTIC-POSTS-1 (log §316): diagramas del comercio agéntico
    (`components/blog/article/diagrams.tsx`). Mismas reglas que BLOG-ANIM-1:
    texto real, CSS puro y quietos con `prefers-reduced-motion`. Sin logotipos

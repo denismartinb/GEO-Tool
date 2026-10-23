@@ -36,7 +36,7 @@ import { SeoTracking, type SeoView } from "./_components/seo/seo-tracking";
  */
 
 export const dynamic = "force-dynamic";
-// The server actions of this page run the first Google snapshot in `after()` (log §342).
+// The server actions of this page run the first Google snapshot in `after()` (log §346).
 export const maxDuration = 60;
 
 const VIEWS: SeoView[] = ["resumen", "temas", "descubrir"];

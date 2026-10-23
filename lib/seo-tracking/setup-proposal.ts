@@ -2,7 +2,7 @@ import { normalizeKeyword } from "@/lib/seo-tracking/keyword-text";
 import { pagePath } from "@/lib/seo-tracking/topic-actions";
 
 /**
- * SEO-TRACK-1 PR B (log §342): the first-use proposal. Topics are the pages
+ * SEO-TRACK-1 PR B (log §346): the first-use proposal. Topics are the pages
  * Google already shows for the customer's searches (Search Console, live),
  * one topic per page, so «un tema se trabaja con una sola página» holds from
  * the start. No LLM groups anything: the grouping is Google's own.

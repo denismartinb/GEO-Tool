@@ -7,7 +7,7 @@ import { DISCOVERY_DAILY_LIMIT, discoveryRunsToday, recordDiscoveryRun } from "@
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 PR B (log §342): the two searches of «Descubrir palabras».
+ * SEO-TRACK-1 PR B (log §346): the two searches of «Descubrir palabras».
  * Five a day per account, shared by both. A search counts once it reached
  * DataForSEO (it may have cost money), so a provider failure still uses one;
  * a refusal before calling (no rivals, bad seed, limit reached) does not.

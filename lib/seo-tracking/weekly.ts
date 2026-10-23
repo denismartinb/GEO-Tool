@@ -10,7 +10,7 @@ import { weekStartUtc } from "@/lib/seo-tracking/week";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 (log §341, §342): one pass of keyword tracking. The cron
+ * SEO-TRACK-1 (log §345, §346): one pass of keyword tracking. The cron
  * (`/api/cron/seo-serp`) fires every 10 minutes; each pass takes what is still
  * pending for this week (a keyword with no snapshot since Monday UTC), so a
  * pass that runs out of time or budget just leaves the rest to the next one,

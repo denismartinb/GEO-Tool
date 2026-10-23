@@ -6,7 +6,7 @@ import { categorizeDfsFailure, type SeoErrorCategory } from "@/lib/seo-tracking/
 import type { SerpFetchResult } from "@/lib/seo-tracking/serp-pass";
 
 /**
- * SEO-TRACK-1 (log §341): the two DataForSEO calls the weekly cron makes, on
+ * SEO-TRACK-1 (log §345): the two DataForSEO calls the weekly cron makes, on
  * the same transport and readers as the operator diagnosis (SEO-DIAG-0).
  * Live endpoints, Google Spain. A Top 20 (`depth: 20`) is what SEO-DIAG-0
  * measured at 0.004 $; the own position comes from Search Console anyway, so

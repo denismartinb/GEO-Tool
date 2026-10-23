@@ -108,7 +108,11 @@ const BLOG_SLUGS = [
   "web-preparada-para-el-comercio-agentico",
   "la-ia-descubre-tu-web-vende",
   "protocolos-comercio-agentico-acp-ucp-ap2",
-  "agentes-personales-de-ia-que-compran"
+  "agentes-personales-de-ia-que-compran",
+  // BLOG-CITES-1 (2026-10-22, log §341).
+  "que-fuentes-cita-la-ia",
+  // BLOG-BF-AGENTS-1 (2026-10-23, log §342).
+  "black-friday-agentes-de-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

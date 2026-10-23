@@ -1,5 +1,5 @@
 /**
- * SEO-TRACK-1 (log §341): how much keyword tracking each plan gets. Read with
+ * SEO-TRACK-1 (log §345): how much keyword tracking each plan gets. Read with
  * the EFFECTIVE plan (`resolveSystemPlanId` from system code, the user's own
  * plan read from a request), never `current_plan` raw: an expired trial must
  * stop costing DataForSEO calls the day it expires (log §229).

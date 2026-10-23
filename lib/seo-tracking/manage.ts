@@ -7,13 +7,13 @@ import { isMissingTable } from "@/lib/seo-tracking/store";
 import type { createServiceClient } from "@/lib/supabase/service";
 
 /**
- * SEO-TRACK-1 (log §341): the writes behind «Posición en Google». Service
+ * SEO-TRACK-1 (log §345): the writes behind «Posición en Google». Service
  * role, so the CALLER must have verified identity first
  * (`requireActiveProject(projectId)` + `requireUser().user.id`) and pass the
  * plan from the user's own plan read. These functions re-check that the
  * project belongs to that owner and filter every write by `project_id` AND
  * `owner_user_id` (`.claude/rules/seo-tracking.md`). Called from the server
- * actions of the screen (PR B, log §342).
+ * actions of the screen (PR B, log §346).
  */
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -51,7 +51,7 @@ async function ownedTopic(service: Service, projectId: string, ownerUserId: stri
 /**
  * Tracks keywords under the plan's cap. A keyword the project stopped
  * tracking (`tracked=false`) is tracked again, keeping its history, and counts
- * against the cap like a new one (log §342). One already tracked is reported
+ * against the cap like a new one (log §346). One already tracked is reported
  * as a duplicate; with a topic given it moves to that topic.
  */
 export async function addTrackedKeywordsCore(
@@ -109,7 +109,7 @@ export async function addTrackedKeywordsCore(
 
 export type SimpleResult = { status: "ok" } | { status: "unavailable" } | { status: "not_found" } | { status: "failed" };
 
-/** Stops tracking a keyword. Never deletes: the cascade would take its snapshot history (log §341). */
+/** Stops tracking a keyword. Never deletes: the cascade would take its snapshot history (log §345). */
 export async function untrackKeywordCore(service: Service, input: { projectId: string; ownerUserId: string; keywordId: string }): Promise<SimpleResult> {
   const { data, error } = await service
     .from("seo_keywords")

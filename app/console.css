@@ -2179,7 +2179,7 @@
 .ovag-upsell { justify-items: start; gap: 10px; }
 .ovag-upsell h3 { margin: 0; font-size: 15px; color: var(--ink); }
 .ovag-upsell p { margin: 0; font-size: 13.5px; color: var(--ink-2); }
-/* ── Seguimiento de palabras en Google (SEO-TRACK-1 PR B, log §342) ──
+/* ── Seguimiento de palabras en Google (SEO-TRACK-1 PR B, log §346) ──
    Prototipo aprobado: docs/design-reference/seo-track-1/posicion-google-v6.html */
 .skw { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .skw-tabs, .skw-filters { display: flex; gap: 6px; flex-wrap: wrap; }

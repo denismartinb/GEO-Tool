@@ -1,7 +1,7 @@
 # Seguimiento de palabras (SEO-TRACK-1) — invariantes
 
 Se inyectan solos al tocar `lib/seo-tracking/**` y `app/api/cron/seo-serp/**`.
-Cada regla es trazable a `docs/brand/design-decisions-log.md` §341.
+Cada regla es trazable a `docs/brand/design-decisions-log.md` §345.
 
 - **Lo que se guarda es DataForSEO, nunca Search Console.** Las tablas `seo_*`
   guardan resultados públicos de Google vistos por DataForSEO. De Search
@@ -35,7 +35,7 @@ Cada regla es trazable a `docs/brand/design-decisions-log.md` §341.
 - **Top 20 (`SERP_DEPTH`).** Subir la profundidad multiplica el coste por
   palabra: se mide antes y se apunta en el histórico.
 
-## Pantalla (PR B, log §342)
+## Pantalla (PR B, log §346)
 
 - **«Qué hacer» sale de reglas, nunca de un LLM** (`topic-actions.ts`, pura).
   Cada paso cita su dato: Top 10, preguntas de Google, mapa local, URL y
@@ -52,7 +52,7 @@ Cada regla es trazable a `docs/brand/design-decisions-log.md` §341.
   tope.** Añadirla a otro tema la mueve. Nunca se borra.
 - **Sin migración, apagado o sin plan, la pantalla de Search Console sigue
   exactamente igual.** El bloque nuevo nunca sustituye a lo que ya había.
-- **La primera foto se toma al guardar** (log §342, punto 8): las acciones
+- **La primera foto se toma al guardar** (log §346, punto 8): las acciones
   que añaden palabras o rivales lanzan en `after()` la pasada del cron
   limitada a ese proyecto ya verificado. Es un acelerador, el motor sigue
   siendo el cron (`*/10 * * * *`), que sólo trabaja lo pendiente de la

@@ -12,7 +12,7 @@ import { SeoSetup, type ProposedRival } from "./seo-setup";
 import { SeoTopics } from "./seo-topics";
 
 /**
- * SEO-TRACK-1 PR B (log §342): «Posición en Google» with keyword tracking.
+ * SEO-TRACK-1 PR B (log §346): «Posición en Google» with keyword tracking.
  * Design approved by the founder as prototype v6
  * (docs/design-reference/seo-track-1/posicion-google-v6.html): three tabs,
  * Resumen · Temas · Descubrir palabras; each topic opens in a side panel with
@@ -36,7 +36,7 @@ const KICK_AFTER_TRIES = 5;
 
 /**
  * While saved keywords have no snapshot yet, re-reads the screen every few
- * seconds so the first Google photo appears on its own (log §342). It stops
+ * seconds so the first Google photo appears on its own (log §346). It stops
  * after a few minutes and says it is slow, never that it failed: the cron
  * keeps trying in the background.
  */
