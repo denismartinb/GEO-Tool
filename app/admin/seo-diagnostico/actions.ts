@@ -80,7 +80,8 @@ export async function runSeoDiagStep(step: SeoDiagStep): Promise<SeoDiagResult> 
   }
 
   if (step.kind === "gap") {
-    const competitor = domainOrThrow(step.competitor);
+    const competitor = normalizeStudyDomain(step.competitor);
+    if (!competitor) return { ok: false, cost: 0, message: "Escribe el dominio del competidor (otterly.ai), no su nombre" };
     const reply = await callDataForSeo("dataforseo_labs/google/domain_intersection/live", {
       target1: competitor,
       target2: domain,

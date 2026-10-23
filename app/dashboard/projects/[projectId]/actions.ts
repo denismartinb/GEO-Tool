@@ -513,6 +513,50 @@ export async function setSamplingEnabled(formData: FormData) {
 }
 
 /**
+ * SEO-TRACK-1 PR B (log §346) — per-project switch for keyword tracking in
+ * «Posición en Google» (migration 0044). Same shape as `setSamplingEnabled`.
+ * Off hides the tracking block and leaves the project out of the Monday cron
+ * (`lib/seo-tracking/serp-pass.ts`); nothing tracked is deleted.
+ */
+export async function setSeoTrackingEnabled(formData: FormData) {
+  await requireOperator(debugPath(formData.get("projectId")));
+  const parsed = recurringScansSchema.safeParse({
+    projectId: formData.get("projectId"),
+    enabled: formData.get("enabled")
+  });
+
+  if (!parsed.success) {
+    redirect("/dashboard/projects?error=invalid_project_id");
+  }
+
+  const { projectId } = parsed.data;
+  const enabled = parsed.data.enabled === "true";
+  const { supabase, user } = await requireUser();
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({ seo_tracking_enabled: enabled })
+    .eq("id", projectId)
+    .eq("owner_user_id", user.id)
+    .eq("is_archived", false)
+    .select("id")
+    .maybeSingle();
+
+  if (error || !data) {
+    const missingColumn = error?.code === "42703" || error?.code === "PGRST204";
+    redirect(
+      `/dashboard/projects/${projectId}/debug?error=${
+        missingColumn ? "seo_tracking_migration_pending" : "seo_tracking_update_failed"
+      }`
+    );
+  }
+
+  revalidatePath(`/dashboard/projects/${projectId}/debug`);
+  revalidatePath(`/dashboard/projects/${projectId}/search-console`);
+  redirect(`/dashboard/projects/${projectId}/debug?success=seo_tracking_${enabled ? "enabled" : "disabled"}`);
+}
+
+/**
  * ENGINE-DEBUG-TOGGLE-1 — per-project, per-engine switch (Gemini/Claude/
  * OpenAI) so a test scan can be restricted to a subset of engines. Same
  * validated-form shape as the switches above.

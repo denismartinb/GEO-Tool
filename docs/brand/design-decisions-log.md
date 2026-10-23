@@ -26938,3 +26938,158 @@ descargado; no hay campo para ello en el código. El título del `.md` sigue la
 plantilla «marcas españolas de…», que no encaja con hoteles internacionales:
 es un borrador interno, la pieza publicada se redacta aparte.
 
+## 345. SEO-TRACK-1 fase 1 (PR A): palabras vigiladas, Top 20 semanal y enlaces de rivales (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el Task Intake el 2026-10-18
+(`/mnt/project-files/estrategia/seo-google/task-intake-fase1.md`). «Posición
+en Google» deja de ser solo una lectura de Search Console y pasa a seguir
+palabras. Este PR trae los datos y el cron, sin cambios visibles. La pantalla
+llega en el PR B, después de que el fundador vea un artefacto en móvil y
+escritorio.
+
+1. **Migración 0044** (`seo_topics`, `seo_keywords`, `seo_serp_snapshots`,
+   `seo_competitors`, `seo_tracking_alerts`, `projects.seo_tracking_enabled` y,
+   desde el PR B (§346), `seo_action_states` y `seo_discovery_runs`).
+   Cada `create policy` va precedido de `drop policy if exists`, para que
+   repetir la migración a mano no falle. El dueño solo lee.
+   Escribe el servidor con service role, filtrando por proyecto y dueño, igual
+   que 0042 (§294).
+2. **Se guarda lo que DataForSEO ve de Google**, nunca filas de Search
+   Console. Lo único que puede venir de Search Console es la palabra que el
+   cliente decide vigilar, como ya hace «Marcar como hecho».
+3. **Cron `/api/cron/seo-serp`**, ~~los lunes cada 10 minutos de 05:00 a 06:50
+   UTC~~ cada 10 minutos todos los días desde §346 (punto 8). Cada pasada toma las palabras sin foto de la semana
+   (`weekStartUtc`, anclado al calendario, §192). Tiene presupuesto de 48 s y
+   techo de 2 $ por pasada, nunca un tope de filas. Lo que no le cabe queda
+   para la siguiente pasada. El motor es el cron, no una cadena (§261, §262).
+4. **Top 20, no Top 100.** Cuesta 0,004 $, lo medido en §338. El puesto propio
+   ya sale de Search Console. El Task Intake decía «Fuera del Top 100»; la
+   pantalla dirá «Fuera del Top 20».
+   La foto guarda también el título con el que sale la página propia
+   (`own_title`, hasta 300 caracteres). Viene en la misma llamada, sin coste,
+   y es lo que deja al «Qué hacer» del PR B comparar tu título con los del
+   Top 10 (aprobado por el fundador con el prototipo v6, 2026-10-18).
+5. **Topes por plan** (`lib/seo-tracking/caps.ts`), con el plan efectivo:
+
+   | Plan | Palabras | Rivales |
+   |---|---|---|
+   | Starter | 15 | 1 |
+   | Pro y prueba | 50 | 3 |
+   | Agencia | 150 por dominio | 3 |
+
+   Un plan `free` o desconocido no tiene nada. Si un plan baja, se siguen las
+   palabras más antiguas hasta el nuevo tope.
+6. **Errores con categoría propia** (`auth`, `balance`, `timeout`,
+   `provider`):
+   - Un reintento para `timeout` y `provider`.
+   - `auth` y `balance` paran la pasada y mandan un correo al operador, uno
+     por categoría y semana. No se guardan como error de la palabra: la
+     palabra sigue pendiente, así que una recarga el mismo lunes la recupera.
+     El deduplicado es `seo_tracking_alerts`, que se escribe sólo si el correo
+     salió (regla de `scan.md`: si el canal falla, la siguiente pasada repite).
+   - Un `timeout` causado por nuestro presupuesto recortado no se guarda
+     (§228).
+   - Un `timeout` cuenta como 0,004 $ para el techo, aunque la respuesta diga
+     0: la tarea abortada puede cobrarse.
+   - El interruptor por proyecto sólo cuenta como encendido si falta la
+     columna. Cualquier otro error de lectura deja la pasada sin nada que
+     buscar, porque encendido significa pagar por lo que el operador apagó.
+7. **Enlaces mensuales.** Si sobra tiempo, la pasada refresca el resumen de
+   enlaces de los rivales y del propio dominio (fila `is_own`) que tengan más
+   de 28 días. Sólo los rivales que el plan cubre (los más antiguos hasta el
+   tope) y sólo filas cuyo dueño es el dueño real del proyecto.
+8. **Escrituras del cliente** (`lib/seo-tracking/manage.ts`): añadir palabras
+   con tope, y fijar los rivales normalizados y sin el propio dominio. Se
+   llaman desde las server actions del PR B, que verifican identidad antes.
+
+**Qué queda.**
+- PR B: la pantalla (Resumen, Temas, «Descubrir palabras»), las server
+  actions y el interruptor de `/debug`.
+- Fase 2: pestaña Plan con borradores y comparativa Google frente a IA.
+- Sin aprobar: leer el contenido del Top 10, rastrear la web propia y Google
+  Business Profile.
+- ~~PR B: una palabra con `tracked=false` hoy cuenta como duplicada al
+  añadirla.~~ Resuelto en §346: vuelve a vigilarse dentro del tope.
+- **Medir la cola estándar de DataForSEO** (más barata) antes de abrir la
+  función a clientes.
+- Recargar DataForSEO. Quedaban 0,78 $.
+
+**Premisa.** No retira ningún camino de recuperación.
+
+## 346. SEO-TRACK-1 fase 1 (PR B): la pantalla de palabras vigiladas, con «Qué hacer» por tema (2026-10-18)
+
+**Qué se decidió.** El fundador aprobó el prototipo v6 el 2026-10-18
+(`docs/design-reference/seo-track-1/posicion-google-v6.html`) tras tres
+rondas: leyenda en las barras de cada tema, «Descubrir palabras» como pestaña
+propia con «A partir de una palabra», el detalle del tema en un panel lateral
+con ✕ (sin «atrás» dentro de una pestaña) y, sobre todo, **qué hacer en cada
+tema para subir**.
+
+1. **Tres pestañas sobre «Posición en Google»**: Resumen, Temas y «Descubrir
+   palabras» (`?vista=temas|descubrir`). Lo que ya existía de Search Console
+   se queda debajo del Resumen (`#google-detalle`). Sin la migración 0044, con
+   el interruptor apagado o sin plan, la pantalla sigue exactamente como
+   antes.
+2. **Primer uso.** Rivales propuestos desde los competidores del proyecto que
+   tienen web, y un tema por cada página tuya que ya sale en Google con sus
+   búsquedas de Search Console (`buildSetupProposal`: puesto ≤30, ≥5
+   impresiones, sin búsquedas de marca, como mucho 6 temas × 8 palabras y 20
+   marcadas). Sin Search Console, un tema escrito a mano. Nada se guarda hasta
+   «Guardar y empezar».
+3. **«Qué hacer» por tema, con reglas y sin LLM** (`topic-actions.ts`, pura y
+   con tests). Cada paso sale de un dato que ya tenemos: títulos y dominios del
+   Top 10, preguntas de Google, mapa local, la URL y el título propios
+   (`own_title`, §345), enlaces de rivales y el CTR de Search Console. Reglas
+   en orden: crear página, rozar la página 1, dos páginas tuyas para lo mismo,
+   CTR bajo, palabra que lleva el Top 10 y falta en tu título, caída, mapa
+   local, preguntas y enlaces. Como mucho 4 por tema. No se lee ninguna página
+   de terceros (sería un rastreador, no aprobado).
+4. **«Marcar como hecho»** guarda sólo la clave del paso en
+   `seo_action_states` (tema + clave, sin texto). Si el paso deja de salir, la
+   marca deja de verse. El Resumen enseña «Qué hacer esta semana»: el primer
+   paso abierto de los tres temas más urgentes.
+5. **«Descubrir palabras»**: «A partir de una palabra» (DataForSEO keyword
+   suggestions), «Ya casi» (Search Console, puestos 4–20, gratis) y «Las de tus
+   rivales» (domain intersection). Las dos de pago comparten **5 búsquedas al
+   día por cuenta**, contadas en `seo_discovery_runs` en cuanto la llamada
+   llega a DataForSEO (también si falla, porque puede cobrarse). Los
+   resultados se enseñan y no se guardan.
+6. **Dejar de vigilar es `tracked=false`** y volver a añadirla la recupera
+   dentro del tope, con su historial. Añadir una palabra ya vigilada a otro
+   tema la mueve.
+7. **Interruptor en `/debug`** («Seguimiento de palabras en Google»), con su
+   consulta aparte y «Sin migrar» si falta la columna.
+8. **La primera foto se toma al guardar, y la pantalla no dice qué día se
+   refresca** (fundador, 2026-10-19: «si un cliente se registra ahora, tenga
+   la primera foto de sus datos ahora y no tenga que esperar una semana»; «no
+   es necesario decir cuándo»).
+   - Al guardar palabras o rivales, la server action lanza en `after()` la
+     misma pasada del cron limitada a ese proyecto
+     (`runWeeklySeoTracking(..., { projectId })`, 40 s, 8 a la vez). Es un
+     acelerador: lo que no termine sigue pendiente.
+   - El cron pasa a `*/10 * * * *`. Sólo trabaja lo pendiente de la semana
+     (palabras nuevas, o todas tras el lunes 00:00 UTC), así que una pasada
+     sin nada pendiente no llama a DataForSEO y el coste no cambia. Es lo que
+     recoge en 10 minutos lo que la pasada inmediata no alcanzó.
+   - Mientras haya palabras sin foto, la pantalla se relee cada 10 s durante
+     unos 3 minutos. Si sigue sin foto dice que tarda más de lo normal y que
+     lo seguimos intentando, nunca que ha fallado.
+   - Si a los 50 s de abrir la pantalla siguen palabras sin foto, la pantalla
+     pide una vez por visita la misma pasada (`kickSeoTrackingAction`). Cubre
+     las palabras guardadas antes de este cambio (las del fundador se quedaron
+     esperando en la preview) y una pasada que murió. Espera a que acabe la
+     del guardado para no pagar dos veces la misma búsqueda. Cada pasada
+     inmediata deja una línea `[geo:seo-serp] immediate pass` en los logs.
+   - Ningún texto del cliente menciona el lunes ni la hora; «Comparados con la
+     foto anterior». La foto sigue siendo semanal por dentro (`weekStartUtc`).
+
+**Qué queda.**
+- ~~El fundador tiene que aplicar la versión actual de 0044 (con
+  `seo_action_states` y `seo_discovery_runs`) antes del merge del PR A.~~
+  Aplicada (2026-10-19).
+- Recargar DataForSEO antes de la primera foto.
+- Medir el coste real de una búsqueda de «Descubrir» y apuntarlo aquí.
+- Fase 2: pestaña Plan con borradores y Google frente a IA.
+
+**Premisa.** No retira ningún camino de recuperación: la pantalla de Search
+Console sigue entera, debajo del Resumen.

@@ -1,0 +1,830 @@
+<title>Posicionamiento en Google</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: consola GenScore (dirección F, fondo claro) con menú lateral. «Posición en Google» v5 (SEO-TRACK-1 fase 1): tres pestañas (Resumen, Temas, Descubrir), el detalle de un tema en un panel lateral, la franja de enlaces en el Resumen; sin pestaña Plan (fase 2). Primer uso aparte. Conmutador escritorio/móvil con container queries. */
+:root{
+  color-scheme:light;
+  --font:"Figtree",ui-sans-serif,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --stage:#e8e8ed; --bg:#f5f5f7; --sb:#fbfbfd; --card:#ffffff; --card-2:#f7f7f9; --muted:#f0f0f3; --muted-2:#e6e6eb;
+  --border:rgba(60,60,67,.11); --border-2:rgba(60,60,67,.2);
+  --fg:#1d1d1f; --fg-2:#424245; --fg-3:#6e6e73; --fg-4:#a1a1a6;
+  --primary:#1068e0; --primary-hover:#0b5bc8; --accent-soft:rgba(16,104,224,.09); --accent-soft-2:rgba(16,104,224,.16);
+  --pos:#34c759; --pos-soft:rgba(52,199,89,.13); --pos-ink:#1f7a35;
+  --warn:#ff9500; --warn-soft:rgba(255,149,0,.14); --warn-ink:#a14a00;
+  --neg:#ff3b30; --neg-soft:rgba(255,59,48,.10); --neg-ink:#c9000f;
+  --vio:#7a4fd6; --vio-soft:rgba(122,79,214,.11);
+  --t1:#34c759; --t2:#4b91ff; --t3:#ffb020; --t4:#c7c7cc;
+  --sh-card:0 .5px 1px rgba(0,0,0,.035),0 1px 6px rgba(0,0,0,.04);
+  --sh-md:0 2px 6px rgba(0,0,0,.05),0 10px 28px rgba(0,0,0,.08);
+  --sh-lg:0 24px 70px rgba(0,0,0,.18),0 0 0 .5px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box}
+body{background:var(--stage);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,[tabindex]:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:6px}
+.topbar{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));max-width:1320px;margin:0 auto}
+.topbar .ttl{font-weight:700;font-size:15px}
+.topbar .ttl span{font-weight:500;color:var(--fg-3);margin-left:8px;font-size:13px}
+.seg{display:inline-flex;background:var(--muted-2);border-radius:9px;padding:2px;gap:2px}
+.seg button{font-size:13px;padding:6px 12px;border-radius:7px;color:var(--fg-3);font-weight:500}
+.seg button[aria-pressed="true"]{background:var(--card);color:var(--fg);font-weight:600;box-shadow:var(--sh-card)}
+.stagewrap{padding-bottom:40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.device{max-width:1320px;margin:0 auto;border-radius:14px;overflow:hidden;box-shadow:var(--sh-lg);background:var(--bg);transition:max-width .25s ease}
+.device.mobile{max-width:390px;border-radius:36px;border:9px solid #1d1d1f}
+.app{container-type:inline-size;container-name:app;position:relative;min-height:760px}
+.shell{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:760px}
+
+/* sidebar */
+.sb{background:var(--sb);border-right:1px solid var(--border);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px;padding:2px 10px 14px}
+.logo i{width:22px;height:22px;border-radius:7px;background:linear-gradient(135deg,#2563eb,#09c5d6);display:block}
+.grp{font-size:11px;font-weight:600;color:var(--fg-4);padding:14px 10px 4px}
+.nav{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;text-align:left;padding:7px 10px;border-radius:8px;font-size:13.5px;color:var(--fg-2)}
+.nav:hover{background:var(--muted)}
+.nav.on{background:var(--accent-soft);color:var(--primary);font-weight:600}
+.nav.off{color:var(--fg-4);cursor:default}
+.nav.off:hover{background:none}
+.badge{font-size:11px;font-weight:700;background:var(--primary);color:#fff;border-radius:99px;padding:0 7px;line-height:18px}
+.nav.on .badge{background:var(--primary)}
+
+/* main */
+.main{min-width:0;display:flex;flex-direction:column}
+.mhead{display:none}
+.mtabs{display:none}
+.view{padding:26px 30px 40px;display:flex;flex-direction:column;gap:18px;min-width:0}
+.ph{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.ph h1{margin:0;font-size:26px;font-weight:800;letter-spacing:-.02em;text-wrap:balance}
+.ph .sub{color:var(--fg-3);font-size:13px;margin-top:2px}
+.conn{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--pos-ink);background:var(--pos-soft);border-radius:99px;padding:3px 10px;font-weight:600}
+.conn::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--pos)}
+.card{background:var(--card);border-radius:12px;box-shadow:var(--sh-card);padding:18px 20px;min-width:0}
+.card h2{margin:0;font-size:16px;font-weight:700;letter-spacing:-.01em}
+.card-h{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.link{color:var(--primary);font-weight:600;font-size:13px}
+.link:hover{text-decoration:underline}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-weight:600;font-size:13px;border-radius:9px;padding:8px 14px;background:var(--card);box-shadow:inset 0 0 0 1px var(--border-2);color:var(--fg);white-space:nowrap}
+.btn:hover{background:var(--card-2)}
+.btn.pri{background:var(--primary);color:#fff;box-shadow:none}
+.btn.pri:hover{background:var(--primary-hover)}
+.btn.ghost{box-shadow:none;color:var(--fg-3)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 9px;white-space:nowrap}
+.c-blue{background:var(--accent-soft);color:var(--primary)}
+.c-pos{background:var(--pos-soft);color:var(--pos-ink)}
+.c-warn{background:var(--warn-soft);color:var(--warn-ink)}
+.c-neg{background:var(--neg-soft);color:var(--neg-ink)}
+.c-vio{background:var(--vio-soft);color:var(--vio)}
+.c-grey{background:var(--muted);color:var(--fg-3)}
+.num{font-variant-numeric:tabular-nums}
+.mono{font-family:var(--mono);font-size:12.5px}
+.muted{color:var(--fg-3)}
+.faint{color:var(--fg-4)}
+.up{color:var(--pos-ink);font-weight:600}.down{color:var(--neg-ink);font-weight:600}
+
+/* resumen */
+.hero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;align-items:stretch}
+.verdict{display:flex;flex-direction:column;gap:12px}
+.verdict .eyebrow{font-size:12px;font-weight:600;color:var(--fg-3)}
+.verdict h2{font-size:24px;font-weight:800;letter-spacing:-.02em;line-height:1.15;text-wrap:balance}
+.verdict p{margin:0;color:var(--fg-2);font-size:14.5px;max-width:60ch}
+.brakes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:4px}
+.brake{background:var(--card-2);border-radius:10px;padding:12px;text-align:left;display:flex;flex-direction:column;gap:6px;box-shadow:inset 0 0 0 1px var(--border)}
+.brake:hover{box-shadow:inset 0 0 0 1px var(--border-2)}
+.brake .bt{font-size:12.5px;font-weight:600;color:var(--fg-2)}
+.brake .bv{font-size:13px;color:var(--fg-3)}
+.lvl{display:flex;gap:3px}
+.lvl i{flex:1;height:5px;border-radius:99px;background:var(--muted-2)}
+.lvl.l3 i{background:var(--neg)}
+.lvl.l2 i:nth-child(-n+2){background:var(--warn)}
+.lvl.l1 i:nth-child(1){background:var(--pos)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:var(--card);border-radius:12px;box-shadow:var(--sh-card);padding:14px 16px;min-width:0}
+.kpi .l{font-size:12px;color:var(--fg-3);font-weight:500}
+.kpi .v{font-size:26px;font-weight:800;letter-spacing:-.02em;line-height:1.15;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--fg-3)}
+.two{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:18px;align-items:start}
+.tierbar{display:flex;height:12px;border-radius:99px;overflow:hidden;gap:2px;margin:6px 0 10px}
+.tierbar i{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--fg-2)}
+.legend b{font-variant-numeric:tabular-nums}
+.dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px}
+
+/* tareas */
+.tasks{display:flex;flex-direction:column;gap:10px}
+.task{background:var(--card);border-radius:12px;box-shadow:var(--sh-card);overflow:hidden}
+.task-row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:start;padding:14px 18px;width:100%;text-align:left}
+.task-row:hover{background:var(--card-2)}
+.tn{font-family:var(--mono);font-size:12px;color:var(--fg-4);padding-top:3px}
+.tt{font-weight:700;font-size:14.5px}
+.tm{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12.5px;color:var(--fg-3);margin-top:5px;align-items:center}
+.tg{text-align:right;font-size:12px;color:var(--fg-3);white-space:nowrap}
+.tg b{display:block;color:var(--pos-ink);font-size:14px;font-variant-numeric:tabular-nums}
+.task-body{padding:0 18px 16px 58px;display:flex;flex-direction:column;gap:12px}
+.why{font-size:13.5px;color:var(--fg-2);background:var(--card-2);border-radius:9px;padding:10px 12px}
+.why b{color:var(--fg)}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.steps li{display:grid;grid-template-columns:20px minmax(0,1fr);gap:8px;font-size:13.5px;color:var(--fg-2)}
+.steps li::before{content:"";width:14px;height:14px;border-radius:4px;box-shadow:inset 0 0 0 1.5px var(--fg-4);margin-top:3px}
+.acts{display:flex;flex-wrap:wrap;gap:8px}
+.done-note{font-size:13px;color:var(--pos-ink);background:var(--pos-soft);border-radius:9px;padding:9px 12px}
+.result{display:flex;gap:16px;flex-wrap:wrap;font-size:13px}
+.result b{font-variant-numeric:tabular-nums}
+.empty{color:var(--fg-3);font-size:13.5px;padding:18px;text-align:center}
+
+/* palabras clave */
+.toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{font-size:12.5px;border-radius:99px;padding:4px 12px;box-shadow:inset 0 0 0 1px var(--border-2);color:var(--fg-2)}
+.filters button[aria-pressed="true"]{background:var(--fg);color:#fff;box-shadow:none}
+.kt{width:100%;border-collapse:collapse;font-size:13.5px}
+.kt th{font-size:11.5px;font-weight:600;color:var(--fg-4);text-align:left;padding:8px 10px;border-bottom:1px solid var(--border)}
+.kt td{padding:11px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.kt tbody tr{cursor:pointer}
+.kt tbody tr:hover td{background:var(--card-2)}
+.kt tr:last-child td{border-bottom:0}
+.kt .r{text-align:right}
+.pos{display:inline-flex;align-items:center;gap:6px}
+.pos b{font-variant-numeric:tabular-nums;font-size:15px}
+.next{color:var(--primary);font-weight:600;font-size:13px;white-space:nowrap}
+.kcards{display:none}
+.kc{display:flex;flex-direction:column;gap:6px;padding:12px 0;border-bottom:1px solid var(--border);text-align:left;width:100%}
+.kc:last-child{border-bottom:0}
+.kc .r1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.kc .r2{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:12.5px;color:var(--fg-3);align-items:center}
+
+/* detalle */
+.back{align-self:flex-start;color:var(--fg-3);font-size:13px;font-weight:500}
+.back:hover{color:var(--fg)}
+.kp4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.gap-row{display:grid;grid-template-columns:minmax(0,1fr) 110px 70px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.gap-row:last-of-type{border-bottom:0}
+.meter{height:6px;border-radius:99px;background:var(--muted);overflow:hidden}
+.meter i{display:block;height:100%;background:var(--fg-3);border-radius:99px}
+.yn{font-size:12.5px;font-weight:600;text-align:right}
+.yn.no{color:var(--neg-ink)}.yn.si{color:var(--pos-ink)}
+.sr{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--border);font-size:13px}
+.sr:last-child{border-bottom:0}
+.sr .p{font-family:var(--mono);font-size:12px;color:var(--fg-4);text-align:right}
+.sr .d{font-weight:600;min-width:0}
+.sr .d small{display:block;font-weight:400;color:var(--fg-3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sr.you{background:var(--accent-soft);border-radius:8px;border-bottom-color:transparent}
+.sr.you .d{color:var(--primary)}
+.spark{width:100%;height:90px;display:block}
+
+/* enlaces */
+.bars .row{display:grid;grid-template-columns:minmax(0,150px) minmax(0,1fr) 44px;gap:12px;align-items:center;padding:7px 0;font-size:13.5px}
+.bars .row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.opp{border-bottom:1px solid var(--border)}
+.opp:last-child{border-bottom:0}
+.opp-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:12px 2px;width:100%;text-align:left}
+.opp-row:hover{background:var(--card-2)}
+.opp-body{padding:0 2px 14px;display:flex;flex-direction:column;gap:10px}
+
+/* salud técnica */
+.score{display:flex;align-items:center;gap:18px}
+.ring{width:96px;height:96px;flex:none}
+.issue{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.issue:last-child{border-bottom:0}
+.sev{width:8px;height:8px;border-radius:50%}
+
+/* modal y cajón */
+.overlay{position:absolute;inset:0;background:rgba(29,29,31,.32);display:flex;align-items:center;justify-content:center;padding:24px;z-index:40}
+.modal{background:var(--card);border-radius:16px;box-shadow:var(--sh-lg);width:min(820px,100%);max-height:calc(100% - 20px);display:flex;flex-direction:column;overflow:hidden}
+.mh{display:flex;justify-content:space-between;align-items:center;padding:18px 20px 0}
+.mh h2{margin:0;font-size:18px;font-weight:800}
+.mb{padding:14px 20px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.mf{border-top:1px solid var(--border);padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--fg-3);font-weight:500;min-width:0}
+.inp{font:inherit;font-size:14px;color:var(--fg);border-radius:9px;border:0;box-shadow:inset 0 0 0 1px var(--border-2);padding:9px 11px;background:var(--card);width:100%}
+textarea.inp{min-height:110px;resize:vertical}
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 180px auto;gap:10px;align-items:end}
+.res{width:100%;border-collapse:collapse;font-size:13px}
+.res th{font-size:11.5px;font-weight:600;color:var(--fg-4);text-align:left;padding:7px 8px;border-bottom:1px solid var(--border)}
+.res td{padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.res tr:last-child td{border-bottom:0}
+.res .r{text-align:right}
+.cb{width:16px;height:16px;accent-color:var(--primary);vertical-align:middle;cursor:pointer}
+.diff{display:inline-flex;gap:2px;vertical-align:middle}
+.diff i{width:6px;height:11px;border-radius:2px;background:var(--muted-2)}
+.diff.d1 i:nth-child(1),.diff.d2 i:nth-child(-n+2){background:var(--pos)}
+.diff.d3 i:nth-child(-n+3){background:var(--warn)}
+.diff.d4 i{background:var(--neg)}
+.loading{display:flex;align-items:center;gap:10px;color:var(--fg-3);padding:22px 4px;font-size:13.5px}
+.spin{width:16px;height:16px;border-radius:50%;border:2px solid var(--muted-2);border-top-color:var(--primary);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.device{transition:none}}
+.drawer{position:absolute;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--card);box-shadow:var(--sh-lg);z-index:41;display:flex;flex-direction:column}
+.draft{font-size:14px;color:var(--fg-2);display:flex;flex-direction:column;gap:10px}
+.draft h3{margin:6px 0 0;font-size:16px;color:var(--fg)}
+.draft p{margin:0}
+.example{font-size:12px;color:var(--warn-ink);background:var(--warn-soft);border-radius:8px;padding:6px 10px;align-self:flex-start;font-weight:600}
+.toast{position:absolute;left:50%;bottom:22px;transform:translateX(-50%);background:var(--fg);color:#fff;font-size:13px;font-weight:500;border-radius:10px;padding:10px 16px;z-index:50;box-shadow:var(--sh-md);max-width:calc(100% - 32px)}
+
+/* móvil (por ancho del contenedor, sirve igual para el conmutador y para un teléfono real) */
+@container app (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .sb{display:none}
+  .mhead{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px;background:var(--sb);border-bottom:1px solid var(--border)}
+  .mhead b{font-size:15px}
+  .mtabs{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;background:var(--sb);border-bottom:1px solid var(--border);scrollbar-width:none}
+  .mtabs::-webkit-scrollbar{display:none}
+  .mtabs button{font-size:13px;border-radius:99px;padding:6px 12px;white-space:nowrap;color:var(--fg-2);box-shadow:inset 0 0 0 1px var(--border-2)}
+  .mtabs button.on{background:var(--fg);color:#fff;box-shadow:none}
+  .view{padding:16px 14px 32px;gap:14px}
+  .ph h1{font-size:22px}
+  .hero,.two{grid-template-columns:1fr}
+  .verdict h2{font-size:20px}
+  .brakes{grid-template-columns:1fr}
+  .brake{flex-direction:row;align-items:center;justify-content:space-between}
+  .brake .lvl{width:70px}
+  .kp4{grid-template-columns:1fr 1fr}
+  .kt{display:none}
+  .kcards{display:block}
+  .task-row{grid-template-columns:minmax(0,1fr) auto;padding:13px 14px}
+  .tn{display:none}
+  .task-body{padding:0 14px 14px}
+  .gap-row{grid-template-columns:minmax(0,1fr) 62px}
+  .gap-row .meter{display:none}
+  .frow{grid-template-columns:1fr}
+  .overlay{padding:0;align-items:flex-end}
+  .modal{border-radius:18px 18px 0 0;max-height:92%}
+  .res .hide-m{display:none}
+  .bars .row{grid-template-columns:minmax(0,110px) minmax(0,1fr) 36px}
+  .opp-row{grid-template-columns:minmax(0,1fr) auto}
+  .opp-row .hide-m{display:none}
+  .card{padding:15px 16px}
+}
+
+/* v2: objetivo, temas, descubrir */
+.brakeline{display:flex;gap:12px;align-items:center;font-size:13.5px;color:var(--fg-2);flex-wrap:wrap}
+.brakeline .chip{flex:none}
+.goal{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:18px;align-items:center}
+.goal .big{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1;font-variant-numeric:tabular-nums}
+.goal .big span{font-size:18px;color:var(--fg-3);font-weight:700}
+.prog{height:10px;border-radius:99px;background:var(--muted);overflow:hidden;margin:12px 0 8px}
+.prog i{display:block;height:100%;background:var(--primary);border-radius:99px}
+.pace{font-size:13px;font-weight:600}
+.vis .row{display:grid;grid-template-columns:minmax(0,1fr) 64px 64px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.vis .row:last-child{border-bottom:0}
+.vis .row.h{font-size:11.5px;color:var(--fg-4);font-weight:600;padding-top:0}
+.vis .row .r{text-align:right;font-variant-numeric:tabular-nums}
+.vis .row.me{color:var(--primary);font-weight:700}
+.moves{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mv{font-size:13.5px;display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+.mv:last-child{border-bottom:0}
+.mv span:last-child{white-space:nowrap}
+.topics{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.topic{background:var(--card);border-radius:12px;box-shadow:var(--sh-card);padding:16px;text-align:left;display:flex;flex-direction:column;gap:10px;width:100%}
+.topic:hover{box-shadow:var(--sh-md)}
+.topic .tp{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.topic h3{margin:0;font-size:16px;font-weight:700}
+.topic .stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.topic .stats div{font-size:11.5px;color:var(--fg-3)}
+.topic .stats b{display:block;font-size:17px;color:var(--fg);font-variant-numeric:tabular-nums}
+.minibar{display:flex;gap:2px;height:6px}
+.minibar i{flex:1;border-radius:2px;background:var(--muted-2)}
+.minibar i.on{background:var(--primary)}
+.srcchips{display:flex;gap:6px;flex-wrap:wrap}
+.grp-h{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0 6px;border-bottom:1px solid var(--border)}
+.grp-h h3{margin:0;font-size:15px}
+.dk{display:grid;grid-template-columns:24px minmax(0,1fr) auto 70px 64px 92px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.dk:last-child{border-bottom:0}
+.dk .r{text-align:right;font-variant-numeric:tabular-nums}
+.dk small{display:block;color:var(--fg-3);font-size:12px}
+.sticky-add{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--border);margin:12px -20px -18px;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-radius:0 0 12px 12px;flex-wrap:wrap}
+.optgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.opt{border-radius:10px;padding:12px;text-align:left;box-shadow:inset 0 0 0 1px var(--border-2);display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--fg-3)}
+.opt b{font-size:14px;color:var(--fg)}
+.opt[aria-pressed="true"]{box-shadow:inset 0 0 0 2px var(--primary);background:var(--accent-soft)}
+.suggest{background:var(--card-2);border-radius:10px;padding:12px;font-size:13.5px;color:var(--fg-2)}
+@container app (max-width:760px){
+  .goal{grid-template-columns:1fr}
+  .moves{grid-template-columns:1fr}
+  .dk{grid-template-columns:24px minmax(0,1fr) 64px}
+  .dk .hide-m{display:none}
+  .optgrid{grid-template-columns:1fr}
+  .sticky-add{margin:12px -16px -15px;padding:12px 16px}
+}
+
+/* v5 */
+.drawer.wide{width:min(760px,100%)}
+.dh{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 12px;border-bottom:1px solid var(--border)}
+.dh h2{margin:0;font-size:20px;font-weight:800}
+.db{padding:16px 20px 24px;overflow:auto;display:flex;flex-direction:column;gap:16px;background:var(--bg)}
+.acts{display:flex;flex-direction:column;gap:10px}
+.act{border:1px solid var(--border);border-radius:10px;padding:12px 14px;background:var(--card)}
+.act.done{opacity:.6}
+.act .ah{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.act .ah .n{font-size:12px;font-weight:700;color:var(--fg-3)}
+.act h3{margin:0 0 6px;font-size:14.5px;font-weight:700;line-height:1.35}
+.act .why{margin:0 0 8px;font-size:13px;color:var(--fg-2)}
+.act ol{margin:0 0 8px;padding-left:18px;font-size:13px}
+.act ol li{margin:3px 0}
+.act .af{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--fg-3)}
+.next{white-space:normal;overflow-wrap:anywhere;display:block;font-size:12.5px;color:var(--fg-2);border-top:1px solid var(--border);padding-top:8px;line-height:1.35}
+.next b{color:var(--fg)}
+.todo{display:flex;flex-direction:column}
+.todo button{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 10px;align-items:start;text-align:left;padding:10px 0;border-top:1px solid var(--border);width:100%;background:none}
+.todo button:first-child{border-top:0}
+.todo small{display:block;color:var(--fg-3);font-size:12px;margin-top:2px}
+.dist{display:flex;height:8px;border-radius:99px;overflow:hidden;background:var(--muted);gap:2px}
+.dist i{display:block;height:100%}
+.dist .g1{background:var(--pos)}.dist .g2{background:var(--warn)}.dist .g3{background:var(--t4)}
+.distl{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--fg-3)}
+.distl span{display:inline-flex;align-items:center;gap:5px}
+.distl i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.mini .s{font-size:11.5px;color:var(--fg-3);margin-top:2px}
+.dh{position:sticky;top:0;background:var(--card);z-index:2}
+.seed{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-top:12px}
+/* v4 */
+.linkbars{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.lb{display:grid;grid-template-columns:150px minmax(0,1fr) 48px;gap:10px;align-items:center;font-size:13px}
+.lb .bar{height:10px;border-radius:99px;background:var(--muted)}
+.lb .bar i{display:block;height:100%;border-radius:99px;background:var(--fg-4)}
+.lb.me .bar i{background:var(--neg)}
+.lb.me{font-weight:700}
+.lb .n{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.brake-card h2{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.kp3{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.mini{background:var(--card-2);border-radius:10px;padding:10px 12px}
+.mini .v{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.mini .l{font-size:11.5px;color:var(--fg-3);font-weight:500}
+.mv2{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px;align-items:center}
+.mv2:last-child{border-bottom:0}
+.mv2 small{display:block;color:var(--fg-3);font-size:12px}
+.posc{font-variant-numeric:tabular-nums;white-space:nowrap}
+.posc b{font-size:15px}
+.down{color:var(--neg-ink);font-weight:600;font-size:12.5px}
+.up{font-weight:600;font-size:12.5px}
+.out{color:var(--fg-3);font-size:12.5px;font-weight:600;white-space:nowrap}
+.kt tbody tr.sel td{background:var(--accent-soft)}
+.kt td small{display:block;color:var(--fg-3);font-size:12px}
+.sr .rv{font-size:11px}
+.notice{background:var(--accent-soft);border-radius:12px;padding:14px 16px;font-size:13.5px;color:var(--fg-2);display:flex;gap:10px;align-items:flex-start}
+.notice b{color:var(--fg)}
+.setup-step{display:flex;gap:12px;align-items:baseline;margin-bottom:6px}
+.setup-step .n{width:24px;height:24px;flex:none;border-radius:50%;background:var(--fg);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center}
+.rv-row{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.rv-row:last-child{border-bottom:0}
+.rv-row small{display:block;color:var(--fg-3);font-size:12px}
+.sel-inp{font:inherit;font-size:12.5px;border:0;box-shadow:inset 0 0 0 1px var(--border-2);border-radius:8px;padding:5px 8px;background:var(--card);color:var(--fg);max-width:170px}
+.tname{font:inherit;font-weight:700;font-size:15px;border:0;border-bottom:1px dashed var(--border-2);background:none;color:var(--fg);padding:2px 0;min-width:0;width:100%}
+.dk2{display:grid;grid-template-columns:24px minmax(0,1fr) 84px 180px;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13.5px}
+.dk2 small{display:block;color:var(--fg-3);font-size:12px}
+.dk2 .r{text-align:right;font-variant-numeric:tabular-nums}
+.quota{font-size:12.5px;color:var(--fg-3)}
+.paa li{margin:4px 0}
+@container app (min-width:761px){.kt td small.show-m-only{display:none}}
+@container app (max-width:760px){
+  #dtabs{display:none}
+  .lb{grid-template-columns:110px minmax(0,1fr) 40px}
+  .kp3{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .dk2{grid-template-columns:24px minmax(0,1fr) 64px}
+  .dk2 .sel-wrap{grid-column:2 / -1}
+  .hide-m{display:none}
+  .kt th,.kt td{padding:10px 6px}
+}
+</style>
+<div class="topbar">
+  <div class="ttl">Posición en Google <span>Prototipo v6 · datos de ejemplo de una clínica dental</span></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="seg" role="group" aria-label="Momento">
+      <button id="bt-use" aria-pressed="true">Uso normal</button>
+      <button id="bt-first" aria-pressed="false">Primer uso</button>
+    </div>
+    <div class="seg" role="group" aria-label="Vista">
+      <button id="bt-desk" aria-pressed="true">Escritorio</button>
+      <button id="bt-mob" aria-pressed="false">Móvil</button>
+    </div>
+  </div>
+</div>
+<div class="stagewrap">
+  <div class="device" id="device">
+    <div class="app" id="app">
+      <div class="shell">
+        <aside class="sb" aria-label="Menú">
+          <div class="logo"><i></i>GenScore</div>
+          <div class="grp">Posicionamiento en la IA</div>
+          <button class="nav off" tabindex="-1">Visión general</button>
+          <button class="nav off" tabindex="-1">Prompts</button>
+          <button class="nav off" tabindex="-1">Competidores</button>
+          <div class="grp">Posicionamiento global</div>
+          <button class="nav on" tabindex="-1">Posición en Google</button>
+          <button class="nav off" tabindex="-1">Auditoría técnica</button>
+          <div class="grp">Actuar</div>
+          <button class="nav off" tabindex="-1">Recomendaciones</button>
+        </aside>
+        <div class="main">
+          <div class="mhead"><span aria-hidden="true">☰</span><b>Posición en Google</b><span class="faint" aria-hidden="true">●</span></div>
+          <nav class="mtabs" id="mtabs" aria-label="Secciones"></nav>
+          <main class="view" id="view"></main>
+        </div>
+      </div>
+      <div id="layer"></div>
+    </div>
+  </div>
+</div>
+<script>
+const SECTIONS=[{id:"resumen",label:"Resumen"},{id:"temas",label:"Temas"},{id:"descubrir",label:"Descubrir palabras"}];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>n==null?"—":n.toLocaleString("es-ES");
+const CAP=50;
+const OWN="clinicadentalsol.es";
+
+let rivals=[{d:"vitaldent.com",rd:210},{d:"sanitas.es",rd:180},{d:"clinicabaviera.es",rd:150}];
+const ownRd=23;
+
+/* k: palabra · pos/prev: puesto esta semana y la anterior (null = fuera del Top 20) · url: tu página que sale */
+let topics=[
+  {id:"implantes",name:"Implantes dentales",page:"/implantes",hist:[19,18,18,17,17,16,16,15],local:true,
+   top:[["vitaldent.com","/implantes-dentales","Implantes dentales: precio y financiación"],["sanitas.es","/dental/implantes","Implantes dentales | Sanitas Dental"],["doctoralia.es","/tratamientos/implantes/madrid","Implantes en Madrid: 214 especialistas"],["clinicabaviera.es","/implantes","Implantes dentales en Madrid"],["dentalcompany.es","/implantes-dentales","Implantes con garantía de por vida"],["topdoctors.es","/diccionario-medico/implantes","Implantes dentales: qué son y tipos"],["cuidateplus.marca.com","/salud-bucodental/implantes","¿Cuánto dura un implante dental?"],["ocu.org","/salud/implantes-dentales","Implantes: lo que debes saber"],["dentix.es","/implantes","Implantes dentales"],["adeslas.es","/dental/implantes","Implantes Adeslas Dental"]],
+   paa:["¿Cuánto dura un implante dental?","¿Duele ponerse un implante?","¿Qué pasa si no hay hueso para un implante?"],
+   kws:[{k:"implantes dentales madrid",pos:14,prev:17,url:"/implantes"},{k:"implantes dentales precio madrid",pos:16,prev:18,url:"/implantes"},{k:"implante dental en un día",pos:8,prev:9,url:"/implantes"},{k:"cuánto dura un implante dental",pos:null,prev:null,url:null},{k:"implantes dentales sin hueso",pos:19,prev:null,url:"/blog/implantes-sin-hueso"},{k:"implante dental precio",pos:19,prev:17,url:"/implantes"},{k:"clínica implantes madrid",pos:12,prev:15,url:"/"}]},
+  {id:"ortodoncia",name:"Ortodoncia invisible",page:"/ortodoncia",hist:[11,11,10,10,10,9,9,9],local:false,
+   top:[["invisalign.es","/precio","¿Cuánto cuesta Invisalign?"],["vitaldent.com","/ortodoncia-invisible","Ortodoncia invisible desde 39 €/mes"],[OWN,"/ortodoncia","Ortodoncia invisible · Clínica Dental Sol"],["sanitas.es","/dental/ortodoncia-invisible","Ortodoncia invisible Sanitas"],["doctoralia.es","/tratamientos/ortodoncia-invisible","Ortodoncia invisible: especialistas"],["clinicabaviera.es","/ortodoncia","Ortodoncia invisible en Madrid"],["ocu.org","/salud/ortodoncia","Ortodoncia invisible: precios"],["dentix.es","/ortodoncia","Ortodoncia invisible"],["topdoctors.es","/ortodoncia","Ortodoncia: tipos y precios"],["smile2impress.com","/es/precio","Alineadores invisibles: precio"]],
+   paa:["¿Cuánto cuesta Invisalign en España?","¿Cuánto dura la ortodoncia invisible?"],
+   kws:[{k:"ortodoncia invisible precio",pos:3,prev:3,url:"/ortodoncia"},{k:"ortodoncia invisible madrid",pos:12,prev:13,url:"/ortodoncia"},{k:"invisalign precio",pos:11,prev:12,url:"/ortodoncia"},{k:"ortodoncia invisible adultos",pos:14,prev:15,url:"/ortodoncia"},{k:"ortodoncia invisible financiación",pos:4,prev:4,url:"/ortodoncia"}]},
+  {id:"blanqueamiento",name:"Blanqueamiento",page:"/blanqueamiento",hist:[10,10,11,11,11,12,12,12],local:false,
+   top:[["clinicabaviera.es","/blanqueamiento-dental","Blanqueamiento dental: precio"],["cuidateplus.marca.com","/blanqueamiento","¿Daña el esmalte el blanqueamiento?"],["sanitas.es","/dental/blanqueamiento","Blanqueamiento dental Sanitas"],["vitaldent.com","/blanqueamiento","Blanqueamiento dental profesional"],["ocu.org","/blanqueamiento","Blanqueadores: análisis"],["doctoralia.es","/tratamientos/blanqueamiento","Blanqueamiento dental: especialistas"],[OWN,"/blog/blanqueamiento-en-casa","Blanqueamiento en casa: lo que funciona"],["dentix.es","/blanqueamiento","Blanqueamiento dental"],["topdoctors.es","/blanqueamiento","Blanqueamiento: tipos"],["adeslas.es","/dental/blanqueamiento","Blanqueamiento Adeslas"]],
+   paa:["¿El blanqueamiento daña el esmalte?"],
+   kws:[{k:"blanqueamiento dental",pos:9,prev:7,url:"/blog/blanqueamiento-en-casa"},{k:"blanqueamiento dental precio",pos:12,prev:11,url:"/blanqueamiento"},{k:"blanqueamiento en casa",pos:15,prev:14,url:"/blog/blanqueamiento-en-casa"},{k:"blanqueamiento láser",pos:13,prev:13,url:"/blanqueamiento"}]},
+  {id:"urgencias",name:"Urgencias dentales",page:"Sin página",hist:null,local:true,
+   top:[["doctoralia.es","/dentista/urgencias/madrid","Dentistas de urgencia en Madrid"],["dentalcompany.es","/urgencias","Urgencias dentales 24 h"],["topdoctors.es","/urgencias-dentales","Urgencias dentales en Madrid"],["vitaldent.com","/urgencias-dentales","Urgencias dentales"],["sanitas.es","/dental/urgencias","Urgencias dentales Sanitas"],["dentix.es","/urgencias","Urgencias dentales"],["clinicadentalmadrid24h.es","/","Dentista 24 horas Madrid"],["cuidateplus.marca.com","/dolor-de-muelas","Dolor de muelas: qué hacer"],["adeslas.es","/dental/urgencias","Urgencias dentales Adeslas"],["paginasamarillas.es","/dentistas-urgencias/madrid","Dentistas de urgencia"]],
+   paa:["¿Qué dentista abre los domingos en Madrid?"],
+   kws:[{k:"dentista urgencias madrid",pos:null,prev:null,url:null},{k:"dentista 24 horas madrid",pos:null,prev:null,url:null},{k:"urgencias dentales domingo",pos:null,prev:null,url:null}]},
+  {id:"carillas",name:"Carillas",page:"/carillas",hist:[7,6,6,6,5,5,5,5],local:false,
+   top:[[OWN,"/carillas","Carillas dentales: precio por pieza"],["vitaldent.com","/carillas","Carillas dentales"],["sanitas.es","/dental/carillas","Carillas Sanitas"],["clinicabaviera.es","/carillas","Carillas de porcelana"],["doctoralia.es","/tratamientos/carillas","Carillas: especialistas"],["ocu.org","/carillas","Carillas: precios"],["dentix.es","/carillas","Carillas dentales"],["topdoctors.es","/carillas","Carillas: tipos"],["cuidateplus.marca.com","/carillas","¿Duran las carillas?"],["adeslas.es","/dental/carillas","Carillas Adeslas"]],
+   paa:[],
+   kws:[{k:"carillas dentales precio",pos:2,prev:3,url:"/carillas"},{k:"carillas de porcelana",pos:3,prev:4,url:"/carillas"},{k:"carillas composite",pos:4,prev:4,url:"/carillas"},{k:"carillas dentales madrid",pos:11,prev:12,url:"/carillas"}]}
+];
+
+/* Qué hacer por tema. Cada acción sale de una regla sobre datos que ya tenemos:
+   el Top 20 del lunes (títulos, dominios, preguntas, mapa), tus enlaces, tu auditoría y tu Search Console. */
+const TYPES={cont:["Contenido","c-blue"],enl:["Enlaces","c-vio"],loc:["Local","c-pos"],tec:["Tu web","c-grey"],tit:["Título","c-warn"]};
+const ACTS={
+  implantes:[
+    {t:"cont",h:"Lleva «implantes dentales madrid» del puesto 14 a la página 1",
+     why:"Es la palabra del tema con más búsquedas y le faltan 4 puestos. 7 de los 10 primeros resultados llevan «Madrid» en el título; el de /implantes no.",
+     steps:["En /implantes, pon «Implantes dentales en Madrid» en el título y en el primer encabezado.","Responde en la página las 3 preguntas que enseña Google (las tienes abajo), cada una con su encabezado.","Añade precio orientativo y financiación: 6 de los 10 primeros lo dicen en el título."],src:"Top 10 de Google del lunes y tu auditoría"},
+    {t:"tec",h:"Dos páginas tuyas se reparten el tema",
+     why:"«clínica implantes madrid» sale con tu portada y «implantes dentales sin hueso» con un artículo del blog. Google no ve una página clara para el tema.",
+     steps:["Desde la portada y desde el artículo, enlaza a /implantes con el texto «implantes dentales en Madrid».","Deja el artículo para la duda concreta (sin hueso) y la explicación general en /implantes."],src:"Tus páginas en el Top 20"},
+    {t:"loc",h:"Completa tu ficha de Google",
+     why:"En «implantes dentales madrid» el mapa con 3 clínicas sale antes que cualquier web. Ahí entras por tu ficha, no por tu página.",
+     steps:["En tu Perfil de Empresa de Google, añade el servicio «Implantes dentales» con una descripción.","Sube fotos reales de la clínica y pide reseña a los pacientes de implantes."],src:"Top 20 de Google del lunes"},
+    {t:"enl",h:"Consigue enlaces hacia /implantes",
+     why:"Los rivales que te ganan aquí tienen de media 8 veces más webs que les enlazan. Sin enlaces, mejorar la página sólo sube hasta cierto punto.",
+     steps:["Pide aparecer en directorios de salud que ya salen en el Top 10 (Doctoralia, Top Doctors).","Ofrece a un medio local un dato o consejo sobre implantes con enlace a /implantes."],src:"Enlaces según DataForSEO"}],
+  ortodoncia:[
+    {t:"tit",h:"Mejora el título de /ortodoncia",
+     why:"Sales 3º en «ortodoncia invisible precio», pero la página recibe menos clics de lo habitual en tu web para ese puesto.",
+     steps:["Pon en el título lo que la gente busca: el precio desde y la financiación.","Reescribe la descripción con una razón para elegirte (primera consulta gratis, si es así)."],src:"Tu Search Console, últimos 28 días"},
+    {t:"cont",h:"«invisalign precio» está a un puesto de la página 1",
+     why:"Sales 11º. El primer resultado es de Invisalign y la pregunta «¿Cuánto cuesta Invisalign en España?» sale en esa búsqueda.",
+     steps:["Nombra Invisalign en /ortodoncia si lo ofreces, con su precio orientativo.","Responde esa pregunta en la página con su propio encabezado."],src:"Top 10 de Google del lunes"}],
+  blanqueamiento:[
+    {t:"tec",h:"Google elige tu blog en lugar de /blanqueamiento",
+     why:"En «blanqueamiento dental» sale el artículo de blanqueamiento en casa, y ha bajado del 7 al 9. La página del servicio se queda en el 12.",
+     steps:["Decide qué página quieres que salga: lo normal es /blanqueamiento.","Desde el artículo, enlaza a /blanqueamiento con el texto «blanqueamiento dental en clínica»."],src:"Tus páginas en el Top 20"},
+    {t:"cont",h:"Responde si el blanqueamiento daña el esmalte",
+     why:"Es la pregunta que Google enseña en este tema y la responden dos resultados del Top 10.",
+     steps:["Añade a /blanqueamiento una sección con esa pregunta y una respuesta clara."],src:"Top 10 de Google del lunes"}],
+  urgencias:[
+    {t:"cont",h:"Crea una página de urgencias",
+     why:"Ninguna página tuya sale en el Top 20 de estas 3 búsquedas. Los 10 primeros son directorios o clínicas con una página propia de urgencias.",
+     steps:["Haz /urgencias sólo si de verdad atiendes urgencias: horario real, teléfono visible y zona.","Ponle el título «Dentista de urgencias en Madrid» y responde qué hacer con un dolor fuerte.","Enlázala desde la portada y desde el menú."],src:"Top 20 de Google del lunes"},
+    {t:"loc",h:"Pon tu horario de urgencias en tu ficha de Google",
+     why:"El mapa sale primero en las 3 búsquedas. Quien busca una urgencia llama desde ahí.",
+     steps:["En tu Perfil de Empresa, marca los horarios especiales y el teléfono."],src:"Top 20 de Google del lunes"},
+    {t:"enl",h:"Aparece en los directorios que ocupan el Top 10",
+     why:"Doctoralia, Top Doctors y Páginas Amarillas ocupan 3 de los 10 primeros puestos.",
+     steps:["Crea o completa tu ficha en esos tres, con la especialidad de urgencias y enlace a tu web."],src:"Top 10 de Google del lunes"}],
+  carillas:[
+    {t:"tit",h:"Añade «Madrid» al título de /carillas",
+     why:"Vas bien: 3 de 4 palabras en la página 1. La que falta, «carillas dentales madrid», está en el 11.",
+     steps:["Cambia el título a «Carillas dentales en Madrid: precio por pieza»."],src:"Top 10 de Google del lunes"}]
+};
+const actsOf=id=>(ACTS[id]||[]);
+const nextOf=id=>actsOf(id).find(a=>!a.done);
+
+const SEED=[
+  {k:"endodoncia precio",vol:1600,pos:null},{k:"endodoncia madrid",vol:880,pos:18},{k:"endodoncia duele",vol:720,pos:null},
+  {k:"endodoncia precio madrid",vol:590,pos:null},{k:"cuánto dura una endodoncia",vol:480,pos:null},{k:"endodoncia y corona precio",vol:320,pos:null}
+];
+const NEAR=[ /* Search Console, puestos 4 a 20, sin vigilar */
+  {k:"implantes dentales financiación",pos:9,imp:1840,topic:"implantes"},
+  {k:"precio ortodoncia invisible madrid",pos:13,imp:1210,topic:"ortodoncia"},
+  {k:"carillas dentales opiniones",pos:7,imp:640,topic:"carillas"},
+  {k:"blanqueamiento dental cuánto dura",pos:16,imp:520,topic:"blanqueamiento"},
+  {k:"clínica dental chamberí",pos:5,imp:480,topic:"new"},
+  {k:"dentista chamberí",pos:11,imp:410,topic:"new"}
+];
+const GAP=[ /* lo que tienen tus rivales y tú no */
+  {k:"empaste dental precio",vol:2400,who:"vitaldent.com · puesto 2",diff:2,topic:"new"},
+  {k:"endodoncia precio madrid",vol:1300,who:"sanitas.es · puesto 4",diff:2,topic:"new"},
+  {k:"periodoncia tratamiento",vol:880,who:"clinicabaviera.es · puesto 6",diff:3,topic:"new"},
+  {k:"implantes dentales opiniones",vol:720,who:"vitaldent.com · puesto 3",diff:3,topic:"implantes"},
+  {k:"ortodoncia invisible niños",vol:590,who:"sanitas.es · puesto 5",diff:2,topic:"ortodoncia"},
+  {k:"limpieza dental precio",vol:1900,who:"vitaldent.com · puesto 1",diff:1,topic:"new"}
+];
+
+/* Primer uso: propuesta, todo editable antes de guardar */
+const PROPOSAL={
+  rivals:[{d:"vitaldent.com",on:true,why:"Sale en el Top 10 de 14 de tus búsquedas"},{d:"sanitas.es",on:true,why:"Sale en el Top 10 de 11"},{d:"clinicabaviera.es",on:true,why:"Sale en el Top 10 de 8"},{d:"dentalcompany.es",on:false,why:"Sale en el Top 10 de 5"}],
+  topics:[
+    {name:"Implantes dentales",kws:[["implantes dentales madrid","Search Console · puesto 14",true],["implantes dentales precio madrid","Search Console · puesto 16",true],["implante dental en un día","Search Console · puesto 8",true],["implantes dentales opiniones","La tiene vitaldent.com",false]]},
+    {name:"Ortodoncia invisible",kws:[["ortodoncia invisible precio","Search Console · puesto 3",true],["ortodoncia invisible madrid","Search Console · puesto 12",true],["invisalign precio","Search Console · puesto 11",true]]},
+    {name:"Urgencias dentales",kws:[["dentista urgencias madrid","La tienen vitaldent.com y sanitas.es",true],["dentista 24 horas madrid","La tiene sanitas.es",true]]},
+    {name:"Carillas",kws:[["carillas dentales precio","Search Console · puesto 2",true],["carillas de porcelana","Search Console · puesto 3",true]]}
+  ]
+};
+
+let state={mode:"use",view:"resumen",topic:null,kw:0,disc:"seed",seedQ:"endodoncia",seedRan:false,gapRan:false,gapLeft:4,loading:false,firstWeek:false,sel:{}};
+
+const allKws=()=>topics.flatMap(t=>t.kws);
+const inP1=k=>k.pos!=null&&k.pos<=10;
+const p1Count=t=>t.kws.filter(inP1).length;
+const avgPos=t=>{const v=t.kws.filter(k=>k.pos!=null).map(k=>k.pos);return v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length):null};
+function posCell(k){
+  if(state.firstWeek)return `<span class="out">Pendiente</span>`;
+  if(k.pos==null)return `<span class="out">Fuera del Top 20</span>`;
+  let d="";
+  if(k.prev==null)d=` <span class="faint" style="font-size:12px">nueva</span>`;
+  else if(k.pos<k.prev)d=` <span class="up">↑${k.prev-k.pos}</span>`;
+  else if(k.pos>k.prev)d=` <span class="down">↓${k.pos-k.prev}</span>`;
+  else d=` <span class="faint">=</span>`;
+  return `<span class="posc"><b>${k.pos}</b>${d}</span>`;
+}
+
+function nav(v){state.view=v;state.topic=null;render();$("#view").scrollIntoView({block:"nearest"})}
+function openTopic(id,kw){state.view="temas";state.topic=id;state.kw=kw||0;render();$("#app").scrollIntoView({block:"start"})}
+function isOn(id){return state.view===id}
+function renderNav(){
+  const tabs=state.mode==="first"?[]:SECTIONS;
+  $("#mtabs").innerHTML=tabs.map(s=>`<button class="${isOn(s.id)?"on":""}" data-nav="${s.id}">${s.label}</button>`).join("");
+  $("#mtabs").style.display=tabs.length?"":"none";
+}
+function subnav(){
+  if(state.mode==="first")return"";
+  return `<div class="filters" role="tablist" aria-label="Secciones" style="margin-bottom:16px" id="dtabs">${SECTIONS.map(s=>`<button role="tab" aria-selected="${isOn(s.id)}" aria-pressed="${isOn(s.id)}" data-nav="${s.id}">${s.label}</button>`).join("")}</div>`;
+}
+function head(t,sub,right=""){return `<div class="ph"><div><h1>${t}</h1><div class="sub">${sub}</div></div>${right}</div>`}
+function line(pts){
+  const max=Math.max(...pts),min=Math.min(...pts),span=Math.max(1,max-min);
+  const x=i=>i*(300/(pts.length-1)),y=v=>10+((v-min)/span)*66;
+  const d=pts.map((v,i)=>`${i?"L":"M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  return `<svg class="spark" viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="Puesto medio de las últimas 8 semanas: de ${pts[0]} a ${pts[pts.length-1]}"><line x1="0" y1="84" x2="300" y2="84" stroke="var(--border)"/><path d="${d}" fill="none" stroke="var(--primary)" stroke-width="2"/><circle cx="${x(pts.length-1)}" cy="${y(pts[pts.length-1])}" r="3.5" fill="var(--primary)"/></svg>
+  <div class="legend" style="justify-content:space-between"><span>Hace 8 semanas: ${pts[0]}</span><span>Esta semana: <b>${pts[pts.length-1]}</b></span></div>`;
+}
+
+function linkStrip(){
+  const avg=Math.round(rivals.reduce((a,r)=>a+r.rd,0)/rivals.length);
+  const max=Math.max(ownRd,...rivals.map(r=>r.rd));
+  const rows=[{d:"Tú",rd:ownRd,me:true},...rivals];
+  return `<div class="card brake-card">
+    <div class="card-h"><h2><span class="chip c-neg">Lo que más te frena</span> Los enlaces</h2><button class="link" data-rivals>Cambiar rivales</button></div>
+    <p style="margin:0;font-size:13.5px;color:var(--fg-2)">Te enlazan <b>${ownRd}</b> webs. A tus rivales, <b>${avg}</b> de media. Con tan pocos enlaces, mejorar tus páginas sólo te sube hasta cierto punto.</p>
+    <div class="linkbars">${rows.map(r=>`<div class="lb ${r.me?"me":""}"><span>${esc(r.d)}</span><span class="bar" aria-hidden="true"><i style="width:${Math.max(3,r.rd/max*100)}%"></i></span><span class="n">${r.rd}</span></div>`).join("")}</div>
+    <p class="muted" style="font-size:12px;margin:10px 0 0">Webs distintas que enlazan a cada dominio, según DataForSEO. Se actualiza una vez al mes.</p>
+  </div>`;
+}
+
+function todoCard(){
+  if(state.firstWeek)return "";
+  const items=topics.map(t=>({t,a:nextOf(t.id)})).filter(x=>x.a).slice(0,3);
+  if(!items.length)return "";
+  return `<div class="card"><div class="card-h"><h2>Qué hacer esta semana</h2><button class="link" data-nav="temas">Ver todos los temas</button></div>
+    <div class="todo">${items.map(({t,a})=>`<button data-topic="${t.id}"><span class="chip ${TYPES[a.t][1]}">${TYPES[a.t][0]}</span><span><b style="font-size:13.5px">${esc(a.h)}</b><small>${esc(t.name)} · paso 1 de ${actsOf(t.id).filter(x=>!x.done).length}</small></span></button>`).join("")}</div></div>`;
+}
+function vResumen(){
+  const ks=allKws();const p1=ks.filter(inP1).length;
+  const ups=ks.filter(k=>k.pos!=null&&k.prev!=null&&k.pos<k.prev).length;
+  const downs=ks.filter(k=>k.pos!=null&&k.prev!=null&&k.pos>k.prev).length;
+  const outs=ks.filter(k=>k.pos==null).length;
+  const moves=ks.filter(k=>k.pos!=null&&k.prev!=null&&k.pos!==k.prev).sort((a,b)=>Math.abs(b.prev-b.pos)-Math.abs(a.prev-a.pos)).slice(0,5);
+  const tOf=k=>topics.find(t=>t.kws.includes(k));
+  const words=state.firstWeek?`<div class="card"><div class="card-h"><h2>Tus palabras</h2></div>
+      <div class="notice"><span aria-hidden="true">🗓</span><span><b>Tu primera foto de Google llega el lunes 20 de octubre.</b> Revisamos el Top 20 de tus ${ks.length} palabras cada lunes por la mañana. Mientras tanto, abajo tienes lo que ya dice tu Search Console.</span></div></div>`
+  :`<div class="card"><div class="card-h"><h2>Tus palabras esta semana</h2><button class="link" data-nav="temas">Ver los temas</button></div>
+      <div class="kp3">
+        <div class="mini"><div class="v">${p1} <span style="font-size:13px;color:var(--fg-3)">de ${ks.length}</span></div><div class="l">en la página 1</div></div>
+        <div class="mini"><div class="v" style="color:var(--pos-ink)">${ups}</div><div class="l">han subido</div></div>
+        <div class="mini"><div class="v" style="color:var(--neg-ink)">${downs}</div><div class="l">han bajado</div></div>
+        <div class="mini"><div class="v">${outs}</div><div class="l">fuera del Top 20</div></div>
+      </div>
+      <div class="muted" style="font-size:12px;font-weight:600;margin-bottom:2px">Lo que más se ha movido</div>
+      ${moves.map(k=>`<button class="mv2" style="width:100%;text-align:left" data-topic="${tOf(k).id}" data-kwname="${esc(k.k)}"><span>${esc(k.k)}<small>${esc(tOf(k).name)} · ${esc(k.url||"")}</small></span>${posCell(k)}</button>`).join("")}
+      <p class="muted" style="font-size:12px;margin:10px 0 0">Puestos del lunes 13 de octubre en Google España, ordenador. Comparados con el lunes anterior.</p>
+    </div>`;
+  return head("Resumen",`${OWN} · ${state.firstWeek?"empezaste hoy":"actualizado el lunes 13 de octubre"}`,`<span class="conn">Search Console conectado</span>`)+subnav()+`
+  ${todoCard()}
+  ${linkStrip()}
+  <div class="two">
+    ${words}
+    <div class="card"><div class="card-h"><h2>Google · últimos 28 días</h2><span class="muted" style="font-size:12.5px">Search Console</span></div>
+      <div class="kp3" style="grid-template-columns:repeat(2,minmax(0,1fr))">
+        <div class="mini"><div class="v">412</div><div class="l">clics</div></div>
+        <div class="mini"><div class="v">18.300</div><div class="l">impresiones</div></div>
+        <div class="mini"><div class="v">14,2</div><div class="l">puesto medio</div></div>
+        <div class="mini"><div class="v">23</div><div class="l">búsquedas en la página 2</div></div>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin:0">El detalle por búsqueda y por página sigue como hoy, debajo de este resumen.</p>
+      <button class="btn sm" style="margin-top:12px" data-toast="En el producto, aquí sigue la pantalla de Search Console que ya tienes.">Ver búsquedas y páginas</button>
+    </div>
+  </div>`;
+}
+
+function distHTML(t){
+  const a=t.kws.filter(inP1).length,b=t.kws.filter(k=>k.pos!=null&&k.pos>10).length,c=t.kws.filter(k=>k.pos==null).length,n=t.kws.length;
+  const seg=(v,cl)=>v?`<i class="${cl}" style="width:${v/n*100}%"></i>`:"";
+  return `<span class="dist" role="img" aria-label="${a} en la página 1, ${b} en la página 2, ${c} fuera del Top 20">${seg(a,"g1")}${seg(b,"g2")}${seg(c,"g3")}</span>
+  <span class="distl"><span><i style="background:var(--pos)"></i>${a} en la página 1</span>${b?`<span><i style="background:var(--warn)"></i>${b} en la página 2</span>`:""}${c?`<span><i style="background:var(--t4)"></i>${c} fuera del Top 20</span>`:""}</span>`;
+}
+function vTemas(){
+  const n=allKws().length;
+  return head("Temas",`${topics.length} temas · ${n} de ${CAP} palabras vigiladas`)+subnav()+`
+  <div class="topics">${topics.map(t=>{const p=p1Count(t),a=avgPos(t);return `<button class="topic" data-topic="${t.id}">
+    <span class="tp"><h3>${t.name}</h3></span>
+    <span class="muted mono" style="font-size:12px">${esc(t.page)}</span>
+    <span class="stats"><div><b>${state.firstWeek?"—":a==null?"—":a}</b>puesto medio</div><div><b>${t.kws.length}</b>palabras</div></span>
+    ${state.firstWeek?`<span class="distl">Primera foto el lunes</span>`:distHTML(t)}
+    ${!state.firstWeek&&nextOf(t.id)?`<span class="next">Lo siguiente: <b>${esc(nextOf(t.id).h)}</b></span>`:""}
+  </button>`}).join("")}</div>
+  <p class="muted" style="font-size:12.5px;margin:0">Un tema es un grupo de palabras que se trabaja con una sola página. Pulsa uno para ver qué hacer, sus palabras y quién ocupa el Top 10. Para añadir palabras, ve a «Descubrir palabras».</p>`;
+}
+
+function actsHTML(t){
+  if(state.firstWeek)return `<div class="card"><div class="card-h"><h2>Qué hacer</h2></div><p class="muted" style="margin:0;font-size:13px">Te lo decimos el lunes, cuando tengamos la primera foto del Top 20.</p></div>`;
+  const list=actsOf(t.id);const open=list.filter(a=>!a.done),done=list.filter(a=>a.done);
+  const card=(a,i)=>{const ty=TYPES[a.t];const idx=list.indexOf(a);return `<div class="act ${a.done?"done":""}">
+    <div class="ah"><span class="n">${a.done?"Hecho":i+1}</span><span class="chip ${ty[1]}">${ty[0]}</span></div>
+    <h3>${esc(a.h)}</h3>
+    ${a.done?`<p class="why">Lo verás en las próximas fotos del lunes, en el puesto de las palabras del tema.</p>`:`<p class="why">${esc(a.why)}</p><ol>${a.steps.map(x=>`<li>${esc(x)}</li>`).join("")}</ol>`}
+    <div class="af"><span>Dato: ${esc(a.src)}</span><button class="btn sm" data-act="${t.id}:${idx}">${a.done?"Deshacer":"Marcar como hecho"}</button></div>
+  </div>`};
+  return `<div class="card"><div class="card-h"><h2>Qué hacer</h2><span class="muted" style="font-size:12.5px">${open.length?`${open.length} ${open.length===1?"paso":"pasos"}, en este orden`:"todo hecho"}</span></div>
+    <div class="acts">${open.map(card).join("")}${done.map(card).join("")}</div>
+    <p class="muted" style="font-size:12px;margin:10px 0 0">Los cambios en Google tardan semanas. Ningún paso garantiza un puesto; lo medimos cada lunes.</p></div>`;
+}
+function vTopic(){
+  const t=topics.find(x=>x.id===state.topic);if(!t)return vTemas();
+  const k=t.kws[state.kw]||t.kws[0];const a=avgPos(t);
+  const best=t.kws.filter(x=>x.pos!=null).reduce((m,x)=>Math.min(m,x.pos),99);
+  const rivalSet=new Set(rivals.map(r=>r.d));
+  // Top 10 de la palabra elegida: ejemplo que reordena el del tema y pone tu web en su puesto
+  let top=t.top.filter(r=>r[0]!==OWN);
+  if(k.pos!=null&&k.pos<=10)top.splice(k.pos-1,0,[OWN,k.url,"Tu página"]);
+  top=top.slice(0,10);
+  return `<div class="overlay" data-close-topic></div><aside class="drawer wide" role="dialog" aria-modal="true" aria-labelledby="tt">
+  <div class="dh"><div><h2 id="tt">${esc(t.name)}</h2><div class="muted" style="font-size:13px">Página: ${esc(t.page)} · Top 10 revisado el lunes</div></div><button class="btn ghost sm" data-close-topic aria-label="Cerrar">✕</button></div>
+  <div class="db">
+  <div class="kp3">
+    <div class="mini"><div class="l">Puesto medio</div><div class="v">${state.firstWeek?"—":a==null?"—":a}</div><div class="s">${a==null&&!state.firstWeek?"ninguna en el Top 20":"de las palabras del tema"}</div></div>
+    <div class="mini"><div class="l">En la página 1</div><div class="v">${state.firstWeek?"—":p1Count(t)} <span style="font-size:15px;color:var(--fg-3)">de ${t.kws.length}</span></div><div class="s">palabras</div></div>
+    <div class="mini"><div class="l">Mejor puesto</div><div class="v">${state.firstWeek||best===99?"—":best}</div><div class="s">esta semana</div></div>
+    <div class="mini"><div class="l">Mapa de Google</div><div class="v" style="font-size:18px">${t.local?"Sí sale":"No sale"}</div><div class="s">${t.local?"3 clínicas antes que las webs":"sólo resultados web"}</div></div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:16px">
+    ${actsHTML(t)}
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="card"><div class="card-h"><h2>Palabras del tema</h2><span class="muted" style="font-size:12.5px">pulsa una para ver su Top 10</span></div>
+        <table class="kt" style="display:table"><thead><tr><th>Palabra</th><th class="hide-m">Tu página</th><th class="r">Puesto</th></tr></thead><tbody>
+        ${t.kws.map((x,i)=>`<tr class="${i===state.kw?"sel":""}" data-kw="${i}" tabindex="0" aria-selected="${i===state.kw}"><td>${esc(x.k)}<small class="show-m-only">${esc(x.url||"Sin página en el Top 20")}</small></td><td class="hide-m mono" style="font-size:12px">${esc(x.url||"—")}</td><td class="r">${posCell(x)}</td></tr>`).join("")}</tbody></table>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div class="card"><div class="card-h"><h2>Top 10 de «${esc(k.k)}»</h2><button class="link" data-untrack="${state.kw}">Dejar de vigilar</button></div>
+        ${state.firstWeek?`<p class="muted" style="margin:0;font-size:13px">Lo verás el lunes, con la primera foto.</p>`:
+        top.map((r,i)=>{const me=r[0]===OWN,rv=rivalSet.has(r[0]);return `<div class="sr ${me?"you":""}"><span class="p">${i+1}</span><span class="d">${esc(r[0])}<small>${esc(r[2])} · ${esc(r[1])}</small></span><span>${me?`<span class="chip c-blue rv">Tú</span>`:rv?`<span class="chip c-vio rv">Rival</span>`:""}</span></div>`}).join("")+
+        (k.pos==null?`<div class="sr you"><span class="p">—</span><span class="d">${OWN}<small>Fuera del Top 20</small></span><span></span></div>`:k.pos>10?`<div class="sr you"><span class="p">${k.pos}</span><span class="d">${OWN}<small>Tu página · ${esc(k.url)}</small></span><span><span class="chip c-blue rv">Tú</span></span></div>`:"")}
+      </div>
+      <div class="card"><div class="card-h"><h2>Puesto medio, 8 semanas</h2><span class="muted" style="font-size:12.5px">más arriba es mejor</span></div>${state.firstWeek?`<p class="muted" style="margin:0;font-size:13px">La línea empieza con la primera foto del lunes.</p>`:t.hist?line(t.hist):`<p class="muted" style="margin:0;font-size:13px">Ninguna palabra del tema sale todavía en el Top 20, así que no hay puesto medio que dibujar.</p>`}</div>
+      ${t.paa.length&&!state.firstWeek?`<div class="card"><div class="card-h"><h2>Preguntas que Google enseña</h2></div><ul class="paa" style="margin:0;padding-left:18px;font-size:13.5px">${t.paa.map(q=>`<li>${esc(q)}</li>`).join("")}</ul><p class="muted" style="font-size:12px;margin:8px 0 0">Salen en el bloque «Otras preguntas de los usuarios» de esta búsqueda.</p></div>`:""}
+    </div>
+  </div></div></aside>`;
+}
+
+const topicOpts=sel=>topics.map(t=>`<option value="${t.id}" ${sel===t.id?"selected":""}>${esc(t.name)}</option>`).join("")+`<option value="new" ${sel==="new"?"selected":""}>Tema nuevo…</option>`;
+function vDescubrir(){
+  const n=allKws().length;const picked=Object.values(state.sel).filter(Boolean).length;const over=n+picked>CAP;
+  const f=state.disc;
+  const near=NEAR.filter(d=>!d.added),gap=GAP.filter(d=>!d.added);
+  let body;
+  if(f==="seed"){
+    const res=SEED.filter(d=>!d.added);
+    body=`<p class="muted" style="font-size:13px;margin:12px 0 0">Escribe una palabra o frase y te damos búsquedas reales que la contienen, con cuánta gente las busca en España.</p>
+    <div class="seed"><label class="field">Palabra o frase<input class="inp" id="seed-in" value="${esc(state.seedQ)}" placeholder="por ejemplo, endodoncia"></label><button class="btn pri" data-seed ${state.gapLeft?"":"disabled"}>Buscar ideas</button></div>
+    ${state.loading?`<div class="loading"><span class="spin"></span>Buscando ideas para «${esc(state.seedQ)}»…</div>`:""}
+    ${state.seedRan&&!state.loading?res.map(d=>{const id="s:"+d.k;return `<div class="dk2"><input type="checkbox" class="cb" data-pick="${esc(id)}" ${state.sel[id]?"checked":""} aria-label="Vigilar ${esc(d.k)}">
+      <span><b>${esc(d.k)}</b><small>${d.pos?`Sales en el puesto ${d.pos}`:"No sales en el Top 20"}</small></span>
+      <span class="r num">${fmt(d.vol)}<small>búsq./mes</small></span>
+      <span class="sel-wrap"><select class="sel-inp" aria-label="Tema de ${esc(d.k)}">${topicOpts("new")}</select></span></div>`}).join(""):""}
+    <p class="quota" style="margin:10px 0 0">Te quedan ${state.gapLeft} de 5 búsquedas hoy, compartidas con «Las de tus rivales». Búsquedas al mes: DataForSEO, con datos de Google Ads.</p>`;
+  }else if(f==="near"){
+    body=`<p class="muted" style="font-size:13px;margin:12px 0 4px">Búsquedas de tu Search Console en las que ya sales entre los puestos 4 y 20 y que todavía no vigilas. No gastan búsquedas.</p>
+    ${near.map(d=>{const id="n:"+d.k;return `<div class="dk2"><input type="checkbox" class="cb" data-pick="${esc(id)}" ${state.sel[id]?"checked":""} aria-label="Vigilar ${esc(d.k)}">
+      <span><b>${esc(d.k)}</b><small>Puesto ${d.pos} en Search Console</small></span>
+      <span class="r num">${fmt(d.imp)}<small>impresiones</small></span>
+      <span class="sel-wrap"><select class="sel-inp" aria-label="Tema de ${esc(d.k)}">${topicOpts(d.topic)}</select></span></div>`}).join("")||`<p class="muted">Ya vigilas todas.</p>`}`;
+  }else{
+    body=`<p class="muted" style="font-size:13px;margin:12px 0 8px">Palabras que traen visitas a ${rivals.map(r=>r.d).join(", ")} y en las que tú no sales en el Top 20.</p>
+    ${!state.gapRan&&!state.loading?`<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><button class="btn pri" data-gap ${state.gapLeft?"":"disabled"}>Buscar en tus rivales</button><span class="quota">Te quedan ${state.gapLeft} de 5 búsquedas hoy, compartidas con «A partir de una palabra».</span></div>`:""}
+    ${state.loading?`<div class="loading"><span class="spin"></span>Buscando palabras de tus rivales…</div>`:""}
+    ${state.gapRan&&!state.loading?gap.map(d=>{const id="g:"+d.k;return `<div class="dk2"><input type="checkbox" class="cb" data-pick="${esc(id)}" ${state.sel[id]?"checked":""} aria-label="Vigilar ${esc(d.k)}">
+      <span><b>${esc(d.k)}</b><small>La tiene ${esc(d.who)}</small></span>
+      <span class="r num">${fmt(d.vol)}<small>búsq./mes</small></span>
+      <span class="sel-wrap"><select class="sel-inp" aria-label="Tema de ${esc(d.k)}">${topicOpts(d.topic)}</select></span></div>`}).join("")+`<p class="quota" style="margin:10px 0 0">Te quedan ${state.gapLeft} de 5 búsquedas hoy. Búsquedas al mes: DataForSEO, con datos de Google Ads.</p>`:""}`;
+  }
+  return head("Descubrir palabras","Palabras que todavía no vigilas, para añadirlas a tus temas")+subnav()+`
+  <div class="card">
+    <div class="filters" role="group" aria-label="Fuente"><button data-disc="seed" aria-pressed="${f==="seed"}">A partir de una palabra</button><button data-disc="near" aria-pressed="${f==="near"}">Ya casi</button><button data-disc="gap" aria-pressed="${f==="gap"}">Las de tus rivales</button></div>
+    ${body}
+    <div class="sticky-add"><span class="quota">${n} de ${CAP} palabras vigiladas${over?` · <b style="color:var(--neg-ink)">Tu plan llega a ${CAP}</b>`:""}</span><button class="btn pri" data-addsel ${picked&&!over?"":"disabled style=\"opacity:.45\""}>Vigilar ${picked} ${picked===1?"palabra":"palabras"}</button></div>
+  </div>`;
+}
+
+function vSetup(){
+  const P=PROPOSAL;const kwOn=P.topics.reduce((a,t)=>a+t.kws.filter(k=>k[2]).length,0);const rvOn=P.rivals.filter(r=>r.on).length;
+  return head("Empieza a vigilar tus palabras","Te proponemos rivales, temas y palabras. Marca, edita o descarta antes de guardar.")+`
+  <div class="card">
+    <div class="setup-step"><span class="n">1</span><h2 style="margin:0;font-size:15px">Tus rivales en Google</h2></div>
+    <p class="muted" style="font-size:13px;margin:0 0 6px">Las webs que más se repiten en el Top 10 de tus búsquedas. Hemos quitado las que no compiten contigo, como YouTube, Wikipedia o los directorios generales. Tu plan permite 3.</p>
+    ${P.rivals.map((r,i)=>`<div class="rv-row"><input type="checkbox" class="cb" data-prv="${i}" ${r.on?"checked":""} ${!r.on&&rvOn>=3?"disabled":""} aria-label="Elegir ${esc(r.d)}"><span><b>${esc(r.d)}</b><small>${esc(r.why)}</small></span><span></span></div>`).join("")}
+    <div class="frow" style="grid-template-columns:minmax(0,1fr) auto;margin-top:10px"><label class="field">Añadir otro dominio<input class="inp" placeholder="ejemplo.es"></label><button class="btn" data-toast="En el producto, el dominio se comprueba y entra en la lista.">Añadir</button></div>
+  </div>
+  <div class="card">
+    <div class="setup-step"><span class="n">2</span><h2 style="margin:0;font-size:15px">Temas y palabras</h2></div>
+    <p class="muted" style="font-size:13px;margin:0 0 6px">Salen de tu Search Console y de lo que tienen tus rivales. Puedes cambiar el nombre de cada tema.</p>
+    ${P.topics.map((t,ti)=>`<div style="padding:12px 0;border-bottom:1px solid var(--border)">
+      <input class="tname" value="${esc(t.name)}" aria-label="Nombre del tema">
+      ${t.kws.map((k,ki)=>`<div class="rv-row"><input type="checkbox" class="cb" data-pkw="${ti}:${ki}" ${k[2]?"checked":""} aria-label="Vigilar ${esc(k[0])}"><span>${esc(k[0])}<small>${esc(k[1])}</small></span><span></span></div>`).join("")}
+    </div>`).join("")}
+    <div class="sticky-add"><span class="quota">${rvOn} ${rvOn===1?"rival":"rivales"} · ${kwOn} de ${CAP} palabras</span><button class="btn pri" data-save-setup ${kwOn?"":"disabled"}>Guardar y empezar</button></div>
+  </div>`;
+}
+
+function render(){
+  renderNav();const v=state.mode==="first"?"setup":state.view;
+  $("#view").innerHTML=v==="setup"?vSetup():v==="resumen"?vResumen():v==="temas"?vTemas():v==="descubrir"?vDescubrir():vResumen();
+  if(v==="temas"&&state.topic){if(!$("#layer").innerHTML||$("#layer").dataset.k==="topic"){$("#layer").innerHTML=vTopic();$("#layer").dataset.k="topic"}}
+  else if($("#layer").dataset.k==="topic"){$("#layer").innerHTML="";$("#layer").dataset.k=""}
+}
+
+function closeLayer(){$("#layer").innerHTML=""}
+function openRivals(){
+  $("#layer").innerHTML=`<div class="overlay" data-close-bg><div class="modal" role="dialog" aria-modal="true" aria-labelledby="rt" style="width:min(520px,100%)">
+    <div class="mh"><h2 id="rt">Tus rivales en Google</h2><button class="btn ghost sm" data-close aria-label="Cerrar">✕</button></div>
+    <div class="mb">
+      <p class="muted" style="font-size:13px;margin:0 0 12px">Hasta 3 dominios. Comparamos tus enlaces con los suyos y los marcamos en cada Top 10.</p>
+      ${[0,1,2].map(i=>`<label class="field" style="margin-bottom:10px">Rival ${i+1}<input class="inp" id="rv-${i}" value="${esc(rivals[i]?rivals[i].d:"")}" placeholder="ejemplo.es"></label>`).join("")}
+      <p class="muted" style="font-size:12px;margin:0">No vale tu propio dominio. Los enlaces de un rival nuevo se miden en la pasada del lunes.</p>
+    </div>
+    <div class="mf"><span></span><button class="btn pri" data-rsave>Guardar</button></div>
+  </div></div>`;
+  setTimeout(()=>$("#rv-0")&&$("#rv-0").focus(),0);
+}
+function toast(msg){const el=document.createElement("div");el.className="toast";el.setAttribute("role","status");el.textContent=msg;$("#app").appendChild(el);setTimeout(()=>el.remove(),3200)}
+
+document.addEventListener("click",e=>{
+  const g=s=>e.target.closest(s);let el;
+  if(el=g("[data-nav]")){nav(el.dataset.nav);return}
+  if(el=g("[data-close-topic]")){state.topic=null;render();return}
+  if(el=g("[data-topic]")){const t=topics.find(x=>x.id===el.dataset.topic);let i=0;if(el.dataset.kwname)i=Math.max(0,t.kws.findIndex(k=>k.k===el.dataset.kwname));openTopic(t.id,i);return}
+  if(el=g("[data-seed]")){if(!state.gapLeft)return;state.seedQ=($("#seed-in").value||"").trim()||"endodoncia";state.loading=true;state.gapLeft--;render();setTimeout(()=>{state.loading=false;state.seedRan=true;render()},900);return}
+  if(el=g("[data-act]")){const [id,i]=el.dataset.act.split(":");const a=ACTS[id][+i];a.done=!a.done;const dr=document.querySelector(".drawer"),st=dr?dr.scrollTop:0,db=document.querySelector(".db"),sb=db?db.scrollTop:0;$("#layer").innerHTML=vTopic();render();const d2=document.querySelector(".drawer");if(d2)d2.scrollTop=st;const b2=document.querySelector(".db");if(b2)b2.scrollTop=sb;toast(a.done?"Hecho. Lo verás en las próximas fotos del lunes.":"Vuelve a la lista.");return}
+  if(el=g("[data-kw]")){state.kw=+el.dataset.kw;$("#layer").innerHTML=vTopic();return}
+  if(el=g("[data-untrack]")){const t=topics.find(x=>x.id===state.topic);const k=t.kws[+el.dataset.untrack];if(t.kws.length<=1){toast("Un tema necesita al menos una palabra.");return}t.kws.splice(+el.dataset.untrack,1);state.kw=0;$("#layer").innerHTML=vTopic();render();toast(`Ya no vigilas «${k.k}». Su historial se guarda por si vuelves a vigilarla.`);return}
+  if(el=g("[data-disc]")){state.disc=el.dataset.disc;render();return}
+  if(el=g("[data-gap]")){if(!state.gapLeft)return;state.loading=true;state.gapLeft--;render();setTimeout(()=>{state.loading=false;state.gapRan=true;render()},900);return}
+  if(el=g("[data-pick]")){state.sel[el.dataset.pick]=el.checked;render();return}
+  if(el=g("[data-addsel]")){if(el.disabled)return;let n=0;
+    Object.entries(state.sel).forEach(([id,on])=>{if(!on)return;const [src,k]=[id.slice(0,1),id.slice(2)];const d=(src==="n"?NEAR:src==="s"?SEED:GAP).find(x=>x.k===k);if(!d)return;d.added=true;n++;
+      const tp=topics.find(t=>t.id===d.topic);if(tp)tp.kws.push({k:d.k,pos:src==="n"?d.pos:null,prev:null,url:src==="n"?"/":null});else if(d.topic==="new"||!d.topic){}});
+    state.sel={};render();toast(`Vigilas ${n} ${n===1?"palabra":"palabras"} más. Su primera foto llega el lunes.`);return}
+  if(el=g("[data-rivals]")){openRivals();return}
+  if(el=g("[data-rsave]")){const v=[0,1,2].map(i=>($("#rv-"+i).value||"").trim().toLowerCase()).filter(Boolean);
+    if(v.includes(OWN)){toast("Tu propio dominio no puede ser un rival.");return}
+    rivals=v.map(d=>rivals.find(r=>r.d===d)||{d,rd:0});closeLayer();render();toast("Rivales guardados. Los enlaces de un rival nuevo llegan el lunes.");return}
+  if(el=g("[data-prv]")){PROPOSAL.rivals[+el.dataset.prv].on=el.checked;render();return}
+  if(el=g("[data-pkw]")){const [a,b]=el.dataset.pkw.split(":").map(Number);PROPOSAL.topics[a].kws[b][2]=el.checked;render();return}
+  if(el=g("[data-save-setup]")){state.mode="use";state.firstWeek=true;state.view="resumen";setMode();render();toast("Guardado. Tu primera foto de Google llega el lunes.");return}
+  if(el=g("[data-toast]")){toast(el.dataset.toast);return}
+  if(el=g("[data-close]")){closeLayer();return}
+  if(e.target.matches("[data-close-bg]")){closeLayer();return}
+});
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&state.topic){state.topic=null;render();return}
+  if(e.key==="Escape"&&$("#layer").innerHTML)closeLayer();
+  if((e.key==="Enter"||e.key===" ")&&e.target.matches("tr[data-kw]")){e.preventDefault();state.kw=+e.target.dataset.kw;$("#layer").innerHTML=vTopic();const r=document.querySelector(`tr[data-kw="${state.kw}"]`);r&&r.focus()}
+});
+function setDevice(m){$("#device").classList.toggle("mobile",m);$("#bt-mob").setAttribute("aria-pressed",m);$("#bt-desk").setAttribute("aria-pressed",!m)}
+function setMode(){$("#bt-use").setAttribute("aria-pressed",state.mode==="use");$("#bt-first").setAttribute("aria-pressed",state.mode==="first")}
+$("#bt-desk").onclick=()=>setDevice(false);$("#bt-mob").onclick=()=>setDevice(true);
+$("#bt-use").onclick=()=>{state.mode="use";state.firstWeek=false;setMode();render()};
+$("#bt-first").onclick=()=>{state.mode="first";setMode();render()};
+render();
+</script>

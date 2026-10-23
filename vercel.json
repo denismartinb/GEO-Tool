@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/affiliate-report",
       "schedule": "0 7 5 * *"
+    },
+    {
+      "path": "/api/cron/seo-serp",
+      "schedule": "*/10 * * * *"
     }
   ]
 }
