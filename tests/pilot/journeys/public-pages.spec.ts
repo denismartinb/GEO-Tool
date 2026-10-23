@@ -91,7 +91,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "protocolos-comercio-agentico-acp-ucp-ap2": "fundamentos",
   "agentes-personales-de-ia-que-compran": "fundamentos",
   // BLOG-CITES-1 (2026-10-22, log §341).
-  "que-fuentes-cita-la-ia": "playbooks"
+  "que-fuentes-cita-la-ia": "playbooks",
+  // BLOG-BF-AGENTS-1 (2026-10-23, log §342).
+  "black-friday-agentes-de-ia": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

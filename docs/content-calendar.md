@@ -182,7 +182,8 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A1 | Pregunta lo mismo dos veces a la IA: por qué casi nunca te da la misma lista de marcas (BLOG-ANIM-1, log §314) — slug `la-ia-no-repite-la-misma-lista-de-marcas` | `medicion` | ✅ Publicado (2026-10-17) | #636 |
 | A2 | Query fan-out: la IA no busca tu pregunta, busca muchas a la vez (BLOG-ANIM-1, log §314) — slug `query-fan-out-la-ia-no-busca-tu-pregunta` | `fundamentos` | ✅ Publicado (2026-10-17) | #636 |
 | A3 | Los bots de la IA leen tu web miles de veces por cada visita: cuáles dejar entrar (BLOG-ANIM-1, log §314) — slug `bots-de-ia-robots-txt-cuales-dejar-entrar` | `playbooks` | ✅ Publicado (2026-10-17) | #636 |
-| A4 | Qué fuentes cita la IA: el 84% de sus enlaces no lo publicas tú (BLOG-CITES-1, log §341; primer post de la rutina de cada dos días) — slug `que-fuentes-cita-la-ia` | `playbooks` | 🟡 En PR (2026-10-22) | — |
+| A4 | Qué fuentes cita la IA: el 84% de sus enlaces no lo publicas tú (BLOG-CITES-1, log §341; primer post de la rutina de cada dos días) — slug `que-fuentes-cita-la-ia` | `playbooks` | ✅ Publicado (2026-10-22) | #665 |
+| A5 | Black Friday con agentes de IA: qué revisar en tu tienda antes del 27 de noviembre (BLOG-BF-AGENTS-1, log §342) — slug `black-friday-agentes-de-ia` | `playbooks` | 🟡 En PR (2026-10-23) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
