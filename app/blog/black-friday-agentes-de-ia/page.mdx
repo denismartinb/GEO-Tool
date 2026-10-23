@@ -1,0 +1,248 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  Timeline
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { BLACK_FRIDAY_OFFER_JSONLD } from "@/lib/blog/black-friday-offer-jsonld";
+
+export const post = getBlogPost("black-friday-agentes-de-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Van a comprar los agentes de IA en mi tienda este Black Friday?",
+    answer:
+      "En España, el pago lo sigue haciendo la persona en tu web: ningún asistente cobra dentro del chat de forma general. Lo que sí cambia es cómo llega: tres de cada cuatro consumidores españoles dicen que probablemente usarán la IA para alguna tarea de sus compras de estas fiestas, sobre todo para elegir y comparar, según Shopify."
+  },
+  {
+    question: "¿Cómo marco un precio rebajado para que lo entienda un agente?",
+    answer:
+      "Con datos estructurados de producto: el precio activo en la oferta y el precio anterior como un segundo precio con priceType StrikethroughPrice, que es como lo documenta Google. Añade priceValidUntil con la fecha en que acaba la oferta y quítalo todo cuando vuelvas al precio normal."
+  },
+  {
+    question: "¿Qué precio anterior puedo tachar en una oferta?",
+    answer:
+      "En España, el artículo 20 de la Ley de Ordenación del Comercio Minorista obliga a que el precio anterior que muestres sea el más bajo que aplicaste al mismo producto en los 30 días previos. El precio tachado de tus datos estructurados debe ser ese mismo."
+  },
+  {
+    question: "¿Debo endurecer la protección anti-bots durante el Black Friday?",
+    answer:
+      "Revisa antes a quién deja fuera. Un reto que se pone a todos los programas por igual también frena a los bots de búsqueda de la IA y a los agentes que vienen a comparar tu oferta. Si lo activas, deja pasar a los que se identifican."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Este Black Friday, el 27 de noviembre, muchos de tus clientes van a preguntar
+a la IA antes de entrar en tu tienda. Para que te elija, revisa seis cosas
+antes de la semana de ofertas: que la IA te nombre en tu categoría, que tu
+página de ofertas tenga una dirección fija y se lea sin JavaScript, que el
+precio rebajado y el anterior estén escritos como datos, que el stock sea el
+real, que envío y devoluciones se lean sin hacer clic y que tu protección
+anti-bots no eche a quien viene a comparar. Y el 1 de diciembre, deshazlo.
+
+</KeyTakeaway>
+
+## Por qué este Black Friday es distinto
+
+Hasta ahora, una oferta se encontraba en Google, en el correo o en las redes.
+Este año hay un paso más: preguntar a ChatGPT, Gemini o Claude qué comprar y
+dónde está más barato. Tres de cada cuatro consumidores españoles dicen que
+probablemente usarán la IA para alguna tarea de sus compras de estas fiestas,
+según la encuesta de Shopify, y la mayoría ya le deja elegir:
+
+<StatGrid label="Consumidores españoles y la IA en las compras de estas fiestas">
+  <Stat value="55%" label="se sienten cómodos dejando que la IA les recomiende qué producto elegir." source="Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)" />
+  <Stat value="38%" label="aceptarían que la IA les prepare el carrito, si la compra la terminan ellos." source="Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)" tone="cyan" />
+  <Stat value="30%" label="confían en que la IA haga la compra por ellos." source="Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)" />
+</StatGrid>
+
+En Estados Unidos, Adobe prevé que las visitas que llegan a las tiendas online
+desde asistentes de IA crezcan un 130% esta campaña de Navidad, frente a la del
+año pasado (previsión sobre más de un billón de visitas a webs de comercio). Es
+una encuesta y una previsión de otro mercado: lo útil es la dirección, no el
+decimal.
+
+En España el pago lo sigue haciendo la persona en tu web. Lo que cambia es
+cómo llega: con la decisión casi tomada y después de que la IA haya leído tu
+ficha. Lo contamos en <a href="/blog/la-ia-descubre-tu-web-vende">la IA
+descubre y tu web vende</a>.
+
+## El calendario de la campaña
+
+<Figure
+  label="Figura 1."
+  caption="Qué hacer y cuándo, de aquí al final de la campaña. Elaboración propia; las fechas de Black Friday y Cyber Monday son las de 2026."
+>
+
+<Timeline
+  items={[
+    { date: "Esta semana", title: "Revisa si la IA te nombra y si puede leerte", now: true },
+    { date: "Antes del 20 nov.", title: "Página de ofertas publicada y datos de precio listos" },
+    { date: "27 nov.", title: "Black Friday: precio, stock y plazos al día" },
+    { date: "30 nov.", title: "Cyber Monday" },
+    { date: "1 dic.", title: "Vuelve al precio normal y quita la rebaja de tus datos" }
+  ]}
+/>
+
+</Figure>
+
+## Seis comprobaciones antes del 27 de noviembre
+
+<NumberedSection n={1} title="Que la IA te nombre cuando preguntan por ofertas de tu categoría">
+
+Pregunta en ChatGPT, Gemini y Claude lo que preguntaría tu cliente: «dónde
+comprar zapatillas de trail en oferta», «qué tienda tiene mejor precio en…».
+Repítelo en días distintos, porque la IA <a href="/blog/la-ia-no-repite-la-misma-lista-de-marcas">casi
+nunca repite la misma lista</a>. Si no sales, mira qué webs cita: las guías
+de ofertas de medios y comparadores pesan mucho, porque
+<a href="/blog/que-fuentes-cita-la-ia">la mayoría de lo que cita la IA lo
+publica otro</a>. Todavía hay tiempo de entrar en alguna.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Una página de ofertas con dirección fija, publicada antes">
+
+Usa la misma dirección cada año (por ejemplo, tu-dominio.com/black-friday) en
+lugar de una nueva por campaña: así conserva los enlaces que ya tiene y los
+motores que buscan en internet ya la conocen. Publícala unas semanas antes,
+aunque al principio solo anuncie la fecha, y comprueba que las ofertas se ven
+en el HTML de la página y no solo después de ejecutar JavaScript. Un bot que
+lee la página sin ejecutarlo no verá lo que tu web pinta después.
+
+</NumberedSection>
+
+<QuickAction>Abre tu página de ofertas, pulsa «Ver código fuente» y busca el precio de un producto rebajado. Si no aparece, un agente que lea esa página tampoco lo verá.</QuickAction>
+
+<NumberedSection n={3} title="El precio rebajado y el anterior, escritos como datos">
+
+Un agente que compara no adivina qué número es la oferta. En los datos
+estructurados de cada ficha, el precio activo va en la oferta y el anterior,
+como un segundo precio marcado con `StrikethroughPrice`, que es como lo
+documenta Google. `priceValidUntil` dice cuándo acaba la oferta. Este es un
+ejemplo completo que puedes adaptar:
+
+<Figure
+  label="Figura 2."
+  caption="Datos estructurados de una ficha rebajada: precio activo, precio tachado, fin de la oferta, stock, envío y devoluciones. Producto y código de barras inventados."
+>
+
+<CodeBlock title="JSON-LD de una ficha en oferta">{BLACK_FRIDAY_OFFER_JSONLD}</CodeBlock>
+
+</Figure>
+
+Un aviso que no es técnico: en España, el artículo 20 de la Ley de Ordenación
+del Comercio Minorista obliga a que el precio anterior que enseñas sea el más
+bajo que aplicaste a ese producto en los 30 días previos. El precio tachado de
+tus datos tiene que ser ese mismo. Si en la página dices una cosa y en los
+datos otra, el agente no sabe a cuál creer.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Stock real, también a las once de la noche">
+
+En los días de más venta, una ficha que dice «en stock» y luego no deja
+comprar es lo peor que le puede pasar a un agente y a una persona. Asegúrate
+de que el campo `availability` de tus datos cambia a `OutOfStock` en cuanto se
+agota un producto, y de que tu feed de Google Merchant Center se actualiza al
+mismo ritmo que la web.
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Envío y devoluciones con los plazos de campaña">
+
+«Que llegue antes del sábado» y «que se pueda devolver después de Reyes» son
+dos preguntas típicas de diciembre. Si alargas el plazo de devolución o el de
+entrega cambia por el volumen, cámbialo también en la página de envíos, en la
+de devoluciones y en los datos de la ficha (`shippingDetails` y
+`hasMerchantReturnPolicy`), no solo en un banner.
+
+</NumberedSection>
+
+<NumberedSection n={6} title="Una protección anti-bots que no eche a quien viene a comparar">
+
+Es tentador poner un reto a todo el tráfico automático durante el pico. Pero
+un reto que se pone a todos por igual también frena a los bots de búsqueda de
+la IA y a los agentes que vienen a leer tu oferta, justo la semana en que más
+te buscan. Revisa tu robots.txt (tienes el detalle en <a href="/blog/bots-de-ia-robots-txt-cuales-dejar-entrar">los
+bots de la IA: cuáles dejar entrar</a>) y, si activas un modo de ataque en tu
+proveedor, pregunta si deja pasar a los agentes que se identifican.
+
+</NumberedSection>
+
+<QuickAction>Antes del 20 de noviembre, apunta qué ajustes de tu protección anti-bots piensas tocar en la campaña y comprueba con tu proveedor qué hacen con los bots de búsqueda de la IA.</QuickAction>
+
+## El 1 de diciembre: deshazlo
+
+Cuando termine el Cyber Monday, vuelve al precio normal, quita el precio
+tachado de tus datos y actualiza el feed. Si dejas una oferta caducada, el
+agente compara con un precio que ya no existe. Y Google avisa de que una ficha
+con un `priceValidUntil` en el pasado puede dejar de mostrarse en sus
+resultados de compra.
+
+## Qué revisa GenScore
+
+GenScore mide si ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity te
+nombran en tus preguntas principales de búsqueda, y qué webs citan cuando no
+apareces. Su Auditoría técnica revisa si tu robots.txt deja entrar a los bots
+de la IA.
+
+Para los agentes, la Auditoría agéntica de Pro y Agencia revisa sola, después
+de cada escaneo, la página donde vendes: si el precio, el stock, el envío y
+las devoluciones se leen como datos, y si un reto anti-bots corta el paso. Lo
+puedes probar gratis con una ficha de tu tienda en el <a href="/comercio-agentico">comprobador
+de comercio agéntico</a>. Si quieres el contexto completo, empieza por
+<a href="/blog/web-preparada-para-el-comercio-agentico">las diez
+comprobaciones de una web preparada para el comercio agéntico</a>.
+
+<Verdict title="Prioriza lo que se ve el 27">
+
+Si solo te da tiempo para dos cosas, que sean la primera y la tercera: que la
+IA te nombre cuando preguntan por ofertas de tu categoría y que tu precio
+rebajado esté escrito como dato y coincida con la página. Lo demás ayuda a
+cerrar la venta; esas dos deciden si llegas a la comparación.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Comprueba si la IA te nombra antes del Black Friday"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: te decimos si ChatGPT, Gemini, Claude y Perplexity nombran tu tienda, qué webs citan en tu lugar y si un agente puede leer tu ficha."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

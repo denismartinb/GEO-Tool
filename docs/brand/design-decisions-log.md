@@ -26885,6 +26885,38 @@ GenScore lea el contenido de las páginas citadas, porque no lo hace
 **Pendiente.** La cifra del 84% es de un solo informe y de enlaces en inglés
 mayoritariamente; si Muck Rack publica una edición nueva, se refresca.
 
+## 342. BLOG-BF-AGENTS-1: Black Friday con agentes de IA (2026-10-23)
+
+**Qué.** Artículo `black-friday-agentes-de-ia` (clúster `playbooks`), segundo
+post de la rutina de cada dos días: seis comprobaciones para que la IA nombre
+a una tienda y un agente lea bien sus ofertas antes del 27 de noviembre, más
+lo que hay que deshacer el 1 de diciembre. Fuentes: Shopify *Holiday Retail
+2026* (Sapio Research, 18.000 consumidores de nueve países, 2.000 en España,
+julio de 2026), la previsión de Navidad de Adobe (septiembre de 2026, más de un
+billón de visitas a webs de comercio de EE. UU.), la documentación de Google
+sobre datos de producto (`StrikethroughPrice`, `priceValidUntil`) y el
+artículo 20 de la Ley de Ordenación del Comercio Minorista (precio anterior =
+el más bajo de los 30 días previos). No dice que en España se pague dentro de
+un chat.
+
+**Bloque que el lector copia, atado con un test.** El JSON-LD de ejemplo vive
+en `lib/blog/black-friday-offer-jsonld.ts` y el MDX lo pinta como expresión,
+igual que el robots.txt de §314. `black-friday-offer-jsonld.test.ts` lo pasa
+por `extractPageSignals` (el lector de la Auditoría agéntica) y comprueba
+precio, stock, código de barras, envío y devoluciones, además de que el precio
+tachado va como `StrikethroughPrice` y el activo sin `priceType`.
+
+**Lo que el producto afirma, trazado.** La Auditoría agéntica revisa precio,
+stock, envío, devoluciones y retos anti-bots (`lib/agentic-audit/score.ts`,
+`html-signals.ts`, `challenge.ts`), sola tras cada escaneo en Pro y Agencia
+(§333). La Auditoría técnica revisa robots.txt (`lib/web-audit/robots.ts`).
+El artículo no dice que GenScore revise el precio tachado ni la fecha de fin
+de oferta, porque no lo hace.
+
+**Pendiente.** El 1 de diciembre el artículo sigue siendo válido para la
+campaña de 2027 si se cambian las fechas; conviene refrescarlo en octubre de
+2027 con la encuesta nueva de Shopify.
+
 ## 344. HOTEL-STUDY-1: sectores «hoteles en Madrid» y «hoteles en Barcelona» en `/admin/estudio` (2026-10-23)
 
 **Qué.** Dos sectores nuevos en `SECTORS` (`lib/studies/sector-study.ts`),
