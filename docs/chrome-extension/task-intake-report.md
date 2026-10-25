@@ -1,202 +1,203 @@
-# Task Intake Report · Extensión de Chrome SEO + GEO (CHROME-EXT-1)
+# Task Intake Report · Extensión de Chrome de GenScore (CHROME-EXT-1)
 
-Fecha: 2026-10-25 · Estado: **propuesta, sin implementar** · Pide: Denis
+Fecha: 2026-10-25 · Revisión 2 · Estado: **propuesta, sin implementar** · Pide: Denis
 
 Wireframes de las tres opciones: [`ux-options.html`](./ux-options.html)
 (se abre en el navegador; es la misma página que el artifact del hilo).
 
----
-
-## 0. Resumen en cinco líneas
-
-1. La extensión es un canal de captación de genscore.es, no un producto aparte.
-   Se posiciona en "SEO" (donde está la demanda) y vende el GEO como lo que nadie
-   más tiene en español.
-2. Todo lo gratuito se calcula **en el navegador**, sobre la página que el usuario
-   está viendo: coste de servidor cero y ningún permiso amplio.
-3. Recomiendo la **opción B, panel lateral**, que se abre con un clic en el icono y
-   sólo pide `activeTab`, `scripting`, `sidePanel` y `storage`.
-4. El MVP (dos fines de semana) **no toca el backend**: auditoría local, nota, tres
-   correcciones, tarjeta para compartir y salida al comprobador gratuito que ya
-   existe en la web. Cuenta, Search Console y DataForSEO van en fases posteriores.
-5. Hay cinco premisas del encargo que corrijo abajo (sección 2). La más importante:
-   **ya no existe cuenta gratuita**, así que el gancho de registro es la prueba de
-   7 días de Pro.
+> **Qué cambia en la revisión 2.** Denis (2026-10-25): *"me gustaría que tuviera
+> toda la potencia de GenScore: los 4 motores, la parte de SEO con Search Console y
+> DataForSEO, e incluso el comercio agéntico"*. La extensión deja de ser una
+> auditoría con salida a ChatGPT y pasa a ser **GenScore entero en un panel**, al
+> lado de la web que estás viendo. El cambio de fondo que lo hace posible sin
+> disparar el coste: la extensión **lee los datos que tu proyecto ya tiene**, no
+> lanza escaneos nuevos por cada página.
 
 ---
 
-## 1. Qué se pide (reformulado)
+## 0. Resumen
 
-Una extensión de Chrome (Manifest V3) que, sobre la página abierta:
+1. La extensión es un canal de captación de genscore.es. Se posiciona en "SEO"
+   (donde está la demanda) y enseña lo que nadie más tiene en español: qué dicen
+   ChatGPT, Gemini, Claude y Perplexity de tu marca, y si un agente de IA puede
+   comprar en tu web.
+2. **Tres capas.** Sin cuenta: auditoría SEO, preparación para IA y comercio
+   agéntico de la página abierta, calculadas en el navegador. Con cuenta (7 días de
+   Pro): todo tu proyecto de GenScore en el panel, con los cuatro motores, Search
+   Console, palabras clave de DataForSEO y la Auditoría agéntica. Con plan: lo
+   mismo de forma continua, más el análisis de páginas de la competencia.
+3. **Recomiendo el panel lateral con la alternativa A, "Estudio".** Una nota,
+   tres arreglos y tres carriles plegados (IA, Google y Agentes) que se abren al
+   pedirlo, con los cuatro motores dibujados dentro del carril IA. Es la consola
+   en pequeño y no abruma (sección 9).
+4. **El MVP sigue sin tocar el servidor** y sale en dos fines de semana: las tres
+   auditorías locales y un botón que lleva a crear el proyecto con el dominio ya
+   escrito. La vista de tu proyecto con los cuatro motores es la fase 2, y es la
+   que convierte.
+5. Corrijo cuatro premisas del encargo (sección 2).
 
-| Nivel | Qué ve el usuario | Dónde se calcula |
-|---|---|---|
-| Sin cuenta | Auditoría SEO on-page, preparación para IA, nota de 0 a 100 y las tres correcciones más urgentes | En el navegador |
-| Con cuenta | "¿Te recomienda ChatGPT?" para el dominio, con el comprobador que ya existe | Servidor, con sus límites y su techo de gasto |
-| De pago | Search Console de esa página, palabras clave de DataForSEO, enlace al informe y a la consola | Servidor, reutilizando lo que ya existe |
+---
+
+## 1. Qué hace, por capas
+
+| Capa | Qué ve el usuario sobre la página abierta | De dónde sale | Coste por uso |
+|---|---|---|---|
+| **Sin cuenta** | Nota SEO + IA de 0 a 100, tres correcciones, bots de IA, llms.txt, contenido visible sin JavaScript. En fichas y páginas de precios, la comprobación rápida de comercio agéntico (descubrimiento, comprensión, confianza, compra) | Navegador | 0 |
+| **Con cuenta, su dominio** (prueba de Pro y planes) | Pestaña **Tu proyecto**: Puntuación GEO, qué dice cada motor (ChatGPT, Gemini, Claude y Perplexity), competidores que te adelantan, prompts donde no apareces y las tres primeras recomendaciones. Pestaña **Google**: clics, impresiones y búsquedas de esa URL en Search Console, y las palabras que vigilas con su puesto en el Top 20. Pestaña **Agentes**: la Auditoría agéntica del proyecto | El último escaneo y las tablas que ya existen | Lecturas, sin LLM |
+| **Con cuenta, otro dominio** | Si no es suyo: "Añadir a GenScore" (crea el proyecto y lanza el primer escaneo, con los motores de su plan). Si es de un competidor que ya sigue: cómo le va a ese rival en cada motor frente a ti | Flujo de alta existente y datos de competidores del escaneo | El del escaneo normal |
+| **Pro y Agencia** | "¿Por qué palabras posiciona esta página?" sobre la página de un competidor, con DataForSEO | `lib/seo-tracking/discover.ts` | ~0,012 $ por consulta, dentro de las 5 diarias que ya existen |
+
+Los motores que se ven son los del plan del usuario: cuatro en Pro, Agencia y la
+prueba, y tres en Starter (Perplexity se vende con Pro y Agencia, log §283). En
+Starter el carril IA enseña Perplexity con la invitación a Pro, nunca con datos
+inventados.
 
 Objetivo a 30 días desde la publicación: **200 o más instalaciones y al menos un
 cliente de pago atribuido a la extensión**.
 
-Clasificación: **P1 de crecimiento**. No hay ningún P0 abierto que esto bloquee o
-que deba ir antes (el flujo principal funciona en producción).
+Clasificación: **P1 de crecimiento**. No hay ningún P0 abierto que deba ir antes.
 
 ---
 
 ## 2. Lo que cuestiono del encargo
 
-1. **"Con cuenta gratuita" no existe.** Desde TRIAL-ONLY-1 (log §243) no hay plan
-   Free: toda alta empieza con 7 días de Pro sin tarjeta y después la cuenta queda en
-   solo lectura. Es un gancho mejor que una cuenta gratuita, así que la promesa del
-   registro pasa a ser *"7 días de Pro gratis, sin tarjeta"*. Lo que la extensión hace
-   sin cuenta sigue siendo gratis para siempre.
+1. **Los cuatro motores no se consultan en directo por cada página.** Una consulta
+   en directo de los cuatro motores por página costaría unas cuatro veces lo que
+   cuesta hoy el comprobador (~0,06 $ en vez de ~0,016 $). Además tardaría entre 30
+   y 60 segundos y mediría una sola pregunta, que según nuestro propio artículo
+   sobre la variabilidad de las listas es poco fiable. La potencia real de GenScore
+   está en el escaneo: muchas preguntas, varias veces, en los cuatro motores. Así
+   que la extensión **enseña ese escaneo**. El usuario que aún no tiene proyecto lo
+   crea en un clic desde el panel. Así la extensión no gasta nada nuevo y lo que
+   enseña es la misma cifra que la consola.
 
-2. **La nota única no puede llamarse "Puntuación GEO".** TRUST-METRICS-1 (log §183)
-   deja una sola Puntuación GEO en todo el producto, y mide respuestas reales de los
-   motores, no el HTML de una página. La extensión enseña una nota distinta, que
-   propongo llamar **"Nota SEO + IA de esta página"**. Se construye con los pesos que
-   ya usa la Auditoría técnica (`lib/web-audit/page-checks.ts`: bloque IA 55 puntos,
-   bloque SEO 45, log §275) más las comprobaciones nuevas de la extensión con peso
-   documentado. Así un usuario que ve 62 en la extensión y entra en la consola no se
-   encuentra otro número contradictorio para lo mismo.
+2. **No existe la cuenta gratuita** (TRIAL-ONLY-1, log §243). Toda alta empieza con
+   7 días de Pro sin tarjeta, que es exactamente la llave de los cuatro motores, de
+   Search Console y de la Auditoría agéntica. Es mejor gancho que una cuenta
+   gratuita. Al terminar la prueba, la cuenta pasa a solo lectura: el panel sigue
+   enseñando el último escaneo y pide plan para actualizarlo.
 
-3. **"¿Te cita ChatGPT?" sin segunda ruta que gaste.** De acuerdo con no abrir otra
-   ruta anónima. Pero la ruta actual (`app/api/gratis/comprobar`) cuenta por IP y no
-   por persona. Para usarla desde la extensión con cuenta propongo **la misma ruta y
-   el mismo `runPublicCheck`**, que además acepte una sesión: si llega con sesión,
-   cuenta por usuario; si no, por IP, como hoy. Las filas de la extensión llevan su
-   propia marca (`engine = "extension"`) y su propio subtecho, para que la extensión
-   no se coma el techo diario del comprobador de la web. El techo global de gasto
-   sigue siendo uno y sigue fallando cerrado.
+3. **La nota de la página no es la Puntuación GEO.** TRUST-METRICS-1 (log §183)
+   deja una sola Puntuación GEO en todo el producto, y mide respuestas reales de
+   los motores. La nota de la página se llama **"Nota SEO + IA de esta página"** y
+   usa los pesos de la Auditoría técnica (IA 55, SEO 45, log §275). Con cuenta y en
+   tu web, la Puntuación GEO es la de la consola, leída de su único dueño
+   (`lib/metrics/run-metrics.ts`).
 
-4. **DataForSEO aporta poco sobre la web propia de una pyme.** El diagnóstico real de
-   genscore.es (2026-10-18) mostró que Labs apenas conoce webs pequeñas: para tu
-   propia página, Search Console ya da las búsquedas reales y gratis. Donde
-   DataForSEO sí vale es en **la página de un competidor** ("¿por qué palabras
-   posiciona esta página de mi rival?"). Propongo ese uso, solo en Pro y Agencia, con
-   tope diario por cuenta, y dejarlo para la fase 4.
+4. **"ChatGPT" en el título de la ficha puede hacer que la tienda la rechace.**
+   Propongo el nombre "GenScore: Auditoría SEO e IA" y nombrar los cuatro motores
+   en la descripción (sección 7).
 
-5. **"ChatGPT" en el nombre de la ficha es un riesgo de rechazo.** La política de la
-   Chrome Web Store sobre marcas de terceros y metadatos engañosos ha retirado
-   extensiones con nombres de productos ajenos en el título. Propongo el nombre sin
-   marcas ajenas y las marcas en la descripción, donde describen compatibilidad (ver
-   sección 7). Si prefieres arriesgar con "ChatGPT" en el título, se puede: el peor
-   caso es un rechazo en revisión y volver a enviar, no una sanción.
-
-Además, una nota de expectativas: **200 instalaciones en 30 días no van a venir solas
-de la búsqueda de la tienda.** Una extensión nueva, sin reseñas, sale poco en los
-resultados las primeras semanas. Hay que empujarla con canales propios (blog,
-LinkedIn, X, correos, informe gratis), y el plan de lanzamiento de la sección 9 lo
-cuenta.
+Y una nota de expectativas: **200 instalaciones en 30 días no vienen solas de la
+búsqueda de la tienda.** Hay que empujarlas desde el blog, LinkedIn, X y el informe
+gratuito (sección 10).
 
 ---
 
 ## 3. Qué se reutiliza del repo
 
-| Pieza | Fichero | Uso en la extensión | ¿Se puede llevar al navegador? |
+| Pieza | Fichero | Uso en la extensión | Dónde corre |
 |---|---|---|---|
-| Comprobaciones on-page | `lib/web-audit/page-checks.ts` | Metadatos, datos estructurados, indexabilidad, contenido citable, frescura, SEO de página | **Sí**: son funciones puras sobre HTML, sin I/O ni `server-only` |
-| Bloques y pesos | `lib/web-audit/audit-blocks.ts` | Reparto IA 55 / SEO 45 de la nota | Sí, si sus imports son puros (comprobar en la fase 1) |
-| Bots de IA en robots.txt | `lib/web-audit/robots.ts` (`resolveBotAccess`, `TRACKED_BOT_AGENTS`) | GPTBot, OAI-SearchBot, Google-Extended, PerplexityBot, ClaudeBot, anthropic-ai, Bingbot | **Hay que separar** el analizador puro: el fichero lleva `server-only` |
-| llms.txt | `lib/web-audit/llms-txt.ts` | Si no existe, ofrecer un borrador con `buildLlmsTxt` | Sí, es puro |
-| Señales de compra | `lib/agentic-audit/html-signals.ts` | Futuro: "¿pueden comprar aquí los agentes?" en fichas de producto | Sí, es puro |
-| Comprobador de ChatGPT | `app/api/gratis/comprobar`, `lib/free-checker/*` | Fase 2, con sesión | No, servidor. Se reutiliza tal cual |
-| Search Console | `lib/search-console/load.ts`, `connection.ts`, `insights.ts` | Fase 3: clics, impresiones y búsquedas de la URL abierta | No, servidor. Caché de 30 min, nada se guarda |
-| DataForSEO | `lib/seo-data/dataforseo.ts`, `lib/seo-tracking/discover.ts` | Fase 4: palabras de una página de competidor | No, servidor. Tope diario como `seo_discovery_runs` |
-| Eventos de embudo | `lib/analytics/funnel-events.ts` | Alta y pago atribuidos a la extensión | Servidor; la extensión usa la API de captura de PostHog |
-| Atribución | cookie `gs_ref` y `user_metadata.referral_code` (AFFILIATES-1, log §277) | Mismo patrón para `acquisition_source = extension` | Servidor |
-| Marca | `--brand-*` de `app/globals.css`, Figtree, Bricolage Grotesque | Estilo del panel | Sí, se copian los tokens |
-
-Lo que **no** se reutiliza: los componentes React de la consola. El panel es una
-página pequeña de extensión y meterle React y la hoja de estilos de la consola
-multiplicaría el tamaño del paquete. Propongo HTML y TypeScript sin framework para el
-MVP, con los mismos tokens de color y las mismas fuentes.
+| Comprobaciones on-page | `lib/web-audit/page-checks.ts` | Nota SEO + IA de la página | Navegador (funciones puras) |
+| Bloques y pesos | `lib/web-audit/audit-blocks.ts` | Reparto IA 55 / SEO 45 | Navegador, si sus imports son puros |
+| Bots de IA | `lib/web-audit/robots.ts` | GPTBot, OAI-SearchBot, Google-Extended, PerplexityBot, ClaudeBot, anthropic-ai, Bingbot | Navegador; **hay que separar** el analizador puro, porque el fichero lleva `server-only` |
+| llms.txt | `lib/web-audit/llms-txt.ts` | Borrador si no existe | Navegador |
+| Comercio agéntico, página | `lib/agentic-audit/html-signals.ts`, `score.ts`, `interop.ts` | Comprobación rápida en la página abierta | Navegador, revisando que `score.ts` no tenga I/O |
+| Puntuación GEO y métricas | `lib/metrics/run-metrics.ts` | Pestaña Tu proyecto | Servidor, solo lectura |
+| Recomendaciones | `selectPlan` (el mismo que usa el informe, `report.md`) | Tres primeras acciones | Servidor, solo lectura |
+| Competidores | datos del último escaneo | Rivales que te adelantan, por motor | Servidor, solo lectura |
+| Search Console | `lib/search-console/load.ts`, `insights.ts` | Pestaña Google, filtrada a la URL abierta | Servidor; caché de 30 min, nada se guarda |
+| Seguimiento de palabras | `lib/seo-tracking/view-model.ts` | Palabras vigiladas y su puesto | Servidor; las fotos las paga ya el cron semanal |
+| Descubrir palabras | `lib/seo-tracking/discover.ts` | Página de competidor, Pro y Agencia | Servidor, dentro de las 5 diarias |
+| Auditoría agéntica | `lib/agentic-audit/console-model.ts` | Pestaña Agentes | Servidor, solo lectura |
+| Alta de dominio | `lib/onboarding/pending-domain.ts`, `createProjectCore` | "Añadir a GenScore" con el dominio ya escrito | Web |
+| Eventos de embudo | `lib/analytics/funnel-events.ts` | Alta y pago atribuidos | Servidor |
+| Atribución | patrón `gs_ref` → `user_metadata` (log §277) | `acquisition_source = extension` | Servidor |
 
 ---
 
-## 4. Arquitectura propuesta
+## 4. Arquitectura
 
 ```
-extension/                     (carpeta nueva en el repo, fuera de Next)
+extension/                     carpeta nueva en el repo, fuera de Next
   manifest.json                MV3
-  src/background.ts            service worker: clic en el icono, abre el panel, inyecta el análisis
-  src/analyze.ts               se inyecta en la pestaña con scripting.executeScript
-  src/panel/                   HTML + TS del panel lateral
-  src/score.ts                 nota SEO + IA (importa lib/web-audit/* puros)
+  src/background.ts            clic en el icono: abre el panel e inyecta el análisis
+  src/analyze.ts               se inyecta en la pestaña (scripting.executeScript)
+  src/panel/                   HTML + TS del panel: Página, Tu proyecto, Google, Agentes
+  src/score.ts                 nota SEO + IA y comercio agéntico (importa lib/* puros)
+  src/api.ts                   llamadas a genscore.es/api/ext/* con el token
   src/telemetry.ts             PostHog por HTTP, sin URLs
 ```
 
-**Cómo analiza sin permisos amplios.** Al pulsar el icono, Chrome concede
-`activeTab` sobre esa pestaña. El service worker abre el panel y ejecuta `analyze.ts`
-dentro de la página. Desde ahí:
+**La página, sin permisos amplios.** El clic en el icono concede `activeTab` sobre
+esa pestaña. El script inyectado:
 
-- lee el DOM ya pintado (encabezados, imágenes sin `alt`, enlaces, `hreflang`);
-- pide `location.href`, `/robots.txt` y `/llms.txt` **al mismo origen**, sin CORS ni
-  permisos de host;
-- compara el texto del HTML crudo con el del DOM pintado. Esa diferencia es lo que
-  ve un bot de IA que no ejecuta JavaScript, y es la comprobación de "contenido
-  renderizado en servidor o solo en cliente".
+- lee el DOM pintado (encabezados, `alt`, enlaces, `hreflang`);
+- pide `location.href`, `/robots.txt` y `/llms.txt` al mismo origen;
+- compara el HTML crudo con el DOM pintado, que es lo que ve un bot de IA que no
+  ejecuta JavaScript.
 
-Las funciones de `page-checks.ts` reciben el **HTML crudo**, que es justo lo que leen
-los bots. Es más fiel que leer el DOM y es la misma entrada que usa hoy la Auditoría
-técnica, así que los resultados coinciden.
+`page-checks.ts` y `html-signals.ts` reciben el HTML crudo, igual que en el
+servidor, así que los resultados coinciden con la Auditoría técnica y con el
+comprobador agéntico.
 
-**Permisos del MVP:** `activeTab`, `scripting`, `sidePanel`, `storage`. Ninguno de
-los cuatro muestra el aviso "Leer y cambiar todos tus datos en todos los sitios web".
-Analizar solo cada página nueva, sin pulsar el icono, requiere ese permiso: se pide
-**después**, como `optional_host_permissions`, cuando el usuario active
-"Analizar automáticamente", nunca al instalar.
+**El proyecto, con un único endpoint.** `GET /api/ext/summary?domain=…` resuelve el
+proyecto del usuario que cubre ese dominio (`isSameOrSubdomain`). Devuelve la
+Puntuación GEO, cada motor, los rivales, los prompts sin mención, las tres
+recomendaciones y el estado de la Auditoría agéntica. Todo sale de los cargadores
+que ya usa la consola, con el cliente del propio usuario (RLS) y sin service role.
+`GET /api/ext/google?url=…` hace lo mismo con Search Console y con las palabras
+vigiladas.
 
-**Riesgo técnico a validar en la primera hora:** que el clic en el icono conceda
-`activeTab` y abra el panel en el mismo gesto. El diseño seguro es
-`chrome.action.onClicked` (que sí concede `activeTab`) y dentro
-`chrome.sidePanel.open({ tabId })` (Chrome 116 o superior). Si falla, el plan B es
-un popup que hace el análisis y ofrece "Abrir en panel".
+**Permisos:** `activeTab`, `scripting`, `sidePanel`, `storage`. Ninguno muestra el
+aviso "Leer y cambiar todos tus datos en todos los sitios web". El análisis
+automático de cada página se pide después, como `optional_host_permissions`, solo
+si el usuario lo activa.
+
+**Riesgo técnico a validar en la primera hora:** que `chrome.action.onClicked`
+conceda `activeTab` y abra el panel con `chrome.sidePanel.open({ tabId })` en el
+mismo gesto (Chrome 116 o superior). Plan B: un popup que analiza y ofrece "Abrir
+en panel".
 
 ---
 
-## 5. Cambios de backend (por fase, ninguno en el MVP)
+## 5. Cambios de backend por fase
 
 | Cambio | Fase | Migración | Riesgo |
 |---|---|---|---|
 | Página `genscore.es/extension` (bienvenida, desinstalación, privacidad) | 1 | No | Bajo |
-| Saltar el build de Vercel cuando sólo cambia `extension/` (`scripts/vercel-should-build.sh` y sus tests) | 1 | No | Bajo |
-| Cookie de origen `gs_src=extension` → `user_metadata.acquisition_source` → metadatos de Stripe y propiedad en `payment_completed` | 1 | No | Bajo, mismo patrón que `gs_ref` |
-| Entregar la sesión a la extensión: página `/extension/conectar` que, con sesión iniciada, envía el token de Supabase a la extensión por `externally_connectable` (solo desde genscore.es) | 2 | No | **Medio**: es autenticación. Revisión de data-guardian antes de construir |
-| CORS en `/api/ext/*` solo para el origen `chrome-extension://<id fijo>` | 2 | No | Medio |
-| `/api/gratis/comprobar` acepta `Authorization: Bearer`; con sesión cuenta por usuario, con subtecho propio (`engine = "extension"`) | 2 | No (el usuario se cuenta en la columna de hash, con prefijo propio) o sí, si prefieres una columna `user_id` limpia | Medio, es la ruta que gasta |
-| `/api/ext/google?url=…`: busca el proyecto del usuario que cubre ese dominio, lee Search Console con la caché existente y filtra por URL | 3 | No | Medio, hereda las reglas de `search-console.md` |
-| `/api/ext/keywords?url=…` (DataForSEO, solo Pro y Agencia, tope diario) | 4 | Probablemente no, si se reutiliza `seo_discovery_runs` | Medio, cuesta dinero |
+| `extension/` no construye en Vercel (`scripts/vercel-should-build.sh` y sus tests) | 1 | No | Bajo |
+| Cookie `gs_src=extension` → `user_metadata.acquisition_source` → Stripe y `payment_completed` | 1 | No | Bajo |
+| Entrega de sesión: `/extension/conectar` envía el token de Supabase a la extensión por `externally_connectable` (solo desde genscore.es) | 2 | No | **Medio**: autenticación. Revisión de data-guardian antes |
+| CORS en `/api/ext/*` solo para `chrome-extension://<id fijo>` | 2 | No | Medio |
+| `/api/ext/summary` (proyecto, motores, rivales, recomendaciones, agéntica), solo lectura | 2 | No | Medio: tiene que dar las mismas cifras que la consola |
+| `/api/ext/google` (Search Console de la URL, palabras vigiladas), solo lectura | 3 | No | Medio, hereda `search-console.md` y `seo-tracking.md` |
+| `/api/ext/discover` (palabras de una página de competidor), Pro y Agencia | 3 | No (reutiliza `seo_discovery_runs`) | Medio, cuesta dinero |
 
-Todas las rutas nuevas filtran por el usuario verificado (`requireUser` sobre el
-token), sin service role salvo donde ya lo usa la pieza reutilizada.
+Ninguna ruta lanza un LLM. Lo único que gasta es lo que ya gastaba: el escaneo del
+proyecto (que dispara el alta normal) y "Descubrir", con su tope.
 
 ---
 
-## 6. Coste por usuario y límites de Vercel Hobby
+## 6. Coste por usuario y Vercel Hobby
 
 | Acción | Coste LLM / API | Carga en Vercel |
 |---|---|---|
-| Análisis de página (gratis, sin cuenta) | 0 | **0**: no llama al servidor |
-| Compartir nota o comparar | 0 | 0 en el MVP (imagen generada en el navegador) |
-| "¿Te recomienda ChatGPT?" | ~0,016 $ por comprobación (medido en `rate-limit.ts`) | 1 invocación, casi todo espera de red |
-| Search Console | 0 (API de Google gratuita) | 1 invocación; con caché de 30 min |
-| DataForSEO, página de competidor | ~0,012 $ por consulta (Labs, medido 2026-10-18) | 1 invocación |
+| Auditoría de la página (SEO, IA, agentes) | 0 | 0, no llama al servidor |
+| Tu proyecto, Agentes | 0 nuevo: lee el último escaneo | 1 invocación corta, lectura de base de datos |
+| Google | 0 (API gratuita); las fotos del Top 20 ya las paga el cron | 1 invocación; caché de 30 min |
+| Descubrir palabras de un competidor | ~0,012 $ por consulta, como mucho 5 al día por cuenta | 1 invocación |
+| Añadir a GenScore | El primer escaneo de la prueba, el mismo que hoy | El del escaneo |
 
-**Peor caso de gasto LLM:** el techo global actual, 300 comprobaciones al día, unos
-145 $/mes si se agota todos los días. Propongo que la extensión tenga un subtecho de
-100 al día **dentro** de esos 300, no encima. Con 3 comprobaciones por usuario y día,
-el coste por usuario activo es como mucho ~1,5 $/mes, y lo normal es una sola
-comprobación por dominio.
+**El gasto nuevo de la extensión es casi cero.** Lo que cuesta dinero es que lleguen
+más altas, y cada alta escanea igual que si llegara por la web. Ese es el coste que
+queremos.
 
-**Hobby:** la cuenta volvió a Hobby el 2026-10-25. Lo que más pesa en Hobby son el
-CPU activo y las invocaciones del mes. La espera a la respuesta de un LLM no cuenta
-como CPU activo, y la parte gratuita no invoca nada. Aun en el peor caso (el techo
-entero de la extensión todos los días, unas 3.000 comprobaciones al mes) la carga es
-pequeña frente a lo que ya hacen los escaneos. Hay que mirar el panel de Uso de
-Vercel tras la primera semana, igual que se hizo con el piloto (log §199). Y queda
-pendiente lo que ya está anotado en `docs/environment-contract.md`: **Hobby no
-permite uso comercial**. Eso es anterior a esta extensión y es tu decisión.
+**Hobby:** las lecturas del panel son invocaciones de milisegundos de CPU, y la
+parte gratuita no invoca nada. Hay que mirar el panel de Uso de Vercel tras la
+primera semana, igual que se hizo con el piloto (log §199). Sigue pendiente lo que
+ya anota `docs/environment-contract.md`: Hobby no permite uso comercial, una decisión
+tuya anterior a esto.
 
 **Coste fijo:** cuenta de desarrollador de la Chrome Web Store, 5 $ una vez.
 
@@ -206,138 +207,142 @@ permite uso comercial**. Eso es anterior a esta extensión y es tu decisión.
 
 | Campo | Propuesta | Por qué |
 |---|---|---|
-| Nombre (máx. 75) | **GenScore: Auditoría SEO e IA** | Contiene "SEO", "auditoría" e "IA", sin marcas ajenas en el título |
-| Alternativa | GenScore: SEO e IA · Auditoría SEO y visibilidad en ChatGPT | La tuya. Más tráfico por "ChatGPT", más riesgo de rechazo |
-| Resumen (máx. 132) | Audita el SEO de cualquier web y mira si está lista para ChatGPT, Gemini y Perplexity. Nota de 0 a 100 y qué arreglar primero. | Las tres búsquedas que pediste, con las marcas como compatibilidad |
-| Categoría | Herramientas para desarrolladores no; **Productividad / Herramientas** | Donde está Detailed SEO Extension |
-| Capturas | 5, 1280×800: nota, correcciones, bots de IA, comparación, informe | La primera captura es la nota sobre una web conocida |
-| Idioma | Español primero; inglés en la misma ficha con `_locales/en` | La tienda localiza una sola extensión: no hace falta otra. El inglés, cuando el español convierta |
+| Nombre (máx. 75) | **GenScore: Auditoría SEO e IA** | "SEO", "auditoría" e "IA", sin marcas ajenas |
+| Alternativa | GenScore: SEO e IA · Auditoría SEO y visibilidad en ChatGPT | La tuya. Más búsquedas por "ChatGPT", más riesgo de rechazo |
+| Resumen (máx. 132) | Audita el SEO de cualquier web y mira qué dicen de ella ChatGPT, Gemini, Claude y Perplexity. Nota de 0 a 100 y qué arreglar. | Las tres búsquedas que pediste, con los cuatro motores |
+| Categoría | Productividad / Herramientas | Donde está Detailed SEO Extension |
+| Capturas | 5, 1280×800: nota de la página, los cuatro motores, Google, comercio agéntico, comparación con un rival | La segunda captura es la que nadie más tiene |
+| Idioma | Español; inglés en la misma ficha con `_locales/en` | No hace falta otra extensión |
 
 Primer párrafo de la descripción larga (borrador):
 
-> Abre cualquier web y pulsa GenScore. En segundos ves su nota SEO + IA de 0 a 100,
-> las tres correcciones que más suben esa nota y si ChatGPT, Gemini, Claude y
-> Perplexity pueden leerla: bots de IA en robots.txt, llms.txt, datos estructurados
-> y contenido que se ve sin JavaScript. Gratis y sin cuenta.
+> Abre cualquier web y pulsa GenScore. Ves su nota SEO + IA de 0 a 100, las tres
+> correcciones que más la suben, si los bots de ChatGPT, Gemini, Claude y
+> Perplexity pueden leerla y si un agente de IA podría comprar en ella. Gratis y sin
+> cuenta. Con tu cuenta de GenScore, el panel añade lo que responden los cuatro
+> motores sobre tu marca, tus rivales, tus búsquedas en Google y qué hacer primero.
 
 ---
 
-## 8. Embudo, momento del registro y bucles
+## 8. Embudo, registro y bucles
 
-**Valor en el primer clic:** la nota sale sin cuenta, sin formulario y sin pantalla
-de bienvenida. La página `genscore.es/extension/bienvenida` se abre al instalar con
-una sola instrucción ("Abre cualquier web y pulsa el icono") y nada que rellenar.
+**Valor en el primer clic:** la nota de la página, tres arreglos y los tres
+carriles (IA, Google y Agentes) con lo que se lee de la página, incluido qué
+motores pueden leerla. Nada que rellenar.
 
-**Momento del registro:** justo después de ver la nota y las tres correcciones, la
-siguiente tarjeta es *"¿Te recomienda ChatGPT cuando preguntan por lo que vendes?"*.
-Es la pregunta que la nota abre y no contesta, porque la nota habla de la página y
-esta pregunta habla de las respuestas de la IA. El botón dice *"Compruébalo gratis"*
-y la promesa de la cuenta es *"7 días de Pro gratis, sin tarjeta"*. En el MVP ese
-botón lleva al comprobador de la web (`/gratis/aparece-mi-marca-en-chatgpt?d=dominio`) con
-`utm_source=chrome-extension`, que ya funciona y ya acaba en el registro. Desde la
-fase 2 la comprobación sale dentro del panel, con la cuenta.
+**Momento del registro:** la invitación está visible desde el primer clic (en la
+alternativa A, bajo los carriles). Enseña los cuatro logotipos de los
+motores y la pregunta *"¿Qué dicen ChatGPT, Gemini, Claude y Perplexity cuando
+preguntan por lo que vendes?"*. No enseña cifras de ejemplo. El botón dice *"Mídelo
+gratis"* y la promesa es *"7 días de Pro gratis, sin tarjeta"*.
+
+- En el MVP, el botón abre el alta de la web con el dominio ya escrito (el mismo
+  arrastre que usa la portada, `pending-domain.ts`) y `utm_source=chrome-extension`.
+- Desde la fase 2, al volver a la web con el proyecto creado, el panel se rellena
+  solo.
+
+**Momento del pago:** al acabar la prueba el panel sigue enseñando el último
+escaneo, con la fecha. "Actualizar" y los datos nuevos de Google piden plan. Es el mismo
+muro de solo lectura que la consola.
 
 **Bucles de difusión:**
 
-1. **Compartir la nota.** Tarjeta de imagen generada en el navegador (dominio, nota,
-   tres barras, marca GenScore y `genscore.es/extension`), lista para LinkedIn o X.
-   No se guarda nada en el servidor, así que nadie puede publicar una nota falsa
-   bajo nuestra URL.
-2. **Exportar la auditoría.** Página imprimible de la extensión con marca GenScore,
-   para que una agencia la mande a su cliente. Cada exportación lleva el enlace a la
-   extensión.
-3. **Comparar con un competidor.** La extensión recuerda las últimas webs analizadas
-   (en `storage.local`, nunca en el servidor) y pone dos lado a lado. "Tu rival
-   tiene 71 y tú 48" es la frase que hace instalar a un segundo usuario del mismo
-   equipo.
+1. **Compartir la nota** como imagen generada en el navegador. No hay URL pública con
+   la nota, así que nadie puede publicar una falsa bajo genscore.es.
+2. **Comparar con un competidor.** Abres la web de tu rival y el panel pone su nota
+   de página junto a la tuya. Si ya lo sigues en GenScore, añade cómo le va en cada
+   motor frente a ti.
+3. **Exportar** (fase 4): el informe de GenScore (`/informe/<proyecto>`) ya existe; el
+   panel enlaza a él.
 
-**Medición en PostHog** (API de captura por HTTP, sin `posthog-js`, porque MV3 no
-permite código remoto):
+**Medición en PostHog** (API de captura por HTTP, porque MV3 no permite código
+remoto):
 
 | Evento | Cuándo | Propiedades |
 |---|---|---|
 | `ext_installed` | `runtime.onInstalled` | versión |
-| `ext_analysis_completed` | nota calculada | rango de nota (0-39, 40-69, 70-100), si es la web propia (no) |
-| `ext_fix_opened` | abre una corrección | clave de la comprobación |
-| `ext_share_clicked` / `ext_export_clicked` / `ext_compare_opened` | bucles | ninguna |
-| `ext_signup_clicked` | botón del registro | posición |
-| `signup_completed` | ya existe | `acquisition_source = extension` |
-| `search_console_connected` | ya existe en el flujo | idem |
-| `payment_completed` | ya existe (webhook de Stripe) | idem |
+| `ext_analysis_completed` | nota calculada | tramo de nota, si se detectó tienda |
+| `ext_lane_opened` | abre un carril | carril (IA, Google, Agentes) |
+| `ext_signup_clicked` | botón del registro | sitio desde el que se pulsa |
+| `ext_project_viewed` | "Tu proyecto" con datos | plan |
+| `ext_share_clicked` / `ext_compare_opened` | bucles | ninguna |
+| `signup_completed`, `search_console_connected`, `payment_completed` | ya existen | `acquisition_source = extension` |
 
-**Nunca se envía la URL ni el dominio analizado.** El `distinct_id` es un id aleatorio
-de instalación hasta el registro, y después se une al id de usuario con `$identify`.
-Esto hay que contarlo en `/privacidad` y en la sección de prácticas de privacidad de
-la tienda.
+**Nunca se envía la URL ni el dominio analizado.** El `distinct_id` es un id
+aleatorio de instalación hasta el registro, y después se une al id de usuario. Se
+cuenta en `/privacidad` y en las prácticas de privacidad de la tienda.
 
 ---
 
-## 9. Opciones de UX (detalle y wireframes en `ux-options.html`)
+## 9. Opciones de UX (maquetas en `ux-options.html`)
 
-| | A. Popup compacto | B. Panel lateral | C. Capa sobre la página |
+**Contenedor decidido: panel lateral** (`chrome.sidePanel`). Se comparó con un
+popup (se cierra solo y no cabe todo GenScore) y con una capa sobre la página
+(pide permiso sobre todas las webs). El panel se queda abierto mientras navegas y
+mientras te registras, con cuatro permisos. De la capa se rescata "Señalar en la
+página" para la fase 4, con el mismo `activeTab`.
+
+Sobre ese panel, tres formas de enseñar los cuatro motores, Google y el comercio
+agéntico sin abrumar. Cada una sale de una línea de la consola profesional, y las
+tres siguen la misma regla: una respuesta por pantalla y el detalle al pedirlo, con
+los tres carriles de la consola (IA azul, Google verde azulado, Agentes ámbar).
+
+| | A. Estudio: una nota y tu plan | B. Mapa: tres carriles, un dibujo cada uno | C. Instrumento: una cosa cada vez |
 |---|---|---|---|
-| Cómo se abre | Clic en el icono, ventana de 380 px que se cierra al hacer clic fuera | Clic en el icono, panel fijo a la derecha que sigue abierto al navegar | Insignia flotante en la esquina de cada web; al pulsarla se despliega la capa y señala los fallos sobre la propia página |
-| Permisos al instalar | 3 | 4 | Todos los sitios web (aviso fuerte) |
-| Espacio para fases 3 y 4 | Poco | Mucho | Medio, y tapa la web |
-| Bucle viral | Compartir | Compartir, exportar, comparar | El más visible: se ve en capturas y en directos |
-| Revisión en la tienda | Rápida | Rápida | Más lenta, por el permiso amplio |
-| Esfuerzo MVP | 1 fin de semana | 1,5 a 2 | 2 a 3 |
-| Esfuerzo completo | 3 | 4 a 5 | 5 a 6 |
+| Primera pantalla | Nota, tres arreglos y los tres carriles plegados en una línea | Selector IA · Google · Agentes; en IA, la página en el centro y los cuatro motores alrededor | Una cifra grande y una sola tarjeta con lo siguiente que hacer |
+| Cuatro motores sin cuenta | Una línea ("pueden leerla 3 de 4") | Protagonistas: qué rastreador puede leer la página | En la tarjeta que toque |
+| Con cuenta | Puntuación GEO, plan de la semana mezclando carriles, motores al abrir IA | Tú en el centro, rivales por cuota de voz, motores en órbita | La baraja es tu plan de la semana; deslizar para marcar como hecho |
+| Momento de registro | Hoja con lo que ganas en cada carril | "Ponte en el mapa": el centro vacío | La última carta de la baraja gratuita |
+| Esfuerzo MVP / completo | 2 / 6 fines de semana | 2,5 / 7,5 | 2 / 6 |
 
-**Recomendación: B, panel lateral.** Tiene el permiso mínimo de A y el espacio que
-piden las fases de pago: Search Console y palabras clave son tablas, y en un popup
-de 380 px que se cierra solo no se leen. El panel sigue abierto mientras el usuario
-navega por su web, que es como trabaja un consultor SEO. De C me quedo con lo mejor
-sin su coste: un botón **"Señalar en la página"** dentro del panel que, con el mismo
-`activeTab`, marca sobre la web las imágenes sin `alt` y los encabezados mal
-ordenados. Se queda fuera del MVP.
+**Recomendación: A, con el dibujo de los cuatro motores de B dentro del carril
+IA y "Comprobar otra vez" de C.** A enseña todo en una pantalla sin abrumar y es
+la consola en pequeño (el hilo de la consola profesional recomienda Estudio como
+base). El dibujo de B responde a "quiero ver los cuatro motores" desde el primer
+clic sin coste, porque cada motor tiene su rastreador y robots.txt dice si puede
+leer la página. "Comprobar otra vez" de C hace que la nota suba delante del usuario
+al arreglar algo.
 
-Cómo encaja con `UX_BRIEF.md`: el brief pide "de la visibilidad a la
-implementación", no un informe pasivo. Por eso cada fallo del panel se escribe como
-una acción ("Añade una descripción de 140 a 160 caracteres") con su efecto en la nota
-("+6 puntos"), igual que la Auditoría técnica, y no como una lista de avisos rojos.
+Encaje con `UX_BRIEF.md` ("de la visibilidad a la implementación"): cada fallo es
+una acción con su efecto en la nota, y el plan de la semana del proyecto es el
+mismo de la consola (`selectPlan`), con su enlace.
 
 ---
 
-## 10. MVP de 1 o 2 fines de semana (opción B recortada)
+## 10. Fases y MVP
 
-**Entra:**
+| Fase | Qué entra | Backend | Esfuerzo |
+|---|---|---|---|
+| **1. MVP** | Panel con la nota, tres arreglos y los carriles IA, Google y Agentes (auditoría local, con qué motores pueden leer la página); invitación con el alta prerrellenada; compartir; comparar notas de página; PostHog; página `/extension`; ficha | Ninguno en rutas existentes | 2 fines de semana |
+| **2. Tu proyecto** | Iniciar sesión en el panel; Puntuación GEO, los cuatro motores, rivales, prompts sin mención, tres recomendaciones y Auditoría agéntica del proyecto; "Añadir a GenScore" | `/api/ext/summary`, sesión, CORS | 1,5 fines de semana |
+| **3. Google** | Search Console de la URL abierta, palabras vigiladas con su puesto, descubrir palabras de un competidor (Pro y Agencia) | `/api/ext/google`, `/api/ext/discover` | 1,5 fines de semana |
+| **4. Pulido** | Señalar en la página, análisis automático opcional, ficha en inglés | Ninguno | 1 fin de semana |
 
-- Panel lateral que analiza la pestaña al pulsar el icono.
-- Nota SEO + IA con las comprobaciones de `page-checks.ts` más cinco nuevas: bots de
-  IA en robots.txt, llms.txt, contenido visible sin JavaScript, imágenes sin `alt` y
-  orden de encabezados.
-- Tres correcciones con su efecto en la nota; la lista completa, plegada.
-- Tarjeta "¿Te recomienda ChatGPT?", que lleva al comprobador de la web.
-- Compartir como imagen y comparar las dos últimas webs analizadas.
-- Eventos de PostHog sin URL.
-- Página `genscore.es/extension` (bienvenida y privacidad) y la cookie de origen
-  para atribuir el pago.
-- Ficha de la tienda en español con cinco capturas.
-
-**No entra:** cuenta dentro de la extensión, comprobación dentro del panel, Search
-Console, DataForSEO, exportación imprimible, "Señalar en la página", inglés.
-
-**Calendario:**
+**Calendario del MVP:**
 
 | Cuándo | Qué |
 |---|---|
-| Fin de semana 1, sábado | Prueba del `activeTab` con el panel; separar el analizador puro de `robots.ts`; paquete `extension/` con esbuild; análisis y nota |
-| Fin de semana 1, domingo | Panel con el diseño aprobado, tres correcciones, tarjeta ChatGPT |
-| Fin de semana 2, sábado | Compartir, comparar, PostHog, página `/extension`, cookie de origen |
-| Fin de semana 2, domingo | Capturas, ficha, envío a revisión (suele tardar de 1 a 3 días) |
+| Fin de semana 1, sábado | Prueba del `activeTab` con el panel; separar el analizador puro de `robots.ts`; paquete `extension/` con esbuild; nota SEO + IA |
+| Fin de semana 1, domingo | Pestaña Agentes con las comprobaciones del comprobador agéntico; diseño del panel |
+| Fin de semana 2, sábado | Pestaña Tu proyecto (invitación), compartir, comparar, PostHog, `/extension`, atribución |
+| Fin de semana 2, domingo | Capturas, ficha, envío a revisión (de 1 a 3 días) |
 
-**Lanzamiento** (fuera del código, tras la aprobación de la tienda): artículo en el
-blog con enlace a la tienda, publicación en la página de LinkedIn y en X, enlace en
-todos los artículos del blog que hablan de auditoría, y una línea en el informe
+**Por qué el MVP no incluye todavía los cuatro motores.** La fase 2 toca
+autenticación y necesita revisión de data-guardian. Publicar antes la parte que no
+toca el servidor nos da instalaciones y datos de embudo mientras se construye.
+Mientras tanto, el botón lleva a crear el proyecto, que es donde ya están hoy los
+cuatro motores. Si prefieres esperar a lanzar con la fase 2 incluida, son cuatro
+fines de semana en total en vez de dos.
+
+**Lanzamiento** (tras la aprobación de la tienda): artículo en el blog, LinkedIn y X,
+enlace en todos los artículos que hablan de auditoría y una línea en el informe
 gratuito. Todo enlace con `utm_source`.
 
-**Cómo sabremos si funciona a 30 días:** instalaciones (tienda), análisis por
-instalación (PostHog), clics en el registro, altas con `acquisition_source =
-extension` y pagos con esa misma marca. Con supuestos que habrá que medir (la mitad
-de los que instalan analizan, 1 de cada 10 que analizan se registra, 1 de cada 10
-pruebas paga), 200 instalaciones dan un pago. El objetivo es alcanzable pero justo, y
-depende más del empuje de los canales propios que de la tienda.
+**Cómo sabremos si funciona a 30 días:** instalaciones, análisis por instalación,
+clics en "Mídelo gratis", altas con `acquisition_source = extension` y pagos con la
+misma marca. Con supuestos que habrá que medir (la mitad analiza, 1 de cada 10 que
+analizan se registra, 1 de cada 10 pruebas paga), 200 instalaciones dan un pago:
+alcanzable pero justo.
 
 ---
 
@@ -346,40 +351,35 @@ depende más del empuje de los canales propios que de la tienda.
 | Riesgo | Mitigación |
 |---|---|
 | El clic en el icono no concede `activeTab` con el panel | Prueba en la primera hora; plan B con popup |
-| Rechazo en la tienda por marcas ajenas en el título | Nombre sin marcas ajenas (sección 7) |
-| La nota de la extensión contradice la de la consola | Mismos pesos que la Auditoría técnica, nombre distinto de la Puntuación GEO |
-| La extensión agota el techo del comprobador de la web | Subtecho propio dentro del techo global |
-| Entregar la sesión a la extensión (fase 2) | Solo por `externally_connectable` desde genscore.es, `storage.local`, botón de cerrar sesión, revisión de data-guardian |
-| Tarjeta compartida con una nota falsa | Imagen generada en local, sin URL pública con la nota |
-| Privacidad (la extensión ve páginas visitadas) | No sale ninguna URL; todo el análisis es local; política en `/privacidad` |
-| Hobby: uso comercial | Ya anotado en el contrato de entorno; decisión tuya |
+| Rechazo por marcas ajenas en el título | Nombre sin marcas ajenas |
+| El panel da cifras distintas a la consola | El endpoint usa los cargadores de la consola, nunca recálculos propios; test que compara las dos salidas |
+| Starter ve tres motores y espera cuatro | El carril IA enseña Perplexity con invitación a Pro, sin datos inventados |
+| Entregar la sesión a la extensión (fase 2) | Solo por `externally_connectable` desde genscore.es, `storage.local`, cerrar sesión, revisión de data-guardian |
+| Search Console fuera de nuestra base de datos | El endpoint usa la misma caché de 30 min; la extensión no guarda filas de Google |
+| Privacidad | Ninguna URL sale del navegador salvo la que el usuario consulta contra su propio proyecto; política publicada |
+| Hobby: uso comercial | Ya anotado; decisión tuya |
 
 ---
 
 ## 12. Áreas tocadas y prohibidas
 
 - **No toca** escaneo, puntuación, esquema, RLS, Stripe, Gemini ni crons.
-- **Fase 2** toca autenticación y CORS: necesita su propio visto bueno y la revisión
-  de data-guardian, como pide `CLAUDE.md`.
-- **Fase 4** gasta en DataForSEO: necesita su visto bueno con el tope escrito.
+- **Fase 2** toca autenticación y CORS, y necesita su propio visto bueno y revisión
+  de data-guardian (`CLAUDE.md`).
+- **Fase 3** gasta en DataForSEO dentro del tope que ya existe.
 - Ningún cron nuevo. Nada sub-diario en `vercel.json`.
 - Este PR solo añade documentación en `docs/chrome-extension/`.
 
 ---
 
-## 13. Fase segura por la que empezaría
+## 13. Lo que necesito de ti
 
-**Fase 1 = MVP de la sección 10.** No cambia ninguna ruta del servidor que ya
-existe, no gasta un euro por usuario y no pide permisos amplios. Si a los 30 días
-no llega a 200 instalaciones, habremos gastado dos fines de semana y 5 $, y sabremos
-qué falla mirando el embudo de PostHog. Si llega, la fase 2 (cuenta y comprobación
-dentro del panel) es la que más mueve el pago.
-
-Antes de construir necesito de ti:
-
-1. Que elijas una opción de UX (recomiendo B).
-2. El nombre de la ficha (recomiendo "GenScore: Auditoría SEO e IA").
-3. Que des de alta la cuenta de desarrollador de la Chrome Web Store (5 $) con el
-   correo de GenScore. La publicación la tienes que confirmar tú.
+1. Que elijas una alternativa de UX. Recomiendo la A (Estudio) con los detalles
+   de B y C de la sección 9.
+2. Que elijas entre lanzar el MVP en dos fines de semana o esperar a la fase 2
+   (cuatro en total). Recomiendo lanzar el MVP.
+3. El nombre de la ficha. Recomiendo "GenScore: Auditoría SEO e IA".
+4. Que abras la cuenta de desarrollador de la Chrome Web Store (5 $) con el correo
+   de GenScore. La publicación la confirmas tú.
 
 > Do you approve this plan? I will not implement until you confirm.
