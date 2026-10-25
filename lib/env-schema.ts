@@ -113,6 +113,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   PERPLEXITY_MODEL: "se usa perplexity/sonar, fijado en código",
   PUBLIC_CHECK_IP_SALT:
     "el comprobador gratuito anónimo deja de comprobar y cae a captar el dominio — a propósito: sin sal, hashear la IP no la protege",
+  STUDY_API_SECRET: "la API interna de estudios (/api/internal/study) rechaza todo con 401: las rutinas de captación no pueden lanzar estudios",
+  STUDY_API_DAILY_CAP: "la API interna de estudios usa el techo diario por defecto de 600 llamadas fijado en código",
   LLM_SCAN_PROVIDERS: "el escaneo cae a Gemini en solitario",
   LLM_SCAN_PROVIDER: "legacy: sólo se lee si LLM_SCAN_PROVIDERS no está",
   ENABLE_SYNC_SCAN_EXECUTION: "el escaneo síncrono no se ejecuta",
@@ -198,6 +200,8 @@ export const envSchema = z.object({
   PERPLEXITY_API_KEY: optionalText,
   PERPLEXITY_MODEL: optionalText,
   PUBLIC_CHECK_IP_SALT: optionalText,
+  STUDY_API_SECRET: optionalText,
+  STUDY_API_DAILY_CAP: optionalText,
   LLM_SCAN_PROVIDERS: optionalText,
   LLM_SCAN_PROVIDER: optionalText,
 
