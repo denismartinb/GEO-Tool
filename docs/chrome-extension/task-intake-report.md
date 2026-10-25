@@ -382,4 +382,37 @@ alcanzable pero justo.
 4. Que abras la cuenta de desarrollador de la Chrome Web Store (5 $) con el correo
    de GenScore. La publicación la confirmas tú.
 
+## 14. Revisión 3: la alternativa A, página a página
+
+Denis se inclina por A y pregunta qué aporta de verdad la extensión. La respuesta,
+detallada en [`prototipo-navegable.html`](./prototipo-navegable.html):
+
+- **El valor es por URL, no por proyecto.** La consola dice cómo va tu marca; el
+  panel dice qué pasa con la página que tienes delante: para qué preguntas la cita
+  la IA, qué búsquedas trae de Google, si un agente puede comprar en ella y qué
+  paso del plan le toca.
+- **Lo que sólo la extensión puede hacer:** leer la página que el usuario está
+  viendo. En la web de un rival o de una revista que cita la IA, comprueba si
+  nombra a tus rivales y no a ti. No es un rastreador: lee sólo la pestaña abierta
+  y cuando el usuario lo pide. Páginas citadas sigue sin afirmar nada del
+  contenido de una URL (`.claude/rules/citations.md`).
+- **Cinco tipos de página:** tu web con datos, tu web sin datos («nada que hacer
+  aquí»), portada (resumen del proyecto), competidor (cuota de voz y su página
+  frente a la tuya por la misma búsqueda), fuente citada (preguntas y si te
+  nombra) y cualquier otra web (nota y «Añadir como competidor o proyecto»).
+- **Asociación:** sin cuenta, «Sí, es mía» abre el alta con el dominio escrito.
+  Al conectar, la extensión baja sólo dominios (proyectos, competidores, fuentes) y
+  reconoce cada página por su dominio; una agencia cambia de proyecto sola.
+- **«Sigue mis webs» es opcional:** `optional_host_permissions` sólo para tus
+  dominios y los de tus rivales. Sin él, el panel se pausa al cambiar de página y
+  se lee al pulsar el icono, porque `activeTab` caduca al navegar.
+- **Panel o consola:** el panel lee, copia arreglos deterministas, comprueba otra
+  vez, marca como hecho, vigila un prompt y añade competidores o proyectos. Todo
+  lo que usa un modelo, abarca varias páginas o tiene historial vive en la
+  consola. El panel nunca genera texto con IA.
+- **Backend nuevo (fase 2):** `GET /api/ext/context` (sólo dominios) y
+  `GET /api/ext/page?url=` (citas del último escaneo para esa URL, pasos del plan
+  que apuntan a ella, Search Console en vivo con la caché de 30 minutos y filas
+  del seguimiento de palabras). Sin migración y sin llamadas a modelos.
+
 > Do you approve this plan? I will not implement until you confirm.

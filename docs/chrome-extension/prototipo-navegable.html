@@ -1,0 +1,764 @@
+<title>Extensión GenScore: prototipo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: intro card, then a browser mock (site on the left, extension side panel on the right) driven by a small state machine, then the reasoning sections. Tokens follow the light console line "Estudio". */
+:root {
+  --canvas: #eceff4; --shell: #fbfcfd; --card: #ffffff; --card-2: #f4f6f9;
+  --line: rgba(15,23,40,.08); --line-2: rgba(15,23,40,.14);
+  --fg: #0f1728; --fg-2: #3a4355; --fg-3: #687184; --fg-4: #a2a9b6;
+  --brand: #1068e0; --brand-2: #4b91ff; --brand-ink: #0b55bd; --brand-soft: rgba(16,104,224,.08); --brand-soft-2: rgba(16,104,224,.15);
+  --pos: #22a559; --pos-soft: rgba(34,165,89,.12); --pos-ink: #167a40;
+  --warn: #f08c00; --warn-soft: rgba(240,140,0,.13); --warn-ink: #9a4f00;
+  --neg: #e5383b; --neg-soft: rgba(229,56,59,.10); --neg-ink: #b4141c;
+  --lane-ia: #1068e0; --lane-ia-soft: rgba(16,104,224,.10);
+  --lane-g: #0d9488; --lane-g-soft: rgba(13,148,136,.11);
+  --lane-a: #d97706; --lane-a-soft: rgba(217,119,6,.12);
+  --rival: #7c3aed; --rival-soft: rgba(124,58,237,.10);
+  --hero-a: #e7f0fe; --hero-b: #f3f7fe; --track: #eef1f5; --seg: #eef1f5; --seg-on: #ffffff;
+  --chrome: #dfe3ea; --chrome-2: #f1f3f6;
+  --sh-shell: 0 1px 2px rgba(15,23,40,.04), 0 12px 40px rgba(15,23,40,.06);
+  --sh-card: 0 1px 2px rgba(15,23,40,.03);
+  --sh-pop: 0 18px 50px rgba(15,23,40,.22);
+  --font: "Figtree", ui-sans-serif, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--fg); font-family: var(--font); font-size: 15px; line-height: 1.55; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-block: 36px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 24px; }
+h1, h2, h3 { margin: 0; letter-spacing: -.015em; text-wrap: balance; }
+h1 { font-size: clamp(28px, 4.6vw, 44px); line-height: 1.06; font-weight: 800; }
+h2 { font-size: clamp(22px, 3vw, 30px); line-height: 1.12; font-weight: 800; }
+h3 { font-size: 16px; font-weight: 700; }
+p { margin: 0; max-width: 72ch; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); }
+.lede { font-size: 17px; color: var(--fg-2); }
+.note { font-size: 13px; color: var(--fg-3); }
+.shell { background: var(--shell); border: 1px solid var(--line); border-radius: 28px; padding: clamp(18px, 3vw, 32px); box-shadow: var(--sh-shell); display: grid; gap: 18px; min-width: 0; }
+.hero-shell { background: linear-gradient(135deg, var(--hero-a), var(--hero-b) 60%, #ffffff); }
+.big-idea { font-size: clamp(18px, 2.2vw, 22px); font-weight: 700; color: var(--fg); max-width: 60ch; }
+.big-idea em { font-style: normal; color: var(--brand); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; }
+.seg { display: inline-grid; grid-auto-flow: column; background: var(--seg); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { border: 0; background: transparent; padding: 7px 14px; border-radius: 999px; font-size: 13px; font-weight: 700; color: var(--fg-3); }
+.seg button[aria-pressed="true"] { background: var(--seg-on); color: var(--fg); box-shadow: 0 1px 3px rgba(15,23,40,.1); }
+.ctl-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ctl-label { font-size: 12px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: .06em; }
+.reset { border: 1px solid var(--line-2); background: var(--card); border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 600; }
+.state-line { font-size: 13px; color: var(--fg-3); }
+.state-line b { color: var(--fg); }
+
+/* Browser mock */
+.browser { border-radius: 18px; overflow: hidden; border: 1px solid var(--line-2); background: var(--card); box-shadow: var(--sh-shell); position: relative; min-width: 0; }
+.b-top { background: var(--chrome); padding: 8px 10px 0; display: flex; align-items: end; gap: 6px; }
+.dots { display: flex; gap: 6px; padding: 0 6px 10px; }
+.dots i { width: 11px; height: 11px; border-radius: 50%; background: #c6ccd6; display: block; }
+.b-tab { background: var(--chrome-2); border-radius: 10px 10px 0 0; padding: 7px 14px; font-size: 12px; font-weight: 600; max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; gap: 8px; align-items: center; min-width: 0; }
+.fav { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.b-bar { background: var(--chrome-2); display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
+.nav-b { border: 0; background: transparent; width: 26px; height: 26px; border-radius: 50%; color: var(--fg-3); font-size: 15px; flex: none; }
+.url { flex: 1; min-width: 0; background: var(--card); border-radius: 999px; padding: 6px 14px; font-size: 13px; color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.url b { color: var(--fg); font-weight: 600; }
+.ext-ic { position: relative; border: 0; width: 32px; height: 32px; border-radius: 10px; background: transparent; display: grid; place-items: center; flex: none; }
+.ext-ic:hover, .ext-ic.hint { background: var(--brand-soft-2); }
+.ext-ic.hint { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 5px var(--brand-soft-2); } }
+.gmark { width: 22px; height: 22px; border-radius: 7px; background: linear-gradient(135deg, #1068e0, #4b91ff); color: #fff; font-weight: 800; font-size: 12px; display: grid; place-items: center; }
+.badge { position: absolute; right: -3px; bottom: -2px; min-width: 18px; height: 15px; padding: 0 4px; border-radius: 5px; font-size: 9.5px; font-weight: 800; color: #fff; display: grid; place-items: center; background: var(--brand); }
+.badge.rv { background: var(--rival); }
+.bmarks { background: var(--chrome-2); display: flex; gap: 6px; padding: 6px 10px 8px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+.bm-g { display: flex; gap: 4px; align-items: center; flex: none; }
+.bm-g > span { font-size: 10.5px; font-weight: 700; color: var(--fg-3); text-transform: uppercase; letter-spacing: .05em; margin: 0 2px 0 6px; }
+.bm { border: 1px solid transparent; background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: var(--fg-2); display: flex; gap: 6px; align-items: center; white-space: nowrap; }
+.bm:hover { background: var(--card); }
+.bm[aria-current="true"] { background: var(--card); border-color: var(--line-2); color: var(--fg); }
+.view { display: grid; grid-template-columns: minmax(0, 1fr) 372px; height: 760px; }
+.site { overflow: hidden; position: relative; border-right: 1px solid var(--line); }
+.panel-col { background: var(--canvas); overflow-y: auto; position: relative; }
+.panel-head-chrome { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; font-size: 11px; color: var(--fg-3); background: var(--chrome-2); border-bottom: 1px solid var(--line); }
+
+/* Fake sites */
+.s { font-family: Georgia, "Times New Roman", serif; color: #1d2433; height: 100%; }
+.s-nav { display: flex; align-items: center; gap: 18px; padding: 14px 28px; border-bottom: 1px solid #e6e8ec; font-family: var(--font); font-size: 13px; }
+.s-logo { font-weight: 800; font-size: 16px; margin-right: auto; }
+.s-body { padding: 26px 28px; display: grid; gap: 14px; }
+.s h2 { font-size: 30px; line-height: 1.1; font-weight: 700; }
+.s-img { height: 170px; border-radius: 14px; }
+.s-line { height: 9px; border-radius: 5px; background: #e4e7ec; }
+.s-price { font-family: var(--font); font-size: 24px; font-weight: 800; }
+.s-cta { font-family: var(--font); display: inline-block; padding: 10px 18px; border-radius: 8px; color: #fff; font-weight: 700; font-size: 14px; }
+.s-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.s-list { font-family: var(--font); display: grid; gap: 10px; }
+.s-li { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px solid #e6e8ec; border-radius: 10px; font-size: 14px; }
+.s-li b { font-size: 18px; color: #9aa1ad; }
+.mark { background: rgba(124,58,237,.16); outline: 2px solid rgba(124,58,237,.5); border-radius: 3px; }
+
+/* Panel (extension) */
+.px { padding: 12px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; font-size: 13px; }
+.px > * { min-width: 0; }
+.px-top { display: flex; align-items: center; gap: 8px; background: var(--shell); border: 1px solid var(--line); border-radius: 16px; padding: 9px 10px; }
+.px-dom { flex: 1; min-width: 0; font-weight: 700; font-size: 12.5px; line-height: 1.25; }
+.px-dom small { display: block; color: var(--fg-3); font-weight: 500; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.px-av { margin-left: auto; flex: none; height: 26px; min-width: 26px; padding: 0 8px; border-radius: 999px; font-size: 11px; font-weight: 700; display: grid; place-items: center; background: var(--seg); color: var(--fg-3); border: 0; }
+.px-av.on { background: var(--brand-soft-2); color: var(--brand-ink); }
+.ctx { display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700; padding: 6px 10px; border-radius: 12px; }
+.ctx i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.ctx.own { background: var(--brand-soft); color: var(--brand-ink); } .ctx.own i { background: var(--brand); }
+.ctx.rv { background: var(--rival-soft); color: var(--rival); } .ctx.rv i { background: var(--rival); }
+.ctx.src { background: var(--lane-a-soft); color: var(--warn-ink); } .ctx.src i { background: var(--lane-a); }
+.ctx.oth { background: var(--seg); color: var(--fg-3); } .ctx.oth i { background: var(--fg-4); }
+.ctx span { margin-left: auto; font-weight: 600; color: var(--fg-3); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px; display: grid; gap: 8px; box-shadow: var(--sh-card); }
+.hero { background: linear-gradient(140deg, var(--hero-a), var(--hero-b) 70%, #fff); border: 1px solid var(--line); border-radius: 20px; padding: 14px; display: grid; gap: 8px; position: relative; overflow: hidden; }
+.hero-row { display: flex; align-items: center; gap: 12px; }
+.orb { width: 48px; height: 48px; border-radius: 50%; flex: none; background: radial-gradient(circle at 32% 26%, #fff 0 9%, #a9cdff 26%, #4b91ff 50%, #1068e0 74%, #0a3f8f 100%); box-shadow: inset -6px -8px 14px rgba(0,0,0,.16), 0 8px 18px rgba(16,104,224,.3); color: #fff; font-weight: 800; display: grid; place-items: center; font-size: 18px; }
+.orb.rv { background: radial-gradient(circle at 32% 26%, #fff 0 9%, #d6c4ff 26%, #9f6bff 52%, #7c3aed 76%, #4c1d95 100%); box-shadow: inset -6px -8px 14px rgba(0,0,0,.16), 0 8px 18px rgba(124,58,237,.3); }
+.orb.src { background: radial-gradient(circle at 32% 26%, #fff 0 9%, #ffe0a8 26%, #f7b23b 52%, #d97706 78%, #92400e 100%); box-shadow: inset -6px -8px 14px rgba(0,0,0,.16), 0 8px 18px rgba(217,119,6,.3); }
+.orb.oth { background: radial-gradient(circle at 32% 26%, #fff 0 9%, #e3e7ee 30%, #a2a9b6 70%, #687184 100%); box-shadow: inset -6px -8px 14px rgba(0,0,0,.12); }
+.num { font-size: 38px; font-weight: 300; line-height: 1; letter-spacing: -.03em; transition: color .3s; }
+.num small { font-size: 12.5px; font-weight: 600; color: var(--fg-3); letter-spacing: 0; }
+.num.up { color: var(--pos-ink); }
+.hero-sub { font-size: 12px; color: var(--fg-3); }
+.verdict { font-size: 13.5px; font-weight: 600; color: var(--fg); line-height: 1.35; }
+.delta { color: var(--pos-ink); font-weight: 700; }
+.inplan { justify-self: start; font-size: 11px; font-weight: 700; color: var(--brand-ink); background: var(--card); border: 1px solid var(--brand-soft-2); border-radius: 999px; padding: 2px 9px; }
+.sec-h { font-size: 10.5px; font-weight: 800; color: var(--fg-3); text-transform: uppercase; letter-spacing: .07em; padding: 2px 4px 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.ia { background: var(--lane-ia-soft); color: var(--lane-ia); }
+.chip.g { background: var(--lane-g-soft); color: var(--lane-g); }
+.chip.a { background: var(--lane-a-soft); color: var(--lane-a); }
+.chip.pro { background: var(--ink, #101a2c); color: #fff; }
+.chip.n { background: var(--seg); color: var(--fg-3); }
+.lanes { display: grid; gap: 6px; }
+.lane { border: 1px solid var(--line); border-radius: 14px; background: var(--card); overflow: hidden; }
+.lane-h { width: 100%; border: 0; background: transparent; display: grid; grid-template-columns: 8px 1fr auto 14px; gap: 10px; align-items: center; padding: 10px 12px; text-align: left; }
+.lane-h .dot { width: 8px; height: 8px; border-radius: 50%; }
+.lane-h b { font-size: 12.5px; font-weight: 700; display: block; }
+.lane-h span.t { font-size: 11.5px; color: var(--fg-3); display: block; line-height: 1.35; }
+.lane-h .v { font-size: 18px; font-weight: 300; white-space: nowrap; }
+.lane-h .ar { color: var(--fg-4); font-size: 12px; transition: transform .2s; }
+.lane.open .lane-h .ar { transform: rotate(90deg); }
+.lane-b { display: none; padding: 0 12px 12px; gap: 8px; }
+.lane.open .lane-b { display: grid; }
+.lane.ia.open { border-color: color-mix(in srgb, var(--lane-ia) 40%, transparent); }
+.lane.g.open { border-color: color-mix(in srgb, var(--lane-g) 40%, transparent); }
+.lane.a.open { border-color: color-mix(in srgb, var(--lane-a) 40%, transparent); }
+.engs4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.e4 { display: grid; justify-items: center; gap: 3px; font-size: 11px; font-weight: 700; text-align: center; }
+.e4 .ic { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); display: grid; place-items: center; position: relative; background: var(--card); }
+.e4 .st { position: absolute; right: -3px; bottom: -3px; width: 13px; height: 13px; border-radius: 50%; border: 2px solid var(--card); }
+.st.ok { background: var(--pos); } .st.ko { background: var(--neg); }
+.e4 .bar { width: 100%; height: 4px; border-radius: 4px; background: var(--track); position: relative; overflow: hidden; }
+.e4 .bar i { position: absolute; inset: 0 auto 0 0; background: var(--lane-ia); border-radius: 4px; }
+.e4 small { font-weight: 500; color: var(--fg-3); font-size: 10px; }
+.eng { width: 16px; height: 16px; flex: none; }
+.row { display: flex; gap: 8px; align-items: center; justify-content: space-between; font-size: 12.5px; }
+.row .k { color: var(--fg-2); min-width: 0; }
+.row .w { font-weight: 700; white-space: nowrap; }
+.q { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 12px; background: var(--card-2); font-size: 12.5px; }
+.q .engs { display: flex; gap: 3px; }
+.q .eng { width: 14px; height: 14px; }
+.q small { display: block; color: var(--fg-3); font-size: 11px; }
+.mini-btn { border: 1px solid var(--line-2); background: var(--card); border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 700; color: var(--brand-ink); white-space: nowrap; }
+.mini-btn.on { background: var(--pos-soft); color: var(--pos-ink); border-color: transparent; }
+.cmp { display: grid; grid-template-columns: 1fr 52px 52px; gap: 6px 8px; font-size: 12px; align-items: center; }
+.cmp .h { font-size: 10.5px; font-weight: 800; color: var(--fg-3); text-transform: uppercase; letter-spacing: .05em; text-align: center; }
+.cmp .c { text-align: center; font-weight: 800; }
+.yes { color: var(--pos-ink); } .no { color: var(--neg-ink); }
+.sov { display: grid; gap: 6px; }
+.sov-r { display: grid; grid-template-columns: 74px 1fr 40px; gap: 8px; align-items: center; font-size: 12px; font-weight: 600; }
+.sov-r .bar { height: 8px; border-radius: 6px; background: var(--track); position: relative; overflow: hidden; }
+.sov-r .bar i { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+.fixes { display: grid; gap: 6px; }
+.fx { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; grid-template-columns: 22px 1fr; gap: 4px 10px; }
+.fx > i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--brand-soft); color: var(--brand-ink); font-size: 11px; font-weight: 800; display: grid; place-items: center; grid-row: span 2; }
+.fx b { font-size: 12.5px; font-weight: 700; line-height: 1.3; }
+.fx .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.fx .pts { font-size: 11.5px; font-weight: 800; color: var(--pos-ink); }
+.fx .acts { grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.fx.done { opacity: .6; }
+.fx.done b { text-decoration: line-through; }
+.fx.done > i { background: var(--pos-soft); color: var(--pos-ink); }
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px; padding: 10px 14px; font-weight: 700; font-size: 13px; background: var(--brand); color: #fff; border: 0; width: 100%; }
+.btn.ghost { background: var(--card); color: var(--brand-ink); border: 1px solid var(--line-2); }
+.btn.ink { background: #101a2c; }
+.btns { display: grid; gap: 6px; }
+.teaser { border: 1px dashed var(--line-2); border-radius: 18px; padding: 12px; display: grid; gap: 8px; background: var(--shell); }
+.teaser b { font-size: 13px; line-height: 1.35; }
+.eng-row { display: flex; gap: 6px; }
+.empty { text-align: center; padding: 18px 12px; display: grid; gap: 8px; justify-items: center; color: var(--fg-2); }
+.empty .ic { width: 44px; height: 44px; border-radius: 14px; background: var(--seg); display: grid; place-items: center; font-size: 20px; }
+.pause { display: grid; gap: 10px; text-align: center; justify-items: center; padding: 26px 14px; }
+.pause .ic { width: 52px; height: 52px; border-radius: 16px; background: var(--brand-soft); display: grid; place-items: center; }
+.list { display: grid; gap: 6px; }
+.li { display: flex; gap: 10px; align-items: center; padding: 9px 10px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); font-size: 12.5px; }
+.li small { display: block; color: var(--fg-3); font-size: 11px; }
+.li .tag { margin-left: auto; }
+.field { border: 1px solid var(--line-2); border-radius: 12px; padding: 9px 12px; font-size: 13px; display: flex; justify-content: space-between; background: var(--card); }
+.field small { color: var(--pos-ink); font-weight: 700; }
+.fine { font-size: 11px; color: var(--fg-3); text-align: center; }
+.consoleln { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 14px; background: #101a2c; color: #fff; font-size: 12.5px; font-weight: 600; border: 0; width: 100%; text-align: left; }
+.consoleln span { opacity: .7; font-weight: 500; font-size: 11.5px; display: block; }
+.toast { position: sticky; bottom: 10px; margin: 0 12px 12px; background: #101a2c; color: #fff; border-radius: 14px; padding: 10px 12px; font-size: 12.5px; box-shadow: var(--sh-pop); display: none; }
+.toast.show { display: block; animation: rise .25s ease-out; }
+@keyframes rise { from { transform: translateY(8px); opacity: 0; } }
+.scan { display: grid; gap: 12px; justify-items: center; text-align: center; padding: 22px 10px; }
+.orbit { position: relative; width: 170px; height: 170px; }
+.orbit .ring { position: absolute; inset: 0; border-radius: 50%; border: 1.5px dashed var(--line-2); animation: spin 18s linear infinite; }
+.orbit .o { position: absolute; width: 34px; height: 34px; border-radius: 50%; background: var(--card); border: 1px solid var(--line); display: grid; place-items: center; transform: translate(-50%, -50%); }
+.orbit .c { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .orbit .ring, .ext-ic.hint, .toast.show { animation: none; } }
+
+/* Chrome permission dialog */
+.perm-scrim { position: absolute; inset: 0; background: rgba(15,23,40,.28); display: none; align-items: flex-start; justify-content: center; padding-top: 70px; z-index: 5; }
+.perm-scrim.show { display: flex; }
+.perm { width: min(420px, calc(100% - 24px)); background: #fff; border-radius: 12px; box-shadow: var(--sh-pop); padding: 18px; display: grid; gap: 10px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 13.5px; }
+.perm b { font-size: 15px; }
+.perm ul { margin: 0; padding-left: 18px; color: #3a4355; }
+.perm .pb { display: flex; justify-content: flex-end; gap: 8px; }
+.perm .pb button { border-radius: 999px; padding: 7px 16px; font-weight: 600; border: 1px solid #c6ccd6; background: #fff; }
+.perm .pb button.pri { background: #0b57d0; color: #fff; border-color: #0b57d0; }
+
+/* Explanation sections */
+.grid4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.tile { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.tile h3 { font-size: 16px; }
+.tile p, .tile li { font-size: 14px; color: var(--fg-2); }
+.tile ul, .tile ol { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
+.try { justify-self: start; border: 1px solid var(--line-2); background: var(--shell); border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 700; color: var(--brand-ink); }
+.split { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.tablewrap { overflow-x: auto; }
+table.t { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+table.t th, table.t td { text-align: left; padding: 9px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+table.t th { border-top: 0; font-size: 12px; color: var(--fg-3); text-transform: uppercase; letter-spacing: .05em; }
+code { font-family: var(--mono); font-size: 12.5px; background: var(--seg); padding: 1px 5px; border-radius: 5px; }
+
+@media (max-width: 920px) {
+  .view { grid-template-columns: 1fr; height: auto; }
+  .site { height: 220px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .panel-col { overflow: visible; }
+  .s-grid { grid-template-columns: 1fr; }
+  .dots { display: none; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="e-chatgpt" viewBox="0 0 256 260"><path style="fill:var(--fg)" d="M239.183914,106.202783 C245.054304,88.5242096 243.02228,69.1733805 233.607599,53.0998864 C219.451678,28.4588021 190.999703,15.7836129 163.213007,21.739505 C147.554077,4.32145883 123.794909,-3.42398554 100.87901,1.41873898 C77.9631105,6.26146349 59.3690093,22.9572536 52.0959621,45.2214219 C33.8436494,48.9644867 18.0901721,60.392749 8.86672513,76.5818033 C-5.443491,101.182962 -2.19544431,132.215255 16.8986662,153.320094 C11.0060865,170.990656 13.0197283,190.343991 22.4238231,206.422991 C36.5975553,231.072344 65.0680342,243.746566 92.8695738,237.783372 C105.235639,251.708249 123.001113,259.630942 141.623968,259.52692 C170.105359,259.552169 195.337611,241.165718 204.037777,214.045661 C222.28734,210.296356 238.038489,198.869783 247.267014,182.68528 C261.404453,158.127515 258.142494,127.262775 239.183914,106.202783 L239.183914,106.202783 Z M141.623968,242.541207 C130.255682,242.559177 119.243876,238.574642 110.519381,231.286197 L112.054146,230.416496 L163.724595,200.590881 C166.340648,199.056444 167.954321,196.256818 167.970781,193.224005 L167.970781,120.373788 L189.815614,133.010026 C190.034132,133.121423 190.186235,133.330564 190.224885,133.572774 L190.224885,193.940229 C190.168603,220.758427 168.442166,242.484864 141.623968,242.541207 Z M37.1575749,197.93062 C31.456498,188.086359 29.4094818,176.546984 31.3766237,165.342426 L32.9113895,166.263285 L84.6329973,196.088901 C87.2389349,197.618207 90.4682717,197.618207 93.0742093,196.088901 L156.255402,159.663793 L156.255402,184.885111 C156.243557,185.149771 156.111725,185.394602 155.89729,185.550176 L103.561776,215.733903 C80.3054953,229.131632 50.5924954,221.165435 37.1575749,197.93062 Z M23.5493181,85.3811273 C29.2899861,75.4733097 38.3511911,67.9162648 49.1287482,64.0478825 L49.1287482,125.438515 C49.0891492,128.459425 50.6965386,131.262556 53.3237748,132.754232 L116.198014,169.025864 L94.3531808,181.662102 C94.1132325,181.789434 93.8257461,181.789434 93.5857979,181.662102 L41.3526015,151.529534 C18.1419426,138.076098 10.1817681,108.385562 23.5493181,85.125333 L23.5493181,85.3811273 Z M203.0146,127.075598 L139.935725,90.4458545 L161.7294,77.8607748 C161.969348,77.7334434 162.256834,77.7334434 162.496783,77.8607748 L214.729979,108.044502 C231.032329,117.451747 240.437294,135.426109 238.871504,154.182739 C237.305714,172.939368 225.050719,189.105572 207.414262,195.67963 L207.414262,134.288998 C207.322521,131.276867 205.650697,128.535853 203.0146,127.075598 Z M224.757116,94.3850867 L223.22235,93.4642272 L171.60306,63.3828173 C168.981293,61.8443751 165.732456,61.8443751 163.110689,63.3828173 L99.9806554,99.8079259 L99.9806554,74.5866077 C99.9533004,74.3254088 100.071095,74.0701869 100.287609,73.9215426 L152.520805,43.7889738 C168.863098,34.3743518 189.174256,35.2529043 204.642579,46.0434841 C220.110903,56.8340638 227.949269,75.5923959 224.757116,94.1804513 L224.757116,94.3850867 Z M88.0606409,139.097931 L66.2158076,126.512851 C65.9950399,126.379091 65.8450965,126.154176 65.8065367,125.898945 L65.8065367,65.684966 C65.8314495,46.8285367 76.7500605,29.6846032 93.8270852,21.6883055 C110.90411,13.6920079 131.063833,16.2835462 145.5632,28.338998 L144.028434,29.2086986 L92.3579852,59.0343142 C89.7419327,60.5687513 88.1282597,63.3683767 88.1117998,66.4011901 L88.0606409,139.097931 Z M99.9294965,113.5185 L128.06687,97.3011417 L156.255402,113.5185 L156.255402,145.953218 L128.169187,162.170577 L99.9806554,145.953218 L99.9294965,113.5185 Z"/></symbol>
+<symbol id="e-gemini" viewBox="0 0 24 24"><linearGradient id="gmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4285F4"/><stop offset=".52" stop-color="#9B72CB"/><stop offset="1" stop-color="#D96570"/></linearGradient><path fill="url(#gmg)" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></symbol>
+<symbol id="e-claude" viewBox="0 0 256 257"><path fill="#D97757" d="M50.2278481,170.321013 L100.585316,142.063797 L101.427848,139.601013 L100.585316,138.24 L98.1225316,138.24 L89.6972152,137.721519 L60.921519,136.943797 L35.9696203,135.906835 L11.795443,134.610633 L5.70329114,133.31443 L0,125.796456 L0.583291139,122.037468 L5.70329114,118.602532 L13.0268354,119.250633 L29.2293671,120.352405 L53.5331646,122.037468 L71.161519,123.07443 L97.28,125.796456 L101.427848,125.796456 L102.011139,124.111392 L100.585316,123.07443 L99.4835443,122.037468 L74.3372152,104.992405 L47.116962,86.9751899 L32.8587342,76.6055696 L25.1463291,71.3559494 L21.2577215,66.4303797 L19.5726582,55.6718987 L26.5721519,47.9594937 L35.9696203,48.6075949 L38.3675949,49.2556962 L47.8946835,56.5792405 L68.2450633,72.3281013 L94.8172152,91.9007595 L98.7058228,95.1412658 L100.261266,94.0394937 L100.455696,93.2617722 L98.7058228,90.3453165 L84.2531646,64.2268354 L68.8283544,37.6546835 L61.958481,26.636962 L60.1437975,20.0263291 C59.4956962,17.3043038 59.0420253,15.0359494 59.0420253,12.2491139 L67.0136709,1.42582278 L71.4207595,-1.42108547e-14 L82.0496203,1.42582278 L86.521519,5.31443038 L93.1321519,20.4151899 L103.825823,44.2005063 L120.417215,76.5407595 L125.277975,86.1326582 L127.87038,95.0116456 L128.842532,97.7336709 L130.527595,97.7336709 L130.527595,96.1782278 L131.888608,77.9665823 L134.416203,55.6070886 L136.878987,26.8313924 L137.721519,18.7301266 L141.739747,9.00860759 L149.711392,3.75898734 L155.933165,6.74025316 L161.053165,14.0637975 L160.340253,18.7949367 L157.294177,38.5620253 L151.331646,69.5412658 L147.443038,90.2805063 L149.711392,90.2805063 L152.303797,87.6881013 L162.803038,73.7539241 L180.431392,51.718481 L188.208608,42.9691139 L197.282025,33.3124051 L203.114937,28.7108861 L214.132658,28.7108861 L222.233924,40.7655696 L218.604557,53.2091139 L207.262785,67.596962 L197.865316,79.7812658 L184.38481,97.9281013 L175.959494,112.44557 L176.737215,113.612152 L178.746329,113.417722 L209.207089,106.936709 L225.668861,103.955443 L245.306329,100.585316 L254.185316,104.733165 L255.157468,108.945823 L251.657722,117.56557 L230.659241,122.75038 L206.031392,127.675949 L169.348861,136.360506 L168.89519,136.684557 L169.413671,137.332658 L185.940253,138.888101 L193.004557,139.276962 L210.308861,139.276962 L242.519494,141.674937 L250.94481,147.248608 L256,154.053671 L255.157468,159.238481 L242.195443,165.849114 L224.696709,161.701266 L183.866329,151.979747 L169.867342,148.48 L167.923038,148.48 L167.923038,149.646582 L179.588861,161.053165 L200.976203,180.366582 L227.742785,205.253671 L229.103797,211.410633 L225.668861,216.271392 L222.039494,215.752911 L198.513418,198.059747 L189.44,190.088101 L168.89519,172.783797 L167.534177,172.783797 L167.534177,174.598481 L172.265316,181.533165 L197.282025,219.123038 L198.578228,230.659241 L196.763544,234.418228 L190.282532,236.686582 L183.153418,235.39038 L168.506329,214.84557 L153.40557,191.708354 L141.221266,170.969114 L139.730633,171.811646 L132.536709,249.259747 L129.166582,253.213165 L121.389367,256.19443 L114.908354,251.268861 L111.473418,243.297215 L114.908354,227.548354 L119.056203,207.003544 L122.426329,190.671392 L125.472405,170.385823 L127.287089,163.64557 L127.157468,163.191899 L125.666835,163.386329 L110.371646,184.38481 L87.1048101,215.817722 L68.6987342,235.52 L64.2916456,237.269873 L56.6440506,233.316456 L57.356962,226.252152 L61.6344304,219.96557 L87.1048101,187.560506 L102.46481,167.469367 L112.380759,155.868354 L112.315949,154.183291 L111.732658,154.183291 L44.0708861,198.124557 L32.0162025,199.68 L26.8313924,194.819241 L27.4794937,186.847595 L29.9422785,184.25519 L50.2926582,170.256203 L50.2278481,170.321013 Z"/></symbol>
+<symbol id="e-perplexity" viewBox="0 0 24 24"><path fill="#20808D" d="M22.3977 7.0896h-2.3106V.0676l-7.5094 6.3542V.1577h-1.1554v6.1966L4.4904 0v7.0896H1.6023v10.3976h2.8882V24l6.932-6.3591v6.2005h1.1554v-6.0469l6.9318 6.1807v-6.4879h2.8882V7.0896zm-3.4657-4.531v4.531h-5.355l5.355-4.531zm-13.2862.0676 4.8691 4.4634H5.6458V2.6262zM2.7576 16.332V8.245h7.8476l-6.1149 6.1147v1.9723H2.7576zm2.8882 5.0404v-3.8852h.0001v-2.6488l5.7763-5.7764v7.0111l-5.7764 5.2993zm12.7086.0248-5.7766-5.1509V9.0618l5.7766 5.7766v6.5588zm2.8882-5.0652h-1.733v-1.9723L13.3948 8.245h7.8478v8.087z"/></symbol>
+</svg>
+
+<main class="wrap">
+
+<header class="shell hero-shell">
+  <span class="eyebrow">CHROME-EXT-1 · propuesta A · prototipo navegable</span>
+  <h1>La consola responde por proyecto. La extensión responde por página, en la página.</h1>
+  <p class="lede">Lo que la extensión aporta y la consola no puede: decirte qué pasa con la URL exacta que tienes delante, sea tuya, de un rival o de una revista que cita la IA, y leer esa página para comprobarlo. Navega por las webs de la barra de marcadores, cambia entre «Sin cuenta» y «Con cuenta», y conecta tu cuenta desde el propio panel.</p>
+  <p class="note">Datos, marcas y webs de ejemplo. Panel lateral de Chrome con el diseño de la consola «Estudio».</p>
+</header>
+
+<section class="shell" aria-label="Prototipo">
+  <div class="controls">
+    <div class="ctl-group">
+      <span class="ctl-label">Escenario</span>
+      <div class="seg" role="group" aria-label="Cuenta">
+        <button type="button" data-ctl="noacct" aria-pressed="true">Sin cuenta</button>
+        <button type="button" data-ctl="acct" aria-pressed="false">Con cuenta (Pro)</button>
+      </div>
+      <div class="seg" role="group" aria-label="Seguir mis webs">
+        <button type="button" data-ctl="follow-off" aria-pressed="true">Pulsando el icono</button>
+        <button type="button" data-ctl="follow-on" aria-pressed="false">Sigue mis webs</button>
+      </div>
+    </div>
+    <button type="button" class="reset" data-ctl="reset">Empezar de cero</button>
+  </div>
+  <p class="state-line" id="stateLine"></p>
+
+  <div class="browser">
+    <div class="b-top"><div class="dots"><i></i><i></i><i></i></div><div class="b-tab" id="tab"></div></div>
+    <div class="b-bar">
+      <button class="nav-b" type="button" aria-label="Atrás">‹</button><button class="nav-b" type="button" aria-label="Adelante">›</button>
+      <div class="url" id="url"></div>
+      <button class="ext-ic" type="button" id="extIcon" aria-label="Abrir GenScore en esta página"><span class="gmark">G</span><span id="badge"></span></button>
+    </div>
+    <div class="bmarks" id="bmarks"></div>
+    <div class="view">
+      <div class="site" id="site"></div>
+      <div class="panel-col">
+        <div class="panel-head-chrome"><span>GenScore</span><span>✕</span></div>
+        <div id="panel"></div>
+        <div class="toast" id="toast" role="status"></div>
+      </div>
+    </div>
+    <div class="perm-scrim" id="perm">
+      <div class="perm" role="dialog" aria-label="Permiso de Chrome">
+        <b>«GenScore: Auditoría SEO e IA» quiere permiso adicional</b>
+        <span>Leer y cambiar tus datos en:</span>
+        <ul id="permList"></ul>
+        <span style="color:#687184;font-size:12.5px">Sólo estas webs. En el resto, GenScore sólo lee la página cuando pulsas su icono.</span>
+        <div class="pb"><button type="button" data-act="perm-no">Rechazar</button><button type="button" class="pri" data-act="perm-yes">Permitir</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="shell">
+  <span class="eyebrow">Por qué instalarla</span>
+  <h2>Lo que descubre cada tipo de cliente</h2>
+  <p class="big-idea">La consola dice cómo va tu marca. La extensión dice qué pasa con <em>esta página</em>: para qué preguntas la cita la IA, qué búsquedas trae de Google, si un agente puede comprar en ella, y si la página que lees nombra a tu rival y no a ti.</p>
+  <div class="grid4">
+    <div class="tile"><h3>Tienda online</h3><ul>
+      <li>En cada ficha: si un agente puede comprar y qué le falta (precio, stock, botón).</li>
+      <li>Qué búsqueda de Google tiene esa ficha a un paso de la página 1.</li>
+      <li>En la ficha de un rival: qué tiene la suya que no tiene la tuya, comprobado en las dos páginas.</li>
+    </ul><button class="try" type="button" data-go="product">Probar en una ficha</button><button class="try" type="button" data-go="rival">Probar en un rival</button></div>
+    <div class="tile"><h3>Negocio local o de servicios</h3><ul>
+      <li>En tu página de servicio: a quién recomienda la IA en tu lugar para esa pregunta.</li>
+      <li>Si un agente encuentra cómo pedir cita o reservar.</li>
+      <li>En una revista o un directorio que cita la IA: si te nombra o sólo a otros.</li>
+    </ul><button class="try" type="button" data-go="client">Probar en una clínica</button><button class="try" type="button" data-go="source">Probar en una revista</button></div>
+    <div class="tile"><h3>SaaS, medios y contenido</h3><ul>
+      <li>En cada artículo: para qué preguntas lo cita cada motor y qué búsquedas trae.</li>
+      <li>Una búsqueda de Google que trae clics se vigila como prompt con un clic.</li>
+      <li>En las páginas sin tráfico, el panel dice «nada que hacer aquí» y no molesta.</li>
+    </ul><button class="try" type="button" data-go="blog">Probar en un artículo</button><button class="try" type="button" data-go="legal">Probar en una página sin tráfico</button></div>
+    <div class="tile"><h3>Agencia</h3><ul>
+      <li>Cambia de cliente sola según la web que abres, sin elegir proyecto.</li>
+      <li>En una web que aún no es cliente: nota en un clic y «Añadir como proyecto» para prospectar.</li>
+      <li>Lo que ve en la web de un cliente es lo mismo que verá el cliente en su consola.</li>
+    </ul><button class="try" type="button" data-go="client">Probar con otro cliente</button><button class="try" type="button" data-go="other">Probar en una web nueva</button></div>
+  </div>
+</section>
+
+<section class="shell">
+  <span class="eyebrow">Al navegar</span>
+  <h2>Qué pasa en cada tipo de web</h2>
+  <div class="tablewrap">
+    <table class="t">
+      <thead><tr><th>Dónde estás</th><th>Sin cuenta</th><th>Con cuenta</th><th>Icono (si sigue tus webs)</th></tr></thead>
+      <tbody>
+        <tr><td><b>Tu web, página con datos</b></td><td>Nota SEO + IA de la página, tres arreglos, qué motores pueden leerla</td><td>Lo de antes, más: preguntas en las que la IA cita esta URL, sus búsquedas en Search Console, si está en tu plan y qué paso le toca</td><td>La nota de la página</td></tr>
+        <tr><td><b>Tu web, página sin datos</b></td><td>Nota y arreglos</td><td>«Ninguna respuesta ni búsqueda pasa por aquí»: nada más</td><td>La nota, en gris</td></tr>
+        <tr><td><b>Portada de tu web</b></td><td>Nota y arreglos</td><td>Resumen del proyecto: Puntuación GEO, plan de la semana con enlace a cada página, los cuatro motores</td><td>La nota</td></tr>
+        <tr><td><b>Web de un competidor</b></td><td>Nota de su página</td><td>Cuota de voz suya frente a la tuya por motor, preguntas en que la IA cita esta URL, su página frente a la tuya que compite por la misma búsqueda; palabras con DataForSEO en Pro</td><td>«VS»</td></tr>
+        <tr><td><b>Web que la IA cita en tus preguntas</b></td><td>Nota de la página</td><td>Para qué preguntas la citan y si te nombran; si la página nombra a tus rivales, comprobado en la página que lees; plantilla para pedir que te incluyan</td><td>Nada: no tiene permiso en esa web</td></tr>
+        <tr><td><b>Cualquier otra web</b></td><td>Nota de la página</td><td>Nota y «Añadir como competidor» o «Añadir como proyecto»</td><td>Nada</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="split">
+  <div class="shell">
+    <span class="eyebrow">Tu dominio y tu cuenta</span>
+    <h2>Cómo se asocia</h2>
+    <ol style="margin:0;padding-left:18px;display:grid;gap:8px;color:var(--fg-2)">
+      <li><b>Sin cuenta</b>, «Sí, es mía» guarda el dominio y abre el alta con él ya escrito, como hace la portada.</li>
+      <li><b>Conectar</b> abre genscore.es. Al iniciar sesión, la web le pasa la sesión a la extensión y ésta baja tu lista de dominios: tus proyectos, sus competidores y las webs que la IA cita en tus preguntas.</li>
+      <li><b>Cada página se reconoce sola</b> por su dominio (el mismo o un subdominio): tu web, un rival, una fuente u otra web. Una agencia con varios proyectos cambia de proyecto sin elegirlo.</li>
+      <li><b>«Sigue mis webs» es opcional.</b> Chrome pide permiso sólo para tus dominios y los de tus competidores, nunca para todas las webs. Con él, el panel cambia solo al navegar y el icono enseña la nota. Sin él, funciona igual pulsando el icono en cada página.</li>
+    </ol>
+  </div>
+  <div class="shell">
+    <span class="eyebrow">Panel o consola</span>
+    <h2>Qué se hace en cada sitio</h2>
+    <div class="split" style="gap:10px">
+      <div class="tile"><h3>En el panel</h3><ul>
+        <li>Ver qué pasa con esta página.</li>
+        <li>Copiar el arreglo de esta página (línea de robots.txt, datos de producto) y «Comprobar otra vez».</li>
+        <li>Marcar como hecho un paso del plan.</li>
+        <li>Vigilar una búsqueda como prompt.</li>
+        <li>Añadir un competidor o un proyecto.</li>
+        <li>Copiar la plantilla para escribir a una fuente.</li>
+      </ul></div>
+      <div class="tile"><h3>En la consola</h3><ul>
+        <li>Todo lo que usa IA: generar planes, textos y comparativas, con sus cupos.</li>
+        <li>Lo que abarca varias páginas: auditoría completa, todas las citas, historial.</li>
+        <li>Escaneos, prompts y competidores en bloque.</li>
+        <li>Informe, plan y facturación.</li>
+      </ul></div>
+    </div>
+    <p class="note">Regla: el panel nunca genera texto con un modelo. Así cada lectura cuesta cero y lo que tiene coste vive donde ya tiene sus límites.</p>
+  </div>
+</section>
+
+<section class="shell">
+  <span class="eyebrow">Qué cambia en el plan técnico</span>
+  <h2>Lo nuevo frente a la revisión 2</h2>
+  <div class="grid4">
+    <div class="tile"><h3>Datos por URL</h3><p><code>GET /api/ext/page?url=</code> devuelve, para una URL de tus dominios o de tus rivales: las preguntas del último escaneo que la citan y con qué motor, los pasos del plan que apuntan a ella, sus búsquedas de Search Console (en vivo, caché de 30 minutos, nada guardado) y sus filas del seguimiento de palabras. Sin llamadas a modelos.</p></div>
+    <div class="tile"><h3>Lista de dominios</h3><p><code>GET /api/ext/context</code> al conectar: dominios de tus proyectos, de sus competidores y de las fuentes citadas. Sólo dominios, para reconocer la página sin preguntar al servidor en cada clic.</p></div>
+    <div class="tile"><h3>Leer la página que tienes delante</h3><p>El script que ya lee la página para la nota busca también tu marca y las de tus rivales en su texto. No es un rastreador: lee sólo la pestaña que el usuario está viendo y cuando lo pide. Por eso puede afirmar «esta página nombra a Rival Uno», cosa que Páginas citadas no puede.</p></div>
+    <div class="tile"><h3>Permiso opcional</h3><p><code>optional_host_permissions</code> pedido con <code>chrome.permissions.request</code> sólo para tus dominios y los de tus rivales. Las acciones del panel reutilizan las de la consola (marcar como hecho, vigilar prompt, añadir competidor), con su tope de plan.</p></div>
+  </div>
+</section>
+
+</main>
+
+<script>
+(() => {
+  const E = (n, cls = 'eng') => `<svg class="${cls}" aria-hidden="true"><use href="#e-${n}"/></svg>`;
+  const ENG = ['chatgpt', 'gemini', 'claude', 'perplexity'];
+  const ENGN = { chatgpt: 'ChatGPT', gemini: 'Gemini', claude: 'Claude', perplexity: 'Perplexity' };
+
+  const PAGES = {
+    home:    { group: 'Tu web', label: 'Portada', host: 'tienda-ejemplo.es', path: '/', kind: 'own', fav: '#1d2433', title: 'Tienda Ejemplo · Zapatillas de montaña' },
+    product: { group: 'Tu web', label: 'Ficha de producto', host: 'tienda-ejemplo.es', path: '/zapatillas-trail-mujer', kind: 'own', fav: '#1d2433', title: 'Zapatillas trail mujer · Tienda Ejemplo' },
+    blog:    { group: 'Tu web', label: 'Artículo', host: 'tienda-ejemplo.es', path: '/blog/como-elegir-zapatillas-de-trail', kind: 'own', fav: '#1d2433', title: 'Cómo elegir zapatillas de trail' },
+    legal:   { group: 'Tu web', label: 'Aviso legal', host: 'tienda-ejemplo.es', path: '/aviso-legal', kind: 'own', fav: '#1d2433', title: 'Aviso legal · Tienda Ejemplo' },
+    rival:   { group: 'Fuera', label: 'Rival Uno', host: 'rival-uno.es', path: '/zapatillas-trail-pro', kind: 'rival', fav: '#7c3aed', title: 'Trail Pro W · Rival Uno' },
+    source:  { group: 'Fuera', label: 'Revista Trail', host: 'revista-trail.com', path: '/mejores-zapatillas-trail-2026', kind: 'source', fav: '#d97706', title: 'Las mejores zapatillas de trail de 2026' },
+    other:   { group: 'Fuera', label: 'Otra web', host: 'deportes-otra.com', path: '/', kind: 'other', fav: '#687184', title: 'Deportes Otra' },
+    client:  { group: 'Agencia', label: 'Otro cliente', host: 'clinica-ejemplo.es', path: '/implantes-dentales', kind: 'own2', fav: '#0d9488', title: 'Implantes dentales en Madrid · Clínica Ejemplo' }
+  };
+
+  // Local checks: computed in the browser, no account. bots = can each engine's crawler read the page.
+  const LOCAL = {
+    home:    { nota: 81, verdict: 'La portada está bien para Google. Perplexity no puede leer tu web.', bots: [1,1,1,0],
+               fixes: [{ id: 'pb', t: 'Perplexity no puede leer tu web', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' }, { id: 'llms', t: 'Añade un llms.txt', lane: 'ia', p: 4, act: 'copy', what: 'un llms.txt de partida' }],
+               lanes: { ia: [78, 'Pueden leerla 3 de 4 motores'], g: [90, 'Título, descripción e indexación bien'], a: [62, 'Ve el catálogo, sin datos de tienda'] } },
+    product: { nota: 68, verdict: 'Google la entiende. A Perplexity y a los agentes les falta información.', bots: [1,1,1,0],
+               fixes: [{ id: 'pb', t: 'Perplexity no puede leer esta página', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' }, { id: 'price', t: 'El precio no está en los datos de producto', lane: 'a', p: 6, act: 'copy', what: 'los datos de producto con el precio que se ve en la página' }, { id: 'desc', t: 'Falta la descripción para Google', lane: 'g', p: 5, act: 'how' }],
+               lanes: { ia: [61, 'Pueden leerla 3 de 4 motores'], g: [78, 'Indexable, sin descripción'], a: [54, 'Ve el producto, no el precio'] } },
+    blog:    { nota: 81, verdict: 'Buena fuente para la IA. Le faltan los datos de artículo.', bots: [1,1,1,0],
+               fixes: [{ id: 'pb', t: 'Perplexity no puede leer esta página', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' }, { id: 'art', t: 'Añade fecha y autor en los datos de artículo', lane: 'g', p: 3, act: 'copy', what: 'los datos de artículo' }],
+               lanes: { ia: [74, 'Respuesta clara en las primeras líneas'], g: [88, 'Título y descripción bien'], a: null } },
+    legal:   { nota: 74, verdict: 'Página de trámite. Sólo le afecta lo que afecta a toda tu web.', bots: [1,1,1,0],
+               fixes: [{ id: 'pb', t: 'Perplexity no puede leer tu web', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' }],
+               lanes: { ia: [70, 'Pueden leerla 3 de 4 motores'], g: [80, 'Indexable'], a: null } },
+    rival:   { nota: 84, verdict: 'Muy completa para la IA y para un agente.', bots: [1,1,1,1],
+               fixes: [{ id: 'rdesc', t: 'Su descripción para Google es demasiado larga', lane: 'g', p: 2, act: 'none' }],
+               lanes: { ia: [92, 'Pueden leerla los 4 motores'], g: [80, 'Bien, descripción larga'], a: [86, 'Ve producto, precio y stock'] } },
+    source:  { nota: 88, verdict: 'Página editorial muy clara para la IA.', bots: [1,1,1,1], fixes: [],
+               lanes: { ia: [93, 'Pueden leerla los 4 motores'], g: [90, 'Título y descripción bien'], a: null } },
+    other:   { nota: 63, verdict: 'A Google le falta información y la IA tiene poco que citar.', bots: [1,0,1,1],
+               fixes: [{ id: 'o1', t: 'Gemini no puede leer esta web (Google-Extended bloqueado)', lane: 'ia', p: 12, act: 'none' }, { id: 'o2', t: 'Varias páginas con el mismo título', lane: 'g', p: 4, act: 'none' }],
+               lanes: { ia: [58, 'Pueden leerla 3 de 4 motores'], g: [66, 'Títulos repetidos'], a: [40, 'Tienda sin datos de producto'] } },
+    client:  { nota: 58, verdict: 'Google la entiende. Un agente no encuentra cómo pedir cita.', bots: [1,1,1,1],
+               fixes: [{ id: 'cita', t: 'Un agente no encuentra cómo pedir cita', lane: 'a', p: 8, act: 'how' }, { id: 'cllms', t: 'Añade un llms.txt', lane: 'ia', p: 4, act: 'copy', what: 'un llms.txt de partida' }],
+               lanes: { ia: [70, 'Pueden leerla los 4 motores'], g: [66, 'Sin datos de negocio local'], a: [41, 'No encuentra cómo pedir cita'] } }
+  };
+
+  const S0 = () => ({ acct: false, follow: false, page: 'home', readPage: 'home', view: null, openLane: null, done: {}, recheck: {}, watched: {}, added: {}, permAsked: false });
+  let S = S0();
+
+  const $ = (id) => document.getElementById(id);
+  const kindOf = (p) => PAGES[p].kind;
+
+  function toast(msg) {
+    const t = $('toast'); t.textContent = msg; t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+    clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 3600);
+  }
+
+  // Note after fixes that were marked done and re-checked locally.
+  function notaOf(p) {
+    const L = LOCAL[p]; let n = L.nota;
+    if (S.recheck[p]) for (const f of L.fixes) if (S.done[p + ':' + f.id] && f.act === 'copy') n += f.p;
+    return Math.min(100, n);
+  }
+
+  /* ---------- Site mock ---------- */
+  function siteHTML(p) {
+    const lines = (n, w = [100, 92, 96, 70]) => Array.from({ length: n }, (_, i) => `<div class="s-line" style="width:${w[i % w.length]}%"></div>`).join('');
+    if (p === 'home') return `<div class="s"><div class="s-nav"><span class="s-logo">Tienda Ejemplo</span><span>Mujer</span><span>Hombre</span><span>Blog</span></div><div class="s-body"><div class="s-img" style="background:linear-gradient(120deg,#dfe8d8,#b9cdb0)"></div><h2>Zapatillas para correr por la montaña</h2>${lines(3)}<div class="s-grid"><div class="s-img" style="height:110px;background:#eee6dc"></div><div class="s-img" style="height:110px;background:#dde6ee"></div></div></div></div>`;
+    if (p === 'product') return `<div class="s"><div class="s-nav"><span class="s-logo">Tienda Ejemplo</span><span>Mujer</span><span>Hombre</span><span>Blog</span></div><div class="s-body"><div class="s-grid"><div class="s-img" style="height:260px;background:linear-gradient(140deg,#f1d9c9,#e4b49a)"></div><div style="display:grid;gap:12px;align-content:start"><h2>Zapatillas trail mujer Cumbre</h2><div class="s-price">119,90 €</div>${lines(3)}<span class="s-cta" style="background:#1d2433">Añadir a la cesta</span></div></div>${lines(4)}</div></div>`;
+    if (p === 'blog') return `<div class="s"><div class="s-nav"><span class="s-logo">Tienda Ejemplo</span><span>Mujer</span><span>Hombre</span><span>Blog</span></div><div class="s-body" style="max-width:620px"><span style="font-family:var(--font);font-size:12px;color:#687184">Guía · 8 min</span><h2>Cómo elegir zapatillas de trail</h2>${lines(4)}<div class="s-img" style="height:130px;background:#e3eadf"></div>${lines(5)}</div></div>`;
+    if (p === 'legal') return `<div class="s"><div class="s-nav"><span class="s-logo">Tienda Ejemplo</span><span>Mujer</span><span>Hombre</span><span>Blog</span></div><div class="s-body" style="max-width:620px"><h2 style="font-size:24px">Aviso legal</h2>${lines(9)}</div></div>`;
+    if (p === 'rival') return `<div class="s" style="font-family:var(--font)"><div class="s-nav" style="background:#1b1033;color:#fff;border:0"><span class="s-logo">RIVAL UNO</span><span>Trail</span><span>Asfalto</span></div><div class="s-body"><div class="s-grid"><div class="s-img" style="height:260px;background:linear-gradient(140deg,#e9e2ff,#b9a6f0)"></div><div style="display:grid;gap:12px;align-content:start"><h2 style="font-family:var(--font)">Trail Pro W</h2><div class="s-price">124 €</div><span style="font-size:13px;color:#167a40;font-weight:700">En stock · envío en 24 h</span>${lines(2)}<span class="s-cta" style="background:#7c3aed">Comprar</span></div></div><div class="s-list"><div class="s-li"><b>?</b>¿Talla igual que en asfalto?</div><div class="s-li"><b>?</b>¿Sirven para barro?</div></div></div></div>`;
+    if (p === 'source') {
+      const marked = S.acct && S.readPage === 'source';
+      const r1 = marked ? '<span class="mark">Rival Uno</span>' : 'Rival Uno';
+      const r2 = marked ? '<span class="mark">Rival Dos</span>' : 'Rival Dos';
+      return `<div class="s"><div class="s-nav"><span class="s-logo" style="font-style:italic">Revista Trail</span><span>Material</span><span>Carreras</span></div><div class="s-body" style="max-width:660px"><span style="font-family:var(--font);font-size:12px;color:#687184">Material · Actualizado en octubre</span><h2>Las mejores zapatillas de trail de 2026</h2>${lines(2)}<div class="s-list"><div class="s-li"><b>1</b><span>${r1} Trail Pro W. Agarre excelente en roca.</span></div><div class="s-li"><b>2</b><span>${r2} Sky 4. Ligeras y rápidas.</span></div><div class="s-li"><b>3</b><span>Marca Tres Ultra. Para distancias largas.</span></div></div>${lines(3)}</div></div>`;
+    }
+    if (p === 'other') return `<div class="s" style="font-family:var(--font)"><div class="s-nav"><span class="s-logo">Deportes Otra</span><span>Ofertas</span><span>Marcas</span></div><div class="s-body"><div class="s-img" style="background:#e6e9ee"></div><h2 style="font-family:var(--font)">Todo para tu deporte</h2>${lines(3)}</div></div>`;
+    if (p === 'client') return `<div class="s" style="font-family:var(--font)"><div class="s-nav"><span class="s-logo" style="color:#0d9488">Clínica Ejemplo</span><span>Tratamientos</span><span>Equipo</span><span>Contacto</span></div><div class="s-body" style="max-width:660px"><h2 style="font-family:var(--font)">Implantes dentales en Madrid</h2>${lines(4)}<div class="s-img" style="height:130px;background:#dff1ee"></div>${lines(3)}<span style="font-size:13px;color:#687184">Llámanos al 900 000 000</span></div></div>`;
+    return '';
+  }
+
+  /* ---------- Panel pieces ---------- */
+  function topBar(p) {
+    const P = PAGES[p];
+    const proj = S.acct ? (P.kind === 'own2' ? 'Proyecto: clinica-ejemplo.es' : 'Proyecto: tienda-ejemplo.es') : 'Esta página';
+    const av = S.acct ? '<button class="px-av on" type="button" data-act="toast-acct">DM</button>' : '<button class="px-av" type="button" data-act="connect">Conectar</button>';
+    return `<div class="px-top"><span class="gmark">G</span><span class="px-dom">${P.host}<small>${proj} · ${P.path}</small></span>${av}</div>`;
+  }
+  function ctx(p) {
+    if (!S.acct) return '';
+    const k = kindOf(p);
+    if (k === 'own') return `<div class="ctx own"><i></i>Tu web · ${PAGES[p].label}<span>último escaneo ayer</span></div>`;
+    if (k === 'own2') return `<div class="ctx own"><i></i>Tu cliente · cambiado de proyecto solo<span>hace 2 días</span></div>`;
+    if (k === 'rival') return `<div class="ctx rv"><i></i>Competidor de tienda-ejemplo.es<span>Rival Uno</span></div>`;
+    if (k === 'source') return `<div class="ctx src"><i></i>Fuente que cita la IA en tus preguntas</div>`;
+    return `<div class="ctx oth"><i></i>Otra web · no está en tu cuenta</div>`;
+  }
+  function hero(orbCls, numHTML, sub, verdict, extra = '') {
+    return `<div class="hero"><div class="hero-row"><span class="orb ${orbCls}">G</span><div><div class="num" id="heroNum">${numHTML}</div><div class="hero-sub">${sub}</div></div></div>${verdict ? `<div class="verdict">${verdict}</div>` : ''}${extra}</div>`;
+  }
+  function lane(id, cls, dotVar, title, txt, v, body) {
+    const open = S.openLane === p_lane(id);
+    return `<div class="lane ${cls}${open ? ' open' : ''}"><button class="lane-h" type="button" data-lane="${id}" aria-expanded="${open}"><span class="dot" style="background:var(${dotVar})"></span><span><b>${title}</b><span class="t">${txt}</span></span><span class="v">${v}</span><span class="ar">›</span></button><div class="lane-b">${body}</div></div>`;
+  }
+  const p_lane = (id) => S.page + ':' + id;
+
+  function botsBody(p) {
+    const b = LOCAL[p].bots;
+    return `<div class="engs4">${ENG.map((e, i) => `<div class="e4"><span class="ic">${E(e)}<span class="st ${b[i] ? 'ok' : 'ko'}"></span></span>${ENGN[e]}<small>${b[i] ? 'Puede leerla' : 'Bloqueado'}</small></div>`).join('')}</div>`;
+  }
+  function fixesHTML(p, list, heading) {
+    if (!list.length) return '';
+    return `<div class="sec-h">${heading}</div><div class="fixes">${list.map((f, i) => {
+      const key = p + ':' + f.id; const done = S.done[key];
+      const chip = `<span class="chip ${f.lane}">${f.lane === 'ia' ? 'IA' : f.lane === 'g' ? 'Google' : 'Agentes'}</span>`;
+      let acts = '';
+      if (f.act === 'copy') acts = `<button class="mini-btn" type="button" data-act="copy" data-what="${f.what}">${f.lbl || 'Copiar código'}</button><button class="mini-btn${done ? ' on' : ''}" type="button" data-act="done" data-key="${key}">${done ? 'Hecho ✓' : 'Ya lo he puesto'}</button>`;
+      else if (f.act === 'how') acts = `<button class="mini-btn" type="button" data-act="how">Cómo se hace</button>`;
+      else if (f.act === 'plan') acts = `<button class="mini-btn" type="button" data-act="console" data-where="${f.where}">Ver el paso en la consola</button><button class="mini-btn${done ? ' on' : ''}" type="button" data-act="done" data-key="${key}">${done ? 'Hecho ✓' : 'Marcar como hecho'}</button>`;
+      return `<div class="fx${done ? ' done' : ''}"><i>${done ? '✓' : i + 1}</i><b>${f.t}</b><span class="meta">${chip}${f.p ? `<span class="pts">+${f.p}</span>` : ''}${f.note ? `<span class="note" style="font-size:11px">${f.note}</span>` : ''}</span>${acts ? `<div class="acts">${acts}</div>` : ''}</div>`;
+    }).join('')}</div>${list.some((f) => f.act === 'copy') ? `<button class="btn ghost" type="button" data-act="recheck">Comprobar otra vez</button>` : ''}`;
+  }
+
+  /* ---------- Views ---------- */
+  function localView(p) {
+    const L = LOCAL[p]; const n = notaOf(p);
+    const up = n > L.nota;
+    let h = topBar(p);
+    h += hero('', `${n}<small> /100</small>`, 'Nota SEO + IA de esta página' + (up ? ` · <span class="delta">+${n - L.nota} tras comprobar</span>` : ''), L.verdict);
+    h += fixesHTML(p, L.fixes, 'Lo primero en esta página');
+    h += `<div class="lanes">`;
+    h += lane('ia', 'ia', '--lane-ia', 'IA', L.lanes.ia[1], L.lanes.ia[0], botsBody(p) + `<div class="note" style="font-size:11.5px">Lo dice el robots.txt de la web: cada motor tiene su rastreador.</div>`);
+    h += lane('g', 'g', '--lane-g', 'Google', L.lanes.g[1], L.lanes.g[0], `<div class="row"><span class="k">Título</span><span class="w yes">Bien</span></div><div class="row"><span class="k">Descripción</span><span class="w ${p === 'product' ? 'no' : 'yes'}">${p === 'product' ? 'Falta' : 'Bien'}</span></div><div class="row"><span class="k">Indexable</span><span class="w yes">Sí</span></div>`);
+    if (L.lanes.a) h += lane('a', 'a', '--lane-a', 'Agentes', L.lanes.a[1], L.lanes.a[0], `<div class="row"><span class="k">Qué vende</span><span class="w">${p === 'client' ? 'Citas' : 'Producto'}</span></div><div class="row"><span class="k">Precio legible</span><span class="w ${p === 'rival' ? 'yes' : 'no'}">${p === 'rival' ? 'Sí' : 'No'}</span></div><div class="row"><span class="k">Cómo comprar o reservar</span><span class="w ${p === 'client' ? 'no' : 'yes'}">${p === 'client' ? 'No lo encuentra' : 'Botón visible'}</span></div>`);
+    h += `</div>`;
+    const ownish = !['source'].includes(kindOf(p));
+    h += `<div class="teaser"><div class="eng-row">${ENG.map((e) => E(e)).join('')}</div><b>${ownish ? '¿Es tu web? Mira si ChatGPT, Gemini, Claude y Perplexity la recomiendan, y frente a quién.' : '¿Esta revista te nombra? Conecta tu cuenta y lo comprobamos en la página.'}</b><div class="btns"><button class="btn" type="button" data-act="mine">${ownish ? 'Sí, es mía: medirla' : 'Medir mi web'}</button><button class="btn ghost" type="button" data-act="connect">Ya tengo cuenta: conectar</button></div></div>`;
+    return h;
+  }
+
+  function accountView(p) {
+    const k = kindOf(p); let h = topBar(p) + ctx(p);
+    const L = LOCAL[p];
+    if (p === 'home') {
+      h += hero('', `54<small> Puntuación GEO</small>`, '<span class="delta">+3</span> desde el escaneo anterior', 'Te nombran en el 29 % de las respuestas. Rival Uno, en el 41 %.');
+      h += `<div class="sec-h">Tu plan de la semana</div><div class="fixes">
+        <div class="fx"><i>1</i><b>Publica la comparativa con Rival Uno</b><span class="meta"><span class="chip ia">IA</span><span class="pts">+8</span></span><div class="acts"><button class="mini-btn" type="button" data-act="console" data-where="Recomendaciones, con el plan de esta comparativa">Abrir el plan</button></div></div>
+        <div class="fx"><i>2</i><b>Sube «zapatillas trail mujer» a la página 1</b><span class="meta"><span class="chip g">Google</span><span class="note" style="font-size:11px">puesto 11</span></span><div class="acts"><button class="mini-btn" type="button" data-nav="product">Ir a la página ›</button></div></div>
+        <div class="fx"><i>3</i><b>Pon el precio en los datos de producto</b><span class="meta"><span class="chip a">Agentes</span><span class="pts">+6</span></span><div class="acts"><button class="mini-btn" type="button" data-nav="product">Ir a la página ›</button></div></div></div>`;
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'Te nombran en el 29 % de las respuestas', '29 %', `<div class="engs4">${[[38], [31], [22], [25]].map((v, i) => `<div class="e4"><span class="ic">${E(ENG[i])}</span>${v[0]} %<span class="bar"><i style="width:${v[0]}%"></i></span></div>`).join('')}</div>`);
+      h += lane('g', 'g', '--lane-g', 'Google', 'Últimos 28 días: 1.240 clics', '9,1', `<div class="row"><span class="k">Puesto medio</span><span class="w">9,1</span></div><div class="row"><span class="k">Búsquedas en la página 2</span><span class="w">7</span></div><div class="row"><span class="k">Palabras vigiladas en el top 10</span><span class="w">4 de 15</span></div>`);
+      h += lane('a', 'a', '--lane-a', 'Agentes', 'Visibilidad agéntica', '66', `<div class="row"><span class="k">Descubrimiento</span><span class="w">24 / 30</span></div><div class="row"><span class="k">Comprensión</span><span class="w">17 / 30</span></div><div class="row"><span class="k">Confianza</span><span class="w">14 / 20</span></div><div class="row"><span class="k">Compra</span><span class="w">11 / 20</span></div>`);
+      h += `</div><button class="consoleln" type="button" data-act="console" data-where="Visión general"><span>Abrir la consola<span>Todo el proyecto, historial e informe</span></span>›</button>`;
+      return h;
+    }
+    if (p === 'product') {
+      const n = notaOf(p);
+      h += hero('', `${n}<small> /100</small>`, 'Nota SEO + IA de esta página' + (n > L.nota ? ` · <span class="delta">+${n - L.nota}</span>` : ''), 'Está a un paso de la página 1 de Google, y Perplexity y los agentes no la ven entera.', `<span class="inplan">Está en tu plan: pasos 2 y 3</span>`);
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'La cita Gemini en 1 de tus preguntas', '1', `<div class="q"><span>¿Qué zapatillas de trail para mujer recomiendas?<small>Gemini la cita · no te nombra en el texto</small></span><span class="engs">${E('gemini')}</span></div>${botsBody(p)}`);
+      h += lane('g', 'g', '--lane-g', 'Google', '«zapatillas trail mujer»: puesto 11', '11', `<div class="row"><span class="k">Impresiones (28 días)</span><span class="w">2.400</span></div><div class="row"><span class="k">Clics</span><span class="w">31</span></div><div class="row"><span class="k">Delante en esa búsqueda</span><span class="w">Rival Uno, puesto 3</span></div><button class="mini-btn" type="button" data-nav="rival" style="justify-self:start">Ver su página ›</button><span class="note" style="font-size:11px">Search Console y tu seguimiento de palabras.</span>`);
+      h += lane('a', 'a', '--lane-a', 'Agentes', 'Ve el producto, no el precio', '54', `<div class="row"><span class="k">Producto</span><span class="w yes">Lo ve</span></div><div class="row"><span class="k">Precio</span><span class="w no">No lo lee</span></div><div class="row"><span class="k">Stock</span><span class="w no">No lo lee</span></div><div class="row"><span class="k">Botón de compra</span><span class="w yes">Lo encuentra</span></div>`);
+      h += `</div>`;
+      h += fixesHTML(p, [
+        { id: 'price', t: 'Pon el precio en los datos de producto', lane: 'a', p: 6, act: 'copy', what: 'los datos de producto con el precio que se ve en la página', note: 'paso 3' },
+        { id: 'pb', t: 'Deja que Perplexity lea la página', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' },
+        { id: 'p1', t: 'Sube «zapatillas trail mujer» a la página 1', lane: 'g', p: 0, act: 'plan', where: 'el paso 2 del plan, con lo que tienen las tres primeras', note: 'paso 2' }
+      ], 'Lo primero aquí');
+      h += `<button class="consoleln" type="button" data-act="console" data-where="la Auditoría técnica de esta página"><span>Abrir esta página en la consola<span>Auditoría completa e historial</span></span>›</button>`;
+      return h;
+    }
+    if (p === 'blog') {
+      h += hero('', `81<small> /100</small>`, 'Nota SEO + IA de esta página', 'Es tu página que más cita la IA. Cuídala.');
+      const qs = [['¿Cómo elegir zapatillas de trail?', ['chatgpt', 'gemini']], ['¿Qué drop deben tener unas zapatillas de montaña?', ['chatgpt']], ['¿Zapatillas de trail para principiantes?', ['gemini', 'perplexity']]];
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'La citan en 3 de tus preguntas principales', '3', qs.map(([q, es]) => `<div class="q"><span>${q}</span><span class="engs">${es.map((e) => E(e)).join('')}</span></div>`).join('') + `<span class="note" style="font-size:11px">Del último escaneo. Te nombran en 2 de esas 3 respuestas.</span>`);
+      const gq = [['cómo elegir zapatillas de trail', '4', 'yes'], ['cuánto duran unas zapatillas de trail', '7', 'no'], ['drop zapatillas trail', '9', 'no']];
+      h += lane('g', 'g', '--lane-g', 'Google', '380 clics en 28 días · 14 búsquedas', '4,8', gq.map(([q, pos, isPrompt]) => {
+        const w = S.watched[q] || isPrompt === 'yes';
+        return `<div class="q"><span>${q}<small>puesto ${pos}${isPrompt === 'yes' ? ' · ya es un prompt' : ''}</small></span>${isPrompt === 'yes' ? '<span class="chip n">Vigilado</span>' : `<button class="mini-btn${w ? ' on' : ''}" type="button" data-act="watch" data-q="${q}">${w ? 'Prompt vigilado' : 'Vigilar prompt'}</button>`}</div>`;
+      }).join(''));
+      h += `</div>`;
+      h += fixesHTML(p, [
+        { id: 'art', t: 'Añade fecha y autor en los datos de artículo', lane: 'g', p: 3, act: 'copy', what: 'los datos de artículo' },
+        { id: 'pb', t: 'Deja que Perplexity lea la página', lane: 'ia', p: 12, act: 'copy', what: 'la línea de robots.txt', lbl: 'Copiar línea' }
+      ], 'Lo primero aquí');
+      h += `<button class="consoleln" type="button" data-act="console" data-where="Páginas citadas, filtrada por esta URL"><span>Ver sus citas en la consola<span>Respuestas completas por motor</span></span>›</button>`;
+      return h;
+    }
+    if (p === 'legal') {
+      h += hero('', `74<small> /100</small>`, 'Nota SEO + IA de esta página', '');
+      h += `<div class="card empty"><span class="ic">☕</span><b>Nada que hacer aquí</b><span class="note">Ninguna respuesta de la IA cita esta página y no trae búsquedas de Google. Lo que le afecta (Perplexity bloqueado) ya está en la portada.</span><button class="mini-btn" type="button" data-nav="home">Ir a la portada ›</button></div>`;
+      return h;
+    }
+    if (p === 'rival') {
+      h += hero('rv', `41 %<small> de las respuestas</small>`, 'Rival Uno · tú, en el 29 %', 'Te saca ventaja en ChatGPT y Gemini.');
+      h += `<div class="card sov">${[['ChatGPT', 52, 38], ['Gemini', 44, 31], ['Claude', 30, 22], ['Perplexity', 36, 25]].map(([n, r, y]) => `<div class="sov-r"><span>${n}</span><span class="bar"><i style="width:${r}%;background:var(--rival)"></i></span><span>${r} %</span></div><div class="sov-r" style="margin-top:-4px"><span class="note" style="font-size:11px">tú</span><span class="bar"><i style="width:${y}%;background:var(--brand)"></i></span><span class="note" style="font-size:11px">${y} %</span></div>`).join('')}</div>`;
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'Esta página la citan en 2 de tus preguntas', '2', `<div class="q"><span>¿Qué zapatillas de trail para mujer recomiendas?<small>Te nombran: no</small></span><span class="engs">${E('chatgpt')}${E('perplexity')}</span></div><div class="q"><span>¿Mejores zapatillas para trail con barro?<small>Te nombran: sí, en segundo lugar</small></span><span class="engs">${E('chatgpt')}</span></div>`);
+      h += lane('g', 'g', '--lane-g', 'Google', 'Compiten por «zapatillas trail mujer»', '3 vs 11', `<div class="cmp"><span></span><span class="h">Rival</span><span class="h">Tú</span><span>Puesto en esa búsqueda</span><span class="c">3</span><span class="c">11</span><span>Precio en los datos de producto</span><span class="c yes">Sí</span><span class="c no">No</span><span>Preguntas frecuentes en la página</span><span class="c yes">Sí</span><span class="c no">No</span><span>Pueden leerla los 4 motores</span><span class="c yes">Sí</span><span class="c no">No</span></div><span class="note" style="font-size:11px">Comparado en su página y en tu ficha, leídas las dos.</span><div class="row"><span class="k">Te gana en tus palabras vigiladas</span><span class="w">6 de 15 <span class="chip pro">Pro</span></span></div>`);
+      h += `</div>`;
+      h += fixesHTML(p, [{ id: 'cmp', t: 'Publica la comparativa con Rival Uno', lane: 'ia', p: 8, act: 'plan', where: 'el plan de la comparativa (paso 1)', note: 'paso 1 de tu plan' }, { id: 'faq', t: 'Añade preguntas frecuentes a tu ficha', lane: 'ia', p: 4, act: 'how' }], 'Qué hacer con esto');
+      h += `<button class="btn ghost" type="button" data-nav="product">Ver mi página que compite ›</button>`;
+      return h;
+    }
+    if (p === 'source') {
+      const read = S.readPage === 'source';
+      h += hero('src', `2<small> de tus preguntas</small>`, 'Gemini y ChatGPT citan esta página', 'Y en esas respuestas no te nombran.');
+      h += `<div class="card"><div class="sec-h" style="padding:0">Comprobado en esta página</div><div class="row"><span class="k">Nombra a Rival Uno</span><span class="w yes">Sí, puesto 1</span></div><div class="row"><span class="k">Nombra a Rival Dos</span><span class="w yes">Sí, puesto 2</span></div><div class="row"><span class="k">Nombra a Tienda Ejemplo</span><span class="w no">No</span></div><span class="note" style="font-size:11px">${read ? 'Marcado en la página de la izquierda.' : ''} Leído en la pestaña que tienes abierta.</span></div>`;
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'Preguntas en que la citan', '2', `<div class="q"><span>¿Cuáles son las mejores zapatillas de trail?</span><span class="engs">${E('gemini')}${E('chatgpt')}</span></div><div class="q"><span>¿Qué zapatillas de trail comprar en 2026?</span><span class="engs">${E('gemini')}</span></div>`);
+      h += `</div>`;
+      h += `<div class="sec-h">Qué hacer con esto</div><div class="fixes"><div class="fx"><i>1</i><b>Pide a Revista Trail que te incluya en su lista</b><span class="meta"><span class="chip ia">IA</span><span class="note" style="font-size:11px">depende de ellos</span></span><div class="acts"><button class="mini-btn" type="button" data-act="copy" data-what="la plantilla para escribirles">Copiar la plantilla</button><button class="mini-btn" type="button" data-act="console" data-where="Páginas citadas, fuentes alcanzables">Ver tus fuentes</button></div></div></div>`;
+      return h;
+    }
+    if (p === 'other') {
+      const n = notaOf(p);
+      h += hero('oth', `${n}<small> /100</small>`, 'Nota SEO + IA de esta página', 'No es tu web ni un rival, y la IA no la cita en tus preguntas.');
+      h += `<div class="btns"><button class="btn ghost" type="button" data-act="add" data-what="competidor">${S.added.competidor ? 'Añadida como competidor ✓' : 'Añadir como competidor'}</button><button class="btn ghost" type="button" data-act="add" data-what="proyecto">${S.added.proyecto ? 'Añadida como proyecto ✓' : 'Añadir como proyecto (agencia)'}</button><button class="btn ghost" type="button" data-nav="home">Comparar con mi web</button></div>`;
+      h += `<div class="lanes">${lane('ia', 'ia', '--lane-ia', 'IA', L.lanes.ia[1], L.lanes.ia[0], botsBody(p))}${lane('g', 'g', '--lane-g', 'Google', L.lanes.g[1], L.lanes.g[0], '<div class="row"><span class="k">Títulos repetidos</span><span class="w no">Sí</span></div>')}${lane('a', 'a', '--lane-a', 'Agentes', L.lanes.a[1], L.lanes.a[0], '<div class="row"><span class="k">Precio legible</span><span class="w no">No</span></div>')}</div>`;
+      return h;
+    }
+    if (p === 'client') {
+      h += hero('', `47<small> Puntuación GEO</small>`, 'clinica-ejemplo.es · <span class="delta">+5</span>', 'Para «implantes dentales en Madrid», la IA recomienda a otras tres clínicas.');
+      h += `<div class="lanes">`;
+      h += lane('ia', 'ia', '--lane-ia', 'IA', 'Te nombran en 1 de 4 motores para esta pregunta', '1 de 4', `<div class="q"><span>¿Qué clínica de implantes recomiendas en Madrid?<small>Recomiendan: Clínica Norte, Dental Sol, Clínica Centro</small></span><span class="engs">${E('chatgpt')}${E('gemini')}${E('claude')}</span></div><div class="q"><span>Misma pregunta en Perplexity<small>Te nombra, en tercer lugar</small></span><span class="engs">${E('perplexity')}</span></div>`);
+      h += lane('a', 'a', '--lane-a', 'Agentes', 'No encuentra cómo pedir cita', '41', `<div class="row"><span class="k">Qué ofrece</span><span class="w">Citas</span></div><div class="row"><span class="k">Cómo reservar</span><span class="w no">Sólo un teléfono</span></div>`);
+      h += lane('g', 'g', '--lane-g', 'Google', '«implantes dentales madrid»: puesto 14', '14', `<div class="row"><span class="k">Impresiones (28 días)</span><span class="w">3.100</span></div>`);
+      h += `</div>`;
+      h += fixesHTML(p, [{ id: 'cita', t: 'Pon un enlace para pedir cita que un agente pueda leer', lane: 'a', p: 8, act: 'how' }, { id: 'rv', t: 'Añade a Clínica Norte a tus competidores', lane: 'ia', p: 0, act: 'plan', where: 'Competidores, con la sugerencia ya puesta' }], 'Lo primero aquí');
+      return h;
+    }
+    return h;
+  }
+
+  function pausedView(p) {
+    return topBar(p) + `<div class="card pause"><span class="pause-ic ic"><span class="gmark">G</span></span><b style="font-size:15px">Has cambiado de página</b><span class="note">Chrome sólo deja leer una página cuando pulsas el icono. Pulsa el icono de GenScore o el botón para leer ésta.</span><div class="btns" style="width:100%"><button class="btn" type="button" data-act="read">Leer esta página</button>${S.acct ? '<button class="btn ghost" type="button" data-act="follow-ask">Seguir mis webs sin pulsar</button>' : ''}</div></div>`;
+  }
+
+  function signupView(p) {
+    const P = PAGES[p];
+    return topBar(p) + `<div class="card" style="gap:10px"><b style="font-size:17px;line-height:1.2">Mide ${P.host} en los cuatro motores</b><div class="field">${P.host}<small>✓ ya escrito</small></div><div class="list"><div class="li"><span class="chip ia">IA</span>Cómo te nombran ChatGPT, Gemini, Claude y Perplexity, y frente a quién</div><div class="li"><span class="chip g">Google</span>Tu puesto real, página a página, con Search Console</div><div class="li"><span class="chip a">Agentes</span>Si un agente puede comprar o reservar en tu web</div></div><button class="btn" type="button" data-act="signup-go">Continuar con Google</button><button class="btn ghost" type="button" data-act="signup-go">Usar mi correo</button><span class="fine">7 días de Pro sin tarjeta. Se abre genscore.es y vuelves aquí.</span><button class="mini-btn" type="button" data-act="back" style="justify-self:center">Volver</button></div>`;
+  }
+  function scanningView(p) {
+    const pos = [[50, 0], [100, 50], [50, 100], [0, 50]];
+    return topBar(p) + `<div class="card scan"><div class="orbit"><span class="ring"></span>${ENG.map((e, i) => `<span class="o" style="left:${pos[i][0]}%;top:${pos[i][1]}%">${E(e)}</span>`).join('')}<span class="c orb">G</span></div><b style="font-size:15px">Tu primer escaneo está en marcha</b><span class="note">Preguntamos por lo que vendes a los cuatro motores. Mientras, puedes seguir navegando: el panel se rellena solo cuando termine.</span><button class="btn" type="button" data-act="scan-done">Ver cuando termine (simulado)</button></div>`;
+  }
+  function loginView(p) {
+    return topBar(p) + `<div class="card" style="gap:10px;text-align:center;justify-items:center;padding:22px 14px"><span class="orb">G</span><b style="font-size:15px">Inicia sesión en genscore.es</b><span class="note">Se ha abierto una pestaña con tu acceso de siempre. Al entrar, la web le pasa la sesión a la extensión. No escribes nada aquí.</span><button class="btn" type="button" data-act="login-done">He iniciado sesión (simulado)</button><button class="mini-btn" type="button" data-act="back">Volver</button></div>`;
+  }
+  function foundView(p) {
+    return topBar(p) + `<div class="card" style="gap:10px"><b style="font-size:15px">Conectado. Esto es lo que reconocerá el panel</b><div class="list"><div class="li"><span class="gmark" style="width:18px;height:18px;font-size:10px">G</span><span>tienda-ejemplo.es<small>Tu proyecto</small></span><span class="chip ia tag">Tu web</span></div><div class="li"><span class="gmark" style="width:18px;height:18px;font-size:10px;background:#0d9488">G</span><span>clinica-ejemplo.es<small>Tu proyecto (cliente)</small></span><span class="chip ia tag">Tu web</span></div><div class="li"><span class="fav" style="background:#7c3aed"></span><span>rival-uno.es, rival-dos.es<small>Competidores</small></span><span class="chip tag" style="background:var(--rival-soft);color:var(--rival)">Rival</span></div><div class="li"><span class="fav" style="background:#d97706"></span><span>12 webs que cita la IA<small>Fuentes de tus preguntas</small></span><span class="chip a tag">Fuente</span></div></div><span class="note">¿Quieres que el panel cambie solo al navegar por tus webs y las de tus rivales? Chrome te pedirá permiso sólo para esos dominios.</span><button class="btn" type="button" data-act="follow-ask">Sí, seguir mis webs</button><button class="btn ghost" type="button" data-act="follow-no">Ahora no: pulsaré el icono</button></div>`;
+  }
+
+  /* ---------- Render ---------- */
+  function render() {
+    const p = S.page, P = PAGES[p];
+    $('tab').innerHTML = `<span class="fav" style="background:${P.fav}"></span>${P.title}`;
+    $('url').innerHTML = `<b>${P.host}</b>${P.path === '/' ? '' : P.path}`;
+    $('site').innerHTML = siteHTML(p);
+    // bookmarks
+    const groups = {};
+    for (const [id, pg] of Object.entries(PAGES)) (groups[pg.group] ||= []).push([id, pg]);
+    $('bmarks').innerHTML = Object.entries(groups).map(([g, items]) => `<div class="bm-g"><span>${g}</span>${items.map(([id, pg]) => `<button type="button" class="bm" data-nav="${id}" aria-current="${id === p}"><span class="fav" style="background:${pg.fav}"></span>${pg.label}</button>`).join('')}</div>`).join('');
+    // badge
+    let badge = '';
+    const k = kindOf(p);
+    if (S.acct && S.follow) {
+      if (k === 'own' || k === 'own2') badge = `<span class="badge"${['legal'].includes(p) ? ' style="background:#a2a9b6"' : ''}>${p === 'home' ? 54 : p === 'client' ? 47 : notaOf(p)}</span>`;
+      else if (k === 'rival') badge = '<span class="badge rv">VS</span>';
+    }
+    $('badge').innerHTML = badge;
+    const paused = !S.view && S.readPage !== p;
+    $('extIcon').classList.toggle('hint', paused);
+    // panel
+    let html;
+    if (S.view === 'signup') html = signupView(p);
+    else if (S.view === 'scanning') html = scanningView(p);
+    else if (S.view === 'login') html = loginView(p);
+    else if (S.view === 'found') html = foundView(p);
+    else if (paused) html = pausedView(p);
+    else html = S.acct ? accountView(p) : localView(p);
+    $('panel').innerHTML = `<div class="px">${html}</div>`;
+    // controls
+    document.querySelector('[data-ctl="noacct"]').setAttribute('aria-pressed', String(!S.acct));
+    document.querySelector('[data-ctl="acct"]').setAttribute('aria-pressed', String(S.acct));
+    document.querySelector('[data-ctl="follow-off"]').setAttribute('aria-pressed', String(!S.follow));
+    document.querySelector('[data-ctl="follow-on"]').setAttribute('aria-pressed', String(S.follow));
+    const kindTxt = { own: 'tu web', own2: 'la web de otro proyecto tuyo', rival: 'la web de un competidor', source: 'una web que cita la IA', other: 'una web cualquiera' }[k];
+    $('stateLine').innerHTML = `Estás en <b>${kindTxt}</b>, ${S.acct ? '<b>con cuenta</b>' : '<b>sin cuenta</b>'}, y el panel ${S.follow ? '<b>sigue tus webs solo</b>' : 'se actualiza <b>al pulsar el icono</b>'}.`;
+  }
+
+  function navigate(p) {
+    S.page = p; S.openLane = null;
+    if (S.view === 'signup' || S.view === 'login' || S.view === 'found') S.view = null;
+    const k = kindOf(p);
+    const followed = S.acct && S.follow && (k === 'own' || k === 'own2' || k === 'rival');
+    if (followed) S.readPage = p;
+    render();
+    document.querySelector('.panel-col').scrollTop = 0;
+  }
+
+  document.addEventListener('click', (ev) => {
+    const t = ev.target.closest('[data-nav],[data-act],[data-lane],[data-ctl],[data-go],#extIcon');
+    if (!t) return;
+    if (t.id === 'extIcon') { S.readPage = S.page; if (S.view === 'found') S.view = null; render(); return; }
+    if (t.dataset.go) {
+      S.acct = true; S.view = null; S.page = t.dataset.go; S.readPage = t.dataset.go; S.openLane = null; render();
+      document.querySelector('.browser').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    if (t.dataset.nav) { navigate(t.dataset.nav); return; }
+    if (t.dataset.lane) { const key = p_lane(t.dataset.lane); S.openLane = S.openLane === key ? null : key; render(); return; }
+    const c = t.dataset.ctl;
+    if (c === 'noacct') { S.acct = false; S.follow = false; S.view = null; S.readPage = S.page; render(); return; }
+    if (c === 'acct') { S.acct = true; S.view = null; S.readPage = S.page; render(); return; }
+    if (c === 'follow-off') { S.follow = false; render(); return; }
+    if (c === 'follow-on') { if (!S.acct) { toast('«Sigue mis webs» necesita una cuenta: así sabemos cuáles son tus webs.'); return; } openPerm(); return; }
+    if (c === 'reset') { S = S0(); render(); return; }
+    const a = t.dataset.act;
+    switch (a) {
+      case 'copy': toast(`Copiado: ${t.dataset.what}. Pégalo en tu web y pulsa «Comprobar otra vez».`); break;
+      case 'done': S.done[t.dataset.key] = !S.done[t.dataset.key]; render(); break;
+      case 'recheck': {
+        S.recheck[S.page] = true; const before = LOCAL[S.page].nota; render();
+        const n = notaOf(S.page);
+        if (n > before) { $('heroNum')?.classList.add('up'); toast(`Página leída otra vez: la nota sube a ${n}.`); }
+        else toast('Página leída otra vez. Marca como hecho lo que hayas cambiado y vuelve a comprobar.');
+        break;
+      }
+      case 'how': toast('Se abre la guía de este arreglo, sin salir del panel.'); break;
+      case 'console': toast(`Se abre la consola en ${t.dataset.where}.`); break;
+      case 'watch': S.watched[t.dataset.q] = true; render(); toast('Añadida a tus prompts. Entra en el próximo escaneo.'); break;
+      case 'add': S.added[t.dataset.what] = true; render(); toast(t.dataset.what === 'proyecto' ? 'Proyecto creado con la web ya escrita. Su primer escaneo empieza solo.' : 'Añadida a tus competidores. Saldrá en el próximo escaneo.'); break;
+      case 'mine': S.view = 'signup'; render(); break;
+      case 'signup-go': S.view = 'scanning'; render(); break;
+      case 'scan-done': S.acct = true; S.view = 'found'; S.page = kindOf(S.page) === 'own2' ? S.page : 'home'; S.readPage = S.page; render(); break;
+      case 'connect': S.view = 'login'; render(); break;
+      case 'login-done': S.acct = true; S.view = 'found'; render(); break;
+      case 'follow-ask': openPerm(); break;
+      case 'follow-no': S.follow = false; S.view = null; S.readPage = S.page; render(); break;
+      case 'perm-yes': closePerm(); S.follow = true; S.view = null; S.readPage = S.page; render(); toast('Listo. Navega por tu web: el panel y el icono cambian solos.'); break;
+      case 'perm-no': closePerm(); S.follow = false; S.view = null; S.readPage = S.page; render(); toast('Sin problema: pulsa el icono en cada página.'); break;
+      case 'read': S.readPage = S.page; render(); break;
+      case 'back': S.view = null; render(); break;
+      case 'toast-acct': toast('Cuenta de Denis · Pro. Desde aquí: cerrar sesión o abrir la consola.'); break;
+    }
+  });
+
+  function openPerm() {
+    $('permList').innerHTML = ['tienda-ejemplo.es', 'clinica-ejemplo.es', 'rival-uno.es', 'rival-dos.es'].map((d) => `<li>${d}</li>`).join('');
+    $('perm').classList.add('show');
+  }
+  function closePerm() { $('perm').classList.remove('show'); }
+
+  render();
+})();
+</script>
