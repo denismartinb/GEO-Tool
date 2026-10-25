@@ -1,0 +1,552 @@
+<title>Extensión GenScore para Chrome</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: a single reading column of options; each option pairs a scaled browser mock with its flow and trade-offs. */
+:root {
+  --ink: #0b1426;
+  --muted: #5b6b82;
+  --line: #e7eaf0;
+  --line-soft: #eef1f6;
+  --canvas: #f7f8fb;
+  --surface: #ffffff;
+  --blue: #2563eb;
+  --blue-soft: rgba(37, 99, 235, .10);
+  --cyan: #09c5d6;
+  --warm: #ffb020;
+  --warm-soft: #fff4dd;
+  --pos: #15915a;
+  --pos-soft: #e7f6ee;
+  --neg: #d23b48;
+  --neg-soft: #fdecee;
+  --chrome: #dfe3ea;
+  --chrome-2: #eef1f5;
+  --site: #f2f4f7;
+  --site-block: #dde2ea;
+  --shadow: 0 1px 2px rgba(11, 20, 38, .05), 0 10px 30px rgba(11, 20, 38, .10);
+  --f-display: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  --f-body: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #eef2f8; --muted: #9aa8bd; --line: #24324b; --line-soft: #1b2840;
+    --canvas: #081223; --surface: #0f1c33; --blue: #5b8cff; --blue-soft: rgba(91, 140, 255, .16);
+    --cyan: #2fd6e5; --warm: #ffbe45; --warm-soft: #3a2c10; --pos: #3fbf83; --pos-soft: #12301f;
+    --neg: #ff6b77; --neg-soft: #3a1820; --chrome: #26324a; --chrome-2: #1d2a42; --site: #142139;
+    --site-block: #26344f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --ink: #eef2f8; --muted: #9aa8bd; --line: #24324b; --line-soft: #1b2840;
+  --canvas: #081223; --surface: #0f1c33; --blue: #5b8cff; --blue-soft: rgba(91, 140, 255, .16);
+  --cyan: #2fd6e5; --warm: #ffbe45; --warm-soft: #3a2c10; --pos: #3fbf83; --pos-soft: #12301f;
+  --neg: #ff6b77; --neg-soft: #3a1820; --chrome: #26324a; --chrome-2: #1d2a42; --site: #142139;
+  --site-block: #26344f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 10px 30px rgba(0,0,0,.35); color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--canvas); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-block: 40px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.05; }
+h2 { font-size: clamp(24px, 3.4vw, 32px); line-height: 1.1; }
+h3 { font-size: 18px; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--blue); }
+.lede { font-size: 17px; color: var(--muted); }
+.note { font-size: 13px; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 12px; }
+
+/* Header */
+header.top { display: grid; gap: 16px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; font-size: 13px; font-weight: 600; border: 1px solid var(--line); background: var(--surface); }
+.chip.rec { background: var(--blue); color: #fff; border-color: transparent; }
+.chip.warn { background: var(--warm-soft); border-color: transparent; }
+
+/* Summary table */
+.table-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 640px; font-size: 14px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 700; }
+tr:last-child td { border-bottom: 0; }
+td.best { background: var(--blue-soft); font-weight: 600; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Option sections */
+.option { display: grid; gap: 24px; }
+.option-head { display: grid; gap: 8px; }
+.option-head .row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; }
+.letter { font-family: var(--f-display); font-size: 15px; font-weight: 700; color: #fff; background: var(--ink); width: 30px; height: 30px; border-radius: 8px; display: inline-grid; place-items: center; flex: none; }
+.option.recommended .letter { background: var(--blue); }
+.screens { display: grid; gap: 20px; grid-template-columns: 1fr; }
+.screen-label { font-size: 13px; font-weight: 700; color: var(--muted); margin-bottom: 8px; }
+.cols { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.panel h3 { font-size: 15px; font-family: var(--f-body); font-weight: 700; }
+.panel ol, .panel ul { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 14px; }
+.pros li::marker { color: var(--pos); content: "+  "; font-weight: 700; }
+.cons li::marker { color: var(--neg); content: "−  "; font-weight: 700; }
+.effort { display: flex; flex-wrap: wrap; gap: 16px; }
+.effort div { display: grid; }
+.effort strong { font-family: var(--f-display); font-size: 22px; }
+.effort span { font-size: 12px; color: var(--muted); }
+
+/* Scaled mock frames: inner width fixed, scaled to the column by script. */
+.scaler { width: 100%; overflow: hidden; position: relative; }
+.scaler > .stage { width: 960px; transform-origin: 0 0; position: absolute; top: 0; left: 0; }
+
+/* Browser mock */
+.browser { width: 960px; border-radius: 12px; overflow: hidden; background: var(--site); box-shadow: var(--shadow); border: 1px solid var(--line); font-size: 13px; }
+.b-top { background: var(--chrome); display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.b-dots { display: flex; gap: 6px; }
+.b-dots i { width: 11px; height: 11px; border-radius: 50%; background: var(--surface); opacity: .8; display: block; }
+.b-url { flex: 1; background: var(--chrome-2); border-radius: 999px; padding: 5px 14px; color: var(--muted); font-size: 12.5px; }
+.b-icons { display: flex; gap: 8px; align-items: center; }
+.b-icons i { width: 18px; height: 18px; border-radius: 5px; background: var(--site-block); display: block; }
+.ext-icon { width: 24px; height: 24px; border-radius: 7px; background: var(--blue); color: #fff; font-weight: 800; font-size: 11px; display: grid; place-items: center; font-family: var(--f-display); position: relative; }
+.ext-icon.active { outline: 3px solid var(--blue-soft); }
+.ext-icon b { position: absolute; right: -7px; bottom: -6px; background: var(--warm); color: #0b1426; font-size: 9px; border-radius: 6px; padding: 0 4px; line-height: 14px; font-family: var(--f-body); }
+.b-body { position: relative; height: 560px; display: flex; }
+.site { flex: 1; padding: 26px 34px; display: grid; gap: 14px; align-content: start; min-width: 0; }
+.site .nav { display: flex; justify-content: space-between; }
+.site .bar { height: 12px; border-radius: 6px; background: var(--site-block); }
+.site .hero { height: 150px; border-radius: 12px; background: var(--site-block); }
+.site .row3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.site .card { height: 110px; border-radius: 10px; background: var(--site-block); position: relative; }
+
+/* GenScore extension UI (shared by all three options) */
+.gs { font-family: var(--f-body); color: var(--ink); }
+.gs-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.gs-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.gs-brand .ext-icon { width: 22px; height: 22px; }
+.gs-domain { font-size: 12px; color: var(--muted); }
+.gs-scorebox { display: flex; align-items: center; gap: 14px; }
+.ring { --v: 58; width: 76px; height: 76px; border-radius: 50%; background: conic-gradient(var(--warm) calc(var(--v) * 1%), var(--line) 0); display: grid; place-items: center; flex: none; }
+.ring span { width: 60px; height: 60px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-family: var(--f-display); font-size: 24px; font-weight: 700; }
+.ring.small { width: 52px; height: 52px; }
+.ring.small span { width: 40px; height: 40px; font-size: 16px; }
+.split { display: grid; gap: 6px; flex: 1; min-width: 0; }
+.split .l { display: flex; justify-content: space-between; font-size: 12px; }
+.meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--blue); border-radius: 3px; }
+.meter.ia i { background: var(--cyan); }
+.gs-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.fix { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 12.5px; line-height: 1.35; }
+.tag { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 5px; letter-spacing: .03em; }
+.tag.ia { background: rgba(9, 197, 214, .16); color: var(--ink); }
+.tag.seo { background: var(--blue-soft); color: var(--blue); }
+.pts { font-weight: 700; color: var(--pos); font-size: 12px; white-space: nowrap; }
+.fix small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+.cta-card { border-radius: 11px; padding: 12px; background: var(--ink); color: var(--canvas); display: grid; gap: 8px; font-size: 12.5px; }
+.cta-card strong { font-size: 14px; }
+.btn { display: inline-flex; justify-content: center; align-items: center; gap: 6px; border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 12.5px; background: var(--blue); color: #fff; border: 0; }
+.btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.light { background: var(--surface); color: var(--ink); }
+.links { display: flex; gap: 12px; font-size: 12px; color: var(--blue); font-weight: 600; }
+.bots { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 12px; }
+.bots div { display: flex; justify-content: space-between; padding: 5px 8px; border-radius: 7px; background: var(--canvas); }
+.ok { color: var(--pos); font-weight: 700; }
+.no { color: var(--neg); font-weight: 700; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.tabs span { padding: 6px 9px; color: var(--muted); font-weight: 600; border-bottom: 2px solid transparent; }
+.tabs span.on { color: var(--ink); border-color: var(--blue); }
+.lock { font-size: 10px; background: var(--warm-soft); padding: 0 5px; border-radius: 4px; margin-left: 4px; color: var(--ink); }
+.example { position: absolute; left: 12px; top: 10px; z-index: 5; font-size: 11px; font-weight: 700; background: var(--warm-soft); color: var(--ink); padding: 2px 8px; border-radius: 6px; }
+
+/* A: popup */
+.popup { position: absolute; top: 4px; right: 10px; width: 380px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 16px; display: grid; gap: 12px; z-index: 4; }
+/* B: side panel */
+.sidepanel { width: 380px; flex: none; background: var(--surface); border-left: 1px solid var(--line); padding: 14px 16px; display: grid; gap: 11px; align-content: start; overflow: hidden; }
+/* C: overlay */
+.badge-float { position: absolute; right: 22px; bottom: 22px; display: flex; align-items: center; gap: 8px; background: var(--surface); border-radius: 999px; padding: 6px 12px 6px 6px; box-shadow: var(--shadow); font-weight: 700; font-size: 12.5px; z-index: 4; }
+.layer { position: absolute; right: 22px; bottom: 78px; width: 340px; background: var(--surface); border-radius: 14px; box-shadow: var(--shadow); padding: 14px; display: grid; gap: 10px; z-index: 4; border: 1px solid var(--line); }
+.flag { position: absolute; inset: -4px; border: 2px dashed var(--neg); border-radius: 12px; }
+.flag em { position: absolute; top: -11px; left: 10px; background: var(--neg); color: #fff; font-style: normal; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 5px; white-space: nowrap; }
+.flag.warn { border-color: var(--warm); }
+.flag.warn em { background: var(--warm); color: #0b1426; }
+.dim { position: absolute; inset: 0; background: rgba(8, 18, 35, .45); z-index: 3; }
+
+/* Signup card used in all options */
+.signup { display: grid; gap: 10px; }
+.signup .promise { background: var(--pos-soft); border-radius: 9px; padding: 9px 11px; font-size: 12.5px; }
+.signup .promise strong { color: var(--pos); }
+.field { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: var(--muted); background: var(--surface); }
+.google { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-weight: 700; font-size: 12.5px; background: var(--surface); }
+.google i { width: 14px; height: 14px; border-radius: 50%; background: conic-gradient(#ea4335 0 25%, #fbbc05 0 50%, #34a853 0 75%, #4285f4 0); display: block; }
+.or { text-align: center; font-size: 11px; color: var(--muted); }
+.locked-row { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line-soft); filter: blur(2.5px); }
+
+/* Extras */
+.extras { display: grid; gap: 20px; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.share { border-radius: 16px; overflow: hidden; background: #0b1426; color: #f7f8fb; padding: 22px; display: grid; gap: 14px; aspect-ratio: 1200 / 627; max-width: 100%; align-content: space-between; }
+.share .top { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.share .big { display: flex; align-items: center; gap: 18px; }
+.share .big b { font-family: var(--f-display); font-size: 56px; line-height: 1; }
+.share .big b small { font-size: 20px; opacity: .6; }
+.share .bars { display: grid; gap: 6px; font-size: 12px; flex: 1; }
+.share .bars i { display: block; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); }
+.share .bars i u { display: block; height: 100%; border-radius: 3px; background: #2563eb; }
+.share .bars i.c u { background: #09c5d6; }
+.share .foot { font-size: 12px; opacity: .75; }
+.store { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 12px; }
+.store .app { display: flex; gap: 14px; align-items: center; }
+.store .app .ext-icon { width: 54px; height: 54px; border-radius: 14px; font-size: 18px; }
+.store .name { font-weight: 700; font-size: 17px; }
+.store .by { font-size: 12px; color: var(--muted); }
+.store .add { margin-left: auto; }
+.perm { display: grid; gap: 4px; font-size: 13px; }
+.mvp { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+.weekend { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: grid; gap: 8px; align-content: start; }
+.weekend .when { font-size: 12px; font-weight: 700; color: var(--blue); text-transform: uppercase; letter-spacing: .06em; }
+.weekend ul { margin: 0; padding-left: 18px; font-size: 14px; display: grid; gap: 4px; }
+.recbox { background: var(--surface); border: 2px solid var(--blue); border-radius: 14px; padding: 20px 22px; display: grid; gap: 10px; }
+footer { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+a { color: var(--blue); }
+@media (min-width: 1400px) { .wrap { max-width: 1240px; } }
+@media (prefers-reduced-motion: no-preference) { .ext-icon.active { transition: outline-color .2s; } }
+</style>
+
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">CHROME-EXT-1 · Propuesta para revisar · 25 oct 2026</div>
+  <h1>Extensión GenScore para Chrome: tres formas de enseñarla</h1>
+  <p class="lede">Un canal de captación que se posiciona donde está la demanda (SEO) y vende lo que no tiene nadie más en español (si la IA puede leer y recomendar tu web). Todo lo gratuito se calcula en el navegador, sin cuenta y sin coste de servidor.</p>
+  <div class="chips">
+    <span class="chip rec">Recomendada: B, panel lateral</span>
+    <span class="chip">Manifest V3</span>
+    <span class="chip">MVP en 2 fines de semana</span>
+    <span class="chip warn">Sin implementar hasta tu aprobación</span>
+  </div>
+  <p class="note">Los datos de las maquetas son de ejemplo. Chrome no admite extensiones en móvil, así que las tres opciones se diseñan para escritorio; esta página sí se lee bien en el teléfono.</p>
+</header>
+
+<section style="display:grid;gap:14px">
+  <h2>Las tres opciones de un vistazo</h2>
+  <div class="table-scroll">
+    <table>
+      <thead><tr><th></th><th>A. Popup compacto</th><th>B. Panel lateral</th><th>C. Capa sobre la página</th></tr></thead>
+      <tbody>
+        <tr><td>Cómo se abre</td><td>Clic en el icono; se cierra al hacer clic fuera</td><td class="best">Clic en el icono; queda fijo a la derecha mientras navegas</td><td>Insignia en cada web; se despliega y marca fallos sobre la página</td></tr>
+        <tr><td>Permisos al instalar</td><td>3, sin aviso fuerte</td><td class="best">4, sin aviso fuerte</td><td>"Leer y cambiar tus datos en todos los sitios web"</td></tr>
+        <tr><td>Sitio para Search Console y palabras clave</td><td>Poco</td><td class="best">Mucho</td><td>Medio, y tapa la web</td></tr>
+        <tr><td>Bucles de difusión</td><td>Compartir</td><td class="best">Compartir, exportar, comparar</td><td>El más visible en capturas</td></tr>
+        <tr><td>Revisión en la tienda</td><td>Rápida</td><td class="best">Rápida</td><td>Más lenta</td></tr>
+        <tr><td>Esfuerzo MVP / completo</td><td class="num">1 / 3 fines de semana</td><td class="num best">1,5 a 2 / 4 a 5</td><td class="num">2 a 3 / 5 a 6</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ OPTION A ============ -->
+<section class="option" id="opcion-a">
+  <div class="option-head">
+    <div class="row"><span class="letter">A</span><h2>Popup compacto</h2></div>
+    <p class="lede">Lo más rápido de construir. Una ventana de 380 px bajo el icono con la nota, tres correcciones y la pregunta de ChatGPT.</p>
+  </div>
+  <div class="screens">
+    <div>
+      <div class="screen-label">Pantalla principal</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon active">G</span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:260px"></div></div><div class="hero"></div><div class="row3"><div class="card"></div><div class="card"></div><div class="card"></div></div><div class="bar" style="width:70%"></div><div class="bar" style="width:55%"></div></div>
+            <div class="popup gs">
+              <div class="gs-head"><div class="gs-brand"><span class="ext-icon">G</span>GenScore</div><div class="gs-domain">tuweb.es</div></div>
+              <div class="gs-scorebox"><div class="ring" style="--v:58"><span>58</span></div>
+                <div class="split"><div style="font-weight:700;font-size:13px">Nota SEO + IA de esta página</div>
+                  <div class="l"><span>SEO</span><span>29 de 45</span></div><div class="meter"><i style="width:64%"></i></div>
+                  <div class="l"><span>Lista para la IA</span><span>29 de 55</span></div><div class="meter ia"><i style="width:53%"></i></div></div></div>
+              <div class="gs-title">Arregla esto primero</div>
+              <div class="fix"><span class="tag ia">IA</span><div>ChatGPT no puede leer tu web<small>GPTBot está bloqueado en robots.txt</small></div><span class="pts">+10</span></div>
+              <div class="fix"><span class="tag ia">IA</span><div>El texto principal sólo aparece con JavaScript</div><span class="pts">+8</span></div>
+              <div class="fix"><span class="tag seo">SEO</span><div>Falta la meta descripción</div><span class="pts">+6</span></div>
+              <div class="cta-card"><strong>¿Te recomienda ChatGPT cuando preguntan por lo que vendes?</strong><button class="btn" type="button">Compruébalo gratis</button></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="screen-label">Momento del registro</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon active">G</span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:260px"></div></div><div class="hero"></div><div class="row3"><div class="card"></div><div class="card"></div><div class="card"></div></div></div>
+            <div class="popup gs">
+              <div class="gs-head"><div class="gs-brand"><span class="ext-icon">G</span>GenScore</div><div class="gs-domain">← Volver a la nota</div></div>
+              <div class="signup">
+                <strong style="font-size:16px">Mira qué responde ChatGPT sobre tuweb.es</strong>
+                <p style="font-size:12.5px;color:var(--muted)">Le preguntamos lo que pregunta un cliente tuyo y te decimos si te nombra, a quién recomienda y qué fuentes usa.</p>
+                <div class="promise"><strong>7 días de Pro gratis, sin tarjeta.</strong> La nota de cada página sigue gratis para siempre.</div>
+                <div class="google"><i></i>Continuar con Google</div>
+                <div class="or">o con tu correo</div>
+                <div class="field">tu@empresa.es</div>
+                <button class="btn" type="button">Crear cuenta y comprobar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="panel"><h3>Flujo, de la instalación al pago</h3><ol>
+      <li>Instala desde la tienda; se abre una bienvenida de una línea.</li>
+      <li>Pulsa el icono en cualquier web: nota y tres correcciones al momento.</li>
+      <li>"Compruébalo gratis" abre el registro dentro del popup.</li>
+      <li>Con cuenta, la respuesta de ChatGPT sale en el popup.</li>
+      <li>"Ver el informe completo" lleva a la consola: primer escaneo en la prueba de Pro.</li>
+      <li>Al acabar la prueba, el aviso de plan de la consola lleva a Starter o Pro.</li>
+    </ol></div>
+    <div class="panel"><h3>A favor</h3><ul class="pros">
+      <li>Un fin de semana para el MVP.</li>
+      <li>Permisos mínimos: activeTab, scripting y storage.</li>
+      <li>El patrón que ya conoce quien usa Detailed SEO Extension.</li>
+    </ul><h3>En contra</h3><ul class="cons">
+      <li>Se cierra al hacer clic fuera: el registro con Google abre otra pestaña y el popup se pierde.</li>
+      <li>380 px no dan para tablas de Search Console ni de palabras clave.</li>
+      <li>Al cambiar de página hay que volver a abrirlo.</li>
+    </ul></div>
+    <div class="panel"><h3>Esfuerzo y encaje</h3><div class="effort"><div><strong>1</strong><span>fin de semana, MVP</span></div><div><strong>3</strong><span>fines de semana, completo</span></div></div>
+      <p style="font-size:14px">Encaja con el brief en lo esencial: cada fallo es una acción con su efecto en la nota. Se queda corto para la parte de pago, que es la que convierte.</p></div>
+  </div>
+</section>
+
+<!-- ============ OPTION B ============ -->
+<section class="option recommended" id="opcion-b">
+  <div class="option-head">
+    <div class="row"><span class="letter">B</span><h2>Panel lateral</h2><span class="chip rec">Recomendada</span></div>
+    <p class="lede">El mismo clic en el icono abre un panel de Chrome a la derecha que sigue ahí mientras navegas. Tiene pestañas para SEO, IA y Google, y sitio para la parte de pago.</p>
+  </div>
+  <div class="screens">
+    <div>
+      <div class="screen-label">Pantalla principal</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon active">G</span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:200px"></div></div><div class="hero"></div><div class="row3"><div class="card"></div><div class="card"></div><div class="card"></div></div><div class="bar" style="width:70%"></div><div class="bar" style="width:50%"></div></div>
+            <div class="sidepanel gs">
+              <div class="gs-head"><div class="gs-brand"><span class="ext-icon">G</span>GenScore</div><div class="gs-domain">tuweb.es/servicios</div></div>
+              <div class="tabs"><span class="on">Resumen</span><span>SEO</span><span>IA</span><span>Google<span class="lock">Pro</span></span></div>
+              <div class="gs-scorebox"><div class="ring" style="--v:58"><span>58</span></div>
+                <div class="split"><div style="font-weight:700;font-size:13px">Nota SEO + IA de esta página</div>
+                  <div class="l"><span>SEO</span><span>29 de 45</span></div><div class="meter"><i style="width:64%"></i></div>
+                  <div class="l"><span>Lista para la IA</span><span>29 de 55</span></div><div class="meter ia"><i style="width:53%"></i></div></div></div>
+              <div class="gs-title">Arregla esto primero</div>
+              <div class="fix"><span class="tag ia">IA</span><div>ChatGPT no puede leer tu web<small>GPTBot está bloqueado en robots.txt</small></div><span class="pts">+10</span></div>
+              <div class="fix"><span class="tag ia">IA</span><div>El texto principal sólo aparece con JavaScript<small>Un bot de IA ve la página casi vacía</small></div><span class="pts">+8</span></div>
+              <div class="fix"><span class="tag seo">SEO</span><div>Falta la meta descripción</div><span class="pts">+6</span></div>
+              <div class="gs-title">Bots de IA</div>
+              <div class="bots"><div>GPTBot <span class="no">bloqueado</span></div><div>ClaudeBot <span class="ok">entra</span></div><div>PerplexityBot <span class="ok">entra</span></div><div>Google-Extended <span class="ok">entra</span></div></div>
+              <div class="cta-card"><strong>¿Te recomienda ChatGPT cuando preguntan por lo que vendes?</strong><button class="btn" type="button">Compruébalo gratis</button></div>
+              <div class="links"><span>Compartir nota</span><span>Comparar con otra web</span></div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="screen-label">Momento del registro (pestaña Google, fase 3) y del pago</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon active">G</span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:200px"></div></div><div class="hero"></div><div class="row3"><div class="card"></div><div class="card"></div><div class="card"></div></div></div>
+            <div class="sidepanel gs">
+              <div class="gs-head"><div class="gs-brand"><span class="ext-icon">G</span>GenScore</div><div class="gs-domain">tuweb.es/servicios</div></div>
+              <div class="tabs"><span>Resumen</span><span>SEO</span><span>IA</span><span class="on">Google<span class="lock">Pro</span></span></div>
+              <strong style="font-size:15px">Qué busca la gente que llega a esta página</strong>
+              <div>
+                <div class="locked-row"><span>dentista urgencias madrid</span><span>puesto 7</span><span>clics</span></div>
+                <div class="locked-row"><span>implantes precio</span><span>puesto 14</span><span>clics</span></div>
+                <div class="locked-row"><span>clínica dental cerca</span><span>puesto 4</span><span>clics</span></div>
+              </div>
+              <div class="signup">
+                <div class="promise"><strong>7 días de Pro gratis, sin tarjeta.</strong> Conecta Search Console y ves las búsquedas reales de cada página mientras navegas.</div>
+                <div class="google"><i></i>Continuar con Google</div>
+                <button class="btn ghost" type="button">Ya tengo cuenta</button>
+                <p class="note">Las filas borrosas no son datos: son la forma de la tabla que verás con tu Search Console.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="panel"><h3>Flujo, de la instalación al pago</h3><ol>
+      <li>Instala; la bienvenida dice "Abre cualquier web y pulsa el icono".</li>
+      <li>Clic en el icono: se abre el panel y analiza la pestaña. Sin cuenta.</li>
+      <li>Ve la nota, tres correcciones y los bots de IA. Puede compartir o comparar.</li>
+      <li>"Compruébalo gratis": registro con la promesa de 7 días de Pro (MVP: lo hace la web; fase 2: dentro del panel).</li>
+      <li>Pestaña Google: conecta Search Console y ve las búsquedas de cada página.</li>
+      <li>Al acabar la prueba, la pestaña Google y la comprobación piden plan: Starter o Pro.</li>
+    </ol></div>
+    <div class="panel"><h3>A favor</h3><ul class="pros">
+      <li>Mismos permisos que A más sidePanel, que no muestra aviso.</li>
+      <li>No se cierra al registrarse ni al navegar por la web.</li>
+      <li>Hay sitio para las tablas de Search Console y DataForSEO, que es lo que se paga.</li>
+      <li>Permite "Señalar en la página" (lo mejor de C) con el mismo activeTab.</li>
+    </ul><h3>En contra</h3><ul class="cons">
+      <li>Al cambiar de página hay que pulsar el icono otra vez, salvo que el usuario active el análisis automático (permiso opcional, pedido en ese momento).</li>
+      <li>Hay que validar en la primera hora que el clic concede activeTab y abre el panel.</li>
+    </ul></div>
+    <div class="panel"><h3>Esfuerzo y encaje</h3><div class="effort"><div><strong>1,5 a 2</strong><span>fines de semana, MVP</span></div><div><strong>4 a 5</strong><span>completo</span></div></div>
+      <p style="font-size:14px">Es la "consola de mando" del brief en pequeño: resumen arriba, detalle por pestañas, y cada fallo como acción con puntos. Mismos colores, tipografías y etiquetas IA/SEO que la Auditoría técnica.</p></div>
+  </div>
+</section>
+
+<!-- ============ OPTION C ============ -->
+<section class="option" id="opcion-c">
+  <div class="option-head">
+    <div class="row"><span class="letter">C</span><h2>Capa sobre la página</h2></div>
+    <p class="lede">Una insignia con la nota aparece sola en cada web. Al pulsarla se despliega una capa y los fallos se marcan encima de la propia página.</p>
+  </div>
+  <div class="screens">
+    <div>
+      <div class="screen-label">Pantalla principal</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon">G<b>58</b></span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:260px"></div></div>
+              <div class="hero" style="position:relative"><span class="flag warn"><em>H1 vacío: el título está en una imagen</em></span></div>
+              <div class="row3"><div class="card"><span class="flag"><em>Imagen sin texto alternativo</em></span></div><div class="card"></div><div class="card"><span class="flag"><em>Imagen sin texto alternativo</em></span></div></div>
+              <div class="bar" style="width:70%"></div></div>
+            <div class="layer gs">
+              <div class="gs-scorebox"><div class="ring small" style="--v:58"><span>58</span></div><div class="split"><div style="font-weight:700;font-size:13px">Nota SEO + IA</div><div class="meter"><i style="width:64%"></i></div><div class="meter ia"><i style="width:53%"></i></div></div></div>
+              <div class="fix"><span class="tag ia">IA</span><div>ChatGPT no puede leer tu web</div><span class="pts">+10</span></div>
+              <div class="fix"><span class="tag seo">SEO</span><div>3 imágenes sin texto alternativo<small>Marcadas en la página</small></div><span class="pts">+5</span></div>
+              <button class="btn" type="button">¿Te recomienda ChatGPT? Compruébalo</button>
+            </div>
+            <div class="badge-float"><div class="ring small" style="--v:58;width:34px;height:34px"><span style="width:26px;height:26px;font-size:11px">58</span></div>GenScore</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+    <div>
+      <div class="screen-label">Momento del registro</div>
+      <div class="scaler"><div class="stage">
+        <div class="browser">
+          <div class="b-top"><div class="b-dots"><i></i><i></i><i></i></div><div class="b-url">tuweb.es/servicios</div><div class="b-icons"><i></i><span class="ext-icon">G<b>58</b></span></div></div>
+          <div class="b-body">
+            <span class="example">Ejemplo</span>
+            <div class="site"><div class="nav"><div class="bar" style="width:120px"></div><div class="bar" style="width:260px"></div></div><div class="hero"></div><div class="row3"><div class="card"></div><div class="card"></div><div class="card"></div></div></div>
+            <div class="dim"></div>
+            <div class="layer gs" style="right:50%;transform:translateX(50%);bottom:auto;top:60px;width:380px">
+              <div class="signup">
+                <strong style="font-size:16px">Mira qué responde ChatGPT sobre tuweb.es</strong>
+                <div class="promise"><strong>7 días de Pro gratis, sin tarjeta.</strong> La nota de cada página sigue gratis para siempre.</div>
+                <div class="google"><i></i>Continuar con Google</div>
+                <div class="or">o con tu correo</div>
+                <div class="field">tu@empresa.es</div>
+                <button class="btn" type="button">Crear cuenta y comprobar</button>
+              </div>
+            </div>
+            <div class="badge-float"><div class="ring small" style="--v:58;width:34px;height:34px"><span style="width:26px;height:26px;font-size:11px">58</span></div>GenScore</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+  <div class="cols">
+    <div class="panel"><h3>Flujo, de la instalación al pago</h3><ol>
+      <li>Al instalar, Chrome avisa: "Leer y cambiar tus datos en todos los sitios web".</li>
+      <li>En cada web aparece la insignia con la nota, sin pulsar nada.</li>
+      <li>Al pulsarla: capa con fallos y marcas sobre la página.</li>
+      <li>"Compruébalo": registro en una ventana sobre la web.</li>
+      <li>Con cuenta, consola y prueba de Pro; al acabar, plan.</li>
+    </ol></div>
+    <div class="panel"><h3>A favor</h3><ul class="pros">
+      <li>La más vistosa: se entiende en una captura o un vídeo.</li>
+      <li>Señalar el fallo sobre la página es lo más didáctico.</li>
+      <li>La nota está siempre a la vista, en cada web.</li>
+    </ul><h3>En contra</h3><ul class="cons">
+      <li>El aviso de permisos amplios baja la conversión de la ficha y alarga la revisión.</li>
+      <li>Analiza todas las webs que visitas: más privacidad que explicar.</li>
+      <li>Choca con el CSS de cada web y tapa contenido; más mantenimiento.</li>
+      <li>Poco sitio para la parte de pago.</li>
+    </ul></div>
+    <div class="panel"><h3>Esfuerzo y encaje</h3><div class="effort"><div><strong>2 a 3</strong><span>fines de semana, MVP</span></div><div><strong>5 a 6</strong><span>completo</span></div></div>
+      <p style="font-size:14px">Las marcas sobre la página encajan muy bien con "de la visibilidad a la implementación". Por eso las rescato como botón "Señalar en la página" dentro de B, sin el permiso amplio.</p></div>
+  </div>
+</section>
+
+<section style="display:grid;gap:16px">
+  <h2>Recomendación</h2>
+  <div class="recbox">
+    <strong style="font-size:18px">Haría la B, panel lateral.</strong>
+    <p>Tiene el permiso mínimo de A y el espacio que necesitan las fases de pago. El panel sigue abierto mientras el usuario recorre su web y durante el registro, que es justo donde A pierde a la gente. De C nos quedamos con las marcas sobre la página, como botón dentro del panel y sin pedir acceso a todas las webs.</p>
+    <p class="note">La nota se llama "Nota SEO + IA de esta página" y usa los mismos pesos que la Auditoría técnica (IA 55, SEO 45), para no tener dos números distintos para lo mismo ni confundirla con la Puntuación GEO, que mide respuestas reales de los motores.</p>
+  </div>
+</section>
+
+<section style="display:grid;gap:16px">
+  <h2>MVP de dos fines de semana</h2>
+  <p>Sin cambios en el servidor y sin coste por usuario. La pregunta de ChatGPT lleva al comprobador gratuito de la web, que ya existe, ya tiene sus límites y ya acaba en el registro.</p>
+  <div class="mvp">
+    <div class="weekend"><div class="when">Fin de semana 1</div><ul><li>Clic en el icono abre el panel y analiza la pestaña</li><li>Nota SEO + IA con las comprobaciones de la Auditoría técnica</li><li>Bots de IA, llms.txt, texto sin JavaScript, imágenes sin alt, encabezados</li><li>Tres correcciones con sus puntos</li></ul></div>
+    <div class="weekend"><div class="when">Fin de semana 2</div><ul><li>Compartir la nota como imagen</li><li>Comparar las dos últimas webs analizadas</li><li>Eventos de PostHog, sin URLs</li><li>Página genscore.es/extension y atribución del pago</li><li>Ficha en español y envío a revisión</li></ul></div>
+    <div class="weekend"><div class="when">Después, si funciona</div><ul><li>Fase 2: cuenta y comprobación dentro del panel</li><li>Fase 3: pestaña Google con Search Console</li><li>Fase 4: palabras de una página de competidor (Pro)</li><li>"Señalar en la página" y ficha en inglés</li></ul></div>
+  </div>
+</section>
+
+<section style="display:grid;gap:16px">
+  <h2>Ficha y tarjeta para compartir</h2>
+  <div class="extras">
+    <div class="store">
+      <div class="app"><span class="ext-icon">G</span><div><div class="name">GenScore: Auditoría SEO e IA</div><div class="by">genscore.es · Herramientas</div></div><span class="btn add">Añadir a Chrome</span></div>
+      <p style="font-size:14px">Audita el SEO de cualquier web y mira si está lista para ChatGPT, Gemini y Perplexity. Nota de 0 a 100 y qué arreglar primero.</p>
+      <div class="perm"><strong style="font-size:13px">Lo que pedirá al instalar (opción B)</strong><span class="note">Nada que diga "todos los sitios web". Sólo actúa sobre la pestaña donde pulsas el icono.</span></div>
+      <p class="note">Nombre alternativo que propusiste: "GenScore: SEO e IA · Auditoría SEO y visibilidad en ChatGPT". Atrae más búsquedas por "ChatGPT", con más riesgo de rechazo por marca ajena en el título.</p>
+    </div>
+    <div style="display:grid;gap:8px;align-content:start">
+      <div class="share" aria-label="Tarjeta para compartir, ejemplo">
+        <div class="top"><strong>GenScore</strong><span style="opacity:.7">Nota SEO + IA</span></div>
+        <div class="big"><b>58<small>/100</small></b>
+          <div class="bars"><span>tuweb.es</span><span>SEO</span><i><u style="width:64%"></u></i><span>Lista para la IA</span><i class="c"><u style="width:53%"></u></i></div></div>
+        <div class="foot">Mide la tuya gratis: genscore.es/extension</div>
+      </div>
+      <p class="note">Se genera en el navegador. No hay URL pública con la nota, así que nadie puede publicar una nota falsa bajo genscore.es.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Informe completo y riesgos en <span class="mono">docs/chrome-extension/task-intake-report.md</span>. Nada se implementa hasta que elijas opción y nombre de la ficha.
+</footer>
+</div>
+
+<script>
+(function () {
+  function fit() {
+    document.querySelectorAll(".scaler").forEach(function (box) {
+      var stage = box.querySelector(".stage");
+      if (!stage) return;
+      var scale = Math.min(1, box.clientWidth / 960);
+      stage.style.transform = "scale(" + scale + ")";
+      box.style.height = Math.ceil(stage.offsetHeight * scale) + "px";
+    });
+  }
+  fit();
+  if ("ResizeObserver" in window) {
+    var ro = new ResizeObserver(fit);
+    document.querySelectorAll(".scaler").forEach(function (b) { ro.observe(b); });
+  } else {
+    window.addEventListener("resize", fit);
+  }
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+})();
+</script>
