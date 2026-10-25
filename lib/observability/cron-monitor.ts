@@ -14,8 +14,14 @@ import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
  * ("missed"), when it stays `in_progress` past `maxRuntime` ("timeout"), or
  * when the route answers 5xx ("error").
  *
- * The schedules MUST follow `vercel.json`; `cron-monitor.test.ts` reads that
- * file and fails if they drift, same guard as `lib/scan/cron-schedule.test.ts`.
+ * The schedules MUST follow the scheduler that fires each cron: `vercel.json`
+ * for the daily ones, the pg_cron migration 0045 for the frequent ones
+ * (CRON-HOBBY-1, log §347). `cron-monitor.test.ts` reads both and fails if
+ * they drift, same guard as `lib/scan/cron-schedule.test.ts`.
+ *
+ * The Vercel ones get a 60-minute margin: on Hobby a cron set for 06:00 fires
+ * anywhere between 06:00 and 06:59, so a tighter margin reports a "missed"
+ * run that was only late.
  */
 
 type CronMonitorSpec = {
@@ -27,13 +33,13 @@ type CronMonitorSpec = {
 };
 
 export const CRON_MONITORS = {
-  "/api/cron/weekly-scans": { schedule: "0 6 * * *", checkinMargin: 15, failureIssueThreshold: 1 },
-  "/api/cron/weekly-digest": { schedule: "0 8 * * 1", checkinMargin: 15, failureIssueThreshold: 1 },
+  "/api/cron/weekly-scans": { schedule: "0 6 * * *", checkinMargin: 60, failureIssueThreshold: 1 },
+  "/api/cron/weekly-digest": { schedule: "0 8 * * 1", checkinMargin: 60, failureIssueThreshold: 1 },
   "/api/cron/run-audit": { schedule: "*/10 * * * *", checkinMargin: 5, failureIssueThreshold: 3 },
   "/api/cron/scan-watchdog": { schedule: "*/15 * * * *", checkinMargin: 5, failureIssueThreshold: 2 },
-  "/api/cron/lifecycle-emails": { schedule: "45 7 * * *", checkinMargin: 15, failureIssueThreshold: 1 },
+  "/api/cron/lifecycle-emails": { schedule: "45 7 * * *", checkinMargin: 60, failureIssueThreshold: 1 },
   "/api/cron/scan-continue": { schedule: "*/5 * * * *", checkinMargin: 3, failureIssueThreshold: 3 },
-  "/api/cron/affiliate-report": { schedule: "0 7 5 * *", checkinMargin: 30, failureIssueThreshold: 1 },
+  "/api/cron/affiliate-report": { schedule: "0 7 5 * *", checkinMargin: 60, failureIssueThreshold: 1 },
   "/api/cron/seo-serp": { schedule: "*/10 * * * *", checkinMargin: 5, failureIssueThreshold: 3 }
 } as const satisfies Record<string, CronMonitorSpec>;
 

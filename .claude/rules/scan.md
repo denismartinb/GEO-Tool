@@ -117,6 +117,20 @@ worse than no rule, because a future session will obey it anyway.
   parado y el camino de reanudar/fallar del vigilante sigue viéndolo. Si se le
   añade una escritura, ese contrato se rompe y un run muerto puede no fallar
   nunca. Lo vigila `vercel-crons.test.ts`.
+- **Un cron que corre más de una vez al día vive en pg_cron, nunca en
+  `vercel.json`.** La cuenta de Vercel está en Hobby desde el 2026-10-25, y
+  Hobby rechaza el deploy entero si `vercel.json` trae un cron más frecuente
+  que diario: el siguiente merge a `main` habría dejado producción congelada
+  (`docs/brand/design-decisions-log.md` §347). `scan-continue`, `run-audit`,
+  `seo-serp` y `scan-watchdog` son trabajos de pg_cron
+  (`supabase/migrations/0045_pg_cron_frequent_crons.sql`) que llaman a la ruta
+  de producción con el mismo `Bearer CRON_SECRET`, leído de Vault
+  (`genscore_cron_secret`). Las rutas no saben quién las llama y no deben
+  saberlo. Un cron nuevo frecuente se añade a una migración nueva con
+  `cron.schedule`, y `vercel-crons.test.ts` lo exige en las dos direcciones:
+  nada sub-diario en `vercel.json`, nada diario en pg_cron. Y con Hobby un
+  cron diario sale con hasta 59 minutos de retraso, así que nada puede
+  depender del minuto exacto de un cron de `vercel.json`.
 - **Never let a browser be the only thing driving a scan.** Work that continues
   after a response is sent must be dispatched server-side; a client-side loop
   is an accelerator, never the engine. A phone that locks its screen suspends
