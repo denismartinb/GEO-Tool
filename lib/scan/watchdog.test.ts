@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readAllCrons } from "@/tests/helpers/cron-schedules";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { sendWatchdogAlertEmail, isOpsAlertConfigured, reconcileStuckScanRuns, checkAndSendScanHealthAlert } =
@@ -121,12 +121,9 @@ describe("shouldAlertFailedRun", () => {
   });
 });
 
-describe("vercel.json", () => {
+describe("watchdog schedule (pg_cron, log §347)", () => {
   it("schedules the watchdog at the interval its dedupe fallback assumes", () => {
-    const config = JSON.parse(readFileSync(new URL("../../vercel.json", import.meta.url), "utf8")) as {
-      crons: Array<{ path: string; schedule: string }>;
-    };
-    const entry = config.crons.find((cron) => cron.path === "/api/cron/scan-watchdog");
+    const entry = readAllCrons().find((cron) => cron.path === "/api/cron/scan-watchdog");
     expect(entry?.schedule).toBe(`*/${WATCHDOG_INTERVAL_MINUTES} * * * *`);
   });
 });

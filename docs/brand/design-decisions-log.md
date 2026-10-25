@@ -27093,3 +27093,60 @@ tema para subir**.
 
 **Premisa.** No retira ningún camino de recuperación: la pantalla de Search
 Console sigue entera, debajo del Resumen.
+
+## 347. CRON-HOBBY-1: los crons frecuentes pasan a Supabase pg_cron al volver a Vercel Hobby (2026-10-25)
+
+**Qué pasó.** El fundador bajó la cuenta de Vercel de Pro a Hobby el
+2026-10-25. Hobby sólo admite crons que corren como mucho una vez al día, con
+±59 minutos de margen, y **rechaza el deploy** si `vercel.json` trae uno más
+frecuente. Teníamos cuatro: `scan-continue` (5 min, §262), `run-audit` (10 min,
+§261), `seo-serp` (10 min, §346) y `scan-watchdog` (15 min, §227). Los logs de
+producción los enseñaban corriendo todavía porque el deploy vigente se hizo en
+Pro, pero el siguiente merge a `main` habría fallado al construir y producción
+se habría quedado congelada.
+
+**Qué se decidió.** El fundador eligió, en tarjeta de decisión, «Quedarse en
+Hobby con pg_cron» frente a volver a Pro (recomendado: Hobby es sólo para uso
+no comercial según Vercel, y GenScore cobra) o quitar los crons sin sustituto.
+
+- Migración `0045_pg_cron_frequent_crons.sql`: `pg_cron` + `pg_net`, función
+  `internal_cron.call_route(route)` (esquema no expuesto, cerrado a `anon` y
+  `authenticated`) que hace `GET https://www.genscore.es<route>` con
+  `Authorization: Bearer <secreto>`. Los cuatro horarios son los mismos de
+  `vercel.json`, y hay un quinto trabajo que borra el historial de pg_cron
+  con más de 7 días (unas 600 filas al día; el plan gratuito de Supabase
+  tiene 500 MB).
+- El secreto vive en Supabase Vault (`genscore_cron_secret`) y tiene que ser
+  igual a `CRON_SECRET` de Vercel Production. Sin él la llamada se salta con
+  un aviso y nunca sale sin cabecera.
+- Las rutas no cambian: comprueban el mismo `Bearer CRON_SECRET` que mandaba
+  Vercel, y el monitor de Sentry del vigilante sigue funcionando porque se
+  activa con `VERCEL_ENV=production` y una petición autorizada.
+- `vercel.json` sólo guarda los diarios: `weekly-scans`, `lifecycle-emails`,
+  `weekly-digest` y `affiliate-report`. Con Hobby salen con hasta 59 minutos de
+  retraso; ninguno depende del minuto exacto (la elegibilidad del barrido se
+  ancla a la hora, §192, y el vigilante da 3 h de gracia). Sus monitores de
+  Sentry pasan a 60 min de margen.
+- `vercel-crons.test.ts` lee los dos programadores (`tests/helpers/
+  cron-schedules.ts`) y falla si vuelve un cron sub-diario a `vercel.json` o
+  si se pone en pg_cron uno diario que podía quedarse en Vercel.
+
+**Qué queda.**
+- El fundador aplica 0045 a mano y crea el secreto en Vault **antes del merge**
+  (si se mergea antes, entre el deploy y la migración no corre ninguno de los
+  cuatro).
+- Hobby vuelve a tener el tope de 100 deploys al día (CLAUDE.md, «Presupuesto
+  de builds»), 4 h de CPU activa al mes (si se pasa, pausa de 30 días) y
+  1 hora de logs. Hobby prohíbe además el uso comercial: riesgo aceptado por
+  el fundador.
+- Los logs de producción del 2026-10-25 marcan `region=iad1` aunque
+  `vercel.json` fija `dub1`. Sin confirmar si es la región de la función o la
+  de la petición; conviene mirarlo en Vercel.
+
+**Premisa.** No retira ningún camino de recuperación: los cuatro crons siguen
+corriendo con el mismo horario, sólo cambia quién los dispara. La premisa es
+que pg_cron llama a producción: lo verifican `cron.job_run_details` y
+`net._http_response` (consultas en la cabecera de la migración). Si falla
+(secreto ausente o distinto, extensión desactivada), se pierden a la vez el
+vigilante y la reanudación de escaneos, y nada lo avisa salvo el monitor de
+Sentry del vigilante («missed»), que es por eso el único que se conserva.

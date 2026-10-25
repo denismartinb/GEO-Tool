@@ -187,8 +187,22 @@ runs every 15 minutes (`*/15 * * * *`). No new variables: it reuses
 the findings and writes no dedupe marker, so they go out once the channel
 works. **Not** gated on `CRON_SCANS_ENABLED`: it mostly reads and alerts; the
 only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
-which any page view already does. A sub-daily schedule needs Vercel Pro (the
-account is Pro since 2026-08-04).
+which any page view already does.
+
+**Frequent crons run on Supabase pg_cron, not Vercel (CRON-HOBBY-1, log §347).**
+The account went back to Vercel Hobby on 2026-10-25, which only allows crons
+that fire at most once a day (±59 min) and rejects a deployment with anything
+more frequent. `scan-continue` (5 min), `run-audit` and `seo-serp` (10 min) and
+`scan-watchdog` (15 min) are pg_cron jobs from
+`supabase/migrations/0045_pg_cron_frequent_crons.sql`; pg_net calls
+`https://www.genscore.es/api/cron/<name>` with `Authorization: Bearer
+<CRON_SECRET>`, exactly what Vercel sent. The secret is read from **Supabase
+Vault**, name `genscore_cron_secret`, and must equal `CRON_SECRET` in Vercel
+Production; without it every call is skipped with a warning in
+`cron.job_run_details`. Rotating `CRON_SECRET` means changing both.
+`vercel.json` keeps the daily crons (`weekly-scans`, `lifecycle-emails`,
+`weekly-digest`, `affiliate-report`), and `vercel-crons.test.ts` fails if a
+sub-daily schedule comes back to it.
 
 **Scan continuation pass (SCAN-CRON-DRAIN-1, log §262).** `/api/cron/scan-continue`
 runs every 5 minutes (`*/5 * * * *`) and re-dispatches every scan run younger

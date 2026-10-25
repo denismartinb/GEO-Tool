@@ -10,19 +10,19 @@ vi.mock("@sentry/nextjs", () => ({
   flush: async () => true
 }));
 
+import { readAllCrons } from "@/tests/helpers/cron-schedules";
 import { CRON_MONITORS, isMonitoredCron, monitorSlug, withCronMonitor, type CronPath } from "./cron-monitor";
 
 /**
  * OBSERVABILITY-1 (log §300). The monitor is only as good as its schedule: a
  * crontab that drifts from vercel.json makes Sentry report "missed" runs that
- * were never due, or stay quiet about ones that were.
+ * were never due, or stay quiet about ones that were. Since CRON-HOBBY-1 (log
+ * §347) the schedules live in vercel.json and in the pg_cron migration 0045.
  */
-describe("CRON_MONITORS ↔ vercel.json", () => {
-  const vercel = JSON.parse(readFileSync(path.resolve(__dirname, "../../vercel.json"), "utf8")) as {
-    crons: Array<{ path: string; schedule: string }>;
-  };
+describe("CRON_MONITORS ↔ vercel.json + pg_cron", () => {
+  const vercel = { crons: readAllCrons() };
 
-  it("cada cron de vercel.json tiene monitor, con el mismo horario", () => {
+  it("cada cron programado tiene monitor, con el mismo horario", () => {
     for (const cron of vercel.crons) {
       expect(CRON_MONITORS[cron.path as CronPath]?.schedule, cron.path).toBe(cron.schedule);
     }
