@@ -415,4 +415,39 @@ detallada en [`prototipo-navegable.html`](./prototipo-navegable.html):
   que apuntan a ella, Search Console en vivo con la caché de 30 minutos y filas
   del seguimiento de palabras). Sin migración y sin llamadas a modelos.
 
+## 15. Revisión 4: el mismo flujo que la consola
+
+Denis (2026-10-26) no entendía el flujo de la revisión 3: la pantalla de
+«Conectado» parecía añadir webs y rivales por otro camino, «Volver a revisar»
+parecía un escaneo nuevo y la llamada a registrarse no estaba clara. Se rehace
+así (prototipo en [`prototipo-navegable.html`](./prototipo-navegable.html)), y
+**esto sustituye a la sección 14 donde se contradigan**:
+
+- **Sin cuenta:** el panel sólo revisa la página cuando el usuario pulsa el icono.
+  Corre en su navegador (lee la página y su robots.txt), no pasa por nuestro
+  servidor y no usa IA: coste cero, por mucho que navegue. Navegar sin pulsar no
+  hace nada. La llamada dice «¿Quieres saber si ChatGPT, Gemini, Claude y
+  Perplexity recomiendan **esta web** y a sus competidores?» con el botón
+  «Analizar dominio».
+- **Analizar dominio = el alta de la consola.** Registro o entrada como en
+  genscore.es, sin distracciones y con la oferta destacada (7 días de Pro sin
+  tarjeta y precio fundador). Después, el mismo asistente de nuevo dominio
+  (competidores y prompts sugeridos, revisión, primer escaneo), con las mismas
+  server actions y los mismos topes.
+- **Con cuenta:** el panel es la consola en pequeño. Mismo selector de dominios con
+  el mismo tope (1 en Starter, 5 en Pro); al abrir otro dominio tuyo cambia a él.
+  En tu dominio, dos pestañas: «Tu dominio» (Visión general: Puntuación GEO, plan
+  de la semana, motores del plan, Google, Agentes) y «Esta página» (lo que el
+  último escaneo y Search Console dicen de esa URL, más la revisión gratis).
+- **Desaparece la pantalla de «Conectado» con la lista de webs.** Competidores y
+  fuentes son los que ya tiene el dominio en la consola. En una web ajena, «Analizar
+  como dominio» (o, sin hueco, «Mejorar a Pro») y «Añadir como competidor», que
+  cuenta contra el mismo tope.
+- **No hay escaneos desde la extensión.** Los datos dicen «Datos del escaneo de hoy
+  · se actualizan solos cada día» (cada semana en Starter). «Volver a revisar la
+  página» sólo vuelve a leer la página en el navegador, y lo dice.
+- **Search Console se conecta desde el panel** con la misma conexión de la consola.
+- **«Actualizar el panel solo en mis dominios»** queda como opción al pie, con el
+  permiso de Chrome limitado a tus dominios de GenScore.
+
 > Do you approve this plan? I will not implement until you confirm.
