@@ -27150,3 +27150,39 @@ que pg_cron llama a producción: lo verifican `cron.job_run_details` y
 (secreto ausente o distinto, extensión desactivada), se pierden a la vez el
 vigilante y la reanudación de escaneos, y nada lo avisa salvo el monitor de
 Sentry del vigilante («missed»), que es por eso el único que se conserva.
+
+## 348. BLOG-FRESH-1: ¿la IA prefiere el contenido reciente? (2026-10-26)
+
+**Qué.** Artículo `la-ia-prefiere-contenido-reciente` (clúster `medicion`),
+tercer post de la rutina de cada dos días, publicado como pasada de
+recuperación: la del 25 no se disparó. Fuentes: Seer Interactive, *Study:
+Content Recency's Impact on AI Visibility in 2026* (julio de 2026, 47.097
+citas de ChatGPT, Gemini y Perplexity en cuatro sectores, de marzo a junio);
+Ahrefs, *AI Assistants Prefer to Cite «Fresher» Content* (julio de 2025, 17
+millones de citas); Fang et al., Universidad de Waseda, arXiv:2509.11353
+(septiembre de 2025, fechas inyectadas en siete modelos), y Google Search
+Central (fechas de publicación y la guía de contenido útil). La idea central
+sale de Seer: el 72% de las páginas citadas parece reciente por su fecha de
+actualización, pero sólo el 42% es nuevo; lo que cuenta es mantener al día,
+no publicar más ni cambiar la fecha.
+
+**Cifras de terceros con sus defectos.** Seer da cifras distintas en el texto
+y en las tablas por sector; el artículo sólo usa las globales y las de cada
+motor, que coinciden. Ahrefs cuenta «siete plataformas» y lista seis; el
+artículo usa su tabla por plataforma, en años redondeados. Los tres estudios
+son de correlación y el artículo lo dice.
+
+**Bloque que el lector copia, atado con un test.** El JSON-LD con
+`datePublished`/`dateModified` y la línea visible viven en
+`lib/blog/article-dates-jsonld.ts`; `article-dates-jsonld.test.ts` comprueba
+que las dos fechas coinciden y que `checkFreshness`
+(`lib/web-audit/page-checks.ts`) lee la de actualización y la da por reciente.
+
+**Lo que el producto afirma, trazado.** «Contenido actualizado» de la
+Auditoría técnica lee `dateModified`/`datePublished` del JSON-LD,
+`article:modified_time` o `last-modified`; reciente hasta 180 días, aviso hasta
+540 y sin fecha marcada para añadirla (`checkFreshness`, `page-fixes`). No
+lee la fecha visible, y el artículo no dice que lo haga. Páginas citadas, como
+en §341.
+
+**Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
