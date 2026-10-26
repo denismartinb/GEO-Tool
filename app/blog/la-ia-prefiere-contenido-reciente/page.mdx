@@ -1,0 +1,269 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  Stat,
+  StatGrid,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { ARTICLE_DATES_JSONLD, ARTICLE_DATES_VISIBLE_LINE } from "@/lib/blog/article-dates-jsonld";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("la-ia-prefiere-contenido-reciente");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿La IA prefiere citar contenido reciente?",
+    answer:
+      "Sí, según los datos disponibles. Seer Interactive analizó 47.097 citas de ChatGPT, Gemini y Perplexity entre marzo y junio de 2026: el 75% de las páginas citadas se había actualizado en el último año. Ahrefs, sobre 17 millones de citas, midió que las páginas que citan los asistentes de IA son un 25,7% más recientes que las de los resultados de Google."
+  },
+  {
+    question: "¿Basta con cambiar la fecha de una página para que parezca nueva?",
+    answer:
+      "No, y es mala idea. Google pregunta en su guía de contenido útil si cambias la fecha de tus páginas para que parezcan recientes sin haber cambiado el contenido de verdad. Y si la página dice algo desactualizado, la IA lo encuentra igual: la fecha nueva no arregla la información vieja."
+  },
+  {
+    question: "¿Tengo que publicar artículos nuevos o actualizar los que ya tengo?",
+    answer:
+      "Sobre todo actualizar. En el estudio de Seer, el 72% de las páginas citadas parecía reciente por su fecha de actualización, pero solo el 42% se había publicado en el último año. Más de una cuarta parte de esas páginas recientes llevaba publicada más de dos años: eran páginas antiguas puestas al día."
+  },
+  {
+    question: "¿Cómo le digo a Google y a la IA cuándo actualicé una página?",
+    answer:
+      "Con una fecha visible en la página y las mismas fechas en datos estructurados: datePublished y dateModified en un Article o BlogPosting, como documenta Google. La Auditoría técnica de GenScore lee esa fecha en cada página que analiza y la marca en «Contenido actualizado»."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Sí: la IA cita sobre todo páginas recientes. El 75% de las páginas que citan
+ChatGPT, Gemini y Perplexity se actualizó en el último año, según Seer
+Interactive (47.097 citas, de marzo a junio de 2026). Pero lo que cuenta es la
+actualización, no la publicación: solo el 42% de esas páginas era nuevo. La
+mayoría eran páginas antiguas puestas al día. Para que la IA te siga citando,
+revisa tus páginas importantes cada pocos meses, cambia lo que ya no es
+cierto y declara la fecha de actualización de forma que se pueda leer.
+
+</KeyTakeaway>
+
+## Lo que dicen los datos sobre la IA y el contenido reciente
+
+Tres estudios, hechos con métodos distintos, apuntan en la misma dirección:
+
+<StatGrid label="La IA y la antigüedad de las páginas que cita">
+  <Stat value="75%" label="de las páginas que citan ChatGPT, Gemini y Perplexity se actualizó en el último año." source="Seer Interactive, 47.097 citas en cuatro sectores (marzo a junio de 2026)" />
+  <Stat value="25,7%" label="más recientes son, de media, las páginas que citan los asistentes de IA que las de los resultados de Google." source="Ahrefs, 17 millones de citas en asistentes de IA (julio de 2025)" tone="cyan" />
+  <Stat value="25%" label="de las preferencias entre dos textos igual de buenos se dan la vuelta, como máximo, al ponerle una fecha más reciente a uno." source="Universidad de Waseda, siete modelos de lenguaje (septiembre de 2025)" />
+</StatGrid>
+
+**Seer Interactive**, una agencia de SEO, siguió durante cuatro meses las citas
+de ChatGPT, Gemini y Perplexity en cuatro sectores: tiendas de mascotas,
+alquiler vacacional, energía y banca para empresas. Tres de cada cuatro
+páginas citadas se habían actualizado en el último año, y casi nueve de cada
+diez en los dos últimos. Gemini era el más exigente con la fecha y Perplexity,
+el que más páginas antiguas citaba:
+
+<Figure
+  label="Figura 1."
+  caption="Porcentaje de las páginas citadas por cada motor que se actualizó en los doce meses anteriores. Fuente: Seer Interactive, Study: Content Recency's Impact on AI Visibility in 2026, 47.097 citas en cuatro sectores (marzo a junio de 2026). La fecha se leyó de los datos estructurados, el sitemap o las cabeceras; un tercio de las páginas no tenía fecha legible y quedó fuera."
+>
+
+<BarChart
+  title="Páginas citadas actualizadas en el último año"
+  rows={[
+    { label: "Gemini", value: 78, highlight: true },
+    { label: "ChatGPT", value: 73, highlight: true },
+    { label: "Perplexity", value: 65, highlight: true }
+  ]}
+/>
+
+</Figure>
+
+**Ahrefs** comparó la antigüedad de 17 millones de citas de asistentes de IA
+con la de las páginas que salen en los resultados normales de Google. Las
+páginas que cita la IA son más jóvenes, y ChatGPT es el que más se nota. Las
+Vistas creadas con IA de Google van al revés: citan páginas tan antiguas como
+las de sus propios resultados.
+
+<Figure
+  label="Figura 2."
+  caption="Antigüedad media, desde su publicación, de las páginas que cita cada plataforma. Fuente: Ahrefs, New Study: AI Assistants Prefer to Cite «Fresher» Content, 17 millones de citas (julio de 2025). Ahrefs toma como fecha de publicación el día en que su rastreador vio la página por primera vez."
+>
+
+<BarChart
+  title="Antigüedad media de las páginas citadas, en años"
+  max={4}
+  rows={[
+    { label: "Resultados de Google", value: 3.9, display: "3,9 años" },
+    { label: "Vistas creadas con IA de Google", value: 3.9, display: "3,9 años" },
+    { label: "Perplexity", value: 3.2, display: "3,2 años", highlight: true },
+    { label: "Gemini", value: 3.1, display: "3,1 años", highlight: true },
+    { label: "Copilot", value: 2.9, display: "2,9 años", highlight: true },
+    { label: "ChatGPT", value: 2.6, display: "2,6 años", highlight: true }
+  ]}
+/>
+
+</Figure>
+
+El tercer estudio explica parte del porqué. Un equipo de investigadores de la **Universidad de
+Waseda**, en Tokio, le pidió a siete modelos de lenguaje que ordenaran textos
+por relevancia, después de añadirles fechas de publicación inventadas. Los
+modelos subieron los textos con fecha reciente, algunos hasta 95 puestos, y
+cuando tenían que elegir entre dos textos igual de buenos cambiaban de opinión
+hasta en el 25% de los casos por la fecha. Los modelos más grandes lo hacían
+menos, pero ninguno dejaba de hacerlo.
+
+## El matiz: actualizar no es cambiar la fecha
+
+Lo más útil del estudio de Seer es la diferencia entre dos fechas. Por fecha de
+actualización, el 72% de las páginas citadas parecía reciente. Por fecha de
+publicación, solo el 42%. Más de una cuarta parte de esas páginas «recientes»
+llevaba publicada más de dos años. La IA no cita sobre todo lo que se acaba de
+escribir: cita lo que alguien ha mantenido al día.
+
+Eso no significa que baste con tocar la fecha. Google lo dice en su guía de
+contenido útil, con una pregunta directa: *¿cambias la fecha de tus páginas
+para que parezcan recientes sin haber cambiado el contenido de verdad?* Y aunque
+un modelo de lenguaje se dejara engañar por la fecha, el texto seguiría
+diciendo un precio, una norma o una cifra que ya no es cierta, y la IA lo
+repetiría con tu nombre al lado. Lo contamos en
+<a href="/blog/chatgpt-informacion-incorrecta-de-tu-empresa">qué hacer si
+ChatGPT da información incorrecta de tu empresa</a>.
+
+Un aviso sobre los propios datos: los tres estudios miden correlación, no
+causa. Muestran qué cita la IA, no que actualizar una página haga que la citen.
+Y la fecha es un factor entre muchos: Ahrefs recuerda que, aun siendo más
+jóvenes, las páginas que cita la IA tienen de media casi tres años.
+
+## Cómo mantener tu contenido al día para la IA
+
+<NumberedSection n={1} title="Elige las páginas que merecen el trabajo">
+
+No hace falta revisar toda la web. Empieza por las páginas que responden a las
+preguntas que hacen tus clientes: las de producto o servicio, precios,
+comparativas y guías. Son las que la IA puede citar cuando alguien pregunta por
+lo que vendes.
+
+<QuickAction>Haz una lista con tus diez páginas más importantes y apunta al lado la fecha de su última actualización real, no la que pone la página.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Cambia lo que ya no es cierto">
+
+Una actualización que cuenta es una que cambia el contenido: precios,
+condiciones, cifras, capturas, nombres de producto, normas que han cambiado,
+ejemplos de otro año. Añade también lo que ha pasado desde la última versión,
+si es relevante para la pregunta que responde la página. Si no hay nada que
+cambiar, no cambies la fecha.
+
+<QuickAction>Lee cada página de tu lista como si fueras un cliente que pregunta hoy. Corrige cada dato que ya no valga y apunta qué has cambiado.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Declara la fecha de forma que se pueda leer">
+
+Google documenta cómo indicar las fechas de una página: una fecha visible, con
+una etiqueta como «Actualizado el», y las mismas fechas en datos estructurados.
+Una página puede llevar las dos, la de publicación y la de actualización, y
+tienen que coincidir con las que ve el lector. En el estudio de Seer, un tercio
+de las páginas citadas no tenía ninguna fecha legible.
+
+<Figure
+  label="Figura 3."
+  caption="Las dos fechas de un artículo, en datos estructurados (arriba) y visibles en la página (abajo). La de actualización solo cambia cuando cambia el contenido. Basado en la documentación de Google sobre fechas de publicación."
+>
+
+<CodeBlock title="JSON-LD con las fechas de un artículo">{ARTICLE_DATES_JSONLD}</CodeBlock>
+
+<CodeBlock title="La misma fecha, visible en la página">{ARTICLE_DATES_VISIBLE_LINE}</CodeBlock>
+
+</Figure>
+
+Si tu web usa WordPress u otro gestor de contenidos, lo normal es que ya
+genere estas fechas: comprueba que la de actualización cambia cuando editas el
+texto y que no cambia sola cada vez que se reconstruye la web.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Pon una cadencia según lo que caduque">
+
+No todo envejece igual. Una página de precios o de condiciones caduca cuando
+cambias la tarifa. Una guía de un tema que se mueve rápido, cada pocos meses.
+Una explicación de fondo puede aguantar un año. Ponle a cada página una fecha
+de revisión en el calendario, igual que se revisa un contrato.
+
+</NumberedSection>
+
+<Checklist
+  tone="evitar"
+  items={[
+    "Cambiar la fecha sin cambiar el contenido: Google lo señala en su guía de contenido útil.",
+    "Poner fechas futuras o la fecha del evento del que habla la página: Google pide que no se haga.",
+    "Publicar un artículo nuevo sobre el mismo tema en vez de actualizar el que ya tienes: compiten entre sí y el antiguo queda con datos viejos.",
+    "Una fecha de actualización que cambia sola en todas las páginas cada vez que se publica la web."
+  ]}
+/>
+
+## Cómo lo ves en GenScore
+
+La **Auditoría técnica** de GenScore revisa, en cada página que analiza, si
+tiene una fecha de actualización que se pueda leer: `dateModified` o
+`datePublished` en el JSON-LD, o una etiqueta de última modificación. El
+punto «Contenido actualizado» la da por buena si es de los últimos seis
+meses, avisa entre los seis y los dieciocho, y marca las páginas sin fecha
+para que se la añadas.
+
+Y en cada escaneo, la pantalla **Páginas citadas** enseña qué páginas citan
+ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity cuando preguntan por
+lo que vendes. Si una página tuya deja de salir después de mucho tiempo sin
+tocarla, es la primera candidata a revisar.
+
+<Verdict title="La IA cita lo que alguien mantiene al día">
+
+Los datos apuntan a lo mismo: la IA prefiere páginas actualizadas, y la mayoría
+de las que cita no son nuevas, son antiguas puestas al día. No hace falta
+publicar más, hace falta mantener vivas las páginas que ya responden a tus
+clientes, cambiar lo que caduca y decir cuándo lo hiciste.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre qué páginas tuyas necesitan una actualización"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: la Auditoría técnica revisa la fecha de tus páginas y Páginas citadas te enseña cuáles citan ChatGPT, Gemini, Claude y Perplexity en tus preguntas principales de búsqueda."
+/>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>
