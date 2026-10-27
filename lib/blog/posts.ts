@@ -819,7 +819,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "convierte-mejor-el-trafico-de-la-ia",
     title: "¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden",
-    seoTitle: "¿Convierte mejor el tráfico de la IA? Lo que dicen los estudios",
+    seoTitle: "¿Convierte mejor el tráfico de la IA? Qué dicen los datos",
     metaDescription:
       "Adobe ve un 60% más de conversión en las visitas que llegan de la IA; otro estudio, menos que la búsqueda orgánica. Por qué no coinciden y cómo medir la tuya.",
     description:
