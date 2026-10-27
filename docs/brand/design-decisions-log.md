@@ -27254,3 +27254,38 @@ en F8, cuando todas las pantallas estén migradas. Las pantallas aún sin migrar
 corren dentro del marco nuevo con su estilo antiguo. Premisa de recuperación:
 no se retira ningún camino (todas las entradas del menú anterior existen en el
 nuevo; «Gestionar» sigue llevando a `/dashboard/domains`).
+
+## 351. CONSOLE-INSTRUMENTO-1 Fase 2: el acceso pasa a «Bruma» (2026-10-27)
+
+**Decisión.** Inicio de sesión, alta, recuperar contraseña, confirmación de
+correo y verificación en dos pasos (MFA, desafío y alta) adoptan el acceso
+«Bruma» del prototipo aprobado: lienzo de niebla ambiente, marca, titular y
+formulario en dos pasos (correo, luego contraseña). Es la única pantalla de
+acceso (decisión de Denis, plan de 9 fases). Solo cambia el aspecto: las
+acciones de servidor (`login`, `signup`, `signInWithGoogle`, `sendOtpAction`,
+`verifyOtpAction`, `updatePasswordAction`, `verifyChallenge`,
+`verifyEnrollment`, `regenerateEnrollment`, `signOut`) y sus reglas no se
+tocan.
+
+**Cómo.** `app/ins/auth.css` (acotado a `.ins`, animaciones `ins-au*`),
+`components/ins/auth/` (`fx.ts` con el efecto de niebla portado del prototipo,
+`shell`, `page`, `parts`, `entry-form`). Las páginas de acceso viven fuera del
+layout de la consola, así que importan por su cuenta tokens, componentes y la
+hoja de acceso. La niebla es solo ambiente: no codifica ningún dato, se para al
+desmontarse y con `prefers-reduced-motion` queda quieta.
+
+**Decisiones de implementación.**
+- El paso 1 (correo) se valida en el cliente y no llama al servidor; el paso 2
+  envía la acción real. Los errores del servidor llegan por `?error=` como
+  antes y se pintan en `.au-fail`.
+- El alta lleva un `confirmPassword` oculto igual a la contraseña, porque la
+  acción lo exige y el prototipo tiene un solo campo.
+- La línea legal del alta usa la redacción del prototipo y mantiene la
+  información de EMAIL-UNSUB-1 (correos de cuenta y consejos, baja posible).
+
+**Pendiente / roto conocido.** «¿No te ha llegado?» de la confirmación enlaza
+a volver a registrarse: reenviar el correo exigiría una acción de servidor
+nueva, que necesita aprobación. MFA se verificó por código y con los mismos
+componentes; ver la pantalla real exige sesión de operador. Premisa de
+recuperación: no se retira ningún camino (olvidar contraseña, Google y volver a
+registrarse siguen en pantalla).

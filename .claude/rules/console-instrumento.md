@@ -29,3 +29,15 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   proyecto activo. Sin dato, no se pinta (no hay nombre de perfil hasta F8).
 - **Una clase de `.ins` que también use una página pública vive en
   `globals.css`**, no en `console.css` (`tests/console-css-scope.test.ts`).
+
+## Acceso «Bruma» (F2, log §351)
+
+- **Las páginas de acceso no heredan el layout de la consola.** Importan
+  tokens, componentes y `app/ins/auth.css` por su cuenta y se montan con
+  `AuthPage` (`components/ins/auth/`).
+- **El formulario de dos pasos envía la acción de servidor real** en el paso 2;
+  el paso 1 solo valida en el cliente. Los errores llegan por `?error=`.
+  Nunca se añade una acción de servidor nueva (p. ej. reenviar confirmación)
+  sin aprobación.
+- **La niebla (`fx.ts`) es ambiente**: no representa progreso ni datos, se
+  detiene al desmontar y respeta `prefers-reduced-motion`.
