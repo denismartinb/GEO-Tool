@@ -27186,3 +27186,47 @@ lee la fecha visible, y el artículo no dice que lo haga. Páginas citadas, como
 en §341.
 
 **Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
+
+## 349. BLOG-CONVERT-1: ¿convierte mejor el tráfico de la IA? (2026-10-27)
+
+**Qué.** Artículo `convierte-mejor-el-trafico-de-la-ia` (clúster
+`fundamentos`), cuarto post de la rutina de cada dos días. Pone lado a lado
+las cifras de conversión del tráfico que llega desde la IA y explica por qué
+no coinciden. Fuentes, todas leídas en origen: Adobe Digital Insights, *AI
+Traffic Trends Report* (agosto de 2026, más de un billón de visitas a webs de
+comercio de EE. UU., datos de octubre de 2024 a julio de 2026: +60% de
+conversión en comercio, +53% de ingresos por visita, −1% en viajes); Shopify,
+*AI and organic search are doing different jobs* (11 de agosto de 2026,
+segundo trimestre de 2026, sin tamaño de muestra: +197% de sesiones desde la
+IA, +80% de conversión en ficha de producto, el doble en categorías de
+especificaciones, relojes 2,4, collares 2,3 y ropa 1,6 veces); Ahrefs, Patrick
+Stox (16 de junio de 2025, una sola web, 30 días: 0,5% del tráfico, 12,1% de
+los registros, 23 veces), y Kaiser y Schulze, *Marketing Science* (2026, doi
+10.1287/mksc.2025.0489, 973 tiendas en 49 países, agosto de 2024 a julio de
+2025: la orgánica convierte un 13% más que ChatGPT, la afiliación un 86% más,
+ChatGPT por encima sólo de redes sociales de pago).
+
+**Defectos de las cifras, dichos en el artículo.** Shopify no da muestra y
+presenta sus cifras de categoría como indicios; en relojes y collares no dice
+con qué compara, aunque el contexto es la búsqueda orgánica. El 13% del estudio
+académico es una razón de probabilidades (log-odds) y en varias de sus
+comprobaciones deja de ser significativo. Ahrefs es una sola web, con un
+público de profesionales del SEO. El artículo no afirma nada sobre la
+complejidad del producto en Kaiser y Schulze: el resumen la menciona pero no
+la cifra, así que la explicación por categoría sale sólo de Shopify y Adobe.
+
+**Bloque que el lector copia.** La condición de GA4 es `GA4_AI_SOURCE_REGEX`
+(`lib/blog/ga4-source-regex.ts`), la misma de S8 y ya cubierta por su test;
+no se duplica. El consejo de crear el canal cuanto antes se apoya en lo que
+ya dice ese artículo: un grupo personalizado reagrupa también los datos
+anteriores.
+
+**Lo que el producto afirma, trazado.** GenScore no mide conversiones, y el
+artículo no lo dice. Lo que afirma: escanea las preguntas principales de
+búsqueda en ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity (§283) y
+dice si te nombran, en qué lugar, a qué competidores y qué páginas citan; y
+«Posición en Google» enseña clics e impresiones con Search Console conectado
+(§284).
+
+**Pendiente.** Refrescar con el siguiente informe trimestral de Adobe o
+Shopify, y con la versión ampliada que Ahrefs anunció.
