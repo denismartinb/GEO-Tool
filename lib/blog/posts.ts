@@ -824,7 +824,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Adobe ve un 60% más de conversión en las visitas que llegan de la IA; otro estudio, menos que la búsqueda orgánica. Por qué no coinciden y cómo medir la tuya.",
     description:
       "Adobe, Shopify y Ahrefs dicen que las visitas que llegan desde ChatGPT y otros asistentes convierten más que el resto; un estudio académico sobre 973 tiendas dice que menos que la búsqueda orgánica. Qué mide cada uno, por qué no coinciden y cómo medir el tráfico de IA de tu propia web.",
-    datePublished: "2026-10-27",
+    datePublished: "2026-10-29",
     coverImage: "/blog/convierte-mejor-el-trafico-de-la-ia/cover.webp",
     coverIcon: "chart",
     // BLOG-CONVERT-1 (log §349). Adobe Digital Insights, AI Traffic Trends

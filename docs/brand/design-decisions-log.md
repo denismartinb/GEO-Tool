@@ -27187,10 +27187,12 @@ en §341.
 
 **Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
 
-## 349. BLOG-CONVERT-1: ¿convierte mejor el tráfico de la IA? (2026-10-27)
+## 349. BLOG-CONVERT-1: ¿convierte mejor el tráfico de la IA? (2026-10-29)
 
 **Qué.** Artículo `convierte-mejor-el-trafico-de-la-ia` (clúster
-`fundamentos`), cuarto post de la rutina de cada dos días. Pone lado a lado
+`fundamentos`), cuarto post de la rutina de cada dos días. Escrito el 27 y
+publicado el 29 a petición del fundador, que ese día ya había compartido otro
+post en redes: la pasada del 29 publica éste en vez de escribir uno nuevo. Pone lado a lado
 las cifras de conversión del tráfico que llega desde la IA y explica por qué
 no coinciden. Fuentes, todas leídas en origen: Adobe Digital Insights, *AI
 Traffic Trends Report* (agosto de 2026, más de un billón de visitas a webs de
