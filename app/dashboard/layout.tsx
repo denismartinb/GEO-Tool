@@ -2,6 +2,8 @@
 // entran por aquí, no por `globals.css`: así no viajan a /blog ni a la
 // landing. Ver la cabecera de `app/console.css` para qué se movió y qué no.
 import "@/app/console.css";
+import "@/app/ins/tokens.css";
+import "@/app/ins/components.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";

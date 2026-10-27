@@ -27186,3 +27186,31 @@ lee la fecha visible, y el artículo no dice que lo haga. Páginas citadas, como
 en §341.
 
 **Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
+
+## 349. CONSOLE-INSTRUMENTO-1 Fase 0: fundación del sistema «Instrumento» (2026-10-27)
+
+**Qué.** Denis aprobó (2026-10-27, tarjeta de decisión) implementar la consola
+rediseñada «Instrumento» v51 por fases, un PR por fase (F0 fundación, F1 menú y
+cabecera, F2 acceso «Bruma», F3 Visión general + misión + alta de dominio, F4
+Recomendaciones, F5 Prompts/Competidores/Páginas citadas, F6 Auditoría técnica
+y Posición en Google, F7 Comercio agéntico, F8 Perfil/plan/tour/404). Task
+Intake en `rediseno-consola/implementacion/task-intake-consola-instrumento.md`.
+Fuente de verdad: `docs/design-reference/console-instrumento-1/` (HTML v51 +
+`i-src/` + inventarios de copy). El prototipo usa la marca ficticia Nubaria:
+se mantienen los datos reales.
+
+**F0 (este PR, sin cambio visible).** Tokens y componentes compartidos
+portados de `i-src/css` a `app/ins/tokens.css` y `app/ins/components.css`,
+**acotados** a `.ins` (pantallas ya migradas) y `.ins-shell` (marco): el blog,
+la landing y las pantallas aún sin migrar no los ven. Las animaciones se
+renombran `ins-*` para no pisar las de `globals.css`. `lib/ins/theme.ts`
+fija el tema.
+
+**Decisión de Denis: modo claro por defecto.** El oscuro solo existe si la
+persona lo elige (`data-theme="dark"` en `<html>`, guardado en
+`localStorage`); nunca se sigue `prefers-color-scheme`. El selector de tema no
+se publica hasta que todas las pantallas estén migradas (F8): una pantalla
+antigua en oscuro saldría ilegible.
+
+**Pendiente / roto conocido.** Nada de la consola usa todavía `.ins`. Cada
+fase retira las hojas antiguas de las pantallas que migra.
