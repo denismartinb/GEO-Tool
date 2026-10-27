@@ -450,4 +450,50 @@ así (prototipo en [`prototipo-navegable.html`](./prototipo-navegable.html)), y
 - **«Actualizar el panel solo en mis dominios»** queda como opción al pie, con el
   permiso de Chrome limitado a tus dominios de GenScore.
 
+## 16. Revisión 5: diseño de la consola nueva y prueba casi en real (2026-10-27)
+
+Denis pidió usar los elementos y principios de la consola rediseñada
+(«Instrumento», versión final del 2026-10-27), dar más información sin gastar
+IA y proponer cómo probarla casi en real antes de implementarla. El prototipo
+(`prototipo-navegable.html`) se reconstruye con los tokens, los componentes y
+los ayudantes de esa consola. El flujo y los límites de la revisión 4 no cambian.
+
+**Orden en cuatro capas**, como la consola:
+
+1. Estado: una cifra con su escala y una frase.
+2. Lo que frena: un único aviso naranja (p. ej. «Perplexity no puede leer tu web»).
+3. Haz esto: una tarjeta cada vez, con puntos, la acción a mano y deslizar para
+   confirmar. En una mejora de la página, deslizar vuelve a leer la página en el
+   navegador y la nota sube. En un paso del plan, se marca como hecho y se verá
+   en el próximo escaneo. Un objetivo de Google no se marca: se sigue solo.
+4. Detalle: IA, Google y Agentes, plegados, de uno en uno.
+
+**Dos formas para la capa 1**, a elegir:
+
+- **Cuadro** (recomendada): dial de 270° con la nota y tres indicadores
+  pequeños (IA, Google, Agentes) que abren su detalle. Es el lenguaje del
+  «Cuadro claro» que Denis eligió para Agentes.
+- **Pila**: número grande con barra de franjas, y los tres carriles como filas
+  bajo la tarjeta. Más calmada y más corta.
+
+**Información nueva sin IA.** Desde el navegador: qué motores pueden leer la
+página, si responde en las primeras líneas, fecha visible, datos estructurados,
+producto, precio y stock, y qué marcas nombra la página abierta. Desde la
+cuenta: en qué prompts citan esa URL, sus búsquedas de Search Console, quién va
+delante en Google para su palabra (foto semanal de DataForSEO), Puntuación GEO
+por motor frente a rivales y Visibilidad agéntica por componente.
+
+**Probarla casi en real.** Recomendación, por pasos:
+
+1. Extensión de prueba instalable desde un .zip en modo desarrollador, con este
+   diseño. La revisión de la página es real en cualquier web. La cuenta usa
+   datos de ejemplo. No toca producción.
+2. La misma, conectada a la cuenta de Denis en la vista previa del PR, sólo
+   lectura (dos rutas `GET /api/ext/*`, su propio PR).
+3. Publicación oculta en la tienda de Chrome para cinco contactos durante una
+   semana.
+
+El paso 1 es implementación (código nuevo en una carpeta propia, sin tocar la
+app), así que espera la aprobación de Denis.
+
 > Do you approve this plan? I will not implement until you confirm.
