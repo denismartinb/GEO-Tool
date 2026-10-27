@@ -78,38 +78,15 @@ test("project overview renders real scan data", async ({ page }, testInfo) => {
   assertPageIsHealthy(findings);
   await exploreInteractions(page, testInfo, "overview");
 
-  // HEADER-FLAT-1 (log §109): la cabecera de consola nace plana y se vuelve
-  // cristal al desplazar. Sin este paso el estado de cristal NO tenía ni una
-  // captura en toda la evidencia — 309 imágenes y ninguna del estado que la
-  // fase introduce — así que el piloto devolvió INCONCLUSIVE con razón.
-  //
-  // Se desplaza `.dash-content` y no la ventana a propósito: en la consola
-  // `.shell` es `overflow:hidden` a `100dvh` y la ventana no scrollea nunca,
-  // que es justo por lo que `ConsoleHeader` escucha a ese contenedor. Si
-  // alguien cambiara esa clase, el estado de cristal dejaría de encenderse en
-  // silencio; esta aserción es lo que convierte ese fallo mudo en un fallo
-  // ruidoso.
-  const header = page.locator(".dash-header");
-  await expect(header, "la cabecera nace plana, sin la clase de cristal").not.toHaveClass(
-    /is-scrolled/
-  );
-  await captureInteraction(page, testInfo, "overview-cabecera-plana");
-
-  const scrolled = await page.evaluate(() => {
-    const scroller = document.querySelector<HTMLElement>(".dash-content");
-    if (!scroller || scroller.scrollHeight <= scroller.clientHeight + 40) return false;
-    scroller.scrollTop = 240;
-    return true;
-  });
-
-  // Una pantalla sin contenido suficiente para desplazar no puede demostrar
-  // nada; se anota y se sigue, en vez de fingir que se comprobó.
-  test.skip(!scrolled, "la Visión general de esta cuenta no tiene scroll suficiente");
-
-  await expect(header, "al desplazar `.dash-content` la cabecera se vuelve cristal").toHaveClass(
-    /is-scrolled/
-  );
-  await captureInteraction(page, testInfo, "overview-cabecera-cristal");
+  // CONSOLE-INSTRUMENTO-1 F1 (log §349): la cabecera del marco «Instrumento»
+  // ya no cambia al desplazar (el cristal de HEADER-FLAT-1 desapareció con la
+  // cabecera anterior). Lo que se protege ahora es que el marco existe y que
+  // el desplazamiento ocurre en `.dash-content`, no en la ventana: si alguien
+  // cambiara esa clase, el pilot dejaría de medir el desbordamiento en
+  // silencio (ver `tests/pilot/support/journey.ts`).
+  await expect(page.locator(".ins-shell .app"), "el marco Instrumento no se montó").toBeVisible();
+  await expect(page.locator(".ins-shell .dash-content"), "falta el contenedor de scroll").toHaveCount(1);
+  await captureInteraction(page, testInfo, "overview-marco");
 });
 
 test("prompts screen renders", async ({ page }, testInfo) => {
@@ -552,7 +529,7 @@ test("un proyecto que no existe da el 404 de la consola, no el de marketing", as
 
   // La consola sigue alrededor: el menú lateral es lo que permite salir de
   // aquí sin usar el botón de atrás del navegador.
-  await expect(page.locator("aside.sb")).toBeVisible();
+  await expect(page.locator(".ins-shell aside.side")).toBeAttached();
 
   // "Ver mis dominios" tiene que llevar a la puerta de entrada real de la
   // consola. El fundador cazó a mano que apuntaba a /dashboard/projects

@@ -94,7 +94,7 @@
 .ins .toast.out{animation:ins-tout var(--d2) var(--std) forwards}
 @keyframes ins-tin{from{opacity:0;transform:translateY(10px) scale(.98)}}
 @keyframes ins-tout{to{opacity:0;transform:translateY(6px)}}
-.ins .drawer-scrim{display:none}
+
 
 
 /* ===== instrument: dial, engine row, evolution ===== */

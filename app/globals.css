@@ -12702,3 +12702,16 @@ select.set-field {
 .als-compact { width: min(100%, 320px); }
 .als-compact .als-media { min-height: 84px; }
 .als-compact .als-kinds { display: none; }
+
+/* CONSOLE-INSTRUMENTO-1 F1: `.fav` también lo pinta components/ins (fuera de app/dashboard), así que vive aquí y no en console.css. */
+.fav {
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+}

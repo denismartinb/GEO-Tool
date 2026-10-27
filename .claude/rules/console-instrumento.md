@@ -18,3 +18,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   hojas antiguas.
 - **Sin rayas largas, motores solo por nombre** (ChatGPT, Gemini, Claude,
   Perplexity), copy del prototipo aprobado manda sobre el anterior.
+
+## Marco (F1, log §350)
+
+- **Los resets del marco usan `:where(...)`** para no ganar a ninguna regla de
+  componente por especificidad. El scrim del cajón es `.ins-scrim`; no
+  reutilices `.drawer-scrim` (lo usa Prompts en `globals.css`).
+- **Lo que enseña el menú sale de `useShellData`/`lib/ins/nav.ts`**, nunca de
+  cifras fijas: recuentos, puntuación, banda y límite del plan son datos del
+  proyecto activo. Sin dato, no se pinta (no hay nombre de perfil hasta F8).
+- **Una clase de `.ins` que también use una página pública vive en
+  `globals.css`**, no en `console.css` (`tests/console-css-scope.test.ts`).

@@ -27214,3 +27214,43 @@ antigua en oscuro saldría ilegible.
 
 **Pendiente / roto conocido.** Nada de la consola usa todavía `.ins`. Cada
 fase retira las hojas antiguas de las pantallas que migra.
+
+## 350. CONSOLE-INSTRUMENTO-1 Fase 1: el marco «Instrumento» sustituye al menú y la cabecera (2026-10-27)
+
+**Qué.** El marco de toda la consola (`app/dashboard/layout.tsx`) pasa a
+`components/ins/shell.tsx`: menú lateral en cuatro bloques sin título para los
+dos primeros (Visión general, Recomendaciones), «En la IA», «En Google» y
+«Comercio agéntico» con «Nuevo»; selector de dominio (`DomainSwitcherPanel`),
+cabecera con migas, búsqueda ⌘K y campana, cajón móvil con cabecera de 64 px,
+menú de ayuda (tour, videollamada, Manuales y estudios), menú de cuenta
+(perfil, notificaciones, ¿Cómo funciona?, afiliados, cerrar sesión), pila de
+avisos y paleta de comandos. Capa de popovers/diálogos/hojas inferiores propia
+(`components/ins/layer.tsx`). Solo cambia el aspecto: las consultas del layout,
+la lógica de carriles de la campana (§297) y el plan por dominio no se tocan.
+
+**Datos reales, no los de Nubaria.** El pie del menú enseña el correo (no hay
+nombre de perfil: guardarlo necesita migración y queda para F8, con aprobación).
+La puntuación y la banda de cada dominio salen de `latestScoreByProject`
+(`lib/ins/band.ts`: ≥70 Competitivo, ≥40 Emergente, resto Inicial); el límite
+del plan, de `plan.caps.projects`. El punto cálido de «Auditoría técnica» del
+prototipo no se pinta: no hay dato que lo justifique todavía.
+
+**Decisiones de implementación.**
+- El scrim del cajón es `.ins-scrim`, no `.drawer-scrim`: ese nombre ya lo usa
+  el cajón de Prompts en `globals.css` y chocaban.
+- Los resets del marco se escriben con `:where(...)` para quedar por debajo de
+  cualquier regla de componente; con `:is(...)` el reset de `button` pisaba el
+  borde de `.proj`.
+- `.fav` pasa de `console.css` a `globals.css` porque `components/ins` lo usa
+  fuera de `app/dashboard` (`tests/console-css-scope.test.ts`).
+- El piloto: `core-flow` deja de comprobar el cristal de HEADER-FLAT-1 (la
+  cabecera nueva no cambia al desplazar) y comprueba que el marco y
+  `.dash-content` existen; `domains-selection` lee el selector nuevo.
+
+**Pendiente / roto conocido.** `components/sidebar.tsx`, `workspace-topbar.tsx`,
+`console-header.tsx` y `mobile-shell.tsx` ya no se montan pero siguen en el
+repo (`tests/search-seo-nav.test.ts` lee el primero); se retiran con sus hojas
+en F8, cuando todas las pantallas estén migradas. Las pantallas aún sin migrar
+corren dentro del marco nuevo con su estilo antiguo. Premisa de recuperación:
+no se retira ningún camino (todas las entradas del menú anterior existen en el
+nuevo; «Gestionar» sigue llevando a `/dashboard/domains`).
