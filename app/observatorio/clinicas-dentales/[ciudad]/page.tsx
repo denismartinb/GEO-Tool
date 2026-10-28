@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ ciudad: s
   const city = getCity(ciudad);
   if (!city) return {};
   return contentMetadata({
-    title: `Clínicas dentales que la IA recomienda en ${city.name} · Observatorio GenScore`,
+    title: `Clínicas dentales que la IA nombra en ${city.name} · Observatorio GenScore`,
     description: `Las clínicas dentales que más nombran ChatGPT, Gemini y Claude en ${city.name}. Edición ${EDITION.label}, medida con preguntas reales de pacientes.`,
     path: `/observatorio/clinicas-dentales/${city.id}`
   });
@@ -57,7 +57,7 @@ export default async function CiudadPage({ params }: { params: Promise<{ ciudad:
         ]}
       />
 
-      <h1 className="lp-h2">Clínicas dentales que la IA recomienda en {city.name}</h1>
+      <h1 className="lp-h2">Clínicas dentales que la IA nombra en {city.name}</h1>
       <p className="legal-updated" style={{ marginBottom: 36 }}>
         Edición {EDITION.label} · Medición del 10 de octubre de 2026 ·{" "}
         <Link href="/observatorio/clinicas-dentales/metodologia">Metodología</Link>
