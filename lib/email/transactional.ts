@@ -950,11 +950,11 @@ export async function sendLlmIncidentAlertEmail(input: {
  * Goes to the OPERATOR (`OPS_ALERT_EMAIL`), never re-uses a customer-facing
  * template: this is about the account, not for the account.
  *
- * Known gap, stated rather than hidden: a signup that requires email
- * confirmation and never confirms never reaches either call site, so it
- * never generates this alert either — seeing those would need a Supabase
- * database webhook on `auth.users`, which is infrastructure outside this
- * repo and its own Task Intake.
+ * SIGNUP-ALERT-PENDING-1 (log §359): a password signup that needs email
+ * confirmation now alerts at submission too (`status: "pending"`), from
+ * `app/signup/actions.ts`. Before, it only alerted once the confirmation
+ * link produced a session, and a link opened in another browser or app
+ * fails PKCE there, so real signups reached the operator never.
  */
 export async function sendNewSignupOpsAlertEmail(input: {
   email: string;
@@ -963,6 +963,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
   planId: string;
   trialEndsAt: string | null;
   createdAt: Date;
+  status?: "active" | "pending";
 }): Promise<void> {
   const to = getOpsAlertAddress();
   if (!to) return;
@@ -974,9 +975,12 @@ export async function sendNewSignupOpsAlertEmail(input: {
     </tr>`;
 
   const methodLabel = input.method === "google" ? "Google OAuth" : "Email y contraseña";
-  const planLabel = input.trialEndsAt
-    ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
-    : input.planId;
+  const pending = input.status === "pending";
+  const planLabel = pending
+    ? "Prueba de Pro al confirmar el email"
+    : input.trialEndsAt
+      ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
+      : input.planId;
 
   const rowsHtml = [
     dataRow("Email", input.email),
@@ -988,19 +992,23 @@ export async function sendNewSignupOpsAlertEmail(input: {
 
   await sendEmail(
     to,
-    `[GenScore] Alta nueva — ${input.email}`,
+    pending ? `[GenScore] Alta nueva (sin confirmar) · ${input.email}` : `[GenScore] Alta nueva · ${input.email}`,
     wrap(
       `
       ${eyebrow("Alta nueva · sólo equipo GenScore")}
-      ${heading("Nueva cuenta activa")}
+      ${heading(pending ? "Alta pendiente de confirmar el email" : "Nueva cuenta activa")}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
         ${rowsHtml}
       </table>
-      ${subtext("Aviso automático por cada cuenta que llega a tener una sesión real — no cubre altas que nunca confirman el email.")}
+      ${subtext(
+        pending
+          ? "La persona se ha registrado con email y contraseña y todavía tiene que pulsar el enlace de confirmación. Si lo pulsa, llegará otro aviso de cuenta activa."
+          : "Aviso automático por cada cuenta que llega a tener una sesión real."
+      )}
     `,
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
-        preheader: `Nueva cuenta: ${input.email}`
+        preheader: pending ? `Alta sin confirmar: ${input.email}` : `Nueva cuenta: ${input.email}`
       }
     )
   );
