@@ -113,7 +113,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     relatedLinks: [
       { href: "/glosario/grounding", label: "Glosario: qué es el grounding" },
       { href: "/glosario/rag", label: "Glosario: qué es RAG" },
-      { href: "/glosario/datos-estructurados", label: "Glosario: datos estructurados" }
+      { href: "/glosario/datos-estructurados", label: "Glosario: datos estructurados" },
+      { href: "/blog/llms-txt-guia-practica", label: "Artículo: llms.txt, guía práctica para crearlo (y qué esperar de verdad)" }
     ]
   },
   {
