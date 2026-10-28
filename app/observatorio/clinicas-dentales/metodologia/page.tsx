@@ -70,7 +70,7 @@ export default function MetodologiaPage() {
 
         <h2>Qué publicamos y qué no</h2>
         <p>
-          Solo nombramos clínicas que la IA recomienda. No publicamos qué clínicas no aparecen: ese detalle solo lo ve cada clínica en su diagnóstico privado de GenScore.
+          Solo nombramos clínicas que aparecen en las respuestas del estudio. No publicamos qué clínicas no aparecen: ese detalle solo lo ve cada clínica en su diagnóstico privado de GenScore.
         </p>
 
         <h2>Límites</h2>
