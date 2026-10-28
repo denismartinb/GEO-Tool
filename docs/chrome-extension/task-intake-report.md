@@ -496,4 +496,37 @@ por motor frente a rivales y Visibilidad agéntica por componente.
 El paso 1 es implementación (código nuevo en una carpeta propia, sin tocar la
 app), así que espera la aprobación de Denis.
 
+## 17. Paso 01 construido: extensión de prueba (2026-10-28)
+
+Denis eligió «Sí, con datos de ejemplo». Está en [`prueba/`](./prueba/LEEME.md).
+
+- **Real:** la revisión de la página abierta, sólo al pulsar el icono o
+  `Alt+Mayús+G`. Lee el DOM y tres ficheros del mismo dominio (`robots.txt`,
+  `llms.txt` y la cabecera `X-Robots-Tag`). Nada sale del navegador.
+- **Nota SEO + IA:** IA 55 y Google 45. Agentes sólo si la página vende algo, y
+  no entra en la nota. Un criterio que no se puede medir (un `robots.txt` que no
+  responde, la fecha en una ficha) se deja fuera y no cuenta como fallo.
+- **Motores:** se leen con los tokens de la Auditoría agéntica
+  (`lib/agentic-audit/agents.ts`). Las líneas que propone para `robots.txt`
+  repiten las demás reglas del sitio, para no abrir de paso `/checkout` o
+  `/cuenta`.
+- **Haz esto:** una tarjeta por fallo, con su efecto en puntos y, cuando se
+  puede, el código para pegar. Al deslizar, vuelve a leer la página de verdad.
+  Si Chrome ya retiró el permiso, pide recargar y pulsar el icono, y entonces
+  dice de cuánto a cuánto ha cambiado la nota.
+- **De ejemplo:** la cuenta, con la etiqueta «Ejemplo» en todo lo que no sale de
+  la página. Los botones que escribirían algo explican que en la prueba no se
+  guarda nada.
+- **Permisos:** `activeTab`, `scripting`, `storage` y `sidePanel`. Ninguno de
+  sitios.
+- **Probado:** con tests del cálculo en node, la lectura sobre tres páginas
+  locales (una tienda que bloquea a PerplexityBot, un artículo completo y una
+  página con `noindex`), capturas del panel a 380 px en claro y oscuro, y la
+  extensión cargada en Chromium. En Chromium se recorrió el ciclo entero: leer,
+  arreglar `robots.txt`, deslizar, nota de 81 a 88, recargar y «Has cambiado de
+  página».
+- **Queda fuera:** la cuenta real (paso 02, con dos rutas de sólo lectura en el
+  servidor), la ficha de la tienda y el seguimiento automático de los dominios
+  propios, que necesita permisos de sitio.
+
 > Do you approve this plan? I will not implement until you confirm.
