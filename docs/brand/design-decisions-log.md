@@ -27468,3 +27468,63 @@ sugerencia vacía (LLM-RESILIENCE-1).
 retiran en F8 junto con el resto de hojas antiguas, porque la portada comparte
 algunas. Sin premisa de recuperación retirada: ningún botón ni salida de error
 desaparece.
+
+## 357. CONSOLE-INSTRUMENTO-1 Fase 4: Recomendaciones pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Recomendaciones se reconstruye sobre el prototipo
+aprobado (v51): cabecera con alerta de bloqueo y sus URL, cuatro pilares, plan
+de la semana como baraja de tarjetas (arrastre, flechas, ticks, deslizar para
+marcar como hecho), «Más adelante» con Pendientes/Resueltas, búsqueda, índice
+de palancas, grupos con «Ver N más» y capa «Recorrer en foco».
+
+**Cómo.** `lib/ins/recs-cards.ts` (puro) unifica recomendación suelta, palanca
+y competidor emergente en un solo modelo `InsCard`; no calcula cifras ni frases
+nuevas, sólo reordena lo que ya decidían `selectPlan`, `recommendationHeadline`,
+`effectiveFirstStep`, los puntos conjuntos y la cobertura. Componentes en
+`components/ins/recs/` y piezas reutilizables en `components/ins/kit/`
+(`Deck`, `SlideToConfirm`, `Seg`, `FocusLayer`). Las acciones de servidor
+(`rewriteRecommendationAction`, `dismissRecommendationAction`,
+`restoreRecommendationAction`, `addEmergingCompetitorAction`) no cambian. La
+tarjeta de Google ocupa el puesto 2 con el mismo reparto de §307
+(`InsGooglePlanCard`).
+
+**Decisiones.**
+- El plan se fija por visita: marcar una tarjeta como hecha no reordena la
+  baraja bajo los dedos de la persona.
+- El «Deshacer» durable vive en «Resueltas» (como en §203); no hay deshacer
+  efímero en la tarjeta activa.
+- El prototipo trae pestañas por fuente (IA/Google/Agentes) y un bloque
+  «Técnico»: no se dibujan, porque §307 decidió una sola cola y lo técnico vive
+  en Auditoría técnica. Tampoco el botón «Descargar informe» de esta pantalla
+  (sigue en Visión general, §250).
+- Se conservan funciones reales que el prototipo no dibuja: copiar el artefacto
+  generado, generar, formulario de competidor emergente, insignia de
+  «reaparece».
+
+**Pendiente / roto conocido.** `RecommendationsClient` y `GooglePlanCard`
+quedan como código muerto hasta F8, junto con las hojas antiguas. Sin premisa
+de recuperación retirada: ningún botón ni salida de error desaparece.
+
+## 358. RECS-NEGATIVE-EVIDENCE-1: la evidencia de «imagen negativa» cita frases reales (2026-10-28)
+
+**Problema.** La tarjeta «Responde a la imagen negativa que da la IA de ti»
+enseñaba en «Evidencia» el nombre de la marca repetido (p. ej. «Movistar
+Prosegur Alarmas» cuatro veces) en vez de lo que la IA dice mal. La regla leía
+`brand.evidence[0]` de la extracción, que sólo recoge dónde se nombra la marca.
+Denis (2026-10-28): las recomendaciones son lo más importante del producto y
+deben ser reales, útiles y listas para aplicar.
+
+**Decisión.**
+- `negativeExcerpts` (`recommendation-engine.ts`) toma de `raw_response_text`
+  de las respuestas con tono negativo o mixto la frase que nombra la marca o un
+  tema recurrente Y contiene una señal de queja. Una frase por respuesta, sin
+  repetir, literal, nunca parafraseada. Sin frase válida no hay citas.
+- `aggregateEvidence` deduplica citas sin distinguir mayúsculas.
+- La pantalla (`CardDetail`) descarta citas de menos de cuatro palabras y
+  repetidas, así que las tarjetas ya guardadas dejan de enseñar el nombre solo
+  sin esperar a un nuevo escaneo.
+- Sin migración ni cambio de extracción.
+
+**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
+pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
+esquema de extracción.
