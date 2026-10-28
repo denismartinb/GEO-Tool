@@ -13,7 +13,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
 export const metadata: Metadata = contentMetadata({
   title: "Metodología del observatorio de clínicas dentales · GenScore",
   description:
-    "Cómo medimos qué clínicas dentales recomienda la IA: preguntas reales de pacientes en ChatGPT, Gemini y Claude, repetidas en distintos momentos. Sin nombres de clínica en las preguntas.",
+    "Cómo medimos qué clínicas dentales nombra la IA: preguntas reales de pacientes en ChatGPT, Gemini y Claude, repetidas en distintos momentos. Sin nombres de clínica en las preguntas.",
   path: PAGE_PATH
 });
 
@@ -36,7 +36,7 @@ export default function MetodologiaPage() {
         ]}
       />
 
-      <h1 className="lp-h2">Cómo medimos qué clínicas dentales recomienda la IA</h1>
+      <h1 className="lp-h2">Cómo medimos qué clínicas dentales nombra la IA</h1>
       <p className="legal-updated" style={{ marginBottom: 36 }}>
         Edición {EDITION.label} · Medición del 10 de octubre de 2026
       </p>
