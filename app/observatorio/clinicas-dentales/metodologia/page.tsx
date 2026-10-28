@@ -60,10 +60,11 @@ export default function MetodologiaPage() {
           ]}
         />
 
-        <h2>Qué cuenta como recomendación</h2>
+        <h2>Qué cuenta como presencia</h2>
         <ul>
           <li>Una clínica solo cuenta si su nombre aparece en la respuesta.</li>
           <li>La presencia es el porcentaje de respuestas que la nombran al menos una vez, con cada motor aportando el mismo número de respuestas.</li>
+          <li>Contamos la mención tal cual aparece: no valoramos si el motor recomienda la clínica, la describe o solo la da como contexto.</li>
           <li>Esta edición cubre Madrid y Valencia.</li>
         </ul>
 
