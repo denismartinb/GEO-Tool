@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -370,8 +371,13 @@ export default async function ProjectDetailPage({
         recs: activeRecommendationsRaw
       })
     : null;
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
   const activeRecommendations = activeRecommendationsRaw
-    ? activeRecommendationsRaw.filter((r) => !isAlreadyCovered(r.recommendation_type, coverageOverlays?.get(r.id)))
+    ? activeRecommendationsRaw.filter(
+        (r) =>
+          !isRetiredRecommendationType(r.recommendation_type) &&
+          !isAlreadyCovered(r.recommendation_type, coverageOverlays?.get(r.id))
+      )
     : null;
 
   // The trend window is the LAST 7 scored runs; the query fetches them
@@ -713,7 +719,8 @@ export default async function ProjectDetailPage({
     recs: activeRecommendations ?? [],
     categoryByResultId,
     scoreRows: scoreInputRows,
-    domain: project.domain
+    domain: project.domain,
+    coverageFor: (id) => overlayForHeadline(coverageOverlays?.get(id))
   });
 
   /* ---- «Instrumento» layout (CONSOLE-INSTRUMENTO-1 F3, log §352) ----

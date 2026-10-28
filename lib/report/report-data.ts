@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import { parseCoverageMap, COULD_NOT_VERIFY_NOTE } from "@/lib/web-audit/coverage-map";
@@ -191,7 +192,8 @@ export async function loadReportInput({
   }
 
   const resultById = new Map(results.map((r) => [r.id, r]));
-  const recs = ((recRows ?? []) as RecRow[]).map((r) => ({
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
+  const recs = ((recRows ?? []) as RecRow[]).filter((r) => !isRetiredRecommendationType(r.recommendation_type)).map((r) => ({
     ...r,
     potentialPoints:
       results.length > 0
@@ -244,7 +246,7 @@ export async function loadReportInput({
       if (topic) topics.add(topic);
     }
     return {
-      title: r.title,
+      title: recommendationHeadline(r, overlayForHeadline(overlay)).title,
       description: r.description,
       firstStep: overlayStep ?? r.evidence_json?.first_step ?? null,
       providers: (r.evidence_json?.affected_prompt_details ?? [])

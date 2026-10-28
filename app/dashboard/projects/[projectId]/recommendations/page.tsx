@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Icon } from "@/components/ui/icon";
@@ -219,7 +220,11 @@ export default async function RecommendationsPage({
 
   const activeRun = await activeRunPromise;
 
-  const baseRecs = (recommendations ?? []) as Recommendation[];
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer; rows
+  // stored before the change stay hidden until the next scan replaces them.
+  const baseRecs = ((recommendations ?? []) as Recommendation[]).filter(
+    (r) => !isRetiredRecommendationType(r.recommendation_type),
+  );
 
   // A single logical prompt scanned by multiple LLM engines (Gemini + Claude)
   // produces one scan_prompt_results row per engine, so per-prompt gap cards
@@ -444,7 +449,7 @@ export default async function RecommendationsPage({
   // ResolvedHistoryItem.run_id's own doc comment in recommendations-client.tsx.
   const resolvedHistoryForClient = resolvedHistory.map((r) => ({
     id: r.id,
-    title: r.title,
+    title: recommendationHeadline(r).title,
     description: r.description,
     recommendation_type: r.recommendation_type,
     status: r.status,
@@ -586,7 +591,7 @@ export default async function RecommendationsPage({
     .filter((r) => isAlreadyCovered(r.recommendation_type, r.coverageOverlay))
     .map((r) => ({
       id: r.id,
-      title: r.title,
+      title: recommendationHeadline(r, overlayForHeadline(r.coverageOverlay)).title,
       description: r.description,
       recommendation_type: r.recommendation_type,
       status: "covered" as const,
