@@ -63,3 +63,15 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   queda vacía, nunca inventada.
 - **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-mission)`), no por
   una prop del layout. Otra pantalla a pantalla completa usa el mismo patrón.
+
+## Alta de dominio (F3c, log §356)
+
+- **El asistente envía las acciones reales.** `suggestProjectSetup`,
+  `generateMorePrompts` y `createProject` no cambian; los campos ocultos del
+  formulario del paso 4 son los de siempre. No se añade una acción nueva sin
+  aprobación.
+- **Ninguna cifra inventada en el resumen.** Sólo recuentos del propio estado
+  (prompts marcados, competidores, motores del plan); nunca una estimación de
+  respuestas.
+- **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-newdomain)`), igual
+  que con la misión.

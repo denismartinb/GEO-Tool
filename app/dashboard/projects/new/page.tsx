@@ -55,6 +55,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
     <OnboardingWizard
       errorMessage={errorMessage}
       atLimit={atProjectLimit}
+      isFirst={usage.projectCount === 0}
       promptCap={usage.promptCap}
       engines={engines}
       suggestAction={suggestProjectSetup}

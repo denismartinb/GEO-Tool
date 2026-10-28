@@ -27387,3 +27387,42 @@ reentrada de Auditoría web (`ReentryMission`), con la regla
 recuperación: se retira el cohete como señal de estado, no un camino. Si el
 sondeo cae, la pantalla se queda en su último dato hasta que vuelva la
 conexión y el vigilante de escaneos sigue avisando al operador.
+
+
+## 356. CONSOLE-INSTRUMENTO-1 Fase 3c: el alta de dominio pasa a «Instrumento» (2026-10-28)
+
+**Qué.** El asistente de nuevo dominio (`/dashboard/projects/new`) adopta la
+pantalla `newdomain` del prototipo aprobado: marco propio sin menú, barra de
+cuatro pasos (Dominio, Competidores, Prompts, Lanzar), resumen lateral que se
+va llenando, lista de carga con los pasos reales y fila de motores del plan con
+«Nuevo» en Perplexity. En móvil el resumen se oculta y los botones ocupan el
+ancho.
+
+**Cómo.** `components/onboarding-wizard.tsx` se reescribe sobre `app/ins/newdomain.css`
+(el marco oculta el menú con `:has(.sc-newdomain)`, como la misión). Conserva
+sin cambios las acciones de servidor (`suggestProjectSetup`,
+`generateMorePrompts`, `createProject`), el dominio que llega de la portada, el
+tope de prompts del plan, los motores reales del plan y los avisos de
+sugerencia vacía (LLM-RESILIENCE-1).
+
+**Decisiones.**
+- Cuatro pasos en vez de tres: el último resume antes de crear; el botón de
+  crear sigue siendo el envío del mismo formulario.
+- Los prompts se agrupan por tema (la categoría que ya devuelve la sugerencia);
+  lo escrito a mano va en «Tuyos». Desmarcar un prompt lo excluye sin perderlo;
+  el tope del plan cuenta sólo los marcados.
+- Se conservan funciones reales que el prototipo no dibuja: editar un
+  competidor o un prompt, añadir un competidor a mano (hasta
+  `MAX_USER_COMPETITORS`, 10, no los 5 del prototipo) y «Generar N más».
+- La cifra «respuestas que leeremos» del prototipo (`prompts × motores × 2`) es
+  inventada: se sustituye por el mercado y no se muestra ninguna estimación.
+- Sin selector de idioma ni «Atrás» de navegador propio: el idioma sigue
+  saliendo de la sugerencia y se enseña en el resumen.
+- El primer dominio de la cuenta no tiene «Salir» (no hay a dónde volver); el
+  resto vuelve a `/dashboard`.
+
+**Pendiente / roto conocido.** Las clases `onb2-*` de `globals.css` y
+`domain-bar`, `country-sel` y `eng-chip` ya no las usa esta pantalla; se
+retiran en F8 junto con el resto de hojas antiguas, porque la portada comparte
+algunas. Sin premisa de recuperación retirada: ningún botón ni salida de error
+desaparece.
