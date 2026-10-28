@@ -27260,7 +27260,7 @@ escritorio) con «Adelante».
   `recommendationHeadline` en su plan y sus tarjetas en vez de `title`.
 - Diseño aprobado: `docs/design-reference/recs-headlines-1/`.
 
-## 355. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
+## 359. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
 
 **Qué pasaba.** Denis dejó de recibir los avisos de alta nueva. El aviso
 (`sendNewSignupOpsAlertEmail`, a `OPS_ALERT_EMAIL`) sólo salía cuando la cuenta

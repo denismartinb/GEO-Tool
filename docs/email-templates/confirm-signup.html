@@ -4,7 +4,7 @@
   Suggested Subject heading: Confirma tu cuenta en GenScore
 
   The link goes to /auth/confirm with {{ .TokenHash }} (SIGNUP-ALERT-PENDING-1,
-  log §355), not to Supabase's ConfirmationURL: that one ends in
+  log §359), not to Supabase's ConfirmationURL: that one ends in
   /auth/callback with a PKCE code, which only works in the browser that
   signed up, so a link opened from the phone's mail app failed and the
   account never got its welcome email, operator alert or signup_completed.

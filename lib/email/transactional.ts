@@ -950,7 +950,7 @@ export async function sendLlmIncidentAlertEmail(input: {
  * Goes to the OPERATOR (`OPS_ALERT_EMAIL`), never re-uses a customer-facing
  * template: this is about the account, not for the account.
  *
- * SIGNUP-ALERT-PENDING-1 (log §355): a password signup that needs email
+ * SIGNUP-ALERT-PENDING-1 (log §359): a password signup that needs email
  * confirmation now alerts at submission too (`status: "pending"`), from
  * `app/signup/actions.ts`. Before, it only alerted once the confirmation
  * link produced a session, and a link opened in another browser or app

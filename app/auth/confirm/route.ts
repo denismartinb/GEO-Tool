@@ -7,7 +7,7 @@ import { redirectAfterSession } from "@/lib/auth-first-session";
 const AUTH_CONFIRM_ERROR =
   "El enlace no es válido o ha caducado. Inicia sesión o pide uno nuevo.";
 
-// SIGNUP-ALERT-PENDING-1 (log §355). The confirmation email links here with
+// SIGNUP-ALERT-PENDING-1 (log §359). The confirmation email links here with
 // `token_hash` (template in docs/email-templates/confirm-signup.html), and
 // `verifyOtp` needs nothing stored in the browser, so the link works from the
 // phone's mail app as well as from the browser that signed up. The PKCE link

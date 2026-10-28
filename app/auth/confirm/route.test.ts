@@ -22,7 +22,7 @@ function requestFor(search: string): Request {
   return new Request(`https://app.example.com/auth/confirm${search}`);
 }
 
-describe("GET /auth/confirm (log §355)", () => {
+describe("GET /auth/confirm (log §359)", () => {
   beforeEach(() => {
     verifyOtp.mockReset();
     sendWelcomeEmail.mockReset();

@@ -16,7 +16,7 @@ import { readRefCookie, referralCodeForNewAccount } from "@/lib/affiliates/codes
  * pending ad conversion. Shared by the two routes that can create that first
  * session: `/auth/callback` (Google, and confirmation links in the PKCE
  * shape) and `/auth/confirm` (confirmation links with `token_hash`,
- * SIGNUP-ALERT-PENDING-1, log §355). Moved here from the callback unchanged.
+ * SIGNUP-ALERT-PENDING-1, log §359). Moved here from the callback unchanged.
  */
 
 // Supabase gives no explicit "this was just created" flag on the session

@@ -96,7 +96,7 @@ export async function signup(formData: FormData) {
   }
 
   if (!data.session) {
-    // SIGNUP-ALERT-PENDING-1 (log §355): the operator hears about the signup
+    // SIGNUP-ALERT-PENDING-1 (log §359): the operator hears about the signup
     // now, not only once the confirmation link works. Supabase answers a
     // signUp for an email that already has an account with a user that has
     // no identities and sends no email, so that one is not a new signup.

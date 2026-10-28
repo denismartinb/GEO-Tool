@@ -86,7 +86,7 @@ describe("signup", () => {
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
-  it("alerts the operator as a pending signup when confirmation is required (log §355)", async () => {
+  it("alerts the operator as a pending signup when confirmation is required (log §359)", async () => {
     signUp.mockResolvedValue({
       data: {
         session: null,

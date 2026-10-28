@@ -12,7 +12,7 @@ const AUTH_CALLBACK_ERROR = "No se pudo completar el inicio de sesión. Inténta
 // signup with "Confirm email" ON gets no session until the user clicks the
 // confirmation link. That link only works here in the browser that signed up
 // (PKCE keeps its verifier in a cookie); `/auth/confirm` is the route that
-// works from any device (log §355). What a first session sets off lives in
+// works from any device (log §359). What a first session sets off lives in
 // `lib/auth-first-session.ts`, shared by both.
 
 function safeLoginError(url: URL) {

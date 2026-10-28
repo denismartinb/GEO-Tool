@@ -8,7 +8,7 @@ import type { createClient } from "@/lib/supabase/server";
  * (`app/signup/actions.ts` for an immediate-session password signup,
  * `app/auth/callback/route.ts` for a confirmed-link or Google signup) so
  * the "read the plan this account actually got, then alert" logic exists
- * once. `status: "pending"` (SIGNUP-ALERT-PENDING-1, log §355) is the
+ * once. `status: "pending"` (SIGNUP-ALERT-PENDING-1, log §359) is the
  * password signup that still has to confirm its email. Reads `profiles` with the caller's own just-created session — RLS's
  * `profiles_select_own` (0002_v0_rls.sql) allows it, no service role needed.
  *

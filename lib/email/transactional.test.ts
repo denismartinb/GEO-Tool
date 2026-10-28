@@ -157,7 +157,7 @@ describe("a quién va cada correo", () => {
     expect(payload.html).toContain(CUSTOMER);
   });
 
-  it("el aviso de alta sin confirmar lo dice en el asunto (log §355)", async () => {
+  it("el aviso de alta sin confirmar lo dice en el asunto (log §359)", async () => {
     await opsAlerts[4][1]();
     const payload = lastPayload();
 
