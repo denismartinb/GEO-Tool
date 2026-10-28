@@ -8,6 +8,7 @@ import { readSearchConsoleInputs } from "@/lib/search-console/screen-inputs";
 import { GoogleRecFrame, GoogleRecMark } from "./google-rec-frame";
 import { GoogleWatchActions } from "./google-watch";
 import { GooglePlanCard } from "./google-plan-card";
+import { InsGooglePlanCard } from "./ins-google-plan-card";
 import { GooglePlanMarker } from "./google-plan-state";
 import { laterCopy, pickPlanRec } from "./google-rec-copy";
 
@@ -168,13 +169,14 @@ export function GoogleLaterSlot({ includePlan = false, ...props }: SlotProps & {
   );
 }
 
-async function GooglePlanResolved({ rank, ...props }: SlotProps & { rank: number }) {
+async function GooglePlanResolved({ rank, ins, ...props }: SlotProps & { rank: number; ins: boolean }) {
   const data = await load(props);
   const planRec = data ? pickPlanRec(data.recs) : null;
   return (
     <>
       <GooglePlanMarker kind={planRec?.kind ?? null} />
-      {planRec && data && (
+      {planRec && data && ins && <InsGooglePlanCard rec={planRec} projectId={props.projectId} canPersist={data.canPersist} />}
+      {planRec && data && !ins && (
         <GooglePlanCard rec={planRec} projectId={props.projectId} rank={rank} canPersist={data.canPersist} />
       )}
     </>
@@ -193,11 +195,27 @@ function GooglePlanSkeleton() {
   );
 }
 
-/** Slot 2 of «Tu plan de esta semana», when Search Console is connected. */
-export function GooglePlanSlot({ rank, ...props }: SlotProps & { rank: number }) {
+/** The same reserved height inside a plate of the «Instrumento» deck. */
+function InsGooglePlanSkeleton() {
   return (
-    <Suspense fallback={<GooglePlanSkeleton />}>
-      <GooglePlanResolved {...props} rank={rank} />
+    <div className="in" aria-hidden="true" aria-busy="true">
+      <span className="grec-skel-line grec-skel-tag" />
+      <span className="grec-skel-line grec-skel-title" />
+      <span className="grec-skel-line" />
+      <span className="grec-skel-line grec-skel-short" />
+    </div>
+  );
+}
+
+/**
+ * Slot 2 of «Tu plan de esta semana», when Search Console is connected.
+ * `ins` draws it as a plate of the «Instrumento» deck (CONSOLE-INSTRUMENTO-1
+ * F4, log §357); without it, as the card of the previous screen.
+ */
+export function GooglePlanSlot({ rank, ins = false, ...props }: SlotProps & { rank: number; ins?: boolean }) {
+  return (
+    <Suspense fallback={ins ? <InsGooglePlanSkeleton /> : <GooglePlanSkeleton />}>
+      <GooglePlanResolved {...props} rank={rank} ins={ins} />
     </Suspense>
   );
 }

@@ -75,3 +75,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   respuestas.
 - **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-newdomain)`), igual
   que con la misión.
+
+## Recomendaciones (F4, log §357)
+
+- **Un solo modelo de tarjeta (`lib/ins/recs-cards.ts`)** para la baraja, las
+  filas de «Más adelante» y la capa en foco. Es puro y no calcula cifras ni
+  frases: lee `selectPlan`, `recommendationHeadline` y los puntos conjuntos.
+- **El plan se fija por visita**; marcar como hecha no reordena la baraja. El
+  deshacer durable sólo vive en «Resueltas».
+- **Una sola cola**: sin pestañas por fuente ni bloque «Técnico» (§307).
+  La tarjeta de Google es la placa 2 del plan.
+- **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.

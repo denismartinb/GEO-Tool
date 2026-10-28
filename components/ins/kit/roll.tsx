@@ -3,7 +3,13 @@
  * value; `Motion` replays the roll on arrival. The digits are decorative
  * (`aria-hidden`), the number is in the `aria-label`.
  */
-export function Roll({ value, className = "" }: { value: number | string; className?: string }) {
+export function Roll({
+  value,
+  className = "",
+}: {
+  value: number | string;
+  className?: string;
+}) {
   const text = String(value);
   return (
     <span className={`roll num ${className}`.trim()} aria-label={text}>
@@ -20,7 +26,7 @@ export function Roll({ value, className = "" }: { value: number | string; classN
           <span key={i} className="st" aria-hidden="true">
             {ch}
           </span>
-        )
+        ),
       )}
     </span>
   );

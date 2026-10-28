@@ -10,6 +10,7 @@ import "@/app/ins/app.css";
 import "@/app/ins/overview.css";
 import "@/app/ins/mission.css";
 import "@/app/ins/newdomain.css";
+import "@/app/ins/recs.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
