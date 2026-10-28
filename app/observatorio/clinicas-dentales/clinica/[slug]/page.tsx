@@ -29,7 +29,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { clinic } = sightings[0];
   return contentMetadata({
     title: `${clinic.name} en las respuestas de la IA · Observatorio GenScore`,
-    description: `Con qué frecuencia recomiendan ChatGPT, Gemini y Claude a ${clinic.name}. Edición ${EDITION.label} del observatorio de clínicas dentales.`,
+    description: `Con qué frecuencia nombran ChatGPT, Gemini y Claude a ${clinic.name}. Edición ${EDITION.label} del observatorio de clínicas dentales.`,
     path: `/observatorio/clinicas-dentales/clinica/${slug}`
   });
 }
