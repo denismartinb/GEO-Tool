@@ -27324,3 +27324,34 @@ sparklines en los KPIs (no hay histórico real por KPI); la tarjeta SEO enseña
 solo la primera recomendación, como el prototipo; el panel de invitación a
 Google reutiliza CSS anterior; la misión del primer escaneo y el alta de
 dominio son la Fase 3b.
+
+## 353. COMPETITOR-RANK-VISIBILITY-1: la lista de competidores se ordena por mención y enseña el puesto medio real (2026-10-28)
+
+**Qué.** `rankLatestPositions` (`lib/competitors/latest-positions.ts`), que
+ordena la panorámica de Visión general y la lista «Último escaneo» de
+Competidores, pasa a ordenar por **tasa de mención** descendente; el puesto
+medio cuando aparece sólo desempata. La columna «Puesto medio» de las dos
+pantallas y el titular «Tu puesto medio cuando apareces» enseñan la media real
+con un decimal (`formatMeanPosition`, «1,4»), no el número de fila. El titular
+de la lista en Competidores pasa a «Mención y puesto medio de cada marca».
+
+**Por qué.** En el proyecto de pruebas del fundador, una marca nombrada en el
+19% de las respuestas (siempre la primera en ellas) encabezaba la lista por
+delante de la propia marca, nombrada en el 95%: «no tiene sentido; tiene que
+salir en el primer puesto» (fundador, 2026-10-28). El puesto medio sólo
+promedia las respuestas donde sale cada marca, así que no dice quién tiene más
+visibilidad. Además, la columna «Puesto medio» pintaba `rank` con «º», que era
+el puesto en la lista (1º, 2º, 3º…, igual que el número de fila), no la media.
+Opción elegida frente a una puntuación combinada (mención ponderada por
+posición): es la que se explica sola y coincide con la barra de la fila.
+
+**Supersede.** El orden por puesto medio de §15, la decisión de §177 de
+«arreglar cómo se lee, no lo que mide» y el papel de SAMPLE-FLOOR-1 (§175) en
+el orden. `qualified` sigue: marca «pocas menciones» cuando la media descansa
+en poca muestra. `mean-rank-copy.ts` lo anota en su cabecera.
+
+**Pendiente.** La consola nueva (CONSOLE-INSTRUMENTO-1 F3a, PR #681) pinta
+«Puesto medio» con `r.rank`; al rebasar sobre esta rama tiene que usar
+`formatMeanPosition(r.position)`. El gráfico «Top 5 posiciones» de Visión
+general sigue dibujando el puesto medio de las cinco primeras, ahora las
+cinco más mencionadas.

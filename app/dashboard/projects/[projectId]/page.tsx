@@ -682,8 +682,7 @@ export default async function ProjectDetailPage({
   const panoramaListRows = panoramaState.kind === "ranked" ? panoramaState.listRows : panoramaState.kind === "unranked" ? panoramaState.rows : [];
   const maxPanoramaMention = Math.max(1, ...panoramaListRows.map((r) => r.mentionRate ?? 0));
   const panoramaRanked = panoramaState.kind === "ranked";
-  const brandRank = panoramaState.kind === "ranked" ? panoramaState.brandRank : null;
-  const totalRanked = panoramaState.kind === "ranked" ? panoramaState.totalRanked : 0;
+  const brandMeanPosition = panoramaState.kind === "ranked" ? panoramaState.brandPosition : null;
   const brandAppendedBeyondTop5 = panoramaState.kind === "ranked" && panoramaState.brandAppended;
 
   const categoryByPromptId = new Map((prompts ?? []).map((p) => [p.id, p.category as string | null]));
@@ -870,7 +869,7 @@ export default async function ProjectDetailPage({
     domain: r.domain,
     isBrand: r.isBrand,
     mentionRate: r.mentionRate,
-    rank: r.rank,
+    position: r.position,
     qualified: r.qualified
   }));
 

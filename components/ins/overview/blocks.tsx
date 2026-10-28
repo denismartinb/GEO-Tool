@@ -1,3 +1,4 @@
+import { formatMeanPosition } from "@/lib/competitors/mean-rank-copy";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Ic } from "@/components/ins/ic";
@@ -339,7 +340,8 @@ export type RankRow = {
   domain: string | null;
   isBrand: boolean;
   mentionRate: number | null;
-  rank: number | null;
+  /** Mean rank when named (log §353), never the row's place in the list. */
+  position: number | null;
   qualified: boolean;
 };
 
@@ -393,7 +395,7 @@ export function Ranking({
               {secondLabel ? (
                 <span className="avg num">
                   <small>{secondLabel} </small>
-                  {r.rank !== null ? `${r.rank}º` : "—"}
+                  {r.position !== null ? formatMeanPosition(r.position) : "—"}
                 </span>
               ) : null}
               <Bar value={r.mentionRate ?? 0} max={max * 1.08} cls={`thin ${r.isBrand ? "" : "ink nomark"}`.trim()} delay={i * 60} />
