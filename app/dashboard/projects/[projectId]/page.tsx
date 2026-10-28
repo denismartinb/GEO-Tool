@@ -4,29 +4,31 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
-import { EmptyState } from "@/components/empty-state";
-import { Gauge } from "@/components/ui/gauge";
-import { EngineGlyph } from "@/components/ui/engine-glyph";
-import { FaviconImg } from "@/components/ui/favicon-img";
-import { Sparkline } from "@/components/ui/sparkline";
-import { Delta } from "@/components/ui/delta";
-import { AutoExecuteScan } from "@/components/auto-execute-scan";
-import { ScanProgressPoller } from "@/components/scan-progress-poller";
-import { ScanInProgressLive } from "@/components/scan-in-progress-live";
-import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { MEAN_RANK_BRAND_HEADLINE, MEAN_RANK_COLUMN_LABEL, formatMeanPosition } from "@/lib/competitors/mean-rank-copy";
-import { ScanTriggerButton } from "@/components/scan-trigger-button";
-import { ScanReportControl } from "./scan-report-control";
-import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { Ic } from "@/components/ins/ic";
+import { Motion } from "@/components/ins/kit/motion";
 import {
-  computeJointPotentialPoints,
-  computeRecommendationPotentialPoints,
-  getEffectiveGeoScore,
-  isQuantifiableRecommendationType,
-  type ScoreInputRow
-} from "@/lib/scoring/run-scoring";
+  Breakdown,
+  Kpis,
+  OvHeader,
+  PriorityAlert,
+  QuietCard,
+  Ranking,
+  ScoreHero,
+  SentimentBar,
+  type BreakdownRow,
+  type KpiView,
+  type RankRow
+} from "@/components/ins/overview/blocks";
+import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
+import { PlanBlock } from "@/components/ins/overview/plan-block";
+import { firstNameFromMetadata, greeting, leadParts, scoreHeadline } from "@/lib/ins/overview-copy";
+import { buildOverviewPlan } from "@/lib/ins/overview-plan";
+import { AutoExecuteScan } from "@/components/auto-execute-scan";
+import { FirstScanTakeover } from "@/components/first-scan-takeover";
+import { MEAN_RANK_COLUMN_LABEL } from "@/lib/competitors/mean-rank-copy";
+import { ScanTriggerButton } from "@/components/scan-trigger-button";
+import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
+import { getEffectiveGeoScore, type ScoreInputRow } from "@/lib/scoring/run-scoring";
 import {
   computeMentionInterval,
   hasSufficientSample,
@@ -35,11 +37,7 @@ import {
   resolveDelta,
   type DeltaVerdict
 } from "@/lib/scoring/score-reliability";
-import {
-  computeWindowedScore,
-  computeWindowedSeries,
-  readWindowRun
-} from "@/lib/scoring/score-window";
+import { computeWindowedScore, computeWindowedSeries, readWindowRun } from "@/lib/scoring/score-window";
 import { reconcileStuckScanRuns, scanRunsNeedReconciliation } from "@/lib/scan/scan-runner";
 import { getLLMScanProviders } from "@/lib/scan/providers";
 import { computeEngineBreakdown } from "@/lib/scan/engine-breakdown";
@@ -50,51 +48,24 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
+import { blockerDetail, blockerTitle, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
 import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
 import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
+import { readSearchConsoleAvailability } from "@/lib/search-console/load";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 import { SeoAuditCard } from "./_components/seo-audit-card";
 import { AgenticOverviewCard } from "./_components/agentic-overview-card";
-import { GscOverviewHalf } from "./_components/gsc-overview-half";
+import { GscOverviewHalf, GscOverviewHalfSkeleton } from "./_components/gsc-overview-half";
 import { resolveCompetitiveClaim } from "@/lib/metrics/competitive-claim";
-import {
-  GEO_SCORE_COMPONENT_META,
-  parseEngineCoverage,
-  translateDroppedComponentReason,
-  type GeoScoreEngineCoverage
-} from "./geo-score-breakdown";
-
-/**
- * DOMAINS-REDESIGN-1: NOT optional, and not a copy-paste from the page this
- * replaced.
- *
- * `AutoExecuteScan` (mounted below) drives the scan by calling
- * `autoExecutePendingScan`, a Server Action — and Server Actions inherit the
- * `maxDuration` of the page they are invoked from (docs/adr/0003). Overview
- * previously exported none, so it ran on Vercel's default budget. Mounting the
- * driver here without this line would kill every batch window mid-flight, in
- * production only, with no error the user or the logs would attribute to it:
- * the run would simply stop advancing and be failed later by
- * `reconcileStuckScanRuns` as a timeout.
- *
- * 60s matches the window `AUTO_EXECUTE_TIME_BUDGET_MS` (~40s) is sized against.
- */
+import { parseEngineCoverage, translateDroppedComponentReason, type GeoScoreEngineCoverage } from "./geo-score-breakdown";
 export const maxDuration = 60;
 
 /* ---- constants & helpers ---- */
 
 const COMPETITOR_COLORS = ["#0e9488", "#d9772b", "#9333a8", "#3b6fd6", "#e54563"];
 
-const statusLabels: Record<string, string> = {
-  pending: "pendiente",
-  running: "en curso",
-  completed: "completado",
-  failed: "fallido",
-  cancelled: "cancelado"
-};
 
 const sentimentLabels: Record<string, string> = {
   positive: "positivo",
@@ -104,39 +75,10 @@ const sentimentLabels: Record<string, string> = {
   unknown: "desconocido"
 };
 
-const priorityLabels: Record<string, string> = {
-  high: "alta",
-  med: "media",
-  low: "baja"
-};
 
 function n(v: unknown): number {
   return Number(v ?? 0);
 }
-
-function getBandLabel(score: number): string {
-  if (score >= 70) return "Franja «competitivo»";
-  if (score >= 40) return "Franja «emergente»";
-  return "Franja «inicial»";
-}
-
-function getBandTone(score: number): string {
-  if (score >= 70) return "pos";
-  if (score >= 40) return "accent";
-  return "warn";
-}
-
-/**
- * Icon/meter colors for the GEO Score breakdown rows — keyed by the same
- * "pos" / "accent" / "warn" tone `getBandTone` already uses for the gauge's
- * own band, so a component scoring e.g. 85 reads with the same color
- * language as the overall score badge instead of inventing a second scale.
- */
-const GEO_SCORE_TONE_COLORS: Record<string, { soft: string; ink: string }> = {
-  pos: { soft: "var(--pos-soft)", ink: "var(--pos-ink)" },
-  accent: { soft: "var(--accent-soft)", ink: "var(--accent-ink)" },
-  warn: { soft: "var(--warn-soft)", ink: "var(--warn-ink)" }
-};
 
 /**
  * Classification bands for "Presión Competitiva" (docs/adr/0011).
@@ -215,18 +157,6 @@ function isOwnDomain(domain: string | null | undefined, projectDomain: string): 
   const own = projectDomain.trim().toLowerCase().replace(/^www\./, "");
   if (!d || !own) return false;
   return d === own || d.endsWith(`.${own}`);
-}
-
-/**
- * Reads the real, already-persisted affected_prompt_ids off a
- * recommendation's evidence_json (buildEvidenceJson,
- * lib/recommendations/recommendation-engine.ts) — the same list RECS-
- * POTENTIAL-1 (docs/adr/0017) recomputes the real score over.
- */
-function affectedPromptIds(evidenceJson: unknown): string[] {
-  if (!evidenceJson || typeof evidenceJson !== "object") return [];
-  const ids = (evidenceJson as Record<string, unknown>).affected_prompt_ids;
-  return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === "string") : [];
 }
 
 /* ---- page ---- */
@@ -372,18 +302,15 @@ export default async function ProjectDetailPage({
           supabase
             .from("scan_prompt_results")
             .select(
-              "id, prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider, mentioned_competitors_count, citations_count, extraction_error, brand_snapshot, extraction_version"
+              "id, prompt_id, prompt_text_snapshot, brand_mentioned, citation_found, sentiment, extracted_json, provider, mentioned_competitors_count, citations_count, extraction_error, brand_snapshot, extraction_version"
             )
             .eq("project_id", projectId)
             .eq("run_id", latestCompletedRun.id)
             .eq("status", "completed"),
-          // No .limit(3) here: the Oportunidades card's joint "potential
-          // points" ceiling (RECS-POTENTIAL-1) needs EVERY active
-          // recommendation's affected_prompt_ids, not just the top 3 shown
-          // as cards — otherwise the aggregate would silently ignore
-          // whatever's ranked 4th and beyond. latestRecommendations (the
-          // top-3 display slice) and activeRecommendationsCount are both
-          // derived from this same array below.
+          // No .limit(3) here: the plan's joint "potential points" ceiling
+          // (RECS-POTENTIAL-1) needs EVERY active recommendation's
+          // affected_prompt_ids, not just the ones shown — otherwise the
+          // aggregate would silently ignore whatever's ranked 4th and beyond.
           supabase
             .from("recommendations")
             .select("id, priority_rank, title, impact, effort, confidence, recommendation_type, evidence_json")
@@ -452,8 +379,6 @@ export default async function ProjectDetailPage({
           !isAlreadyCovered(r.recommendation_type, coverageOverlays?.get(r.id))
       )
     : null;
-  const latestRecommendations = activeRecommendations?.slice(0, 3) ?? null;
-  const activeRecommendationsCount = activeRecommendations?.length ?? null;
 
   // The trend window is the LAST 7 scored runs; the query fetches them
   // newest-first (descending + limit) and this reversal restores chronological
@@ -716,7 +641,6 @@ export default async function ProjectDetailPage({
   // rank" and are collapsed in one tested place, because readers disagreeing
   // about which was which is what put a numeric rank badge beside a "—"
   // position on the same row.
-  const brandPositionLowConfidence = brandPositionPromptsWithData > 0 && brandPositionPromptsWithData <= 2;
 
   const topCompetitor = competitorRows.sort((a, b) => b.mentionRate - a.mentionRate)[0];
 
@@ -767,40 +691,13 @@ export default async function ProjectDetailPage({
   const brandMeanPosition = panoramaState.kind === "ranked" ? panoramaState.brandPosition : null;
   const brandAppendedBeyondTop5 = panoramaState.kind === "ranked" && panoramaState.brandAppended;
 
-  const posbarsData = (() => {
-    if (panoramaState.kind !== "ranked") return [];
-    // Every ranked row has a position by construction; the guard stays because
-    // coercing a missing one to 0 would draw it as the best-placed brand on
-    // the chart, the exact inversion of the truth.
-    const ranked = panoramaState.topRows.filter(
-      (r): r is typeof r & { position: number } => r.position !== null
-    );
-    if (ranked.length === 0) return [];
-    const positions = ranked.map((r) => r.position);
-    const maxPos = Math.max(...positions);
-    const minPos = Math.min(...positions);
-    const range = maxPos - minPos;
-    return ranked.map((r) => {
-      // Lower rank-when-mentioned (better) → taller bar. Flat range → uniform.
-      const height = range > 0 ? 20 + ((maxPos - r.position) / range) * 40 : 40;
-      return { name: r.name, isBrand: r.isBrand, height };
-    });
-  })();
+  const categoryByPromptId = new Map((prompts ?? []).map((p) => [p.id, p.category as string | null]));
+  const categoryByResultId = new Map<string, string | null>(
+    (allPromptResults ?? []).map((r) => [r.id, r.prompt_id ? (categoryByPromptId.get(r.prompt_id) ?? null) : null])
+  );
 
-  // Real, honest content for the Oportunidades summary card (Task Intake
-  // 2026-07-23, Option A): total active recommendations + how many are
-  // high priority.
-  const highPriorityCount = (latestRecommendations ?? []).filter(
-    (r) => (r.priority_rank ?? 99) <= 2
-  ).length;
-
-  /* ---- RECS-POTENTIAL-1: real "potential score points" ----
-   * docs/adr/0017-recommendation-potential-points.md. Every number here is
-   * a real counterfactual recomputation of the same composite score over
-   * the real per-prompt rows of this scan — computeRecommendationPotentialPoints
-   * returns null (render a qualitative badge, never a number) for
-   * non-quantifiable types, missing evidence, or a low-confidence run.
-   */
+  // The scan's rows in the shape the potential-points counterfactual reads
+  // (RECS-POTENTIAL-1, docs/adr/0017).
   const scoreInputRows: ScoreInputRow[] = (allPromptResults ?? []).map((r) => ({
     id: r.id,
     prompt_text_snapshot: r.prompt_text_snapshot,
@@ -816,987 +713,370 @@ export default async function ProjectDetailPage({
     extraction_version: r.extraction_version
   }));
 
-  const potentialPointsByRecId = new Map<string, number | null>();
-  for (const rec of latestRecommendations ?? []) {
-    const points = computeRecommendationPotentialPoints(
-      scoreInputRows,
-      project.domain,
-      rec.recommendation_type,
-      affectedPromptIds(rec.evidence_json)
-    );
-    potentialPointsByRecId.set(rec.id, points?.deltaPoints ?? null);
+  // «Tu plan de esta semana»: the same actions, order and ceiling as
+  // Recomendaciones (log §352).
+  const overviewPlan = buildOverviewPlan({
+    recs: activeRecommendations ?? [],
+    categoryByResultId,
+    scoreRows: scoreInputRows,
+    domain: project.domain,
+    coverageFor: (id) => overlayForHeadline(coverageOverlays?.get(id))
+  });
+
+  /* ---- «Instrumento» layout (CONSOLE-INSTRUMENTO-1 F3, log §352) ----
+   * Every gate above (sample floor, comparable runs, competitive claim,
+   * windowed score) is untouched: the blocks below only lay out what those
+   * decided to publish. A figure that was withheld before is withheld now. */
+  const madridHour = Number(
+    new Intl.DateTimeFormat("es-ES", { hour: "numeric", hourCycle: "h23", timeZone: "Europe/Madrid" }).format(new Date())
+  );
+  const shortDate = (iso: string | null | undefined) =>
+    iso
+      ? new Date(iso)
+          .toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" })
+          .replace(".", "")
+      : "";
+  // The sparkline plots the gauge's own quantity, so its dates follow the same
+  // filter: window mode drops the gaps, run mode is one point per scan.
+  const trendDates = windowPublished
+    ? windowRuns.filter((_, i) => windowedSeries[i] !== null).map((r) => shortDate(r.finished_at))
+    : trendHistory.map((r) => shortDate(r.created_at));
+  const showTrend = geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" && trendDates.length === geoTrend.length;
+  const gaugeDeltaPoints =
+    gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 ? Math.round(gaugeDeltaVerdict.value) : null;
+
+  const googleAvailability = hasData ? await readSearchConsoleAvailability(projectId, user.id) : "off";
+  const googleConnected = googleAvailability === "active";
+  const googleColumn = googleAvailability !== "off";
+  const googleProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
+
+  const providers = engineBreakdown.length > 0 ? engineBreakdown.map((e) => e.provider) : getLLMScanProviders();
+  const scanProviders = getLLMScanProviders();
+  const lastScanLabel = latestCompletedRun
+    ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at).toLocaleDateString("es-ES", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Europe/Madrid"
+      })
+    : null;
+  void lastScanLabel;
+
+  const deltaBadge = (verdict: DeltaVerdict | null | undefined, invert = false): KpiView["badge"] => {
+    if (!verdict || verdict.kind !== "publish" || verdict.value === 0) return null;
+    const rounded = Math.round(verdict.value);
+    if (rounded === 0) return null;
+    const good = invert ? rounded < 0 : rounded > 0;
+    return {
+      tone: good ? "pos" : "warm",
+      text: `${rounded > 0 ? "+" : "−"}${Math.abs(rounded)} pt`,
+      arrow: rounded > 0 ? "up" : "down"
+    };
+  };
+
+  const citationBadge = (share: number): KpiView["badge"] =>
+    !sampleSufficient
+      ? null
+      : share > 50
+        ? { tone: "pos", text: "Muy alto" }
+        : share >= 30
+          ? { tone: "pos", text: "Alto" }
+          : share >= 15
+            ? { tone: "line", text: "Medio" }
+            : share >= 5
+              ? { tone: "warm", text: "Bajo" }
+              : { tone: "warm", text: "Muy bajo" };
+
+  const pressureBand = sampleSufficient ? getCompetitivePressureBand(competitorPressureScore) : null;
+  const pressureBadge: KpiView["badge"] = pressureBand
+    ? { tone: pressureBand.tone === "pos" ? "pos" : pressureBand.tone === "accent" ? "line" : "warm", text: pressureBand.label }
+    : deltaBadge(gapDeltaVerdict, true);
+
+  const sentimentPct = (() => {
+    if (sentimentTotal === 0) return null;
+    const positive = Math.round((sentimentCounts.positive / sentimentTotal) * 100);
+    const negative = Math.round((sentimentCounts.negative / sentimentTotal) * 100);
+    return { positive, negative, neutral: Math.max(0, 100 - positive - negative) };
+  })();
+
+  const kpis: KpiView[] = [
+    {
+      key: "mention",
+      label: "Tasa de mención",
+      value: computedMentionRate,
+      unit: "%",
+      badge: deltaBadge(visDeltaVerdict),
+      extra:
+        mentionInterval && !sampleSufficient ? (
+          <div className="ov-note" style={{ marginTop: 10 }}>
+            ±{Math.round(mentionInterval.marginPoints)} pt de margen
+          </div>
+        ) : null
+    },
+    citationShareResult.share !== null
+      ? {
+          key: "citation-share",
+          label: "Cuota de citas",
+          value: citationShareResult.share,
+          unit: "%",
+          badge: citationBadge(citationShareResult.share)
+        }
+      : { key: "citation-share", label: "Cuota de citas", value: "Sin datos" },
+    {
+      key: "gap",
+      label: "Presión competitiva",
+      value: competitorPressureScore,
+      unit: "%",
+      badge: pressureBadge
+    }
+  ];
+  if (hasSufficientSample(sentimentTotal) && dominantSentiment && sentimentPct) {
+    kpis.push({
+      key: "sentiment",
+      label: "Sentimiento de marca",
+      value: sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1),
+      extra: <SentimentBar {...sentimentPct} />
+    });
   }
 
-  // Joint ceiling over EVERY active recommendation (not just the top 3
-  // shown as cards) — summing standalone deltas would double-count any
-  // prompt shared by more than one recommendation (docs/adr/0017 §3).
-  const jointPotentialPoints = computeJointPotentialPoints(
-    scoreInputRows,
-    project.domain,
-    (activeRecommendations ?? []).map((rec) => ({
-      recommendationType: rec.recommendation_type,
-      affectedPromptIds: affectedPromptIds(rec.evidence_json)
-    }))
-  );
-  // Rounded for display (the mockup's "+14" is a clean integer, not
-  // "+13.87") — a delta that rounds down to 0 isn't worth headlining, so
-  // that case falls back to the real recommendation count instead.
-  const roundedJointPoints =
-    jointPotentialPoints && Math.round(jointPotentialPoints.deltaPoints) > 0
-      ? Math.round(jointPotentialPoints.deltaPoints)
-      : null;
-
-  const engineBars =
-    engineBreakdown.length > 0 ? (
-      engineBreakdown.map((e) => {
-        const meta = getEngineMeta(e.provider);
-        return (
-          <div key={e.provider} className="ov2-engbar">
-            <span className="nm">
-              <span className="ov2-eng-ico" style={{ color: meta.color }}>
-                <EngineGlyph provider={e.provider} />
-              </span>
-              {meta.label}
-            </span>
-            <div className="track">
-              <i style={{ width: `${e.mentionRate}%`, background: meta.color }} />
-            </div>
-            <span className="v">{e.mentionRate}%</span>
-          </div>
-        );
+  const breakdownCopy: Record<string, { label: string; hint: string }> = {
+    presence: { label: "Presencia", hint: "Cuánto te nombra la IA." },
+    prominence: { label: "Prominencia", hint: "En qué puesto sales." },
+    standing: { label: "Cuota de voz", hint: "Tú frente a tus rivales." },
+    authority: { label: "Autoridad", hint: "Cuánto cita tu web." },
+    technical: { label: "Diagnóstico técnico", hint: "Salud técnica de tu web." }
+  };
+  const breakdownRows: BreakdownRow[] = geoScore?.components
+    ? (["presence", "prominence", "standing", "authority", "technical"] as const).flatMap((key) => {
+        const component = geoScore.components?.[key];
+        // A run scored before GEO-SCORE-V4 has no `technical` key at all. The
+        // row still renders, says why, and tells what makes it appear (no
+        // silent gap, `.claude/rules/scan.md`, «No mute rows»).
+        const isLegacyRun = !component && key === "technical";
+        if (!component && !isLegacyRun) return [];
+        const dropped = isLegacyRun || component?.value === null || component?.value === undefined;
+        return [
+          {
+            key,
+            label: breakdownCopy[key].label,
+            hint: isLegacyRun
+              ? "Se incluirá en tu próximo escaneo."
+              : dropped
+                ? translateDroppedComponentReason(component?.reason)
+                : breakdownCopy[key].hint,
+            value: dropped ? null : Math.round(component?.value as number)
+          }
+        ];
       })
-    ) : (
-      <div style={{ fontSize: 12.5, color: "var(--ink-4)", textAlign: "center", padding: "6px 0" }}>
-        Aparecerá aquí después de completar un escaneo.
-      </div>
-    );
+    : [];
+
+  const rankRows: RankRow[] = panoramaListRows.map((r) => ({
+    key: r.key,
+    name: r.name,
+    domain: r.domain,
+    isBrand: r.isBrand,
+    mentionRate: r.mentionRate,
+    position: r.position,
+    qualified: r.qualified
+  }));
+
+  const leadParts_ = hasData
+    ? leadParts({
+        mentionRate: computedMentionRate,
+        marginPoints: mentionInterval && !sampleSufficient ? mentionInterval.marginPoints : null,
+        claim: competitiveClaim,
+        // With Google connected the plan takes a Google card in its second
+        // slot, so the exact count is only known after Google answers: say
+        // nothing rather than a number that may change.
+        planCount: googleConnected ? 0 : overviewPlan.rows.length
+      })
+    : null;
+
+  const feedbackNotes = (
+    <>
+      {feedbackErrorMessage ? <p className="ov-fb err">{feedbackErrorMessage}</p> : null}
+      {successMessage ? <p className="ov-fb ok">{successMessage}</p> : null}
+      {latestFailedRun ? (
+        <p className="ov-fb">
+          {latestCompletedRun
+            ? "El último escaneo no se pudo completar. Se muestran los últimos resultados completados."
+            : "El último escaneo no se pudo completar. Vuelve a intentarlo con el botón de abajo."}
+        </p>
+      ) : null}
+      {!prompts?.length ? (
+        <p className="ov-fb">
+          Añade al menos un prompt activo antes de escanear.{" "}
+          <Link href={`/dashboard/projects/${projectId}/prompts`}>Añadir prompts</Link>
+        </p>
+      ) : null}
+    </>
+  );
 
   /* ---- render ---- */
-  /* Panorámica competitiva, split in two (founder, 2026-10-11, log §279).
-     The chart card ("tu puesto medio" + top 5) and the "Último escaneo" table
-     used to sit together in the analysis column below. From 1200px, when the
-     side column holds both the engine bars and the Auditoría SEO card, the
-     chart moves up under the GEO Score breakdown so it ends level with the
-     SEO card, and the table starts a new row level with Oportunidades. The
-     chart is rendered twice (same pattern as the engine bars, log §271) so
-     the phone and tablet order stays exactly as it was. */
-  const panoramaLabel = (
-    <div className="ov2-sec-lbl">
-      Panorámica competitiva
-      {competitors?.length ? (
-        <Link href={`/dashboard/projects/${projectId}/competitors`}>Ver todo</Link>
-      ) : null}
-    </div>
+
+  // The first scan of a domain takes the whole screen (ONBOARDING-ROCKET-1).
+  // F3b restyles it; until then it keeps its own full-bleed layout.
+  if (showMissionTakeover && activeRun) {
+    return (
+      <div className="page mrk-fill">
+        {ENABLE_SYNC_SCAN_EXECUTION ? <AutoExecuteScan projectId={projectId} runId={activeRun.id} /> : null}
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      </div>
+    );
+  }
+
+  const header = (
+    <OvHeader
+      projectId={projectId}
+      domain={project.domain}
+      greeting={greeting(madridHour, firstNameFromMetadata(user.user_metadata))}
+      lead={leadParts_}
+      hasReport={Boolean(latestCompletedRun)}
+    />
   );
-  const panoramaTop =
-    competitorRows.length === 0 ? (
-      <div className="card" style={{ padding: "16px 18px" }}>
-        <EmptyState
-          title="Sin datos de competidores"
-          description="Añade competidores para ver cómo se compara tu visibilidad en IA."
-        />
-        <Link
-          href={`/dashboard/projects/${projectId}/competitors`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
-        >
-          Añadir competidores <Icon name="arrRight" size={13} />
-        </Link>
-      </div>
-    ) : panoramaState.kind === "empty" ? (
-      /* PANORAMA-EMPTY-1. Six rows of "0%" answered a question nobody
-         asked — a live customer's first scan (genscore.es, zero
-         mentions across the board, 2026-08-07) rendered exactly that,
-         with no explanation. Nobody named is real, reportable
-         information; it reads better as a sentence than as a table
-         that happens to be all zeros. */
-      <div className="card" style={{ padding: "16px 18px" }}>
-        <EmptyState
-          title="Ninguna marca apareció en este escaneo"
-          description={`La IA no nombró a ${project.brand} ni a ninguno de tus ${competitorRows.length} ${competitorRows.length === 1 ? "competidor" : "competidores"} en ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"}. Puede pasar en un dominio nuevo o con prompts muy genéricos.`}
-        />
-        <Link
-          href={`/dashboard/projects/${projectId}/prompts`}
-          style={{ display: "inline-flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 13, fontWeight: 650, color: "var(--brand-blue)" }}
-        >
-          Revisar mis prompts <Icon name="arrRight" size={13} />
-        </Link>
-      </div>
-    ) : posbarsData.length > 0 ? (
-      <div className="card" style={{ padding: "17px 16px 6px" }}>
-        <div className="ov2-pm-lbl">{MEAN_RANK_BRAND_HEADLINE}</div>
-        <div className="ov2-pm-val">
-          {brandMeanPosition !== null ? (
-            <>{formatMeanPosition(brandMeanPosition)}</>
-          ) : (
-            // The brand itself was never named this scan, even though
-            // others were — a real state (dormant or newly-tracked
-            // domain next to established competitors), not the "—"
-            // this used to render with the actual reason buried in a
-            // tooltip nobody on mobile ever opens.
-            <span className="ov2-pm-val-text">No apareciste en este escaneo</span>
-          )}
-        </div>
-        {/* The bars are always the real top 5, never padded with the
-            brand's own row — forcing "your" bars to include you when
-            you're 6th is the inversion of what a leaderboard means
-            (founder, 2026-08-07). Labelled so the headline number
-            above (your standing) and the bars below (who's actually
-            top 5) are never read as the same claim. */}
-        <div className="ov2-pm-bars-lbl">Top 5 posiciones</div>
-        <div className="ov2-posbars">
-          {posbarsData.map((b, i) => (
-            <div key={`${b.name}-${i}`} className={`b ${b.isBrand ? "you" : ""}`} style={{ height: b.height, ["--h" as string]: `${(b.height / 60) * 100}%` }}>
-              <span>{b.name}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    ) : null;
-  const panoramaTable =
-    competitorRows.length > 0 && panoramaState.kind !== "empty" ? (
-      <div className={`card ov2-cmp-card${posbarsData.length > 0 ? " has-chart" : ""}`}>
-        {/* One label per column, over the data it names — the rule that
-            the Competidores list arrived at the hard way (log §15): a
-            single heading ends up naming the wrong column the moment
-            the layout changes under it. The panorama had NO headers at
-            all, which is how a share-of-voice percentage passed for the
-            mention rate shown on the other screen. */}
-        <div className="ov2-cmp-hd">
-          <span className="ov2-cmp-hd-nm">Último escaneo</span>
-          <span className="ov2-cmp-sov">Mención</span>
-          {/* No column at all when this scan has no position data,
-              rather than a "Puesto" heading over five dashes: a labelled
-              empty column reads as a broken screen, an absent one reads
-              as what it is (log §15, "ni etiqueta ni tarjeta si no hay
-              nada debajo"). */}
-          {panoramaRanked ? <span className="ov2-cmp-sc">{MEAN_RANK_COLUMN_LABEL}</span> : null}
-        </div>
-        {panoramaListRows.flatMap((row, i) => {
-          const barColor = row.isBrand ? "var(--brand-blue)" : "var(--ink-3)";
-          const nodes = [];
-          // A gap between the top 5 and your own row must LOOK like a
-          // skip, not like a missing row — an unexplained hole at rank
-          // 6 reads as a bug (founder, 2026-08-07).
-          if (brandAppendedBeyondTop5 && i === panoramaListRows.length - 1) {
-            nodes.push(
-              <div className="ov2-cmp-gap" key="gap" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-            );
-          }
-          nodes.push(
-            <div key={row.key} className={`ov2-cmp-row ${row.isBrand ? "you" : ""}`}>
-              {/* 26 px por defecto, 30 px a partir del breakpoint de la
-                  columna de análisis (globals.css) — se pide para 30. */}
-              <FaviconImg
-                domain={row.domain}
-                cssSize={30}
-                className="ov2-cmp-fav"
-                fallback={
-                  <span className="fav" style={{ background: barColor, width: 26, height: 26, fontSize: 11 }}>
-                    {row.name.slice(0, 1).toUpperCase()}
-                  </span>
-                }
-              />
-              <div className="ov2-cmp-nm">
-                <div className="t">
-                  {row.name}
-                  {row.isBrand && <span className="ov2-cmp-tag">Tú</span>}
-                  {/* SAMPLE-FLOOR-1: last because its mean rests on
-                      too few answers to compare, not because the AI
-                      ranked it last. An unexplained demotion is as
-                      misleading as the 1º it replaces. */}
-                  {!row.qualified && <span className="ov2-cmp-thin">pocas menciones</span>}
-                </div>
-              </div>
-              <div className="ov2-cmp-sov">
-                <div className="track">
-                  <i
-                    style={{
-                      width: `${((row.mentionRate ?? 0) / maxPanoramaMention) * 100}%`,
-                      background: barColor
-                    }}
-                  />
-                </div>
-                <div className="pct">{row.mentionRate !== null ? `${Math.round(row.mentionRate)}%` : "—"}</div>
-              </div>
-              {/* The real mean rank (1,4), not the row's place: the list
-                  is ordered by mention rate (log §353). Same shape as
-                  Competidores. Absent, not dashed, when the scan has no
-                  positions —
-                  every row would carry the same "—". */}
-              {row.position !== null ? (
-                <span className="ov2-cmp-sc">{formatMeanPosition(row.position)}</span>
-              ) : null}
-            </div>
-          );
-          return nodes;
-        })}
-      </div>
-    ) : null;
-  const panoramaUp = seoSummary !== null && !enginesInKpiGrid && panoramaTop !== null && panoramaTable !== null;
 
   return (
-    <div className={`page${showMissionTakeover ? " mrk-fill" : ""}`}>
-      {/* DOMAINS-REDESIGN-1 — the invisible driver that actually executes a
-          pending scan's batches, moved here from the Escaneos page it used to
-          be the ONLY mount of. Onboarding now lands on this page, so this is
-          where a freshly created project's first run gets driven; leaving it
-          behind would have stranded every new customer's first scan in
-          `pending` until the cron rescued it.
-
-          Mounted while the run is `pending` OR `running`, not just `pending`:
-          a multi-batch campaign (SCAN-CHAIN-1) flips to `running` after its
-          first batch, and unmounting then would strand the campaign after
-          batch 1. AutoExecuteScan guards against double-driving across
-          re-renders. */}
-      {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
-        <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
-      ) : null}
-      {/* VERCEL-COST-1 (2026-08-30, fixed after `qa` caught it before Human
-          Gate): a rescan on a project that already has data renders the
-          `hasData` branch below, which mounts neither `ScanInProgressLive`
-          nor any other live component — both only live in the `!hasData`
-          empty-state branch. Without a poller here, that branch never
-          detects the run going terminal and the page is stuck showing stale
-          data with a perpetual "Escaneando…" pill. Scoped to exactly this
-          gap so it never runs alongside `ScanInProgressLive` (which already
-          owns the empty-state branch) or `ScanMissionRocket` (owns the
-          takeover). */}
-      {hasData && activeRun && !showMissionTakeover ? (
-        <ScanProgressPoller projectId={projectId} initialRunId={activeRun.id} />
-      ) : null}
-      {/* Sticky page header — hidden while the first-scan mission takeover
-          (below) owns the screen, so the rocket animation reads as full
-          screen instead of sitting under a second chrome band. */}
-      {!showMissionTakeover && (
-        <div className="ov-sticky-header">
-          <div className="ov-sticky-left">
-            <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Visión general</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>{project.name}</span>
-                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>{project.domain}</span>
-                <span className="meta-pill">{project.country}/{project.language}</span>
-              </div>
-            </div>
-          </div>
-          <div className="ov-sticky-right">
-            {/* GEO-REPORT-1 Fase 2 (log §250): the pill and the way to the
-                report of the latest completed scan. */}
-            <ScanReportControl
-              projectId={projectId}
-              activeRun={activeRun ?? null}
-              lastScanLabel={
-                latestCompletedRun
-                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                      .toLocaleDateString("es-ES", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/Madrid" })
-                  : null
-              }
-              lastScanLongLabel={
-                latestCompletedRun
-                  ? new Date(latestCompletedRun.finished_at ?? latestCompletedRun.created_at)
-                      .toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" })
-                  : null
-              }
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Feedback */}
-      {feedbackErrorMessage && (
-        <p className="feedback error" style={{ marginBottom: 16 }}>{feedbackErrorMessage}</p>
-      )}
-      {successMessage && (
-        <p className="feedback success" style={{ marginBottom: 16 }}>{successMessage}</p>
-      )}
-      {latestFailedRun && (
-        <div className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
-          <p style={{ fontWeight: 650 }}>
-            {latestCompletedRun
-              ? "El último escaneo no se pudo completar. Se muestran los últimos resultados completados."
-              : "El último escaneo no se pudo completar. Vuelve a intentarlo con el botón de arriba."}
-          </p>
-        </div>
-      )}
-      {!prompts?.length && (
-        <p className="feedback" style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginBottom: 16 }}>
-          Añade al menos un prompt activo antes de escanear.{" "}
-          <Link href={`/dashboard/projects/${projectId}/prompts`} style={{ fontWeight: 700, textDecoration: "underline" }}>Añadir prompts</Link>
-        </p>
-      )}
-
-      {/* ===== DATA STATE ===== */}
-      {hasData ? (
-        <div className="ov2-scope">
-          {/* 0 · SEARCH-SEO-1 Fase 1 (log §271): a citation blocker on the
-              site outranks the summary. Same blockers, titles and copy as
-              Recomendaciones (lib/recommendations/citation-blockers.ts), so
-              the two screens never disagree. The first one leads; the rest
-              are counted and live on Auditoría SEO. */}
-          {citationBlockers.length > 0 ? (
-            <div className="ov2-prio" role="note">
-              <span className="ov2-prio-ico" aria-hidden="true">!</span>
-              <div className="ov2-prio-body">
-                <div className="ov2-prio-k">Prioridad 1 · tu web</div>
-                <p className="ov2-prio-t">{blockerTitle(citationBlockers[0])}</p>
-                <p className="ov2-prio-d">
-                  {blockerDetail(citationBlockers[0])}
-                  {citationBlockers.length > 1
-                    ? ` Y hay ${citationBlockers.length - 1} ${citationBlockers.length - 1 === 1 ? "freno más" : "frenos más"}.`
-                    : null}
-                </p>
-                {blockerUrls(citationBlockers[0]).length > 0 ? (
-                  <p className="ov2-prio-url">
-                    {displayPath(blockerUrls(citationBlockers[0])[0])}
-                    {blockerUrls(citationBlockers[0]).length > 1
-                      ? ` y ${blockerUrls(citationBlockers[0]).length - 1} más`
-                      : ""}
-                  </p>
-                ) : null}
-              </div>
-              <Link href={`/dashboard/projects/${projectId}/web-audit`} className="btn btn-primary btn-sm ov2-prio-cta">
-                Ver cómo arreglarlo
-              </Link>
-            </div>
+    <div className="ins">
+      <Motion id={`overview:${projectId}`}>
+        <div className="page">
+          {/* DOMAINS-REDESIGN-1: the invisible driver that executes a pending
+              scan's batches. Mounted while the run is `pending` OR `running`:
+              a multi-batch campaign flips to `running` after its first batch
+              and unmounting then would strand it. AutoExecuteScan guards
+              against double-driving across re-renders. */}
+          {ENABLE_SYNC_SCAN_EXECUTION && activeRun ? (
+            <AutoExecuteScan projectId={projectId} runId={activeRun.id} />
           ) : null}
 
-          {/* 1 · Executive summary / insight banner */}
-          <div className="ov2-insight">
-            <div className="ov2-insight-ico">
-              <Icon name="sparkles" size={18} />
-            </div>
-            <p className="ov2-insight-txt">
-              {/* "prompts" here counted prompt × engine rows, not prompts: a
-                  project with 1 prompt scanned on 3 engines read "3 de 3
-                  prompts". The unit is an AI response (GEO-SCORE-RELIABILITY-1).
+          {header}
+          {feedbackNotes}
 
-                  TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1):
-                  this sentence used to close with "con una puntuación GEO de
-                  {perRunScore}/100" — this scan's own composite, a different
-                  number from the windowed gaugeScore the gauge two inches
-                  above shows under the same literal label. Caught in review
-                  (geo-strategy, Human Gate pass): two "puntuación GEO" on one
-                  screen is the audit's P0-01 exactly, just moved from
-                  cross-screen to same-screen. The founder's rule is that only
-                  the windowed figure may carry that label anywhere — so this
-                  sentence stops claiming a score at all; the gauge already
-                  states it once, correctly, and doesn't need a second,
-                  differently-sourced echo. */}
-              GenScore detectó que <b>{project.brand}</b> aparece en{" "}
-              <b>{brandMentions} de {totalResults} {totalResults === 1 ? "respuesta" : "respuestas"} de IA</b>{" "}
-              ({computedMentionRate}%{mentionInterval && !sampleSufficient ? ` ±${Math.round(mentionInterval.marginPoints)}` : ""}).
-              {competitiveClaim.kind === "behind" ? (
-                <>
-                  {" "}Tu rival más visible,{" "}
-                  <b>{competitiveClaim.competitor}</b>, te saca ventaja:{" "}
-                  <span className="hl-neg">{competitiveClaim.competitorRate}% de presencia</span> frente a
-                  tu {computedMentionRate}%.
-                </>
-              ) : competitiveClaim.kind === "no_citations" ? (
-                <>
-                  {" "}Tu mayor freno son las citas:{" "}
-                  <span className="hl-neg">ninguna de las fuentes que usa la IA es tuya todavía</span>.
-                </>
-              ) : competitiveClaim.kind === "no_competitors" ? (
-                <> No sigues a ningún competidor, así que todavía no hay con quién compararte.</>
-              ) : competitiveClaim.kind === "nobody_named" ? (
-                <> La IA no nombró ni a tu marca ni a tus competidores en estas respuestas.</>
-              ) : competitiveClaim.kind === "tied" ? (
-                <>
-                  {" "}Empatas en presencia con <b>{competitiveClaim.competitor}</b>, tu competidor más visible.
-                </>
-              ) : competitiveClaim.kind === "ahead_small_sample" ? (
-                <> Vas por delante de tus competidores en este escaneo, pero con tan pocas respuestas todavía no es concluyente.</>
+          {/* One poller per screen (VERCEL-COST-1): the card owns the refresh
+              when the run ends, on a project with data and on one without. */}
+          {activeRun ? <LiveScanCard projectId={projectId} initial={activeRun} providers={providers.length > 0 ? providers : scanProviders} /> : null}
+
+          {hasData ? (
+            <>
+              {/* SEARCH-SEO-1 Fase 1 (log §271): a citation blocker on the site
+                  outranks the summary. Same blockers, titles and copy as
+                  Recomendaciones, so the two screens never disagree. */}
+              {citationBlockers.length > 0 ? (
+                <PriorityAlert
+                  title={blockerTitle(citationBlockers[0])}
+                  detail={`${blockerDetail(citationBlockers[0])}${
+                    citationBlockers.length > 1
+                      ? ` Y hay ${citationBlockers.length - 1} ${citationBlockers.length - 1 === 1 ? "freno más" : "frenos más"}.`
+                      : ""
+                  }`}
+                  href={`/dashboard/projects/${projectId}/web-audit`}
+                />
+              ) : null}
+
+              <ScoreHero
+                projectId={projectId}
+                score={gaugeScore}
+                headline={scoreHeadline(computedMentionRate, competitiveClaim)}
+                trend={showTrend ? { vals: geoTrend, dates: trendDates } : null}
+                nudge={showTrend ? null : sampleNudge(gaugeDeltaVerdict)}
+                delta={gaugeDeltaPoints}
+                engines={engineBreakdown.map((e) => ({ provider: e.provider, rate: e.mentionRate }))}
+              />
+
+              <Kpis items={kpis} />
+
+              {overviewPlan.rows.length > 0 || googleConnected ? (
+                <PlanBlock projectId={projectId} plan={overviewPlan} google={googleConnected ? googleProps : null} />
               ) : (
-                <>
-                  {" "}Hoy mantienes la{" "}
-                  <span className="hl-pos">mayor visibilidad</span> frente a tus competidores.
-                </>
+                <section className="sec" aria-label="Tu plan de esta semana">
+                  <QuietCard
+                    title="Sin acciones pendientes"
+                    text="Cuando un escaneo detecte algo que mejorar, tu plan de la semana aparecerá aquí."
+                    href={`/dashboard/projects/${projectId}/recommendations`}
+                    cta="Ver recomendaciones"
+                  />
+                </section>
               )}
-              {highPriorityCount > 0 ? (
-                <>
-                  {" "}GenScore ha priorizado{" "}
-                  <b>{highPriorityCount} {highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad</b>{" "}
-                  para mejorar tu presencia en las respuestas de IA.
-                </>
+
+              {geoScore?.engine_coverage?.status === "partial" ? (
+                <p className="ov-fb">{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
               ) : null}
-            </p>
-          </div>
 
-          {/* Hero band (OV-DESKTOP-1): score card + KPI block. `.ov2-hero` is
-              `display: contents` below 1200px, so this wrapper has no effect
-              on the mobile stacked flow — it only becomes a 2-col grid on
-              desktop (app/globals.css). */}
-          <div className="ov2-hero">
-          {/* 2 · Compact gauge card (score + trend). `.ov2-gauge-block` wraps
-              the card together with an external "Puntuación GEO" label so the
-              two hero columns share the same section-label pattern and start
-              flush at the top on desktop (OV-DESKTOP-2) — below 1200px this
-              label stays hidden and the card keeps its original inline one,
-              so the mobile/tablet layout is unchanged. */}
-          <div className="ov2-gauge-block">
-          <div className="ov2-sec-lbl ov2-gauge-sec-lbl">Puntuación GEO</div>
-          <div className="ov2-gauge-card">
-            <div className="ov2-gauge-ring">
-              <Gauge value={gaugeScore} size={96} stroke={10} />
-            </div>
-            <div className="ov2-gauge-info">
-              <div className="ov2-gauge-lbl">Puntuación GEO</div>
-              <div className="ov2-gauge-badges">
-                {/* GEO-BAND-ALWAYS-1 (founder decision, 2026-09-12): the band
-                    is derived straight from the score the gauge already shows
-                    (getBandLabel/getBandTone are pure functions of gaugeScore,
-                    same 70/40 cuts as every other screen), so it never states
-                    anything the visible number doesn't already — unlike the
-                    delta and sparkline below, it isn't a claim about a
-                    comparison across runs, so the sample-floor gate that
-                    protects THOSE doesn't apply here. Kept unconditional on
-                    purpose: the first-scan card was reading as broken with
-                    nothing next to the number (founder, 2026-09-11/12). Delta
-                    and trend stay gated on sampleSufficient below — this
-                    change touches only the band. */}
-                <span className={`badge badge-${getBandTone(gaugeScore)}`}>{getBandLabel(gaugeScore)}</span>
-                {gaugeDeltaVerdict?.kind === "publish" && gaugeDeltaVerdict.value !== 0 && (
-                  <Delta value={gaugeDeltaVerdict.value} suffix=" pt" />
-                )}
-              </div>
-              {/* The sparkline is the delta in graphical form: a line joining
-                  the last N scores asserts a trend between them just as
-                  literally as "+44 pt" does. Drawing a rising line directly
-                  under the words "sin comparación" would contradict them in
-                  the more persuasive medium — the founder's original report
-                  was a screenshot of exactly that rise. So the line is
-                  withheld under the same condition as the number, and the
-                  caption says why instead. */}
-              {geoTrend.length >= 2 && gaugeDeltaVerdict?.kind === "publish" ? (
-                <>
-                  <Sparkline data={geoTrend} w={200} h={30} color="var(--brand-blue)" />
-                  <div className="ov2-gauge-trend-cap">Últimos {geoTrend.length} escaneos</div>
-                </>
-              ) : sampleNudge(gaugeDeltaVerdict) ? (
-                <div className="ov2-gauge-trend-cap">{sampleNudge(gaugeDeltaVerdict)}</div>
-              ) : null}
-            </div>
-          </div>
-          </div>
-
-          {/* 3 · Indicadores clave — KPI carousel */}
-          <div className="ov2-hero-kpis">
-          <div className="ov2-sec-lbl">Indicadores clave</div>
-          <div className="ov2-kpi-car">
-            {[
-              {
-                key: "mention",
-                label: "Tasa de mención",
-                value: computedMentionRate,
-                unit: "%",
-                deltaVerdict: visDeltaVerdict,
-                hint: mentionInterval
-                  ? `${brandMentions} de ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"} de IA · margen ±${Math.round(mentionInterval.marginPoints)} pt (95%).`
-                  : "Respuestas de IA donde aparece tu marca.",
-                tip: "Porcentaje de respuestas de IA en las que tu marca aparece mencionada, sobre el total de respuestas del escaneo (prompts × motores). El margen es el intervalo de confianza de Wilson al 95%: con pocas respuestas, el valor real puede estar en cualquier punto de ese rango. Se estrecha añadiendo prompts o motores.",
-                isShare: false as const
-              },
-              {
-                key: "citation-share",
-                label: "Cuota de Citas",
-                value: citationShareResult.share,
-                unit: "%",
-                hint: citationShareResult.share !== null
-                  ? `${citationShareResult.ownCitations} de ${citationShareResult.totalCitations} citas grounding resueltas apuntan a tu dominio.`
-                  : "Sin citas grounding resueltas en este escaneo.",
-                tip: "Mide qué porcentaje del total de URLs que la IA cita en sus respuestas pertenecen a tu dominio. Cuanto mayor sea este ratio, más presente está tu contenido como fuente de referencia para la IA.",
-                isShare: true as const
-              },
-              {
-                key: "gap",
-                label: "Presión competitiva",
-                value: competitorPressureScore,
-                unit: "%",
-                deltaVerdict: gapDeltaVerdict,
-                hint: "Respuestas de IA donde aparece un competidor pero tu marca no.",
-                invert: true,
-                tip: "Mide en qué porcentaje de las respuestas de IA aparece un competidor pero tu marca no. Cuanto más alto, más te están desplazando tus rivales en las respuestas de la IA.",
-                isShare: false as const,
-                // Same sample gate as the GEO gauge's band: "Presión
-                // competitiva: Baja" is a qualitative claim about the market,
-                // and over <10 AI responses it rests on one or two answers.
-                // Gating one band and not the other would just move the false
-                // precision to the card next door. Falls through to the
-                // delta verdict below, which renders the honest absence.
-                band: sampleSufficient ? getCompetitivePressureBand(competitorPressureScore) : undefined
-              },
-              {
-                // Sentiment replaces the old "Confianza" card (audit phase B,
-                // findings 6+7): confidence is a data-quality meta-metric that
-                // already surfaces as a badge on the gauge when degraded, while
-                // brand sentiment was extracted and persisted but shown nowhere.
-                // No fabricated history: sentiment is only computed for the
-                // latest run, so no trend line and no "vs. previous" delta.
-                key: "sentiment",
-                label: "Sentimiento de marca",
-                value: dominantSentiment
-                  ? sentimentLabels[dominantSentiment].charAt(0).toUpperCase() + sentimentLabels[dominantSentiment].slice(1)
-                  : "Sin datos",
-                unit: "",
-                hint:
-                  sentimentTotal > 0
-                    ? `${sentimentBreakdown} · sobre ${sentimentTotal} ${sentimentTotal === 1 ? "respuesta" : "respuestas"} con tu marca.`
-                    : "Sin respuestas con tu marca mencionada en este escaneo.",
-                tip: "Tono con el que las respuestas de IA hablan de tu marca en el último escaneo, calculado solo sobre las respuestas donde tu marca aparece. Se muestra el tono dominante; el desglose completo está debajo.",
-                isShare: false as const,
-                hideDelta: true as const
-              }
-            ]
-              // A KPI that cannot support its own claim is hidden, not
-              // labelled (founder decision, 2026-08-03). "Sentimiento de
-              // marca: Positivo" is a qualitative verdict, and it is computed
-              // only over answers that actually mention the brand — 2 of them
-              // on the run that surfaced this. Left in, it would have been the
-              // only card on the screen still asserting something confident
-              // while its three siblings withheld.
-              .filter((m) => m.key !== "sentiment" || hasSufficientSample(sentimentTotal))
-              .map((m) => (
-              <div key={m.key} className="ov2-kpi">
-                <div className="ov2-kpi-k">{m.label}</div>
-
-                {m.key === "sentiment" ? (
-                  <>
-                    <div
-                      className="ov2-kpi-v txt"
-                      style={{
-                        color:
-                          dominantSentiment === "positive"
-                            ? "var(--pos-ink)"
-                            : dominantSentiment === "negative"
-                              ? "var(--neg-ink)"
-                              : "var(--ink-2)"
-                      }}
-                    >
-                      {m.value}
-                    </div>
-                    {sentimentTotal > 0 && (
-                      <>
-                        <div className="ov2-senti-bar">
-                          {sentimentCounts.positive > 0 && (
-                            <i style={{ flexGrow: sentimentCounts.positive, background: "var(--pos)" }} />
-                          )}
-                          {sentimentCounts.neutral + sentimentCounts.mixed > 0 && (
-                            <i style={{ flexGrow: sentimentCounts.neutral + sentimentCounts.mixed, background: "var(--line)" }} />
-                          )}
-                          {sentimentCounts.negative > 0 && (
-                            <i style={{ flexGrow: sentimentCounts.negative, background: "var(--neg)" }} />
-                          )}
-                        </div>
-                        <div className="ov2-senti-cap">
-                          {Math.round((sentimentCounts.positive / sentimentTotal) * 100)}% · {sentimentTotal} resp.
-                        </div>
-                      </>
-                    )}
-                  </>
-                ) : m.isShare ? (
-                  m.value !== null ? (
-                    <>
-                      <div className="ov2-kpi-v">{m.value}<small>%</small></div>
-                      <div className="ov2-kpi-foot">
-                        {/* Same sample gate as the GEO band and the
-                            competitive-pressure band: "Muy bajo" is a
-                            qualitative verdict, and over <10 responses it
-                            rests on one or two cited pages. Gating three
-                            bands on this screen and leaving the fourth would
-                            just be arbitrary. */}
-                        {/* Hidden, not labelled — same rule as the gauge band. */}
-                        {!sampleSufficient ? null : (
-                        <span className={`badge ${
-                          m.value > 50 ? "badge-pos" :
-                          m.value >= 30 ? "badge-accent" :
-                          m.value >= 15 ? "badge-neutral" :
-                          m.value >= 5  ? "badge-warn" :
-                          "badge-neg"
-                        }`} style={{ fontSize: 10 }}>
-                          {m.value > 50 ? "Muy alto" :
-                           m.value >= 30 ? "Alto" :
-                           m.value >= 15 ? "Medio" :
-                           m.value >= 5  ? "Bajo" :
-                           "Muy bajo"}
-                        </span>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="ov2-kpi-v txt" style={{ color: "var(--ink-4)" }}>Sin datos</div>
-                  )
+              <section className="sec grid57" style={breakdownRows.length === 0 ? { gridTemplateColumns: "1fr" } : undefined}>
+                {breakdownRows.length > 0 ? <Breakdown score={gaugeScore} rows={breakdownRows} /> : null}
+                {competitorRows.length === 0 ? (
+                  <QuietCard
+                    title="Sin datos de competidores"
+                    text="Añade competidores para ver cómo se compara tu visibilidad en IA."
+                    href={`/dashboard/projects/${projectId}/competitors`}
+                    cta="Añadir competidores"
+                  />
+                ) : panoramaState.kind === "empty" ? (
+                  <QuietCard
+                    title="Ninguna marca apareció en este escaneo"
+                    text={`La IA no nombró a ${project.brand} ni a ninguno de tus ${competitorRows.length} ${competitorRows.length === 1 ? "competidor" : "competidores"} en ${totalResults} ${totalResults === 1 ? "respuesta" : "respuestas"}. Puede pasar en un dominio nuevo o con prompts muy genéricos.`}
+                    href={`/dashboard/projects/${projectId}/prompts`}
+                    cta="Revisar mis prompts"
+                  />
                 ) : (
-                  <>
-                    <div className="ov2-kpi-v">{m.value}<small>{m.unit}</small></div>
-                    <div className="ov2-kpi-foot">
-                      {"band" in m && m.band ? (
-                        <span className={`badge badge-${m.band.tone}`} style={{ fontSize: 10 }}>
-                          {m.band.label}
-                        </span>
-                      ) : "hideDelta" in m && m.hideDelta ? null : !("deltaVerdict" in m) || m.deltaVerdict === null ? null : m.deltaVerdict.kind !== "publish" ? (
-                        // Withheld -> render NOTHING. Never "— sin cambio",
-                        // which would assert measured stability we do not
-                        // have; and no "— sin comparación" label either, since
-                        // repeating that across every card reads as a broken
-                        // screen rather than a careful one (founder decision,
-                        // 2026-08-03). The absence is explained once, under
-                        // the gauge.
-                        null
-                      ) : m.deltaVerdict.value !== 0 ? (
-                        <Delta value={m.deltaVerdict.value} suffix=" pt" invert={"invert" in m ? m.invert : undefined} />
-                      ) : (
-                        <span className="delta flat">— sin cambio</span>
-                      )}
-                    </div>
-                  </>
+                  <Ranking
+                    projectId={projectId}
+                    rows={rankRows}
+                    secondLabel={panoramaRanked ? MEAN_RANK_COLUMN_LABEL : null}
+                    gapBeforeLast={brandAppendedBeyondTop5}
+                  />
                 )}
-              </div>
-            ))}
-            {enginesInKpiGrid ? (
-              <div className="ov2-eng-kpi">
-                <div className="card">
-                  <div className="ov2-kpi-k">Posicionamiento por motores de IA</div>
-                  {engineBars}
-                </div>
-              </div>
-            ) : null}
-          </div>
-          </div>
-          </div>
+              </section>
 
-          {/* Desglose del GEO Score (GEO-SCORE-V4, ADR 0033 §7) + Posicionamiento
-              por motores de IA, side by side (OV-DESKTOP-2). Stated
-              obligation, not polish — "wherever the GEO Score is shown, its
-              component breakdown must be visible", so "subió porque
-              arreglaste la web" and "subió porque las IAs te citan más" son
-              distinguibles. `.ov2-score-row` is `display: contents` below
-              1200px, so mobile/tablet keep the exact stacked order these two
-              sections already had (Posicionamiento immediately followed
-              Desglose in the DOM before this change) — only desktop gets the
-              2/3 + 1/3 layout. Desglose is only rendered once there is a real
-              score to explain; Posicionamiento always renders, same as
-              before. */}
-          <div className={`ov2-score-row${panoramaUp ? " is-pano-up" : ""}`}>
-          <div className="ov2-score-main">
-          {geoScore?.components ? (
-            <>
-              {geoScore.engine_coverage?.status === "partial" ? (
-                <div
-                  className="feedback"
-                  style={{ background: "var(--warn-soft)", color: "var(--warn-ink)", borderColor: "#f3d086", marginTop: 14 }}
-                >
-                  <p style={{ fontWeight: 650 }}>{engineCoverageNotice(parseEngineCoverage(geoScore.engine_coverage))}</p>
-                </div>
-              ) : null}
-
-              <div className="ov2-sec-lbl">
-                Desglose del GEO Score
-                <span style={{ fontWeight: 600, color: "var(--ink-4)", textTransform: "none", letterSpacing: 0 }}>
-                  {gaugeScore}/100
-                </span>
-              </div>
-              <div className="card" style={{ padding: "4px 18px" }}>
-                {(["presence", "prominence", "standing", "authority", "technical"] as const).map((key) => {
-                  const component = geoScore.components?.[key];
-                  // A run scored before GEO-SCORE-V4 has no `technical` key at
-                  // all — not a null value, the key simply does not exist.
-                  // Returning null there made the row VANISH, so the breakdown
-                  // silently had four rows on older scans and five on new ones,
-                  // with nothing saying why. That is the "no silent gap" failure
-                  // this codebase keeps paying for (.claude/rules/scan.md, "No
-                  // mute rows"). The row now always renders; a pre-v4 run says
-                  // so and tells the user what makes it appear.
-                  const isLegacyRun = !component && key === "technical";
-                  if (!component && !isLegacyRun) return null;
-                  const meta = GEO_SCORE_COMPONENT_META[key];
-                  const isDropped = isLegacyRun || component?.value === null || component?.value === undefined;
-                  // Same 3-tier tone the gauge's own band uses (getBandTone),
-                  // so a component scoring e.g. 85 reads with the same color
-                  // language as the overall score badge — never a fourth,
-                  // unrelated color scale invented just for this row.
-                  const tone = isDropped ? null : GEO_SCORE_TONE_COLORS[getBandTone(component?.value as number)];
-                  return (
-                    <div key={key} className="ov2-brow">
-                      <span
-                        className="ov2-brow-ico"
-                        style={{ background: tone?.soft ?? "var(--line-soft)", color: tone?.ink ?? "var(--ink-4)" }}
-                      >
-                        <Icon name={meta.icon} size={16} />
-                      </span>
-                      <div className="ov2-brow-txt">
-                        <div className="ov2-brow-l">{meta.label}</div>
-                        <div className="ov2-brow-h">
-                          {isLegacyRun
-                            ? "Este escaneo es anterior a que la salud técnica entrara en el GEO Score. Se incluirá en tu próximo escaneo."
-                            : isDropped
-                              ? translateDroppedComponentReason(component?.reason)
-                              : meta.hint}
-                        </div>
-                      </div>
-                      <div className="ov2-brow-meter">
-                        {isDropped ? (
-                          <>
-                            <div className="track dashed"><i /></div>
-                            <div className="cap"><span className="na">No disponible</span></div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="track">
-                              <i style={{ width: `${component?.value}%`, background: tone?.ink }} />
-                            </div>
-                            <div className="cap">
-                              <span className="v">
-                                {Math.round(component?.value as number)}
-                                <small>/100</small>
-                              </span>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-
-          ) : null}
-          {panoramaUp ? (
-            <div className="ov2-pano-up">
-              {panoramaLabel}
-              {panoramaTop}
-            </div>
-          ) : null}
-          </div>
-
-          <div className="ov2-score-side">
-          {/* 4 · Posicionamiento por motores de IA. From 1200px this copy is
-              hidden when the engines move up into the KPI grid. */}
-          <div className={`ov2-eng-side${enginesInKpiGrid ? " is-in-kpis" : ""}`}>
-          <div className="ov2-sec-lbl">Posicionamiento por motores de IA</div>
-          <div className="card" style={{ padding: 18 }}>
-            {engineBars}
-          </div>
-          </div>
-          {/* Auditoría SEO (SEARCH-SEO-1, log §271): under the engine bars on
-              mobile and tablet, and beside the breakdown on desktop. Not
-              rendered without a usable audit snapshot. */}
-          {seoSummary ? (
-            <div className={`ov2-seo-side${enginesInKpiGrid ? " is-first" : ""}`}>
-              <div className="ov2-sec-lbl ov2-seo-lbl">
-                Auditoría SEO
-                <Link href={`/dashboard/projects/${projectId}/web-audit`}>Ver todo</Link>
-              </div>
-              <SeoAuditCard
-                summary={seoSummary}
-                auditedAt={seoAuditedAt}
-                href={`/dashboard/projects/${projectId}/web-audit`}
-              >
-                {/* SEARCH-SEO-1 Fase 3 (log §284): Search Console, streamed in
-                    so Google's latency never holds up the Overview. */}
+              {/* AGENTIC-COMMERCE-1 Fase 2b (log §340) and SEARCH-SEO-1 (log §271,
+                  §284): streamed apart, so neither holds up the page. */}
+              <section className="sec grid2 ov-pair">
                 <Suspense fallback={null}>
-                  <GscOverviewHalf projectId={projectId} ownerUserId={user.id} domain={project.domain} />
+                  <AgenticOverviewCard projectId={projectId} />
                 </Suspense>
-              </SeoAuditCard>
-            </div>
-          ) : null}
-          {/* Comercio agéntico (AGENTIC-COMMERCE-1 Fase 2b, log §340): under
-              Auditoría SEO. Pro, Agencia and the trial see it once the
-              agentic review found something the site sells; Starter sees an
-              invitation to Pro. Streamed, so it never holds up the page. */}
-          <Suspense fallback={null}>
-            <AgenticOverviewCard projectId={projectId} />
-          </Suspense>
-          </div>
-          </div>
-
-          {/* Analysis column + sticky action rail (OV-DESKTOP-1). Same
-              `display: contents` default as `.ov2-hero` above — no effect on
-              mobile, becomes a 2-col grid with `.ov2-rail` following the
-              analysis column on desktop. */}
-          <div className="ov2-cols">
-          <div className={`ov2-main${panoramaUp ? " is-pano-up" : ""}`}>
-          {/* 5 · Panorámica competitiva. From 1200px the chart may live in
-              `.ov2-pano-up` above (see `panoramaUp`); this copy then hides. */}
-          <div className="ov2-pano-dup">
-            {panoramaLabel}
-            {panoramaTop}
-          </div>
-          {panoramaTable ? (
-            <>
-              {panoramaUp ? (
-                <div className="ov2-sec-lbl ov2-cmp-lbl">
-                  Último escaneo
-                  <Link href={`/dashboard/projects/${projectId}/competitors`}>Ver todo</Link>
-                </div>
-              ) : null}
-              {panoramaTable}
+                {seoSummary ? (
+                  <SeoAuditCard
+                    summary={seoSummary}
+                    auditedAt={seoAuditedAt}
+                    href={`/dashboard/projects/${projectId}/web-audit`}
+                    googleHref={`/dashboard/projects/${projectId}/search-console`}
+                    googleColumn={googleColumn}
+                  >
+                    {googleColumn ? (
+                      <Suspense fallback={<GscOverviewHalfSkeleton />}>
+                        <GscOverviewHalf projectId={projectId} ownerUserId={user.id} domain={project.domain} />
+                      </Suspense>
+                    ) : null}
+                  </SeoAuditCard>
+                ) : null}
+              </section>
             </>
-          ) : null}
-          </div>
-
-          <div className="ov2-rail">
-          {/* 6 · Oportunidades — resumen visual de Recomendaciones.
-              Cabecera: "hasta +Y pt" real (RECS-POTENTIAL-1, docs/adr/0017)
-              cuando hay recomendaciones cuantificables y confianza
-              suficiente; si no, cae al conteo real de recomendaciones
-              activas — nunca un número inventado. Cada tarjeta muestra su
-              propio "hasta +Xpt" cuando es cuantificable, o el impacto
-              cualitativo cuando no lo es. */}
-          {latestRecommendations?.length ? (
-            <>
-              <div className="ov2-sec-lbl">
-                Oportunidades
-                <Link href={`/dashboard/projects/${projectId}/recommendations`}>
-                  Ver todo <Icon name="arrRight" size={13} />
-                </Link>
+          ) : !activeRun ? (
+            prompts?.length ? (
+              <div className="card ov-state">
+                <h2>Lanza tu primer escaneo de visibilidad en IA</h2>
+                <p>
+                  Analiza cómo aparece <b>{project.brand}</b> en los motores de IA con tus <b>{prompts.length} {prompts.length === 1 ? "prompt activo" : "prompts activos"}</b>.
+                </p>
+                <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" ins />
+                <p className="ov-note">
+                  Primer escaneo · {prompts.length} {prompts.length === 1 ? "prompt" : "prompts"} · {scanProviders.map((p) => getEngineMeta(p).label).join(" y ")}
+                </p>
               </div>
-              <div className="card ov2-opps">
-                <div className="ov2-opps-hero">
-                  <div className="ov2-opps-gain">
-                    {roundedJointPoints !== null ? (
-                      <>
-                        <div className="ov2-opps-gain-n">+{roundedJointPoints}</div>
-                        <div className="ov2-opps-gain-l">Puntos potenciales</div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="ov2-opps-gain-n">{activeRecommendationsCount ?? latestRecommendations.length}</div>
-                        <div className="ov2-opps-gain-l">
-                          {(activeRecommendationsCount ?? latestRecommendations.length) === 1 ? "Recomendación" : "Recomendaciones"}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div>
-                    <div className="ov2-opps-h">
-                      {highPriorityCount > 0
-                        ? `${highPriorityCount} ${highPriorityCount === 1 ? "acción" : "acciones"} de alta prioridad`
-                        : "Acciones priorizadas para ti"}
-                    </div>
-                    <div className="ov2-opps-s">
-                      {roundedJointPoints !== null
-                        ? "Techo optimista si resuelves estas acciones — tu próximo escaneo lo confirma."
-                        : topCompetitor && topCompetitor.mentionRate > computedMentionRate
-                          ? `Ejecútalas para recuperar visibilidad frente a ${topCompetitor.name}.`
-                          : "Ordenadas por impacto en tu visibilidad en las respuestas de IA."}
-                    </div>
-                  </div>
-                </div>
-                <div className="ov2-opps-list">
-                  {latestRecommendations.map((rec) => {
-                    const effort = (rec.effort ?? "medium").toLowerCase();
-                    const isQuick = effort === "low";
-                    const impact = (rec.impact ?? "low").toLowerCase();
-                    const impactLabel = impact === "high" ? "Alto" : impact === "medium" || impact === "med" ? "Medio" : "Bajo";
-                    const rawPoints = potentialPointsByRecId.get(rec.id);
-                    const displayPoints = rawPoints !== null && rawPoints !== undefined ? Math.round(rawPoints) : null;
-                    return (
-                      <div key={rec.id} className="ov2-opp">
-                        <span className="ov2-opp-dot" style={{ background: isQuick ? "var(--pos)" : "var(--brand-neg)" }} />
-                        <span className="ov2-opp-t">
-                          <span>{recommendationHeadline(rec, overlayForHeadline(coverageOverlays?.get(rec.id))).title}</span>
-                          {isQuick && <span className="ov2-opp-quick">rápida</span>}
-                        </span>
-                        <span className="ov2-opp-r">
-                          {displayPoints !== null && displayPoints > 0 ? (
-                            <>
-                              <span className="n">+{displayPoints}</span>
-                              <span className="u">pt</span>
-                            </>
-                          ) : (
-                            <span className="impact-lbl">Impacto {impactLabel.toLowerCase()}</span>
-                          )}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <Link href={`/dashboard/projects/${projectId}/recommendations`} className="ov2-opps-cta">
-                  Ver todas las recomendaciones <Icon name="arrRight" size={13} />
-                </Link>
-              </div>
-            </>
-          ) : null}
-          </div>
-          </div>
-        </div>
-      ) : (
-        /* ===== EMPTY STATE ===== */
-        activeRun ? (
-          isFirstScan ? (
-            /* ONBOARDING-ROCKET-1 — spent once per domain; every scan after
-               this project's first falls to the plain shared bar below.
-               SCAN-STATES-2 routes it through FirstScanTakeover so the rail's
-               figures are resolved the same way here as in every section. */
-            <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
-          ) : (
-            /* Estado A — Escaneo en curso (componente compartido pixel-perfect) */
-            <ScanInProgressLive projectId={projectId} initial={activeRun} />
-          )
-        ) : prompts?.length ? (
-          /* Estado B — Listo para lanzar */
-          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
-            <div style={{
-              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
-              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
-              boxShadow: "var(--sh-2)"
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
-                background: "var(--accent-soft)", display: "grid", placeItems: "center", color: "var(--accent)"
-              }}>
-                <Icon name="overview" size={24} />
-              </div>
-              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
-                Lanza tu primer escaneo de visibilidad en IA
-              </h2>
-              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
-                Analiza cómo aparece <b style={{ color: "var(--ink-2)" }}>{project.brand}</b> en los motores de IA con tus <b style={{ color: "var(--ink-2)" }}>{prompts.length} prompts</b> activos.
-              </p>
-              <div style={{ display: "inline-block" }}>
-                <ScanTriggerButton projectId={projectId} label="Lanzar escaneo" />
-              </div>
-              <p style={{ fontSize: 12, color: "var(--ink-4)", marginTop: 14 }}>
-                Primer escaneo · {prompts.length} prompts · {getLLMScanProviders().map((p) => getEngineMeta(p).label).join(" y ")}
-              </p>
-            </div>
-          </div>
-        ) : (
-          /* Estado C — Sin prompts */
-          <div style={{ display: "flex", justifyContent: "center", padding: "60px 20px" }}>
-            <div style={{
-              background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
-              padding: "40px 36px", maxWidth: 520, width: "100%", textAlign: "center",
-              boxShadow: "var(--sh-2)"
-            }}>
-              <div style={{
-                width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
-                background: "var(--surface-sunk)", display: "grid", placeItems: "center", color: "var(--ink-3)"
-              }}>
-                <Icon name="prompts" size={24} />
-              </div>
-              <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10, letterSpacing: "-.01em" }}>
-                Configura tus primeros prompts
-              </h2>
-              <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
-                Añade entre 5 y 10 preguntas de alta intención que tus potenciales clientes hacen a la IA. Son la base de tu análisis de visibilidad.
-              </p>
-              <Link href={`/dashboard/projects/${projectId}/prompts`}>
-                <Button variant="outline">
-                  <Icon name="prompts" size={14} />
+            ) : (
+              <div className="card ov-state">
+                <h2>Configura tus primeros prompts</h2>
+                <p>
+                  Añade entre 5 y 10 preguntas de alta intención que tus potenciales clientes hacen a la IA. Son la base de tu análisis de visibilidad.
+                </p>
+                <Link className="btn line" href={`/dashboard/projects/${projectId}/prompts`}>
                   Ir a Prompts
-                </Button>
-              </Link>
-            </div>
-          </div>
-        )
-      )}
-
+                  <Ic n="arrowr" sm />
+                </Link>
+              </div>
+            )
+          ) : null}
+        </div>
+      </Motion>
     </div>
   );
 }

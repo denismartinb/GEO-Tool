@@ -47,7 +47,7 @@ describe("GET /api/search-console/callback", () => {
     requireUser.mockReset().mockResolvedValue({ user: { id: U } });
     requireActiveProject.mockReset().mockResolvedValue({ id: P });
     saveConnection.mockReset().mockResolvedValue(true);
-    exchangeCode.mockReset().mockResolvedValue({ accessToken: "at", refreshToken: "rt", scope: GSC_SCOPE });
+    exchangeCode.mockReset().mockResolvedValue({ accessToken: "at", refreshToken: "refresh-token-plaintext-marker", scope: GSC_SCOPE });
     revokeToken.mockReset().mockResolvedValue(true);
   });
 
@@ -57,8 +57,8 @@ describe("GET /api/search-console/callback", () => {
     expect(exchangeCode).toHaveBeenCalledWith("abc", VERIFIER);
     const [ids, ciphertext] = saveConnection.mock.calls[0];
     expect(ids).toEqual({ projectId: P, ownerUserId: U });
-    expect(ciphertext).not.toContain("rt");
-    expect(decryptRefreshToken(ciphertext, P, U)?.token).toBe("rt");
+    expect(ciphertext).not.toContain("refresh-token-plaintext-marker");
+    expect(decryptRefreshToken(ciphertext, P, U)?.token).toBe("refresh-token-plaintext-marker");
     expect(res.headers.get("set-cookie")).toMatch(new RegExp(`${GSC_OAUTH_COOKIE}=;`));
     expect(res.headers.get("referrer-policy")).toBe("no-referrer");
   });

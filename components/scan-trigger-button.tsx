@@ -4,17 +4,21 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
+import { Ic } from "@/components/ins/ic";
 
 type Feedback = "none" | "failed" | "active_run" | "read_only";
 
 export function ScanTriggerButton({
   projectId,
   disabled,
-  label
+  label,
+  ins = false
 }: {
   projectId: string;
   disabled?: boolean;
   label: string;
+  /** «Instrumento» styling (CONSOLE-INSTRUMENTO-1, log §352). Same behaviour. */
+  ins?: boolean;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
@@ -55,11 +59,18 @@ export function ScanTriggerButton({
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
-      <Button type="button" onClick={handleClick} disabled={disabled || pending}>
-        {pending ? <span className="btn-spinner" /> : <Icon name="play" size={14} />}
-        {pending ? "Lanzando…" : label}
-      </Button>
+    <div style={{ display: "flex", flexDirection: "column", alignItems: ins ? "flex-start" : "flex-end", gap: 6 }}>
+      {ins ? (
+        <button type="button" className="btn blue" onClick={handleClick} disabled={disabled || pending}>
+          {pending ? null : <Ic n="arrowr" sm />}
+          {pending ? "Lanzando…" : label}
+        </button>
+      ) : (
+        <Button type="button" onClick={handleClick} disabled={disabled || pending}>
+          {pending ? <span className="btn-spinner" /> : <Icon name="play" size={14} />}
+          {pending ? "Lanzando…" : label}
+        </Button>
+      )}
       {feedback === "failed" && (
         <p className="field-err" style={{ marginTop: 0 }}>
           No se pudo lanzar el escaneo. Inténtalo de nuevo.

@@ -1,0 +1,142 @@
+/* --- screens/overlays.css --- */
+/* ===== overlays (builder C): layer, popover, dialog, sheet ===== */
+.ins #xo-layer{position:fixed;inset:0;z-index:86;pointer-events:none}
+.ins .xo-w{position:absolute;inset:0;pointer-events:auto}
+.ins .xo-click{position:absolute;inset:0}
+.ins .xo-scrim{position:absolute;inset:0;background:rgba(5,8,15,.34);opacity:0;transition:opacity var(--d2) var(--std)}
+.ins .xo-w.on .xo-scrim{opacity:1}
+.ins .xo-box{position:absolute;background:var(--surface);border:1px solid var(--rule);box-shadow:0 30px 80px -24px rgba(5,8,15,.45);color:var(--ink);overflow:hidden}
+.ins .xo-pop{border-radius:18px;opacity:0;transform:translateY(-6px) scale(.985);transform-origin:top;transition:opacity var(--d2) var(--std),transform var(--d2) var(--out);max-height:calc(100vh - 90px);overflow-y:auto}
+.ins .xo-w.on .xo-pop{opacity:1;transform:none}
+.ins .xo-dlg{left:50%;top:50%;width:min(560px,calc(100vw - 32px));max-height:calc(100vh - 48px);overflow-y:auto;border-radius:24px;opacity:0;transform:translate(-50%,-48%) scale(.98);transition:opacity var(--d2) var(--std),transform var(--d3) var(--out)}
+.ins .xo-w.on .xo-dlg{opacity:1;transform:translate(-50%,-50%)}
+.ins .xo-dlg.xo-narrow{width:min(480px,calc(100vw - 32px))}
+.ins .xo-sheet{left:0;right:0;bottom:0;border-radius:24px 24px 0 0;border-bottom:0;max-height:86vh;overflow-y:auto;transform:translateY(100%);transition:transform var(--d3) var(--out);padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.ins .xo-w.on .xo-sheet{transform:none}
+.ins .xo-grab{display:block;width:40px;height:4px;border-radius:2px;background:var(--rule);margin:10px auto 2px}
+.ins .xo-x{position:absolute;right:14px;top:14px;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;color:var(--ink-3);z-index:2}
+.ins .xo-x:hover{background:var(--surface-2);color:var(--ink)}
+.ins .xo-h{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid var(--rule-2)}
+.ins .xo-h b{font-size:14px;font-weight:600}
+.ins .xo-h .xo-lk,.ins .xo-h .xo-cap{margin-left:auto}
+.ins .xo-cap{font-size:12.5px;color:var(--ink-3)}
+.ins .xo-lk{display:inline-flex;align-items:center;gap:2px;font-size:12.5px;font-weight:550;color:var(--ink-3)}
+.ins .xo-lk:hover{color:var(--blue)}
+.ins .xo-f{display:flex;align-items:center;gap:10px;padding:11px 18px;border-top:1px solid var(--rule-2);font-size:12px;color:var(--ink-3)}
+.ins .xo-f .xo-lk{margin-left:auto}
+.ins .xo-lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+
+/* notifications: one per lane */
+.ins .xo-lanes{list-style:none;padding:4px 0}
+.ins .xo-ln{padding:14px 18px 16px;border-bottom:1px solid var(--rule-2)}
+.ins .xo-ln:last-child{border-bottom:0}
+.ins .xo-ln .k{display:flex;align-items:center;gap:8px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.ins .xo-ln .k .d{width:6px;height:6px;border-radius:50%;background:var(--ink-4)}
+.ins .xo-ln.warm .k .d{background:var(--warm)}
+.ins .xo-ln.blue .k .d{background:var(--blue)}
+.ins .xo-ln .k .tm{margin-left:auto;letter-spacing:0;text-transform:none;font-weight:500}
+.ins .xo-ln b{display:block;font-size:15px;font-weight:550;letter-spacing:-.01em;margin-top:8px;line-height:1.35}
+.ins .xo-ln p{font-size:13px;color:var(--ink-2);margin-top:4px}
+.ins .xo-ln .btn{margin-top:12px}
+.ins .xo-go{display:inline-flex;align-items:center;gap:6px;margin-top:10px;font-size:13px;font-weight:600;color:var(--blue)}
+.ins .xo-empty{display:flex;flex-direction:column;align-items:center;gap:4px;padding:36px 20px;text-align:center;font-size:13.5px;color:var(--ink-3)}
+.ins .xo-empty .i{width:26px;height:26px;color:var(--pos);margin-bottom:6px}
+.ins .xo-empty b{color:var(--ink);font-weight:600}
+
+/* domain switcher */
+.ins .xo-doms{list-style:none;padding:6px}
+.ins .xo-dom{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:12px;align-items:center;width:100%;padding:10px;border-radius:12px;text-align:left}
+.ins .xo-dom:hover{background:var(--surface-2)}
+.ins .xo-dom.cur{background:var(--blue-tint)}
+.ins .xo-dom .fav,.ins .xo-lt{width:30px;height:30px;border-radius:8px}
+.ins .xo-lt{display:grid;place-items:center;color:#fff;font-weight:650;font-size:14px;flex:none}
+.ins .xo-dom .t{min-width:0;line-height:1.3}
+.ins .xo-dom .t b{display:block;font-size:14px;font-weight:600}
+.ins .xo-dom .t .mono{display:block;font-size:11.5px;color:var(--ink-3)}
+.ins .xo-st{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3);margin-top:3px}
+.ins .xo-st .dt{width:6px;height:6px;border-radius:50%;background:var(--pos);flex:none}
+.ins .xo-st.fresh .dt{background:var(--ink-4)}
+.ins .xo-st.err{color:var(--warm)}.ins .xo-st.err .dt{background:var(--warm)}
+.ins .xo-st.run{color:var(--blue-ink)}
+.ins .xo-st .pl{width:7px;height:7px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 0 var(--blue-soft);animation:pulse 1.6s var(--std) infinite;flex:none}
+.ins .xo-dom .sc{text-align:right;line-height:1.1}
+.ins .xo-dom .sc b{display:block;font-size:24px;font-weight:300;letter-spacing:-.04em}
+.ins .xo-dom .sc span{font-size:11px;color:var(--ink-3)}
+.ins .xo-dom .sc .na{font-size:12px}
+.ins .xo-full{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:start;margin:4px 12px 12px;padding:12px 14px;border-radius:14px;background:var(--surface-2);font-size:12.5px;color:var(--ink-3)}
+.ins .xo-full b{color:var(--ink);font-weight:600}
+.ins .xo-full .i{margin-top:2px}
+.ins .xo-full .btn{grid-column:2;justify-self:start;margin-top:8px}
+
+/* menus */
+.ins .xo-menu{padding:6px}
+.ins .xo-mi{display:flex;align-items:center;gap:12px;width:100%;min-height:42px;padding:8px 10px;border-radius:10px;font-size:14px;color:var(--ink-2);text-align:left}
+.ins .xo-mi:hover,.ins .xo-mi:focus-visible{background:var(--surface-2);color:var(--ink)}
+.ins .xo-mi .i{color:var(--ink-3)}
+.ins .xo-mi>span:first-of-type{flex:1;min-width:0}
+.ins .xo-mi small{display:block;font-size:12px;color:var(--ink-3)}
+.ins .xo-mi .k{font-size:12px;color:var(--ink-3);font-weight:550}
+.ins .xo-mi.sm{min-height:34px;font-size:13px;padding:6px 10px}
+.ins .xo-sep{height:1px;background:var(--rule-2);margin:6px 4px}
+.ins .xo-who{display:flex;align-items:center;gap:12px;padding:16px 16px 12px;border-bottom:1px solid var(--rule-2)}
+.ins .xo-who>span:last-child{min-width:0;line-height:1.3}
+.ins .xo-who b{display:block;font-size:14px;font-weight:600}
+.ins .xo-who span span{display:block;font-size:12.5px;color:var(--ink-3)}
+.ins .xo-who .xo-pl{display:inline-flex;margin-top:6px;font-size:11.5px;font-weight:600;color:var(--blue-ink);background:var(--blue-tint);border-radius:99px;padding:1px 8px}
+body.xo-isro .xo-who .xo-pl{color:var(--warm);background:var(--warm-tint)}
+.ins .xo-stl{padding:8px 6px 10px;max-height:60vh;overflow-y:auto}
+.ins .xo-stl .xo-lbl{padding:10px 10px 4px}
+
+/* dialog anatomy */
+.ins .xo-dh{position:relative;padding:28px 28px 8px}
+.ins .xo-dh .eyebrow{padding-right:40px}
+.ins .xo-dh h2{margin-top:12px;font-size:26px;font-weight:300;letter-spacing:-.03em;line-height:1.2;padding-right:28px}
+.ins .xo-dh p{font-size:14px;color:var(--ink-2);margin-top:8px}
+.ins .xo-big{font-weight:400;color:var(--blue)}
+.ins .xo-db{padding:16px 28px 4px}
+.ins .xo-df{display:flex;justify-content:flex-end;gap:8px;padding:20px 28px 24px;flex-wrap:wrap}
+.ins .xo-steps{margin:10px 18px 0;--d-rule:var(--rule);--d-ink:var(--ink)}
+.ins .xo-steps .n{color:var(--ink);background:var(--surface)}
+.ins .xo-steps a{grid-template-columns:36px minmax(0,1fr)}
+.ins .xo-days{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.ins .xo-days button{display:flex;flex-direction:column;align-items:center;padding:10px 0 8px;border:1px solid var(--rule);border-radius:14px;font-size:12px;color:var(--ink-3)}
+.ins .xo-days b{font-size:22px;font-weight:300;color:var(--ink);letter-spacing:-.03em;line-height:1.2}
+.ins .xo-days button.on{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.ins .xo-days button.on b{color:var(--surface)}
+.ins .xo-slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(76px,1fr));gap:6px;margin-top:8px}
+.ins .xo-slots button{height:38px;border:1px solid var(--rule);border-radius:99px;font-size:13.5px;font-weight:550;color:var(--ink-2)}
+.ins .xo-slots button.on{border-color:var(--blue);background:var(--blue-tint);color:var(--blue-ink)}
+.ins .xo-note{font-size:12.5px;color:var(--ink-3);margin-top:14px}
+
+/* shell additions */
+.ins .xo-sfoot{display:grid;gap:2px;margin-top:auto;padding-top:8px}
+.ins .side .xo-sfoot+.foot{margin-top:0}
+.ins .xo-sfoot .xo-ext{margin-left:auto;width:13px;height:13px;color:var(--ink-4)}
+.ins .side .foot.xo-foot{cursor:pointer;border-radius:12px;transition:background var(--d1)}
+.ins .side .foot.xo-foot:hover{background:var(--surface-2)}
+.ins .top .av,.ins .mtop .av{cursor:pointer}
+.ins .av.xo-avimg{background-size:cover;background-position:center;color:transparent}
+.ins .ibox .c.xo-seen{background:var(--surface-3);color:var(--ink-3)}
+.ins .mtop .bell .num.xo-seen{color:var(--ink-3)}
+.ins .mtop .bell:has(.xo-seen){border-color:var(--rule-2)}
+.ins .xo-ro{display:none;align-items:center;gap:12px;max-width:1000px;margin:20px auto 0;padding:12px 14px 12px 16px;border:1px solid var(--warm-rule);border-left:3px solid var(--warm);border-radius:14px;background:var(--warm-tint);font-size:14px;color:var(--ink-2)}
+.ins .xo-ro .i{color:var(--warm)}
+.ins .xo-ro .tx{flex:1;min-width:0}
+.ins .xo-ro b{color:var(--ink);font-weight:600}
+body.xo-isro .xo-ro{display:flex}
+.ins .main:has(.sc-full) .xo-ro{display:none}
+@media (max-width:1180px){.ins .xo-ro{margin:20px 28px 0}}
+@media (max-width:760px){
+ .ins .xo-ro{margin:16px 16px 0;flex-wrap:wrap}
+ .ins .xo-ro .tx{flex-basis:calc(100% - 40px)}
+ .ins .xo-dlg{left:0;right:0;top:auto;bottom:0;width:auto;max-height:92vh;border-radius:24px 24px 0 0;border-bottom:0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom)}
+ .ins .xo-w.on .xo-dlg{transform:none}
+ .ins .xo-dlg.xo-narrow{width:auto}
+ .ins .xo-dh{padding:24px 20px 6px}
+ .ins .xo-dh h2{font-size:23px}
+ .ins .xo-db{padding:14px 20px 4px}
+ .ins .xo-df{padding:18px 20px 20px}
+ .ins .xo-df .btn{flex:1}
+ .ins .xo-mi{min-height:48px;font-size:15px}
+}
+.ins .xo-box:focus{outline:0}

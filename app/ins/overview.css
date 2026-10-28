@@ -1,0 +1,241 @@
+/* Visión general (F3, log §352): port of i-src/screens/overview.css and the .agh hero block of agents.css, scoped to .ins. F7 reuses .agh. */
+.ins .agh{padding:0;overflow:hidden}
+.ins .agh .ey{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:650;display:flex;align-items:center;gap:8px}
+.ins .agh .ey .i{color:var(--blue)}
+.ins .agh .big{font-size:84px;font-weight:300;letter-spacing:-.055em;line-height:1;margin-top:16px;display:flex;align-items:baseline}
+.ins .agh .big small{font-size:15px;letter-spacing:0;color:var(--ink-3);margin-left:8px}
+
+/* A · lo que falta */
+.ins .agh-a{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+.ins .agh-a .l{padding:28px 30px;border-right:1px solid var(--rule)}
+.ins .agh-sc{position:relative;height:6px;border-radius:3px;background:var(--rule-2);margin:22px 0 0}
+.ins .agh-sc .f{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--blue)}
+.ins .agh-sc .g{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(90deg,var(--blue-soft) 0 4px,transparent 4px 7px)}
+.ins .agh-sc .mk{position:absolute;top:50%;width:12px;height:12px;border-radius:50%;background:var(--surface);border:2px solid var(--blue);transform:translate(-50%,-50%)}
+.ins .agh-sc .gl{position:absolute;top:12px;transform:translateX(-50%);font-size:11.5px;font-weight:600;color:var(--blue-ink)}
+.ins .agh-a .gn{font-size:13px;color:var(--ink-3);margin-top:28px}
+.ins .agh-a .gn b{color:var(--ink)}
+.ins .agh-a h2{font-size:22px;font-weight:400;letter-spacing:-.02em;line-height:1.25;margin-top:22px;max-width:360px}
+.ins .agh-a .l>.btn{margin-top:18px}
+.ins .agh-a .r{padding:24px 26px 18px}
+.ins .agh .rh{display:flex;align-items:baseline;justify-content:space-between;gap:12px;padding-bottom:10px;border-bottom:1px solid var(--ink)}
+.ins .agh .rh b{font-size:14.5px;font-weight:600}
+.ins .agh .rh span{font-size:12px;color:var(--ink-3)}
+.ins .agh-a .mr{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) 44px 64px 14px;gap:14px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--rule-2)}
+.ins .agh-a .mr .t{display:flex;flex-direction:column;min-width:0}
+.ins .agh-a .mr .t b{font-size:15px;font-weight:550}
+.ins .agh-a .mr .t small{font-size:12.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins .agh-a .bb{height:6px;border-radius:3px;background:var(--rule-2);overflow:hidden}
+.ins .agh-a .bb i{display:block;height:100%;border-radius:3px;background:var(--warm);opacity:.8}
+.ins .agh-a .m{font-size:22px;font-weight:300;letter-spacing:-.03em;color:var(--warm);text-align:right}
+.ins .agh-a .of{font-size:12px;color:var(--ink-3);text-align:right}
+.ins .agh-a .mr>.i{color:var(--ink-4)}
+.ins .agh-a .mr:hover .t b{color:var(--blue-ink)}
+
+
+
+@media(max-width:1000px){
+ .ins .agh-a,.ins .agh-c{grid-template-columns:1fr}
+ .ins .agh-a .l{border-right:0;border-bottom:1px solid var(--rule)}
+}
+@media(max-width:760px){
+ .ins .agh .big{font-size:64px}
+ .ins .agh-a .l,.ins .agh-c .l{padding:22px 18px}
+ .ins .agh-a .r,.ins .agh-c .r{padding:18px 16px 12px}
+ .ins .agh-a .mr{grid-template-columns:minmax(0,1fr) 40px 14px;gap:4px 10px}
+ .ins .agh-a .mr .t{grid-column:1}
+ .ins .agh-a .bb{grid-column:1;grid-row:2}
+ .ins .agh-a .m{grid-column:2;grid-row:1/3}
+ .ins .agh-a .of{display:none}
+ .ins .agh-a .mr>.i{grid-column:3;grid-row:1/3}
+ .ins .agh-a .mr .t small{white-space:normal}
+}
+
+/* A · a bit more «wow» (Denis 2026-10-26): tab breaks the top edge, tinted
+   left panel with two faint trace lines, bigger number, glowing marker */
+.ins .agh-a{overflow:visible;position:relative;margin-top:14px}
+.ins .agh-tab{position:absolute;top:-13px;left:26px;z-index:2;display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 12px 0 10px;border-radius:99px;background:var(--ink);color:var(--surface);font-size:11px;font-weight:650;letter-spacing:.12em;text-transform:uppercase;box-shadow:0 6px 16px -8px rgba(10,22,51,.45)}
+.ins .agh-tab .i{color:var(--blue-soft)}
+.ins .agh-a .l{position:relative;overflow:hidden;border-radius:22px 0 0 22px;padding-top:38px;background:radial-gradient(90% 70% at 15% 10%,color-mix(in srgb,var(--blue) 12%,transparent) 0%,transparent 70%),linear-gradient(165deg,var(--blue-tint) 0%,var(--surface) 75%)}
+.ins .agh-a .l>*{position:relative}
+.ins .agh-trace{position:absolute!important;inset:0;width:100%;height:100%;pointer-events:none}
+.ins .agh-trace path{fill:none;stroke:var(--blue);stroke-width:1;opacity:.14;vector-effect:non-scaling-stroke}
+.ins .agh-trace path+path{opacity:.08;stroke-dasharray:2 5}
+.ins .agh-a .big{font-size:132px;font-weight:200;letter-spacing:-.065em;margin-top:2px;color:var(--ink)}
+.ins .agh-a .agh-sc{height:8px;border-radius:4px;margin-top:18px}
+.ins .agh-a .agh-sc .f{border-radius:4px;background:linear-gradient(90deg,var(--blue-soft),var(--blue))}
+.ins .agh-a .agh-sc .mk{width:16px;height:16px;border-width:3px;box-shadow:0 0 0 6px color-mix(in srgb,var(--blue) 14%,transparent)}
+.ins .agh-a .agh-sc .gl{top:-24px;padding:1px 7px;border-radius:99px;background:var(--surface);box-shadow:0 0 0 1px var(--blue-soft);font-size:11px}
+.ins .agh-a .r{border-radius:0 22px 22px 0}
+@media(max-width:1000px){.ins .agh-a .l{border-radius:22px 22px 0 0}.ins .agh-a .r{border-radius:0 0 22px 22px}}
+@media(max-width:760px){.ins .agh-a .big{font-size:96px}.ins .agh-tab{left:16px}}
+
+/* --- screens/overview.css --- */
+/* agentic + seo */
+.ins .ag:not(.src){display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center}
+.ins .ag:not(.src)>*,.ins .ag:not(.src) .rows>div>*{min-width:0}
+.ins .ag:not(.src) svg.tring{width:120px;height:120px;display:block}
+.ins .ag:not(.src) .rows>div{display:grid;grid-template-columns:110px 1fr 46px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
+.ins .ag:not(.src) .rows .tk{height:9px;gap:2px}
+.ins .ag:not(.src) .rows b{font-weight:600;text-align:right;font-size:13px}
+.ins .ag:not(.src) .rows b small{color:var(--ink-3);font-weight:400}
+.ins .note{font-size:12px;color:var(--ink-3);margin-top:14px;display:flex;gap:6px;align-items:center}
+.ins .fixln{display:flex;align-items:center;gap:10px;margin-top:14px;padding:11px 12px;border-radius:12px;background:var(--surface-2);font-size:13px}
+.ins .fixln .sd{width:7px;height:7px;border-radius:50%;background:var(--warm);flex:none}
+.ins .fixln .i{margin-left:auto;color:var(--ink-3)}
+.ins .seo3{display:grid;grid-template-columns:repeat(3,1fr)}
+.ins .seo3.two{grid-template-columns:1fr 1fr}
+.ins .seo3>div{padding:4px 22px 6px;border-right:1px solid var(--rule)}
+.ins .seo3>div:first-child{padding-left:0}
+.ins .seo3>div:last-child{border-right:0;padding-right:0}
+.ins .seo3 .k{font-size:12.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.ins .seo3 .k svg{width:13px;height:13px}
+.ins .seo3 .bv{font-size:34px;font-weight:300;letter-spacing:-.04em;line-height:1;margin-top:8px}
+.ins .seo3 .bv small{font-size:13px;color:var(--ink-3);letter-spacing:0}
+.ins .trio{display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--ink-3)}
+.ins .trio b{display:block;font-size:18px;font-weight:500;color:var(--ink)}
+
+.ins .ag:not(.src) .rows .tb{margin:0 2px}
+
+/* plan of the week: deep block */
+.ins .planx{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;padding:34px 30px 30px 36px}
+.ins .planx .l{position:relative;z-index:1;display:flex;flex-direction:column}
+.ins .planx .ey{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--d-ink-3);font-weight:650;display:flex;align-items:center;gap:8px}
+.ins .planx .ey .i{width:14px;height:14px;color:#8fb2ff}
+.ins .planx .upto{font-size:15px;color:var(--d-ink-2);margin-top:22px}
+.ins .planx .big{font-size:96px;font-weight:300;letter-spacing:-.055em;line-height:.95;color:#fff;margin-top:4px;display:flex;align-items:baseline}
+.ins .planx .big small{font-size:24px;letter-spacing:0;color:var(--d-ink-2);margin-left:6px}
+.ins .planx .s{font-size:14.5px;color:var(--d-ink-2);margin-top:12px;max-width:280px}
+.ins .planx .btn{margin-top:auto;align-self:flex-start}
+.ins .planx .l .meta{display:flex;gap:18px;margin:26px 0 28px;font-size:12.5px;color:var(--d-ink-3)}
+.ins .planx .l .meta b{display:block;font-size:20px;font-weight:400;color:#fff;letter-spacing:-.02em}
+.ins .planx .r{position:relative;z-index:1;border-left:1px solid var(--d-rule);padding-left:18px}
+@media (max-width:760px){
+ .ins .ag:not(.src){grid-template-columns:minmax(0,1fr)}
+ .ins .ag:not(.src) svg.tring{margin:0 auto}
+ .ins .ag:not(.src) .rows>div{grid-template-columns:100px 1fr 40px}
+ .ins .seo3,.ins .seo3.two{grid-template-columns:minmax(0,1fr)}
+ .ins .seo3>div{padding:14px 0;border-right:0;border-bottom:1px solid var(--rule-2)}
+ .ins .seo3>div:last-child{border-bottom:0}
+ .ins .planx{grid-template-columns:1fr;padding:24px 18px 18px;gap:8px}
+ .ins .planx .big{font-size:72px}
+ .ins .planx .r{border-left:0;border-top:1px solid var(--d-rule);padding:10px 0 0}
+ .ins .planx .btn{margin-top:0}
+ .ins .planx .l .meta{margin:20px 0}
+ .ins .deep .arc{width:300px;height:300px;left:auto;right:-170px;bottom:auto;top:-150px;opacity:.22}
+}
+
+/* ===== plan of the week: three sober options ===== */
+.ins .pv-ey{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+.ins .pv-src{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);font-weight:550}
+.ins .pv-src::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.ins .pv-src.google::before{background:var(--pos)}
+.ins .pv-src.agent::before{background:var(--warm)}
+.ins .pv-pt{font-size:15px;font-weight:600;color:var(--blue-ink);white-space:nowrap}
+.ins .pv-pt.q{font-size:12.5px;font-weight:500;color:var(--ink-3)}
+.ins .pv-t{font-size:15px;line-height:1.45;color:var(--ink);display:block}
+.ins .pv-t code.p{font-size:.92em}
+.ins .pv-m{display:block;margin-top:5px}
+.ins .pv-prog{display:flex;align-items:center;gap:4px}
+.ins .pv-prog i{width:22px;height:4px;border-radius:2px;background:var(--tick-off)}
+.ins .pv-prog i.on{background:var(--pos)}
+.ins .pv-prog span{margin-left:8px;font-size:12.5px;color:var(--ink-3)}
+.ins .pv a{color:inherit;text-decoration:none}
+
+/* 1 · Hoja: a paper card with an ink top rule; the big number is the break */
+.ins .pv1{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);background:linear-gradient(160deg,var(--blue-tint) 0%,color-mix(in srgb,var(--blue-tint) 55%,var(--surface)) 100%);border:1px solid var(--rule);border-top:3px solid var(--ink);border-radius:6px 6px 22px 22px;box-shadow:var(--shadow)}
+.ins .pv1 .pv-l{padding:30px 30px 28px;display:flex;flex-direction:column;gap:14px;border-right:1px solid var(--rule)}
+.ins .pv1 .pv-big{font-size:88px;font-weight:250;letter-spacing:-.055em;line-height:.9;color:var(--ink);margin-top:6px;display:flex;align-items:baseline}
+.ins .pv1 .pv-big small{font-size:22px;letter-spacing:0;color:var(--ink-3);margin-left:6px;font-weight:400}
+.ins .pv1 .pv-s{font-size:14px;color:var(--ink-2);max-width:260px}
+.ins .pv1 .btn{align-self:flex-start;margin-top:auto}
+.ins .pv1 .pv-list{list-style:none;padding:10px 26px}
+.ins .pv1 .pv-list li+li{border-top:1px solid var(--rule-2)}
+.ins .pv1 .pv-list a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;padding:18px 4px;align-items:baseline;transition:background var(--d1)}
+.ins .pv1 .pv-list a:hover .pv-t{color:var(--blue-ink)}
+.ins .pv1 .pv-n{font-size:13px;color:var(--ink-4);font-weight:600}
+
+/* 2 · Tinte azul: the only tinted surface on the page; rows are white sheets */
+
+/* 3 · Columnas: no card, ink rules above and below, four actions across */
+
+@media (max-width:760px){
+ .ins .pv1{grid-template-columns:minmax(0,1fr)}
+ .ins .pv1 .pv-l{border-right:0;border-bottom:1px solid var(--rule);padding:22px 18px}
+ .ins .pv1 .pv-big{font-size:68px}
+ .ins .pv1 .pv-list{padding:4px 14px}
+ .ins .pv1 .pv-list a{grid-template-columns:26px minmax(0,1fr);row-gap:4px}
+ .ins .pv1 .pv-list .pv-pt{grid-column:2}
+}
+
+.ins .pv1 .pv-l{border-right-color:color-mix(in srgb,var(--blue-soft) 60%,transparent)}
+.ins .pv1 .pv-list li+li{border-top-color:color-mix(in srgb,var(--blue-soft) 45%,transparent)}
+.ins .pv1 .pv-list a{border-radius:10px}
+.ins .pv1 .btn.line{background:var(--surface)}
+.ins .pv1 .pv-prog i:not(.on){background:color-mix(in srgb,var(--blue-soft) 70%,transparent)}
+:root[data-theme="dark"] .ins .pv1{background:linear-gradient(160deg,color-mix(in srgb,var(--blue-tint) 55%,var(--surface)) 0%,var(--surface) 100%)}
+
+/* ---- Overview hero, same treatment as Visibilidad en agentes option A (Denis 2026-10-27) ---- */
+.ins .ov-h .agh-sc .bd{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--surface);z-index:1}
+.ins .ov-h .agh-sc .mk{z-index:2}
+.ins .ov-bands{display:flex;margin-top:10px;font-size:11px;color:var(--ink-4);letter-spacing:.02em}
+.ins .ov-bands span{padding-left:2px}
+.ins .ov-bands .on{color:var(--blue-ink);font-weight:650}
+.ins .ov-h .gn{margin-top:22px}
+.ins .ov-h .gn .up{display:inline-flex;align-items:center;gap:3px;color:var(--pos);font-weight:600}
+.ins .ov-h .r{display:flex;flex-direction:column}
+.ins .ov-h .evo{margin-top:12px;min-height:0;flex:none}
+.ins .ov-h .rh.sub{margin-top:18px}
+.ins .ov-h .er{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 64px 14px;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--rule-2)}
+.ins .ov-h .er .t{display:flex;align-items:center;gap:9px;min-width:0}
+.ins .ov-h .er .t b{font-size:14.5px;font-weight:550}
+.ins .ov-h .bb{height:6px;border-radius:3px;background:var(--rule-2);overflow:hidden}
+.ins .ov-h .bb i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue-soft),var(--blue))}
+.ins .agh-a.ov-h .er .m{font-size:22px;font-weight:300;letter-spacing:-.03em;text-align:right;color:var(--ink)}
+.ins .ov-h .er .m small{font-size:12px;color:var(--ink-3);letter-spacing:0}
+.ins .ov-h .er>.i{color:var(--ink-4)}
+.ins .ov-h .er:hover .t b{color:var(--blue-ink)}
+@media(max-width:760px){.ins .ov-h .er{grid-template-columns:minmax(0,1fr) 64px 56px 14px;gap:10px}.ins .agh-a.ov-h .bb,.ins .agh-a.ov-h .er .m,.ins .agh-a.ov-h .er>.i{grid-column:auto;grid-row:auto}.ins .ov-h .er .t b{font-size:14px}}
+.ins .ov-h h2{margin-top:30px}
+.ins .agh .rh.ev{border-bottom:0;padding-bottom:0}
+/* Plan list on white (Denis 2026-10-27): the tinted half stays on the left */
+.ins .pv1 .pv-list{background:var(--surface);border-radius:0 5px 21px 0}
+.ins .pv1 .pv-list li+li{border-top-color:var(--rule-2)}
+@media(max-width:1000px){.ins .pv1 .pv-list{border-radius:0 0 21px 21px}}
+/* Agentic + SEO pair: the recommendation row sits at the foot of both cards (Denis 2026-10-27) */
+.ins .ov-pair>.card{display:flex;flex-direction:column}
+.ins .ov-pair>.card>.card-b{flex:1;display:flex;flex-direction:column}
+.ins .ov-pair .fx-w{margin-top:auto;padding-top:18px}
+.ins .ov-pair .fx-w .fixln{margin-top:0}
+.ins .ov-pair .fx-k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:650;color:var(--ink-3);margin-bottom:8px}
+/* "Descargar informe": on the greeting line on desktop, its own row on mobile (Denis 2026-10-27) */
+.ins .ov-rep-m{display:none}
+@media(max-width:760px){.ins .ov-rep-d{display:none}.ins .ov-rep-m{display:flex}}
+
+/* ---- F3 additions (log §352): what prod needs that the prototype's fiction did not ---- */
+.ins .ov-h .gn .dn{display:inline-flex;align-items:center;gap:3px;color:var(--warm);font-weight:600}
+.ins .ov-nudge{font-size:13px;color:var(--ink-3);margin-top:12px;max-width:420px}
+.ins .rank-h.no-avg,.ins .rank.no-avg .rk{grid-template-columns:52px minmax(0,1fr) 110px}
+.ins .rank.no-avg .rk .tb{grid-column:2/4}
+.ins .rk .thin{font-size:11px;color:var(--ink-3);font-weight:500;white-space:nowrap}
+.ins .rk.gap{margin-top:8px;border-top:1px dashed var(--rule)}
+.ins .seo3.one{grid-template-columns:minmax(0,1fr)}
+.ins .ov-quiet{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:22px}
+.ins .ov-quiet h3{font-size:15px;font-weight:600}
+.ins .ov-quiet p{font-size:13.5px;color:var(--ink-3);max-width:520px}
+.ins .ov-quiet .btn{margin-top:6px}
+.ins .ov-note{font-size:13px;color:var(--ink-3)}
+.ins .ins-skel-line{display:block;border-radius:6px;background:var(--rule-2);animation:ins-skel 1.6s var(--std) infinite}
+@keyframes ins-skel{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ins .ins-skel-line{animation:none}}
+.ins .ov-fb{margin-top:20px;padding:12px 16px;border-radius:12px;background:var(--warm-tint);color:var(--ink);font-size:13.5px}
+.ins .ov-fb.err{background:var(--warm-tint)}
+.ins .ov-fb.ok{background:var(--pos-tint)}
+.ins .ov-fb a{font-weight:600;text-decoration:underline}
+.ins .ov-state{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:34px 30px;margin-top:28px}
+.ins .ov-state h2{font-size:22px;font-weight:400;letter-spacing:-.02em;line-height:1.25;max-width:440px}
+.ins .ov-state p{font-size:14.5px;color:var(--ink-2);max-width:480px}
+.ins .ov-state .note{margin-top:4px}
+.ins .ag:not(.src) .rows .tb.warm{--c:var(--warm)}
+.ins .ag-up p{font-size:14.5px;color:var(--ink-2);max-width:460px;margin-top:6px}
+.ins .ag-up .btn{margin-top:14px}
