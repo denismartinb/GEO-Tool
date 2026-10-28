@@ -104,15 +104,20 @@ propia marca cuando caía fuera del top 5.
   el titular dice "No apareciste en este escaneo" y eso basta (decisión
   explícita del fundador, 2026-08-07: *"En el D que lo diga el titular. No
   hace falta la fila al final"*).
-- **La lista muestra un ranking 1..N sin repetidos, no la media en crudo.** El
-  dato de fondo sigue siendo `avg_position_when_mentioned`, pero una media casi
-  nunca vale 1,00, así que enseñarla hacía que la lista pareciera no tener a
-  nadie en primera posición (log §15). **Empates: desempata la tasa de mención**
-  (a igual puesto medio, quien sale en más respuestas va antes), y el nombre
-  como último criterio sólo para que el orden sea estable entre renders. El
-  porcentaje que desempata se muestra en la fila, para que el criterio sea
-  visible y no arbitrario.
+- **La lista se ordena por tasa de mención, y la columna «Puesto medio» enseña
+  la media real** (COMPETITOR-RANK-VISIBILITY-1, 2026-10-28, log §353;
+  sustituye al orden por puesto medio de §15/§175/§177). El puesto medio sólo
+  promedia las respuestas donde sale la marca, así que ordenar por él puso a
+  una marca nombrada en el 19% de las respuestas por delante de la propia,
+  nombrada en el 95% («no tiene sentido», fundador). Y la columna pintaba el
+  número de fila (1º, 2º, 3º…), no la media. Ahora: mención descendente, el
+  puesto medio desempata, el nombre sólo da estabilidad. La columna usa
+  `formatMeanPosition` («1,4»), nunca `rank` con «º»: `rank` es el puesto en
+  esta lista. Lo mismo en el titular de Visión general («Tu puesto medio
+  cuando apareces»), que enseña la media de la marca.
 - **Una media sobre pocas respuestas no adelanta a una media sobre muchas.**
+  (Desde §353 el orden por mención ya la deja abajo; `qualified` sigue
+  marcando «pocas menciones» porque su media descansa en poca muestra.)
   `avg_position_when_mentioned` no dice sobre cuántas respuestas promedia, así
   que comparar n=1 con n=26 no es un matiz: Euskaltel salió UNA vez en 30, fue
   primero en esa respuesta y encabezó las dos pantallas con un 1,00, por delante
