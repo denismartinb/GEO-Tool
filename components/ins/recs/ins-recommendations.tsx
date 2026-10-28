@@ -375,10 +375,7 @@ export function InsRecommendations({
                 }
               >
                 <Ic n="focus" sm />
-                <span>
-                  Recorrer <span className="num">{filtered.length}</span> en
-                  foco
-                </span>
+                <span>Ver pendientes</span>
               </button>
             </div>
           </div>
@@ -512,16 +509,6 @@ export function InsRecommendations({
                             <span className="im num q">
                               {g.items[0].impactWord}
                             </span>
-                          )}
-                          {lever === g.key ? null : (
-                            <button
-                              type="button"
-                              className="btn sm line"
-                              onClick={() => openFocus(g.label, g.items)}
-                            >
-                              <Ic n="focus" sm />
-                              Abrir en foco
-                            </button>
                           )}
                         </div>
                         {lever === g.key || !g.description ? null : (

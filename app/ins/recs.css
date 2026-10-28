@@ -33,7 +33,9 @@
 @media (max-width:760px){
  .ins .focus .fh .ctl{display:none}
  .ins .focus .fb{padding:14px 16px 40px}
- .ins .toolbar .btn{width:100%;justify-content:center}
+ .ins .lfilters .toolbar{flex-wrap:nowrap;gap:8px}
+ .ins .lfilters .toolbar .search{min-width:0;max-width:none;flex:1 1 auto}
+ .ins .lfilters .toolbar .btn{width:auto;flex:none;justify-content:center}
 }
 .ins .dk-act .donebar{flex:1;max-width:460px}
 .ins .lrow .donebar{display:inline-flex}
