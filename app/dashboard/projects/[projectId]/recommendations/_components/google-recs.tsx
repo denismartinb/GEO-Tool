@@ -37,7 +37,7 @@ type SlotProps = {
  * One Google read per request, shared by the plan slot and the carousel
  * (React `cache`, keyed on the same arguments both slots receive).
  */
-const loadGoogleRecs = cache(
+export const loadGoogleRecs = cache(
   async (
     projectId: string,
     ownerUserId: string,

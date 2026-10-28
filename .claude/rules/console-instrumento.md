@@ -41,3 +41,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   sin aprobación.
 - **La niebla (`fx.ts`) es ambiente**: no representa progreso ni datos, se
   detiene al desmontar y respeta `prefers-reduced-motion`.
+
+## Visión general (F3a, log §352)
+
+- **El plan replica a Recomendaciones** (`buildOverviewPlan`: `selectPlan` sobre
+  palancas colapsadas, techo conjunto); con Google conectado su tarjeta ocupa
+  el puesto 2. No se calcula otro plan por su cuenta.
+- **Un solo sondeo por pantalla**: `LiveScanCard` es dueña del
+  `router.refresh()`. No montes un segundo poller.
+- **Las puertas de honestidad no se tocan** (muestra mínima, runs comparables,
+  ventana de la puntuación, afirmación competitiva): lo retenido sigue retenido.
+- **El anillo del kit usa la clase `tring`**, nunca `ring` (utilidad global).

@@ -39,8 +39,10 @@ describe("first-scan mission — the six screens agree", () => {
       // `.mrk-fill` is what turns `.page` into the flex column the mission
       // fills; without it the scene stops at its own min-height cap with grey
       // page underneath (the Prompts bug, but reachable from any of the six).
+      // Overview (F3a) returns early with a literal `page mrk-fill` while the
+      // mission shows; the other five keep the conditional class.
       expect(src, `${file} must apply mrk-fill to .page while the mission shows`).toMatch(
-        /className=\{`page[^`]*\$\{showMissionTakeover \? " mrk-fill" : ""\}/
+        /className=\{`page[^`]*\$\{showMissionTakeover \? " mrk-fill" : ""\}|className="page mrk-fill"/
       );
     }
   });

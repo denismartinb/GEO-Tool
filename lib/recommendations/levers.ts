@@ -79,7 +79,7 @@ export function leverPointsCaption(theme: LeverTheme): string {
 export const DEFINITION_LEVER_NOTE =
   "Son preguntas de definición: lo realista es que te citen, no que te nombren.";
 
-type LeverEvidence = {
+export type LeverEvidence = {
   query_shape?: unknown;
   affected_prompt_ids?: unknown;
 } | null | undefined;

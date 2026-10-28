@@ -27289,3 +27289,38 @@ nueva, que necesita aprobación. MFA se verificó por código y con los mismos
 componentes; ver la pantalla real exige sesión de operador. Premisa de
 recuperación: no se retira ningún camino (olvidar contraseña, Google y volver a
 registrarse siguen en pantalla).
+
+## 352. CONSOLE-INSTRUMENTO-1 Fase 3a: Visión general pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Visión general se rehace sobre el prototipo aprobado:
+cabecera con saludo y enlaces, franja de prioridad, hoja de puntuación con
+traza, escala por bandas y evolución, KPIs, plan de acción, desglose,
+ranking y el par Comercio agéntico + Auditoría SEO (con la mitad de Google).
+Solo cambia el aspecto y la composición: consultas, umbrales de muestra,
+ventana de la puntuación, afirmación competitiva y puertas de honestidad no se
+tocan; una cifra retenida sigue retenida.
+
+**Cómo.** `app/ins/overview.css`, `components/ins/kit/` (motor, Roll, barras,
+gráficos, `PendulumWave`), `components/ins/overview/` (bloques, tarjeta de
+escaneo en vivo, bloque del plan) y `lib/ins/overview-{copy,plan}.ts`. El
+anillo del kit usa la clase `tring` porque `.ring` choca con una utilidad
+global.
+
+**Decisiones.**
+- El plan replica el de Recomendaciones (`selectPlan` sobre palancas
+  colapsadas, techo conjunto de ADR 0017); con Search Console conectado una
+  tarjeta de Google ocupa el puesto 2. El texto de cada fila es el título de
+  la recomendación o de la palanca, no el paso imperativo del prototipo.
+- Un solo sondeo por pantalla: `LiveScanCard` es dueña del `router.refresh()`.
+- Sin datos de posición, el ranking pasa a tres columnas en vez de inventarlas.
+
+**Premisa de recuperación.** Se retira `ScanReportControl` (pastilla y hoja
+inferior de estado de escaneo). Premisa: el estado del escaneo vive en la
+pastilla del marco (F1) y en `LiveScanCard`. Si el marco no la mostrase, esta
+pantalla seguiría enseñando el escaneo vivo en su tarjeta.
+
+**Pendiente / roto conocido.** Sin ticks «N de M hechas» en el plan; sin
+sparklines en los KPIs (no hay histórico real por KPI); la tarjeta SEO enseña
+solo la primera recomendación, como el prototipo; el panel de invitación a
+Google reutiliza CSS anterior; la misión del primer escaneo y el alta de
+dominio son la Fase 3b.
