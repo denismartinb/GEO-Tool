@@ -40,7 +40,7 @@ export default function ObservatorioPage() {
 
       <div className="blog-body">
         <KeyTakeaway label="Cómo leer esto">
-          Cada edición mide un sector en varias ciudades y publica el resultado agregado: qué negocios nombra la IA y con qué frecuencia. Solo nombramos negocios que la IA recomienda; no publicamos quién no aparece. No es un juicio sobre la calidad de ningún negocio.
+          Cada edición mide un sector en varias ciudades y publica el resultado agregado: qué negocios nombra la IA y con qué frecuencia. Solo nombramos negocios que aparecen en las respuestas medidas; no publicamos quién no aparece. No es un juicio sobre la calidad de ningún negocio.
         </KeyTakeaway>
 
         <h2>Sectores medidos</h2>
