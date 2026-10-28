@@ -27187,6 +27187,144 @@ en §341.
 
 **Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
 
+## 349. CONSOLE-INSTRUMENTO-1 Fase 0: fundación del sistema «Instrumento» (2026-10-27)
+
+**Qué.** Denis aprobó (2026-10-27, tarjeta de decisión) implementar la consola
+rediseñada «Instrumento» v51 por fases, un PR por fase (F0 fundación, F1 menú y
+cabecera, F2 acceso «Bruma», F3 Visión general + misión + alta de dominio, F4
+Recomendaciones, F5 Prompts/Competidores/Páginas citadas, F6 Auditoría técnica
+y Posición en Google, F7 Comercio agéntico, F8 Perfil/plan/tour/404). Task
+Intake en `rediseno-consola/implementacion/task-intake-consola-instrumento.md`.
+Fuente de verdad: `docs/design-reference/console-instrumento-1/` (HTML v51 +
+`i-src/` + inventarios de copy). El prototipo usa la marca ficticia Nubaria:
+se mantienen los datos reales.
+
+**F0 (este PR, sin cambio visible).** Tokens y componentes compartidos
+portados de `i-src/css` a `app/ins/tokens.css` y `app/ins/components.css`,
+**acotados** a `.ins` (pantallas ya migradas) y `.ins-shell` (marco): el blog,
+la landing y las pantallas aún sin migrar no los ven. Las animaciones se
+renombran `ins-*` para no pisar las de `globals.css`. `lib/ins/theme.ts`
+fija el tema.
+
+**Decisión de Denis: modo claro por defecto.** El oscuro solo existe si la
+persona lo elige (`data-theme="dark"` en `<html>`, guardado en
+`localStorage`); nunca se sigue `prefers-color-scheme`. El selector de tema no
+se publica hasta que todas las pantallas estén migradas (F8): una pantalla
+antigua en oscuro saldría ilegible.
+
+**Pendiente / roto conocido.** Nada de la consola usa todavía `.ins`. Cada
+fase retira las hojas antiguas de las pantallas que migra.
+
+## 350. CONSOLE-INSTRUMENTO-1 Fase 1: el marco «Instrumento» sustituye al menú y la cabecera (2026-10-27)
+
+**Qué.** El marco de toda la consola (`app/dashboard/layout.tsx`) pasa a
+`components/ins/shell.tsx`: menú lateral en cuatro bloques sin título para los
+dos primeros (Visión general, Recomendaciones), «En la IA», «En Google» y
+«Comercio agéntico» con «Nuevo»; selector de dominio (`DomainSwitcherPanel`),
+cabecera con migas, búsqueda ⌘K y campana, cajón móvil con cabecera de 64 px,
+menú de ayuda (tour, videollamada, Manuales y estudios), menú de cuenta
+(perfil, notificaciones, ¿Cómo funciona?, afiliados, cerrar sesión), pila de
+avisos y paleta de comandos. Capa de popovers/diálogos/hojas inferiores propia
+(`components/ins/layer.tsx`). Solo cambia el aspecto: las consultas del layout,
+la lógica de carriles de la campana (§297) y el plan por dominio no se tocan.
+
+**Datos reales, no los de Nubaria.** El pie del menú enseña el correo (no hay
+nombre de perfil: guardarlo necesita migración y queda para F8, con aprobación).
+La puntuación y la banda de cada dominio salen de `latestScoreByProject`
+(`lib/ins/band.ts`: ≥70 Competitivo, ≥40 Emergente, resto Inicial); el límite
+del plan, de `plan.caps.projects`. El punto cálido de «Auditoría técnica» del
+prototipo no se pinta: no hay dato que lo justifique todavía.
+
+**Decisiones de implementación.**
+- El scrim del cajón es `.ins-scrim`, no `.drawer-scrim`: ese nombre ya lo usa
+  el cajón de Prompts en `globals.css` y chocaban.
+- Los resets del marco se escriben con `:where(...)` para quedar por debajo de
+  cualquier regla de componente; con `:is(...)` el reset de `button` pisaba el
+  borde de `.proj`.
+- `.fav` pasa de `console.css` a `globals.css` porque `components/ins` lo usa
+  fuera de `app/dashboard` (`tests/console-css-scope.test.ts`).
+- El piloto: `core-flow` deja de comprobar el cristal de HEADER-FLAT-1 (la
+  cabecera nueva no cambia al desplazar) y comprueba que el marco y
+  `.dash-content` existen; `domains-selection` lee el selector nuevo.
+
+**Pendiente / roto conocido.** `components/sidebar.tsx`, `workspace-topbar.tsx`,
+`console-header.tsx` y `mobile-shell.tsx` ya no se montan pero siguen en el
+repo (`tests/search-seo-nav.test.ts` lee el primero); se retiran con sus hojas
+en F8, cuando todas las pantallas estén migradas. Las pantallas aún sin migrar
+corren dentro del marco nuevo con su estilo antiguo. Premisa de recuperación:
+no se retira ningún camino (todas las entradas del menú anterior existen en el
+nuevo; «Gestionar» sigue llevando a `/dashboard/domains`).
+
+## 351. CONSOLE-INSTRUMENTO-1 Fase 2: el acceso pasa a «Bruma» (2026-10-27)
+
+**Decisión.** Inicio de sesión, alta, recuperar contraseña, confirmación de
+correo y verificación en dos pasos (MFA, desafío y alta) adoptan el acceso
+«Bruma» del prototipo aprobado: lienzo de niebla ambiente, marca, titular y
+formulario en dos pasos (correo, luego contraseña). Es la única pantalla de
+acceso (decisión de Denis, plan de 9 fases). Solo cambia el aspecto: las
+acciones de servidor (`login`, `signup`, `signInWithGoogle`, `sendOtpAction`,
+`verifyOtpAction`, `updatePasswordAction`, `verifyChallenge`,
+`verifyEnrollment`, `regenerateEnrollment`, `signOut`) y sus reglas no se
+tocan.
+
+**Cómo.** `app/ins/auth.css` (acotado a `.ins`, animaciones `ins-au*`),
+`components/ins/auth/` (`fx.ts` con el efecto de niebla portado del prototipo,
+`shell`, `page`, `parts`, `entry-form`). Las páginas de acceso viven fuera del
+layout de la consola, así que importan por su cuenta tokens, componentes y la
+hoja de acceso. La niebla es solo ambiente: no codifica ningún dato, se para al
+desmontarse y con `prefers-reduced-motion` queda quieta.
+
+**Decisiones de implementación.**
+- El paso 1 (correo) se valida en el cliente y no llama al servidor; el paso 2
+  envía la acción real. Los errores del servidor llegan por `?error=` como
+  antes y se pintan en `.au-fail`.
+- El alta lleva un `confirmPassword` oculto igual a la contraseña, porque la
+  acción lo exige y el prototipo tiene un solo campo.
+- La línea legal del alta usa la redacción del prototipo y mantiene la
+  información de EMAIL-UNSUB-1 (correos de cuenta y consejos, baja posible).
+
+**Pendiente / roto conocido.** «¿No te ha llegado?» de la confirmación enlaza
+a volver a registrarse: reenviar el correo exigiría una acción de servidor
+nueva, que necesita aprobación. MFA se verificó por código y con los mismos
+componentes; ver la pantalla real exige sesión de operador. Premisa de
+recuperación: no se retira ningún camino (olvidar contraseña, Google y volver a
+registrarse siguen en pantalla).
+
+## 352. CONSOLE-INSTRUMENTO-1 Fase 3a: Visión general pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Visión general se rehace sobre el prototipo aprobado:
+cabecera con saludo y enlaces, franja de prioridad, hoja de puntuación con
+traza, escala por bandas y evolución, KPIs, plan de acción, desglose,
+ranking y el par Comercio agéntico + Auditoría SEO (con la mitad de Google).
+Solo cambia el aspecto y la composición: consultas, umbrales de muestra,
+ventana de la puntuación, afirmación competitiva y puertas de honestidad no se
+tocan; una cifra retenida sigue retenida.
+
+**Cómo.** `app/ins/overview.css`, `components/ins/kit/` (motor, Roll, barras,
+gráficos, `PendulumWave`), `components/ins/overview/` (bloques, tarjeta de
+escaneo en vivo, bloque del plan) y `lib/ins/overview-{copy,plan}.ts`. El
+anillo del kit usa la clase `tring` porque `.ring` choca con una utilidad
+global.
+
+**Decisiones.**
+- El plan replica el de Recomendaciones (`selectPlan` sobre palancas
+  colapsadas, techo conjunto de ADR 0017); con Search Console conectado una
+  tarjeta de Google ocupa el puesto 2. El texto de cada fila es el título de
+  la recomendación o de la palanca, no el paso imperativo del prototipo.
+- Un solo sondeo por pantalla: `LiveScanCard` es dueña del `router.refresh()`.
+- Sin datos de posición, el ranking pasa a tres columnas en vez de inventarlas.
+
+**Premisa de recuperación.** Se retira `ScanReportControl` (pastilla y hoja
+inferior de estado de escaneo). Premisa: el estado del escaneo vive en la
+pastilla del marco (F1) y en `LiveScanCard`. Si el marco no la mostrase, esta
+pantalla seguiría enseñando el escaneo vivo en su tarjeta.
+
+**Pendiente / roto conocido.** Sin ticks «N de M hechas» en el plan; sin
+sparklines en los KPIs (no hay histórico real por KPI); la tarjeta SEO enseña
+solo la primera recomendación, como el prototipo; el panel de invitación a
+Google reutiliza CSS anterior; la misión del primer escaneo y el alta de
+dominio son la Fase 3b.
+
 ## 353. COMPETITOR-RANK-VISIBILITY-1: la lista de competidores se ordena por mención y enseña el puesto medio real (2026-10-28)
 
 **Qué.** `rankLatestPositions` (`lib/competitors/latest-positions.ts`), que
@@ -27259,6 +27397,137 @@ escritorio) con «Adelante».
 - La consola nueva (CONSOLE-INSTRUMENTO-1, PR #681) debe leer
   `recommendationHeadline` en su plan y sus tarjetas en vez de `title`.
 - Diseño aprobado: `docs/design-reference/recs-headlines-1/`.
+
+## 355. CONSOLE-INSTRUMENTO-1 Fase 3b: la misión del primer escaneo pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla que ocupa las seis secciones durante el primer escaneo de
+un dominio deja el cohete y adopta la del prototipo aprobado: marco propio sin
+menú, contador de respuestas con su «de N», fila de puntos, un péndulo por
+motor (ambiente, nunca progreso), cinco fases y nota final. Es la misma
+pantalla en las seis secciones, como exigía ANIMATION-PARITY-1 (§168).
+
+**Cómo.** `components/ins/mission/first-scan-mission.tsx` sustituye a
+`scan-mission-rocket.tsx` (borrado, con su test de copy), `app/ins/mission.css`
+(el marco oculta el menú con `:has(.sc-mission)`), `lib/ins/mission-copy.ts` y
+`lib/scan/engine-response-counts.ts`. El sondeo `/scan-status` acepta
+`?engines=` y devuelve `engine_counts`, un recuento por motor de filas con
+respuesta; el resto de sondeos no pagan esas consultas.
+
+**Decisiones.**
+- Las cinco fases son los cinco pasos reales de `computeMissionBeat`, no un
+  reloj. El único reloj sigue siendo el que cambia de escena tras la ignición.
+- El contador son respuestas recibidas sobre lanzamientos por motores mientras
+  responden los motores, y respuestas leídas sobre las de la ejecución en
+  órbita; el rótulo cambia con la unidad. Si no se pudo contar por motor, cae a
+  lanzamientos. Nunca un número estimado.
+- El prototipo tiene «Salir» hacia Visión general, que aquí sería esta misma
+  pantalla; lleva a Ajustes. Pendiente de confirmar con el fundador.
+
+**Pendiente / roto conocido.** El cohete sigue vivo en la 404 y en la
+reentrada de Auditoría web (`ReentryMission`), con la regla
+`mission-rocket.md` reducida a eso; F6 y F8 deciden su destino. Premisa de
+recuperación: se retira el cohete como señal de estado, no un camino. Si el
+sondeo cae, la pantalla se queda en su último dato hasta que vuelva la
+conexión y el vigilante de escaneos sigue avisando al operador.
+
+
+## 356. CONSOLE-INSTRUMENTO-1 Fase 3c: el alta de dominio pasa a «Instrumento» (2026-10-28)
+
+**Qué.** El asistente de nuevo dominio (`/dashboard/projects/new`) adopta la
+pantalla `newdomain` del prototipo aprobado: marco propio sin menú, barra de
+cuatro pasos (Dominio, Competidores, Prompts, Lanzar), resumen lateral que se
+va llenando, lista de carga con los pasos reales y fila de motores del plan con
+«Nuevo» en Perplexity. En móvil el resumen se oculta y los botones ocupan el
+ancho.
+
+**Cómo.** `components/onboarding-wizard.tsx` se reescribe sobre `app/ins/newdomain.css`
+(el marco oculta el menú con `:has(.sc-newdomain)`, como la misión). Conserva
+sin cambios las acciones de servidor (`suggestProjectSetup`,
+`generateMorePrompts`, `createProject`), el dominio que llega de la portada, el
+tope de prompts del plan, los motores reales del plan y los avisos de
+sugerencia vacía (LLM-RESILIENCE-1).
+
+**Decisiones.**
+- Cuatro pasos en vez de tres: el último resume antes de crear; el botón de
+  crear sigue siendo el envío del mismo formulario.
+- Los prompts se agrupan por tema (la categoría que ya devuelve la sugerencia);
+  lo escrito a mano va en «Tuyos». Desmarcar un prompt lo excluye sin perderlo;
+  el tope del plan cuenta sólo los marcados.
+- Se conservan funciones reales que el prototipo no dibuja: editar un
+  competidor o un prompt, añadir un competidor a mano (hasta
+  `MAX_USER_COMPETITORS`, 10, no los 5 del prototipo) y «Generar N más».
+- La cifra «respuestas que leeremos» del prototipo (`prompts × motores × 2`) es
+  inventada: se sustituye por el mercado y no se muestra ninguna estimación.
+- Sin selector de idioma ni «Atrás» de navegador propio: el idioma sigue
+  saliendo de la sugerencia y se enseña en el resumen.
+- El primer dominio de la cuenta no tiene «Salir» (no hay a dónde volver); el
+  resto vuelve a `/dashboard`.
+
+**Pendiente / roto conocido.** Las clases `onb2-*` de `globals.css` y
+`domain-bar`, `country-sel` y `eng-chip` ya no las usa esta pantalla; se
+retiran en F8 junto con el resto de hojas antiguas, porque la portada comparte
+algunas. Sin premisa de recuperación retirada: ningún botón ni salida de error
+desaparece.
+
+## 357. CONSOLE-INSTRUMENTO-1 Fase 4: Recomendaciones pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Recomendaciones se reconstruye sobre el prototipo
+aprobado (v51): cabecera con alerta de bloqueo y sus URL, cuatro pilares, plan
+de la semana como baraja de tarjetas (arrastre, flechas, ticks, deslizar para
+marcar como hecho), «Más adelante» con Pendientes/Resueltas, búsqueda, índice
+de palancas, grupos con «Ver N más» y capa «Recorrer en foco».
+
+**Cómo.** `lib/ins/recs-cards.ts` (puro) unifica recomendación suelta, palanca
+y competidor emergente en un solo modelo `InsCard`; no calcula cifras ni frases
+nuevas, sólo reordena lo que ya decidían `selectPlan`, `recommendationHeadline`,
+`effectiveFirstStep`, los puntos conjuntos y la cobertura. Componentes en
+`components/ins/recs/` y piezas reutilizables en `components/ins/kit/`
+(`Deck`, `SlideToConfirm`, `Seg`, `FocusLayer`). Las acciones de servidor
+(`rewriteRecommendationAction`, `dismissRecommendationAction`,
+`restoreRecommendationAction`, `addEmergingCompetitorAction`) no cambian. La
+tarjeta de Google ocupa el puesto 2 con el mismo reparto de §307
+(`InsGooglePlanCard`).
+
+**Decisiones.**
+- El plan se fija por visita: marcar una tarjeta como hecha no reordena la
+  baraja bajo los dedos de la persona.
+- El «Deshacer» durable vive en «Resueltas» (como en §203); no hay deshacer
+  efímero en la tarjeta activa.
+- El prototipo trae pestañas por fuente (IA/Google/Agentes) y un bloque
+  «Técnico»: no se dibujan, porque §307 decidió una sola cola y lo técnico vive
+  en Auditoría técnica. Tampoco el botón «Descargar informe» de esta pantalla
+  (sigue en Visión general, §250).
+- Se conservan funciones reales que el prototipo no dibuja: copiar el artefacto
+  generado, generar, formulario de competidor emergente, insignia de
+  «reaparece».
+
+**Pendiente / roto conocido.** `RecommendationsClient` y `GooglePlanCard`
+quedan como código muerto hasta F8, junto con las hojas antiguas. Sin premisa
+de recuperación retirada: ningún botón ni salida de error desaparece.
+
+## 358. RECS-NEGATIVE-EVIDENCE-1: la evidencia de «imagen negativa» cita frases reales (2026-10-28)
+
+**Problema.** La tarjeta «Responde a la imagen negativa que da la IA de ti»
+enseñaba en «Evidencia» el nombre de la marca repetido (p. ej. «Movistar
+Prosegur Alarmas» cuatro veces) en vez de lo que la IA dice mal. La regla leía
+`brand.evidence[0]` de la extracción, que sólo recoge dónde se nombra la marca.
+Denis (2026-10-28): las recomendaciones son lo más importante del producto y
+deben ser reales, útiles y listas para aplicar.
+
+**Decisión.**
+- `negativeExcerpts` (`recommendation-engine.ts`) toma de `raw_response_text`
+  de las respuestas con tono negativo o mixto la frase que nombra la marca o un
+  tema recurrente Y contiene una señal de queja. Una frase por respuesta, sin
+  repetir, literal, nunca parafraseada. Sin frase válida no hay citas.
+- `aggregateEvidence` deduplica citas sin distinguir mayúsculas.
+- La pantalla (`CardDetail`) descarta citas de menos de cuatro palabras y
+  repetidas, así que las tarjetas ya guardadas dejan de enseñar el nombre solo
+  sin esperar a un nuevo escaneo.
+- Sin migración ni cambio de extracción.
+
+**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
+pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
+esquema de extracción.
 
 ## 359. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
 

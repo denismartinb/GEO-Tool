@@ -1,0 +1,87 @@
+/* ===== full-screen states (builder C): auth and mission hide the shell ===== */
+.app:has(.sc-full){grid-template-columns:1fr}
+.app:has(.sc-full) .side,.app:has(.sc-full) .drawer-scrim{display:none}
+.main:has(.sc-full){grid-template-rows:1fr}
+.main:has(.sc-full) .top,.main:has(.sc-full) .mtop{display:none}
+.main:has(.sc-full) .pblur.t{top:0}
+.page:has(.sc-full){max-width:none;padding:0;min-height:100%;display:flex;flex-direction:column}
+.sc-full{flex:1;display:flex;flex-direction:column}
+
+/* ===== entry (login, signup, forgot, MFA) ===== */
+.sc-auth{align-items:center;justify-content:center;padding:48px 24px 64px;background:radial-gradient(70% 55% at 50% 0%,var(--blue-tint),transparent 70%),var(--surface)}
+.au-col{width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.au-col>*{animation:auin var(--d4) var(--out) both}
+.au-col>*:nth-child(2){animation-delay:60ms}.au-col>*:nth-child(3){animation-delay:110ms}.au-col>*:nth-child(4){animation-delay:160ms}.au-col>*:nth-child(5){animation-delay:210ms}.au-col>*:nth-child(n+6){animation-delay:260ms}
+@keyframes auin{from{opacity:0;transform:translateY(8px)}}
+.au-t{margin-top:28px;font-size:40px}
+.au-s{font-size:16px;color:var(--ink-2);margin-top:10px;max-width:340px}
+.au-s b{font-weight:600;color:var(--ink)}
+.au-note{display:flex;align-items:center;gap:8px;margin-top:18px;padding:10px 14px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550;width:100%}
+.au-f{width:100%;margin-top:28px;text-align:left;display:grid;gap:14px}
+.au-fld{display:grid;gap:6px}
+.au-fh{display:flex;align-items:baseline;justify-content:space-between;gap:10px;font-size:13px;font-weight:550;color:var(--ink-2)}
+.au-fh a{font-size:12.5px;font-weight:500;color:var(--ink-3)}
+.au-fh a:hover{color:var(--blue)}
+.au-iw{position:relative}
+.au-in{width:100%;height:50px;border:1px solid var(--rule);border-radius:14px;padding:0 16px;font:400 16px var(--font);color:var(--ink);background:var(--surface);transition:border-color var(--d1),box-shadow var(--d1),background var(--d2)}
+.au-in:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.au-in::placeholder{color:var(--ink-4)}
+.au-in[readonly]{background:var(--surface-2);color:var(--ink-2)}
+.au-chg{position:absolute;right:8px;top:50%;transform:translateY(-50%);height:34px;padding:0 10px;border-radius:10px;font-size:13px;font-weight:600;color:var(--blue);opacity:0;pointer-events:none;transition:opacity var(--d2)}
+.au-f[data-step="2"] .au-chg{opacity:1;pointer-events:auto}
+.au-eye{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--ink-3)}
+.au-eye[aria-pressed="true"]{color:var(--blue)}
+.au-err{font-size:12.5px;color:var(--warm);min-height:0}
+.au-err:empty{display:none}
+.au-fld.bad .au-in{border-color:var(--warm);box-shadow:0 0 0 3px var(--warm-tint);animation:aushake var(--d3) var(--std)}
+@keyframes aushake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.au-rv{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--d3) var(--out),opacity var(--d3) var(--std);opacity:0}
+.au-rv>div{overflow:hidden;padding:0 3px;margin:0 -3px}
+.au-f[data-step="2"] .au-rv{grid-template-rows:1fr;opacity:1}
+.au-f[data-step="1"] .au-rv{margin-top:-14px}
+.au-btn{position:relative;display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:50px;border-radius:99px;font-size:15px;font-weight:600;transition:background var(--d1),transform var(--d1)}
+.au-btn:active{transform:scale(.985)}
+.au-p{background:var(--ink);color:var(--surface);margin-top:4px}
+.au-p:hover{background:var(--ink-2)}
+.au-col>.au-p{margin-top:28px}
+.au-p.ok{background:var(--blue);color:#fff}
+.au-g{border:1px solid var(--rule);color:var(--ink);background:var(--surface)}
+.au-g:hover{border-color:var(--ink-4)}
+.au-spin{display:none;width:16px;height:16px;border-radius:50%;border:2px solid currentColor;border-right-color:transparent;animation:auspin .8s linear infinite}
+.au-btn.loading .au-spin{display:block}
+.au-btn:disabled{cursor:default}
+@keyframes auspin{to{transform:rotate(360deg)}}
+.au-or{display:flex;align-items:center;gap:12px;width:100%;margin:18px 0;font-size:12.5px;color:var(--ink-3)}
+.au-or::before,.au-or::after{content:"";flex:1;height:1px;background:var(--rule)}
+.au-alt{font-size:14px;color:var(--ink-3);margin-top:22px}
+.au-alt a{color:var(--ink);font-weight:600;background:linear-gradient(var(--blue),var(--blue)) 0 100%/100% 1px no-repeat}
+.au-legal{font-size:12px;color:var(--ink-3);margin-top:14px;max-width:340px}
+.au-legal a{text-decoration:underline;text-underline-offset:2px}
+.au-dots{display:flex;gap:6px;margin-top:26px}
+.au-dots i{width:22px;height:3px;border-radius:2px;background:var(--tick-off);transition:background var(--d2)}
+.au-dots i.on{background:var(--ink)}
+.au-otp{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;width:100%;margin-top:28px}
+.au-otp input{height:58px;min-width:0;border:1px solid var(--rule);border-radius:14px;text-align:center;font:300 28px var(--font);color:var(--ink);background:var(--surface);font-variant-numeric:tabular-nums}
+.au-otp input:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.au-str{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--pos);font-weight:600}
+.au-str .tb{flex:1;--c:var(--pos)}
+.au-chk{list-style:none;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12.5px;color:var(--ink-3)}
+.au-chk li{display:flex;align-items:center;gap:6px}
+.au-chk li.ok{color:var(--ink-2)}
+.au-chk li.ok .i{color:var(--pos)}
+@media (max-width:760px){
+ .sc-auth{padding:40px 20px 110px;justify-content:flex-start}
+ .au-t{font-size:34px;margin-top:22px}
+ .au-chk{grid-template-columns:1fr}
+}
+
+/* ===== Bruma (chosen by Denis 2026-10-27): the flowing hairlines of
+   Síntesis 4's sign-in, barely there behind the form ===== */
+.sc-auth{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(135deg,color-mix(in oklab,var(--surface) 92%,var(--blue-tint)),var(--surface) 55%,color-mix(in oklab,var(--surface) 90%,var(--surface-2)))}
+.au-cv{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+.au-col{position:relative;z-index:2;background:radial-gradient(closest-side,color-mix(in oklab,var(--surface) 80%,transparent),transparent);padding:24px 0;border-radius:40px}
+.au-lock{display:flex;align-items:center;gap:9px;font-weight:700;font-size:17px;letter-spacing:-.025em;color:var(--ink)}
+.au-lock svg{width:26px;height:27px}
+.sc-auth .au-t{margin-top:30px;font-size:36px;letter-spacing:-.035em}
+.sc-auth .au-dots{display:none}
+@media (max-width:760px){.sc-auth .au-t{font-size:30px;margin-top:22px}}
