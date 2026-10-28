@@ -1,7 +1,11 @@
 import type { CSSProperties } from "react";
 
 /** Axis range and gridlines for a 0-100 series: round numbers a little outside the data. */
-export function chartRange(vals: readonly number[]): { min: number; max: number; grid: number[] } {
+export function chartRange(vals: readonly number[]): {
+  min: number;
+  max: number;
+  grid: number[];
+} {
   const lo = Math.min(...vals);
   const hi = Math.max(...vals);
   const span = hi - lo;
@@ -21,7 +25,7 @@ export function LineChart({
   dates,
   label,
   w = 560,
-  h = 170
+  h = 170,
 }: {
   vals: readonly number[];
   dates: readonly string[];
@@ -49,7 +53,13 @@ export function LineChart({
       ))}
       {vals.map((_, i) => (
         <g key={`x${i}`}>
-          <line x1={X(i)} x2={X(i)} y1={h - B} y2={h - B + 5} stroke="var(--ink-4)" />
+          <line
+            x1={X(i)}
+            x2={X(i)}
+            y1={h - B}
+            y2={h - B + 5}
+            stroke="var(--ink-4)"
+          />
           <text className="ax" x={X(i)} y={h - 6} textAnchor="middle">
             {i === 0 || i === last ? dates[i] : dates[i].replace(/ \S+$/, "")}
           </text>
@@ -57,7 +67,9 @@ export function LineChart({
       ))}
       <line x1={L} x2={w - R} y1={h - B} y2={h - B} stroke="var(--ink-4)" />
       <polyline
-        points={vals.map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}
+        points={vals
+          .map((v, i) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`)
+          .join(" ")}
         fill="none"
         stroke="var(--blue)"
         strokeWidth={1.75}
@@ -75,7 +87,12 @@ export function LineChart({
           strokeWidth={1.5}
         />
       ))}
-      <text className="ax s" x={X(last)} y={Y(vals[last]) - 10} textAnchor="middle">
+      <text
+        className="ax s"
+        x={X(last)}
+        y={Y(vals[last]) - 10}
+        textAnchor="middle"
+      >
         {vals[last]}
       </text>
     </svg>
@@ -88,7 +105,12 @@ export function TickRing({ value, label }: { value: number; label: string }) {
   const cy = 60;
   const on = Math.round(value * 0.6);
   return (
-    <svg className="tring dial" viewBox="0 0 120 120" role="img" aria-label={`${label} ${value} de 100`}>
+    <svg
+      className="tring dial"
+      viewBox="0 0 120 120"
+      role="img"
+      aria-label={`${label} ${value} de 100`}
+    >
       {Array.from({ length: 60 }, (_, i) => {
         const a = ((-90 + i * 6) * Math.PI) / 180;
         return (
@@ -103,10 +125,24 @@ export function TickRing({ value, label }: { value: number; label: string }) {
           />
         );
       })}
-      <text x="60" y="64" textAnchor="middle" style={{ font: "300 30px var(--font)", fill: "var(--ink)", letterSpacing: "-.04em" }}>
+      <text
+        x="60"
+        y="64"
+        textAnchor="middle"
+        style={{
+          font: "300 30px var(--font)",
+          fill: "var(--ink)",
+          letterSpacing: "-.04em",
+        }}
+      >
         {value}
       </text>
-      <text x="60" y="80" textAnchor="middle" style={{ font: "500 10px var(--font)", fill: "var(--ink-3)" }}>
+      <text
+        x="60"
+        y="80"
+        textAnchor="middle"
+        style={{ font: "500 10px var(--font)", fill: "var(--ink-3)" }}
+      >
         /100
       </text>
     </svg>

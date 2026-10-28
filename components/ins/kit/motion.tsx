@@ -46,26 +46,34 @@ export function armMotion(root: HTMLElement, animate: boolean) {
       requestAnimationFrame(() =>
         requestAnimationFrame(() => {
           s.style.transform = `translateY(-${d}em)`;
-        })
+        }),
       );
     });
   });
-  const lit = root.querySelectorAll<HTMLElement>(".tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])");
+  const lit = root.querySelectorAll<HTMLElement>(
+    ".tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])",
+  );
   lit.forEach((e) => (e.dataset.armed = "1"));
   if (now) {
     lit.forEach((e) => {
       e.classList.add("lit");
       e.style.transition = "none";
-      e.querySelectorAll<HTMLElement>("*").forEach((x) => (x.style.transition = "none"));
+      e.querySelectorAll<HTMLElement>("*").forEach(
+        (x) => (x.style.transition = "none"),
+      );
     });
     requestAnimationFrame(() =>
       lit.forEach((e) => {
         e.style.transition = "";
-        e.querySelectorAll<HTMLElement>("*").forEach((x) => (x.style.transition = ""));
-      })
+        e.querySelectorAll<HTMLElement>("*").forEach(
+          (x) => (x.style.transition = ""),
+        );
+      }),
     );
   } else {
-    requestAnimationFrame(() => requestAnimationFrame(() => lit.forEach((e) => e.classList.add("lit"))));
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => lit.forEach((e) => e.classList.add("lit"))),
+    );
   }
 }
 
@@ -77,7 +85,11 @@ export function Motion({ id, children }: { id: string; children: ReactNode }) {
     const animate = !wasSeen(id);
     armMotion(root, animate);
     const mo = new MutationObserver(() => {
-      if (root.querySelector(".roll:not([data-armed]),.tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])")) {
+      if (
+        root.querySelector(
+          ".roll:not([data-armed]),.tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])",
+        )
+      ) {
         armMotion(root, animate);
       }
     });

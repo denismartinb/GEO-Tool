@@ -27429,3 +27429,102 @@ reentrada de Auditoría web (`ReentryMission`), con la regla
 recuperación: se retira el cohete como señal de estado, no un camino. Si el
 sondeo cae, la pantalla se queda en su último dato hasta que vuelva la
 conexión y el vigilante de escaneos sigue avisando al operador.
+
+
+## 356. CONSOLE-INSTRUMENTO-1 Fase 3c: el alta de dominio pasa a «Instrumento» (2026-10-28)
+
+**Qué.** El asistente de nuevo dominio (`/dashboard/projects/new`) adopta la
+pantalla `newdomain` del prototipo aprobado: marco propio sin menú, barra de
+cuatro pasos (Dominio, Competidores, Prompts, Lanzar), resumen lateral que se
+va llenando, lista de carga con los pasos reales y fila de motores del plan con
+«Nuevo» en Perplexity. En móvil el resumen se oculta y los botones ocupan el
+ancho.
+
+**Cómo.** `components/onboarding-wizard.tsx` se reescribe sobre `app/ins/newdomain.css`
+(el marco oculta el menú con `:has(.sc-newdomain)`, como la misión). Conserva
+sin cambios las acciones de servidor (`suggestProjectSetup`,
+`generateMorePrompts`, `createProject`), el dominio que llega de la portada, el
+tope de prompts del plan, los motores reales del plan y los avisos de
+sugerencia vacía (LLM-RESILIENCE-1).
+
+**Decisiones.**
+- Cuatro pasos en vez de tres: el último resume antes de crear; el botón de
+  crear sigue siendo el envío del mismo formulario.
+- Los prompts se agrupan por tema (la categoría que ya devuelve la sugerencia);
+  lo escrito a mano va en «Tuyos». Desmarcar un prompt lo excluye sin perderlo;
+  el tope del plan cuenta sólo los marcados.
+- Se conservan funciones reales que el prototipo no dibuja: editar un
+  competidor o un prompt, añadir un competidor a mano (hasta
+  `MAX_USER_COMPETITORS`, 10, no los 5 del prototipo) y «Generar N más».
+- La cifra «respuestas que leeremos» del prototipo (`prompts × motores × 2`) es
+  inventada: se sustituye por el mercado y no se muestra ninguna estimación.
+- Sin selector de idioma ni «Atrás» de navegador propio: el idioma sigue
+  saliendo de la sugerencia y se enseña en el resumen.
+- El primer dominio de la cuenta no tiene «Salir» (no hay a dónde volver); el
+  resto vuelve a `/dashboard`.
+
+**Pendiente / roto conocido.** Las clases `onb2-*` de `globals.css` y
+`domain-bar`, `country-sel` y `eng-chip` ya no las usa esta pantalla; se
+retiran en F8 junto con el resto de hojas antiguas, porque la portada comparte
+algunas. Sin premisa de recuperación retirada: ningún botón ni salida de error
+desaparece.
+
+## 357. CONSOLE-INSTRUMENTO-1 Fase 4: Recomendaciones pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Recomendaciones se reconstruye sobre el prototipo
+aprobado (v51): cabecera con alerta de bloqueo y sus URL, cuatro pilares, plan
+de la semana como baraja de tarjetas (arrastre, flechas, ticks, deslizar para
+marcar como hecho), «Más adelante» con Pendientes/Resueltas, búsqueda, índice
+de palancas, grupos con «Ver N más» y capa «Recorrer en foco».
+
+**Cómo.** `lib/ins/recs-cards.ts` (puro) unifica recomendación suelta, palanca
+y competidor emergente en un solo modelo `InsCard`; no calcula cifras ni frases
+nuevas, sólo reordena lo que ya decidían `selectPlan`, `recommendationHeadline`,
+`effectiveFirstStep`, los puntos conjuntos y la cobertura. Componentes en
+`components/ins/recs/` y piezas reutilizables en `components/ins/kit/`
+(`Deck`, `SlideToConfirm`, `Seg`, `FocusLayer`). Las acciones de servidor
+(`rewriteRecommendationAction`, `dismissRecommendationAction`,
+`restoreRecommendationAction`, `addEmergingCompetitorAction`) no cambian. La
+tarjeta de Google ocupa el puesto 2 con el mismo reparto de §307
+(`InsGooglePlanCard`).
+
+**Decisiones.**
+- El plan se fija por visita: marcar una tarjeta como hecha no reordena la
+  baraja bajo los dedos de la persona.
+- El «Deshacer» durable vive en «Resueltas» (como en §203); no hay deshacer
+  efímero en la tarjeta activa.
+- El prototipo trae pestañas por fuente (IA/Google/Agentes) y un bloque
+  «Técnico»: no se dibujan, porque §307 decidió una sola cola y lo técnico vive
+  en Auditoría técnica. Tampoco el botón «Descargar informe» de esta pantalla
+  (sigue en Visión general, §250).
+- Se conservan funciones reales que el prototipo no dibuja: copiar el artefacto
+  generado, generar, formulario de competidor emergente, insignia de
+  «reaparece».
+
+**Pendiente / roto conocido.** `RecommendationsClient` y `GooglePlanCard`
+quedan como código muerto hasta F8, junto con las hojas antiguas. Sin premisa
+de recuperación retirada: ningún botón ni salida de error desaparece.
+
+## 358. RECS-NEGATIVE-EVIDENCE-1: la evidencia de «imagen negativa» cita frases reales (2026-10-28)
+
+**Problema.** La tarjeta «Responde a la imagen negativa que da la IA de ti»
+enseñaba en «Evidencia» el nombre de la marca repetido (p. ej. «Movistar
+Prosegur Alarmas» cuatro veces) en vez de lo que la IA dice mal. La regla leía
+`brand.evidence[0]` de la extracción, que sólo recoge dónde se nombra la marca.
+Denis (2026-10-28): las recomendaciones son lo más importante del producto y
+deben ser reales, útiles y listas para aplicar.
+
+**Decisión.**
+- `negativeExcerpts` (`recommendation-engine.ts`) toma de `raw_response_text`
+  de las respuestas con tono negativo o mixto la frase que nombra la marca o un
+  tema recurrente Y contiene una señal de queja. Una frase por respuesta, sin
+  repetir, literal, nunca parafraseada. Sin frase válida no hay citas.
+- `aggregateEvidence` deduplica citas sin distinguir mayúsculas.
+- La pantalla (`CardDetail`) descarta citas de menos de cuatro palabras y
+  repetidas, así que las tarjetas ya guardadas dejan de enseñar el nombre solo
+  sin esperar a un nuevo escaneo.
+- Sin migración ni cambio de extracción.
+
+**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
+pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
+esquema de extracción.

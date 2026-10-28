@@ -841,3 +841,7 @@ log §306).
 - **Las tarjetas de Google y la franja de bloqueos siguen la misma regla**
   (`pushTitle`, `snippetTitle`, `blockerTitle`): «Enlaza /x desde /a y /b»,
   «Reescribe título y descripción de /x», «Permite GPTBot en tu robots.txt».
+- **La evidencia citada es una frase de la respuesta, nunca el nombre de la
+  marca.** `address_negative_narrative` cita con `negativeExcerpts` frases
+  reales con señal de queja; la tarjeta descarta citas de menos de cuatro
+  palabras y repetidas (`docs/brand/design-decisions-log.md` §358).
