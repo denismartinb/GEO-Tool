@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
 /** Segmented control with the sliding indicator (`seg()` / `segInd()` in the prototype). */
 export function Seg<T extends string>({
@@ -9,7 +9,7 @@ export function Seg<T extends string>({
   onChange,
   label,
 }: {
-  options: ReadonlyArray<readonly [T, string]>;
+  options: ReadonlyArray<readonly [T, ReactNode]>;
   value: T;
   onChange: (next: T) => void;
   label: string;

@@ -86,3 +86,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Una sola cola**: sin pestañas por fuente ni bloque «Técnico» (§307).
   La tarjeta de Google es la placa 2 del plan.
 - **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.
+
+## Prompts (F5a, log §360)
+
+- **La hoja lateral es un componente del kit** (`Sheet`/`SheetHead`), con
+  portal a `body`, Esc, trampa de foco y retorno de foco. Competidores y
+  Páginas citadas la reutilizan; no se crea otra.
+- **Todo número de la pantalla sale de filas del último escaneo**
+  (`buildPromptsModel`, `buildPromptDetail`). Un prompt sin escanear es
+  «pendiente», nunca «no te nombra».
+- **Nada se guarda antes del paso de revisión** de «Añadir prompts»; el tope
+  del plan cuenta lo marcado (PROMPTS-REVIEW-1, §305).

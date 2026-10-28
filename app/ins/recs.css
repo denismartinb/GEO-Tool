@@ -95,12 +95,6 @@
 .ins .dk-act .dk-next .i{transition:transform var(--d2) var(--out)}
 .ins .dk-act .dk-next:hover .i{transform:translateX(3px)}
 
-/* ===== segmented control (shared with the shell prototype) ===== */
-.ins .seg{position:relative;display:inline-flex;background:var(--surface);border:1px solid var(--rule);border-radius:99px;padding:3px;flex:none}
-.ins .seg button{position:relative;z-index:1;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:550;color:var(--ink-3);white-space:nowrap;transition:color var(--d2) var(--std)}
-.ins .seg button[aria-pressed="true"]{color:var(--surface)}
-.ins .seg .ind{position:absolute;top:3px;bottom:3px;border-radius:99px;background:var(--ink);transition:left var(--d3) var(--out),width var(--d3) var(--out)}
-
 /* ===== what a real card carries that the prototype's did not ===== */
 .ins .alert-urls{margin:6px 0 0;padding-left:16px;font-size:12.5px;color:var(--ink-2);line-height:1.7;word-break:break-word}
 .ins .rc-keys{font-size:12.5px;color:var(--ink-3)}

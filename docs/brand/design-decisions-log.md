@@ -27571,3 +27571,32 @@ enlaces siguen siendo PKCE y sólo funcionan en el navegador del alta; el punto
 1 ya cubre el aviso igualmente. El recordatorio de confirmación
 (`lib/email/lifecycle/runner.ts`) reenvía la misma plantilla, así que se arregla
 con ella.
+
+## 360. CONSOLE-INSTRUMENTO-1 Fase 5a: Prompts pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla de Prompts se rehace sobre el prototipo v51:
+frase de cabecera con el tema fuerte y el flojo (enlaces que abren el tema),
+tira de visibilidad (conjunto y un medidor por motor del plan, «Nuevo» en
+Perplexity), pestañas Temas/Prompts con búsqueda, y el detalle de un prompt en
+una hoja lateral (panel a la derecha en escritorio, hoja inferior en móvil).
+«Añadir prompts» pasa a una hoja de tres pasos (método, detalle, revisión) con
+la barra del tope del plan. La hoja es un componente compartido
+(`components/ins/kit/sheet.tsx`, `app/ins/sheet.css`) que reutilizarán
+Competidores y Páginas citadas (F5b y F5c).
+
+**Qué no cambia.** Consultas, acciones de servidor (`generatePromptProposals`,
+`addReviewedPrompts`, `addPrompts`, `deactivatePrompt`), RLS y esquema. Cada
+cifra es un recuento de filas del último escaneo (`lib/ins/prompts-model.ts`,
+`lib/ins/prompt-detail.ts`, puros y con tests). Un prompt añadido después del
+último escaneo sale como «pendiente», nunca como «no te nombra». Los
+sentimientos siguen contándose sólo sobre respuestas que nombran la marca.
+
+**Retirado.** `prompts-client.tsx`, `add-prompts-button.tsx`,
+`delete-prompt-button.tsx`, `components/prompts/prompt-drawer.*`. Las reglas
+`.seg` pasan de `recs.css` a `components.css` (las usan varias pantallas).
+
+**Pendiente o roto conocido.** Los selectores del piloto (`.prompt-drawer`,
+`write-guard.ts`) apuntan a la hoja antigua y hay que actualizarlos antes de
+volver a lanzar el piloto de escritura. Las reglas `pr2-*`/`add-prompts-*` de
+`globals.css` y `console.css` se borran en F8. El placeholder del buscador se
+corta en 390 px (copy del prototipo, sin tocar).

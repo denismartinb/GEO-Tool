@@ -500,3 +500,10 @@
 .ins .pr-hd>.btn{flex:none;margin-bottom:6px}
 .ins .hd-m{display:none}
 @media(max-width:760px){.ins .hd-d{display:none!important}.ins .hd-m{display:flex}}
+
+/* ===== segmented control (shared: Recomendaciones, Prompts, sheets) ===== */
+.ins .seg{position:relative;display:inline-flex;background:var(--surface);border:1px solid var(--rule);border-radius:99px;padding:3px;flex:none}
+.ins .seg button{position:relative;z-index:1;padding:5px 12px;border-radius:99px;font-size:12.5px;font-weight:550;color:var(--ink-3);white-space:nowrap;transition:color var(--d2) var(--std)}
+.ins .seg button[aria-pressed="true"]{color:var(--surface)}
+.ins .seg .ind{position:absolute;top:3px;bottom:3px;border-radius:99px;background:var(--ink);transition:left var(--d3) var(--out),width var(--d3) var(--out)}
+
