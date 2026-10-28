@@ -54,7 +54,6 @@ import { ResolvedRow } from "./resolved";
 type Props = {
   recommendations: Recommendation[];
   resolvedHistory?: ResolvedHistoryItem[];
-  recentWinsCount?: number;
   projectId: string;
   jointPointsByType?: Record<string, number | null>;
   planIds?: string[];
@@ -74,7 +73,6 @@ const GROUP_SHOW = 3;
 export function InsRecommendations({
   recommendations,
   resolvedHistory = [],
-  recentWinsCount = 0,
   projectId,
   jointPointsByType,
   planIds = [],
@@ -275,19 +273,6 @@ export function InsRecommendations({
   return (
     <RecsContext.Provider value={{ projectId, done, setDone }}>
       <GooglePlanReport.Provider value={reportGooglePlan}>
-        {recentWinsCount > 0 ? (
-          <button
-            type="button"
-            className="wins"
-            onClick={() => jumpToLater("res")}
-          >
-            <Ic n="checkc" sm />
-            {recentWinsCount} {recentWinsCount === 1 ? "resuelta" : "resueltas"}{" "}
-            hace poco
-            <Ic n="arrowr" sm />
-          </button>
-        ) : null}
-
         {hasPlan ? (
           <>
             <div className="focus-h">

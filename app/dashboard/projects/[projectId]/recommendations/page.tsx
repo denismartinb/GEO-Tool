@@ -250,14 +250,6 @@ export default async function RecommendationsPage({
     return out;
   }
 
-  const recentWins = dedupeByTitle(
-    (resolvedRecommendations ?? []) as Array<{
-      id: string;
-      title: string;
-      recommendation_type: string;
-    }>,
-  );
-
   type HistoryRow = {
     id: string;
     title: string;
@@ -848,7 +840,6 @@ export default async function RecommendationsPage({
     <InsRecommendations
       recommendations={recs}
       resolvedHistory={historyForClient}
-      recentWinsCount={recentWins.length}
       projectId={projectId}
       jointPointsByType={jointPointsByType}
       planIds={planIds}
