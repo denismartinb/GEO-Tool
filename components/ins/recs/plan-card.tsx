@@ -50,6 +50,8 @@ export function PlanCard({ card }: { card: InsCard }) {
   const index = plate?.index ?? 0;
   const a = useCardActions(card);
   const [detail, setDetail] = useState(false);
+  // A stored proposal stays folded on load; the button unfolds it (no new call).
+  const [showSol, setShowSol] = useState(false);
   const emerging = card.form === "emerging";
 
   return (
@@ -100,7 +102,7 @@ export function PlanCard({ card }: { card: InsCard }) {
         </div>
       ) : null}
       {a.generating ? <GeneratingBlock /> : null}
-      {!a.generating && card.solution ? (
+      {!a.generating && card.solution && showSol ? (
         <SolutionBlock solution={card.solution} type={card.type} />
       ) : null}
       {a.generateError ? (
@@ -137,17 +139,22 @@ export function PlanCard({ card }: { card: InsCard }) {
               onConfirm={a.markDone}
               disabled={a.marking}
             />
-            {card.solution ? null : (
-              <button
-                type="button"
-                className="btn line"
-                disabled={a.generating}
-                onClick={a.generate}
-              >
-                <Ic n="sparkles" sm />
-                {a.cta}
-              </button>
-            )}
+            <button
+              type="button"
+              className="btn line"
+              disabled={a.generating}
+              aria-expanded={card.solution ? showSol : undefined}
+              onClick={() => {
+                if (card.solution) setShowSol((o) => !o);
+                else {
+                  setShowSol(true);
+                  a.generate();
+                }
+              }}
+            >
+              <Ic n="sparkles" sm />
+              {card.solution && showSol ? "Ocultar propuesta" : a.cta}
+            </button>
           </>
         )}
         <NextButton />

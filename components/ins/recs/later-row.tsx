@@ -63,6 +63,7 @@ export function LaterRow({
 }) {
   const a = useCardActions(card);
   const [inline, setInline] = useState(false);
+  const [showSol, setShowSol] = useState(false);
   const emerging = card.form === "emerging";
   const imp = importanceLabel(card);
   const line = card.step ?? card.context ?? card.reach ?? "";
@@ -99,7 +100,7 @@ export function LaterRow({
           ) : null}
           <CardDetail card={card} />
           {a.generating ? <GeneratingBlock /> : null}
-          {!a.generating && card.solution ? (
+          {!a.generating && card.solution && showSol ? (
             <SolutionBlock solution={card.solution} type={card.type} />
           ) : null}
           {a.generateError || a.markError ? (
@@ -112,17 +113,22 @@ export function LaterRow({
               <EmergingAction card={card} />
             ) : (
               <>
-                {card.solution ? null : (
-                  <button
-                    type="button"
-                    className="btn line sm"
-                    disabled={a.generating}
-                    onClick={a.generate}
-                  >
-                    <Ic n="sparkles" sm />
-                    {a.cta}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  className="btn line sm"
+                  disabled={a.generating}
+                  aria-expanded={card.solution ? showSol : undefined}
+                  onClick={() => {
+                    if (card.solution) setShowSol((o) => !o);
+                    else {
+                      setShowSol(true);
+                      a.generate();
+                    }
+                  }}
+                >
+                  <Ic n="sparkles" sm />
+                  {card.solution && showSol ? "Ocultar propuesta" : a.cta}
+                </button>
                 {inline ? (
                   <span className="inl">
                     ¿Marcarla como hecha?
