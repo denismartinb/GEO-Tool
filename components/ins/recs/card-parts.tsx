@@ -296,10 +296,16 @@ export function CardDetail({
       });
   const advice = isLever ? null : adviceSignal(card.control, ev.query_shape);
   const stale = ev.stale_signals ?? [];
-  const snippets =
-    rec.recommendation_type === "update_stale_content" && stale.length > 0
-      ? stale
-      : (ev.evidence_snippets ?? []);
+  // Stored cards may carry the bare brand name as "evidence" (log §358): a quote
+  // of fewer than four words proves nothing, and repeats are one quote.
+  const snippets = Array.from(
+    new Map(
+      (rec.recommendation_type === "update_stale_content" && stale.length > 0 ? stale : (ev.evidence_snippets ?? []))
+        .map((s) => plainSnippet(s))
+        .filter((s) => s.trim().split(/\s+/).length >= 4)
+        .map((s) => [s.toLowerCase(), s] as const)
+    ).values()
+  );
   const competitors = ev.mentioned_competitors ?? [];
   const domains = ev.citation_domains ?? [];
   const pages = ev.citation_pages ?? [];

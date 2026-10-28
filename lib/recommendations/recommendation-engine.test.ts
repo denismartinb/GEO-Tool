@@ -594,6 +594,47 @@ describe("generateRecommendationsForRun", () => {
     expect(rec!.evidence_json.sentiment_drivers as string[]).toEqual(["atención al cliente", "plazos de entrega"]);
   });
 
+  it("quotes real complaint sentences from the answers, never the repeated brand mention (log §358)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        raw_response_text:
+          "Acme es una empresa conocida. Muchos usuarios señalan quejas sobre la atención al cliente de Acme, con esperas largas. Ofrece varios planes.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"], sentimentDrivers: ["atención al cliente"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "experiencias con Acme",
+        sentiment: "mixed",
+        raw_response_text: "Acme destaca por su cobertura. Aun así, hay críticas recurrentes a Acme por problemas de facturación.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"] })
+      })
+    ]);
+
+    const snippets = recs.find((r) => r.recommendation_type === "address_negative_narrative")!.evidence_json
+      .evidence_snippets as string[];
+    expect(snippets).toHaveLength(2);
+    expect(snippets.every((s) => s.length > 40)).toBe(true);
+    expect(snippets.some((s) => s.includes("quejas sobre la atención al cliente"))).toBe(true);
+    expect(snippets.some((s) => s.includes("problemas de facturación"))).toBe(true);
+  });
+
+  it("shows no quotes for the negative narrative when no sentence carries the complaint (log §358)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        raw_response_text: "Acme.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"] })
+      })
+    ]);
+    const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative")!;
+    expect(rec.evidence_json.evidence_snippets).toEqual([]);
+  });
+
   it("falls back to a generic negative-narrative title when no sentiment_drivers were extracted", () => {
     const recs = run([
       prompt({

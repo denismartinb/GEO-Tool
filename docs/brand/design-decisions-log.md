@@ -27504,3 +27504,27 @@ tarjeta de Google ocupa el puesto 2 con el mismo reparto de §307
 **Pendiente / roto conocido.** `RecommendationsClient` y `GooglePlanCard`
 quedan como código muerto hasta F8, junto con las hojas antiguas. Sin premisa
 de recuperación retirada: ningún botón ni salida de error desaparece.
+
+## 358. RECS-NEGATIVE-EVIDENCE-1: la evidencia de «imagen negativa» cita frases reales (2026-10-28)
+
+**Problema.** La tarjeta «Responde a la imagen negativa que da la IA de ti»
+enseñaba en «Evidencia» el nombre de la marca repetido (p. ej. «Movistar
+Prosegur Alarmas» cuatro veces) en vez de lo que la IA dice mal. La regla leía
+`brand.evidence[0]` de la extracción, que sólo recoge dónde se nombra la marca.
+Denis (2026-10-28): las recomendaciones son lo más importante del producto y
+deben ser reales, útiles y listas para aplicar.
+
+**Decisión.**
+- `negativeExcerpts` (`recommendation-engine.ts`) toma de `raw_response_text`
+  de las respuestas con tono negativo o mixto la frase que nombra la marca o un
+  tema recurrente Y contiene una señal de queja. Una frase por respuesta, sin
+  repetir, literal, nunca parafraseada. Sin frase válida no hay citas.
+- `aggregateEvidence` deduplica citas sin distinguir mayúsculas.
+- La pantalla (`CardDetail`) descarta citas de menos de cuatro palabras y
+  repetidas, así que las tarjetas ya guardadas dejan de enseñar el nombre solo
+  sin esperar a un nuevo escaneo.
+- Sin migración ni cambio de extracción.
+
+**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
+pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
+esquema de extracción.

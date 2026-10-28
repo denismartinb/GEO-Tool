@@ -362,7 +362,7 @@ function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" 
     ev.domains.forEach((d) => domains.add(d));
     if (snippetSource === "none") continue;
     const snippet = snippetSource === "competitor" ? ev.brandSnippet ?? ev.competitorSnippet : ev.brandSnippet;
-    if (snippet) snippets.push(snippet);
+    if (snippet && !snippets.some((s) => s.toLowerCase() === snippet.toLowerCase())) snippets.push(snippet);
   }
   return {
     mentionedCompetitors: Array.from(competitors).slice(0, 8),
@@ -391,8 +391,11 @@ function buildEvidenceJson(opts: {
   firstStep: string;
   extra?: Record<string, unknown>;
   snippetSource?: "brand" | "competitor" | "none";
+  /** Rule-specific quotes that replace the per-prompt brand snippets (log §358). */
+  snippets?: string[];
 }): Record<string, unknown> {
   const agg = aggregateEvidence(opts.affected, opts.snippetSource);
+  if (opts.snippets) agg.snippets = opts.snippets;
   return {
     rule_id: opts.ruleId,
     first_step: opts.firstStep,
@@ -757,6 +760,73 @@ function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptRes
  * name the actual theme instead of a generic "percepción negativa" — the data
  * was already captured by extraction but previously unused by the engine.
  */
+/*
+ * Words that make a sentence read as a complaint or a doubt. Conservative on
+ * purpose: a sentence only becomes evidence when it also names the brand or a
+ * recurring driver, so a generic "problema" elsewhere in the answer is ignored.
+ */
+const NEGATIVE_CUES = [
+  "queja", "quejas", "problema", "problemas", "crítica", "críticas", "criticad", "negativ", "malas opiniones",
+  "mala ", "malo", "deficien", "insatisf", "descontent", "lent", "caro", "caros", "elevad", "sobrecoste",
+  "cobros", "permanencia", "reclamacion", "reclamaciones", "falta de", "no recomend", "cuestionad", "polémic",
+  "complaint", "complaints", "issue", "issues", "poor", "slow", "expensive", "criticism", "negative", "unreliable"
+];
+
+function splitSentences(raw: string): string[] {
+  return raw
+    .replace(/[*_#>`]+/g, " ")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡"“(])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Real fragments of the negative/mixed answers (log §358). The extraction's
+ * `brand.evidence` only quotes where the brand was named, so a card about the
+ * brand's bad image showed the brand name over and over. The evidence for this
+ * rule is the sentence that carries the complaint: one that names the brand or
+ * a recurring driver AND contains a negative cue, taken from the stored answer
+ * text, never paraphrased. Empty when no such sentence exists — the card then
+ * shows no quotes instead of filler.
+ */
+export function negativeExcerpts(
+  prompts: PromptResultInput[],
+  brand: string,
+  drivers: string[],
+  limit = 4
+): string[] {
+  const brandKey = brand.trim().toLowerCase();
+  const driverKeys = drivers.map((d) => d.trim().toLowerCase()).filter((d) => d.length >= 4);
+  const seen = new Set<string>();
+  const scored: Array<{ text: string; score: number }> = [];
+  for (const p of prompts) {
+    const raw = p.raw_response_text ?? "";
+    if (!raw) continue;
+    let best: { text: string; score: number } | null = null;
+    for (const sentence of splitSentences(raw)) {
+      if (sentence.length < 40 || sentence.length > 320) continue;
+      const lower = sentence.toLowerCase();
+      const cue = NEGATIVE_CUES.some((c) => lower.includes(c));
+      const driver = driverKeys.some((d) => lower.includes(d));
+      const named = brandKey.length >= 3 && lower.includes(brandKey);
+      if (!cue && !driver) continue;
+      if (!named && !driver) continue;
+      const score = (cue ? 2 : 0) + (driver ? 2 : 0) + (named ? 1 : 0);
+      if (!best || score > best.score) best = { text: sentence, score };
+    }
+    if (!best) continue;
+    const key = best.text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    scored.push(best);
+  }
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((s) => s.text);
+}
+
 function topSentimentDrivers(promptResults: PromptResultInput[], limit = 3): string[] {
   const counts = new Map<string, number>();
   for (const result of promptResults) {
@@ -1318,7 +1388,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           drivers.length > 0
             ? `Publica una página que explique tu posición sobre ${drivers[0]} con datos concretos y verificables.`
             : "Publica una página que responda con datos concretos a la objeción que aparece en estas respuestas.",
-        snippetSource: "brand",
+        snippetSource: "none",
+        snippets: negativeExcerpts(negativePrompts, input.project.brand, drivers),
         extra: { sentiment_drivers: drivers }
       })
     });
