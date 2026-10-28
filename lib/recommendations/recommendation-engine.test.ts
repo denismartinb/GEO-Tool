@@ -621,6 +621,22 @@ describe("generateRecommendationsForRun", () => {
     expect(snippets.some((s) => s.includes("problemas de facturación"))).toBe(true);
   });
 
+  it("never quotes a bare name as evidence for a competitor card (log §358)", () => {
+    const recs = run(
+      [
+        prompt({ id: "p1", prompt_text_snapshot: "mejores herramientas", brand_mentioned: false, mentioned_competitors_count: 1, extracted_json: extractedWith({ competitors: [{ name: "Rival", mentioned: true, evidence: ["Rival"] }] }) }),
+        prompt({ id: "p2", prompt_text_snapshot: "alternativas a Rival", brand_mentioned: false, mentioned_competitors_count: 1, extracted_json: extractedWith({ competitors: [{ name: "Rival", mentioned: true, evidence: ["Rival"] }] }) })
+      ],
+      {},
+      ["Rival"]
+    );
+    for (const r of recs) {
+      for (const s of (r.evidence_json.evidence_snippets as string[]) ?? []) {
+        expect(s.trim().split(/\s+/).length).toBeGreaterThanOrEqual(4);
+      }
+    }
+  });
+
   it("shows no quotes for the negative narrative when no sentence carries the complaint (log §358)", () => {
     const recs = run([
       prompt({
