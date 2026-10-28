@@ -185,3 +185,8 @@
 .ins .grec-skel-line{display:block;height:10px;border-radius:99px;background:var(--surface-3);margin-top:10px}
 .ins .grec-skel-tag{width:60px}.ins .grec-skel-title{width:70%;height:14px}.ins .grec-skel-short{width:45%}.ins .grec-skel-btn{width:96px;height:26px}
 .ins .lfilters .toolbar{margin-top:20px}
+
+.ins .rc-engs{display:inline-flex;align-items:center;gap:6px}
+.ins .gen ol{display:block;list-style:decimal;padding-left:22px}
+.ins .gen ol li{padding-left:2px}
+.ins .gen ol li+li{margin-top:8px}

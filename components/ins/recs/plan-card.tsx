@@ -12,7 +12,6 @@ import {
   CardDetail,
   EngineRow,
   GeneratingBlock,
-  SeenAccordion,
   SolutionBlock,
   SrcChip,
   TitleWithPath,
@@ -60,7 +59,13 @@ export function PlanCard({ card }: { card: InsCard }) {
           {pad(index + 1)}
         </span>
         <div className="dk-ch">
-          <SrcChip src="ia" />
+          {card.providers.length > 0 ? (
+            <span className="rc-engs">
+              <EngineRow providers={card.providers} size={16} />
+            </span>
+          ) : (
+            <SrcChip src="ia" />
+          )}
           <span className="k">{card.kindLabel}</span>
           <CardBadges card={card} />
         </div>
@@ -78,9 +83,6 @@ export function PlanCard({ card }: { card: InsCard }) {
           {card.reach}
         </p>
       ) : null}
-      {!emerging && card.questions.length > 0 ? (
-        <SeenAccordion card={card} />
-      ) : null}
       {!emerging && card.questions.length === 0 && card.reach ? (
         <p className="eng-l">{card.reach}</p>
       ) : null}
@@ -94,7 +96,7 @@ export function PlanCard({ card }: { card: InsCard }) {
             <span>Lo que vimos y por qué funciona</span>
             <Ic n="chevd" sm />
           </button>
-          {detail ? <CardDetail card={card} withQuestions={false} /> : null}
+          {detail ? <CardDetail card={card} withQuestions /> : null}
         </div>
       ) : null}
       {a.generating ? <GeneratingBlock /> : null}

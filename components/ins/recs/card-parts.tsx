@@ -93,9 +93,6 @@ export function CardBadges({ card }: { card: InsCard }) {
       {card.control === "in_app" ? (
         <span className="badge b-line">{CONTROL_LABEL.in_app}</span>
       ) : null}
-      {card.runsOpen > 1 && card.control !== "third_party" ? (
-        <span className="badge b-line">Abierta {card.runsOpen} escaneos</span>
-      ) : null}
       {card.previouslyDoneAt ? (
         <span className="badge b-line">
           La marcaste como hecha el {dateLabel(card.previouslyDoneAt)}
