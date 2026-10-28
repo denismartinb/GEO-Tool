@@ -111,7 +111,7 @@ export default function ClinicasDentalesPage() {
 
         <p>
           Los datos completos y el análisis están en el estudio:{" "}
-          <Link href={STUDY_HREF}>Qué clínicas dentales recomienda la IA</Link>. Solo nombramos clínicas que la IA recomienda; no publicamos quién no aparece.
+          <Link href={STUDY_HREF}>Qué clínicas dentales recomienda la IA</Link>. Solo nombramos clínicas que aparecen en las respuestas del estudio; no publicamos quién no aparece.
         </p>
 
         <ArticleCta
