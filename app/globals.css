@@ -11898,6 +11898,18 @@ select.set-field {
   width: 100%;
 }
 .rec2-scope .rec-title { font-size: 14px; }
+/* RECS-HEADLINES-1 (log §354): the question, rival or source a task is
+   about. One line; the headline above never gets cut, this line does. */
+.rec-context {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  line-height: 1.4;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
 .rec2-scope .rec-problem { font-size: 12.5px; margin-top: 4px; }
 .rec2-scope .rec-tags { margin-top: 9px; gap: 6px; }
 /* Pillar labels wrap instead of truncating: "Prominencia" and "Cuota de voz"
