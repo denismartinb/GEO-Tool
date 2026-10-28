@@ -96,7 +96,7 @@ export default async function CiudadPage({ params }: { params: Promise<{ ciudad:
         </table></div>
 
         <p>
-          Una clínica solo cuenta si su nombre aparece en la respuesta. Es una foto del 10 de octubre de 2026: repetida otro día, el orden puede moverse. No es un juicio sobre la calidad de ninguna clínica, y solo nombramos clínicas que la IA recomienda.
+          Una clínica solo cuenta si su nombre aparece en la respuesta. Es una foto del 10 de octubre de 2026: repetida otro día, el orden puede moverse. No es un juicio sobre la calidad de ninguna clínica, y solo nombramos clínicas que aparecen en las respuestas.
         </p>
 
         <ArticleCta
