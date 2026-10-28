@@ -1,3 +1,4 @@
+import { headlinePath } from "@/lib/recommendations/headline";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 
@@ -62,20 +63,30 @@ export function findCitationBlockers(input: {
   return blockers;
 }
 
-/** Titular del bloqueo. Nombra la causa, no la métrica. */
+/**
+ * Titular del bloqueo: el cambio que hay que hacer y en qué fichero o página
+ * (RECS-HEADLINES-1, log §353), no la descripción del problema.
+ */
 export function blockerTitle(blocker: CitationBlocker): string {
   if (blocker.kind === "bots") {
-    const shown = blocker.agents.slice(0, 2).join(" y ");
-    const rest = blocker.agents.length > 2 ? ` y ${blocker.agents.length - 2} más` : "";
-    return `Tu web bloquea a ${shown}${rest}`;
+    const rest = blocker.agents.length - 2;
+    const shown = rest > 0 ? `${blocker.agents.slice(0, 2).join(", ")} y ${rest} más` : blocker.agents.join(" y ");
+    const title = `Permite ${shown} en tu robots.txt`;
+    return title.length <= 48 ? title : "Permite los bots de IA en tu robots.txt";
   }
   const n = blocker.urls.length;
+  const one = n === 1 ? pathFor(blocker.urls[0]) : null;
   if (blocker.kind === "noindex") {
-    return n === 1 ? "Una de tus páginas no se puede indexar" : `${n} de tus páginas no se pueden indexar`;
+    if (one) return `Quita la etiqueta noindex de ${one}`;
+    return n === 1 ? "Quita la etiqueta noindex de una página" : `Quita la etiqueta noindex de ${n} páginas`;
   }
-  return n === 1
-    ? "Una de tus páginas prohíbe mostrar fragmentos"
-    : `${n} de tus páginas prohíben mostrar fragmentos`;
+  if (one) return `Quita nosnippet de ${one}`;
+  return n === 1 ? "Quita nosnippet de una de tus páginas" : `Quita nosnippet de ${n} páginas`;
+}
+
+/** A short path for a one-page title, or null when it would not fit. */
+function pathFor(url: string | undefined): string | null {
+  return headlinePath(url ?? null, 18);
 }
 
 /** Por qué impide que te citen, en una frase. */

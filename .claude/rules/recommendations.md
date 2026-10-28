@@ -814,3 +814,30 @@ log §306).
   Una vista nueva que se lo salte enseñaría como pendiente lo que la
   pantalla da por hecho.
 - **Sólo se enlaza una dirección `http(s)`.**
+
+## Titulares de acción (RECS-HEADLINES-1, log §353)
+
+- **El titular de una tarjeta es una tarea del cliente: el entregable y
+  dónde va.** «Sube esta FAQ a tu web», «Añade un dato con fuente a
+  /tarifas», «Escribe a guiapymes.es para que te incluya». Nunca un resultado
+  que decide la IA o Google («aparece», «sal antes que», «llega a la página
+  1»). Founder, 2026-10-28.
+- **Un tipo sin entregable concreto no genera tarjeta.**
+  `increase_brand_prominence` y `amplify_positive_pattern` están retirados
+  (`RETIRED_RECOMMENDATION_TYPES`): el motor ya no los emite y toda vista que
+  lista tarjetas (Recomendaciones, Visión general, informe, campana, correos)
+  filtra con `isRetiredRecommendationType` las filas guardadas antes. Un tipo
+  nuevo entra sólo si tiene un entregable que el cliente puede hacer.
+- **El titular lo decide `recommendationHeadline` (`lib/recommendations/
+  headline.ts`), al pintar, nunca el `title` guardado.** Así las filas viejas
+  leen igual que las nuevas. Lo leen la tarjeta, Visión general, el informe,
+  la campana y los dos correos. El `title` guardado sigue siendo el de
+  siempre (identifica la pregunta y lo usa la deduplicación de «Resueltas»).
+- **Como mucho `HEADLINE_MAX` (48) caracteres, sin la pregunta dentro.** La
+  pregunta, la búsqueda, el rival largo o las cifras van en la línea de
+  contexto (`.rec-context`), que se corta sin cortar la tarea. Una página o
+  un nombre que no cabe pasa a la forma genérica («tu página»), nunca se
+  recorta a mitad. Lo vigila `headline.test.ts` para todos los tipos.
+- **Las tarjetas de Google y la franja de bloqueos siguen la misma regla**
+  (`pushTitle`, `snippetTitle`, `blockerTitle`): «Enlaza /x desde /a y /b»,
+  «Reescribe título y descripción de /x», «Permite GPTBot en tu robots.txt».

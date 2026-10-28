@@ -46,10 +46,18 @@ export function leverKey(theme: LeverTheme): string {
   return theme.kind;
 }
 
+/**
+ * RECS-HEADLINES-1 (log §353): the deliverable, never the outcome. A topic
+ * name too long for two phone lines falls back to the generic form; the
+ * reach line under the title already names the topic's questions.
+ */
 export function leverTitle(theme: LeverTheme): string {
-  if (theme.kind === "definition") return "Define en tu web los términos que te preguntan";
-  if (theme.kind === "category") return `Una guía que responda a tus preguntas de «${themeLabel(theme.category)}»`;
-  return "Una guía que responda a tus otras preguntas";
+  if (theme.kind === "definition") return "Añade las definiciones al inicio de tu página";
+  if (theme.kind === "category") {
+    const title = `Publica una página sobre «${themeLabel(theme.category)}»`;
+    return title.length <= 48 ? title : "Publica una página con estas preguntas";
+  }
+  return "Publica una página con tus otras preguntas";
 }
 
 export function leverFirstStep(theme: LeverTheme): string {

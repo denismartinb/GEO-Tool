@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
@@ -78,7 +79,10 @@ export async function getNextStepNotice(
       projectDomain: project.domain,
       recs: activeRecs
     });
-    const recs = activeRecs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlays.get(r.id)));
+    // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+    const recs = activeRecs.filter(
+      (r) => !isRetiredRecommendationType(r.recommendation_type) && !isAlreadyCovered(r.recommendation_type, overlays.get(r.id))
+    );
     if (recs.length === 0) return null;
 
     const results = ((resultRows ?? []) as ScoreInputRow[]).map((r) => ({
@@ -101,7 +105,7 @@ export async function getNextStepNotice(
       projectId: project.id,
       domain: project.domain,
       recommendationId: first.id,
-      title: first.title,
+      title: recommendationHeadline(first, overlayForHeadline(overlays.get(first.id))).title,
       potentialPoints: first.potentialPoints
     };
   } catch (error) {

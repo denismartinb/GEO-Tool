@@ -33,6 +33,7 @@ import { adviceSignal, dataSignal, emergingCompetitorReach, scopeLine } from "@/
 import { domainForBrandName } from "@/lib/recommendations/anchored-domains";
 import { parseCompetitorDomain } from "@/lib/competitors/competitor-domain";
 import { plainSnippet, shortDomainList } from "@/lib/recommendations/plain-snippet";
+import { overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import {
   DEFINITION_LEVER_NOTE,
   LEVER_TYPE,
@@ -445,6 +446,25 @@ function dependsOnThirdParty(rec: Recommendation): boolean {
   return deliverableForType(rec.recommendation_type).control === "third_party";
 }
 
+/**
+ * RECS-HEADLINES-1 (log §353): the card's task, and under it the question,
+ * rival or source it is about. Computed from the row, so old rows read the
+ * same as new ones.
+ */
+function RecHeadline({ rec }: { rec: Recommendation }) {
+  const headline = recommendationHeadline(rec, overlayForHeadline(rec.coverageOverlay));
+  return (
+    <>
+      <div className="rec-title">{headline.title}</div>
+      {headline.context && (
+        <div className="rec-context" title={headline.context}>
+          {headline.context}
+        </div>
+      )}
+    </>
+  );
+}
+
 function CopyButton({ text, label }: { text: string; label?: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -826,7 +846,7 @@ export function EmergingCompetitorCard({ rec, projectId }: { rec: Recommendation
               {CONTROL_LABEL.in_app}
             </span>
           </div>
-          <div className="rec-title">{rec.title}</div>
+          <RecHeadline rec={rec} />
           {reach && (
             <div className="rec2-reach" style={{ marginTop: 0 }}>
               {providers.length > 0 && (
@@ -1114,7 +1134,7 @@ function StandardRecCard({ rec, projectId, compact = false, showOwnStep = false,
               )}
             </div>
           )}
-          <div className="rec-title">{rec.title}</div>
+          <RecHeadline rec={rec} />
           {(!compact || showOwnStep) && firstStep && (
             <div className="rec2-step">
               <Icon name="arrRight" size={13} />

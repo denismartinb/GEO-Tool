@@ -5,6 +5,7 @@ import type {
   PushToPageOne
 } from "@/lib/search-console/recommendations";
 import { fmtInt, fmtPct } from "../../search-console/_components/format";
+import { HEADLINE_MAX } from "@/lib/recommendations/headline";
 
 /**
  * Copy of the Google cards in Recomendaciones (RECS-ONE-QUEUE-1, log §307,
@@ -83,7 +84,7 @@ export function planCopy(rec: GooglePlanRec): PlanCopy {
     const from = rec.linkFrom.slice(0, 2);
     return {
       kind: "Subir a la página 1",
-      title: `Lleva «${rec.query}» a la primera página de Google`,
+      title: pushTitle(rec),
       step:
         from.length > 0
           ? `Enlaza ${where} desde ${joinPaths(from)}, con «${rec.query}» en el texto del enlace.`
@@ -109,9 +110,7 @@ export function planCopy(rec: GooglePlanRec): PlanCopy {
 
   return {
     kind: "Título y descripción",
-    title: rec.page
-      ? `Mejora el título de ${where}: la ven ${times(rec.impressions)} y entra el ${fmtPct(rec.ctr)}`
-      : `Mejora el título de la página que sale para «${rec.query}»`,
+    title: snippetTitle(rec),
     step: `Reescribe el título y la descripción de ${rec.page ? where : "esa página"} para que digan qué ofreces y por qué entrar.`,
     scope,
     metric: fmtPct(rec.ctr),
@@ -128,6 +127,31 @@ export function planCopy(rec: GooglePlanRec): PlanCopy {
   };
 }
 
+/**
+ * RECS-HEADLINES-1 (log §353): Google decides the place, so the title is the
+ * change the customer makes: the links to add, or the first lines to write.
+ * The search itself stays in the step and the meta line.
+ */
+export function pushTitle(rec: PushToPageOne): string {
+  const where = rec.page ? pageName(rec.page) : null;
+  const from = rec.linkFrom.slice(0, 2);
+  if (where && from.length > 0) {
+    const full = `Enlaza ${where} desde ${joinPaths(from)}`;
+    if (full.length <= HEADLINE_MAX) return full;
+    const short = `Enlaza ${where} desde tus otras páginas`;
+    if (short.length <= HEADLINE_MAX) return short;
+    return "Enlaza esta página desde tus otras páginas";
+  }
+  const lead = where ? `Responde a esta búsqueda al inicio de ${where}` : null;
+  return lead && lead.length <= HEADLINE_MAX ? lead : "Responde a esta búsqueda al inicio de la página";
+}
+
+export function snippetTitle(rec: ImproveSnippet): string {
+  const where = rec.page ? pageName(rec.page) : null;
+  const full = where ? `Reescribe título y descripción de ${where}` : null;
+  return full && full.length <= HEADLINE_MAX ? full : "Reescribe el título y la descripción en Google";
+}
+
 export type LaterCopy = { kind: string; title: string; text: string };
 
 /** The short card of the «Con tus datos de Google» row in «Más adelante». */
@@ -135,25 +159,30 @@ export function laterCopy(rec: GoogleRecommendation): LaterCopy {
   if (rec.kind === "watch_in_ai") {
     return {
       kind: "Vigilar en la IA",
-      title: `«${rec.query}»`,
-      text: "Ya te buscan así en Google. Añádela a tus prompts para ver si la IA te nombra."
+      title: "Añade esta búsqueda a tus prompts",
+      text: `Ya te buscan «${rec.query}» en Google. Añádela a tus prompts para ver si la IA te nombra.`
     };
   }
   if (rec.kind === "improve_snippet") {
     return {
       kind: "Título y descripción",
-      title: `«${rec.query}»: puesto ${Math.round(rec.position)} y pocos clics`,
-      text: `Entra el ${fmtPct(rec.ctr)} de quienes te ven; tus otras búsquedas ${peersText(rec.position)}, alrededor del ${fmtPct(rec.benchmark)}. Reescribe el título y la descripción de ${rec.page ? pageName(rec.page) : "esa página"}.`
+      title: snippetTitle(rec),
+      text: `«${rec.query}», puesto ${Math.round(rec.position)}: entra el ${fmtPct(rec.ctr)} de quienes te ven; tus otras búsquedas ${peersText(rec.position)}, alrededor del ${fmtPct(rec.benchmark)}.`
     };
   }
-  const where = rec.page ? pageName(rec.page) : "la página que sale";
+  const title = pushTitle(rec);
+  const from = rec.linkFrom.slice(0, 2);
+  // The title names the pages to link from when they fit; otherwise the text does.
+  const fromInTitle = from.length > 0 && title.endsWith(joinPaths(from));
+  const linkHint =
+    from.length === 0
+      ? ""
+      : fromInTitle
+        ? " Pon esa búsqueda en el texto del enlace."
+        : ` Enlázala desde ${joinPaths(from)}, con esa búsqueda en el texto del enlace.`;
   return {
     kind: "Subir a la página 1",
-    title: `«${rec.query}»: puesto ${Math.round(rec.position)}`,
-    text: `Te ven ${times(rec.impressions)} en 28 días, en la segunda página. ${
-      rec.linkFrom.length > 0
-        ? `Enlaza ${where} desde ${joinPaths(rec.linkFrom)}, con ese texto en el enlace.`
-        : `Responde a la búsqueda en las primeras líneas de ${where}.`
-    }`
+    title,
+    text: `«${rec.query}», puesto ${Math.round(rec.position)}. Te ven ${times(rec.impressions)} en 28 días, en la segunda página.${linkHint}`
   };
 }

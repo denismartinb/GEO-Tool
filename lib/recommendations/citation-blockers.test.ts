@@ -75,15 +75,19 @@ describe("findCitationBlockers", () => {
 });
 
 describe("copy del bloqueo", () => {
-  it("concuerda en singular y plural", () => {
-    expect(blockerTitle({ kind: "noindex", urls: ["a"] })).toBe("Una de tus páginas no se puede indexar");
-    expect(blockerTitle({ kind: "noindex", urls: ["a", "b"] })).toBe("2 de tus páginas no se pueden indexar");
-    expect(blockerTitle({ kind: "snippet", urls: ["a"] })).toBe("Una de tus páginas prohíbe mostrar fragmentos");
+  it("nombra el cambio y dónde, en singular y plural (RECS-HEADLINES-1, log §353)", () => {
+    expect(blockerTitle({ kind: "noindex", urls: ["https://acme.com/ofertas"] })).toBe("Quita la etiqueta noindex de /ofertas");
+    expect(blockerTitle({ kind: "noindex", urls: ["a", "b"] })).toBe("Quita la etiqueta noindex de 2 páginas");
+    expect(blockerTitle({ kind: "snippet", urls: ["https://acme.com/precios"] })).toBe("Quita nosnippet de /precios");
+    expect(blockerTitle({ kind: "snippet", urls: ["https://acme.com/una/ruta/demasiado/larga/aqui"] })).toBe(
+      "Quita nosnippet de una de tus páginas"
+    );
   });
 
-  it("resume los bots como antes, sin cambiar el copy que ya existía", () => {
+  it("dice qué fichero tocar para los bots", () => {
+    expect(blockerTitle({ kind: "bots", agents: ["GPTBot", "ClaudeBot"] })).toBe("Permite GPTBot y ClaudeBot en tu robots.txt");
     expect(blockerTitle({ kind: "bots", agents: ["GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot"] })).toBe(
-      "Tu web bloquea a GPTBot y OAI-SearchBot y 2 más"
+      "Permite los bots de IA en tu robots.txt"
     );
   });
 

@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import type { createServiceClient } from "@/lib/supabase/service";
@@ -129,23 +130,29 @@ async function loadTopRecommendation(
 
   const { data: recs } = await service
     .from("recommendations")
-    .select("title, description, evidence_json")
+    .select("title, description, recommendation_type, evidence_json")
     .eq("project_id", projectId)
     .eq("run_id", latest.run_id)
     .eq("status", "active")
     .order("priority_rank", { ascending: true });
-  if (!recs || recs.length === 0) return null;
+  // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+  const live = (recs ?? []).filter((r) => !isRetiredRecommendationType(r.recommendation_type as string));
+  if (live.length === 0) return null;
 
-  const [top] = recs;
+  const [top] = live;
   return {
     recommendation: {
-      title: top.title as string,
+      title: recommendationHeadline({
+        recommendation_type: top.recommendation_type as string,
+        title: top.title as string,
+        evidence_json: top.evidence_json
+      }).title,
       description: top.description as string,
       engines: recommendationEngineLabels({ evidence_json: top.evidence_json } as Parameters<
         typeof recommendationEngineLabels
       >[0])
     },
-    others: recs.length - 1
+    others: live.length - 1
   };
 }
 
