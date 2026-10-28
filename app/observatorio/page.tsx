@@ -21,7 +21,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
 export const metadata: Metadata = contentMetadata({
   title: "Observatorio de visibilidad en IA · GenScore",
   description:
-    "Qué negocios recomiendan ChatGPT, Gemini y Claude, medido con preguntas reales y publicado por sector y ciudad. Primera edición: clínicas dentales en Madrid y Valencia.",
+    "Qué negocios nombran ChatGPT, Gemini y Claude, medido con preguntas reales y publicado por sector y ciudad. Primera edición: clínicas dentales en Madrid y Valencia.",
   path: PAGE_PATH
 });
 
@@ -35,7 +35,7 @@ export default function ObservatorioPage() {
 
       <h1 className="lp-h2">Observatorio de visibilidad en IA</h1>
       <p className="legal-updated" style={{ marginBottom: 36 }}>
-        Qué negocios recomienda la IA cuando alguien pregunta por un servicio en su ciudad, medido con preguntas reales en ChatGPT, Gemini y Claude.
+        Qué negocios nombra la IA cuando alguien pregunta por un servicio en su ciudad, medido con preguntas reales en ChatGPT, Gemini y Claude.
       </p>
 
       <div className="blog-body">
