@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { recommendationHeadline } from "@/lib/recommendations/headline";
 import { buildOverviewPlan, type PlanRecInput } from "./overview-plan";
 
 const rec = (id: string, type: string, rank: number, extra: Partial<PlanRecInput> = {}): PlanRecInput => ({
@@ -32,7 +33,13 @@ describe("buildOverviewPlan", () => {
       scoreRows: [],
       domain: "ejemplo.es"
     });
-    expect(plan.rows[0].text).toBe("Define en tu web los términos que te preguntan");
+    expect(plan.rows[0].text).toBe("Añade las definiciones al inicio de tu página");
+  });
+
+  it("names a single action by its headline, the task and not the stored title", () => {
+    const r = rec("a", "add_citation_block", 1, { title: "Título largo guardado en la base de datos que no es la tarea" });
+    const plan = buildOverviewPlan({ recs: [r], categoryByResultId: new Map(), scoreRows: [], domain: "ejemplo.es" });
+    expect(plan.rows[0].text).toBe(recommendationHeadline(r).title);
   });
 
   it("returns an empty plan for no recommendations", () => {
