@@ -52,3 +52,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Las puertas de honestidad no se tocan** (muestra mínima, runs comparables,
   ventana de la puntuación, afirmación competitiva): lo retenido sigue retenido.
 - **El anillo del kit usa la clase `tring`**, nunca `ring` (utilidad global).
+
+## Misión del primer escaneo (F3b, log §355)
+
+- **Un solo componente en las seis secciones**: `FirstScanMission`, montado por
+  `FirstScanTakeover`. Es dueño del `router.refresh()` final (mismas tres
+  condiciones de salida que en §168).
+- **Cada cifra es un recuento de filas del run** (`missionCounter`); los
+  péndulos son ambiente y no codifican progreso. Sin dato, la fila del motor
+  queda vacía, nunca inventada.
+- **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-mission)`), no por
+  una prop del layout. Otra pantalla a pantalla completa usa el mismo patrón.

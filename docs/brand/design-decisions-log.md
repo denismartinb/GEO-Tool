@@ -27355,3 +27355,35 @@ en poca muestra. `mean-rank-copy.ts` lo anota en su cabecera.
 `formatMeanPosition(r.position)`. El gráfico «Top 5 posiciones» de Visión
 general sigue dibujando el puesto medio de las cinco primeras, ahora las
 cinco más mencionadas.
+
+## 355. CONSOLE-INSTRUMENTO-1 Fase 3b: la misión del primer escaneo pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla que ocupa las seis secciones durante el primer escaneo de
+un dominio deja el cohete y adopta la del prototipo aprobado: marco propio sin
+menú, contador de respuestas con su «de N», fila de puntos, un péndulo por
+motor (ambiente, nunca progreso), cinco fases y nota final. Es la misma
+pantalla en las seis secciones, como exigía ANIMATION-PARITY-1 (§168).
+
+**Cómo.** `components/ins/mission/first-scan-mission.tsx` sustituye a
+`scan-mission-rocket.tsx` (borrado, con su test de copy), `app/ins/mission.css`
+(el marco oculta el menú con `:has(.sc-mission)`), `lib/ins/mission-copy.ts` y
+`lib/scan/engine-response-counts.ts`. El sondeo `/scan-status` acepta
+`?engines=` y devuelve `engine_counts`, un recuento por motor de filas con
+respuesta; el resto de sondeos no pagan esas consultas.
+
+**Decisiones.**
+- Las cinco fases son los cinco pasos reales de `computeMissionBeat`, no un
+  reloj. El único reloj sigue siendo el que cambia de escena tras la ignición.
+- El contador son respuestas recibidas sobre lanzamientos por motores mientras
+  responden los motores, y respuestas leídas sobre las de la ejecución en
+  órbita; el rótulo cambia con la unidad. Si no se pudo contar por motor, cae a
+  lanzamientos. Nunca un número estimado.
+- El prototipo tiene «Salir» hacia Visión general, que aquí sería esta misma
+  pantalla; lleva a Ajustes. Pendiente de confirmar con el fundador.
+
+**Pendiente / roto conocido.** El cohete sigue vivo en la 404 y en la
+reentrada de Auditoría web (`ReentryMission`), con la regla
+`mission-rocket.md` reducida a eso; F6 y F8 deciden su destino. Premisa de
+recuperación: se retira el cohete como señal de estado, no un camino. Si el
+sondeo cae, la pantalla se queda en su último dato hasta que vuelva la
+conexión y el vigilante de escaneos sigue avisando al operador.
