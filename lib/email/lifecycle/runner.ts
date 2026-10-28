@@ -135,7 +135,7 @@ async function loadTopRecommendation(
     .eq("run_id", latest.run_id)
     .eq("status", "active")
     .order("priority_rank", { ascending: true });
-  // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
   const live = (recs ?? []).filter((r) => !isRetiredRecommendationType(r.recommendation_type as string));
   if (live.length === 0) return null;
 

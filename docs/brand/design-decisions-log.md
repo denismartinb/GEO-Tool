@@ -27187,7 +27187,7 @@ en §341.
 
 **Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
 
-## 353. RECS-HEADLINES-1: cada recomendación, una tarea del cliente (2026-10-28)
+## 354. RECS-HEADLINES-1: cada recomendación, una tarea del cliente (2026-10-28)
 
 **Qué.** El fundador vio en el móvil «Consigue que te citen en "¿Cuánto
 cuesta un plan de telefonía móvil con datos ilimitados y ll…"», cortado y sin

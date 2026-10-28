@@ -79,7 +79,7 @@ export async function getNextStepNotice(
       projectDomain: project.domain,
       recs: activeRecs
     });
-    // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+    // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
     const recs = activeRecs.filter(
       (r) => !isRetiredRecommendationType(r.recommendation_type) && !isAlreadyCovered(r.recommendation_type, overlays.get(r.id))
     );

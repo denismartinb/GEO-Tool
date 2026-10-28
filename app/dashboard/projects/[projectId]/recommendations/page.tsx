@@ -220,7 +220,7 @@ export default async function RecommendationsPage({
 
   const activeRun = await activeRunPromise;
 
-  // RECS-HEADLINES-1 (log §353): retired types have no task to offer; rows
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer; rows
   // stored before the change stay hidden until the next scan replaces them.
   const baseRecs = ((recommendations ?? []) as Recommendation[]).filter(
     (r) => !isRetiredRecommendationType(r.recommendation_type),

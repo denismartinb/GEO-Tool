@@ -815,7 +815,7 @@ log §306).
   pantalla da por hecho.
 - **Sólo se enlaza una dirección `http(s)`.**
 
-## Titulares de acción (RECS-HEADLINES-1, log §353)
+## Titulares de acción (RECS-HEADLINES-1, log §354)
 
 - **El titular de una tarjeta es una tarea del cliente: el entregable y
   dónde va.** «Sube esta FAQ a tu web», «Añade un dato con fuente a

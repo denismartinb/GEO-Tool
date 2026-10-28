@@ -101,7 +101,7 @@ describe("the plan sees a lever once", () => {
 describe("copy", () => {
   it("names the topic, shortened where the stored label reads badly", () => {
     expect(leverTitle({ kind: "category", category: "Cómo hacer / guía" })).toBe("Publica una página sobre «Cómo hacer»");
-    // RECS-HEADLINES-1 (log §353): a topic too long for two phone lines falls back.
+    // RECS-HEADLINES-1 (log §354): a topic too long for two phone lines falls back.
     expect(leverTitle({ kind: "category", category: "Comparativas entre proveedores del sector" })).toBe(
       "Publica una página con estas preguntas"
     );

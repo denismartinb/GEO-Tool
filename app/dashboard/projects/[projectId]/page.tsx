@@ -444,7 +444,7 @@ export default async function ProjectDetailPage({
         recs: activeRecommendationsRaw
       })
     : null;
-  // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
   const activeRecommendations = activeRecommendationsRaw
     ? activeRecommendationsRaw.filter(
         (r) =>

@@ -983,7 +983,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
-  // RECS-HEADLINES-1 (log §353): "increase_brand_prominence" (a named
+  // RECS-HEADLINES-1 (log §354): "increase_brand_prominence" (a named
   // competitor ranks ahead of a brand already mentioned) is no longer emitted.
   // The order of names is the engine's call and the card had no deliverable
   // the customer can make. The position stays visible in Competidores.
@@ -1365,7 +1365,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
-  // RECS-HEADLINES-1 (log §353): "amplify_positive_pattern" is no longer
+  // RECS-HEADLINES-1 (log §354): "amplify_positive_pattern" is no longer
   // emitted. «Look at what your good pages share» is an analysis, not a task.
 
   const byKey = new Map<string, CandidateRec>();

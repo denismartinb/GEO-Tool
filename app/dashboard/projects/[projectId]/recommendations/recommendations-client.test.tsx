@@ -561,7 +561,7 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
 
   it("«Más adelante» no repite las tarjetas del plan", () => {
     const recs = [
-      // RECS-HEADLINES-1 (log §353): the headline comes from the type, so the
+      // RECS-HEADLINES-1 (log §354): the headline comes from the type, so the
       // card is found by its context line (the question it is about).
       baseRec({ id: "plan1", evidence_json: { affected_prompts: ["Acción del plan"] } }),
       baseRec({ id: "later1", title: "Otra cosa", recommendation_type: "add_citation_block" })

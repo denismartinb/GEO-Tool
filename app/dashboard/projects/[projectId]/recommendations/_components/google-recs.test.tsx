@@ -58,7 +58,7 @@ describe("GooglePlanCard — la tarjeta de Google dentro del plan", () => {
     expect(html).toContain('class="rec2-rank">2<');
     expect(html).toContain("rec2-src rec2-src-g");
     expect(html).toContain("Subir a la página 1");
-    // RECS-HEADLINES-1 (log §353): the change to make, never the place to reach.
+    // RECS-HEADLINES-1 (log §354): the change to make, never the place to reach.
     expect(html).toContain("Enlaza /blog/aparecer desde tus otras páginas");
     expect(html).toContain("12º");
     expect(html).toContain("Puesto en Google");

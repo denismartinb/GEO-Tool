@@ -65,7 +65,7 @@ export function findCitationBlockers(input: {
 
 /**
  * Titular del bloqueo: el cambio que hay que hacer y en qué fichero o página
- * (RECS-HEADLINES-1, log §353), no la descripción del problema.
+ * (RECS-HEADLINES-1, log §354), no la descripción del problema.
  */
 export function blockerTitle(blocker: CitationBlocker): string {
   if (blocker.kind === "bots") {

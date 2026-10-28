@@ -201,7 +201,7 @@ export async function runWeeklyDigest({
           .gte("created_at", scansSinceIso)
       ]);
 
-    // RECS-HEADLINES-1 (log §353): the email names the task, not the stored
+    // RECS-HEADLINES-1 (log §354): the email names the task, not the stored
     // title, and skips retired types still stored on this run.
     const topRow = ((topRecommendationRows ?? []) as Array<{
       title: string;

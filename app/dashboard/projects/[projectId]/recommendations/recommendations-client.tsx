@@ -447,7 +447,7 @@ function dependsOnThirdParty(rec: Recommendation): boolean {
 }
 
 /**
- * RECS-HEADLINES-1 (log §353): the card's task, and under it the question,
+ * RECS-HEADLINES-1 (log §354): the card's task, and under it the question,
  * rival or source it is about. Computed from the row, so old rows read the
  * same as new ones.
  */

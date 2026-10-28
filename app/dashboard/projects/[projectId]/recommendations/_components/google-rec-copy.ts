@@ -128,7 +128,7 @@ export function planCopy(rec: GooglePlanRec): PlanCopy {
 }
 
 /**
- * RECS-HEADLINES-1 (log §353): Google decides the place, so the title is the
+ * RECS-HEADLINES-1 (log §354): Google decides the place, so the title is the
  * change the customer makes: the links to add, or the first lines to write.
  * The search itself stays in the step and the meta line.
  */

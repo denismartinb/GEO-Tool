@@ -47,7 +47,7 @@ export function leverKey(theme: LeverTheme): string {
 }
 
 /**
- * RECS-HEADLINES-1 (log §353): the deliverable, never the outcome. A topic
+ * RECS-HEADLINES-1 (log §354): the deliverable, never the outcome. A topic
  * name too long for two phone lines falls back to the generic form; the
  * reach line under the title already names the topic's questions.
  */

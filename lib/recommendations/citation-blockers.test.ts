@@ -75,7 +75,7 @@ describe("findCitationBlockers", () => {
 });
 
 describe("copy del bloqueo", () => {
-  it("nombra el cambio y dónde, en singular y plural (RECS-HEADLINES-1, log §353)", () => {
+  it("nombra el cambio y dónde, en singular y plural (RECS-HEADLINES-1, log §354)", () => {
     expect(blockerTitle({ kind: "noindex", urls: ["https://acme.com/ofertas"] })).toBe("Quita la etiqueta noindex de /ofertas");
     expect(blockerTitle({ kind: "noindex", urls: ["a", "b"] })).toBe("Quita la etiqueta noindex de 2 páginas");
     expect(blockerTitle({ kind: "snippet", urls: ["https://acme.com/precios"] })).toBe("Quita nosnippet de /precios");

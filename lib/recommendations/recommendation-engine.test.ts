@@ -914,7 +914,7 @@ describe("generateRecommendationsForRun", () => {
 
   // --- RECS-2B ---
 
-  it("no longer emits a prominence card even when a named competitor ranks ahead (RECS-HEADLINES-1, log §353)", () => {
+  it("no longer emits a prominence card even when a named competitor ranks ahead (RECS-HEADLINES-1, log §354)", () => {
     const recs = run(
       [
         prompt({
@@ -1015,7 +1015,7 @@ describe("generateRecommendationsForRun", () => {
     expect(rec!.evidence_json.first_step).toContain("Best furniture brands 2026");
   });
 
-  it("no longer emits amplify_positive_pattern even with winning prompts and an open gap (RECS-HEADLINES-1, log §353)", () => {
+  it("no longer emits amplify_positive_pattern even with winning prompts and an open gap (RECS-HEADLINES-1, log §354)", () => {
     const recs = run([
       prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),

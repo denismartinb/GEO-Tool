@@ -192,7 +192,7 @@ export async function loadReportInput({
   }
 
   const resultById = new Map(results.map((r) => [r.id, r]));
-  // RECS-HEADLINES-1 (log §353): retired types have no task to offer.
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
   const recs = ((recRows ?? []) as RecRow[]).filter((r) => !isRetiredRecommendationType(r.recommendation_type)).map((r) => ({
     ...r,
     potentialPoints:

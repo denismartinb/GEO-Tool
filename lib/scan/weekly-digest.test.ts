@@ -284,7 +284,7 @@ describe("runWeeklyDigest", () => {
         currentScore: 70,
         previousScore: 80,
         topMover: { name: "Rival", mentionDelta: 5 },
-        // RECS-HEADLINES-1 (log §353): the email names the task.
+        // RECS-HEADLINES-1 (log §354): the email names the task.
         recommendation: { title: "Publica una comparativa con tabla y tus rivales", description: "..." }
       }), expect.any(String), expect.anything()
     );
