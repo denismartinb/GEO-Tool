@@ -27600,3 +27600,36 @@ sentimientos siguen contándose sólo sobre respuestas que nombran la marca.
 volver a lanzar el piloto de escritura. Las reglas `pr2-*`/`add-prompts-*` de
 `globals.css` y `console.css` se borran en F8. El placeholder del buscador se
 corta en 390 px (copy del prototipo, sin tocar).
+
+## 361. CONSOLE-INSTRUMENTO-1 Fase 5b: Competidores pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con las cifras reales, tarjeta «Ranking» (menciones, citas y puesto
+medio por marca, la tuya resaltada, aviso «pocas menciones»), «Evolución del
+puesto medio» (sólo con escaneos suficientes), presencia por motor en mapa de
+calor, terreno por tema, brecha de prompts por categoría y competidores
+sugeridos. Gestionar competidores y alias pasa a la hoja lateral compartida
+(`components/ins/kit/sheet.tsx`). Se mantiene «Editar» en la hoja aunque el
+prototipo no lo muestra, y una fila de la brecha sigue llevando a Prompts
+filtrado por competidor.
+
+**Qué no cambia.** Consultas, acciones de servidor (`createCompetitorAction`,
+`updateCompetitorAction`, `deactivateCompetitorAction`,
+`getSuggestedCompetitorsAction`, `addBrandAliasAction`,
+`removeBrandAliasAction`), RLS y esquema. El orden sigue siendo por menciones,
+con el puesto medio (sólo si es fiable) como desempate (§175, §353). El
+denominador («N respuestas · M prompts en K motores», `answerCountLabel`) sigue
+a la vista junto al ranking (TRUST-METRICS-1, §183).
+
+**Qué cambia respecto a la pantalla anterior.** La cuota de voz (barra
+apilada y delta) deja de enseñarse porque el prototipo no la pinta. Menciones y
+citas son acumuladas sobre todas las respuestas analizadas; el puesto medio sale
+del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
+
+**Retirado.** `podium-row`, `manage-competitors-panel`,
+`manage-brand-aliases-panel`, `prompt-gap-section`,
+`suggested-competitors-section`.
+
+**Pendiente o roto conocido.** Los favicons muestran imagen rota sólo en el
+arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
+que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.

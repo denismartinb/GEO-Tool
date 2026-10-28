@@ -97,3 +97,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   «pendiente», nunca «no te nombra».
 - **Nada se guarda antes del paso de revisión** de «Añadir prompts»; el tope
   del plan cuenta lo marcado (PROMPTS-REVIEW-1, §305).
+
+## Competidores (F5b, log §361)
+
+- **El orden del ranking es por menciones**; el puesto medio sólo desempata y
+  sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
+- **El denominador no se quita**: «N respuestas · M prompts en K motores» lo
+  compone `answerCountLabel`, nunca una frase suelta (§183).
+- **Las clases `i` de una regla móvil se escriben con `>`**: el kit `Roll` usa
+  `<i>` para los dígitos y una regla `.mt i` los rompe.
+- **Las acciones de servidor de competidores y alias no cambian**; la hoja de
+  gestión las llama y refresca.
