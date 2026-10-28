@@ -15,7 +15,7 @@ import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { ScanProgressPoller } from "@/components/scan-progress-poller";
 import { ScanInProgressLive } from "@/components/scan-in-progress-live";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { MEAN_RANK_BRAND_HEADLINE, MEAN_RANK_COLUMN_LABEL } from "@/lib/competitors/mean-rank-copy";
+import { MEAN_RANK_BRAND_HEADLINE, MEAN_RANK_COLUMN_LABEL, formatMeanPosition } from "@/lib/competitors/mean-rank-copy";
 import { ScanTriggerButton } from "@/components/scan-trigger-button";
 import { ScanReportControl } from "./scan-report-control";
 import { feedbackErrorMessages, feedbackSuccessMessages } from "@/lib/projects/feedback-messages";
@@ -758,8 +758,7 @@ export default async function ProjectDetailPage({
   const panoramaListRows = panoramaState.kind === "ranked" ? panoramaState.listRows : panoramaState.kind === "unranked" ? panoramaState.rows : [];
   const maxPanoramaMention = Math.max(1, ...panoramaListRows.map((r) => r.mentionRate ?? 0));
   const panoramaRanked = panoramaState.kind === "ranked";
-  const brandRank = panoramaState.kind === "ranked" ? panoramaState.brandRank : null;
-  const totalRanked = panoramaState.kind === "ranked" ? panoramaState.totalRanked : 0;
+  const brandMeanPosition = panoramaState.kind === "ranked" ? panoramaState.brandPosition : null;
   const brandAppendedBeyondTop5 = panoramaState.kind === "ranked" && panoramaState.brandAppended;
 
   const posbarsData = (() => {
@@ -920,8 +919,8 @@ export default async function ProjectDetailPage({
       <div className="card" style={{ padding: "17px 16px 6px" }}>
         <div className="ov2-pm-lbl">{MEAN_RANK_BRAND_HEADLINE}</div>
         <div className="ov2-pm-val">
-          {brandRank !== null ? (
-            <>{brandRank}<small> / {totalRanked}</small></>
+          {brandMeanPosition !== null ? (
+            <>{formatMeanPosition(brandMeanPosition)}</>
           ) : (
             // The brand itself was never named this scan, even though
             // others were — a real state (dormant or newly-tracked
@@ -1017,13 +1016,13 @@ export default async function ProjectDetailPage({
                 </div>
                 <div className="pct">{row.mentionRate !== null ? `${Math.round(row.mentionRate)}%` : "—"}</div>
               </div>
-              {/* Ordinal, and the heaviest figure of the row: "5º" is a
-                  standing, "5" is a bullet, and on the left it gets read
-                  as one (log §15, twice). Same shape as Competidores.
-                  Absent, not dashed, when the scan has no positions —
+              {/* The real mean rank (1,4), not the row's place: the list
+                  is ordered by mention rate (log §353). Same shape as
+                  Competidores. Absent, not dashed, when the scan has no
+                  positions —
                   every row would carry the same "—". */}
-              {row.rank !== null ? (
-                <span className="ov2-cmp-sc">{row.rank}º</span>
+              {row.position !== null ? (
+                <span className="ov2-cmp-sc">{formatMeanPosition(row.position)}</span>
               ) : null}
             </div>
           );

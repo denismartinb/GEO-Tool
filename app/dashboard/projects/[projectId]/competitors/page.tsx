@@ -24,7 +24,8 @@ import { DEFAULT_VISIBLE_SERIES } from "@/lib/competitors/trend-window";
 import {
   MEAN_RANK_COLUMN_LABEL,
   MEAN_RANK_LIST_HEADLINE,
-  MEAN_RANK_TREND_HEADLINE
+  MEAN_RANK_TREND_HEADLINE,
+  formatMeanPosition
 } from "@/lib/competitors/mean-rank-copy";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { FaviconImg } from "@/components/ui/favicon-img";
@@ -925,14 +926,13 @@ export default async function CompetitorsPage({
                                 ellipsis, and the tag would be the first thing
                                 to disappear. Same shape as `.ov2-cmp-tag`. */}
                             {!entry.qualified && <span className="cm2-pos-thin">pocas menciones</span>}
-                            {/* Also the tiebreaker for the order, so a shared
-                                mean rank never resolves invisibly. */}
+                            {/* The figure that orders the list (log §353). */}
                             <span className="cm2-pos-rate">
                               {entry.mentionRate != null ? `${Math.round(entry.mentionRate)}%` : ""}
                             </span>
-                            {/* Ordinal, not a row number: "3º" is a standing,
-                                "3" is a bullet. */}
-                            <span className="cm2-pos-n">{entry.rank}º</span>
+                            {/* The real mean, not the row's place: the list is
+                                ordered by mention rate (log §353). */}
+                            <span className="cm2-pos-n">{formatMeanPosition(entry.position)}</span>
                           </div>
                         ))}
                       </div>
