@@ -99,13 +99,32 @@ export function OvHeader({
   );
 }
 
-export function PriorityAlert({ title, detail, href }: { title: string; detail: string; href: string }) {
+export function PriorityAlert({
+  title,
+  detail,
+  href,
+  urls = []
+}: {
+  title: string;
+  detail: string;
+  href: string;
+  /** The concrete pages behind the block, when the screen can name them. */
+  urls?: string[];
+}) {
   const dot = (s: string) => (/[.!?…]$/.test(s) ? s : `${s}.`);
   return (
     <div className="alert" role="region" aria-label="Prioridad 1">
       <Ic n="warn" />
       <div className="tx">
         <b>{dot(title)}</b> {detail}
+        {urls.length > 0 ? (
+          <ul className="alert-urls">
+            {urls.slice(0, 3).map((url) => (
+              <li key={url}>{url}</li>
+            ))}
+            {urls.length > 3 ? <li>y {urls.length - 3} más</li> : null}
+          </ul>
+        ) : null}
       </div>
       <Link className="btn warm sm" href={href}>
         Arreglarlo

@@ -10,7 +10,9 @@ import { engineSpriteKey } from "./engine";
  */
 export function PendulumWave({ providers }: { providers: readonly string[] }) {
   const ref = useRef<SVGSVGElement>(null);
-  const keys = providers.map((p) => engineSpriteKey(p)).filter((k): k is string => k !== null);
+  const keys = providers
+    .map((p) => engineSpriteKey(p))
+    .filter((k): k is string => k !== null);
   const width = Math.max(1, keys.length) * 100;
 
   useEffect(() => {
@@ -78,11 +80,21 @@ export function PendulumWave({ providers }: { providers: readonly string[] }) {
         const x = 50 + i * 100;
         return (
           <g key={k}>
-            <path className="arc" d={`M${x - 38} 88 A88 88 0 0 0 ${x + 38} 88`} />
+            <path
+              className="arc"
+              d={`M${x - 38} 88 A88 88 0 0 0 ${x + 38} 88`}
+            />
             <g data-x={x}>
               <line className="str" x1={x} y1="8" x2={x} y2="96" />
               <circle className="bob" cx={x} cy="96" r="13" />
-              <use href={`#e-${k}`} x={x - 7} y="89" width="14" height="14" style={{ color: "var(--ink)" }} />
+              <use
+                href={`#e-${k}`}
+                x={x - 7}
+                y="89"
+                width="14"
+                height="14"
+                style={{ color: "var(--ink)" }}
+              />
             </g>
             <circle cx={x} cy="8" r="2" fill="var(--ink-3)" />
           </g>

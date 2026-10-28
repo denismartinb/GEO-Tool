@@ -6,7 +6,7 @@ const SPRITE_KEY: Record<string, string> = {
   chatgpt: "chatgpt",
   gemini: "gemini",
   claude: "claude",
-  perplexity: "perplexity"
+  perplexity: "perplexity",
 };
 
 export function engineSpriteKey(provider: string): string | null {
@@ -14,7 +14,13 @@ export function engineSpriteKey(provider: string): string | null {
 }
 
 /** Engine glyph from the sprite (`lg()` in the prototype). Nothing for an unknown provider. */
-export function EngineLogo({ provider, size = 16 }: { provider: string; size?: number }) {
+export function EngineLogo({
+  provider,
+  size = 16,
+}: {
+  provider: string;
+  size?: number;
+}) {
   const key = engineSpriteKey(provider);
   if (!key) return null;
   return (
