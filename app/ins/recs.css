@@ -150,7 +150,13 @@
 .ins .rc-add{display:grid;gap:10px;flex:1 1 100%;min-width:0}
 .ins .rc-addb .btn{max-width:100%;height:auto;min-height:40px;white-space:normal;text-align:left}
 .ins .dk-act:has(.rc-add) .dk-next{margin-left:0}
-@media (max-width:760px){.ins .pillars>div:last-child:nth-child(odd){grid-column:1/-1}}
+@media (max-width:760px){
+ .ins .pillars{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+ .ins .pillars>div{border-right:1px solid var(--rule)!important;border-bottom:0!important;margin-right:10px!important;padding:12px 10px 12px 0!important}
+ .ins .pillars>div:last-child{border-right:0!important;margin-right:0!important}
+ .ins .pillars .l{font-size:11.5px}
+ .ins .pillars b{font-size:24px}
+}
 .ins .rc-field{display:grid;gap:4px;font-size:12.5px;color:var(--ink-3)}
 .ins .rc-field input{height:40px;border:1px solid var(--rule);border-radius:99px;padding:0 14px;background:var(--surface);font:400 14px var(--font);color:var(--ink);max-width:340px}
 .ins .rc-field input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
