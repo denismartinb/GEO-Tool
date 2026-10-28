@@ -8,6 +8,7 @@
  * its impact in words.
  */
 import { collapseLeversForPlan, expandLeverIds, groupLevers, leverTitle, themeForRec, type LeverEvidence, type LeverView } from "@/lib/recommendations/levers";
+import { recommendationHeadline, type HeadlineCoverage } from "@/lib/recommendations/headline";
 import { MIN_VISIBLE_POINTS, selectPlan } from "@/lib/recommendations/plan";
 import {
   computeJointPotentialPoints,
@@ -60,8 +61,10 @@ export function buildOverviewPlan(input: {
   categoryByResultId: ReadonlyMap<string, string | null>;
   scoreRows: ScoreInputRow[];
   domain: string;
+  /** Coverage verdict of a recommendation, so its headline can name the own page (RECS-HEADLINES-1, log §354). */
+  coverageFor?: (recId: string) => HeadlineCoverage;
 }): OverviewPlan {
-  const { recs, categoryByResultId, scoreRows, domain } = input;
+  const { recs, categoryByResultId, scoreRows, domain, coverageFor } = input;
   const withPoints = recs.map((r) => ({
     ...r,
     potentialPoints:
@@ -118,7 +121,7 @@ export function buildOverviewPlan(input: {
     const raw = r.potentialPoints;
     return {
       id: r.id,
-      text: lever ? leverTitle(lever.theme) : r.title,
+      text: lever ? leverTitle(lever.theme) : recommendationHeadline(r, coverageFor?.(r.id)).title,
       source: "ia",
       points: typeof raw === "number" && raw >= MIN_VISIBLE_POINTS && Math.round(raw) > 0 ? Math.round(raw) : null,
       qualitative: impactWords(r.impact)

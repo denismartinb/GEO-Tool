@@ -27356,6 +27356,48 @@ en poca muestra. `mean-rank-copy.ts` lo anota en su cabecera.
 general sigue dibujando el puesto medio de las cinco primeras, ahora las
 cinco más mencionadas.
 
+## 354. RECS-HEADLINES-1: cada recomendación, una tarea del cliente (2026-10-28)
+
+**Qué.** El fundador vio en el móvil «Consigue que te citen en "¿Cuánto
+cuesta un plan de telefonía móvil con datos ilimitados y ll…"», cortado y sin
+decir qué hacer, y pidió que cada recomendación sea una tarjeta y una línea de
+un plan de cosas por hacer. Después de ver la primera propuesta añadió la
+regla de fondo: sólo existen recomendaciones con una acción concreta que el
+cliente puede hacer («sube esta FAQ a la página», «añade esta comparativa»,
+«modifica este fichero»); «sal antes que X» o «aparece en la página 1» no
+están en su mano. Propuesta aprobada en artifact (versión 2, móvil y
+escritorio) con «Adelante».
+
+**Cómo.**
+- `lib/recommendations/headline.ts` decide el titular y una línea de contexto
+  por tipo, al pintar, con lo que ya trae la fila (pregunta, rival, dominios,
+  críticas) y el veredicto de cobertura (si confirmó la página, la nombra).
+  Las filas guardadas antes leen igual que las nuevas, sin migración. El
+  `title` guardado no cambia.
+- Lo leen la tarjeta de Recomendaciones (y de Auditoría técnica, que reutiliza
+  `RecCard`), «Resueltas», Visión general, el informe, la campana, el correo
+  de fin de prueba y el resumen semanal.
+- Las palancas por tema pasan a «Publica una página sobre «Tema»» y «Añade las
+  definiciones al inicio de tu página»; Google a «Enlaza /x desde /a y /b» o
+  «Reescribe título y descripción de /x»; los bloqueos a «Permite GPTBot y
+  ClaudeBot en tu robots.txt», «Quita la etiqueta noindex de /x».
+- Retirados `increase_brand_prominence` («Adelanta a X: sales después en N
+  respuestas») y `amplify_positive_pattern` («Repite lo que ya te funciona»):
+  el motor ya no los emite y las filas guardadas se ocultan en toda vista que
+  lista tarjetas hasta que el siguiente escaneo las sustituye. El puesto
+  frente a cada rival sigue en Competidores.
+
+**Pendiente o conocido.**
+- Los recuentos de «recomendaciones activas» que se piden con `count` (resumen
+  semanal, correo de ciclo de vida, contadores de la consola) pueden contar
+  una fila retirada hasta el siguiente escaneo. Se aceptó: la cifra se corrige
+  sola en uno o dos días y no enseña la tarjeta.
+- La etiqueta de tipo («Añadir bloque de cita», «Aumentar prominencia de
+  marca») sigue sonando a interna; queda para otra fase.
+- La consola nueva (CONSOLE-INSTRUMENTO-1, PR #681) debe leer
+  `recommendationHeadline` en su plan y sus tarjetas en vez de `title`.
+- Diseño aprobado: `docs/design-reference/recs-headlines-1/`.
+
 ## 355. CONSOLE-INSTRUMENTO-1 Fase 3b: la misión del primer escaneo pasa a «Instrumento» (2026-10-28)
 
 **Qué.** La pantalla que ocupa las seis secciones durante el primer escaneo de
