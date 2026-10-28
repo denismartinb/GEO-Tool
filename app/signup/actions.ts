@@ -96,6 +96,18 @@ export async function signup(formData: FormData) {
   }
 
   if (!data.session) {
+    // SIGNUP-ALERT-PENDING-1 (log §355): the operator hears about the signup
+    // now, not only once the confirmation link works. Supabase answers a
+    // signUp for an email that already has an account with a user that has
+    // no identities and sends no email, so that one is not a new signup.
+    if (data.user && (data.user.identities?.length ?? 0) > 0) {
+      await sendNewSignupOpsAlert(
+        supabase,
+        { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at },
+        "password",
+        "pending"
+      );
+    }
     redirect(`/signup/confirm?email=${encodeURIComponent(parsed.data.email)}`);
   }
 

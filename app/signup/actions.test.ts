@@ -86,6 +86,42 @@ describe("signup", () => {
     expect(sendWelcomeEmail).not.toHaveBeenCalled();
   });
 
+  it("alerts the operator as a pending signup when confirmation is required (log §355)", async () => {
+    signUp.mockResolvedValue({
+      data: {
+        session: null,
+        user: { id: "user-9", created_at: "2026-10-28T10:00:00.000Z", identities: [{ id: "i1" }] }
+      },
+      error: null
+    });
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret" }))
+    ).rejects.toThrow("REDIRECT:/signup/confirm?email=new%40example.com");
+
+    expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(
+      expect.anything(),
+      { id: "user-9", email: "new@example.com", created_at: "2026-10-28T10:00:00.000Z" },
+      "password",
+      "pending"
+    );
+  });
+
+  it("does not alert for an email that already has an account (user with no identities)", async () => {
+    signUp.mockResolvedValue({
+      data: { session: null, user: { id: "user-9", created_at: "2026-01-01T00:00:00.000Z", identities: [] } },
+      error: null
+    });
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(formData({ email: "old@example.com", password: "supersecret", confirmPassword: "supersecret" }))
+    ).rejects.toThrow("REDIRECT:/signup/confirm?email=old%40example.com");
+
+    expect(sendNewSignupOpsAlert).not.toHaveBeenCalled();
+  });
+
   it("builds emailRedirectTo from NEXT_PUBLIC_SITE_URL when set", async () => {
     process.env.NEXT_PUBLIC_SITE_URL = "https://app.example.com";
     signUp.mockResolvedValue({ data: { session: null }, error: null });

@@ -27259,3 +27259,46 @@ escritorio) con «Adelante».
 - La consola nueva (CONSOLE-INSTRUMENTO-1, PR #681) debe leer
   `recommendationHeadline` en su plan y sus tarjetas en vez de `title`.
 - Diseño aprobado: `docs/design-reference/recs-headlines-1/`.
+
+## 355. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
+
+**Qué pasaba.** Denis dejó de recibir los avisos de alta nueva. El aviso
+(`sendNewSignupOpsAlertEmail`, a `OPS_ALERT_EMAIL`) sólo salía cuando la cuenta
+conseguía su primera sesión: en `signup()` si Supabase devolvía sesión (nunca,
+con «Confirm email» activo) y en `/auth/callback` al pulsar el enlace de
+confirmación. Ese enlace es PKCE: el verificador vive en una cookie del
+navegador que hizo el alta, así que abierto desde la app de correo del móvil o
+desde otro navegador falla con «PKCE code verifier not found». La cuenta queda
+confirmada en Supabase, pero la persona aterriza en `/login` con «No se pudo
+completar el inicio de sesión» y no salen ni la bienvenida, ni el aviso al
+operador, ni `signup_completed`. Ya se vio el 2026-10-09 con una prueba de
+Denis y quedó pendiente de su aprobación.
+
+**Lo que dicen los datos (PostHog, 30 días).** Altas con contraseña enviadas
+(`signup_submitted`) el 16 y el 23 de octubre sin `signup_completed`; el 23,
+la persona pulsó el enlace y acabó en ese error de `/login`. Lo mismo el 2 y el
+3 de octubre. Las altas con Google sí completan (11, 15 y 24 de octubre). No se
+pudo comprobar el buzón de `OPS_ALERT_EMAIL` ni Resend desde aquí.
+
+**Qué se decide.**
+
+1. `signup()` avisa al operador en cuanto se envía el formulario cuando la
+   cuenta tiene que confirmar el email, con asunto «Alta nueva (sin
+   confirmar)». Si confirma, llega además el aviso de cuenta activa. Supabase
+   responde a un alta con un email que ya tiene cuenta con un usuario sin
+   `identities` y no manda correo: ese caso no avisa.
+2. Ruta nueva `/auth/confirm` que canjea `token_hash` con `verifyOtp`. No
+   necesita nada guardado en el navegador, así que el enlace funciona desde
+   cualquier dispositivo. Los efectos de la primera sesión (bienvenida, aviso,
+   `signup_completed`, código de afiliado, conversión pendiente) pasan a
+   `lib/auth-first-session.ts`, compartido con `/auth/callback`, sin cambiar.
+   `/auth/callback` sigue para Google y para los enlaces ya enviados.
+3. La plantilla «Confirm signup» (`docs/email-templates/confirm-signup.html`)
+   enlaza a `https://www.genscore.es/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
+
+**Pendiente, fuera del repo.** La plantilla se pega a mano en Supabase
+(Authentication → Emails → Templates → Confirm signup). Hasta que se pegue, los
+enlaces siguen siendo PKCE y sólo funcionan en el navegador del alta; el punto
+1 ya cubre el aviso igualmente. El recordatorio de confirmación
+(`lib/email/lifecycle/runner.ts`) reenvía la misma plantilla, así que se arregla
+con ella.
