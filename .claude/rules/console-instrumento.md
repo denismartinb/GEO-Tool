@@ -41,3 +41,48 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   sin aprobación.
 - **La niebla (`fx.ts`) es ambiente**: no representa progreso ni datos, se
   detiene al desmontar y respeta `prefers-reduced-motion`.
+
+## Visión general (F3a, log §352)
+
+- **El plan replica a Recomendaciones** (`buildOverviewPlan`: `selectPlan` sobre
+  palancas colapsadas, techo conjunto); con Google conectado su tarjeta ocupa
+  el puesto 2. No se calcula otro plan por su cuenta.
+- **Un solo sondeo por pantalla**: `LiveScanCard` es dueña del
+  `router.refresh()`. No montes un segundo poller.
+- **Las puertas de honestidad no se tocan** (muestra mínima, runs comparables,
+  ventana de la puntuación, afirmación competitiva): lo retenido sigue retenido.
+- **El anillo del kit usa la clase `tring`**, nunca `ring` (utilidad global).
+
+## Misión del primer escaneo (F3b, log §355)
+
+- **Un solo componente en las seis secciones**: `FirstScanMission`, montado por
+  `FirstScanTakeover`. Es dueño del `router.refresh()` final (mismas tres
+  condiciones de salida que en §168).
+- **Cada cifra es un recuento de filas del run** (`missionCounter`); los
+  péndulos son ambiente y no codifican progreso. Sin dato, la fila del motor
+  queda vacía, nunca inventada.
+- **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-mission)`), no por
+  una prop del layout. Otra pantalla a pantalla completa usa el mismo patrón.
+
+## Alta de dominio (F3c, log §356)
+
+- **El asistente envía las acciones reales.** `suggestProjectSetup`,
+  `generateMorePrompts` y `createProject` no cambian; los campos ocultos del
+  formulario del paso 4 son los de siempre. No se añade una acción nueva sin
+  aprobación.
+- **Ninguna cifra inventada en el resumen.** Sólo recuentos del propio estado
+  (prompts marcados, competidores, motores del plan); nunca una estimación de
+  respuestas.
+- **El marco se aparta por CSS** (`.ins-shell .app:has(.sc-newdomain)`), igual
+  que con la misión.
+
+## Recomendaciones (F4, log §357)
+
+- **Un solo modelo de tarjeta (`lib/ins/recs-cards.ts`)** para la baraja, las
+  filas de «Más adelante» y la capa en foco. Es puro y no calcula cifras ni
+  frases: lee `selectPlan`, `recommendationHeadline` y los puntos conjuntos.
+- **El plan se fija por visita**; marcar como hecha no reordena la baraja. El
+  deshacer durable sólo vive en «Resueltas».
+- **Una sola cola**: sin pestañas por fuente ni bloque «Técnico» (§307).
+  La tarjeta de Google es la placa 2 del plan.
+- **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.

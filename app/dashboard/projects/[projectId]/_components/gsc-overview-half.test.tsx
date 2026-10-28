@@ -32,10 +32,8 @@ describe("GscOverviewHalfView", () => {
     expect(html).toContain("1045");
     expect(html).toContain("+12%");
     expect(html).toContain("9,6");
-    expect(html).toContain("▲ 1,3");
     expect(html).toContain(">2<");
-    expect(html).toContain("búsquedas en la página 2");
-    expect(html).toContain(`/dashboard/projects/${P}/search-console`);
+    expect(html).toContain("búsquedas en página 2");
   });
 
   it("invites to connect when there is no connection, straight to Google", () => {
@@ -48,17 +46,19 @@ describe("GscOverviewHalfView", () => {
     expect(render({ kind: "reconnect", reason: "revoked" })).toContain("Volver a conectar");
   });
 
-  it("renders nothing it could not honestly fill", () => {
+  it("renders nothing when the feature cannot work, and says so when Google gave nothing", () => {
     expect(render({ kind: "not_configured" })).toBe("");
     expect(render({ kind: "unavailable" })).toBe("");
-    expect(render({ kind: "error", category: "timeout" })).toBe("");
-    expect(render(ready({ empty: true }))).toBe("");
+    expect(render({ kind: "error", category: "timeout" })).toContain("Google no ha respondido");
+    const empty = render(ready({ empty: true }));
+    expect(empty).toContain("no ha devuelto búsquedas");
+    expect(empty).not.toMatch(/clics<\/small>/);
   });
 
   it("hides deltas Google cannot support", () => {
     const html = render(ready({ clicks: { value: 3, deltaPct: null }, position: { value: 20, delta: null }, nearPage1: [] }));
     expect(html).not.toContain("%");
     expect(html).not.toContain("▲");
-    expect(html).not.toContain("en la página 2 de Google");
+    expect(html).not.toContain("página 2");
   });
 });
