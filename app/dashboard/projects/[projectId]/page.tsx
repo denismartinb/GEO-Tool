@@ -20,7 +20,7 @@ import {
 } from "@/components/ins/overview/blocks";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
 import { PlanBlock } from "@/components/ins/overview/plan-block";
-import { greeting, leadParts, scoreHeadline } from "@/lib/ins/overview-copy";
+import { firstNameFromMetadata, greeting, leadParts, scoreHeadline } from "@/lib/ins/overview-copy";
 import { buildOverviewPlan } from "@/lib/ins/overview-plan";
 import { AutoExecuteScan } from "@/components/auto-execute-scan";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
@@ -923,7 +923,7 @@ export default async function ProjectDetailPage({
     <OvHeader
       projectId={projectId}
       domain={project.domain}
-      greeting={greeting(madridHour)}
+      greeting={greeting(madridHour, firstNameFromMetadata(user.user_metadata))}
       lead={leadParts_}
       hasReport={Boolean(latestCompletedRun)}
     />

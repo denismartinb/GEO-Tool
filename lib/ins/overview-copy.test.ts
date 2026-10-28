@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bandOf, greeting, leadParts, scoreHeadline, type LeadPart } from "./overview-copy";
+import { bandOf, firstNameFromMetadata, greeting, leadParts, scoreHeadline, type LeadPart } from "./overview-copy";
 
 const text = (parts: LeadPart[]) => parts.map((p) => (typeof p === "string" ? p : p.text)).join("");
 
@@ -55,5 +55,18 @@ describe("bandOf", () => {
     expect(bandOf(39)).toBe("initial");
     expect(bandOf(40)).toBe("emerging");
     expect(bandOf(70)).toBe("competitive");
+  });
+});
+
+describe("greeting with a name", () => {
+  it("adds the first name when the account has one", () => {
+    expect(greeting(15, "Denis")).toBe("Buenas tardes, Denis.");
+    expect(firstNameFromMetadata({ full_name: "Denis Martín" })).toBe("Denis");
+    expect(firstNameFromMetadata({ given_name: "Ana", full_name: "Ana Ruiz" })).toBe("Ana");
+  });
+  it("never invents one", () => {
+    expect(firstNameFromMetadata({})).toBeNull();
+    expect(firstNameFromMetadata(null)).toBeNull();
+    expect(greeting(15, null)).toBe("Buenas tardes.");
   });
 });

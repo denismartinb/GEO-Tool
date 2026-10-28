@@ -10,10 +10,17 @@ export type LeadTarget = "prompts" | "competitors" | "recommendations";
 export type LeadPart = string | { text: string; to: LeadTarget };
 
 /** «Buenos días.» until 13:00, «Buenas tardes.» until 21:00, «Buenas noches.» after. The caller passes Madrid's hour. */
-export function greeting(hour: number): string {
-  if (hour >= 6 && hour < 13) return "Buenos días.";
-  if (hour >= 13 && hour < 21) return "Buenas tardes.";
-  return "Buenas noches.";
+export function greeting(hour: number, firstName?: string | null): string {
+  const base = hour >= 6 && hour < 13 ? "Buenos días" : hour >= 13 && hour < 21 ? "Buenas tardes" : "Buenas noches";
+  return firstName ? `${base}, ${firstName}.` : `${base}.`;
+}
+
+/** First given name from the account's own metadata (Google sign-in); null when the account has none. Never guessed from the email. */
+export function firstNameFromMetadata(meta: Record<string, unknown> | null | undefined): string | null {
+  const raw = meta?.given_name ?? meta?.full_name ?? meta?.name;
+  if (typeof raw !== "string") return null;
+  const first = raw.trim().split(/\s+/)[0] ?? "";
+  return first.length > 0 && first.length <= 30 ? first : null;
 }
 
 export function leadParts(input: {

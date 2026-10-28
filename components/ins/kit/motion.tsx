@@ -21,10 +21,16 @@ function wasSeen(id: string): boolean {
   }
 }
 
+/**
+ * Late arms: a block that streams in after the first paint (a Suspense
+ * boundary) mounts after `armMotion` ran, so its ticks, dials and bars never
+ * got `.lit` and stayed empty. Anything not yet armed is armed on arrival.
+ */
 export function armMotion(root: HTMLElement, animate: boolean) {
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const now = !animate || reduce;
-  root.querySelectorAll<HTMLElement>(".roll").forEach((r) => {
+  root.querySelectorAll<HTMLElement>(".roll:not([data-armed])").forEach((r) => {
+    r.dataset.armed = "1";
     r.querySelectorAll<HTMLElement>(".col>span").forEach((s, k) => {
       const d = Number(s.dataset.d);
       if (now) {
@@ -44,7 +50,8 @@ export function armMotion(root: HTMLElement, animate: boolean) {
       );
     });
   });
-  const lit = root.querySelectorAll<HTMLElement>(".tk,.dial,.tb");
+  const lit = root.querySelectorAll<HTMLElement>(".tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])");
+  lit.forEach((e) => (e.dataset.armed = "1"));
   if (now) {
     lit.forEach((e) => {
       e.classList.add("lit");
@@ -65,7 +72,17 @@ export function armMotion(root: HTMLElement, animate: boolean) {
 export function Motion({ id, children }: { id: string; children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
-    if (ref.current) armMotion(ref.current, !wasSeen(id));
+    const root = ref.current;
+    if (!root) return;
+    const animate = !wasSeen(id);
+    armMotion(root, animate);
+    const mo = new MutationObserver(() => {
+      if (root.querySelector(".roll:not([data-armed]),.tk:not([data-armed]),.dial:not([data-armed]),.tb:not([data-armed])")) {
+        armMotion(root, animate);
+      }
+    });
+    mo.observe(root, { childList: true, subtree: true });
+    return () => mo.disconnect();
   }, [id]);
   return (
     <div ref={ref} style={{ display: "contents" }}>
