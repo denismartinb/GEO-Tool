@@ -292,7 +292,7 @@ export function InsRecommendations({
           <>
             <div className="focus-h">
               <h2>
-                Tu plan de esta semana.
+                Tus acciones de esta semana.
                 {summary ? (
                   <>
                     {" "}

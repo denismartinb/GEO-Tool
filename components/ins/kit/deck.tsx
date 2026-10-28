@@ -272,11 +272,13 @@ export function ProgressTicks({
   idx,
   onGo,
   labels = true,
+  tickLabel = "Acción",
 }: {
   plates: Array<{ id: string; done: boolean }>;
   idx: number;
   onGo: (i: number) => void;
   labels?: boolean;
+  tickLabel?: string;
 }) {
   return (
     <div className="ptk" role="tablist" aria-label="Progreso">
@@ -285,13 +287,13 @@ export function ProgressTicks({
           key={p.id}
           type="button"
           role="tab"
-          aria-label={`Paso ${i + 1}`}
+          aria-label={`${tickLabel} ${i + 1}`}
           aria-selected={i === idx}
           className={`${i === idx ? "cur" : ""}${p.done ? " done" : ""}`.trim()}
           onClick={() => onGo(i)}
         >
           {labels ? (
-            <span className="num">{String(i + 1).padStart(2, "0")}</span>
+            <span className="num">{`${tickLabel} ${i + 1}`}</span>
           ) : null}
           <i />
         </button>
