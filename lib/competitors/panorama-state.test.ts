@@ -78,7 +78,9 @@ describe("computePanoramaState", () => {
     });
     expect(state.kind).toBe("ranked");
     if (state.kind !== "ranked") throw new Error("unreachable");
-    expect(state.brandRank).toBe(3);
+    // Highest mention rate first (log §353): the brand at 48% leads.
+    expect(state.brandRank).toBe(1);
+    expect(state.brandPosition).toBe(1.5);
     expect(state.totalRanked).toBe(3);
     expect(state.brandAppended).toBe(false);
     expect(state.listRows).toBe(state.topRows);
@@ -129,6 +131,6 @@ describe("computePanoramaState", () => {
     });
     expect(state.kind).toBe("ranked");
     if (state.kind !== "ranked") throw new Error("unreachable");
-    expect(state.rows.map((r) => r.key)).toEqual(["a", "brand"]);
+    expect(state.rows.map((r) => r.key)).toEqual(["brand", "a"]);
   });
 });

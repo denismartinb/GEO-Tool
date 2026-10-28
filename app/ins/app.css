@@ -1,0 +1,9 @@
+/* CONSOLE-INSTRUMENTO-1 · añadidos de producción (log §349): lo que el prototipo
+   resolvía con datos de ficción y aquí necesita reglas propias. */
+.ins .fav.ins-fav img,.ins-shell .fav.ins-fav img{width:100%;height:100%;object-fit:cover;display:block}
+.ins .ins-fav-lt,.ins-shell .ins-fav-lt{display:grid;place-items:center;width:100%;height:100%;color:#fff;font-weight:650;font-size:12px}
+.ins-shell .side .foot>div,.ins-shell .side .proj .t{min-width:0}
+.ins-shell .side .foot b,.ins-shell .side .foot span:not(.av){display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ins-shell .side .proj .t b,.ins-shell .side .proj .t .d{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ins-shell .side .nav.off{opacity:.5;pointer-events:none}
+.ins-shell .main{background:var(--surface)}

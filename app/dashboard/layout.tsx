@@ -4,25 +4,26 @@
 import "@/app/console.css";
 import "@/app/ins/tokens.css";
 import "@/app/ins/components.css";
+import "@/app/ins/overlays.css";
+import "@/app/ins/shell.css";
+import "@/app/ins/app.css";
+import "@/app/ins/overview.css";
+import "@/app/ins/mission.css";
+import "@/app/ins/newdomain.css";
+import "@/app/ins/recs.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getDomainOverage } from "@/lib/billing";
 import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project-cookie";
-import { Sidebar } from "@/components/sidebar";
-import { WorkspaceTopbar } from "@/components/workspace-topbar";
-import { ConsoleHeader } from "@/components/console-header";
-import { NotificationBell } from "@/components/notification-bell";
 import { getNextStepNotice } from "@/lib/notifications/next-step-data";
 import { getAccountNotice } from "@/lib/notifications/account-notice-data";
 import { DataMaturityBanner } from "@/components/data-maturity-banner";
 import { DomainOverageGate } from "@/components/billing/domain-overage-gate";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
-import { MobileShellProvider } from "@/components/mobile-shell";
 import { TourProvider } from "@/components/tour-provider";
-import { SessionCacheSync, SignOutForm } from "@/components/session-cache-sync";
+import { SessionCacheSync } from "@/components/session-cache-sync";
+import { InsShell } from "@/components/ins/shell";
 import { InternalVisitorMark } from "@/components/internal-visitor-mark";
 import { isCountedAccount } from "@/lib/admin/kpi/own-accounts";
 import { signOut } from "./actions";
@@ -48,6 +49,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     competitorCountByProject,
     recommendationCountByProject,
     latestScanStatusByProject,
+    latestScoreByProject,
+    latestScanDateByProject,
     dataMaturityByProject,
     plan,
     notifications
@@ -93,10 +96,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const overage = role === "admin" ? await getDomainOverage() : null;
 
   return (
-    <MobileShellProvider>
+    <>
       {/* header-flicker-prehydration-2 — seeds the public header's identity
           cache from the identity this layout already resolved server-side,
-          so the first public page this visitor opens (the sidebar's own
+          so the first public page this visitor opens (the help menu's own
           "Manuales y estudios" link goes straight to /blog) paints the account chip
           instead of flashing the anonymous CTAs. Renders nothing; see
           components/session-cache-sync.tsx. */}
@@ -105,7 +108,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           so /admin/panel counts only real visitors. */}
       {!isCountedAccount({ id: user.id, email: user.email ?? "" }) && <InternalVisitorMark />}
       {/* Blocking on purpose: no close button, no Escape, no click-outside.
-          Rendered above everything else in the console — Sidebar included —
+          Rendered above everything else in the console — the shell included —
           for as long as the account holds more active domains than its plan
           allows, on every page in app/dashboard/**, incl. Facturación. */}
       {overage?.isOverCapacity && (
@@ -120,45 +123,36 @@ export default async function DashboardLayout({ children }: { children: React.Re
         />
       )}
       {/* ONBOARDING-TOUR-1: el popup «Aprende cómo funciona». Envuelve la
-          consola entera porque tiene que poder abrirse desde el menú lateral
+          consola entera porque tiene que poder abrirse desde el menú de ayuda
           y saltar solo en el primer acceso, sea cual sea la pantalla. */}
       <TourProvider hasSeenTour={hasSeenTour}>
-      <Sidebar
-        projects={projects ?? []}
-        preferredProjectId={preferredProjectId}
-        promptCountByProject={promptCountByProject}
-        competitorCountByProject={competitorCountByProject}
-        recommendationCountByProject={recommendationCountByProject}
-        userEmail={user.email ?? ""}
-        planId={plan.id}
-        planName={plan.name}
-        signOutAction={signOut}
-      />
-      <div className="dash-main">
-        <ConsoleHeader>
-          <WorkspaceTopbar
-            projects={projects ?? []}
-            latestScanStatusByProject={latestScanStatusByProject}
-          />
-          <div className="dash-header-actions">
-            <NotificationBell
-              notifications={notifications}
-              accountNotice={accountNotice}
-              nextStep={nextStep}
-              projects={projects ?? []}
-            />
-            <SignOutForm action={signOut}>
-              <Button variant="outline" type="submit">
-                <Icon name="settings" size={14} />
-                Cerrar sesión
-              </Button>
-            </SignOutForm>
-          </div>
-        </ConsoleHeader>
-        <DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />
-        <main className="dash-content">{children}</main>
-      </div>
+        {/* CONSOLE-INSTRUMENTO-1 F1 (log §349): el marco «Instrumento» v51
+            sustituye al menú lateral y la cabecera anteriores. */}
+        <InsShell
+          data={{
+            projects: (projects ?? []).map((p) => ({ id: p.id, name: p.name, domain: p.domain })),
+            preferredProjectId,
+            promptCountByProject,
+            competitorCountByProject,
+            recommendationCountByProject,
+            latestScanStatusByProject,
+            latestScoreByProject,
+            latestScanDateByProject,
+            userEmail: user.email ?? "",
+            planId: plan.id,
+            planName: plan.name,
+            planProjectCap: plan.caps.projects,
+            onTrial: accountNotice?.kind === "trial",
+            signOutAction: signOut
+          }}
+          notifications={notifications}
+          accountNotice={accountNotice}
+          nextStep={nextStep}
+          banner={<DataMaturityBanner dataMaturityByProject={dataMaturityByProject} />}
+        >
+          <main>{children}</main>
+        </InsShell>
       </TourProvider>
-    </MobileShellProvider>
+    </>
   );
 }

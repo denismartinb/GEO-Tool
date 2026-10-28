@@ -94,7 +94,7 @@
 .ins .toast.out{animation:ins-tout var(--d2) var(--std) forwards}
 @keyframes ins-tin{from{opacity:0;transform:translateY(10px) scale(.98)}}
 @keyframes ins-tout{to{opacity:0;transform:translateY(6px)}}
-.ins .drawer-scrim{display:none}
+
 
 
 /* ===== instrument: dial, engine row, evolution ===== */
@@ -453,7 +453,7 @@
  .ins .focus-h .ctl{display:none}
  .ins .deck{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:18px -16px 0;padding:4px 16px 10px;scrollbar-width:none;height:auto!important;align-items:flex-start;scroll-padding-inline:16px}
  .ins .deck::-webkit-scrollbar{display:none}
- .ins .dk{position:relative;flex:0 0 calc(100% - 28px);scroll-snap-align:start;transform:none!important;opacity:1!important;height:auto!important;pointer-events:auto!important;border-radius:22px;box-shadow:0 1px 2px rgba(11,20,38,.04)}
+ .ins .dk{touch-action:auto;position:relative;flex:0 0 calc(100% - 28px);scroll-snap-align:start;transform:none!important;opacity:1!important;height:auto!important;pointer-events:auto!important;border-radius:22px;box-shadow:0 1px 2px rgba(11,20,38,.04)}
  .ins .dk .in{opacity:1!important;padding:22px 20px}
  .ins .dk-ix{font-size:34px;min-width:40px}
  .ins .dk-imp .v{font-size:34px}
