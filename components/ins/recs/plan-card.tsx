@@ -70,7 +70,7 @@ export function PlanCard({ card }: { card: InsCard }) {
       <h3 className="do">
         <TitleWithPath text={card.title} />
       </h3>
-      {card.context ? <p className="rc-ctx">{card.context}</p> : null}
+      {card.context && !emerging ? <p className="rc-ctx">{card.context}</p> : null}
       {card.step ? <p className="why">{card.step}</p> : null}
       {emerging && card.reach ? (
         <p className="eng-l">

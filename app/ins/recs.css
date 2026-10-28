@@ -147,7 +147,10 @@
 .ins .gen .rc-ex pre{margin:0;white-space:pre-wrap;word-break:break-word;font:inherit;font-size:13px;line-height:1.55;color:var(--ink-2)}
 
 /* emerging competitor: one action, not a plan */
-.ins .rc-add{display:grid;gap:10px;flex:1;min-width:0}
+.ins .rc-add{display:grid;gap:10px;flex:1 1 100%;min-width:0}
+.ins .rc-addb .btn{max-width:100%;height:auto;min-height:40px;white-space:normal;text-align:left}
+.ins .dk-act:has(.rc-add) .dk-next{margin-left:0}
+@media (max-width:760px){.ins .pillars>div:last-child:nth-child(odd){grid-column:1/-1}}
 .ins .rc-field{display:grid;gap:4px;font-size:12.5px;color:var(--ink-3)}
 .ins .rc-field input{height:40px;border:1px solid var(--rule);border-radius:99px;padding:0 14px;background:var(--surface);font:400 14px var(--font);color:var(--ink);max-width:340px}
 .ins .rc-field input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
