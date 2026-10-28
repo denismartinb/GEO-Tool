@@ -17,7 +17,7 @@ export function greeting(hour: number, firstName?: string | null): string {
 
 /** First given name from the account's own metadata (Google sign-in); null when the account has none. Never guessed from the email. */
 export function firstNameFromMetadata(meta: Record<string, unknown> | null | undefined): string | null {
-  const raw = meta?.given_name ?? meta?.full_name ?? meta?.name;
+  const raw = meta?.first_name ?? meta?.given_name ?? meta?.full_name ?? meta?.name;
   if (typeof raw !== "string") return null;
   const first = raw.trim().split(/\s+/)[0] ?? "";
   return first.length > 0 && first.length <= 30 ? first : null;

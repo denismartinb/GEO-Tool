@@ -62,6 +62,7 @@ describe("greeting with a name", () => {
   it("adds the first name when the account has one", () => {
     expect(greeting(15, "Denis")).toBe("Buenas tardes, Denis.");
     expect(firstNameFromMetadata({ full_name: "Denis Martín" })).toBe("Denis");
+    expect(firstNameFromMetadata({ first_name: "Denis", last_name: "Martín" })).toBe("Denis");
     expect(firstNameFromMetadata({ given_name: "Ana", full_name: "Ana Ruiz" })).toBe("Ana");
   });
   it("never invents one", () => {
