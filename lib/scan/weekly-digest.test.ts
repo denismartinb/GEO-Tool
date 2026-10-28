@@ -76,9 +76,10 @@ function fakeService({
               eq: (_col: string, runId: string) => ({
                 eq: () => ({
                   order: () => ({
-                    limit: () => ({
-                      maybeSingle: () => Promise.resolve({ data: recommendationByRunId?.[runId] ?? null, error: null })
-                    })
+                    limit: () => {
+                      const row = recommendationByRunId?.[runId];
+                      return Promise.resolve({ data: row ? [row] : [], error: null });
+                    }
                   })
                 })
               })
@@ -269,7 +270,9 @@ describe("runWeeklyDigest", () => {
           }
         ]
       },
-      recommendationByRunId: { r2: { title: "Añade una página de comparativa", description: "..." } }
+      recommendationByRunId: {
+        r2: { title: "Añade una página de comparativa", description: "...", recommendation_type: "add_comparison_content", evidence_json: {} }
+      }
     });
 
     await runWeeklyDigest({ service: service as never });
@@ -281,7 +284,8 @@ describe("runWeeklyDigest", () => {
         currentScore: 70,
         previousScore: 80,
         topMover: { name: "Rival", mentionDelta: 5 },
-        recommendation: { title: "Añade una página de comparativa", description: "..." }
+        // RECS-HEADLINES-1 (log §354): the email names the task.
+        recommendation: { title: "Publica una comparativa con tabla y tus rivales", description: "..." }
       }), expect.any(String), expect.anything()
     );
   });
