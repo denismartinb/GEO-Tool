@@ -17,9 +17,9 @@ const PAGE_PATH = "/observatorio/clinicas-dentales";
 const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Qué clínicas dentales recomienda la IA · Observatorio GenScore",
+  title: "Qué clínicas dentales nombra la IA · Observatorio GenScore",
   description:
-    "Ranking de las clínicas dentales que más recomiendan ChatGPT, Gemini y Claude en Madrid y Valencia. Edición octubre de 2026, medida con preguntas reales de pacientes.",
+    "Ranking de las clínicas dentales que más nombran ChatGPT, Gemini y Claude en Madrid y Valencia. Edición octubre de 2026, medida con preguntas reales de pacientes.",
   path: PAGE_PATH
 });
 
@@ -53,7 +53,7 @@ export default function ClinicasDentalesPage() {
         ]}
       />
 
-      <h1 className="lp-h2">Qué clínicas dentales recomienda la IA</h1>
+      <h1 className="lp-h2">Qué clínicas dentales nombra la IA</h1>
       <p className="legal-updated" style={{ marginBottom: 36 }}>
         Edición {EDITION.label} · Medición del 10 de octubre de 2026 en {CITY_IDS.map((id) => CITIES[id].name).join(" y ")} ·{" "}
         <Link href="/observatorio/clinicas-dentales/metodologia">Metodología</Link>
@@ -104,7 +104,7 @@ export default function ClinicasDentalesPage() {
         <ul>
           {CITY_IDS.map((id) => (
             <li key={id}>
-              <Link href={`/observatorio/clinicas-dentales/${id}`}>Clínicas dentales que la IA recomienda en {CITIES[id].name}</Link>
+              <Link href={`/observatorio/clinicas-dentales/${id}`}>Clínicas dentales que la IA nombra en {CITIES[id].name}</Link>
             </li>
           ))}
         </ul>
