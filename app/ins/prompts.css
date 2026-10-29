@@ -235,7 +235,7 @@
  .ins .sc-prompts .pq-strip{display:flex;flex-wrap:wrap}
  .ins .pq-all{flex:1 1 100%}
  .ins .pq-strip>div{padding:10px 0}
- .ins .pq-strip>.pq-eng{flex:1 1 0;padding:10px 0 10px 10px;border-left:1px solid var(--rule-2)}
+ .ins .pq-strip>.pq-eng{flex:1 1 22%;min-width:0;padding:10px 0 10px 10px;border-left:1px solid var(--rule-2)}
  .ins .pq-strip>.pq-eng:nth-child(2){padding-left:0;border-left:0}
  .ins .pq-eng .pq-k{font-size:11px;gap:4px}
  .ins .pq-eng .pq-k .new{display:none}
