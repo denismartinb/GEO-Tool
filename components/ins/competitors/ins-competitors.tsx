@@ -52,6 +52,29 @@ type Props = {
 const fmtD = (v: number) => v.toFixed(1).replace(".", ",");
 
 /* ---------- evolution of the mean position: 1º at the top ---------- */
+/** Monotone cubic path through the points: smooth, never overshoots a value. */
+function smoothPath(pts: { x: number; y: number }[]): string {
+  const n = pts.length;
+  const f = (v: number) => v.toFixed(1);
+  if (n < 3) return pts.map((p, i) => `${i ? "L" : "M"}${f(p.x)},${f(p.y)}`).join(" ");
+  const dx = pts.slice(1).map((p, i) => p.x - pts[i].x);
+  const sl = dx.map((d, i) => (d === 0 ? 0 : (pts[i + 1].y - pts[i].y) / d));
+  const m = [sl[0]];
+  for (let i = 1; i < n - 1; i++) m.push(sl[i - 1] * sl[i] <= 0 ? 0 : (sl[i - 1] + sl[i]) / 2);
+  m.push(sl[n - 2]);
+  for (let i = 0; i < n - 1; i++) {
+    if (sl[i] === 0) { m[i] = 0; m[i + 1] = 0; continue; }
+    const a = m[i] / sl[i], b = m[i + 1] / sl[i], h = Math.hypot(a, b);
+    if (h > 3) { m[i] = (3 * a * sl[i]) / h; m[i + 1] = (3 * b * sl[i]) / h; }
+  }
+  let d = `M${f(pts[0].x)},${f(pts[0].y)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const c = dx[i] / 3;
+    d += ` C${f(pts[i].x + c)},${f(pts[i].y + m[i] * c)} ${f(pts[i + 1].x - c)},${f(pts[i + 1].y - m[i + 1] * c)} ${f(pts[i + 1].x)},${f(pts[i + 1].y)}`;
+  }
+  return d;
+}
+
 function EvoChart({ data, off, mobile }: { data: EvoData; off: ReadonlySet<string>; mobile: boolean }) {
   const n = data.dates.length;
   const all = data.series.flatMap((s) => s.values).filter((v): v is number => v != null);
@@ -108,10 +131,10 @@ function EvoChart({ data, off, mobile }: { data: EvoData; off: ReadonlySet<strin
           <g key={s.key}>
             {segments(s.values).map((seg, k) =>
               seg.length > 1 ? (
-                <polyline
+                <path
                   key={k}
                   className="cp-ln"
-                  points={seg.map(({ i, v }) => `${X(i).toFixed(1)},${Y(v).toFixed(1)}`).join(" ")}
+                  d={smoothPath(seg.map(({ i, v }) => ({ x: X(i), y: Y(v) })))}
                   fill="none"
                   stroke={st.stroke}
                   strokeWidth={st.width}
@@ -294,8 +317,14 @@ export function InsCompetitors(p: Props) {
                 <p className="cp-al" id="identidad-de-marca">
                   <Ic n="shield" sm />
                   <span>
-                    También cuenta como {p.brand}:{" "}
-                    {p.aliases.length > 0 ? p.aliases.map((a, i) => <b key={a}>{i > 0 ? ", " : ""}{a}</b>) : "ningún alias"}.
+                    {p.aliases.length > 0 ? (
+                      <>
+                        También cuenta como {p.brand}:{" "}
+                        {p.aliases.map((a, i) => <b key={a}>{i > 0 ? ", " : ""}{a}</b>)}.
+                      </>
+                    ) : (
+                      <>Se analiza {p.brand}, no hay ningún alias de marca configurado.</>
+                    )}
                   </span>
                   <button type="button" className="btn sm ghost" onClick={() => setManaging("manage")}>
                     Gestionar alias
@@ -371,7 +400,6 @@ export function InsCompetitors(p: Props) {
                         <span>{heatMax}%</span>
                       </div>
                     </div>
-                    <p className="cp-note">Porcentaje de respuestas de cada motor que nombran a la marca. Cuanto más oscura la celda, más presencia.</p>
                   </div>
                 </div>
               ) : null}
