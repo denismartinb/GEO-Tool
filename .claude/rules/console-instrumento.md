@@ -108,3 +108,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   `<i>` para los dígitos y una regla `.mt i` los rompe.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
   gestión las llama y refresca.
+
+## Páginas citadas (F5c, log §362)
+
+- **«Te nombran» sigue siendo un hecho de la respuesta** (`.claude/rules/citations.md`):
+  la nota bajo el anillo no se quita ni se reescribe como afirmación sobre la página.
+- **Los porcentajes del anillo suman 100** (`percentShares`, mayor resto) y son
+  cuota de páginas distintas, no de citas.
+- **Una fuente alcanzable no exige competidor**; el competidor co-citado sólo
+  sale como aviso «sin verificar en la página».

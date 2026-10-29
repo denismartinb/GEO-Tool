@@ -13,6 +13,7 @@ import "@/app/ins/newdomain.css";
 import "@/app/ins/recs.css";
 import "@/app/ins/sheet.css";
 import "@/app/ins/competitors.css";
+import "@/app/ins/citations.css";
 import "@/app/ins/prompts.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";

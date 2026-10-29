@@ -27633,3 +27633,35 @@ del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
 **Pendiente o roto conocido.** Los favicons muestran imagen rota sólo en el
 arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
 que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.
+
+## 362. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con la cuota de citas propias y el enlace a las fuentes alcanzables,
+tres cifras (respuestas con cita, citas totales, citas a tu web), el anillo
+«De dónde salen las citas» en cuatro grupos (Tuyas, Terceros que te nombran,
+Competidores, Otros terceros) que filtran la lista al pulsarlos, «Fuentes
+alcanzables» agrupadas por web con las preguntas donde la citan, y la tabla de
+todas las páginas con pestañas, búsqueda y «Ver más» (25 en 25).
+
+**Qué no cambia.** Consultas, `aggregateCitations`, `groupOpportunitiesByDomain`,
+RLS y esquema. Las reglas de `.claude/rules/citations.md` siguen: «te nombran»
+es un hecho de la respuesta, nunca de la página (nota visible bajo el anillo);
+«Fuentes alcanzables» no exige competidor co-citado, y el competidor sale sólo
+como aviso «sin verificar en la página». Modelo puro con tests:
+`lib/ins/citations-model.ts`. Los porcentajes del anillo son cuota de páginas
+distintas y suman siempre 100 (mayor resto).
+
+**Qué cambia respecto a la pantalla anterior.** Se retiran la barra de impacto
+(favorable/adverso), el donut por tipo de fuente y la fila desplegable por
+página con la evidencia de cada respuesta, porque el prototipo no los pinta; el
+tipo de fuente (Comparador, Comunidad, Medio...) sigue visible como etiqueta de
+cada fila. El desplegable de cada fuente alcanzable conserva las preguntas. No
+se pinta «Ver la recomendación» del prototipo: no hay vínculo real entre una
+fuente y una recomendación.
+
+**Retirado.** `citations-client.tsx`.
+
+**Pendiente o roto conocido.** Los favicons se verifican en el preview (en el
+arnés sin red salen rotos). Si el fundador echa de menos la evidencia por
+página, se vuelve a ofrecer en la hoja lateral compartida, en una fase aparte.
