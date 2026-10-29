@@ -1,3 +1,4 @@
+import { Motion } from "@/components/ins/kit/motion";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
@@ -182,22 +183,12 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
   const auditHref = `/dashboard/projects/${projectId}/agentic-audit`;
 
   return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Visibilidad en agentes</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
-            </div>
-          </div>
+    <div className="ins">
+      <Motion id={`agentic-visibility:${projectId}`}>
+      <div className="page sc-ag">
+        <div className="eyebrow bare">
+          Visibilidad en agentes · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
         </div>
-      </div>
 
       <div className="ag-page av-page">
         <div className="av-ph">
@@ -301,6 +292,8 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
           </>
         )}
       </div>
+      </div>
+      </Motion>
     </div>
   );
 }

@@ -136,3 +136,8 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   leen los tokens de Instrumento desde `app/ins/google.css`.
 - **No se reconstruye el Resumen sin datos de ejemplo en el arnés**: sin ellos
   no se puede comparar con el prototipo.
+
+## Comercio agéntico (F7, log §365)
+
+- **Sólo el marco es nuevo**; los bloques conservan marcado y las reglas de
+  `agentic-audit.md`, y leen los tokens de Instrumento desde `app/ins/agentic.css`.

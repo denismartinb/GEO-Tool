@@ -27716,3 +27716,21 @@ Google, así que queda como fase aparte con datos de ejemplo en el arnés.
 **Pendiente o roto conocido.** Verificar en el preview con una cuenta conectada
 que ninguna tarjeta antigua se ve rota con los tokens nuevos. Reconstruir el
 Resumen y el seguimiento sobre el prototipo si el fundador lo pide.
+
+## §365 · CONSOLE-INSTRUMENTO-1 F7: Comercio agéntico pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** «Visibilidad en agentes» y «Auditoría agéntica» adoptan el
+marco de Instrumento (eyebrow con el dominio, título y frase grandes) y sus
+bloques leen los tokens nuevos desde `app/ins/agentic.css`. Mismo criterio de
+recorte que F6a y F6b (§363, §364): se renueva el marco y se conserva el
+marcado de cada bloque.
+
+**Qué no cambia.** El motor sin LLM, la selección de ficha, los cupos, las
+puertas por plan (Pro y Agencia), la tarjeta de Visión general, las acciones y
+todo lo que fija `.claude/rules/agentic-audit.md`.
+
+**No se hizo.** Rehacer el anillo, el camino del agente y las cinco tarjetas de
+componente sobre `agaudit.js` y `agents.js` del prototipo. Requiere datos de
+ejemplo en el arnés y se propone como fase aparte.
+
+**Pendiente.** Revisar en el preview con un proyecto con auditoría hecha.
