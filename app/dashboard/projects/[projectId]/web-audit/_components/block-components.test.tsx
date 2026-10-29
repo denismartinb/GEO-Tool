@@ -11,8 +11,7 @@ vi.mock("next/link", () => ({
   )
 }));
 
-const { BlockSwitch } = await import("./block-switch");
-const { BlockPotentialBanner } = await import("./block-potential-banner");
+const { InsBlockCards } = await import("@/components/ins/audit/block-cards");
 const { BlockIssuesCard, BlockPassingCard } = await import("./block-panels");
 
 /**
@@ -49,10 +48,10 @@ function view(overrides: Partial<AuditBlockView> = {}): AuditBlockView {
   };
 }
 
-describe("BlockSwitch", () => {
+describe("InsBlockCards", () => {
   it("links each block to its own URL and marks the open one", () => {
     const html = renderToStaticMarkup(
-      <BlockSwitch projectId="p1" active="seo" blocks={[view(), view({ key: "seo", score: 76, issues: [] })]} />
+      <InsBlockCards projectId="p1" active="seo" blocks={[view(), view({ key: "seo", score: 76, issues: [] })]} />
     );
     expect(html).toContain('href="/dashboard/projects/p1/web-audit?bloque=geo"');
     expect(html).toContain('href="/dashboard/projects/p1/web-audit?bloque=seo"');
@@ -62,33 +61,40 @@ describe("BlockSwitch", () => {
 
   it("shows each block's score and counts its critical problems", () => {
     const html = renderToStaticMarkup(
-      <BlockSwitch projectId="p1" active="geo" blocks={[view(), view({ key: "seo", score: 76, issues: [] })]} />
+      <InsBlockCards projectId="p1" active="geo" blocks={[view(), view({ key: "seo", score: 76, issues: [] })]} />
     );
-    expect(html).toContain(">55<");
-    expect(html).toContain(">76<");
+    expect(html).toContain('aria-label="55"');
+    expect(html).toContain('aria-label="76"');
     expect(html).toContain("2 críticos");
     expect(html).toContain("3 problemas");
     expect(html).toContain("Sin problemas");
   });
 
   it("draws a dash, not a zero, for a block with nothing measured", () => {
-    const html = renderToStaticMarkup(<BlockSwitch projectId="p1" active="geo" blocks={[view({ score: null })]} />);
+    const html = renderToStaticMarkup(<InsBlockCards projectId="p1" active="geo" blocks={[view({ score: null })]} />);
     expect(html).toContain(">—<");
   });
 });
 
-describe("BlockPotentialBanner", () => {
-  it("prints the real from and to scores and the scored count", () => {
-    const html = renderToStaticMarkup(<BlockPotentialBanner block="seo" issueCount={3} fromScore={76} toScore={100} />);
+describe("InsBlockCards potential line", () => {
+  it("prints the real gain and the scored count, with the block's own note", () => {
+    const html = renderToStaticMarkup(
+      <InsBlockCards projectId="p1" active="seo" blocks={[view({ key: "seo", score: 76, projectedScore: 100, scoredIssueCount: 3 })]} />
+    );
+    expect(html).toContain("+24 pt");
     expect(html).toContain("los 3 problemas que puntúan");
-    expect(html).toContain(">76<");
-    expect(html).toContain(">100<");
-    expect(html).toContain("Salud SEO");
+    expect(html).toContain("Lo que Google necesita");
   });
 
-  it("uses the singular for one problem", () => {
-    const html = renderToStaticMarkup(<BlockPotentialBanner block="geo" issueCount={1} fromScore={90} toScore={100} />);
-    expect(html).toContain("el problema que puntúa");
+  it("uses the singular for one problem and draws no line when nothing is gained", () => {
+    const one = renderToStaticMarkup(
+      <InsBlockCards projectId="p1" active="geo" blocks={[view({ score: 90, projectedScore: 100, scoredIssueCount: 1 })]} />
+    );
+    expect(one).toContain("el problema que puntúa");
+    const none = renderToStaticMarkup(
+      <InsBlockCards projectId="p1" active="geo" blocks={[view({ score: 100, projectedScore: 100, scoredIssueCount: 0 })]} />
+    );
+    expect(none).not.toContain("class=\"pot\"");
   });
 });
 

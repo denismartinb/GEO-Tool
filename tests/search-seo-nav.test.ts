@@ -44,8 +44,8 @@ describe("audit screen name", () => {
     const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
     expect(page).toContain('const SCREEN_LABEL = "Auditoría técnica";');
     expect(page).toContain("projectScreenMetadata(SCREEN_LABEL");
-    expect(page).toContain("{SCREEN_LABEL}</p>");
-    expect(page).toContain("<BlockSwitch ");
+    expect(page).toContain("<h1 style={{ marginTop: 14 }}>{SCREEN_LABEL}</h1>");
+    expect(page).toContain("<InsBlockCards ");
   });
 });
 

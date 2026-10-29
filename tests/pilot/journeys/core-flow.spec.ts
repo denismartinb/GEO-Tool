@@ -353,7 +353,7 @@ test("web audit screen renders", async ({ page }, testInfo) => {
   // The SEO block is the second half of the same screen (log §275): its own
   // score, banner and tabs. Switching is a link, so this proves the block
   // card navigates and the SEO tab panel renders with real content.
-  const seoBlock = page.locator("a.sa-blk-seo");
+  const seoBlock = page.locator("a.sel[data-block=\"seo\"]");
   await seoBlock.click();
   await expect(page, "the SEO block card did not open the SEO block").toHaveURL(/[?&]bloque=seo/);
   await expect(seoBlock, "the SEO block card is not marked current").toHaveAttribute("aria-current", "page");
