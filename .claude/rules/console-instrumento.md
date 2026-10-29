@@ -128,3 +128,11 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Lo que no está en el prototipo pero es real se conserva** (cobertura,
   generadores de llms.txt y sitemap, filas por página) y lee los tokens de
   Instrumento desde `app/ins/audit.css`.
+
+## Posición en Google (F6b, log §364)
+
+- **Sólo el marco es nuevo.** Los bloques de Search Console y el seguimiento de
+  palabras conservan marcado y reglas (`search-console.md`, `seo-tracking.md`) y
+  leen los tokens de Instrumento desde `app/ins/google.css`.
+- **No se reconstruye el Resumen sin datos de ejemplo en el arnés**: sin ellos
+  no se puede comparar con el prototipo.

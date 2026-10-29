@@ -27693,3 +27693,26 @@ tarjeta de bloque).
 
 **Pendiente.** Reconstruir cobertura, bots y velocidad con los componentes
 nuevos si el fundador quiere fidelidad total; F6b Posición en Google.
+
+## §364 · CONSOLE-INSTRUMENTO-1 F6b: Posición en Google pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `/search-console` adopta el marco de Instrumento: eyebrow con
+el dominio, título, botón informativo «Search Console conectado · últimos 28
+días» y frase. Es un recorte deliberado, igual que F6a (§363): los datos de
+Google, el seguimiento de palabras y todos sus bloques mantienen su marcado y
+leen los tokens de Instrumento desde `app/ins/google.css`.
+
+**Qué no cambia.** Todo lo que fijan `.claude/rules/search-console.md` y
+`seo-tracking.md`: nada de Search Console va a la base de datos, la caché de 30
+minutos, el cifrado del token, las acciones de servidor y los topes por plan.
+
+**Qué no se hizo y por qué.** El prototipo (`google.js`) redibuja el Resumen
+con una escalera de páginas de Google, las pestañas «Seguimiento de
+categorías» y «Descubrir palabras» y los estados Conectado, Sin conectar,
+Cargando y Primera foto. Reconstruirlo cambia el componente de seguimiento
+entero (`seo/*`), que hoy no se puede probar en el entorno sin datos reales de
+Google, así que queda como fase aparte con datos de ejemplo en el arnés.
+
+**Pendiente o roto conocido.** Verificar en el preview con una cuenta conectada
+que ninguna tarjeta antigua se ve rota con los tokens nuevos. Reconstruir el
+Resumen y el seguimiento sobre el prototipo si el fundador lo pide.
