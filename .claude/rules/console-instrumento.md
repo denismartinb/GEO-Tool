@@ -141,3 +141,9 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **Sólo el marco es nuevo**; los bloques conservan marcado y las reglas de
   `agentic-audit.md`, y leen los tokens de Instrumento desde `app/ins/agentic.css`.
+
+## 404 y error (F8a, log §366)
+
+- **La referencia del error es el `digest` de Next o no hay referencia.** Nunca
+  un código inventado.
+- **Sin cohete ni progreso**: el anillo es un instrumento vacío, decorativo.

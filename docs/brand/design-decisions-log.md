@@ -27734,3 +27734,20 @@ componente sobre `agaudit.js` y `agents.js` del prototipo. Requiere datos de
 ejemplo en el arnés y se propone como fase aparte.
 
 **Pendiente.** Revisar en el preview con un proyecto con auditoría hecha.
+
+## §366 · CONSOLE-INSTRUMENTO-1 F8a: 404 y error de la consola pasan a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `app/dashboard/not-found.tsx` y `app/dashboard/error.tsx`
+adoptan el instrumento vacío del prototipo (`errors.js`): anillo de marcas sin
+nada que leer, eyebrow, título y frase. El error enseña como referencia el
+`digest` real de Next cuando existe (nunca una referencia inventada) y un botón
+«Escribir a soporte» con `SUPPORT_EMAIL`. Sustituye el 404 de §86 en lo visual;
+sigue sin cohete (`mission-rocket.md`).
+
+**Qué no cambia.** Los destinos («Ver mis dominios» a `/dashboard/domains`,
+«Ir al último dominio» a `/dashboard`), el aviso a Sentry del error y la
+cobertura del piloto (`core-flow.spec.ts` busca el texto «esta pantalla no existe»).
+
+**Pendiente.** F8b: Perfil y ajustes, modal «Cambiar de plan», tour, afiliados y
+la limpieza de hojas y componentes antiguos (`.nfc*` de `globals.css` queda como
+código muerto hasta entonces).
