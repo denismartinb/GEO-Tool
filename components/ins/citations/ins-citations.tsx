@@ -306,7 +306,7 @@ export function InsCitations(p: Props) {
             <h2>
               {p.reach.length} {p.reach.length === 1 ? "web que la IA cita y no te nombra" : "webs que la IA cita y no te nombran"}
             </h2>
-            <p>Agrupadas por web. Las respuestas donde aparecen no te nombran: escribirles es la vía más directa para entrar.</p>
+            <p>Las respuestas donde aparecen no te nombran. Conseguir aquí una cita es una vía directa de mejora</p>
           </div>
           <div className="ct-rl">
             {reachList.map((r, i) => {
@@ -324,12 +324,12 @@ export function InsCitations(p: Props) {
                       <span className="num">
                         {r.cites} {r.cites === 1 ? "cita" : "citas"} · {r.pages} {r.pages === 1 ? "página" : "páginas"} ·{" "}
                         {r.engines.length} {r.engines.length === 1 ? "motor" : "motores"}
+                        <span className="e" role="img" aria-label={`La citan ${r.engines.map(engineName).join(", ")}`}>
+                          {r.engines.map((k) => (
+                            <EngineLogo key={k} provider={k} size={13} />
+                          ))}
+                        </span>
                       </span>
-                    </span>
-                    <span className="e" aria-label={`La citan ${r.engines.map(engineName).join(", ")}`}>
-                      {r.engines.map((k) => (
-                        <EngineLogo key={k} provider={k} size={13} />
-                      ))}
                     </span>
                     <Bar value={r.cites} max={maxReach} cls="thin ink nomark" delay={i * 50} />
                     <Ic n="chevd" sm />
