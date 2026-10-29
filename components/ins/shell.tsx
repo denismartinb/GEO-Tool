@@ -12,6 +12,7 @@ import { DomainSwitcherPanel } from "@/components/ins/domain-switcher";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
 import { InsSprite } from "@/components/ins/sprite";
+import { TrialEndedDock, TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
 import { crumbForPath, INS_NAV, isNavActive, type InsNavItem } from "@/lib/ins/nav";
 import type { AccountNotice } from "@/lib/notifications/account-notice";
@@ -131,6 +132,9 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
             <BellButton variant="mobile" />
             <AccountAvatar />
           </header>
+          <TrialEndedStrip />
+          <TrialEndedFirstEntry />
+          <TrialEndedDock />
           <div className="scroller dash-content" id="sc" ref={scRef}>
             {banner}
             {children}
@@ -292,6 +296,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           </div>
         ))}
       </nav>
+      <TrialEndedPlanCard onNavigate={onNavigate} />
       <div className="xo-sfoot">
         <button
           type="button"

@@ -28,7 +28,18 @@ export type ShellData = {
   planProjectCap: number;
   /** `true` mientras la cuenta está en la prueba de Pro. */
   onTrial: boolean;
+  /** Planes que se ofrecen a una cuenta sin plan (`free`); vacío en el resto. */
+  trialEndedOffers: TrialEndedOffer[];
   signOutAction: () => Promise<void>;
+};
+
+export type TrialEndedOffer = {
+  id: string;
+  name: string;
+  price: number;
+  /** Precio fundador, sólo si el cupón de Stripe sigue activo con plazas. */
+  promoPrice: number | null;
+  note: string;
 };
 
 const ShellDataCtx = createContext<ShellData | null>(null);

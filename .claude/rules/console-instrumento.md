@@ -147,3 +147,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **La referencia del error es el `digest` de Next o no hay referencia.** Nunca
   un código inventado.
 - **Sin cohete ni progreso**: el anillo es un instrumento vacío, decorativo.
+
+## Prueba terminada (F8b, log §367)
+
+- **Las piezas dependen de `planId === "free"` del marco**, no de una
+  consulta propia. Franja, tarjeta del menú y barra móvil no se pueden cerrar.
+- **El precio fundador se cita sólo si Stripe lo confirma**
+  (`getActivePromoPlanIds`); nunca un descuento fijo en el texto.
+- **El aviso de primera entrada vive en `localStorage`**: sin migración no hay
+  marca por cuenta.

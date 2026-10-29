@@ -19,7 +19,10 @@ import "@/app/ins/audit.css";
 import "@/app/ins/google.css";
 import "@/app/ins/agentic.css";
 import "@/app/ins/errors.css";
+import "@/app/ins/trial-ended.css";
 import { cookies } from "next/headers";
+import { SELLABLE_PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";
+import { getActivePromoPlanIds } from "@/lib/stripe";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
@@ -103,6 +106,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const role = await getAccountRole();
   const overage = role === "admin" ? await getDomainOverage() : null;
 
+  // CONSOLE-INSTRUMENTO-1 F8b (log §367): what an account with no plan is
+  // offered. The founder price is only quoted when the real Stripe coupon is
+  // active with slots left (same gate as Ajustes and /precios).
+  const trialEndedOffers =
+    plan.id === "free"
+      ? await (async () => {
+          const promoPlanIds = await getActivePromoPlanIds();
+          return SELLABLE_PLANS.filter((p) => p.id === "starter" || p.id === "pro").map((p) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            promoPrice: resolveShownPromoPrice({ plan: p, promoPlanIds })?.price ?? null,
+            note: `${p.meter.engines} motores`
+          }));
+        })()
+      : [];
+
   return (
     <>
       {/* header-flicker-prehydration-2 — seeds the public header's identity
@@ -151,6 +171,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             planName: plan.name,
             planProjectCap: plan.caps.projects,
             onTrial: accountNotice?.kind === "trial",
+            trialEndedOffers,
             signOutAction: signOut
           }}
           notifications={notifications}

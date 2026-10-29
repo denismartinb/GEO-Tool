@@ -27751,3 +27751,28 @@ cobertura del piloto (`core-flow.spec.ts` busca el texto «esta pantalla no exis
 **Pendiente.** F8b: Perfil y ajustes, modal «Cambiar de plan», tour, afiliados y
 la limpieza de hojas y componentes antiguos (`.nfc*` de `globals.css` queda como
 código muerto hasta entonces).
+
+## §367 · CONSOLE-INSTRUMENTO-1 F8b: la prueba de Pro terminada (2026-10-29)
+
+**Qué se decidió.** Una cuenta `free` (TRIAL-ONLY-1, §243) vive la consola con
+cuatro piezas del prototipo aprobado
+(`docs/design-reference/console-instrumento-1/prueba-caducada.html`): un aviso
+la primera vez que entra (hoja inferior en móvil), una franja fija bajo la
+cabecera, una tarjeta «Prueba terminada» en el menú y una barra inferior en
+móvil. Todas llevan a `/dashboard/settings?openPlan=pro#plan`. Sustituye a la
+banda `dmb-band` del estado `free` de `DataMaturityBanner`, que ahora no pinta
+nada para ese estado. El fundador pidió quitar del aviso la línea «Precios con
+IVA incluido. El precio fundador se mantiene mientras sigas suscrito».
+
+**Honestidad.** Los precios del aviso salen de `plans-data.ts`; el precio
+fundador sólo sale si `getActivePromoPlanIds()` lo confirma (cupón real con
+plazas). Sin fecha de fin de prueba: el marco no la conoce y no se inventa.
+
+**Premisa de la regla 4 del cierre de fase.** El aviso de primera entrada se
+recuerda en `localStorage` (por navegador, no por cuenta: guardarlo por cuenta
+necesita migración). Si el almacenamiento falla, el aviso no se repite. La
+franja, la tarjeta y la barra no dependen de él y nunca se pueden cerrar.
+
+**No se hizo.** La tarjeta de «Escaneos en pausa» en Visión general y el
+«Marcar como hecho» deshabilitado con su motivo en el sitio (piezas 3 y 4 del
+prototipo): pendientes. Las acciones siguen bloqueadas en servidor.
