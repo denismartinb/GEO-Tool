@@ -122,7 +122,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
           <h1 style={{ marginTop: 14 }}>{SCREEN_LABEL}</h1>
           <p className="lead">
             Lo que frena a la IA y a Google en tu web.
-            {technicalSnapshot ? ` Última revisión: ${formatDate(technicalSnapshot.created_at)}.` : ""}
           </p>
 
           <WebAuditProvider
@@ -158,17 +157,15 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 return (
                   <div className="sa-screen">
                     <InsBlockCards projectId={projectId} active={activeBlock} blocks={views} />
-                    {currentTechnicalReport.actualReadinessScore !== null && (
-                      <p className="sa-total">
-                        Tu Puntuación GEO usa la <b>Salud técnica ({currentTechnicalReport.actualReadinessScore}/100)</b>: los
-                        checks GEO y los SEO de siempre. Las comprobaciones nuevas y la velocidad sólo cuentan en la Salud SEO.
-                        {technicalScoreDelta !== null && technicalScoreDelta !== 0 && (
+                    {currentTechnicalReport.actualReadinessScore !== null &&
+                      technicalScoreDelta !== null &&
+                      technicalScoreDelta !== 0 && (
+                        <p className="sa-total">
                           <span className="sa-total-delta">
                             <Delta value={technicalScoreDelta} suffix=" pt" /> desde la revisión anterior
                           </span>
-                        )}
-                      </p>
-                    )}
+                        </p>
+                      )}
 
                     <AuditTabsProvider>
                       <AuditTabBar
