@@ -27,7 +27,6 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
     grouped,
     trend,
     latestMap,
-    auditedScanDate,
     coverageDelta,
     surfacingDelta,
     activeCampaignProgress,
@@ -41,12 +40,6 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
         <div className="cov-head-r">
           {canAuditCoverage && auditPillState === "auditing" && <ScanStatePill auditing />}
           {canAuditCoverage && auditPillState === "pending" && <span className="badge">Comprobación pendiente</span>}
-          {latestMap && (
-            <span className="cov-date">
-              Comprobada el {formatDate(latestMap.verifiedAt ?? latestMap.generatedAt)}
-              {auditedScanDate ? ` · escaneo del ${formatDate(auditedScanDate)}` : ""}
-            </span>
-          )}
         </div>
       </div>
       <p className="cov-desc">
