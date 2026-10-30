@@ -39,8 +39,8 @@ describe("PurchaseQuestionsCard", () => {
   it("shows the three figures, the engine that does not search and the rule", () => {
     const html = render(QUESTIONS);
     expect(html).toContain("3 de tus 17 preguntas");
-    expect(html).toContain("Te nombran");
-    expect(html).toContain("Mandan a un marketplace");
+    expect(html).toContain("Te nombra");
+    expect(html).toContain("Manda a un marketplace");
     expect(html).toContain("Sobre todo a Amazon");
     expect(html).toContain("No busca en la web");
     expect(html).toContain("no suman 100");
