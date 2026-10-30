@@ -59,3 +59,17 @@ test("every card's points are positive and its title has no em dash", () => {
     assert.ok(!/\u2014/.test(x.t + x.why + (x.how || "") + (x.snippet || "")));
   }
 });
+
+test("a «Reservar» button alone does not make a shop (no Agentes on a clinic)", () => {
+  const clinic = Object.assign({}, F.b, { buy: "Reservar cita" });
+  assert.equal(S.scorePage(clinic, NOW).commerce, false);
+  assert.equal(S.scorePage(Object.assign({}, F.b, { buy: "Añadir al carrito" }), NOW).commerce, true);
+});
+
+test("the title card explains the real problem: too long or too short", () => {
+  const long = S.scorePage(Object.assign({}, F.b, { title: "x".repeat(68) }), NOW).fixes.find((f) => f.id === "title");
+  assert.match(long.why, /corta/);
+  assert.doesNotMatch(long.why, /corto/);
+  const short = S.scorePage(Object.assign({}, F.b, { title: "Inicio" }), NOW).fixes.find((f) => f.id === "title");
+  assert.match(short.why, /Tan corto/);
+});

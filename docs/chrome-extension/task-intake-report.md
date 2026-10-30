@@ -529,4 +529,18 @@ Denis eligió «Sí, con datos de ejemplo». Está en [`prueba/`](./prueba/LEEME
   servidor), la ficha de la tienda y el seguimiento automático de los dominios
   propios, que necesita permisos de sitio.
 
+### 17.1 Versión 0.2.0 (2026-10-30), tras la primera prueba de Denis
+
+- **«Revisar esta página» y revisión automática.** El panel en pausa tiene un
+  botón grande. La primera vez pide el permiso opcional de sitios
+  (`optional_host_permissions: <all_urls>`); con él, y sólo con el panel
+  abierto, cada página se revisa sola al cambiar de pestaña o al terminar de
+  cargar. Sin él, sigue el icono. Se quita con un interruptor del pie. Para la
+  tienda importa: el aviso de Chrome dice «leer y cambiar tus datos en todos
+  los sitios web», por eso es opcional y se pide en el momento en que se usa.
+- **Agentes ya no sale en webs de servicios.** Un botón «Reservar» o
+  «Contratar» solo no convierte la página en tienda (alberdiderma.es salía con
+  Agentes 20).
+- **El texto del título dice el problema real:** largo o corto.
+
 > Do you approve this plan? I will not implement until you confirm.

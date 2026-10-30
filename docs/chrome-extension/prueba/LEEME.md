@@ -16,12 +16,15 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.1.0.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.2.0.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
 Fija el icono con la chincheta de la pieza de puzle. Para revisar una página,
-pulsa el icono o `Alt+Mayús+G` (en Mac, Opción).
+pulsa el icono o `Alt+Mayús+G` (en Mac, Opción), o «Revisar esta página» en el
+panel. Ese botón pide una vez el permiso opcional de Chrome para leer las webs
+que visitas; con él, y sólo mientras el panel está abierto, cada página se
+revisa sola al cambiar de pestaña o de página. Se quita en el pie del panel.
 
 ## Qué probar
 
@@ -36,7 +39,7 @@ pulsa el icono o `Alt+Mayús+G` (en Mac, Opción).
 
 | Fichero | Qué hace |
 |---|---|
-| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. Ninguno de sitios. |
+| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. El de sitios (`<all_urls>`) es opcional y sólo se pide al pulsar «Revisar esta página». |
 | `sw.js` | Al pulsar el icono abre el panel y lee la página. Guarda el resultado por pestaña en `storage.session` y lo borra al navegar. |
 | `collect.js` | Lo que se ejecuta dentro de la página: DOM, más `robots.txt`, `llms.txt` y la cabecera `X-Robots-Tag` del mismo dominio. |
 | `score.js` | Puro. De los datos de la página a la «Nota SEO + IA» (IA 55, Google 45; Agentes aparte) y a las tarjetas «Haz esto». Los motores se leen con los mismos tokens que la Auditoría agéntica (`lib/agentic-audit/agents.ts`). |

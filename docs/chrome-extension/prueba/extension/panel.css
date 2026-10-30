@@ -918,3 +918,21 @@ kbd{font:500 11px var(--mono);border:1px solid var(--rule);border-bottom-width:2
 .px .deep .q{font-size:17px}
 @media (prefers-reduced-motion:reduce){.kbd .k2::after,.ring.spin::before{animation:none}}
 .ph .who b.wm{font-size:15px;font-weight:700;letter-spacing:-.02em}
+/* «Revisar esta página»: the one big action of the idle panel */
+.paused .ring.go{cursor:pointer;transition:transform var(--d2) var(--out),border-color var(--d2) var(--std)}
+.paused .ring.go::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1.5px solid var(--blue);opacity:0;animation:exth 2.2s var(--out) infinite}
+.paused .ring.go:hover{transform:scale(1.04);border-color:var(--blue-soft)}
+.rv{position:relative;overflow:hidden;display:flex;align-items:center;gap:12px;width:100%;max-width:300px;height:54px;margin-top:22px;padding:0 18px 0 16px;border-radius:99px;color:#fff;font-size:15px;font-weight:600;letter-spacing:-.01em;background:radial-gradient(120% 160% at 0% 0%,#3b74ff 0%,rgba(59,116,255,0) 60%),linear-gradient(135deg,#1b4fd6,#0b1f5c);box-shadow:0 10px 30px -10px rgba(27,79,214,.7);transition:transform var(--d2) var(--out),box-shadow var(--d2) var(--std)}
+.rv span{flex:1;text-align:left}
+.rv .i{width:18px;height:18px;flex:none}
+.rv .i.sm{width:15px;height:15px;transition:transform var(--d2) var(--out)}
+.rv::after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.22),transparent);transform:skewX(-18deg);animation:rvsh 3.2s var(--std) infinite 1s}
+@keyframes rvsh{0%{left:-80px}40%,100%{left:120%}}
+.rv:hover{transform:translateY(-1px);box-shadow:0 14px 34px -10px rgba(27,79,214,.85)}
+.rv:hover .i.sm{transform:translateX(3px)}
+.rv:active{transform:translateY(0) scale(.98)}
+.paused .tiny{max-width:290px}
+.paused .kbd{margin-top:14px}
+.sws{display:grid;gap:10px}
+@media (prefers-reduced-motion:reduce){.paused .ring.go::after,.rv::after{animation:none}}
+.paused .kbd{flex-wrap:wrap;justify-content:center;gap:6px 10px}.paused .kbd span{white-space:nowrap}.paused .kbd .ks{display:inline-flex;align-items:center;gap:5px}

@@ -148,7 +148,10 @@
     const nosnippet = has(f.robotsMeta, "nosnippet") || has(f.xRobots, "nosnippet") || /max-snippet\s*:\s*0\b/.test((f.robotsMeta || "") + " " + (f.xRobots || ""));
     const ld = f.ld || { types: [], errors: 0 };
     const product = ld.product;
-    const commerce = !!(product || f.buy || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount);
+    /* «Reservar» or «Contratar» alone do not make a shop: a clinic or a gestoría
+       has them too, and an Agentes 20 there alarms for nothing. */
+    const cartButton = !!f.buy && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(f.buy);
+    const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount);
     const titleLen = (f.title || "").length;
     const descLen = (f.description || "").length;
     const lead = f.lead || { words: 0 };
@@ -267,7 +270,7 @@
       why: f.description ? `Ahora tiene ${(f.description || "").length} caracteres.` : "Es el texto que Google enseña bajo el título. Esta sale del primer párrafo de la página: revísala antes de pegarla.",
       snippet: `<meta name="description" content="${attr(trimTo(f.lead && f.lead.text ? f.lead.text : f.title, 155))}">`, copyWhat: "la etiqueta de descripción"
     });
-    push("title", { t: f.title ? "Deja el título entre 15 y 65 caracteres" : "Añade un título", why: f.title ? `Ahora tiene ${(f.title || "").length}. Google corta lo que sobra y un título corto no dice de qué va.` : "Sin título, Google se inventa uno.", how: "Lo que la página resuelve primero, y la marca al final." });
+    push("title", { t: f.title ? "Deja el título entre 15 y 65 caracteres" : "Añade un título", why: !f.title ? "Sin título, Google se inventa uno." : f.title.length > 65 ? `Ahora tiene ${f.title.length}. Google corta lo que pasa de unos 65 y se pierde el final.` : `Ahora tiene ${f.title.length}. Tan corto no dice de qué va la página.`, how: "Lo que la página resuelve primero, y la marca al final." });
     push("ld", x.commerce ? {
       t: "Describe el producto con JSON-LD", why: "Es lo que leen Google y los agentes para saber qué vendes, a qué precio y si hay stock. Rellena lo que va en mayúsculas.",
       snippet: productLd(h1, cleanUrl, x.product), copyWhat: "el bloque JSON-LD"
