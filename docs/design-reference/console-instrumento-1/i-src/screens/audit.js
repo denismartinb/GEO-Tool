@@ -65,7 +65,7 @@ function auCwv(){const m=U.au.dev==='m';const rows=m?[['Carga del contenido prin
   <div class="zone" role="img" aria-label="${n}: ${v}, ${r}"><i class="ok"></i><i class="mid"></i><i class="bad"></i><span style="left:${p*100}%"></span></div><div class="zl"><span>Bueno</span><span>Mejorable</span><span>Lento</span></div></div>`).join('')}</div>
   <p class="hint">Datos de PageSpeed Insights sobre tu portada.</p></div></div>`}
 
-const AU_NOTE={geo:'Lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones.',seo:'Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido.'};
+const AU_NOTE={geo:'Lo que la IA necesita técnicamente en tu web para poder citarte. El número de citas depende también del contenido, que trabajas en Recomendaciones.',seo:'Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido.'};
 const AU_TITLE={geo:'Tu web para la IA',seo:'Tu web para Google'};
 function auPage(k){const B=AU[k],geo=k==='geo',tab=U.au.tab;if(!B.issues.some(x=>x.id===U.au.open))U.au.open=B.issues[0].id;
  const main=tab==='prob'?`${geo?'':auCwv()}<div class="card"><div class="card-h"><h3>Problemas</h3><span class="see" style="cursor:default">Ordenados por lo que suman</span></div><div class="card-b sc-au-list">${B.issues.map(auIssue).join('')}</div></div>`
