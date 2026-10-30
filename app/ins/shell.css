@@ -76,7 +76,8 @@
  .ins-shell .top{display:none}
  .ins-shell .mtop{display:flex;align-items:center;gap:8px;height:64px;padding:0 12px;border-bottom:1px solid var(--rule-2);background:var(--surface);position:relative;z-index:5}
  .ins-shell .mtop .hb{width:40px;height:40px;display:grid;place-items:center;border-radius:12px}
- .ins-shell .mtop .pj{display:flex;align-items:center;gap:4px;font-weight:650;font-size:16px;letter-spacing:-.01em;height:40px}
+ .ins-shell .mtop .pj{display:flex;align-items:center;gap:8px;font-weight:650;font-size:16px;letter-spacing:-.01em;height:40px}
+ .ins-shell .side .proj{display:none}
  .ins-shell .mtop .sp{flex:1}
  .ins-shell .mtop .bell{position:relative;height:36px;min-width:36px;border-radius:11px;border:1px solid var(--rule);display:grid;place-items:center;font-size:13.5px;font-weight:650}
  .ins-shell .pblur.t{top:64px}

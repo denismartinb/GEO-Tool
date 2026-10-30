@@ -190,6 +190,7 @@ function ProjectButton({ mobile }: { mobile?: boolean }) {
   if (mobile) {
     return (
       <button type="button" className="pj" aria-haspopup="dialog" aria-label={`${p.name}. Cambiar de dominio`} onClick={(e) => openIt(e.currentTarget)}>
+        <ProjectFav domain={p.domain} name={p.name} size={22} />
         {p.name}
         <Ic n="chevd" sm />
       </button>
