@@ -3,3 +3,6 @@
    host_permissions must name exactly this origin. The test build points it
    at the pull request's Vercel preview; the store build, at www.genscore.es. */
 const GS_API = "https://www.genscore.es";
+/* «Cuenta de ejemplo» (invented account data, labelled as such) exists only in
+   test builds; the store build ships without it (paso 03). */
+const GS_SAMPLE = false;

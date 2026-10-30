@@ -68,3 +68,13 @@ analizarla.
 | `panel.*`, `core.js` | El panel, con los tokens, componentes y ayudantes de la consola «Instrumento». `panel.css` y `core.js` se generaron desde ese prototipo. |
 
 Tests: `node --test docs/chrome-extension/prueba/tests/score.test.cjs`.
+
+## Versión de tienda (1.0.0, paso 03)
+
+Esta carpeta es ya la versión de tienda: apunta a `https://www.genscore.es`, se
+llama «GenScore: Auditoría SEO y visibilidad en IA» y no tiene «Cuenta de
+ejemplo» (`GS_SAMPLE = false` en `config.js`). Para una versión de prueba contra
+una vista previa, cambia `GS_API` en `config.js` y `host_permissions` en
+`manifest.json` por la dirección de la vista previa, y pon `GS_SAMPLE = true` si
+quieres el modo de ejemplo. Capturas, tesela, marquesina y textos de la ficha:
+`docs/chrome-extension/tienda/`.

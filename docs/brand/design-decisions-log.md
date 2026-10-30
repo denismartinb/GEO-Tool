@@ -27704,3 +27704,26 @@ que se llama «Login» en vez de «Entrar», para que se lea como su motivo.
 selector de arriba ya no enseña un dominio (confundía: no es de esa página).
 Dice «Analiza la página actual · o elige uno de tus dominios», y el
 desplegable sigue listando los dominios sin ninguno marcado.
+
+## 362. CHROME-EXT-1 paso 03: versión de tienda 1.0.0 (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la ficha (`/mnt/project-files/chrome-extension/ficha-tienda-propuesta.md`) y el paso 03. La extensión pasa a 1.0.0 con nombre «GenScore: Auditoría SEO y visibilidad en IA» y el resumen de la ficha como descripción del manifiesto, apuntando a `https://www.genscore.es`.
+
+**Cambios en la extensión.**
+- **Sin «Cuenta de ejemplo».** `GS_SAMPLE = false` en `config.js`: la versión de tienda no enseña datos inventados. El modo de ejemplo sólo existe en las versiones de prueba.
+- **Las acciones del plan de la cuenta ya no tienen «Desliza para marcar como hecho».** El panel sólo lee (paso 02), así que deslizar no habría guardado nada. Se marcan en la consola, con el botón «Abrir en la consola».
+- **«Conectar con Google»** lleva a la consola en vez de a un aviso de prueba.
+- Los enlaces llevan `utm_campaign=extension`.
+
+**`/privacidad`.** Nuevo apartado «Extensión de Chrome». Cuenta tres cosas:
+- la revisión es local;
+- con sesión, el panel recibe email, plan, dominios y resultados;
+- envía la dirección de una página propia para ver qué preguntas la citan.
+
+Fecha de actualización: 30 de octubre de 2026.
+
+**Pendiente o conocido.**
+- **Ficha sólo en español en la 1.0.** La propuesta pedía también inglés, pero el panel está entero en castellano: una ficha inglesa traería instalaciones que no entienden la interfaz y reseñas malas. El inglés llega con la traducción del panel (`_locales`), en otra fase.
+- **`genscore.es/extension` no existe.** La ficha enlaza a `https://www.genscore.es` hasta que se diseñe esa página.
+- **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
+- **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
