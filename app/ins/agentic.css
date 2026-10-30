@@ -25,3 +25,12 @@
  .ins .sc-ag .ag-intro,.ins .sc-ag .av-ph p{font-size:15.5px}
  .ins .sc-ag .ag-screen .card{padding:16px}
 }
+
+/* Component cards of the audit are legacy <button>s: the Instrumento button
+   reset (`.ins button{padding:0;border:0}`) out-ranks `.ag-comp`, so they lost
+   their padding and border. Re-state them here with the tokens (log §368). */
+.ins .ag-comp{font:inherit;font-size:12px;text-align:left;border:1px solid var(--rule);border-radius:12px;padding:12px 14px;background:var(--surface);color:var(--ink-2);cursor:pointer;transition:border-color var(--d1),background var(--d1)}
+.ins .ag-comp:hover{background:var(--surface-2)}
+.ins .ag-comp b{font-size:13.5px;font-weight:600;color:var(--ink)}
+.ins .ag-comp[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.ins .ag-comp:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
