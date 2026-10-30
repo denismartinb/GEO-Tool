@@ -220,12 +220,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </AuditTabPanel>
                         </div>
                         <div className="sa-side">
-                          <div className="sa-scope">
-                            <p>
-                              <b>Esto es lo que vemos desde fuera.</b> Revisamos las páginas clave de tu web: la portada,
-                              las que hemos verificado y las que cita la IA. No rastreamos la web entera.
-                            </p>
-                          </div>
                           {isGeo && <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />}
                           {!isGeo && <SeoWeightsCard />}
                         </div>
