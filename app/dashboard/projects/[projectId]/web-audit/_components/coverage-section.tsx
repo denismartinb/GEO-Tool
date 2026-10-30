@@ -157,10 +157,10 @@ export function CoverageHistory({ data }: { data: CoverageSectionData }) {
   if (!summary || trend.length < 2) return null;
   return (
     <section className="card cov-sec cov-hist" aria-labelledby="cov-hist-title">
-      <div className="cov-blk">
-        <h3 id="cov-hist-title" className="cov-blk-t">
+      <details className="cov-blk cov-hist-d">
+        <summary id="cov-hist-title" className="cov-blk-t">
           Historial de comprobaciones
-        </h3>
+        </summary>
         <p className="cov-note">
           Una entrada por escaneo comprobado (las 8 más recientes como máximo).
         </p>
@@ -197,7 +197,7 @@ export function CoverageHistory({ data }: { data: CoverageSectionData }) {
             </div>
           ))}
         </div>
-      </div>
+      </details>
     </section>
   );
 }

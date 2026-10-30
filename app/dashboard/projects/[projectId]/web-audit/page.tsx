@@ -155,7 +155,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const pageSpeed = bots?.site?.pageSpeed;
                 return (
                   <div className="sa-screen">
-                    <InsBlockHero projectId={projectId} view={view} />
+                    <InsBlockHero view={view} />
                     {currentTechnicalReport.actualReadinessScore !== null &&
                       technicalScoreDelta !== null &&
                       technicalScoreDelta !== 0 && (
@@ -176,7 +176,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                       />
                       <div className={isGeo ? "sa-grid-2" : undefined}>
                         <div className="sa-main">
-                          {isGeo && <CoverageSection data={coverage} />}
                           {!isGeo && pageSpeed !== undefined && <SpeedCard pageSpeed={pageSpeed} />}
                           <AuditTabPanel id="problemas">
                             <BlockIssuesCard
@@ -217,6 +216,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                               </div>
                             </div>
                           </AuditTabPanel>
+                          {isGeo && <CoverageSection data={coverage} />}
                         </div>
                         <div className="sa-side">
                           {isGeo && <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />}

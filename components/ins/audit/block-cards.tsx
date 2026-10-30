@@ -1,12 +1,11 @@
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { Ic } from "@/components/ins/ic";
 import { Roll } from "@/components/ins/kit/roll";
 import { arcGeometry, blockMeta, potentialLine } from "@/lib/ins/audit-model";
-import { AUDIT_BLOCKS, AUDIT_BLOCK_PARAM, type AuditBlockKey, type AuditBlockView } from "@/lib/web-audit/audit-blocks";
+import { AUDIT_BLOCKS, type AuditBlockKey, type AuditBlockView } from "@/lib/web-audit/audit-blocks";
 
 /**
- * The score strip of one audit block (CONSOLE-INSTRUMENTO-1 F6a, log §363; one
+ * The score strip of one audit block (the gain is information, not a link) (CONSOLE-INSTRUMENTO-1 F6a, log §363; one
  * strip per page since log §368): the score on a 270 degree arc, a ghost up to
  * what fixing the scored issues reaches, and the gain line. The block is chosen
  * by the menu entry («Tu web para la IA» / «Tu web para Google»), which links
@@ -39,7 +38,7 @@ function Arc({ score, projected }: { score: number | null; projected: number | n
           <circle className="now" cx={c} cy={c} r={r} />
         </g>
       </svg>
-      <span className="n">
+      <span className={`n${score !== null && score >= 100 ? " w3" : ""}`}>
         <b className="num">{score === null ? "—" : <Roll value={score} />}</b>
         <small>/100</small>
       </span>
@@ -47,9 +46,8 @@ function Arc({ score, projected }: { score: number | null; projected: number | n
   );
 }
 
-export function InsBlockHero({ projectId, view }: { projectId: string; view: AuditBlockView }) {
+export function InsBlockHero({ view }: { view: AuditBlockView }) {
   const def = AUDIT_BLOCKS[view.key];
-  const base = `/dashboard/projects/${projectId}/web-audit`;
   const critical = view.issues.filter((i) => i.issue.severity === "critical").length;
   const meta = blockMeta(critical, view.issues.length);
   const pot = potentialLine(view.score, view.projectedScore, view.scoredIssueCount);
@@ -71,12 +69,13 @@ export function InsBlockHero({ projectId, view }: { projectId: string; view: Aud
         ) : null}
       </div>
       {pot ? (
-        <Link href={`${base}?${AUDIT_BLOCK_PARAM}=${view.key}#problemas`} className="pot" scroll={false}>
-          <Ic n="arrowup" sm />
-          <b className="num">+{pot.gain} pt</b>
-          <span className="px"> {pot.text}</span>
-          <Ic n="chevr" sm />
-        </Link>
+        <div className="gain">
+          <b className="num">+{pot.gain}</b>
+          <span>
+            <i>pt</i>
+            {pot.text}
+          </span>
+        </div>
       ) : null}
     </section>
   );
