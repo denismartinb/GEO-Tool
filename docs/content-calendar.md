@@ -184,7 +184,8 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A3 | Los bots de la IA leen tu web miles de veces por cada visita: cuáles dejar entrar (BLOG-ANIM-1, log §314) — slug `bots-de-ia-robots-txt-cuales-dejar-entrar` | `playbooks` | ✅ Publicado (2026-10-17) | #636 |
 | A4 | Qué fuentes cita la IA: el 84% de sus enlaces no lo publicas tú (BLOG-CITES-1, log §341; primer post de la rutina de cada dos días) — slug `que-fuentes-cita-la-ia` | `playbooks` | ✅ Publicado (2026-10-22) | #665 |
 | A5 | Black Friday con agentes de IA: qué revisar en tu tienda antes del 27 de noviembre (BLOG-BF-AGENTS-1, log §342) — slug `black-friday-agentes-de-ia` | `playbooks` | ✅ Publicado (2026-10-23) | #666 |
-| A6 | ¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas (BLOG-FRESH-1, log §348; pasada de recuperación del 25) — slug `la-ia-prefiere-contenido-reciente` | `medicion` | 🟡 En PR (2026-10-26) | — |
+| A6 | ¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas (BLOG-FRESH-1, log §348; pasada de recuperación del 25) — slug `la-ia-prefiere-contenido-reciente` | `medicion` | ✅ Publicado (2026-10-26) | #674 |
+| A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,

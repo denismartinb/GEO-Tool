@@ -502,7 +502,7 @@ export default async function CompetitorsPage({
     );
   }
 
-  /* ---- «Instrumento» (CONSOLE-INSTRUMENTO-1 F5b, log §361): every figure below
+  /* ---- «Instrumento» (CONSOLE-INSTRUMENTO-1 F5b, log §374): every figure below
      was already computed above; this only shapes it for the new screen. ---- */
   const positionByKey = new Map(latestPositions.map((e) => [e.key, e]));
   const rankingEntries: RankEntry[] = [

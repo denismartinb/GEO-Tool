@@ -1,0 +1,271 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  CompareTable,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { GA4_AI_SOURCE_REGEX } from "@/lib/blog/ga4-source-regex";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("convierte-mejor-el-trafico-de-la-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿El tráfico que llega desde ChatGPT convierte mejor que el de Google?",
+    answer:
+      "Depende del estudio y de lo que vendas. Adobe, con más de un billón de visitas a tiendas online de EE. UU., mide que las visitas que llegan desde la IA convierten un 60% más que el resto del tráfico (julio de 2026). Un estudio académico de Kaiser y Schulze sobre 973 tiendas en 49 países, con datos de agosto de 2024 a julio de 2025, encontró lo contrario: la búsqueda orgánica convertía un 13% más que ChatGPT."
+  },
+  {
+    question: "¿Por qué los estudios sobre conversión del tráfico de IA no coinciden?",
+    answer:
+      "Porque miden cosas distintas: una sola web frente a cientos de tiendas, todo el tráfico frente a un canal concreto, y periodos distintos en un canal que cambia cada mes. Además, lo que vendes pesa: Shopify ve que los productos con muchas especificaciones convierten el doble desde la IA, y Adobe ve que en viajes la IA convierte un 1% menos que el resto."
+  },
+  {
+    question: "¿Cuánto tráfico llega de la IA a una web?",
+    answer:
+      "Todavía poco. En el estudio de Kaiser y Schulze, ChatGPT era menos del 0,2% de las sesiones de las tiendas. En Ahrefs, la IA era el 0,5% de su tráfico de un mes, aunque trajo el 12,1% de sus registros. Por eso cualquier cifra de conversión del tráfico de IA se calcula sobre pocos casos."
+  },
+  {
+    question: "¿Cómo mido la conversión del tráfico de IA en mi web?",
+    answer:
+      "En Google Analytics 4, con un grupo de canales personalizado que agrupe las visitas cuya fuente es chatgpt.com, perplexity.ai, claude.ai, gemini.google.com y el resto de asistentes, y comparando su conversión con la de la búsqueda orgánica, no con la de todo el tráfico. Así sabes cómo se comporta en tu web, no en la de otro."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Depende de quién lo mida. Adobe (julio de 2026) y Shopify (segundo trimestre
+de 2026) ven que las visitas que llegan desde la IA a una tienda online
+convierten entre un 60% y un 80% más que el resto. Un estudio académico sobre
+973 tiendas, con datos hasta julio de 2025, ve que la búsqueda orgánica
+convertía un 13% más que ChatGPT. Los estudios miden cosas distintas, y lo que
+vendes cambia el resultado. Lo único seguro es que el tráfico de IA aún es
+pequeño, así que mide el tuyo y no decidas con el multiplicador de otra web.
+
+</KeyTakeaway>
+
+## Lo que dicen los estudios
+
+Hay cifras para todos los gustos, y casi todas son ciertas para lo que miden:
+
+<StatGrid label="Conversión del tráfico que llega desde la IA">
+  <Stat value="60%" label="más de conversión en las visitas a tiendas online que llegan desde la IA, frente al resto del tráfico." source="Adobe Digital Insights, más de un billón de visitas a webs de comercio de EE. UU. (julio de 2026)" />
+  <Stat value="80%" label="más de conversión en las visitas desde la IA que llegan a una ficha de producto, frente a las de la búsqueda orgánica." source="Shopify, tiendas de su plataforma (segundo trimestre de 2026)" tone="cyan" />
+  <Stat value="13%" label="más de conversión de la búsqueda orgánica frente a las visitas desde ChatGPT." source="Kaiser y Schulze, Marketing Science, 973 tiendas en 49 países (agosto de 2024 a julio de 2025)" tone="warm" />
+</StatGrid>
+
+**Adobe** mide el tráfico de más de un billón de visitas a tiendas online de
+Estados Unidos. En julio de 2026, las visitas que llegaban desde un asistente de
+IA convertían un 60% más que el resto y dejaban un 53% más de ingresos por
+visita. En viajes, en cambio, convertían un 1% menos que el resto.
+
+**Shopify** mira las tiendas de su plataforma. En el segundo trimestre de 2026,
+las sesiones que llegaban desde la IA crecieron un 197% respecto al año
+anterior, y la búsqueda orgánica, un 12% sobre una base mucho mayor. La mitad
+de las visitas desde la IA aterrizaba directamente en una ficha de producto, y
+allí convertía un 80% más que las de la búsqueda orgánica.
+
+**Ahrefs** publicó en junio de 2025 el dato que más se repite: las visitas desde
+la IA convertían 23 veces más que las de la búsqueda orgánica. Es el dato de
+una sola web, la suya, en 30 días: la IA era el 0,5% de su tráfico y trajo el
+12,1% de sus registros. El propio autor avisa de que su público, profesionales
+del SEO, puede comportarse distinto que el de otras webs.
+
+**Maximilian Kaiser y Christian Schulze**, de la Universidad de Hamburgo y la
+Frankfurt School of Finance & Management, publicaron en *Marketing Science* el
+estudio más amplio con método académico: doce meses de datos de analítica de
+973 tiendas online en 49 países, con unos 20.000 millones de dólares de
+facturación. Su conclusión es la contraria: las visitas desde ChatGPT
+convertían más que las de redes sociales de pago y menos que todos los demás
+canales. La búsqueda orgánica convertía un 13% más y el marketing de
+afiliación, un 86% más. Dos matices del propio estudio: en varias de sus
+comprobaciones la diferencia con la orgánica deja de ser significativa, y la
+conversión de ChatGPT mejoró a lo largo de esos doce meses.
+
+## Por qué no coinciden
+
+No es que unos mientan y otros no. Miden cosas distintas:
+
+<CompareTable>
+
+| Estudio | Con qué compara | Datos | Resultado |
+|---|---|---|---|
+| **Adobe** | Todo el tráfico que no viene de la IA | Más de un billón de visitas a tiendas de EE. UU., julio de 2026 | 60% más en comercio, 1% menos en viajes |
+| **Shopify** | La búsqueda orgánica | Tiendas de su plataforma, segundo trimestre de 2026 | 80% más en ficha de producto |
+| **Ahrefs** | La búsqueda orgánica | Una web de software, 30 días de 2025 | 23 veces más |
+| **Kaiser y Schulze** | Cada canal por separado | 973 tiendas, agosto de 2024 a julio de 2025 | 13% menos que la orgánica |
+
+</CompareTable>
+
+Cinco diferencias explican casi todo:
+
+- **Con qué se compara.** «El resto del tráfico» incluye redes sociales de pago,
+  correo y visitas que entran por curiosidad. Ganarle a esa media es más fácil
+  que ganarle a la búsqueda orgánica, que es el canal con el que compite de
+  verdad la IA.
+- **Cuándo se midió.** El estudio académico acaba en julio de 2025; Adobe y
+  Shopify llegan a mediados de 2026. En un canal que cambia cada mes, un año es
+  mucho, y el propio estudio académico vio que la conversión de ChatGPT
+  mejoraba con el tiempo.
+- **Qué se vende.** La IA se usa sobre todo para comparar y decidir. Shopify ve
+  que los productos que se eligen por sus especificaciones convierten desde la
+  IA el doble que desde la orgánica, y Adobe ve que en viajes no hay ventaja.
+- **Qué se cuenta como IA.** Las Vistas creadas con IA de Google cuentan como
+  búsqueda orgánica en casi todas las analíticas, y muchas visitas desde un
+  asistente llegan sin referente y se cuentan como tráfico directo. Shopify
+  reconoce que su cifra de IA es casi seguro una cifra por debajo de la real.
+- **Cuántas visitas hay.** Con un 0,2% o un 0,5% del tráfico, unas pocas ventas
+  mueven mucho el porcentaje. El 23 veces de Ahrefs sale de un número pequeño
+  de registros.
+
+## Lo que sí sale igual en todos: depende de lo que vendas
+
+Donde los estudios entran al detalle, el patrón se repite: la IA convierte más
+cuanto más hay que comparar antes de comprar. Shopify lo ve por categorías:
+
+<Figure
+  label="Figura 1."
+  caption="Conversión de las visitas que llegan desde la IA frente a las de la búsqueda orgánica, por categoría de producto (veces). Fuente: Shopify, AI and organic search are doing different jobs: What Shopify's data shows, tiendas de su plataforma, segundo trimestre de 2026. Shopify presenta estas cifras como indicios, no como prueba."
+>
+
+<BarChart
+  title="Conversión desde la IA frente a la orgánica, en veces"
+  max={2.5}
+  rows={[
+    { label: "Relojes", value: 2.4, display: "2,4 veces", highlight: true },
+    { label: "Collares", value: 2.3, display: "2,3 veces", highlight: true },
+    { label: "Productos que se eligen por especificaciones", value: 2, display: "2 veces", highlight: true },
+    { label: "Ropa", value: 1.6, display: "1,6 veces", highlight: true },
+    { label: "Búsqueda orgánica, como referencia", value: 1, display: "1 vez" }
+  ]}
+/>
+
+</Figure>
+
+Shopify lo resume en que la IA y la búsqueda orgánica hacen trabajos
+distintos. La IA rinde más donde hay que comparar especificaciones,
+compatibilidades o ventajas e inconvenientes: quien llega desde una respuesta
+ya ha comparado. La orgánica sigue sirviendo para descubrir y curiosear en las
+categorías que se eligen por gusto. En viajes,
+Adobe no ve ventaja: la IA convierte un 1% menos que el resto.
+
+## Qué hacer con esto
+
+<NumberedSection n={1} title="Mide tu tráfico de IA por separado">
+
+La cifra que importa es la de tu web. En Google Analytics 4, crea un grupo de
+canales personalizado con un canal «Tráfico de IA» y pon esta condición en la
+fuente de la sesión:
+
+<CodeBlock wrap title="Condición de fuente para el canal «Tráfico de IA»">{GA4_AI_SOURCE_REGEX}</CodeBlock>
+
+El paso a paso está en
+<a href="/blog/como-medir-trafico-chatgpt-ga4">cómo medir en GA4 el tráfico
+que llega desde ChatGPT</a>.
+
+<QuickAction>Crea el canal hoy: un grupo de canales personalizado también reagrupa los datos que ya tenías, así que desde el primer día ves cómo ha convertido el tráfico de IA en los meses anteriores.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Compárala con la búsqueda orgánica, no con la media">
+
+Una vez tengas el canal, compara su conversión con la de la búsqueda orgánica,
+que es el canal con el que compite. Compararla con todo el tráfico, como hace
+Adobe, te dará casi siempre una ventaja que no significa mucho. Y mira varios
+meses: con pocas visitas, un mes bueno o malo es ruido.
+
+<QuickAction>Anota cada mes tres cifras: visitas desde la IA, su conversión y la conversión de la búsqueda orgánica en el mismo periodo.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Mira a qué página llegan">
+
+En Shopify, la mitad de las visitas desde la IA entraba directamente en una
+ficha de producto. Quien llega así ya sabe qué quiere, y la página tiene que
+confirmarlo rápido: precio, disponibilidad, condiciones y lo que la IA le haya
+contado de ti. Shopify también ve que las tiendas cuyos datos de catálogo
+llegaban estructurados a los asistentes convertían el doble, aunque no aclara
+cuánto de eso es causa. Lo contamos en
+<a href="/blog/web-preparada-para-el-comercio-agentico">cómo preparar tu web
+para el comercio agéntico</a>.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Mide también lo que no llega en clic">
+
+El clic es solo el final. La mayor parte de lo que hace la IA por una marca
+ocurre en la respuesta: si te nombra, en qué lugar y al lado de quién. Cuando
+Google muestra un resumen de IA, solo el 1% de las visitas pulsa un enlace del
+resumen, según Pew Research (lo contamos en
+<a href="/blog/de-buscar-a-preguntar">De buscar a preguntar</a>). Una marca que
+la IA no nombra no recibe visitas de la IA, conviertan bien o mal.
+
+</NumberedSection>
+
+## Cómo lo ves en GenScore
+
+Tu analítica ve la visita que llega. **GenScore** ve la respuesta que la
+provoca: en cada escaneo pregunta por lo que vendes en ChatGPT, Gemini, Claude
+y, en Pro y Agencia, Perplexity, con tus preguntas principales de búsqueda, y
+te dice si te nombran, en qué lugar, a qué competidores nombran a tu lado y qué
+páginas citan. Si conectas Search Console, **Posición en Google** te enseña al
+lado tus clics e impresiones de Google, para tener las dos mitades en el mismo
+sitio.
+
+Con las dos cosas juntas se entiende la cifra de conversión: si te nombran más
+y llegan más visitas desde la IA, sabes de dónde salen; si te nombran y no
+llegan, la respuesta ya ha hecho el trabajo de comparar, y lo que toca es
+revisar la página a la que aterrizan.
+
+<Verdict title="La cifra que importa es la tuya">
+
+Los estudios no coinciden porque miden cosas distintas, en momentos distintos
+y sobre productos distintos. Lo que sí comparten es que el tráfico de IA aún es
+pequeño, crece rápido y convierte mejor cuanto más hay que comparar antes de
+comprar. Mide el tuyo frente a la búsqueda orgánica, cuida la página a la que
+llega y mide también si la IA te nombra, que es lo que decide si llega.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre si la IA te nombra cuando preguntan por lo que vendes"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: escaneamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te decimos si te nombran, en qué lugar y a quién nombran a tu lado."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

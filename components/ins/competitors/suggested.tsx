@@ -17,7 +17,7 @@ type State =
  * «Competidores sugeridos» (COMPETITOR-SUGGESTIONS-1): fetched after paint,
  * since a cache miss takes seconds. «Seguir» creates the competitor straight
  * away with the domain that came with the suggestion (CONSOLE-INSTRUMENTO-1
- * F5b, log §361).
+ * F5b, log §374).
  */
 export function Suggested({ projectId }: { projectId: string }) {
   const router = useRouter();

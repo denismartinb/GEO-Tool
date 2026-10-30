@@ -19,7 +19,7 @@ import { PromptSheet } from "./prompt-sheet";
 import { sentimentClass, sentimentText } from "./sentiment";
 
 /**
- * Prompts in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5, log §360):
+ * Prompts in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5, log §373):
  * the lead, the strip (set visibility and one figure per engine), «Temas» and
  * «Prompts» tabs, and the side sheet of each prompt. Every figure counts the
  * rows of the last completed scan; a prompt added since then is listed as

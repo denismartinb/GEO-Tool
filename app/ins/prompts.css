@@ -1,4 +1,4 @@
-/* Prompts (CONSOLE-INSTRUMENTO-1 F5, log §360). Port of screens/prompts.css, scoped to `.ins`; ids became classes. */
+/* Prompts (CONSOLE-INSTRUMENTO-1 F5, log §373). Port of screens/prompts.css, scoped to `.ins`; ids became classes. */
 .ins .sc-prompts .lead a{cursor:pointer}
 .ins .sc-prompts .pills .btn{margin-left:auto}
 .ins .pr-sum{margin-top:28px;display:grid;grid-template-columns:300px 1fr;overflow:hidden}

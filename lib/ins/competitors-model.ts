@@ -1,5 +1,5 @@
 /**
- * Competidores in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5b, log §361).
+ * Competidores in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5b, log §374).
  * Pure: the page already computed every figure from stored rows; this only
  * orders, shades and phrases them, so nothing here can invent a number.
  */

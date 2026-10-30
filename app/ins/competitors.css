@@ -1,4 +1,4 @@
-/* Competidores (CONSOLE-INSTRUMENTO-1 F5b, log §361). Port of screens/competitors.css, scoped to `.ins`. */
+/* Competidores (CONSOLE-INSTRUMENTO-1 F5b, log §374). Port of screens/competitors.css, scoped to `.ins`. */
 .ins .sc-comp .lead b{color:var(--ink);font-weight:600}
 .ins .cp-top{margin-top:32px;grid-template-columns:7fr 5fr}
 .ins .cp-al{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--rule-2);font-size:13px;color:var(--ink-3)}

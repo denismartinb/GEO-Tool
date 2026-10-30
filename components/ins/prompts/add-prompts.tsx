@@ -29,7 +29,7 @@ const STEP_LABELS = ["Método", "Detalle", "Revisión"];
 
 /**
  * «Añadir prompts» in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5,
- * log §360): the same three methods and the same server actions as before, in
+ * log §373): the same three methods and the same server actions as before, in
  * the shared side sheet. Nothing is saved before the review step, and the plan
  * cap bar counts only what the person has ticked.
  */

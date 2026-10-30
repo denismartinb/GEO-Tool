@@ -4,7 +4,7 @@ import { fold } from "@/lib/ins/prompts-model";
 
 /**
  * Páginas citadas in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5c,
- * log §362). Pure: it reshapes what `aggregateCitations` already computed.
+ * log §375). Pure: it reshapes what `aggregateCitations` already computed.
  * «Te nombran» is a fact about the ANSWER where the page was cited, never about
  * the page (.claude/rules/citations.md); nothing here reads a page.
  */

@@ -12,7 +12,7 @@ import type { PromptRow } from "@/lib/ins/prompts-model";
 
 /**
  * Detail of one prompt for the «Instrumento» side sheet (CONSOLE-INSTRUMENTO-1
- * F5, log §360). Same derivations the old drawer made, none new: counts come
+ * F5, log §373). Same derivations the old drawer made, none new: counts come
  * from the rows, the ranking from `buildRanking`, the engines from
  * `summarizeEngines`. Pure and client-safe.
  */

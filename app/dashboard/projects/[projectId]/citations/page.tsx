@@ -167,7 +167,7 @@ export default async function CitationsPage({
     );
   }
 
-  /* «Instrumento» (CONSOLE-INSTRUMENTO-1 F5c, log §362): every figure was
+  /* «Instrumento» (CONSOLE-INSTRUMENTO-1 F5c, log §375): every figure was
      already computed above; this only shapes it for the new screen. */
   return (
     <div className="ins">

@@ -1,0 +1,163 @@
+{
+ "a": {
+  "v": 1,
+  "url": "http://localhost:8301/zapatillas/",
+  "host": "localhost",
+  "path": "/zapatillas/",
+  "title": "Zapatillas Trail Nube 3 · Tienda Ejemplo",
+  "description": null,
+  "robotsMeta": "",
+  "xRobots": "",
+  "canonical": "http://localhost:8301/zapatillas/",
+  "lang": "es",
+  "h1": [
+   "Zapatillas Trail Nube 3"
+  ],
+  "og": {
+   "type": null,
+   "price": null
+  },
+  "ld": {
+   "types": [
+    "Product",
+    "Offer"
+   ],
+   "errors": 0,
+   "product": {
+    "name": "Zapatillas Trail Nube 3",
+    "price": null,
+    "currency": "EUR",
+    "availability": null,
+    "returns": false,
+    "shipping": false
+   },
+   "article": null,
+   "faq": false,
+   "org": false,
+   "offerCount": 1
+  },
+  "microPrice": true,
+  "visibleDate": null,
+  "lead": {
+   "text": "Zapatillas de trail para mujer con suela de agarre alto y amortiguación media, pensadas para tiradas largas por montaña con barro y piedra suelta.",
+   "words": 24,
+   "wordsBefore": 0
+  },
+  "words": 42,
+  "buy": "Añadir al carrito",
+  "returnsLink": false,
+  "robots": {
+   "status": 200,
+   "text": "User-agent: *\nDisallow: /checkout\nDisallow: /cuenta\n\nUser-agent: PerplexityBot\nDisallow: /\n"
+  },
+  "llms": {
+   "status": 404,
+   "ok": false
+  },
+  "ms": 120,
+  "at": "2026-10-28T10:00:00.000Z"
+ },
+ "b": {
+  "v": 1,
+  "url": "http://localhost:8302/",
+  "host": "localhost",
+  "path": "/",
+  "title": "Las mejores zapatillas de trail de 2026 · Revista Ejemplo",
+  "description": "Probamos doce modelos de zapatillas de trail en barro, roca y pista para decirte cuál comprar según tu terreno y tu presupuesto.",
+  "robotsMeta": "",
+  "xRobots": "",
+  "canonical": "http://localhost:8302/",
+  "lang": "es",
+  "h1": [
+   "Las mejores zapatillas de trail de 2026"
+  ],
+  "og": {
+   "type": null,
+   "price": null
+  },
+  "ld": {
+   "types": [
+    "Article",
+    "FAQPage"
+   ],
+   "errors": 0,
+   "product": null,
+   "article": {
+    "published": "2026-09-02",
+    "modified": "2026-10-20"
+   },
+   "faq": true,
+   "org": false,
+   "offerCount": 0
+  },
+  "microPrice": false,
+  "visibleDate": "2026-10-20",
+  "lead": {
+   "text": "Para la mayoría de corredores, la mejor zapatilla de trail este año es una con suela de tacos de cinco milímetros y drop medio: agarra en barro sin castigar en pista. Abajo, los doce modelos que probamos.",
+   "words": 37,
+   "wordsBefore": 0
+  },
+  "words": 53,
+  "buy": null,
+  "returnsLink": false,
+  "robots": {
+   "status": 200,
+   "text": "User-agent: *\nAllow: /\n"
+  },
+  "llms": {
+   "status": 200,
+   "ok": true
+  },
+  "ms": 120,
+  "at": "2026-10-28T10:00:00.000Z"
+ },
+ "c": {
+  "v": 1,
+  "url": "http://localhost:8303/",
+  "host": "localhost",
+  "path": "/",
+  "title": "Inicio",
+  "description": null,
+  "robotsMeta": "noindex, nosnippet",
+  "xRobots": "",
+  "canonical": null,
+  "lang": "",
+  "h1": [
+   "Bienvenido",
+   "Servicios"
+  ],
+  "og": {
+   "type": null,
+   "price": null
+  },
+  "ld": {
+   "types": [],
+   "errors": 1,
+   "product": null,
+   "article": null,
+   "faq": false,
+   "org": false,
+   "offerCount": 0
+  },
+  "microPrice": false,
+  "visibleDate": null,
+  "lead": {
+   "text": "",
+   "words": 0,
+   "wordsBefore": null
+  },
+  "words": 3,
+  "buy": null,
+  "returnsLink": false,
+  "robots": {
+   "status": 404,
+   "text": null
+  },
+  "llms": {
+   "status": 404,
+   "ok": false
+  },
+  "ms": 120,
+  "at": "2026-10-28T10:00:00.000Z"
+ }
+}

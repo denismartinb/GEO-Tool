@@ -15,7 +15,7 @@ import { buildPromptDetail, citationLabel, type DetailRow } from "@/lib/ins/prom
 import { sentimentClass, sentimentText } from "./sentiment";
 
 /**
- * Detail of one prompt (CONSOLE-INSTRUMENTO-1 F5, log §360): the approved
+ * Detail of one prompt (CONSOLE-INSTRUMENTO-1 F5, log §373): the approved
  * side sheet with «Resumen» and «Respuestas». Every figure is a count of the
  * stored answers (see `lib/ins/prompt-detail.ts`).
  */

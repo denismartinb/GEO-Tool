@@ -27572,7 +27572,165 @@ enlaces siguen siendo PKCE y sólo funcionan en el navegador del alta; el punto
 (`lib/email/lifecycle/runner.ts`) reenvía la misma plantilla, así que se arregla
 con ella.
 
-## 360. CONSOLE-INSTRUMENTO-1 Fase 5a: Prompts pasa a «Instrumento» (2026-10-28)
+## 360. BLOG-CONVERT-1: ¿convierte mejor el tráfico de la IA? (2026-10-30)
+
+**Qué.** Artículo `convierte-mejor-el-trafico-de-la-ia` (clúster
+`fundamentos`), cuarto post de la rutina de cada dos días. Escrito el 27 y
+aplazado a petición del fundador, que ese día ya había compartido otro
+post en redes. Iba a salir el 29, pero la pasada de ese día no se ejecutó y se
+publicó el 30, sin escribir uno nuevo. El número era §349 y pasó a §360 porque
+§349 lo tomó CONSOLE-INSTRUMENTO-1 en `main`. Pone lado a lado
+las cifras de conversión del tráfico que llega desde la IA y explica por qué
+no coinciden. Fuentes, todas leídas en origen: Adobe Digital Insights, *AI
+Traffic Trends Report* (agosto de 2026, más de un billón de visitas a webs de
+comercio de EE. UU., datos de octubre de 2024 a julio de 2026: +60% de
+conversión en comercio, +53% de ingresos por visita, −1% en viajes); Shopify,
+*AI and organic search are doing different jobs* (11 de agosto de 2026,
+segundo trimestre de 2026, sin tamaño de muestra: +197% de sesiones desde la
+IA, +80% de conversión en ficha de producto, el doble en categorías de
+especificaciones, relojes 2,4, collares 2,3 y ropa 1,6 veces); Ahrefs, Patrick
+Stox (16 de junio de 2025, una sola web, 30 días: 0,5% del tráfico, 12,1% de
+los registros, 23 veces), y Kaiser y Schulze, *Marketing Science* (2026, doi
+10.1287/mksc.2025.0489, 973 tiendas en 49 países, agosto de 2024 a julio de
+2025: la orgánica convierte un 13% más que ChatGPT, la afiliación un 86% más,
+ChatGPT por encima sólo de redes sociales de pago).
+
+**Defectos de las cifras, dichos en el artículo.** Shopify no da muestra y
+presenta sus cifras de categoría como indicios; en relojes y collares no dice
+con qué compara, aunque el contexto es la búsqueda orgánica. El 13% del estudio
+académico es una razón de probabilidades (log-odds) y en varias de sus
+comprobaciones deja de ser significativo. Ahrefs es una sola web, con un
+público de profesionales del SEO. El artículo no afirma nada sobre la
+complejidad del producto en Kaiser y Schulze: el resumen la menciona pero no
+la cifra, así que la explicación por categoría sale sólo de Shopify y Adobe.
+
+**Bloque que el lector copia.** La condición de GA4 es `GA4_AI_SOURCE_REGEX`
+(`lib/blog/ga4-source-regex.ts`), la misma de S8 y ya cubierta por su test;
+no se duplica. El consejo de crear el canal cuanto antes se apoya en lo que
+ya dice ese artículo: un grupo personalizado reagrupa también los datos
+anteriores.
+
+**Lo que el producto afirma, trazado.** GenScore no mide conversiones, y el
+artículo no lo dice. Lo que afirma: escanea las preguntas principales de
+búsqueda en ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity (§283) y
+dice si te nombran, en qué lugar, a qué competidores y qué páginas citan; y
+«Posición en Google» enseña clics e impresiones con Search Console conectado
+(§284).
+
+**Pendiente.** Refrescar con el siguiente informe trimestral de Adobe o
+Shopify, y con la versión ampliada que Ahrefs anunció.
+
+## 361. CHROME-EXT-1 paso 02: la extensión lee la cuenta real (2026-10-30)
+
+**Qué.** Dos rutas de sólo lectura para el panel de la extensión de Chrome,
+aprobadas por el fundador en el Task Intake
+(`docs/chrome-extension/task-intake-report.md` §18):
+
+- `GET /api/ext/context`: plan efectivo, fin de la prueba, tope de dominios y
+  la lista de dominios de la cuenta.
+- `GET /api/ext/project?domain=&url=`: el proyecto que cubre ese dominio (el
+  más específico gana) con Puntuación GEO, mención por motor, rivales, Salud
+  técnica, las tres acciones del plan, la Visibilidad agéntica y, si `url` es
+  de ese proyecto, los prompts del último escaneo que la citaron.
+
+La extensión de prueba pasa a 0.6.0: con sesión en GenScore, el desplegable
+enseña los dominios reales, la visión general sale de esas rutas y «Cuenta de
+ejemplo» desaparece; sin sesión, todo sigue como en el paso 01.
+
+**Cómo se autentica.** Sin token propio. El manifiesto pide
+`host_permissions` sólo para el origen de GenScore (`config.js`, `GS_API`), y
+con eso Chrome manda la cookie de sesión de Supabase en las peticiones de la
+extensión, también siendo `SameSite=Lax` (comprobado con una extensión real
+contra un servidor local). Las rutas leen la sesión con el cliente del
+usuario (RLS), filtran los proyectos además por `owner_user_id` y responden
+401 en vez de redirigir. No hay cabeceras CORS, así que otra web no puede leer
+la respuesta. `Cache-Control: private, no-store`.
+
+**Cada cifra sale de su dueño.** `lib/ext/summary.ts` es pura y sólo elige y
+renombra campos de `buildReportModel(loadReportInput(...))`, el cargador del
+informe (que ya toma la puntuación de `resolveGeoScore`, la parte técnica de
+`buildTechnicalIssuesReport` y el plan de `selectPlan`), y de
+`overviewAgenticCard`, la tarjeta agéntica de Visión general. Las citas pasan
+por `resolveCitation`, como en Páginas citadas. Todo va en proporciones; el
+panel pinta porcentajes. El plan se lee como `/api/me` (`isTrialElapsed` +
+`resolveEffectivePlanId`): abrir el panel nunca rebaja una prueba ni manda el
+correo de fin de prueba.
+
+**Pendiente o conocido.**
+- La prueba usa la vista previa de Vercel del PR: el .zip lleva `GS_API`
+  apuntando a ella y su permiso de host. La versión de tienda (paso 03)
+  apuntará a `https://www.genscore.es`.
+- El panel no tiene delta de la puntuación ni puntos por acción: el modelo del
+  informe no los da y no se recalculan aquí.
+- Search Console y palabras vigiladas en el panel (`/api/ext/google`),
+  «Descubrir», añadir competidores y marcar acciones como hechas siguen fuera.
+- `pnpm run build` no termina en el contenedor del agente porque no llega a
+  Google Fonts; typecheck, lint y los 5.030 tests pasan. Vercel construye el
+  preview.
+
+**0.6.1: el panel abre en el proyecto de la consola (Denis, 2026-10-30).**
+Con sesión y sin página leída, el panel ya no enseña la pantalla de reposo:
+enseña la visión general del dominio que la consola tiene seleccionado y,
+encima, «Para analizar la página actual, pulsa el icono de nuevo» (o el botón
+«Analizar la página actual» si ya dio el permiso). `/api/ext/context` devuelve
+`activeDomain`, leído de la cookie `geo_active_project` con
+`resolveSelectedProject` como `/dashboard/domains`: un id ajeno o caducado cae
+al proyecto más reciente de la cuenta. El panel sigue a la consola cuando esa
+selección cambia y, si no, respeta lo que se eligió en el desplegable. En
+cuanto se lee una página, la página manda (como en la 0.5.2).
+
+**0.6.2: el aviso sólo fuera de la consola (Denis, 2026-10-30).** Mientras la
+pestaña abierta es GenScore (el origen de `GS_API`, el único cuya URL ve la
+extensión), ni el aviso ni el parpadeo del icono salen: quien acaba de entrar
+está en la consola. En cualquier otra página sí.
+
+**0.6.3: fuera de la consola, la pantalla de reposo (Denis, 2026-10-30).**
+Con sesión, el panel enseña los datos del dominio seleccionado sólo mientras
+la pestaña es la consola. En otra página vuelve la pantalla de reposo de la
+0.5 (la barra con el clic animado y «Escanear automáticamente las páginas»),
+con el título «Para analizar la página actual, pulsa el icono de nuevo».
+Elegir un dominio en el desplegable enseña sus datos también fuera de la
+consola, hasta que cambia la pestaña. Corregido de paso: el clic en un
+dominio del desplegable no hacía nada, porque `[data-pick]` faltaba en el
+selector del manejador de clics.
+
+**0.6.4 (Denis, 2026-10-30).** Sin sesión, bajo la cabecera sale «Identifícate
+en GenScore para el análisis completo», con «GenScore» en la letra del logo, y
+lleva a `/login`. Se quita del pie la línea «Revisada en tu navegador… No pasa
+por ningún servidor». En la 0.6.5 la frase pasa a la cabecera, junto al botón,
+que se llama «Login» en vez de «Entrar», para que se lea como su motivo.
+
+**0.6.6 (Denis, 2026-10-30).** En la pantalla de reposo con sesión, el
+selector de arriba ya no enseña un dominio (confundía: no es de esa página).
+Dice «Analiza la página actual · o elige uno de tus dominios», y el
+desplegable sigue listando los dominios sin ninguno marcado.
+
+## 362. CHROME-EXT-1 paso 03: versión de tienda 1.0.0 (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la ficha (`/mnt/project-files/chrome-extension/ficha-tienda-propuesta.md`) y el paso 03. La extensión pasa a 1.0.0 con nombre «GenScore: Auditoría SEO y visibilidad en IA» y el resumen de la ficha como descripción del manifiesto, apuntando a `https://www.genscore.es`.
+
+**Cambios en la extensión.**
+- **Sin «Cuenta de ejemplo».** `GS_SAMPLE = false` en `config.js`: la versión de tienda no enseña datos inventados. El modo de ejemplo sólo existe en las versiones de prueba.
+- **Las acciones del plan de la cuenta ya no tienen «Desliza para marcar como hecho».** El panel sólo lee (paso 02), así que deslizar no habría guardado nada. Se marcan en la consola, con el botón «Abrir en la consola».
+- **«Conectar con Google»** lleva a la consola en vez de a un aviso de prueba.
+- Los enlaces llevan `utm_campaign=extension`.
+
+**`/privacidad`.** Nuevo apartado «Extensión de Chrome». Cuenta tres cosas:
+- la revisión es local;
+- con sesión, el panel recibe email, plan, dominios y resultados;
+- envía la dirección de una página propia para ver qué preguntas la citan.
+
+Después del merge, a petición del fundador, el apartado añade que el uso de esa información se rige por la Política de datos de usuario de Chrome Web Store y sus requisitos de uso limitado (Limited Use), como pide la ficha de la tienda.
+
+Fecha de actualización: 30 de octubre de 2026.
+
+**Pendiente o conocido.**
+- **Ficha sólo en español en la 1.0.** La propuesta pedía también inglés, pero el panel está entero en castellano: una ficha inglesa traería instalaciones que no entienden la interfaz y reseñas malas. El inglés llega con la traducción del panel (`_locales`), en otra fase.
+- **`genscore.es/extension` no existe.** La ficha enlaza a `https://www.genscore.es` hasta que se diseñe esa página.
+- **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
+- **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
+
+## 373. CONSOLE-INSTRUMENTO-1 Fase 5a: Prompts pasa a «Instrumento» (2026-10-28)
 
 **Qué se decidió.** La pantalla de Prompts se rehace sobre el prototipo v51:
 frase de cabecera con el tema fuerte y el flojo (enlaces que abren el tema),
@@ -27601,7 +27759,7 @@ volver a lanzar el piloto de escritura. Las reglas `pr2-*`/`add-prompts-*` de
 `globals.css` y `console.css` se borran en F8. El placeholder del buscador se
 corta en 390 px (copy del prototipo, sin tocar).
 
-## 361. CONSOLE-INSTRUMENTO-1 Fase 5b: Competidores pasa a «Instrumento» (2026-10-28)
+## 374. CONSOLE-INSTRUMENTO-1 Fase 5b: Competidores pasa a «Instrumento» (2026-10-28)
 
 **Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
 cabecera con las cifras reales, tarjeta «Ranking» (menciones, citas y puesto
@@ -27634,7 +27792,7 @@ del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
 arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
 que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.
 
-## 362. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
+## 375. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
 
 **Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
 cabecera con la cuota de citas propias y el enlace a las fuentes alcanzables,

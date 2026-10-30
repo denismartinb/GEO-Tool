@@ -87,7 +87,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   La tarjeta de Google es la placa 2 del plan.
 - **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.
 
-## Prompts (F5a, log §360)
+## Prompts (F5a, log §373)
 
 - **La hoja lateral es un componente del kit** (`Sheet`/`SheetHead`), con
   portal a `body`, Esc, trampa de foco y retorno de foco. Competidores y
@@ -98,7 +98,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Nada se guarda antes del paso de revisión** de «Añadir prompts»; el tope
   del plan cuenta lo marcado (PROMPTS-REVIEW-1, §305).
 
-## Competidores (F5b, log §361)
+## Competidores (F5b, log §374)
 
 - **El orden del ranking es por menciones**; el puesto medio sólo desempata y
   sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
@@ -109,7 +109,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
   gestión las llama y refresca.
 
-## Páginas citadas (F5c, log §362)
+## Páginas citadas (F5c, log §375)
 
 - **«Te nombran» sigue siendo un hecho de la respuesta** (`.claude/rules/citations.md`):
   la nota bajo el anillo no se quita ni se reescribe como afirmación sobre la página.

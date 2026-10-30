@@ -17,7 +17,7 @@ type Competitor = { id: string; name: string; domain: string };
 
 /**
  * «Gestionar competidores» and the brand aliases, in the shared side sheet
- * (CONSOLE-INSTRUMENTO-1 F5b, log §361). Same server actions as before; the
+ * (CONSOLE-INSTRUMENTO-1 F5b, log §374). Same server actions as before; the
  * only addition to the prototype is «Editar», which the old panel had.
  */
 export function ManageSheet({

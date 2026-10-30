@@ -3,7 +3,7 @@ import { isBrandDomain } from "@/lib/domains/brand-domain";
 import { normalizeProvider } from "@/lib/scan/engine-meta";
 
 /**
- * Prompts in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5, log §360).
+ * Prompts in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F5, log §373).
  * Pure: it only regroups rows the page already loaded, never asks anything
  * else, and every figure is a count of those rows (no estimate, no filler).
  */
