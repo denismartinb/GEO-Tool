@@ -154,3 +154,7 @@
 .ins .cov-hist-d>summary::after{content:"";width:8px;height:8px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:rotate(45deg);transition:transform var(--d2) var(--std);margin-right:4px}
 .ins .cov-hist-d[open]>summary{margin-bottom:10px}
 .ins .cov-hist-d[open]>summary::after{transform:rotate(-135deg)}
+
+/* Móvil / Escritorio de la velocidad: `.ins button{padding:0}` ganaba a `.sa-seg button` */
+.ins .sa-seg{gap:4px;padding:4px;border-radius:12px}
+.ins .sa-seg button{padding:6px 14px;border-radius:9px;font-size:12.5px;font-weight:600}
