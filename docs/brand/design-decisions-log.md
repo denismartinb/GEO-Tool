@@ -27720,6 +27720,8 @@ desplegable sigue listando los dominios sin ninguno marcado.
 - con sesión, el panel recibe email, plan, dominios y resultados;
 - envía la dirección de una página propia para ver qué preguntas la citan.
 
+Después del merge, a petición del fundador, el apartado añade que el uso de esa información se rige por la Política de datos de usuario de Chrome Web Store y sus requisitos de uso limitado (Limited Use), como pide la ficha de la tienda.
+
 Fecha de actualización: 30 de octubre de 2026.
 
 **Pendiente o conocido.**
