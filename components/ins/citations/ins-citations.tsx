@@ -1,7 +1,6 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { Ic } from "@/components/ins/ic";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { Bar } from "@/components/ins/kit/bar";
@@ -212,13 +211,6 @@ export function InsCitations(p: Props) {
           )}
         </p>
       ) : null}
-      <div className="pills">
-        <Link className="chip" href={`/dashboard/projects/${p.projectId}/web-audit`}>
-          <Ic n="audit" sm />
-          ¿Tus páginas se pueden citar?
-        </Link>
-      </div>
-
       <section className="sec">
         <div className="kpis ct-k">
           <div className="kpi">
