@@ -20,7 +20,6 @@ import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
 import { CoverageHistory, CoverageSection } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
-import { SeoWeightsCard } from "./_components/seo-weights-card";
 import { duplicateMetadataUrls } from "@/lib/web-audit/seo-health";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
@@ -218,10 +217,11 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </AuditTabPanel>
                           {isGeo && <CoverageSection data={coverage} />}
                         </div>
-                        <div className="sa-side">
-                          {isGeo && <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />}
-                          {!isGeo && <SeoWeightsCard />}
-                        </div>
+                        {isGeo && (
+                          <div className="sa-side">
+                            <BotAccessCard bots={technicalSnapshot.bots} checkedAt={technicalSnapshot.created_at} />
+                          </div>
+                        )}
                       </div>
                       {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
