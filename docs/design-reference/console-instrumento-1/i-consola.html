@@ -1186,16 +1186,20 @@ code.p{font:500 .86em var(--mono);background:var(--surface-3);border-radius:6px;
 .sc-au-hero{display:flex;align-items:center;gap:24px;margin-top:24px;padding:16px 22px}
 .sc-au-hero .sc-au-arc .n{padding-top:32px}
 .sc-au-hero .sc-au-arc .n b{font-size:34px}
+.sc-au-hero .sc-au-arc .n.w3{padding-top:36px}
+.sc-au-hero .sc-au-arc .n.w3 b{font-size:27px;letter-spacing:-.06em}
+.sc-au-hero .sc-au-arc .n.w3 small{font-size:10.5px}
 .sc-au-hero .rt{display:flex;flex-direction:column;gap:4px;min-width:0}
 .sc-au-hero .lb{font-size:12.5px;color:var(--ink-3)}
 .sc-au-hero .mt{font-size:14px;color:var(--ink-2)}
 .sc-au-hero .mt>b{color:var(--warm);font-weight:600}
 .sc-au-hero .to{font-size:13.5px;color:var(--ink-3)}
 .sc-au-hero .to b{color:var(--pos);font-weight:650;font-size:15px}
-.sc-au-hero .pot{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550;white-space:nowrap}
-.sc-au-hero .pot b{font-weight:700}
-.sc-au-hero .pot:hover{filter:brightness(.97)}
-@media (max-width:760px){.sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}.sc-au-hero .pot{margin-left:0;width:100%;height:36px;font-size:13px}.sc-au-hero .pot .i:last-child{margin-left:auto}}
+.sc-au-hero .gain{margin-left:auto;align-self:stretch;display:flex;align-items:center;gap:12px;padding-left:24px;border-left:1px solid var(--rule-2);color:var(--pos)}
+.sc-au-hero .gain>b{font-size:38px;font-weight:300;letter-spacing:-.04em;line-height:1}
+.sc-au-hero .gain>span{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.3;color:var(--ink-3);max-width:150px}
+.sc-au-hero .gain i{font-style:normal;font-size:13px;font-weight:650;color:var(--pos)}
+@media (max-width:760px){.sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}.sc-au-hero .gain{margin-left:0;width:100%;padding:12px 0 0;border-left:0;border-top:1px solid var(--rule-2)}.sc-au-hero .gain>span{max-width:none}}
 
 /* --- screens/auth.css --- */
 /* ===== full-screen states (builder C): auth and mission hide the shell ===== */
@@ -3586,13 +3590,13 @@ function auArc(v,to,size=132){const r=size/2-8,c=size/2,C=2*Math.PI*r,span=.75*C
   <circle class="tr" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="${span.toFixed(1)} ${C.toFixed(1)}"/>
   <circle class="gh" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}" style="stroke-dashoffset:${(-a).toFixed(1)}"/>
   <circle class="now" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}"/></g></svg>
-  <span class="n"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
+  <span class="n${v>=100?' w3':''}"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
 
 function auHero(k){const B=AU[k],gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
  return `<section class="card sc-au-hero" aria-label="${B.lbl}: ${B.v} de 100. Puedes llegar a ${to}.">
   ${auArc(B.v,to,104)}
   <div class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b> · `:''}${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span></div>
-  <button class="pot" data-act="auPot" data-arg="${k}">${ic('arrowup','sm')}<b class="num">+${gain} pt</b><span class="px"> si arreglas ${B.issues.length} problemas</span>${ic('chevr','sm')}</button>
+  <div class="gain"><b class="num">+${gain}</b><span><i>pt</i>si arreglas los ${B.issues.length} problemas que puntúan</span></div>
  </section>`}
 
 function auIssue(x){const op=U.au.open===x.id;

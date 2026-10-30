@@ -43,13 +43,13 @@ function auArc(v,to,size=132){const r=size/2-8,c=size/2,C=2*Math.PI*r,span=.75*C
   <circle class="tr" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="${span.toFixed(1)} ${C.toFixed(1)}"/>
   <circle class="gh" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}" style="stroke-dashoffset:${(-a).toFixed(1)}"/>
   <circle class="now" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}"/></g></svg>
-  <span class="n"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
+  <span class="n${v>=100?' w3':''}"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
 
 function auHero(k){const B=AU[k],gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
  return `<section class="card sc-au-hero" aria-label="${B.lbl}: ${B.v} de 100. Puedes llegar a ${to}.">
   ${auArc(B.v,to,104)}
   <div class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b> · `:''}${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span></div>
-  <button class="pot" data-act="auPot" data-arg="${k}">${ic('arrowup','sm')}<b class="num">+${gain} pt</b><span class="px"> si arreglas ${B.issues.length} problemas</span>${ic('chevr','sm')}</button>
+  <div class="gain"><b class="num">+${gain}</b><span><i>pt</i>si arreglas los ${B.issues.length} problemas que puntúan</span></div>
  </section>`}
 
 function auIssue(x){const op=U.au.open===x.id;
