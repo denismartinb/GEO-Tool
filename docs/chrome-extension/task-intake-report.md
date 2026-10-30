@@ -598,4 +598,62 @@ fase»). Siguen sin aprobar el paso 02 (cuenta conectada, dos rutas de solo
 lectura en el servidor) y el paso 03 (publicación oculta en la Chrome Web
 Store).
 
+
+## 18. Task Intake: paso 02, cuenta conectada (2026-10-30)
+
+Denis eligió el paso 02 en la tarjeta de decisión. Toca autenticación y rutas
+de servidor, así que va con su Task Intake y no se implementa hasta su sí.
+
+**Qué verá Denis.** Pulsa «Entrar», inicia sesión en GenScore como siempre, y
+el panel pasa a leer su cuenta real: sus dominios en el desplegable, la
+Puntuación GEO, los cuatro motores, los rivales, las tres acciones del plan y la
+Auditoría agéntica. «Cuenta de ejemplo» desaparece cuando hay sesión. La
+revisión de la página abierta no cambia.
+
+**Cómo se conecta (recomendado: la cookie de GenScore, sin token nuevo).** La
+extensión pide `host_permissions` sólo para `https://www.genscore.es/*`. Con
+eso, una petición de la extensión a genscore.es lleva la cookie de sesión de
+Supabase, igual que la consola, y las rutas usan el `requireUser()` de siempre.
+Ventajas: ninguna superficie de autenticación nueva, ningún token guardado en la
+extensión, cerrar sesión en la web la cierra en el panel, y el precedente ya
+existe (`/api/me`, que la cabecera pública lee igual). Coste: al instalar,
+Chrome avisa de «leer y cambiar tus datos en www.genscore.es», un aviso
+pequeño y sólo de nuestra web.
+Alternativa descartada: entregar el token de Supabase a la extensión
+(`externally_connectable`) y guardarlo en `storage`. Es más trabajo, deja un
+token de refresco fuera de la web y necesita revisión de data-guardian.
+
+**Rutas nuevas (las dos `GET`, sólo lectura, sin migración, sin LLM, sin
+service role):**
+
+| Ruta | Devuelve | Dueño de cada cifra |
+|---|---|---|
+| `GET /api/ext/context` | Plan efectivo, días de prueba, tope y lista de dominios | `getPlanForUser`, mismos proyectos que el selector de la consola (RLS) |
+| `GET /api/ext/project?domain=&url=` | Del proyecto que cubre ese dominio: Puntuación GEO y su delta, motores, rivales, nota SEO, Visibilidad agéntica por componente, las tres acciones del plan; y, si llega `url`, los prompts del último escaneo que citan esa URL | `run-metrics.ts` (puntuación), `selectPlan` (plan, las mismas tres que Recomendaciones), `buildTechnicalIssuesReport` (SEO), `lib/agentic-audit` (agéntica) |
+
+- Sin sesión responden 401 y el panel vuelve a «Entrar». Un dominio que no es
+  del usuario responde 404, nunca datos de otra cuenta.
+- Sin cabeceras CORS: una web cualquiera no puede leer la respuesta, y la
+  cookie `lax` no viaja en peticiones de otros sitios.
+- Sólo porcentajes y nombres de motor, como en todo lo que lee un cliente.
+
+**Cómo se prueba sin tocar producción.** Las rutas van en su propio PR. La
+extensión de prueba 0.6.0 apunta a la vista previa de Vercel de ese PR y pide
+permiso sólo para esa dirección. Denis inicia sesión en la vista previa (mismo
+Supabase, su cuenta real) y prueba el panel. Si la vista previa tiene
+protección de Vercel activada, hará falta entrar primero con su cuenta de
+Vercel en esa pestaña.
+
+**Fuera de este paso:** Search Console y palabras vigiladas en el panel
+(`/api/ext/google`), «Descubrir», añadir competidores o dominios desde el
+panel, marcar acciones como hechas, y la tienda de Chrome.
+
+**Tamaño:** un PR de app (dos rutas con sus tests de contrato y de que cada
+cifra sale de su dueño) y la extensión 0.6.0 en este PR de documentación.
+`pnpm test && pnpm run validate` antes de pedir la revisión.
+
+**Riesgos:** que una cifra del panel no coincida con la consola (se mitiga
+llamando a las mismas funciones, con un test que lo compara), y el aviso de
+permiso de genscore.es al instalar.
+
 > Do you approve this plan? I will not implement until you confirm.
