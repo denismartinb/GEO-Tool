@@ -27667,3 +27667,14 @@ correo de fin de prueba.
 - `pnpm run build` no termina en el contenedor del agente porque no llega a
   Google Fonts; typecheck, lint y los 5.030 tests pasan. Vercel construye el
   preview.
+
+**0.6.1: el panel abre en el proyecto de la consola (Denis, 2026-10-30).**
+Con sesión y sin página leída, el panel ya no enseña la pantalla de reposo:
+enseña la visión general del dominio que la consola tiene seleccionado y,
+encima, «Para analizar la página actual, pulsa el icono de nuevo» (o el botón
+«Analizar la página actual» si ya dio el permiso). `/api/ext/context` devuelve
+`activeDomain`, leído de la cookie `geo_active_project` con
+`resolveSelectedProject` como `/dashboard/domains`: un id ajeno o caducado cae
+al proyecto más reciente de la cuenta. El panel sigue a la consola cuando esa
+selección cambia y, si no, respeta lo que se eligió en el desplegable. En
+cuanto se lee una página, la página manda (como en la 0.5.2).

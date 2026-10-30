@@ -271,6 +271,18 @@
       <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>
       ${auto}</div>${foot(null)}</div>`;
   }
+  /* Signed in and no page read yet: the panel opens on the project the
+     console is pointed at, with one line on how to read the open page
+     (Denis, 2026-10-30). Once a page is read, it takes over (viewReview). */
+  function pageHint() {
+    if (S.read && S.autoOn) return "";
+    if (S.read) return `<button class="pghint" data-act="review-now"><span class="k2">${ic("scan", "sm")}</span><span class="tx"><b>Analizar la página actual</b></span>${ic("arrowr", "sm")}</button>`;
+    return `<div class="pghint" role="note"><span class="k2">${svgGs(14)}</span><span class="tx"><b>Para analizar la página actual, pulsa el icono de nuevo</b><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></span></div>`;
+  }
+  function viewDom() {
+    const D = A();
+    return `<div class="px">${headAcct()}${pageHint()}<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span></div>${heroDom()}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${foot(null)}</div>`;
+  }
   function viewReading() {
     return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
   }
@@ -322,8 +334,9 @@
     const pn = $("#panel");
     let html, ctx;
     const idle = !S.rec && !(S.read && S.autoOn && S.tabId != null);
-    badgeTick(idle);
-    if (!S.rec) { html = idle ? viewIdle(S.shown) : viewReading(); ctx = "idle" + S.read + S.autoOn; }
+    badgeTick(idle && !(S.real && S.read));
+    if (!S.rec && idle && S.real && curDom()) { html = viewDom(); ctx = "dom|" + curDom() + "|" + (A() ? 1 : 0); }
+    else if (!S.rec) { html = idle ? viewIdle(S.shown) : viewReading(); ctx = "idle" + S.read + S.autoOn; }
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
     else {
@@ -367,21 +380,27 @@
     const r = await Env.api("/api/ext/context");
     const was = !!S.real;
     if (r.status === 200 && r.body && Array.isArray(r.body.domains)) {
-      const prev = S.real && S.real.sel;
+      const prev = S.real && S.real.sel, prevAct = S.real ? S.real.activeDomain : undefined;
       S.real = Object.assign({}, r.body, { sel: null });
-      S.real.sel = pickSel(prev);
+      S.real.sel = pickSel(prev, r.body.activeDomain !== prevAct);
+      if (S.real.sel !== prev) S.tab = "dom";
       if (!was) { S.tabUrl = null; S.lane = null; }
       ensureProj();
     } else if (r.status === 401) {
       S.real = null;
     }
-    if (was !== !!S.real) draw();
+    if (was !== !!S.real || (S.real && S.real.sel !== (S._lastSel ?? null))) draw();
+    S._lastSel = S.real ? S.real.sel : null;
   }
-  /* the open page's own domain when it is one of yours, else the last pick */
-  function pickSel(prev) {
+  /* the open page's own domain when it is one of yours; else the domain the
+     console is pointed at when that just changed; else the last pick */
+  function pickSel(prev, consoleMoved) {
     const doms = S.real.domains.map((x) => x.domain), h = S.rec && S.rec.facts ? S.rec.facts.host : null;
     const own = doms.filter((d) => covers(h, d)).sort((a, b) => b.length - a.length)[0];
-    return own || (doms.includes(prev) ? prev : doms[0] || null);
+    const act = doms.includes(S.real.activeDomain) ? S.real.activeDomain : null;
+    if (own) return own;
+    if (consoleMoved && act) return act;
+    return doms.includes(prev) ? prev : act || doms[0] || null;
   }
   async function ensureProj() {
     if (!S.real || !S.real.sel) return;

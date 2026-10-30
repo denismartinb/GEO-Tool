@@ -28,6 +28,11 @@ vi.mock("@/lib/supabase/server", () => ({
   })
 }));
 
+const activeCookie = vi.fn<() => string | undefined>();
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: (name: string) => (name === "geo_active_project" && activeCookie() ? { value: activeCookie() } : undefined) })
+}));
+
 const loadReportInput = vi.fn();
 vi.mock("@/lib/report/report-data", () => ({ loadReportInput: (...a: unknown[]) => loadReportInput(...a) }));
 vi.mock("@/lib/agentic-audit/console-audit", () => ({
@@ -48,6 +53,7 @@ beforeEach(() => {
     { id: "p2", name: "Blog", brand: null, domain: "blog.marca.es" }
   ]);
   loadReportInput.mockResolvedValue(null);
+  activeCookie.mockReturnValue(undefined);
 });
 
 describe("GET /api/ext/context", () => {
@@ -70,6 +76,15 @@ describe("GET /api/ext/context", () => {
       { domain: "marca.es", brand: "Marca" },
       { domain: "blog.marca.es", brand: "Blog" }
     ]);
+  });
+
+  it("opens on the project the console is pointed at, and ignores a foreign id", async () => {
+    getUser.mockResolvedValue({ data: { user: USER } });
+    expect((await (await context()).json()).activeDomain).toBe("marca.es");
+    activeCookie.mockReturnValue("p2");
+    expect((await (await context()).json()).activeDomain).toBe("blog.marca.es");
+    activeCookie.mockReturnValue("someone-elses-project");
+    expect((await (await context()).json()).activeDomain).toBe("marca.es");
   });
 
   it("reads an elapsed trial as free, without writing anything", async () => {
