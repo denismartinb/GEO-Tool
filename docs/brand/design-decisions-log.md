@@ -27838,6 +27838,39 @@ lateral `SettingsIndex` queda sin uso (limpieza final de F8).
 `.set-idx` y `h2.set-sech`, que ya no existen: hay que actualizarlo antes de
 lanzar el piloto sobre esta pantalla.
 
+## §370 · CONSOLE-INSTRUMENTO-1: «Visibilidad en agentes» se rehace sobre el prototipo (2026-10-30)
+
+**Qué se decidió.** En F7 (§365) sólo se cambió el marco de esta pantalla y el
+fundador lo vio: «todavía tiene el diseño antiguo». Se reconstruye sobre
+`i-src/screens/agents.js`: el «Cuadro claro» (dial grande con la nota, cuatro
+diales pequeños, un testigo por componente y el titular con «Ver la
+auditoría») y las dos tarjetas de abajo, «Preguntas de compra» (una fila por
+motor con tres barras finas) y «Qué hacer primero». Estados: con tienda,
+«No hemos encontrado qué vendes en tu web» y Starter con invitación a Pro.
+
+**Cómo.** `components/ins/agents/visibility-cluster.tsx` sólo dibuja: la página
+le pasa nota, objetivo (`fixbarLine`), diales y testigos ya calculados desde la
+última auditoría guardada (`componentStatus`, `componentLine`, `interopLine`).
+La ignición (aguja, testigos) suena una vez por visita y es ambiente; con
+movimiento reducido queda en el estado final. Estilos en `app/ins/agents.css`,
+portados del CSS del prototipo con prefijo `.ins`.
+
+**Lo que NO se hace.** El prototipo trae «Marcar como hecho» en «Qué hacer
+primero»: el producto no lo tiene (Fase 2c sin aprobar), así que no se pinta.
+Sin cifras inventadas: el objetivo del dial sólo sale si `fixbarLine` lo
+calcula. Se retira el «camino de un agente» y las cinco tarjetas de componente
+de la versión anterior: los diales y testigos los sustituyen y enlazan a la
+misma auditoría por componente (`?componente=`).
+
+**Premisa de retirada de camino.** Se retiran las tarjetas de componente como
+entrada a la auditoría; la premisa es que los diales y testigos enlazan a
+`?componente=<id>`. Si esa query dejara de abrir el componente, esta pantalla
+quedaría sin entrada por componente (queda «Ver la auditoría»).
+
+**Pendiente.** Comparar con el prototipo en 375, 768 y 1280 px con datos
+reales; el hueco de «Interoperabilidad» usa el icono de enlace porque el
+sprite no trae el de enchufe.
+
 ## §371 · CONSOLE-INSTRUMENTO-1 F8d: Cuenta y Notificaciones por dentro (2026-10-30)
 
 **Qué se decidió.** Las pestañas Cuenta y Notificaciones de Ajustes dejan el

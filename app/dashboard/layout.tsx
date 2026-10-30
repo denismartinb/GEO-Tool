@@ -20,6 +20,7 @@ import "@/app/ins/audit.css";
 import "@/app/ins/google.css";
 import "@/app/ins/agentic.css";
 import "@/app/ins/settings.css";
+import "@/app/ins/agents.css";
 import "@/app/ins/errors.css";
 import "@/app/ins/trial-ended.css";
 import { cookies } from "next/headers";
