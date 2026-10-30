@@ -35,6 +35,10 @@ export function AccountSection({
   company: CompanyDetails;
   billingDetails: BillingDetails;
 }) {
+  // Fields read as saved until «Editar» is pressed; «Cancelar» restores the
+  // last saved values (founder, 2026-10-30).
+  const [editing, setEditing] = useState(false);
+  const [saved, setSaved] = useState({ first: firstName, last: lastName, billing: billingDetails });
   const [first, setFirst] = useState(firstName);
   const [last, setLast] = useState(lastName);
   // "Datos de empresa" is hidden (nothing in the product reads it — see
@@ -61,7 +65,19 @@ export function AccountSection({
       setSaveFeedback(
         result.success ? { type: "ok", text: "Cambios guardados." } : { type: "err", text: result.error }
       );
+      if (result.success) {
+        setSaved({ first, last, billing: billingValue });
+        setEditing(false);
+      }
     });
+  };
+
+  const cancelEdit = () => {
+    setFirst(saved.first);
+    setLast(saved.last);
+    setBillingValue(saved.billing);
+    setSaveFeedback(null);
+    setEditing(false);
   };
 
   const [showPasswordForm, setShowPasswordForm] = useState(false);
@@ -116,7 +132,27 @@ export function AccountSection({
     </div>
   );
 
+  const ro = editing ? "" : " ro";
+
   return (
+    <>
+    <div className="pf-editbar">
+      {editing ? (
+        <>
+          <button type="button" className="btn ghost sm" onClick={cancelEdit} disabled={isSaving}>
+            Cancelar
+          </button>
+          <button type="button" className="btn ink sm" onClick={save} disabled={isSaving}>
+            {isSaving ? "Guardando…" : "Guardar"}
+          </button>
+        </>
+      ) : (
+        <button type="button" className="btn line sm" onClick={() => { setSaveFeedback(null); setEditing(true); }}>
+          Editar
+        </button>
+      )}
+    </div>
+    {saveFeedback ? <div className="pf-editfb">{fieldErr(saveFeedback)}</div> : null}
     <div className="grid2 pf-acc">
       <section>
         <div className="eyebrow">Datos personales</div>
@@ -124,11 +160,11 @@ export function AccountSection({
           <div className="pf-f2">
             <label className="pf-fld" htmlFor="profile-first-name">
               <span>Nombre</span>
-              <input id="profile-first-name" className="pf-in" value={first} onChange={(event) => setFirst(event.target.value)} />
+              <input id="profile-first-name" className={`pf-in${ro}`} readOnly={!editing} value={first} onChange={(event) => setFirst(event.target.value)} />
             </label>
             <label className="pf-fld" htmlFor="profile-last-name">
               <span>Apellidos</span>
-              <input id="profile-last-name" className="pf-in" value={last} onChange={(event) => setLast(event.target.value)} />
+              <input id="profile-last-name" className={`pf-in${ro}`} readOnly={!editing} value={last} onChange={(event) => setLast(event.target.value)} />
             </label>
           </div>
           <label className="pf-fld" htmlFor="profile-email">
@@ -218,7 +254,8 @@ export function AccountSection({
             <span>Empresa o razón social</span>
             <input
               id="billing-legal-name"
-              className="pf-in"
+              className={`pf-in${ro}`}
+              readOnly={!editing}
               value={billingValue.legalName}
               onChange={(event) => setBillingValue({ ...billingValue, legalName: event.target.value })}
             />
@@ -227,20 +264,16 @@ export function AccountSection({
             <span>NIF/CIF</span>
             <input
               id="billing-tax-id"
-              className="pf-in mono"
+              className={`pf-in mono${ro}`}
+              readOnly={!editing}
               value={billingValue.taxId}
               onChange={(event) => setBillingValue({ ...billingValue, taxId: event.target.value })}
             />
           </label>
           <p className="pf-hint">Aparecen en tus facturas.</p>
-          <div className="pf-end">
-            <button type="button" className="btn ink sm" onClick={save} disabled={isSaving}>
-              {isSaving ? "Guardando…" : "Guardar"}
-            </button>
-          </div>
-          {saveFeedback ? fieldErr(saveFeedback) : null}
         </div>
       </section>
     </div>
+    </>
   );
 }

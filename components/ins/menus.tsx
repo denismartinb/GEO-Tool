@@ -71,7 +71,7 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
     <>
       <div className="xo-who">
         <span className={`av${d.avatarUrl ? " xo-avimg" : ""}`} style={{ width: 40, height: 40, fontSize: 14, ...avatarStyle(d.avatarUrl) }} aria-hidden="true">
-          {initialsOf(d.userEmail)}
+          {d.avatarUrl ? null : initialsOf(d.userEmail)}
         </span>
         <span>
           <b>{d.userEmail}</b>

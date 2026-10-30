@@ -227,7 +227,7 @@ function AccountAvatar() {
         }
       }}
     >
-      {initialsOf(d.userEmail)}
+      {d.avatarUrl ? null : initialsOf(d.userEmail)}
     </span>
   );
 }
@@ -334,7 +334,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           }}
         >
           <span className={`av${d.avatarUrl ? " xo-avimg" : ""}`} style={avatarStyle(d.avatarUrl)}>
-            {initialsOf(d.userEmail)}
+            {d.avatarUrl ? null : initialsOf(d.userEmail)}
           </span>
           <div>
             <b>{d.userEmail}</b>

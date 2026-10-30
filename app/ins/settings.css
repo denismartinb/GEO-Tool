@@ -41,6 +41,10 @@
 .ins .sc-set .pf-in{height:44px;border:1px solid var(--rule);border-radius:12px;padding:0 14px;font:400 15px var(--font);color:var(--ink);background:var(--surface);width:100%;min-width:0;transition:border-color var(--d1)}
 .ins .sc-set .pf-in.mono{font-family:var(--mono);font-size:14px}
 .ins .sc-set .pf-in:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.ins .sc-set .pf-in.ro{background:var(--surface-2);cursor:default}
+.ins .sc-set .pf-in.ro:focus{border-color:var(--rule);box-shadow:none}
+.ins .sc-set .pf-editbar{display:flex;justify-content:flex-end;gap:8px;margin:0 0 16px}
+.ins .sc-set .pf-editfb{margin:-8px 0 12px;text-align:right}
 .ins .sc-set .pf-in:disabled{background:var(--surface-2);color:var(--ink-3)}
 .ins .sc-set .pf-end{display:flex;justify-content:flex-end;gap:8px}
 .ins .sc-set .pf-pwd{margin-top:14px}

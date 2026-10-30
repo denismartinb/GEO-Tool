@@ -41,7 +41,7 @@
 .ins-shell .crumb b{color:var(--ink);font-weight:600}
 .ins-shell .top .sp{flex:1}
 .ins-shell .ibox{position:relative;height:38px;min-width:38px;padding:0 10px;border:1px solid var(--rule);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2)}
-.ins-shell .ibox .c,.ins-shell .mtop .bell .c{position:absolute;top:-6px;right:-6px;box-sizing:content-box;min-width:15px;height:15px;padding:0 4px;border:2px solid var(--surface);border-radius:99px;background:var(--blue);color:#fff;font:700 10.5px/15px var(--font);text-align:center}
+.ins-shell .ibox .c,.ins-shell .mtop .bell .c{position:absolute;bottom:-6px;right:-6px;box-sizing:content-box;min-width:15px;height:15px;padding:0 4px;border:2px solid var(--surface);border-radius:99px;background:var(--blue);color:#fff;font:700 10.5px/15px var(--font);text-align:center}
 .ins-shell .top .kbtn{width:240px;background:var(--surface-2)}
 .ins-shell .mtop{display:none}
 .ins-shell .scroller{overflow-y:auto;overflow-x:hidden;min-height:0;scroll-behavior:smooth;overscroll-behavior:contain}

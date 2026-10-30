@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { Ic } from "@/components/ins/ic";
 import { useLayer } from "@/components/ins/layer";
 import { relativeTime, renderNotification, type NotificationRow, type RenderedNotification } from "@/lib/notifications/render";
@@ -37,6 +37,28 @@ const ALERT_ICON: Record<string, string> = {
 };
 
 type BellValue = { count: number; unread: boolean; open: (anchor: HTMLElement) => void };
+
+/** Seen lanes live in this browser only: the next step and the account notice are computed on each load, so they have no row to mark. */
+const SEEN_KEY = "ins-bell-seen";
+const laneSignature = (l: Pick<Lane, "key" | "title">) => `${l.key}|${l.title}`;
+
+function readSeen(): string[] {
+  try {
+    const raw = window.localStorage.getItem(SEEN_KEY);
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSeen(signatures: string[]) {
+  try {
+    window.localStorage.setItem(SEEN_KEY, JSON.stringify(signatures.slice(-30)));
+  } catch {
+    /* storage blocked: the count simply comes back on the next load */
+  }
+}
 const BellCtx = createContext<BellValue | null>(null);
 
 export function BellProvider({
@@ -115,19 +137,32 @@ export function BellProvider({
     });
   }
 
-  const accountWantsDot = Boolean(renderedAccount?.urgent) && !openedOnce;
-  const unread = pendingUnreadCount > 0 || accountWantsDot;
+  // null until the browser's list is read, so an already-seen number never flashes.
+  const [seen, setSeen] = useState<string[] | null>(null);
+  useEffect(() => {
+    setSeen(readSeen());
+  }, []);
+
+  const readIds = new Set(notifications.filter((n) => n.readAt).map((n) => n.id));
+  const freshCount =
+    seen === null || openedOnce
+      ? 0
+      : lanes.filter((l) => !seen.includes(laneSignature(l)) && !readIds.has(l.key)).length;
+  const unread = freshCount > 0 || pendingUnreadCount > 0;
 
   const open = useCallback(
     (anchor: HTMLElement) => {
       setOpenedOnce(true);
       setPopOpen(true);
+      const signatures = Array.from(new Set([...readSeen(), ...lanes.map(laneSignature)]));
+      writeSeen(signatures);
+      setSeen(signatures);
       layer.pop(anchor, <BellPanel lanes={lanes} />, { w: 380, label: "Notificaciones", onClose: () => setPopOpen(false) });
     },
     [layer, notifications, accountNotice, nextStep]
   );
 
-  return <BellCtx.Provider value={{ count: lanes.length, unread, open }}>{children}</BellCtx.Provider>;
+  return <BellCtx.Provider value={{ count: freshCount, unread, open }}>{children}</BellCtx.Provider>;
 }
 
 function BellPanel({ lanes }: { lanes: Lane[] }) {
@@ -190,20 +225,20 @@ function useBell(): BellValue {
 
 /** Botón de la campana: `.ibox` en escritorio, `.bell` en la cabecera móvil. */
 export function BellButton({ variant }: { variant: "desktop" | "mobile" }) {
-  const { count, unread, open } = useBell();
-  const label = unread ? `Notificaciones, ${count} sin leer` : "Notificaciones";
+  const { count, open } = useBell();
+  const label = count > 0 ? `Notificaciones, ${count} sin leer` : "Notificaciones";
   if (variant === "desktop") {
     return (
       <button type="button" className="ibox" aria-label={label} aria-haspopup="dialog" onClick={(e) => open(e.currentTarget)}>
         <Ic n="bell" sm />
-        {count > 0 ? <span className={`c${unread ? "" : " xo-seen"}`}>{count}</span> : null}
+        {count > 0 ? <span className="c">{count}</span> : null}
       </button>
     );
   }
   return (
     <button type="button" className="bell" aria-label={label} aria-haspopup="dialog" onClick={(e) => open(e.currentTarget)}>
       <Ic n="bell" sm />
-      {count > 0 ? <span className={`c${unread ? "" : " xo-seen"}`}>{count}</span> : null}
+      {count > 0 ? <span className="c">{count}</span> : null}
     </button>
   );
 }
