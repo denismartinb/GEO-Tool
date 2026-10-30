@@ -1,0 +1,21 @@
+/* Ajustes, «Instrumento» (CONSOLE-INSTRUMENTO-1 F8c, log §369). New chrome only
+   (profile header and tabs); the three sections keep their markup and read the
+   legacy `.set-scope` token remap. */
+.ins .sc-set{max-width:960px}
+.ins .sc-set .st-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;align-items:center}
+.ins .sc-set .st-av{width:88px;height:88px;font-size:26px;box-shadow:0 0 0 4px var(--surface),0 0 0 5px var(--rule)}
+.ins .sc-set .st-id h1{margin-top:10px}
+.ins .sc-set .st-id p{font-size:13.5px;color:var(--ink-3);margin-top:6px;overflow-wrap:anywhere}
+.ins .sc-set .st-id .pills{margin-top:12px}
+.ins .sc-set .st-out{align-self:start;margin:0}
+.ins .sc-set .st-tabs{margin-top:36px;border-bottom:1px solid var(--rule);padding-bottom:16px}
+.ins .sc-set .st-tabs .seg button{padding:7px 16px;font-size:13.5px}
+.ins .sc-set .st-panels{padding-top:28px}
+.ins .sc-set .st-panels>section[hidden]{display:none}
+.ins .sc-set .st-panels .set-end{margin-top:28px}
+@media (max-width:640px){
+ .ins .sc-set .st-head{grid-template-columns:auto minmax(0,1fr);gap:16px}
+ .ins .sc-set .st-av{width:64px;height:64px;font-size:20px}
+ .ins .sc-set .st-out{grid-column:1/-1}
+}
+.ins .sc-set .st-panels section>.card{margin-bottom:12px}

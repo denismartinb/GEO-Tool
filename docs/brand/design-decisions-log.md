@@ -27811,3 +27811,29 @@ sigue enlazando a `?bloque=seo`.
 **Premisa de retirada de camino:** se retira el selector de bloques de la página.
 La premisa es que cada bloque tiene su entrada de menú; la verifica
 `lib/ins/nav.test.ts`. Sin esas entradas la pantalla no tendría forma de cambiar de bloque.
+
+## §369 · CONSOLE-INSTRUMENTO-1 F8c: Ajustes pasa al marco «Instrumento» (2026-10-30)
+
+**Qué se decidió.** `/dashboard/settings` estrena cabecera de perfil (iniciales,
+nombre, correo, pastilla del plan y «Cerrar sesión») y tres pestañas, Plan,
+Cuenta y Notificaciones (`components/ins/settings/settings-frame.tsx`, estilos en
+`app/ins/settings.css`). Es sólo el marco, como F6b y F7: las tres secciones
+conservan su marcado, textos y acciones de servidor (`AccountSection`,
+`BillingContent`, `NotificationsSection`, `DeleteAccountButton`). Plan abre por
+defecto en cuentas administradoras; si no, Cuenta. Los paneles se ocultan, no se
+desmontan, así que un formulario a medias sobrevive al cambio de pestaña.
+«Eliminar cuenta» pasa al final de la pestaña Cuenta.
+
+**Enlaces que siguen vivos.** `#plan`, `#cuenta`, `#avisos`, `?openPlan=` y
+`?checkout=` aterrizan en la pestaña correcta (cuatro correos transaccionales los
+enlazan y no se pueden reescribir).
+
+**No se hace (necesita aprobación aparte).** Foto de perfil (almacenamiento),
+«Cargo», «Contraseña cambiada hace…» y estado de la verificación en dos pasos
+(no hay dato), tarjeta de plan nueva con cifra grande y días de prueba, y el
+modal «Cambiar de plan» del prototipo: siguen siendo el diseño anterior. El índice
+lateral `SettingsIndex` queda sin uso (limpieza final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` busca
+`.set-idx` y `h2.set-sech`, que ya no existen: hay que actualizarlo antes de
+lanzar el piloto sobre esta pantalla.

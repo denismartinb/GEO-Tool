@@ -156,3 +156,13 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   (`getActivePromoPlanIds`); nunca un descuento fijo en el texto.
 - **El aviso de primera entrada vive en `localStorage`**: sin migración no hay
   marca por cuenta.
+
+## Ajustes (F8c, log §369)
+
+- **Sólo el marco es nuevo.** Cabecera de perfil y pestañas Plan, Cuenta y
+  Notificaciones; las secciones conservan marcado, textos y acciones.
+- **Los anclajes `#plan`, `#cuenta`, `#avisos` y `?openPlan=` siguen
+  aterrizando en su pestaña**: los enlazan correos ya enviados.
+- **Los paneles se ocultan, no se desmontan.**
+- **Sin dato, no se pinta**: foto, cargo, antigüedad de la contraseña y estado de
+  la verificación en dos pasos no existen hoy y no se simulan.
