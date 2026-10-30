@@ -202,7 +202,8 @@ export function BellButton({ variant }: { variant: "desktop" | "mobile" }) {
   }
   return (
     <button type="button" className="bell" aria-label={label} aria-haspopup="dialog" onClick={(e) => open(e.currentTarget)}>
-      {count > 0 ? <span className={`num${unread ? "" : " xo-seen"}`}>{count}</span> : <Ic n="bell" sm />}
+      <Ic n="bell" sm />
+      {count > 0 ? <span className={`c${unread ? "" : " xo-seen"}`}>{count}</span> : null}
     </button>
   );
 }
