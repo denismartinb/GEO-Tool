@@ -27874,3 +27874,22 @@ cota de 999 se pinta como «sin tope», sin barra. La foto de perfil sigue sin
 existir: subirla necesita un bucket de almacenamiento con RLS y espera
 aprobación. Premisa de la fila retirada: los correos de cuenta y facturación se
 envían siempre (`lib/email/categories.ts`).
+
+## §372 · CONSOLE-INSTRUMENTO-1 F8e: foto de perfil (2026-10-30)
+
+**Qué.** El avatar de Ajustes es un botón: un clic abre el selector estándar del
+sistema (en móvil, galería o cámara). El navegador recorta al centro y reduce a
+un JPEG de 256 px; la acción `uploadAvatar` lo guarda en el bucket privado
+`avatars` (`<id>/avatar.jpg`) y el camino queda en `profiles.avatar_path`. La
+consola lee una URL firmada de una hora (`readAvatarUrl`) y la pinta en el menú,
+la cabecera móvil y el panel de cuenta; sin foto, iniciales como siempre.
+«Quitar foto» borra el camino y el objeto. El email del perfil pasa de
+monoespaciada a la tipografía de la consola.
+
+**Por qué así.** Aprobado por Denis (2026-10-30) con tarjeta de decisión. La
+foto no cabe en `user_metadata` (viajaría en el JWT y en cada cookie). Bucket
+privado y RLS por carpeta propia; sin service role.
+
+**Pendiente.** Migración `0046_profile_avatar.sql`, que se aplica a mano antes del
+merge; sin ella `readAvatarUrl` lee «sin foto» y la subida falla con mensaje.
+Premisa: no hay otra vía de recuperación retirada.

@@ -11,6 +11,7 @@ import { DeleteAccountButton } from "@/components/settings/delete-account-button
 import { SettingsFrame } from "@/components/ins/settings/settings-frame";
 import { BillingContent } from "@/components/billing/billing-content";
 import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-details";
+import { readAvatarUrl } from "@/lib/settings/avatar";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
 
 /**
@@ -39,6 +40,7 @@ export default async function SettingsPage({
   const { checkout, openPlan } = await searchParams;
 
   const email = user.email ?? "";
+  const avatarUrl = await readAvatarUrl(supabase, user.id);
   const initials = email.slice(0, 2).toUpperCase();
 
   const metadata = user.user_metadata ?? {};
@@ -105,6 +107,7 @@ export default async function SettingsPage({
         name={fullName || "Tu cuenta"}
         email={email}
         initials={initials}
+        avatarUrl={avatarUrl}
         planPill={planPill}
         showPlan={isAdmin}
         forcePlan={Boolean(openPlan) || Boolean(checkout)}

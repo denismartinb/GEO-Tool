@@ -10,7 +10,7 @@ import { InsLayerProvider, useLayer } from "@/components/ins/layer";
 import { AccountPanel, HelpPanel } from "@/components/ins/menus";
 import { DomainSwitcherPanel } from "@/components/ins/domain-switcher";
 import { ProjectFav } from "@/components/ins/project-fav";
-import { initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
+import { avatarStyle, initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
 import { InsSprite } from "@/components/ins/sprite";
 import { TrialEndedDock, TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
@@ -212,12 +212,12 @@ function AccountAvatar() {
   const { pop } = useLayer();
   return (
     <span
-      className="av"
+      className={`av${d.avatarUrl ? " xo-avimg" : ""}`}
       role="button"
       tabIndex={0}
       aria-haspopup="dialog"
       aria-label="Tu cuenta"
-      style={{ cursor: "pointer" }}
+      style={{ cursor: "pointer", ...avatarStyle(d.avatarUrl) }}
       onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => e.currentTarget} />, { w: 280, label: "Tu cuenta" })}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -332,7 +332,9 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
             }
           }}
         >
-          <span className="av">{initialsOf(d.userEmail)}</span>
+          <span className={`av${d.avatarUrl ? " xo-avimg" : ""}`} style={avatarStyle(d.avatarUrl)}>
+            {initialsOf(d.userEmail)}
+          </span>
           <div>
             <b>{d.userEmail}</b>
             <span>{planLabel(d)}</span>

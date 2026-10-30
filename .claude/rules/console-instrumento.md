@@ -174,3 +174,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **La tarjeta de Plan es la del prototipo** (`pf-plan`, log §371 adenda); sin pastilla «Activo» ni «Cerrar sesión» en la cabecera.
 - **Un único «Guardar» en Cuenta** envía `saveAccount` con todos los campos; no se
   parte en dos acciones sin aprobación.
+
+## Foto de perfil (F8e, log §372)
+
+- **La foto vive en el bucket privado `avatars` y su camino en
+  `profiles.avatar_path`** (migración 0046). Se lee sólo con URL firmada desde el
+  servidor y con tolerancia a que falte la columna; nunca se pone en
+  `user_metadata`.
+- **La RLS del bucket exige la carpeta propia** (`<id>/…`); no se escribe con
+  service role.

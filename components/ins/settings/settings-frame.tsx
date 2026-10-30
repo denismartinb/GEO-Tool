@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import { AvatarPicker } from "@/components/ins/settings/avatar-picker";
 import { Seg } from "@/components/ins/kit/seg";
 
 /**
@@ -22,6 +23,7 @@ export function SettingsFrame({
   name,
   email,
   initials,
+  avatarUrl,
   planPill,
   showPlan,
   forcePlan,
@@ -32,6 +34,7 @@ export function SettingsFrame({
   name: string;
   email: string;
   initials: string;
+  avatarUrl: string | null;
   /** «Plan Pro · 4 días de prueba» or «Sin plan · solo lectura»; null for a non-admin. */
   planPill: { text: string; readOnly: boolean } | null;
   showPlan: boolean;
@@ -65,13 +68,11 @@ export function SettingsFrame({
   return (
     <div className="page sc-set">
       <header className="st-head">
-        <span className="av st-av" aria-hidden="true">
-          {initials}
-        </span>
+        <AvatarPicker initials={initials} url={avatarUrl} />
         <div className="st-id">
           <div className="eyebrow bare">Tu perfil</div>
           <h1>{name}</h1>
-          <p className="mono">{email}</p>
+          <p className="st-mail">{email}</p>
           {planPill ? (
             <div className="pills">
               <span className={`badge ${planPill.readOnly ? "b-warm" : "b-blue"}`}>{planPill.text}</span>

@@ -1,6 +1,7 @@
 // PRELAUNCH-HARDENING-1 Fase V (V5). Las hojas que sólo pinta la consola
 // entran por aquí, no por `globals.css`: así no viajan a /blog ni a la
 // landing. Ver la cabecera de `app/console.css` para qué se movió y qué no.
+import { readAvatarUrl } from "@/lib/settings/avatar";
 import "@/app/console.css";
 import "@/app/ins/tokens.css";
 import "@/app/ins/components.css";
@@ -94,6 +95,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .select("onboarding_tour_seen_at")
     .eq("id", user.id)
     .maybeSingle();
+  const avatarUrl = await readAvatarUrl(supabase, user.id);
   const hasSeenTour = tourFlagError ? true : tourFlagRow?.onboarding_tour_seen_at != null;
 
   // DOMAINS-OVERAGE-GATE-1 (founder-approved Task Intake): every account is
@@ -168,6 +170,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             latestScoreByProject,
             latestScanDateByProject,
             userEmail: user.email ?? "",
+            avatarUrl,
             planId: plan.id,
             planName: plan.name,
             planProjectCap: plan.caps.projects,
