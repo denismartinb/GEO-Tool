@@ -551,4 +551,16 @@ pestaña (la que el panel ya leyó con el icono; Chrome no enseña la dirección
 una web nueva), y «Revisar automáticamente las páginas» pide el permiso de
 todas. Una web con permiso se revisa sola mientras el panel está abierto.
 
+### 17.3 Versión 0.4.0 (2026-10-30): el botón vuelve a leer la página
+
+El permiso por web de la 0.3.0 no servía en una web nueva: el panel no ve su
+dirección y sólo el icono podía leerla. Denis: «Yo quiero que el botón en la
+propia extensión revise la página. Y un segundo botón sea revisar
+automáticamente». Ahora «Revisar esta página» siempre lee la página abierta y
+«Revisar automáticamente las páginas» es una preferencia guardada
+(`autoOn`). Los dos usan el mismo permiso opcional de todas las webs, pedido
+una sola vez en la primera pulsación. Quitar el automático en el pie no retira
+el permiso, así que el botón sigue funcionando. Chrome no ofrece un aviso más
+suave que permita a un botón del panel leer cualquier página.
+
 > Do you approve this plan? I will not implement until you confirm.

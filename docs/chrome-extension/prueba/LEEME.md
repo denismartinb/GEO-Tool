@@ -16,7 +16,7 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.3.0.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.4.0.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
@@ -24,15 +24,16 @@ Fija el icono con la chincheta de la pieza de puzle. Para revisar una página,
 pulsa el icono o `Alt+Mayús+G` (en Mac, Opción). Cuando cambias de página, el
 panel ofrece dos botones:
 
-- **Revisar esta página** pide permiso sólo para esa web («leer y cambiar tus
-  datos en alberdiderma.es»). Desde entonces esa web se revisa sola con el
-  panel abierto.
-- **Revisar automáticamente las páginas** pide permiso para todas las webs. Es
-  el aviso duro de Chrome, así que sólo lo ve quien lo pulsa. Se quita en el
-  pie del panel.
+- **Revisar esta página** revisa la página abierta desde el propio panel, sin
+  tocar la barra.
+- **Revisar automáticamente las páginas** hace lo mismo sola en cada página que
+  abres, mientras el panel esté abierto. Se quita en el pie del panel.
 
-En una web que el panel no ha leído nunca en esa pestaña, Chrome no nos deja
-ver su dirección, así que ahí sólo sirve el icono.
+La primera vez que pulsas cualquiera de los dos, Chrome pide permiso para
+«leer y cambiar tus datos en todos los sitios web». Es el único permiso con el
+que Chrome deja a un botón del panel leer la página; sin él, sólo el icono de la
+barra puede. Se pide una vez y no vuelve a salir. Sólo leemos la página abierta
+cuando lo pides (o con el automático puesto), y nada sale del navegador.
 
 ## Qué probar
 
@@ -47,7 +48,7 @@ ver su dirección, así que ahí sólo sirve el icono.
 
 | Fichero | Qué hace |
 |---|---|
-| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. El de sitios (`<all_urls>`) es opcional y sólo se pide al pulsar «Revisar esta página». |
+| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. El de sitios (`<all_urls>`) es opcional y sólo se pide la primera vez que pulsas uno de los dos botones del panel. |
 | `sw.js` | Al pulsar el icono abre el panel y lee la página. Guarda el resultado por pestaña en `storage.session` y lo borra al navegar. |
 | `collect.js` | Lo que se ejecuta dentro de la página: DOM, más `robots.txt`, `llms.txt` y la cabecera `X-Robots-Tag` del mismo dominio. |
 | `score.js` | Puro. De los datos de la página a la «Nota SEO + IA» (IA 55, Google 45; Agentes aparte) y a las tarjetas «Haz esto». Los motores se leen con los mismos tokens que la Auditoría agéntica (`lib/agentic-audit/agents.ts`). |
