@@ -27729,3 +27729,23 @@ Fecha de actualización: 30 de octubre de 2026.
 - **`genscore.es/extension` no existe.** La ficha enlaza a `https://www.genscore.es` hasta que se diseñe esa página.
 - **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
 - **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
+
+## 363. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la maqueta `docs/design-reference/mobile-tabbar-1/consola-tab-bar.html` (variante «Flotante») y pidió el mismo frontal en la web móvil y, después, en la app de Android. Esta fase es sólo la web móvil.
+
+**Qué cambia (≤760 px).**
+- Una cápsula translúcida fija abajo con cinco pestañas: Inicio (Visión general), Plan (Recomendaciones), En la IA, Google y Agentes (con «Nuevo»). Plan lleva el recuento de recomendaciones activas.
+- Cada pestaña recuerda la última pantalla que se vio en su familia (`tabTarget`, memoria en el marco, dura la visita).
+- Las familias con varias pantallas (En la IA, Google, Agentes) muestran pastillas fijas al inicio de la página.
+- Desaparecen la hamburguesa y el cajón lateral: la cabecera móvil lleva marca, dominio, buscar, campana y cuenta. «¿Cómo funciona?» ya vivía en el menú de cuenta.
+- Respeta los márgenes del sistema (`env(safe-area-inset-*)`, la raíz ya declara `viewport-fit=cover`): la barra queda por encima de la barra de gestos y de la muesca, y la página reserva su alto.
+- Se oculta durante la misión del primer escaneo y el alta de dominio, que son de pantalla completa.
+
+**Escritorio no cambia**: menú lateral como siempre.
+
+**Datos.** `lib/ins/nav.ts` (`INS_TABS`) agrupa las mismas rutas del menú; ninguna ruta, consulta ni acción cambia. Test: cada pantalla del menú pertenece a una sola pestaña.
+
+**Pendiente o conocido.**
+- La maqueta pintaba un punto de aviso en Google y un indicador deslizante entre pestañas: no se han construido (el primero necesita un dato nuevo, el segundo es pulido).
+- Fase 2 (app de Android como TWA, sin compras dentro) va en su propio PR.

@@ -78,3 +78,54 @@ export function crumbForPath(pathname: string): string {
   }
   return "Visión general";
 }
+
+// MOBILE-TABBAR-1 · barra inferior flotante de la consola en móvil (log §363).
+// Cinco pestañas que agrupan las pantallas del menú lateral; las familias con
+// varias pantallas enseñan unas pastillas al inicio de la página. Las rutas
+// son las mismas: solo cambia cómo se llega a ellas.
+
+export type InsTabKey = "home" | "recs" | "ia" | "google" | "agents";
+
+export type InsTab = {
+  key: InsTabKey;
+  /** Nombre completo (accesibilidad y pastillas). */
+  label: string;
+  /** Rótulo de la barra, corto para que quepan las cinco. */
+  short: string;
+  icon: string;
+  isNew?: boolean;
+  /** Segmentos de las pantallas de la pestaña, en el orden de las pastillas. */
+  segments: string[];
+};
+
+export const INS_TABS: InsTab[] = [
+  { key: "home", label: "Visión general", short: "Inicio", icon: "overview", segments: [""] },
+  { key: "recs", label: "Recomendaciones", short: "Plan", icon: "recs", segments: ["/recommendations"] },
+  { key: "ia", label: "En la IA", short: "En la IA", icon: "prompts", segments: ["/prompts", "/competitors", "/citations"] },
+  { key: "google", label: "En Google", short: "Google", icon: "trend", segments: ["/search-console", "/web-audit"] },
+  { key: "agents", label: "Comercio agéntico", short: "Agentes", icon: "agent", isNew: true, segments: ["/agentic-visibility", "/agentic-audit"] }
+];
+
+/** La pestaña a la que pertenece esta ruta, o null (ajustes, avisos, dominios…). */
+export function tabForPath(pathname: string, projectId: string): InsTab | null {
+  return (
+    INS_TABS.find((t) =>
+      t.segments.some((s) => {
+        const item = INS_NAV_FLAT.find((n) => n.segment === s);
+        return item ? isNavActive(pathname, projectId, item) : false;
+      })
+    ) ?? null
+  );
+}
+
+/** Pantalla a la que lleva una pestaña: la última que se vio en ella, o su primera. */
+export function tabTarget(tab: InsTab, last: Partial<Record<InsTabKey, string>>): string {
+  const seg = last[tab.key];
+  return seg !== undefined && tab.segments.includes(seg) ? seg : tab.segments[0];
+}
+
+/** Las pastillas de subpantallas solo existen en las pestañas con varias. */
+export function tabSubItems(tab: InsTab): InsNavItem[] {
+  if (tab.segments.length < 2) return [];
+  return tab.segments.map((s) => INS_NAV_FLAT.find((n) => n.segment === s)!);
+}

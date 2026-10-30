@@ -86,3 +86,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Una sola cola**: sin pestañas por fuente ni bloque «Técnico» (§307).
   La tarjeta de Google es la placa 2 del plan.
 - **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.
+
+## Barra inferior móvil (MOBILE-TABBAR-1, log §363)
+
+- **Solo ≤760 px.** Escritorio conserva el menú lateral; no se añaden pestañas
+  a su cabecera. Móvil no tiene cajón: la navegación es `TabBar` + `TabSub`.
+- **Las pestañas viven en `lib/ins/nav.ts` (`INS_TABS`)** y agrupan las mismas
+  rutas de `INS_NAV`; una pantalla nueva del menú entra en una (y solo una)
+  pestaña, lo vigila `nav.test.ts`.
+- **Márgenes del sistema con `env(safe-area-inset-*)`** en la barra y en el
+  padding inferior de `.page`. Un elemento fijo nuevo abajo cuenta con la barra.
+- **Se oculta en pantallas completas** (`.sc-mission`, `.sc-newdomain`).
