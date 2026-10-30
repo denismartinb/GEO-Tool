@@ -975,9 +975,6 @@ button.pghint{cursor:pointer}button.pghint:hover{border-color:var(--blue)}
 .pghint .tx b{font-weight:600}
 .pghint .ks{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;color:var(--ink-3)}
 @media (prefers-reduced-motion:reduce){.pghint .k2::after{animation:none}}
-/* signed out: one line up top that leads to the full analysis (Denis, 2026-10-30) */
-.signin{display:flex;align-items:center;gap:10px;width:calc(100% - 32px);margin:4px 16px 6px;padding:10px 14px;border:1px solid var(--rule-2);border-radius:14px;background:var(--blue-tint);color:var(--ink);font:400 13px/1.35 var(--font);text-align:left;cursor:pointer}
-.signin:hover{border-color:var(--blue)}
-.signin span{flex:1}
-.signin b.wm{font-weight:700;letter-spacing:-.02em;font-size:13.5px}
-.signin .ic{color:var(--blue)}
+/* signed out: the reason for «Login», next to it (Denis, 2026-10-30) */
+.ph .lgin{flex:0 1 150px;font:400 11.5px/1.3 var(--font);color:var(--ink-2);text-align:right;margin-left:auto}
+.ph .lgin b.wm{font-weight:700;letter-spacing:-.02em;color:var(--ink)}

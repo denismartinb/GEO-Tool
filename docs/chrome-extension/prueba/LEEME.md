@@ -16,7 +16,7 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.6.4.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.6.5.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
@@ -35,7 +35,7 @@ El panel sale en modo claro; el botón de la luna del pie lo pasa a oscuro.
 
 ## Tu cuenta (desde la 0.6.0)
 
-Pulsa «Entrar» en el panel e inicia sesión en GenScore en la pestaña que se
+Pulsa «Login» en el panel e inicia sesión en GenScore en la pestaña que se
 abre. Al volver al panel, el desplegable enseña tus dominios y la visión
 general de tu dominio, leídas de tu cuenta en sólo lectura. La extensión no
 guarda ninguna contraseña ni token: usa la misma sesión que la web, y si
