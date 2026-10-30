@@ -2,7 +2,6 @@ import Link from "next/link";
 import {
   engineRank,
   PURCHASE_MIN_QUESTIONS,
-  PURCHASE_RULE_SENTENCE,
   type PurchaseOutcome,
   type PurchaseQuestionsReport
 } from "@/lib/agentic-audit/purchase-questions";
@@ -84,7 +83,7 @@ export function PurchaseQuestionsCard({ projectId, report }: { projectId: string
       {head}
       <div className="card-b">
         <p className="foot agx-sub">
-          De tus escaneos, sólo las preguntas de quien va a comprar: {purchaseCountLine(report)}.
+          {purchaseCountLine(report)} permiten analizar posicionamiento en la compra.
         </p>
 
         {report.questions.length === 0 ? (
@@ -136,8 +135,6 @@ export function PurchaseQuestionsCard({ projectId, report }: { projectId: string
           </p>
         )}
 
-        {report.example ? <p className="foot">{report.example}</p> : null}
-
         {report.questions.length > 0 ? (
           <>
             <div className="qs">
@@ -156,8 +153,8 @@ export function PurchaseQuestionsCard({ projectId, report }: { projectId: string
                     <span className="q">{q.text}</span>
                     <span className="qe">
                       {providers.map((p) => (
-                        <span key={p} className="qen">
-                          <span>{getEngineMeta(p).label}</span>
+                        <span key={p} className="qen" title={getEngineMeta(p).label} role="img" aria-label={getEngineMeta(p).label}>
+                          <EngineLogo provider={p} size={16} />
                           <Marks outcome={q.byEngine[p]} />
                         </span>
                       ))}
@@ -181,7 +178,6 @@ export function PurchaseQuestionsCard({ projectId, report }: { projectId: string
           </Link>
         ) : null}
 
-        <p className="foot">{PURCHASE_RULE_SENTENCE}</p>
       </div>
     </div>
   );
