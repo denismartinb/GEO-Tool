@@ -656,4 +656,13 @@ cifra sale de su dueño) y la extensión 0.6.0 en este PR de documentación.
 llamando a las mismas funciones, con un test que lo compara), y el aviso de
 permiso de genscore.es al instalar.
 
+### 18.1 Construido (2026-10-30)
+
+Denis aprobó este plan («sí»). Las rutas y sus tests viven en `app/api/ext/`
+y `lib/ext/`, y van en esta misma PR en vez de en una aparte: la rama de
+trabajo es una sola, y así la vista previa de Vercel trae las rutas que el
+panel necesita. Detalle en el histórico, log §361. Extensión 0.6.0: sin
+sesión todo sigue igual; con sesión, el desplegable y la visión general son
+los de tu cuenta.
+
 > Do you approve this plan? I will not implement until you confirm.

@@ -27619,3 +27619,51 @@ dice si te nombran, en qué lugar, a qué competidores y qué páginas citan; y
 
 **Pendiente.** Refrescar con el siguiente informe trimestral de Adobe o
 Shopify, y con la versión ampliada que Ahrefs anunció.
+
+## 361. CHROME-EXT-1 paso 02: la extensión lee la cuenta real (2026-10-30)
+
+**Qué.** Dos rutas de sólo lectura para el panel de la extensión de Chrome,
+aprobadas por el fundador en el Task Intake
+(`docs/chrome-extension/task-intake-report.md` §18):
+
+- `GET /api/ext/context`: plan efectivo, fin de la prueba, tope de dominios y
+  la lista de dominios de la cuenta.
+- `GET /api/ext/project?domain=&url=`: el proyecto que cubre ese dominio (el
+  más específico gana) con Puntuación GEO, mención por motor, rivales, Salud
+  técnica, las tres acciones del plan, la Visibilidad agéntica y, si `url` es
+  de ese proyecto, los prompts del último escaneo que la citaron.
+
+La extensión de prueba pasa a 0.6.0: con sesión en GenScore, el desplegable
+enseña los dominios reales, la visión general sale de esas rutas y «Cuenta de
+ejemplo» desaparece; sin sesión, todo sigue como en el paso 01.
+
+**Cómo se autentica.** Sin token propio. El manifiesto pide
+`host_permissions` sólo para el origen de GenScore (`config.js`, `GS_API`), y
+con eso Chrome manda la cookie de sesión de Supabase en las peticiones de la
+extensión, también siendo `SameSite=Lax` (comprobado con una extensión real
+contra un servidor local). Las rutas leen la sesión con el cliente del
+usuario (RLS), filtran los proyectos además por `owner_user_id` y responden
+401 en vez de redirigir. No hay cabeceras CORS, así que otra web no puede leer
+la respuesta. `Cache-Control: private, no-store`.
+
+**Cada cifra sale de su dueño.** `lib/ext/summary.ts` es pura y sólo elige y
+renombra campos de `buildReportModel(loadReportInput(...))`, el cargador del
+informe (que ya toma la puntuación de `resolveGeoScore`, la parte técnica de
+`buildTechnicalIssuesReport` y el plan de `selectPlan`), y de
+`overviewAgenticCard`, la tarjeta agéntica de Visión general. Las citas pasan
+por `resolveCitation`, como en Páginas citadas. Todo va en proporciones; el
+panel pinta porcentajes. El plan se lee como `/api/me` (`isTrialElapsed` +
+`resolveEffectivePlanId`): abrir el panel nunca rebaja una prueba ni manda el
+correo de fin de prueba.
+
+**Pendiente o conocido.**
+- La prueba usa la vista previa de Vercel del PR: el .zip lleva `GS_API`
+  apuntando a ella y su permiso de host. La versión de tienda (paso 03)
+  apuntará a `https://www.genscore.es`.
+- El panel no tiene delta de la puntuación ni puntos por acción: el modelo del
+  informe no los da y no se recalculan aquí.
+- Search Console y palabras vigiladas en el panel (`/api/ext/google`),
+  «Descubrir», añadir competidores y marcar acciones como hechas siguen fuera.
+- `pnpm run build` no termina en el contenedor del agente porque no llega a
+  Google Fonts; typecheck, lint y los 5.030 tests pasan. Vercel construye el
+  preview.

@@ -8,8 +8,8 @@
 (() => {
   "use strict";
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-  const SITE = "https://www.genscore.es";
-  const utm = (content) => `utm_source=chrome-extension&utm_medium=extension&utm_campaign=prueba-0-1&utm_content=${content}`;
+  const SITE = GS_API;
+  const utm = (content) => `utm_source=chrome-extension&utm_medium=extension&utm_campaign=prueba-0-6&utm_content=${content}`;
 
   /* ---------------- environment: Chrome, or a stand-in for screenshots ---------------- */
   const IN_EXT = typeof chrome !== "undefined" && chrome.storage && chrome.storage.session && chrome.tabs;
@@ -25,6 +25,14 @@
        toolbar icon can (activeTab). Asked once, on the first press. */
     hasAuto: () => chrome.permissions.contains({ origins: ["<all_urls>"] }),
     askAuto: () => chrome.permissions.request({ origins: ["<all_urls>"] }),
+    /* the account: GenScore's own session cookie travels with these requests
+       because the manifest holds host_permissions for GS_API only (paso 02) */
+    api: async (path) => {
+      try {
+        const r = await fetch(GS_API + path, { credentials: "include", cache: "no-store" });
+        return { status: r.status, body: r.ok ? await r.json() : null };
+      } catch (e) { return { status: 0, body: null }; }
+    },
     badge: (tabId, on) => { try { chrome.action.setBadgeBackgroundColor({ tabId, color: "#2563eb" }); chrome.action.setBadgeText({ tabId, text: on ? " " : "" }); } catch (e) {} },
     open: (url) => chrome.tabs.create({ url }),
     copy: (t) => navigator.clipboard.writeText(t),
@@ -47,6 +55,7 @@
       reread: async () => ({ ok: true }),
       hasAuto: async () => !!demo.auto, askAuto: async () => true,
       badge: () => {},
+      api: async (path) => { const a = demo.api || {}; const k = Object.keys(a).find((x) => path.startsWith(x)); return k ? { status: 200, body: a[k] } : { status: 401, body: null }; },
       open: (u) => toast("Se abriría " + esc(u.split("?")[0]), "", "arrowr"),
       copy: async () => {},
       listen() {}
@@ -54,11 +63,19 @@
   })();
 
   /* ---------------- state ---------------- */
-  const S = { read: false, autoOn: false, tabId: null, rec: null, sample: { on: false, domain: null }, tab: null, lane: null, dk: {}, done: {}, shown: false, noted: null, seen: {}, from: null };
+  const S = { read: false, autoOn: false, tabId: null, rec: null, real: null, proj: {}, sample: { on: false, domain: null }, tab: null, lane: null, dk: {}, done: {}, shown: false, noted: null, seen: {}, from: null };
+  /* The account is the real one when GenScore answers /api/ext/context with
+     a session (paso 02); otherwise «Cuenta de ejemplo» still works as before. */
+  const acctOn = () => !!S.real || S.sample.on;
+  const isSample = () => !S.real;
+  const covers = (h, d) => !!h && !!d && (h === d || h.endsWith("." + d));
+  const acctDomains = () => (S.real ? S.real.domains.map((x) => x.domain) : [S.sample.domain, ...SAMPLE.extraDomains]);
+  const curDom = () => (S.real ? S.real.sel : S.sample.domain);
   const relation = () => {
-    if (!S.sample.on || !S.rec || !S.rec.facts) return "none";
-    const h = S.rec.facts.host, d = S.sample.domain;
-    return h === d || h.endsWith("." + d) ? "own" : "other";
+    if (!acctOn() || !S.rec || !S.rec.facts) return "none";
+    const h = S.rec.facts.host;
+    if (S.real) return S.real.domains.some((x) => covers(h, x.domain)) ? "own" : "other";
+    return covers(h, S.sample.domain) ? "own" : "other";
   };
   const band = (v) => (v >= 75 ? ["ok", "Bien"] : v >= 50 ? ["mid", "Mejorable"] : ["bad", "Se frena"]);
   const SH = (c) => `<i class="sh ${c || ""}" aria-hidden="true"></i>`;
@@ -70,7 +87,29 @@
   };
   const brandOf = (host) => { const b = String(host || "").split(".")[0].replace(/-/g, " "); return b.charAt(0).toUpperCase() + b.slice(1); };
   const pathLabel = (f) => (f.path === "/" ? "portada" : f.path.length > 34 ? f.path.slice(0, 33) + "…" : f.path);
-  const EJ = `<span class="badge b-ej">Ejemplo</span>`;
+  const EJ0 = `<span class="badge b-ej">Ejemplo</span>`;
+  const EJx = () => (isSample() ? EJ0 : "");
+  const ENGKEY = { openai: "chatgpt", gemini: "gemini", claude: "claude", perplexity: "perplexity" };
+  const LABELKEY = { ChatGPT: "chatgpt", Gemini: "gemini", Claude: "claude", Perplexity: "perplexity" };
+  const pct = (share) => (share == null ? null : Math.round(share * 100));
+  /* The selected domain's figures in the shape the views were built on
+     (sample.js). Real ones come from /api/ext/project as shares; the panel
+     prints percentages, never counts. null while it loads. */
+  function A() {
+    if (isSample()) return SAMPLE;
+    const p = S.proj[curDom()];
+    if (!p || p === "loading" || p === "error") return null;
+    const engines = {};
+    for (const e of p.engines) if (ENGKEY[e.provider]) engines[ENGKEY[e.provider]] = pct(e.mentionShare);
+    const card = p.agentic && p.agentic.kind === "card" ? p.agentic : null;
+    return {
+      score: p.geoScore, say: p.lede || "Todavía no hay un escaneo completado de este dominio.",
+      engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand]), seo: p.seoScore,
+      agent: card ? card.score : null, agentParts: card ? card.components.map((c) => [c.name, c.points ?? 0, c.weight]) : [],
+      plan: p.plan.map((x, i) => ({ id: "r" + i, kind: "plan", lane: "ia", pts: null, t: esc(x.title), why: esc(x.firstStep || "") })),
+      prompts: (p.citingPrompts || []).map((q) => [q.text, q.engines.map((l) => LABELKEY[l]).filter(Boolean), q.mentioned ? "Te nombran" : "No te nombran"])
+    };
+  }
 
   /* ---------------- small gauge (light «Cuadro claro») ---------------- */
   const GA0 = 135, GSW = 270;
@@ -99,7 +138,8 @@
     const C = sc.criteria.filter((c) => c.lane === k);
     if (k === "ia") {
       let h = `<div class="mh">Quién puede leerla<span class="r">robots.txt</span></div>${readers(sc)}`;
-      if (rel === "own") h += `<div class="mh">La citan en tus prompts${EJ}</div>${promptRows(SAMPLE.prompts.slice(0, 2))}`;
+      const pr = rel === "own" && A() ? A().prompts : [];
+      if (pr.length) h += `<div class="mh">La citan en tus prompts${EJx()}</div>${promptRows(pr.slice(0, 3))}`;
       return h + `<div class="mh">En la página</div>${kv(C.filter((c) => !c.id.startsWith("bot-")))}`;
     }
     if (k === "google") return (rel === "own" ? `<div class="mh">Search Console</div>${gscInvite()}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
@@ -107,12 +147,13 @@
   }
   function domLane(k) {
     if (k === "ia") {
-      const max = Math.max(...SAMPLE.rivals.map((r) => r[1]));
-      return `<div class="mh">Te nombran por motor${EJ}</div>${EK.map((e, i) => `<div class="er"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><span class="n">${ENG[e].n}</span>${bar(SAMPLE.engines[e], { max: 60, cls: "thin", delay: i * 60 })}<span class="v num">${SAMPLE.engines[e]}<small>%</small></span></div>`).join("")}
-        <div class="mh">Frente a tus rivales${EJ}</div>${SAMPLE.rivals.map(([n, m, me], i) => `<div class="er">${me ? tile(S.sample.domain) : tile(n)}<span class="n" style="${me ? "color:var(--blue-ink)" : ""}">${esc(me ? brandOf(S.sample.domain) : n)}</span>${bar(m, { max: max * 1.1, cls: "thin " + (me ? "" : "ink nomark"), delay: i * 60 })}<span class="v num">${m}<small>%</small></span></div>`).join("")}`;
+      const D = A(), max = Math.max(1, ...D.rivals.map((r) => r[1] || 0)), emax = Math.max(60, ...EK.map((e) => D.engines[e] || 0));
+      const engs = EK.filter((e) => D.engines[e] != null);
+      return `<div class="mh">Te nombran por motor${EJx()}</div>${engs.map((e, i) => `<div class="er"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><span class="n">${ENG[e].n}</span>${bar(D.engines[e], { max: emax, cls: "thin", delay: i * 60 })}<span class="v num">${D.engines[e]}<small>%</small></span></div>`).join("")}
+        ${D.rivals.length ? `<div class="mh">Frente a tus rivales${EJx()}</div>${D.rivals.map(([n, m, me], i) => `<div class="er">${me ? tile(curDom()) : tile(n)}<span class="n" style="${me ? "color:var(--blue-ink)" : ""}">${esc(me ? (isSample() ? brandOf(curDom()) : n) : n)}</span>${bar(m, { max: max * 1.1, cls: "thin " + (me ? "" : "ink nomark"), delay: i * 60 })}<span class="v num">${m}<small>%</small></span></div>`).join("")}` : ""}`;
     }
     if (k === "google") return gscInvite();
-    return `<div class="ag4">${SAMPLE.agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div><p class="mini-note">De la auditoría agéntica de tu tienda. ${EJ}</p>`;
+    return `<div class="ag4">${A().agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div><p class="mini-note">De la auditoría agéntica de tu web. ${EJx()}</p>`;
   }
 
   /* ---------------- layer 1: hero «Cuadro» ---------------- */
@@ -128,12 +169,19 @@
       ${lanes.map((k) => laneBox(k, () => pageLane(k, sc, rel))).join("")}</div>`;
   }
   function heroDom() {
-    const s = SAMPLE.score, me = SAMPLE.rivals.find((r) => r[2])[1], top = SAMPLE.rivals[0];
-    const lanes = [["ia", me, "%", `${top[0]}, ${top[1]}%`, me >= top[1] ? "ok" : "mid"], ["google", SAMPLE.seo, "", "Salud SEO", band(SAMPLE.seo)[0]], ["agent", SAMPLE.agent, "", band(SAMPLE.agent)[1], band(SAMPLE.agent)[0]]];
-    return `<div class="hq"><div class="dialbox">${dial(s)}<div class="dial-c"><span class="big num">${roll(s)}</span><span class="of">Puntuación GEO</span></div></div>
-      <div class="bands"><span class="${s < 40 ? "on" : ""}">Inicial</span><span class="${s >= 40 && s < 70 ? "on" : ""}">Emergente</span><span class="${s >= 70 ? "on" : ""}">Competitivo</span></div>
-      <p class="say">${esc(SAMPLE.say)}</p>
-      <div class="gg3">${lanes.map(([k, v, u, st, cls], i) => gauge({ v, unit: u, cls, nm: laneName(k), icon: laneIcon(k), st, lane: k, i })).join("")}</div>
+    const D = A();
+    if (!D) {
+      const p = S.proj[curDom()];
+      return `<div class="paused" style="min-height:240px"><span class="ring ${p === "error" ? "" : "spin"}">${p === "error" ? ic("warn") : svgGs(30)}</span><h2>${p === "error" ? "No hemos podido leer tu dominio" : "Leyendo tu dominio"}</h2>${p === "error" ? `<button class="btn line sm" data-act="reload-proj" style="margin-top:14px">Reintentar</button>` : ""}</div>`;
+    }
+    const s = D.score, meR = D.rivals.find((r) => r[2]), me = meR ? meR[1] : null, top = D.rivals.find((r) => !r[2]);
+    const lanes = [["ia", me, "%", top ? `${esc(top[0])}, ${top[1]}%` : "Sin rivales nombrados", me != null && top && me < top[1] ? "mid" : "ok"]];
+    if (D.seo != null) lanes.push(["google", D.seo, "", "Salud SEO", band(D.seo)[0]]);
+    if (D.agent != null) lanes.push(["agent", D.agent, "", band(D.agent)[1], band(D.agent)[0]]);
+    return `<div class="hq"><div class="dialbox">${dial(s ?? 0)}<div class="dial-c"><span class="big num">${s == null ? "–" : roll(s)}</span><span class="of">Puntuación GEO</span></div></div>
+      <div class="bands"><span class="${s != null && s < 40 ? "on" : ""}">Inicial</span><span class="${s >= 40 && s < 70 ? "on" : ""}">Emergente</span><span class="${s >= 70 ? "on" : ""}">Competitivo</span></div>
+      <p class="say">${esc(D.say)}</p>
+      <div class="gg3" style="grid-template-columns:repeat(${lanes.length},minmax(0,1fr))">${lanes.map(([k, v, u, st, cls], i) => gauge({ v, unit: u, cls, nm: laneName(k), icon: laneIcon(k), st, lane: k, i })).join("")}</div>
       ${lanes.map(([k]) => laneBox(k, () => domLane(k))).join("")}</div>`;
   }
 
@@ -144,7 +192,7 @@
   const whereOf = (f) => (f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
   function plate(f, ctx) {
     const key = ctx + ":" + f.id, kind = f.kind || "local", done = S.done[key];
-    const pts = kind === "goal" ? `<span class="pt q">Objetivo</span>` : f.unit === "en Agentes" ? `<span class="pt num">+${f.pts}<small>Agentes</small></span>` : `<span class="pt num">+${f.pts}<small>pt</small></span>`;
+    const pts = f.pts == null && kind !== "goal" ? "" : kind === "goal" ? `<span class="pt q">Objetivo</span>` : f.unit === "en Agentes" ? `<span class="pt num">+${f.pts}<small>Agentes</small></span>` : `<span class="pt num">+${f.pts}<small>pt</small></span>`;
     let body = `<p class="why">${f.why}</p>`;
     if (f.how) body += `<p class="why">${f.how}</p>`;
     if (f.snippet) body += `<pre class="snip" tabindex="0">${esc(f.snippet)}</pre><div class="acts"><button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar ${esc(f.copyWhat || "el código")}</button></div>`;
@@ -169,7 +217,9 @@
   /* ---------------- CTAs ---------------- */
   const arcSvg = () => { let g = ""; for (let i = 0; i <= 40; i++) { const a = ((200 + i * 3.5) * Math.PI) / 180, r0 = i % 5 ? 140 : 128; g += `<line x1="${(150 + r0 * Math.cos(a)).toFixed(1)}" y1="${(150 + r0 * Math.sin(a)).toFixed(1)}" x2="${(150 + 148 * Math.cos(a)).toFixed(1)}" y2="${(150 + 148 * Math.sin(a)).toFixed(1)}"/>`; } return `<svg class="arc" viewBox="0 0 300 300" aria-hidden="true">${g}</svg>`; };
   const ctaNoAcct = (host) => `<div class="deep">${arcSvg()}<div class="egs">${EK.map((e) => `<span>${lg(e, 15)}</span>`).join("")}</div><p class="q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>${esc(host)}</b> y a sus competidores?</p><button class="btn onink" data-act="open" data-to="/signup" data-c="analizar-dominio">Analizar dominio${ic("arrowr", "sm")}</button><p class="ft">7 días de Pro gratis. Sin tarjeta.</p></div>`;
-  const ctaOther = (host) => `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="sample-only" data-what="analizar un dominio nuevo">Analizar como dominio<span class="dim"> · ${1 + SAMPLE.extraDomains.length} de ${SAMPLE.cap}</span></button><button class="btn lnd" data-act="sample-only" data-what="añadir un competidor">Añadir como competidor de ${esc(S.sample.domain)}</button><button class="lnk2" data-act="use-domain">Probar esta web como mi dominio de ejemplo</button></div>`;
+  const ctaOther = (host) => S.real
+    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Analizar como dominio<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span></button></div>`
+    : `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="sample-only" data-what="analizar un dominio nuevo">Analizar como dominio<span class="dim"> · ${1 + SAMPLE.extraDomains.length} de ${SAMPLE.cap}</span></button><button class="btn lnd" data-act="sample-only" data-what="añadir un competidor">Añadir como competidor de ${esc(S.sample.domain)}</button><button class="lnk2" data-act="use-domain">Probar esta web como mi dominio de ejemplo</button></div>`;
 
   /* ---------------- header and foot ---------------- */
   const svgGs = (w = 16) => `<svg width="${w}" height="${Math.round(w * 1.03)}" aria-hidden="true"><use href="#e-gs"/></svg>`;
@@ -177,22 +227,30 @@
   /* The selector at the top says what the results below belong to (Denis,
      2026-10-30): the open page is one more option, next to the domains. */
   function headAcct() {
-    const d = S.sample.domain, f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
-    const doms = [d, ...SAMPLE.extraDomains];
+    const d = curDom(), f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
+    const doms = acctDomains(), cap = S.real ? S.real.domainCap : SAMPLE.cap;
+    const brandFor = (x) => (S.real ? (S.real.domains.find((y) => y.domain === x) || {}).brand || brandOf(x) : brandOf(x));
     const onPage = !!f && S.tab === "page";
     const own = !!f && relation() === "own";
+    const days = S.real && S.real.trialEndsAt ? Math.max(0, Math.ceil((new Date(S.real.trialEndsAt) - Date.now()) / 864e5)) : null;
+    const planLine = S.real ? (days != null ? `Prueba de ${esc(S.real.plan.name)} · ${days} ${days === 1 ? "día" : "días"}` : `Plan ${esc(S.real.plan.name)}`) : "Prueba de Pro · 7 días";
     const pageItem = f ? `<div class="mh" style="margin:6px 10px 4px">Página abierta</div><button class="dd-i ${onPage ? "on" : ""}" role="menuitem" data-tab="page">${tile(f.host)}<span class="t">${esc(f.host)}<span>${esc(pathLabel(f))}</span></span>${onPage ? ic("check", "sm ck") : ""}</button><div class="dd-sep"></div>` : "";
-    const menu = S.dd ? `<div class="dd-m" role="menu">${pageItem}<div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${SAMPLE.cap}</span></div>${doms.map((x, i) => { const on = i === 0 && !onPage; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${i === 0 ? `data-tab="dom"` : `data-act="sample-only" data-what="cambiar de dominio"`}>${tile(x)}<span class="t">${esc(brandOf(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; }).join("")}<div class="dd-sep"></div>${f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" data-act="sample-only" data-what="añadir un dominio"><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${SAMPLE.cap}</span></button></div>` : "";
+    const domItem = (x) => { const on = x === d && !onPage; const act = S.real || x === d ? `data-pick="${esc(x)}"` : `data-act="sample-only" data-what="cambiar de dominio"`; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${act}>${tile(x)}<span class="t">${esc(brandFor(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; };
+    const newDom = S.real ? `data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio"` : `data-act="sample-only" data-what="añadir un dominio"`;
+    const menu = S.dd ? `<div class="dd-m" role="menu">${pageItem}<div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${cap}</span></div>${doms.map(domItem).join("")}<div class="dd-sep"></div>${isSample() && f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" ${newDom}><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${cap}</span></button><div class="mh" style="margin:8px 10px 4px">${planLine}</div></div>` : "";
     const btn = onPage
       ? `${tile(f.host)}<span class="t"><b>${esc(f.host)}</b><span class="d">Página abierta · ${esc(pathLabel(f))}</span></span>`
-      : `${tile(d)}<span class="t"><b>${esc(brandOf(d))}</b><span class="d">${esc(d)}</span></span>`;
-    return `<div class="ph">${svgGs(20)}<div class="dd"><button class="pj" data-act="dd" aria-expanded="${!!S.dd}" aria-haspopup="menu">${btn}${ic("updown", "sm")}</button>${menu}</div><button class="av" data-act="sample-only" data-what="abrir tu cuenta" aria-label="Tu cuenta">DM</button></div>
-      <div class="ctx">${EJ}<span>Cuenta y escaneos inventados para probar. La revisión de la página es real.</span></div>`;
+      : d ? `${tile(d)}<span class="t"><b>${esc(brandFor(d))}</b><span class="d">${esc(d)}</span></span>`
+      : `<span class="t"><b>Sin dominios</b><span class="d">Añade el primero en la consola</span></span>`;
+    const ini = S.real ? esc((S.real.email || "?").slice(0, 2).toUpperCase()) : "DM";
+    const av = S.real ? `<button class="av" data-act="open" data-to="/dashboard/settings" data-c="cuenta" aria-label="Tu cuenta">${ini}</button>` : `<button class="av" data-act="sample-only" data-what="abrir tu cuenta" aria-label="Tu cuenta">DM</button>`;
+    return `<div class="ph">${svgGs(20)}<div class="dd"><button class="pj" data-act="dd" aria-expanded="${!!S.dd}" aria-haspopup="menu">${btn}${ic("updown", "sm")}</button>${menu}</div>${av}</div>
+      ${isSample() ? `<div class="ctx">${EJ0}<span>Cuenta y escaneos inventados para probar. La revisión de la página es real.</span></div>` : ""}`;
   }
   function foot(f) {
     const stamp = f ? `<div class="fine">Revisada en tu navegador ${f.ms < 1000 ? "en menos de un segundo" : "en " + (f.ms / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 }) + " s"}. No pasa por ningún servidor.</div>` : "";
-    return `<div class="pf">${S.sample.on ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}${stamp}
-      <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button><button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button></div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
+    return `<div class="pf">${acctOn() ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}${stamp}
+      <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
   /* ---------------- views ---------------- */
@@ -207,18 +265,18 @@
   function viewIdle(paused) {
     const auto = S.autoOn && S.read ? "" : `<div class="autobox"><button class="rv" data-act="auto-on">${ic("eye", "sm")}<span>Escanear automáticamente las páginas</span></button>
       ${S.read ? "" : `<p class="tiny">Chrome te pedirá permiso para leer las webs.</p>`}</div>`;
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused idleb">
+    return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused idleb">
       <div class="idlemain"><div class="minibar" aria-hidden="true"><i class="u"></i><span class="t">${PUZ}</span><span class="t g">${svgGs(14)}</span><i class="av"></i><i class="hit"></i>${CUR}</div>
       <h2>${paused ? "Pulsa el icono otra vez" : "Pulsa el icono"}</h2>
       <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>
       ${auto}</div>${foot(null)}</div>`;
   }
   function viewReading() {
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
+    return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
   }
   function viewError(r) {
     const t = { blocked: ["Esta página no se puede revisar", "Chrome no deja que ninguna extensión lea sus propias páginas, la tienda ni los PDF."], perm: ["Pulsa el icono otra vez", "Chrome retiró el permiso al cambiar de página."], gone: ["La pestaña ya no está", "Abre la página y pulsa el icono."], other: ["No hemos podido leerla", "Recarga la página y pulsa el icono otra vez."] }[r] || ["No hemos podido leerla", ""];
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring">${ic("warn")}</span><h2>${t[0]}</h2><p>${t[1]}</p>${r === "blocked" || !S.read ? "" : `<button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>`}</div>${foot(null)}</div>`;
+    return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused"><span class="ring">${ic("warn")}</span><h2>${t[0]}</h2><p>${t[1]}</p>${r === "blocked" || !S.read ? "" : `<button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>`}</div>${foot(null)}</div>`;
   }
   function viewReview(f, sc) {
     const rel = relation();
@@ -227,7 +285,8 @@
     let h = `<div class="px">${rel === "none" ? headNo(f.host) : headAcct()}`;
     const fixesCtx = "page:" + f.url;
     if (rel !== "none" && S.tab === "dom") {
-      h += `<div class="ey">Visión general · <span class="mono">${esc(S.sample.domain)}</span>${EJ}</div>${heroDom()}${rel === "own" ? alertHtml(sc) : ""}${deck(SAMPLE.plan, "dom", "")}`;
+      const D = A();
+      h += `<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span>${EJx()}</div>${heroDom()}${rel === "own" && covers(f.host, curDom()) ? alertHtml(sc) : ""}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}`;
       return h + foot(null) + "</div>";
     }
     if (rel === "none") h += `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`;
@@ -300,11 +359,51 @@
     }
   }
 
+  /* ---------------- the account (paso 02) ---------------- */
+  let ctxAt = 0;
+  async function loadCtx(force) {
+    if (!force && Date.now() - ctxAt < 3000) return;
+    ctxAt = Date.now();
+    const r = await Env.api("/api/ext/context");
+    const was = !!S.real;
+    if (r.status === 200 && r.body && Array.isArray(r.body.domains)) {
+      const prev = S.real && S.real.sel;
+      S.real = Object.assign({}, r.body, { sel: null });
+      S.real.sel = pickSel(prev);
+      if (!was) { S.tabUrl = null; S.lane = null; }
+      ensureProj();
+    } else if (r.status === 401) {
+      S.real = null;
+    }
+    if (was !== !!S.real) draw();
+  }
+  /* the open page's own domain when it is one of yours, else the last pick */
+  function pickSel(prev) {
+    const doms = S.real.domains.map((x) => x.domain), h = S.rec && S.rec.facts ? S.rec.facts.host : null;
+    const own = doms.filter((d) => covers(h, d)).sort((a, b) => b.length - a.length)[0];
+    return own || (doms.includes(prev) ? prev : doms[0] || null);
+  }
+  async function ensureProj() {
+    if (!S.real || !S.real.sel) return;
+    const d = S.real.sel, f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
+    const url = f && covers(f.host, d) ? f.url : null, key = d + "|" + (url || "");
+    if (S.projKey && S.projKey[d] === key && S.proj[d] && S.proj[d] !== "error") return;
+    (S.projKey ||= {})[d] = key;
+    S.proj[d] = "loading";
+    draw();
+    const r = await Env.api(`/api/ext/project?domain=${encodeURIComponent(d)}${url ? `&url=${encodeURIComponent(url)}` : ""}`);
+    if (S.projKey[d] !== key) return;
+    if (r.status === 401) { S.real = null; draw(); return; }
+    S.proj[d] = r.status === 200 && r.body ? r.body : "error";
+    draw();
+  }
+
   async function sync() {
     const tab = await Env.activeTab();
     S.tabId = tab ? tab.id : null;
     S.rec = S.tabId != null ? await Env.result(S.tabId) : null;
     S.lane = null; S.dd = false;
+    if (S.real) { S.real.sel = pickSel(S.real.sel); ensureProj(); }
     draw();
     noteDelta();
     if (S.read && S.autoOn && !S.rec && S.tabId != null) Env.reread(S.tabId);
@@ -347,7 +446,7 @@
 
   function findFix(key) {
     const [ctx, id] = [key.slice(0, key.lastIndexOf(":")), key.slice(key.lastIndexOf(":") + 1)];
-    const list = ctx === "dom" ? SAMPLE.plan : SC ? SC.fixes : [];
+    const list = ctx === "dom" ? (A() ? A().plan : []) : SC ? SC.fixes : [];
     return list.find((x) => x.id === id);
   }
 
@@ -357,6 +456,10 @@
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
     if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }
+    if (t.dataset.pick != null) {
+      if (S.real) { S.real.sel = t.dataset.pick; ensureProj(); }
+      S.tab = "dom"; S.lane = null; S.dd = false; draw(); return;
+    }
     const hz = t.closest(".hz");
     if (t.dataset.dk && hz) { S.dk[hz.dataset.ctx] = (S.dk[hz.dataset.ctx] || 0) + +t.dataset.dk; draw(); return; }
     if (t.dataset.dkgo && hz) { S.dk[hz.dataset.ctx] = +t.dataset.dkgo; draw(); return; }
@@ -391,6 +494,7 @@
       S.dd = false; draw();
       toast(`En la prueba no se puede ${esc(t.dataset.what || "hacer esto")}.`, "Con la cuenta conectada, funciona igual que en la consola.", "notes");
     } else if (a === "dd") { S.dd = !S.dd; draw(); }
+    else if (a === "reload-proj") { if (S.real) { delete S.proj[curDom()]; S.projKey[curDom()] = null; ensureProj(); } }
     else if (a === "theme") {
       document.documentElement.dataset.theme = curTheme() === "dark" ? "light" : "dark";
       try { localStorage.setItem("gs-ext-theme", document.documentElement.dataset.theme); } catch (e) {}
@@ -409,12 +513,18 @@
     S.read = await Env.hasAuto();
     S.autoOn = !!(await Env.getL("autoOn"));
     Env.listen(async (why) => {
-      if (why === "tab") return sync();
+      if (why === "tab") { loadCtx(); return sync(); }
       if (why === "perm") { S.read = await Env.hasAuto(); return draw(); }
       if (why === "loaded") return sync();
-      S.rec = await Env.result(S.tabId); draw(); noteDelta();
+      S.rec = await Env.result(S.tabId);
+      if (S.real && S.rec && S.rec.state === "ok") { S.real.sel = pickSel(S.real.sel); ensureProj(); }
+      draw(); noteDelta();
     });
     await sync();
+    await loadCtx(true);
+    /* back from signing in on GenScore: the panel notices on its own */
+    addEventListener("focus", () => loadCtx());
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) loadCtx(); });
     document.fonts && document.fonts.ready.then(() => $$(".seg").forEach(segInd));
   })();
 })();
