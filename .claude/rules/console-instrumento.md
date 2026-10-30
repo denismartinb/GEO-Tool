@@ -113,7 +113,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **Solo en `/login`, solo dentro de la app (`gs_app`), una vez por apertura**, y
   nunca la misma que la anterior. Con `prefers-reduced-motion` no sale.
-- **No bloquea el acceso**: un toque, «Saltar» o Esc llevan al formulario, y si
+- **No bloquea el acceso**: un toque o Esc llevan (sin botón visible, a petición de Denis) al formulario, y si
   el JavaScript falla el formulario aparece a los 6 s.
 - **La G geométrica (`splash/g-mark.ts`) es de la splash y del login de la app.**
   Sustituir `app/icon.svg` o las marcas del resto del producto no está aprobado.

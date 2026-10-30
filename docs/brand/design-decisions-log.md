@@ -27775,12 +27775,12 @@ Fecha de actualización: 30 de octubre de 2026.
 
 ## 382. APP-SPLASH-1: tres entradas animadas que aterrizan en el login de la app (2026-10-30)
 
-**Qué se decidió.** Denis aprobó las tres propuestas (D Calibre, E Compás, F Bruma) y que rote una distinta en cada apertura. Solo salen dentro de la app de Android (cookie `gs_app`, §381), en `/login` sin sesión, una vez por apertura (`sessionStorage`) y nunca dos veces seguidas la misma (`localStorage`, al azar si el navegador lo bloquea). Con `prefers-reduced-motion` no sale ninguna y se entra directo. Se saltan con un toque, «Saltar» o Esc. Diseño de referencia en `docs/design-reference/app-splash-1/splash-login.html`.
+**Qué se decidió.** Denis aprobó las tres propuestas (D Calibre, E Compás, F Bruma) y que rote una distinta en cada apertura. Solo salen dentro de la app de Android (cookie `gs_app`, §381), en `/login` sin sesión, una vez por apertura (`sessionStorage`) y nunca dos veces seguidas la misma (`localStorage`, al azar si el navegador lo bloquea). Con `prefers-reduced-motion` no sale ninguna y se entra directo. Se saltan con un toque en cualquier parte o Esc, sin botón ni texto visible (Denis quitó «Saltar»); la capa lleva `aria-label` para lectores de pantalla. Diseño de referencia en `docs/design-reference/app-splash-1/splash-login.html`.
 
 **Cómo funciona.** Una superposición (`components/ins/auth/splash/engine.ts`) con un solo reloj en ms: SVG para la marca y su decorado y un canvas para la bruma. La G vuela hasta el sitio real de la marca del login (`.au-lock svg`, medido en vivo) y el formulario entra con la misma animación escalonada de siempre cuando la G se posa. La bruma del login real se atenúa mientras dura y vuelve con fundido. Si el JavaScript no arranca, el formulario aparece solo a los 6 s (`ins-aufail`).
 
 **La G nueva.** Geometría exacta (`g-mark.ts`): dos anillos concéntricos de un solo grosor, tres cortes paralelos iguales, barra con remate redondo y punto ámbar centrado en el anillo. Sustituye al calco con bordes dentados. **Solo la usan la splash y la marca del login dentro de la app**; `app/icon.svg` y el resto de marcas siguen igual hasta que Denis apruebe cambiarlas.
 
 **Pendiente o conocido.**
-- El tiempo hasta el formulario es de unos 3 s; «Saltar» lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
+- El tiempo hasta el formulario es de unos 3 s; un toque lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
 - Aún no está medida en un móvil real; solo en Chromium a 390×844.

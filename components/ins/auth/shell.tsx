@@ -109,7 +109,7 @@ export function AuthShell({ children, lit = 0, splash = false }: { children: Rea
         </div>
         {children}
       </div>
-      {splash ? <div ref={spRef} className="sp-root" aria-hidden="true" /> : null}
+      {splash ? <div ref={spRef} className="sp-root" role="button" aria-label="Toca para ir al inicio de sesión" /> : null}
     </div>
   );
 }

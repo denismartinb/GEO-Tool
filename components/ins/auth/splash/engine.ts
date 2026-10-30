@@ -211,7 +211,6 @@ const SPLASH_CSS = `
 .sp-hero svg{display:block;width:100%;height:100%;overflow:visible}
 .sp-decor .guide{fill:none;stroke:var(--blue);stroke-width:1;vector-effect:non-scaling-stroke;opacity:.55}
 .sp-decor .gtxt{font:500 20px ui-monospace,monospace;fill:var(--blue)}
-.sp-skip{position:absolute;top:max(24px,env(safe-area-inset-top,0px));right:20px;height:36px;padding:0 16px;border-radius:99px;border:1px solid var(--rule);background:color-mix(in oklab,var(--surface) 70%,transparent);color:var(--ink-2);font:600 13px var(--font-body,system-ui,sans-serif);cursor:pointer;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 `;
 
 /** Runs the splash on `opts.root`; returns a cleanup that also ends it at once. */
@@ -230,13 +229,11 @@ export function runSplash(opts: Opts): () => void {
   root.innerHTML =
     `<style>${SPLASH_CSS}</style><canvas class="sp-mist" aria-hidden="true"></canvas><div class="sp-paper"></div>` +
     `<svg class="sp-decor" viewBox="-146 -146 584 584" style="left:${hx - S / 2}px;top:${hy - S / 2}px;width:${S * 2}px;height:${S * 2}px" aria-hidden="true">${v.decor()}</svg>` +
-    `<div class="sp-hero" style="left:${hx}px;top:${hy}px;width:${S}px;height:${S}px"><svg viewBox="0 0 292 292" aria-hidden="true" xmlns="${SVGNS}">${gMarkInner("spg")}</svg></div>` +
-    `<button type="button" class="sp-skip">Saltar</button>`;
+    `<div class="sp-hero" style="left:${hx}px;top:${hy}px;width:${S}px;height:${S}px"><svg viewBox="0 0 292 292" aria-hidden="true" xmlns="${SVGNS}">${gMarkInner("spg")}</svg></div>`;
 
   const q = <E extends Element>(sel: string) => root.querySelector(sel) as unknown as E;
   const hero = q<HTMLElement>(".sp-hero");
   const cv = q<HTMLCanvasElement>(".sp-mist");
-  const skip = q<HTMLElement>(".sp-skip");
   const ctx = cv.getContext("2d");
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = Math.round(W * dpr);
@@ -365,9 +362,6 @@ export function runSplash(opts: Opts): () => void {
   const render = () => {
     const t = st.t;
     v.render(st, t);
-    const sp = 1 - seg(t, L0 - 250, L0);
-    skip.style.opacity = String(sp);
-    skip.style.visibility = sp > 0 ? "visible" : "hidden";
     const f = ease.io(seg(t, L0, L0 + 760));
     hero.style.transform = `translate(${f2(tx * f)}px,${f2(ty * f)}px) scale(${(1 + (sc - 1) * f).toFixed(4)})`;
     const w = ease.o(seg(t, L0 + 600, L0 + 950));
