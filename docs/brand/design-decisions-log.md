@@ -27794,6 +27794,16 @@ agéntica recuperan relleno y borde (el reset `.ins button` ganaba a `.ag-comp`)
 El prototipo (`i-src` + `i-consola.html`) se actualiza con las dos rutas
 (`auditgeo`, `auditseo`).
 
+**Retoques posteriores (Denis, 2026-10-30).** El bloque «+N pt si arreglas…» es
+informativo, no un enlace. Orden de «Tu web para la IA»: Problemas, Cobertura de
+dominio y el Historial de comprobaciones plegado; con nota 100 el arco entra
+completo. Frase de cabecera propia de cada bloque. Se retira la tarjeta «Cómo se
+calcula tu Salud SEO» y la pestaña «Páginas» de las dos páginas, y con ella se
+descarta el botón «Añadir página» (habría exigido migración y acción de servidor).
+En el menú, la cuenta va pegada abajo y la fila «¿Cómo funciona?» justo encima
+(sustituye al icono junto a la cuenta). Auditoría agéntica aterriza con
+«Descubrimiento» activa (`initialComponent` queda con su test, sin uso en pantalla).
+
 **Pendiente.** El nombre de las dos entradas es una prueba: Denis puede volver a
 «Auditoría técnica GEO/SEO». La nota de la fila de arriba en Visión general («Auditoría SEO»)
 sigue enlazando a `?bloque=seo`.
