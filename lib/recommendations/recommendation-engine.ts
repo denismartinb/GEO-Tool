@@ -362,7 +362,9 @@ function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" 
     ev.domains.forEach((d) => domains.add(d));
     if (snippetSource === "none") continue;
     const snippet = snippetSource === "competitor" ? ev.brandSnippet ?? ev.competitorSnippet : ev.brandSnippet;
-    if (snippet && !snippets.some((s) => s.toLowerCase() === snippet.toLowerCase())) snippets.push(snippet);
+    // A quote of fewer than four words is a name, not evidence (log §358).
+    if (snippet && snippet.trim().split(/\s+/).length >= 4 && !snippets.some((s) => s.toLowerCase() === snippet.toLowerCase()))
+      snippets.push(snippet);
   }
   return {
     mentionedCompetitors: Array.from(competitors).slice(0, 8),
@@ -1430,7 +1432,9 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           "Un dato viejo en la respuesta hace dudar de todo lo demás, y la IA prefiere citar páginas con fecha reciente.",
         firstStep:
           "Actualiza la página donde vive ese dato y deja visible la fecha de actualización. Es de lo más rápido que puedes hacer.",
-        snippetSource: "brand",
+        // The proof is the stale sentence itself (stale_signals); a brand-mention
+        // quote proves nothing about staleness (log §358).
+        snippetSource: "none",
         extra: { stale_signals: staleSignals }
       })
     });
