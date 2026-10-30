@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BellButton, BellProvider } from "@/components/ins/bell";
 import { CommandPaletteProvider, useCommandPalette } from "@/components/ins/command-palette";
@@ -14,7 +14,7 @@ import { initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataI
 import { InsSprite } from "@/components/ins/sprite";
 import { TrialEndedDock, TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
-import { crumbForPath, INS_NAV, isNavActive, type InsNavItem } from "@/lib/ins/nav";
+import { crumbForPath, INS_NAV, isNavActive, navHref, type InsNavItem } from "@/lib/ins/nav";
 import type { AccountNotice } from "@/lib/notifications/account-notice";
 import type { NextStepNotice } from "@/lib/notifications/next-step";
 import type { WorkspaceNotification } from "@/lib/project-workspace";
@@ -50,9 +50,15 @@ export function InsShell({ data, notifications, accountNotice, nextStep, banner,
   );
 }
 
+/** `?bloque=` de la URL: dos entradas del menú comparten la ruta de la auditoría técnica. */
+function useAuditBlock(): "geo" | "seo" {
+  return useSearchParams().get("bloque") === "seo" ? "seo" : "geo";
+}
+
 function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }) {
   const d = useShellData();
   const pathname = usePathname();
+  const block = useAuditBlock();
   const [drawer, setDrawer] = useState(false);
   const scRef = useRef<HTMLDivElement | null>(null);
   const [edgeTop, setEdgeTop] = useState(false);
@@ -116,7 +122,7 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
                   <span>/</span>
                 </>
               ) : null}
-              <b>{crumbForPath(pathname)}</b>
+              <b>{crumbForPath(pathname, block)}</b>
             </div>
             <span className="sp" />
             <PaletteButton />
@@ -228,6 +234,7 @@ function AccountAvatar() {
 function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const d = useShellData();
   const pathname = usePathname();
+  const block = useAuditBlock();
   const { open: openPalette } = useCommandPalette();
   const { pop } = useLayer();
   const asideRef = useRef<HTMLElement | null>(null);
@@ -278,11 +285,11 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
                   </span>
                 );
               }
-              const active = isNavActive(pathname, p.id, item);
+              const active = isNavActive(pathname, p.id, item, block);
               return (
                 <Link
                   key={item.label}
-                  href={`/dashboard/projects/${p.id}${item.segment}`}
+                  href={navHref(p.id, item)}
                   className={`nav${active ? " on" : ""}`}
                   aria-current={active ? "page" : undefined}
                   onClick={onNavigate}
@@ -297,38 +304,39 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         ))}
       </nav>
       <TrialEndedPlanCard onNavigate={onNavigate} />
-      <div className="xo-sfoot">
+      <div className="xo-bot">
+        <div
+          className="foot xo-foot"
+          role="button"
+          tabIndex={0}
+          aria-haspopup="dialog"
+          aria-label="Tu cuenta"
+          ref={footRef}
+          onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => helpRef.current ?? footRef.current} />, { w: 280, align: "start", label: "Tu cuenta" })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.currentTarget.click();
+            }
+          }}
+        >
+          <span className="av">{initialsOf(d.userEmail)}</span>
+          <div>
+            <b>{d.userEmail}</b>
+            <span>{planLabel(d)}</span>
+          </div>
+        </div>
         <button
           type="button"
-          className="nav"
+          className="xo-help"
           ref={helpRef}
           aria-haspopup="dialog"
+          aria-label="¿Cómo funciona?"
+          title="¿Cómo funciona?"
           onClick={(e) => pop(e.currentTarget, <HelpPanel />, { w: 320, align: "start", label: "¿Cómo funciona?" })}
         >
           <Ic n="c-help" />
-          <span>¿Cómo funciona?</span>
         </button>
-      </div>
-      <div
-        className="foot xo-foot"
-        role="button"
-        tabIndex={0}
-        aria-haspopup="dialog"
-        aria-label="Tu cuenta"
-        ref={footRef}
-        onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => helpRef.current ?? footRef.current} />, { w: 280, align: "start", label: "Tu cuenta" })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.currentTarget.click();
-          }
-        }}
-      >
-        <span className="av">{initialsOf(d.userEmail)}</span>
-        <div>
-          <b>{d.userEmail}</b>
-          <span>{planLabel(d)}</span>
-        </div>
       </div>
     </aside>
   );
