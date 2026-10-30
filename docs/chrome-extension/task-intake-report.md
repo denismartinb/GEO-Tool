@@ -591,4 +591,11 @@ Al revisar una página se elige ella sola, salvo la portada de tu dominio, que
 abre la visión general. Elegir tu dominio enseña su visión general (datos de
 ejemplo). Las pestañas «Tu dominio / Esta página» desaparecen.
 
+### 17.7 Paso 01 aprobado (2026-10-30)
+
+Denis aprobó la extensión de prueba tal como queda en 0.5.2 («ok. apruebo esta
+fase»). Siguen sin aprobar el paso 02 (cuenta conectada, dos rutas de solo
+lectura en el servidor) y el paso 03 (publicación oculta en la Chrome Web
+Store).
+
 > Do you approve this plan? I will not implement until you confirm.
