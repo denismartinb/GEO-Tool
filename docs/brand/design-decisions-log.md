@@ -27693,3 +27693,8 @@ Elegir un dominio en el desplegable enseña sus datos también fuera de la
 consola, hasta que cambia la pestaña. Corregido de paso: el clic en un
 dominio del desplegable no hacía nada, porque `[data-pick]` faltaba en el
 selector del manejador de clics.
+
+**0.6.4 (Denis, 2026-10-30).** Sin sesión, bajo la cabecera sale «Identifícate
+en GenScore para el análisis completo», con «GenScore» en la letra del logo, y
+lleva a `/login`. Se quita del pie la línea «Revisada en tu navegador… No pasa
+por ningún servidor».

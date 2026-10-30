@@ -223,7 +223,8 @@
 
   /* ---------------- header and foot ---------------- */
   const svgGs = (w = 16) => `<svg width="${w}" height="${Math.round(w * 1.03)}" aria-hidden="true"><use href="#e-gs"/></svg>`;
-  function headNo(host) { return `<div class="ph">${svgGs(20)}<span class="who">${host ? `<b>Esta página</b>${esc(host)}` : `<b class="wm">GenScore</b>`}</span><button class="lnk" data-act="open" data-to="/login" data-c="entrar">Entrar</button></div>`; }
+  function headNo(host) { return `<div class="ph">${svgGs(20)}<span class="who">${host ? `<b>Esta página</b>${esc(host)}` : `<b class="wm">GenScore</b>`}</span><button class="lnk" data-act="open" data-to="/login" data-c="entrar">Entrar</button></div>
+    <button class="signin" data-act="open" data-to="/login" data-c="identificate">${svgGs(16)}<span>Identifícate en <b class="wm">GenScore</b> para el análisis completo</span>${ic("arrowr", "sm")}</button>`; }
   /* The selector at the top says what the results below belong to (Denis,
      2026-10-30): the open page is one more option, next to the domains. */
   function headAcct() {
@@ -248,8 +249,7 @@
       ${isSample() ? `<div class="ctx">${EJ0}<span>Cuenta y escaneos inventados para probar. La revisión de la página es real.</span></div>` : ""}`;
   }
   function foot(f) {
-    const stamp = f ? `<div class="fine">Revisada en tu navegador ${f.ms < 1000 ? "en menos de un segundo" : "en " + (f.ms / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 }) + " s"}. No pasa por ningún servidor.</div>` : "";
-    return `<div class="pf">${acctOn() ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}${stamp}
+    return `<div class="pf">${acctOn() ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}
       <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
