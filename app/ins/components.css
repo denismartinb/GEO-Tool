@@ -39,6 +39,15 @@
 .ins .btn.ghost{color:var(--ink-3)}
 .ins .btn.ghost:hover{color:var(--ink)}
 .ins .btn.sm{height:34px;padding:0 13px;font-size:13px}
+/* Legacy variants still used by screens that keep their old markup (Google,
+   Auditoría técnica, Comercio agéntico). `.ins button` resets them to plain text. */
+.ins .btn.btn-sm{height:34px;padding:0 13px;font-size:13px}
+.ins .btn.btn-primary{background:var(--ink);color:var(--surface)}
+.ins .btn.btn-primary:hover:not(:disabled){background:var(--ink-2)}
+.ins .btn.btn-primary:disabled{opacity:.45;cursor:not-allowed}
+.ins .btn.btn-ghost{border:1px solid var(--rule);color:var(--ink)}
+.ins .btn.btn-ghost:hover:not(:disabled){border-color:var(--ink-4)}
+.ins .btn.btn-ghost:disabled{opacity:.45;cursor:not-allowed}
 .ins .btn.warm{background:var(--warm);color:var(--surface)}
 
 /* alert: the one warm accent */

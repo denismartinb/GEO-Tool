@@ -109,8 +109,11 @@ body.xo-isro .xo-who .xo-pl{color:var(--warm);background:var(--warm-tint)}
 .ins .xo-note{font-size:12.5px;color:var(--ink-3);margin-top:14px}
 
 /* shell additions */
-.ins .xo-sfoot{display:grid;gap:2px;margin-top:auto;padding-top:8px}
-.ins .side .xo-sfoot+.foot{margin-top:0}
+.ins .side .xo-bot{margin-top:auto;display:flex;align-items:center;gap:4px;border-top:1px solid var(--rule-2);padding-top:6px}
+.ins .side .xo-bot .foot{flex:1;min-width:0;margin-top:0;border-top:0}
+.ins .xo-help{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--ink-3);transition:background var(--d1),color var(--d1)}
+.ins .xo-help:hover{background:var(--surface-2);color:var(--ink)}
+.ins .xo-help .i{width:18px;height:18px}
 .ins .xo-sfoot .xo-ext{margin-left:auto;width:13px;height:13px;color:var(--ink-4)}
 .ins .side .foot.xo-foot{cursor:pointer;border-radius:12px;transition:background var(--d1)}
 .ins .side .foot.xo-foot:hover{background:var(--surface-2)}

@@ -27665,3 +27665,31 @@ fuente y una recomendación.
 **Pendiente o roto conocido.** Los favicons se verifican en el preview (en el
 arnés sin red salen rotos). Si el fundador echa de menos la evidencia por
 página, se vuelve a ofrecer en la hoja lateral compartida, en una fase aparte.
+
+## §363 · CONSOLE-INSTRUMENTO-1 F6a: Auditoría técnica pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla `/web-audit` adopta el aspecto del prototipo
+aprobado (v51, `i-src/screens/audit.js|css`): cabecera con eyebrow, título y
+frase, dos tarjetas de bloque (Auditoría GEO y Auditoría SEO) con la nota en un
+arco de 270 grados y un «fantasma» hasta lo que se alcanza arreglando lo que
+puntúa, línea verde «+N pt si arreglas…» que lleva a `#problemas`, y pestañas
+Problemas, Correcto y Páginas con su recuento en el control segmentado del kit.
+El arco se anima con CSS puro. Los bloques siguen siendo enlaces
+`?bloque=geo|seo`.
+
+**Qué no cambia.** `buildAuditBlock`, los pesos, la Puntuación GEO, la nota
+«Tu Puntuación GEO usa la Salud técnica», la cobertura (mapa de temas), los
+generadores de llms.txt y sitemap, el acceso de bots, la velocidad (Core Web
+Vitals) y las filas por página. Consultas, acciones, RLS y esquema, intactos.
+
+**Decisión de alcance (a revisar por el fundador).** El prototipo no pinta la
+sección de cobertura, los generadores ni las correcciones por página, pero son
+funcionalidad real. Se conservan con su marcado y se leen con los tokens de
+Instrumento mediante ajustes en `app/ins/audit.css`; no se reconstruyen fila a
+fila como el prototipo. Se retiran `BlockSwitch` y `BlockPotentialBanner`
+(su cifra pasa a la tarjeta de bloque, su nota a una línea bajo las tarjetas) y
+los contadores por gravedad de la tarjeta Problemas (el recuento vive en la
+tarjeta de bloque).
+
+**Pendiente.** Reconstruir cobertura, bots y velocidad con los componentes
+nuevos si el fundador quiere fidelidad total; F6b Posición en Google.

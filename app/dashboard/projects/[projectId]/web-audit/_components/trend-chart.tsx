@@ -73,7 +73,13 @@ export function TrendChart({ points }: { points: TrendChartPoint[] }) {
   // Consecutive audits over the same scan share a calendar date — render each
   // date label once (founder screenshot: "9 jul 2026 · 9 jul 20…" repeated,
   // truncated, on the x-axis).
-  const xLabels = points.map((p) => formatDate(p.generatedAt));
+  // The year is dropped when every point shares it: eight «23 oct 2026»
+  // labels overlapped into one smear on a phone (founder screenshot).
+  const years = new Set(points.map((p) => new Date(p.generatedAt).getUTCFullYear()));
+  const xLabels = points.map((p) => {
+    const full = formatDate(p.generatedAt);
+    return years.size === 1 ? full.replace(/\s\d{4}$/, "") : full;
+  });
 
   return (
     <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>

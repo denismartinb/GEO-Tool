@@ -15,6 +15,7 @@ import "@/app/ins/sheet.css";
 import "@/app/ins/competitors.css";
 import "@/app/ins/citations.css";
 import "@/app/ins/prompts.css";
+import "@/app/ins/audit.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
