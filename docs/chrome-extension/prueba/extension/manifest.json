@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GenScore (prueba)",
   "short_name": "GenScore",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Versión de prueba. Revisa la página abierta para SEO e IA al pulsar el icono. Con sesión en GenScore, enseña tu cuenta en sólo lectura.",
   "minimum_chrome_version": "116",
   "permissions": [

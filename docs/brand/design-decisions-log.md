@@ -27678,3 +27678,8 @@ encima, «Para analizar la página actual, pulsa el icono de nuevo» (o el botó
 al proyecto más reciente de la cuenta. El panel sigue a la consola cuando esa
 selección cambia y, si no, respeta lo que se eligió en el desplegable. En
 cuanto se lee una página, la página manda (como en la 0.5.2).
+
+**0.6.2: el aviso sólo fuera de la consola (Denis, 2026-10-30).** Mientras la
+pestaña abierta es GenScore (el origen de `GS_API`, el único cuya URL ve la
+extensión), ni el aviso ni el parpadeo del icono salen: quien acaba de entrar
+está en la consola. En cualquier otra página sí.

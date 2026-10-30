@@ -39,7 +39,7 @@
     listen(fn) {
       chrome.storage.onChanged.addListener((ch, area) => { if (area === "session" && S.tabId != null && ch["r:" + S.tabId]) fn("result"); });
       chrome.tabs.onActivated.addListener(() => fn("tab"));
-      chrome.tabs.onUpdated.addListener((tabId, info) => { if (tabId === S.tabId && info.status === "complete") fn("loaded"); });
+      chrome.tabs.onUpdated.addListener((tabId, info) => { if (tabId === S.tabId && (info.status === "complete" || info.url)) fn("loaded"); });
       chrome.permissions.onAdded.addListener(() => fn("perm"));
       chrome.permissions.onRemoved.addListener(() => fn("perm"));
       chrome.windows && chrome.windows.onFocusChanged && chrome.windows.onFocusChanged.addListener(() => fn("tab"));
@@ -274,8 +274,14 @@
   /* Signed in and no page read yet: the panel opens on the project the
      console is pointed at, with one line on how to read the open page
      (Denis, 2026-10-30). Once a page is read, it takes over (viewReview). */
+  /* Not while the open tab is GenScore itself: right after signing in the
+     person is on the console, and the hint only makes sense once they visit
+     another page (Denis, 2026-10-30). Chrome gives the tab's URL only for
+     GS_API, which is the one origin the manifest holds; elsewhere it is
+     undefined, and that also counts as «another page». */
+  const onConsole = () => !!S.tabNow && S.tabNow.startsWith(GS_API + "/");
   function pageHint() {
-    if (S.read && S.autoOn) return "";
+    if ((S.read && S.autoOn) || onConsole()) return "";
     if (S.read) return `<button class="pghint" data-act="review-now"><span class="k2">${ic("scan", "sm")}</span><span class="tx"><b>Analizar la página actual</b></span>${ic("arrowr", "sm")}</button>`;
     return `<div class="pghint" role="note"><span class="k2">${svgGs(14)}</span><span class="tx"><b>Para analizar la página actual, pulsa el icono de nuevo</b><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></span></div>`;
   }
@@ -334,7 +340,7 @@
     const pn = $("#panel");
     let html, ctx;
     const idle = !S.rec && !(S.read && S.autoOn && S.tabId != null);
-    badgeTick(idle && !(S.real && S.read));
+    badgeTick(idle && !(S.real && (S.read || onConsole())));
     if (!S.rec && idle && S.real && curDom()) { html = viewDom(); ctx = "dom|" + curDom() + "|" + (A() ? 1 : 0); }
     else if (!S.rec) { html = idle ? viewIdle(S.shown) : viewReading(); ctx = "idle" + S.read + S.autoOn; }
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
@@ -420,6 +426,7 @@
   async function sync() {
     const tab = await Env.activeTab();
     S.tabId = tab ? tab.id : null;
+    S.tabNow = tab ? tab.url || null : null;
     S.rec = S.tabId != null ? await Env.result(S.tabId) : null;
     S.lane = null; S.dd = false;
     if (S.real) { S.real.sel = pickSel(S.real.sel); ensureProj(); }
