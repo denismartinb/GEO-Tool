@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { crumbForPath, INS_NAV, INS_NAV_FLAT, isNavActive, navHref, projectIdFromPath } from "./nav";
+import { crumbForPath, INS_NAV, INS_NAV_FLAT, isNavActive, navHref, projectIdFromPath, switchProjectHref } from "./nav";
 
 describe("menú Instrumento", () => {
   it("Visión general solo se activa en la raíz del proyecto", () => {
@@ -32,5 +32,16 @@ describe("menú Instrumento", () => {
   });
   it("no hay rayas largas en el menú", () => {
     expect(JSON.stringify(INS_NAV_FLAT)).not.toContain("—");
+  });
+});
+
+describe("cambio de dominio", () => {
+  it("conserva la sección de primer nivel", () => {
+    expect(switchProjectHref("/dashboard/projects/p1/competitors", "p2")).toBe("/dashboard/projects/p2/competitors");
+    expect(switchProjectHref("/dashboard/projects/p1/runs/r9", "p2")).toBe("/dashboard/projects/p2/runs");
+  });
+  it("cae en la portada del proyecto desde la visión general o fuera de un proyecto", () => {
+    expect(switchProjectHref("/dashboard/projects/p1", "p2")).toBe("/dashboard/projects/p2");
+    expect(switchProjectHref("/dashboard/settings", "p2")).toBe("/dashboard/projects/p2");
   });
 });
