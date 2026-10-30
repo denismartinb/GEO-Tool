@@ -57,6 +57,16 @@ export function projectIdFromPath(pathname: string): string | null {
   return pathname.match(/^\/dashboard\/projects\/([^/]+)/)?.[1] ?? null;
 }
 
+/**
+ * Destino al cambiar de dominio: la misma sección de primer nivel (`/competitors`,
+ * `/web-audit`...) del dominio elegido. Fuera de un proyecto, o en la visión
+ * general, cae en la portada del proyecto.
+ */
+export function switchProjectHref(pathname: string, projectId: string): string {
+  const section = pathname.match(/^\/dashboard\/projects\/[^/]+\/([^/]+)/)?.[1];
+  return `/dashboard/projects/${projectId}${section ? `/${section}` : ""}`;
+}
+
 /** Destino de una entrada: las de Auditoría técnica llevan su bloque en la URL. */
 export function navHref(projectId: string, item: InsNavItem): string {
   const base = `/dashboard/projects/${projectId}${item.segment}`;
