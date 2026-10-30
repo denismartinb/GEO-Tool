@@ -59,7 +59,7 @@ export async function discoverFromSeedCore(service: Service, input: { projectId:
   );
   await recordDiscoveryRun(service, { projectId: input.projectId, ownerUserId: input.ownerUserId, kind: "seed", costUsd: reply.cost });
   if (!reply.ok) return { status: "provider", left: left - 1 };
-  return { status: "ok", items: shapeSeedIdeas(readKeywordIdeas(reply.result), tracked), left: left - 1 };
+  return { status: "ok", items: shapeSeedIdeas(readKeywordIdeas(reply.result), tracked, seed), left: left - 1 };
 }
 
 export async function discoverFromRivalsCore(
