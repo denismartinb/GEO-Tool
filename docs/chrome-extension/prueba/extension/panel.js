@@ -25,6 +25,7 @@
        toolbar icon can (activeTab). Asked once, on the first press. */
     hasAuto: () => chrome.permissions.contains({ origins: ["<all_urls>"] }),
     askAuto: () => chrome.permissions.request({ origins: ["<all_urls>"] }),
+    badge: (tabId, on) => { try { chrome.action.setBadgeBackgroundColor({ tabId, color: "#2563eb" }); chrome.action.setBadgeText({ tabId, text: on ? " " : "" }); } catch (e) {} },
     open: (url) => chrome.tabs.create({ url }),
     copy: (t) => navigator.clipboard.writeText(t),
     listen(fn) {
@@ -45,6 +46,7 @@
       getL: async (k) => (demo.local || {})[k], setL: async (k, v) => { (demo.local ||= {})[k] = v; },
       reread: async () => ({ ok: true }),
       hasAuto: async () => !!demo.auto, askAuto: async () => true,
+      badge: () => {},
       open: (u) => toast("Se abriría " + esc(u.split("?")[0]), "", "arrowr"),
       copy: async () => {},
       listen() {}
@@ -186,27 +188,29 @@
   }
 
   /* ---------------- views ---------------- */
-  /* Two buttons on the paused panel (Denis, 2026-10-30):
-     «Revisar esta página» reads the open page from the panel itself.
-     «Revisar automáticamente las páginas» also reads every page on load while
-     the panel is open. Both need the same optional host permission: without it
-     Chrome only lets the toolbar icon read a page, and a per-site permission
-     cannot be asked for a site the panel cannot see. So it is asked once, on
-     the first press of either button, and never again. */
+  /* The paused panel (Denis, 2026-10-30, version B of the artifact): a small
+     replica of Chrome's toolbar where a cursor presses the GenScore icon, since
+     only that icon can read a page without the permission, and ONE button,
+     «Escanear automáticamente las páginas», which asks for the permission once.
+     Chrome lets nothing draw over its own toolbar, so the real icon only gets
+     a blinking badge (badgeTick). */
+  const PUZ = `<svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M10 4.5a2 2 0 1 1 4 0V6h3a1 1 0 0 1 1 1v3h-1.5a2 2 0 1 0 0 4H18v3a1 1 0 0 1-1 1h-3v-1.5a2 2 0 1 0-4 0V18H7a1 1 0 0 1-1-1v-3h1.5a2 2 0 1 0 0-4H6V7a1 1 0 0 1 1-1h3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>`;
+  const CUR = `<svg class="mbcur" viewBox="0 0 18 22" aria-hidden="true"><path d="M1.5 1.5v16l4.3-4 3 6.6 3-1.4-3-6.4h6z" fill="var(--surface)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/></svg>`;
   function viewIdle(paused) {
-    const autoBtn = S.autoOn && S.read ? "" : `<div class="autobox"><button class="rv2" data-act="auto-on">${ic("eye", "sm")}<span>Revisar automáticamente las páginas</span></button>
-      <p class="tiny">Cada página se revisa sola al abrirla, mientras el panel esté abierto.</p></div>`;
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring">${svgGs(30)}</span><h2>${paused ? "Has cambiado de página" : "Revisa la página que tienes abierta"}</h2>
-      <button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>
-      ${S.read ? "" : `<p class="tiny">La primera vez, Chrome te pedirá permiso para leer las páginas que visitas. Sólo leemos la que tienes abierta cuando lo pides, y nada sale de tu navegador.</p>`}
-      ${autoBtn}</div>${foot(null)}</div>`;
+    const auto = S.autoOn && S.read ? "" : `<div class="autobox"><button class="rv" data-act="auto-on">${ic("eye", "sm")}<span>Escanear automáticamente las páginas</span></button>
+      ${S.read ? "" : `<p class="tiny">Chrome te pedirá permiso para leer las webs.</p>`}</div>`;
+    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused idleb">
+      <div class="idlemain"><div class="minibar" aria-hidden="true"><i class="u"></i><span class="t">${PUZ}</span><span class="t g">${svgGs(14)}</span><i class="av"></i><i class="hit"></i>${CUR}</div>
+      <h2>${paused ? "Pulsa el icono otra vez" : "Pulsa el icono"}</h2>
+      <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>
+      ${auto}</div>${foot(null)}</div>`;
   }
   function viewReading() {
     return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
   }
   function viewError(r) {
     const t = { blocked: ["Esta página no se puede revisar", "Chrome no deja que ninguna extensión lea sus propias páginas, la tienda ni los PDF."], perm: ["Pulsa el icono otra vez", "Chrome retiró el permiso al cambiar de página."], gone: ["La pestaña ya no está", "Abre la página y pulsa el icono."], other: ["No hemos podido leerla", "Recarga la página y pulsa el icono otra vez."] }[r] || ["No hemos podido leerla", ""];
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring">${ic("warn")}</span><h2>${t[0]}</h2><p>${t[1]}</p>${r === "blocked" ? "" : `<button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>`}</div>${foot(null)}</div>`;
+    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring">${ic("warn")}</span><h2>${t[0]}</h2><p>${t[1]}</p>${r === "blocked" || !S.read ? "" : `<button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>`}</div>${foot(null)}</div>`;
   }
   function viewReview(f, sc) {
     const rel = relation();
@@ -229,12 +233,33 @@
     return h + foot(f) + "</div>";
   }
 
+  /* ---------------- toolbar badge ---------------- */
+  let badgeTimer = null, badgeOn = false, badgeTab = null;
+  function badgeTick(idle) {
+    if (idle && S.tabId != null && !RM.matches) {
+      if (badgeTimer && badgeTab === S.tabId) return;
+      clearInterval(badgeTimer); if (badgeTab != null && badgeTab !== S.tabId) Env.badge(badgeTab, false);
+      badgeTab = S.tabId; badgeOn = false;
+      const t = () => { badgeOn = !badgeOn; Env.badge(badgeTab, badgeOn); };
+      t(); badgeTimer = setInterval(t, 900);
+    } else if (idle && S.tabId != null) {
+      Env.badge(S.tabId, true); badgeTab = S.tabId;
+    } else {
+      clearInterval(badgeTimer); badgeTimer = null;
+      if (badgeTab != null) Env.badge(badgeTab, false);
+      badgeTab = null;
+    }
+  }
+  addEventListener("pagehide", () => { clearInterval(badgeTimer); if (badgeTab != null) Env.badge(badgeTab, false); });
+
   /* ---------------- draw ---------------- */
   let SC = null;
   function draw() {
     const pn = $("#panel");
     let html, ctx;
-    if (!S.rec) { html = S.read && S.autoOn && S.tabId != null ? viewReading() : viewIdle(S.shown); ctx = "idle" + S.read + S.autoOn; }
+    const idle = !S.rec && !(S.read && S.autoOn && S.tabId != null);
+    badgeTick(idle);
+    if (!S.rec) { html = idle ? viewIdle(S.shown) : viewReading(); ctx = "idle" + S.read + S.autoOn; }
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
     else {
@@ -371,7 +396,8 @@
   addEventListener("resize", () => $$(".seg").forEach(segInd));
 
   /* ---------------- boot ---------------- */
-  try { const th = localStorage.getItem("gs-ext-theme"); if (th) document.documentElement.dataset.theme = th; } catch (e) {}
+  /* light by default (Denis, 2026-10-30); the footer button switches to dark */
+  { let th = null; try { th = localStorage.getItem("gs-ext-theme"); } catch (e) {} document.documentElement.dataset.theme = th === "dark" ? "dark" : "light"; }
   (async () => {
     const s = await Env.getL("sample");
     if (s && typeof s === "object") S.sample = { on: !!s.on, domain: s.domain || null };

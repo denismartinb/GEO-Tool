@@ -16,24 +16,22 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.4.0.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.5.0.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
 Fija el icono con la chincheta de la pieza de puzle. Para revisar una página,
-pulsa el icono o `Alt+Mayús+G` (en Mac, Opción). Cuando cambias de página, el
-panel ofrece dos botones:
+pulsa el icono o `Alt+Mayús+G` (en Mac, Opción). Con el panel en reposo, una
+barra en miniatura enseña el gesto y el icono de verdad lleva un punto azul que
+parpadea (Chrome no deja dibujar sobre su barra).
 
-- **Revisar esta página** revisa la página abierta desde el propio panel, sin
-  tocar la barra.
-- **Revisar automáticamente las páginas** hace lo mismo sola en cada página que
-  abres, mientras el panel esté abierto. Se quita en el pie del panel.
+Debajo hay un solo botón, **Escanear automáticamente las páginas**: la primera
+vez Chrome pide permiso para «leer y cambiar tus datos en todos los sitios
+web», y desde entonces cada página se revisa sola con el panel abierto. Se
+quita en el pie del panel. Sólo leemos la página abierta y nada sale del
+navegador.
 
-La primera vez que pulsas cualquiera de los dos, Chrome pide permiso para
-«leer y cambiar tus datos en todos los sitios web». Es el único permiso con el
-que Chrome deja a un botón del panel leer la página; sin él, sólo el icono de la
-barra puede. Se pide una vez y no vuelve a salir. Sólo leemos la página abierta
-cuando lo pides (o con el automático puesto), y nada sale del navegador.
+El panel sale en modo claro; el botón de la luna del pie lo pasa a oscuro.
 
 ## Qué probar
 
@@ -48,7 +46,7 @@ cuando lo pides (o con el automático puesto), y nada sale del navegador.
 
 | Fichero | Qué hace |
 |---|---|
-| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. El de sitios (`<all_urls>`) es opcional y sólo se pide la primera vez que pulsas uno de los dos botones del panel. |
+| `manifest.json` | MV3. Permisos: `activeTab`, `scripting`, `storage`, `sidePanel`. El de sitios (`<all_urls>`) es opcional y sólo se pide al pulsar «Escanear automáticamente las páginas». |
 | `sw.js` | Al pulsar el icono abre el panel y lee la página. Guarda el resultado por pestaña en `storage.session` y lo borra al navegar. |
 | `collect.js` | Lo que se ejecuta dentro de la página: DOM, más `robots.txt`, `llms.txt` y la cabecera `X-Robots-Tag` del mismo dominio. |
 | `score.js` | Puro. De los datos de la página a la «Nota SEO + IA» (IA 55, Google 45; Agentes aparte) y a las tarjetas «Haz esto». Los motores se leen con los mismos tokens que la Auditoría agéntica (`lib/agentic-audit/agents.ts`). |

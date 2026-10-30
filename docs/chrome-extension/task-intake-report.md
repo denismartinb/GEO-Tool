@@ -563,4 +563,16 @@ una sola vez en la primera pulsación. Quitar el automático en el pie no retira
 el permiso, así que el botón sigue funcionando. Chrome no ofrece un aviso más
 suave que permita a un botón del panel leer cualquier página.
 
+### 17.4 Versión 0.5.0 (2026-10-30): panel en reposo B y modo claro
+
+Denis eligió la versión B de tres propuestas (diseño en
+`prueba/diseno-panel-reposo.html`): una barra en miniatura donde un cursor
+pulsa el icono de GenScore, «Pulsa el icono» con el atajo, y un solo botón,
+«Escanear automáticamente las páginas», con «Chrome te pedirá permiso para leer
+las webs.» debajo. El icono real lleva un punto azul (`chrome.action` badge)
+que parpadea mientras el panel espera; con movimiento reducido se queda fijo.
+«Revisar esta página» sólo queda en la pantalla de error, y sólo si ya hay
+permiso. El panel sale en modo claro aunque el sistema esté en oscuro; el
+botón del pie lo cambia y se recuerda.
+
 > Do you approve this plan? I will not implement until you confirm.
