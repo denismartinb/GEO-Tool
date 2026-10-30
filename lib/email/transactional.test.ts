@@ -115,6 +115,19 @@ const opsAlerts: Array<[string, () => Promise<void>]> = [
         trialEndsAt: null,
         createdAt: new Date("2026-08-15T10:00:00Z")
       })
+  ],
+  [
+    "sendNewSignupOpsAlertEmail (pending)",
+    () =>
+      sendNewSignupOpsAlertEmail({
+        email: CUSTOMER,
+        userId: "u1",
+        method: "password",
+        planId: "pro",
+        trialEndsAt: null,
+        createdAt: new Date("2026-10-28T10:00:00Z"),
+        status: "pending"
+      })
   ]
 ];
 
@@ -142,6 +155,15 @@ describe("a quién va cada correo", () => {
     expect(payload.to).toBe(OPS);
     expect(payload.to).not.toBe(CUSTOMER);
     expect(payload.html).toContain(CUSTOMER);
+  });
+
+  it("el aviso de alta sin confirmar lo dice en el asunto (log §359)", async () => {
+    await opsAlerts[4][1]();
+    const payload = lastPayload();
+
+    expect(payload.to).toBe(OPS);
+    expect(payload.subject).toContain("sin confirmar");
+    expect(payload.html).toContain("pendiente de confirmar");
   });
 
   it("los correos de cliente van a la dirección que les pasan", async () => {

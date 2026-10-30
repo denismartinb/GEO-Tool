@@ -249,6 +249,20 @@ email, no por `auth.users.id` como `ADMIN_USER_IDS`: el fallo aquí es "una
 cuenta ve un muro de pago que no debería", barato de notar y corregir, no una
 brecha de acceso.
 
+### API interna de estudios (STUDY-API-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `STUDY_API_SECRET` | No, sin ella `/api/internal/study/*` responde 401 a todo | Vercel | cadena aleatoria larga, p. ej. `openssl rand -hex 32`; quien llama la envía como `Authorization: Bearer <STUDY_API_SECRET>` |
+| `STUDY_API_DAILY_CAP` | No (600 por defecto) | Vercel | entero positivo: unidades LLM por 24 h móviles |
+
+El motor de `/admin/estudio` (`lib/studies/study-engine.ts`) sin sesión de
+navegador, para las rutinas de captación. Secreto propio, nunca `CRON_SECRET`.
+El techo se cuenta en `public_checks` con `engine = 'study_api'` (una fila por
+unidad, escrita antes de gastar) y el comprobador gratuito excluye esas filas
+de sus contadores. Añadir la variable en Vercel exige desplegar un commit
+nuevo: el script de build se salta los redeploys sin cambios.
+
 ### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
 
 | Variable | Required | Where | Expected shape |

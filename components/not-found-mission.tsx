@@ -241,9 +241,9 @@ function MissionScene() {
           </text>
         </g>
 
-        {/* El cohete. Mismo casco, aletas, toberas y ventana que
-            `components/scan-mission-rocket.tsx` — si tocas uno, lee
-            `.claude/rules/mission-rocket.md`. El grupo exterior sólo lleva el
+        {/* El cohete. Desde CONSOLE-INSTRUMENTO-1 F3b (log §355) el
+            primer escaneo ya no lleva cohete, así que éste es el único; lee
+            `.claude/rules/mission-rocket.md` antes de tocarlo. El grupo exterior sólo lleva el
             balanceo por CSS; el interior, la colocación por atributo (un
             `transform` de CSS reemplazaría al atributo, no se compone con él). */}
         <g className="nf-flight">

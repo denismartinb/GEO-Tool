@@ -3,7 +3,13 @@
   Where to paste: Supabase Dashboard → Authentication → Emails → Templates → Confirm signup
   Suggested Subject heading: Confirma tu cuenta en GenScore
 
-  Only {{ .ConfirmationURL }} is wired to a working flow in the app today:
+  The link goes to /auth/confirm with {{ .TokenHash }} (SIGNUP-ALERT-PENDING-1,
+  log §359), not to Supabase's ConfirmationURL: that one ends in
+  /auth/callback with a PKCE code, which only works in the browser that
+  signed up, so a link opened from the phone's mail app failed and the
+  account never got its welcome email, operator alert or signup_completed.
+
+  The confirmation link is the only flow wired in the app today:
   app/signup/confirm/page.tsx has no manual code-entry form, it only tells
   the user to check their email and click the link. Supabase also exposes
   {{ .Token }} (6-digit OTP) for this template type, but showing it here
@@ -64,11 +70,11 @@
 
         <table role="presentation" cellpadding="0" cellspacing="0" style="margin:24px 0 6px;"><tr>
           <td align="center" bgcolor="#2563EB" style="border-radius:10px;">
-            <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:15px;color:#ffffff;text-decoration:none;border-radius:10px;">Confirmar mi cuenta</a>
+            <a href="https://www.genscore.es/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email" style="display:inline-block;padding:14px 28px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-weight:700;font-size:15px;color:#ffffff;text-decoration:none;border-radius:10px;">Confirmar mi cuenta</a>
           </td>
         </tr></table>
 
-        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">¿No funciona el botón? <a href="{{ .ConfirmationURL }}" style="color:#2563EB;font-weight:600;text-decoration:underline;">Confirma tu cuenta desde aquí</a>.</p>
+        <p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">¿No funciona el botón? <a href="https://www.genscore.es/auth/confirm?token_hash={{ .TokenHash }}&amp;type=email" style="color:#2563EB;font-weight:600;text-decoration:underline;">Confirma tu cuenta desde aquí</a>.</p>
       </td></tr>
 
       <tr><td class="em-px" style="padding:24px 34px 30px;">

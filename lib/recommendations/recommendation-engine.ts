@@ -362,7 +362,7 @@ function aggregateEvidence(prompts: PromptResultInput[], snippetSource: "brand" 
     ev.domains.forEach((d) => domains.add(d));
     if (snippetSource === "none") continue;
     const snippet = snippetSource === "competitor" ? ev.brandSnippet ?? ev.competitorSnippet : ev.brandSnippet;
-    if (snippet) snippets.push(snippet);
+    if (snippet && !snippets.some((s) => s.toLowerCase() === snippet.toLowerCase())) snippets.push(snippet);
   }
   return {
     mentionedCompetitors: Array.from(competitors).slice(0, 8),
@@ -391,8 +391,11 @@ function buildEvidenceJson(opts: {
   firstStep: string;
   extra?: Record<string, unknown>;
   snippetSource?: "brand" | "competitor" | "none";
+  /** Rule-specific quotes that replace the per-prompt brand snippets (log §358). */
+  snippets?: string[];
 }): Record<string, unknown> {
   const agg = aggregateEvidence(opts.affected, opts.snippetSource);
+  if (opts.snippets) agg.snippets = opts.snippets;
   return {
     rule_id: opts.ruleId,
     first_step: opts.firstStep,
@@ -493,70 +496,6 @@ function computeEmergingCompetitors(
     .filter((entry) => entry.prompts.length >= 2)
     .sort((a, b) => b.prompts.length - a.prompts.length)
     .slice(0, 3);
-}
-
-/**
- * Gap: prominence (RECS-2B / N1). Distinct from close_competitor_gap (brand
- * ABSENT while a competitor appears): this is for prompts where the brand IS
- * mentioned but a specific named competitor consistently ranks ahead of it —
- * a lower 1-based first-mention position, per
- * docs/adr/0005-average-brand-position.md. Being present but always second
- * is a different problem than not appearing at all, and needs a different
- * fix (become the primary answer, not just any mention). Mutually exclusive
- * with the visibility/citation per-prompt cards (both require
- * brand_mentioned=true here vs. false there), so no prompt can double up
- * into both a presence gap and a prominence gap.
- */
-function computeProminenceGap(promptResults: PromptResultInput[], namedCompetitors: string[]): CompetitorDominance[] {
-  const normalizedNamed = new Set(namedCompetitors.map((c) => c.trim().toLowerCase()).filter(Boolean));
-  const byCompetitor = new Map<string, CompetitorDominance>();
-
-  for (const result of promptResults) {
-    if (!result.brand_mentioned) continue;
-    const extracted = getExtracted(result);
-    const brandPosition = extracted?.brand?.position;
-    if (typeof brandPosition !== "number") continue;
-
-    for (const comp of extracted?.competitors ?? []) {
-      if (!comp.mentioned || !comp.name || typeof comp.position !== "number") continue;
-      if (comp.position >= brandPosition) continue; // must rank strictly ahead of the brand
-      const key = comp.name.trim().toLowerCase();
-      if (normalizedNamed.size > 0 && !normalizedNamed.has(key)) continue;
-      const entry = byCompetitor.get(key) ?? { competitor: comp.name, prompts: [] };
-      entry.prompts.push(result);
-      byCompetitor.set(key, entry);
-    }
-  }
-
-  return Array.from(byCompetitor.values())
-    .filter((entry) => entry.prompts.length >= 2)
-    .sort((a, b) => b.prompts.length - a.prompts.length)
-    .slice(0, 3);
-}
-
-/**
- * "Amplify what works" (RECS-2B / N4): prompts where the brand is mentioned,
- * grounded-cited, and NOT carrying a negative/mixed narrative — a working
- * content/positioning pattern worth replicating. Deliberately includes
- * "neutral" sentiment, not just "positive": most factual AI answers land as
- * neutral even when they cite the brand cleanly, so requiring an explicit
- * positive judgment made this gate almost never fire in practice (confirmed
- * against real scan data) — being mentioned+cited without any negative frame
- * is already the "working" outcome worth replicating. Excludes
- * negative/mixed (that's gap 9's job) and "unknown" (failed/missing
- * sentiment extraction is not a validated signal either way). Callers must
- * additionally gate this on the run actually having an open gap elsewhere
- * (see generateRecommendationsForRun) — "replicate this pattern" is only
- * useful advice when there's somewhere left to apply it; on an
- * already-perfect run it would just be noise.
- */
-function computeWinningPattern(promptResults: PromptResultInput[], projectDomain: string): PromptResultInput[] {
-  return promptResults.filter(
-    (r) =>
-      r.brand_mentioned &&
-      citesOwnDomain(r, projectDomain) &&
-      (r.sentiment === "positive" || r.sentiment === "neutral")
-  );
 }
 
 function shortPrompt(text: string): string {
@@ -821,6 +760,73 @@ function computeNegativeNarrative(promptResults: PromptResultInput[]): PromptRes
  * name the actual theme instead of a generic "percepción negativa" — the data
  * was already captured by extraction but previously unused by the engine.
  */
+/*
+ * Words that make a sentence read as a complaint or a doubt. Conservative on
+ * purpose: a sentence only becomes evidence when it also names the brand or a
+ * recurring driver, so a generic "problema" elsewhere in the answer is ignored.
+ */
+const NEGATIVE_CUES = [
+  "queja", "quejas", "problema", "problemas", "crítica", "críticas", "criticad", "negativ", "malas opiniones",
+  "mala ", "malo", "deficien", "insatisf", "descontent", "lent", "caro", "caros", "elevad", "sobrecoste",
+  "cobros", "permanencia", "reclamacion", "reclamaciones", "falta de", "no recomend", "cuestionad", "polémic",
+  "complaint", "complaints", "issue", "issues", "poor", "slow", "expensive", "criticism", "negative", "unreliable"
+];
+
+function splitSentences(raw: string): string[] {
+  return raw
+    .replace(/[*_#>`]+/g, " ")
+    .replace(/\s+/g, " ")
+    .split(/(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÑ¿¡"“(])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Real fragments of the negative/mixed answers (log §358). The extraction's
+ * `brand.evidence` only quotes where the brand was named, so a card about the
+ * brand's bad image showed the brand name over and over. The evidence for this
+ * rule is the sentence that carries the complaint: one that names the brand or
+ * a recurring driver AND contains a negative cue, taken from the stored answer
+ * text, never paraphrased. Empty when no such sentence exists — the card then
+ * shows no quotes instead of filler.
+ */
+export function negativeExcerpts(
+  prompts: PromptResultInput[],
+  brand: string,
+  drivers: string[],
+  limit = 4
+): string[] {
+  const brandKey = brand.trim().toLowerCase();
+  const driverKeys = drivers.map((d) => d.trim().toLowerCase()).filter((d) => d.length >= 4);
+  const seen = new Set<string>();
+  const scored: Array<{ text: string; score: number }> = [];
+  for (const p of prompts) {
+    const raw = p.raw_response_text ?? "";
+    if (!raw) continue;
+    let best: { text: string; score: number } | null = null;
+    for (const sentence of splitSentences(raw)) {
+      if (sentence.length < 40 || sentence.length > 320) continue;
+      const lower = sentence.toLowerCase();
+      const cue = NEGATIVE_CUES.some((c) => lower.includes(c));
+      const driver = driverKeys.some((d) => lower.includes(d));
+      const named = brandKey.length >= 3 && lower.includes(brandKey);
+      if (!cue && !driver) continue;
+      if (!named && !driver) continue;
+      const score = (cue ? 2 : 0) + (driver ? 2 : 0) + (named ? 1 : 0);
+      if (!best || score > best.score) best = { text: sentence, score };
+    }
+    if (!best) continue;
+    const key = best.text.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    scored.push(best);
+  }
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit)
+    .map((s) => s.text);
+}
+
 function topSentimentDrivers(promptResults: PromptResultInput[], limit = 3): string[] {
   const counts = new Map<string, number>();
   for (const result of promptResults) {
@@ -1047,41 +1053,10 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
-  // RECS-2B / N1 (prominence gap): the brand IS mentioned, but a specific
-  // named competitor consistently ranks ahead of it. Independent of the
-  // close_competitor_gap block above — that one only fires when the brand is
-  // ABSENT, this one only when it's present but overshadowed — so a prompt
-  // can never generate both cards.
-  const prominenceGaps = computeProminenceGap(promptResults, input.competitors);
-  for (const entry of prominenceGaps) {
-    const impact: "high" | "medium" = entry.prompts.length >= 3 ? "high" : "medium";
-    candidates.push({
-      title: `Adelanta a ${entry.competitor}: sales después en ${entry.prompts.length} respuestas`,
-      description: `Ya te mencionan, pero la IA nombra antes a ${entry.competitor}. Aparecer primero pesa mucho más que aparecer.`,
-      rule_id: "rule_prominence_001",
-      recommendation_type: "increase_brand_prominence",
-      dedupeKey: `increase_brand_prominence:${entry.competitor.trim().toLowerCase()}`,
-      impact,
-      effort: "medium",
-      confidence: runScore.confidence,
-      source_type: "rule",
-      affectedCount: entry.prompts.length,
-      severityScore: entry.prompts.length * 16 + confWeight(runScore.confidence) * 3,
-      evidence_json: buildEvidenceJson({
-        ruleId: "rule_prominence_001",
-        scoreDetails,
-        runScore,
-        affected: entry.prompts,
-        assumptions: [
-          `${entry.competitor} aparece con mayor prominencia que tu marca en ${entry.prompts.length} respuestas donde ambos se mencionan.`
-        ],
-        whyThisMatters: `Quien lee la respuesta se queda con el primer nombre. Estar detrás de ${entry.competitor} te deja fuera de la decisión aunque aparezcas.`,
-        firstStep: `Compara tu página con la de ${entry.competitor} en estas consultas: qué responde antes, con qué datos y en qué formato.`,
-        extra: { dominant_competitor: entry.competitor },
-        snippetSource: "brand"
-      })
-    });
-  }
+  // RECS-HEADLINES-1 (log §354): "increase_brand_prominence" (a named
+  // competitor ranks ahead of a brand already mentioned) is no longer emitted.
+  // The order of names is the engine's call and the card had no deliverable
+  // the customer can make. The position stays visible in Competidores.
 
   // RECS-4A / N6 (emerging competitors): a real brand the AI surfaces
   // recurringly that isn't in the project's tracked competitor list.
@@ -1413,7 +1388,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
           drivers.length > 0
             ? `Publica una página que explique tu posición sobre ${drivers[0]} con datos concretos y verificables.`
             : "Publica una página que responda con datos concretos a la objeción que aparece en estas respuestas.",
-        snippetSource: "brand",
+        snippetSource: "none",
+        snippets: negativeExcerpts(negativePrompts, input.project.brand, drivers),
         extra: { sentiment_drivers: drivers }
       })
     });
@@ -1460,41 +1436,8 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
     });
   }
 
-  // RECS-2B / N4 ("amplify what works"): only worth surfacing when there's
-  // still an open gap elsewhere to apply the pattern to — on an
-  // already-perfect run "replicate this" has nothing left to replicate
-  // toward. severityScore is deliberately low so this never crowds out a
-  // real gap-fix card, only fills the backlog when there's room.
-  const winningPrompts = computeWinningPattern(promptResults, input.project.domain);
-  const hasOpenGap =
-    brandMissing.length > 0 || promptResults.some((p) => isOwnCitationGap(p, input.project.domain));
-  if (winningPrompts.length >= 2 && hasOpenGap) {
-    candidates.push({
-      title: `Repite lo que ya te funciona en ${questionsLabel(countQuestions(winningPrompts))}`,
-      description: `En estas consultas la IA te menciona y te cita. Mira qué tienen en común esas páginas y aplica la misma fórmula donde todavía no apareces.`,
-      rule_id: "rule_amplify_positive_001",
-      recommendation_type: "amplify_positive_pattern",
-      dedupeKey: "amplify_positive_pattern",
-      impact: "medium",
-      effort: "low",
-      confidence: runScore.confidence,
-      source_type: "rule",
-      affectedCount: winningPrompts.length,
-      severityScore: winningPrompts.length * 6 + confWeight(runScore.confidence) * 2,
-      evidence_json: buildEvidenceJson({
-        ruleId: "rule_amplify_positive_001",
-        scoreDetails,
-        runScore,
-        affected: winningPrompts,
-        assumptions: [`La IA te menciona y cita tu web, sin narrativa negativa, en ${answersLabel(winningPrompts.length)}.`],
-        whyThisMatters:
-          "Ya tienes la receta probada en tu propio dominio. Copiarla es más barato y más seguro que inventar un formato nuevo.",
-        firstStep:
-          "Abre las páginas que la IA cita en estas consultas y anota el patrón: formato, longitud y qué dato concreto usan.",
-        snippetSource: "brand"
-      })
-    });
-  }
+  // RECS-HEADLINES-1 (log §354): "amplify_positive_pattern" is no longer
+  // emitted. «Look at what your good pages share» is an analysis, not a task.
 
   const byKey = new Map<string, CandidateRec>();
   for (const rec of candidates) {

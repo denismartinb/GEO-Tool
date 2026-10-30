@@ -69,6 +69,9 @@ export const AGENTIC_CHECK_LIMITS: PublicCheckLimits = {
   perDomainPerDay: 5
 };
 
+/** Mirrors `lib/studies/study-api-cap.ts` (kept literal: that module is server-only). */
+const STUDY_API_ENGINE = "study_api";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_PREFIX = "[geo:free-checker-rate-limit]";
 
@@ -160,7 +163,12 @@ export async function checkPublicCheckLimits(
       .from("public_checks")
       .select("id", { count: "exact", head: true })
       .gte("created_at", windowStart);
-    query = deps.engine ? query.eq("engine", deps.engine) : query.neq("engine", AGENTIC_CHECK_ENGINE);
+    // STUDY-API-1: the internal study API keeps its own ceiling rows in this
+    // table (`lib/studies/study-api-cap.ts`); they must not eat the public
+    // checker's global ceiling or its per-domain count.
+    query = deps.engine
+      ? query.eq("engine", deps.engine)
+      : query.not("engine", "in", `(${AGENTIC_CHECK_ENGINE},${STUDY_API_ENGINE})`);
     if (column && value !== undefined) query = query.eq(column, value);
     return query;
   };

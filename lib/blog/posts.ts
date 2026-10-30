@@ -789,6 +789,56 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de los consumidores españoles confían en que la IA haga una compra por ellos estas fiestas.",
       source: "Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)"
     }
+  },
+  {
+    slug: "la-ia-prefiere-contenido-reciente",
+    title: "¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas",
+    seoTitle: "¿La IA prefiere contenido reciente? Lo que dicen los datos",
+    metaDescription:
+      "El 75% de las páginas que cita la IA se actualizó en el último año, pero solo el 42% es nuevo. Qué dicen los datos y cómo mantener tu contenido al día.",
+    description:
+      "ChatGPT, Gemini y Perplexity citan sobre todo páginas actualizadas en el último año, y la mayoría no son nuevas: son páginas antiguas puestas al día. Qué dicen los estudios de Seer Interactive, Ahrefs y la Universidad de Waseda, por qué cambiar la fecha no basta y cómo declarar la fecha de actualización para que Google y la IA la lean.",
+    datePublished: "2026-10-26",
+    coverImage: "/blog/la-ia-prefiere-contenido-reciente/cover.webp",
+    coverIcon: "calendar",
+    // BLOG-FRESH-1 (log §348). Seer Interactive, Study: Content Recency's
+    // Impact on AI Visibility in 2026 (Jul 2026); Ahrefs, AI Assistants Prefer
+    // to Cite "Fresher" Content (Jul 2025); Fang et al., Waseda University,
+    // arXiv:2509.11353 (Sep 2025); Google Search Central (publication dates,
+    // helpful content). The JSON-LD example lives in
+    // lib/blog/article-dates-jsonld.ts and is tested against checkFreshness
+    // (lib/web-audit/page-checks.ts), which backs the product claims.
+    primaryKeyword: "la ia prefiere contenido reciente",
+    cluster: "medicion",
+    heroStat: {
+      value: "75%",
+      label: "de las páginas que citan ChatGPT, Gemini y Perplexity se actualizó en el último año. Solo el 42% se publicó en ese plazo.",
+      source: "Seer Interactive, 47.097 citas en cuatro sectores (marzo a junio de 2026)"
+    }
+  },
+  {
+    slug: "convierte-mejor-el-trafico-de-la-ia",
+    title: "¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden",
+    seoTitle: "¿Convierte mejor el tráfico de la IA? Qué dicen los datos",
+    metaDescription:
+      "Adobe ve un 60% más de conversión en las visitas que llegan de la IA; otro estudio, menos que la búsqueda orgánica. Por qué no coinciden y cómo medir la tuya.",
+    description:
+      "Adobe, Shopify y Ahrefs dicen que las visitas que llegan desde ChatGPT y otros asistentes convierten más que el resto; un estudio académico sobre 973 tiendas dice que menos que la búsqueda orgánica. Qué mide cada uno, por qué no coinciden y cómo medir el tráfico de IA de tu propia web.",
+    datePublished: "2026-10-30",
+    coverImage: "/blog/convierte-mejor-el-trafico-de-la-ia/cover.webp",
+    coverIcon: "chart",
+    // BLOG-CONVERT-1 (log §360). Adobe Digital Insights, AI Traffic Trends
+    // Report (Aug 2026); Shopify, AI search category behavior (Aug 2026);
+    // Ahrefs, Does AI Search Traffic Convert Better (Jun 2025); Kaiser and
+    // Schulze, Marketing Science (2026), doi 10.1287/mksc.2025.0489. The GA4
+    // condition reuses GA4_AI_SOURCE_REGEX, already tested for the S8 post.
+    primaryKeyword: "convierte mejor el tráfico de la ia",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "60%",
+      label: "más de conversión en las visitas a tiendas online de EE. UU. que llegan desde la IA, frente al resto del tráfico.",
+      source: "Adobe Digital Insights, más de un billón de visitas a webs de comercio de EE. UU. (julio de 2026)"
+    }
   }
 ];
 
