@@ -84,6 +84,10 @@ export default function PrivacidadPage() {
         extensión no guarda contraseñas, no vende datos y no los usa para publicidad ni para fines
         distintos de su función.
       </p>
+      <p>
+        El uso de la información que trata esta extensión se rige por la Política de datos de
+        usuario de Chrome Web Store, incluidos sus requisitos de uso limitado (Limited Use).
+      </p>
 
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>
       <p>Para prestar el servicio, algunos datos se comparten con los siguientes proveedores, que actúan como encargados del tratamiento:</p>
