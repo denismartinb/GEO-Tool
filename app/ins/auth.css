@@ -100,3 +100,11 @@
 .ins .au-step-form .au-p{margin-top:28px}
 .ins .au-lnk-inline{color:var(--ink);font-weight:600;background:linear-gradient(var(--blue),var(--blue)) 0 100%/100% 1px no-repeat}
 .ins .au-btn .lbl{display:inline-flex;align-items:center;justify-content:center;gap:10px}
+
+/* App splash (log §382): while it runs the form waits, the entrance is the same ins-auin once released. */
+.ins .sc-auth[data-splash] .au-cv{transition:opacity .5s ease}
+.ins .sc-auth[data-splash="run"] .au-cv{opacity:0}
+.ins .sc-auth[data-splash] .au-col>.au-lock{animation:none}
+.ins .sc-auth[data-splash="run"] .au-lock>*{opacity:0;animation:ins-aufail 1ms 6s both}
+.ins .sc-auth[data-splash="run"] .au-col>*:not(.au-lock){opacity:0;animation:ins-aufail 1ms 6s both}
+@keyframes ins-aufail{from{opacity:0}to{opacity:1}}

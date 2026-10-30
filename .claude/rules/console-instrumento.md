@@ -108,3 +108,13 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   (`isAppModePathAllowed`): una página pública nueva no entra sola.
 - **Las acciones de pago se niegan en servidor**, no solo se esconden
   (`createCheckoutSession`, `createPortalSession`).
+
+## Splash de la app (APP-SPLASH-1, log §382)
+
+- **Solo en `/login`, solo dentro de la app (`gs_app`), una vez por apertura**, y
+  nunca la misma que la anterior. Con `prefers-reduced-motion` no sale.
+- **No bloquea el acceso**: un toque, «Saltar» o Esc llevan al formulario, y si
+  el JavaScript falla el formulario aparece a los 6 s.
+- **La G geométrica (`splash/g-mark.ts`) es de la splash y del login de la app.**
+  Sustituir `app/icon.svg` o las marcas del resto del producto no está aprobado.
+- **El movimiento es ambiente**: ninguna cifra ni barra representa un dato.
