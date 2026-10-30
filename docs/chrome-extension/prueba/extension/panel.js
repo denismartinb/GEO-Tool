@@ -226,7 +226,9 @@
   function headNo(host) { return `<div class="ph">${svgGs(20)}<span class="who">${host ? `<b>Esta página</b>${esc(host)}` : `<b class="wm">GenScore</b>`}</span><span class="lgin">Identifícate en <b class="wm">GenScore</b> para el análisis completo</span><button class="lnk" data-act="open" data-to="/login" data-c="login">Login</button></div>`; }
   /* The selector at the top says what the results below belong to (Denis,
      2026-10-30): the open page is one more option, next to the domains. */
-  function headAcct() {
+  /* idle: on a page that is not the console, before the icon is pressed. The
+     selector then names what to do here, not a domain (Denis, 2026-10-30). */
+  function headAcct(idle) {
     const d = curDom(), f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
     const doms = acctDomains(), cap = S.real ? S.real.domainCap : SAMPLE.cap;
     const brandFor = (x) => (S.real ? (S.real.domains.find((y) => y.domain === x) || {}).brand || brandOf(x) : brandOf(x));
@@ -235,10 +237,12 @@
     const days = S.real && S.real.trialEndsAt ? Math.max(0, Math.ceil((new Date(S.real.trialEndsAt) - Date.now()) / 864e5)) : null;
     const planLine = S.real ? (days != null ? `Prueba de ${esc(S.real.plan.name)} · ${days} ${days === 1 ? "día" : "días"}` : `Plan ${esc(S.real.plan.name)}`) : "Prueba de Pro · 7 días";
     const pageItem = f ? `<div class="mh" style="margin:6px 10px 4px">Página abierta</div><button class="dd-i ${onPage ? "on" : ""}" role="menuitem" data-tab="page">${tile(f.host)}<span class="t">${esc(f.host)}<span>${esc(pathLabel(f))}</span></span>${onPage ? ic("check", "sm ck") : ""}</button><div class="dd-sep"></div>` : "";
-    const domItem = (x) => { const on = x === d && !onPage; const act = S.real || x === d ? `data-pick="${esc(x)}"` : `data-act="sample-only" data-what="cambiar de dominio"`; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${act}>${tile(x)}<span class="t">${esc(brandFor(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; };
+    const domItem = (x) => { const on = x === d && !onPage && !idle; const act = S.real || x === d ? `data-pick="${esc(x)}"` : `data-act="sample-only" data-what="cambiar de dominio"`; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${act}>${tile(x)}<span class="t">${esc(brandFor(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; };
     const newDom = S.real ? `data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio"` : `data-act="sample-only" data-what="añadir un dominio"`;
     const menu = S.dd ? `<div class="dd-m" role="menu">${pageItem}<div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${cap}</span></div>${doms.map(domItem).join("")}<div class="dd-sep"></div>${isSample() && f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" ${newDom}><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${cap}</span></button><div class="mh" style="margin:8px 10px 4px">${planLine}</div></div>` : "";
-    const btn = onPage
+    const btn = idle
+      ? `<span class="fav pgi">${ic("scan", "sm")}</span><span class="t"><b>Analiza la página actual</b><span class="d sans">o elige uno de tus dominios</span></span>`
+      : onPage
       ? `${tile(f.host)}<span class="t"><b>${esc(f.host)}</b><span class="d">Página abierta · ${esc(pathLabel(f))}</span></span>`
       : d ? `${tile(d)}<span class="t"><b>${esc(brandFor(d))}</b><span class="d">${esc(d)}</span></span>`
       : `<span class="t"><b>Sin dominios</b><span class="d">Añade el primero en la consola</span></span>`;
@@ -264,7 +268,7 @@
   function viewIdle(paused) {
     const auto = S.autoOn && S.read ? "" : `<div class="autobox"><button class="rv" data-act="auto-on">${ic("eye", "sm")}<span>Escanear automáticamente las páginas</span></button>
       ${S.read ? "" : `<p class="tiny">Chrome te pedirá permiso para leer las webs.</p>`}</div>`;
-    return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused idleb">
+    return `<div class="px pfull">${acctOn() ? headAcct(!!S.real) : headNo("")}<div class="paused idleb">
       <div class="idlemain"><div class="minibar" aria-hidden="true"><i class="u"></i><span class="t">${PUZ}</span><span class="t g">${svgGs(14)}</span><i class="av"></i><i class="hit"></i>${CUR}</div>
       <h2>${paused || S.real ? "Para analizar la página actual, pulsa el icono de nuevo" : "Pulsa el icono"}</h2>
       <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>

@@ -27699,3 +27699,8 @@ en GenScore para el análisis completo», con «GenScore» en la letra del logo,
 lleva a `/login`. Se quita del pie la línea «Revisada en tu navegador… No pasa
 por ningún servidor». En la 0.6.5 la frase pasa a la cabecera, junto al botón,
 que se llama «Login» en vez de «Entrar», para que se lea como su motivo.
+
+**0.6.6 (Denis, 2026-10-30).** En la pantalla de reposo con sesión, el
+selector de arriba ya no enseña un dominio (confundía: no es de esa página).
+Dice «Analiza la página actual · o elige uno de tus dominios», y el
+desplegable sigue listando los dominios sin ninguno marcado.
