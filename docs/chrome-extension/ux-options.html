@@ -1,0 +1,629 @@
+<title>Extensión GenScore para Chrome</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700;800&display=swap">
+<style>
+/* Layout: one reading column. Each alternative = intro, three side-panel mocks (first click, with account, signup), then flow and trade-offs. Tokens follow the console "Estudio" line. */
+:root {
+  --canvas: #eceff4;
+  --shell: #fbfcfd;
+  --surface: #ffffff;
+  --ink: #101a2c;
+  --ink-2: #3c4a62;
+  --muted: #66758c;
+  --line: #e3e8f0;
+  --line-soft: #eef2f7;
+  --brand: #1068e0;
+  --brand-soft: rgba(16, 104, 224, .09);
+  --lane-ia: #1068e0;
+  --lane-ia-soft: rgba(16, 104, 224, .10);
+  --lane-g: #0d9488;
+  --lane-g-soft: rgba(13, 148, 136, .11);
+  --lane-a: #d97706;
+  --lane-a-soft: rgba(217, 119, 6, .12);
+  --pos: #15915a;
+  --pos-soft: #e6f5ed;
+  --neg: #d23b48;
+  --neg-soft: #fdecee;
+  --site: #e7ebf1;
+  --site-block: #d6dce6;
+  --shadow: 0 1px 2px rgba(16, 26, 44, .05), 0 14px 34px rgba(16, 26, 44, .10);
+  --hero-grad: linear-gradient(140deg, #eaf2ff 0%, #f4f0ff 55%, #eafaf7 100%);
+  --fg: #101a2c;
+  --f: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #0a1220; --shell: #101b2e; --surface: #15223a; --ink: #edf2fa; --ink-2: #c3cddd; --muted: #93a2b9;
+    --line: #24324b; --line-soft: #1c2940; --brand: #5b97ff; --brand-soft: rgba(91, 151, 255, .15);
+    --lane-ia: #5b97ff; --lane-ia-soft: rgba(91, 151, 255, .16); --lane-g: #2dd4bf; --lane-g-soft: rgba(45, 212, 191, .14);
+    --lane-a: #f59e0b; --lane-a-soft: rgba(245, 158, 11, .16); --pos: #3fbf83; --pos-soft: #12301f; --neg: #ff6b77; --neg-soft: #3a1820;
+    --site: #1a273e; --site-block: #26344f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 14px 34px rgba(0,0,0,.4);
+    --hero-grad: linear-gradient(140deg, #16274a 0%, #221d44 55%, #123236 100%); --fg: #edf2fa; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas: #0a1220; --shell: #101b2e; --surface: #15223a; --ink: #edf2fa; --ink-2: #c3cddd; --muted: #93a2b9;
+  --line: #24324b; --line-soft: #1c2940; --brand: #5b97ff; --brand-soft: rgba(91, 151, 255, .15);
+  --lane-ia: #5b97ff; --lane-ia-soft: rgba(91, 151, 255, .16); --lane-g: #2dd4bf; --lane-g-soft: rgba(45, 212, 191, .14);
+  --lane-a: #f59e0b; --lane-a-soft: rgba(245, 158, 11, .16); --pos: #3fbf83; --pos-soft: #12301f; --neg: #ff6b77; --neg-soft: #3a1820;
+  --site: #1a273e; --site-block: #26344f; --shadow: 0 1px 2px rgba(0,0,0,.3), 0 14px 34px rgba(0,0,0,.4);
+  --hero-grad: linear-gradient(140deg, #16274a 0%, #221d44 55%, #123236 100%); --fg: #edf2fa; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--canvas); color: var(--ink); font-family: var(--f); font-size: 15px; line-height: 1.55; }
+.wrap { max-width: 1160px; margin: 0 auto; padding-block: 40px 80px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 28px; }
+h1, h2, h3 { margin: 0; letter-spacing: -.015em; text-wrap: balance; }
+h1 { font-size: clamp(30px, 5vw, 46px); line-height: 1.05; font-weight: 800; }
+h2 { font-size: clamp(24px, 3.4vw, 32px); line-height: 1.1; font-weight: 800; }
+h3 { font-size: 17px; font-weight: 700; }
+p { margin: 0; max-width: 70ch; }
+.eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); }
+.lede { font-size: 17px; color: var(--ink-2); }
+.note { font-size: 13px; color: var(--muted); }
+.card { background: var(--shell); border: 1px solid var(--line); border-radius: 28px; padding: clamp(18px, 3vw, 32px); box-shadow: var(--shadow); display: grid; gap: 18px; min-width: 0; }
+.principles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.pr { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; gap: 6px; }
+.pr b { font-size: 15px; }
+.pr span { font-size: 14px; color: var(--ink-2); }
+.layers { width: 100%; border-collapse: collapse; font-size: 14px; }
+.layers th, .layers td { text-align: left; padding: 10px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+.layers th { font-size: 12px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; border-top: 0; }
+.tablewrap { overflow-x: auto; }
+
+/* Option header */
+.opt-head { display: grid; gap: 10px; }
+.opt-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--brand); }
+.opt-tag i { width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; font-style: normal; display: grid; place-items: center; font-size: 14px; }
+.rec-badge { margin-left: 6px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--pos-soft); color: var(--pos); }
+
+/* Panel mocks */
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 18px; align-items: start; }
+.mock { display: grid; gap: 10px; justify-items: center; min-width: 0; }
+.mock-cap { font-size: 13px; font-weight: 600; color: var(--muted); text-align: center; }
+.px { width: 100%; max-width: 340px; min-height: 700px; background: var(--shell); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); overflow: hidden; display: flex; flex-direction: column; position: relative; font-size: 13px; }
+.px-top { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 1px solid var(--line-soft); }
+.g-logo { width: 24px; height: 24px; border-radius: 8px; background: linear-gradient(135deg, #1068e0, #09c5d6); color: #fff; font-weight: 800; font-size: 13px; display: grid; place-items: center; flex: none; }
+.px-dom { font-weight: 600; font-size: 12.5px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.px-dom small { display: block; font-weight: 500; color: var(--muted); font-size: 11px; }
+.px-av { margin-left: auto; width: 24px; height: 24px; border-radius: 50%; background: var(--line); flex: none; font-size: 11px; display: grid; place-items: center; color: var(--muted); font-weight: 700; }
+.px-av.on { background: var(--brand-soft); color: var(--brand); }
+.px-body { padding: 14px; display: grid; gap: 12px; align-content: start; flex: 1; overflow: hidden; }
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.ia { background: var(--lane-ia-soft); color: var(--lane-ia); }
+.chip.g { background: var(--lane-g-soft); color: var(--lane-g); }
+.chip.a { background: var(--lane-a-soft); color: var(--lane-a); }
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; border-radius: 999px; padding: 10px 14px; font-weight: 700; font-size: 13px; background: var(--brand); color: #fff; border: 0; }
+.btn.ghost { background: transparent; color: var(--brand); border: 1px solid var(--line); }
+.muted { color: var(--muted); }
+.eng { width: 18px; height: 18px; flex: none; --fg: var(--ink); }
+.eng-row { display: flex; gap: 6px; align-items: center; }
+.sample { position: absolute; top: 10px; right: 46px; font-size: 9.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); background: var(--line-soft); padding: 2px 7px; border-radius: 999px; }
+
+/* A · Estudio */
+.hero { background: var(--hero-grad); border-radius: 20px; padding: 14px; display: grid; gap: 10px; }
+.hero-top { display: flex; align-items: center; gap: 12px; }
+.orb { width: 52px; height: 52px; border-radius: 50%; flex: none; background: radial-gradient(circle at 32% 28%, #ffffff 0 10%, #8fc1ff 30%, #1068e0 68%, #0a3f8f 100%); box-shadow: inset -6px -8px 14px rgba(0,0,0,.18), 0 8px 18px rgba(16,104,224,.35); color: #fff; font-weight: 800; font-size: 20px; display: grid; place-items: center; }
+.big { font-size: 40px; font-weight: 300; line-height: 1; letter-spacing: -.03em; }
+.big small { font-size: 14px; color: var(--muted); font-weight: 500; }
+.hero-line { font-size: 13px; color: var(--ink-2); }
+.plan { display: grid; gap: 6px; }
+.plan-h { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.pi { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; align-items: center; background: var(--surface); border-radius: 14px; padding: 8px 10px; }
+.pi > i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; background: var(--brand-soft); color: var(--brand); font-weight: 800; font-size: 11px; display: grid; place-items: center; }
+.pi b { font-size: 12.5px; font-weight: 600; display: block; line-height: 1.3; margin-bottom: 3px; }
+.pi .pts { font-weight: 800; color: var(--pos); font-size: 12px; }
+.lanes { display: grid; gap: 6px; }
+.lane { display: grid; grid-template-columns: 8px 1fr auto 12px; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.lane .dot { width: 8px; height: 8px; border-radius: 50%; }
+.lane b { font-size: 12.5px; font-weight: 600; }
+.lane span { font-size: 11.5px; color: var(--muted); display: block; }
+.lane .v { font-size: 18px; font-weight: 300; }
+.lane .ar { color: var(--muted); font-size: 12px; }
+.lane.open { border-color: var(--lane-ia); }
+.lane-detail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 2px 2px 0; }
+.ed { display: grid; justify-items: center; gap: 3px; font-size: 11px; font-weight: 700; }
+.ed .bar { width: 100%; height: 4px; border-radius: 4px; background: var(--line); position: relative; overflow: hidden; }
+.ed .bar i { position: absolute; inset: 0 auto 0 0; background: var(--lane-ia); border-radius: 4px; }
+.teaser { border: 1px dashed var(--line); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+.teaser b { font-size: 13px; }
+
+/* Sheet (signup moment) */
+.scrim { position: absolute; inset: 0; background: rgba(16, 26, 44, .38); }
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--shell); border-radius: 22px 22px 0 0; padding: 16px 16px 18px; display: grid; gap: 10px; box-shadow: 0 -10px 30px rgba(0,0,0,.18); }
+.grab { width: 36px; height: 4px; border-radius: 4px; background: var(--line); justify-self: center; }
+.sheet h4 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.01em; line-height: 1.2; }
+.field { border: 1px solid var(--line); border-radius: 12px; padding: 9px 12px; font-size: 13px; display: flex; justify-content: space-between; background: var(--surface); }
+.field small { color: var(--pos); font-weight: 700; }
+.gets { display: grid; gap: 6px; font-size: 12.5px; }
+.gets div { display: flex; gap: 8px; align-items: center; }
+.gets .chip { flex: none; }
+.fine { font-size: 11px; color: var(--muted); text-align: center; }
+.dim { filter: blur(1.5px); opacity: .55; }
+
+/* B · Mapa */
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--line-soft); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg span { text-align: center; font-size: 12px; font-weight: 700; padding: 6px 0; border-radius: 999px; color: var(--muted); }
+.seg span.on { background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.seg span.on.ia { color: var(--lane-ia); }
+.orbit { position: relative; height: 250px; border-radius: 20px; background: radial-gradient(circle at 50% 50%, var(--brand-soft) 0 22%, transparent 23%), var(--surface); border: 1px solid var(--line); overflow: hidden; }
+.orbit svg.rings { position: absolute; inset: 0; width: 100%; height: 100%; }
+.node { position: absolute; transform: translate(-50%, -50%); display: grid; justify-items: center; gap: 2px; font-size: 10.5px; font-weight: 700; text-align: center; }
+.node .ic { width: 36px; height: 36px; border-radius: 50%; background: var(--shell); border: 1px solid var(--line); display: grid; place-items: center; box-shadow: 0 4px 10px rgba(0,0,0,.06); position: relative; }
+.node .ic .eng { width: 18px; height: 18px; }
+.node .st { position: absolute; right: -2px; bottom: -2px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--shell); }
+.st.ok { background: var(--pos); }
+.st.ko { background: var(--neg); }
+.node.center .ic { width: 64px; height: 64px; background: var(--brand); color: #fff; border: 0; font-size: 12px; font-weight: 800; box-shadow: 0 10px 24px rgba(16,104,224,.35); }
+.node.center.empty .ic { background: var(--shell); color: var(--muted); border: 2px dashed var(--line); box-shadow: none; font-size: 20px; }
+.rival { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; background: var(--line); display: grid; place-items: center; font-size: 9.5px; font-weight: 700; color: var(--ink-2); }
+.verdict { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.mini-list { display: grid; gap: 6px; }
+.ml { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 12.5px; }
+.ml b { font-weight: 600; }
+.legend { display: flex; gap: 12px; font-size: 11px; color: var(--muted); }
+.legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; vertical-align: 0; }
+
+/* C · Foco */
+.instr { display: grid; gap: 6px; }
+.instr-row { display: flex; align-items: baseline; justify-content: space-between; }
+.huge { font-size: 64px; font-weight: 300; line-height: .95; letter-spacing: -.04em; }
+.ticks { display: grid; grid-template-columns: repeat(40, 1fr); gap: 2px; height: 18px; align-items: end; }
+.ticks i { background: var(--line); border-radius: 1px; height: 100%; }
+.ticks i.on { background: var(--brand); }
+.eng-ticks { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.et { display: grid; gap: 4px; justify-items: start; font-size: 11px; font-weight: 700; }
+.et .bar { width: 100%; height: 3px; background: var(--line); border-radius: 3px; position: relative; }
+.et .bar i { position: absolute; inset: 0 auto 0 0; background: var(--ink); border-radius: 3px; }
+.deck { position: relative; height: 360px; }
+.deck .back { position: absolute; left: 12px; right: 12px; top: 0; height: 40px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); }
+.deck .back.b2 { left: 22px; right: 22px; top: -8px; opacity: .6; }
+.fc { position: absolute; inset: 10px 0 0 0; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); padding: 16px; display: grid; gap: 10px; align-content: start; }
+.fc-top { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); font-weight: 600; }
+.fc h5 { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; }
+.fc p { font-size: 12.5px; color: var(--ink-2); }
+.evid { font-size: 11.5px; color: var(--muted); border-left: 2px solid var(--line); padding-left: 8px; }
+.slide { margin-top: 4px; height: 44px; border-radius: 999px; background: var(--brand-soft); position: relative; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--brand); }
+.slide .knob { position: absolute; left: 4px; top: 4px; width: 36px; height: 36px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center; font-size: 15px; }
+.fc-foot { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--brand); }
+.lock { display: grid; gap: 10px; justify-items: start; }
+.lock .engs { display: flex; gap: 10px; }
+.lock .engs span { width: 38px; height: 38px; border-radius: 12px; background: var(--line-soft); display: grid; place-items: center; }
+
+/* Flow and trade-offs */
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.box h3 { font-size: 15px; }
+.box ol, .box ul { margin: 0; padding-left: 18px; display: grid; gap: 5px; font-size: 14px; color: var(--ink-2); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.pill { font-size: 12.5px; font-weight: 600; padding: 5px 12px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); }
+.pill b { color: var(--brand); }
+.compare { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 620px; }
+.compare th, .compare td { padding: 10px 8px; border-top: 1px solid var(--line); text-align: left; vertical-align: top; }
+.compare thead th { border-top: 0; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.compare td.win { color: var(--pos); font-weight: 700; }
+.reco { background: var(--hero-grad); }
+.reco ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; }
+@media (max-width: 560px) {
+  .px { height: auto; min-height: 560px; }
+  .px-body { overflow: visible; }
+}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="e-chatgpt" viewBox="0 0 256 260"><path style="fill:var(--fg)" d="M239.183914,106.202783 C245.054304,88.5242096 243.02228,69.1733805 233.607599,53.0998864 C219.451678,28.4588021 190.999703,15.7836129 163.213007,21.739505 C147.554077,4.32145883 123.794909,-3.42398554 100.87901,1.41873898 C77.9631105,6.26146349 59.3690093,22.9572536 52.0959621,45.2214219 C33.8436494,48.9644867 18.0901721,60.392749 8.86672513,76.5818033 C-5.443491,101.182962 -2.19544431,132.215255 16.8986662,153.320094 C11.0060865,170.990656 13.0197283,190.343991 22.4238231,206.422991 C36.5975553,231.072344 65.0680342,243.746566 92.8695738,237.783372 C105.235639,251.708249 123.001113,259.630942 141.623968,259.52692 C170.105359,259.552169 195.337611,241.165718 204.037777,214.045661 C222.28734,210.296356 238.038489,198.869783 247.267014,182.68528 C261.404453,158.127515 258.142494,127.262775 239.183914,106.202783 L239.183914,106.202783 Z M141.623968,242.541207 C130.255682,242.559177 119.243876,238.574642 110.519381,231.286197 L112.054146,230.416496 L163.724595,200.590881 C166.340648,199.056444 167.954321,196.256818 167.970781,193.224005 L167.970781,120.373788 L189.815614,133.010026 C190.034132,133.121423 190.186235,133.330564 190.224885,133.572774 L190.224885,193.940229 C190.168603,220.758427 168.442166,242.484864 141.623968,242.541207 Z M37.1575749,197.93062 C31.456498,188.086359 29.4094818,176.546984 31.3766237,165.342426 L32.9113895,166.263285 L84.6329973,196.088901 C87.2389349,197.618207 90.4682717,197.618207 93.0742093,196.088901 L156.255402,159.663793 L156.255402,184.885111 C156.243557,185.149771 156.111725,185.394602 155.89729,185.550176 L103.561776,215.733903 C80.3054953,229.131632 50.5924954,221.165435 37.1575749,197.93062 Z M23.5493181,85.3811273 C29.2899861,75.4733097 38.3511911,67.9162648 49.1287482,64.0478825 L49.1287482,125.438515 C49.0891492,128.459425 50.6965386,131.262556 53.3237748,132.754232 L116.198014,169.025864 L94.3531808,181.662102 C94.1132325,181.789434 93.8257461,181.789434 93.5857979,181.662102 L41.3526015,151.529534 C18.1419426,138.076098 10.1817681,108.385562 23.5493181,85.125333 L23.5493181,85.3811273 Z M203.0146,127.075598 L139.935725,90.4458545 L161.7294,77.8607748 C161.969348,77.7334434 162.256834,77.7334434 162.496783,77.8607748 L214.729979,108.044502 C231.032329,117.451747 240.437294,135.426109 238.871504,154.182739 C237.305714,172.939368 225.050719,189.105572 207.414262,195.67963 L207.414262,134.288998 C207.322521,131.276867 205.650697,128.535853 203.0146,127.075598 Z M224.757116,94.3850867 L223.22235,93.4642272 L171.60306,63.3828173 C168.981293,61.8443751 165.732456,61.8443751 163.110689,63.3828173 L99.9806554,99.8079259 L99.9806554,74.5866077 C99.9533004,74.3254088 100.071095,74.0701869 100.287609,73.9215426 L152.520805,43.7889738 C168.863098,34.3743518 189.174256,35.2529043 204.642579,46.0434841 C220.110903,56.8340638 227.949269,75.5923959 224.757116,94.1804513 L224.757116,94.3850867 Z M88.0606409,139.097931 L66.2158076,126.512851 C65.9950399,126.379091 65.8450965,126.154176 65.8065367,125.898945 L65.8065367,65.684966 C65.8314495,46.8285367 76.7500605,29.6846032 93.8270852,21.6883055 C110.90411,13.6920079 131.063833,16.2835462 145.5632,28.338998 L144.028434,29.2086986 L92.3579852,59.0343142 C89.7419327,60.5687513 88.1282597,63.3683767 88.1117998,66.4011901 L88.0606409,139.097931 Z M99.9294965,113.5185 L128.06687,97.3011417 L156.255402,113.5185 L156.255402,145.953218 L128.169187,162.170577 L99.9806554,145.953218 L99.9294965,113.5185 Z"/></symbol>
+<symbol id="e-gemini" viewBox="0 0 24 24"><linearGradient id="gmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4285F4"/><stop offset=".52" stop-color="#9B72CB"/><stop offset="1" stop-color="#D96570"/></linearGradient><path fill="url(#gmg)" d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></symbol>
+<symbol id="e-claude" viewBox="0 0 256 257"><path fill="#D97757" d="M50.2278481,170.321013 L100.585316,142.063797 L101.427848,139.601013 L100.585316,138.24 L98.1225316,138.24 L89.6972152,137.721519 L60.921519,136.943797 L35.9696203,135.906835 L11.795443,134.610633 L5.70329114,133.31443 L0,125.796456 L0.583291139,122.037468 L5.70329114,118.602532 L13.0268354,119.250633 L29.2293671,120.352405 L53.5331646,122.037468 L71.161519,123.07443 L97.28,125.796456 L101.427848,125.796456 L102.011139,124.111392 L100.585316,123.07443 L99.4835443,122.037468 L74.3372152,104.992405 L47.116962,86.9751899 L32.8587342,76.6055696 L25.1463291,71.3559494 L21.2577215,66.4303797 L19.5726582,55.6718987 L26.5721519,47.9594937 L35.9696203,48.6075949 L38.3675949,49.2556962 L47.8946835,56.5792405 L68.2450633,72.3281013 L94.8172152,91.9007595 L98.7058228,95.1412658 L100.261266,94.0394937 L100.455696,93.2617722 L98.7058228,90.3453165 L84.2531646,64.2268354 L68.8283544,37.6546835 L61.958481,26.636962 L60.1437975,20.0263291 C59.4956962,17.3043038 59.0420253,15.0359494 59.0420253,12.2491139 L67.0136709,1.42582278 L71.4207595,-1.42108547e-14 L82.0496203,1.42582278 L86.521519,5.31443038 L93.1321519,20.4151899 L103.825823,44.2005063 L120.417215,76.5407595 L125.277975,86.1326582 L127.87038,95.0116456 L128.842532,97.7336709 L130.527595,97.7336709 L130.527595,96.1782278 L131.888608,77.9665823 L134.416203,55.6070886 L136.878987,26.8313924 L137.721519,18.7301266 L141.739747,9.00860759 L149.711392,3.75898734 L155.933165,6.74025316 L161.053165,14.0637975 L160.340253,18.7949367 L157.294177,38.5620253 L151.331646,69.5412658 L147.443038,90.2805063 L149.711392,90.2805063 L152.303797,87.6881013 L162.803038,73.7539241 L180.431392,51.718481 L188.208608,42.9691139 L197.282025,33.3124051 L203.114937,28.7108861 L214.132658,28.7108861 L222.233924,40.7655696 L218.604557,53.2091139 L207.262785,67.596962 L197.865316,79.7812658 L184.38481,97.9281013 L175.959494,112.44557 L176.737215,113.612152 L178.746329,113.417722 L209.207089,106.936709 L225.668861,103.955443 L245.306329,100.585316 L254.185316,104.733165 L255.157468,108.945823 L251.657722,117.56557 L230.659241,122.75038 L206.031392,127.675949 L169.348861,136.360506 L168.89519,136.684557 L169.413671,137.332658 L185.940253,138.888101 L193.004557,139.276962 L210.308861,139.276962 L242.519494,141.674937 L250.94481,147.248608 L256,154.053671 L255.157468,159.238481 L242.195443,165.849114 L224.696709,161.701266 L183.866329,151.979747 L169.867342,148.48 L167.923038,148.48 L167.923038,149.646582 L179.588861,161.053165 L200.976203,180.366582 L227.742785,205.253671 L229.103797,211.410633 L225.668861,216.271392 L222.039494,215.752911 L198.513418,198.059747 L189.44,190.088101 L168.89519,172.783797 L167.534177,172.783797 L167.534177,174.598481 L172.265316,181.533165 L197.282025,219.123038 L198.578228,230.659241 L196.763544,234.418228 L190.282532,236.686582 L183.153418,235.39038 L168.506329,214.84557 L153.40557,191.708354 L141.221266,170.969114 L139.730633,171.811646 L132.536709,249.259747 L129.166582,253.213165 L121.389367,256.19443 L114.908354,251.268861 L111.473418,243.297215 L114.908354,227.548354 L119.056203,207.003544 L122.426329,190.671392 L125.472405,170.385823 L127.287089,163.64557 L127.157468,163.191899 L125.666835,163.386329 L110.371646,184.38481 L87.1048101,215.817722 L68.6987342,235.52 L64.2916456,237.269873 L56.6440506,233.316456 L57.356962,226.252152 L61.6344304,219.96557 L87.1048101,187.560506 L102.46481,167.469367 L112.380759,155.868354 L112.315949,154.183291 L111.732658,154.183291 L44.0708861,198.124557 L32.0162025,199.68 L26.8313924,194.819241 L27.4794937,186.847595 L29.9422785,184.25519 L50.2926582,170.256203 L50.2278481,170.321013 Z"/></symbol>
+<symbol id="e-perplexity" viewBox="0 0 24 24"><path fill="#20808D" d="M22.3977 7.0896h-2.3106V.0676l-7.5094 6.3542V.1577h-1.1554v6.1966L4.4904 0v7.0896H1.6023v10.3976h2.8882V24l6.932-6.3591v6.2005h1.1554v-6.0469l6.9318 6.1807v-6.4879h2.8882V7.0896zm-3.4657-4.531v4.531h-5.355l5.355-4.531zm-13.2862.0676 4.8691 4.4634H5.6458V2.6262zM2.7576 16.332V8.245h7.8476l-6.1149 6.1147v1.9723H2.7576zm2.8882 5.0404v-3.8852h.0001v-2.6488l5.7763-5.7764v7.0111l-5.7764 5.2993zm12.7086.0248-5.7766-5.1509V9.0618l5.7766 5.7766v6.5588zm2.8882-5.0652h-1.733v-1.9723L13.3948 8.245h7.8478v8.087z"/></symbol>
+</svg>
+
+<main class="wrap">
+
+<header class="card" style="background: var(--hero-grad);">
+  <span class="eyebrow">CHROME-EXT-1 · revisión 2</span>
+  <h1>Toda la potencia de GenScore en un panel que se entiende al primer vistazo</h1>
+  <p class="lede">Tres alternativas para el panel lateral de la extensión, cada una basada en una de las líneas de la consola profesional: <b>Estudio</b>, <b>Mapa de la IA</b> e <b>Instrumento</b>. Las tres enseñan los cuatro motores, Google (Search Console y DataForSEO) y el comercio agéntico, pero nunca a la vez.</p>
+  <p class="note">Todas las cifras, dominios y marcas de las maquetas son de ejemplo. El panel mide unos 360 px de ancho, como el panel lateral de Chrome.</p>
+</header>
+
+<section class="card">
+  <h2>La regla que comparten las tres</h2>
+  <div class="principles">
+    <div class="pr"><b>Una respuesta por pantalla</b><span>Lo primero que se ve es una frase y una cifra. El detalle aparece sólo al pedirlo.</span></div>
+    <div class="pr"><b>Tres carriles, siempre los mismos</b><span>IA (azul), Google (verde azulado) y Agentes (ámbar), con los mismos colores y nombres que la consola.</span></div>
+    <div class="pr"><b>Nada se inventa en el panel</b><span>Los cuatro motores salen de tu último escaneo, no de una consulta en vivo. Sin cuenta, el panel sólo enseña lo que puede leer de la página.</span></div>
+    <div class="pr"><b>Registro en el momento justo</b><span>La cuenta se pide cuando la siguiente respuesta necesita un escaneo, con tu dominio ya escrito.</span></div>
+  </div>
+  <div class="tablewrap">
+    <table class="layers">
+      <thead><tr><th>Capa</th><th>IA</th><th>Google</th><th>Agentes</th></tr></thead>
+      <tbody>
+        <tr><td><b>Sin cuenta</b><br><span class="note">en el navegador, coste cero</span></td><td>Si GPTBot, Google-Extended, ClaudeBot y PerplexityBot pueden leer la página, llms.txt y contenido citable</td><td>Título, descripción, indexación, canonical, encabezados y datos estructurados</td><td>Señales de compra de la página: producto, precio, stock y botón de compra</td></tr>
+        <tr><td><b>Con cuenta, tu dominio</b><br><span class="note">lee lo que el proyecto ya tiene</span></td><td>Puntuación GEO y cómo te nombra cada motor (ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity)</td><td>Puesto y clics de esta página según Search Console, y tus palabras vigiladas con DataForSEO</td><td>Visibilidad agéntica y preguntas de compra</td></tr>
+        <tr><td><b>Con cuenta, otra web</b></td><td>Si es un rival tuyo: cómo le nombran frente a ti</td><td>En Pro y Agencia: sus palabras en Google con DataForSEO</td><td>Su nota agéntica frente a la tuya</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ A · ESTUDIO ============ -->
+<section class="card" id="a">
+  <div class="opt-head">
+    <span class="opt-tag"><i>A</i> Basada en «Estudio» <span class="rec-badge">Recomendada</span></span>
+    <h2>Una nota y tu plan</h2>
+    <p class="lede">Arriba, la nota y las tres cosas que más suben. Debajo, los tres carriles cerrados en una línea cada uno. Se abre el que interesa.</p>
+  </div>
+
+  <div class="panels">
+    <!-- A1 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body">
+          <div class="hero">
+            <div class="hero-top"><span class="orb">G</span><div><div class="big">68<small> /100</small></div><div class="hero-line">Nota SEO + IA de esta página</div></div></div>
+            <div class="hero-line">Google la entiende bien. A la IA y a los agentes les falta información.</div>
+          </div>
+          <div class="plan">
+            <span class="plan-h">Lo primero que arreglar</span>
+            <div class="pi"><i>1</i><div><b>Perplexity no puede leer esta página</b><span class="chip ia">IA</span></div><span class="pts">+12</span></div>
+            <div class="pi"><i>2</i><div><b>El precio no está en los datos de producto</b><span class="chip a">Agentes</span></div><span class="pts">+6</span></div>
+            <div class="pi"><i>3</i><div><b>Falta la descripción para Google</b><span class="chip g">Google</span></div><span class="pts">+5</span></div>
+          </div>
+          <div class="lanes">
+            <div class="lane"><span class="dot" style="background:var(--lane-ia)"></span><div><b>IA</b><span>Pueden leerla 3 de 4 motores</span></div><span class="v">61</span><span class="ar">›</span></div>
+            <div class="lane"><span class="dot" style="background:var(--lane-g)"></span><div><b>Google</b><span>Indexable, sin descripción</span></div><span class="v">78</span><span class="ar">›</span></div>
+            <div class="lane"><span class="dot" style="background:var(--lane-a)"></span><div><b>Agentes</b><span>Ve el producto, no el precio</span></div><span class="v">54</span><span class="ar">›</span></div>
+          </div>
+          <div class="teaser">
+            <div class="eng-row"><svg class="eng"><use href="#e-chatgpt"/></svg><svg class="eng"><use href="#e-gemini"/></svg><svg class="eng"><use href="#e-claude"/></svg><svg class="eng"><use href="#e-perplexity"/></svg></div>
+            <b>¿Te recomiendan ChatGPT, Gemini, Claude y Perplexity?</b>
+            <span class="btn">Medirlo con 7 días de Pro</span>
+          </div>
+        </div>
+      </div>
+      <span class="mock-cap">1 · Primer clic, sin cuenta</span>
+    </div>
+
+    <!-- A2 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Tu proyecto · actualizado ayer</small></span><span class="px-av on">DM</span></div>
+        <div class="px-body">
+          <div class="hero">
+            <div class="hero-top"><span class="orb">G</span><div><div class="big">54<small> Puntuación GEO</small></div><div class="hero-line"><span style="color:var(--pos);font-weight:700">+3</span> desde el escaneo anterior</div></div></div>
+          </div>
+          <div class="plan">
+            <span class="plan-h">Tu plan de la semana</span>
+            <div class="pi"><i>1</i><div><b>Publica la comparativa con Rival 1</b><span class="chip ia">IA</span></div><span class="pts">+8</span></div>
+            <div class="pi"><i>2</i><div><b>Sube «zapatillas trail mujer» a la página 1</b><span class="chip g">Google</span></div><span class="pts">puesto 11</span></div>
+            <div class="pi"><i>3</i><div><b>Pon el precio en los datos de producto</b><span class="chip a">Agentes</span></div><span class="pts">+6</span></div>
+          </div>
+          <div class="lanes">
+            <div class="lane open"><span class="dot" style="background:var(--lane-ia)"></span><div><b>IA</b><span>Te nombran en el 29 % de las respuestas</span></div><span class="v">54</span><span class="ar">⌄</span></div>
+            <div class="lane-detail">
+              <div class="ed"><svg class="eng"><use href="#e-chatgpt"/></svg>38 %<span class="bar"><i style="width:38%"></i></span></div>
+              <div class="ed"><svg class="eng"><use href="#e-gemini"/></svg>31 %<span class="bar"><i style="width:31%"></i></span></div>
+              <div class="ed"><svg class="eng"><use href="#e-claude"/></svg>22 %<span class="bar"><i style="width:22%"></i></span></div>
+              <div class="ed"><svg class="eng"><use href="#e-perplexity"/></svg>25 %<span class="bar"><i style="width:25%"></i></span></div>
+            </div>
+            <div class="lane"><span class="dot" style="background:var(--lane-g)"></span><div><b>Google</b><span>Esta página: puesto medio 8,4</span></div><span class="v">8,4</span><span class="ar">›</span></div>
+            <div class="lane"><span class="dot" style="background:var(--lane-a)"></span><div><b>Agentes</b><span>Visibilidad agéntica</span></div><span class="v">66</span><span class="ar">›</span></div>
+          </div>
+          <span class="btn ghost">Abrir en la consola</span>
+        </div>
+      </div>
+      <span class="mock-cap">2 · Con cuenta, en tu web</span>
+    </div>
+
+    <!-- A3 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body dim">
+          <div class="hero"><div class="hero-top"><span class="orb">G</span><div><div class="big">68<small> /100</small></div></div></div></div>
+          <div class="plan"><div class="pi"><i>1</i><div><b>Perplexity no puede leer esta página</b></div><span class="pts">+12</span></div><div class="pi"><i>2</i><div><b>El precio no está en los datos</b></div><span class="pts">+6</span></div></div>
+        </div>
+        <div class="scrim"></div>
+        <div class="sheet">
+          <span class="grab"></span>
+          <h4>Mide tienda-ejemplo.es en los cuatro motores</h4>
+          <div class="field">tienda-ejemplo.es <small>✓ ya escrito</small></div>
+          <div class="gets">
+            <div><span class="chip ia">IA</span>Cómo te nombran ChatGPT, Gemini, Claude y Perplexity</div>
+            <div><span class="chip g">Google</span>Tu puesto real con Search Console</div>
+            <div><span class="chip a">Agentes</span>Si un agente puede comprar en tu tienda</div>
+          </div>
+          <span class="btn">Continuar con Google</span>
+          <span class="btn ghost">Usar mi correo</span>
+          <span class="fine">7 días de Pro sin tarjeta. Tu primer escaneo empieza solo.</span>
+        </div>
+      </div>
+      <span class="mock-cap">3 · Momento de registro</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="box"><h3>Del clic al pago</h3><ol>
+      <li>Instala y pulsa el icono: el panel enseña la nota y tres arreglos en menos de un segundo.</li>
+      <li>Abre un carril para ver el detalle, o pulsa un arreglo para ver cómo se hace.</li>
+      <li>Pulsa «Medirlo con 7 días de Pro»: hoja con el dominio ya escrito y entrada con Google.</li>
+      <li>El primer escaneo corre solo; al volver a su web, el panel ya es «Tu proyecto».</li>
+      <li>Al acabar la prueba, el plan de la semana sigue ahí en solo lectura, con «Contratar».</li>
+    </ol></div>
+    <div class="box"><h3>A favor</h3><ul>
+      <li>Es la consola en pequeño: quien la conoce no aprende nada nuevo.</li>
+      <li>Una sola lista mezcla IA, Google y Agentes por lo que más sube.</li>
+      <li>Los cuatro motores caben en una fila, sin pantalla propia.</li>
+    </ul></div>
+    <div class="box"><h3>En contra</h3><ul>
+      <li>Es la menos sorprendente de las tres a primera vista.</li>
+      <li>Con cuenta, el panel es largo en pantallas bajas (se arregla plegando el plan a dos líneas).</li>
+    </ul></div>
+  </div>
+  <div class="meta"><span class="pill">Esfuerzo MVP: <b>2 fines de semana</b></span><span class="pill">Fases 2 a 4: <b>4 fines de semana</b></span><span class="pill">Encaje con la consola: <b>total</b></span></div>
+</section>
+
+<!-- ============ B · MAPA ============ -->
+<section class="card" id="b">
+  <div class="opt-head">
+    <span class="opt-tag"><i>B</i> Basada en «Mapa de la IA»</span>
+    <h2>Tres carriles, un dibujo cada uno</h2>
+    <p class="lede">Arriba, un selector IA · Google · Agentes. Cada carril es un solo dibujo y una frase. El de IA pone la página en el centro y los cuatro motores alrededor.</p>
+  </div>
+
+  <div class="panels">
+    <!-- B1 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body">
+          <div class="seg"><span class="on ia">IA</span><span>Google</span><span>Agentes</span></div>
+          <div class="orbit">
+            <svg class="rings" viewBox="0 0 300 250" preserveAspectRatio="none" aria-hidden="true"><circle cx="150" cy="125" r="88" fill="none" stroke="var(--line)" stroke-dasharray="3 5"/></svg>
+            <div class="node center" style="left:50%;top:50%"><span class="ic">Esta<br>página</span></div>
+            <div class="node" style="left:50%;top:15%"><span class="ic"><svg class="eng"><use href="#e-chatgpt"/></svg><span class="st ok"></span></span>ChatGPT</div>
+            <div class="node" style="left:82%;top:50%"><span class="ic"><svg class="eng"><use href="#e-gemini"/></svg><span class="st ok"></span></span>Gemini</div>
+            <div class="node" style="left:50%;top:85%"><span class="ic"><svg class="eng"><use href="#e-claude"/></svg><span class="st ok"></span></span>Claude</div>
+            <div class="node" style="left:18%;top:50%"><span class="ic"><svg class="eng"><use href="#e-perplexity"/></svg><span class="st ko"></span></span>Perplexity</div>
+          </div>
+          <div class="legend"><span><i style="background:var(--pos)"></i>Puede leerla</span><span><i style="background:var(--neg)"></i>Bloqueado</span></div>
+          <div class="verdict">Perplexity no puede leer esta página. Los otros tres, sí.</div>
+          <div class="mini-list">
+            <div class="ml"><b>Desbloquea PerplexityBot en robots.txt</b><span class="chip ia">+12</span></div>
+            <div class="ml"><b>Añade un llms.txt</b><span class="chip ia">+4</span></div>
+          </div>
+          <span class="btn">¿Y te recomiendan? Medirlo gratis</span>
+        </div>
+      </div>
+      <span class="mock-cap">1 · Primer clic, sin cuenta</span>
+    </div>
+
+    <!-- B2 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Tu proyecto · actualizado ayer</small></span><span class="px-av on">DM</span></div>
+        <div class="px-body">
+          <div class="seg"><span class="on ia">IA</span><span>Google</span><span>Agentes</span></div>
+          <div class="orbit">
+            <svg class="rings" viewBox="0 0 300 250" preserveAspectRatio="none" aria-hidden="true"><circle cx="150" cy="125" r="96" fill="none" stroke="var(--line)" stroke-dasharray="3 5"/><circle cx="150" cy="125" r="58" fill="none" stroke="var(--line)"/></svg>
+            <div class="rival" style="left:32%;top:30%;width:40px;height:40px">Rival 1</div>
+            <div class="rival" style="left:70%;top:68%;width:30px;height:30px">Rival 2</div>
+            <div class="rival" style="left:30%;top:72%;width:22px;height:22px">R3</div>
+            <div class="node center" style="left:50%;top:50%"><span class="ic">Tú<br>29 %</span></div>
+            <div class="node" style="left:50%;top:10%"><span class="ic"><svg class="eng"><use href="#e-chatgpt"/></svg></span>38 %</div>
+            <div class="node" style="left:86%;top:46%"><span class="ic"><svg class="eng"><use href="#e-gemini"/></svg></span>31 %</div>
+            <div class="node" style="left:56%;top:90%"><span class="ic"><svg class="eng"><use href="#e-claude"/></svg></span>22 %</div>
+            <div class="node" style="left:13%;top:46%"><span class="ic"><svg class="eng"><use href="#e-perplexity"/></svg></span>25 %</div>
+          </div>
+          <div class="verdict">Rival 1 sale más que tú en ChatGPT y Gemini.</div>
+          <div class="mini-list">
+            <div class="ml"><b>Publica la comparativa con Rival 1</b><span class="chip ia">+8</span></div>
+            <div class="ml"><b>Ver qué responde ChatGPT</b><span class="muted">›</span></div>
+          </div>
+          <p class="note" style="font-size:11.5px">Google: puesto, clics y palabras vigiladas. Agentes: el camino de un agente, de descubrir a comprar.</p>
+        </div>
+      </div>
+      <span class="mock-cap">2 · Con cuenta, carril IA</span>
+    </div>
+
+    <!-- B3 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body">
+          <div class="seg"><span class="on ia">IA</span><span>Google</span><span>Agentes</span></div>
+          <div class="orbit">
+            <svg class="rings" viewBox="0 0 300 250" preserveAspectRatio="none" aria-hidden="true"><circle cx="150" cy="125" r="96" fill="none" stroke="var(--line)" stroke-dasharray="3 5"/></svg>
+            <div class="node center empty" style="left:50%;top:50%"><span class="ic">?</span></div>
+            <div class="node" style="left:50%;top:10%"><span class="ic"><svg class="eng"><use href="#e-chatgpt"/></svg></span></div>
+            <div class="node" style="left:86%;top:46%"><span class="ic"><svg class="eng"><use href="#e-gemini"/></svg></span></div>
+            <div class="node" style="left:56%;top:90%"><span class="ic"><svg class="eng"><use href="#e-claude"/></svg></span></div>
+            <div class="node" style="left:13%;top:46%"><span class="ic"><svg class="eng"><use href="#e-perplexity"/></svg></span></div>
+          </div>
+          <div class="verdict">¿Qué marca ponen en el centro cuando alguien pregunta por zapatillas de trail?</div>
+          <div class="field">tienda-ejemplo.es <small>✓ ya escrito</small></div>
+          <span class="btn">Ponme en el mapa: 7 días de Pro</span>
+          <span class="btn ghost">Ya tengo cuenta</span>
+          <span class="fine">Sin tarjeta. El mapa se dibuja con tu primer escaneo.</span>
+        </div>
+      </div>
+      <span class="mock-cap">3 · Momento de registro</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="box"><h3>Del clic al pago</h3><ol>
+      <li>Pulsa el icono: abre en el carril IA con la página en el centro y qué motores pueden leerla.</li>
+      <li>Cambia a Google o Agentes con el selector; cada carril es un dibujo y una frase.</li>
+      <li>Pulsa el centro vacío o «Ponme en el mapa»: registro con el dominio ya escrito.</li>
+      <li>Con cuenta, el centro eres tú y alrededor salen tus rivales y los cuatro motores.</li>
+      <li>Al acabar la prueba, el mapa se queda congelado en el último escaneo, con «Contratar».</li>
+    </ol></div>
+    <div class="box"><h3>A favor</h3><ul>
+      <li>Es la que más impresiona y la que mejor se comparte en una captura.</li>
+      <li>Los cuatro motores se ven desde el primer clic, sin cuenta y sin coste, porque cada uno tiene su rastreador.</li>
+      <li>El centro vacío es un registro muy natural: «ponte en el mapa».</li>
+    </ul></div>
+    <div class="box"><h3>En contra</h3><ul>
+      <li>Hay que cambiar de carril para ver todo: no hay una lista única de «lo primero».</li>
+      <li>Con muchos rivales, el mapa se llena en 360 px; hay que limitarlo a tres.</li>
+      <li>Google y Agentes necesitan su propio dibujo, así que hay más diseño por hacer.</li>
+    </ul></div>
+  </div>
+  <div class="meta"><span class="pill">Esfuerzo MVP: <b>2,5 fines de semana</b></span><span class="pill">Fases 2 a 4: <b>5 fines de semana</b></span><span class="pill">Encaje con la consola: <b>alto si se elige el mapa en Visión general</b></span></div>
+</section>
+
+<!-- ============ C · FOCO ============ -->
+<section class="card" id="c">
+  <div class="opt-head">
+    <span class="opt-tag"><i>C</i> Basada en «Instrumento»</span>
+    <h2>Una cosa cada vez</h2>
+    <p class="lede">Una cifra grande y una sola tarjeta: lo siguiente que hacer. Debajo esperan las demás, como una baraja. Los datos aparecen dentro de cada tarjeta, como prueba.</p>
+  </div>
+
+  <div class="panels">
+    <!-- C1 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body">
+          <div class="instr">
+            <div class="instr-row"><span class="huge">68</span><span class="note">Nota SEO + IA</span></div>
+            <div class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="deck">
+            <span class="back b2"></span><span class="back"></span>
+            <div class="fc">
+              <div class="fc-top"><span class="chip ia">IA</span><span>1 de 6</span></div>
+              <h5>Perplexity no puede leer esta página</h5>
+              <p>Tu robots.txt bloquea a PerplexityBot. Mientras siga así, Perplexity no la usará para responder.</p>
+              <div class="evid">Visto en tu robots.txt: Disallow: / para PerplexityBot</div>
+              <span class="btn ghost">Cómo arreglarlo</span>
+              <div class="fc-foot"><span>Comprobar otra vez</span><span>Siguiente ›</span></div>
+            </div>
+          </div>
+          <span class="btn">¿Te recomiendan? Medirlo gratis</span>
+        </div>
+      </div>
+      <span class="mock-cap">1 · Primer clic, sin cuenta</span>
+    </div>
+
+    <!-- C2 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Tu proyecto · actualizado ayer</small></span><span class="px-av on">DM</span></div>
+        <div class="px-body">
+          <div class="instr">
+            <div class="instr-row"><span class="huge">54</span><span class="note">Puntuación GEO <span style="color:var(--pos);font-weight:700">+3</span></span></div>
+            <div class="eng-ticks">
+              <div class="et"><svg class="eng"><use href="#e-chatgpt"/></svg>38 %<span class="bar"><i style="width:38%"></i></span></div>
+              <div class="et"><svg class="eng"><use href="#e-gemini"/></svg>31 %<span class="bar"><i style="width:31%"></i></span></div>
+              <div class="et"><svg class="eng"><use href="#e-claude"/></svg>22 %<span class="bar"><i style="width:22%"></i></span></div>
+              <div class="et"><svg class="eng"><use href="#e-perplexity"/></svg>25 %<span class="bar"><i style="width:25%"></i></span></div>
+            </div>
+          </div>
+          <div class="deck">
+            <span class="back b2"></span><span class="back"></span>
+            <div class="fc">
+              <div class="fc-top"><span class="chip g">Google</span><span>2 de 5 esta semana</span></div>
+              <h5>Sube «zapatillas trail mujer» a la página 1</h5>
+              <p>Esta página está en el puesto 11. Los tres primeros resultados tienen una guía de tallas que tú no tienes.</p>
+              <div class="evid">Search Console, últimos 28 días · Top 10 de DataForSEO</div>
+              <div class="slide"><span class="knob">›</span>Desliza para marcar como hecho</div>
+              <div class="fc-foot"><span>Ahora no</span><span>Siguiente ›</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span class="mock-cap">2 · Con cuenta, en tu web</span>
+    </div>
+
+    <!-- C3 -->
+    <div class="mock">
+      <div class="px">
+        <span class="sample">Ejemplo</span>
+        <div class="px-top"><span class="g-logo">G</span><span class="px-dom">tienda-ejemplo.es<small>Esta página · /zapatillas-trail</small></span><span class="px-av">?</span></div>
+        <div class="px-body">
+          <div class="instr">
+            <div class="instr-row"><span class="huge">74</span><span class="note">Nota SEO + IA <span style="color:var(--pos);font-weight:700">+6</span></span></div>
+            <div class="ticks"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+          <div class="deck">
+            <span class="back b2"></span><span class="back"></span>
+            <div class="fc lock">
+              <div class="fc-top" style="width:100%"><span class="chip ia">IA</span><span>Última</span></div>
+              <h5>Lo siguiente lo deciden cuatro motores</h5>
+              <div class="engs"><span><svg class="eng"><use href="#e-chatgpt"/></svg></span><span><svg class="eng"><use href="#e-gemini"/></svg></span><span><svg class="eng"><use href="#e-claude"/></svg></span><span><svg class="eng"><use href="#e-perplexity"/></svg></span></div>
+              <p>Has arreglado lo que se ve desde la página. Ahora toca saber si te recomiendan, y frente a quién.</p>
+              <div class="field" style="width:100%">tienda-ejemplo.es <small>✓ ya escrito</small></div>
+              <span class="btn" style="width:100%">Seguir con 7 días de Pro</span>
+            </div>
+          </div>
+          <span class="fine">Sin tarjeta. La baraja sigue con tu primer escaneo.</span>
+        </div>
+      </div>
+      <span class="mock-cap">3 · Momento de registro</span>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="box"><h3>Del clic al pago</h3><ol>
+      <li>Pulsa el icono: una cifra y una tarjeta con lo primero que arreglar.</li>
+      <li>Arregla, pulsa «Comprobar otra vez» y la cifra sube delante de ti.</li>
+      <li>Al terminar la baraja gratuita, la última carta pide la cuenta con el dominio ya escrito.</li>
+      <li>Con cuenta, la baraja es tu plan de la semana: IA, Google y Agentes mezclados.</li>
+      <li>Al acabar la prueba, la baraja se queda en la carta actual, con «Contratar».</li>
+    </ol></div>
+    <div class="box"><h3>A favor</h3><ul>
+      <li>La más sencilla de todas: nunca hay más de una cosa en pantalla.</li>
+      <li>Ver subir la cifra al arreglar algo engancha y lleva solo al registro.</li>
+      <li>Cada dato aparece como prueba de una acción, nunca suelto.</li>
+    </ul></div>
+    <div class="box"><h3>En contra</h3><ul>
+      <li>No da una vista de conjunto: para ver los cuatro motores juntos hay que ir a la consola.</li>
+      <li>Quien sólo quiere mirar, no arreglar, se cansa de pasar cartas.</li>
+      <li>Deslizar para confirmar es menos claro con ratón que en móvil.</li>
+    </ul></div>
+  </div>
+  <div class="meta"><span class="pill">Esfuerzo MVP: <b>2 fines de semana</b></span><span class="pill">Fases 2 a 4: <b>4 fines de semana</b></span><span class="pill">Encaje con la consola: <b>alto si se elige el modo foco</b></span></div>
+</section>
+
+<section class="card">
+  <h2>Comparación rápida</h2>
+  <div class="tablewrap">
+    <table class="compare">
+      <thead><tr><th></th><th>A · Estudio</th><th>B · Mapa</th><th>C · Foco</th></tr></thead>
+      <tbody>
+        <tr><td>Sencillez al primer clic</td><td>Alta</td><td>Media</td><td class="win">Muy alta</td></tr>
+        <tr><td>Todo GenScore a la vista</td><td class="win">Sí, en una pantalla</td><td>Sí, en tres carriles</td><td>Sólo dentro de cada tarjeta</td></tr>
+        <tr><td>Cuatro motores sin cuenta</td><td>En una línea</td><td class="win">Protagonistas</td><td>En la tarjeta que toque</td></tr>
+        <tr><td>Momento de registro</td><td>Hoja con lo que ganas</td><td class="win">«Ponte en el mapa»</td><td>Última carta</td></tr>
+        <tr><td>Se comparte en una captura</td><td>Bien</td><td class="win">Muy bien</td><td>Regular</td></tr>
+        <tr><td>Esfuerzo hasta tenerlo todo</td><td class="win">6 fines de semana</td><td>7,5 fines de semana</td><td class="win">6 fines de semana</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card reco">
+  <span class="eyebrow">Recomendación</span>
+  <h2>A, con el mapa de lectores de B como detalle del carril IA</h2>
+  <ul>
+    <li><b>A</b> es la que enseña todo en una pantalla sin abrumar: una nota, tres arreglos y tres líneas cerradas. Es también la consola en pequeño, y el hilo de la consola profesional recomienda Estudio como base.</li>
+    <li>De <b>B</b> tomaría el dibujo de los cuatro motores alrededor de la página como lo que se ve al abrir el carril IA. Es lo que mejor responde a «quiero ver los cuatro motores» desde el primer clic y sin coste.</li>
+    <li>De <b>C</b> tomaría «Comprobar otra vez», para que la nota suba delante del usuario al arreglar algo.</li>
+    <li>El MVP sigue siendo de dos fines de semana y sin cambios en el servidor. Los cuatro motores con datos de tu marca, Search Console y DataForSEO llegan en las fases 2 y 3, leyendo lo que tu proyecto ya tiene.</li>
+  </ul>
+</section>
+
+</main>

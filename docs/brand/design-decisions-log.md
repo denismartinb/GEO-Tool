@@ -27619,3 +27619,88 @@ dice si te nombran, en qué lugar, a qué competidores y qué páginas citan; y
 
 **Pendiente.** Refrescar con el siguiente informe trimestral de Adobe o
 Shopify, y con la versión ampliada que Ahrefs anunció.
+
+## 361. CHROME-EXT-1 paso 02: la extensión lee la cuenta real (2026-10-30)
+
+**Qué.** Dos rutas de sólo lectura para el panel de la extensión de Chrome,
+aprobadas por el fundador en el Task Intake
+(`docs/chrome-extension/task-intake-report.md` §18):
+
+- `GET /api/ext/context`: plan efectivo, fin de la prueba, tope de dominios y
+  la lista de dominios de la cuenta.
+- `GET /api/ext/project?domain=&url=`: el proyecto que cubre ese dominio (el
+  más específico gana) con Puntuación GEO, mención por motor, rivales, Salud
+  técnica, las tres acciones del plan, la Visibilidad agéntica y, si `url` es
+  de ese proyecto, los prompts del último escaneo que la citaron.
+
+La extensión de prueba pasa a 0.6.0: con sesión en GenScore, el desplegable
+enseña los dominios reales, la visión general sale de esas rutas y «Cuenta de
+ejemplo» desaparece; sin sesión, todo sigue como en el paso 01.
+
+**Cómo se autentica.** Sin token propio. El manifiesto pide
+`host_permissions` sólo para el origen de GenScore (`config.js`, `GS_API`), y
+con eso Chrome manda la cookie de sesión de Supabase en las peticiones de la
+extensión, también siendo `SameSite=Lax` (comprobado con una extensión real
+contra un servidor local). Las rutas leen la sesión con el cliente del
+usuario (RLS), filtran los proyectos además por `owner_user_id` y responden
+401 en vez de redirigir. No hay cabeceras CORS, así que otra web no puede leer
+la respuesta. `Cache-Control: private, no-store`.
+
+**Cada cifra sale de su dueño.** `lib/ext/summary.ts` es pura y sólo elige y
+renombra campos de `buildReportModel(loadReportInput(...))`, el cargador del
+informe (que ya toma la puntuación de `resolveGeoScore`, la parte técnica de
+`buildTechnicalIssuesReport` y el plan de `selectPlan`), y de
+`overviewAgenticCard`, la tarjeta agéntica de Visión general. Las citas pasan
+por `resolveCitation`, como en Páginas citadas. Todo va en proporciones; el
+panel pinta porcentajes. El plan se lee como `/api/me` (`isTrialElapsed` +
+`resolveEffectivePlanId`): abrir el panel nunca rebaja una prueba ni manda el
+correo de fin de prueba.
+
+**Pendiente o conocido.**
+- La prueba usa la vista previa de Vercel del PR: el .zip lleva `GS_API`
+  apuntando a ella y su permiso de host. La versión de tienda (paso 03)
+  apuntará a `https://www.genscore.es`.
+- El panel no tiene delta de la puntuación ni puntos por acción: el modelo del
+  informe no los da y no se recalculan aquí.
+- Search Console y palabras vigiladas en el panel (`/api/ext/google`),
+  «Descubrir», añadir competidores y marcar acciones como hechas siguen fuera.
+- `pnpm run build` no termina en el contenedor del agente porque no llega a
+  Google Fonts; typecheck, lint y los 5.030 tests pasan. Vercel construye el
+  preview.
+
+**0.6.1: el panel abre en el proyecto de la consola (Denis, 2026-10-30).**
+Con sesión y sin página leída, el panel ya no enseña la pantalla de reposo:
+enseña la visión general del dominio que la consola tiene seleccionado y,
+encima, «Para analizar la página actual, pulsa el icono de nuevo» (o el botón
+«Analizar la página actual» si ya dio el permiso). `/api/ext/context` devuelve
+`activeDomain`, leído de la cookie `geo_active_project` con
+`resolveSelectedProject` como `/dashboard/domains`: un id ajeno o caducado cae
+al proyecto más reciente de la cuenta. El panel sigue a la consola cuando esa
+selección cambia y, si no, respeta lo que se eligió en el desplegable. En
+cuanto se lee una página, la página manda (como en la 0.5.2).
+
+**0.6.2: el aviso sólo fuera de la consola (Denis, 2026-10-30).** Mientras la
+pestaña abierta es GenScore (el origen de `GS_API`, el único cuya URL ve la
+extensión), ni el aviso ni el parpadeo del icono salen: quien acaba de entrar
+está en la consola. En cualquier otra página sí.
+
+**0.6.3: fuera de la consola, la pantalla de reposo (Denis, 2026-10-30).**
+Con sesión, el panel enseña los datos del dominio seleccionado sólo mientras
+la pestaña es la consola. En otra página vuelve la pantalla de reposo de la
+0.5 (la barra con el clic animado y «Escanear automáticamente las páginas»),
+con el título «Para analizar la página actual, pulsa el icono de nuevo».
+Elegir un dominio en el desplegable enseña sus datos también fuera de la
+consola, hasta que cambia la pestaña. Corregido de paso: el clic en un
+dominio del desplegable no hacía nada, porque `[data-pick]` faltaba en el
+selector del manejador de clics.
+
+**0.6.4 (Denis, 2026-10-30).** Sin sesión, bajo la cabecera sale «Identifícate
+en GenScore para el análisis completo», con «GenScore» en la letra del logo, y
+lleva a `/login`. Se quita del pie la línea «Revisada en tu navegador… No pasa
+por ningún servidor». En la 0.6.5 la frase pasa a la cabecera, junto al botón,
+que se llama «Login» en vez de «Entrar», para que se lea como su motivo.
+
+**0.6.6 (Denis, 2026-10-30).** En la pantalla de reposo con sesión, el
+selector de arriba ya no enseña un dominio (confundía: no es de esa página).
+Dice «Analiza la página actual · o elige uno de tus dominios», y el
+desplegable sigue listando los dominios sin ninguno marcado.
