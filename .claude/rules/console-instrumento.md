@@ -141,3 +141,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **Sólo el marco es nuevo**; los bloques conservan marcado y las reglas de
   `agentic-audit.md`, y leen los tokens de Instrumento desde `app/ins/agentic.css`.
+- **«Visibilidad en agentes» está rehecha sobre el prototipo (log §370).** El
+  «Cuadro claro» sólo dibuja lo que la página le pasa; objetivo del dial =
+  `fixbarLine`, nunca una cifra propia. Sin «Marcar como hecho» (Fase 2c sin
+  aprobar). Sus estilos viven en `app/ins/agents.css`.
