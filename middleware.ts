@@ -115,7 +115,7 @@ export async function middleware(request: NextRequest) {
   // el acceso y lo legal; lo demás (precios, portada, blog…) vuelve a la
   // consola, porque Google Play no admite vender ni enviar a pagar fuera. La
   // cookie solo oculta cosas: no autoriza nada, igual que el resto de este
-  // middleware (log §364).
+  // middleware (log §381).
   const signal = appModeSignal(request.nextUrl.searchParams, request.headers.get("referer"));
   const inApp = signal === "enter" || (signal !== "leave" && request.cookies.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE);
   if (inApp && !isAppModePathAllowed(request.nextUrl.pathname)) {

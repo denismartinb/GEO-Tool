@@ -27730,7 +27730,7 @@ Fecha de actualización: 30 de octubre de 2026.
 - **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
 - **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
 
-## 363. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
+## 380. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
 
 **Qué se decidió.** Denis aprobó la maqueta `docs/design-reference/mobile-tabbar-1/consola-tab-bar.html` (variante «Flotante») y pidió el mismo frontal en la web móvil y, después, en la app de Android. Esta fase es sólo la web móvil.
 
@@ -27750,9 +27750,9 @@ Fecha de actualización: 30 de octubre de 2026.
 - La maqueta pintaba un punto de aviso en Google y un indicador deslizante entre pestañas: no se han construido (el primero necesita un dato nuevo, el segundo es pulido).
 - Fase 2 (app de Android como TWA, sin compras dentro) va en su propio PR.
 
-## 364. ANDROID-TWA-1: app de Android como TWA, sin compras dentro (2026-10-30)
+## 381. ANDROID-TWA-1: app de Android como TWA, sin compras dentro (2026-10-30)
 
-**Qué se decidió.** Denis pidió el mismo frontal en todos los canales: la app de Android es la web móvil de §363 abierta en Chrome a pantalla completa (Trusted Web Activity, construida con Bubblewrap). Sin segundo frontal: cada despliegue de Vercel actualiza la app. Se descartó un WebView a pelo porque Google bloquea el acceso con Google dentro de él.
+**Qué se decidió.** Denis pidió el mismo frontal en todos los canales: la app de Android es la web móvil de §380 abierta en Chrome a pantalla completa (Trusted Web Activity, construida con Bubblewrap). Sin segundo frontal: cada despliegue de Vercel actualiza la app. Se descartó un WebView a pelo porque Google bloquea el acceso con Google dentro de él.
 
 **Regla de Google Play: la app no vende.** Las compras digitales dentro de la app tendrían que pasar por el cobro de Google (15 % en suscripciones). Se evita así: dentro de la app no hay precios, ni «Cambiar de plan», ni checkout de Stripe ni texto que mande a pagar fuera. Registrarse y la prueba de Pro de 7 días (sin tarjeta) sí; quien ya paga entra con su cuenta. Contratar se hace en genscore.es, fuera de la app, por los correos de fin de prueba que ya existen.
 

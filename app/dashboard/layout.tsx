@@ -41,7 +41,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // after clicking into the project.
   const cookieStore = await cookies();
   const preferredProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
-  // ANDROID-TWA-1: dentro de la app no se enseña nada que venda (log §364).
+  // ANDROID-TWA-1: dentro de la app no se enseña nada que venda (log §381).
   const inApp = cookieStore.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE;
 
   // NOTIF-LANES-1: the «Tu cuenta» lane of the bell, computed in parallel.

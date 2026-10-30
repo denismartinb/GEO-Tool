@@ -3,7 +3,7 @@
 La app es la propia web móvil de genscore.es abierta en Chrome a pantalla completa
 (Trusted Web Activity). No hay un segundo frontal: cada despliegue de Vercel
 actualiza la app sin pasar por Google Play. Decisión y reglas en
-`docs/brand/design-decisions-log.md` §364.
+`docs/brand/design-decisions-log.md` §381.
 
 ## Regla de Google Play: la app no vende
 

@@ -56,7 +56,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       }
       list.push({ group: "Acciones", label: "Descargar informe", icon: "download", run: () => window.open(`/informe/${pid}`, "_blank", "noopener") });
     }
-    // ANDROID-TWA-1: en la app no hay cambio de plan ni afiliados (log §364).
+    // ANDROID-TWA-1: en la app no hay cambio de plan ni afiliados (log §381).
     list.push(
       { group: "Cuenta", label: "Tu perfil", icon: "c-user", run: () => router.push("/dashboard/settings") },
       ...(d.inApp ? [] : [{ group: "Cuenta", label: "Cambiar de plan", icon: "c-card", run: () => router.push("/dashboard/settings?openPlan=pro#plan") }]),

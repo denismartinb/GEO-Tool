@@ -87,7 +87,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   La tarjeta de Google es la placa 2 del plan.
 - **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.
 
-## Barra inferior móvil (MOBILE-TABBAR-1, log §363)
+## Barra inferior móvil (MOBILE-TABBAR-1, log §380)
 
 - **Solo ≤760 px.** Escritorio conserva el menú lateral; no se añaden pestañas
   a su cabecera. Móvil no tiene cajón: la navegación es `TabBar` + `TabSub`.
@@ -98,7 +98,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   padding inferior de `.page`. Un elemento fijo nuevo abajo cuenta con la barra.
 - **Se oculta en pantallas completas** (`.sc-mission`, `.sc-newdomain`).
 
-## App de Android (ANDROID-TWA-1, log §364)
+## App de Android (ANDROID-TWA-1, log §381)
 
 - **Dentro de la app no se vende.** Con la cookie `gs_app` (`lib/app-mode.ts`)
   no puede aparecer un precio, «Cambiar de plan», un checkout ni texto que

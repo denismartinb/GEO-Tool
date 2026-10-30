@@ -1,4 +1,4 @@
-// ANDROID-TWA-1 · la web dentro de la app de Android (log §364).
+// ANDROID-TWA-1 · la web dentro de la app de Android (log §381).
 //
 // La app es una TWA: Chrome a pantalla completa sobre genscore.es. Google Play
 // obliga a cobrar dentro de la app lo digital y prohíbe enseñar o enviar a pagar

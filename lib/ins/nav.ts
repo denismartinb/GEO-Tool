@@ -79,7 +79,7 @@ export function crumbForPath(pathname: string): string {
   return "Visión general";
 }
 
-// MOBILE-TABBAR-1 · barra inferior flotante de la consola en móvil (log §363).
+// MOBILE-TABBAR-1 · barra inferior flotante de la consola en móvil (log §380).
 // Cinco pestañas que agrupan las pantallas del menú lateral; las familias con
 // varias pantallas enseñan unas pastillas al inicio de la página. Las rutas
 // son las mismas: solo cambia cómo se llega a ellas.

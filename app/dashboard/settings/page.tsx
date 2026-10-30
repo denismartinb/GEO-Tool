@@ -37,7 +37,7 @@ export default async function SettingsPage({
 }) {
   const { supabase, user } = await requireUser();
   const role = await getAccountRole();
-  // ANDROID-TWA-1: en la app, ni plan ni facturación (log §364).
+  // ANDROID-TWA-1: en la app, ni plan ni facturación (log §381).
   const inApp = await isInApp();
   const isAdmin = role === "admin" && !inApp;
 

@@ -40,7 +40,7 @@ export function DomainOverageGate({
   requiredRemoveCount: number;
   domains: ActiveProjectSummary[];
   hasStripeSubscription: boolean;
-  /** ANDROID-TWA-1: `false` dentro de la app de Android, donde no se vende (log §364). */
+  /** ANDROID-TWA-1: `false` dentro de la app de Android, donde no se vende (log §381). */
   canUpgrade?: boolean;
 }) {
   const router = useRouter();

@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /**
  * ANDROID-TWA-1 · manifiesto de la app web. `start_url` lleva `?source=twa`: es
  * la señal con la que el middleware activa el modo app (sin precios ni compra,
- * log §364). `scope` es todo el sitio porque la TWA no puede salir de él.
+ * log §381). `scope` es todo el sitio porque la TWA no puede salir de él.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {

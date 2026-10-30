@@ -263,7 +263,7 @@ export type CheckoutSessionResult = { success: true; url: string } | { success: 
  * prorated in-place subscription update correctly.
  */
 export async function createCheckoutSession(planId: string): Promise<CheckoutSessionResult> {
-  // ANDROID-TWA-1: dentro de la app de Android no se vende (Google Play, log §364).
+  // ANDROID-TWA-1: dentro de la app de Android no se vende (Google Play, log §381).
   if (await isInApp()) return { success: false, error: IN_APP_BILLING_ERROR };
 
   if (!isSelfServePlan(planId)) {
@@ -429,7 +429,7 @@ export type PortalIntent = { type: "update"; planId: SelfServePlanId } | { type:
  * used for an in-app downgrade.
  */
 export async function createPortalSession(intent?: PortalIntent): Promise<PortalSessionResult> {
-  // ANDROID-TWA-1: ídem, el portal de Stripe también cobra (log §364).
+  // ANDROID-TWA-1: ídem, el portal de Stripe también cobra (log §381).
   if (await isInApp()) return { success: false, error: IN_APP_BILLING_ERROR };
 
   const stripe = getStripeClient();
