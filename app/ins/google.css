@@ -21,3 +21,7 @@
  .ins .sc-gsc .pr-hd{flex-direction:column;align-items:flex-start;gap:12px}
  .ins .sc-gsc .gsc-screen .card{padding:16px}
 }
+/* `.ins button` resets padding, border and colour, and out-ranks the legacy
+   `.gsc-st` pill, so the section tabs lost their padding (founder screenshot). */
+.ins .sc-gsc .gsc-st{padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.ins .sc-gsc .gsc-st.gsc-st-on{border-color:var(--ink);background:var(--ink);color:var(--surface)}
