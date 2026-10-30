@@ -18,7 +18,7 @@ import { InsBlockCards } from "@/components/ins/audit/block-cards";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
-import { CoverageSection } from "./_components/coverage-section";
+import { CoverageHistory, CoverageSection } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
 import { SeoWeightsCard } from "./_components/seo-weights-card";
 import { duplicateMetadataUrls } from "@/lib/web-audit/seo-health";
@@ -230,6 +230,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           {!isGeo && <SeoWeightsCard />}
                         </div>
                       </div>
+                      {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
                   </div>
                 );
