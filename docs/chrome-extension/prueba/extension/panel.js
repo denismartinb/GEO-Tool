@@ -225,7 +225,12 @@
         return h + foot(null) + "</div>";
       }
     }
-    h += `<div class="ey">${rel === "none" ? "Revisión gratis" : "Esta página"} · <span class="mono">${esc(pathLabel(f))}</span></div>`;
+    /* With an account the header shows the SELECTED domain, so the results
+       need to say which web they belong to (Denis, 2026-10-30: «no me queda
+       claro si estos resultados son de la página abierta o de mi dominio»). */
+    h += rel === "none"
+      ? `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`
+      : `<div class="ey">Página abierta</div><div class="pgstrip">${tile(f.host)}<span class="t"><b>${esc(f.host)}</b><span class="mono">${esc(pathLabel(f))}</span></span><span class="pgchip ${rel}">${rel === "own" ? "Tu dominio" : "Otra web"}</span></div>`;
     h += heroPage(sc, rel) + alertHtml(sc);
     h += deck(sc.fixes, fixesCtx, "Nada que arreglar en esta página. La pueden leer los cuatro motores y Google.");
     if (rel === "none") h += ctaNoAcct(f.host);

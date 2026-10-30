@@ -575,4 +575,11 @@ que parpadea mientras el panel espera; con movimiento reducido se queda fijo.
 permiso. El panel sale en modo claro aunque el sistema esté en oscuro; el
 botón del pie lo cambia y se recuerda.
 
+### 17.5 Versión 0.5.1 (2026-10-30): de qué web son los resultados
+
+Con la cuenta de ejemplo, la cabecera enseña el dominio elegido y Denis no
+sabía si la nota era de esa web o de la página abierta. Bajo la cabecera sale
+ahora «Página abierta» con la web y la ruta revisadas y una etiqueta, «Otra
+web» o «Tu dominio».
+
 > Do you approve this plan? I will not implement until you confirm.

@@ -16,7 +16,7 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.5.0.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.5.1.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
