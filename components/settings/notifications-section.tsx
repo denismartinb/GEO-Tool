@@ -64,17 +64,6 @@ export function NotificationsSection({ initial }: { initial: Record<OptionalEmai
             </div>
           </div>
         ))}
-        <div className="pf-row fixed">
-          <div className="l">
-            <b>Tu cuenta y facturación</b>
-            <span>Seguridad, pagos y cambios de plan. Siempre activos.</span>
-          </div>
-          <div className="c">
-            <button type="button" className="pf-sw" role="switch" aria-checked="true" disabled aria-label="Tu cuenta y facturación, siempre activos">
-              <i />
-            </button>
-          </div>
-        </div>
       </div>
     </>
   );

@@ -171,5 +171,6 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **Los campos y filas de Ajustes usan las clases `pf-*` del prototipo**, acotadas
   a `.ins .sc-set`. No se reutilizan `SettingRow`/`Switch` antiguos aquí.
+- **La tarjeta de Plan es la del prototipo** (`pf-plan`, log §371 adenda); sin pastilla «Activo» ni «Cerrar sesión» en la cabecera.
 - **Un único «Guardar» en Cuenta** envía `saveAccount` con todos los campos; no se
   parte en dos acciones sin aprobación.

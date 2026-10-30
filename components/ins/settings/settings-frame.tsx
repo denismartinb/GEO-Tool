@@ -1,9 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { Ic } from "@/components/ins/ic";
 import { Seg } from "@/components/ins/kit/seg";
-import { useShellData } from "@/components/ins/shell-context";
 
 /**
  * Ajustes, marco «Instrumento» (CONSOLE-INSTRUMENTO-1 F8c, log §369): the
@@ -43,7 +41,6 @@ export function SettingsFrame({
   account: ReactNode;
   notifications: ReactNode;
 }) {
-  const shell = useShellData();
   const first: SettingsTabId = showPlan ? "plan" : "cuenta";
   const [tab, setTab] = useState<SettingsTabId>(forcePlan && showPlan ? "plan" : first);
 
@@ -81,12 +78,6 @@ export function SettingsFrame({
             </div>
           ) : null}
         </div>
-        <form action={shell.signOutAction} className="st-out">
-          <button type="submit" className="btn ghost sm">
-            <Ic n="c-logout" sm />
-            Cerrar sesión
-          </button>
-        </form>
       </header>
 
       <div className="st-tabs">

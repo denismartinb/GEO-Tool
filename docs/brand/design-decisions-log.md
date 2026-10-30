@@ -27862,3 +27862,15 @@ final de F8).
 
 **Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` sigue
 sin actualizarse (§369).
+
+**Adenda (2026-10-30, mismo PR, revisión de Denis).** La pestaña Plan pasa a la
+tarjeta del prototipo (nombre grande, cifra de precio, días de prueba en siete
+tramos, «Incluido» a la derecha, uso del ciclo y «Más opciones»); se retira la
+pastilla «Activo», «Cerrar sesión» sale de la cabecera del perfil (sigue en el
+menú) y los botones de plan y facturas pasan al kit `btn`. El contacto de
+soporte es un botón `mailto:`. Se quita la fila fija «Tu cuenta y facturación»
+de Notificaciones: no era un ajuste y un interruptor apagado engañaba. Una
+cota de 999 se pinta como «sin tope», sin barra. La foto de perfil sigue sin
+existir: subirla necesita un bucket de almacenamiento con RLS y espera
+aprobación. Premisa de la fila retirada: los correos de cuenta y facturación se
+envían siempre (`lib/email/categories.ts`).

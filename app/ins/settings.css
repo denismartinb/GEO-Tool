@@ -2,12 +2,11 @@
    (profile header and tabs); the three sections keep their markup and read the
    legacy `.set-scope` token remap. */
 .ins .sc-set{max-width:960px}
-.ins .sc-set .st-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:24px;align-items:center}
+.ins .sc-set .st-head{display:grid;grid-template-columns:auto minmax(0,1fr);gap:24px;align-items:center}
 .ins .sc-set .st-av{width:88px;height:88px;font-size:26px;box-shadow:0 0 0 4px var(--surface),0 0 0 5px var(--rule)}
 .ins .sc-set .st-id h1{margin-top:10px}
 .ins .sc-set .st-id p{font-size:13.5px;color:var(--ink-3);margin-top:6px;overflow-wrap:anywhere}
 .ins .sc-set .st-id .pills{margin-top:12px}
-.ins .sc-set .st-out{align-self:start;margin:0}
 .ins .sc-set .st-tabs{margin-top:36px;border-bottom:1px solid var(--rule);padding-bottom:16px}
 .ins .sc-set .st-tabs .seg button{padding:7px 16px;font-size:13.5px}
 .ins .sc-set .st-panels{padding-top:28px}
@@ -16,7 +15,6 @@
 @media (max-width:640px){
  .ins .sc-set .st-head{grid-template-columns:auto minmax(0,1fr);gap:16px}
  .ins .sc-set .st-av{width:64px;height:64px;font-size:20px}
- .ins .sc-set .st-out{grid-column:1/-1}
 }
 .ins .sc-set .st-panels section>.card{margin-bottom:12px}
 
@@ -27,7 +25,6 @@
 .ins .sc-set .pf-row .l b{display:block;font-size:15px;font-weight:550;letter-spacing:-.005em}
 .ins .sc-set .pf-row .l span{display:block;font-size:13px;color:var(--ink-3);margin-top:2px}
 .ins .sc-set .pf-row .c{flex:none}
-.ins .sc-set .pf-row.fixed .l b{color:var(--ink-2)}
 .ins .sc-set .pf-hint{font-size:12.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
 .ins .sc-set .pf-sw{position:relative;width:44px;height:26px;border-radius:99px;background:var(--tick-off);transition:background var(--d2) var(--std);flex:none;padding:0;border:0;cursor:pointer}
 .ins .sc-set .pf-sw i{position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(11,20,38,.25);transition:transform var(--d2) var(--spring)}
@@ -48,3 +45,64 @@
 .ins .sc-set .pf-end{display:flex;justify-content:flex-end;gap:8px}
 .ins .sc-set .pf-pwd{margin-top:14px}
 @media (max-width:640px){.ins .sc-set .pf-f2{grid-template-columns:minmax(0,1fr)}.ins .sc-set .pf-acc{gap:36px}}
+
+/* Plan: tarjeta del prototipo (perfil.css), acotada a Ajustes. */
+.ins .sc-set .pf-plan{position:relative;display:grid;grid-template-columns:minmax(0,7fr) minmax(0,5fr);border-radius:24px;background:linear-gradient(180deg,var(--blue-tint),var(--surface) 62%);border:1px solid var(--blue-soft);box-shadow:0 1px 0 rgba(11,20,38,.02),0 24px 60px -36px rgba(37,99,235,.45);overflow:hidden}
+.ins .sc-set .pf-plan::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:var(--blue)}
+.ins .sc-set .pf-plan.ro{background:var(--surface);border-color:var(--rule);box-shadow:var(--card-shadow)}
+.ins .sc-set .pf-plan.ro::before{background:var(--warm)}
+.ins .sc-set .pf-pl{padding:30px 32px 28px;min-width:0}
+.ins .sc-set .pf-ey{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.ins .sc-set .pf-ey .badge{text-transform:none;letter-spacing:0}
+.ins .sc-set .pf-name{font-size:40px;font-weight:400;letter-spacing:-.035em;line-height:1;margin-top:18px}
+.ins .sc-set .pf-tag{font-size:15px;color:var(--ink-2);margin-top:6px}
+.ins .sc-set .pf-price{display:flex;align-items:baseline;gap:10px;margin-top:22px;flex-wrap:wrap}
+.ins .sc-set .pf-price b{font-size:84px;font-weight:300;letter-spacing:-.055em;line-height:.9;color:var(--ink);display:inline-flex;align-items:baseline}
+.ins .sc-set .pf-price b small{font-size:34px;letter-spacing:-.02em;margin-left:4px}
+.ins .sc-set .pf-price b.pf-pt{font-size:40px;letter-spacing:-.035em;line-height:1.1}
+.ins .sc-set .pf-price .per{font-size:15px;color:var(--ink-3)}
+.ins .sc-set .pf-price s{font-size:20px;color:var(--ink-4);font-weight:300;margin-left:6px}
+.ins .sc-set .pf-fp{font-size:14px;color:var(--blue-ink);margin-top:8px}
+.ins .sc-set .pf-fp b{font-weight:600}
+.ins .sc-set .pf-fp.pf-cancel{color:var(--ink-3)}
+.ins .sc-set .pf-trial{margin-top:22px;padding-top:16px;border-top:1px solid var(--rule)}
+.ins .sc-set .pf-trial .h{font-size:14px;color:var(--ink-2)}
+.ins .sc-set .pf-trial .h b{font-weight:600;color:var(--ink)}
+.ins .sc-set .pf-days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;max-width:420px}
+.ins .sc-set .pf-days i{display:flex;flex-direction:column;gap:5px;font-style:normal}
+.ins .sc-set .pf-days i::before{content:"";height:4px;border-radius:2px;background:var(--tick-off)}
+.ins .sc-set .pf-days i.on::before{background:var(--blue)}
+.ins .sc-set .pf-days span{font-size:10.5px;color:var(--ink-4)}
+.ins .sc-set .pf-days i.on span{color:var(--ink-3)}
+.ins .sc-set .pf-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:24px}
+.ins .sc-set .pf-acts .btn.blue:hover{background:var(--blue-ink)}
+.ins .sc-set .pf-pr{padding:30px 30px 28px;border-left:1px solid var(--rule);min-width:0}
+.ins .sc-set .pf-pr ul{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:10px}
+.ins .sc-set .pf-pr li{display:flex;gap:10px;font-size:14px;color:var(--ink-2);line-height:1.4}
+.ins .sc-set .pf-pr li .i{color:var(--blue);margin-top:2px;flex:none}
+.ins .sc-set .pf-plan.ro .pf-pr li{color:var(--ink-3)}
+.ins .sc-set .pf-plan.ro .pf-pr li .i{color:var(--ink-4)}
+.ins .sc-set .pf-uses{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--ink)}
+.ins .sc-set .pf-use{position:relative;padding:18px 22px 20px 0;margin-right:22px;border-right:1px solid var(--rule)}
+.ins .sc-set .pf-use:last-child{border-right:0;margin-right:0}
+.ins .sc-set .pf-use .h{display:flex;flex-direction:column;gap:6px;font-size:12.5px;color:var(--ink-3);margin-bottom:14px}
+.ins .sc-set .pf-use .h b{font-size:34px;font-weight:300;letter-spacing:-.04em;color:var(--ink);line-height:1}
+.ins .sc-set .pf-use .h b small{font-size:14px;color:var(--ink-3);letter-spacing:0;margin-left:2px}
+.ins .sc-set .pf-use .full{position:absolute;right:22px;top:18px;font-size:11.5px;color:var(--ink-3);font-weight:600}
+.ins .sc-set .pf-use:last-child .full{right:0}
+.ins .sc-set .pf-support{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between}
+.ins .sc-set .pf-support .sub{margin:0}
+.ins .sc-set .pf-plan+.sec{margin-top:36px}
+@media (max-width:640px){
+ .ins .sc-set .pf-plan{grid-template-columns:minmax(0,1fr)}
+ .ins .sc-set .pf-pl{padding:24px 20px 22px}
+ .ins .sc-set .pf-pr{border-left:0;border-top:1px solid var(--rule);padding:20px}
+ .ins .sc-set .pf-price b{font-size:68px}
+ .ins .sc-set .pf-price b.pf-pt{font-size:34px}
+ .ins .sc-set .pf-acts .btn.blue{flex-basis:100%}
+ .ins .sc-set .pf-acts .btn{flex:1}
+ .ins .sc-set .pf-uses{grid-template-columns:minmax(0,1fr)}
+ .ins .sc-set .pf-use{margin-right:0;border-right:0;padding:16px 0;border-bottom:1px solid var(--rule-2)}
+ .ins .sc-set .pf-use .full{right:0;top:16px}
+ .ins .sc-set .pf-support .btn{width:100%}
+}
