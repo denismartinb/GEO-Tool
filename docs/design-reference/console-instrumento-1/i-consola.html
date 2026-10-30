@@ -1101,28 +1101,6 @@ code.p{font:500 .86em var(--mono);background:var(--surface-3);border-radius:6px;
 
 /* --- screens/audit.css --- */
 /* ===== Auditoría técnica ===== */
-.sc-au-blks{margin-top:28px}
-.sc-au-blk{display:flex;flex-direction:column;transition:border-color var(--d2) var(--std),box-shadow var(--d2) var(--std)}
-.sc-au-blk.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
-.sc-au-blk .sel{display:block;width:100%;text-align:left;padding:20px 22px 6px;border-radius:20px 20px 0 0}
-.sc-au-blk .hd{display:flex;align-items:center;gap:12px}
-.sc-au-blk .hd>span:last-child{display:flex;flex-direction:column}
-.sc-au-blk .hd b{font-size:15px;font-weight:600;letter-spacing:-.01em}
-.sc-au-blk .hd b+span{font-size:12.5px;color:var(--ink-3)}
-.sc-au-blk .ico{width:34px;height:34px;border-radius:10px;border:1px solid var(--rule);display:grid;place-items:center;color:var(--blue)}
-.sc-au-blk .ico .i{width:16px;height:16px}
-.sc-au-blk:not(.on) .sel:hover{background:var(--surface-2)}
-.sc-au-blk .bd{display:flex;align-items:center;gap:22px;margin-top:10px}
-.sc-au-blk .rt{display:flex;flex-direction:column;gap:6px;min-width:0}
-.sc-au-blk .lb{font-size:12.5px;color:var(--ink-3)}
-.sc-au-blk .mt{font-size:13.5px;color:var(--ink-2)}
-.sc-au-blk .mt b{color:var(--warm);font-weight:600}
-.sc-au-blk .to{font-size:13.5px;color:var(--ink-3)}
-.sc-au-blk .to b{color:var(--pos);font-weight:650;font-size:15px}
-.sc-au-blk .pot{display:flex;align-items:center;gap:8px;margin:6px 16px 16px;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550}
-.sc-au-blk .pot b{font-weight:700}
-.sc-au-blk .pot .i:last-child{margin-left:auto}
-.sc-au-blk .pot:hover{filter:brightness(.97)}
 .sc-au-arc{position:relative;flex:none;display:block}
 .sc-au-arc svg{width:100%;height:100%;display:block}
 .sc-au-arc circle{fill:none;stroke-width:7;stroke-linecap:round}
@@ -1134,7 +1112,6 @@ code.p{font:500 .86em var(--mono);background:var(--surface-3);border-radius:6px;
 .sc-au-arc .n{position:absolute;inset:0;display:flex;align-items:baseline;justify-content:center;padding-top:44px}
 .sc-au-arc .n b{font-size:44px;font-weight:300;letter-spacing:-.05em;line-height:1}
 .sc-au-arc .n small{font-size:12px;color:var(--ink-3);margin-left:2px}
-.sc-au-note{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);margin-top:14px}
 .sc-au-tabs{margin-top:32px}
 .sc-au-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:16px;align-items:start}
 .sc-au .stk{display:grid;gap:16px;min-width:0}
@@ -1190,9 +1167,6 @@ code.p{font:500 .86em var(--mono);background:var(--surface-3);border-radius:6px;
 .sc-au-cwv .zone span{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--ink);transform:translate(-50%,-50%)}
 .sc-au-cwv .zl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:6px}
 @media (max-width:760px){
- .sc-au-blk .sel{padding:16px 16px 4px}
- .sc-au-blk .bd{gap:16px}
- .sc-au-blk .pot{margin:6px 12px 12px;font-size:13px}
  .sc-au-grid{grid-template-columns:minmax(0,1fr)}
  .sc-au-tabs .seg{max-width:100%}
  .sc-au-iss .h{grid-template-columns:10px minmax(0,1fr) 48px 16px;gap:10px}
@@ -1206,26 +1180,22 @@ code.p{font:500 .86em var(--mono);background:var(--surface-3);border-radius:6px;
  .sc-au-pages .u{grid-area:u}.sc-au-pages .s{grid-area:s}.sc-au-pages .r>.badge{grid-area:b;justify-self:start}.sc-au-pages .tb{grid-area:t}
 }
 
-.sc-au-blk .to-m{display:none}
 @media (max-width:760px){
- .sc-au-blks.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:22px}
- .sc-au-blk{border-radius:18px}
- .sc-au-blk .sel{padding:12px 12px 2px;border-radius:18px 18px 0 0}
- .sc-au-blk .hd{gap:8px}
- .sc-au-blk .ico{width:26px;height:26px;border-radius:8px}
- .sc-au-blk .ico .i,.sc-au-blk .ico svg,.sc-au-blk .ico img{width:13px;height:13px}
- .sc-au-blk .hd b{font-size:13.5px;line-height:1.2}
- .sc-au-blk .hd b+span,.sc-au-blk .mt,.sc-au-blk .to,.sc-au-blk .pot .px{display:none}
- .sc-au-blk .bd{gap:10px;margin-top:8px}
- .sc-au-blk .sc-au-arc{width:68px!important;height:68px!important}
- .sc-au-blk .sc-au-arc .n{padding-top:22px}
- .sc-au-blk .sc-au-arc .n b{font-size:24px}
- .sc-au-blk .sc-au-arc .n small{display:none}
- .sc-au-blk .lb{font-size:12px;white-space:nowrap}
- .sc-au-blk .to-m{display:block;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
- .sc-au-blk .to-m b{color:var(--pos);font-weight:650;font-size:14px}
- .sc-au-blk .pot{margin:4px 10px 10px;height:32px;padding:0 10px;border-radius:10px;font-size:12.5px;gap:6px}
 }
+/* One score strip per page (log §368) */
+.sc-au-hero{display:flex;align-items:center;gap:24px;margin-top:24px;padding:16px 22px}
+.sc-au-hero .sc-au-arc .n{padding-top:32px}
+.sc-au-hero .sc-au-arc .n b{font-size:34px}
+.sc-au-hero .rt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sc-au-hero .lb{font-size:12.5px;color:var(--ink-3)}
+.sc-au-hero .mt{font-size:14px;color:var(--ink-2)}
+.sc-au-hero .mt>b{color:var(--warm);font-weight:600}
+.sc-au-hero .to{font-size:13.5px;color:var(--ink-3)}
+.sc-au-hero .to b{color:var(--pos);font-weight:650;font-size:15px}
+.sc-au-hero .pot{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550;white-space:nowrap}
+.sc-au-hero .pot b{font-weight:700}
+.sc-au-hero .pot:hover{filter:brightness(.97)}
+@media (max-width:760px){.sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}.sc-au-hero .pot{margin-left:0;width:100%;height:36px;font-size:13px}.sc-au-hero .pot .i:last-child{margin-left:auto}}
 
 /* --- screens/auth.css --- */
 /* ===== full-screen states (builder C): auth and mission hide the shell ===== */
@@ -2260,8 +2230,11 @@ body.xo-isro .xo-who .xo-pl{color:var(--warm);background:var(--warm-tint)}
 .xo-note{font-size:12.5px;color:var(--ink-3);margin-top:14px}
 
 /* shell additions */
-.xo-sfoot{display:grid;gap:2px;margin-top:auto;padding-top:8px}
-.xo-sfoot+.foot{margin-top:0}
+.side .xo-bot{margin-top:auto;display:flex;align-items:center;gap:4px;border-top:1px solid var(--rule-2);padding-top:6px}
+.side .xo-bot .foot{flex:1;min-width:0;margin-top:0;border-top:0}
+.xo-help{flex:none;width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--ink-3);transition:background var(--d1),color var(--d1)}
+.xo-help:hover{background:var(--surface-2);color:var(--ink)}
+.xo-help .i{width:18px;height:18px}
 .xo-sfoot .xo-ext{margin-left:auto;width:13px;height:13px;color:var(--ink-4)}
 .side .foot.xo-foot{cursor:pointer;border-radius:12px;transition:background var(--d1)}
 .side .foot.xo-foot:hover{background:var(--surface-2)}
@@ -3360,7 +3333,7 @@ function goalScale([a,n,gl]){/* text only: the tick scale was dropped (Denis 202
  return `<div class="goal gline">${ic('trend','sm')}<span>Objetivo</span><b>del puesto ${n} a la página 1</b><span class="gs">Lo seguimos solos en cada foto</span></div>`}
 
 /* ---------- navigation (routes are plug-in: SCREENS[key]) ---------- */
-const NAV=[['',[['overview','Visión general','overview'],['recs','Recomendaciones','recs','34']]],['En la IA',[['prompts','Prompts','prompts','17'],['competitors','Competidores','users','4'],['citations','Páginas citadas','link']]],['En Google',[['google','Posición en Google','trend'],['audit','Auditoría técnica','audit','',1]]],['Comercio agéntico',[['agents','Visibilidad en agentes','agent'],['agaudit','Auditoría agéntica','cart']],'new']];
+const NAV=[['',[['overview','Visión general','overview'],['recs','Recomendaciones','recs','34']]],['En la IA',[['prompts','Prompts','prompts','17'],['competitors','Competidores','users','4'],['citations','Páginas citadas','link'],['auditgeo','Tu web para la IA','audit','',1]]],['En Google',[['google','Posición en Google','trend'],['auditseo','Tu web para Google','audit']]],['Comercio agéntico',[['agents','Visibilidad en agentes','agent'],['agaudit','Auditoría agéntica','cart']],'new']];
 const NAVFLAT=NAV.flatMap(([,it])=>it.map(([k,l,i])=>({k,l,i})));
 const R={route:'overview',first:{}};
 function navRender(){$('#nav').innerHTML=NAV.map(([g,items,f])=>`<div class="grp" style="margin-top:${g?14:0}px">${g?`<div class="lbl">${g}${f?'<span class="new">Nuevo</span>':''}</div>`:''}${items.map(([k,l,i,n,dot])=>`<a href="#${k}" class="nav ${R.route===k?'on':''}" ${R.route===k?'aria-current="page"':''} data-route="${k}">${ic(i)}<span>${l}</span>${n?`<span class="cnt num">${n}</span>`:''}${dot?'<span class="sd" title="Hay algo que frena"></span>':''}</a>`).join('')}</div>`).join('')}
@@ -3604,7 +3577,7 @@ seo:{t:'Auditoría SEO',q:'¿Te encuentra Google?',lbl:'Salud SEO',v:81,icon:'se
 const AU_SEV={crit:'Crítico',warn:'Aviso',imp:'Mejora'};
 const AU_PAGES=[['/',78,'Actualizada','420 ms','86 KB'],['/precios',71,'Actualizada','380 ms','64 KB'],['/facturacion-electronica',84,'Empieza a desactualizarse','510 ms','92 KB'],['/autonomos',66,'Desactualizada','460 ms','71 KB'],['/blog/que-es-verifactu',73,'Sin fecha detectada','350 ms','58 KB']];
 const AU_BOTS=[['ChatGPT','chatgpt',1],['ChatGPT (búsqueda)','chatgpt',1],['Gemini','gemini',1],['Claude','claude',1],['Perplexity','perplexity',0]];
-U.au={blk:'geo',tab:'prob',open:'bots',dev:'m'};
+U.au={tab:'prob',open:'bots',dev:'m'};
 const auGain=k=>AU[k].issues.reduce((a,x)=>a+x.pt,0);
 
 /* score arc with ghost potential: 270 degrees, now in blue, ghost up to «to» */
@@ -3615,13 +3588,12 @@ function auArc(v,to,size=132){const r=size/2-8,c=size/2,C=2*Math.PI*r,span=.75*C
   <circle class="now" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}"/></g></svg>
   <span class="n"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
 
-function auBlock(k){const B=AU[k],on=U.au.blk===k,gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
- return `<div class="card sc-au-blk ${on?'on':''}">
-  <button class="sel" data-act="auBlk" data-arg="${k}" aria-pressed="${on}" aria-label="${B.t}: ${B.lbl} ${B.v} de 100. Puedes llegar a ${to}.">
-   <span class="hd"><span class="ico">${k==='seo'?lg('google',16):ic(B.icon)}</span><span><b>${B.t}</b><span>${B.q}</span></span></span>
-   <span class="bd">${auArc(B.v,to)}<span class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b>`:'0 críticos'} · ${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span><span class="to-m">Hasta <b class="num">${to}</b></span></span></span></button>
+function auHero(k){const B=AU[k],gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
+ return `<section class="card sc-au-hero" aria-label="${B.lbl}: ${B.v} de 100. Puedes llegar a ${to}.">
+  ${auArc(B.v,to,104)}
+  <div class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b> · `:''}${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span></div>
   <button class="pot" data-act="auPot" data-arg="${k}">${ic('arrowup','sm')}<b class="num">+${gain} pt</b><span class="px"> si arreglas ${B.issues.length} problemas</span>${ic('chevr','sm')}</button>
- </div>`}
+ </section>`}
 
 function auIssue(x){const op=U.au.open===x.id;
  return `<div class="sc-au-iss ${op?'open':''}"><button class="h" data-act="auIss" data-arg="${x.id}" aria-expanded="${op}"><span class="sd ${x.sev}" aria-hidden="true"></span><span class="l"><b>${bEsc(x.l)}</b><span>${AU_SEV[x.sev]} · ${x.scope}</span></span>${x.fix?'<span class="badge b-blue">Solución disponible</span>':'<span></span>'}<span class="pt num">+${x.pt} pt</span>${ic('chevd','sm')}</button>
@@ -3636,27 +3608,28 @@ function auCwv(){const m=U.au.dev==='m';const rows=m?[['Carga del contenido prin
   <div class="zone" role="img" aria-label="${n}: ${v}, ${r}"><i class="ok"></i><i class="mid"></i><i class="bad"></i><span style="left:${p*100}%"></span></div><div class="zl"><span>Bueno</span><span>Mejorable</span><span>Lento</span></div></div>`).join('')}</div>
   <p class="hint">Datos de PageSpeed Insights sobre tu portada.</p></div></div>`}
 
-SCREENS.audit={title:'Auditoría técnica',render(){const k=U.au.blk,B=AU[k],geo=k==='geo',tab=U.au.tab;
+const AU_NOTE={geo:'Lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones.',seo:'Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido.'};
+const AU_TITLE={geo:'Tu web para la IA',seo:'Tu web para Google'};
+function auPage(k){const B=AU[k],geo=k==='geo',tab=U.au.tab;if(!B.issues.some(x=>x.id===U.au.open))U.au.open=B.issues[0].id;
  const main=tab==='prob'?`${geo?'':auCwv()}<div class="card"><div class="card-h"><h3>Problemas</h3><span class="see" style="cursor:default">Ordenados por lo que suman</span></div><div class="card-b sc-au-list">${B.issues.map(auIssue).join('')}</div></div>`
   :tab==='ok'?`<div class="card"><div class="card-h"><h3>Lo que ya está bien</h3></div><div class="card-b sc-au-okl">${B.ok.map(p=>`<div>${ic('checkc','sm')}<span>${p}</span></div>`).join('')}</div></div>`
   :`<div class="card"><div class="card-h"><h3>Páginas revisadas</h3><span class="see" style="cursor:default">Puntos por página</span></div><div class="card-b sc-au-pages">${AU_PAGES.map(([u,s,f,t,kb],i)=>`<div class="r"><span class="u"><code class="p">${u}</code><span>Respuesta ${t} · HTML ${kb}</span></span><span class="badge ${f==='Actualizada'?'b-pos':f==='Desactualizada'?'b-warm':'b-line'}">${f}</span><span class="s num">${s}<small>/100</small></span>${bar(s,{cls:'thin '+(s<70?'warm':''),delay:i*60})}</div>`).join('')}</div></div>`;
  const side=geo?`<div class="card"><div class="card-h"><h3>Acceso de bots de IA</h3></div><div class="card-b sc-au-bots">${AU_BOTS.map(([n,l,ok])=>`<div class="${ok?'':'no'}"><span class="n">${lg(l,14)}${n}</span>${ok?`<span class="ok">${ic('checkc','sm')}Permitido</span>`:`<span class="ko">${ic('x','sm')}Bloqueado</span>`}</div>`).join('')}<div><span class="n mono">llms.txt</span><span class="wn">${ic('warn','sm')}No encontrado</span></div><div><span class="n mono">sitemap.xml</span><span class="ok">${ic('checkc','sm')}Encontrado</span></div></div></div>`:'';
  return `<div class="sc-au"><div class="eyebrow bare">Auditoría técnica · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span></div>
- <h1 style="margin-top:14px">Auditoría técnica</h1>
- <p class="lead">Lo que frena a la IA y a Google en tu web. Lo más urgente: <a href="#audit" data-act="auGo" data-arg="bots">Perplexity no puede leerte</a>.</p>
- <section class="grid2 sc-au-blks">${auBlock('geo')}${auBlock('seo')}</section>
+ <h1 style="margin-top:14px">${AU_TITLE[k]}</h1>
+ <p class="lead">${AU_NOTE[k]}${geo?` Lo más urgente: <a href="#auditgeo" data-act="auGo" data-arg="bots">Perplexity no puede leerte</a>.`:''}</p>
+ ${auHero(k)}
  <div class="sc-au-tabs">${seg('au-tab',[['prob',`Problemas · ${B.issues.length}`],['ok',`Correcto · ${B.ok.length}`],['pg','Páginas · 5']],tab,'auTab')}</div>
- <div class="${geo?'sc-au-grid':''}" style="margin-top:16px"><div class="stk">${main}</div>${geo?`<div class="stk">${side}</div>`:''}</div></div>`},
- after(root,first){bLight(root,first)}};
+ <div class="${geo?'sc-au-grid':''}" style="margin-top:16px"><div class="stk">${main}</div>${geo?`<div class="stk">${side}</div>`:''}</div></div>`}
+SCREENS.auditgeo={title:AU_TITLE.geo,render(){return auPage('geo')},after(root,first){bLight(root,first)}};
+SCREENS.auditseo={title:AU_TITLE.seo,render(){return auPage('seo')},after(root,first){bLight(root,first)}};
 
-ACT.auBlk=el=>{const k=el.dataset.arg;if(U.au.blk===k)return;U.au.blk=k;U.au.open=AU[k].issues[0].id;bRe()};
 ACT.auTab=el=>{U.au.tab=el.dataset.arg;bRe()};
 ACT.auIss=el=>{const id=el.dataset.arg;U.au.open=U.au.open===id?null:id;bRe()};
 ACT.auDev=el=>{U.au.dev=el.dataset.arg;bRe()};
 function auScrollTo(sel){setTimeout(()=>{const sc=$('#sc'),e=$(sel);if(sc&&e)sc.scrollTo({top:e.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-90,behavior:RM.matches?'auto':'smooth'})},40)}
-ACT.auPot=el=>{const k=el.dataset.arg;U.au.blk=k;U.au.tab='prob';U.au.open=AU[k].issues[0].id;bRe();auScrollTo('.sc-au-list')};
-ACT.auGo=el=>{U.au.blk='geo';U.au.tab='prob';U.au.open=el.dataset.arg;bRe();auScrollTo('.sc-au-iss.open')};
-CMDS.push(['Auditoría técnica','Ver la Auditoría SEO','search',()=>{U.au.blk='seo';U.au.tab='prob';go('audit')}]);
+ACT.auPot=el=>{const k=el.dataset.arg;U.au.tab='prob';U.au.open=AU[k].issues[0].id;bRe();auScrollTo('.sc-au-list')};
+ACT.auGo=el=>{U.au.tab='prob';U.au.open=el.dataset.arg;bRe();auScrollTo('.sc-au-iss.open')};
 
 /* --- screens/auth.js --- */
 /* ================= SCREENS: entry (login, signup, forgot, MFA) · builder C =================
@@ -3802,7 +3775,7 @@ SCREENS.citations={title:'Páginas citadas',render(){
  <div class="eyebrow bare">Páginas citadas · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span></div>
  <h1 style="margin-top:14px">Páginas citadas</h1>
  <p class="lead">Las webs que la IA usa como fuente. El 4% de las citas son tuyas y hay <a href="#citations" data-act="ctjump" data-arg="reach">13 webs alcanzables</a> que no te nombran.</p>
- <div class="pills"><a class="chip" href="#audit" data-route="audit">${ic('audit','sm')}¿Tus páginas se pueden citar?</a></div>
+ <div class="pills"><a class="chip" href="#auditgeo" data-route="auditgeo">${ic('audit','sm')}¿Tus páginas se pueden citar?</a></div>
 
  <section class="sec"><div class="kpis ct-k">
   <div class="kpi"><div class="l">Respuestas con cita</div><div class="v"><b>${roll(64)}</b><span class="u">%</span></div><p class="ct-kc">De las respuestas del último escaneo citan al menos una página.</p></div>
@@ -4546,7 +4519,7 @@ function xoPaintShell(){
  set('.mtop .pj','xoDomains',{'aria-haspopup':'dialog','aria-label':'Nubaria. Cambiar de dominio'});
  set('.top .ibox,.mtop .bell','xoBell',{'aria-haspopup':'dialog'});
  set('.top .av,.mtop .av','xoAccount',{role:'button',tabindex:'0','aria-haspopup':'dialog','aria-label':'Tu cuenta'});
- const foot=$('.side .foot');foot.insertAdjacentHTML('beforebegin',`<div class="xo-sfoot"><button class="nav" data-act="xoHelp" aria-haspopup="dialog">${ic('c-help')}<span>¿Cómo funciona?</span></button></div>`);
+ const foot=$('.side .foot');const bot=document.createElement('div');bot.className='xo-bot';foot.before(bot);bot.append(foot);bot.insertAdjacentHTML('beforeend',`<button class="xo-help" data-act="xoHelp" aria-haspopup="dialog" aria-label="¿Cómo funciona?" title="¿Cómo funciona?">${ic('c-help')}</button>`);
  foot.setAttribute('role','button');foot.tabIndex=0;foot.dataset.act='xoAccount';foot.setAttribute('aria-label','Tu cuenta');foot.classList.add('xo-foot');
  document.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('[role="button"][data-act]')){e.preventDefault();e.target.click()}});
  /* prototype-only: a menu with every state this builder adds */
@@ -4557,7 +4530,7 @@ const XO_STATES=[
  ['Acceso',[['Login','login'],['Crear cuenta','signup'],['Confirma tu email',()=>{U.cAuth='confirm';go('signup')}],['Recuperar contraseña',()=>{U.cFg='email';go('forgot')}],['Código de 6 dígitos',()=>{U.cFg='code';go('forgot')}],['Contraseña nueva',()=>{U.cFg='new';go('forgot')}],['Verificación MFA','mfa']]],
  ['Entrada',[['Nuevo dominio · Pro',()=>{U.cPlan='pro';U.cWz={step:1};go('newdomain')}],['Nuevo dominio · Starter',()=>{U.cPlan='starter';U.cWz={step:1};go('newdomain')}],['Primer escaneo',()=>{U.cMs=null;go('mission')}]]],
  ['Tu perfil',[['Plan',()=>{U.cTab='plan';go('perfil')}],['Cuenta',()=>{U.cTab='cuenta';go('perfil')}],['Notificaciones',()=>{U.cTab='notif';go('perfil')}],['Cambiar de plan',()=>{go('perfil');setTimeout(()=>ACT.cPlan(),60)}]]],
- ['Transversal',[['Notificaciones',()=>ACT.xoBell(xoTrig('.top .ibox','.mtop .bell'))],['Notificaciones vacías',()=>{U.cBellEmpty=true;ACT.xoBell(xoTrig('.top .ibox','.mtop .bell'))}],['Selector de dominios',()=>ACT.xoDomains(xoTrig('.side .proj','.mtop .pj'))],['¿Cómo funciona?',()=>ACT.xoHelp(xoTrig('.xo-sfoot [data-act="xoHelp"]','.mtop .av'))],['Menú de cuenta',()=>ACT.xoAccount(xoTrig('.top .av','.mtop .av'))],['Tour',()=>ACT.cTour()],['Videollamada',()=>ACT.xoDemo()],['Programa de afiliados',()=>ACT.xoAffil()],['Error 404','notfound'],['Algo ha ido mal','error'],
+ ['Transversal',[['Notificaciones',()=>ACT.xoBell(xoTrig('.top .ibox','.mtop .bell'))],['Notificaciones vacías',()=>{U.cBellEmpty=true;ACT.xoBell(xoTrig('.top .ibox','.mtop .bell'))}],['Selector de dominios',()=>ACT.xoDomains(xoTrig('.side .proj','.mtop .pj'))],['¿Cómo funciona?',()=>ACT.xoHelp(xoTrig('.xo-help','.mtop .av'))],['Menú de cuenta',()=>ACT.xoAccount(xoTrig('.top .av','.mtop .av'))],['Tour',()=>ACT.cTour()],['Videollamada',()=>ACT.xoDemo()],['Programa de afiliados',()=>ACT.xoAffil()],['Error 404','notfound'],['Algo ha ido mal','error'],
   ['Solo lectura · activar',()=>{xoSetRO(true);go('perfil')}],['Solo lectura · quitar',()=>xoSetRO(false)]]]];
 const xoTrig=(d,m)=>MOB.matches?$(m):$(d);
 ACT.xoStates=el=>xoPop(el,`<div class="xo-h"><b>Estados · builder C</b></div><div class="xo-stl">${XO_STATES.map(([g,it],gi)=>`<div class="xo-lbl">${g}</div>${it.map(([l],ii)=>`<button class="xo-mi sm" data-act="xoState" data-arg="${gi}:${ii}"><span>${l}</span></button>`).join('')}`).join('')}</div>`,{w:300,label:'Estados del prototipo'});
@@ -4606,7 +4579,7 @@ SCREENS.overview={title:'Visión general',render(){const sc=U.scan;
    ${ticks(68,Math.floor(U.prog/2),{id:'scan-tk'})}
    <div class="s" id="scan-s">Puedes salir. Seguimos solos.</div></div>
  </section>`:''}
- <div class="alert" role="region" aria-label="Prioridad 1">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="audit">Arreglarlo${ic('arrowr','sm')}</button></div>
+ <div class="alert" role="region" aria-label="Prioridad 1">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="auditgeo">Arreglarlo${ic('arrowr','sm')}</button></div>
 
  <section class="sec" aria-label="Puntuación GEO"><div class="card agh agh-a ov-h">
   <span class="agh-tab">${ic('trend','sm')}Puntuación GEO</span>
@@ -4650,7 +4623,7 @@ SCREENS.overview={title:'Visión general',render(){const sc=U.scan;
     <div><div class="k">Salud SEO</div><div class="bv num">81<small>/100</small></div><div class="trio"><span><b class="num">0</b>Críticos</span><span><b class="num">2</b>Avisos</span><span><b class="num">3</b>Mejoras</span></div></div>
     <div><div class="k">${lg('google',13)}Google · 28 días</div><div class="bv num">1.284<small> clics</small></div><div class="trio"><span><b class="num">14,2</b>Puesto medio</span><span><b class="num">5</b>En página 2</span></div></div>
    </div>
-   <div class="fx-w"><div class="fx-k">Recomendaciones</div><a class="fixln" href="#audit" data-route="audit"><span class="sd" style="background:var(--ink-4)"></span>Un solo &lt;h1&gt; por página<span style="color:var(--ink-3);margin-left:6px">4 páginas</span>${ic('chevr','sm')}</a></div>
+   <div class="fx-w"><div class="fx-k">Recomendaciones</div><a class="fixln" href="#auditseo" data-route="auditseo"><span class="sd" style="background:var(--ink-4)"></span>Un solo &lt;h1&gt; por página<span style="color:var(--ink-3);margin-left:6px">4 páginas</span>${ic('chevr','sm')}</a></div>
    </div></div>
  </section>`}};
 
@@ -5140,7 +5113,7 @@ function rerenderLater(){const b=$('#laterb');if(!b)return;
 SCREENS.recs={title:'Recomendaciones',render(){const open=ALLRECS.filter(r=>!U.done[r.id]).length;
  return `<div class="eyebrow bare">Recomendaciones · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span><span class="badge b-line" style="letter-spacing:0;text-transform:none">${open} acciones</span></div>
  <h1 style="margin-top:14px">Recomendaciones</h1><p class="lead">Cuatro para esta semana. El resto, ordenado por palanca.</p>
- <div class="alert" role="region" aria-label="Bloqueo">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="audit">Arreglarlo</button></div>
+ <div class="alert" role="region" aria-label="Bloqueo">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="auditgeo">Arreglarlo</button></div>
  <div class="pillars">${[['Presencia',41],['Prominencia',66],['Cuota de voz',34],['Autoridad',18]].map(([l,v],i)=>`<div><div class="l">${l}</div><b class="num">${roll(v)}</b>${bar(v,{cls:'thin '+(v<25?'warm':''),delay:i*80})}</div>`).join('')}</div>
  <button class="wins" data-act="wins">${ic('checkc','sm')}3 resueltas hace poco${ic('arrowr','sm')}</button>
  <div class="focus-h"><h2>Tu plan de esta semana. <b>Hasta +14 pt</b></h2><div class="ctl"><span style="font-size:12.5px;color:var(--ink-3)">← →</span><button class="navb" data-step="-1" aria-label="Acción anterior">${ic('chevl')}</button><button class="navb" data-step="1" aria-label="Acción siguiente">${ic('chevr')}</button></div></div>

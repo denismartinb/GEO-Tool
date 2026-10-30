@@ -34,7 +34,7 @@ seo:{t:'Auditoría SEO',q:'¿Te encuentra Google?',lbl:'Salud SEO',v:81,icon:'se
 const AU_SEV={crit:'Crítico',warn:'Aviso',imp:'Mejora'};
 const AU_PAGES=[['/',78,'Actualizada','420 ms','86 KB'],['/precios',71,'Actualizada','380 ms','64 KB'],['/facturacion-electronica',84,'Empieza a desactualizarse','510 ms','92 KB'],['/autonomos',66,'Desactualizada','460 ms','71 KB'],['/blog/que-es-verifactu',73,'Sin fecha detectada','350 ms','58 KB']];
 const AU_BOTS=[['ChatGPT','chatgpt',1],['ChatGPT (búsqueda)','chatgpt',1],['Gemini','gemini',1],['Claude','claude',1],['Perplexity','perplexity',0]];
-U.au={blk:'geo',tab:'prob',open:'bots',dev:'m'};
+U.au={tab:'prob',open:'bots',dev:'m'};
 const auGain=k=>AU[k].issues.reduce((a,x)=>a+x.pt,0);
 
 /* score arc with ghost potential: 270 degrees, now in blue, ghost up to «to» */
@@ -45,13 +45,12 @@ function auArc(v,to,size=132){const r=size/2-8,c=size/2,C=2*Math.PI*r,span=.75*C
   <circle class="now" cx="${c}" cy="${c}" r="${r}" stroke-dasharray="0 ${C.toFixed(1)}"/></g></svg>
   <span class="n"><b class="num">${roll(v)}</b><small>/100</small></span></span>`}
 
-function auBlock(k){const B=AU[k],on=U.au.blk===k,gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
- return `<div class="card sc-au-blk ${on?'on':''}">
-  <button class="sel" data-act="auBlk" data-arg="${k}" aria-pressed="${on}" aria-label="${B.t}: ${B.lbl} ${B.v} de 100. Puedes llegar a ${to}.">
-   <span class="hd"><span class="ico">${k==='seo'?lg('google',16):ic(B.icon)}</span><span><b>${B.t}</b><span>${B.q}</span></span></span>
-   <span class="bd">${auArc(B.v,to)}<span class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b>`:'0 críticos'} · ${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span><span class="to-m">Hasta <b class="num">${to}</b></span></span></span></button>
+function auHero(k){const B=AU[k],gain=auGain(k),to=Math.min(100,B.v+gain),crit=B.issues.filter(x=>x.sev==='crit').length;
+ return `<section class="card sc-au-hero" aria-label="${B.lbl}: ${B.v} de 100. Puedes llegar a ${to}.">
+  ${auArc(B.v,to,104)}
+  <div class="rt"><span class="lb">${B.lbl}</span><span class="mt num">${crit?`<b>${crit} ${crit===1?'crítico':'críticos'}</b> · `:''}${B.issues.length} problemas</span><span class="to">Puedes llegar a <b class="num">${to}</b></span></div>
   <button class="pot" data-act="auPot" data-arg="${k}">${ic('arrowup','sm')}<b class="num">+${gain} pt</b><span class="px"> si arreglas ${B.issues.length} problemas</span>${ic('chevr','sm')}</button>
- </div>`}
+ </section>`}
 
 function auIssue(x){const op=U.au.open===x.id;
  return `<div class="sc-au-iss ${op?'open':''}"><button class="h" data-act="auIss" data-arg="${x.id}" aria-expanded="${op}"><span class="sd ${x.sev}" aria-hidden="true"></span><span class="l"><b>${bEsc(x.l)}</b><span>${AU_SEV[x.sev]} · ${x.scope}</span></span>${x.fix?'<span class="badge b-blue">Solución disponible</span>':'<span></span>'}<span class="pt num">+${x.pt} pt</span>${ic('chevd','sm')}</button>
@@ -66,24 +65,25 @@ function auCwv(){const m=U.au.dev==='m';const rows=m?[['Carga del contenido prin
   <div class="zone" role="img" aria-label="${n}: ${v}, ${r}"><i class="ok"></i><i class="mid"></i><i class="bad"></i><span style="left:${p*100}%"></span></div><div class="zl"><span>Bueno</span><span>Mejorable</span><span>Lento</span></div></div>`).join('')}</div>
   <p class="hint">Datos de PageSpeed Insights sobre tu portada.</p></div></div>`}
 
-SCREENS.audit={title:'Auditoría técnica',render(){const k=U.au.blk,B=AU[k],geo=k==='geo',tab=U.au.tab;
+const AU_NOTE={geo:'Lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones.',seo:'Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido.'};
+const AU_TITLE={geo:'Tu web para la IA',seo:'Tu web para Google'};
+function auPage(k){const B=AU[k],geo=k==='geo',tab=U.au.tab;if(!B.issues.some(x=>x.id===U.au.open))U.au.open=B.issues[0].id;
  const main=tab==='prob'?`${geo?'':auCwv()}<div class="card"><div class="card-h"><h3>Problemas</h3><span class="see" style="cursor:default">Ordenados por lo que suman</span></div><div class="card-b sc-au-list">${B.issues.map(auIssue).join('')}</div></div>`
   :tab==='ok'?`<div class="card"><div class="card-h"><h3>Lo que ya está bien</h3></div><div class="card-b sc-au-okl">${B.ok.map(p=>`<div>${ic('checkc','sm')}<span>${p}</span></div>`).join('')}</div></div>`
   :`<div class="card"><div class="card-h"><h3>Páginas revisadas</h3><span class="see" style="cursor:default">Puntos por página</span></div><div class="card-b sc-au-pages">${AU_PAGES.map(([u,s,f,t,kb],i)=>`<div class="r"><span class="u"><code class="p">${u}</code><span>Respuesta ${t} · HTML ${kb}</span></span><span class="badge ${f==='Actualizada'?'b-pos':f==='Desactualizada'?'b-warm':'b-line'}">${f}</span><span class="s num">${s}<small>/100</small></span>${bar(s,{cls:'thin '+(s<70?'warm':''),delay:i*60})}</div>`).join('')}</div></div>`;
  const side=geo?`<div class="card"><div class="card-h"><h3>Acceso de bots de IA</h3></div><div class="card-b sc-au-bots">${AU_BOTS.map(([n,l,ok])=>`<div class="${ok?'':'no'}"><span class="n">${lg(l,14)}${n}</span>${ok?`<span class="ok">${ic('checkc','sm')}Permitido</span>`:`<span class="ko">${ic('x','sm')}Bloqueado</span>`}</div>`).join('')}<div><span class="n mono">llms.txt</span><span class="wn">${ic('warn','sm')}No encontrado</span></div><div><span class="n mono">sitemap.xml</span><span class="ok">${ic('checkc','sm')}Encontrado</span></div></div></div>`:'';
  return `<div class="sc-au"><div class="eyebrow bare">Auditoría técnica · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span></div>
- <h1 style="margin-top:14px">Auditoría técnica</h1>
- <p class="lead">Lo que frena a la IA y a Google en tu web. Lo más urgente: <a href="#audit" data-act="auGo" data-arg="bots">Perplexity no puede leerte</a>.</p>
- <section class="grid2 sc-au-blks">${auBlock('geo')}${auBlock('seo')}</section>
+ <h1 style="margin-top:14px">${AU_TITLE[k]}</h1>
+ <p class="lead">${AU_NOTE[k]}${geo?` Lo más urgente: <a href="#auditgeo" data-act="auGo" data-arg="bots">Perplexity no puede leerte</a>.`:''}</p>
+ ${auHero(k)}
  <div class="sc-au-tabs">${seg('au-tab',[['prob',`Problemas · ${B.issues.length}`],['ok',`Correcto · ${B.ok.length}`],['pg','Páginas · 5']],tab,'auTab')}</div>
- <div class="${geo?'sc-au-grid':''}" style="margin-top:16px"><div class="stk">${main}</div>${geo?`<div class="stk">${side}</div>`:''}</div></div>`},
- after(root,first){bLight(root,first)}};
+ <div class="${geo?'sc-au-grid':''}" style="margin-top:16px"><div class="stk">${main}</div>${geo?`<div class="stk">${side}</div>`:''}</div></div>`}
+SCREENS.auditgeo={title:AU_TITLE.geo,render(){return auPage('geo')},after(root,first){bLight(root,first)}};
+SCREENS.auditseo={title:AU_TITLE.seo,render(){return auPage('seo')},after(root,first){bLight(root,first)}};
 
-ACT.auBlk=el=>{const k=el.dataset.arg;if(U.au.blk===k)return;U.au.blk=k;U.au.open=AU[k].issues[0].id;bRe()};
 ACT.auTab=el=>{U.au.tab=el.dataset.arg;bRe()};
 ACT.auIss=el=>{const id=el.dataset.arg;U.au.open=U.au.open===id?null:id;bRe()};
 ACT.auDev=el=>{U.au.dev=el.dataset.arg;bRe()};
 function auScrollTo(sel){setTimeout(()=>{const sc=$('#sc'),e=$(sel);if(sc&&e)sc.scrollTo({top:e.getBoundingClientRect().top-sc.getBoundingClientRect().top+sc.scrollTop-90,behavior:RM.matches?'auto':'smooth'})},40)}
-ACT.auPot=el=>{const k=el.dataset.arg;U.au.blk=k;U.au.tab='prob';U.au.open=AU[k].issues[0].id;bRe();auScrollTo('.sc-au-list')};
-ACT.auGo=el=>{U.au.blk='geo';U.au.tab='prob';U.au.open=el.dataset.arg;bRe();auScrollTo('.sc-au-iss.open')};
-CMDS.push(['Auditoría técnica','Ver la Auditoría SEO','search',()=>{U.au.blk='seo';U.au.tab='prob';go('audit')}]);
+ACT.auPot=el=>{const k=el.dataset.arg;U.au.tab='prob';U.au.open=AU[k].issues[0].id;bRe();auScrollTo('.sc-au-list')};
+ACT.auGo=el=>{U.au.tab='prob';U.au.open=el.dataset.arg;bRe();auScrollTo('.sc-au-iss.open')};

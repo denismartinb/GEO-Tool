@@ -30,7 +30,7 @@ SCREENS.citations={title:'Páginas citadas',render(){
  <div class="eyebrow bare">Páginas citadas · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span></div>
  <h1 style="margin-top:14px">Páginas citadas</h1>
  <p class="lead">Las webs que la IA usa como fuente. El 4% de las citas son tuyas y hay <a href="#citations" data-act="ctjump" data-arg="reach">13 webs alcanzables</a> que no te nombran.</p>
- <div class="pills"><a class="chip" href="#audit" data-route="audit">${ic('audit','sm')}¿Tus páginas se pueden citar?</a></div>
+ <div class="pills"><a class="chip" href="#auditgeo" data-route="auditgeo">${ic('audit','sm')}¿Tus páginas se pueden citar?</a></div>
 
  <section class="sec"><div class="kpis ct-k">
   <div class="kpi"><div class="l">Respuestas con cita</div><div class="v"><b>${roll(64)}</b><span class="u">%</span></div><p class="ct-kc">De las respuestas del último escaneo citan al menos una página.</p></div>

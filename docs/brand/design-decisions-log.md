@@ -27776,3 +27776,28 @@ franja, la tarjeta y la barra no dependen de él y nunca se pueden cerrar.
 **No se hizo.** La tarjeta de «Escaneos en pausa» en Visión general y el
 «Marcar como hecho» deshabilitado con su motivo en el sitio (piezas 3 y 4 del
 prototipo): pendientes. Las acciones siguen bloqueadas en servidor.
+
+## §368 · CONSOLE-INSTRUMENTO-1: «Auditoría técnica» se desdobla en dos páginas (2026-10-30)
+
+**Qué se decidió (Denis, 2026-10-30).** «Auditoría técnica» no podía vivir
+bajo «En Google», porque incluye la parte GEO. Se prueba la opción 3: una
+entrada por canal, «Tu web para la IA» bajo «En la IA» y «Tu web para Google»
+bajo «En Google». Ambas siguen en `/web-audit` y se distinguen por `?bloque=geo|seo`
+(`navHref`, `isNavActive` con el bloque, la miga y el título de pestaña salen del
+bloque). Las dos tarjetas selectoras de arriba desaparecen: cada página lleva una
+sola franja de nota (arco con potencial, recuento de problemas y «+N pt si
+arreglas…»), y el texto de cada bloque pasa a ser la frase bajo el título.
+
+**Además.** «¿Cómo funciona?» pasa a icono junto a la cuenta, en la fila inferior
+del menú, para recuperar una fila. Las tarjetas de componente de la Auditoría
+agéntica recuperan relleno y borde (el reset `.ins button` ganaba a `.ag-comp`).
+El prototipo (`i-src` + `i-consola.html`) se actualiza con las dos rutas
+(`auditgeo`, `auditseo`).
+
+**Pendiente.** El nombre de las dos entradas es una prueba: Denis puede volver a
+«Auditoría técnica GEO/SEO». La nota de la fila de arriba en Visión general («Auditoría SEO»)
+sigue enlazando a `?bloque=seo`.
+
+**Premisa de retirada de camino:** se retira el selector de bloques de la página.
+La premisa es que cada bloque tiene su entrada de menú; la verifica
+`lib/ins/nav.test.ts`. Sin esas entradas la pantalla no tendría forma de cambiar de bloque.
