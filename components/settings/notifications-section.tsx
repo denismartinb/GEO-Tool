@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Ic } from "@/components/ins/ic";
 import { updateNotificationPreference } from "@/app/dashboard/settings/notifications/actions";
 import {
   CATEGORY_COPY,
@@ -77,10 +76,6 @@ export function NotificationsSection({ initial }: { initial: Record<OptionalEmai
           </div>
         </div>
       </div>
-      <p className="pf-hint" style={{ marginTop: 14 }}>
-        <Ic n="bell" sm />
-        En la consola, la campana te enseña como mucho un aviso de cada tipo.
-      </p>
     </>
   );
 }
