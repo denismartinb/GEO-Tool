@@ -14,7 +14,7 @@ import { AUDIT_BLOCKS, type AuditBlockKey, type AuditBlockView } from "@/lib/web
 
 /** One line under the title: what each block is for. */
 export const BLOCK_NOTES: Record<AuditBlockKey, string> = {
-  geo: "Lo que la IA necesita para poder citarte. Que acabe citándote depende también del contenido, que trabajas en Recomendaciones.",
+  geo: "Lo que la IA necesita técnicamente en tu web para poder citarte. El número de citas depende también del contenido, que trabajas en Recomendaciones.",
   seo: "Lo que Google necesita para encontrar tu web, entenderla y enseñarla rápido.",
 };
 
