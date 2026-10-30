@@ -94,7 +94,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "que-fuentes-cita-la-ia": "playbooks",
   // BLOG-BF-AGENTS-1 (2026-10-23, log §342).
   "black-friday-agentes-de-ia": "playbooks",
-  "la-ia-prefiere-contenido-reciente": "medicion"
+  "la-ia-prefiere-contenido-reciente": "medicion",
+  "convierte-mejor-el-trafico-de-la-ia": "fundamentos"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

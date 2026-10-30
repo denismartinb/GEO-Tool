@@ -113,7 +113,8 @@ const BLOG_SLUGS = [
   "que-fuentes-cita-la-ia",
   // BLOG-BF-AGENTS-1 (2026-10-23, log §342).
   "black-friday-agentes-de-ia",
-  "la-ia-prefiere-contenido-reciente"
+  "la-ia-prefiere-contenido-reciente",
+  "convierte-mejor-el-trafico-de-la-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
