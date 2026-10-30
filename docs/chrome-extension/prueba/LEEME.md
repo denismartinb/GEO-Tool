@@ -16,7 +16,7 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.6.2.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.6.3.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
@@ -42,9 +42,10 @@ guarda ninguna contraseña ni token: usa la misma sesión que la web, y si
 cierras sesión allí, el panel vuelve a «Entrar». Esta prueba lee la vista
 previa del PR, así que hay que iniciar sesión en esa dirección.
 
-Al abrir el panel con sesión sale el dominio que tienes seleccionado en la
-consola. Para analizar la página que tienes abierta, pulsa el icono de
-GenScore de la barra (o Alt+Mayús+G).
+Mientras estás en la consola, el panel enseña el dominio que tienes
+seleccionado allí (o el que elijas en el desplegable). En cualquier otra
+página, pulsa el icono de GenScore de la barra (o Alt+Mayús+G) para
+analizarla.
 
 ## Qué probar
 

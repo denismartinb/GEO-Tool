@@ -267,7 +267,7 @@
       ${S.read ? "" : `<p class="tiny">Chrome te pedirá permiso para leer las webs.</p>`}</div>`;
     return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused idleb">
       <div class="idlemain"><div class="minibar" aria-hidden="true"><i class="u"></i><span class="t">${PUZ}</span><span class="t g">${svgGs(14)}</span><i class="av"></i><i class="hit"></i>${CUR}</div>
-      <h2>${paused ? "Pulsa el icono otra vez" : "Pulsa el icono"}</h2>
+      <h2>${paused || S.real ? "Para analizar la página actual, pulsa el icono de nuevo" : "Pulsa el icono"}</h2>
       <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>
       ${auto}</div>${foot(null)}</div>`;
   }
@@ -341,7 +341,10 @@
     let html, ctx;
     const idle = !S.rec && !(S.read && S.autoOn && S.tabId != null);
     badgeTick(idle && !(S.real && (S.read || onConsole())));
-    if (!S.rec && idle && S.real && curDom()) { html = viewDom(); ctx = "dom|" + curDom() + "|" + (A() ? 1 : 0); }
+    /* Signed in: on the console the panel shows the console's domain; on any
+       other page it shows the paused screen, unless a domain was picked in
+       the selector (Denis, 2026-10-30). */
+    if (!S.rec && idle && S.real && curDom() && (onConsole() || S.pickedDom)) { html = viewDom(); ctx = "dom|" + curDom() + "|" + (A() ? 1 : 0); }
     else if (!S.rec) { html = idle ? viewIdle(S.shown) : viewReading(); ctx = "idle" + S.read + S.autoOn; }
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
@@ -427,6 +430,7 @@
     const tab = await Env.activeTab();
     S.tabId = tab ? tab.id : null;
     S.tabNow = tab ? tab.url || null : null;
+    S.pickedDom = false; /* a pick in the selector lasts until the tab changes */
     S.rec = S.tabId != null ? await Env.result(S.tabId) : null;
     S.lane = null; S.dd = false;
     if (S.real) { S.real.sel = pickSel(S.real.sel); ensureProj(); }
@@ -478,13 +482,13 @@
 
   /* ---------------- events ---------------- */
   document.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-dk],[data-dkgo]");
+    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo]");
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
     if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }
     if (t.dataset.pick != null) {
       if (S.real) { S.real.sel = t.dataset.pick; ensureProj(); }
-      S.tab = "dom"; S.lane = null; S.dd = false; draw(); return;
+      S.tab = "dom"; S.pickedDom = true; S.lane = null; S.dd = false; draw(); return;
     }
     const hz = t.closest(".hz");
     if (t.dataset.dk && hz) { S.dk[hz.dataset.ctx] = (S.dk[hz.dataset.ctx] || 0) + +t.dataset.dk; draw(); return; }

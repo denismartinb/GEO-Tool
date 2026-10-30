@@ -27683,3 +27683,13 @@ cuanto se lee una página, la página manda (como en la 0.5.2).
 pestaña abierta es GenScore (el origen de `GS_API`, el único cuya URL ve la
 extensión), ni el aviso ni el parpadeo del icono salen: quien acaba de entrar
 está en la consola. En cualquier otra página sí.
+
+**0.6.3: fuera de la consola, la pantalla de reposo (Denis, 2026-10-30).**
+Con sesión, el panel enseña los datos del dominio seleccionado sólo mientras
+la pestaña es la consola. En otra página vuelve la pantalla de reposo de la
+0.5 (la barra con el clic animado y «Escanear automáticamente las páginas»),
+con el título «Para analizar la página actual, pulsa el icono de nuevo».
+Elegir un dominio en el desplegable enseña sus datos también fuera de la
+consola, hasta que cambia la pestaña. Corregido de paso: el clic en un
+dominio del desplegable no hacía nada, porque `[data-pick]` faltaba en el
+selector del manejador de clics.
