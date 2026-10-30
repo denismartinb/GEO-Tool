@@ -8,11 +8,9 @@ import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
 import { loadCoverageSectionData } from "@/lib/web-audit/coverage-section-data";
-import { AUDIT_BLOCKS, AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
+import { AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { Delta } from "@/components/ui/delta";
-import { formatDate } from "./_components/format";
-import { PageAuditRow } from "./_components/page-audit-row";
 import { BotAccessCard } from "./_components/bot-access-card";
 import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
 import { Ic } from "@/components/ins/ic";
@@ -20,7 +18,6 @@ import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
 import { CoverageHistory, CoverageSection } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
-import { duplicateMetadataUrls } from "@/lib/web-audit/seo-health";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
 
@@ -46,13 +43,6 @@ import { WebAuditProvider } from "./web-audit-context";
 // Same ADR-0003 rationale as the Escaneos page: the screen can wake the audit
 // worker on render (`after()` below).
 export const maxDuration = 60;
-
-// WEB-AUDIT-R3 (founder-approved 2026-07-12) rescaled page-checks.ts's point
-// weights and added new sub-checks — the SAME page's pageScore can differ
-// before/after this ships even with zero content change. A snapshot taken
-// before this date used the old criteria; the note below says so, so a lower
-// score never reads as a silent regression.
-const TECHNICAL_CRITERIA_EXPANDED_AT = new Date("2026-07-13T00:00:00Z");
 
 // ROOT-METADATA-1: el dominio va en la pestaña.
 type PageProps = {
@@ -150,7 +140,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport, bots));
                 const view = views.find((v) => v.key === activeBlock)!;
                 const isGeo = activeBlock === "geo";
-                const duplicates = isGeo ? null : duplicateMetadataUrls(pages);
                 const pageSpeed = bots?.site?.pageSpeed;
                 return (
                   <div className="sa-screen">
@@ -169,8 +158,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                       <AuditTabBar
                         counts={{
                           problemas: view.issues.length,
-                          correcto: view.passing.length,
-                          paginas: pages.length
+                          correcto: view.passing.length
                         }}
                       />
                       <div className={isGeo ? "sa-grid-2" : undefined}>
@@ -186,34 +174,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </AuditTabPanel>
                           <AuditTabPanel id="correcto">
                             <BlockPassingCard view={view} citedTopics={isGeo ? coverage.grouped.performing : undefined} />
-                          </AuditTabPanel>
-                          <AuditTabPanel id="paginas">
-                            <div className="card sa-pages">
-                              <div className="sa-ch">
-                                <h3>Páginas revisadas</h3>
-                                <span className="sa-src">
-                                  {AUDIT_BLOCKS[activeBlock].scoreLabel} de cada página · toca una para ver qué mejorar
-                                </span>
-                              </div>
-                              {new Date(technicalSnapshot.created_at) < TECHNICAL_CRITERIA_EXPANDED_AT && (
-                                <p className="sa-note">
-                                  Esta revisión es anterior al 13 jul 2026, cuando se ampliaron los criterios (canonical,
-                                  indexabilidad, hreflang, listas y tablas, contenido, Open Graph). La próxima ya usará los
-                                  actuales.
-                                </p>
-                              )}
-                              <div className="sa-pg-list">
-                                {pages.map((page, i) => (
-                                  <PageAuditRow
-                                    key={`${page.url}-${i}`}
-                                    page={page}
-                                    fixContext={fixContext}
-                                    block={activeBlock}
-                                    duplicate={duplicates ? duplicates.has(page.url) : undefined}
-                                  />
-                                ))}
-                              </div>
-                            </div>
                           </AuditTabPanel>
                           {isGeo && <CoverageSection data={coverage} />}
                         </div>

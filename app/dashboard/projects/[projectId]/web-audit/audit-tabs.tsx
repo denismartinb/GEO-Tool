@@ -50,14 +50,13 @@ export function AuditTabsProvider({ children }: { children: ReactNode }) {
   return <AuditTabsContext.Provider value={{ tab, setTab }}>{children}</AuditTabsContext.Provider>;
 }
 
-export type AuditTabCounts = Record<AuditTabId, number>;
+export type AuditTabCounts = Record<Exclude<AuditTabId, "paginas">, number>;
 
 export function AuditTabBar({ counts }: { counts: AuditTabCounts }) {
   const { tab, setTab } = useAuditTabs();
   const options: ReadonlyArray<readonly [AuditTabId, string]> = [
     ["problemas", `Problemas · ${counts.problemas}`],
-    ["correcto", `Correcto · ${counts.correcto}`],
-    ["paginas", `Páginas · ${counts.paginas}`]
+    ["correcto", `Correcto · ${counts.correcto}`]
   ];
   return (
     <div className="sc-au-tabs">
