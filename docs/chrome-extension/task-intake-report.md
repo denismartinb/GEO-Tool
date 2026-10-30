@@ -582,4 +582,13 @@ sabía si la nota era de esa web o de la página abierta. Bajo la cabecera sale
 ahora «Página abierta» con la web y la ruta revisadas y una etiqueta, «Otra
 web» o «Tu dominio».
 
+### 17.6 Versión 0.5.2 (2026-10-30): la página abierta, en el desplegable
+
+La franja de 0.5.1 seguía siendo confusa para Denis. El selector de arriba
+dice ahora de qué son los resultados de abajo: la página abierta es una opción
+más del desplegable («Página abierta», con su ruta), encima de «Tus dominios».
+Al revisar una página se elige ella sola, salvo la portada de tu dominio, que
+abre la visión general. Elegir tu dominio enseña su visión general (datos de
+ejemplo). Las pestañas «Tu dominio / Esta página» desaparecen.
+
 > Do you approve this plan? I will not implement until you confirm.

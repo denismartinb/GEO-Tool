@@ -174,11 +174,19 @@
   /* ---------------- header and foot ---------------- */
   const svgGs = (w = 16) => `<svg width="${w}" height="${Math.round(w * 1.03)}" aria-hidden="true"><use href="#e-gs"/></svg>`;
   function headNo(host) { return `<div class="ph">${svgGs(20)}<span class="who">${host ? `<b>Esta página</b>${esc(host)}` : `<b class="wm">GenScore</b>`}</span><button class="lnk" data-act="open" data-to="/login" data-c="entrar">Entrar</button></div>`; }
+  /* The selector at the top says what the results below belong to (Denis,
+     2026-10-30): the open page is one more option, next to the domains. */
   function headAcct() {
-    const d = S.sample.domain, cur = S.rec && S.rec.facts ? S.rec.facts.host : null;
+    const d = S.sample.domain, f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
     const doms = [d, ...SAMPLE.extraDomains];
-    const menu = S.dd ? `<div class="dd-m" role="menu"><div class="mh" style="margin:6px 10px 4px">Prueba de Pro · 7 días<span class="r num">${doms.length} de ${SAMPLE.cap} dominios</span></div>${doms.map((x, i) => `<button class="dd-i ${i === 0 ? "on" : ""}" role="menuitem" data-act="${i === 0 ? "dd" : "sample-only"}" data-what="cambiar de dominio">${tile(x)}<span class="t">${esc(brandOf(x))}<span>${esc(x)}</span></span>${i === 0 ? ic("check", "sm ck") : ""}</button>`).join("")}<div class="dd-sep"></div>${cur && cur !== d ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(cur)}<span class="t">Probar ${esc(cur)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" data-act="sample-only" data-what="añadir un dominio"><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${SAMPLE.cap}</span></button></div>` : "";
-    return `<div class="ph">${svgGs(20)}<div class="dd"><button class="pj" data-act="dd" aria-expanded="${!!S.dd}" aria-haspopup="menu">${tile(d)}<span class="t"><b>${esc(brandOf(d))}</b><span class="d">${esc(d)}</span></span>${ic("updown", "sm")}</button>${menu}</div><button class="av" data-act="sample-only" data-what="abrir tu cuenta" aria-label="Tu cuenta">DM</button></div>
+    const onPage = !!f && S.tab === "page";
+    const own = !!f && relation() === "own";
+    const pageItem = f ? `<div class="mh" style="margin:6px 10px 4px">Página abierta</div><button class="dd-i ${onPage ? "on" : ""}" role="menuitem" data-tab="page">${tile(f.host)}<span class="t">${esc(f.host)}<span>${esc(pathLabel(f))}</span></span>${onPage ? ic("check", "sm ck") : ""}</button><div class="dd-sep"></div>` : "";
+    const menu = S.dd ? `<div class="dd-m" role="menu">${pageItem}<div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${SAMPLE.cap}</span></div>${doms.map((x, i) => { const on = i === 0 && !onPage; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${i === 0 ? `data-tab="dom"` : `data-act="sample-only" data-what="cambiar de dominio"`}>${tile(x)}<span class="t">${esc(brandOf(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; }).join("")}<div class="dd-sep"></div>${f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" data-act="sample-only" data-what="añadir un dominio"><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${SAMPLE.cap}</span></button></div>` : "";
+    const btn = onPage
+      ? `${tile(f.host)}<span class="t"><b>${esc(f.host)}</b><span class="d">Página abierta · ${esc(pathLabel(f))}</span></span>`
+      : `${tile(d)}<span class="t"><b>${esc(brandOf(d))}</b><span class="d">${esc(d)}</span></span>`;
+    return `<div class="ph">${svgGs(20)}<div class="dd"><button class="pj" data-act="dd" aria-expanded="${!!S.dd}" aria-haspopup="menu">${btn}${ic("updown", "sm")}</button>${menu}</div><button class="av" data-act="sample-only" data-what="abrir tu cuenta" aria-label="Tu cuenta">DM</button></div>
       <div class="ctx">${EJ}<span>Cuenta y escaneos inventados para probar. La revisión de la página es real.</span></div>`;
   }
   function foot(f) {
@@ -214,23 +222,15 @@
   }
   function viewReview(f, sc) {
     const rel = relation();
+    /* a new page starts on itself, or on the domain when it is your homepage */
+    if (S.tabUrl !== f.url) { S.tabUrl = f.url; S.tab = rel === "own" && f.path === "/" ? "dom" : "page"; }
     let h = `<div class="px">${rel === "none" ? headNo(f.host) : headAcct()}`;
     const fixesCtx = "page:" + f.url;
-    if (rel === "own") {
-      const tab = S.tab || (f.path === "/" ? "dom" : "page");
-      S.tab = tab;
-      h += `<div class="seg pseg" role="tablist"><span class="ind"></span><button data-tab="dom" aria-pressed="${tab === "dom"}">Tu dominio</button><button data-tab="page" aria-pressed="${tab === "page"}">Esta página</button></div>`;
-      if (tab === "dom") {
-        h += `<div class="ey">Visión general · <span class="mono">${esc(S.sample.domain)}</span>${EJ}</div>${heroDom()}${alertHtml(sc)}${deck(SAMPLE.plan, "dom", "")}`;
-        return h + foot(null) + "</div>";
-      }
+    if (rel !== "none" && S.tab === "dom") {
+      h += `<div class="ey">Visión general · <span class="mono">${esc(S.sample.domain)}</span>${EJ}</div>${heroDom()}${rel === "own" ? alertHtml(sc) : ""}${deck(SAMPLE.plan, "dom", "")}`;
+      return h + foot(null) + "</div>";
     }
-    /* With an account the header shows the SELECTED domain, so the results
-       need to say which web they belong to (Denis, 2026-10-30: «no me queda
-       claro si estos resultados son de la página abierta o de mi dominio»). */
-    h += rel === "none"
-      ? `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`
-      : `<div class="ey">Página abierta</div><div class="pgstrip">${tile(f.host)}<span class="t"><b>${esc(f.host)}</b><span class="mono">${esc(pathLabel(f))}</span></span><span class="pgchip ${rel}">${rel === "own" ? "Tu dominio" : "Otra web"}</span></div>`;
+    if (rel === "none") h += `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`;
     h += heroPage(sc, rel) + alertHtml(sc);
     h += deck(sc.fixes, fixesCtx, "Nada que arreglar en esta página. La pueden leer los cuatro motores y Google.");
     if (rel === "none") h += ctaNoAcct(f.host);
@@ -356,7 +356,7 @@
     const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-dk],[data-dkgo]");
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
-    if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; draw(); return; }
+    if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }
     const hz = t.closest(".hz");
     if (t.dataset.dk && hz) { S.dk[hz.dataset.ctx] = (S.dk[hz.dataset.ctx] || 0) + +t.dataset.dk; draw(); return; }
     if (t.dataset.dkgo && hz) { S.dk[hz.dataset.ctx] = +t.dataset.dkgo; draw(); return; }
@@ -381,12 +381,12 @@
     } else if (a === "sample") {
       S.sample.on = !S.sample.on;
       if (S.sample.on && !S.sample.domain) S.sample.domain = S.rec && S.rec.facts ? S.rec.facts.host : "tu-dominio-ejemplo.es";
-      S.tab = null; S.lane = null;
+      S.tabUrl = null; S.lane = null;
       await Env.setL("sample", S.sample);
       draw();
       if (S.sample.on) toast("Cuenta de ejemplo activada.", `Tu dominio de ejemplo es ${esc(S.sample.domain)}. Los datos de cuenta son inventados.`, "users");
     } else if (a === "use-domain") {
-      if (S.rec && S.rec.facts) { S.sample.domain = S.rec.facts.host; S.dd = false; S.tab = null; await Env.setL("sample", S.sample); draw(); toast(`Ahora ${esc(S.sample.domain)} es tu dominio de ejemplo.`, "", "checkc"); }
+      if (S.rec && S.rec.facts) { S.sample.domain = S.rec.facts.host; S.dd = false; S.tabUrl = null; await Env.setL("sample", S.sample); draw(); toast(`Ahora ${esc(S.sample.domain)} es tu dominio de ejemplo.`, "", "checkc"); }
     } else if (a === "sample-only") {
       S.dd = false; draw();
       toast(`En la prueba no se puede ${esc(t.dataset.what || "hacer esto")}.`, "Con la cuenta conectada, funciona igual que en la consola.", "notes");
