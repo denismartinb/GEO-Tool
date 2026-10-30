@@ -9,7 +9,7 @@
   "use strict";
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const SITE = GS_API;
-  const utm = (content) => `utm_source=chrome-extension&utm_medium=extension&utm_campaign=prueba-0-6&utm_content=${content}`;
+  const utm = (content) => `utm_source=chrome-extension&utm_medium=extension&utm_campaign=extension&utm_content=${content}`;
 
   /* ---------------- environment: Chrome, or a stand-in for screenshots ---------------- */
   const IN_EXT = typeof chrome !== "undefined" && chrome.storage && chrome.storage.session && chrome.tabs;
@@ -132,7 +132,7 @@
     return `<div class="rd4">${EK.map((e) => { const a = sc.access[e]; const cls = a == null ? "u" : a ? "y" : "n"; return `<div class="c ${cls}"><span class="lg">${lg(e, 18)}<i></i></span>${ENG[e].n}<small>${a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado"}</small></div>`; }).join("")}</div>`;
   }
   const promptRows = (list) => list.map(([q, es, s]) => `<div class="qr"><span class="q">${esc(q)}<small>${esc(s)}</small></span><span class="e">${es.map((e) => lg(e, 14)).join("")}</span></div>`).join("");
-  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" data-act="sample-only" data-what="conectar Search Console">Conectar con Google</button></div>`;
+  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="/dashboard" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar con Google</button></div>`;
 
   function pageLane(k, sc, rel) {
     const C = sc.criteria.filter((c) => c.lane === k);
@@ -197,7 +197,10 @@
     if (f.how) body += `<p class="why">${f.how}</p>`;
     if (f.snippet) body += `<pre class="snip" tabindex="0">${esc(f.snippet)}</pre><div class="acts"><button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar ${esc(f.copyWhat || "el código")}</button></div>`;
     if (kind === "plan") body += `<div class="acts"><button class="btn line sm" data-act="open" data-to="/dashboard" data-c="plan">Abrir en la consola${ic("arrowr", "sm")}</button></div>`;
-    const tail = kind === "goal" ? `<div class="gline">${ic("trend", "sm")}<span>Objetivo</span><b>${esc(f.goal)}</b><span>Lo seguimos en cada foto</span></div>`
+    /* a real plan item is marked done in the console, where it is saved; the
+       panel only reads (paso 02), so it offers no slide that would save nothing */
+    const tail = kind === "plan" && !isSample() ? ""
+      : kind === "goal" ? `<div class="gline">${ic("trend", "sm")}<span>Objetivo</span><b>${esc(f.goal)}</b><span>Lo seguimos en cada foto</span></div>`
       : done ? `<div class="donebar">${ic("checkc")}<span>Hecha. Se verá en el próximo escaneo.</span><button class="btn sm" data-act="undo" data-key="${esc(key)}">Deshacer</button></div>`
       : slideHtml(key, kind === "local" ? "Desliza cuando lo hayas puesto" : "Desliza para marcar como hecho");
     return `<div class="plc" data-k="${esc(key)}"><div class="top">${srcChip(f.lane)}<span class="k">${whereOf(f)}</span>${pts}</div><div class="dk-k">Haz esto</div><h3>${f.t}</h3>${body}${tail}</div>`;
@@ -253,7 +256,7 @@
   }
   function foot(f) {
     return `<div class="pf">${acctOn() ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}
-      <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
+      <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real || !GS_SAMPLE ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
   /* ---------------- views ---------------- */
@@ -542,7 +545,7 @@
   { let th = null; try { th = localStorage.getItem("gs-ext-theme"); } catch (e) {} document.documentElement.dataset.theme = th === "dark" ? "dark" : "light"; }
   (async () => {
     const s = await Env.getL("sample");
-    if (s && typeof s === "object") S.sample = { on: !!s.on, domain: s.domain || null };
+    if (GS_SAMPLE && s && typeof s === "object") S.sample = { on: !!s.on, domain: s.domain || null };
     S.read = await Env.hasAuto();
     S.autoOn = !!(await Env.getL("autoOn"));
     Env.listen(async (why) => {

@@ -15,7 +15,7 @@ export const metadata: Metadata = contentMetadata({
 
 export default function PrivacidadPage() {
   return (
-    <LegalPageShell title="Política de Privacidad" updated="9 de octubre de 2026" activeHref="/privacidad">
+    <LegalPageShell title="Política de Privacidad" updated="30 de octubre de 2026" activeHref="/privacidad">
       <h2>Responsable del tratamiento</h2>
       <p>
         El responsable del tratamiento de los datos personales recogidos a través de GenScore es{" "}
@@ -66,6 +66,23 @@ export default function PrivacidadPage() {
         escribiendo a <a href="mailto:soporte@genscore.es">soporte@genscore.es</a>. Conservamos
         estos datos durante un año desde tu petición si no llegas a crear una cuenta, salvo que
         antes nos pidas borrarlos.
+      </p>
+
+      <h2>Extensión de Chrome</h2>
+      <p>
+        La extensión de GenScore para Chrome revisa la página que tienes abierta cuando pulsas su
+        icono o su atajo de teclado, o cada página que visitas si activas la revisión automática.
+        Esa revisión se hace en tu navegador: el contenido de la página, su robots.txt y su
+        llms.txt se leen desde tu equipo y no se envían a GenScore. El último resultado de cada
+        pestaña y tus preferencias del panel se guardan en tu navegador.
+      </p>
+      <p>
+        Si has iniciado sesión en genscore.es, la extensión usa esa misma sesión para mostrarte tu
+        cuenta en solo lectura: tu email, tu plan, tus dominios y sus resultados. Cuando la página
+        abierta pertenece a uno de tus dominios, envía su dirección a GenScore para mostrarte qué
+        preguntas la citan. Estos datos se tratan para prestarte el servicio (art. 6.1.b RGPD). La
+        extensión no guarda contraseñas, no vende datos y no los usa para publicidad ni para fines
+        distintos de su función.
       </p>
 
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>

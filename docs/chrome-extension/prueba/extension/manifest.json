@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "GenScore (prueba)",
+  "name": "GenScore: Auditoría SEO y visibilidad en IA",
   "short_name": "GenScore",
-  "version": "0.6.6",
-  "description": "Versión de prueba. Revisa la página abierta para SEO e IA al pulsar el icono. Con sesión en GenScore, enseña tu cuenta en sólo lectura.",
+  "version": "1.0.0",
+  "description": "Auditoría SEO de la página en un clic y qué motores de IA pueden leerla: ChatGPT, Gemini, Claude y Perplexity. Gratis, sin cuenta.",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
