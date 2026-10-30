@@ -105,3 +105,7 @@
  html .ins .toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 }
 @media (prefers-reduced-motion:reduce){.ins-shell .tabbar a,.ins-shell .tabbar a .i{transition:none}}
+
+/* ANDROID-TWA-1: dentro de la app de Android nada lleva a cambiar de plan (log §364).
+   Capa de apoyo: la que manda es no pintarlo en servidor (ajustes, selector, paleta). */
+.ins-shell[data-app] a[href*="openPlan="],.ins-shell[data-app] a[href*="/precios"],.ins-shell[data-app] a[href*="/pricing"]{display:none}

@@ -6,6 +6,14 @@ import {
   getProjectIdFromPathname
 } from "@/lib/active-project-cookie";
 import {
+  APP_MODE_COOKIE,
+  APP_MODE_COOKIE_MAX_AGE_S,
+  APP_MODE_COOKIE_VALUE,
+  APP_MODE_HOME,
+  appModeSignal,
+  isAppModePathAllowed
+} from "@/lib/app-mode";
+import {
   AFFILIATE_REF_COOKIE,
   AFFILIATE_REF_COOKIE_MAX_AGE_S,
   AFFILIATE_REF_PARAM,
@@ -101,7 +109,38 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // ANDROID-TWA-1 — la app de Android es esta web dentro de Chrome. Su
+  // `start_url` lleva `?source=twa` (o llega con referrer `android-app://`) y
+  // desde ahí la cookie `gs_app` manda: dentro de la app solo existe la consola,
+  // el acceso y lo legal; lo demás (precios, portada, blog…) vuelve a la
+  // consola, porque Google Play no admite vender ni enviar a pagar fuera. La
+  // cookie solo oculta cosas: no autoriza nada, igual que el resto de este
+  // middleware (log §364).
+  const signal = appModeSignal(request.nextUrl.searchParams, request.headers.get("referer"));
+  const inApp = signal === "enter" || (signal !== "leave" && request.cookies.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE);
+  if (inApp && !isAppModePathAllowed(request.nextUrl.pathname)) {
+    const redirect = NextResponse.redirect(new URL(APP_MODE_HOME, request.url));
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    redirect.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+    return redirect;
+  }
+  if (signal === "enter") {
+    response.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+  } else if (signal === "leave") {
+    response.cookies.delete(APP_MODE_COOKIE);
+  }
+
   return response;
+}
+
+function appModeCookieOptions(request: NextRequest) {
+  return {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: request.nextUrl.protocol === "https:",
+    maxAge: APP_MODE_COOKIE_MAX_AGE_S
+  };
 }
 
 export const config = {

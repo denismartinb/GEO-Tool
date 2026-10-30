@@ -97,3 +97,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Márgenes del sistema con `env(safe-area-inset-*)`** en la barra y en el
   padding inferior de `.page`. Un elemento fijo nuevo abajo cuenta con la barra.
 - **Se oculta en pantallas completas** (`.sc-mission`, `.sc-newdomain`).
+
+## App de Android (ANDROID-TWA-1, log §364)
+
+- **Dentro de la app no se vende.** Con la cookie `gs_app` (`lib/app-mode.ts`)
+  no puede aparecer un precio, «Cambiar de plan», un checkout ni texto que
+  mande a pagar fuera: lo exige Google Play. Una pantalla nueva con una llamada a
+  contratar la oculta con `ShellData.inApp` o `isInApp()` (servidor).
+- **La lista de rutas permitidas dentro de la app es de permitidos**
+  (`isAppModePathAllowed`): una página pública nueva no entra sola.
+- **Las acciones de pago se niegan en servidor**, no solo se esconden
+  (`createCheckoutSession`, `createPortalSession`).

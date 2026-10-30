@@ -13,7 +13,10 @@ function resetHeaderEntries() {
   ]);
 }
 resetHeaderEntries();
-vi.mock("next/headers", () => ({ headers: () => Promise.resolve(headerEntries) }));
+vi.mock("next/headers", () => ({
+  headers: () => Promise.resolve(headerEntries),
+  cookies: () => Promise.resolve({ get: () => undefined })
+}));
 
 const requireUser = vi.fn();
 vi.mock("@/lib/auth", () => ({ requireUser: (...args: unknown[]) => requireUser(...args) }));

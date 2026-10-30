@@ -96,7 +96,7 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
   }, [edges]);
 
   return (
-    <div className="ins-shell">
+    <div className="ins-shell" data-app={d.inApp ? "android" : undefined}>
       <InsSprite />
       <div className="app">
         <Sidebar />

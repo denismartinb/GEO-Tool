@@ -27749,3 +27749,26 @@ Fecha de actualización: 30 de octubre de 2026.
 **Pendiente o conocido.**
 - La maqueta pintaba un punto de aviso en Google y un indicador deslizante entre pestañas: no se han construido (el primero necesita un dato nuevo, el segundo es pulido).
 - Fase 2 (app de Android como TWA, sin compras dentro) va en su propio PR.
+
+## 364. ANDROID-TWA-1: app de Android como TWA, sin compras dentro (2026-10-30)
+
+**Qué se decidió.** Denis pidió el mismo frontal en todos los canales: la app de Android es la web móvil de §363 abierta en Chrome a pantalla completa (Trusted Web Activity, construida con Bubblewrap). Sin segundo frontal: cada despliegue de Vercel actualiza la app. Se descartó un WebView a pelo porque Google bloquea el acceso con Google dentro de él.
+
+**Regla de Google Play: la app no vende.** Las compras digitales dentro de la app tendrían que pasar por el cobro de Google (15 % en suscripciones). Se evita así: dentro de la app no hay precios, ni «Cambiar de plan», ni checkout de Stripe ni texto que mande a pagar fuera. Registrarse y la prueba de Pro de 7 días (sin tarjeta) sí; quien ya paga entra con su cuenta. Contratar se hace en genscore.es, fuera de la app, por los correos de fin de prueba que ya existen.
+
+**Cómo se implementa.**
+- `start_url` = `/dashboard?source=twa` (`app/manifest.ts`). El middleware lee `?source=twa` o un referrer `android-app://es.genscore.app` y guarda la cookie `gs_app` (un año, httpOnly). `?source=web` la borra, para pruebas. La cookie solo oculta: no autoriza nada.
+- Con la cookie, el middleware sirve **solo** consola, acceso, API y lo legal (lista de permitidos, `lib/app-mode.ts`); portada, `/precios`, blog, comparativas, afiliados… vuelven a `/dashboard`. Una página pública nueva queda fuera de la app salvo que alguien la añada a la lista.
+- Servidor: `createCheckoutSession` y `createPortalSession` se niegan; Ajustes no pinta la sección Plan; el aviso «Tu cuenta» de la campana no sale; el bloqueo por exceso de dominios solo ofrece retirar.
+- Cliente: el selector de dominios, la paleta ⌘K y el menú de cuenta quitan «Cambiar de plan» y «Programa de afiliados» (`ShellData.inApp`). Una regla CSS esconde cualquier enlace con `openPlan=`, `/precios` o `/pricing` dentro de la consola: red de seguridad para las pantallas de Comercio agéntico (las tarjetas «Pasar a Pro»), que otros PRs reescriben.
+- Instalable: manifiesto, iconos (192, 512 y maskable), service worker mínimo que solo guarda la pantalla `/offline.html`, y `/.well-known/assetlinks.json` leído de `ANDROID_SHA256_CERT_FINGERPRINTS`.
+- `twa/` guarda la configuración de Bubblewrap y los pasos para construir, firmar y publicar (`twa/README.md`).
+
+**Premisa que se retira (regla de cierre n.º 4).** Dentro de la app desaparece el camino «Cambiar de plan». Premisa: quien paga lo hace en la web y la cuenta es la misma. Lo verifica el correo de fin de prueba (§238, §254) y `/precios` en navegador. Si esa premisa falla (correo no entregado), el usuario de la app no tiene salida de pago desde la app: puede abrir genscore.es en el navegador. Una cuenta `free` en la app queda en solo lectura, sin explicación de cómo reactivarla: es el coste aceptado de la política de Google.
+
+**Pendiente o conocido.**
+- Hay que crear la cuenta de Play Console (25 $), generar la clave de firma y poner `ANDROID_SHA256_CERT_FINGERPRINTS` en Vercel: lo hace Denis, pasos en `twa/README.md`. Sin las huellas la app abre con la barra de Chrome.
+- Los textos de Comercio agéntico siguen diciendo «está en Pro y Agencia» sin botón. No manda a pagar, pero queda un cartel sin acción; se revisará cuando se mergee F7.
+- Las páginas públicas que no pasan por el middleware (comparativas, docs, glosario…) no se redirigen dentro de la app: solo se llega a ellas si el usuario escribe la URL.
+- Notificaciones push: no existen; son la fase siguiente y lo que más aporta una app frente a la web.
+- iPhone: Apple es más exigente con apps que son solo una web; mismo planteamiento cuando haya push.

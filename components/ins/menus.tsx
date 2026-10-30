@@ -99,19 +99,23 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
           <Ic n="c-help" />
           <span>¿Cómo funciona?</span>
         </button>
-        <div className="xo-sep" />
-        <button
-          type="button"
-          className="xo-mi"
-          onClick={() => {
-            close();
-            setTimeout(() => dlg(<AffiliateDialog />, { label: "Programa de afiliados", narrow: true }), 220);
-          }}
-        >
-          <Ic n="c-hand" />
-          <span>Programa de afiliados</span>
-          <span className="k">30 %</span>
-        </button>
+        {d.inApp ? null : (
+          <>
+            <div className="xo-sep" />
+            <button
+              type="button"
+              className="xo-mi"
+              onClick={() => {
+                close();
+                setTimeout(() => dlg(<AffiliateDialog />, { label: "Programa de afiliados", narrow: true }), 220);
+              }}
+            >
+              <Ic n="c-hand" />
+              <span>Programa de afiliados</span>
+              <span className="k">30 %</span>
+            </button>
+          </>
+        )}
         <div className="xo-sep" />
         <SignOutForm action={d.signOutAction}>
           <button type="submit" className="xo-mi">

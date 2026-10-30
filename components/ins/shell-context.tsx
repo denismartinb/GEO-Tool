@@ -28,6 +28,8 @@ export type ShellData = {
   planProjectCap: number;
   /** `true` mientras la cuenta está en la prueba de Pro. */
   onTrial: boolean;
+  /** `true` dentro de la app de Android: nada que venda (ANDROID-TWA-1, log §364). */
+  inApp: boolean;
   signOutAction: () => Promise<void>;
 };
 
