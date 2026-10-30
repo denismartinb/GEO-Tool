@@ -1,26 +1,4 @@
 /* Auditoría técnica, «Instrumento» (CONSOLE-INSTRUMENTO-1 F6a, log §363). Port of the approved prototype, scoped under .ins. */
-.ins .sc-au-blks{margin-top:28px}
-.ins .sc-au-blk{display:flex;flex-direction:column;transition:border-color var(--d2) var(--std),box-shadow var(--d2) var(--std)}
-.ins .sc-au-blk.on{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
-.ins .sc-au-blk .sel{display:block;width:100%;text-align:left;padding:20px 22px 6px;border-radius:20px 20px 0 0}
-.ins .sc-au-blk .hd{display:flex;align-items:center;gap:12px}
-.ins .sc-au-blk .hd>span:last-child{display:flex;flex-direction:column}
-.ins .sc-au-blk .hd b{font-size:15px;font-weight:600;letter-spacing:-.01em}
-.ins .sc-au-blk .hd b+span{font-size:12.5px;color:var(--ink-3)}
-.ins .sc-au-blk .ico{width:34px;height:34px;border-radius:10px;border:1px solid var(--rule);display:grid;place-items:center;color:var(--blue)}
-.ins .sc-au-blk .ico .i{width:16px;height:16px}
-.ins .sc-au-blk:not(.on) .sel:hover{background:var(--surface-2)}
-.ins .sc-au-blk .bd{display:flex;align-items:center;gap:22px;margin-top:10px}
-.ins .sc-au-blk .rt{display:flex;flex-direction:column;gap:6px;min-width:0}
-.ins .sc-au-blk .lb{font-size:12.5px;color:var(--ink-3)}
-.ins .sc-au-blk .mt{font-size:13.5px;color:var(--ink-2)}
-.ins .sc-au-blk .mt b{color:var(--warm);font-weight:600}
-.ins .sc-au-blk .to{font-size:13.5px;color:var(--ink-3)}
-.ins .sc-au-blk .to b{color:var(--pos);font-weight:650;font-size:15px}
-.ins .sc-au-blk .pot{display:flex;align-items:center;gap:8px;margin:6px 16px 16px;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550}
-.ins .sc-au-blk .pot b{font-weight:700}
-.ins .sc-au-blk .pot .i:last-child{margin-left:auto}
-.ins .sc-au-blk .pot:hover{filter:brightness(.97)}
 .ins .sc-au-arc{position:relative;flex:none;display:block}
 .ins .sc-au-arc svg{width:100%;height:100%;display:block}
 .ins .sc-au-arc circle{fill:none;stroke-width:7;stroke-linecap:round}
@@ -32,7 +10,6 @@
 .ins .sc-au-arc .n{position:absolute;inset:0;display:flex;align-items:baseline;justify-content:center;padding-top:44px}
 .ins .sc-au-arc .n b{font-size:44px;font-weight:300;letter-spacing:-.05em;line-height:1}
 .ins .sc-au-arc .n small{font-size:12px;color:var(--ink-3);margin-left:2px}
-.ins .sc-au-note{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink-3);margin-top:14px}
 .ins .sc-au-tabs{margin-top:32px}
 .ins .sc-au-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:16px;align-items:start}
 .ins .sc-au .stk{display:grid;gap:16px;min-width:0}
@@ -91,9 +68,6 @@
 .ins .sc-au-cwv .zone span{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--ink);transform:translate(-50%,-50%)}
 .ins .sc-au-cwv .zl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:6px}
 @media (max-width:760px){
-.ins .sc-au-blk .sel{padding:16px 16px 4px}
-.ins .sc-au-blk .bd{gap:16px}
-.ins .sc-au-blk .pot{margin:6px 12px 12px;font-size:13px}
 .ins .sc-au-grid{grid-template-columns:minmax(0,1fr)}
 .ins .sc-au-tabs .seg{max-width:100%}
 .ins .sc-au-iss .h{grid-template-columns:10px minmax(0,1fr) 48px 16px;gap:10px}
@@ -109,25 +83,7 @@
 .ins .sc-au-pages .r>.badge{grid-area:b;justify-self:start}
 .ins .sc-au-pages .tb{grid-area:t}
 }
-.ins .sc-au-blk .to-m{display:none}
 @media (max-width:760px){
-.ins .sc-au-blks.grid2{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin-top:22px}
-.ins .sc-au-blk{border-radius:18px}
-.ins .sc-au-blk .sel{padding:12px 12px 2px;border-radius:18px 18px 0 0}
-.ins .sc-au-blk .hd{gap:8px}
-.ins .sc-au-blk .ico{width:26px;height:26px;border-radius:8px}
-.ins .sc-au-blk .ico .i,.ins .sc-au-blk .ico svg,.ins .sc-au-blk .ico img{width:13px;height:13px}
-.ins .sc-au-blk .hd b{font-size:13.5px;line-height:1.2}
-.ins .sc-au-blk .hd b+span,.ins .sc-au-blk .mt,.ins .sc-au-blk .to,.ins .sc-au-blk .pot .px{display:none}
-.ins .sc-au-blk .bd{gap:10px;margin-top:8px}
-.ins .sc-au-blk .sc-au-arc{width:68px!important;height:68px!important}
-.ins .sc-au-blk .sc-au-arc .n{padding-top:22px}
-.ins .sc-au-blk .sc-au-arc .n b{font-size:24px}
-.ins .sc-au-blk .sc-au-arc .n small{display:none}
-.ins .sc-au-blk .lb{font-size:12px;white-space:nowrap}
-.ins .sc-au-blk .to-m{display:block;font-size:12.5px;color:var(--ink-3);white-space:nowrap}
-.ins .sc-au-blk .to-m b{color:var(--pos);font-weight:650;font-size:14px}
-.ins .sc-au-blk .pot{margin:4px 10px 10px;height:32px;padding:0 10px;border-radius:10px;font-size:12.5px;gap:6px}
 }
 
 /* Arc animation in plain CSS (the prototype armed it from JS with .lit). */
@@ -136,9 +92,6 @@
 .ins .sc-au-arc .now{stroke-dasharray:calc(var(--a)*1px) calc(var(--C)*1px);animation:au-now var(--d4) var(--out) both}
 .ins .sc-au-arc .gh{stroke-dasharray:calc(var(--g)*1px) calc(var(--C)*1px);animation:au-gh var(--d4) var(--out) 380ms both}
 @media (prefers-reduced-motion:reduce){.ins .sc-au-arc .now,.ins .sc-au-arc .gh{animation:none}}
-.ins .sc-au-blk .sel{color:inherit;text-decoration:none}
-.ins .sc-au-blk .pot{text-decoration:none}
-.ins .sc-au-blk .mt>b{color:var(--warm)}
 .ins .sc-au .eyebrow+h1{margin-top:14px}
 .ins .sc-au-body{margin-top:16px}
 .ins .sc-au-tabs .seg{max-width:100%}
@@ -170,4 +123,23 @@
 .ins .sc-au .sa-iss-in h4{font-family:var(--font);letter-spacing:.12em;color:var(--ink-3)}
 @media (max-width:760px){
  .ins .sc-au .sa-screen .card{padding:16px}
+}
+
+/* One score strip per page (log §368): arc, what it measures, and the gain. */
+.ins .sc-au-hero{display:flex;align-items:center;gap:24px;margin-top:24px;padding:16px 22px}
+.ins .sc-au-hero .sc-au-arc .n{padding-top:32px}
+.ins .sc-au-hero .sc-au-arc .n b{font-size:34px}
+.ins .sc-au-hero .rt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ins .sc-au-hero .lb{font-size:12.5px;color:var(--ink-3)}
+.ins .sc-au-hero .mt{font-size:14px;color:var(--ink-2)}
+.ins .sc-au-hero .mt>b{color:var(--warm);font-weight:600}
+.ins .sc-au-hero .to{font-size:13.5px;color:var(--ink-3)}
+.ins .sc-au-hero .to b{color:var(--pos);font-weight:650;font-size:15px}
+.ins .sc-au-hero .pot{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550;text-decoration:none;white-space:nowrap}
+.ins .sc-au-hero .pot b{font-weight:700}
+.ins .sc-au-hero .pot:hover{filter:brightness(.97)}
+@media (max-width:760px){
+.ins .sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}
+.ins .sc-au-hero .pot{margin-left:0;width:100%;height:36px;font-size:13px}
+.ins .sc-au-hero .pot .i:last-child{margin-left:auto}
 }

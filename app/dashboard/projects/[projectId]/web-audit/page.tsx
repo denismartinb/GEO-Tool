@@ -14,7 +14,7 @@ import { Delta } from "@/components/ui/delta";
 import { formatDate } from "./_components/format";
 import { PageAuditRow } from "./_components/page-audit-row";
 import { BotAccessCard } from "./_components/bot-access-card";
-import { InsBlockCards } from "@/components/ins/audit/block-cards";
+import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
@@ -61,14 +61,15 @@ type PageProps = {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 };
 
-// NAV-SIMPLIFY-1 (log §291): one menu entry, «Auditoría técnica», for both
-// blocks. The tab title and the kicker name the screen; the block cards below
-// say which block is open.
+// Log §368: the screen is split in two pages by `?bloque=`, each with its own
+// menu entry. The kicker keeps naming the screen; the title names the block.
 const SCREEN_LABEL = "Auditoría técnica";
+const BLOCK_TITLES: Record<"geo" | "seo", string> = { geo: "Tu web para la IA", seo: "Tu web para Google" };
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { projectId } = await params;
-  return projectScreenMetadata(SCREEN_LABEL, async () => (await requireActiveProject(projectId)).domain);
+  const block = parseAuditBlock((await searchParams)[AUDIT_BLOCK_PARAM]);
+  return projectScreenMetadata(BLOCK_TITLES[block], async () => (await requireActiveProject(projectId)).domain);
 }
 
 export default async function WebAuditPage({ params, searchParams }: PageProps) {
@@ -119,10 +120,8 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
           <div className="eyebrow bare">
             {SCREEN_LABEL} · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
           </div>
-          <h1 style={{ marginTop: 14 }}>{SCREEN_LABEL}</h1>
-          <p className="lead">
-            Lo que frena a la IA y a Google en tu web.
-          </p>
+          <h1 style={{ marginTop: 14 }}>{BLOCK_TITLES[activeBlock]}</h1>
+          <p className="lead">{BLOCK_NOTES[activeBlock]}</p>
 
           <WebAuditProvider
             projectId={projectId}
@@ -156,7 +155,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const pageSpeed = bots?.site?.pageSpeed;
                 return (
                   <div className="sa-screen">
-                    <InsBlockCards projectId={projectId} active={activeBlock} blocks={views} />
+                    <InsBlockHero projectId={projectId} view={view} />
                     {currentTechnicalReport.actualReadinessScore !== null &&
                       technicalScoreDelta !== null &&
                       technicalScoreDelta !== 0 && (
