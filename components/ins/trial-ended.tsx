@@ -38,15 +38,13 @@ export function TrialEndedStrip() {
   const d = useShellData();
   if (d.planId !== "free") return null;
   return (
-    <div className="te-strip" role="status">
+    <Link href={PICK_PLAN_HREF} className="te-strip" aria-label="Tu prueba de Pro ha terminado. Elegir plan">
       <span className="dot" aria-hidden="true" />
       <p>
         <b>Tu prueba de Pro ha terminado.</b> Tus datos siguen aquí; los escaneos están en pausa hasta que elijas un plan.
       </p>
-      <Link href={PICK_PLAN_HREF} className="btn ink sm">
-        Elegir plan
-      </Link>
-    </div>
+      <span className="btn ink sm">Elegir plan</span>
+    </Link>
   );
 }
 
@@ -70,15 +68,13 @@ export function TrialEndedDock() {
   const d = useShellData();
   if (d.planId !== "free") return null;
   return (
-    <div className="te-dock" role="status">
+    <Link href={PICK_PLAN_HREF} className="te-dock" aria-label="Prueba terminada. Elegir plan">
       <div className="t">
         <b>Prueba terminada</b>
         Solo lectura hasta que elijas plan
       </div>
-      <Link href={PICK_PLAN_HREF} className="btn ink sm">
-        Elegir plan
-      </Link>
-    </div>
+      <span className="btn ink sm">Elegir plan</span>
+    </Link>
   );
 }
 

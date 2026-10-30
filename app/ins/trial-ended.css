@@ -1,5 +1,5 @@
 /* CONSOLE-INSTRUMENTO-1 F8b (log §367): prueba de Pro terminada. */
-.ins-shell .te-strip{display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--warm-tint);border-bottom:1px solid var(--warm-rule);font-size:13.5px}
+.ins-shell .te-strip{color:inherit;text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--warm-tint);border-bottom:1px solid var(--warm-rule);font-size:13.5px}
 .ins-shell .te-strip .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warm)}
 .ins-shell .te-strip p{margin:0;flex:1;min-width:0;color:var(--ink-2)}
 .ins-shell .te-strip p b{color:var(--ink);font-weight:600}
