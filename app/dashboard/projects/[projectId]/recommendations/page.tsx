@@ -1,11 +1,9 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Icon } from "@/components/ui/icon";
-import { InfoTip } from "@/components/ui/info-tip";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { ScanStatePill } from "@/components/scan-state-pill";
 import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
 import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import { parseGeneratedSolution } from "@/lib/recommendations/generated-solution";
@@ -40,7 +38,15 @@ import {
 } from "@/lib/recommendations/levers";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { RecommendationsClient, type GeneratedSolution, type Recommendation } from "./recommendations-client";
+import { type GeneratedSolution, type Recommendation } from "./recommendations-client";
+import { InsRecommendations } from "@/components/ins/recs/ins-recommendations";
+import { Ic } from "@/components/ins/ic";
+import { Roll } from "@/components/ins/kit/roll";
+import { Bar } from "@/components/ins/kit/bar";
+import { Motion } from "@/components/ins/kit/motion";
+import { PriorityAlert } from "@/components/ins/overview/blocks";
+import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
+import { getLLMScanProviders } from "@/lib/scan/providers";
 import { GoogleLaterSlot, GooglePlanSlot } from "./_components/google-recs";
 import { readSearchConsoleAvailability } from "@/lib/search-console/load";
 import { GscConnectRow } from "../_components/gsc-connect-invite";
@@ -219,7 +225,11 @@ export default async function RecommendationsPage({
 
   const activeRun = await activeRunPromise;
 
-  const baseRecs = (recommendations ?? []) as Recommendation[];
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer; rows
+  // stored before the change stay hidden until the next scan replaces them.
+  const baseRecs = ((recommendations ?? []) as Recommendation[]).filter(
+    (r) => !isRetiredRecommendationType(r.recommendation_type),
+  );
 
   // A single logical prompt scanned by multiple LLM engines (Gemini + Claude)
   // produces one scan_prompt_results row per engine, so per-prompt gap cards
@@ -239,14 +249,6 @@ export default async function RecommendationsPage({
     }
     return out;
   }
-
-  const recentWins = dedupeByTitle(
-    (resolvedRecommendations ?? []) as Array<{
-      id: string;
-      title: string;
-      recommendation_type: string;
-    }>,
-  );
 
   type HistoryRow = {
     id: string;
@@ -444,7 +446,7 @@ export default async function RecommendationsPage({
   // ResolvedHistoryItem.run_id's own doc comment in recommendations-client.tsx.
   const resolvedHistoryForClient = resolvedHistory.map((r) => ({
     id: r.id,
-    title: r.title,
+    title: recommendationHeadline(r).title,
     description: r.description,
     recommendation_type: r.recommendation_type,
     status: r.status,
@@ -586,7 +588,7 @@ export default async function RecommendationsPage({
     .filter((r) => isAlreadyCovered(r.recommendation_type, r.coverageOverlay))
     .map((r) => ({
       id: r.id,
-      title: r.title,
+      title: recommendationHeadline(r, overlayForHeadline(r.coverageOverlay)).title,
       description: r.description,
       recommendation_type: r.recommendation_type,
       status: "covered" as const,
@@ -792,222 +794,144 @@ export default async function RecommendationsPage({
   const total = recs.length;
   const latestRunFailed = latestRun?.status === "failed";
 
-  const lastScanDate = latestCompletedRun
-    ? new Date(
-        latestCompletedRun.finished_at ?? latestCompletedRun.created_at,
-      ).toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Europe/Madrid",
-      })
-    : null;
-
-  // Mirrors the FirstScanTakeover condition below — hidden while the mission
-  // takeover owns the screen, so the rocket animation reads as full screen
-  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  // Mirrors the FirstScanTakeover condition below: the mission owns the whole
+  // screen, so nothing else is drawn (CONSOLE-INSTRUMENTO-1 F3b, log §355).
   const showMissionTakeover = Boolean(activeRun) && !latestCompletedRun;
   const googleSlotProps = { projectId, ownerUserId: user.id, domain: project.domain, supabase };
+
+  if (activeRun && showMissionTakeover) {
+    return (
+      <div className="page mrk-fill">
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      </div>
+    );
+  }
 
   // The AI list, with the Google slots inside it (RECS-ONE-QUEUE-1, log §307).
   const aiHasList = Boolean(latestCompletedRun) && (recs.length > 0 || historyForClient.length > 0);
   const aiContent = !latestCompletedRun ? (
-            <div className="section-empty" style={{ marginTop: 20 }}>
-              <div className="section-empty-title">
-                {latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}
-              </div>
-              <div className="section-empty-desc">
-                {latestRunFailed
-                  ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
-                  : "Aparecerán en cuanto termine tu primer escaneo."}
-              </div>
-              <Link
-                href={`/dashboard/projects/${projectId}`}
-                className="btn btn-ghost btn-sm"
-                style={{ marginTop: 14, display: "inline-flex" }}
-              >
-                Volver a visión general
-                <Icon name="arrRight" size={14} />
-              </Link>
-            </div>
-          ) : recs.length === 0 && historyForClient.length === 0 ? (
-            // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
-            // "Ver detalle del escaneo" link to /runs/[runId] is retired from
-            // this empty state, same reasoning as Citas — the route is no
-            // longer part of the end-user console, only /debug.
-            //
-            // ACTIONS-OBSERVABLE-1 slice 4a (founder feedback 2026-09-07):
-            // this branch used to fire on `recs.length === 0` alone, which
-            // meant `RecommendationsClient` never even mounted the moment the
-            // last active recommendation was marked done — losing the
-            // "Resueltas" tab (and its data, already fetched) entirely, with
-            // no way back to what the user just did. Now it only fires when
-            // there is truly nothing anywhere, active or historical.
-            <div className="section-empty" style={{ marginTop: 20 }}>
-              <div className="section-empty-title">Nada que corregir ahora mismo</div>
-              <div className="section-empty-desc">
-                Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.
-              </div>
-            </div>
-          ) : (
-            <RecommendationsClient
-              recommendations={recs}
-              resolvedHistory={historyForClient}
-              recentWinsCount={recentWins.length}
-              projectId={projectId}
-              jointPoints={jointPoints}
-              jointPointsByType={jointPointsByType}
-              planIds={planIds}
-              levers={levers}
-              leverSolutions={Object.fromEntries(
-                levers.flatMap((l) => {
-                  const solution = leverSolutionByRecId.get(l.representativeId);
-                  return solution ? [[l.representativeId, solution]] : [];
-                }),
-              )}
-              planPoints={planPoints}
-              planPointsWithGoogle={planPointsWithGoogle}
-              jointPointsByTypeWithGoogle={jointPointsByTypeWithGoogle}
-              latestCompletedRunId={latestCompletedRun.id}
-              googleConnected={googleConnected}
-              googlePlanSlot={
-                googleConnected ? <GooglePlanSlot {...googleSlotProps} rank={plan.length > 0 ? 2 : 1} /> : null
-              }
-              googleLaterSlot={googleConnected ? <GoogleLaterSlot {...googleSlotProps} /> : googleInvite}
-            />
-          );
+    <div className="empty-s">
+      <b>{latestRunFailed ? "El último escaneo falló" : "Todavía no hay recomendaciones"}</b>
+      <p>
+        {latestRunFailed
+          ? "No hay ningún escaneo completado del que sacar acciones. Revisa el dominio y vuelve a lanzarlo."
+          : "Aparecerán en cuanto termine tu primer escaneo."}
+      </p>
+      <div style={{ marginTop: 12 }}>
+        <Link href={`/dashboard/projects/${projectId}`} className="btn sm line">
+          Volver a visión general
+          <Ic n="arrowr" sm />
+        </Link>
+      </div>
+    </div>
+  ) : recs.length === 0 && historyForClient.length === 0 ? (
+    // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): the
+    // "Ver detalle del escaneo" link to /runs/[runId] is retired from this
+    // empty state; the route is no longer part of the end-user console.
+    //
+    // ACTIONS-OBSERVABLE-1 slice 4a: this branch only fires when there is
+    // truly nothing anywhere, active or historical, so marking the last
+    // active card done never loses the "Resueltas" tab with its data.
+    <div className="empty-s">
+      <b>Nada que corregir ahora mismo</b>
+      <p>Este escaneo no ha encontrado ningún hueco accionable. Vuelve tras el próximo.</p>
+    </div>
+  ) : (
+    <InsRecommendations
+      recommendations={recs}
+      resolvedHistory={historyForClient}
+      projectId={projectId}
+      jointPointsByType={jointPointsByType}
+      planIds={planIds}
+      levers={levers}
+      leverSolutions={Object.fromEntries(
+        levers.flatMap((l) => {
+          const solution = leverSolutionByRecId.get(l.representativeId);
+          return solution ? [[l.representativeId, solution]] : [];
+        }),
+      )}
+      planPoints={planPoints}
+      planPointsWithGoogle={planPointsWithGoogle}
+      jointPointsByTypeWithGoogle={jointPointsByTypeWithGoogle}
+      latestCompletedRunId={latestCompletedRun.id}
+      googleConnected={googleConnected}
+      googlePlanSlot={
+        googleConnected ? <GooglePlanSlot {...googleSlotProps} ins rank={plan.length > 0 ? 2 : 1} /> : null
+      }
+      googleLaterSlot={googleConnected ? <GoogleLaterSlot {...googleSlotProps} /> : googleInvite}
+    />
+  );
+
+  const planWord = ["", "Una", "Dos", "Tres"][Math.min(3, plan.length)] ?? "";
+  const lead = googleConnected || !planWord
+    ? "Tu plan para esta semana. El resto, ordenado por palanca."
+    : `${planWord} para esta semana. El resto, ordenado por palanca.`;
 
   return (
-    <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
-      {/* 1 · Cabecera estándar de sección, igual que Competidores, Prompts y
-          Páginas citadas: kicker con el nombre de la sección, nombre del
-          proyecto, contador y fecha de escaneo a la derecha. El rediseño la
-          había sustituido por un titular propio, rompiendo la consistencia de
-          la consola (revisión del fundador).
-
-          Va FUERA de `.rec2-scope`, como en el resto de secciones: la cabecera
-          sangra a los bordes de la página con márgenes negativos, y dentro de
-          una columna centrada de 460px quedaría recortada. Se oculta mientras
-          la misión del primer escaneo (abajo) ocupa la pantalla entera. */}
-      {!showMissionTakeover && (
-        <div className="ov-sticky-header">
-          <div className="ov-sticky-left">
-            <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>
-                Recomendaciones
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                  {project.name}
-                </span>
-                {total > 0 && <span className="badge badge-neutral">{total} acciones</span>}
-              </div>
-            </div>
+    <div className="ins">
+      <Motion id={`recs:${projectId}`}>
+        <div className="page">
+          <div className="eyebrow bare">
+            Recomendaciones ·{" "}
+            <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
+              {project.domain}
+            </span>
+            {total > 0 ? (
+              <span className="badge b-line" style={{ letterSpacing: 0, textTransform: "none", marginLeft: 8 }}>
+                {total} {total === 1 ? "acción" : "acciones"}
+              </span>
+            ) : null}
           </div>
-          <div className="ov-sticky-right">
-            <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
-          </div>
-        </div>
-      )}
+          <h1 style={{ marginTop: 14 }}>Recomendaciones</h1>
+          <p className="lead">{lead}</p>
 
-      {/* Alineada con Prompts, Competidores y Páginas citadas: el overlay a
-          pantalla completa sólo sustituye a la pantalla cuando NO hay nada que
-          enseñar. Esconder las recomendaciones que ya tienes detrás de un
-          overlay porque hay un refresco en marcha era la única pantalla de
-          datos que lo hacía, y la causa del PILOT FAIL repetido de
-          "recommendations: estado vacío" (2026-08-04/05) — que no era una
-          carrera con los datos, sino esta condición. Con datos, el estado del
-          escaneo lo lleva la pastilla del sticky-header. */}
-      {activeRun && showMissionTakeover ? (
-        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
-      ) : (
-        <div className="rec2-scope">
-          {latestRunFailed && latestCompletedRun && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "10px 14px",
-                background: "var(--warn-soft)",
-                border: "1px solid #f3d086",
-                borderRadius: "var(--r-md)",
-                fontSize: 13,
-                color: "var(--warn-ink)",
-                marginBottom: 16,
-              }}
-            >
-              <Icon name="info" size={14} />
-              El último escaneo falló. Estas recomendaciones son del anterior.
+          {/* One poller per screen: the card owns the refresh when the run ends. */}
+          {activeRun ? (
+            <LiveScanCard projectId={projectId} initial={activeRun} providers={getLLMScanProviders()} />
+          ) : null}
+
+          {latestRunFailed && latestCompletedRun ? (
+            <div className="alert" role="status">
+              <Ic n="warn" />
+              <div className="tx">El último escaneo falló. Estas recomendaciones son del anterior.</div>
             </div>
-          )}
+          ) : null}
 
-          {/* 2 · Blocking finding, above everything: while an AI crawler is
-              blocked, the content actions below cannot pay off on that engine. */}
-          {citationBlockers.map((blocker) => {
-            const urls = blockerUrls(blocker);
-            return (
-              <div className="rec2-blocker" key={blocker.kind}>
-                <Icon name="alert" size={16} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="rec2-blocker-t">{blockerTitle(blocker)}</div>
-                  <div className="rec2-blocker-d">
-                    {blockerDetail(blocker)}{" "}
-                    <Link href={`/dashboard/projects/${projectId}/web-audit`} style={{ fontWeight: 700 }}>
-                      Ver cómo arreglarlo
-                    </Link>
-                  </div>
-                  {/* La URL concreta: es lo primero en esta pantalla que señala
-                      una página del cliente en vez de una consulta. */}
-                  {urls.length > 0 && (
-                    <ul
-                      style={{
-                        margin: "6px 0 0",
-                        paddingLeft: 16,
-                        fontSize: 12,
-                        color: "var(--ink-2)",
-                        lineHeight: 1.7,
-                        wordBreak: "break-word"
-                      }}
-                    >
-                      {urls.slice(0, 3).map((url) => (
-                        <li key={url}>{url}</li>
-                      ))}
-                      {urls.length > 3 && <li>y {urls.length - 3} más</li>}
-                    </ul>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+          {/* Blocking finding, above everything: while an AI crawler is blocked,
+              the content actions below cannot pay off on that engine. */}
+          {citationBlockers.map((blocker) => (
+            <PriorityAlert
+              key={blocker.kind}
+              title={blockerTitle(blocker)}
+              detail={blockerDetail(blocker)}
+              urls={blockerUrls(blocker)}
+              href={`/dashboard/projects/${projectId}/web-audit`}
+            />
+          ))}
 
-          {/* 3 · Pillars — where the score stands, as context for the choices below. */}
-          {pillars.length > 0 && (
-            <div className="rec2-pillars">
-              {pillars.map((p) => (
-                <div key={p.key} className="rec2-pillar">
-                  <div className="rec2-pillar-n">
-                    {p.label}
-                    {p.help && <InfoTip text={p.help} />}
-                  </div>
-                  <div className="rec2-pillar-v">{p.value}</div>
-                  <div className="rec2-pillar-trk">
-                    <i style={{ width: `${Math.max(0, Math.min(100, p.value))}%` }} />
-                  </div>
+          {/* Where the score stands, as context for the choices below. */}
+          {pillars.length > 0 ? (
+            <div className="pillars">
+              {pillars.map((pillar, i) => (
+                <div key={pillar.key}>
+                  <div className="l">{pillar.label}</div>
+                  <b className="num">
+                    <Roll value={pillar.value} />
+                  </b>
+                  <Bar value={pillar.value} cls={`thin${pillar.value < 25 ? " warm" : ""}`} delay={i * 80} />
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
 
-          {/* 4 · RECS-ONE-QUEUE-1 (log §307): one queue. The Google cards live
+          {/* RECS-ONE-QUEUE-1 (log §307): one queue. The Google cards live
               inside it (slot 2 of the plan, and a row at the top of «Más
-              adelante»), streamed in by `RecommendationsClient`'s slots. With
-              no AI list to sit in, every Google card goes to the row. */}
+              adelante»). With no AI list to sit in, every Google card goes to the row. */}
           {aiContent}
-          {googleConnected && !aiHasList && <GoogleLaterSlot {...googleSlotProps} includePlan />}
-          {!aiHasList && googleInvite}
+          {googleConnected && !aiHasList ? <GoogleLaterSlot {...googleSlotProps} includePlan /> : null}
+          {!aiHasList ? googleInvite : null}
         </div>
-      )}
+      </Motion>
     </div>
   );
 }

@@ -1,5 +1,15 @@
 # Mission Rocket Rules
 
+> **F3b (CONSOLE-INSTRUMENTO-1, log §355):** el primer escaneo dejó de usar el
+> cohete. Su pantalla es ahora `components/ins/mission/first-scan-mission.tsx`
+> (contador de respuestas, péndulos por motor y cinco fases; ver
+> `.claude/rules/console-instrumento.md`). De este documento sigue vigente lo que
+> habla de `components/not-found-mission.tsx`, de `.mrk-full` (que aún usa
+> `ReentryMission` de Auditoría web) y de `lib/scan/mission-beats.ts`, que sigue
+> decidiendo las cinco fases del escaneo. Lo escrito abajo sobre «dos cohetes» y
+> sobre `scan-mission-rocket.tsx` es histórico: ese fichero ya no existe.
+
+
 Invariantes compartidos por **las dos animaciones del cohete**:
 `components/scan-mission-rocket.tsx` (el primer escaneo), `lib/scan/mission-beats.ts`
 (su línea de tiempo) y `components/not-found-mission.tsx` (la 404 pública).

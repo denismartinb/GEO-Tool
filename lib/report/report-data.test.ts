@@ -129,7 +129,7 @@ describe("loadReportInput", () => {
   it("maps the plan with its first step, engines and topics", async () => {
     const input = (await loadReportInput({ supabase: fakeSupabase(base()), project: PROJECT }))!;
     expect(input.plan).toEqual([
-      { title: "Publica una FAQ", description: "D", firstStep: "Empieza por la portada", providers: ["gemini"], topics: ["Local"] }
+      { title: "Publica una página que responda esta pregunta", description: "D", firstStep: "Empieza por la portada", providers: ["gemini"], topics: ["Local"] }
     ]);
   });
 

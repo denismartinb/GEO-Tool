@@ -1,21 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Icon } from "@/components/ui/icon";
-import { EngineGlyph } from "@/components/ui/engine-glyph";
-import { FaviconImg } from "@/components/ui/favicon-img";
-import { useTypewriter } from "@/components/ui/use-typewriter";
-import type { GenerateMorePromptsResult, ProjectSetupSuggestion } from "@/app/dashboard/projects/actions";
+import type {
+  GenerateMorePromptsResult,
+  ProjectSetupSuggestion,
+} from "@/app/dashboard/projects/actions";
+import { Ic } from "@/components/ins/ic";
+import { EngineLogo, engineName } from "@/components/ins/kit/engine";
+import { ProjectFav } from "@/components/ins/project-fav";
 import type { PromptCategory } from "@/lib/projects/prompt-categories";
-import { isWellFormedDomain, MAX_USER_COMPETITORS, RECOMMENDED_MIN_PROMPTS_COPY, sanitizePromptLineText } from "@/lib/projects/project-form";
+import {
+  isWellFormedDomain,
+  MAX_USER_COMPETITORS,
+  RECOMMENDED_MIN_PROMPTS_COPY,
+  sanitizePromptLineText,
+} from "@/lib/projects/project-form";
 import { takePendingDomain } from "@/lib/onboarding/pending-domain";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
 import type { LLMScanProvider } from "@/lib/scan/providers";
-import { PLANS } from "@/app/pricing/plans-data";
+
+/**
+ * Alta de dominio, pantalla «Nuevo dominio» de la consola «Instrumento»
+ * (CONSOLE-INSTRUMENTO-1 F3c, log §356). Cuatro pasos: Dominio, Competidores,
+ * Prompts y Lanzar. Sólo cambia el aspecto: las sugerencias, el tope de prompts,
+ * los motores del plan y la acción de crear son los reales de siempre.
+ */
 
 const DEFAULT_PROMPT_CAP = 10;
 const GENERATE_MORE_BATCH_SIZE = 5;
@@ -31,335 +41,246 @@ const COUNTRIES: Array<{ code: string; name: string }> = [
   { code: "FR", name: "Francia" },
   { code: "IT", name: "Italia" },
   { code: "PT", name: "Portugal" },
-  { code: "BR", name: "Brasil" }
+  { code: "BR", name: "Brasil" },
 ];
 
-const TYPE_SAMPLES = ["tudominio.com", "miempresa.io", "tienda.es", "startup.ai", "agencia.com"];
+// Sólo el respaldo: la página pasa los motores reales del plan
+// (`resolveScanProvidersForPlan`), así que Pro y Agencia ven Perplexity y
+// Starter no (log §285).
+const DEFAULT_ENGINE_PROVIDERS: readonly LLMScanProvider[] = [
+  "gemini",
+  "claude",
+  "openai",
+];
 
-// Mismos motores, mismos glifos y colores que Visión general/Prompts
-// (lib/scan/engine-meta.ts, components/ui/engine-glyph.tsx) — no un set
-// paralelo de puntos de color inventado para este flujo. Sólo el respaldo: la
-// página pasa los motores reales del plan (`resolveScanProvidersForPlan`),
-// así que Pro y Agencia ven Perplexity y Starter no (log §285).
-const DEFAULT_ENGINE_PROVIDERS: readonly LLMScanProvider[] = ["gemini", "claude", "openai"];
-
-// Nombres amigables para lo que devuelve `languageForCountry`
-// (lib/projects/project-form.ts) — sólo cubre los códigos que ese mapa puede
-// producir para los países listados en COUNTRIES arriba. Cae al código crudo
-// si algún día aparece uno nuevo, en vez de reventar.
+// Nombres para lo que devuelve `languageForCountry` (lib/projects/project-form.ts).
+// Cae al código crudo si algún día aparece uno nuevo.
 const LANGUAGE_NAMES: Record<string, string> = {
   es: "Español",
   en: "Inglés",
   de: "Alemán",
   fr: "Francés",
   it: "Italiano",
-  pt: "Portugués"
+  pt: "Portugués",
 };
 
-// Colores decorativos del avatar de competidor (iniciales sobre círculo de
-// color) — puramente estéticos, ciclan por índice. No son favicons reales.
-const AVATAR_COLORS = ["#2563eb", "#7c3aed", "#0f9d8e", "#ff642d", "#d97706", "#db2777"];
+const WIZARD_STEP_LABELS = ["Dominio", "Competidores", "Prompts", "Lanzar"];
+const UNTOPICED = "Tuyos";
 
-const WIZARD_STEP_LABELS = ["Dominio", "Competidores", "Prompts"];
-
-// Checklist cosmético mostrado mientras `suggestAction` (Gemini) resuelve.
-// Cada paso describe trabajo real que ocurre dentro de suggestProjectSetup
-// (lib/llm/gemini.ts): lee el dominio, busca competidores y genera prompts.
-function suggestionsSteps(domain: string): string[] {
-  const cleanDomain = domain.trim() || "tu dominio";
-  return [
-    `Leyendo el contenido de ${cleanDomain}`,
-    "Buscando competidores relevantes",
-    "Generando prompts de monitorización con IA"
-  ];
-}
-
-// Checklist cosmético mostrado mientras `createAction` resuelve. Cada paso
-// describe trabajo real que ocurre dentro de createProject
-// (app/dashboard/projects/actions.ts): crea el proyecto, persiste prompts y
-// competidores, y lanza el primer escaneo (createPendingScanRun).
+// Cada paso describe trabajo real de `suggestProjectSetup` (lee el dominio,
+// busca competidores y genera prompts) y de `createProject` (guarda, crea
+// prompts y competidores y lanza el primer escaneo).
+const SUGGEST_STEPS = [
+  "Leyendo el contenido de tu web",
+  "Buscando competidores relevantes",
+  "Proponiendo prompts de monitorización",
+];
 const CREATE_PROJECT_STEPS = [
   "Guardando tu dominio y configuración",
   "Creando tus prompts y competidores",
-  "Lanzando tu primer escaneo"
+  "Lanzando tu primer escaneo",
 ];
 
 // `source` distingue una fila que vino de la sugerencia de Gemini de una
-// añadida a mano ("Añadir competidor") — el chip "sugerido" del paso 1 sólo
-// se pinta en la primera, para no afirmar una sugerencia de IA que no existió
-// (ver docs/design-reference/onboarding-domain-redesign-1/README.md). `id` es
-// una identidad de UI local (asignada por `newId()` al montar cada fila,
-// nunca enviada al servidor) — sostiene qué filas están plegadas/desplegadas
-// sin depender del índice, que cambia al borrar una fila de en medio.
-type Competitor = { id: number; name: string; domain: string; source: "suggested" | "manual" };
-type PromptRow = { id: number; text: string; category: PromptCategory | null };
+// añadida a mano: «Sugerido» sólo se pinta en la primera, para no afirmar una
+// sugerencia de IA que no existió. `id` es identidad de UI local, nunca viaja
+// al servidor.
+type Competitor = {
+  id: number;
+  name: string;
+  domain: string;
+  source: "suggested" | "manual";
+};
+type PromptRow = {
+  id: number;
+  text: string;
+  category: PromptCategory | null;
+  on: boolean;
+};
 
-// Banderitas mini (mismas que onboarding.jsx) — solo los códigos definidos en
-// la referencia; el resto cae al fallback "us" igual que `F[code] || F.us`.
-function Flag({ code }: { code: string }) {
-  const flags: Record<string, ReactNode> = {
-    us: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="13" fill="#fff" />
-        {[0, 2, 4, 6, 8, 10, 12].map((y) => (
-          <rect key={y} y={y} width="19" height="1" fill="#b22234" />
-        ))}
-        <rect width="9" height="7" fill="#3c3b6e" />
-      </svg>
-    ),
-    es: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="13" fill="#c60b1e" />
-        <rect y="3.25" width="19" height="6.5" fill="#ffc400" />
-      </svg>
-    ),
-    mx: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="13" fill="#fff" />
-        <rect width="6.33" height="13" fill="#006847" />
-        <rect x="12.67" width="6.33" height="13" fill="#ce1126" />
-      </svg>
-    ),
-    uk: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="13" fill="#012169" />
-        <path d="M0 0l19 13M19 0L0 13" stroke="#fff" strokeWidth={2} />
-        <path d="M9.5 0v13M0 6.5h19" stroke="#fff" strokeWidth={3} />
-        <path d="M9.5 0v13M0 6.5h19" stroke="#c8102e" strokeWidth={1.6} />
-      </svg>
-    ),
-    de: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="4.33" fill="#000" />
-        <rect y="4.33" width="19" height="4.33" fill="#dd0000" />
-        <rect y="8.66" width="19" height="4.34" fill="#ffce00" />
-      </svg>
-    ),
-    fr: (
-      <svg viewBox="0 0 19 13">
-        <rect width="19" height="13" fill="#fff" />
-        <rect width="6.33" height="13" fill="#0055a4" />
-        <rect x="12.67" width="6.33" height="13" fill="#ef4135" />
-      </svg>
-    )
-  };
-  return (
-    <span className="meta-flag" style={{ width: 18, height: 12 }}>
-      {flags[code] || flags.us}
-    </span>
-  );
-}
-
-// Barra de pasos del asistente: tres segmentos con etiqueta debajo
-// (.onb2-steps/.onb2-stp/.onb2-stp-bar/.onb2-stp-lb, ONBOARDING-DOMAIN-
-// REDESIGN-1). Sustituye a los círculos numerados de la versión anterior.
-function WizardSteps({ currentStep }: { currentStep: number }) {
-  return (
-    <div className="onb2-steps" aria-label="Progreso del asistente">
-      {WIZARD_STEP_LABELS.map((label, index) => {
-        const cls = index === currentStep ? "onb2-stp on" : index < currentStep ? "onb2-stp done" : "onb2-stp";
-        return (
-          <div key={label} className={cls} aria-current={index === currentStep ? "step" : undefined}>
-            <span className="onb2-stp-bar" aria-hidden="true" />
-            <span className="onb2-stp-lb">{label}</span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// Avanza un índice de "paso activo" en un timer fijo, puramente cosmético:
-// no representa progreso real medido del backend (la llamada es una única
-// promesa opaca). Se detiene en el último paso (nunca lo marca "hecho") hasta
-// que `done` sea true, momento en el que el componente que lo usa se
-// desmonta — por eso no hace falta un estado "todo completado".
 function useStepCycle(stepCount: number, done: boolean, intervalMs = 1400) {
   const [active, setActive] = useState(0);
   useEffect(() => {
     if (done) return;
     if (active >= stepCount - 1) return;
-    const timer = setTimeout(() => setActive((value) => Math.min(value + 1, stepCount - 1)), intervalMs);
+    const timer = setTimeout(
+      () => setActive((value) => Math.min(value + 1, stepCount - 1)),
+      intervalMs,
+    );
     return () => clearTimeout(timer);
   }, [active, done, stepCount, intervalMs]);
   return active;
 }
 
-// Checklist "esto es lo que estamos haciendo" para las dos cargas embebidas
-// del asistente (analizar dominio, crear proyecto). Igual que antes: SIN
-// porcentaje ni "X de Y pasos" — la llamada real es una única promesa opaca.
-// Los pasos previos al activo se marcan "done" solo como parte de la
-// animación cosmética; el paso activo se queda en spinner hasta que la
-// promesa real resuelve y el componente que lo usa se desmonta.
-function OnbChecklist({ steps, activeIndex }: { steps: string[]; activeIndex: number }) {
+// Lista «esto es lo que estamos haciendo». Sin porcentaje ni «X de Y»: la
+// llamada real es una única promesa opaca, y los pasos previos al activo se
+// marcan hechos sólo como parte de la animación.
+function LoadList({
+  items,
+  activeIndex,
+}: {
+  items: string[];
+  activeIndex: number;
+}) {
   return (
-    <div className="onb2-check">
-      {steps.map((label, index) => {
-        const isDone = index < activeIndex;
-        const isActive = index === activeIndex;
+    <ol className="wz-load" aria-live="polite">
+      {items.map((text, i) => {
+        const done = i < activeIndex;
+        const on = i === activeIndex;
         return (
-          <div key={label} className={isActive ? "onb2-ci on" : "onb2-ci"}>
-            {isDone ? (
-              <span className="onb2-cdone">
-                <Icon name="check" size={10} />
-              </span>
-            ) : isActive ? (
-              <span className="onb2-cspin" aria-hidden="true" />
+          <li key={text} className={done ? "done" : on ? "on" : ""}>
+            {done ? (
+              <Ic n="checkc" />
+            ) : on ? (
+              <span className="wz-sp" aria-hidden="true" />
             ) : (
-              <span className="onb2-cpending" aria-hidden="true" />
+              <Ic n="c-dot" />
             )}
-            {label}
-          </div>
+            <span className={on ? "shimmer" : ""}>{text}</span>
+          </li>
         );
       })}
-    </div>
+    </ol>
   );
 }
 
-// Estado de carga al sugerir competidores y prompts con Gemini (paso 0 → 1).
-// A diferencia de la versión anterior, no es una cortina fija a pantalla
-// completa: es la misma tarjeta del paso 0, con un checklist y un esqueleto
-// de filas orientativo debajo (ONBOARDING-DOMAIN-REDESIGN-1).
-function DomainAnalyzingCard({ domain }: { domain: string }) {
-  const steps = useMemo(() => suggestionsSteps(domain), [domain]);
-  const activeIndex = useStepCycle(steps.length, false);
+function SuggestLoading({ domain }: { domain: string }) {
+  const activeIndex = useStepCycle(SUGGEST_STEPS.length, false);
   return (
-    <div className="card onb2-cpad">
-      <OnbChecklist steps={steps} activeIndex={activeIndex} />
-      <div style={{ borderTop: "1px solid var(--line-soft)", marginTop: 14 }}>
-        {[70, 54, 62, 46].map((width, index) => (
-          <div className="onb2-skelrow" key={index}>
-            <span className="onb2-fav" aria-hidden="true" />
-            <span style={{ flex: 1 }}>
-              <span className="onb2-skel" style={{ width: `${width}%` }} />
-              <span className="onb2-skel" style={{ width: `${width - 26}%`, height: 8, marginTop: 6, opacity: 0.7 }} />
-            </span>
-          </div>
-        ))}
-      </div>
-      <p style={{ fontSize: 12, color: "var(--ink-4)", margin: "14px 0 0", textAlign: "center" }}>
-        No cierres ni recargues esta pestaña.
+    <>
+      <div className="eyebrow bare">Paso 1 de 4</div>
+      <h1>
+        Leyendo <span className="mono wz-dm">{domain || "tu dominio"}</span>
+      </h1>
+      <p className="lead">
+        Unos 15 segundos. No cierres ni recargues esta pestaña.
       </p>
-    </div>
+      <LoadList items={SUGGEST_STEPS} activeIndex={activeIndex} />
+    </>
   );
 }
 
-/**
- * LLM-RESILIENCE-1: shown on the step whose automatic suggestion came back
- * empty, at the moment the user is looking at that empty step.
- *
- * Says only what is known. The server can tell that the suggestion did not
- * produce anything, but from here we cannot tell a provider outage apart from
- * a domain the model genuinely had nothing to say about — so the copy claims
- * neither. The operator gets the real cause by email
- * (`lib/llm/llm-incident.ts`); the user gets the way forward.
- */
-function SuggestionGapNotice({ kind, reason }: { kind: "competitors" | "prompts"; reason?: string | null }) {
-  const what = kind === "competitors" ? "competidores" : "prompts";
+function EngineRow({ engines }: { engines: readonly LLMScanProvider[] }) {
+  const hasPerplexity = engines.includes("perplexity");
   return (
-    <div className="add-hint" role="status" style={{ marginBottom: 12 }}>
-      <Icon name="alertCircle" size={13} />
-      No hemos podido sugerir {what} automáticamente para este dominio. Añádelos a mano — el escaneo funciona igual y
-      podrás cambiarlos cuando quieras.
-      {reason ? <span style={{ opacity: 0.7 }}> (preview: {reason})</span> : null}
+    <div className="wz-engs">
+      {engines.map((provider) => (
+        <span className="wz-eng" key={provider}>
+          <EngineLogo provider={provider} size={15} />
+          {engineName(provider)}
+          {provider === "perplexity" ? (
+            <span className="new">Nuevo</span>
+          ) : null}
+        </span>
+      ))}
+      {!hasPerplexity ? (
+        <span className="wz-lock">
+          <Ic n="c-lock" sm />
+          Perplexity, en Pro y Agencia
+        </span>
+      ) : null}
     </div>
   );
 }
 
-// Panel fijo "Resumen del lanzamiento" — refleja el estado real del
-// asistente en cada paso, nunca una cifra inventada. `competitorsCount` /
-// `promptsCount` son `null` mientras ese paso no se ha alcanzado todavía.
-function LaunchSummaryPanel({
-  domain,
-  languageKnown,
-  language,
-  engineCount,
-  competitorsCount,
-  promptsCount
+// Cuerpo del paso final. Vive dentro del <form> porque `useFormStatus()` sólo
+// funciona en un descendiente suyo: mientras `createAction` está en vuelo la
+// lista de carga sustituye al botón, en el mismo sitio y sin cortina.
+function LaunchBody({
+  promptCount,
+  engines,
+  competitorCount,
+  countryName,
+  goBack,
 }: {
-  domain: string;
-  languageKnown: boolean;
-  language: string;
-  engineCount: number;
-  competitorsCount: number | null;
-  promptsCount: number | null;
+  promptCount: number;
+  engines: readonly LLMScanProvider[];
+  competitorCount: number;
+  countryName: string;
+  goBack: () => void;
 }) {
-  const estimatedResponses = promptsCount !== null ? promptsCount * engineCount : null;
+  const { pending } = useFormStatus();
+  const activeIndex = useStepCycle(CREATE_PROJECT_STEPS.length, !pending);
   return (
-    <div>
-      <div className="onb2-seclbl">Resumen del lanzamiento</div>
-      <div className="card onb2-cpad onb2-panel">
-        <div className="onb2-prow">
-          <span className="onb2-pico">
-            <Icon name="globe" size={14} />
-          </span>
-          <span className="onb2-pk">Dominio</span>
-          <span className={domain ? "onb2-pv mono" : "onb2-pv mono na"}>{domain || "Pendiente"}</span>
+    <>
+      <div className="eyebrow bare">Paso 4 de 4</div>
+      <h1>Todo listo para tu primer escaneo</h1>
+      <p className="lead">
+        Preguntamos tus prompts a cada motor y leemos menciones, puestos y
+        citas.
+      </p>
+      <div className="wz-sum4">
+        <div>
+          <span>Prompts</span>
+          <b className="num">{promptCount}</b>
         </div>
-        <div className="onb2-prow">
-          <span className="onb2-pico">
-            <Icon name="lang" size={14} />
-          </span>
-          <span className="onb2-pk">Idioma</span>
-          <span className={languageKnown ? "onb2-pv" : "onb2-pv na"}>
-            {languageKnown ? LANGUAGE_NAMES[language] ?? language : "Pendiente"}
-            {languageKnown ? <span style={{ color: "var(--ink-4)", fontWeight: 500 }}> · detectado</span> : null}
-          </span>
+        <div>
+          <span>Motores</span>
+          <b className="num">{engines.length}</b>
         </div>
-        <div className="onb2-prow">
-          <span className="onb2-pico">
-            <Icon name="overview" size={14} />
-          </span>
-          <span className="onb2-pk">Motores</span>
-          <span className="onb2-pv">{engineCount}</span>
+        <div>
+          <span>Competidores</span>
+          <b className="num">{competitorCount}</b>
         </div>
-        <div className="onb2-prow">
-          <span className="onb2-pico">
-            <Icon name="competitors" size={14} />
-          </span>
-          <span className="onb2-pk">Competidores</span>
-          <span className={competitorsCount === null ? "onb2-pv na" : "onb2-pv"}>
-            {competitorsCount === null ? "Pendiente" : competitorsCount}
-          </span>
-        </div>
-        <div className="onb2-prow">
-          <span className="onb2-pico">
-            <Icon name="prompts" size={14} />
-          </span>
-          <span className="onb2-pk">Prompts</span>
-          <span className={promptsCount === null ? "onb2-pv na" : "onb2-pv"}>{promptsCount === null ? "Pendiente" : promptsCount}</span>
-        </div>
-        <div className="onb2-est">
-          {estimatedResponses !== null ? (
-            <>
-              <div className="onb2-est-n">{estimatedResponses}</div>
-              <div className="onb2-est-l">respuestas estimadas en el primer escaneo</div>
-              <div className="onb2-est-f">
-                {promptsCount} prompts × {engineCount} motores.
-              </div>
-            </>
-          ) : (
-            <div className="onb2-est-f" style={{ marginTop: 0 }}>
-              El total de respuestas aparecerá aquí cuando elijas tus prompts.
-            </div>
-          )}
+        <div>
+          <span>Mercado</span>
+          <b className="wz-country">{countryName}</b>
         </div>
       </div>
-    </div>
+      <div className="wz-sub">
+        <div className="xo-lbl">Motores</div>
+        <EngineRow engines={engines} />
+      </div>
+      <p className="wz-hint">
+        El escaneo tarda unos minutos y sigue aunque cierres la pestaña una vez
+        creado el dominio.
+      </p>
+      {pending ? (
+        <LoadList items={CREATE_PROJECT_STEPS} activeIndex={activeIndex} />
+      ) : null}
+      <div className="wz-foot">
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={goBack}
+          disabled={pending}
+        >
+          <Ic n="chevl" sm />
+          Atrás
+        </button>
+        <button
+          type="submit"
+          className="btn blue"
+          disabled={pending || promptCount === 0}
+        >
+          {pending ? (
+            "Creando…"
+          ) : (
+            <>
+              <Ic n="c-rocket" sm />
+              Crear dominio y escanear
+            </>
+          )}
+        </button>
+      </div>
+    </>
   );
 }
 
 type OnboardingWizardProps = {
   errorMessage: string | null;
   atLimit?: boolean;
+  /** Primer dominio de la cuenta: el asistente no se puede cerrar (no hay a dónde volver). */
+  isFirst?: boolean;
   /** Owner's real plan cap on active prompts (app/pricing/plans-data.ts) —
-   * bounds both the manual "Añadir prompt" button and "Generar N más" here,
-   * so a Starter/Pro/Agency user isn't stuck at a hardcoded 10 during
-   * onboarding (SCAN-CHAIN-1 follow-up). */
+   * bounds both the manual add and "Generar N más" here. */
   promptCap?: number;
   /** Engines the owner's plan scans with, in scan order. */
   engines?: readonly LLMScanProvider[];
-  suggestAction: (input: { domain: string; country: string }) => Promise<ProjectSetupSuggestion>;
+  suggestAction: (input: {
+    domain: string;
+    country: string;
+  }) => Promise<ProjectSetupSuggestion>;
   generateMorePromptsAction: (input: {
     domain: string;
     country: string;
@@ -369,173 +290,16 @@ type OnboardingWizardProps = {
   createAction: (formData: FormData) => void | Promise<void>;
 };
 
-// Cuerpo del paso de prompts. Vive dentro del <form> porque necesita
-// `useFormStatus()` (sólo funciona en un descendiente de <form>) para saber
-// si `createAction` está en vuelo y, si lo está, sustituir la lista editable
-// por la tarjeta "Creando…" en el mismo sitio — nunca una cortina a pantalla
-// completa (ONBOARDING-DOMAIN-REDESIGN-1; antes era `CreateProjectOverlay`).
-function PromptsStepBody({
-  prompts,
-  promptCap,
-  validPromptCount,
-  promptRoomLeft,
-  generateMoreCount,
-  categoryCounts,
-  isGeneratingMore,
-  generateMoreError,
-  openPrompts,
-  toggleOpenPrompt,
-  updatePrompt,
-  removePrompt,
-  addPrompt,
-  generateMorePromptsAutomatically,
-  goBack
-}: {
-  prompts: PromptRow[];
-  promptCap: number;
-  validPromptCount: number;
-  promptRoomLeft: number;
-  generateMoreCount: number;
-  categoryCounts: Array<[string, number]>;
-  isGeneratingMore: boolean;
-  generateMoreError: string | null;
-  openPrompts: Set<number>;
-  toggleOpenPrompt: (id: number) => void;
-  updatePrompt: (index: number, value: string) => void;
-  removePrompt: (index: number) => void;
-  addPrompt: () => void;
-  generateMorePromptsAutomatically: () => void;
-  goBack: () => void;
-}) {
-  const { pending } = useFormStatus();
-  const activeIndex = useStepCycle(CREATE_PROJECT_STEPS.length, !pending);
-
-  if (pending) {
-    return (
-      <>
-        <div className="onb2-seclbl">Lanzando</div>
-        <div className="card onb2-cpad">
-          <OnbChecklist steps={CREATE_PROJECT_STEPS} activeIndex={activeIndex} />
-        </div>
-        <div className="onb2-foot">
-          <Button type="button" variant="outline" disabled>
-            Atrás
-          </Button>
-          <Button type="submit" disabled className="inline-flex items-center gap-2">
-            Creando…
-          </Button>
-        </div>
-      </>
-    );
-  }
-
-  const maxCategoryCount = categoryCounts.length ? categoryCounts[0][1] : 0;
-
-  return (
-    <>
-      <div className="onb2-seclbl">
-        {validPromptCount} prompt{validPromptCount === 1 ? "" : "s"} · límite de tu plan: {promptCap}
-      </div>
-      <div className="card" style={{ overflow: "hidden" }}>
-        {prompts.map((row, index) => {
-          const isOpen = openPrompts.has(row.id);
-          return (
-            <div key={row.id} className="onb2-row align-top">
-              {isOpen ? (
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Textarea
-                    aria-label={`Prompt ${index + 1}`}
-                    rows={3}
-                    className="onb-prompt-input onb2-prompt-edit"
-                    placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
-                    value={row.text}
-                    onChange={(event) => updatePrompt(index, event.target.value)}
-                    autoFocus
-                  />
-                </div>
-              ) : (
-                <span className="onb2-ptext">{row.text || "Prompt vacío"}</span>
-              )}
-              {row.category ? <span className="onb2-chip n">{row.category}</span> : null}
-              <button
-                type="button"
-                className="onb2-iconbtn"
-                aria-label={isOpen ? `Listo, prompt ${index + 1}` : `Editar prompt ${index + 1}`}
-                onClick={() => toggleOpenPrompt(row.id)}
-              >
-                <Icon name={isOpen ? "check" : "settings"} size={14} />
-              </button>
-              <button
-                type="button"
-                className="onb2-iconbtn"
-                aria-label={`Quitar prompt ${index + 1}`}
-                onClick={() => removePrompt(index)}
-              >
-                <Icon name="trash" size={14} />
-              </button>
-            </div>
-          );
-        })}
-        {categoryCounts.length > 0 ? (
-          <div className="onb2-cov">
-            {categoryCounts.map(([category, count]) => (
-              <div className="onb2-covc" key={category}>
-                <span className="onb2-cov-l">
-                  <span>{category}</span>
-                  <b>{count}</b>
-                </span>
-                <span className="onb2-cov-b">
-                  <span className="onb2-cov-f" style={{ width: `${(count / maxCategoryCount) * 100}%` }} />
-                </span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-        <div className="onb2-listfoot">
-          <span style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {promptRoomLeft > 0 ? (
-              <Button type="button" variant="outline" onClick={generateMorePromptsAutomatically} disabled={isGeneratingMore}>
-                <Icon name="sparkles" size={13} />
-                {isGeneratingMore ? "Generando…" : `Generar ${generateMoreCount} más`}
-              </Button>
-            ) : null}
-            <Button type="button" variant="outline" onClick={addPrompt} disabled={prompts.length >= promptCap}>
-              <Icon name="plus" size={13} />
-              Añadir prompt
-            </Button>
-          </span>
-        </div>
-      </div>
-
-      {generateMoreError ? <p className="feedback error">{generateMoreError}</p> : null}
-
-      <div className="onb2-foot">
-        <Button type="button" variant="outline" onClick={goBack}>
-          Atrás
-        </Button>
-        <Button type="submit" disabled={validPromptCount === 0} className="inline-flex items-center gap-2">
-          Crear dominio y escanear
-          <Icon name="arrRight" size={16} />
-        </Button>
-      </div>
-    </>
-  );
-}
-
 export function OnboardingWizard({
   errorMessage,
   atLimit = false,
+  isFirst = false,
   promptCap = DEFAULT_PROMPT_CAP,
   engines = DEFAULT_ENGINE_PROVIDERS,
   suggestAction,
   generateMorePromptsAction,
-  createAction
+  createAction,
 }: OnboardingWizardProps) {
-  // SCREEN-POLISH-1 Fase B: only used in the copy below when promptCap is
-  // below RECOMMENDED_MIN_PROMPTS_COPY (Free today) — the first plan tier (PLANS is
-  // already ordered by prompt cap, ascending) that covers more than this
-  // account's own cap, to name a concrete upgrade instead of a vague "more".
-  const nextPromptPlan = PLANS.find((p) => p.caps.prompts > promptCap);
   const [step, setStep] = useState(0);
   const [domain, setDomain] = useState("");
   const [country, setCountry] = useState("ES");
@@ -543,21 +307,38 @@ export function OnboardingWizard({
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [prompts, setPrompts] = useState<PromptRow[]>([]);
   const [suggestError, setSuggestError] = useState<string | null>(null);
-  /**
-   * Identidad de UI local para cada fila de competidor/prompt — nunca sale de
-   * este componente ni llega al servidor. Filas sugeridas por Gemini nacen
-   * plegadas (`open*` no las contiene); una fila nueva vía "Añadir…" nace
-   * desplegada, porque una fila vacía y plegada no da nada en lo que hacer
-   * clic para rellenarla.
-   */
+  // LLM-RESILIENCE-1: qué mitades de la sugerencia automática volvieron vacías,
+  // para que el paso que de verdad está vacío lo diga.
+  const [suggestFailed, setSuggestFailed] = useState<
+    Array<"competitors" | "prompts">
+  >([]);
+  // Diagnóstico sólo de preview de una sugerencia de competidores vacía (log §240).
+  const [competitorsReason, setCompetitorsReason] = useState<string | null>(
+    null,
+  );
+  const [isPending, startTransition] = useTransition();
+  const [showDomainErr, setShowDomainErr] = useState(false);
+  const [isGeneratingMore, startGenerateMoreTransition] = useTransition();
+  const [generateMoreError, setGenerateMoreError] = useState<string | null>(
+    null,
+  );
+  const [editingCompetitors, setEditingCompetitors] = useState<Set<number>>(
+    new Set(),
+  );
+  const [editingPrompts, setEditingPrompts] = useState<Set<number>>(new Set());
+  const [newCompetitor, setNewCompetitor] = useState({ name: "", domain: "" });
+  const [newPrompt, setNewPrompt] = useState("");
+  const rootRef = useRef<HTMLDivElement>(null);
+
   const nextId = useRef(0);
   const newId = () => {
     nextId.current += 1;
     return nextId.current;
   };
-  const [openCompetitors, setOpenCompetitors] = useState<Set<number>>(new Set());
-  const [openPrompts, setOpenPrompts] = useState<Set<number>>(new Set());
-  function toggleId(setter: (updater: (prev: Set<number>) => Set<number>) => void, id: number) {
+  function toggleId(
+    setter: (updater: (prev: Set<number>) => Set<number>) => void,
+    id: number,
+  ) {
     setter((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -565,92 +346,79 @@ export function OnboardingWizard({
       return next;
     });
   }
-  /**
-   * LLM-RESILIENCE-1: which halves of the automatic suggestion came back
-   * empty, so the step that is actually empty can say so.
-   *
-   * `suggestError` alone could not do this job. It is rendered inside the
-   * `step === 0` block, and the failure path calls `setStep(1)` in the same
-   * update — so the one message the wizard had was written onto a screen the
-   * user was being navigated away from at that instant. Worse, the common case
-   * on 2026-08-09 never set it at all: competitors failed while prompts
-   * succeeded, so `ok` was true and the user landed on an empty competitors
-   * step with nothing to read.
-   */
-  const [suggestFailed, setSuggestFailed] = useState<Array<"competitors" | "prompts">>([]);
-  // Preview-only diagnosis of an empty competitor suggestion (log §240); the
-  // server never sends it in production.
-  const [competitorsReason, setCompetitorsReason] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-  const [isDomainFocused, setIsDomainFocused] = useState(false);
-  const [showDomainErr, setShowDomainErr] = useState(false);
-  const [isGeneratingMore, startGenerateMoreTransition] = useTransition();
-  const [generateMoreError, setGenerateMoreError] = useState<string | null>(null);
 
-  /**
-   * Recoge el dominio que la persona escribió en el hero de la landing.
-   *
-   * Hasta hoy ese campo se tiraba: escribías tu dominio en la portada, te
-   * registrabas, y el asistente te lo volvía a pedir como si no lo hubieras
-   * dicho. Se lee una sola vez al montar y se consume, para que un segundo
-   * dominio en la misma cuenta no nazca relleno con el primero.
-   *
-   * En un efecto y no en el estado inicial porque `localStorage` no existe en
-   * el servidor: leerlo durante el render rompería la hidratación.
-   */
+  // El dominio que la persona escribió en el hero de la landing se lee una
+  // sola vez y se consume (log §54). En un efecto porque `localStorage` no
+  // existe en el servidor.
   useEffect(() => {
     const pending = takePendingDomain();
     if (pending) setDomain((current) => (current ? current : pending));
   }, []);
 
+  // Cada paso empieza arriba del todo.
+  useEffect(() => {
+    rootRef.current?.closest(".scroller")?.scrollTo({ top: 0 });
+  }, [step]);
+
   const domainHasValue = domain.trim().length > 0;
   const domainIsValid = isWellFormedDomain(domain);
-  const typedPlaceholder = useTypewriter(TYPE_SAMPLES, !isDomainFocused && domain === "");
   const selectedCountry = useMemo(
     () => COUNTRIES.find((option) => option.code === country) ?? COUNTRIES[0],
-    [country]
+    [country],
   );
 
   const competitorsText = useMemo(
     () =>
       competitors
         .map((c) => `${c.name.trim()}|${c.domain.trim()}`)
-        .filter((line) => line.length > 1 && !line.startsWith("|") && !line.endsWith("|"))
+        .filter(
+          (line) =>
+            line.length > 1 && !line.startsWith("|") && !line.endsWith("|"),
+        )
         .join("\n"),
-    [competitors]
+    [competitors],
   );
-  const promptsText = useMemo(
-    () => prompts.map((p) => sanitizePromptLineText(p.text)).filter(Boolean).join("\n"),
-    [prompts]
-  );
-  const categoriesText = useMemo(
+  const validCompetitorCount = competitorsText
+    ? competitorsText.split("\n").length
+    : 0;
+
+  // Sólo cuentan los prompts marcados y con texto; las categorías viajan en el
+  // mismo orden que el texto.
+  const chosen = useMemo(
     () =>
       prompts
-        .filter((p) => p.text.trim().length > 0)
-        .map((p) => p.category ?? "")
-        .join("\n"),
-    [prompts]
+        .filter((p) => p.on)
+        .map((p) => ({
+          text: sanitizePromptLineText(p.text),
+          category: p.category ?? "",
+        }))
+        .filter((p) => p.text),
+    [prompts],
   );
-  const validCompetitorCount = competitorsText ? competitorsText.split("\n").length : 0;
-  const validPromptCount = promptsText ? promptsText.split("\n").length : 0;
-  const promptRoomLeft = Math.max(0, promptCap - prompts.length);
+  const promptsText = chosen.map((p) => p.text).join("\n");
+  const categoriesText = chosen.map((p) => p.category).join("\n");
+  const validPromptCount = chosen.length;
+  const promptRoomLeft = Math.max(0, promptCap - validPromptCount);
   const generateMoreCount = Math.min(GENERATE_MORE_BATCH_SIZE, promptRoomLeft);
 
-  // Reparto real de los prompts por categoría, para el panel de cobertura del
-  // paso 3 — cuenta el propio estado, nunca un número inventado. Ordenado de
-  // mayor a menor para que las barras escalen contra el máximo real.
-  const categoryCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of prompts) {
-      if (!sanitizePromptLineText(p.text)) continue;
-      const key = p.category ?? "Sin categoría";
-      counts.set(key, (counts.get(key) ?? 0) + 1);
+  // Reparto real por tema, en orden de aparición; lo escrito a mano va aparte.
+  const topics = useMemo(() => {
+    const groups = new Map<string, PromptRow[]>();
+    for (const row of prompts) {
+      const key = row.category ?? UNTOPICED;
+      const list = groups.get(key);
+      if (list) list.push(row);
+      else groups.set(key, [row]);
     }
-    return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
+    const entries = Array.from(groups.entries());
+    return [
+      ...entries.filter(([k]) => k !== UNTOPICED),
+      ...entries.filter(([k]) => k === UNTOPICED),
+    ];
   }, [prompts]);
 
   function generateSuggestions() {
-    if (atLimit) return;
+    if (atLimit || isPending) return;
     if (!domainIsValid) {
       setShowDomainErr(true);
       return;
@@ -664,13 +432,13 @@ export function OnboardingWizard({
       setCompetitorsReason(result.competitorsReason ?? null);
       if (!result.ok) {
         setSuggestError(
-          "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar."
+          "No hemos podido sugerir competidores ni prompts para este dominio. Puedes añadirlos manualmente y continuar.",
         );
-        setSuggestFailed(result.failed.length ? result.failed : ["competitors", "prompts"]);
-        // No blank placeholder row: closed, it rendered as a "Sin nombre / sin
-        // dominio" card under "0 competidores". "Añadir competidor" opens one.
+        setSuggestFailed(
+          result.failed.length ? result.failed : ["competitors", "prompts"],
+        );
         setCompetitors([]);
-        setPrompts([{ id: newId(), text: "", category: null }]);
+        setPrompts([]);
         setLanguage((current) => result.language || current);
         setStep(1);
         return;
@@ -678,404 +446,627 @@ export function OnboardingWizard({
       setLanguage(result.language || language);
       setSuggestFailed(result.failed);
       setCompetitors(
-        result.competitors.length
-          ? result.competitors.map((c) => ({ id: newId(), ...c, source: "suggested" as const }))
-          : []
+        result.competitors.map((c) => ({
+          id: newId(),
+          ...c,
+          source: "suggested" as const,
+        })),
       );
-      setPrompts(
-        result.prompts.length
-          ? result.prompts.map((p) => ({ id: newId(), ...p }))
-          : [{ id: newId(), text: "", category: null }]
-      );
+      setPrompts(result.prompts.map((p) => ({ id: newId(), ...p, on: true })));
       setStep(1);
     });
   }
 
-  function updateCompetitor(index: number, patch: Partial<Competitor>) {
-    setCompetitors((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  function updateCompetitor(id: number, patch: Partial<Competitor>) {
+    setCompetitors((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
   }
-  function updatePrompt(index: number, value: string) {
-    setPrompts((rows) => rows.map((row, i) => (i === index ? { ...row, text: value } : row)));
+  function updatePrompt(id: number, patch: Partial<PromptRow>) {
+    setPrompts((rows) =>
+      rows.map((row) => (row.id === id ? { ...row, ...patch } : row)),
+    );
   }
 
-  // "Generar N más" (prompts step): asks Gemini for a handful of new prompts
-  // distinct from what's already listed (generateMorePromptsAction ->
-  // generateAddedPrompts, same call the post-creation "Añadir prompts" flow
-  // uses), then appends up to however many slots remain under the plan cap.
+  function addCompetitor() {
+    const name = newCompetitor.name.trim();
+    const dom = newCompetitor.domain.trim();
+    if (!name || !dom || competitors.length >= MAX_USER_COMPETITORS) return;
+    setCompetitors((rows) => [
+      ...rows,
+      { id: newId(), name, domain: dom, source: "manual" },
+    ]);
+    setNewCompetitor({ name: "", domain: "" });
+  }
+
+  function addPrompt() {
+    const text = newPrompt.trim();
+    if (!text || promptRoomLeft <= 0) return;
+    setPrompts((rows) => [
+      ...rows,
+      { id: newId(), text, category: null, on: true },
+    ]);
+    setNewPrompt("");
+  }
+
+  // «Generar N más»: pide a Gemini prompts distintos de los listados
+  // (generateMorePromptsAction -> generateAddedPrompts, la misma llamada del
+  // «Añadir prompts» posterior a la creación) y añade sólo los que caben en el
+  // tope del plan.
   function generateMorePromptsAutomatically() {
     if (promptRoomLeft <= 0 || isGeneratingMore) return;
     setGenerateMoreError(null);
     startGenerateMoreTransition(async () => {
-      const existingPromptTexts = prompts.map((p) => sanitizePromptLineText(p.text)).filter(Boolean);
-      const existingCategories = prompts.map((p) => p.category ?? "").filter(Boolean);
-      const result = await generateMorePromptsAction({ domain, country, existingPromptTexts, existingCategories });
-
+      // Lo desmarcado también cuenta: no se vuelve a proponer lo que se quitó.
+      const existingPromptTexts = prompts
+        .map((p) => sanitizePromptLineText(p.text))
+        .filter(Boolean);
+      const existingCategories = prompts
+        .map((p) => p.category ?? "")
+        .filter(Boolean);
+      const result = await generateMorePromptsAction({
+        domain,
+        country,
+        existingPromptTexts,
+        existingCategories,
+      });
       if (!result.ok) {
         setGenerateMoreError(
-          "No hemos podido generar más prompts ahora mismo. Puedes reintentarlo o añadir uno manualmente."
+          "No hemos podido generar más prompts ahora mismo. Puedes reintentarlo o añadir uno manualmente.",
         );
         return;
       }
-
-      setPrompts((rows) => {
-        const room = Math.max(0, promptCap - rows.length);
-        const toAdd = result.prompts.slice(0, room);
-        return [...rows, ...toAdd.map((p) => ({ id: newId(), text: p.text, category: p.category }))];
-      });
+      const room = Math.max(0, promptCap - validPromptCount);
+      const toAdd = result.prompts.slice(0, room);
+      setPrompts((rows) => [
+        ...rows,
+        ...toAdd.map((p) => ({
+          id: newId(),
+          text: p.text,
+          category: p.category,
+          on: true,
+        })),
+      ]);
     });
   }
 
-  const stepsBar = <WizardSteps currentStep={step} />;
+  const s = step + 1;
+  const languageName = LANGUAGE_NAMES[language] ?? language;
+  const loadingFirst = step === 0 && isPending;
 
-  if (step === 0) {
-    return (
-      <div className="page onb2-scope onb2-page fade-in">
-        <div className="onb2-crumb">
-          <Icon name="plus" size={13} />
-          Nuevo dominio
+  const stepsBar = (
+    <ol className="wz-steps" aria-label="Pasos">
+      {WIZARD_STEP_LABELS.map((label, i) => (
+        <li
+          key={label}
+          className={i + 1 < s ? "done" : i + 1 === s ? "cur" : ""}
+          aria-current={i + 1 === s ? "step" : undefined}
+        >
+          <i />
+          <span>
+            <span className="num">{String(i + 1).padStart(2, "0")}</span>
+            {label}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+
+  const side = (
+    <aside className="wz-side" aria-label="Resumen del lanzamiento">
+      <div className="xo-lbl">Resumen</div>
+      <dl>
+        <div>
+          <dt>Dominio</dt>
+          <dd className="mono">
+            {domainHasValue && (s > 1 || isPending)
+              ? domain.trim()
+              : "Pendiente"}
+          </dd>
         </div>
-
-        <div className="onb2-head">
-          <div>
-            <h1 className="onb2-h1">{isPending ? `Leyendo ${domain || "tu dominio"}` : "Añade un dominio"}</h1>
-            <p className="onb2-sub">
-              {isPending
-                ? "Buscamos con quién compites y qué te preguntarían de verdad en un chat de IA. Unos 15 segundos — no cierres ni recargues esta pestaña."
-                : "Lo leemos, te proponemos competidores y prompts, y lanzamos el primer escaneo en los motores de tu plan."}
-            </p>
-          </div>
-          {stepsBar}
+        <div>
+          <dt>País</dt>
+          <dd>{s > 1 ? selectedCountry.name : "Pendiente"}</dd>
         </div>
-
-        {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
-
-        <div className="onb2-grid">
-          <div>
-            {isPending ? (
-              <DomainAnalyzingCard domain={domain} />
-            ) : (
-              <div className="card onb2-cpad">
-                <label className="field-label" htmlFor="domain">
-                  Dominio
-                </label>
-                <div className="domain-bar">
-                  <Icon name="globe" size={18} className="domain-globe" />
-                  <input
-                    id="domain"
-                    name="domain"
-                    className="domain-input"
-                    value={domain}
-                    onChange={(event) => {
-                      setDomain(event.target.value);
-                      setShowDomainErr(false);
-                    }}
-                    onFocus={() => setIsDomainFocused(true)}
-                    onBlur={() => setIsDomainFocused(false)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        event.preventDefault();
-                        generateSuggestions();
-                      }
-                    }}
-                    placeholder={isDomainFocused || domain ? "introduce tu dominio" : ""}
-                    aria-label="Dominio"
-                    aria-describedby="domain-help"
-                    spellCheck={false}
-                    autoFocus
-                  />
-                  {!isDomainFocused && domain === "" ? (
-                    <span className="db-ghost">
-                      {typedPlaceholder}
-                      <span className="type-caret" />
-                    </span>
-                  ) : null}
-                  <div className="country-sel" title="País de análisis">
-                    <Flag code={selectedCountry.code.toLowerCase()} />
-                    <span
-                      className="country-sel-name"
-                      style={{ maxWidth: 96, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {selectedCountry.name}
-                    </span>
-                    <Icon name="chevDown" size={14} className="text-[var(--ink-4)]" />
-                    <select
-                      id="country"
-                      value={country}
-                      onChange={(event) => setCountry(event.target.value)}
-                      aria-label="País de análisis"
-                    >
-                      {COUNTRIES.map((option) => (
-                        <option key={option.code} value={option.code}>
-                          {option.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <Button type="button" className="onb-cta" onClick={generateSuggestions} disabled={isPending || atLimit}>
-                    {isPending ? "Generando…" : "Continuar"}
-                    <Icon name="arrRight" size={16} />
-                  </Button>
-                </div>
-                <p id="domain-help" className="sr-only">
-                  Escribe solo el dominio, sin https:// ni rutas. Ejemplo: miempresa.com
-                </p>
-                {showDomainErr && domainHasValue && !domainIsValid ? (
-                  <div className="field-err" style={{ justifyContent: "flex-start" }}>
-                    <Icon name="alertCircle" size={14} />
-                    Introduce un dominio válido, p. ej. miempresa.com
-                  </div>
-                ) : (
-                  <div className="add-hint">
-                    <Icon name="info" size={13} className="add-hint-ico" />
-                    <span>Elige el país cuyo mercado quieres analizar.</span>
-                  </div>
-                )}
-                {suggestError ? <p className="feedback error mt-2">{suggestError}</p> : null}
-
-                <div className="add-engines">
-                  <span className="cap">Motores</span>
-                  {engines.map((provider) => {
-                    const meta = getEngineMeta(provider);
-                    return (
-                      <span className="eng-chip" key={provider}>
-                        <span className="eng-ico" style={{ color: meta.color }}>
-                          <EngineGlyph provider={provider} />
-                        </span>
-                        {meta.label}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <LaunchSummaryPanel
-            domain={domain}
-            languageKnown={false}
-            language={language}
-            engineCount={engines.length}
-            competitorsCount={null}
-            promptsCount={null}
-          />
+        <div>
+          <dt>Idioma</dt>
+          <dd>{s > 1 ? languageName : "Pendiente"}</dd>
         </div>
+        <div>
+          <dt>Motores</dt>
+          <dd>
+            {engines.length} · {engines.map((p) => engineName(p)).join(", ")}
+          </dd>
+        </div>
+        <div>
+          <dt>Competidores</dt>
+          <dd>{s > 2 ? validCompetitorCount : "Pendiente"}</dd>
+        </div>
+        <div>
+          <dt>Prompts</dt>
+          <dd>{s > 2 ? validPromptCount : "Pendiente"}</dd>
+        </div>
+      </dl>
+      <div className="wz-est">
+        <span>Cada prompt se pregunta a todos los motores de tu plan.</span>
       </div>
-    );
-  }
+    </aside>
+  );
 
-  if (step === 1) {
-    return (
-      <div className="page onb2-scope onb2-page fade-in">
-        <button type="button" className="onb2-back" onClick={() => setStep(0)}>
-          <Icon name="chevLeft" size={14} />
-          Volver al dominio
-        </button>
+  const failedNotice = (kind: "competitors" | "prompts") => (
+    <div className="wz-gap" role="status">
+      No hemos podido sugerir{" "}
+      {kind === "competitors" ? "competidores" : "prompts"} automáticamente para
+      este dominio. Añádelos a mano: el escaneo funciona igual y podrás
+      cambiarlos cuando quieras.
+      {kind === "competitors" && competitorsReason ? (
+        <span style={{ opacity: 0.7 }}> (preview: {competitorsReason})</span>
+      ) : null}
+    </div>
+  );
 
-        <div className="onb2-head">
-          <div>
-            <h1 className="onb2-h1">Tus competidores</h1>
-            <p className="onb2-sub">
-              Analizamos{" "}
-              <b style={{ color: "var(--ink-2)", fontFamily: "var(--mono)", fontWeight: 600 }}>
-                {domain || "tu dominio"}
-              </b>{" "}
-              e identificamos tus principales competidores para monitorizar cómo te comparas en las respuestas de
-              IA. Si algo no encaja, edítalo o elimínalo.
-            </p>
-          </div>
-          {stepsBar}
+  let main;
+  if (loadingFirst) {
+    main = <SuggestLoading domain={domain.trim()} />;
+  } else if (step === 0) {
+    main = (
+      <>
+        <div className="eyebrow bare">Paso 1 de 4</div>
+        <h1>{isFirst ? "Añade tu primer dominio" : "Añade un dominio"}</h1>
+        <p className="lead">
+          Te proponemos rivales y prompts, y lanzamos el primer escaneo.
+        </p>
+        {errorMessage ? (
+          <p className="wz-err" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        {suggestError ? (
+          <p className="wz-err" role="alert">
+            {suggestError}
+          </p>
+        ) : null}
+        <div className="wz-f1">
+          <label
+            className={`wz-fld wz-grow${showDomainErr && !domainIsValid ? " bad" : ""}`}
+          >
+            <span>Dominio</span>
+            <input
+              id="wz-dom"
+              name="domain"
+              className="wz-in mono"
+              value={domain}
+              onChange={(event) => {
+                setDomain(event.target.value);
+                setShowDomainErr(false);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  generateSuggestions();
+                }
+              }}
+              placeholder="miempresa.com"
+              autoComplete="off"
+              spellCheck={false}
+              autoFocus
+            />
+            <em>
+              {showDomainErr && !domainIsValid
+                ? domainHasValue
+                  ? "Eso no parece un dominio. Ejemplo: miempresa.com"
+                  : "Escribe tu dominio."
+                : "Escribe solo el dominio, sin https:// ni rutas."}
+            </em>
+          </label>
+          <label className="wz-fld">
+            <span>País de análisis</span>
+            <select
+              id="wz-cty"
+              className="wz-in"
+              value={country}
+              onChange={(event) => setCountry(event.target.value)}
+            >
+              {COUNTRIES.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.name}
+                </option>
+              ))}
+            </select>
+            <em>El mercado que quieres analizar.</em>
+          </label>
         </div>
-
-        {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
-        {suggestFailed.includes("competitors") ? <SuggestionGapNotice kind="competitors" reason={competitorsReason} /> : null}
-
-        <div className="onb2-grid">
-          <div>
-            <div className="onb2-seclbl">
-              {validCompetitorCount} competidor{validCompetitorCount === 1 ? "" : "es"} (máximo {MAX_USER_COMPETITORS})
+        <div className="wz-sub">
+          <div className="xo-lbl">Motores de tu plan</div>
+          <EngineRow engines={engines} />
+        </div>
+        <div className="wz-foot">
+          <span />
+          <button
+            type="button"
+            className="btn ink"
+            onClick={generateSuggestions}
+            disabled={atLimit}
+          >
+            Continuar
+            <Ic n="arrowr" sm />
+          </button>
+        </div>
+      </>
+    );
+  } else if (step === 1) {
+    const atCap = competitors.length >= MAX_USER_COMPETITORS;
+    main = (
+      <>
+        <div className="eyebrow bare">Paso 2 de 4</div>
+        <h1>Tus competidores</h1>
+        <p className="lead">
+          Los hemos encontrado en tu web y en tu sector. Quita los que no
+          encajen o añade los tuyos.
+        </p>
+        {errorMessage ? (
+          <p className="wz-err" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        {suggestFailed.includes("competitors")
+          ? failedNotice("competitors")
+          : null}
+        <div className="wz-lh">
+          <span>
+            <b className="num">{validCompetitorCount}</b> de{" "}
+            {MAX_USER_COMPETITORS} como máximo
+          </span>
+          <span>Podrás cambiarlos cuando quieras.</span>
+        </div>
+        {competitors.length > 0 ? (
+          <ul className="wz-list">
+            {competitors.map((row) => {
+              const editing = editingCompetitors.has(row.id);
+              return (
+                <li key={row.id}>
+                  <ProjectFav
+                    domain={row.domain}
+                    name={row.name || row.domain || "?"}
+                    size={30}
+                  />
+                  {editing ? (
+                    <div className="wz-edit">
+                      <input
+                        className="wz-in"
+                        aria-label="Nombre del competidor"
+                        placeholder="Nombre"
+                        value={row.name}
+                        onChange={(event) =>
+                          updateCompetitor(row.id, { name: event.target.value })
+                        }
+                        autoFocus
+                      />
+                      <input
+                        className="wz-in mono"
+                        aria-label="Dominio del competidor"
+                        placeholder="dominio.com"
+                        value={row.domain}
+                        onChange={(event) =>
+                          updateCompetitor(row.id, {
+                            domain: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  ) : (
+                    <span className="t">
+                      <b>{row.name || "Sin nombre"}</b>
+                      <span className="mono">
+                        {row.domain || "sin dominio"}
+                      </span>
+                    </span>
+                  )}
+                  {row.source === "suggested" && !editing ? (
+                    <span className="wz-sug">Sugerido</span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className="wz-ib"
+                    aria-label={
+                      editing
+                        ? `Listo, ${row.name || "competidor"}`
+                        : `Editar ${row.name || "competidor"}`
+                    }
+                    onClick={() => toggleId(setEditingCompetitors, row.id)}
+                  >
+                    <Ic n={editing ? "check" : "c-pencil"} sm />
+                  </button>
+                  <button
+                    type="button"
+                    className="wz-ib"
+                    aria-label={`Quitar ${row.name || "competidor"}`}
+                    onClick={() =>
+                      setCompetitors((rows) =>
+                        rows.filter((r) => r.id !== row.id),
+                      )
+                    }
+                  >
+                    <Ic n="x" sm />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+        <form
+          className="wz-addc"
+          onSubmit={(event) => {
+            event.preventDefault();
+            addCompetitor();
+          }}
+        >
+          <input
+            className="wz-in"
+            aria-label="Nombre del nuevo competidor"
+            placeholder="Nombre"
+            value={newCompetitor.name}
+            onChange={(event) =>
+              setNewCompetitor((c) => ({ ...c, name: event.target.value }))
+            }
+            disabled={atCap}
+          />
+          <input
+            className="wz-in mono"
+            aria-label="Dominio del nuevo competidor"
+            placeholder="dominio.com"
+            value={newCompetitor.domain}
+            onChange={(event) =>
+              setNewCompetitor((c) => ({ ...c, domain: event.target.value }))
+            }
+            disabled={atCap}
+          />
+          <button
+            className="btn line sm"
+            type="submit"
+            disabled={
+              atCap ||
+              !newCompetitor.name.trim() ||
+              !newCompetitor.domain.trim()
+            }
+          >
+            <Ic n="plus" sm />
+            Añadir competidor
+          </button>
+        </form>
+        {atCap ? (
+          <p className="wz-hint">
+            Has llegado a {MAX_USER_COMPETITORS}. Quita uno para añadir otro.
+          </p>
+        ) : null}
+        <div className="wz-foot">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => setStep(0)}
+          >
+            <Ic n="chevl" sm />
+            Atrás
+          </button>
+          <button type="button" className="btn ink" onClick={() => setStep(2)}>
+            Continuar a prompts
+            <Ic n="arrowr" sm />
+          </button>
+        </div>
+      </>
+    );
+  } else if (step === 2) {
+    main = (
+      <>
+        <div className="eyebrow bare">Paso 3 de 4</div>
+        <h1>Tus prompts</h1>
+        <p className="lead">
+          Las preguntas que tus clientes hacen a la IA. Desmarca las que no te
+          representen
+          {promptCap >= RECOMMENDED_MIN_PROMPTS_COPY
+            ? `; mejor ${RECOMMENDED_MIN_PROMPTS_COPY} o más.`
+            : "."}
+        </p>
+        {errorMessage ? (
+          <p className="wz-err" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        {suggestFailed.includes("prompts") ? failedNotice("prompts") : null}
+        <div className="wz-lh">
+          <span>
+            <b className="num">{validPromptCount}</b> elegidos
+          </span>
+          <span>Límite de tu plan: {promptCap}</span>
+        </div>
+        {topics.map(([topic, rows]) => (
+          <div className="wz-topic" key={topic}>
+            <div className="wz-th">
+              {topic}
+              <span className="num">
+                {rows.filter((r) => r.on).length}/{rows.length}
+              </span>
             </div>
-            <div className="card" style={{ overflow: "hidden" }}>
-              {competitors.map((row, index) => {
-                const isOpen = openCompetitors.has(row.id);
+            <ul className="wz-ps">
+              {rows.map((row) => {
+                const editing = editingPrompts.has(row.id);
+                const blocked = !row.on && promptRoomLeft <= 0;
                 return (
-                  <div key={row.id} className={isOpen ? "onb2-row align-top" : "onb2-row"}>
-                    <FaviconImg
-                      domain={row.domain}
-                      cssSize={28}
-                      className="onb2-fav-img"
-                      fallback={
-                        <span
-                          className="onb2-fav"
-                          style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}
-                          aria-hidden="true"
-                        >
-                          {(row.name.trim()[0] || row.domain.trim()[0] || "?").toUpperCase()}
-                        </span>
-                      }
-                    />
-                    {isOpen ? (
-                      <div className="onb2-editgrid">
-                        <Input
-                          aria-label={`Nombre competidor ${index + 1}`}
-                          placeholder="Nombre"
-                          value={row.name}
-                          onChange={(event) => updateCompetitor(index, { name: event.target.value })}
+                  <li key={row.id}>
+                    {editing ? (
+                      <div className="wz-pedit">
+                        <textarea
+                          className="wz-in"
+                          rows={3}
+                          aria-label="Texto del prompt"
+                          placeholder="Ej. ¿Cuáles son las mejores herramientas para…?"
+                          value={row.text}
+                          onChange={(event) =>
+                            updatePrompt(row.id, { text: event.target.value })
+                          }
                           autoFocus
-                        />
-                        <Input
-                          aria-label={`Dominio competidor ${index + 1}`}
-                          placeholder="dominio.com"
-                          value={row.domain}
-                          onChange={(event) => updateCompetitor(index, { domain: event.target.value })}
                         />
                       </div>
                     ) : (
-                      <span className="onb2-rmeta-static">
-                        <span className="onb2-rname">{row.name || "Sin nombre"}</span>
-                        <span className="onb2-rdom">{row.domain || "sin dominio"}</span>
-                      </span>
+                      <label className={row.on ? "" : "off"}>
+                        <input
+                          type="checkbox"
+                          checked={row.on}
+                          disabled={blocked}
+                          onChange={(event) =>
+                            updatePrompt(row.id, { on: event.target.checked })
+                          }
+                        />
+                        <span>{row.text || "Prompt vacío"}</span>
+                      </label>
                     )}
-                    {row.source === "suggested" ? (
-                      <span className="onb2-chip">
-                        <Icon name="sparkles" size={11} />
-                        sugerido
-                      </span>
-                    ) : null}
                     <button
                       type="button"
-                      className="onb2-iconbtn"
-                      aria-label={isOpen ? `Listo, competidor ${index + 1}` : `Editar competidor ${index + 1}`}
-                      onClick={() => toggleId(setOpenCompetitors, row.id)}
+                      className="wz-ib"
+                      aria-label={editing ? "Listo" : "Editar prompt"}
+                      onClick={() => toggleId(setEditingPrompts, row.id)}
                     >
-                      <Icon name={isOpen ? "check" : "settings"} size={14} />
+                      <Ic n={editing ? "check" : "c-pencil"} sm />
                     </button>
-                    <button
-                      type="button"
-                      className="onb2-iconbtn"
-                      aria-label={`Quitar competidor ${index + 1}`}
-                      onClick={() => setCompetitors((rows) => rows.filter((_, i) => i !== index))}
-                    >
-                      <Icon name="trash" size={14} />
-                    </button>
-                  </div>
+                  </li>
                 );
               })}
-              <div className="onb2-listfoot">
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={competitors.length >= MAX_USER_COMPETITORS}
-                  onClick={() => {
-                    const id = newId();
-                    setCompetitors((rows) =>
-                      rows.length >= MAX_USER_COMPETITORS ? rows : [...rows, { id, name: "", domain: "", source: "manual" }]
-                    );
-                    setOpenCompetitors((prev) => new Set(prev).add(id));
-                  }}
-                >
-                  <Icon name="plus" size={13} />
-                  Añadir competidor
-                </Button>
-                <span style={{ fontSize: 12, color: "var(--ink-4)" }}>Podrás cambiarlos cuando quieras.</span>
-              </div>
-            </div>
-
-            <div className="onb2-foot">
-              <Button type="button" variant="outline" onClick={() => setStep(0)}>
-                Atrás
-              </Button>
-              <Button type="button" onClick={() => setStep(2)} className="inline-flex items-center gap-2">
-                Continuar a prompts
-                <Icon name="arrRight" size={16} />
-              </Button>
-            </div>
+            </ul>
           </div>
-
-          <LaunchSummaryPanel
-            domain={domain}
-            languageKnown
-            language={language}
-            engineCount={engines.length}
-            competitorsCount={validCompetitorCount}
-            promptsCount={null}
+        ))}
+        <form
+          className="wz-add"
+          onSubmit={(event) => {
+            event.preventDefault();
+            addPrompt();
+          }}
+        >
+          <input
+            className="wz-in"
+            aria-label="Nuevo prompt"
+            placeholder="Escribe un prompt propio"
+            value={newPrompt}
+            onChange={(event) => setNewPrompt(event.target.value)}
+            disabled={promptRoomLeft <= 0}
           />
+          <button
+            className="btn line sm"
+            type="submit"
+            disabled={promptRoomLeft <= 0 || !newPrompt.trim()}
+          >
+            <Ic n="plus" sm />
+            Añadir
+          </button>
+        </form>
+        {promptRoomLeft > 0 ? (
+          <div className="wz-moreb">
+            <button
+              type="button"
+              className="btn line sm"
+              onClick={generateMorePromptsAutomatically}
+              disabled={isGeneratingMore}
+            >
+              <Ic n="sparkles" sm />
+              {isGeneratingMore
+                ? "Generando…"
+                : `Generar ${generateMoreCount} más`}
+            </button>
+          </div>
+        ) : (
+          <p className="wz-hint">
+            Has llegado al límite de tu plan. Desmarca uno para añadir otro.
+          </p>
+        )}
+        {generateMoreError ? (
+          <p className="wz-err" role="alert">
+            {generateMoreError}
+          </p>
+        ) : null}
+        <div className="wz-foot">
+          <button
+            type="button"
+            className="btn ghost"
+            onClick={() => setStep(1)}
+          >
+            <Ic n="chevl" sm />
+            Atrás
+          </button>
+          <button
+            type="button"
+            className="btn ink"
+            onClick={() => setStep(3)}
+            disabled={validPromptCount === 0}
+          >
+            Revisar y lanzar
+            <Ic n="arrowr" sm />
+          </button>
         </div>
-      </div>
+      </>
+    );
+  } else {
+    main = (
+      <form action={createAction}>
+        <input type="hidden" name="domain" value={domain} />
+        <input type="hidden" name="country" value={country} />
+        <input type="hidden" name="language" value={language} />
+        <input
+          type="hidden"
+          name="initial_competitors"
+          value={competitorsText}
+        />
+        <input type="hidden" name="initial_prompts" value={promptsText} />
+        <input
+          type="hidden"
+          name="initial_prompt_categories"
+          value={categoriesText}
+        />
+        {errorMessage ? (
+          <p className="wz-err" role="alert">
+            {errorMessage}
+          </p>
+        ) : null}
+        <LaunchBody
+          promptCount={validPromptCount}
+          engines={engines}
+          competitorCount={validCompetitorCount}
+          countryName={selectedCountry.name}
+          goBack={() => setStep(2)}
+        />
+      </form>
     );
   }
 
   return (
-    <div className="page onb2-scope onb2-page fade-in">
-      <div className="onb2-head">
-        <div>
-          <h1 className="onb2-h1">Revisa tus prompts</h1>
-          <p className="onb2-sub">
-            Cada prompt se lanza a todos los motores de tu plan. Quita los que no te representen
-            {promptCap >= RECOMMENDED_MIN_PROMPTS_COPY ? (
-              <>
-                {" "}— recomendamos al menos <b style={{ color: "var(--ink-2)" }}>{RECOMMENDED_MIN_PROMPTS_COPY}</b> para
-                obtener mejores datos.
-              </>
-            ) : (
-              <>
-                . Tu plan cubre hasta <b style={{ color: "var(--ink-2)" }}>{promptCap}</b>
-                {nextPromptPlan ? (
-                  <>
-                    {" "}
-                    — con {nextPromptPlan.name} monitorizas {nextPromptPlan.caps.prompts}.
-                  </>
-                ) : (
-                  "."
-                )}
-              </>
+    <div className="ins">
+      <div className="page">
+        <div className="sc-full sc-newdomain" ref={rootRef}>
+          <header className="wz-top">
+            <span className="wz-brand">
+              <svg aria-hidden="true">
+                <use href="#e-gs" />
+              </svg>
+              GenScore
+            </span>
+            <span className="wz-k">Nuevo dominio</span>
+            <span style={{ flex: 1 }} />
+            {isFirst ? null : (
+              <Link
+                className="xo-x wz-x"
+                href="/dashboard"
+                aria-label="Salir del asistente"
+              >
+                <Ic n="x" />
+              </Link>
             )}
-          </p>
+          </header>
+          <div className="wz-wrap">
+            {stepsBar}
+            <div className="wz-grid">
+              <div className="wz-main">{main}</div>
+              {side}
+            </div>
+          </div>
         </div>
-        {stepsBar}
-      </div>
-
-      {errorMessage ? <p className="feedback error">{errorMessage}</p> : null}
-      {suggestFailed.includes("prompts") ? <SuggestionGapNotice kind="prompts" /> : null}
-
-      <div className="onb2-grid">
-        <form action={createAction}>
-          <input type="hidden" name="domain" value={domain} />
-          <input type="hidden" name="country" value={country} />
-          <input type="hidden" name="language" value={language} />
-          <input type="hidden" name="initial_competitors" value={competitorsText} />
-          <input type="hidden" name="initial_prompts" value={promptsText} />
-          <input type="hidden" name="initial_prompt_categories" value={categoriesText} />
-          <PromptsStepBody
-            prompts={prompts}
-            promptCap={promptCap}
-            validPromptCount={validPromptCount}
-            promptRoomLeft={promptRoomLeft}
-            generateMoreCount={generateMoreCount}
-            categoryCounts={categoryCounts}
-            isGeneratingMore={isGeneratingMore}
-            generateMoreError={generateMoreError}
-            openPrompts={openPrompts}
-            toggleOpenPrompt={(id) => toggleId(setOpenPrompts, id)}
-            updatePrompt={updatePrompt}
-            removePrompt={(index) => setPrompts((rows) => rows.filter((_, i) => i !== index))}
-            addPrompt={() => {
-              const id = newId();
-              setPrompts((rows) => (rows.length >= promptCap ? rows : [...rows, { id, text: "", category: null }]));
-              setOpenPrompts((prev) => new Set(prev).add(id));
-            }}
-            generateMorePromptsAutomatically={generateMorePromptsAutomatically}
-            goBack={() => setStep(1)}
-          />
-        </form>
-
-        <LaunchSummaryPanel
-          domain={domain}
-          languageKnown
-          language={language}
-          engineCount={engines.length}
-          competitorsCount={validCompetitorCount}
-          promptsCount={validPromptCount}
-        />
       </div>
     </div>
   );
