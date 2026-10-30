@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Ic } from "@/components/ins/ic";
 import { removeAvatar, uploadAvatar } from "@/app/dashboard/settings/profile/actions";
@@ -33,6 +33,21 @@ export function AvatarPicker({ initials, url }: { initials: string; url: string 
   const input = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const [menu, setMenu] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menu) return;
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === "Escape" : !wrap.current?.contains(e.target as Node)) setMenu(false);
+    };
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("keydown", close);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("keydown", close);
+    };
+  }, [menu]);
 
   function onFile(file: File | undefined) {
     if (!file) return;
@@ -52,14 +67,16 @@ export function AvatarPicker({ initials, url }: { initials: string; url: string 
   }
 
   return (
-    <div className="st-avwrap">
+    <div className="st-avwrap" ref={wrap}>
       <button
         type="button"
         className={`av st-av st-avbtn${url ? " xo-avimg" : ""}`}
         style={url ? { backgroundImage: `url("${url}")` } : undefined}
         aria-label={url ? "Cambiar foto de perfil" : "Subir foto de perfil"}
+        aria-haspopup={url ? "menu" : undefined}
+        aria-expanded={url ? menu : undefined}
         disabled={pending}
-        onClick={() => input.current?.click()}
+        onClick={() => (url ? setMenu((m) => !m) : input.current?.click())}
       >
         {url ? null : initials}
         <span className="st-cam" aria-hidden="true">
@@ -76,21 +93,35 @@ export function AvatarPicker({ initials, url }: { initials: string; url: string 
           e.target.value = "";
         }}
       />
-      {url ? (
-        <button
-          type="button"
-          className="st-avrm"
-          disabled={pending}
-          onClick={() =>
-            start(async () => {
-              const result = await removeAvatar();
-              if (!result.success) setError(result.error);
-              else router.refresh();
-            })
-          }
-        >
-          Quitar foto
-        </button>
+      {menu ? (
+        <div className="st-avmenu" role="menu">
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenu(false);
+              input.current?.click();
+            }}
+          >
+            <Ic n="c-camera" sm />
+            Cambiar foto
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setMenu(false);
+              start(async () => {
+                const result = await removeAvatar();
+                if (!result.success) setError(result.error);
+                else router.refresh();
+              });
+            }}
+          >
+            <Ic n="c-trash" sm />
+            Quitar foto
+          </button>
+        </div>
       ) : null}
       {error ? (
         <p className="st-averr" role="alert">

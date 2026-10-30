@@ -114,6 +114,8 @@
 .ins .sc-set .st-avbtn:disabled{opacity:.6;cursor:progress}
 .ins .sc-set .st-cam{position:absolute;right:-2px;bottom:-2px;width:28px;height:28px;border-radius:50%;background:var(--ink);color:var(--surface);display:grid;place-items:center;border:2px solid var(--surface)}
 .ins .sc-set .st-cam .i{width:14px;height:14px}
-.ins .sc-set .st-avrm{font-size:12px;color:var(--ink-3);text-decoration:underline;text-underline-offset:3px;cursor:pointer;background:none;border:0;padding:0}
-.ins .sc-set .st-avrm:hover{color:var(--ink)}
+.ins .sc-set .st-avwrap{position:relative}
+.ins .sc-set .st-avmenu{position:absolute;z-index:20;top:100%;left:0;margin-top:10px;min-width:190px;padding:6px;background:var(--surface);border:1px solid var(--rule);border-radius:14px;box-shadow:0 18px 40px -20px rgba(11,20,38,.35);display:grid;gap:2px}
+.ins .sc-set .st-avmenu button{display:flex;align-items:center;gap:10px;height:40px;padding:0 12px;border-radius:9px;font-size:14px;font-weight:550;color:var(--ink);text-align:left;cursor:pointer}
+.ins .sc-set .st-avmenu button:hover{background:var(--surface-2)}
 .ins .sc-set .st-averr{font-size:12px;color:var(--warm);max-width:140px;text-align:center;margin:0}
