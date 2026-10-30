@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { SettingRow } from "@/components/settings/setting-row";
-import { Switch } from "@/components/settings/switch";
+import { Ic } from "@/components/ins/ic";
 import { updateNotificationPreference } from "@/app/dashboard/settings/notifications/actions";
 import {
   CATEGORY_COPY,
@@ -44,17 +42,45 @@ export function NotificationsSection({ initial }: { initial: Record<OptionalEmai
   };
 
   return (
-    <Card>
-      <CardContent>
+    <>
+      <div className="eyebrow">Correos</div>
+      <div className="pf-list pf-mails">
         {OPTIONAL_EMAIL_CATEGORIES.map((category) => (
-          <SettingRow key={category} title={CATEGORY_COPY[category].title} desc={CATEGORY_COPY[category].desc}>
-            <Switch on={state[category]} onChange={set(category)} />
-          </SettingRow>
+          <div className="pf-row" key={category}>
+            <div className="l">
+              <b>{CATEGORY_COPY[category].title}</b>
+              <span>{CATEGORY_COPY[category].desc}</span>
+            </div>
+            <div className="c">
+              <button
+                type="button"
+                className="pf-sw"
+                role="switch"
+                aria-checked={state[category]}
+                aria-label={CATEGORY_COPY[category].title}
+                onClick={() => set(category)(!state[category])}
+              >
+                <i />
+              </button>
+            </div>
+          </div>
         ))}
-        <SettingRow title="Tu cuenta y facturación" desc="Seguridad, pagos y cambios de plan. Siempre activos." last>
-          <Switch on disabled onChange={() => {}} />
-        </SettingRow>
-      </CardContent>
-    </Card>
+        <div className="pf-row fixed">
+          <div className="l">
+            <b>Tu cuenta y facturación</b>
+            <span>Seguridad, pagos y cambios de plan. Siempre activos.</span>
+          </div>
+          <div className="c">
+            <button type="button" className="pf-sw" role="switch" aria-checked="true" disabled aria-label="Tu cuenta y facturación, siempre activos">
+              <i />
+            </button>
+          </div>
+        </div>
+      </div>
+      <p className="pf-hint" style={{ marginTop: 14 }}>
+        <Ic n="bell" sm />
+        En la consola, la campana te enseña como mucho un aviso de cada tipo.
+      </p>
+    </>
   );
 }

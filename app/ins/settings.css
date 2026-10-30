@@ -19,3 +19,32 @@
  .ins .sc-set .st-out{grid-column:1/-1}
 }
 .ins .sc-set .st-panels section>.card{margin-bottom:12px}
+
+/* Notificaciones: filas e interruptores del prototipo (perfil.css), acotados a Ajustes. */
+.ins .sc-set .pf-list{border-top:1px solid var(--rule)}
+.ins .sc-set .pf-row{display:flex;align-items:center;gap:16px;padding:16px 0;border-bottom:1px solid var(--rule-2)}
+.ins .sc-set .pf-row .l{flex:1;min-width:0}
+.ins .sc-set .pf-row .l b{display:block;font-size:15px;font-weight:550;letter-spacing:-.005em}
+.ins .sc-set .pf-row .l span{display:block;font-size:13px;color:var(--ink-3);margin-top:2px}
+.ins .sc-set .pf-row .c{flex:none}
+.ins .sc-set .pf-row.fixed .l b{color:var(--ink-2)}
+.ins .sc-set .pf-hint{font-size:12.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.ins .sc-set .pf-sw{position:relative;width:44px;height:26px;border-radius:99px;background:var(--tick-off);transition:background var(--d2) var(--std);flex:none;padding:0;border:0;cursor:pointer}
+.ins .sc-set .pf-sw i{position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(11,20,38,.25);transition:transform var(--d2) var(--spring)}
+.ins .sc-set .pf-sw[aria-checked="true"]{background:var(--blue)}
+.ins .sc-set .pf-sw[aria-checked="true"] i{transform:translateX(18px)}
+.ins .sc-set .pf-sw:disabled{opacity:.45;cursor:default}
+.ins .sc-set .pf-sw:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+/* Cuenta: formularios del prototipo (perfil.css). */
+.ins .sc-set .pf-acc{gap:48px}
+.ins .sc-set .pf-form{display:grid;gap:14px;padding-top:4px}
+.ins .sc-set .pf-f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ins .sc-set .pf-fld{display:grid;gap:6px;font-size:13px;font-weight:550;color:var(--ink-2)}
+.ins .sc-set .pf-in{height:44px;border:1px solid var(--rule);border-radius:12px;padding:0 14px;font:400 15px var(--font);color:var(--ink);background:var(--surface);width:100%;min-width:0;transition:border-color var(--d1)}
+.ins .sc-set .pf-in.mono{font-family:var(--mono);font-size:14px}
+.ins .sc-set .pf-in:focus{outline:0;border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.ins .sc-set .pf-in:disabled{background:var(--surface-2);color:var(--ink-3)}
+.ins .sc-set .pf-end{display:flex;justify-content:flex-end;gap:8px}
+.ins .sc-set .pf-pwd{margin-top:14px}
+@media (max-width:640px){.ins .sc-set .pf-f2{grid-template-columns:minmax(0,1fr)}.ins .sc-set .pf-acc{gap:36px}}

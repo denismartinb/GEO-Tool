@@ -27837,3 +27837,28 @@ lateral `SettingsIndex` queda sin uso (limpieza final de F8).
 **Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` busca
 `.set-idx` y `h2.set-sech`, que ya no existen: hay que actualizarlo antes de
 lanzar el piloto sobre esta pantalla.
+
+## §371 · CONSOLE-INSTRUMENTO-1 F8d: Cuenta y Notificaciones por dentro (2026-10-30)
+
+**Qué se decidió.** Las pestañas Cuenta y Notificaciones de Ajustes dejan el
+marcado antiguo y adoptan las filas, campos e interruptores del prototipo
+(`perfil.css`, copiados y acotados a `.ins .sc-set` en `app/ins/settings.css`).
+Cuenta pasa a dos columnas: datos personales y acceso (contraseña) a la
+izquierda, datos de facturación a la derecha; desaparece la fila de avatar y
+nombre, que ya enseña la cabecera de perfil. Notificaciones son las filas de
+`lib/email/categories.ts` con el interruptor `pf-sw`, más la fila fija «Tu
+cuenta y facturación» y la nota de la campana.
+
+**Qué no cambia.** `saveAccount`, `changePassword` y
+`updateNotificationPreference`, sus validaciones, textos y la reversión del
+interruptor si falla. Un único «Guardar» sigue cubriendo nombre, apellidos y
+facturación. «Eliminar cuenta» (`DeleteAccountButton`) conserva su modal.
+
+**No se hace.** La pestaña Plan (tarjeta con cifra grande, días de prueba, uso
+del ciclo) y el modal «Cambiar de plan» tocan facturación y necesitan su propia
+aprobación; foto, cargo, antigüedad de la contraseña y verificación en dos
+pasos siguen sin dato (§369). `BillingDetailsFold` queda sin uso (limpieza
+final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` sigue
+sin actualizarse (§369).

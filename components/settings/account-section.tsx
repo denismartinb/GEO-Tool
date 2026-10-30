@@ -2,9 +2,6 @@
 
 import { useState, useTransition } from "react";
 import { Icon } from "@/components/ui/icon";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { BillingDetailsFold } from "@/components/settings/billing-details";
 import type { BillingDetails, CompanyDetails } from "@/lib/settings/company-details";
 import { changePassword } from "@/app/dashboard/settings/profile/actions";
 import { saveAccount } from "@/app/dashboard/settings/organization/actions";
@@ -27,14 +24,12 @@ type Feedback = { type: "ok" | "err"; text: string };
  */
 export function AccountSection({
   email,
-  initials,
   firstName,
   lastName,
   company,
   billingDetails
 }: {
   email: string;
-  initials: string;
   firstName: string;
   lastName: string;
   company: CompanyDetails;
@@ -114,167 +109,138 @@ export function AccountSection({
     });
   };
 
+  const fieldErr = (f: Feedback) => (
+    <div className={f.type === "err" ? "field-err" : "field-ok"} style={{ justifyContent: "flex-start" }}>
+      {f.type === "err" && <Icon name="alertCircle" size={13} />}
+      {f.text}
+    </div>
+  );
+
   return (
-    <>
-      <Card>
-        <CardContent>
-          <div className="set-idrow">
-            <div className="set-avatar-lg">{initials}</div>
-            <div style={{ minWidth: 0 }}>
-              <div className="set-idname">{[first, last].filter(Boolean).join(" ") || "Tu cuenta"}</div>
-              <div className="set-idmail">{email}</div>
-            </div>
+    <div className="grid2 pf-acc">
+      <section>
+        <div className="eyebrow">Datos personales</div>
+        <div className="pf-form">
+          <div className="pf-f2">
+            <label className="pf-fld" htmlFor="profile-first-name">
+              <span>Nombre</span>
+              <input id="profile-first-name" className="pf-in" value={first} onChange={(event) => setFirst(event.target.value)} />
+            </label>
+            <label className="pf-fld" htmlFor="profile-last-name">
+              <span>Apellidos</span>
+              <input id="profile-last-name" className="pf-in" value={last} onChange={(event) => setLast(event.target.value)} />
+            </label>
           </div>
+          <label className="pf-fld" htmlFor="profile-email">
+            <span>Email</span>
+            <input id="profile-email" className="pf-in" value={email} disabled readOnly />
+            <small className="pf-hint">Es tu identificador de acceso.</small>
+          </label>
+        </div>
 
-          <div className="set-form-grid">
-            <div>
-              <label className="field-label" htmlFor="profile-first-name">
-                Nombre
-              </label>
-              <input
-                id="profile-first-name"
-                className="set-field"
-                value={first}
-                onChange={(event) => setFirst(event.target.value)}
-              />
+        <div className="eyebrow" style={{ marginTop: 36 }}>
+          Acceso
+        </div>
+        <div className="pf-list">
+          <div className="pf-row">
+            <div className="l">
+              <b>Contraseña</b>
             </div>
-            <div>
-              <label className="field-label" htmlFor="profile-last-name">
-                Apellidos
-              </label>
-              <input
-                id="profile-last-name"
-                className="set-field"
-                value={last}
-                onChange={(event) => setLast(event.target.value)}
-              />
-            </div>
-            <div>
-              <label className="field-label" htmlFor="profile-email">
-                Email
-              </label>
-              <input id="profile-email" className="set-field" value={email} disabled readOnly />
-              <div className="set-hint">
-                <Icon name="lock" size={11} />
-                Es tu identificador de acceso.
-              </div>
-            </div>
-          </div>
-
-          {/* "Datos de empresa" hidden here — nothing in the product reads
-              org_name/org_website/org_sector, so showing an editable form for
-              them was a promise the product did not keep (founder,
-              2026-08-25). "Datos de facturación" stays: it is the field pair
-              a future Stripe-invoice sync would use. */}
-          <div className="set-folds">
-            <BillingDetailsFold value={billingValue} onChange={setBillingValue} />
-          </div>
-
-          <div className="set-actions">
-            <Button type="button" onClick={save} disabled={isSaving}>
-              {isSaving ? "Guardando…" : "Guardar"}
-            </Button>
-          </div>
-          {saveFeedback && (
-            <div
-              className={saveFeedback.type === "err" ? "field-err" : "field-ok"}
-              style={{ justifyContent: "flex-start", marginTop: 8 }}
-            >
-              {saveFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
-              {saveFeedback.text}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card className="set-security">
-        <CardContent>
-          <div className="set-row last">
-            <div className="set-row-txt">
-              <div className="set-row-t">Contraseña</div>
-            </div>
-            {!showPasswordForm && (
-              <div className="set-row-ctrl">
-                <Button type="button" variant="outline" onClick={openPasswordForm}>
+            {!showPasswordForm ? (
+              <div className="c">
+                <button type="button" className="btn sm line" onClick={openPasswordForm}>
                   Cambiar
-                </Button>
+                </button>
               </div>
-            )}
+            ) : null}
           </div>
-
-          {showPasswordForm && (
-            <div className="set-password-form">
-              <div className="set-form-grid" style={{ gridTemplateColumns: "1fr", maxWidth: 360 }}>
-                <div>
-                  <label className="field-label" htmlFor="current-password">
-                    Contraseña actual
-                  </label>
-                  <input
-                    id="current-password"
-                    type="password"
-                    autoComplete="current-password"
-                    className="set-field"
-                    value={currentPassword}
-                    onChange={(event) => setCurrentPassword(event.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="field-label" htmlFor="new-password">
-                    Nueva contraseña
-                  </label>
-                  <input
-                    id="new-password"
-                    type="password"
-                    autoComplete="new-password"
-                    className="set-field"
-                    value={newPassword}
-                    onChange={(event) => setNewPassword(event.target.value)}
-                  />
-                </div>
-                <div>
-                  <label className="field-label" htmlFor="confirm-password">
-                    Confirmar nueva contraseña
-                  </label>
-                  <input
-                    id="confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    className="set-field"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    onKeyDown={(event) => event.key === "Enter" && submitPassword()}
-                  />
-                </div>
-              </div>
-
-              {passwordFeedback && (
-                <div
-                  className={passwordFeedback.type === "err" ? "field-err" : "field-ok"}
-                  style={{ justifyContent: "flex-start" }}
-                >
-                  {passwordFeedback.type === "err" && <Icon name="alertCircle" size={13} />}
-                  {passwordFeedback.text}
-                </div>
-              )}
-
-              <div className="set-password-actions">
-                <Button type="button" onClick={submitPassword} disabled={isSavingPassword}>
-                  {isSavingPassword ? "Guardando…" : "Guardar contraseña"}
-                </Button>
-                <Button type="button" variant="ghost" onClick={cancelPasswordForm} disabled={isSavingPassword}>
-                  Cancelar
-                </Button>
-              </div>
+        </div>
+        {showPasswordForm ? (
+          <div className="pf-form pf-pwd">
+            <label className="pf-fld" htmlFor="current-password">
+              <span>Contraseña actual</span>
+              <input
+                id="current-password"
+                type="password"
+                autoComplete="current-password"
+                className="pf-in"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+              />
+            </label>
+            <label className="pf-fld" htmlFor="new-password">
+              <span>Nueva contraseña</span>
+              <input
+                id="new-password"
+                type="password"
+                autoComplete="new-password"
+                className="pf-in"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+              />
+            </label>
+            <label className="pf-fld" htmlFor="confirm-password">
+              <span>Confirmar nueva contraseña</span>
+              <input
+                id="confirm-password"
+                type="password"
+                autoComplete="new-password"
+                className="pf-in"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                onKeyDown={(event) => event.key === "Enter" && submitPassword()}
+              />
+            </label>
+            {passwordFeedback ? fieldErr(passwordFeedback) : null}
+            <div className="pf-end">
+              <button type="button" className="btn ghost sm" onClick={cancelPasswordForm} disabled={isSavingPassword}>
+                Cancelar
+              </button>
+              <button type="button" className="btn ink sm" onClick={submitPassword} disabled={isSavingPassword}>
+                {isSavingPassword ? "Guardando…" : "Guardar contraseña"}
+              </button>
             </div>
-          )}
+          </div>
+        ) : passwordFeedback?.type === "ok" ? (
+          <div className="field-ok" style={{ justifyContent: "flex-start", marginTop: 8 }}>
+            {passwordFeedback.text}
+          </div>
+        ) : null}
+      </section>
 
-          {!showPasswordForm && passwordFeedback?.type === "ok" && (
-            <div className="field-ok" style={{ justifyContent: "flex-start" }}>
-              {passwordFeedback.text}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </>
+      <section>
+        {/* "Datos de empresa" stays hidden (founder, 2026-08-25): nothing reads
+            org_name/org_website/org_sector. "Datos de facturación" is what the
+            Stripe invoice sync reads. One save covers the whole tab. */}
+        <div className="eyebrow">Datos de facturación</div>
+        <div className="pf-form">
+          <label className="pf-fld" htmlFor="billing-legal-name">
+            <span>Empresa o razón social</span>
+            <input
+              id="billing-legal-name"
+              className="pf-in"
+              value={billingValue.legalName}
+              onChange={(event) => setBillingValue({ ...billingValue, legalName: event.target.value })}
+            />
+          </label>
+          <label className="pf-fld" htmlFor="billing-tax-id">
+            <span>NIF/CIF</span>
+            <input
+              id="billing-tax-id"
+              className="pf-in mono"
+              value={billingValue.taxId}
+              onChange={(event) => setBillingValue({ ...billingValue, taxId: event.target.value })}
+            />
+          </label>
+          <p className="pf-hint">Aparecen en tus facturas.</p>
+          <div className="pf-end">
+            <button type="button" className="btn ink sm" onClick={save} disabled={isSaving}>
+              {isSaving ? "Guardando…" : "Guardar"}
+            </button>
+          </div>
+          {saveFeedback ? fieldErr(saveFeedback) : null}
+        </div>
+      </section>
+    </div>
   );
 }

@@ -166,3 +166,10 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Los paneles se ocultan, no se desmontan.**
 - **Sin dato, no se pinta**: foto, cargo, antigüedad de la contraseña y estado de
   la verificación en dos pasos no existen hoy y no se simulan.
+
+## Cuenta y Notificaciones (F8d, log §371)
+
+- **Los campos y filas de Ajustes usan las clases `pf-*` del prototipo**, acotadas
+  a `.ins .sc-set`. No se reutilizan `SettingRow`/`Switch` antiguos aquí.
+- **Un único «Guardar» en Cuenta** envía `saveAccount` con todos los campos; no se
+  parte en dos acciones sin aprobación.

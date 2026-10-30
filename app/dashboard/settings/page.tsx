@@ -123,7 +123,6 @@ export default async function SettingsPage({
           <>
             <AccountSection
               email={email}
-              initials={initials}
               firstName={firstName}
               lastName={lastName}
               company={company}
