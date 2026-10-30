@@ -27,7 +27,11 @@ async function review(tab) {
   try {
     const [res] = await chrome.scripting.executeScript({ target: { tabId }, func: collectPageFacts });
     if (!res || !res.result) throw new Error("empty");
-    await chrome.storage.session.set({ [key(tabId)]: { state: "ok", at: Date.now(), facts: res.result } });
+    let origin = null;
+    try { origin = new URL(res.result.url).origin; } catch (e) {}
+    /* o:<tabId> survives navigation: it is how the panel knows which site to
+       ask a per-site permission for, since it cannot see the new URL */
+    await chrome.storage.session.set({ [key(tabId)]: { state: "ok", at: Date.now(), facts: res.result }, ["o:" + tabId]: origin });
     return { ok: true };
   } catch (e) {
     const r = reason(e, tab.url);
@@ -55,4 +59,4 @@ chrome.runtime.onMessage.addListener((msg, _sender, reply) => {
 chrome.tabs.onUpdated.addListener((tabId, info) => {
   if (info.status === "loading") chrome.storage.session.remove(key(tabId));
 });
-chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove(key(tabId)));
+chrome.tabs.onRemoved.addListener((tabId) => chrome.storage.session.remove([key(tabId), "o:" + tabId]));

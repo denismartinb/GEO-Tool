@@ -543,4 +543,12 @@ Denis eligió «Sí, con datos de ejemplo». Está en [`prueba/`](./prueba/LEEME
   Agentes 20).
 - **El texto del título dice el problema real:** largo o corto.
 
+### 17.2 Versión 0.3.0 (2026-10-30): dos botones
+
+Denis vio el aviso de «leer y cambiar todos tus datos en todos los sitios web»
+y pidió separar: «Revisar esta página» pide permiso sólo para la web de la
+pestaña (la que el panel ya leyó con el icono; Chrome no enseña la dirección de
+una web nueva), y «Revisar automáticamente las páginas» pide el permiso de
+todas. Una web con permiso se revisa sola mientras el panel está abierto.
+
 > Do you approve this plan? I will not implement until you confirm.

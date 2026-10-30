@@ -16,6 +16,7 @@
   const Env = IN_EXT ? {
     activeTab: async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0] || null,
     result: async (id) => (await chrome.storage.session.get("r:" + id))["r:" + id] || null,
+    origin: async (id) => (await chrome.storage.session.get("o:" + id))["o:" + id] || null,
     getS: async (k) => (await chrome.storage.session.get(k))[k],
     setS: (k, v) => chrome.storage.session.set({ [k]: v }),
     getL: async (k) => (await chrome.storage.local.get(k))[k],
@@ -24,6 +25,7 @@
     /* optional permission: lets the panel read the page on its own while it is open */
     hasAuto: () => chrome.permissions.contains({ origins: ["<all_urls>"] }),
     askAuto: () => chrome.permissions.request({ origins: ["<all_urls>"] }),
+    askSite: (origin) => chrome.permissions.request({ origins: [origin + "/*"] }),
     dropAuto: () => chrome.permissions.remove({ origins: ["<all_urls>"] }),
     open: (url) => chrome.tabs.create({ url }),
     copy: (t) => navigator.clipboard.writeText(t),
@@ -39,12 +41,13 @@
     const demo = window.__GS_DEMO || {};
     const mem = {};
     return {
-      activeTab: async () => ({ id: 1 }),
+      activeTab: async () => ({ id: 1, url: demo.url }),
       result: async () => demo.result || null,
+      origin: async () => demo.origin || null,
       getS: async (k) => mem[k], setS: async (k, v) => { mem[k] = v; },
       getL: async (k) => (demo.local || {})[k], setL: async (k, v) => { (demo.local ||= {})[k] = v; },
       reread: async () => ({ ok: true }),
-      hasAuto: async () => !!demo.auto, askAuto: async () => true, dropAuto: async () => true,
+      hasAuto: async () => !!demo.auto, askAuto: async () => true, askSite: async () => true, dropAuto: async () => true,
       open: (u) => toast("Se abriría " + esc(u.split("?")[0]), "", "arrowr"),
       copy: async () => {},
       listen() {}
@@ -182,16 +185,28 @@
   function foot(f) {
     const stamp = f ? `<div class="fine">Revisada en tu navegador ${f.ms < 1000 ? "en menos de un segundo" : "en " + (f.ms / 1000).toLocaleString("es-ES", { maximumFractionDigits: 1 }) + " s"}. No pasa por ningún servidor.</div>` : "";
     return `<div class="pf">${S.sample.on ? `<button class="open" data-act="open" data-to="/dashboard" data-c="abrir-consola">${svgGs()}Abrir la consola${ic("arrowr", "sm")}</button>` : ""}${stamp}
-      <div class="sets"><div class="sws"><button class="sw ${S.auto ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.auto}"><i></i>Revisar sola al cambiar de página</button><button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button></div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
+      <div class="sets"><div class="sws"><button class="sw ${S.auto ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.auto}"><i></i>Revisar automáticamente las páginas</button><button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button></div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
   /* ---------------- views ---------------- */
+  /* Two ways out of the paused panel (Denis, 2026-10-30):
+     «Revisar esta página» asks Chrome for THIS site only, the mild prompt;
+     «Revisar automáticamente las páginas» asks for every site, the harsh one,
+     and only for whoever wants it. A site the panel has never read in this tab
+     has no button: Chrome hides its URL, so only the toolbar icon can read it. */
+  const hostOf = (o) => String(o || "").replace(/^https?:\/\//, "").replace(/^www\./, "");
   function viewIdle(paused) {
-    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><button class="ring go" data-act="review-now" aria-label="Revisar esta página">${svgGs(30)}</button><h2>${paused ? "Has cambiado de página" : "Revisa la página que tienes abierta"}</h2>
-      <p>${S.auto ? "Revísala con un clic." : "Revísala con un clic. Si quieres, a partir de ahí se revisa sola cada vez que cambias de página."}</p>
-      <button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>
-      ${S.auto ? "" : `<p class="tiny">La primera vez Chrome te pide permiso para leer las webs que visitas. Sólo las lee con este panel abierto, y nada sale de tu navegador.</p>`}
-      <div class="kbd"><span>o el icono de la barra</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div></div>${foot(null)}</div>`;
+    const site = S.origin && /^https?:/.test(S.origin) ? hostOf(S.origin) : null;
+    const main = site
+      ? `<button class="rv" data-act="review-now">${ic("scan")}<span>Revisar esta página</span>${ic("arrowr", "sm")}</button>
+         <p class="tiny">${S.siteOk ? `Ya tienes permiso para ${esc(site)}.` : `Chrome te pedirá permiso sólo para ${esc(site)}. Desde entonces esa web se revisa sola con el panel abierto.`}</p>`
+      : `<div class="iconcta"><span class="k2">${svgGs(16)}</span><span><b>Pulsa el icono de GenScore</b> en la barra de Chrome</span></div>
+         <div class="kbd"><span>o</span><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></div>`;
+    const autoBtn = S.auto ? "" : `<div class="autobox"><button class="rv2" data-act="auto-all">${ic("eye", "sm")}<span>Revisar automáticamente las páginas</span></button>
+      <p class="tiny">En todas las webs, sin pulsar nada. Chrome avisará de que podríamos «leer y cambiar tus datos en todos los sitios web»: sólo leemos la página abierta, con el panel abierto, y nada sale de tu navegador.</p></div>`;
+    return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring">${svgGs(30)}</span><h2>${paused ? "Has cambiado de página" : "Revisa la página que tienes abierta"}</h2>
+      <p>${site ? "" : "Es una web nueva para el panel. "}Chrome sólo nos deja leerla cuando nos lo pides.</p>
+      ${main}${autoBtn}</div>${foot(null)}</div>`;
   }
   function viewReading() {
     return `<div class="px pfull">${S.sample.on ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
@@ -226,7 +241,7 @@
   function draw() {
     const pn = $("#panel");
     let html, ctx;
-    if (!S.rec) { html = S.auto && S.tabId != null ? viewReading() : viewIdle(S.shown); ctx = "idle" + S.auto; }
+    if (!S.rec) { html = (S.auto || S.siteOk) && S.tabId != null ? viewReading() : viewIdle(S.shown); ctx = "idle" + S.auto + S.siteOk; }
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
     else {
@@ -262,28 +277,42 @@
     }
   }
 
+  /* tab.url is only visible when we hold a permission for that site, so a
+     visible URL means «this site was allowed»: read it on its own. */
   async function sync() {
     const tab = await Env.activeTab();
     S.tabId = tab ? tab.id : null;
     S.rec = S.tabId != null ? await Env.result(S.tabId) : null;
+    S.siteOk = !!(tab && tab.url && /^https?:/.test(tab.url));
+    S.origin = S.siteOk ? new URL(tab.url).origin : S.tabId != null ? await Env.origin(S.tabId) : null;
     S.lane = null; S.dd = false;
     draw();
     noteDelta();
-    if (S.auto && !S.rec && S.tabId != null) Env.reread(S.tabId);
+    if ((S.auto || S.siteOk) && !S.rec && S.tabId != null) Env.reread(S.tabId);
   }
-  /* «Revisar esta página»: with the permission it reads now; without it, asks once.
-     askAuto() must be the first await of the click, or Chrome drops the gesture. */
+  /* The permission request has to be the first await of the click, or Chrome
+     drops the user gesture and refuses it. */
   async function reviewNow() {
-    if (!S.auto) {
+    if (!S.auto && S.origin && !S.siteOk) {
       let ok = false;
-      try { ok = await Env.askAuto(); } catch (e) { ok = false; }
+      try { ok = await Env.askSite(S.origin); } catch (e) { ok = false; }
       if (!ok) { toast("Sin ese permiso, usa el icono de la barra.", "Chrome sólo deja leer la página al pulsarlo.", "warn"); return; }
-      S.auto = true;
-      toast("Listo. Con el panel abierto, cada página se revisa sola.", "Lo puedes quitar abajo, en el pie del panel.", "checkc");
+      toast(`Listo. ${esc(hostOf(S.origin))} se revisa sola con el panel abierto.`, "Para todas las webs, «Revisar automáticamente las páginas».", "checkc");
     }
+    await readHere();
+  }
+  async function autoAll() {
+    let ok = false;
+    try { ok = await Env.askAuto(); } catch (e) { ok = false; }
+    if (!ok) { toast("Sin ese permiso, usa el icono de la barra.", "", "warn"); return; }
+    S.auto = true;
+    toast("Listo. Con el panel abierto, cada página se revisa sola.", "Lo puedes quitar abajo, en el pie del panel.", "checkc");
+    await readHere();
+  }
+  async function readHere() {
     if (S.tabId == null) await sync();
     const r = await Env.reread(S.tabId);
-    if (!r || !r.ok) draw();
+    if (!r || !r.ok) { toast("No hemos podido leer esta página.", "Si es otra web, pulsa el icono de la barra.", "warn"); draw(); }
   }
 
   /* slide confirmed */
@@ -315,9 +344,10 @@
     if (t.dataset.dkgo && hz) { S.dk[hz.dataset.ctx] = +t.dataset.dkgo; draw(); return; }
     const a = t.dataset.act;
     if (a === "review-now") { reviewNow(); return; }
+    if (a === "auto-all") { autoAll(); return; }
     if (a === "auto") {
-      if (S.auto) { await Env.dropAuto(); S.auto = false; draw(); toast("Revisión automática quitada.", "Para revisar, pulsa el icono de la barra.", "checkc"); }
-      else reviewNow();
+      if (S.auto) { await Env.dropAuto(); S.auto = false; draw(); toast("Revisión automática quitada.", "Las webs que permitiste una a una se siguen revisando solas.", "checkc"); }
+      else autoAll();
       return;
     }
     if (a === "copy") {
@@ -361,7 +391,7 @@
     Env.listen(async (why) => {
       if (why === "tab") return sync();
       if (why === "perm") { S.auto = await Env.hasAuto(); return draw(); }
-      if (why === "loaded") { if (S.auto) Env.reread(S.tabId); return; }
+      if (why === "loaded") return sync();
       S.rec = await Env.result(S.tabId); draw(); noteDelta();
     });
     await sync();

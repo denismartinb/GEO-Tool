@@ -16,15 +16,23 @@ en real»). Aprobada por Denis el 2026-10-28 con datos de ejemplo en la cuenta.
 
 ## Instalarla (tres pasos)
 
-1. Descomprime `genscore-prueba-0.2.0.zip` en una carpeta.
+1. Descomprime `genscore-prueba-0.3.0.zip` en una carpeta.
 2. Abre `chrome://extensions` y activa «Modo de desarrollador» (arriba a la derecha).
 3. Pulsa «Cargar descomprimida» y elige la carpeta `extension`.
 
 Fija el icono con la chincheta de la pieza de puzle. Para revisar una página,
-pulsa el icono o `Alt+Mayús+G` (en Mac, Opción), o «Revisar esta página» en el
-panel. Ese botón pide una vez el permiso opcional de Chrome para leer las webs
-que visitas; con él, y sólo mientras el panel está abierto, cada página se
-revisa sola al cambiar de pestaña o de página. Se quita en el pie del panel.
+pulsa el icono o `Alt+Mayús+G` (en Mac, Opción). Cuando cambias de página, el
+panel ofrece dos botones:
+
+- **Revisar esta página** pide permiso sólo para esa web («leer y cambiar tus
+  datos en alberdiderma.es»). Desde entonces esa web se revisa sola con el
+  panel abierto.
+- **Revisar automáticamente las páginas** pide permiso para todas las webs. Es
+  el aviso duro de Chrome, así que sólo lo ve quien lo pulsa. Se quita en el
+  pie del panel.
+
+En una web que el panel no ha leído nunca en esa pestaña, Chrome no nos deja
+ver su dirección, así que ahí sólo sirve el icono.
 
 ## Qué probar
 
