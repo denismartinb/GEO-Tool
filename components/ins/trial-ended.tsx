@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Ic } from "@/components/ins/ic";
 import { useLayer, XoClose } from "@/components/ins/layer";
 import { useShellData } from "@/components/ins/shell-context";
@@ -14,6 +14,7 @@ import { useShellData } from "@/components/ins/shell-context";
  */
 
 export const PICK_PLAN_HREF = "/dashboard/settings?openPlan=pro#plan";
+const pickPlanHref = (planId: string) => `/dashboard/settings?openPlan=${encodeURIComponent(planId)}#plan`;
 const SEEN_KEY = "gs-trial-ended-seen";
 
 function readSeen(): boolean {
@@ -98,6 +99,7 @@ export function TrialEndedFirstEntry() {
 function TrialEndedDialog() {
   const d = useShellData();
   const { close } = useLayer();
+  const [picked, setPicked] = useState("pro");
   return (
     <div className="te-dlg">
       <div className="xo-dh">
@@ -130,14 +132,20 @@ function TrialEndedDialog() {
         {d.trialEndedOffers.length > 0 ? (
           <div className="te-plans">
             {d.trialEndedOffers.map((o) => (
-              <div key={o.id} className={`te-plan${o.id === "pro" ? " rec" : ""}`}>
+              <button
+                type="button"
+                key={o.id}
+                className={`te-plan${picked === o.id ? " rec" : ""}`}
+                aria-pressed={picked === o.id}
+                onClick={() => setPicked(o.id)}
+              >
                 <b>{o.name}</b>
                 <span className="p num">
                   {o.promoPrice !== null ? <s>{o.price} €</s> : null}
                   {o.promoPrice ?? o.price} €<small> /mes</small>
                 </span>
                 <span className="n">{o.promoPrice !== null ? `Precio fundador, ${o.note}` : o.note}</span>
-              </div>
+              </button>
             ))}
           </div>
         ) : null}
@@ -146,7 +154,7 @@ function TrialEndedDialog() {
         <button type="button" className="btn line" onClick={close}>
           Ahora no, ver mis datos
         </button>
-        <Link href={PICK_PLAN_HREF} className="btn ink" onClick={close}>
+        <Link href={pickPlanHref(picked)} className="btn ink" onClick={close}>
           Elegir plan
           <Ic n="arrowr" sm />
         </Link>

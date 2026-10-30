@@ -27,7 +27,8 @@
 .ins .te-box.hold{background:var(--warm-tint);border-color:var(--warm-rule)}
 .ins .te-box.hold li::before{background:var(--warm)}
 .ins .te-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
-.ins .te-plan{border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:2px}
+.ins .te-plan{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:2px;text-align:left;background:var(--surface);min-width:0}
+.ins .te-plan:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .ins .te-plan.rec{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
 .ins .te-plan b{font-size:14px}
 .ins .te-plan .p{font-size:22px;font-weight:300;letter-spacing:-.03em}
@@ -38,5 +39,5 @@
  .ins .te-two{grid-template-columns:1fr}
  .ins .te-plans{gap:8px}
  .ins .te-acts{flex-direction:column-reverse}
- .ins .te-acts .btn{justify-content:center;height:44px}
+ .ins .te-acts .btn{justify-content:center;height:50px;width:100%;font-size:15px}
 }
