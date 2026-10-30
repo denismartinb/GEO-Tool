@@ -104,28 +104,10 @@ export function DataMaturityBanner({
     setDismissed(true);
   }
 
-  if (state.kind === "free") {
-    return (
-      <div className="dmb-band is-flat">
-        <span className="dmb-ico" aria-hidden="true">
-          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 8h.01M11 12h1v4h1" />
-          </svg>
-        </span>
-        <span className="dmb-txt">
-          Tu prueba de Pro ha terminado. <b>Tus datos siguen aquí</b>, pero no se hacen escaneos nuevos hasta que
-          elijas un plan.
-        </span>
-        <span className="dmb-sp" />
-        {/* TRIAL-ONLY-1: sin «Descartar». Es el único aviso que explica por qué
-            no hay escaneos nuevos, y la salida va directa al modal de planes. */}
-        <a className="dmb-cta" href="/dashboard/settings?openPlan=pro#plan">
-          Elegir plan
-        </a>
-      </div>
-    );
-  }
+  // CONSOLE-INSTRUMENTO-1 F8b (log §367): the expired-trial notice now lives in
+  // the shell (`components/ins/trial-ended.tsx`: strip, menu card, dock and the
+  // first-entry dialog). It is not silenced by the debug switch either.
+  if (state.kind === "free") return null;
 
   const segments = Array.from({ length: state.target }, (_, i) => i < state.completed);
 

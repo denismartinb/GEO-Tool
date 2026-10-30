@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Ic } from "@/components/ins/ic";
 import { useLayer } from "@/components/ins/layer";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { useShellData } from "@/components/ins/shell-context";
+import { switchProjectHref } from "@/lib/ins/nav";
 import { scoreBand } from "@/lib/ins/band";
 import { domainScanLabel } from "@/lib/ins/scan-label";
 
@@ -14,6 +15,7 @@ export function DomainSwitcherPanel() {
   const d = useShellData();
   const { close } = useLayer();
   const router = useRouter();
+  const pathname = usePathname();
   const cap = d.planProjectCap;
   const full = d.projects.length >= cap;
   const left = Math.max(0, cap - d.projects.length);
@@ -40,7 +42,7 @@ export function DomainSwitcherPanel() {
                 aria-current={cur ? "true" : undefined}
                 onClick={() => {
                   close();
-                  router.push(`/dashboard/projects/${p.id}`);
+                  router.push(switchProjectHref(pathname, p.id));
                 }}
               >
                 <ProjectFav domain={p.domain} name={p.name} size={30} />

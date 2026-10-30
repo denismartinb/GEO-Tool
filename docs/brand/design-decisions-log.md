@@ -27730,6 +27730,361 @@ Fecha de actualización: 30 de octubre de 2026.
 - **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
 - **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
 
+## 373. CONSOLE-INSTRUMENTO-1 Fase 5a: Prompts pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla de Prompts se rehace sobre el prototipo v51:
+frase de cabecera con el tema fuerte y el flojo (enlaces que abren el tema),
+tira de visibilidad (conjunto y un medidor por motor del plan, «Nuevo» en
+Perplexity), pestañas Temas/Prompts con búsqueda, y el detalle de un prompt en
+una hoja lateral (panel a la derecha en escritorio, hoja inferior en móvil).
+«Añadir prompts» pasa a una hoja de tres pasos (método, detalle, revisión) con
+la barra del tope del plan. La hoja es un componente compartido
+(`components/ins/kit/sheet.tsx`, `app/ins/sheet.css`) que reutilizarán
+Competidores y Páginas citadas (F5b y F5c).
+
+**Qué no cambia.** Consultas, acciones de servidor (`generatePromptProposals`,
+`addReviewedPrompts`, `addPrompts`, `deactivatePrompt`), RLS y esquema. Cada
+cifra es un recuento de filas del último escaneo (`lib/ins/prompts-model.ts`,
+`lib/ins/prompt-detail.ts`, puros y con tests). Un prompt añadido después del
+último escaneo sale como «pendiente», nunca como «no te nombra». Los
+sentimientos siguen contándose sólo sobre respuestas que nombran la marca.
+
+**Retirado.** `prompts-client.tsx`, `add-prompts-button.tsx`,
+`delete-prompt-button.tsx`, `components/prompts/prompt-drawer.*`. Las reglas
+`.seg` pasan de `recs.css` a `components.css` (las usan varias pantallas).
+
+**Pendiente o roto conocido.** Los selectores del piloto (`.prompt-drawer`,
+`write-guard.ts`) apuntan a la hoja antigua y hay que actualizarlos antes de
+volver a lanzar el piloto de escritura. Las reglas `pr2-*`/`add-prompts-*` de
+`globals.css` y `console.css` se borran en F8. El placeholder del buscador se
+corta en 390 px (copy del prototipo, sin tocar).
+
+## 374. CONSOLE-INSTRUMENTO-1 Fase 5b: Competidores pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con las cifras reales, tarjeta «Ranking» (menciones, citas y puesto
+medio por marca, la tuya resaltada, aviso «pocas menciones»), «Evolución del
+puesto medio» (sólo con escaneos suficientes), presencia por motor en mapa de
+calor, terreno por tema, brecha de prompts por categoría y competidores
+sugeridos. Gestionar competidores y alias pasa a la hoja lateral compartida
+(`components/ins/kit/sheet.tsx`). Se mantiene «Editar» en la hoja aunque el
+prototipo no lo muestra, y una fila de la brecha sigue llevando a Prompts
+filtrado por competidor.
+
+**Qué no cambia.** Consultas, acciones de servidor (`createCompetitorAction`,
+`updateCompetitorAction`, `deactivateCompetitorAction`,
+`getSuggestedCompetitorsAction`, `addBrandAliasAction`,
+`removeBrandAliasAction`), RLS y esquema. El orden sigue siendo por menciones,
+con el puesto medio (sólo si es fiable) como desempate (§175, §353). El
+denominador («N respuestas · M prompts en K motores», `answerCountLabel`) sigue
+a la vista junto al ranking (TRUST-METRICS-1, §183).
+
+**Qué cambia respecto a la pantalla anterior.** La cuota de voz (barra
+apilada y delta) deja de enseñarse porque el prototipo no la pinta. Menciones y
+citas son acumuladas sobre todas las respuestas analizadas; el puesto medio sale
+del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
+
+**Retirado.** `podium-row`, `manage-competitors-panel`,
+`manage-brand-aliases-panel`, `prompt-gap-section`,
+`suggested-competitors-section`.
+
+**Pendiente o roto conocido.** Los favicons muestran imagen rota sólo en el
+arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
+que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.
+
+## 375. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con la cuota de citas propias y el enlace a las fuentes alcanzables,
+tres cifras (respuestas con cita, citas totales, citas a tu web), el anillo
+«De dónde salen las citas» en cuatro grupos (Tuyas, Terceros que te nombran,
+Competidores, Otros terceros) que filtran la lista al pulsarlos, «Fuentes
+alcanzables» agrupadas por web con las preguntas donde la citan, y la tabla de
+todas las páginas con pestañas, búsqueda y «Ver más» (25 en 25).
+
+**Qué no cambia.** Consultas, `aggregateCitations`, `groupOpportunitiesByDomain`,
+RLS y esquema. Las reglas de `.claude/rules/citations.md` siguen: «te nombran»
+es un hecho de la respuesta, nunca de la página (nota visible bajo el anillo);
+«Fuentes alcanzables» no exige competidor co-citado, y el competidor sale sólo
+como aviso «sin verificar en la página». Modelo puro con tests:
+`lib/ins/citations-model.ts`. Los porcentajes del anillo son cuota de páginas
+distintas y suman siempre 100 (mayor resto).
+
+**Qué cambia respecto a la pantalla anterior.** Se retiran la barra de impacto
+(favorable/adverso), el donut por tipo de fuente y la fila desplegable por
+página con la evidencia de cada respuesta, porque el prototipo no los pinta; el
+tipo de fuente (Comparador, Comunidad, Medio...) sigue visible como etiqueta de
+cada fila. El desplegable de cada fuente alcanzable conserva las preguntas. No
+se pinta «Ver la recomendación» del prototipo: no hay vínculo real entre una
+fuente y una recomendación.
+
+**Retirado.** `citations-client.tsx`.
+
+**Pendiente o roto conocido.** Los favicons se verifican en el preview (en el
+arnés sin red salen rotos). Si el fundador echa de menos la evidencia por
+página, se vuelve a ofrecer en la hoja lateral compartida, en una fase aparte.
+
+## §363 · CONSOLE-INSTRUMENTO-1 F6a: Auditoría técnica pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla `/web-audit` adopta el aspecto del prototipo
+aprobado (v51, `i-src/screens/audit.js|css`): cabecera con eyebrow, título y
+frase, dos tarjetas de bloque (Auditoría GEO y Auditoría SEO) con la nota en un
+arco de 270 grados y un «fantasma» hasta lo que se alcanza arreglando lo que
+puntúa, línea verde «+N pt si arreglas…» que lleva a `#problemas`, y pestañas
+Problemas, Correcto y Páginas con su recuento en el control segmentado del kit.
+El arco se anima con CSS puro. Los bloques siguen siendo enlaces
+`?bloque=geo|seo`.
+
+**Qué no cambia.** `buildAuditBlock`, los pesos, la Puntuación GEO, la nota
+«Tu Puntuación GEO usa la Salud técnica», la cobertura (mapa de temas), los
+generadores de llms.txt y sitemap, el acceso de bots, la velocidad (Core Web
+Vitals) y las filas por página. Consultas, acciones, RLS y esquema, intactos.
+
+**Decisión de alcance (a revisar por el fundador).** El prototipo no pinta la
+sección de cobertura, los generadores ni las correcciones por página, pero son
+funcionalidad real. Se conservan con su marcado y se leen con los tokens de
+Instrumento mediante ajustes en `app/ins/audit.css`; no se reconstruyen fila a
+fila como el prototipo. Se retiran `BlockSwitch` y `BlockPotentialBanner`
+(su cifra pasa a la tarjeta de bloque, su nota a una línea bajo las tarjetas) y
+los contadores por gravedad de la tarjeta Problemas (el recuento vive en la
+tarjeta de bloque).
+
+**Pendiente.** Reconstruir cobertura, bots y velocidad con los componentes
+nuevos si el fundador quiere fidelidad total; F6b Posición en Google.
+
+## §364 · CONSOLE-INSTRUMENTO-1 F6b: Posición en Google pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `/search-console` adopta el marco de Instrumento: eyebrow con
+el dominio, título, botón informativo «Search Console conectado · últimos 28
+días» y frase. Es un recorte deliberado, igual que F6a (§363): los datos de
+Google, el seguimiento de palabras y todos sus bloques mantienen su marcado y
+leen los tokens de Instrumento desde `app/ins/google.css`.
+
+**Qué no cambia.** Todo lo que fijan `.claude/rules/search-console.md` y
+`seo-tracking.md`: nada de Search Console va a la base de datos, la caché de 30
+minutos, el cifrado del token, las acciones de servidor y los topes por plan.
+
+**Qué no se hizo y por qué.** El prototipo (`google.js`) redibuja el Resumen
+con una escalera de páginas de Google, las pestañas «Seguimiento de
+categorías» y «Descubrir palabras» y los estados Conectado, Sin conectar,
+Cargando y Primera foto. Reconstruirlo cambia el componente de seguimiento
+entero (`seo/*`), que hoy no se puede probar en el entorno sin datos reales de
+Google, así que queda como fase aparte con datos de ejemplo en el arnés.
+
+**Pendiente o roto conocido.** Verificar en el preview con una cuenta conectada
+que ninguna tarjeta antigua se ve rota con los tokens nuevos. Reconstruir el
+Resumen y el seguimiento sobre el prototipo si el fundador lo pide.
+
+## §365 · CONSOLE-INSTRUMENTO-1 F7: Comercio agéntico pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** «Visibilidad en agentes» y «Auditoría agéntica» adoptan el
+marco de Instrumento (eyebrow con el dominio, título y frase grandes) y sus
+bloques leen los tokens nuevos desde `app/ins/agentic.css`. Mismo criterio de
+recorte que F6a y F6b (§363, §364): se renueva el marco y se conserva el
+marcado de cada bloque.
+
+**Qué no cambia.** El motor sin LLM, la selección de ficha, los cupos, las
+puertas por plan (Pro y Agencia), la tarjeta de Visión general, las acciones y
+todo lo que fija `.claude/rules/agentic-audit.md`.
+
+**No se hizo.** Rehacer el anillo, el camino del agente y las cinco tarjetas de
+componente sobre `agaudit.js` y `agents.js` del prototipo. Requiere datos de
+ejemplo en el arnés y se propone como fase aparte.
+
+**Pendiente.** Revisar en el preview con un proyecto con auditoría hecha.
+
+## §366 · CONSOLE-INSTRUMENTO-1 F8a: 404 y error de la consola pasan a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `app/dashboard/not-found.tsx` y `app/dashboard/error.tsx`
+adoptan el instrumento vacío del prototipo (`errors.js`): anillo de marcas sin
+nada que leer, eyebrow, título y frase. El error enseña como referencia el
+`digest` real de Next cuando existe (nunca una referencia inventada) y un botón
+«Escribir a soporte» con `SUPPORT_EMAIL`. Sustituye el 404 de §86 en lo visual;
+sigue sin cohete (`mission-rocket.md`).
+
+**Qué no cambia.** Los destinos («Ver mis dominios» a `/dashboard/domains`,
+«Ir al último dominio» a `/dashboard`), el aviso a Sentry del error y la
+cobertura del piloto (`core-flow.spec.ts` busca el texto «esta pantalla no existe»).
+
+**Pendiente.** F8b: Perfil y ajustes, modal «Cambiar de plan», tour, afiliados y
+la limpieza de hojas y componentes antiguos (`.nfc*` de `globals.css` queda como
+código muerto hasta entonces).
+
+## §367 · CONSOLE-INSTRUMENTO-1 F8b: la prueba de Pro terminada (2026-10-29)
+
+**Qué se decidió.** Una cuenta `free` (TRIAL-ONLY-1, §243) vive la consola con
+cuatro piezas del prototipo aprobado
+(`docs/design-reference/console-instrumento-1/prueba-caducada.html`): un aviso
+la primera vez que entra (hoja inferior en móvil), una franja fija bajo la
+cabecera, una tarjeta «Prueba terminada» en el menú y una barra inferior en
+móvil. Todas llevan a `/dashboard/settings?openPlan=pro#plan`. Sustituye a la
+banda `dmb-band` del estado `free` de `DataMaturityBanner`, que ahora no pinta
+nada para ese estado. El fundador pidió quitar del aviso la línea «Precios con
+IVA incluido. El precio fundador se mantiene mientras sigas suscrito».
+
+**Honestidad.** Los precios del aviso salen de `plans-data.ts`; el precio
+fundador sólo sale si `getActivePromoPlanIds()` lo confirma (cupón real con
+plazas). Sin fecha de fin de prueba: el marco no la conoce y no se inventa.
+
+**Premisa de la regla 4 del cierre de fase.** El aviso de primera entrada se
+recuerda en `localStorage` (por navegador, no por cuenta: guardarlo por cuenta
+necesita migración). Si el almacenamiento falla, el aviso no se repite. La
+franja, la tarjeta y la barra no dependen de él y nunca se pueden cerrar.
+
+**No se hizo.** La tarjeta de «Escaneos en pausa» en Visión general y el
+«Marcar como hecho» deshabilitado con su motivo en el sitio (piezas 3 y 4 del
+prototipo): pendientes. Las acciones siguen bloqueadas en servidor.
+
+## §368 · CONSOLE-INSTRUMENTO-1: «Auditoría técnica» se desdobla en dos páginas (2026-10-30)
+
+**Qué se decidió (Denis, 2026-10-30).** «Auditoría técnica» no podía vivir
+bajo «En Google», porque incluye la parte GEO. Se prueba la opción 3: una
+entrada por canal, «Tu web para la IA» bajo «En la IA» y «Tu web para Google»
+bajo «En Google». Ambas siguen en `/web-audit` y se distinguen por `?bloque=geo|seo`
+(`navHref`, `isNavActive` con el bloque, la miga y el título de pestaña salen del
+bloque). Las dos tarjetas selectoras de arriba desaparecen: cada página lleva una
+sola franja de nota (arco con potencial, recuento de problemas y «+N pt si
+arreglas…»), y el texto de cada bloque pasa a ser la frase bajo el título.
+
+**Además.** «¿Cómo funciona?» pasa a icono junto a la cuenta, en la fila inferior
+del menú, para recuperar una fila. Las tarjetas de componente de la Auditoría
+agéntica recuperan relleno y borde (el reset `.ins button` ganaba a `.ag-comp`).
+El prototipo (`i-src` + `i-consola.html`) se actualiza con las dos rutas
+(`auditgeo`, `auditseo`).
+
+**Retoques posteriores (Denis, 2026-10-30).** El bloque «+N pt si arreglas…» es
+informativo, no un enlace. Orden de «Tu web para la IA»: Problemas, Cobertura de
+dominio y el Historial de comprobaciones plegado; con nota 100 el arco entra
+completo. Frase de cabecera propia de cada bloque. Se retira la tarjeta «Cómo se
+calcula tu Salud SEO» y la pestaña «Páginas» de las dos páginas, y con ella se
+descarta el botón «Añadir página» (habría exigido migración y acción de servidor).
+En el menú, la cuenta va pegada abajo y la fila «¿Cómo funciona?» justo encima
+(sustituye al icono junto a la cuenta). Auditoría agéntica aterriza con
+«Descubrimiento» activa (`initialComponent` queda con su test, sin uso en pantalla).
+
+**Pendiente.** El nombre de las dos entradas es una prueba: Denis puede volver a
+«Auditoría técnica GEO/SEO». La nota de la fila de arriba en Visión general («Auditoría SEO»)
+sigue enlazando a `?bloque=seo`.
+
+**Premisa de retirada de camino:** se retira el selector de bloques de la página.
+La premisa es que cada bloque tiene su entrada de menú; la verifica
+`lib/ins/nav.test.ts`. Sin esas entradas la pantalla no tendría forma de cambiar de bloque.
+
+## §369 · CONSOLE-INSTRUMENTO-1 F8c: Ajustes pasa al marco «Instrumento» (2026-10-30)
+
+**Qué se decidió.** `/dashboard/settings` estrena cabecera de perfil (iniciales,
+nombre, correo, pastilla del plan y «Cerrar sesión») y tres pestañas, Plan,
+Cuenta y Notificaciones (`components/ins/settings/settings-frame.tsx`, estilos en
+`app/ins/settings.css`). Es sólo el marco, como F6b y F7: las tres secciones
+conservan su marcado, textos y acciones de servidor (`AccountSection`,
+`BillingContent`, `NotificationsSection`, `DeleteAccountButton`). Plan abre por
+defecto en cuentas administradoras; si no, Cuenta. Los paneles se ocultan, no se
+desmontan, así que un formulario a medias sobrevive al cambio de pestaña.
+«Eliminar cuenta» pasa al final de la pestaña Cuenta.
+
+**Enlaces que siguen vivos.** `#plan`, `#cuenta`, `#avisos`, `?openPlan=` y
+`?checkout=` aterrizan en la pestaña correcta (cuatro correos transaccionales los
+enlazan y no se pueden reescribir).
+
+**No se hace (necesita aprobación aparte).** Foto de perfil (almacenamiento),
+«Cargo», «Contraseña cambiada hace…» y estado de la verificación en dos pasos
+(no hay dato), tarjeta de plan nueva con cifra grande y días de prueba, y el
+modal «Cambiar de plan» del prototipo: siguen siendo el diseño anterior. El índice
+lateral `SettingsIndex` queda sin uso (limpieza final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` busca
+`.set-idx` y `h2.set-sech`, que ya no existen: hay que actualizarlo antes de
+lanzar el piloto sobre esta pantalla.
+
+## §370 · CONSOLE-INSTRUMENTO-1: «Visibilidad en agentes» se rehace sobre el prototipo (2026-10-30)
+
+**Qué se decidió.** En F7 (§365) sólo se cambió el marco de esta pantalla y el
+fundador lo vio: «todavía tiene el diseño antiguo». Se reconstruye sobre
+`i-src/screens/agents.js`: el «Cuadro claro» (dial grande con la nota, cuatro
+diales pequeños, un testigo por componente y el titular con «Ver la
+auditoría») y las dos tarjetas de abajo, «Preguntas de compra» (una fila por
+motor con tres barras finas) y «Qué hacer primero». Estados: con tienda,
+«No hemos encontrado qué vendes en tu web» y Starter con invitación a Pro.
+
+**Cómo.** `components/ins/agents/visibility-cluster.tsx` sólo dibuja: la página
+le pasa nota, objetivo (`fixbarLine`), diales y testigos ya calculados desde la
+última auditoría guardada (`componentStatus`, `componentLine`, `interopLine`).
+La ignición (aguja, testigos) suena una vez por visita y es ambiente; con
+movimiento reducido queda en el estado final. Estilos en `app/ins/agents.css`,
+portados del CSS del prototipo con prefijo `.ins`.
+
+**Lo que NO se hace.** El prototipo trae «Marcar como hecho» en «Qué hacer
+primero»: el producto no lo tiene (Fase 2c sin aprobar), así que no se pinta.
+Sin cifras inventadas: el objetivo del dial sólo sale si `fixbarLine` lo
+calcula. Se retira el «camino de un agente» y las cinco tarjetas de componente
+de la versión anterior: los diales y testigos los sustituyen y enlazan a la
+misma auditoría por componente (`?componente=`).
+
+**Premisa de retirada de camino.** Se retiran las tarjetas de componente como
+entrada a la auditoría; la premisa es que los diales y testigos enlazan a
+`?componente=<id>`. Si esa query dejara de abrir el componente, esta pantalla
+quedaría sin entrada por componente (queda «Ver la auditoría»).
+
+**Pendiente.** Comparar con el prototipo en 375, 768 y 1280 px con datos
+reales; el hueco de «Interoperabilidad» usa el icono de enlace porque el
+sprite no trae el de enchufe.
+
+## §371 · CONSOLE-INSTRUMENTO-1 F8d: Cuenta y Notificaciones por dentro (2026-10-30)
+
+**Qué se decidió.** Las pestañas Cuenta y Notificaciones de Ajustes dejan el
+marcado antiguo y adoptan las filas, campos e interruptores del prototipo
+(`perfil.css`, copiados y acotados a `.ins .sc-set` en `app/ins/settings.css`).
+Cuenta pasa a dos columnas: datos personales y acceso (contraseña) a la
+izquierda, datos de facturación a la derecha; desaparece la fila de avatar y
+nombre, que ya enseña la cabecera de perfil. Notificaciones son las filas de
+`lib/email/categories.ts` con el interruptor `pf-sw`, más la fila fija «Tu
+cuenta y facturación» y la nota de la campana.
+
+**Qué no cambia.** `saveAccount`, `changePassword` y
+`updateNotificationPreference`, sus validaciones, textos y la reversión del
+interruptor si falla. Un único «Guardar» sigue cubriendo nombre, apellidos y
+facturación. «Eliminar cuenta» (`DeleteAccountButton`) conserva su modal.
+
+**No se hace.** La pestaña Plan (tarjeta con cifra grande, días de prueba, uso
+del ciclo) y el modal «Cambiar de plan» tocan facturación y necesitan su propia
+aprobación; foto, cargo, antigüedad de la contraseña y verificación en dos
+pasos siguen sin dato (§369). `BillingDetailsFold` queda sin uso (limpieza
+final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` sigue
+sin actualizarse (§369).
+
+**Adenda (2026-10-30, mismo PR, revisión de Denis).** La pestaña Plan pasa a la
+tarjeta del prototipo (nombre grande, cifra de precio, días de prueba en siete
+tramos, «Incluido» a la derecha, uso del ciclo y «Más opciones»); se retira la
+pastilla «Activo», «Cerrar sesión» sale de la cabecera del perfil (sigue en el
+menú) y los botones de plan y facturas pasan al kit `btn`. El contacto de
+soporte es un botón `mailto:`. Se quita la fila fija «Tu cuenta y facturación»
+de Notificaciones: no era un ajuste y un interruptor apagado engañaba. Una
+cota de 999 se pinta como «sin tope», sin barra. La foto de perfil sigue sin
+existir: subirla necesita un bucket de almacenamiento con RLS y espera
+aprobación. Premisa de la fila retirada: los correos de cuenta y facturación se
+envían siempre (`lib/email/categories.ts`).
+
+## §372 · CONSOLE-INSTRUMENTO-1 F8e: foto de perfil (2026-10-30)
+
+**Qué.** El avatar de Ajustes es un botón: un clic abre el selector estándar del
+sistema (en móvil, galería o cámara). El navegador recorta al centro y reduce a
+un JPEG de 256 px; la acción `uploadAvatar` lo guarda en el bucket privado
+`avatars` (`<id>/avatar.jpg`) y el camino queda en `profiles.avatar_path`. La
+consola lee una URL firmada de una hora (`readAvatarUrl`) y la pinta en el menú,
+la cabecera móvil y el panel de cuenta; sin foto, iniciales como siempre.
+«Quitar foto» borra el camino y el objeto. El email del perfil pasa de
+monoespaciada a la tipografía de la consola.
+
+**Por qué así.** Aprobado por Denis (2026-10-30) con tarjeta de decisión. La
+foto no cabe en `user_metadata` (viajaría en el JWT y en cada cookie). Bucket
+privado y RLS por carpeta propia; sin service role.
+
+**Pendiente.** Migración `0046_profile_avatar.sql`, que se aplica a mano antes del
+merge; sin ella `readAvatarUrl` lee «sin foto» y la subida falla con mensaje.
+Premisa: no hay otra vía de recuperación retirada.
+
 ## 380. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
 
 **Qué se decidió.** Denis aprobó la maqueta `docs/design-reference/mobile-tabbar-1/consola-tab-bar.html` (variante «Flotante») y pidió el mismo frontal en la web móvil y, después, en la app de Android. Esta fase es sólo la web móvil.
@@ -27770,6 +28125,7 @@ Fecha de actualización: 30 de octubre de 2026.
 - Hay que crear la cuenta de Play Console (25 $), generar la clave de firma y poner `ANDROID_SHA256_CERT_FINGERPRINTS` en Vercel: lo hace Denis, pasos en `twa/README.md`. Sin las huellas la app abre con la barra de Chrome.
 - Los textos de Comercio agéntico siguen diciendo «está en Pro y Agencia» sin botón. No manda a pagar, pero queda un cartel sin acción; se revisará cuando se mergee F7.
 - Las páginas públicas que no pasan por el middleware (comparativas, docs, glosario…) no se redirigen dentro de la app: solo se llega a ellas si el usuario escribe la URL.
+- La experiencia de prueba terminada (§367: franja, tarjeta del menú, barra inferior y aviso de primera entrada) apunta a elegir plan, así que dentro de la app no se pinta (`d.inApp` en `components/ins/trial-ended.tsx`). Una cuenta sin plan dentro de la app ve sus datos en solo lectura sin explicación ni camino de pago; si Denis quiere un aviso sin venta, se diseña aparte. En móvil de la web, la barra inferior de ese aviso sube sobre la barra de pestañas.
 - Notificaciones push: no existen; son la fase siguiente y lo que más aporta una app frente a la web.
 - iPhone: Apple es más exigente con apps que son solo una web; mismo planteamiento cuando haya push.
 

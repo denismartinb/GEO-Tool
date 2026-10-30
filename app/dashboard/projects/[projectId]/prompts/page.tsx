@@ -1,57 +1,19 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
-import { computeDominantBrandSentiment } from "@/lib/metrics/brand-sentiment";
+import { resolveScanProvidersForPlan, getLLMScanProviders } from "@/lib/scan/providers";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { ScanInProgress } from "@/components/scan-in-progress";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { ScanStatePill } from "@/components/scan-state-pill";
-import { PromptsClient } from "./prompts-client";
-import { AddPromptsButton } from "./add-prompts-button";
-
-export type ResultRow = {
-  id: string;
-  prompt_id: string | null;
-  prompt_text_snapshot: string | null;
-  brand_mentioned: boolean | null;
-  citation_found: boolean | null;
-  mentioned_competitors_count: number | null;
-  citations_count: number | null;
-  sentiment: string | null;
-  raw_response_text: string | null;
-  extracted_json: unknown;
-  extraction_error: string | null;
-  category: string | null;
-  provider: string | null;
-  /** SAMPLING-1 (ADR 0030): which repetition of this (prompt, engine) the row is. Null on rows written before migration 0028 — which is sample 0. */
-  sample_index: number | null;
-  /**
-   * Brand string and alias set as they were AT SCAN TIME (ADR 0025) — the
-   * ones `verifyMention` actually matched this row's `display_name_found`
-   * against. Used only to show WHICH known name a mention matched (Fase
-   * −1c); never to decide mentioned/not-mentioned, which already happened at
-   * scan time. Deliberately the snapshot, not the project's CURRENT
-   * brand_aliases: aliases can change after a scan, and using today's list
-   * to explain yesterday's verdict would attribute a match to a name that
-   * didn't exist yet when the row was scored.
-   */
-  brand_snapshot: string | null;
-  brand_aliases_snapshot: string[] | null;
-};
-
-export type TopicGroup = {
-  category: string;
-  results: ResultRow[];
-  visibilidad: number;
-  menciones: number;
-  citasTotal: number;
-  sentimentDominant: string | null;
-};
+import { Ic } from "@/components/ins/ic";
+import { Motion } from "@/components/ins/kit/motion";
+import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
+import { InsPrompts } from "@/components/ins/prompts/ins-prompts";
+import { InsAddPrompts } from "@/components/ins/prompts/add-prompts";
+import type { PendingPrompt } from "@/lib/ins/prompts-model";
 
 type ExtractedJson = {
   competitors?: Array<{ name?: string; mentioned?: boolean }>;
@@ -178,7 +140,7 @@ export default async function PromptsPage({
   // are gone from the user's point of view ("Borrar prompt"), so they must not
   // render — and without an active prompt there is no category to look up, so
   // they used to fall into "Sin categoría" instead of disappearing.
-  const allResults: ResultRow[] = (rawResults ?? [])
+  const allResults = (rawResults ?? [])
     .filter((r) => promptCategoryMap.has(r.prompt_id ?? ""))
     .map((r) => ({
       ...r,
@@ -186,7 +148,7 @@ export default async function PromptsPage({
     }));
 
   // Filtro opcional por competidor (drilldown desde la página de Competidores)
-  const results: ResultRow[] = competitorFilter
+  const results = competitorFilter
     ? allResults.filter((r) => {
         const ext = parseExt(r.extracted_json);
         return (ext.competitors ?? []).some(
@@ -195,309 +157,131 @@ export default async function PromptsPage({
       })
     : allResults;
 
-  // Lógica de Topics
-  const UNCATEGORIZED_LABEL = "Sin categoría";
-  const distinctCategories = [
-    ...new Set(
-      results
-        .map((r) => r.category)
-        .filter((c): c is string => c !== null && c.trim() !== "")
-    ),
-  ];
-  const hasTopics = distinctCategories.length >= 2;
-  // Prompts without a category (e.g. a categorization gap) must still appear
-  // somewhere in Topics mode rather than silently vanishing — give them their
-  // own grouping bucket instead of dropping them from distinctCategories.
-  const hasUncategorized = hasTopics && results.some((r) => !r.category || r.category.trim() === "");
-  const categoriesForGrouping = hasTopics
-    ? [...distinctCategories, ...(hasUncategorized ? [UNCATEGORIZED_LABEL] : [])]
-    : [];
-
-  // Sort: brand-absent first en modo flat
-  const sortedResults = [...results].sort((a, b) => {
-    if (a.brand_mentioned === b.brand_mentioned) return 0;
-    return a.brand_mentioned ? 1 : -1;
-  });
-
-  // Topics con agregados
-  const topicGroups: TopicGroup[] = hasTopics
-    ? categoriesForGrouping
-        .map((cat) => {
-          const catResults =
-            cat === UNCATEGORIZED_LABEL
-              ? results.filter((r) => !r.category || r.category.trim() === "")
-              : results.filter((r) => r.category === cat);
-          const menciones = catResults.filter((r) => r.brand_mentioned).length;
-          const visibilidad =
-            catResults.length > 0
-              ? Math.round((menciones / catResults.length) * 100)
-              : 0;
-          const citasTotal = catResults.reduce(
-            (sum, r) => sum + (r.citations_count ?? 0),
-            0
-          );
-          // SCREEN-POLISH-1 Fase A: only over rows that actually mention the
-          // brand — a row's sentiment is populated by the LLM regardless of
-          // mention, so counting it unfiltered affirmed a brand sentiment on
-          // responses that never named the brand (lib/metrics/brand-sentiment.ts).
-          const sentimentDominant = computeDominantBrandSentiment(catResults);
-          return {
-            category: cat,
-            results: catResults,
-            visibilidad,
-            menciones,
-            citasTotal,
-            sentimentDominant,
-          };
-        })
-        .sort((a, b) => b.visibilidad - a.visibilidad)
-    : [];
-
-  const totalPrompts = projectPrompts?.length ?? 0;
-  const scannedPrompts = results.length;
-  const totalTopics = topicGroups.length;
-
   const hasActivePrompts = (projectPrompts?.length ?? 0) > 0;
   const hasCompletedRun = latestRun !== null;
   const hasResults = results.length > 0;
-  // Mirrors the FirstScanTakeover condition below — hidden while the mission
-  // takeover owns the screen, so the rocket animation reads as full screen
-  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  const addDisabled = Boolean(activeRun) || atPromptLimit;
+  const addDisabledReason = activeRun
+    ? "Espera a que termine el escaneo en curso."
+    : atPromptLimit
+      ? feedbackErrorMessages.prompt_limit_reached
+      : undefined;
+  // Mirrors the FirstScanTakeover condition: the mission owns the whole screen.
   const showMissionTakeover = Boolean(activeRun) && !hasCompletedRun;
 
+  if (activeRun && showMissionTakeover) {
+    // Hangs DIRECTLY off `.page.mrk-fill`, like the other five sections
+    // (ANIMATION-PARITY-1, log §168).
+    return (
+      <div className="page mrk-fill">
+        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
+      </div>
+    );
+  }
+
+  // Active prompts the last scan did not cover (added after it ran): listed
+  // as pending, never as absent. Not with a competitor filter, which narrows
+  // to scanned rows.
+  const scannedIds = new Set(allResults.map((r) => r.prompt_id));
+  const pendingPrompts: PendingPrompt[] =
+    hasCompletedRun && !competitorFilter
+      ? (projectPrompts ?? [])
+          .filter((p) => !scannedIds.has(p.id))
+          .map((p) => ({ id: p.id, text: p.prompt_text, category: p.category as string | null }))
+      : [];
+
+  const providers = resolveScanProvidersForPlan(plan);
+  const promptsHref = `/dashboard/projects/${projectId}/prompts`;
+
   return (
-    // `.page`'s default top padding is what stops the mission's full-bleed
-    // scene (`.mrk-full`, negative top margin) from collapsing THROUGH an
-    // empty `.page` and clipping its own top edge — this screen zeroes that
-    // padding only when the sticky header (which absorbs the same margin on
-    // its own) is actually mounted below it. `.mrk-fill` (mission mode)
-    // zeroes it its own way via CSS, so the inline override only applies
-    // when the header is shown.
-    <div
-      className={`page${showMissionTakeover ? " mrk-fill" : ""}`}
-      style={showMissionTakeover ? undefined : { paddingTop: 0 }}
-    >
-      {!showMissionTakeover && (
-        <header className="ov-sticky-header">
-          <div className="ov-sticky-left">
-            <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Prompts</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                  {project.name}
-                </span>
-                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                  {project.domain}
-                </span>
-                <span className="meta-pill">{project.country}/{project.language}</span>
-              </div>
-            </div>
+    <div className="ins">
+      <Motion id={`prompts:${projectId}`}>
+        <div className="page sc-prompts">
+          <div className="eyebrow bare">
+            Prompts ·{" "}
+            <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
+              {project.domain}
+            </span>
           </div>
-          <div className="ov-sticky-right">
-            <ScanStatePill
-              activeRun={activeRun}
-              lastScanLabel={
-                latestRun
-                  ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      timeZone: "Europe/Madrid"
-                    })
-                  : null
-              }
+          <div className="pr-hd">
+            <h1>Prompts</h1>
+            <InsAddPrompts
+              projectId={projectId}
+              used={activePromptCount ?? 0}
+              limit={plan.caps.prompts}
+              disabled={addDisabled}
+              disabledReason={addDisabledReason}
             />
           </div>
-        </header>
-      )}
 
-      {/* ANIMATION-PARITY-1 (2026-08-26): the mission hangs DIRECTLY off
-          `.page.mrk-fill`, exactly like the other five sections. It used to
-          live inside the padded `<div>` below, and that one extra box is the
-          whole of "en prompts sale rota completamente": `.mrk-fill` turns
-          `.page` into a flex column and gives `.mrk-full` `flex: 1`, but the
-          flex item there was the wrapper — an `auto`-height box that sized
-          itself to its content — so the scene stopped at its own min-height
-          cap with grey page underneath it, and the wrapper's 20px of top
-          padding pushed it off the header besides. Anything new that renders
-          alongside the mission goes in the ELSE branch, never between `.page`
-          and `<FirstScanTakeover>`. */}
-      {activeRun && showMissionTakeover ? (
-        <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
-      ) : (
-      <>
-      {promptsAddedMessage ? (
-        <p className="feedback success" style={{ marginTop: 20 }}>
-          {promptsAddedMessage}
-        </p>
-      ) : null}
+          {promptsAddedMessage ? (
+            <p className="alert pos" role="status" style={{ marginTop: 20 }}>
+              <Ic n="checkc" />
+              <span className="tx">{promptsAddedMessage}</span>
+            </p>
+          ) : null}
 
-      <div style={{ paddingTop: promptsAddedMessage ? 16 : 20 }}>
-        {competitorFilter && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginBottom: 16,
-              padding: "10px 14px",
-              borderRadius: 10,
-              border: "1px solid var(--line-strong)",
-              background: "var(--surface-2)",
-              fontSize: 13,
-            }}
-          >
-            <Icon name="competitors" size={15} />
-            <span style={{ color: "var(--ink-3)" }}>
-              Mostrando solo prompts donde aparece{" "}
-              <b style={{ color: "var(--ink)" }}>{competitorFilter}</b> en el último escaneo.
-            </span>
-            <Link
-              href={`/dashboard/projects/${projectId}/prompts`}
-              className="btn btn-ghost btn-sm"
-              style={{ marginLeft: "auto" }}
-            >
-              Quitar filtro
-            </Link>
-          </div>
-        )}
-        {!hasActivePrompts ? (
-          <div
-            className="card"
-            style={{ padding: "32px 24px", textAlign: "center" }}
-          >
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--ink)",
-                marginBottom: 8,
-              }}
-            >
-              No hay prompts activos
-            </p>
-            <p
-              style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
-            >
-              Añade tus primeros prompts para empezar a analizar la
-              visibilidad de tu marca.
-            </p>
-            <div style={{ display: "inline-block" }}>
-              <AddPromptsButton
-                projectId={projectId}
-                disabled={Boolean(activeRun) || atPromptLimit}
-                disabledReason={
-                  activeRun
-                    ? "Espera a que termine el escaneo en curso."
-                    : atPromptLimit
-                      ? feedbackErrorMessages.prompt_limit_reached
-                      : undefined
-                }
-              />
+          {/* One poller per screen: the card owns the refresh when the run ends. */}
+          {activeRun ? (
+            <LiveScanCard projectId={projectId} initial={activeRun} providers={getLLMScanProviders()} />
+          ) : null}
+
+          {competitorFilter ? (
+            <div className="pr-filter">
+              <Ic n="users" sm />
+              <span>
+                Mostrando solo prompts donde aparece <b>{competitorFilter}</b> en el último escaneo.
+              </span>
+              <Link href={promptsHref} className="btn ghost sm">
+                Quitar filtro
+              </Link>
             </div>
-          </div>
-        ) : !hasCompletedRun ? (
-          <div
-            className="card"
-            style={{ padding: "32px 24px", textAlign: "center" }}
-          >
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--ink)",
-                marginBottom: 8,
-              }}
-            >
-              Todavía no hay resultados
-            </p>
-            <p
-              style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
-            >
-              Los resultados aparecerán después de lanzar el primer escaneo con
-              Gemini.
-            </p>
-            <Link
-              href={`/dashboard/projects/${projectId}`}
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--accent)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              Ir a visión general para lanzar el escaneo →
-            </Link>
-          </div>
-        ) : !hasResults ? (
-          <div
-            className="card"
-            style={{ padding: "32px 24px", textAlign: "center" }}
-          >
-            <p
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--ink)",
-                marginBottom: 8,
-              }}
-            >
-              {competitorFilter
-                ? `${competitorFilter} no aparece mencionado en el último escaneo`
-                : "Sin resultados disponibles"}
-            </p>
-            <p
-              style={{ fontSize: 13, color: "var(--ink-3)", marginBottom: 16 }}
-            >
-              {competitorFilter
-                ? "Quita el filtro para ver todos los prompts del último escaneo."
-                : "El escaneo está completado pero no hay respuestas disponibles."}
-            </p>
-            <Link
-              href={
-                competitorFilter
-                  ? `/dashboard/projects/${projectId}/prompts`
-                  : `/dashboard/projects/${projectId}`
-              }
-              style={{
-                fontSize: 13,
-                fontWeight: 600,
-                color: "var(--accent)",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 4,
-              }}
-            >
-              {competitorFilter ? "Quitar filtro →" : "Volver a visión general →"}
-            </Link>
-          </div>
-        ) : (
-          <PromptsClient
-            projectId={projectId}
-            projectDomain={project.domain}
-            projectBrand={project.brand}
-            results={sortedResults}
-            hasTopics={hasTopics}
-            topicGroups={topicGroups}
-            competitors={configuredCompetitors ?? []}
-            totalPrompts={totalPrompts}
-            scannedPrompts={scannedPrompts}
-            totalTopics={totalTopics}
-            addPromptsDisabled={Boolean(activeRun) || atPromptLimit}
-            addPromptsDisabledReason={
-              activeRun
-                ? "Espera a que termine el escaneo en curso."
-                : atPromptLimit
-                  ? feedbackErrorMessages.prompt_limit_reached
-                  : undefined
-            }
-          />
-        )}
-      </div>
-      </>
-      )}
+          ) : null}
+
+          {!hasActivePrompts ? (
+            <div className="empty-s">
+              <b>No hay prompts activos</b>
+              <p>Añade tus primeros prompts para empezar a analizar la visibilidad de tu marca.</p>
+            </div>
+          ) : !hasCompletedRun ? (
+            <div className="empty-s">
+              <b>Todavía no hay resultados</b>
+              <p>Los resultados aparecerán después de lanzar el primer escaneo.</p>
+              <Link href={`/dashboard/projects/${projectId}`} className="btn line sm">
+                Ir a visión general <Ic n="chevr" sm />
+              </Link>
+            </div>
+          ) : !hasResults ? (
+            <div className="empty-s">
+              <b>
+                {competitorFilter
+                  ? `${competitorFilter} no aparece mencionado en el último escaneo`
+                  : "Sin resultados disponibles"}
+              </b>
+              <p>
+                {competitorFilter
+                  ? "Quita el filtro para ver todos los prompts del último escaneo."
+                  : "El escaneo está completado pero no hay respuestas disponibles."}
+              </p>
+              <Link href={competitorFilter ? promptsHref : `/dashboard/projects/${projectId}`} className="btn line sm">
+                {competitorFilter ? "Quitar filtro" : "Volver a visión general"}
+              </Link>
+            </div>
+          ) : (
+            <InsPrompts
+              projectId={projectId}
+              projectDomain={project.domain}
+              projectBrand={project.brand}
+              results={results}
+              pending={pendingPrompts}
+              competitors={configuredCompetitors ?? []}
+              providers={providers}
+              capUsed={activePromptCount ?? 0}
+              capLimit={plan.caps.prompts}
+            />
+          )}
+        </div>
+      </Motion>
     </div>
   );
 }

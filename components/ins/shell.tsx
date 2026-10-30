@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { BellButton, BellProvider } from "@/components/ins/bell";
 import { CommandPaletteProvider, useCommandPalette } from "@/components/ins/command-palette";
@@ -10,14 +10,16 @@ import { InsLayerProvider, useLayer } from "@/components/ins/layer";
 import { AccountPanel, HelpPanel } from "@/components/ins/menus";
 import { DomainSwitcherPanel } from "@/components/ins/domain-switcher";
 import { ProjectFav } from "@/components/ins/project-fav";
-import { initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
+import { avatarStyle, initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
 import { InsSprite } from "@/components/ins/sprite";
+import { TrialEndedDock, TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
 import {
   crumbForPath,
   INS_NAV,
   INS_TABS,
   isNavActive,
+  navHref,
   tabForPath,
   tabSubItems,
   tabTarget,
@@ -59,9 +61,15 @@ export function InsShell({ data, notifications, accountNotice, nextStep, banner,
   );
 }
 
+/** `?bloque=` de la URL: dos entradas del menú comparten la ruta de la auditoría técnica. */
+function useAuditBlock(): "geo" | "seo" {
+  return useSearchParams().get("bloque") === "seo" ? "seo" : "geo";
+}
+
 function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }) {
   const d = useShellData();
   const pathname = usePathname();
+  const block = useAuditBlock();
   const scRef = useRef<HTMLDivElement | null>(null);
   const [edgeTop, setEdgeTop] = useState(false);
   const [edgeBottom, setEdgeBottom] = useState(false);
@@ -109,7 +117,7 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
                   <span>/</span>
                 </>
               ) : null}
-              <b>{crumbForPath(pathname)}</b>
+              <b>{crumbForPath(pathname, block)}</b>
             </div>
             <span className="sp" />
             <PaletteButton />
@@ -126,6 +134,9 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
             <BellButton variant="mobile" />
             <AccountAvatar />
           </header>
+          <TrialEndedStrip />
+          <TrialEndedFirstEntry />
+          <TrialEndedDock />
           <div className="scroller dash-content" id="sc" ref={scRef}>
             <TabSub />
             {banner}
@@ -186,6 +197,7 @@ function ProjectButton({ mobile }: { mobile?: boolean }) {
   if (mobile) {
     return (
       <button type="button" className="pj" aria-haspopup="dialog" aria-label={`${p.name}. Cambiar de dominio`} onClick={(e) => openIt(e.currentTarget)}>
+        <ProjectFav domain={p.domain} name={p.name} size={22} />
         {p.name}
         <Ic n="chevd" sm />
       </button>
@@ -208,12 +220,12 @@ function AccountAvatar() {
   const { pop } = useLayer();
   return (
     <span
-      className="av"
+      className={`av${d.avatarUrl ? " xo-avimg" : ""}`}
       role="button"
       tabIndex={0}
       aria-haspopup="dialog"
       aria-label="Tu cuenta"
-      style={{ cursor: "pointer" }}
+      style={{ cursor: "pointer", ...avatarStyle(d.avatarUrl) }}
       onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => e.currentTarget} />, { w: 280, label: "Tu cuenta" })}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -222,7 +234,7 @@ function AccountAvatar() {
         }
       }}
     >
-      {initialsOf(d.userEmail)}
+      {d.avatarUrl ? null : initialsOf(d.userEmail)}
     </span>
   );
 }
@@ -230,6 +242,7 @@ function AccountAvatar() {
 function Sidebar() {
   const d = useShellData();
   const pathname = usePathname();
+  const block = useAuditBlock();
   const { open: openPalette } = useCommandPalette();
   const { pop } = useLayer();
   const helpRef = useRef<HTMLButtonElement | null>(null);
@@ -275,11 +288,11 @@ function Sidebar() {
                   </span>
                 );
               }
-              const active = isNavActive(pathname, p.id, item);
+              const active = isNavActive(pathname, p.id, item, block);
               return (
                 <Link
                   key={item.label}
-                  href={`/dashboard/projects/${p.id}${item.segment}`}
+                  href={navHref(p.id, item)}
                   className={`nav${active ? " on" : ""}`}
                   aria-current={active ? "page" : undefined}
                 >
@@ -292,37 +305,42 @@ function Sidebar() {
           </div>
         ))}
       </nav>
-      <div className="xo-sfoot">
+      <TrialEndedPlanCard />
+      <div className="xo-bot">
         <button
           type="button"
-          className="nav"
+          className="xo-help"
           ref={helpRef}
           aria-haspopup="dialog"
+          aria-label="¿Cómo funciona?"
+          title="¿Cómo funciona?"
           onClick={(e) => pop(e.currentTarget, <HelpPanel />, { w: 320, align: "start", label: "¿Cómo funciona?" })}
         >
           <Ic n="c-help" />
           <span>¿Cómo funciona?</span>
         </button>
-      </div>
-      <div
-        className="foot xo-foot"
-        role="button"
-        tabIndex={0}
-        aria-haspopup="dialog"
-        aria-label="Tu cuenta"
-        ref={footRef}
-        onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => helpRef.current ?? footRef.current} />, { w: 280, align: "start", label: "Tu cuenta" })}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            e.currentTarget.click();
-          }
-        }}
-      >
-        <span className="av">{initialsOf(d.userEmail)}</span>
-        <div>
-          <b>{d.userEmail}</b>
-          <span>{planLabel(d)}</span>
+        <div
+          className="foot xo-foot"
+          role="button"
+          tabIndex={0}
+          aria-haspopup="dialog"
+          aria-label="Tu cuenta"
+          ref={footRef}
+          onClick={(e) => pop(e.currentTarget, <AccountPanel helpAnchor={() => helpRef.current ?? footRef.current} />, { w: 280, align: "start", label: "Tu cuenta" })}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.currentTarget.click();
+            }
+          }}
+        >
+          <span className={`av${d.avatarUrl ? " xo-avimg" : ""}`} style={avatarStyle(d.avatarUrl)}>
+            {d.avatarUrl ? null : initialsOf(d.userEmail)}
+          </span>
+          <div>
+            <b>{d.userEmail}</b>
+            <span>{planLabel(d)}</span>
+          </div>
         </div>
       </div>
     </aside>
@@ -383,15 +401,16 @@ function TabBar() {
 
 function TabSub() {
   const { p, tab, pathname } = useTab();
+  const block = useAuditBlock();
   if (!p || !tab) return null;
   const items = tabSubItems(tab);
   if (items.length === 0) return null;
   return (
     <nav className="ins tabsub" aria-label={tab.label}>
       {items.map((item) => {
-        const active = isNavActive(pathname, p.id, item);
+        const active = isNavActive(pathname, p.id, item, block);
         return (
-          <Link key={item.segment} href={`/dashboard/projects/${p.id}${item.segment}`} className={active ? "on" : undefined} aria-current={active ? "page" : undefined}>
+          <Link key={`${item.segment}${item.block ?? ""}`} href={navHref(p.id, item)} className={active ? "on" : undefined} aria-current={active ? "page" : undefined}>
             <Ic n={item.icon} sm />
             {item.label}
           </Link>

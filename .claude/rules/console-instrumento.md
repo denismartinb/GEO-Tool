@@ -87,6 +87,107 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   La tarjeta de Google es la placa 2 del plan.
 - **Las acciones de servidor no cambian**; no se añade ninguna sin aprobación.
 
+## Prompts (F5a, log §373)
+
+- **La hoja lateral es un componente del kit** (`Sheet`/`SheetHead`), con
+  portal a `body`, Esc, trampa de foco y retorno de foco. Competidores y
+  Páginas citadas la reutilizan; no se crea otra.
+- **Todo número de la pantalla sale de filas del último escaneo**
+  (`buildPromptsModel`, `buildPromptDetail`). Un prompt sin escanear es
+  «pendiente», nunca «no te nombra».
+- **Nada se guarda antes del paso de revisión** de «Añadir prompts»; el tope
+  del plan cuenta lo marcado (PROMPTS-REVIEW-1, §305).
+
+## Competidores (F5b, log §374)
+
+- **El orden del ranking es por menciones**; el puesto medio sólo desempata y
+  sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
+- **El denominador no se quita**: «N respuestas · M prompts en K motores» lo
+  compone `answerCountLabel`, nunca una frase suelta (§183).
+- **Las clases `i` de una regla móvil se escriben con `>`**: el kit `Roll` usa
+  `<i>` para los dígitos y una regla `.mt i` los rompe.
+- **Las acciones de servidor de competidores y alias no cambian**; la hoja de
+  gestión las llama y refresca.
+
+## Páginas citadas (F5c, log §375)
+
+- **«Te nombran» sigue siendo un hecho de la respuesta** (`.claude/rules/citations.md`):
+  la nota bajo el anillo no se quita ni se reescribe como afirmación sobre la página.
+- **Los porcentajes del anillo suman 100** (`percentShares`, mayor resto) y son
+  cuota de páginas distintas, no de citas.
+- **Una fuente alcanzable no exige competidor**; el competidor co-citado sólo
+  sale como aviso «sin verificar en la página».
+
+## Auditoría técnica (F6a, log §363)
+
+- **Los bloques son enlaces `?bloque=`**, no estado de cliente: URL, menú y
+  tarjeta resaltada coinciden. La línea «+N pt» enlaza a `#problemas` y las
+  pestañas lo escuchan.
+- **Cada cifra de la tarjeta sale de `buildAuditBlock`** (`lib/ins/audit-model.ts`
+  sólo da forma). Sin ganancia real no hay línea verde.
+- **Lo que no está en el prototipo pero es real se conserva** (cobertura,
+  generadores de llms.txt y sitemap, filas por página) y lee los tokens de
+  Instrumento desde `app/ins/audit.css`.
+
+## Posición en Google (F6b, log §364)
+
+- **Sólo el marco es nuevo.** Los bloques de Search Console y el seguimiento de
+  palabras conservan marcado y reglas (`search-console.md`, `seo-tracking.md`) y
+  leen los tokens de Instrumento desde `app/ins/google.css`.
+- **No se reconstruye el Resumen sin datos de ejemplo en el arnés**: sin ellos
+  no se puede comparar con el prototipo.
+
+## Comercio agéntico (F7, log §365)
+
+- **Sólo el marco es nuevo**; los bloques conservan marcado y las reglas de
+  `agentic-audit.md`, y leen los tokens de Instrumento desde `app/ins/agentic.css`.
+- **«Visibilidad en agentes» está rehecha sobre el prototipo (log §370).** El
+  «Cuadro claro» sólo dibuja lo que la página le pasa; objetivo del dial =
+  `fixbarLine`, nunca una cifra propia. Sin «Marcar como hecho» (Fase 2c sin
+  aprobar). Sus estilos viven en `app/ins/agents.css`.
+
+## 404 y error (F8a, log §366)
+
+- **La referencia del error es el `digest` de Next o no hay referencia.** Nunca
+  un código inventado.
+- **Sin cohete ni progreso**: el anillo es un instrumento vacío, decorativo.
+
+## Prueba terminada (F8b, log §367)
+
+- **Las piezas dependen de `planId === "free"` del marco**, no de una
+  consulta propia. Franja, tarjeta del menú y barra móvil no se pueden cerrar.
+- **El precio fundador se cita sólo si Stripe lo confirma**
+  (`getActivePromoPlanIds`); nunca un descuento fijo en el texto.
+- **El aviso de primera entrada vive en `localStorage`**: sin migración no hay
+  marca por cuenta.
+
+## Ajustes (F8c, log §369)
+
+- **Sólo el marco es nuevo.** Cabecera de perfil y pestañas Plan, Cuenta y
+  Notificaciones; las secciones conservan marcado, textos y acciones.
+- **Los anclajes `#plan`, `#cuenta`, `#avisos` y `?openPlan=` siguen
+  aterrizando en su pestaña**: los enlazan correos ya enviados.
+- **Los paneles se ocultan, no se desmontan.**
+- **Sin dato, no se pinta**: foto, cargo, antigüedad de la contraseña y estado de
+  la verificación en dos pasos no existen hoy y no se simulan.
+
+## Cuenta y Notificaciones (F8d, log §371)
+
+- **Los campos y filas de Ajustes usan las clases `pf-*` del prototipo**, acotadas
+  a `.ins .sc-set`. No se reutilizan `SettingRow`/`Switch` antiguos aquí.
+- **La tarjeta de Plan es la del prototipo** (`pf-plan`, log §371 adenda); sin pastilla «Activo» ni «Cerrar sesión» en la cabecera.
+- **Un único «Guardar» en Cuenta** envía `saveAccount` con todos los campos; no se
+  parte en dos acciones sin aprobación.
+
+## Foto de perfil (F8e, log §372)
+
+- **La foto vive en el bucket privado `avatars` y su camino en
+  `profiles.avatar_path`** (migración 0046). Se lee sólo con URL firmada desde el
+  servidor y con tolerancia a que falte la columna; nunca se pone en
+  `user_metadata`.
+- **La RLS del bucket exige la carpeta propia** (`<id>/…`); no se escribe con
+  service role.
+
 ## Barra inferior móvil (MOBILE-TABBAR-1, log §380)
 
 - **Solo ≤760 px.** Escritorio conserva el menú lateral; no se añaden pestañas

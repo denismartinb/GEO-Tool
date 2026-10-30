@@ -1,0 +1,43 @@
+/* CONSOLE-INSTRUMENTO-1 F8b (log §367): prueba de Pro terminada. */
+.ins-shell .te-strip{color:inherit;text-decoration:none;cursor:pointer;display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--warm-tint);border-bottom:1px solid var(--warm-rule);font-size:13.5px}
+.ins-shell .te-strip .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warm)}
+.ins-shell .te-strip p{margin:0;flex:1;min-width:0;color:var(--ink-2)}
+.ins-shell .te-strip p b{color:var(--ink);font-weight:600}
+.ins-shell .te-card{margin:12px 12px 0;border:1px solid var(--warm-rule);background:var(--warm-tint);border-radius:16px;padding:14px;display:grid;gap:8px}
+.ins-shell .te-card b{font-size:13.5px}
+.ins-shell .te-card p{margin:0;font-size:12.5px;color:var(--ink-2)}
+.ins-shell .te-card .btn{justify-self:start}
+.ins-shell .te-dock{display:none}
+@media (max-width:760px){
+ .ins-shell .te-strip{padding:10px 16px;flex-wrap:wrap;gap:8px 12px;align-items:flex-start}
+ .ins-shell .te-strip p{flex:1 1 100%;order:2}
+ .ins-shell .te-strip .dot{margin-top:7px}
+ .ins-shell .te-card{display:none}
+ .ins-shell .te-dock{display:flex;position:fixed;left:0;right:0;bottom:calc(76px + env(safe-area-inset-bottom,0px));z-index:20;padding:12px 16px;gap:12px;align-items:center;background:linear-gradient(to top,var(--surface) 70%,transparent)}
+ .ins-shell .te-dock+.scroller{padding-bottom:84px}
+ .ins-shell .te-dock .t{flex:1;min-width:0;font-size:12.5px;color:var(--ink-3);line-height:1.3}
+ .ins-shell .te-dock .t b{display:block;color:var(--ink);font-size:13.5px}
+}
+.ins .te-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ins .te-box{border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:6px;align-content:start}
+.ins .te-box h5{margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.ins .te-box ul{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:13.5px}
+.ins .te-box li{display:flex;gap:8px;align-items:flex-start}
+.ins .te-box li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;margin-top:7px;background:var(--pos)}
+.ins .te-box.hold{background:var(--warm-tint);border-color:var(--warm-rule)}
+.ins .te-box.hold li::before{background:var(--warm)}
+.ins .te-plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.ins .te-plan{all:unset;box-sizing:border-box;cursor:pointer;border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:2px;text-align:left;background:var(--surface);min-width:0}
+.ins .te-plan:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.ins .te-plan.rec{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.ins .te-plan b{font-size:14px}
+.ins .te-plan .p{font-size:22px;font-weight:300;letter-spacing:-.03em}
+.ins .te-plan .p s{font-size:13px;color:var(--ink-4);margin-right:6px;letter-spacing:0}
+.ins .te-plan .p small{font-size:12px;color:var(--ink-3)}
+.ins .te-plan .n{font-size:12px;color:var(--ink-3)}
+@media (max-width:760px){
+ .ins .te-two{grid-template-columns:1fr}
+ .ins .te-plans{gap:8px}
+ .ins .te-acts{flex-direction:column-reverse}
+ .ins .te-acts .btn{justify-content:center;height:50px;width:100%;font-size:15px}
+}

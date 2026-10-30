@@ -1,10 +1,9 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Icon } from "@/components/ui/icon";
+import { Ic } from "@/components/ins/ic";
 import { getUsageSummary } from "@/lib/billing";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { PlanBillingSection } from "@/components/billing/plan-billing-section";
 import { CheckoutSuccessPoller } from "@/components/billing/checkout-success-poller";
-import { SUPPORT_EMAIL } from "@/lib/support";
+import { SUPPORT_EMAIL, supportMailto } from "@/lib/support";
 import type { Plan } from "@/app/pricing/plans-data";
 
 /**
@@ -65,18 +64,13 @@ export async function BillingContent({
         openPlanId={openPlanId}
       />
 
-      <Card>
-        <CardContent className="flex flex-col items-center gap-2 py-6 text-center">
-          <Icon name="mail" size={22} className="text-[var(--ink-3)]" />
-          <p className="sub">
-            ¿Tienes alguna incidencia o consulta? Escríbenos a{" "}
-            <a className="font-semibold text-[var(--accent)]" href={`mailto:${SUPPORT_EMAIL}`}>
-              {SUPPORT_EMAIL}
-            </a>{" "}
-            y te respondemos.
-          </p>
-        </CardContent>
-      </Card>
+      <section className="sec pf-support">
+        <p className="sub">¿Tienes alguna incidencia o consulta? Escríbenos y te respondemos.</p>
+        <a className="btn line" href={supportMailto()}>
+          <Ic n="c-mail" sm />
+          {SUPPORT_EMAIL}
+        </a>
+      </section>
     </div>
   );
 }

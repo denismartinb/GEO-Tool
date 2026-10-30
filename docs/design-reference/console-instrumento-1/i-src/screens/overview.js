@@ -39,7 +39,7 @@ SCREENS.overview={title:'Visión general',render(){const sc=U.scan;
    ${ticks(68,Math.floor(U.prog/2),{id:'scan-tk'})}
    <div class="s" id="scan-s">Puedes salir. Seguimos solos.</div></div>
  </section>`:''}
- <div class="alert" role="region" aria-label="Prioridad 1">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="audit">Arreglarlo${ic('arrowr','sm')}</button></div>
+ <div class="alert" role="region" aria-label="Prioridad 1">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="auditgeo">Arreglarlo${ic('arrowr','sm')}</button></div>
 
  <section class="sec" aria-label="Puntuación GEO"><div class="card agh agh-a ov-h">
   <span class="agh-tab">${ic('trend','sm')}Puntuación GEO</span>
@@ -83,6 +83,6 @@ SCREENS.overview={title:'Visión general',render(){const sc=U.scan;
     <div><div class="k">Salud SEO</div><div class="bv num">81<small>/100</small></div><div class="trio"><span><b class="num">0</b>Críticos</span><span><b class="num">2</b>Avisos</span><span><b class="num">3</b>Mejoras</span></div></div>
     <div><div class="k">${lg('google',13)}Google · 28 días</div><div class="bv num">1.284<small> clics</small></div><div class="trio"><span><b class="num">14,2</b>Puesto medio</span><span><b class="num">5</b>En página 2</span></div></div>
    </div>
-   <div class="fx-w"><div class="fx-k">Recomendaciones</div><a class="fixln" href="#audit" data-route="audit"><span class="sd" style="background:var(--ink-4)"></span>Un solo &lt;h1&gt; por página<span style="color:var(--ink-3);margin-left:6px">4 páginas</span>${ic('chevr','sm')}</a></div>
+   <div class="fx-w"><div class="fx-k">Recomendaciones</div><a class="fixln" href="#auditseo" data-route="auditseo"><span class="sd" style="background:var(--ink-4)"></span>Un solo &lt;h1&gt; por página<span style="color:var(--ink-3);margin-left:6px">4 páginas</span>${ic('chevr','sm')}</a></div>
    </div></div>
  </section>`}};

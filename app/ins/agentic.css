@@ -1,0 +1,36 @@
+/* Comercio agéntico, «Instrumento» (CONSOLE-INSTRUMENTO-1 F7, log §365).
+   New chrome on «Visibilidad en agentes» and «Auditoría agéntica»; their
+   blocks keep their markup and read the Instrumento tokens through the mapping. */
+.ins .sc-ag{
+ --line:var(--rule);--line-soft:var(--rule-2);--line-strong:var(--ink-4);
+ --surface-sunk:var(--surface-2);--av-track:var(--surface-3);
+ --accent:var(--blue);--accent-soft:var(--blue-tint);--accent-ink:var(--blue-ink);--accent-ring:var(--blue-soft);
+ --pos-ink:var(--pos);--pos-soft:var(--pos-tint);--neg-ink:var(--warm);--neg-soft:var(--warm-tint);
+ --warn:var(--warm);--warn-ink:var(--warm);--warn-soft:var(--warm-tint);
+ --brand-ink:var(--ink);--brand-ink-2:var(--ink-2);--brand-ink-3:var(--ink-3);--brand-ink-4:var(--ink-4);
+ --brand-blue:var(--blue);--brand-blue-soft:var(--blue-tint);--brand-neg:var(--warm);--brand-pos:var(--pos);
+ --sh-1:none;--brand-shadow-card:none;
+ font-family:var(--font);
+}
+.ins .sc-ag .ag-page{max-width:none;margin:0}
+.ins .sc-ag .ag-screen{margin-top:14px;gap:16px}
+.ins .sc-ag .ag-intro{font-size:17px;color:var(--ink-2);max-width:620px}
+.ins .sc-ag .ag-screen .card{padding:20px 22px;border-radius:20px}
+.ins .sc-ag .av-page{margin-top:0}
+.ins .sc-ag .av-ph h1{font:400 40px/1.1 var(--font);letter-spacing:-.03em;color:var(--ink)}
+.ins .sc-ag .av-ph p{font-size:17px;color:var(--ink-2)}
+.ins .sc-ag .av-box{border-radius:20px;box-shadow:none}
+@media (max-width:760px){
+ .ins .sc-ag .av-ph h1{font-size:32px}
+ .ins .sc-ag .ag-intro,.ins .sc-ag .av-ph p{font-size:15.5px}
+ .ins .sc-ag .ag-screen .card{padding:16px}
+}
+
+/* Component cards of the audit are legacy <button>s: the Instrumento button
+   reset (`.ins button{padding:0;border:0}`) out-ranks `.ag-comp`, so they lost
+   their padding and border. Re-state them here with the tokens (log §368). */
+.ins .ag-comp{font:inherit;font-size:12px;text-align:left;border:1px solid var(--rule);border-radius:12px;padding:12px 14px;background:var(--surface);color:var(--ink-2);cursor:pointer;transition:border-color var(--d1),background var(--d1)}
+.ins .ag-comp:hover{background:var(--surface-2)}
+.ins .ag-comp b{font-size:13.5px;font-weight:600;color:var(--ink)}
+.ins .ag-comp[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.ins .ag-comp:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
