@@ -108,3 +108,23 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   `<i>` para los dígitos y una regla `.mt i` los rompe.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
   gestión las llama y refresca.
+
+## Páginas citadas (F5c, log §362)
+
+- **«Te nombran» sigue siendo un hecho de la respuesta** (`.claude/rules/citations.md`):
+  la nota bajo el anillo no se quita ni se reescribe como afirmación sobre la página.
+- **Los porcentajes del anillo suman 100** (`percentShares`, mayor resto) y son
+  cuota de páginas distintas, no de citas.
+- **Una fuente alcanzable no exige competidor**; el competidor co-citado sólo
+  sale como aviso «sin verificar en la página».
+
+## Auditoría técnica (F6a, log §363)
+
+- **Los bloques son enlaces `?bloque=`**, no estado de cliente: URL, menú y
+  tarjeta resaltada coinciden. La línea «+N pt» enlaza a `#problemas` y las
+  pestañas lo escuchan.
+- **Cada cifra de la tarjeta sale de `buildAuditBlock`** (`lib/ins/audit-model.ts`
+  sólo da forma). Sin ganancia real no hay línea verde.
+- **Lo que no está en el prototipo pero es real se conserva** (cobertura,
+  generadores de llms.txt y sitemap, filas por página) y lee los tokens de
+  Instrumento desde `app/ins/audit.css`.

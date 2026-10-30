@@ -27633,3 +27633,63 @@ del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
 **Pendiente o roto conocido.** Los favicons muestran imagen rota sólo en el
 arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
 que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.
+
+## 362. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con la cuota de citas propias y el enlace a las fuentes alcanzables,
+tres cifras (respuestas con cita, citas totales, citas a tu web), el anillo
+«De dónde salen las citas» en cuatro grupos (Tuyas, Terceros que te nombran,
+Competidores, Otros terceros) que filtran la lista al pulsarlos, «Fuentes
+alcanzables» agrupadas por web con las preguntas donde la citan, y la tabla de
+todas las páginas con pestañas, búsqueda y «Ver más» (25 en 25).
+
+**Qué no cambia.** Consultas, `aggregateCitations`, `groupOpportunitiesByDomain`,
+RLS y esquema. Las reglas de `.claude/rules/citations.md` siguen: «te nombran»
+es un hecho de la respuesta, nunca de la página (nota visible bajo el anillo);
+«Fuentes alcanzables» no exige competidor co-citado, y el competidor sale sólo
+como aviso «sin verificar en la página». Modelo puro con tests:
+`lib/ins/citations-model.ts`. Los porcentajes del anillo son cuota de páginas
+distintas y suman siempre 100 (mayor resto).
+
+**Qué cambia respecto a la pantalla anterior.** Se retiran la barra de impacto
+(favorable/adverso), el donut por tipo de fuente y la fila desplegable por
+página con la evidencia de cada respuesta, porque el prototipo no los pinta; el
+tipo de fuente (Comparador, Comunidad, Medio...) sigue visible como etiqueta de
+cada fila. El desplegable de cada fuente alcanzable conserva las preguntas. No
+se pinta «Ver la recomendación» del prototipo: no hay vínculo real entre una
+fuente y una recomendación.
+
+**Retirado.** `citations-client.tsx`.
+
+**Pendiente o roto conocido.** Los favicons se verifican en el preview (en el
+arnés sin red salen rotos). Si el fundador echa de menos la evidencia por
+página, se vuelve a ofrecer en la hoja lateral compartida, en una fase aparte.
+
+## §363 · CONSOLE-INSTRUMENTO-1 F6a: Auditoría técnica pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla `/web-audit` adopta el aspecto del prototipo
+aprobado (v51, `i-src/screens/audit.js|css`): cabecera con eyebrow, título y
+frase, dos tarjetas de bloque (Auditoría GEO y Auditoría SEO) con la nota en un
+arco de 270 grados y un «fantasma» hasta lo que se alcanza arreglando lo que
+puntúa, línea verde «+N pt si arreglas…» que lleva a `#problemas`, y pestañas
+Problemas, Correcto y Páginas con su recuento en el control segmentado del kit.
+El arco se anima con CSS puro. Los bloques siguen siendo enlaces
+`?bloque=geo|seo`.
+
+**Qué no cambia.** `buildAuditBlock`, los pesos, la Puntuación GEO, la nota
+«Tu Puntuación GEO usa la Salud técnica», la cobertura (mapa de temas), los
+generadores de llms.txt y sitemap, el acceso de bots, la velocidad (Core Web
+Vitals) y las filas por página. Consultas, acciones, RLS y esquema, intactos.
+
+**Decisión de alcance (a revisar por el fundador).** El prototipo no pinta la
+sección de cobertura, los generadores ni las correcciones por página, pero son
+funcionalidad real. Se conservan con su marcado y se leen con los tokens de
+Instrumento mediante ajustes en `app/ins/audit.css`; no se reconstruyen fila a
+fila como el prototipo. Se retiran `BlockSwitch` y `BlockPotentialBanner`
+(su cifra pasa a la tarjeta de bloque, su nota a una línea bajo las tarjetas) y
+los contadores por gravedad de la tarjeta Problemas (el recuento vive en la
+tarjeta de bloque).
+
+**Pendiente.** Reconstruir cobertura, bots y velocidad con los componentes
+nuevos si el fundador quiere fidelidad total; F6b Posición en Google.
