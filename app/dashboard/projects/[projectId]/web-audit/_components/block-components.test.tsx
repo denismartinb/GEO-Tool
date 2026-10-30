@@ -50,7 +50,7 @@ function view(overrides: Partial<AuditBlockView> = {}): AuditBlockView {
 
 describe("InsBlockHero", () => {
   it("shows the open block's score and counts its critical problems", () => {
-    const html = renderToStaticMarkup(<InsBlockHero projectId="p1" view={view()} />);
+    const html = renderToStaticMarkup(<InsBlockHero view={view()} />);
     expect(html).toContain('aria-label="55"');
     expect(html).toContain("Nota GEO");
     expect(html).toContain("2 críticos");
@@ -58,7 +58,7 @@ describe("InsBlockHero", () => {
   });
 
   it("has no block selector: the menu picks the block", () => {
-    const html = renderToStaticMarkup(<InsBlockHero projectId="p1" view={view({ key: "seo", score: 76, issues: [] })} />);
+    const html = renderToStaticMarkup(<InsBlockHero view={view({ key: "seo", score: 76, issues: [] })} />);
     expect(html).toContain("Salud SEO");
     expect(html).toContain("Sin problemas");
     expect(html).not.toContain("aria-current");
@@ -66,31 +66,33 @@ describe("InsBlockHero", () => {
   });
 
   it("draws a dash, not a zero, for a block with nothing measured", () => {
-    const html = renderToStaticMarkup(<InsBlockHero projectId="p1" view={view({ score: null })} />);
+    const html = renderToStaticMarkup(<InsBlockHero view={view({ score: null })} />);
     expect(html).toContain(">—<");
   });
 });
 
 describe("InsBlockHero potential line", () => {
-  it("prints the real gain and the scored count, linked to its own block", () => {
+  it("prints the real gain and the scored count, as information (no link)", () => {
     const html = renderToStaticMarkup(
-      <InsBlockHero projectId="p1" view={view({ key: "seo", score: 76, projectedScore: 100, scoredIssueCount: 3 })} />
+      <InsBlockHero view={view({ key: "seo", score: 76, projectedScore: 100, scoredIssueCount: 3 })} />
     );
-    expect(html).toContain("+24 pt");
+    expect(html).toContain("+24</b>");
+    expect(html).toContain("<i>pt</i>");
     expect(html).toContain("los 3 problemas que puntúan");
-    expect(html).toContain('href="/dashboard/projects/p1/web-audit?bloque=seo#problemas"');
+    expect(html).toContain('class="gain"');
+    expect(html).not.toContain("<a ");
     expect(BLOCK_NOTES.seo).toContain("Lo que Google necesita");
   });
 
   it("uses the singular for one problem and draws no line when nothing is gained", () => {
     const one = renderToStaticMarkup(
-      <InsBlockHero projectId="p1" view={view({ score: 90, projectedScore: 100, scoredIssueCount: 1 })} />
+      <InsBlockHero view={view({ score: 90, projectedScore: 100, scoredIssueCount: 1 })} />
     );
     expect(one).toContain("el problema que puntúa");
     const none = renderToStaticMarkup(
-      <InsBlockHero projectId="p1" view={view({ score: 100, projectedScore: 100, scoredIssueCount: 0 })} />
+      <InsBlockHero view={view({ score: 100, projectedScore: 100, scoredIssueCount: 0 })} />
     );
-    expect(none).not.toContain("class=\"pot\"");
+    expect(none).not.toContain("class=\"gain\"");
   });
 });
 

@@ -129,17 +129,28 @@
 .ins .sc-au-hero{display:flex;align-items:center;gap:24px;margin-top:24px;padding:16px 22px}
 .ins .sc-au-hero .sc-au-arc .n{padding-top:32px}
 .ins .sc-au-hero .sc-au-arc .n b{font-size:34px}
+.ins .sc-au-hero .sc-au-arc .n.w3{padding-top:36px}
+.ins .sc-au-hero .sc-au-arc .n.w3 b{font-size:27px;letter-spacing:-.06em}
+.ins .sc-au-hero .sc-au-arc .n.w3 small{font-size:10.5px}
 .ins .sc-au-hero .rt{display:flex;flex-direction:column;gap:4px;min-width:0}
 .ins .sc-au-hero .lb{font-size:12.5px;color:var(--ink-3)}
 .ins .sc-au-hero .mt{font-size:14px;color:var(--ink-2)}
 .ins .sc-au-hero .mt>b{color:var(--warm);font-weight:600}
 .ins .sc-au-hero .to{font-size:13.5px;color:var(--ink-3)}
 .ins .sc-au-hero .to b{color:var(--pos);font-weight:650;font-size:15px}
-.ins .sc-au-hero .pot{display:flex;align-items:center;gap:8px;margin-left:auto;padding:0 14px;height:40px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:13.5px;font-weight:550;text-decoration:none;white-space:nowrap}
-.ins .sc-au-hero .pot b{font-weight:700}
-.ins .sc-au-hero .pot:hover{filter:brightness(.97)}
+.ins .sc-au-hero .gain{margin-left:auto;align-self:stretch;display:flex;align-items:center;gap:12px;padding-left:24px;border-left:1px solid var(--rule-2);color:var(--pos)}
+.ins .sc-au-hero .gain>b{font-size:38px;font-weight:300;letter-spacing:-.04em;line-height:1}
+.ins .sc-au-hero .gain>span{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.3;color:var(--ink-3);max-width:150px}
+.ins .sc-au-hero .gain i{font-style:normal;font-size:13px;font-weight:650;color:var(--pos)}
 @media (max-width:760px){
 .ins .sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}
-.ins .sc-au-hero .pot{margin-left:0;width:100%;height:36px;font-size:13px}
-.ins .sc-au-hero .pot .i:last-child{margin-left:auto}
+.ins .sc-au-hero .gain{margin-left:0;width:100%;padding:12px 0 0;border-left:0;border-top:1px solid var(--rule-2)}
+.ins .sc-au-hero .gain>span{max-width:none}
 }
+
+/* Historial de comprobaciones: plegado hasta que se pide */
+.ins .cov-hist-d>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:0}
+.ins .cov-hist-d>summary::-webkit-details-marker{display:none}
+.ins .cov-hist-d>summary::after{content:"";width:8px;height:8px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:rotate(45deg);transition:transform var(--d2) var(--std);margin-right:4px}
+.ins .cov-hist-d[open]>summary{margin-bottom:10px}
+.ins .cov-hist-d[open]>summary::after{transform:rotate(-135deg)}
