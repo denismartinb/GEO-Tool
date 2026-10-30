@@ -17,6 +17,8 @@ import "@/app/ins/citations.css";
 import "@/app/ins/prompts.css";
 import "@/app/ins/audit.css";
 import "@/app/ins/google.css";
+import "@/app/ins/agentic.css";
+import "@/app/ins/agents.css";
 import { cookies } from "next/headers";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";

@@ -27716,3 +27716,54 @@ Google, así que queda como fase aparte con datos de ejemplo en el arnés.
 **Pendiente o roto conocido.** Verificar en el preview con una cuenta conectada
 que ninguna tarjeta antigua se ve rota con los tokens nuevos. Reconstruir el
 Resumen y el seguimiento sobre el prototipo si el fundador lo pide.
+
+## §365 · CONSOLE-INSTRUMENTO-1 F7: Comercio agéntico pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** «Visibilidad en agentes» y «Auditoría agéntica» adoptan el
+marco de Instrumento (eyebrow con el dominio, título y frase grandes) y sus
+bloques leen los tokens nuevos desde `app/ins/agentic.css`. Mismo criterio de
+recorte que F6a y F6b (§363, §364): se renueva el marco y se conserva el
+marcado de cada bloque.
+
+**Qué no cambia.** El motor sin LLM, la selección de ficha, los cupos, las
+puertas por plan (Pro y Agencia), la tarjeta de Visión general, las acciones y
+todo lo que fija `.claude/rules/agentic-audit.md`.
+
+**No se hizo.** Rehacer el anillo, el camino del agente y las cinco tarjetas de
+componente sobre `agaudit.js` y `agents.js` del prototipo. Requiere datos de
+ejemplo en el arnés y se propone como fase aparte.
+
+**Pendiente.** Revisar en el preview con un proyecto con auditoría hecha.
+
+## §370 · CONSOLE-INSTRUMENTO-1: «Visibilidad en agentes» se rehace sobre el prototipo (2026-10-30)
+
+**Qué se decidió.** En F7 (§365) sólo se cambió el marco de esta pantalla y el
+fundador lo vio: «todavía tiene el diseño antiguo». Se reconstruye sobre
+`i-src/screens/agents.js`: el «Cuadro claro» (dial grande con la nota, cuatro
+diales pequeños, un testigo por componente y el titular con «Ver la
+auditoría») y las dos tarjetas de abajo, «Preguntas de compra» (una fila por
+motor con tres barras finas) y «Qué hacer primero». Estados: con tienda,
+«No hemos encontrado qué vendes en tu web» y Starter con invitación a Pro.
+
+**Cómo.** `components/ins/agents/visibility-cluster.tsx` sólo dibuja: la página
+le pasa nota, objetivo (`fixbarLine`), diales y testigos ya calculados desde la
+última auditoría guardada (`componentStatus`, `componentLine`, `interopLine`).
+La ignición (aguja, testigos) suena una vez por visita y es ambiente; con
+movimiento reducido queda en el estado final. Estilos en `app/ins/agents.css`,
+portados del CSS del prototipo con prefijo `.ins`.
+
+**Lo que NO se hace.** El prototipo trae «Marcar como hecho» en «Qué hacer
+primero»: el producto no lo tiene (Fase 2c sin aprobar), así que no se pinta.
+Sin cifras inventadas: el objetivo del dial sólo sale si `fixbarLine` lo
+calcula. Se retira el «camino de un agente» y las cinco tarjetas de componente
+de la versión anterior: los diales y testigos los sustituyen y enlazan a la
+misma auditoría por componente (`?componente=`).
+
+**Premisa de retirada de camino.** Se retiran las tarjetas de componente como
+entrada a la auditoría; la premisa es que los diales y testigos enlazan a
+`?componente=<id>`. Si esa query dejara de abrir el componente, esta pantalla
+quedaría sin entrada por componente (queda «Ver la auditoría»).
+
+**Pendiente.** Comparar con el prototipo en 375, 768 y 1280 px con datos
+reales; el hueco de «Interoperabilidad» usa el icono de enlace porque el
+sprite no trae el de enchufe.
