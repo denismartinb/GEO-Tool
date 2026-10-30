@@ -170,7 +170,7 @@ export function SeoDiscover(props: {
 
   const quota = (other: string) => (
     <p className="skw-quota">
-      Te quedan {left} de {LIMIT} búsquedas hoy, compartidas con «{other}». Búsquedas al mes: datos de Google Search.
+      Te quedan {left} de {LIMIT} búsquedas hoy, compartidas con «{other}». Búsquedas al mes: Datos de Google Search.
     </p>
   );
 
