@@ -1,0 +1,27 @@
+/* Posición en Google, «Instrumento» (CONSOLE-INSTRUMENTO-1 F6b, log §364).
+   New chrome (header, lead); the Search Console and tracking blocks keep their
+   markup and read the Instrumento tokens through the mapping below. */
+.ins .sc-gsc{
+ --line:var(--rule);--line-soft:var(--rule-2);--line-strong:var(--ink-4);
+ --surface-sunk:var(--surface-2);
+ --accent:var(--blue);--accent-soft:var(--blue-tint);--accent-ink:var(--blue-ink);--accent-ring:var(--blue-soft);
+ --pos-ink:var(--pos);--pos-soft:var(--pos-tint);--neg-ink:var(--warm);--neg-soft:var(--warm-tint);
+ --warn:var(--warm);--warn-ink:var(--warm);--warn-soft:var(--warm-tint);
+ --brand-ink:var(--ink);--brand-ink-2:var(--ink-2);--brand-ink-3:var(--ink-3);--brand-ink-4:var(--ink-4);
+ --brand-blue:var(--blue);--brand-blue-soft:var(--blue-tint);--brand-neg:var(--warm);--brand-pos:var(--pos);
+ --brand-shadow-card:none;
+ font-family:var(--font);
+}
+.ins .sc-gsc .gsc-page{max-width:none;margin:0}
+.ins .sc-gsc .gsc-screen{margin-top:20px;gap:16px}
+.ins .sc-gsc .gsc-screen .card{padding:20px 22px;border-radius:20px}
+.ins .sc-gsc .sa-ch h3{font:600 17px var(--font);letter-spacing:-.01em;color:var(--ink)}
+.ins .sc-gsc .btn.gsc-on{display:inline-flex;align-items:center;gap:8px;cursor:default}
+@media (max-width:760px){
+ .ins .sc-gsc .pr-hd{flex-direction:column;align-items:flex-start;gap:12px}
+ .ins .sc-gsc .gsc-screen .card{padding:16px}
+}
+/* `.ins button` resets padding, border and colour, and out-ranks the legacy
+   `.gsc-st` pill, so the section tabs lost their padding (founder screenshot). */
+.ins .sc-gsc .gsc-st{padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.ins .sc-gsc .gsc-st.gsc-st-on{border-color:var(--ink);background:var(--ink);color:var(--surface)}

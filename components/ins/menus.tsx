@@ -5,7 +5,7 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import { requestDemoCall } from "@/app/demo/actions";
 import { Ic } from "@/components/ins/ic";
 import { useLayer, XoClose } from "@/components/ins/layer";
-import { initialsOf, planLabel, useShellData } from "@/components/ins/shell-context";
+import { avatarStyle, initialsOf, planLabel, useShellData } from "@/components/ins/shell-context";
 import { useToast } from "@/components/ins/toasts";
 import { SignOutForm } from "@/components/session-cache-sync";
 import { useTour } from "@/components/tour-provider";
@@ -70,8 +70,8 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
   return (
     <>
       <div className="xo-who">
-        <span className="av" style={{ width: 40, height: 40, fontSize: 14 }} aria-hidden="true">
-          {initialsOf(d.userEmail)}
+        <span className={`av${d.avatarUrl ? " xo-avimg" : ""}`} style={{ width: 40, height: 40, fontSize: 14, ...avatarStyle(d.avatarUrl) }} aria-hidden="true">
+          {d.avatarUrl ? null : initialsOf(d.userEmail)}
         </span>
         <span>
           <b>{d.userEmail}</b>

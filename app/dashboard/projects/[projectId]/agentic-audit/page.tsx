@@ -1,3 +1,4 @@
+import { Motion } from "@/components/ins/kit/motion";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
@@ -84,22 +85,13 @@ export default async function AgenticAuditPage({
   const remaining = audits.available ? Math.max(0, AGENTIC_REVIEW_DAILY_LIMIT - audits.usedToday) : 0;
 
   return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Auditoría agéntica</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
-            </div>
-          </div>
+    <div className="ins">
+      <Motion id={`agentic-audit:${projectId}`}>
+      <div className="page sc-ag">
+        <div className="eyebrow bare">
+          Auditoría agéntica · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
         </div>
-      </div>
+        <h1 style={{ marginTop: 14 }}>Auditoría agéntica</h1>
 
       <div className="ag-page">
         <div className="ag-screen">
@@ -140,6 +132,8 @@ export default async function AgenticAuditPage({
           )}
         </div>
       </div>
+      </div>
+      </Motion>
     </div>
   );
 }

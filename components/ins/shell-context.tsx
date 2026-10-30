@@ -23,12 +23,25 @@ export type ShellData = {
   latestScoreByProject: Record<string, number | null>;
   latestScanDateByProject: Record<string, string | null>;
   userEmail: string;
+  /** URL firmada de la foto de perfil, o null (iniciales). */
+  avatarUrl: string | null;
   planId: string;
   planName: string;
   planProjectCap: number;
   /** `true` mientras la cuenta está en la prueba de Pro. */
   onTrial: boolean;
+  /** Planes que se ofrecen a una cuenta sin plan (`free`); vacío en el resto. */
+  trialEndedOffers: TrialEndedOffer[];
   signOutAction: () => Promise<void>;
+};
+
+export type TrialEndedOffer = {
+  id: string;
+  name: string;
+  price: number;
+  /** Precio fundador, sólo si el cupón de Stripe sigue activo con plazas. */
+  promoPrice: number | null;
+  note: string;
 };
 
 const ShellDataCtx = createContext<ShellData | null>(null);
@@ -68,4 +81,9 @@ export function planLabel(d: Pick<ShellData, "planId" | "planName" | "onTrial">)
 /** Texto de dos letras del avatar. */
 export function initialsOf(email: string): string {
   return email.slice(0, 2).toUpperCase();
+}
+
+/** Estilo de un `.av` con foto: la imagen de fondo, sin iniciales visibles. */
+export function avatarStyle(url: string | null): { backgroundImage: string } | undefined {
+  return url ? { backgroundImage: `url("${url}")` } : undefined;
 }

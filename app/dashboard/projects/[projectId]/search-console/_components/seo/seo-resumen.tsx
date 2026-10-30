@@ -63,7 +63,7 @@ function LinkStrip({ data, ownDomain, onRivals }: { data: ReadyData; ownDomain: 
         ))}
       </div>
       <p className="sa-note" style={{ marginTop: 10, marginBottom: 0 }}>
-        Webs distintas que enlazan a cada dominio, según DataForSEO. Se actualiza una vez al mes.
+        Webs distintas que enlazan a cada dominio.
       </p>
     </div>
   );

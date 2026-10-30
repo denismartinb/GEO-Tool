@@ -88,7 +88,7 @@ function rerenderLater(){const b=$('#laterb');if(!b)return;
 SCREENS.recs={title:'Recomendaciones',render(){const open=ALLRECS.filter(r=>!U.done[r.id]).length;
  return `<div class="eyebrow bare">Recomendaciones · <span class="mono" style="letter-spacing:0;text-transform:none">nubaria.es</span><span class="badge b-line" style="letter-spacing:0;text-transform:none">${open} acciones</span></div>
  <h1 style="margin-top:14px">Recomendaciones</h1><p class="lead">Cuatro para esta semana. El resto, ordenado por palanca.</p>
- <div class="alert" role="region" aria-label="Bloqueo">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="audit">Arreglarlo</button></div>
+ <div class="alert" role="region" aria-label="Bloqueo">${ic('warn')}<div class="tx"><b>Perplexity no puede leer tu web.</b> Tu robots.txt lo bloquea.</div><button class="btn warm sm" data-route="auditgeo">Arreglarlo</button></div>
  <div class="pillars">${[['Presencia',41],['Prominencia',66],['Cuota de voz',34],['Autoridad',18]].map(([l,v],i)=>`<div><div class="l">${l}</div><b class="num">${roll(v)}</b>${bar(v,{cls:'thin '+(v<25?'warm':''),delay:i*80})}</div>`).join('')}</div>
  <button class="wins" data-act="wins">${ic('checkc','sm')}3 resueltas hace poco${ic('arrowr','sm')}</button>
  <div class="focus-h"><h2>Tu plan de esta semana. <b>Hasta +14 pt</b></h2><div class="ctl"><span style="font-size:12.5px;color:var(--ink-3)">← →</span><button class="navb" data-step="-1" aria-label="Acción anterior">${ic('chevl')}</button><button class="navb" data-step="1" aria-label="Acción siguiente">${ic('chevr')}</button></div></div>

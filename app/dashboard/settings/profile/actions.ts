@@ -2,6 +2,8 @@
 
 import { z } from "zod";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { AVATAR_BUCKET, AVATAR_MAX_BYTES, AVATAR_MIME, avatarObjectPath } from "@/lib/settings/avatar";
 import { requireUser } from "@/lib/auth";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getStripeClient } from "@/lib/stripe";
@@ -162,4 +164,41 @@ export async function deleteAccount(confirmationEmail: string): Promise<DeleteAc
   await sendAccountDeletedEmail(accountEmail);
   await supabase.auth.signOut();
   redirect("/login?deleted=1");
+}
+
+export type AvatarResult = { success: true } | { success: false; error: string };
+
+/**
+ * Sube la foto de perfil. El navegador ya la reduce a un JPEG cuadrado; aquí se
+ * vuelve a comprobar tipo y tamaño, y se escribe con el cliente del usuario:
+ * la RLS del bucket (migración 0046) sólo deja tocar `<su id>/…`.
+ */
+export async function uploadAvatar(formData: FormData): Promise<AvatarResult> {
+  const file = formData.get("file");
+  if (!(file instanceof File)) return { success: false, error: "No se ha recibido ninguna imagen." };
+  if (file.type !== AVATAR_MIME) return { success: false, error: "La imagen debe ser un JPEG." };
+  if (file.size === 0 || file.size > AVATAR_MAX_BYTES) {
+    return { success: false, error: "La imagen es demasiado grande." };
+  }
+
+  const { supabase, user } = await requireUser();
+  const path = avatarObjectPath(user.id);
+  const upload = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, file, { contentType: AVATAR_MIME, upsert: true });
+  if (upload.error) return { success: false, error: "No se pudo subir la foto. Inténtalo de nuevo." };
+
+  const { error } = await supabase.from("profiles").update({ avatar_path: path }).eq("id", user.id);
+  if (error) return { success: false, error: "No se pudo guardar la foto. Inténtalo de nuevo." };
+  revalidatePath("/dashboard", "layout");
+  return { success: true };
+}
+
+export async function removeAvatar(): Promise<AvatarResult> {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase.from("profiles").update({ avatar_path: null }).eq("id", user.id);
+  if (error) return { success: false, error: "No se pudo quitar la foto. Inténtalo de nuevo." };
+  await supabase.storage.from(AVATAR_BUCKET).remove([avatarObjectPath(user.id)]);
+  revalidatePath("/dashboard", "layout");
+  return { success: true };
 }

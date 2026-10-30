@@ -1,6 +1,7 @@
 // PRELAUNCH-HARDENING-1 Fase V (V5). Las hojas que sólo pinta la consola
 // entran por aquí, no por `globals.css`: así no viajan a /blog ni a la
 // landing. Ver la cabecera de `app/console.css` para qué se movió y qué no.
+import { readAvatarUrl } from "@/lib/settings/avatar";
 import "@/app/console.css";
 import "@/app/ins/tokens.css";
 import "@/app/ins/components.css";
@@ -11,7 +12,20 @@ import "@/app/ins/overview.css";
 import "@/app/ins/mission.css";
 import "@/app/ins/newdomain.css";
 import "@/app/ins/recs.css";
+import "@/app/ins/sheet.css";
+import "@/app/ins/competitors.css";
+import "@/app/ins/citations.css";
+import "@/app/ins/prompts.css";
+import "@/app/ins/audit.css";
+import "@/app/ins/google.css";
+import "@/app/ins/agentic.css";
+import "@/app/ins/settings.css";
+import "@/app/ins/agents.css";
+import "@/app/ins/errors.css";
+import "@/app/ins/trial-ended.css";
 import { cookies } from "next/headers";
+import { SELLABLE_PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";
+import { getActivePromoPlanIds } from "@/lib/stripe";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
@@ -82,6 +96,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .select("onboarding_tour_seen_at")
     .eq("id", user.id)
     .maybeSingle();
+  const avatarUrl = await readAvatarUrl(supabase, user.id);
   const hasSeenTour = tourFlagError ? true : tourFlagRow?.onboarding_tour_seen_at != null;
 
   // DOMAINS-OVERAGE-GATE-1 (founder-approved Task Intake): every account is
@@ -94,6 +109,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // query) — see lib/billing.ts.
   const role = await getAccountRole();
   const overage = role === "admin" ? await getDomainOverage() : null;
+
+  // CONSOLE-INSTRUMENTO-1 F8b (log §367): what an account with no plan is
+  // offered. The founder price is only quoted when the real Stripe coupon is
+  // active with slots left (same gate as Ajustes and /precios).
+  const trialEndedOffers =
+    plan.id === "free"
+      ? await (async () => {
+          const promoPlanIds = await getActivePromoPlanIds();
+          return SELLABLE_PLANS.filter((p) => p.id === "starter" || p.id === "pro").map((p) => ({
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            promoPrice: resolveShownPromoPrice({ plan: p, promoPlanIds })?.price ?? null,
+            note: `${p.meter.engines} motores`
+          }));
+        })()
+      : [];
 
   return (
     <>
@@ -139,10 +171,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
             latestScoreByProject,
             latestScanDateByProject,
             userEmail: user.email ?? "",
+            avatarUrl,
             planId: plan.id,
             planName: plan.name,
             planProjectCap: plan.caps.projects,
             onTrial: accountNotice?.kind === "trial",
+            trialEndedOffers,
             signOutAction: signOut
           }}
           notifications={notifications}

@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Icon } from "@/components/ui/icon";
 import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { ScanInProgress } from "@/components/scan-in-progress";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
-import { ScanStatePill } from "@/components/scan-state-pill";
-import { CitationsClient } from "./citations-client";
+import { Ic } from "@/components/ins/ic";
+import { Motion } from "@/components/ins/kit/motion";
+import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
+import { InsCitations } from "@/components/ins/citations/ins-citations";
+import { getLLMScanProviders } from "@/lib/scan/providers";
+import { buildOrigins, toPageItems, toReachItems } from "@/lib/ins/citations-model";
 import {
   aggregateCitations,
   compareOpportunityRows,
@@ -108,7 +110,7 @@ export default async function CitationsPage({
     .map((c) => ({ name: c.name, domain: normalizeDomain(c.domain ?? "") }))
     .filter((c) => c.domain.length > 0);
 
-  const { citationRows, hasStructuredCitations, impactBreakdown, sourceTypeBreakdown } =
+  const { citationRows, hasStructuredCitations, impactBreakdown } =
     aggregateCitations({
       rows: (results ?? []) as CitationInputRow[],
       projectDomain: project.domain ?? "",
@@ -116,9 +118,7 @@ export default async function CitationsPage({
       promptCategoryMap
     });
 
-  const totalUrls = citationRows.length;
   const totalCited = citationRows.reduce((sum, r) => sum + r.cited, 0);
-  const yours = citationRows.filter((r) => r.category === "brand").length;
   // Only neutral/third-party domains are actionable outreach targets.
   // Competitor domains (already tracked in project_competitors) are excluded:
   // a brand will never earn a citation on a rival's own site. Unresolved
@@ -156,101 +156,61 @@ export default async function CitationsPage({
   const citationRateAnyDomain =
     typeof scoreDetails.citation_score_any_domain === "number" ? scoreDetails.citation_score_any_domain : null;
 
-  const lastScanDate = latestRun
-    ? new Date(latestRun.finished_at ?? latestRun.created_at).toLocaleDateString("es-ES", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Europe/Madrid"
-      })
-    : null;
-
-  // Mirrors the FirstScanTakeover condition below — hidden while the mission
-  // takeover owns the screen, so the rocket animation reads as full screen
-  // instead of sitting under a second chrome band (founder, 2026-08-25).
+  // Mirrors the FirstScanTakeover condition: the mission owns the whole screen
+  // (ANIMATION-PARITY-1, log §168), hanging directly off `.page.mrk-fill`.
   const showMissionTakeover = Boolean(activeRun) && !latestRun;
-
-  return (
-    <div className={`page fade-in${showMissionTakeover ? " mrk-fill" : ""}`}>
-      {/* Sticky header. HEADER-FULL-WIDTH-1 (2026-08-25): esta pantalla se
-          había quedado con un layout de una sola línea (kicker + separador +
-          dominio) de antes de que el resto de la consola convergiera en
-          kicker arriba / nombre+badge de dominio abajo — Visión general,
-          Prompts, Competidores, Recomendaciones, Auditoría web y Debug ya lo
-          usan (Recomendaciones incluso dice explícitamente "alineada con...
-          Páginas citadas", que nunca lo estuvo). Resultado: aquí la banda
-          salía más baja que en el resto y con una tipografía distinta
-          (fundador, 2026-08-25). Mismo patrón, letra por letra. Se oculta
-          mientras la misión del primer escaneo ocupa la pantalla entera. */}
-      {!showMissionTakeover && (
-        <div className="ov-sticky-header">
-          <div className="ov-sticky-left">
-            <div>
-              <p className="kicker" style={{ marginBottom: 2 }}>Páginas citadas</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                  {project.name}
-                </span>
-                <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                  {project.domain}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="ov-sticky-right">
-            <ScanStatePill activeRun={activeRun} lastScanLabel={lastScanDate} />
-          </div>
-        </div>
-      )}
-
-      {activeRun && showMissionTakeover ? (
+  if (activeRun && showMissionTakeover) {
+    return (
+      <div className="page mrk-fill">
         <FirstScanTakeover projectId={projectId} activeRun={activeRun} domain={project.domain} />
-      ) : !latestRun ? (
-        <div className="section-empty" style={{ marginTop: 20 }}>
-          <div className="section-empty-title">Todavía no hay datos de citas</div>
-          <div className="section-empty-desc">
-            Las páginas que cita la IA al responder tus prompts aparecerán aquí después de
-            completar el primer escaneo con Gemini.
-          </div>
-          <Link
-            href={`/dashboard/projects/${projectId}`}
-            className="btn btn-ghost btn-sm"
-            style={{ marginTop: 14, display: "inline-flex" }}
-          >
-            Volver a visión general
-            <Icon name="arrRight" size={14} />
-          </Link>
+      </div>
+    );
+  }
+
+  /* «Instrumento» (CONSOLE-INSTRUMENTO-1 F5c, log §375): every figure was
+     already computed above; this only shapes it for the new screen. */
+  return (
+    <div className="ins">
+      <Motion id={`citations:${projectId}`}>
+        <div className="page sc-cit-page">
+          {activeRun ? (
+            <LiveScanCard projectId={projectId} initial={activeRun} providers={getLLMScanProviders()} />
+          ) : null}
+          {!latestRun ? (
+            <div className="empty-s">
+              <b>Todavía no hay datos de citas</b>
+              <p>
+                Las páginas que cita la IA al responder tus prompts aparecerán aquí después de completar el primer
+                escaneo.
+              </p>
+              <Link href={`/dashboard/projects/${projectId}`} className="btn line sm">
+                Ir a visión general <Ic n="chevr" sm />
+              </Link>
+            </div>
+          ) : !hasStructuredCitations ? (
+            // TRUST-METRICS-1: no link to /runs/[runId]; that route is only reachable from /debug.
+            <div className="empty-s">
+              <b>Este escaneo respondió sin citar fuentes</b>
+              <p>
+                No es un fallo: una IA no siempre busca en la web para responder. Cuando contesta desde lo que ya
+                sabe (sin consultar el buscador), no hay ninguna URL que citar. Vuelve a comprobarlo tras el próximo
+                escaneo.
+              </p>
+            </div>
+          ) : (
+            <InsCitations
+              projectId={projectId}
+              domain={project.domain}
+              answersWithCitation={citationRateAnyDomain}
+              totalCited={totalCited}
+              ownCited={impactBreakdown.own}
+              pages={toPageItems(citationRows)}
+              origins={buildOrigins(citationRows, project.domain)}
+              reach={toReachItems(opportunityGroups)}
+            />
+          )}
         </div>
-      ) : !hasStructuredCitations ? (
-        // TRUST-METRICS-1 (docs/external-audit-2026-08.md, Fase 1): this used
-        // to link to `/runs/${latestRun.id}` ("Ver detalle del escaneo"). The
-        // founder retired /runs/[runId] from the end-user console entirely —
-        // one GEO score everywhere means a screen that by definition talks
-        // about a single run cannot also exist for users to browse. The route
-        // itself is untouched and stays reachable from /debug, which already
-        // links every row by its date; this empty state just stops sending
-        // users somewhere the product no longer wants them to go.
-        <div className="section-empty" style={{ marginTop: 20 }}>
-          <div className="section-empty-title">Este escaneo respondió sin citar fuentes</div>
-          <div className="section-empty-desc">
-            No es un fallo: una IA no siempre busca en la web para responder. Cuando contesta desde
-            lo que ya sabe (sin consultar el buscador), no hay ninguna URL que citar. Vuelve a
-            comprobarlo tras el próximo escaneo.
-          </div>
-        </div>
-      ) : (
-        <CitationsClient
-          citationRows={citationRows}
-          opportunityGroups={opportunityGroups}
-          impactBreakdown={impactBreakdown}
-          sourceTypeBreakdown={sourceTypeBreakdown}
-          totalUrls={totalUrls}
-          totalCited={totalCited}
-          yours={yours}
-          citationRateAnyDomain={citationRateAnyDomain}
-          brandLabel={project.brand}
-        />
-      )}
+      </Motion>
     </div>
   );
 }

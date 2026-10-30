@@ -7,7 +7,7 @@ import { useLayer } from "@/components/ins/layer";
 import { AffiliateDialog, DemoDialog } from "@/components/ins/menus";
 import { useShellData } from "@/components/ins/shell-context";
 import { useTour } from "@/components/tour-provider";
-import { INS_NAV_FLAT } from "@/lib/ins/nav";
+import { INS_NAV_FLAT, navHref } from "@/lib/ins/nav";
 
 /* Barra de comandos ⌘K / Ctrl+K (`cmdk` del prototipo v51). */
 
@@ -52,7 +52,7 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
     const pid = d.project?.id;
     if (pid) {
       for (const n of INS_NAV_FLAT) {
-        list.push({ group: "Pantallas", label: n.label, icon: n.icon, run: () => router.push(`/dashboard/projects/${pid}${n.segment}`) });
+        list.push({ group: "Pantallas", label: n.label, icon: n.icon, run: () => router.push(navHref(pid, n)) });
       }
       list.push({ group: "Acciones", label: "Descargar informe", icon: "download", run: () => window.open(`/informe/${pid}`, "_blank", "noopener") });
     }

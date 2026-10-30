@@ -1,0 +1,160 @@
+/* Auditoría técnica, «Instrumento» (CONSOLE-INSTRUMENTO-1 F6a, log §363). Port of the approved prototype, scoped under .ins. */
+.ins .sc-au-arc{position:relative;flex:none;display:block}
+.ins .sc-au-arc svg{width:100%;height:100%;display:block}
+.ins .sc-au-arc circle{fill:none;stroke-width:7;stroke-linecap:round}
+.ins .sc-au-arc .tr{stroke:var(--rule-2)}
+.ins .sc-au-arc .gh{stroke:var(--pos);opacity:.55;stroke-dasharray:0 9999;transition:stroke-dasharray var(--d4) var(--out) 380ms}
+.ins .sc-au-arc .now{stroke:var(--blue);transition:stroke-dasharray var(--d4) var(--out)}
+.ins .sc-au-arc.lit .now{stroke-dasharray:calc(var(--a)*1px) calc(var(--C)*1px)!important}
+.ins .sc-au-arc.lit .gh{stroke-dasharray:calc(var(--g)*1px) calc(var(--C)*1px)!important}
+.ins .sc-au-arc .n{position:absolute;inset:0;display:flex;align-items:baseline;justify-content:center;padding-top:44px}
+.ins .sc-au-arc .n b{font-size:44px;font-weight:300;letter-spacing:-.05em;line-height:1}
+.ins .sc-au-arc .n small{font-size:12px;color:var(--ink-3);margin-left:2px}
+.ins .sc-au-tabs{margin-top:32px}
+.ins .sc-au-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:16px;align-items:start}
+.ins .sc-au .stk{display:grid;gap:16px;min-width:0}
+.ins .sc-au-list{padding-top:6px}
+.ins .sc-au-iss{border-bottom:1px solid var(--rule-2)}
+.ins .sc-au-iss:last-child{border-bottom:0}
+.ins .sc-au-iss .h{display:grid;grid-template-columns:10px minmax(0,1fr) auto 56px 16px;gap:14px;align-items:center;width:100%;text-align:left;padding:15px 2px}
+.ins .sc-au-iss .sd{width:9px;height:9px;border-radius:50%}
+.ins .sc-au-iss .sd.crit{background:var(--warm)}
+.ins .sc-au-iss .sd.warn{border:2px solid var(--warm)}
+.ins .sc-au-iss .sd.imp{background:var(--ink-4)}
+.ins .sc-au-iss .l{min-width:0;display:flex;flex-direction:column}
+.ins .sc-au-iss .l b{font-weight:550;font-size:15px}
+.ins .sc-au-iss .l span{font-size:12.5px;color:var(--ink-3)}
+.ins .sc-au-iss .pt{text-align:right;font-weight:650;color:var(--pos);font-size:14px}
+.ins .sc-au-iss .h>.i{color:var(--ink-3);transition:transform var(--d2) var(--std)}
+.ins .sc-au-iss.open .h>.i{transform:rotate(180deg)}
+.ins .sc-au-iss .b{padding:0 2px 20px 26px}
+.ins .sc-au-iss .two{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.ins .sc-au-iss .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600;margin-bottom:4px}
+.ins .sc-au-iss .lbl.mt{margin-top:16px}
+.ins .sc-au-iss p{font-size:14px;color:var(--ink-2)}
+.ins .sc-au-iss .pg{display:flex;flex-wrap:wrap;gap:6px}
+.ins .sc-au-iss .pg .badge svg{width:11px;height:11px}
+.ins .sc-au .hint{font-size:12px;color:var(--ink-3);margin-top:8px}
+.ins .sc-au-okl>div{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--rule-2);font-size:14px}
+.ins .sc-au-okl>div:last-child{border-bottom:0}
+.ins .sc-au-okl .i{color:var(--pos)}
+.ins .sc-au-pages .r{display:grid;grid-template-columns:minmax(0,1fr) auto 72px;gap:8px 14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--rule-2)}
+.ins .sc-au-pages .r:last-child{border-bottom:0}
+.ins .sc-au-pages .u{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ins .sc-au-pages .u code{align-self:flex-start;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.ins .sc-au-pages .u span{font-size:12px;color:var(--ink-3)}
+.ins .sc-au-pages .s{text-align:right;font-size:24px;font-weight:300;letter-spacing:-.03em}
+.ins .sc-au-pages .s small{font-size:11.5px;color:var(--ink-3)}
+.ins .sc-au-pages .tb{grid-column:1/-1}
+.ins .sc-au-bots>div{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+.ins .sc-au-bots>div:last-child{border-bottom:0}
+.ins .sc-au-bots .n{display:flex;align-items:center;gap:8px}
+.ins .sc-au-bots .n svg{color:var(--ink)}
+.ins .sc-au-bots .ok,.ins .sc-au-bots .ko,.ins .sc-au-bots .wn{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600}
+.ins .sc-au-bots .ok{color:var(--pos)}
+.ins .sc-au-bots .ko,.ins .sc-au-bots .wn{color:var(--warm)}
+.ins .sc-au-bots .no{background:var(--warm-tint);margin:0 -10px;padding-left:10px!important;padding-right:10px!important;border-radius:10px}
+.ins .sc-au-cwv .card-h{flex-wrap:wrap}
+.ins .sc-au-cwv .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+.ins .sc-au-cwv .t{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--ink-3)}
+.ins .sc-au-cwv .c{font:500 11px var(--mono)}
+.ins .sc-au-cwv .v{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.ins .sc-au-cwv .v b{font-size:30px;font-weight:300;letter-spacing:-.04em}
+.ins .sc-au-cwv .zone{position:relative;display:grid;grid-template-columns:2fr 1.4fr 1.6fr;gap:3px;height:4px;margin-top:12px}
+.ins .sc-au-cwv .zone i{border-radius:2px}
+.ins .sc-au-cwv .zone .ok{background:var(--pos);opacity:.55}
+.ins .sc-au-cwv .zone .mid{background:var(--warm);opacity:.35}
+.ins .sc-au-cwv .zone .bad{background:var(--warm);opacity:.75}
+.ins .sc-au-cwv .zone span{position:absolute;top:50%;width:10px;height:10px;border-radius:50%;background:var(--surface);border:2px solid var(--ink);transform:translate(-50%,-50%)}
+.ins .sc-au-cwv .zl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-3);margin-top:6px}
+@media (max-width:760px){
+.ins .sc-au-grid{grid-template-columns:minmax(0,1fr)}
+.ins .sc-au-tabs .seg{max-width:100%}
+.ins .sc-au-iss .h{grid-template-columns:10px minmax(0,1fr) 48px 16px;gap:10px}
+.ins .sc-au-iss .h>.badge,.ins .sc-au-iss .h>span:nth-child(3){display:none}
+.ins .sc-au-iss .b{padding-left:0}
+.ins .sc-au-iss .two{grid-template-columns:minmax(0,1fr);gap:14px}
+.ins .sc-au-cwv .g3{grid-template-columns:minmax(0,1fr);gap:18px}
+}
+@media (max-width:560px){
+.ins .sc-au-pages .r{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"u s" "b b" "t t"}
+.ins .sc-au-pages .u{grid-area:u}
+.ins .sc-au-pages .s{grid-area:s}
+.ins .sc-au-pages .r>.badge{grid-area:b;justify-self:start}
+.ins .sc-au-pages .tb{grid-area:t}
+}
+@media (max-width:760px){
+}
+
+/* Arc animation in plain CSS (the prototype armed it from JS with .lit). */
+@keyframes au-now{from{stroke-dasharray:0 calc(var(--C)*1px)}}
+@keyframes au-gh{from{stroke-dasharray:0 calc(var(--C)*1px)}}
+.ins .sc-au-arc .now{stroke-dasharray:calc(var(--a)*1px) calc(var(--C)*1px);animation:au-now var(--d4) var(--out) both}
+.ins .sc-au-arc .gh{stroke-dasharray:calc(var(--g)*1px) calc(var(--C)*1px);animation:au-gh var(--d4) var(--out) 380ms both}
+@media (prefers-reduced-motion:reduce){.ins .sc-au-arc .now,.ins .sc-au-arc .gh{animation:none}}
+.ins .sc-au .eyebrow+h1{margin-top:14px}
+.ins .sc-au-body{margin-top:16px}
+.ins .sc-au-tabs .seg{max-width:100%}
+.ins .sc-au .sa-total{margin-top:14px}
+
+/* Legacy rows kept for their behaviour (llms.txt and sitemap fixes, coverage map,
+   per-page fixes): they read the Instrumento tokens here. */
+.ins .sc-au{
+ --wa-crit:var(--warm);--wa-crit-soft:var(--warm-tint);--warn:var(--warm);--warn-ink:var(--warm);--warn-soft:var(--warm-tint);
+ --neg-ink:var(--warm);--neg-soft:var(--warm-tint);--pos-ink:var(--pos);--pos-soft:var(--pos-tint);
+ --surface-sunk:var(--surface-2);--line:var(--rule);--line-soft:var(--rule-2);
+ --accent:var(--blue);--accent-soft:var(--blue-tint);--accent-ink:var(--blue-ink);--accent-ring:var(--blue-soft);
+ font-family:var(--font);
+}
+.ins .sc-au .sa-screen{margin-top:0;gap:16px}
+.ins .sc-au .card{border-radius:20px}
+.ins .sc-au .sa-screen .card{padding:20px 22px}
+.ins .sc-au .sa-ch h3{font:600 17px var(--font);letter-spacing:-.01em;color:var(--ink)}
+.ins .sc-au .sa-pts{background:none;color:var(--pos);font-weight:650;font-size:14px;padding:0}
+.ins .sc-au .sa-pts-0{background:none;color:var(--ink-3);font-weight:500}
+.ins .sc-au .sa-sevpill{background:none;color:var(--ink-3);padding:0;font-weight:500}
+.ins .sc-au .sa-sevpill::after{content:" ·"}
+.ins .sc-au .sa-tag-g,.ins .sc-au .sa-tag-ia{background:var(--surface-2);color:var(--ink-3)}
+.ins .sc-au .sa-new{background:var(--blue-tint);color:var(--blue-ink)}
+.ins .sc-au .sa-counts{display:none}
+.ins .sc-au .sa-iss.wa-details>summary::before{width:9px;height:9px;top:50%;margin-top:-4.5px;bottom:auto;border-radius:50%;left:0}
+.ins .sc-au .sa-iss[data-sev="warning"]>summary::before{background:none;border:2px solid var(--warm)}
+.ins .sc-au .sa-iss[data-sev="improvement"]>summary::before{background:var(--ink-4)}
+.ins .sc-au .sa-iss-in h4{font-family:var(--font);letter-spacing:.12em;color:var(--ink-3)}
+@media (max-width:760px){
+ .ins .sc-au .sa-screen .card{padding:16px}
+}
+
+/* One score strip per page (log §368): arc, what it measures, and the gain. */
+.ins .sc-au-hero{display:flex;align-items:center;gap:24px;margin-top:24px;padding:16px 22px}
+.ins .sc-au-hero .sc-au-arc .n{padding-top:32px}
+.ins .sc-au-hero .sc-au-arc .n b{font-size:34px}
+.ins .sc-au-hero .sc-au-arc .n.w3{padding-top:36px}
+.ins .sc-au-hero .sc-au-arc .n.w3 b{font-size:27px;letter-spacing:-.06em}
+.ins .sc-au-hero .sc-au-arc .n.w3 small{font-size:10.5px}
+.ins .sc-au-hero .rt{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ins .sc-au-hero .lb{font-size:12.5px;color:var(--ink-3)}
+.ins .sc-au-hero .mt{font-size:14px;color:var(--ink-2)}
+.ins .sc-au-hero .mt>b{color:var(--warm);font-weight:600}
+.ins .sc-au-hero .to{font-size:13.5px;color:var(--ink-3)}
+.ins .sc-au-hero .to b{color:var(--pos);font-weight:650;font-size:15px}
+.ins .sc-au-hero .gain{margin-left:auto;align-self:stretch;display:flex;align-items:center;gap:12px;padding-left:24px;border-left:1px solid var(--rule-2);color:var(--pos)}
+.ins .sc-au-hero .gain>b{font-size:38px;font-weight:300;letter-spacing:-.04em;line-height:1}
+.ins .sc-au-hero .gain>span{display:flex;flex-direction:column;gap:2px;font-size:12.5px;line-height:1.3;color:var(--ink-3);max-width:150px}
+.ins .sc-au-hero .gain i{font-style:normal;font-size:13px;font-weight:650;color:var(--pos)}
+@media (max-width:760px){
+.ins .sc-au-hero{gap:14px;padding:14px 16px;flex-wrap:wrap}
+.ins .sc-au-hero .gain{margin-left:0;width:100%;padding:12px 0 0;border-left:0;border-top:1px solid var(--rule-2)}
+.ins .sc-au-hero .gain>span{max-width:none}
+}
+
+/* Historial de comprobaciones: plegado hasta que se pide */
+.ins .cov-hist-d>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:0}
+.ins .cov-hist-d>summary::-webkit-details-marker{display:none}
+.ins .cov-hist-d>summary::after{content:"";width:8px;height:8px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:rotate(45deg);transition:transform var(--d2) var(--std);margin-right:4px}
+.ins .cov-hist-d[open]>summary{margin-bottom:10px}
+.ins .cov-hist-d[open]>summary::after{transform:rotate(-135deg)}
+
+/* Móvil / Escritorio de la velocidad: `.ins button{padding:0}` ganaba a `.sa-seg button` */
+.ins .sa-seg{gap:4px;padding:4px;border-radius:12px}
+.ins .sa-seg button{padding:6px 14px;border-radius:9px;font-size:12.5px;font-weight:600}
