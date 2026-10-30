@@ -8,7 +8,6 @@ import {
   componentStatus,
   firstSteps,
   foundSentence,
-  initialComponent,
   notApplicableNote,
   offerLabel,
   projectedSentence,
@@ -222,7 +221,7 @@ export function AgenticAuditScreen({
   openOn?: AgenticComponentId | "interop";
 }) {
   const [editing, setEditing] = useState(false);
-  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? initialComponent(result));
+  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? "discovery");
 
   const steps = firstSteps(result);
   const projected = projectedSentence(result, steps);
