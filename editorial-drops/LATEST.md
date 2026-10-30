@@ -1,8 +1,8 @@
 # Última entrega editorial
 
-**Fecha:** 2026-10-26
-**Carpeta:** editorial-drops/2026-10-26-la-ia-prefiere-contenido-reciente/
+**Fecha:** 2026-10-30
+**Carpeta:** editorial-drops/2026-10-30-convierte-mejor-el-trafico-de-la-ia/
 
-Post de LinkedIn (con imagen 4:5), línea para el perfil de Denis e hilo de X sobre el artículo «¿La IA prefiere el contenido reciente?».
-El gancho: el 75% de las páginas que cita la IA se actualizó en el último año, pero sólo el 42% es nuevo (Seer Interactive, 2026).
+Post de LinkedIn (con imagen 4:5), línea para el perfil de Denis e hilo de X sobre el artículo «¿Convierte mejor el tráfico que llega desde la IA?».
+El gancho: Adobe ve un 60% más de conversión en las visitas de la IA, Shopify un 80% más en fichas de producto, y un estudio académico ve a la búsqueda orgánica por delante.
 El artículo ya está en producción; publicar sólo con el «sí, publica» de Denis.
