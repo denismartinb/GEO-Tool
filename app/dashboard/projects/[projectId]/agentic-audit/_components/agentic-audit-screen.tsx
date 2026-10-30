@@ -14,6 +14,7 @@ import {
   unmeasuredReason,
   type Tone
 } from "@/lib/agentic-audit/console-model";
+import { stepTone } from "@/lib/agentic-audit/visibility-model";
 import { AgenticLoadingScene } from "@/components/agentic/agentic-loading-scene";
 import { runAgenticAuditAction } from "../actions";
 
@@ -439,18 +440,30 @@ export function AgenticAuditScreen({
           </p>
         </div>
 
-        <div className="card">
-          <h2 className="ag-h">Qué hacer primero</h2>
-          {steps.length > 0 ? (
-            steps.map((step) => (
-              <div className="ag-fix" key={step.key}>
-                <b>{step.title}</b>
-                <span>{step.seen}</span>
-              </div>
-            ))
-          ) : (
-            <p className="ag-muted">No hemos encontrado nada que arreglar en lo que pudimos medir.</p>
-          )}
+        <div className="card agx-first">
+          <div className="card-h">
+            <h3>Qué hacer primero</h3>
+          </div>
+          <div className="card-b">
+            {steps.length > 0 ? (
+              <ol>
+                {steps.map((step, i) => (
+                  <li key={step.key}>
+                    <span className="n num">{i + 1}</span>
+                    <div>
+                      <div className="ch">
+                        <span className={`dot ${stepTone(result, step) === "warn" ? "warn" : ""}`} aria-hidden="true" />
+                        <span>{result.components.find((c) => c.id === step.component)?.name}</span>
+                      </div>
+                      <b>{step.title}</b>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="none">No hemos encontrado nada que arreglar en lo que pudimos medir.</p>
+            )}
+          </div>
         </div>
       </div>
     </>
