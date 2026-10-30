@@ -305,6 +305,18 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
       </nav>
       <TrialEndedPlanCard onNavigate={onNavigate} />
       <div className="xo-bot">
+        <button
+          type="button"
+          className="xo-help"
+          ref={helpRef}
+          aria-haspopup="dialog"
+          aria-label="¿Cómo funciona?"
+          title="¿Cómo funciona?"
+          onClick={(e) => pop(e.currentTarget, <HelpPanel />, { w: 320, align: "start", label: "¿Cómo funciona?" })}
+        >
+          <Ic n="c-help" />
+          <span>¿Cómo funciona?</span>
+        </button>
         <div
           className="foot xo-foot"
           role="button"
@@ -326,17 +338,6 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
             <span>{planLabel(d)}</span>
           </div>
         </div>
-        <button
-          type="button"
-          className="xo-help"
-          ref={helpRef}
-          aria-haspopup="dialog"
-          aria-label="¿Cómo funciona?"
-          title="¿Cómo funciona?"
-          onClick={(e) => pop(e.currentTarget, <HelpPanel />, { w: 320, align: "start", label: "¿Cómo funciona?" })}
-        >
-          <Ic n="c-help" />
-        </button>
       </div>
     </aside>
   );
