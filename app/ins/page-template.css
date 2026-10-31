@@ -43,15 +43,15 @@
  .ins .sc-gsc .pr-hd.ph{flex-direction:row;align-items:center}
 }
 
-/* Recomendaciones (log §394): the plan plates share the tallest height. */
+/* Recomendaciones (log §395): the plan plates share the tallest height. */
 @media (max-width:760px){
  .ins .deck.eq{align-items:stretch}
 }
 
-/* Prompts (log §394): no plan counter and no rule right under the toolbar. */
+/* Prompts (log §395): no plan counter and no rule right under the toolbar. */
 .ins .sc-prompts .pr-body>.pq-tp:first-child,.ins .sc-prompts .pr-body>.pr-flat:first-child{border-top:0}
 
-/* Competidores (log §394): a more compact ranking on mobile. The three
+/* Competidores (log §395): a more compact ranking on mobile. The three
    figures share one row under the brand. */
 @media (max-width:760px){
  .ins .cx-rank .card-b{padding:4px 12px 14px}
@@ -64,7 +64,7 @@
  .ins .cx-r .avg>i{letter-spacing:0;font-weight:400}
 }
 
-/* Recomendaciones (log §394): an open row of «Más adelante» reads as one
+/* Recomendaciones (log §395): an open row of «Más adelante» reads as one
    block. Its title stays pinned while the detail scrolls, a blue edge ties
    the detail to it, and it closes from the bottom too. */
 .ins .lrow.open{background:var(--surface-2);border-left:3px solid var(--blue);border-bottom-color:transparent;border-radius:4px 16px 16px 4px;margin:8px 0;padding:0 14px 4px 12px}

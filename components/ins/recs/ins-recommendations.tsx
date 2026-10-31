@@ -45,7 +45,7 @@ import { ResolvedRow } from "./resolved";
  * Recomendaciones in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F4, log
  * §357): the plan of the week as a deck, «Más adelante» as lever groups with
  * a quiet lever index and compact rows, and «Resueltas» (CONSOLE-PAGE-TEMPLATE-1,
- * log §394, removed the search box and the focus layer). Every card, figure and action is the real
+ * log §395, removed the search box and the focus layer). Every card, figure and action is the real
  * one: this component only lays them out (see `lib/ins/recs-cards.ts`).
  */
 

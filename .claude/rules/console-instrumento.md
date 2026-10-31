@@ -79,7 +79,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 ## Recomendaciones (F4, log §357)
 
 - **Un solo modelo de tarjeta (`lib/ins/recs-cards.ts`)** para la baraja, las
-  filas de «Más adelante» (y antes la capa en foco, retirada en §394). Es puro y no calcula cifras ni
+  filas de «Más adelante» (y antes la capa en foco, retirada en §395). Es puro y no calcula cifras ni
   frases: lee `selectPlan`, `recommendationHeadline` y los puntos conjuntos.
 - **El plan se fija por visita**; marcar como hecha no reordena la baraja. El
   deshacer durable sólo vive en «Resueltas».
@@ -103,7 +103,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **El orden del ranking es por menciones**; el puesto medio sólo desempata y
   sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
 - **El denominador, si se enseña, lo compone `answerCountLabel`** (§183); desde
-  §394 el ranking ya no lo enseña, a petición de Denis.
+  §395 el ranking ya no lo enseña, a petición de Denis.
 - **Las clases `i` de una regla móvil se escriben con `>`**: el kit `Roll` usa
   `<i>` para los dígitos y una regla `.mt i` los rompe.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
@@ -255,7 +255,18 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   es coste de servidor por cada entrada.
 
 
-## Cabecera común (CONSOLE-PAGE-TEMPLATE-1, log §394)
+## Modal «Cambiar de plan» (PLAN-MODAL-INSTRUMENTO-1, log §394)
+
+- **Se monta por portal en `<body>` dentro de `.ins.pmx`**, por encima de la
+  barra de pestañas. Dentro de la página quedaba debajo y ocultaba el botón.
+- **Sin paso intermedio**: elegir plan y el botón va a Stripe (checkout o
+  portal). Una opción que se aplique sin Stripe necesita su propia confirmación.
+- **«Recomendado» sólo apunta hacia arriba** del plan actual, y el plan actual
+  no se vuelve a elegir salvo en la prueba de Pro.
+- **Agencia no se cambia aquí**: «Hablar con nosotros». Los flujos de pago y la
+  puerta de exceso de dominios (`.cp-*`) no se tocan sin aprobación.
+
+## Cabecera común (CONSOLE-PAGE-TEMPLATE-1, log §395)
 
 - **Toda pantalla de proyecto abre con `PageHead`**: título, una acción en la
   misma fila y la frase con datos debajo. Sin línea «SECCIÓN · dominio» y sin
@@ -266,9 +277,9 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   aprieta lo que ya existe; no cambia tarjetas, colores ni tipos (decisión de
   Denis). Lo secundario va debajo de lo principal (pilares tras el plan).
 - **La frase con datos bajo el título se queda** (Denis, 2026-10-31).
-- **Recomendaciones no tiene buscador ni capa en foco** (log §394): «Más adelante»
+- **Recomendaciones no tiene buscador ni capa en foco** (log §395): «Más adelante»
   se filtra sólo por palanca, y las tarjetas del plan comparten la altura de la
   más alta (`Deck equal`).
-- **Competidores no enseña el denominador junto al ranking** (Denis, log §394,
+- **Competidores no enseña el denominador junto al ranking** (Denis, log §395,
   deja sin efecto aquí «El denominador no se quita» de F5b). Si vuelve, con
   `answerCountLabel`.

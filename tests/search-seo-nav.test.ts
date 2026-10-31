@@ -40,7 +40,7 @@ describe("console navigation: NAV-SIMPLIFY-1 (log §291)", () => {
 });
 
 describe("audit screen name", () => {
-  it("names the page after its block, with the shared head and no kicker (log §368, §394)", () => {
+  it("names the page after its block, with the shared head and no kicker (log §368, §395)", () => {
     const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
     expect(page).not.toContain("SCREEN_LABEL");
     expect(page).toContain("projectScreenMetadata(BLOCK_TITLES[block]");

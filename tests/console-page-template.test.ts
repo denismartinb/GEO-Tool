@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
- * CONSOLE-PAGE-TEMPLATE-1 (log §394): every console screen opens with the
+ * CONSOLE-PAGE-TEMPLATE-1 (log §395): every console screen opens with the
  * shared head (title, one action in the same row, data sentence), no
  * «SECCIÓN · dominio» kicker and no counter next to the title.
  */

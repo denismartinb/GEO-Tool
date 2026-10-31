@@ -211,7 +211,7 @@ export default async function CompetitorsPage({
   let brandCitations = 0; // prompts where project domain appears in citations
   let totalResultsCount = results.length;
   // The ranking's «N respuestas · M prompts en K motores» line was removed at
-  // Denis's request (log §394); if it comes back, compose it with answerCountLabel.
+  // Denis's request (log §395); if it comes back, compose it with answerCountLabel.
   const projectDomainNorm = normalizeDomain(project.domain ?? "");
 
   // Map of normalized competitor key → normalized domain, for citation matching

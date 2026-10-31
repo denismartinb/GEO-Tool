@@ -49,7 +49,7 @@ describe("TRUST-METRICS-1 — the headline GEO score has one owner", () => {
 });
 
 describe("TRUST-METRICS-1 — every answer-row percentage carries its denominator", () => {
-  it("Competidores never composes an answer-count sentence by hand (its ranking line was removed in log §394)", () => {
+  it("Competidores never composes an answer-count sentence by hand (its ranking line was removed in log §395)", () => {
     const source = read("app/dashboard/projects/[projectId]/competitors/page.tsx");
     expect(source).not.toMatch(/respuestas · \$\{/);
     // The audit's exact wrong sentence must not be reconstructable from a
