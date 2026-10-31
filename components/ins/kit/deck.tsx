@@ -69,7 +69,7 @@ export function Deck({
   onLast?: () => void;
   /** Arrow keys move this deck (only the topmost deck should listen). */
   keys?: boolean;
-  /** Every plate takes the height of the tallest one (log §395). */
+  /** Every plate takes the height of the tallest one (log §396). */
   equal?: boolean;
 }) {
   const el = useRef<HTMLDivElement>(null);
