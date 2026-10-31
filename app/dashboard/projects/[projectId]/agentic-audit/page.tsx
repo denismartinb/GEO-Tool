@@ -1,4 +1,5 @@
 import { Motion } from "@/components/ins/kit/motion";
+import { PageHead } from "@/components/ins/page-head";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
@@ -88,10 +89,7 @@ export default async function AgenticAuditPage({
     <div className="ins">
       <Motion id={`agentic-audit:${projectId}`}>
       <div className="page sc-ag">
-        <div className="eyebrow bare">
-          Auditoría agéntica · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
-        </div>
-        <h1 style={{ marginTop: 14 }}>Auditoría agéntica</h1>
+        <PageHead title="Auditoría agéntica" />
 
       <div className="ag-page">
         <div className="ag-screen">

@@ -32,7 +32,6 @@ type Props = {
   projectId: string;
   domain: string;
   brand: string;
-  competitorCount: number;
   /** Denominator sentence (answers, prompts, engines), composed by the page. */
   basis: string | null;
   hasData: boolean;
@@ -235,7 +234,6 @@ export function InsCompetitors(p: Props) {
     <>
       <PageHead
         title="Competidores"
-        count={`${p.competitorCount} ${p.competitorCount === 1 ? "competidor" : "competidores"}`}
         action={manageButton}
         lead={
           lead.length > 0

@@ -596,7 +596,6 @@ export default async function CompetitorsPage({
             projectId={projectId}
             domain={project.domain}
             brand={project.brand}
-            competitorCount={activeCompetitors.length}
             basis={
               totalResultsCount > 0 && promptCount > 0 && engineCount > 0
                 ? answerCountLabel(promptCount, engineCount, totalResultsCount)

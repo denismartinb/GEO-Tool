@@ -928,7 +928,6 @@ export default async function ProjectDetailPage({
   const header = (
     <OvHeader
       projectId={projectId}
-      domain={project.domain}
       greeting={greeting(madridHour, firstNameFromMetadata(user.user_metadata))}
       lead={leadParts_}
       hasReport={Boolean(latestCompletedRun)}

@@ -254,3 +254,15 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   TABS-INSTANT-WEB-1, log §391). Extenderla a escritorio necesita aprobación:
   es coste de servidor por cada entrada.
 
+
+## Cabecera común (CONSOLE-PAGE-TEMPLATE-1, log §394)
+
+- **Toda pantalla de proyecto abre con `PageHead`**: título, una acción en la
+  misma fila y la frase con datos debajo. Sin línea «SECCIÓN · dominio» y sin
+  recuento junto al título (lo vigila `tests/console-page-template.test.ts`).
+- **En el móvil la acción se queda en la fila del título y sólo enseña el
+  icono** (`.ph-lbl` se oculta), así que lleva siempre `aria-label`.
+- **Sólo orden y compactación.** `app/ins/page-template.css` mueve, oculta o
+  aprieta lo que ya existe; no cambia tarjetas, colores ni tipos (decisión de
+  Denis). Lo secundario va debajo de lo principal (pilares tras el plan).
+- **La frase con datos bajo el título se queda** (Denis, 2026-10-31).

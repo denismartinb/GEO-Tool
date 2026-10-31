@@ -28262,3 +28262,21 @@ de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 **Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
 
 **Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
+
+## §394 · CONSOLE-PAGE-TEMPLATE-1: una sola cabecera y un solo orden en todas las pantallas de la consola (2026-10-31)
+
+**Qué se decidió.** Denis pidió homogeneizar la jerarquía de las pantallas: lo importante primero, lo secundario abajo, menos scroll y menos espacio en blanco en el móvil. Lo aprobó sobre un prototipo hecho con los componentes reales (https://claude.ai/artifact/3seCp51L7QH9Pe27ZDwLSe, con Antes y Después), con una condición explícita: **sólo reordenar, quitar o compactar, nunca cambiar el diseño** (tarjetas, fondo, colores y tipos siguen igual; un primer prototipo con estilos propios se rechazó por eso).
+- Cabecera común (`components/ins/page-head.tsx`): título, la acción de la pantalla en la misma fila (en el móvil sólo el icono, con `aria-label`) y la frase con datos debajo. La frase se queda: Denis dijo que aporta calidad.
+- Fuera la línea «SECCIÓN · dominio» de las nueve pantallas: la sección y el dominio ya están en el menú y en el selector.
+- Fuera el recuento junto al título («6 competidores», «12 acciones»): Denis dijo que sobra, la pantalla ya enseña la lista.
+- Menos aire en el móvil (`app/ins/page-template.css`): el título sube (sin el margen por defecto del `h1`, `padding-top` de 14 px), y las secciones y la baraja del plan pasan de 36–44 px a 28 px.
+- Visión general: «Descargar informe» va a la fila del saludo.
+- Competidores: «Gestionar competidores» va a la fila del título y deja de empujar el ranking.
+- Recomendaciones: Presencia, Prominencia, Cuota de voz y Autoridad bajan después de las acciones.
+- Prompts: en el móvil, conjunto y motores en una sola fila (logo y porcentaje; la frase y las barras se ocultan).
+- Páginas citadas: en el móvil, las tres cifras en una fila como los pilares de Recomendaciones (sin la frase de cada una), y «¿Tus páginas se pueden citar?» baja tras «De dónde salen las citas».
+- Posición en Google: «Search Console conectado» se queda en la fila del título; en el móvil, sólo el punto verde.
+
+**Qué no cambia.** Consultas, acciones de servidor, cifras, barra inferior y menú. Ajustes, 404 y errores conservan su cabecera.
+
+**Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).

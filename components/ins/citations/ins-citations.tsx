@@ -189,24 +189,24 @@ export function InsCitations(p: Props) {
         lead={
           lead.length > 0 ? (
             <>
-          {lead.map((part, i) =>
-            part.jump ? (
-              <a
-                key={i}
-                href="#ct-reach-s"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollTo(reachRef.current);
-                }}
-              >
-                {part.text}
-              </a>
-            ) : part.strong ? (
-              <b key={i}>{part.text}</b>
-            ) : (
-              <Fragment key={i}>{part.text}</Fragment>
-            ),
-          )}
+              {lead.map((part, i) =>
+                part.jump ? (
+                  <a
+                    key={i}
+                    href="#ct-reach-s"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollTo(reachRef.current);
+                    }}
+                  >
+                    {part.text}
+                  </a>
+                ) : part.strong ? (
+                  <b key={i}>{part.text}</b>
+                ) : (
+                  <Fragment key={i}>{part.text}</Fragment>
+                ),
+              )}
             </>
           ) : null
         }

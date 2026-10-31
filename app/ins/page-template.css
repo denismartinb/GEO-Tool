@@ -2,10 +2,15 @@
    Only placement and compaction: every card, colour and type size is the one
    each screen already had. Loaded after the screen sheets. */
 .ins .ph{margin-top:0;align-items:center}
-.ins .ph h1{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;min-width:0}
-.ins .ph .ph-n{font-size:12px;letter-spacing:0;text-transform:none;font-weight:500}
+.ins .ph h1{margin:0;min-width:0}
 .ins .ph>.btn{margin-bottom:0}
+.ins .ph+.lead{margin-top:10px}
 @media (max-width:760px){
+ /* Less air: the title starts right under the header, sections sit closer. */
+ .ins .page{padding-top:14px}
+ .ins .sec{margin-top:28px}
+ .ins .focus-h{margin-top:28px}
+ .ins .pills{margin-top:14px}
  .ins .ph{gap:12px}
  .ins .ph .ph-lbl{display:none}
  .ins .ph>.btn{width:40px;height:40px;padding:0;justify-content:center;flex:none}
