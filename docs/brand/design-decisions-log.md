@@ -28344,16 +28344,32 @@ la tienda. Premisa: no se retira ningún camino de recuperación.
 
 **Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).
 
+## §397 · FAVICON-NO-FLICKER-1: los favicons no parpadean al abrir menús y la cabecera móvil se alinea con el título (2026-10-31)
+
+**Qué se decidió.** Denis pidió dos cosas viendo el preview en su iPhone:
+- Que los favicons dejen de parpadear cada vez que abre el selector de dominios o la lista de competidores.
+- Que el favicon y el nombre del dominio de la cabecera móvil queden alineados con la «B» de «Buenos días», que es la alineación de todas las páginas.
+
+**Qué se hizo.**
+- `components/ui/favicon-img.tsx` recuerda en memoria de la pestaña qué iconos ya se pintaron y qué dominios no tienen icono. Al volver a montar un icono ya visto, se pide sin carga diferida y con decodificación síncrona, así que sale de la caché HTTP (una semana, `/api/favicon`) sin hueco en blanco. Un dominio sin icono enseña su letra al instante, sin esperar al `onError` del 204. No se guarda nada fuera de la pestaña.
+- La cabecera móvil (`.ins-shell .mtop`) pasa de 12 px a 19 px de margen izquierdo. Medido a 390 px, el borde del favicon cae en el mismo píxel que el trazo de la «B» del título (19 px, por el espacio lateral de la letra a 34 px). El margen derecho no cambia.
+
+- En el móvil, las pastillas de la invitación a Search Console van en una sola fila que se desliza, a petición de Denis. Las cuatro no caben a 390 px.
+
+**Qué no cambia.** La ruta `/api/favicon`, sus cabeceras de caché y el aspecto de los iconos.
+
+**Pendiente o conocido.** La primera vez que se abre un menú en una pestaña nueva el icono sigue llegando como antes; la memoria sólo ayuda a partir de la segunda. Premisa: no se retira ningún camino de recuperación.
+
 ## §398 · CONSOLE-SKELETONS-1: los esqueletos de carga pasan a «Instrumento» (2026-10-31)
 
-**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (§397), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
+**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (DARK-MODE-MENU-1, PR #714), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
 
 - Cada pantalla tiene la forma de su versión «Instrumento» y de la cabecera común de §396: título, acción en la misma fila (solo icono en el móvil) y la frase.
 - Pantallas con esqueleto propio: Visión general, Recomendaciones (plan primero y pilares al final), Prompts, Competidores, Páginas citadas, Auditoría técnica, Posición en Google, Visibilidad en agentes, Auditoría agéntica, Ajustes, depuración y escaneos. El resto de la consola (Dominios, Notificaciones…) usa el genérico de `app/dashboard/loading.tsx`.
-- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` (§397).
+- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` de DARK-MODE-MENU-1.
 - El pulso es ambiente, no progreso, y se queda quieto con `prefers-reduced-motion`.
 - Se retiran `components/ui/skeleton.tsx` y las reglas `.skel`/`.skel-card` de `globals.css`, que ya no usaba nadie.
 
 **Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
 
-**Pendiente o conocido.** El oscuro depende de que §397 (selector en el menú de cuenta) esté en `main`; sin él, los esqueletos salen en claro como todo lo demás. Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
+**Pendiente o conocido.** El oscuro depende de que DARK-MODE-MENU-1 (PR #714, selector en el menú de cuenta) esté en `main`; sin él, los esqueletos salen en claro como todo lo demás. Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
