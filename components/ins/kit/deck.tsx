@@ -58,6 +58,7 @@ export function Deck({
   lastLabel = "Terminar",
   onLast,
   keys = true,
+  equal = false,
 }: {
   plates: Plate[];
   idx: number;
@@ -68,6 +69,8 @@ export function Deck({
   onLast?: () => void;
   /** Arrow keys move this deck (only the topmost deck should listen). */
   keys?: boolean;
+  /** Every plate takes the height of the tallest one (log §394). */
+  equal?: boolean;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const mobile = useMedia(MOBILE_QUERY);
@@ -109,13 +112,20 @@ export function Deck({
       }
     });
     const front = cards[cur];
-    front.style.height = "";
-    const h = front.offsetHeight;
-    cards.forEach((c, i) => {
-      if (i !== cur) c.style.height = `${h}px`;
-    });
+    let h: number;
+    if (equal) {
+      cards.forEach((c) => (c.style.height = ""));
+      h = Math.max(...cards.map((c) => c.offsetHeight));
+      cards.forEach((c) => (c.style.height = `${h}px`));
+    } else {
+      front.style.height = "";
+      h = front.offsetHeight;
+      cards.forEach((c, i) => {
+        if (i !== cur) c.style.height = `${h}px`;
+      });
+    }
     root.style.height = `${h + 30}px`;
-  }, [cur, mobile]);
+  }, [cur, mobile, equal]);
 
   useLayoutEffect(() => {
     layout();
@@ -127,10 +137,17 @@ export function Deck({
     const ro = new ResizeObserver(() => {
       if (!lock.current) layout();
     });
-    const front = root.querySelectorAll<HTMLElement>(":scope>.dk")[cur];
-    if (front) ro.observe(front);
+    if (equal) {
+      // Watch the content, not the plates: their height is the one we set.
+      root
+        .querySelectorAll<HTMLElement>(":scope>.dk>*")
+        .forEach((n) => ro.observe(n));
+    } else {
+      const front = root.querySelectorAll<HTMLElement>(":scope>.dk")[cur];
+      if (front) ro.observe(front);
+    }
     return () => ro.disconnect();
-  }, [cur, layout, plates.length]);
+  }, [cur, layout, plates.length, equal]);
 
   /* Mobile: a programmatic move scrolls the track; a scroll reports its plate. */
   useEffect(() => {
@@ -238,7 +255,7 @@ export function Deck({
 
   return (
     <div
-      className="deck"
+      className={equal ? "deck eq" : "deck"}
       ref={el}
       aria-roledescription="mazo"
       aria-label={label}

@@ -76,9 +76,10 @@
 @media (max-width:1000px){
  .ins .lgrid{grid-template-columns:minmax(0,1fr);gap:0;margin-top:14px}
  .ins .lidx{display:none}
- .ins .lsel{display:flex;align-items:center;gap:10px;position:relative;height:44px;border-bottom:1px solid var(--rule-2);font-size:14px;color:var(--ink-3)}
- .ins .lsel select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:600 14px var(--font);color:var(--ink);flex:1;min-width:0;height:44px;padding-right:24px;cursor:pointer}
- .ins .lsel .i{position:absolute;right:0;pointer-events:none;color:var(--ink-3)}
+ .ins .lsel{display:flex;align-items:center;gap:10px;position:relative;height:44px;padding:0 6px 0 16px;border:1px solid var(--rule);border-radius:99px;background:var(--surface);font-size:13px;color:var(--ink-3);transition:border-color var(--d1)}
+ .ins .lsel:hover,.ins .lsel:focus-within{border-color:var(--ink-4)}
+ .ins .lsel select{appearance:none;-webkit-appearance:none;border:0;background:transparent;font:600 14px var(--font);color:var(--ink);flex:1;min-width:0;height:42px;padding-right:40px;cursor:pointer;outline:0}
+ .ins .lsel .i{position:absolute;right:6px;top:50%;width:30px;height:30px;padding:7px;margin-top:-15px;border-radius:99px;background:var(--surface-2);color:var(--ink);pointer-events:none}
  .ins .laterb{margin-top:14px}
 }
 @media (max-width:760px){

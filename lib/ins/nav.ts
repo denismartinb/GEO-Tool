@@ -128,7 +128,7 @@ export type InsTab = {
 export const INS_TABS: InsTab[] = [
   { key: "home", label: "Visión general", short: "Inicio", icon: "overview", segments: [""] },
   { key: "recs", label: "Recomendaciones", short: "Plan", icon: "recs", segments: ["/recommendations"] },
-  { key: "ia", label: "En la IA", short: "En la IA", icon: "prompts", segments: ["/prompts", "/competitors", "/citations"] },
+  { key: "ia", label: "En la IA", short: "En la IA", icon: "prompts", segments: ["/competitors", "/prompts", "/citations"] },
   { key: "google", label: "En buscadores", short: "Buscadores", icon: "trend", segments: ["/search-console"] },
   { key: "web", label: "Tu web", short: "Tu web", icon: "audit", segments: ["/web-audit"] },
   { key: "agents", label: "Comercio agéntico", short: "Agentes", icon: "agent", isNew: true, segments: ["/agentic-visibility", "/agentic-audit"] }

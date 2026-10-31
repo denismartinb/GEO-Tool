@@ -79,7 +79,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 ## Recomendaciones (F4, log §357)
 
 - **Un solo modelo de tarjeta (`lib/ins/recs-cards.ts`)** para la baraja, las
-  filas de «Más adelante» y la capa en foco. Es puro y no calcula cifras ni
+  filas de «Más adelante» (y antes la capa en foco, retirada en §394). Es puro y no calcula cifras ni
   frases: lee `selectPlan`, `recommendationHeadline` y los puntos conjuntos.
 - **El plan se fija por visita**; marcar como hecha no reordena la baraja. El
   deshacer durable sólo vive en «Resueltas».
@@ -266,3 +266,6 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   aprieta lo que ya existe; no cambia tarjetas, colores ni tipos (decisión de
   Denis). Lo secundario va debajo de lo principal (pilares tras el plan).
 - **La frase con datos bajo el título se queda** (Denis, 2026-10-31).
+- **Recomendaciones no tiene buscador ni capa en foco** (log §394): «Más adelante»
+  se filtra sólo por palanca, y las tarjetas del plan comparten la altura de la
+  más alta (`Deck equal`).

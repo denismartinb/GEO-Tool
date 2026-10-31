@@ -28277,6 +28277,13 @@ de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 - Páginas citadas: en el móvil, las tres cifras en una fila como los pilares de Recomendaciones (sin la frase de cada una), y «¿Tus páginas se pueden citar?» baja tras «De dónde salen las citas».
 - Posición en Google: «Search Console conectado» se queda en la fila del título; en el móvil, sólo el punto verde.
 
-**Qué no cambia.** Consultas, acciones de servidor, cifras, barra inferior y menú. Ajustes, 404 y errores conservan su cabecera.
+**Segunda pasada sobre el preview (Denis, 2026-10-31).**
+- Recomendaciones: fuera el buscador de «Más adelante» y el botón «Ver pendientes» (la capa en foco). `cardMatches` se queda en `lib/ins/recs-cards.ts`, sin uso en pantalla.
+- El selector «Palanca» (≤1000 px) pasa a un control con borde redondeado y la flecha dentro de un círculo: Denis no veía la flecha.
+- Las tarjetas del plan miden todas lo mismo: la altura de la más alta (`Deck` con `equal`; en el móvil, `align-items: stretch`).
+- La pestaña móvil «En la IA» abre por Competidores, luego Prompts y luego Citadas.
+- Prompts: fuera la línea «N de M prompts de tu plan» y la raya gruesa del primer tema bajo la barra de Temas/Prompts. El tope del plan sigue en «Añadir prompts».
+
+**Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
 
 **Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).

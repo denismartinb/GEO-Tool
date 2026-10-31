@@ -42,3 +42,11 @@
 @media (max-width:760px){
  .ins .sc-gsc .pr-hd.ph{flex-direction:row;align-items:center}
 }
+
+/* Recomendaciones (log §394): the plan plates share the tallest height. */
+@media (max-width:760px){
+ .ins .deck.eq{align-items:stretch}
+}
+
+/* Prompts (log §394): no plan counter and no rule right under the toolbar. */
+.ins .sc-prompts .pr-body>.pq-tp:first-child,.ins .sc-prompts .pr-body>.pr-flat:first-child{border-top:0}

@@ -273,8 +273,6 @@ export default async function PromptsPage({
               pending={pendingPrompts}
               competitors={configuredCompetitors ?? []}
               providers={providers}
-              capUsed={activePromptCount ?? 0}
-              capLimit={plan.caps.prompts}
             />
           )}
         </div>
