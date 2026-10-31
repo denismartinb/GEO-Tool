@@ -65,3 +65,29 @@ const APP_ALLOWED_PREFIXES = [
 export function isAppModePathAllowed(pathname: string): boolean {
   return APP_ALLOWED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
+
+/**
+ * APP-LAUNCH-1 (log §389). Puerta de entrada de cada apertura de la app: el
+ * inicio de sesión, donde sale la splash. El `start_url` ya apunta aquí; esta
+ * constante es la que construye `appLaunchRedirect`.
+ */
+export const APP_LAUNCH_PATH = "/login";
+
+/**
+ * Una apertura de la app que aterriza en la consola (un `start_url` antiguo o
+ * un enlace verificado que Android abre en la app) pasa antes por el inicio de
+ * sesión, para que la splash salga una vez por apertura también con la sesión
+ * abierta. Devuelve la ruta y query del desvío, o null si no toca desviar.
+ * El destino viaja en `next` sin `source`, así que la consola no vuelve a
+ * desviarse al llegar.
+ */
+export function appLaunchRedirect(pathname: string, searchParams: URLSearchParams): string | null {
+  if (pathname !== "/dashboard" && !pathname.startsWith("/dashboard/")) return null;
+  const rest = new URLSearchParams(searchParams);
+  rest.delete(APP_MODE_PARAM);
+  const query = rest.toString();
+  const next = query ? `${pathname}?${query}` : pathname;
+  const target = new URLSearchParams({ [APP_MODE_PARAM]: APP_MODE_ENTER });
+  if (next !== APP_MODE_HOME) target.set("next", next);
+  return `${APP_LAUNCH_PATH}?${target.toString()}`;
+}

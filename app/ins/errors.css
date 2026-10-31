@@ -14,3 +14,45 @@
 .ins .er-ring{width:128px;height:128px}
 .ins .sc-err .pills .btn{flex:1}
 }
+
+/* CONSOLE-404-ROCKET-1 (log §388): the 404 with the public rocket in a night
+   window. Wide, the copy sits on the scene; below 1100px it goes under it. */
+.ins .sc-404{padding-top:28px;padding-bottom:40px}
+.ins .nf4{position:relative;height:clamp(520px,calc(100dvh - 200px),680px);border-radius:22px;overflow:hidden;background:#081223;isolation:isolate}
+.ins .er-rk{position:absolute;inset:0}
+.ins .er-rk-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.ins .er-rk-svg.stack{display:none}
+.ins .er-rk-label{font:500 13px var(--mono);letter-spacing:.24em;fill:#8fa6cc}
+.ins .er-rk-svg.stack .er-rk-label{font-size:11px}
+@media (prefers-reduced-motion:no-preference){.ins .er-rk:not(.is-ready) .er-rk-anim{opacity:0}}
+.ins .nf4-copy{position:absolute;left:56px;top:50%;transform:translateY(-50%);width:min(440px,46%);color:#eef3ff;z-index:1}
+.ins .nf4-copy .eyebrow{color:#9fb3d6;gap:8px}
+.ins .nf4-copy .eyebrow i{width:7px;height:7px;border-radius:50%;background:#2dd4e3;box-shadow:0 0 0 4px rgba(45,212,227,.16)}
+.ins .nf4-copy h1{margin-top:12px;color:#fff}
+.ins .nf4-copy .lead{color:#b9c6dc}
+.ins .nf4-copy .pills{margin-top:28px}
+.ins .nf4-copy .btn.line{border-color:rgba(255,255,255,.22);color:#eef3ff}
+.ins .nf4-copy .btn.line:hover{border-color:rgba(255,255,255,.5)}
+.ins .nf4-copy .btn.ink{background:#fff;color:#0b1426}
+.ins .nf4-copy .btn.ink:hover{background:#dfe7f5}
+@media (max-width:1099px){
+.ins .sc-404{max-width:600px}
+.ins .nf4{height:auto;overflow:visible;background:none;border-radius:0}
+.ins .er-rk{position:relative;inset:auto;aspect-ratio:358/340;border-radius:20px;overflow:hidden;background:#081223}
+.ins .er-rk-svg.wide{display:none}
+.ins .er-rk-svg.stack{display:block}
+.ins .nf4-copy{position:static;transform:none;width:auto;color:var(--ink);margin-top:28px}
+.ins .nf4-copy .eyebrow{color:var(--ink-3)}
+.ins .nf4-copy .eyebrow i{background:var(--blue);box-shadow:0 0 0 4px var(--blue-tint)}
+.ins .nf4-copy h1{color:var(--ink)}
+.ins .nf4-copy .lead{color:var(--ink-2)}
+.ins .nf4-copy .btn.line{border-color:var(--rule);color:var(--ink)}
+.ins .nf4-copy .btn.ink{background:var(--ink);color:var(--surface)}
+}
+@media (max-width:760px){
+.ins .sc-404{padding-top:16px;padding-bottom:32px}
+.ins .nf4-copy{margin-top:22px}
+.ins .nf4-copy h1{font-size:32px}
+.ins .nf4-copy .pills{flex-direction:column-reverse;align-items:stretch}
+.ins .nf4-copy .pills .btn{height:46px}
+}

@@ -28154,4 +28154,51 @@ Premisa: no hay otra vía de recuperación retirada.
 - El tiempo hasta el formulario es de unos 3 s; un toque lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
 - Aún no está medida en un móvil real; solo en Chromium a 390×844.
 
+## §388 · CONSOLE-404-ROCKET-1: la 404 de la consola recupera el cohete (2026-10-31)
+
+**Qué.** La 404 de dentro de la consola (`app/dashboard/not-found.tsx`) deja el
+anillo vacío de F8a (§366) y pasa a «Fuera de trayectoria»: una ventana
+nocturna con el cohete de la 404 pública, que despega del planeta siguiendo la
+ruta hacia el destino, se desvía, y cuyo rumbo punteado pasa de largo junto al
+blanco marcado con 404. Escena en `components/ins/errors/lost-rocket.tsx`,
+estilos en `app/ins/errors.css`. Ancho, el texto va sobre la escena; por debajo
+de 1100 px, debajo de ella sobre la superficie de la consola. Texto, botones y
+destinos no cambian.
+
+**Por qué así.** Denis pidió tres opciones con el concepto «Instrumento», una
+de ellas con el cohete que le gustaba de la 404 pública, y eligió esa (A) el
+2026-10-31. Maqueta con las tres en
+`docs/design-reference/console-404-rocket-1/opciones.html`.
+
+**Cómo se mueve.** Un solo reloj: `render(t, now)` dibuja la entrada (3,2 s) y
+el ambiente (flotación, propulsores, dos capas de estrellas, blanco girando) en
+un bucle de `requestAnimationFrame` que se para fuera de pantalla y con la
+pestaña oculta. Con movimiento reducido se queda en el último fotograma. Nada
+codifica progreso.
+
+**Reglas tocadas.** `mission-rocket.md` vuelve a hablar de dos cohetes (pública
+y consola) con la misma silueta; `console-instrumento.md` sustituye «sin
+cohete» de §366. `app/dashboard/error.tsx` sigue con el anillo vacío.
+
+**Pendiente.** Nada conocido. Premisa: no se retira ninguna vía de
+recuperación; los dos botones siguen siendo los de antes.
+
+## §389 · APP-LAUNCH-1: la app abre con splash también con sesión, y guarda lo estático (2026-10-31)
+
+**Qué se decidió.** Denis aprobó el plan de «app solo consola» del hilo «Lanzar app Android con barra flotante» con un cambio: el registro y la recuperación de contraseña **sí** se hacen desde la app. Lo que cambia:
+
+1. **La splash sale una vez por apertura, también con sesión.** El `start_url` (`app/manifest.ts` y `twa/twa-manifest.json`) pasa de `/dashboard?source=twa` a `/login?source=twa`; `id` sigue en `/dashboard` porque es la identidad de la app instalada. Con sesión abierta, `/login?source=twa` ya no redirige en servidor: pinta la marca con «Abriendo tu consola…», la splash aterriza en ella, la consola se precarga mientras tanto (`router.prefetch`) y se abre en cuanto la G se posa (`continueTo`). Sin sesión, igual que §382. Una apertura que entra directa a la consola (un enlace verificado de un correo, o el `start_url` antiguo) la desvía el middleware al inicio de sesión con `next` (`appLaunchRedirect`, solo GET). Tras arrancar se quita `source` de la dirección, así que recargar no repite la splash. La primera apertura cuenta como app aunque la cookie `gs_app` aún no viaje en esa petición.
+2. **Registro y recuperar contraseña dentro de la app.** Ya estaban permitidos (§381); ahora lo fijan los tests y la regla de ruta.
+3. **Service worker con caché de lo estático** (`public/sw.js`, `gs-static-v2`): primero caché para `/_next/static/` (JS, CSS y fuentes con hash), iconos y marca, con un tope de 300 entradas; las navegaciones van siempre a la red y, sin red, enseñan `offline.html`. Nunca se guarda una página, `/api`, `_next/image` ni una carga RSC. Se registra también en las pantallas de acceso (antes solo en la consola) y solo en producción.
+4. **Precarga de las pestañas.** No hace falta código nuevo: los `Link` de la barra inferior (§380) están siempre a la vista y Next los precarga solos en producción; cada pestaña con `loading.tsx` enseña su esqueleto al instante. Forzar la precarga completa de las cinco pantallas costaría cinco renders con consultas en cada apertura, y no se hace.
+5. **Paquete Android.** Construido con Bubblewrap fuera del repositorio; la clave de firma no entra en el repositorio (ver `twa/README.md`).
+
+**Premisa.** No se retira ninguna vía de recuperación: «Ir a la consola» queda como enlace bajo «Abriendo tu consola…» por si el JavaScript no arranca, y un toque o Esc saltan la splash como en §382.
+
+**Pendiente o conocido.**
+- La cookie `gs_app` vive en el almacén de Chrome, que la TWA comparte con el navegador: quien abra la app y luego visite genscore.es en Chrome del mismo móvil verá la web en modo app (sin precios) hasta entrar con `?source=web`. Ya pasaba desde §381; no se corrige aquí.
+- La sesión también se comparte: cerrar sesión en Chrome la cierra en la app.
+- Sin medir en un móvil real; los tests cubren desvío, splash con sesión no (es interacción de navegador).
+
+
 **Adenda a §381 (2026-10-31).** Dentro de la app (cookie `gs_app`) la pestaña «Plan» de Ajustes vuelve, solo de lectura (`components/settings/in-app-plan.tsx`): dice qué plan tiene la cuenta (o «Sin plan · solo lectura»), los días de prueba que quedan y una frase que remite a genscore.es en el navegador. Sin precios, sin «Cambiar de plan», sin checkout y **sin enlace clicable**: Denis propuso un enlace a la web, pero llevar a pagar fuera de la app arriesga el rechazo de Google Play, así que se deja como texto. Añadir el enlace es un cambio de una línea y la asume el fundador. Premisa: la app no vende; qué la verifica: `createCheckoutSession`/`createPortalSession` siguen negándose en servidor; qué se rompería si falla: el usuario vería su plan pero no podría cambiarlo desde la app.
