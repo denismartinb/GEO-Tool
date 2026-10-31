@@ -13,6 +13,23 @@ export const ACTION_TYPE: Record<ActionType, { label: string; cls: string }> = {
   links: { label: "Enlaces", cls: "skw-chip-vio" }
 };
 
+/** Trailing chevron: marks a row as something you open (log §389). */
+export function OpenChevron() {
+  return (
+    <svg className="skw-chev" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function CloseIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
+      <path d="M4 4l8 8M12 4l-8 8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function ActionChip({ type }: { type: ActionType }) {
   const t = ACTION_TYPE[type];
   return <span className={`skw-chip ${t.cls}`}>{t.label}</span>;

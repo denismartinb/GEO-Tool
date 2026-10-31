@@ -28182,3 +28182,25 @@ cohete» de §366. `app/dashboard/error.tsx` sigue con el anillo vacío.
 
 **Pendiente.** Nada conocido. Premisa: no se retira ninguna vía de
 recuperación; los dos botones siguen siendo los de antes.
+
+## §389 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
+
+**Qué.** En «Posición en Google» (`seo-resumen.tsx`, `seo-topics.tsx`):
+
+- La acción de «Qué hacer esta semana» (Resumen) y «Lo siguiente» de cada tema
+  (Temas) llevan el título en el color de enlace y un chevron a la derecha
+  (`OpenChevron`, `seo-shared.tsx`); al pasar el ratón se subraya.
+- La ficha del tema, en móvil, pasa de panel a pantalla completa a **hoja
+  inferior**: deja ver la consola atenuada arriba, esquinas superiores
+  redondeadas, asa y animación de subida. Cubre la barra de pestañas (antes la
+  barra quedaba encima, z-index 70 frente a 61). En escritorio sigue siendo un
+  panel lateral, ahora con entrada animada.
+- La X de cerrar (ficha y «Cambiar rivales») pasa a botón redondo de 36 px con
+  fondo y un icono de trazo, en vez del carácter «✕» sin caja.
+
+**Por qué.** Denis, en su iPhone (2026-10-31): la próxima acción no parecía un
+enlace en ninguna de las dos páginas, y la ficha parecía una página que había
+perdido la cabecera, con una X que casi no se veía.
+
+**Pendiente.** Verlo en el iPhone de Denis. Premisa: no se retira ninguna vía
+de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
