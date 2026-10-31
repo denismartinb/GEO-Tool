@@ -207,7 +207,7 @@ export function ChangePlanModal({
       : "Ir al portal de Stripe"
     : isPending
       ? "Abriendo Stripe…"
-      : "Ir a pagar";
+      : "Ir al pago";
   const moveLabel =
     onTrial && sel === currentId
       ? "Pasas de la prueba a"
