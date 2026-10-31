@@ -3,11 +3,11 @@ import { InsSprite } from "@/components/ins/sprite";
 import { AuthShell } from "./shell";
 
 /** Server wrapper of an entry screen: scope, symbol sheet and Bruma frame. */
-export function AuthPage({ children, lit = 0 }: { children: ReactNode; lit?: 0 | 1 | 2 }) {
+export function AuthPage({ children, lit = 0, splash = false }: { children: ReactNode; lit?: 0 | 1 | 2; splash?: boolean }) {
   return (
     <main className="ins ins-auth">
       <InsSprite />
-      <AuthShell lit={lit}>{children}</AuthShell>
+      <AuthShell lit={lit} splash={splash}>{children}</AuthShell>
     </main>
   );
 }

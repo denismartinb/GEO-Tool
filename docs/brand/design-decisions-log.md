@@ -27930,6 +27930,11 @@ toda ella es un enlace. Las tarjetas Starter y Pro del aviso de primera entrada
 son seleccionables y «Elegir plan» abre el plan marcado. Superado por esta
 adenda: «una barra inferior en móvil».
 
+**Cabecera móvil (2026-10-31, fundador, opción A).** La cabecera móvil ya no
+lleva el logo G suelto: junto al selector de dominio, que ya muestra su
+favicon, salían dos G seguidas. El logo sigue arriba del menú lateral y del
+cajón. Se retira `<svg class="mk">` y sus reglas de `shell.css`.
+
 **Honestidad.** Los precios del aviso salen de `plans-data.ts`; el precio
 fundador sólo sale si `getActivePromoPlanIds()` lo confirma (cupón real con
 plazas). Sin fecha de fin de prueba: el marco no la conoce y no se inventa.
@@ -28092,3 +28097,59 @@ privado y RLS por carpeta propia; sin service role.
 **Pendiente.** Migración `0046_profile_avatar.sql`, que se aplica a mano antes del
 merge; sin ella `readAvatarUrl` lee «sin foto» y la subida falla con mensaje.
 Premisa: no hay otra vía de recuperación retirada.
+
+## 380. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la maqueta `docs/design-reference/mobile-tabbar-1/consola-tab-bar.html` (variante «Flotante») y pidió el mismo frontal en la web móvil y, después, en la app de Android. Esta fase es sólo la web móvil.
+
+**Qué cambia (≤760 px).**
+- Una cápsula translúcida fija abajo con cinco pestañas: Inicio (Visión general), Plan (Recomendaciones), En la IA, Google y Agentes (con «Nuevo»). Plan lleva el recuento de recomendaciones activas.
+- Cada pestaña recuerda la última pantalla que se vio en su familia (`tabTarget`, memoria en el marco, dura la visita).
+- Las familias con varias pantallas (En la IA, Google, Agentes) muestran pastillas fijas al inicio de la página.
+- Desaparecen la hamburguesa y el cajón lateral: la cabecera móvil lleva marca, dominio, buscar, campana y cuenta. «¿Cómo funciona?» ya vivía en el menú de cuenta.
+- Respeta los márgenes del sistema (`env(safe-area-inset-*)`, la raíz ya declara `viewport-fit=cover`): la barra queda por encima de la barra de gestos y de la muesca, y la página reserva su alto.
+- Se oculta durante la misión del primer escaneo y el alta de dominio, que son de pantalla completa.
+
+**Escritorio no cambia**: menú lateral como siempre.
+
+**Datos.** `lib/ins/nav.ts` (`INS_TABS`) agrupa las mismas rutas del menú; ninguna ruta, consulta ni acción cambia. Test: cada pantalla del menú pertenece a una sola pestaña.
+
+**Pendiente o conocido.**
+- La maqueta pintaba un punto de aviso en Google y un indicador deslizante entre pestañas: no se han construido (el primero necesita un dato nuevo, el segundo es pulido).
+- Fase 2 (app de Android como TWA, sin compras dentro) va en su propio PR.
+
+## 381. ANDROID-TWA-1: app de Android como TWA, sin compras dentro (2026-10-30)
+
+**Qué se decidió.** Denis pidió el mismo frontal en todos los canales: la app de Android es la web móvil de §380 abierta en Chrome a pantalla completa (Trusted Web Activity, construida con Bubblewrap). Sin segundo frontal: cada despliegue de Vercel actualiza la app. Se descartó un WebView a pelo porque Google bloquea el acceso con Google dentro de él.
+
+**Regla de Google Play: la app no vende.** Las compras digitales dentro de la app tendrían que pasar por el cobro de Google (15 % en suscripciones). Se evita así: dentro de la app no hay precios, ni «Cambiar de plan», ni checkout de Stripe ni texto que mande a pagar fuera. Registrarse y la prueba de Pro de 7 días (sin tarjeta) sí; quien ya paga entra con su cuenta. Contratar se hace en genscore.es, fuera de la app, por los correos de fin de prueba que ya existen.
+
+**Cómo se implementa.**
+- `start_url` = `/dashboard?source=twa` (`app/manifest.ts`). El middleware lee `?source=twa` o un referrer `android-app://es.genscore.app` y guarda la cookie `gs_app` (un año, httpOnly). `?source=web` la borra, para pruebas. La cookie solo oculta: no autoriza nada.
+- Con la cookie, el middleware sirve **solo** consola, acceso, API y lo legal (lista de permitidos, `lib/app-mode.ts`); portada, `/precios`, blog, comparativas, afiliados… vuelven a `/dashboard`. Una página pública nueva queda fuera de la app salvo que alguien la añada a la lista.
+- Servidor: `createCheckoutSession` y `createPortalSession` se niegan; Ajustes no pinta la sección Plan; el aviso «Tu cuenta» de la campana no sale; el bloqueo por exceso de dominios solo ofrece retirar.
+- Cliente: el selector de dominios, la paleta ⌘K y el menú de cuenta quitan «Cambiar de plan» y «Programa de afiliados» (`ShellData.inApp`). Una regla CSS esconde cualquier enlace con `openPlan=`, `/precios` o `/pricing` dentro de la consola: red de seguridad para las pantallas de Comercio agéntico (las tarjetas «Pasar a Pro»), que otros PRs reescriben.
+- Instalable: manifiesto, iconos (192, 512 y maskable), service worker mínimo que solo guarda la pantalla `/offline.html`, y `/.well-known/assetlinks.json` leído de `ANDROID_SHA256_CERT_FINGERPRINTS`.
+- `twa/` guarda la configuración de Bubblewrap y los pasos para construir, firmar y publicar (`twa/README.md`).
+
+**Premisa que se retira (regla de cierre n.º 4).** Dentro de la app desaparece el camino «Cambiar de plan». Premisa: quien paga lo hace en la web y la cuenta es la misma. Lo verifica el correo de fin de prueba (§238, §254) y `/precios` en navegador. Si esa premisa falla (correo no entregado), el usuario de la app no tiene salida de pago desde la app: puede abrir genscore.es en el navegador. Una cuenta `free` en la app queda en solo lectura, sin explicación de cómo reactivarla: es el coste aceptado de la política de Google.
+
+**Pendiente o conocido.**
+- Hay que crear la cuenta de Play Console (25 $), generar la clave de firma y poner `ANDROID_SHA256_CERT_FINGERPRINTS` en Vercel: lo hace Denis, pasos en `twa/README.md`. Sin las huellas la app abre con la barra de Chrome.
+- Los textos de Comercio agéntico siguen diciendo «está en Pro y Agencia» sin botón. No manda a pagar, pero queda un cartel sin acción; se revisará cuando se mergee F7.
+- Las páginas públicas que no pasan por el middleware (comparativas, docs, glosario…) no se redirigen dentro de la app: solo se llega a ellas si el usuario escribe la URL.
+- La experiencia de prueba terminada (§367: franja, tarjeta del menú, barra inferior y aviso de primera entrada) apunta a elegir plan, así que dentro de la app no se pinta (`d.inApp` en `components/ins/trial-ended.tsx`). Una cuenta sin plan dentro de la app ve sus datos en solo lectura sin explicación ni camino de pago; si Denis quiere un aviso sin venta, se diseña aparte. En móvil de la web, la barra inferior de ese aviso sube sobre la barra de pestañas.
+- Notificaciones push: no existen; son la fase siguiente y lo que más aporta una app frente a la web.
+- iPhone: Apple es más exigente con apps que son solo una web; mismo planteamiento cuando haya push.
+
+## 382. APP-SPLASH-1: tres entradas animadas que aterrizan en el login de la app (2026-10-30)
+
+**Qué se decidió.** Denis aprobó las tres propuestas (D Calibre, E Compás, F Bruma) y que rote una distinta en cada apertura. Solo salen dentro de la app de Android (cookie `gs_app`, §381), en `/login` sin sesión, una vez por apertura (`sessionStorage`) y nunca dos veces seguidas la misma (`localStorage`, al azar si el navegador lo bloquea). Con `prefers-reduced-motion` no sale ninguna y se entra directo. Se saltan con un toque en cualquier parte o Esc, sin botón ni texto visible (Denis quitó «Saltar»); la capa lleva `aria-label` para lectores de pantalla. Diseño de referencia en `docs/design-reference/app-splash-1/splash-login.html`.
+
+**Cómo funciona.** Una superposición (`components/ins/auth/splash/engine.ts`) con un solo reloj en ms: SVG para la marca y su decorado y un canvas para la bruma. La G vuela hasta el sitio real de la marca del login (`.au-lock svg`, medido en vivo) y el formulario entra con la misma animación escalonada de siempre cuando la G se posa. La bruma del login real se atenúa mientras dura y vuelve con fundido. Si el JavaScript no arranca, el formulario aparece solo a los 6 s (`ins-aufail`).
+
+**La G nueva.** Geometría exacta (`g-mark.ts`): dos anillos concéntricos de un solo grosor, tres cortes paralelos iguales, barra con remate redondo y punto ámbar centrado en el anillo. Sustituye al calco con bordes dentados. **Solo la usan la splash y la marca del login dentro de la app**; `app/icon.svg` y el resto de marcas siguen igual hasta que Denis apruebe cambiarlas.
+
+**Pendiente o conocido.**
+- El tiempo hasta el formulario es de unos 3 s; un toque lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
+- Aún no está medida en un móvil real; solo en Chromium a 390×844.

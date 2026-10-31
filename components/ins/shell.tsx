@@ -14,7 +14,18 @@ import { avatarStyle, initialsOf, planLabel, ShellDataProvider, useShellData, ty
 import { InsSprite } from "@/components/ins/sprite";
 import { TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
-import { crumbForPath, INS_NAV, isNavActive, navHref, type InsNavItem } from "@/lib/ins/nav";
+import {
+  crumbForPath,
+  INS_NAV,
+  INS_TABS,
+  isNavActive,
+  navHref,
+  tabForPath,
+  tabSubItems,
+  tabTarget,
+  type InsNavItem,
+  type InsTabKey
+} from "@/lib/ins/nav";
 import type { AccountNotice } from "@/lib/notifications/account-notice";
 import type { NextStepNotice } from "@/lib/notifications/next-step";
 import type { WorkspaceNotification } from "@/lib/project-workspace";
@@ -59,11 +70,9 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
   const d = useShellData();
   const pathname = usePathname();
   const block = useAuditBlock();
-  const [drawer, setDrawer] = useState(false);
   const scRef = useRef<HTMLDivElement | null>(null);
   const [edgeTop, setEdgeTop] = useState(false);
   const [edgeBottom, setEdgeBottom] = useState(false);
-  const hbRef = useRef<HTMLButtonElement | null>(null);
 
   const edges = useCallback(() => {
     const sc = scRef.current;
@@ -73,7 +82,6 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
   }, []);
 
   useEffect(() => {
-    setDrawer(false);
     scRef.current?.scrollTo({ top: 0 });
     const t = setTimeout(edges, 50);
     return () => clearTimeout(t);
@@ -95,24 +103,11 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
     };
   }, [edges]);
 
-  useEffect(() => {
-    if (!drawer) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setDrawer(false);
-        hbRef.current?.focus();
-      }
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [drawer]);
-
   return (
-    <div className="ins-shell">
+    <div className="ins-shell" data-app={d.inApp ? "android" : undefined}>
       <InsSprite />
       <div className="app">
-        <Sidebar open={drawer} onNavigate={() => setDrawer(false)} />
-        <div className={`ins-scrim${drawer ? " on" : ""}`} onClick={() => setDrawer(false)} aria-hidden="true" />
+        <Sidebar />
         <main className="main">
           <header className="ins top">
             <div className="crumb">
@@ -130,17 +125,16 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
             <AccountAvatar />
           </header>
           <header className="ins mtop">
-            <button type="button" className="hb" ref={hbRef} aria-label="Abrir menú" aria-expanded={drawer} onClick={() => setDrawer(true)}>
-              <Ic n="menu" />
-            </button>
             <ProjectButton mobile />
             <span className="sp" />
+            <MobileSearchButton />
             <BellButton variant="mobile" />
             <AccountAvatar />
           </header>
           <TrialEndedStrip />
           <TrialEndedFirstEntry />
           <div className="scroller dash-content" id="sc" ref={scRef}>
+            <TabSub />
             {banner}
             {children}
           </div>
@@ -158,10 +152,20 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
           </div>
         </main>
       </div>
+      <TabBar />
     </div>
   );
 }
 
+
+function MobileSearchButton() {
+  const { open } = useCommandPalette();
+  return (
+    <button type="button" className="msearch" aria-label="Buscar o ir a" onClick={open}>
+      <Ic n="search" sm />
+    </button>
+  );
+}
 
 function PaletteButton() {
   const { open } = useCommandPalette();
@@ -231,20 +235,15 @@ function AccountAvatar() {
   );
 }
 
-function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
+function Sidebar() {
   const d = useShellData();
   const pathname = usePathname();
   const block = useAuditBlock();
   const { open: openPalette } = useCommandPalette();
   const { pop } = useLayer();
-  const asideRef = useRef<HTMLElement | null>(null);
   const helpRef = useRef<HTMLButtonElement | null>(null);
   const footRef = useRef<HTMLDivElement | null>(null);
   const p = d.project;
-
-  useEffect(() => {
-    if (open) asideRef.current?.focus();
-  }, [open]);
 
   function count(item: InsNavItem): number {
     if (!p || !item.countKey) return 0;
@@ -253,7 +252,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
   }
 
   return (
-    <aside className={`ins side${open ? " on" : ""}`} id="side" aria-label="Menú" ref={asideRef} tabIndex={-1}>
+    <aside className="ins side" id="side" aria-label="Menú">
       <div className="brand">
         <svg aria-hidden="true">
           <use href="#e-gs" />
@@ -261,7 +260,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         GenScore
       </div>
       <ProjectButton />
-      <button type="button" className="kbtn" onClick={() => { onNavigate(); openPalette(); }}>
+      <button type="button" className="kbtn" onClick={openPalette}>
         <Ic n="search" sm />
         Buscar o ir a…
         <kbd>⌘K</kbd>
@@ -292,7 +291,6 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
                   href={navHref(p.id, item)}
                   className={`nav${active ? " on" : ""}`}
                   aria-current={active ? "page" : undefined}
-                  onClick={onNavigate}
                 >
                   <Ic n={item.icon} />
                   <span>{item.label}</span>
@@ -303,7 +301,7 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
           </div>
         ))}
       </nav>
-      <TrialEndedPlanCard onNavigate={onNavigate} />
+      <TrialEndedPlanCard />
       <div className="xo-bot">
         <button
           type="button"
@@ -342,5 +340,78 @@ function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }
         </div>
       </div>
     </aside>
+  );
+}
+
+/*
+ * MOBILE-TABBAR-1: barra inferior flotante (≤760 px). Cinco pestañas; cada una
+ * recuerda la última pantalla vista de su familia. Memoria en un ref: el marco
+ * no se desmonta al navegar, así que dura toda la visita.
+ */
+function useTab() {
+  const d = useShellData();
+  const pathname = usePathname();
+  const last = useRef<Partial<Record<InsTabKey, string>>>({});
+  const p = d.project;
+  const tab = p ? tabForPath(pathname, p.id) : null;
+  if (p && tab) {
+    const seg = tab.segments.find((s) => {
+      const item = navItemBySegment(s);
+      return item ? isNavActive(pathname, p.id, item) : false;
+    });
+    if (seg !== undefined) last.current[tab.key] = seg;
+  }
+  return { d, p, tab, last: last.current, pathname };
+}
+
+function navItemBySegment(segment: string): InsNavItem | undefined {
+  return INS_NAV.flatMap((g) => g.items).find((n) => n.segment === segment);
+}
+
+function TabBar() {
+  const { d, p, tab, last } = useTab();
+  if (!p) return null;
+  return (
+    <nav className="ins tabbar" aria-label="Secciones">
+      {INS_TABS.map((t) => {
+        const on = tab?.key === t.key;
+        const recs = t.key === "recs" ? (d.recommendationCountByProject[p.id] ?? 0) : 0;
+        return (
+          <Link
+            key={t.key}
+            href={`/dashboard/projects/${p.id}${tabTarget(t, last)}`}
+            className={on ? "on" : undefined}
+            aria-current={on ? "page" : undefined}
+            aria-label={recs > 0 ? `${t.label}, ${recs} recomendaciones` : t.label}
+          >
+            <Ic n={t.icon} />
+            <span>{t.short}</span>
+            {recs > 0 ? <span className="b num">{recs}</span> : null}
+            {t.isNew ? <span className="nw">Nuevo</span> : null}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function TabSub() {
+  const { p, tab, pathname } = useTab();
+  const block = useAuditBlock();
+  if (!p || !tab) return null;
+  const items = tabSubItems(tab);
+  if (items.length === 0) return null;
+  return (
+    <nav className="ins tabsub" aria-label={tab.label}>
+      {items.map((item) => {
+        const active = isNavActive(pathname, p.id, item, block);
+        return (
+          <Link key={`${item.segment}${item.block ?? ""}`} href={navHref(p.id, item)} className={active ? "on" : undefined} aria-current={active ? "page" : undefined}>
+            <Ic n={item.icon} sm />
+            {item.label}
+          </Link>
+        );
+      })}
+    </nav>
   );
 }

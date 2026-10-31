@@ -76,11 +76,13 @@ export function DomainSwitcherPanel() {
             <b>
               Has usado {cap === 1 ? "el dominio" : `los ${cap} dominios`} de tu plan.
             </b>{" "}
-            Para añadir otro, retira uno o cambia de plan.
+            {d.inApp ? null : "Para añadir otro, retira uno o cambia de plan."}
           </span>
-          <Link href="/dashboard/settings?openPlan=pro#plan" className="btn sm line" onClick={close}>
-            Cambiar de plan
-          </Link>
+          {d.inApp ? null : (
+            <Link href="/dashboard/settings?openPlan=pro#plan" className="btn sm line" onClick={close}>
+              Cambiar de plan
+            </Link>
+          )}
         </div>
       ) : (
         <div className="xo-full">

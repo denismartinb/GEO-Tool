@@ -7,6 +7,7 @@ import { Ic } from "@/components/ins/ic";
 import "@/app/ins/tokens.css";
 import "@/app/ins/components.css";
 import "@/app/ins/auth.css";
+import { isInApp } from "@/lib/app-mode-server";
 import { safeNextPath } from "@/lib/safe-next-path";
 import { login, signInWithGoogle } from "./actions";
 import type { Metadata } from "next";
@@ -38,8 +39,10 @@ export default async function LoginPage({
   } = await supabase.auth.getUser();
   if (user) redirect(next ?? "/dashboard");
 
+  const inApp = await isInApp();
+
   return (
-    <AuthPage>
+    <AuthPage splash={inApp}>
       <AuthHead title="Hola de nuevo.">Tu visibilidad en la IA, donde la dejaste.</AuthHead>
       {params.deleted === "1" ? (
         <div className="au-note">

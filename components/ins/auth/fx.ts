@@ -22,7 +22,7 @@ export function bumpAuthEnergy() {
   AUFX.en = Math.min(1, AUFX.en + 0.25);
 }
 
-function hex(c: string): [number, number, number] {
+export function hex(c: string): [number, number, number] {
   const m = c.match(/^#([0-9a-f]{6})$/i);
   if (!m) return [120, 130, 150];
   const n = parseInt(m[1], 16);

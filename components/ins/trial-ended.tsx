@@ -10,7 +10,8 @@ import { useShellData } from "@/components/ins/shell-context";
  * CONSOLE-INSTRUMENTO-1 F8b (log §367): la experiencia de la prueba de Pro
  * terminada. Una cuenta `free` es de sólo lectura (TRIAL-ONLY-1, log §243):
  * aviso la primera vez que entra, y piezas fijas que llevan a elegir plan.
- * Diseño aprobado: docs/design-reference/console-instrumento-1/prueba-caducada.html
+ * Dentro de la app de Android no sale nada de esto: apunta a elegir plan, que es
+ * pagar (ANDROID-TWA-1, log §381). Diseño aprobado: docs/design-reference/console-instrumento-1/prueba-caducada.html
  */
 
 export const PICK_PLAN_HREF = "/dashboard/settings?openPlan=pro#plan";
@@ -36,7 +37,7 @@ function markSeen() {
 /** Franja bajo la cabecera, en todas las pantallas y anchuras (la barra inferior móvil se retiró: duplicaba este aviso). */
 export function TrialEndedStrip() {
   const d = useShellData();
-  if (d.planId !== "free") return null;
+  if (d.planId !== "free" || d.inApp) return null;
   return (
     <Link href={PICK_PLAN_HREF} className="te-strip" aria-label="Prueba terminada. Cambiar plan">
       <span className="dot" aria-hidden="true" />
@@ -52,7 +53,7 @@ export function TrialEndedStrip() {
 /** Tarjeta del menú lateral: sustituye al chip del plan en el pie. */
 export function TrialEndedPlanCard({ onNavigate }: { onNavigate?: () => void }) {
   const d = useShellData();
-  if (d.planId !== "free") return null;
+  if (d.planId !== "free" || d.inApp) return null;
   return (
     <div className="te-card">
       <b>Prueba terminada</b>
@@ -68,7 +69,7 @@ export function TrialEndedPlanCard({ onNavigate }: { onNavigate?: () => void }) 
 export function TrialEndedFirstEntry() {
   const d = useShellData();
   const { dlg } = useLayer();
-  const isFree = d.planId === "free";
+  const isFree = d.planId === "free" && !d.inApp;
   useEffect(() => {
     if (!isFree || readSeen()) return;
     markSeen();

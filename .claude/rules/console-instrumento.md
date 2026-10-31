@@ -187,3 +187,35 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   `user_metadata`.
 - **La RLS del bucket exige la carpeta propia** (`<id>/…`); no se escribe con
   service role.
+
+## Barra inferior móvil (MOBILE-TABBAR-1, log §380)
+
+- **Solo ≤760 px.** Escritorio conserva el menú lateral; no se añaden pestañas
+  a su cabecera. Móvil no tiene cajón: la navegación es `TabBar` + `TabSub`.
+- **Las pestañas viven en `lib/ins/nav.ts` (`INS_TABS`)** y agrupan las mismas
+  rutas de `INS_NAV`; una pantalla nueva del menú entra en una (y solo una)
+  pestaña, lo vigila `nav.test.ts`.
+- **Márgenes del sistema con `env(safe-area-inset-*)`** en la barra y en el
+  padding inferior de `.page`. Un elemento fijo nuevo abajo cuenta con la barra.
+- **Se oculta en pantallas completas** (`.sc-mission`, `.sc-newdomain`).
+
+## App de Android (ANDROID-TWA-1, log §381)
+
+- **Dentro de la app no se vende.** Con la cookie `gs_app` (`lib/app-mode.ts`)
+  no puede aparecer un precio, «Cambiar de plan», un checkout ni texto que
+  mande a pagar fuera: lo exige Google Play. Una pantalla nueva con una llamada a
+  contratar la oculta con `ShellData.inApp` o `isInApp()` (servidor).
+- **La lista de rutas permitidas dentro de la app es de permitidos**
+  (`isAppModePathAllowed`): una página pública nueva no entra sola.
+- **Las acciones de pago se niegan en servidor**, no solo se esconden
+  (`createCheckoutSession`, `createPortalSession`).
+
+## Splash de la app (APP-SPLASH-1, log §382)
+
+- **Solo en `/login`, solo dentro de la app (`gs_app`), una vez por apertura**, y
+  nunca la misma que la anterior. Con `prefers-reduced-motion` no sale.
+- **No bloquea el acceso**: un toque o Esc llevan (sin botón visible, a petición de Denis) al formulario, y si
+  el JavaScript falla el formulario aparece a los 6 s.
+- **La G geométrica (`splash/g-mark.ts`) es de la splash y del login de la app.**
+  Sustituir `app/icon.svg` o las marcas del resto del producto no está aprobado.
+- **El movimiento es ambiente**: ninguna cifra ni barra representa un dato.

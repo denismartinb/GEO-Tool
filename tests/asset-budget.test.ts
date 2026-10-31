@@ -120,7 +120,7 @@ const RASTER_EXTENSIONS_UNDER_BUDGET = [".png", ".jpg", ".jpeg"];
 const PNG_ALLOWED_BY_CONSUMER: { reason: string; matches: (path: string) => boolean }[] = [
   {
     reason: "icono de navegador/SO — el formato lo fija el sistema, no nosotros",
-    matches: (p) => /(^|\/)(favicon-\d+|apple-touch-icon|icon-\d+)\.png$/.test(p)
+    matches: (p) => /(^|\/)(favicon-\d+|apple-touch-icon|icon-(maskable-)?\d+)\.png$/.test(p)
   },
   {
     reason: "imagen Open Graph — los rastreadores sociales no aceptan WebP de forma fiable",
