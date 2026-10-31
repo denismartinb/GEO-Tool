@@ -43,5 +43,10 @@
 .ins .gsc-invite-g{display:grid;place-items:center;width:20px;height:20px;border-radius:99px;background:#fff}
 @media (max-width:760px){
  .ins .gsc-invite-slot{padding:16px}
+ .ins .gsc-invite-slot{grid-template-columns:minmax(0,1fr)}
+ .ins .gsc-invite-slot-txt{min-width:0}
+ .ins .gsc-invite-kinds{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .ins .gsc-invite-kinds::-webkit-scrollbar{display:none}
+ .ins .gsc-invite-kinds span{flex:none;white-space:nowrap}
  .ins .gsc-invite-slot .gsc-invite-btn,.ins .gsc-invite-row .gsc-invite-btn{width:100%;height:44px;font-size:14px}
 }

@@ -283,3 +283,11 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Competidores no enseña el denominador junto al ranking** (Denis, log §396,
   deja sin efecto aquí «El denominador no se quita» de F5b). Si vuelve, con
   `answerCountLabel`.
+
+## Favicons y cabecera móvil (FAVICON-NO-FLICKER-1, log §397)
+
+- **`FaviconImg` recuerda en la pestaña lo que ya pintó y lo que no existe.**
+  Sólo memoria del módulo, nunca `localStorage` ni el service worker. La caché
+  de los bytes sigue siendo la HTTP de `/api/favicon`.
+- **El borde izquierdo de la cabecera móvil (19 px) está medido contra la «B» del
+  título a 34 px.** Si cambia el tamaño del título o su tipo, se vuelve a medir.

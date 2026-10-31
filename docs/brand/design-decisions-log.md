@@ -28343,3 +28343,19 @@ la tienda. Premisa: no se retira ningún camino de recuperación.
 **Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
 
 **Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).
+
+## §397 · FAVICON-NO-FLICKER-1: los favicons no parpadean al abrir menús y la cabecera móvil se alinea con el título (2026-10-31)
+
+**Qué se decidió.** Denis pidió dos cosas viendo el preview en su iPhone:
+- Que los favicons dejen de parpadear cada vez que abre el selector de dominios o la lista de competidores.
+- Que el favicon y el nombre del dominio de la cabecera móvil queden alineados con la «B» de «Buenos días», que es la alineación de todas las páginas.
+
+**Qué se hizo.**
+- `components/ui/favicon-img.tsx` recuerda en memoria de la pestaña qué iconos ya se pintaron y qué dominios no tienen icono. Al volver a montar un icono ya visto, se pide sin carga diferida y con decodificación síncrona, así que sale de la caché HTTP (una semana, `/api/favicon`) sin hueco en blanco. Un dominio sin icono enseña su letra al instante, sin esperar al `onError` del 204. No se guarda nada fuera de la pestaña.
+- La cabecera móvil (`.ins-shell .mtop`) pasa de 12 px a 19 px de margen izquierdo. Medido a 390 px, el borde del favicon cae en el mismo píxel que el trazo de la «B» del título (19 px, por el espacio lateral de la letra a 34 px). El margen derecho no cambia.
+
+- En el móvil, las pastillas de la invitación a Search Console van en una sola fila que se desliza, a petición de Denis. Las cuatro no caben a 390 px.
+
+**Qué no cambia.** La ruta `/api/favicon`, sus cabeceras de caché y el aspecto de los iconos.
+
+**Pendiente o conocido.** La primera vez que se abre un menú en una pestaña nueva el icono sigue llegando como antes; la memoria sólo ayuda a partir de la segunda. Premisa: no se retira ningún camino de recuperación.
