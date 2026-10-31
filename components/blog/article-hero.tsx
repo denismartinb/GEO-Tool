@@ -48,6 +48,19 @@ export function ArticleHero({ post }: { post: BlogPost }) {
         <h1>{post.title}</h1>
         <p className="art-hero-sub">{post.description}</p>
 
+        {post.heroImage && (
+          <div className="art-hero-shot">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={post.heroImage.src}
+              alt={post.heroImage.alt}
+              width={post.heroImage.width}
+              height={post.heroImage.height}
+              fetchPriority="high"
+            />
+          </div>
+        )}
+
         {post.heroLogos && post.heroLogos.length > 0 && (
           <div className="art-hero-logos">
             {post.heroLogos.map((group, groupIndex) => (

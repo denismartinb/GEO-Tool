@@ -1,0 +1,181 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
+
+export const post = getBlogPost("extension-de-chrome-de-genscore");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿La extensión de GenScore para Chrome es gratis?",
+    answer:
+      "Sí. La revisión de cualquier página es gratis y no pide cuenta. Si tienes cuenta de GenScore, el mismo panel enseña además la visión general de tu dominio."
+  },
+  {
+    question: "¿Qué revisa la extensión en una página?",
+    answer:
+      "Una nota SEO + IA de 0 a 100, qué motores de IA pueden leer la página según su robots.txt (ChatGPT, Gemini, Claude y Perplexity), el SEO on page (título, metadescripción, indexación, encabezados, enlace canónico y datos estructurados), si la web tiene llms.txt y, en las páginas que venden algo, si un agente de IA podría encontrar el producto, entender el precio y comprarlo."
+  },
+  {
+    question: "¿La extensión envía el contenido de las páginas que visito?",
+    answer:
+      "No. La revisión se hace en tu navegador y solo cuando pulsas el icono, o en cada página si activas tú la revisión automática. Si has iniciado sesión en genscore.es, usa esa sesión para enseñarte tu cuenta en solo lectura. No guarda contraseñas ni usa los datos para publicidad."
+  },
+  {
+    question: "¿Que el robots.txt deje entrar a un motor significa que me va a citar?",
+    answer:
+      "No. El robots.txt solo dice si un rastreador tiene permiso para leer la página. Si te nombran o te citan se mide en las respuestas de los motores, que es lo que hace un escaneo de GenScore."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Abre cualquier web, pulsa el icono de GenScore y en un segundo sabes si la IA
+puede leerla, qué nota tiene en SEO + IA y qué cambiar primero. Gratis, sin
+cuenta y sin salir de la página.
+
+</KeyTakeaway>
+
+<p>
+  <a href={CHROME_WEB_STORE_URL} rel="noopener"><strong>Añade GenScore a Chrome</strong></a>: busca «GenScore: Auditoría SEO y visibilidad en IA» en la Chrome Web Store.
+</p>
+
+## Tu web puede estar cerrada a la IA y no saberlo
+
+Cada vez más gente pregunta a ChatGPT, Gemini, Claude o Perplexity qué comprar
+o a quién contratar. Si sus rastreadores no pueden leer tu página, no van a
+recomendarla. Y basta una regla antigua en el robots.txt para cerrarles la
+puerta sin que nadie lo haya decidido.
+
+La extensión te lo dice en la propia página, junto al SEO de siempre.
+
+<NumberedSection n={1} title="Quién puede leer tu página">
+
+Una nota de 0 a 100 y, motor a motor, si ChatGPT, Gemini, Claude y Perplexity
+tienen permiso para leerla. Debajo, lo que la IA encuentra: si responde en las
+primeras líneas, sus datos estructurados, si hay llms.txt y si deja citar su
+texto.
+
+<Figure
+  label="Figura 1."
+  caption="Ejemplo con una tienda inventada: tres motores pueden leer la página y uno está bloqueado."
+>
+  <img
+    className="art-shot"
+    src="/blog/extension-de-chrome-de-genscore/quien-puede-leerla.webp"
+    alt="Panel de la extensión de GenScore: indicadores IA, Google y Agentes, los cuatro motores de IA con si pueden leer la página y las comprobaciones de la página."
+    width={400}
+    height={347}
+    loading="lazy"
+  />
+</Figure>
+
+<QuickAction>Empieza por tu portada y por la página que más vende. Si un motor sale bloqueado y no lo decidiste tú, es lo primero que arreglar.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Qué arreglar primero, con el código listo">
+
+Cada arreglo llega en una tarjeta, ordenado por lo que más sube la nota, y
+cuando es de código trae las líneas para copiar y pegar. Lo pones, vuelves a
+revisar y ves cuánto has subido. En las páginas que venden, también te dice si
+un agente de IA podría encontrar el producto, entender el precio y comprarlo.
+
+<Figure
+  label="Figura 2."
+  caption="Ejemplo con una tienda inventada: la primera tarjeta, con las líneas que hay que poner en el robots.txt."
+>
+  <img
+    className="art-shot"
+    src="/blog/extension-de-chrome-de-genscore/haz-esto.webp"
+    alt="Tarjeta «Haz esto» del panel: deja entrar a Perplexity en tu robots.txt, con el bloque de código para copiar."
+    width={400}
+    height={469}
+    loading="lazy"
+  />
+</Figure>
+
+<QuickAction>Revisa también la web del competidor que sale por delante de ti. En un clic ves qué tiene él que tú no.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Con tu cuenta, tu marca en la IA">
+
+Si usas GenScore, el panel enseña la visión general de tu dominio: tu
+Puntuación GEO, en qué porcentaje de las respuestas te nombran frente a tu
+rival más fuerte y la primera acción de tu plan de la semana. Sin abrir la
+consola.
+
+<Figure
+  label="Figura 3."
+  caption="Ejemplo con datos inventados: la visión general de un dominio en el panel."
+>
+  <img
+    className="art-shot"
+    src="/blog/extension-de-chrome-de-genscore/con-tu-cuenta.webp"
+    alt="Panel con la cuenta iniciada: Puntuación GEO, indicadores IA, Google y Agentes y la primera acción del plan de la semana."
+    width={400}
+    height={856}
+    loading="lazy"
+  />
+</Figure>
+
+</NumberedSection>
+
+## Instálala
+
+<Checklist
+  items={[
+    "Abre GenScore: Auditoría SEO y visibilidad en IA en la Chrome Web Store y pulsa «Añadir a Chrome».",
+    "Fija el icono de GenScore en la barra del navegador.",
+    "En cualquier web, pulsa el icono o Alt + Mayús + G."
+  ]}
+/>
+
+La revisión se hace en tu navegador: el contenido de la página no se envía a
+GenScore, y la extensión no guarda contraseñas ni usa datos para publicidad.
+Más detalle en la <a href="/privacidad">política de privacidad</a>.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira tu web como la ve la IA"
+  text="Instala la extensión gratis y descubre en un clic qué motores pueden leer tu página y qué cambiar primero. Sin cuenta."
+  cta="Añadir a Chrome"
+  href={CHROME_WEB_STORE_URL}
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>
