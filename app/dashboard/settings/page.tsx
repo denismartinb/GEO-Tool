@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
@@ -35,7 +36,9 @@ export default async function SettingsPage({
 }) {
   const { supabase, user } = await requireUser();
   const role = await getAccountRole();
-  const isAdmin = role === "admin";
+  // ANDROID-TWA-1: en la app, ni plan ni facturación (log §381).
+  const inApp = await isInApp();
+  const isAdmin = role === "admin" && !inApp;
 
   const { checkout, openPlan } = await searchParams;
 

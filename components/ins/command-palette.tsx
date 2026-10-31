@@ -56,12 +56,13 @@ export function CommandPaletteProvider({ children }: { children: ReactNode }) {
       }
       list.push({ group: "Acciones", label: "Descargar informe", icon: "download", run: () => window.open(`/informe/${pid}`, "_blank", "noopener") });
     }
+    // ANDROID-TWA-1: en la app no hay cambio de plan ni afiliados (log §381).
     list.push(
       { group: "Cuenta", label: "Tu perfil", icon: "c-user", run: () => router.push("/dashboard/settings") },
-      { group: "Cuenta", label: "Cambiar de plan", icon: "c-card", run: () => router.push("/dashboard/settings?openPlan=pro#plan") },
+      ...(d.inApp ? [] : [{ group: "Cuenta", label: "Cambiar de plan", icon: "c-card", run: () => router.push("/dashboard/settings?openPlan=pro#plan") }]),
       { group: "Cuenta", label: "Ver el tour", icon: "c-rocket", run: () => openTour() },
       { group: "Cuenta", label: "Hablar con nosotros", icon: "c-video", run: () => dlg(<DemoDialog />, { label: "Hablar con nosotros", narrow: true }) },
-      { group: "Cuenta", label: "Programa de afiliados", icon: "c-hand", run: () => dlg(<AffiliateDialog />, { label: "Programa de afiliados", narrow: true }) },
+      ...(d.inApp ? [] : [{ group: "Cuenta", label: "Programa de afiliados", icon: "c-hand", run: () => dlg(<AffiliateDialog />, { label: "Programa de afiliados", narrow: true }) }]),
       { group: "Cuenta", label: "Añadir dominio", icon: "plus", run: () => router.push("/dashboard/projects/new") }
     );
     return list;

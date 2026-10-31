@@ -200,3 +200,41 @@ describe("middleware · enlace de afiliado (AFFILIATES-1)", () => {
     expect(response.headers.get("location")).toBeNull();
   });
 });
+
+describe("middleware · modo app (ANDROID-TWA-1)", () => {
+  function inApp(pathname: string, cookie = "gs_app=android") {
+    return new NextRequest(new Request(`https://genscore.es${pathname}`, { headers: { cookie } }));
+  }
+
+  it("?source=twa deja la cookie y no redirige la consola", async () => {
+    const res = await middleware(request("/dashboard?source=twa"));
+    expect(res.status).toBe(200);
+    expect(res.cookies.get("gs_app")?.value).toBe("android");
+  });
+
+  it("con la cookie, /precios y la portada vuelven a la consola", async () => {
+    for (const path of ["/precios", "/pricing", "/", "/blog/x"]) {
+      const res = await middleware(inApp(path));
+      expect(res.status, path).toBe(307);
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard");
+    }
+  });
+
+  it("con la cookie, la consola y el acceso siguen igual", async () => {
+    for (const path of ["/dashboard/settings", "/login", "/api/me"]) {
+      const res = await middleware(inApp(path));
+      expect(res.status, path).toBe(200);
+    }
+  });
+
+  it("sin la cookie, /precios sigue siendo pública", async () => {
+    const res = await middleware(request("/precios"));
+    expect(res.status).toBe(200);
+  });
+
+  it("?source=web sale del modo app", async () => {
+    const res = await middleware(inApp("/precios?source=web"));
+    expect(res.status).toBe(200);
+    expect(res.cookies.get("gs_app")?.value ?? "").toBe("");
+  });
+});
