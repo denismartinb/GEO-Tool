@@ -10,6 +10,7 @@ import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
 import { SettingsFrame } from "@/components/ins/settings/settings-frame";
+import { InAppPlan } from "@/components/settings/in-app-plan";
 import { BillingContent } from "@/components/billing/billing-content";
 import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-details";
 import { readAvatarUrl } from "@/lib/settings/avatar";
@@ -86,8 +87,8 @@ export default async function SettingsPage({
 
   // Only fetched for an admin: the section it feeds is admin-only, and so is
   // the plan pill in the header. A non-admin never triggers the query.
-  const usage = isAdmin ? await getUsageSummary() : null;
-  const plan = usage ? PLANS.find((candidate) => candidate.id === usage.planId) : null;
+  const usage = role === "admin" ? await getUsageSummary() : null;
+  const plan = usage && isAdmin ? PLANS.find((candidate) => candidate.id === usage.planId) : null;
 
   const trialDaysLeft = usage?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -112,10 +113,12 @@ export default async function SettingsPage({
         initials={initials}
         avatarUrl={avatarUrl}
         planPill={planPill}
-        showPlan={isAdmin}
+        showPlan={role === "admin"}
         forcePlan={Boolean(openPlan) || Boolean(checkout)}
         plan={
-          isAdmin ? (
+          role === "admin" && inApp && usage ? (
+            <InAppPlan usage={usage} />
+          ) : isAdmin ? (
             <>
               {checkout === "success" && <ConversionOnMount kind="purchase" dedupeKey="purchase" />}
               <BillingContent
