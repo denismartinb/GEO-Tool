@@ -7820,6 +7820,7 @@ html[data-session-hint="1"] .lp-mobnav-ctas:has(.lp-session-skeleton) > *:not(.l
    (#98a0b0) da 2.63:1 sobre blanco, `--ink-3` da 4.76:1. Aquí lo cogió el
    chequeo de contraste del piloto (Fase Q5b, log §55) sobre el enlace «Blog»
    de las páginas pilar del blog, que usa esta clase. */
+.legal-appbar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-block: 14px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); border-bottom: 1px solid var(--line); }
 .legal-updated { font-size: 13px; color: var(--ink-3); margin-top: 8px; }
 .legal-subnav { display: flex; align-items: center; gap: 16px; margin-top: 18px; }
 .legal-subnav-current { font-size: 12.5px; font-weight: 650; color: var(--ink-3); white-space: nowrap; }
