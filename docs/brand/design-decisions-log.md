@@ -28182,3 +28182,21 @@ cohete» de §366. `app/dashboard/error.tsx` sigue con el anillo vacío.
 
 **Pendiente.** Nada conocido. Premisa: no se retira ninguna vía de
 recuperación; los dos botones siguen siendo los de antes.
+
+## §389 · APP-LAUNCH-1: la app abre con splash también con sesión, y guarda lo estático (2026-10-31)
+
+**Qué se decidió.** Denis aprobó el plan de «app solo consola» del hilo «Lanzar app Android con barra flotante» con un cambio: el registro y la recuperación de contraseña **sí** se hacen desde la app. Lo que cambia:
+
+1. **La splash sale una vez por apertura, también con sesión.** El `start_url` (`app/manifest.ts` y `twa/twa-manifest.json`) pasa de `/dashboard?source=twa` a `/login?source=twa`; `id` sigue en `/dashboard` porque es la identidad de la app instalada. Con sesión abierta, `/login?source=twa` ya no redirige en servidor: pinta la marca con «Abriendo tu consola…», la splash aterriza en ella, la consola se precarga mientras tanto (`router.prefetch`) y se abre en cuanto la G se posa (`continueTo`). Sin sesión, igual que §382. Una apertura que entra directa a la consola (un enlace verificado de un correo, o el `start_url` antiguo) la desvía el middleware al inicio de sesión con `next` (`appLaunchRedirect`, solo GET). Tras arrancar se quita `source` de la dirección, así que recargar no repite la splash. La primera apertura cuenta como app aunque la cookie `gs_app` aún no viaje en esa petición.
+2. **Registro y recuperar contraseña dentro de la app.** Ya estaban permitidos (§381); ahora lo fijan los tests y la regla de ruta.
+3. **Service worker con caché de lo estático** (`public/sw.js`, `gs-static-v2`): primero caché para `/_next/static/` (JS, CSS y fuentes con hash), iconos y marca, con un tope de 300 entradas; las navegaciones van siempre a la red y, sin red, enseñan `offline.html`. Nunca se guarda una página, `/api`, `_next/image` ni una carga RSC. Se registra también en las pantallas de acceso (antes solo en la consola) y solo en producción.
+4. **Precarga de las pestañas.** No hace falta código nuevo: los `Link` de la barra inferior (§380) están siempre a la vista y Next los precarga solos en producción; cada pestaña con `loading.tsx` enseña su esqueleto al instante. Forzar la precarga completa de las cinco pantallas costaría cinco renders con consultas en cada apertura, y no se hace.
+5. **Paquete Android.** Construido con Bubblewrap fuera del repositorio; la clave de firma no entra en el repositorio (ver `twa/README.md`).
+
+**Premisa.** No se retira ninguna vía de recuperación: «Ir a la consola» queda como enlace bajo «Abriendo tu consola…» por si el JavaScript no arranca, y un toque o Esc saltan la splash como en §382.
+
+**Pendiente o conocido.**
+- La cookie `gs_app` vive en el almacén de Chrome, que la TWA comparte con el navegador: quien abra la app y luego visite genscore.es en Chrome del mismo móvil verá la web en modo app (sin precios) hasta entrar con `?source=web`. Ya pasaba desde §381; no se corrige aquí.
+- La sesión también se comparte: cerrar sesión en Chrome la cierra en la app.
+- Sin medir en un móvil real; los tests cubren desvío, splash con sesión no (es interacción de navegador).
+

@@ -219,8 +219,25 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **Solo en `/login`, solo dentro de la app (`gs_app`), una vez por apertura**, y
   nunca la misma que la anterior. Con `prefers-reduced-motion` no sale.
+  Desde APP-LAUNCH-1 (log §389) «apertura» es `?source=twa`: el `start_url`
+  abre `/login?source=twa`, y una apertura que entra directa a la consola la
+  desvía el middleware (`appLaunchRedirect`). Con sesión abierta, la splash
+  aterriza en la marca y sigue a la consola (`continueTo`), sin formulario.
 - **No bloquea el acceso**: un toque o Esc llevan (sin botón visible, a petición de Denis) al formulario, y si
   el JavaScript falla el formulario aparece a los 6 s.
 - **La G geométrica (`splash/g-mark.ts`) es de la splash y del login de la app.**
   Sustituir `app/icon.svg` o las marcas del resto del producto no está aprobado.
 - **El movimiento es ambiente**: ninguna cifra ni barra representa un dato.
+
+## Apertura y caché de la app (APP-LAUNCH-1, log §389)
+
+- **El service worker (`public/sw.js`) solo guarda lo estático**: `/_next/static/`
+  sin query, `/icons/`, `/brand/`, `favicon.ico`, `apple-touch-icon.png` y la
+  pantalla sin conexión. Nunca una navegación, `/api`, `_next/image` ni una
+  carga RSC: los datos de un cliente no se quedan en el dispositivo. Lo vigila
+  `tests/service-worker.test.ts`. Ampliar la lista necesita aprobación.
+- **Solo se registra en producción**: en desarrollo `/_next/static/` no lleva
+  hash y la caché serviría código viejo.
+- **Registro y recuperar contraseña existen dentro de la app** (Denis,
+  2026-10-31). `/signup`, `/forgot-password` y `/auth/*` siguen en la lista de
+  permitidos; quitarlos no está aprobado.

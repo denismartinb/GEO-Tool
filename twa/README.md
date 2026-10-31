@@ -12,12 +12,24 @@ texto que mande a pagar fuera. Se puede registrar quien quiera (la prueba de Pro
 de 7 días no pide tarjeta) y quien ya paga entra con su cuenta. Contratar se hace
 en genscore.es, fuera de la app, con los correos de fin de prueba.
 
-Lo hace la web sola cuando detecta la app: `start_url` lleva `?source=twa`, el
+Lo hace la web sola cuando detecta la app: `start_url` es `/login?source=twa`
+(la splash sale en cada apertura y, con sesión, sigue sola a la consola; log
+§389), el
 middleware guarda la cookie `gs_app` y, mientras exista, solo sirve consola,
 acceso y lo legal (`lib/app-mode.ts`). Para probarlo en un navegador normal:
-`https://www.genscore.es/dashboard?source=twa`; para salir, `?source=web`.
+`https://www.genscore.es/login?source=twa`; para salir, `?source=web`.
 
-## Construirla (una vez, en el ordenador de Denis)
+## Construirla
+
+Paquete construido el 2026-10-31 (APP-LAUNCH-1, log §389) desde una sesión de
+Claude con `@bubblewrap/core` 1.27 sobre este `twa-manifest.json`, sin firmar:
+la clave de subida nunca entra en el repositorio. Dos detalles que hubo que
+corregir y ya están en el manifiesto: `minSdkVersion` 24 (lo exige
+androidbrowserhelper 2.7) y los campos que el CLI rellenaría solo
+(`splashScreenFadeOutDuration`, divisor de la barra de navegación). En el
+`build.gradle` generado, `jcenter()` se cambia por `mavenCentral()`.
+
+### A mano, en un ordenador
 
 Requisitos: Node 18+, JDK 17 y el SDK de Android (Bubblewrap los descarga la
 primera vez).

@@ -206,10 +206,28 @@ describe("middleware · modo app (ANDROID-TWA-1)", () => {
     return new NextRequest(new Request(`https://genscore.es${pathname}`, { headers: { cookie } }));
   }
 
-  it("?source=twa deja la cookie y no redirige la consola", async () => {
-    const res = await middleware(request("/dashboard?source=twa"));
+  it("?source=twa en el inicio de sesión deja la cookie y no redirige", async () => {
+    const res = await middleware(request("/login?source=twa"));
     expect(res.status).toBe(200);
     expect(res.cookies.get("gs_app")?.value).toBe("android");
+  });
+
+  it("una apertura que entra a la consola pasa por la splash del inicio de sesión (APP-LAUNCH-1)", async () => {
+    const res = await middleware(request("/dashboard?source=twa"));
+    expect(res.status).toBe(307);
+    expect(res.cookies.get("gs_app")?.value).toBe("android");
+    const to = new URL(res.headers.get("location")!);
+    expect(to.pathname).toBe("/login");
+    expect(to.searchParams.get("source")).toBe("twa");
+    expect(to.searchParams.get("next")).toBeNull();
+
+    const deep = await middleware(request("/dashboard/settings?source=twa&openPlan=pro"));
+    expect(new URL(deep.headers.get("location")!).searchParams.get("next")).toBe("/dashboard/settings?openPlan=pro");
+  });
+
+  it("dentro de la app, navegar por la consola no vuelve a pasar por la splash", async () => {
+    const res = await middleware(inApp("/dashboard/projects/p1"));
+    expect(res.status).toBe(200);
   });
 
   it("con la cookie, /precios y la portada vuelven a la consola", async () => {
