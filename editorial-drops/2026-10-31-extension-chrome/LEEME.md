@@ -2,7 +2,7 @@
 
 Qué hay: textos para LinkedIn (página de GenScore, primer comentario y línea de Denis) y un hilo de X, más dos imágenes 1080×1350 (08a, 08b). Instrucciones para Instinct en PROMPT-INSTINCT.md.
 
-Requisito: el artículo debe responder 200 en producción antes de publicar (pendiente del merge del PR #711, que espera el enlace de la ficha en la Chrome Web Store).
+El artículo ya está en producción (comprobado el 2026-10-31). Aun así, comprueba el 200 antes de publicar.
 
 Artículo: https://www.genscore.es/blog/extension-de-chrome-de-genscore
 Imágenes (1080×1350, en este orden): /mnt/project-files/contenido/blog/redes/08a-extension-chrome.png y /mnt/project-files/contenido/blog/redes/08b-extension-chrome.png

@@ -5,4 +5,4 @@
 
 Post de LinkedIn (con dos imágenes 4:5), primer comentario, línea para el perfil de Denis e hilo de X que lanzan la extensión de Chrome de GenScore.
 El gancho: tu web puede estar cerrada a la IA sin que lo sepas, y en un clic ves quién puede leerla y qué arreglar.
-ESPERA: el artículo aún no está en producción (falta el enlace de la Chrome Web Store). Comprobar el 200 y publicar sólo con el «sí, publica» de Denis.
+El artículo ya está en producción (200 comprobado el 2026-10-31); publicar sólo con el «sí, publica» de Denis.
