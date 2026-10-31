@@ -102,8 +102,8 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **El orden del ranking es por menciones**; el puesto medio sólo desempata y
   sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
-- **El denominador no se quita**: «N respuestas · M prompts en K motores» lo
-  compone `answerCountLabel`, nunca una frase suelta (§183).
+- **El denominador, si se enseña, lo compone `answerCountLabel`** (§183); desde
+  §394 el ranking ya no lo enseña, a petición de Denis.
 - **Las clases `i` de una regla móvil se escriben con `>`**: el kit `Roll` usa
   `<i>` para los dígitos y una regla `.mt i` los rompe.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
@@ -269,3 +269,6 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Recomendaciones no tiene buscador ni capa en foco** (log §394): «Más adelante»
   se filtra sólo por palanca, y las tarjetas del plan comparten la altura de la
   más alta (`Deck equal`).
+- **Competidores no enseña el denominador junto al ranking** (Denis, log §394,
+  deja sin efecto aquí «El denominador no se quita» de F5b). Si vuelve, con
+  `answerCountLabel`.

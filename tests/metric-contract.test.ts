@@ -49,10 +49,9 @@ describe("TRUST-METRICS-1 — the headline GEO score has one owner", () => {
 });
 
 describe("TRUST-METRICS-1 — every answer-row percentage carries its denominator", () => {
-  it("Competidores composes its answer-count sentence only via answerCountLabel, never a bare prompt count or a × between time windows", () => {
+  it("Competidores never composes an answer-count sentence by hand (its ranking line was removed in log §394)", () => {
     const source = read("app/dashboard/projects/[projectId]/competitors/page.tsx");
-    expect(source).toContain('import { answerCountLabel, citationRate, mentionRateByAnswer } from "@/lib/metrics/run-metrics"');
-    expect(source).toMatch(/answerCountLabel\(promptCount, engineCount, totalResultsCount\)/);
+    expect(source).not.toMatch(/respuestas · \$\{/);
     // The audit's exact wrong sentence must not be reconstructable from a
     // literal template anywhere in this file.
     expect(source).not.toMatch(/\$\{totalResultsCount\} prompts/);

@@ -28283,6 +28283,11 @@ de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 - Las tarjetas del plan miden todas lo mismo: la altura de la más alta (`Deck` con `equal`; en el móvil, `align-items: stretch`).
 - La pestaña móvil «En la IA» abre por Competidores, luego Prompts y luego Citadas.
 - Prompts: fuera la línea «N de M prompts de tu plan» y la raya gruesa del primer tema bajo la barra de Temas/Prompts. El tope del plan sigue en «Añadir prompts».
+- Competidores: fuera «Ordenado por menciones · N respuestas · M prompts en K motores» en el ranking, a petición de Denis. Esto deja sin efecto, en esta pantalla, la regla de TRUST-METRICS-1 (§183) que pedía el denominador junto a los porcentajes: la frase del título sigue dando porcentajes sin él. Si vuelve, se compone con `answerCountLabel`.
+- Competidores en el móvil: el ranking se compacta, con menciones, citas y puesto medio en una sola fila bajo la marca.
+- Recomendaciones, «Más adelante»: una acción abierta se lee como un solo bloque. Lleva fondo y borde azul a la izquierda, su título se queda fijo arriba mientras se baja por el detalle, y abajo hay un «Cerrar esta acción».
+- La invitación a conectar Search Console (`GscConnectRow` y `GscConnectPanel`) pasa a la tarjeta, las pastillas y el botón negro de Instrumento (`app/ins/google.css`). El texto y el enlace no cambian.
+- Ajustes > Cuenta: la contraseña («Acceso») pasa al final, detrás de los datos de facturación.
 
 **Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
 

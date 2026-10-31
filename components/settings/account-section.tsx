@@ -173,6 +173,36 @@ export function AccountSection({
             <small className="pf-hint">Es tu identificador de acceso.</small>
           </label>
         </div>
+      </section>
+
+      <section>
+        {/* "Datos de empresa" stays hidden (founder, 2026-08-25): nothing reads
+            org_name/org_website/org_sector. "Datos de facturación" is what the
+            Stripe invoice sync reads. One save covers the whole tab. */}
+        <div className="eyebrow">Datos de facturación</div>
+        <div className="pf-form">
+          <label className="pf-fld" htmlFor="billing-legal-name">
+            <span>Empresa o razón social</span>
+            <input
+              id="billing-legal-name"
+              className={`pf-in${ro}`}
+              readOnly={!editing}
+              value={billingValue.legalName}
+              onChange={(event) => setBillingValue({ ...billingValue, legalName: event.target.value })}
+            />
+          </label>
+          <label className="pf-fld" htmlFor="billing-tax-id">
+            <span>NIF/CIF</span>
+            <input
+              id="billing-tax-id"
+              className={`pf-in mono${ro}`}
+              readOnly={!editing}
+              value={billingValue.taxId}
+              onChange={(event) => setBillingValue({ ...billingValue, taxId: event.target.value })}
+            />
+          </label>
+          <p className="pf-hint">Aparecen en tus facturas.</p>
+        </div>
 
         <div className="eyebrow" style={{ marginTop: 36 }}>
           Acceso
@@ -242,36 +272,6 @@ export function AccountSection({
             {passwordFeedback.text}
           </div>
         ) : null}
-      </section>
-
-      <section>
-        {/* "Datos de empresa" stays hidden (founder, 2026-08-25): nothing reads
-            org_name/org_website/org_sector. "Datos de facturación" is what the
-            Stripe invoice sync reads. One save covers the whole tab. */}
-        <div className="eyebrow">Datos de facturación</div>
-        <div className="pf-form">
-          <label className="pf-fld" htmlFor="billing-legal-name">
-            <span>Empresa o razón social</span>
-            <input
-              id="billing-legal-name"
-              className={`pf-in${ro}`}
-              readOnly={!editing}
-              value={billingValue.legalName}
-              onChange={(event) => setBillingValue({ ...billingValue, legalName: event.target.value })}
-            />
-          </label>
-          <label className="pf-fld" htmlFor="billing-tax-id">
-            <span>NIF/CIF</span>
-            <input
-              id="billing-tax-id"
-              className={`pf-in mono${ro}`}
-              readOnly={!editing}
-              value={billingValue.taxId}
-              onChange={(event) => setBillingValue({ ...billingValue, taxId: event.target.value })}
-            />
-          </label>
-          <p className="pf-hint">Aparecen en tus facturas.</p>
-        </div>
       </section>
     </div>
     </>

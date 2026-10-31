@@ -33,7 +33,6 @@ type Props = {
   domain: string;
   brand: string;
   /** Denominator sentence (answers, prompts, engines), composed by the page. */
-  basis: string | null;
   hasData: boolean;
   hasCompetitors: boolean;
   lead: Parameters<typeof competitorsLead>[0];
@@ -261,9 +260,6 @@ export function InsCompetitors(p: Props) {
             <div className="card cx-rank">
               <div className="card-h">
                 <h3>Ranking</h3>
-                <span className="see num" style={{ cursor: "default" }}>
-                  Ordenado por menciones{p.basis ? ` · ${p.basis}` : ""}
-                </span>
               </div>
               <div className="card-b">
                 <div className="cx-h" aria-hidden="true">

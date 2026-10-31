@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { computeEntityEngineBreakdown, type EntityEngineBreakdown } from "@/lib/competitors/engine-share";
-import { answerCountLabel, citationRate, mentionRateByAnswer } from "@/lib/metrics/run-metrics";
+import { citationRate, mentionRateByAnswer } from "@/lib/metrics/run-metrics";
 import { computePromptGapSummary } from "@/lib/competitors/prompt-gap";
 import { computeTopicComparison } from "@/lib/competitors/topic-comparison";
 import { computeSovDeltas } from "@/lib/competitors/sov-delta";
@@ -15,7 +15,6 @@ import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-po
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { getLLMScanProviders } from "@/lib/scan/providers";
-import { normalizeProvider } from "@/lib/scan/engine-meta";
 import { Motion } from "@/components/ins/kit/motion";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
 import { InsCompetitors } from "@/components/ins/competitors/ins-competitors";
@@ -211,11 +210,8 @@ export default async function CompetitorsPage({
   const competitorCitationMap = new Map<string, number>(); // key → count of results citing that competitor's domain
   let brandCitations = 0; // prompts where project domain appears in citations
   let totalResultsCount = results.length;
-  // P0-02: prompt and engine counts stay SEPARATE from totalResultsCount
-  // (prompt × engine answer rows); `answerCountLabel` is the only composer of
-  // the denominator sentence. engineCount counts providers that produced a row.
-  const promptCount = projectPrompts?.length ?? 0;
-  const engineCount = new Set(results.map((r) => normalizeProvider(r.provider as string | null))).size;
+  // The ranking's «N respuestas · M prompts en K motores» line was removed at
+  // Denis's request (log §394); if it comes back, compose it with answerCountLabel.
   const projectDomainNorm = normalizeDomain(project.domain ?? "");
 
   // Map of normalized competitor key → normalized domain, for citation matching
@@ -596,11 +592,6 @@ export default async function CompetitorsPage({
             projectId={projectId}
             domain={project.domain}
             brand={project.brand}
-            basis={
-              totalResultsCount > 0 && promptCount > 0 && engineCount > 0
-                ? answerCountLabel(promptCount, engineCount, totalResultsCount)
-                : null
-            }
             hasData={hasCompetitiveData && hasData}
             hasCompetitors={activeCompetitors.length > 0}
             lead={{
