@@ -9717,7 +9717,7 @@ select.set-field {
 .art-hero-stat p { margin: 0 0 6px; max-width: 320px; font-size: 15px; line-height: 1.5; color: #e5e9f2; }
 .art-hero-stat p span { display: block; margin-top: 6px; font-size: 11.5px; font-weight: 600; color: var(--brand-ink-4); }
 .art-hero-shot { margin-top: 32px; }
-/* EXT-LAUNCH-1 (log §394): a 2x capture of a narrow panel, never stretched past its own width. */
+/* EXT-LAUNCH-1 (log §395): a 2x capture of a narrow panel, never stretched past its own width. */
 .art-shot { display: block; width: 100%; max-width: 400px; height: auto; margin: 0 auto; border-radius: 12px; box-shadow: 0 12px 32px -14px rgba(15, 28, 51, .35); }
 .art-hero-shot img { display: block; width: 100%; height: auto; }
 .art-hero-logos { margin-top: 36px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px 16px; }

@@ -96,7 +96,7 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "black-friday-agentes-de-ia": "playbooks",
   "la-ia-prefiere-contenido-reciente": "medicion",
   "convierte-mejor-el-trafico-de-la-ia": "fundamentos",
-  // EXT-LAUNCH-1 (2026-10-31, log §394).
+  // EXT-LAUNCH-1 (2026-10-31, log §395).
   "extension-de-chrome-de-genscore": "playbooks"
 };
 

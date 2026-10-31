@@ -115,7 +115,7 @@ const BLOG_SLUGS = [
   "black-friday-agentes-de-ia",
   "la-ia-prefiere-contenido-reciente",
   "convierte-mejor-el-trafico-de-la-ia",
-  // EXT-LAUNCH-1 (2026-10-31, log §394).
+  // EXT-LAUNCH-1 (2026-10-31, log §395).
   "extension-de-chrome-de-genscore"
 ];
 

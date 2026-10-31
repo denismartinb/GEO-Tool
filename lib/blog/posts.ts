@@ -113,7 +113,7 @@ export type BlogPost = {
    */
   heroLogos?: { name: string; src: string; badge?: string }[][];
   /**
-   * EXT-LAUNCH-1 (log §394): for a launch post about a GenScore screen, a
+   * EXT-LAUNCH-1 (log §395): for a launch post about a GenScore screen, a
    * picture of that screen on the dark hero, in place of a figure. Our own
    * product only, rendered at 2x or more, with invented data said in `alt`
    * (ADR 0028). Never a third party's product.
@@ -864,7 +864,7 @@ export const BLOG_POSTS: BlogPost[] = [
       width: 1632,
       height: 940
     },
-    // EXT-LAUNCH-1 (log §394): launch post for CHROME-EXT-1 (log §361, §362).
+    // EXT-LAUNCH-1 (log §395): launch post for CHROME-EXT-1 (log §361, §362).
     // Product claims trace to the store build (docs/chrome-extension/prueba/
     // extension, 1.0.0) and the /privacidad section; every picture is the
     // real panel rendered at 2x or more with a made-up store (ADR 0028).

@@ -89,7 +89,7 @@ const MAX_FILE_BYTES = 320 * 1024;
  * portadas más. Cuando se agote, se sube igual y se anota aquí.
  */
 /**
- * EXT-LAUNCH-1 (2026-10-31, log §394): el margen estaba en ~21 KB y el
+ * EXT-LAUNCH-1 (2026-10-31, log §395): el margen estaba en ~21 KB y el
  * artículo de la extensión de Chrome suma portada, imagen de cabecera y tres
  * capturas del panel a 2x, WebP a calidad 86-90 (~230 KB entre todas; el
  * fundador pidió que se vieran nítidas, y a 1x se veían borrosas). Se suben
