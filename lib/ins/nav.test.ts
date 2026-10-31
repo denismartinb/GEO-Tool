@@ -58,10 +58,10 @@ describe("barra inferior (MOBILE-TABBAR-1)", () => {
     expect(tabSubItems(INS_TABS.find((t) => t.key === "ia")!)).toHaveLength(3);
     // Buscadores: solo Posición en Google, sin botones
     expect(tabSubItems(INS_TABS.find((t) => t.key === "google")!)).toEqual([]);
-    // Tu web: las dos auditorías de la misma ruta (log §390)
+    // Tu web: las dos auditorías de la misma ruta (log §391)
     expect(tabSubItems(INS_TABS.find((t) => t.key === "web")!).map((n) => n.pin)).toEqual(["Para la IA", "Para Google"]);
   });
-  it("seis pestañas con Buscadores y Tu web (log §390)", () => {
+  it("seis pestañas con Buscadores y Tu web (log §391)", () => {
     expect(INS_TABS.map((t) => t.short)).toEqual(["Inicio", "Plan", "En la IA", "Buscadores", "Tu web", "Agentes"]);
   });
   it("sin rayas largas", () => {

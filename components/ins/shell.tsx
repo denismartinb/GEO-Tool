@@ -344,7 +344,7 @@ function Sidebar() {
 }
 
 /*
- * MOBILE-TABBAR-1: barra inferior flotante (≤760 px). Seis pestañas (log §390); cada una
+ * MOBILE-TABBAR-1: barra inferior flotante (≤760 px). Seis pestañas (log §391); cada una
  * recuerda la última pantalla vista de su familia. Memoria en un ref: el marco
  * no se desmonta al navegar, así que dura toda la visita.
  */
