@@ -28313,3 +28313,33 @@ Presupuesto de `public/` +384 KiB, anotado en `asset-budget.test.ts`.
 **Pendiente.** Que la ficha pase a «Pública» antes de difundir el artículo: si
 sigue «Oculta», el enlace funciona pero la extensión no sale en la búsqueda de
 la tienda. Premisa: no se retira ningún camino de recuperación.
+
+## §396 · CONSOLE-PAGE-TEMPLATE-1: una sola cabecera y un solo orden en todas las pantallas de la consola (2026-10-31)
+
+**Qué se decidió.** Denis pidió homogeneizar la jerarquía de las pantallas: lo importante primero, lo secundario abajo, menos scroll y menos espacio en blanco en el móvil. Lo aprobó sobre un prototipo hecho con los componentes reales (https://claude.ai/artifact/3seCp51L7QH9Pe27ZDwLSe, con Antes y Después), con una condición explícita: **sólo reordenar, quitar o compactar, nunca cambiar el diseño** (tarjetas, fondo, colores y tipos siguen igual; un primer prototipo con estilos propios se rechazó por eso).
+- Cabecera común (`components/ins/page-head.tsx`): título, la acción de la pantalla en la misma fila (en el móvil sólo el icono, con `aria-label`) y la frase con datos debajo. La frase se queda: Denis dijo que aporta calidad.
+- Fuera la línea «SECCIÓN · dominio» de las nueve pantallas: la sección y el dominio ya están en el menú y en el selector.
+- Fuera el recuento junto al título («6 competidores», «12 acciones»): Denis dijo que sobra, la pantalla ya enseña la lista.
+- Menos aire en el móvil (`app/ins/page-template.css`): el título sube (sin el margen por defecto del `h1`, `padding-top` de 14 px), y las secciones y la baraja del plan pasan de 36–44 px a 28 px.
+- Visión general: «Descargar informe» va a la fila del saludo.
+- Competidores: «Gestionar competidores» va a la fila del título y deja de empujar el ranking.
+- Recomendaciones: Presencia, Prominencia, Cuota de voz y Autoridad bajan después de las acciones.
+- Prompts: en el móvil, conjunto y motores en una sola fila (logo y porcentaje; la frase y las barras se ocultan).
+- Páginas citadas: en el móvil, las tres cifras en una fila como los pilares de Recomendaciones (sin la frase de cada una), y «¿Tus páginas se pueden citar?» baja tras «De dónde salen las citas».
+- Posición en Google: «Search Console conectado» se queda en la fila del título; en el móvil, sólo el punto verde.
+
+**Segunda pasada sobre el preview (Denis, 2026-10-31).**
+- Recomendaciones: fuera el buscador de «Más adelante» y el botón «Ver pendientes» (la capa en foco). `cardMatches` se queda en `lib/ins/recs-cards.ts`, sin uso en pantalla.
+- El selector «Palanca» (≤1000 px) pasa a un control con borde redondeado y la flecha dentro de un círculo: Denis no veía la flecha.
+- Las tarjetas del plan miden todas lo mismo: la altura de la más alta (`Deck` con `equal`; en el móvil, `align-items: stretch`).
+- La pestaña móvil «En la IA» abre por Competidores, luego Prompts y luego Citadas.
+- Prompts: fuera la línea «N de M prompts de tu plan» y la raya gruesa del primer tema bajo la barra de Temas/Prompts. El tope del plan sigue en «Añadir prompts».
+- Competidores: fuera «Ordenado por menciones · N respuestas · M prompts en K motores» en el ranking, a petición de Denis. Esto deja sin efecto, en esta pantalla, la regla de TRUST-METRICS-1 (§183) que pedía el denominador junto a los porcentajes: la frase del título sigue dando porcentajes sin él. Si vuelve, se compone con `answerCountLabel`.
+- Competidores en el móvil: el ranking se compacta, con menciones, citas y puesto medio en una sola fila bajo la marca.
+- Recomendaciones, «Más adelante»: una acción abierta se lee como un solo bloque. Lleva fondo y borde azul a la izquierda, su título se queda fijo arriba mientras se baja por el detalle, y abajo hay un «Cerrar esta acción».
+- La invitación a conectar Search Console (`GscConnectRow` y `GscConnectPanel`) pasa a la tarjeta, las pastillas y el botón negro de Instrumento (`app/ins/google.css`). El texto y el enlace no cambian.
+- Ajustes > Cuenta: la contraseña («Acceso») pasa al final, detrás de los datos de facturación.
+
+**Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
+
+**Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).

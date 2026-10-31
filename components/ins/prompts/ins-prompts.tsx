@@ -150,8 +150,6 @@ export function InsPrompts({
   pending,
   competitors,
   providers,
-  capUsed,
-  capLimit,
 }: {
   projectId: string;
   projectDomain: string;
@@ -161,8 +159,6 @@ export function InsPrompts({
   competitors: Array<{ id: string; name: string; domain: string }>;
   providers: string[];
   /** Active prompts of the whole account, the scope the plan cap counts. */
-  capUsed: number;
-  capLimit: number;
 }) {
   const model = useMemo(
     () => buildPromptsModel({ results, pending, projectDomain, providers }),
@@ -297,9 +293,6 @@ export function InsPrompts({
             aria-label="Buscar prompt"
           />
         </label>
-        <span className="pr-cap num">
-          {capUsed} de {capLimit} prompts de tu plan
-        </span>
       </div>
 
       {!hasTopics ? (

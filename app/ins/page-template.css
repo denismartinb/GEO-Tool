@@ -1,0 +1,74 @@
+/* One head and one order for every console screen (CONSOLE-PAGE-TEMPLATE-1).
+   Only placement and compaction: every card, colour and type size is the one
+   each screen already had. Loaded after the screen sheets. */
+.ins .ph{margin-top:0;align-items:center}
+.ins .ph h1{margin:0;min-width:0}
+.ins .ph>.btn{margin-bottom:0}
+.ins .ph+.lead{margin-top:10px}
+@media (max-width:760px){
+ /* Less air: the title starts right under the header, sections sit closer. */
+ .ins .page{padding-top:14px}
+ .ins .sec{margin-top:28px}
+ .ins .focus-h{margin-top:28px}
+ .ins .pills{margin-top:14px}
+ .ins .ph{gap:12px}
+ .ins .ph .ph-lbl{display:none}
+ .ins .ph>.btn{width:40px;height:40px;padding:0;justify-content:center;flex:none}
+ .ins .ph>.btn.gsc-on{width:auto;height:auto;padding:0;border:0;background:none}
+ .ins .ph>.btn.gsc-on .gsc-live{margin:0}
+
+ /* Prompts: set and per-engine visibility in one row. */
+ .ins .sc-prompts .pq-strip{grid-template-columns:minmax(0,1.3fr) repeat(4,minmax(0,1fr));margin-top:20px}
+ .ins .sc-prompts .pq-strip>div{padding:10px 0 10px 8px;border-bottom:0!important;border-left:1px solid var(--rule-2)!important}
+ .ins .sc-prompts .pq-strip>div:first-child{padding-left:0;border-left:0!important}
+ .ins .sc-prompts .pq-all{grid-column:auto;display:block}
+ .ins .sc-prompts .pq-sp,.ins .sc-prompts .pq-eng .tb,.ins .sc-prompts .pq-eng .pq-k>:not(svg):not(img){display:none}
+ .ins .sc-prompts .pq-eng .pq-k{font-size:0;gap:0}
+ .ins .sc-prompts .pq-all .pq-k{font-size:11.5px;white-space:normal}
+ .ins .sc-prompts .pq-v{font-size:24px;margin-top:4px}
+ .ins .sc-prompts .pq-v small{font-size:12px}
+ .ins .sc-prompts .pq-ev{margin-top:6px}
+ .ins .sc-prompts .pq-ev b{font-size:19px}
+
+ /* Páginas citadas: the three figures as one strip, like the pillars of Recomendaciones. */
+ .ins .ct-k{grid-template-columns:none;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
+ .ins .ct-k .kpi{display:block;border-bottom:0!important;border-right:1px solid var(--rule)!important;margin-right:10px!important;padding:12px 10px 12px 0!important}
+ .ins .ct-k .kpi:last-child{border-right:0!important;margin-right:0!important}
+ .ins .ct-k .kpi .l{font-size:11.5px}
+ .ins .ct-k .kpi .v{margin-top:8px;flex-wrap:wrap;gap:4px}
+ .ins .ct-k .kpi .v b{font-size:24px}
+ .ins .ct-kc{display:none}
+}
+@media (max-width:760px){
+ .ins .sc-gsc .pr-hd.ph{flex-direction:row;align-items:center}
+}
+
+/* Recomendaciones (log §396): the plan plates share the tallest height. */
+@media (max-width:760px){
+ .ins .deck.eq{align-items:stretch}
+}
+
+/* Prompts (log §396): no plan counter and no rule right under the toolbar. */
+.ins .sc-prompts .pr-body>.pq-tp:first-child,.ins .sc-prompts .pr-body>.pr-flat:first-child{border-top:0}
+
+/* Competidores (log §396): a more compact ranking on mobile. The three
+   figures share one row under the brand. */
+@media (max-width:760px){
+ .ins .cx-rank .card-b{padding:4px 12px 14px}
+ .ins .cx-r{grid-template-columns:28px repeat(3,minmax(0,1fr));gap:6px 10px;padding:10px 8px}
+ .ins .cx-r .pos{font-size:20px;grid-row:1/3;align-self:start;padding-top:4px}
+ .ins .cx-r .who{grid-column:2/5;gap:10px}
+ .ins .cx-r .who b{font-size:15px}
+ .ins .cx-r .mt b{font-size:18px}
+ .ins .cx-r .avg{grid-column:auto;display:grid;gap:4px;align-content:start;font-size:18px;font-weight:350;color:var(--ink);letter-spacing:-.02em}
+ .ins .cx-r .avg>i{letter-spacing:0;font-weight:400}
+}
+
+/* Recomendaciones (log §396): an open row of «Más adelante» reads as one
+   block. Its title stays pinned while the detail scrolls, a blue edge ties
+   the detail to it, and it closes from the bottom too. */
+.ins .lrow.open{background:var(--surface-2);border-left:3px solid var(--blue);border-bottom-color:transparent;border-radius:4px 16px 16px 4px;margin:8px 0;padding:0 14px 4px 12px}
+.ins .lrow.open>button{position:sticky;top:28px;z-index:2;background:var(--surface-2);border-bottom:1px solid var(--rule-2);padding-left:0;padding-right:0}
+.ins .lrow.open .ex{padding:4px 0 6px}
+.ins .lrow-close{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-top:14px;padding:12px 0 8px;border-top:1px solid var(--rule-2);font-size:13px;font-weight:600;color:var(--ink-2)}
+.ins .lrow-close .i{transform:rotate(180deg)}

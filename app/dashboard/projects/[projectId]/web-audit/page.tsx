@@ -13,6 +13,7 @@ import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { Delta } from "@/components/ui/delta";
 import { BotAccessCard } from "./_components/bot-access-card";
 import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
+import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
@@ -52,7 +53,6 @@ type PageProps = {
 
 // Log §368: the screen is split in two pages by `?bloque=`, each with its own
 // menu entry. The kicker keeps naming the screen; the title names the block.
-const SCREEN_LABEL = "Auditoría técnica";
 const BLOCK_TITLES: Record<"geo" | "seo", string> = { geo: "Tu web para la IA", seo: "Tu web para Google" };
 
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
@@ -106,11 +106,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
     <div className="ins">
       <Motion id={`web-audit:${projectId}`}>
         <div className="page sc-au">
-          <div className="eyebrow bare">
-            {SCREEN_LABEL} · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
-          </div>
-          <h1 style={{ marginTop: 14 }}>{BLOCK_TITLES[activeBlock]}</h1>
-          <p className="lead">{BLOCK_NOTES[activeBlock]}</p>
+          <PageHead title={BLOCK_TITLES[activeBlock]} lead={BLOCK_NOTES[activeBlock]} />
 
           <WebAuditProvider
             projectId={projectId}

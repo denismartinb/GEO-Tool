@@ -174,6 +174,10 @@ export function LaterRow({
                   : "Lo verás en tu próximo escaneo."}
             </p>
           ) : null}
+          <button type="button" className="lrow-close" onClick={onToggle}>
+            Cerrar esta acción
+            <Ic n="chevd" sm />
+          </button>
         </div>
       ) : null}
     </div>

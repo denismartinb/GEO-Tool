@@ -187,13 +187,15 @@ export function InsAddPrompts({
         type="button"
         className={className}
         disabled={disabled}
-        title={disabled ? disabledReason : undefined}
+        title={disabled ? disabledReason : "Añadir prompts"}
+        aria-label="Añadir prompts"
         onClick={() => {
           reset();
           setOpen(true);
         }}
       >
-        <Ic n="plus" sm /> Añadir prompts
+        <Ic n="plus" sm />
+        <span className="ph-lbl">Añadir prompts</span>
       </button>
 
       {open ? (

@@ -49,9 +49,9 @@ describe("barra inferior (MOBILE-TABBAR-1)", () => {
   });
   it("una pestaña recuerda la última pantalla vista y si no, abre la primera", () => {
     const ia = INS_TABS.find((t) => t.key === "ia")!;
-    expect(tabTarget(ia, {})).toBe("/prompts");
+    expect(tabTarget(ia, {})).toBe("/competitors");
     expect(tabTarget(ia, { ia: "/citations" })).toBe("/citations");
-    expect(tabTarget(ia, { ia: "/web-audit" })).toBe("/prompts");
+    expect(tabTarget(ia, { ia: "/web-audit" })).toBe("/competitors");
   });
   it("solo las familias con varias pantallas llevan botones", () => {
     expect(tabSubItems(INS_TABS[0])).toEqual([]);

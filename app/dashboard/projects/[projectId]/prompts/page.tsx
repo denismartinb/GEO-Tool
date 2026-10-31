@@ -9,6 +9,7 @@ import { resolveScanProvidersForPlan, getLLMScanProviders } from "@/lib/scan/pro
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { Ic } from "@/components/ins/ic";
+import { PageHead } from "@/components/ins/page-head";
 import { Motion } from "@/components/ins/kit/motion";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
 import { InsPrompts } from "@/components/ins/prompts/ins-prompts";
@@ -197,22 +198,18 @@ export default async function PromptsPage({
     <div className="ins">
       <Motion id={`prompts:${projectId}`}>
         <div className="page sc-prompts">
-          <div className="eyebrow bare">
-            Prompts ·{" "}
-            <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
-              {project.domain}
-            </span>
-          </div>
-          <div className="pr-hd">
-            <h1>Prompts</h1>
-            <InsAddPrompts
-              projectId={projectId}
-              used={activePromptCount ?? 0}
-              limit={plan.caps.prompts}
-              disabled={addDisabled}
-              disabledReason={addDisabledReason}
-            />
-          </div>
+          <PageHead
+            title="Prompts"
+            action={
+              <InsAddPrompts
+                projectId={projectId}
+                used={activePromptCount ?? 0}
+                limit={plan.caps.prompts}
+                disabled={addDisabled}
+                disabledReason={addDisabledReason}
+              />
+            }
+          />
 
           {promptsAddedMessage ? (
             <p className="alert pos" role="status" style={{ marginTop: 20 }}>
@@ -276,8 +273,6 @@ export default async function PromptsPage({
               pending={pendingPrompts}
               competitors={configuredCompetitors ?? []}
               providers={providers}
-              capUsed={activePromptCount ?? 0}
-              capLimit={plan.caps.prompts}
             />
           )}
         </div>

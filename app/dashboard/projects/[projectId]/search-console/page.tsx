@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Motion } from "@/components/ins/kit/motion";
+import { PageHead } from "@/components/ins/page-head";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
@@ -245,19 +246,18 @@ export default async function SearchConsolePage({
     <div className="ins">
       <Motion id={`search-console:${projectId}`}>
         <div className="page sc-gsc">
-          <div className="eyebrow bare">
-            Posición en Google · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
-          </div>
-          <div className="pr-hd">
-            <h1>Posición en Google</h1>
-            {state.kind === "ready" && (
-              <span className="btn line sm gsc-on">
-                <span className="gsc-live" aria-hidden="true" />
-                Search Console conectado · últimos 28 días
-              </span>
-            )}
-          </div>
-          <p className="lead">En qué puesto sales en Google, para qué búsquedas y qué hacer para subir.</p>
+          <PageHead
+            title="Posición en Google"
+            action={
+              state.kind === "ready" ? (
+                <span className="btn line sm gsc-on" title="Search Console conectado · últimos 28 días">
+                  <span className="gsc-live" aria-hidden="true" />
+                  <span className="ph-lbl">Search Console conectado · últimos 28 días</span>
+                </span>
+              ) : null
+            }
+            lead="En qué puesto sales en Google, para qué búsquedas y qué hacer para subir."
+          />
           <div className="gsc-page">
             <div className="gsc-screen">
               <GscOutcome code={gsc} />

@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Ic } from "@/components/ins/ic";
+import { PageHead } from "@/components/ins/page-head";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { Bar } from "@/components/ins/kit/bar";
 import { Roll } from "@/components/ins/kit/roll";
@@ -183,41 +184,33 @@ export function InsCitations(p: Props) {
 
   return (
     <div className="sc-cit">
-      <div className="eyebrow bare">
-        Páginas citadas ·{" "}
-        <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
-          {p.domain}
-        </span>
-      </div>
-      <h1 style={{ marginTop: 14 }}>Páginas citadas</h1>
-      {lead.length > 0 ? (
-        <p className="lead">
-          {lead.map((part, i) =>
-            part.jump ? (
-              <a
-                key={i}
-                href="#ct-reach-s"
-                onClick={(e) => {
-                  e.preventDefault();
-                  scrollTo(reachRef.current);
-                }}
-              >
-                {part.text}
-              </a>
-            ) : part.strong ? (
-              <b key={i}>{part.text}</b>
-            ) : (
-              <Fragment key={i}>{part.text}</Fragment>
-            ),
-          )}
-        </p>
-      ) : null}
-      <div className="pills">
-        <Link className="chip" href={`/dashboard/projects/${p.projectId}/web-audit`}>
-          <Ic n="audit" sm />
-          ¿Tus páginas se pueden citar?
-        </Link>
-      </div>
+      <PageHead
+        title="Páginas citadas"
+        lead={
+          lead.length > 0 ? (
+            <>
+              {lead.map((part, i) =>
+                part.jump ? (
+                  <a
+                    key={i}
+                    href="#ct-reach-s"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      scrollTo(reachRef.current);
+                    }}
+                  >
+                    {part.text}
+                  </a>
+                ) : part.strong ? (
+                  <b key={i}>{part.text}</b>
+                ) : (
+                  <Fragment key={i}>{part.text}</Fragment>
+                ),
+              )}
+            </>
+          ) : null
+        }
+      />
 
       <section className="sec">
         <div className="kpis ct-k">
@@ -298,6 +291,12 @@ export function InsCitations(p: Props) {
           </div>
         </div>
       </section>
+      <div className="pills ct-audit">
+        <Link className="chip" href={`/dashboard/projects/${p.projectId}/web-audit`}>
+          <Ic n="audit" sm />
+          ¿Tus páginas se pueden citar?
+        </Link>
+      </div>
 
       {p.reach.length > 0 ? (
         <section className="sec" id="ct-reach-s" ref={reachRef}>
