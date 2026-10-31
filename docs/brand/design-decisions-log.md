@@ -28262,3 +28262,18 @@ de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 **Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
 
 **Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
+
+## §394 · PLAN-MODAL-INSTRUMENTO-1: «Cambiar de plan» rehecho sobre el prototipo, sin paso intermedio (2026-10-31)
+
+**Qué se decidió.** La primera versión (sólo estilos sobre `.cp-*`) no servía: en móvil el modal quedaba por debajo de la barra de pestañas y el botón no se veía, «Recomendado» señalaba Pro a una cuenta Agencia (una bajada) y el diseño no era el del prototipo. Denis pidió rehacerlo para móvil con barra de pestañas y escritorio partiendo de `i-src/screens/perfil.js` (`pm-*`, carrito fijo), maqueta aprobada en el hilo (https://claude.ai/artifact/87ehqmWuRqL3evbA1dXTTh). Y quitar «Revisa el cambio»: Stripe ya tiene su página de resumen y ese paso era un clic más antes de la conversión.
+
+- El modal se monta por portal en `<body>` dentro de `.ins.pmx`, con `z-index` por encima de la barra de pestañas; en ≤760 px es una hoja inferior a casi toda la altura con el carrito fijo abajo y márgenes del sistema.
+- Tres columnas en escritorio (precio grande y fino, tachado del precio normal si hay precio fundador, filas Dominios/Prompts/Motores/Escaneo) y tarjetas compactas con fichas en móvil.
+- «Recomendado» sólo en un plan por encima del actual. El plan actual lleva «Tu plan ahora» («Tu prueba» en la prueba de Pro) y no se puede volver a elegir, salvo en la prueba, donde elegir Pro es empezar a pagarlo.
+- Agencia (también la comped) no se cambia desde aquí: los planes salen como referencia y el botón es «Hablar con nosotros» (correo a soporte).
+- Sin paso de revisión: eligiendo plan, «Ir al pago» abre el checkout de Stripe y, con suscripción de pago, «Ir al portal de Stripe» abre el portal. El resumen del carrito dice «Pasas de la prueba a / Subes a / Bajas a», el precio y «Precio fundador para siempre · Pago seguro con Stripe».
+- Las acciones de servidor (`createCheckoutSession`, `createPortalSession`, `changePlan`) no cambian. El paso de elegir dominios y «Todo listo» se conservan tal cual.
+
+**Premisa del paso retirado.** Se quita la confirmación interna antes de ir a Stripe porque Stripe Checkout y el portal enseñan su propio resumen y piden confirmar antes de cobrar o cambiar nada. La rama de confirmación de bajada a «Sin plan» ya era inalcanzable desde TRIAL-ONLY-1 (§243: `free` no se puede elegir) y sale con ella. Si un día vuelve un plan elegible que se aplique sin pasar por Stripe, necesita su propio paso de confirmación.
+
+**Qué queda pendiente o sin verificar.** Comprobado con capturas del marcado real en 390 y 1280 px fuera de la consola; en la consola lo juzga Denis en el preview. La puerta de exceso de dominios sigue con su marcado `.cp-*` y los estilos de la primera versión.

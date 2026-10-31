@@ -254,3 +254,14 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   TABS-INSTANT-WEB-1, log §391). Extenderla a escritorio necesita aprobación:
   es coste de servidor por cada entrada.
 
+
+## Modal «Cambiar de plan» (PLAN-MODAL-INSTRUMENTO-1, log §394)
+
+- **Se monta por portal en `<body>` dentro de `.ins.pmx`**, por encima de la
+  barra de pestañas. Dentro de la página quedaba debajo y ocultaba el botón.
+- **Sin paso intermedio**: elegir plan y el botón va a Stripe (checkout o
+  portal). Una opción que se aplique sin Stripe necesita su propia confirmación.
+- **«Recomendado» sólo apunta hacia arriba** del plan actual, y el plan actual
+  no se vuelve a elegir salvo en la prueba de Pro.
+- **Agencia no se cambia aquí**: «Hablar con nosotros». Los flujos de pago y la
+  puerta de exceso de dominios (`.cp-*`) no se tocan sin aprobación.
