@@ -200,7 +200,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Las pestañas viven en `lib/ins/nav.ts` (`INS_TABS`)** y agrupan las mismas
   rutas de `INS_NAV`; una pantalla nueva del menú entra en una (y solo una)
   pestaña, lo vigila `nav.test.ts`.
-- **Seis pestañas y botones fijos (log §391).** «Tu web» reúne las auditorías
+- **Seis pestañas y botones fijos (log §393).** «Tu web» reúne las auditorías
   técnicas; las subpantallas son botones de ancho repartido con su `pin`, sin
   desplazamiento horizontal. Una pantalla nueva con nombre largo lleva `pin`.
 - **Márgenes del sistema con `env(safe-area-inset-*)`** en la barra y en el
@@ -244,3 +244,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Registro y recuperar contraseña existen dentro de la app** (Denis,
   2026-10-31). `/signup`, `/forgot-password` y `/auth/*` siguen en la lista de
   permitidos; quitarlos no está aprobado.
+- **Las pestañas se precargan enteras solo dentro de la app** (`AppTabPrefetch`,
+  APP-TABS-INSTANT-1, log §390): la caché es la del enrutador, en memoria, nunca
+  el service worker. `staleTimes.dynamic` es 60 s; subirlo enseña datos más
+  viejos al volver a una pantalla y necesita aprobación.
+- **En la web la precarga solo va donde está la barra inferior** (≤760 px) y
+  nunca con ahorro de datos o conexión lenta (`shouldPrefetchTabs`,
+  TABS-INSTANT-WEB-1, log §391). Extenderla a escritorio necesita aprobación:
+  es coste de servidor por cada entrada.
+

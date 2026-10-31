@@ -2253,7 +2253,7 @@
 .skw-next > span { flex: 1; min-width: 0; }
 .skw-next b { color: var(--blue-ink, var(--accent-ink)); font-weight: 650; }
 .skw-topic:hover .skw-next b { text-decoration: underline; }
-/* a trailing chevron says «this opens» on rows that are buttons (log §390) */
+/* a trailing chevron says «this opens» on rows that are buttons (log §392) */
 .skw-chev { flex: none; color: var(--blue-ink, var(--accent-ink)); }
 
 /* Panel lateral del tema */
@@ -2360,7 +2360,7 @@
   /* On a phone the topic opens as a bottom sheet, not a page: the dimmed
      console stays visible above it, the top corners are round and a grabber
      sits on top, so nobody mistakes it for a screen that lost its header
-     (log §390). It covers the tab bar, which would otherwise sit on top. */
+     (log §392). It covers the tab bar, which would otherwise sit on top. */
   .skw-drawer { top: max(56px, calc(env(safe-area-inset-top, 0px) + 44px)); left: 0; right: 0; width: 100%; border-radius: 20px 20px 0 0; overflow: hidden; box-shadow: 0 -14px 40px rgba(15, 23, 42, .28); animation-name: skw-in-up; }
   .skw-dh { position: relative; }
   .skw-dh::before { content: ""; position: absolute; top: 8px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 20%, transparent); }

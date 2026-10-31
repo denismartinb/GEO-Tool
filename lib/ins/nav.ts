@@ -13,7 +13,7 @@ export type InsNavItem = {
   countKey?: InsCountKey;
   /** Entradas que comparten ruta y se distinguen por `?bloque=` (Auditoría técnica). */
   block?: "geo" | "seo";
-  /** Rótulo del botón de la barra móvil cuando el nombre no cabe (log §391). */
+  /** Rótulo del botón de la barra móvil cuando el nombre no cabe (log §393). */
   pin?: string;
 };
 
@@ -106,7 +106,7 @@ export function crumbForPath(pathname: string, block: "geo" | "seo" = "geo"): st
 }
 
 // MOBILE-TABBAR-1 · barra inferior flotante de la consola en móvil (log §380).
-// Seis pestañas que agrupan las pantallas del menú lateral (log §391: «Tu web»
+// Seis pestañas que agrupan las pantallas del menú lateral (log §393: «Tu web»
 // reúne las dos auditorías técnicas); las familias con varias pantallas
 // enseñan arriba botones fijos, nunca pastillas que se deslizan. Las rutas son
 // las mismas: solo cambia cómo se llega a ellas.

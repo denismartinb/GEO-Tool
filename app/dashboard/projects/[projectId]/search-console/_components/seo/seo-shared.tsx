@@ -13,7 +13,7 @@ export const ACTION_TYPE: Record<ActionType, { label: string; cls: string }> = {
   links: { label: "Enlaces", cls: "skw-chip-vio" }
 };
 
-/** Trailing chevron: marks a row as something you open (log §390). */
+/** Trailing chevron: marks a row as something you open (log §392). */
 export function OpenChevron() {
   return (
     <svg className="skw-chev" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">

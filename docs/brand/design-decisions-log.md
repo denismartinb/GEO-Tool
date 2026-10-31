@@ -28200,7 +28200,30 @@ recuperación; los dos botones siguen siendo los de antes.
 - La sesión también se comparte: cerrar sesión en Chrome la cierra en la app.
 - Sin medir en un móvil real; los tests cubren desvío, splash con sesión no (es interacción de navegador).
 
-## §390 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
+## §390 · APP-TABS-INSTANT-1: las pestañas de la app se abren sin cargar (2026-10-31)
+
+**Qué se decidió.** Denis comprobó que con §389 navegar entre pestañas seguía cargando como una web: el service worker solo guarda lo estático y los `Link` de la barra solo precargaban hasta el esqueleto (`loading.tsx`), así que cada pestaña volvía a pedirse al servidor. Dos cambios:
+
+1. **Dentro de la app, precarga completa de las pestañas de `INS_TABS`** (cinco hoy; la lista se lee de ahí, no se fija) del proyecto abierto cuando la consola queda en reposo (`AppTabPrefetch`, `router.prefetch` con `kind: "full"`; la lista la da `tabPrefetchTargets`, pura y con test). Solo con la cookie `gs_app`: en la web no se gasta.
+2. **`experimental.staleTimes.dynamic = 60`** en `next.config.ts`: una pantalla de la consola vista en el último minuto se vuelve a enseñar desde la caché en memoria del enrutador, sin pedirla otra vez. Vale para todos (web y app).
+
+**Qué no cambia.** Los datos de cliente siguen sin guardarse en el dispositivo: la caché del enrutador vive en memoria de la pestaña y se pierde al cerrar la app. Una acción de servidor que revalida, el `router.refresh()` de los sondeos de escaneo y recargar siguen trayendo datos nuevos.
+
+**Coste y riesgo.** Cada apertura de la consola en la app hace hasta cuatro renders más en el servidor (con sus consultas a Supabase). Al volver a una pestaña antes de 60 s se puede ver un dato con hasta un minuto de antigüedad si nada lo ha refrescado. Si el coste en Vercel sube, se apaga quitando `AppTabPrefetch` del layout.
+
+**Pendiente.** Medido solo con tests; falta comprobarlo en el móvil.
+
+## §391 · TABS-INSTANT-WEB-1: las pestañas también son instantáneas en la web móvil (2026-10-31)
+
+**Qué se decidió.** Denis probó §390 en el móvil («mejor experiencia que la web hasta ahora») y pidió llevarlo a la web. `AppTabPrefetch` ya no se monta solo con la cookie `gs_app`: se monta siempre y decide en el cliente con `shouldPrefetchTabs` (pura, con test). En la app precarga siempre; en la web solo donde existe la barra inferior (`TAB_BAR_MEDIA_QUERY`, ≤760 px, la misma de MOBILE-TABBAR-1 §380) y nunca con ahorro de datos (`navigator.connection.saveData`) ni con conexión `slow-2g`, `2g` o `3g`.
+
+**Por qué no en escritorio.** El menú lateral ya precarga al pasar el ratón; la mejora sería pequeña y el coste en servidor, el mismo.
+
+**Coste y riesgo.** Cada entrada a la consola desde un móvil hace hasta cuatro o cinco renders más en el servidor, con sus consultas a Supabase, aunque no se abran. Con Vercel en Hobby y Supabase Free es lo que hay que vigilar. Para volver atrás sin tocar la app: que `shouldPrefetchTabs` devuelva `env.inApp`.
+
+**Pendiente.** Medir el efecto en las invocaciones de Vercel durante la primera semana.
+
+## §392 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
 
 **Qué.** En «Posición en Google» (`seo-resumen.tsx`, `seo-topics.tsx`):
 
@@ -28222,7 +28245,7 @@ perdido la cabecera, con una X que casi no se veía.
 **Pendiente.** Verlo en el iPhone de Denis. Premisa: no se retira ninguna vía
 de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 
-## §391 · MOBILE-NAV-TUWEB-1: pestaña «Tu web» en la barra móvil y botones fijos en lugar de pastillas (2026-10-31)
+## §393 · MOBILE-NAV-TUWEB-1: pestaña «Tu web» en la barra móvil y botones fijos en lugar de pastillas (2026-10-31)
 
 **Qué se decidió.** Denis eligió la opción 4 de cuatro maquetas interactivas (https://claude.ai/artifact/Mqju7qS8moqGM6RkHW9UrH), que era su propia idea:
 - La barra inferior móvil pasa de cinco a seis pestañas: Inicio, Plan, En la IA, Buscadores, Tu web y Agentes.
