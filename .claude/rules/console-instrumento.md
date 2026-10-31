@@ -219,6 +219,10 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Ajustes > Plan dentro de la app es de solo lectura** (`InAppPlan`, log §381 adenda): plan, estado y días de prueba, sin precios ni enlace a pagar fuera.
 - **Las acciones de pago se niegan en servidor**, no solo se esconden
   (`createCheckoutSession`, `createPortalSession`).
+- **Las páginas legales se ven dentro de la app sin cabecera ni pie públicos**
+  (`LegalPageShell`, APP-LEGAL-1, log §400): llevan la franja de precio,
+  «Precios» y los logos de pago. Una página nueva de la lista de permitidos
+  tampoco puede usar `PublicHeader`/`PublicFooter` dentro de la app.
 
 ## Splash de la app (APP-SPLASH-1, log §382)
 

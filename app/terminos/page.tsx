@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPageShell } from "@/components/legal-page-shell";
 import { contentMetadata } from "@/lib/seo/metadata";
+import { isInApp } from "@/lib/app-mode-server";
 
 export const metadata: Metadata = contentMetadata({
   title: "Términos del Servicio · GenScore",
@@ -10,7 +11,10 @@ export const metadata: Metadata = contentMetadata({
   path: "/terminos"
 });
 
-export default function TerminosPage() {
+export default async function TerminosPage() {
+  // APP-LEGAL-1 (log §400): inside the Android app the pricing page is not
+  // reachable and must not be linked, so the clause names it without a link.
+  const inApp = await isInApp();
   return (
     <LegalPageShell title="Términos del Servicio" updated="9 de julio de 2026" activeHref="/terminos">
       <h2>Quiénes somos</h2>
@@ -59,7 +63,7 @@ export default function TerminosPage() {
       <h2>Planes y precios</h2>
       <p>
         Los planes disponibles, sus características y precios se describen en nuestra{" "}
-        <Link href="/precios">página de precios</Link>. Podemos modificar los precios o las
+        {inApp ? "página de precios en genscore.es" : <Link href="/precios">página de precios</Link>}. Podemos modificar los precios o las
         características de los planes; si el cambio te afecta de forma sustancial y ya eres
         cliente, te avisaremos con antelación razonable antes de que te sea aplicado.
       </p>
