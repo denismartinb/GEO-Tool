@@ -28153,3 +28153,5 @@ Premisa: no hay otra vía de recuperación retirada.
 **Pendiente o conocido.**
 - El tiempo hasta el formulario es de unos 3 s; un toque lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
 - Aún no está medida en un móvil real; solo en Chromium a 390×844.
+
+**Adenda a §380 (2026-10-31).** En la barra inferior móvil la pestaña «En Google» pasa a rotularse «Buscadores» (`short` en `INS_TABS`), a petición de Denis. Solo cambia el rótulo corto de la barra; el menú de escritorio y las rutas no cambian.
