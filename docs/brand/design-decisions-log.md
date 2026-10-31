@@ -27922,6 +27922,19 @@ banda `dmb-band` del estado `free` de `DataMaturityBanner`, que ahora no pinta
 nada para ese estado. El fundador pidió quitar del aviso la línea «Precios con
 IVA incluido. El precio fundador se mantiene mientras sigas suscrito».
 
+**Adenda (2026-10-31, fundador).** La franja y la barra inferior móvil
+duplicaban el mismo aviso. Se queda una sola pieza, la franja bajo la cabecera
+en todas las anchuras, más alta y con el contenido de la barra («Prueba
+terminada», «Solo lectura hasta que elijas plan») y el botón «Cambiar plan»;
+toda ella es un enlace. Las tarjetas Starter y Pro del aviso de primera entrada
+son seleccionables y «Elegir plan» abre el plan marcado. Superado por esta
+adenda: «una barra inferior en móvil».
+
+**Cabecera móvil (2026-10-31, fundador, opción A).** La cabecera móvil ya no
+lleva el logo G suelto: junto al selector de dominio, que ya muestra su
+favicon, salían dos G seguidas. El logo sigue arriba del menú lateral y del
+cajón. Se retira `<svg class="mk">` y sus reglas de `shell.css`.
+
 **Honestidad.** Los precios del aviso salen de `plans-data.ts`; el precio
 fundador sólo sale si `getActivePromoPlanIds()` lo confirma (cupón real con
 plazas). Sin fecha de fin de prueba: el marco no la conoce y no se inventa.
