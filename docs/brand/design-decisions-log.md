@@ -28223,6 +28223,9 @@ recuperación; los dos botones siguen siendo los de antes.
 
 **Pendiente.** Medir el efecto en las invocaciones de Vercel durante la primera semana.
 
+
+**Adenda a §381 (2026-10-31).** Dentro de la app (cookie `gs_app`) la pestaña «Plan» de Ajustes vuelve, solo de lectura (`components/settings/in-app-plan.tsx`): dice qué plan tiene la cuenta (o «Sin plan · solo lectura»), los días de prueba que quedan y una frase que remite a genscore.es en el navegador. Sin precios, sin «Cambiar de plan», sin checkout y **sin enlace clicable**: Denis propuso un enlace a la web, pero llevar a pagar fuera de la app arriesga el rechazo de Google Play, así que se deja como texto. Añadir el enlace es un cambio de una línea y la asume el fundador. Premisa: la app no vende; qué la verifica: `createCheckoutSession`/`createPortalSession` siguen negándose en servidor; qué se rompería si falla: el usuario vería su plan pero no podría cambiarlo desde la app.
+
 ## §392 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
 
 **Qué.** En «Posición en Google» (`seo-resumen.tsx`, `seo-topics.tsx`):

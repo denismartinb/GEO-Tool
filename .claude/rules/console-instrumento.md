@@ -215,6 +215,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   contratar la oculta con `ShellData.inApp` o `isInApp()` (servidor).
 - **La lista de rutas permitidas dentro de la app es de permitidos**
   (`isAppModePathAllowed`): una página pública nueva no entra sola.
+- **Ajustes > Plan dentro de la app es de solo lectura** (`InAppPlan`, log §381 adenda): plan, estado y días de prueba, sin precios ni enlace a pagar fuera.
 - **Las acciones de pago se niegan en servidor**, no solo se esconden
   (`createCheckoutSession`, `createPortalSession`).
 
