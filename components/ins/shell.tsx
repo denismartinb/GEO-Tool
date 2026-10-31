@@ -14,6 +14,7 @@ import { avatarStyle, initialsOf, planLabel, ShellDataProvider, useShellData, ty
 import { InsSprite } from "@/components/ins/sprite";
 import { TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
+import "@/app/ins/dark.css";
 import {
   crumbForPath,
   INS_NAV,
