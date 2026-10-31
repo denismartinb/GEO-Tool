@@ -1,43 +1,66 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Sk, SkCard, SkHead, SkPage, SkRows, SkSection, SkStrip } from "@/components/ins/skeleton";
 
+/** Visión general while it loads (log §399): score sheet, figures, plan, breakdown and the agentic + SEO pair. */
 export default function OverviewLoading() {
   return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <Skeleton width={90} height={12} style={{ marginBottom: 8 }} />
-          <Skeleton width={220} height={18} />
-        </div>
+    <SkPage>
+      <SkHead action lead={2} />
+
+      <div className="sk-g57" style={{ marginTop: 32 }}>
+        <SkCard style={{ gap: 18 }}>
+          <Sk w={130} h={26} className="pill strong" />
+          <Sk className="sk-score strong" />
+          <Sk className="sk-bar" w="100%" />
+          <Sk w="88%" h={18} />
+          <Sk w="64%" h={18} />
+          <Sk w={170} h={40} className="pill" />
+        </SkCard>
+        <SkCard>
+          <Sk w={90} h={13} className="strong" />
+          <Sk w="100%" h={150} style={{ borderRadius: 12 }} />
+          <SkRows n={4} lead="icon" />
+        </SkCard>
       </div>
 
-      <div className="hero-v2" style={{ marginTop: 20 }}>
-        <div className="hv-gauge">
-          <Skeleton width={140} height={140} style={{ borderRadius: "999px" }} />
-        </div>
-        <div className="hv-divider" />
-        <div className="hv-compose" style={{ display: "grid", gap: 14 }}>
-          <Skeleton height={40} />
-          <Skeleton height={40} />
-          <Skeleton height={40} />
-        </div>
+      <div style={{ marginTop: 28 }}>
+        <SkStrip n={4} />
       </div>
 
-      <div className="metrics-2col" style={{ marginTop: 12 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <div key={i} className="wide-stat">
-            <Skeleton height={90} />
+      <SkSection>
+        <SkCard style={{ gap: 18 }}>
+          <div className="sk-split">
+            <Sk w={60} h={36} className="strong" />
+            <Sk w={110} h={22} className="pill" />
           </div>
-        ))}
-      </div>
+          <Sk w="76%" h={22} className="strong" />
+          <Sk w="92%" />
+          <Sk w="70%" />
+        </SkCard>
+      </SkSection>
 
-      <div className="grid-2-1" style={{ marginTop: 20 }}>
-        <div className="card" style={{ padding: 16 }}>
-          <Skeleton height={220} />
-        </div>
-        <div className="card" style={{ padding: 16 }}>
-          <Skeleton height={220} />
-        </div>
-      </div>
-    </div>
+      <section className="sk-sec sk-g57">
+        <SkCard>
+          <Sk w={140} h={14} className="strong" />
+          <SkRows n={4} lead="none" />
+        </SkCard>
+        <SkCard>
+          <Sk w={160} h={14} className="strong" />
+          <SkRows n={5} lead="num" />
+        </SkCard>
+      </section>
+
+      <section className="sk-sec sk-g2">
+        <SkCard>
+          <Sk w={150} h={14} className="strong" />
+          <Sk className="sk-score" style={{ height: 56, width: 90 }} />
+          <SkRows n={3} lead="dot" figure={false} />
+        </SkCard>
+        <SkCard>
+          <Sk w={130} h={14} className="strong" />
+          <Sk className="sk-score" style={{ height: 56, width: 90 }} />
+          <SkRows n={3} lead="dot" figure={false} />
+        </SkCard>
+      </section>
+    </SkPage>
   );
 }

@@ -302,3 +302,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   tinte fijo, su versión oscura va en `app/ins/dark.css`, acotada a
   `:root[data-theme="dark"] .ins`. Una línea o punto de un gráfico SVG lleva
   clase para que el CSS lo recolore.
+
+## Esqueletos de carga (CONSOLE-SKELETONS-1, log §399)
+
+- **Todo `loading.tsx` de `app/dashboard` se monta con `SkPage`** y las piezas de
+  `components/ins/skeleton.tsx`; nunca con clases o colores antiguos, o en
+  oscuro sale claro (lo vigila `tests/console-skeletons.test.ts`).
+- **La forma sigue a la pantalla**: si una pantalla cambia de orden o de
+  cabecera, su esqueleto cambia en el mismo PR.
+- **El pulso es ambiente**: ninguna barra del esqueleto representa progreso.
