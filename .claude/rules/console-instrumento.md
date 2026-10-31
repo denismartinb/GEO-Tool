@@ -150,7 +150,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **La referencia del error es el `digest` de Next o no hay referencia.** Nunca
   un código inventado.
-- **Sin cohete ni progreso**: el anillo es un instrumento vacío, decorativo.
+- **Sin progreso**: el anillo de error es un instrumento vacío, decorativo.
+- **La 404 lleva el cohete de la 404 pública** (CONSOLE-404-ROCKET-1, log §388,
+  sustituye a «sin cohete» de §366). Silueta y paleta de `mission-rocket.md`;
+  nada en la escena codifica progreso. Ancho, texto sobre la escena; por debajo
+  de 1100 px, debajo. Sus clases no pueden llamarse `nf-scene`: el piloto la
+  usa para asegurar que la consola no sirve la 404 de marketing.
 
 ## Prueba terminada (F8b, log §367)
 
