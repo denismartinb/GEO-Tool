@@ -88,7 +88,13 @@ const MAX_FILE_BYTES = 320 * 1024;
  * Esta primera dejaba el margen a cero; se suben 64 KiB, sitio para unas cinco
  * portadas más. Cuando se agote, se sube igual y se anota aquí.
  */
-const MAX_TOTAL_BYTES = 2512 * 1024;
+/**
+ * EXT-LAUNCH-1 (2026-10-31, log §394): el margen estaba en ~21 KB y el
+ * artículo de la extensión de Chrome suma su portada (7 KB) y tres capturas
+ * del panel recortadas, WebP a calidad 80 (~65 KB entre las tres). Se suben
+ * 128 KiB: sitio para este artículo y unas cuatro portadas más de la rutina.
+ */
+const MAX_TOTAL_BYTES = 2640 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).

@@ -28262,3 +28262,30 @@ de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
 **Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
 
 **Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
+
+## §394 · EXT-LAUNCH-1: artículo de lanzamiento de la extensión de Chrome (2026-10-31)
+
+**Qué se decidió.** Artículo `extension-de-chrome-de-genscore` (cluster
+`playbooks`), a petición de Denis, que anuncia la extensión de CHROME-EXT-1
+(§361, §362) ya en la Chrome Web Store. Cuenta lo que hace sin cuenta (nota
+SEO + IA de 0 a 100, qué motores pueden leer la página según su robots.txt,
+SEO on page, llms.txt, comercio agéntico en páginas que venden, tarjetas con
+el código, revisión automática opcional, atajo Alt + Mayús + G), lo que añade
+con cuenta (visión general del dominio en solo lectura), cómo instalarla y qué
+pasa con los datos. Todo sale del manifiesto 1.0.0, de la ficha aprobada en
+§362 y del apartado «Extensión de Chrome» de `/privacidad`; nada más.
+
+**Enlace a la tienda.** Vive en `CHROME_WEB_STORE_URL`
+(`lib/blog/chrome-extension.ts`), que leen el enlace del principio y el CTA.
+`chrome-extension.test.ts` exige que sea una ficha real
+(`chromewebstore.google.com/detail/<nombre>/<id>`) y que el MDX no escriba la
+URL a mano, y ata el nombre y el atajo al manifiesto.
+
+**Imágenes.** Las capturas de la ficha de la tienda (marca de ejemplo
+inventada, `tienda-ejemplo.es`), pasadas a WebP, con el pie diciendo que los
+datos son inventados (ADR 0028). Portada nueva en el estilo de las demás; su
+SVG está en los archivos del proyecto (`contenido/blog/portadas/`).
+
+**Pendiente.** Que la ficha pase a «Pública» antes de difundir el artículo: si
+sigue «Oculta», el enlace funciona pero la extensión no sale en la búsqueda de
+la tienda. Premisa: no se retira ningún camino de recuperación.

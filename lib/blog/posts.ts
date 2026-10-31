@@ -839,6 +839,24 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "más de conversión en las visitas a tiendas online de EE. UU. que llegan desde la IA, frente al resto del tráfico.",
       source: "Adobe Digital Insights, más de un billón de visitas a webs de comercio de EE. UU. (julio de 2026)"
     }
+  },
+  {
+    slug: "extension-de-chrome-de-genscore",
+    title: "GenScore ya tiene extensión de Chrome: SEO e IA de cualquier página en un clic",
+    seoTitle: "Extensión de Chrome de GenScore: SEO e IA en un clic",
+    metaDescription:
+      "Extensión gratis para Chrome: nota SEO + IA de cualquier página, qué motores de IA pueden leerla y qué cambiar primero, con el código listo. Sin cuenta.",
+    description:
+      "GenScore lanza su extensión de Chrome, gratis y sin cuenta: la nota SEO + IA de cualquier página, qué pueden leer ChatGPT, Gemini, Claude y Perplexity según su robots.txt, el SEO on page y cada arreglo con su código. Con tu cuenta, además, la visión general de tu dominio.",
+    datePublished: "2026-10-31",
+    coverImage: "/blog/extension-de-chrome-de-genscore/cover.webp",
+    coverIcon: "search",
+    // EXT-LAUNCH-1 (log §394): launch post for CHROME-EXT-1 (log §361, §362).
+    // Product claims trace to the store build (docs/chrome-extension/prueba/
+    // extension, 1.0.0) and the /privacidad section; figures are the store
+    // screenshots with the extension's made-up sample store (ADR 0028).
+    primaryKeyword: "extensión chrome seo ia",
+    cluster: "playbooks"
   }
 ];
 

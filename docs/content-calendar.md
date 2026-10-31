@@ -186,6 +186,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A5 | Black Friday con agentes de IA: qué revisar en tu tienda antes del 27 de noviembre (BLOG-BF-AGENTS-1, log §342) — slug `black-friday-agentes-de-ia` | `playbooks` | ✅ Publicado (2026-10-23) | #666 |
 | A6 | ¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas (BLOG-FRESH-1, log §348; pasada de recuperación del 25) — slug `la-ia-prefiere-contenido-reciente` | `medicion` | ✅ Publicado (2026-10-26) | #674 |
 | A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
+| L3 | Lanzamiento: GenScore ya tiene extensión de Chrome (EXT-LAUNCH-1, log §394) — slug `extension-de-chrome-de-genscore` | `playbooks` | ✅ Publicado (2026-10-31) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
