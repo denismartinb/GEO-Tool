@@ -344,7 +344,7 @@ function Sidebar() {
 }
 
 /*
- * MOBILE-TABBAR-1: barra inferior flotante (≤760 px). Cinco pestañas; cada una
+ * MOBILE-TABBAR-1: barra inferior flotante (≤760 px). Seis pestañas (log §390); cada una
  * recuerda la última pantalla vista de su familia. Memoria en un ref: el marco
  * no se desmonta al navegar, así que dura toda la visita.
  */
@@ -407,8 +407,7 @@ function TabSub() {
         const active = isNavActive(pathname, p.id, item, block);
         return (
           <Link key={`${item.segment}${item.block ?? ""}`} href={navHref(p.id, item)} className={active ? "on" : undefined} aria-current={active ? "page" : undefined}>
-            <Ic n={item.icon} sm />
-            {item.label}
+            {item.pin ?? item.label}
           </Link>
         );
       })}

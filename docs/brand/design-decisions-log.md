@@ -28204,3 +28204,18 @@ perdido la cabecera, con una X que casi no se veía.
 
 **Pendiente.** Verlo en el iPhone de Denis. Premisa: no se retira ninguna vía
 de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
+
+## §390 · MOBILE-NAV-TUWEB-1: pestaña «Tu web» en la barra móvil y botones fijos en lugar de pastillas (2026-10-31)
+
+**Qué se decidió.** Denis eligió la opción 4 de cuatro maquetas interactivas (https://claude.ai/artifact/Mqju7qS8moqGM6RkHW9UrH), que era su propia idea:
+- La barra inferior móvil pasa de cinco a seis pestañas: Inicio, Plan, En la IA, Buscadores, Tu web y Agentes.
+- «Tu web» reúne las dos auditorías técnicas (`/web-audit?bloque=geo|seo`), con dos botones arriba: «Para la IA» y «Para Google».
+- «Buscadores» (antes «Google», rótulo pedido por Denis, que sustituye la adenda a §380 del PR #705) se queda solo con Posición en Google, sin botones.
+- Las familias con varias pantallas (En la IA, Tu web, Agentes) llevan botones fijos de ancho repartido, nunca pastillas que se deslizan: Denis no las quiere. El rótulo corto de cada botón es `pin` en `INS_NAV` («Citadas», «Para la IA», «Para Google», «Visibilidad», «Auditoría»).
+- La Auditoría agéntica sigue en Agentes: es un concepto nuevo y Denis prefiere tenerlo unido de momento.
+
+**Por qué.** «Tu web para la IA» colgaba de la pestaña de Google, y meterla en «En la IA» dejaba cuatro pastillas que no cabían.
+
+**Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
+
+**Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
