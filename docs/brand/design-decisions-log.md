@@ -28281,10 +28281,19 @@ pasa con los datos. Todo sale del manifiesto 1.0.0, de la ficha aprobada en
 (`chromewebstore.google.com/detail/<nombre>/<id>`) y que el MDX no escriba la
 URL a mano, y ata el nombre y el atajo al manifiesto.
 
-**Imágenes.** Las capturas de la ficha de la tienda (marca de ejemplo
-inventada, `tienda-ejemplo.es`), pasadas a WebP, con el pie diciendo que los
-datos son inventados (ADR 0028). Portada nueva en el estilo de las demás; su
-SVG está en los archivos del proyecto (`contenido/blog/portadas/`).
+**Imágenes (segunda pasada, a petición de Denis: «portada más visual, menos
+texto», «imágenes nítidas», «ligero y con gancho»).** Las capturas de la ficha
+de la tienda eran 1280×800 a 1x y, recortadas al panel, se veían borrosas. Se
+sustituyen por el panel real (`docs/chrome-extension/prueba/extension/
+panel.html`, modo de demostración `window.__GS_DEMO`) pintado a 3x con una
+tienda inventada (`tienda-ejemplo.es`), guardado a 2x en WebP. La cabecera del
+artículo gana `heroImage` (`ArticleHero`, `lib/blog/posts.ts`): una ventana de
+Chrome con la ficha inventada y el panel al lado, y la portada del índice es
+esa misma escena. Sólo para pantallas nuestras, nunca un producto de terceros.
+El texto se acorta: titular «GenScore ya está en Chrome: mira cualquier web
+como la ve la IA», entradilla de una frase y tres secciones con una captura
+cada una. `.art-shot` limita las capturas del panel a su ancho real.
+Presupuesto de `public/` +384 KiB, anotado en `asset-budget.test.ts`.
 
 **Pendiente.** Que la ficha pase a «Pública» antes de difundir el artículo: si
 sigue «Oculta», el enlace funciona pero la extensión no sale en la búsqueda de

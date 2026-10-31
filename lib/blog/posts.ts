@@ -112,6 +112,13 @@ export type BlogPost = {
    * Rendered above `heroStat` when the post has both.
    */
   heroLogos?: { name: string; src: string; badge?: string }[][];
+  /**
+   * EXT-LAUNCH-1 (log §394): for a launch post about a GenScore screen, a
+   * picture of that screen on the dark hero, in place of a figure. Our own
+   * product only, rendered at 2x or more, with invented data said in `alt`
+   * (ADR 0028). Never a third party's product.
+   */
+  heroImage?: { src: string; alt: string; width: number; height: number };
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -842,19 +849,25 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "extension-de-chrome-de-genscore",
-    title: "GenScore ya tiene extensión de Chrome: SEO e IA de cualquier página en un clic",
+    title: "GenScore ya está en Chrome: mira cualquier web como la ve la IA",
     seoTitle: "Extensión de Chrome de GenScore: SEO e IA en un clic",
     metaDescription:
       "Extensión gratis para Chrome: nota SEO + IA de cualquier página, qué motores de IA pueden leerla y qué cambiar primero, con el código listo. Sin cuenta.",
     description:
-      "GenScore lanza su extensión de Chrome, gratis y sin cuenta: la nota SEO + IA de cualquier página, qué pueden leer ChatGPT, Gemini, Claude y Perplexity según su robots.txt, el SEO on page y cada arreglo con su código. Con tu cuenta, además, la visión general de tu dominio.",
+      "Un clic en cualquier página: su nota SEO + IA, qué motores de IA pueden leerla y qué cambiar primero. Gratis y sin cuenta.",
     datePublished: "2026-10-31",
     coverImage: "/blog/extension-de-chrome-de-genscore/cover.webp",
     coverIcon: "search",
+    heroImage: {
+      src: "/blog/extension-de-chrome-de-genscore/hero.webp",
+      alt: "Ventana de Chrome con la ficha de una tienda inventada y, al lado, el panel de GenScore con la nota SEO + IA de la página y sus indicadores IA, Google y Agentes.",
+      width: 1632,
+      height: 940
+    },
     // EXT-LAUNCH-1 (log §394): launch post for CHROME-EXT-1 (log §361, §362).
     // Product claims trace to the store build (docs/chrome-extension/prueba/
-    // extension, 1.0.0) and the /privacidad section; figures are the store
-    // screenshots with the extension's made-up sample store (ADR 0028).
+    // extension, 1.0.0) and the /privacidad section; every picture is the
+    // real panel rendered at 2x or more with a made-up store (ADR 0028).
     primaryKeyword: "extensión chrome seo ia",
     cluster: "playbooks"
   }

@@ -90,11 +90,12 @@ const MAX_FILE_BYTES = 320 * 1024;
  */
 /**
  * EXT-LAUNCH-1 (2026-10-31, log §394): el margen estaba en ~21 KB y el
- * artículo de la extensión de Chrome suma su portada (7 KB) y tres capturas
- * del panel recortadas, WebP a calidad 80 (~65 KB entre las tres). Se suben
- * 128 KiB: sitio para este artículo y unas cuatro portadas más de la rutina.
+ * artículo de la extensión de Chrome suma portada, imagen de cabecera y tres
+ * capturas del panel a 2x, WebP a calidad 86-90 (~230 KB entre todas; el
+ * fundador pidió que se vieran nítidas, y a 1x se veían borrosas). Se suben
+ * 384 KiB: sitio para este artículo y unas diez portadas más de la rutina.
  */
-const MAX_TOTAL_BYTES = 2640 * 1024;
+const MAX_TOTAL_BYTES = 2896 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).
