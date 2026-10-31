@@ -76,4 +76,20 @@ describe("tema de la consola", () => {
     }
     expect(css).not.toContain("prefers-color-scheme");
   });
+
+  it("ningún bloque heredado deja texto blanco sobre fondo de tinta en oscuro", () => {
+    const dark = read("app/ins/dark.css");
+    const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "");
+    for (const file of ["app/globals.css", "app/console.css"]) {
+      const css = strip(read(file));
+      for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const body = m[2];
+        if (!/background(-color)?\s*:\s*var\(--(brand-)?ink\)/.test(body)) continue;
+        if (!/(^|;)\s*color\s*:\s*(#fff\b|#ffffff|white)/.test(body)) continue;
+        const sel = m[1].trim().split(",")[0].trim();
+        if (/^\.(lp-|pt-)/.test(sel)) continue; // web pública y tour: fuera de `.ins`
+        expect(dark, `${file}: ${sel}`).toContain(`.ins ${sel}`);
+      }
+    }
+  });
 });
