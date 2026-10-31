@@ -13,6 +13,8 @@ export type InsNavItem = {
   countKey?: InsCountKey;
   /** Entradas que comparten ruta y se distinguen por `?bloque=` (Auditoría técnica). */
   block?: "geo" | "seo";
+  /** Rótulo del botón de la barra móvil cuando el nombre no cabe (log §393). */
+  pin?: string;
 };
 
 export type InsNavGroup = { label: string | null; isNew?: boolean; items: InsNavItem[] };
@@ -30,23 +32,23 @@ export const INS_NAV: InsNavGroup[] = [
     items: [
       { segment: "/prompts", label: "Prompts", icon: "prompts", countKey: "prompts" },
       { segment: "/competitors", label: "Competidores", icon: "users", countKey: "competitors" },
-      { segment: "/citations", label: "Páginas citadas", icon: "link" },
-      { segment: "/web-audit", label: "Tu web para la IA", icon: "audit", block: "geo" }
+      { segment: "/citations", label: "Páginas citadas", icon: "link", pin: "Citadas" },
+      { segment: "/web-audit", label: "Tu web para la IA", icon: "audit", block: "geo", pin: "Para la IA" }
     ]
   },
   {
     label: "En Google",
     items: [
       { segment: "/search-console", label: "Posición en Google", icon: "trend" },
-      { segment: "/web-audit", label: "Tu web para Google", icon: "audit", block: "seo" }
+      { segment: "/web-audit", label: "Tu web para Google", icon: "audit", block: "seo", pin: "Para Google" }
     ]
   },
   {
     label: "Comercio agéntico",
     isNew: true,
     items: [
-      { segment: "/agentic-visibility", label: "Visibilidad en agentes", icon: "agent" },
-      { segment: "/agentic-audit", label: "Auditoría agéntica", icon: "cart" }
+      { segment: "/agentic-visibility", label: "Visibilidad en agentes", icon: "agent", pin: "Visibilidad" },
+      { segment: "/agentic-audit", label: "Auditoría agéntica", icon: "cart", pin: "Auditoría" }
     ]
   }
 ];
@@ -104,17 +106,18 @@ export function crumbForPath(pathname: string, block: "geo" | "seo" = "geo"): st
 }
 
 // MOBILE-TABBAR-1 · barra inferior flotante de la consola en móvil (log §380).
-// Cinco pestañas que agrupan las pantallas del menú lateral; las familias con
-// varias pantallas enseñan unas pastillas al inicio de la página. Las rutas
-// son las mismas: solo cambia cómo se llega a ellas.
+// Seis pestañas que agrupan las pantallas del menú lateral (log §393: «Tu web»
+// reúne las dos auditorías técnicas); las familias con varias pantallas
+// enseñan arriba botones fijos, nunca pastillas que se deslizan. Las rutas son
+// las mismas: solo cambia cómo se llega a ellas.
 
-export type InsTabKey = "home" | "recs" | "ia" | "google" | "agents";
+export type InsTabKey = "home" | "recs" | "ia" | "google" | "web" | "agents";
 
 export type InsTab = {
   key: InsTabKey;
   /** Nombre completo (accesibilidad y pastillas). */
   label: string;
-  /** Rótulo de la barra, corto para que quepan las cinco. */
+  /** Rótulo de la barra, corto para que quepan las seis. */
   short: string;
   icon: string;
   isNew?: boolean;
@@ -126,7 +129,8 @@ export const INS_TABS: InsTab[] = [
   { key: "home", label: "Visión general", short: "Inicio", icon: "overview", segments: [""] },
   { key: "recs", label: "Recomendaciones", short: "Plan", icon: "recs", segments: ["/recommendations"] },
   { key: "ia", label: "En la IA", short: "En la IA", icon: "prompts", segments: ["/prompts", "/competitors", "/citations"] },
-  { key: "google", label: "En Google", short: "Google", icon: "trend", segments: ["/search-console", "/web-audit"] },
+  { key: "google", label: "En buscadores", short: "Buscadores", icon: "trend", segments: ["/search-console"] },
+  { key: "web", label: "Tu web", short: "Tu web", icon: "audit", segments: ["/web-audit"] },
   { key: "agents", label: "Comercio agéntico", short: "Agentes", icon: "agent", isNew: true, segments: ["/agentic-visibility", "/agentic-audit"] }
 ];
 
@@ -148,9 +152,9 @@ export function tabTarget(tab: InsTab, last: Partial<Record<InsTabKey, string>>)
   return seg !== undefined && tab.segments.includes(seg) ? seg : tab.segments[0];
 }
 
-/** Las pastillas de subpantallas solo existen en las pestañas con varias. */
+/** Los botones de subpantallas solo existen en las pestañas con varias. */
 export function tabSubItems(tab: InsTab): InsNavItem[] {
-  if (tab.segments.length < 2) return [];
-  // Dos entradas del menú comparten `/web-audit` (bloque GEO y bloque SEO): cada una es una pastilla.
-  return tab.segments.flatMap((s) => INS_NAV_FLAT.filter((n) => n.segment === s));
+  // Dos entradas del menú comparten `/web-audit` (bloque GEO y bloque SEO): cada una es un botón.
+  const items = tab.segments.flatMap((s) => INS_NAV_FLAT.filter((n) => n.segment === s));
+  return items.length < 2 ? [] : items;
 }

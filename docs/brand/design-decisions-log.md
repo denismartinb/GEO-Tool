@@ -28226,7 +28226,44 @@ recuperación; los dos botones siguen siendo los de antes.
 
 **Adenda a §381 (2026-10-31).** Dentro de la app (cookie `gs_app`) la pestaña «Plan» de Ajustes vuelve, solo de lectura (`components/settings/in-app-plan.tsx`): dice qué plan tiene la cuenta (o «Sin plan · solo lectura»), los días de prueba que quedan y una frase que remite a genscore.es en el navegador. Sin precios, sin «Cambiar de plan», sin checkout y **sin enlace clicable**: Denis propuso un enlace a la web, pero llevar a pagar fuera de la app arriesga el rechazo de Google Play, así que se deja como texto. Añadir el enlace es un cambio de una línea y la asume el fundador. Premisa: la app no vende; qué la verifica: `createCheckoutSession`/`createPortalSession` siguen negándose en servidor; qué se rompería si falla: el usuario vería su plan pero no podría cambiarlo desde la app.
 
-## §392 · PLAN-MODAL-INSTRUMENTO-1: «Cambiar de plan» con el aspecto de Instrumento (2026-10-31)
+## §392 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
+
+**Qué.** En «Posición en Google» (`seo-resumen.tsx`, `seo-topics.tsx`):
+
+- La acción de «Qué hacer esta semana» (Resumen) y «Lo siguiente» de cada tema
+  (Temas) llevan el título en el color de enlace y un chevron a la derecha
+  (`OpenChevron`, `seo-shared.tsx`); al pasar el ratón se subraya.
+- La ficha del tema, en móvil, pasa de panel a pantalla completa a **hoja
+  inferior**: deja ver la consola atenuada arriba, esquinas superiores
+  redondeadas, asa y animación de subida. Cubre la barra de pestañas (antes la
+  barra quedaba encima, z-index 70 frente a 61). En escritorio sigue siendo un
+  panel lateral, ahora con entrada animada.
+- La X de cerrar (ficha y «Cambiar rivales») pasa a botón redondo de 36 px con
+  fondo y un icono de trazo, en vez del carácter «✕» sin caja.
+
+**Por qué.** Denis, en su iPhone (2026-10-31): la próxima acción no parecía un
+enlace en ninguna de las dos páginas, y la ficha parecía una página que había
+perdido la cabecera, con una X que casi no se veía.
+
+**Pendiente.** Verlo en el iPhone de Denis. Premisa: no se retira ninguna vía
+de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
+
+## §393 · MOBILE-NAV-TUWEB-1: pestaña «Tu web» en la barra móvil y botones fijos en lugar de pastillas (2026-10-31)
+
+**Qué se decidió.** Denis eligió la opción 4 de cuatro maquetas interactivas (https://claude.ai/artifact/Mqju7qS8moqGM6RkHW9UrH), que era su propia idea:
+- La barra inferior móvil pasa de cinco a seis pestañas: Inicio, Plan, En la IA, Buscadores, Tu web y Agentes.
+- «Tu web» reúne las dos auditorías técnicas (`/web-audit?bloque=geo|seo`), con dos botones arriba: «Para la IA» y «Para Google».
+- «Buscadores» (antes «Google», rótulo pedido por Denis, que sustituye la adenda a §380 del PR #705) se queda solo con Posición en Google, sin botones.
+- Las familias con varias pantallas (En la IA, Tu web, Agentes) llevan botones fijos de ancho repartido, nunca pastillas que se deslizan: Denis no las quiere. El rótulo corto de cada botón es `pin` en `INS_NAV` («Citadas», «Para la IA», «Para Google», «Visibilidad», «Auditoría»).
+- La Auditoría agéntica sigue en Agentes: es un concepto nuevo y Denis prefiere tenerlo unido de momento.
+
+**Por qué.** «Tu web para la IA» colgaba de la pestaña de Google, y meterla en «En la IA» dejaba cuatro pastillas que no cabían.
+
+**Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
+
+**Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
+
+## §394 · PLAN-MODAL-INSTRUMENTO-1: «Cambiar de plan» con el aspecto de Instrumento (2026-10-31)
 
 **Qué se decidió.** Denis pidió el modal «Cambiar de plan» en el lenguaje del prototipo aprobado (`i-src/screens/perfil.js`, `pm-*`). Se hace como hoja de estilos acotada (`app/ins/plan-modal.css`, selectores `:is(.ins,.ins-shell) .cp-*`) y no se toca `components/billing/change-plan-modal.tsx`: marcado, lógica, checkout de Stripe, portal y la puerta de exceso de dominios (`domain-overage-gate.tsx`) siguen exactamente igual. Plan elegido con borde de tinta, bandera «Recomendado» azul, tarjeta de Agencia punteada, pie con el resumen y, en móvil, hoja inferior con botones de 48 px.
 
