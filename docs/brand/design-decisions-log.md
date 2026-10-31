@@ -28204,7 +28204,7 @@ recuperación; los dos botones siguen siendo los de antes.
 
 **Qué se decidió.** Denis comprobó que con §389 navegar entre pestañas seguía cargando como una web: el service worker solo guarda lo estático y los `Link` de la barra solo precargaban hasta el esqueleto (`loading.tsx`), así que cada pestaña volvía a pedirse al servidor. Dos cambios:
 
-1. **Dentro de la app, precarga completa de las cinco pestañas** del proyecto abierto cuando la consola queda en reposo (`AppTabPrefetch`, `router.prefetch` con `kind: "full"`; la lista la da `tabPrefetchTargets`, pura y con test). Solo con la cookie `gs_app`: en la web no se gasta.
+1. **Dentro de la app, precarga completa de las pestañas de `INS_TABS`** (cinco hoy; la lista se lee de ahí, no se fija) del proyecto abierto cuando la consola queda en reposo (`AppTabPrefetch`, `router.prefetch` con `kind: "full"`; la lista la da `tabPrefetchTargets`, pura y con test). Solo con la cookie `gs_app`: en la web no se gasta.
 2. **`experimental.staleTimes.dynamic = 60`** en `next.config.ts`: una pantalla de la consola vista en el último minuto se vuelve a enseñar desde la caché en memoria del enrutador, sin pedirla otra vez. Vale para todos (web y app).
 
 **Qué no cambia.** Los datos de cliente siguen sin guardarse en el dispositivo: la caché del enrutador vive en memoria de la pestaña y se pierde al cerrar la app. Una acción de servidor que revalida, el `router.refresh()` de los sondeos de escaneo y recargar siguen trayendo datos nuevos.

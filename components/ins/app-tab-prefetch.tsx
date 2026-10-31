@@ -6,7 +6,7 @@ import { tabPrefetchTargets } from "@/lib/ins/tab-prefetch";
 
 /**
  * APP-TABS-INSTANT-1 (log §390). Only inside the Android app: once the console
- * is idle, fully prefetch the first screen of every bottom tab of the open
+ * is idle, fully prefetch the first screen of every tab in `INS_TABS` for the open
  * project, so tapping a tab paints at once instead of loading like a web page.
  * The data comes from the server with the user's own session and lives only in
  * the in-memory router cache (never in the service worker), for as long as
