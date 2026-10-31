@@ -24,6 +24,7 @@ import "@/app/ins/agents.css";
 import "@/app/ins/errors.css";
 import "@/app/ins/trial-ended.css";
 import { cookies } from "next/headers";
+import { APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE } from "@/lib/app-mode";
 import { SELLABLE_PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";
 import { getActivePromoPlanIds } from "@/lib/stripe";
 import { getWorkspaceCounters } from "@/lib/project-workspace";
@@ -38,6 +39,7 @@ import { DomainOverageGate } from "@/components/billing/domain-overage-gate";
 import { TourProvider } from "@/components/tour-provider";
 import { SessionCacheSync } from "@/components/session-cache-sync";
 import { InsShell } from "@/components/ins/shell";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { InternalVisitorMark } from "@/components/internal-visitor-mark";
 import { isCountedAccount } from "@/lib/admin/kpi/own-accounts";
 import { signOut } from "./actions";
@@ -53,6 +55,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // after clicking into the project.
   const cookieStore = await cookies();
   const preferredProjectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value ?? null;
+  // ANDROID-TWA-1: dentro de la app no se enseña nada que venda (log §381).
+  const inApp = cookieStore.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE;
 
   // NOTIF-LANES-1: the «Tu cuenta» lane of the bell, computed in parallel.
   const accountNoticePromise = getAccountNotice(supabase, user.id);
@@ -75,10 +79,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // falling back to the most recent one; the item names its domain either way.
   const nextStepProject =
     (projects ?? []).find((p) => p.id === preferredProjectId) ?? (projects ?? [])[0] ?? null;
-  const [accountNotice, nextStep] = await Promise.all([
+  const [accountNoticeFull, nextStep] = await Promise.all([
     accountNoticePromise,
     nextStepProject ? getNextStepNotice(supabase, nextStepProject) : Promise.resolve(null)
   ]);
+
+  // «Tu cuenta» de la campana solo lleva a cambiar de plan: en la app no sale.
+  const accountNotice = inApp ? null : accountNoticeFull;
 
   /* ONBOARDING-TOUR-PERSIST-1 — misma forma que auditFlagRow/samplingFlagRow
      en la página de debug: `onboarding_tour_seen_at` llega en la migración
@@ -135,6 +142,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           "Manuales y estudios" link goes straight to /blog) paints the account chip
           instead of flashing the anonymous CTAs. Renders nothing; see
           components/session-cache-sync.tsx. */}
+      <ServiceWorkerRegister />
       <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
       {/* ADMIN-PANEL-1: a team account's browser stops sending web analytics,
           so /admin/panel counts only real visitors. */}
@@ -152,6 +160,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           requiredRemoveCount={overage.requiredRemoveCount}
           domains={overage.domains}
           hasStripeSubscription={overage.hasStripeSubscription}
+          canUpgrade={!inApp}
         />
       )}
       {/* ONBOARDING-TOUR-1: el popup «Aprende cómo funciona». Envuelve la
@@ -175,7 +184,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
             planId: plan.id,
             planName: plan.name,
             planProjectCap: plan.caps.projects,
-            onTrial: accountNotice?.kind === "trial",
+            onTrial: accountNoticeFull?.kind === "trial",
+            inApp,
             trialEndedOffers,
             signOutAction: signOut
           }}

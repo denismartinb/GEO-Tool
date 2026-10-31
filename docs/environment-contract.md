@@ -374,6 +374,7 @@ toggle at `/dashboard/settings/notifications`).
 |---|---|---|---|
 | `SCAN_CONTINUE_SECRET` | **Yes** for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` — including every manual "Lanzar escaneo" | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
 | `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
+| `ANDROID_SHA256_CERT_FINGERPRINTS` | No (sin ella `/.well-known/assetlinks.json` devuelve `[]` y la app de Android no verifica el dominio) | Vercel | Huellas SHA-256 del certificado de firma de la app (subida y Play App Signing), separadas por comas — ANDROID-TWA-1, `twa/README.md` |
 
 A project whose plan allows more active prompts than fit in one execution
 batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple

@@ -5,6 +5,7 @@ import type Stripe from "stripe";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { IN_APP_BILLING_ERROR, isInApp } from "@/lib/app-mode-server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
@@ -262,6 +263,9 @@ export type CheckoutSessionResult = { success: true; url: string } | { success: 
  * prorated in-place subscription update correctly.
  */
 export async function createCheckoutSession(planId: string): Promise<CheckoutSessionResult> {
+  // ANDROID-TWA-1: dentro de la app de Android no se vende (Google Play, log §381).
+  if (await isInApp()) return { success: false, error: IN_APP_BILLING_ERROR };
+
   if (!isSelfServePlan(planId)) {
     return { success: false, error: "Este plan no se contrata online. Escríbenos a soporte@genscore.es." };
   }
@@ -425,6 +429,9 @@ export type PortalIntent = { type: "update"; planId: SelfServePlanId } | { type:
  * used for an in-app downgrade.
  */
 export async function createPortalSession(intent?: PortalIntent): Promise<PortalSessionResult> {
+  // ANDROID-TWA-1: ídem, el portal de Stripe también cobra (log §381).
+  if (await isInApp()) return { success: false, error: IN_APP_BILLING_ERROR };
+
   const stripe = getStripeClient();
   if (!stripe) {
     return { success: false, error: "La facturación todavía no está disponible. Vuelve a intentarlo más tarde." };
