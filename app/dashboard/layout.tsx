@@ -40,6 +40,7 @@ import { TourProvider } from "@/components/tour-provider";
 import { SessionCacheSync } from "@/components/session-cache-sync";
 import { InsShell } from "@/components/ins/shell";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
+import { AppTabPrefetch } from "@/components/ins/app-tab-prefetch";
 import { InternalVisitorMark } from "@/components/internal-visitor-mark";
 import { isCountedAccount } from "@/lib/admin/kpi/own-accounts";
 import { signOut } from "./actions";
@@ -143,6 +144,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
           instead of flashing the anonymous CTAs. Renders nothing; see
           components/session-cache-sync.tsx. */}
       <ServiceWorkerRegister />
+      {/* APP-TABS-INSTANT-1 (log §390): inside the Android app the bottom tabs are prefetched in full. */}
+      {inApp ? <AppTabPrefetch /> : null}
       <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
       {/* ADMIN-PANEL-1: a team account's browser stops sending web analytics,
           so /admin/panel counts only real visitors. */}

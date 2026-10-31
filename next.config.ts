@@ -9,6 +9,14 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       bodySizeLimit: "1mb"
+    },
+    // APP-TABS-INSTANT-1 (log §390): a console screen visited (or prefetched)
+    // in the last 60 s is shown again from the in-memory router cache instead
+    // of being rendered again, so going back to a tab is instant. A server
+    // action that revalidates, a poller's router.refresh() and a reload still
+    // fetch fresh data. Prefetched screens keep the default 5 min.
+    staleTimes: {
+      dynamic: 60
     }
   },
   // GEO-SELF-1 Fase 1 (log §256): the public pricing page lives at the

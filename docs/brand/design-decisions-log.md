@@ -28200,3 +28200,16 @@ recuperación; los dos botones siguen siendo los de antes.
 - La sesión también se comparte: cerrar sesión en Chrome la cierra en la app.
 - Sin medir en un móvil real; los tests cubren desvío, splash con sesión no (es interacción de navegador).
 
+## §390 · APP-TABS-INSTANT-1: las pestañas de la app se abren sin cargar (2026-10-31)
+
+**Qué se decidió.** Denis comprobó que con §389 navegar entre pestañas seguía cargando como una web: el service worker solo guarda lo estático y los `Link` de la barra solo precargaban hasta el esqueleto (`loading.tsx`), así que cada pestaña volvía a pedirse al servidor. Dos cambios:
+
+1. **Dentro de la app, precarga completa de las cinco pestañas** del proyecto abierto cuando la consola queda en reposo (`AppTabPrefetch`, `router.prefetch` con `kind: "full"`; la lista la da `tabPrefetchTargets`, pura y con test). Solo con la cookie `gs_app`: en la web no se gasta.
+2. **`experimental.staleTimes.dynamic = 60`** en `next.config.ts`: una pantalla de la consola vista en el último minuto se vuelve a enseñar desde la caché en memoria del enrutador, sin pedirla otra vez. Vale para todos (web y app).
+
+**Qué no cambia.** Los datos de cliente siguen sin guardarse en el dispositivo: la caché del enrutador vive en memoria de la pestaña y se pierde al cerrar la app. Una acción de servidor que revalida, el `router.refresh()` de los sondeos de escaneo y recargar siguen trayendo datos nuevos.
+
+**Coste y riesgo.** Cada apertura de la consola en la app hace hasta cuatro renders más en el servidor (con sus consultas a Supabase). Al volver a una pestaña antes de 60 s se puede ver un dato con hasta un minuto de antigüedad si nada lo ha refrescado. Si el coste en Vercel sube, se apaga quitando `AppTabPrefetch` del layout.
+
+**Pendiente.** Medido solo con tests; falta comprobarlo en el móvil.
+
