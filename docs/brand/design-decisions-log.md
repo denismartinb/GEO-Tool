@@ -28084,3 +28084,32 @@ privado y RLS por carpeta propia; sin service role.
 **Pendiente.** Migración `0046_profile_avatar.sql`, que se aplica a mano antes del
 merge; sin ella `readAvatarUrl` lee «sin foto» y la subida falla con mensaje.
 Premisa: no hay otra vía de recuperación retirada.
+
+## §388 · CONSOLE-404-ROCKET-1: la 404 de la consola recupera el cohete (2026-10-31)
+
+**Qué.** La 404 de dentro de la consola (`app/dashboard/not-found.tsx`) deja el
+anillo vacío de F8a (§366) y pasa a «Fuera de trayectoria»: una ventana
+nocturna con el cohete de la 404 pública, que despega del planeta siguiendo la
+ruta hacia el destino, se desvía, y cuyo rumbo punteado pasa de largo junto al
+blanco marcado con 404. Escena en `components/ins/errors/lost-rocket.tsx`,
+estilos en `app/ins/errors.css`. Ancho, el texto va sobre la escena; por debajo
+de 1100 px, debajo de ella sobre la superficie de la consola. Texto, botones y
+destinos no cambian.
+
+**Por qué así.** Denis pidió tres opciones con el concepto «Instrumento», una
+de ellas con el cohete que le gustaba de la 404 pública, y eligió esa (A) el
+2026-10-31. Maqueta con las tres en
+`docs/design-reference/console-404-rocket-1/opciones.html`.
+
+**Cómo se mueve.** Un solo reloj: `render(t, now)` dibuja la entrada (3,2 s) y
+el ambiente (flotación, propulsores, dos capas de estrellas, blanco girando) en
+un bucle de `requestAnimationFrame` que se para fuera de pantalla y con la
+pestaña oculta. Con movimiento reducido se queda en el último fotograma. Nada
+codifica progreso.
+
+**Reglas tocadas.** `mission-rocket.md` vuelve a hablar de dos cohetes (pública
+y consola) con la misma silueta; `console-instrumento.md` sustituye «sin
+cohete» de §366. `app/dashboard/error.tsx` sigue con el anillo vacío.
+
+**Pendiente.** Nada conocido. Premisa: no se retira ninguna vía de
+recuperación; los dos botones siguen siendo los de antes.
