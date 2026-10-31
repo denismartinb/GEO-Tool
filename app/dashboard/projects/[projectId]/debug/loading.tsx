@@ -1,15 +1,12 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { SkCard, SkHead, SkPage, SkRows } from "@/components/ins/skeleton";
 
-export default function RunsLoading() {
+export default function DebugLoading() {
   return (
-    <div className="page">
-      <Skeleton width={90} height={12} style={{ marginBottom: 8 }} />
-      <Skeleton width={240} height={22} style={{ marginBottom: 24 }} />
-      <div className="card" style={{ padding: 16, display: "grid", gap: 12 }}>
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Skeleton key={i} height={56} />
-        ))}
-      </div>
-    </div>
+    <SkPage>
+      <SkHead lead={1} />
+      <SkCard flush style={{ marginTop: 28 }}>
+        <SkRows n={6} lead="dot" />
+      </SkCard>
+    </SkPage>
   );
 }

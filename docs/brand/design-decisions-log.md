@@ -28343,3 +28343,17 @@ la tienda. Premisa: no se retira ningún camino de recuperación.
 **Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
 
 **Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).
+
+## §398 · CONSOLE-SKELETONS-1: los esqueletos de carga pasan a «Instrumento» (2026-10-31)
+
+**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (§397), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
+
+- Cada pantalla tiene la forma de su versión «Instrumento» y de la cabecera común de §396: título, acción en la misma fila (solo icono en el móvil) y la frase.
+- Pantallas con esqueleto propio: Visión general, Recomendaciones (plan primero y pilares al final), Prompts, Competidores, Páginas citadas, Auditoría técnica, Posición en Google, Visibilidad en agentes, Auditoría agéntica, Ajustes, depuración y escaneos. El resto de la consola (Dominios, Notificaciones…) usa el genérico de `app/dashboard/loading.tsx`.
+- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` (§397).
+- El pulso es ambiente, no progreso, y se queda quieto con `prefers-reduced-motion`.
+- Se retiran `components/ui/skeleton.tsx` y las reglas `.skel`/`.skel-card` de `globals.css`, que ya no usaba nadie.
+
+**Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
+
+**Pendiente o conocido.** El oscuro depende de que §397 (selector en el menú de cuenta) esté en `main`; sin él, los esqueletos salen en claro como todo lo demás. Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.

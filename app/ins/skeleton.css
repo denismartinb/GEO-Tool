@@ -1,0 +1,70 @@
+/* CONSOLE-SKELETONS-1 (log §398). Esqueletos de carga de la consola: la misma
+   forma que cada pantalla «Instrumento» (cabecera común, tiras, tarjetas y
+   filas), pintada solo con tokens de Instrumento para que siga al modo oscuro.
+   Es ambiente: el pulso no representa progreso. */
+.ins .sk-page{pointer-events:none;user-select:none}
+.ins .sk{display:block;flex:none;max-width:100%;height:12px;border-radius:7px;background:var(--rule);animation:ins-sk 1.6s var(--std) infinite}
+.ins .sk.pill{border-radius:999px}
+.ins .sk.circ{border-radius:50%}
+.ins .sk.soft{background:var(--rule-2)}
+.ins .sk-card .sk{background:var(--rule-2)}
+.ins .sk-card .sk.strong{background:var(--rule)}
+@keyframes ins-sk{0%,100%{opacity:.55}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.ins .sk{animation:none}}
+
+/* Cabecera común (PageHead): título, acción en la misma fila y la frase. */
+.ins .sk-h{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.ins .sk-h .sk-t{height:40px;width:min(340px,70%);border-radius:10px}
+.ins .sk-h .sk-a{height:40px;width:160px}
+.ins .sk-lead{display:grid;gap:10px;margin-top:16px;max-width:640px}
+.ins .sk-lead .sk{height:15px}
+
+/* Bloques. */
+.ins .sk-sec{margin-top:40px}
+.ins .sk-sec-h{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:18px}
+.ins .sk-sec-h .sk:first-child{height:22px;width:min(300px,60%)}
+.ins .sk-card{border:1px solid var(--rule);border-radius:20px;background:var(--surface);box-shadow:var(--card-shadow);padding:22px;display:grid;gap:14px;align-content:start;min-width:0}
+.ins .sk-card.flush{padding:6px 22px}
+.ins .sk-strip{display:grid;grid-template-columns:repeat(var(--n,4),minmax(0,1fr));border-top:1px solid var(--ink-4);border-bottom:1px solid var(--rule)}
+.ins .sk-strip>div{display:grid;gap:12px;padding:16px 16px 16px 0;border-right:1px solid var(--rule);margin-right:16px}
+.ins .sk-strip>div:last-child{border-right:0;margin-right:0}
+.ins .sk-strip .sk-v{height:30px;width:56px;border-radius:8px}
+.ins .sk-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.ins .sk-tabs .sk{height:32px;width:96px}
+.ins .sk-tabs .sk:first-child{background:var(--ink-4);opacity:.6}
+.ins .sk-row{display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid var(--rule-2);min-width:0}
+.ins .sk-row:last-child{border-bottom:0}
+.ins .sk-row .sk-grow{flex:1;display:grid;gap:8px;min-width:0}
+.ins .sk-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.ins .sk-g57{display:grid;grid-template-columns:5fr 7fr;gap:16px}
+.ins .sk-g21{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+.ins .sk-g2>*,.ins .sk-g57>*,.ins .sk-g21>*{min-width:0}
+.ins .sk-split{display:flex;align-items:center;gap:22px}
+.ins .sk-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ins .sk-progress>.sk{height:4px;border-radius:2px}
+.ins .sk-progress>.sk:first-child{background:var(--ink-4)}
+.ins .sk-score{font-size:0;height:96px;width:150px;border-radius:14px}
+.ins .sk-bar{height:6px;border-radius:3px}
+
+/* Posición en Google conserva su escena de carga (log §289) bajo la cabecera. */
+.ins .sk-page .gsc-load{margin-top:28px}
+
+@media (max-width:760px){
+ .ins .sk-h{gap:12px}
+ .ins .sk-h .sk-t{height:32px;width:min(220px,70%)}
+ .ins .sk-h .sk-a{width:40px}
+ .ins .sk-lead .sk{height:14px}
+ .ins .sk-sec{margin-top:28px}
+ .ins .sk-card{padding:16px;border-radius:18px}
+ .ins .sk-card.flush{padding:4px 16px}
+ .ins .sk-g2,.ins .sk-g57,.ins .sk-g21{grid-template-columns:minmax(0,1fr)}
+ .ins .sk-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .ins .sk-strip.row{grid-template-columns:repeat(var(--n,4),minmax(0,1fr))}
+ .ins .sk-strip>div{padding:12px 10px 12px 0;margin-right:10px}
+ .ins .sk-strip:not(.row)>div:nth-child(2n){border-right:0;margin-right:0}
+ .ins .sk-strip .sk-v{height:24px;width:44px}
+ .ins .sk-tabs .sk{width:80px}
+ .ins .sk-split{flex-direction:column;align-items:stretch}
+ .ins .sk-score{height:72px;width:120px}
+ .ins .sk-hide-m{display:none!important}
+}

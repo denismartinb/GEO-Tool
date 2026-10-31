@@ -25,6 +25,7 @@ import "@/app/ins/agents.css";
 import "@/app/ins/errors.css";
 import "@/app/ins/trial-ended.css";
 import "@/app/ins/page-template.css";
+import "@/app/ins/skeleton.css";
 import { cookies } from "next/headers";
 import { APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE } from "@/lib/app-mode";
 import { SELLABLE_PLANS, resolveShownPromoPrice } from "@/app/pricing/plans-data";

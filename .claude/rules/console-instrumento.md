@@ -283,3 +283,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Competidores no enseña el denominador junto al ranking** (Denis, log §396,
   deja sin efecto aquí «El denominador no se quita» de F5b). Si vuelve, con
   `answerCountLabel`.
+
+## Esqueletos de carga (CONSOLE-SKELETONS-1, log §398)
+
+- **Todo `loading.tsx` de `app/dashboard` se monta con `SkPage`** y las piezas de
+  `components/ins/skeleton.tsx`; nunca con clases o colores antiguos, o en
+  oscuro sale claro (lo vigila `tests/console-skeletons.test.ts`).
+- **La forma sigue a la pantalla**: si una pantalla cambia de orden o de
+  cabecera, su esqueleto cambia en el mismo PR.
+- **El pulso es ambiente**: ninguna barra del esqueleto representa progreso.
