@@ -33,17 +33,18 @@ function markSeen() {
   }
 }
 
-/** Franja bajo la cabecera, en todas las pantallas. */
+/** Franja bajo la cabecera, en todas las pantallas y anchuras (la barra inferior móvil se retiró: duplicaba este aviso). */
 export function TrialEndedStrip() {
   const d = useShellData();
   if (d.planId !== "free") return null;
   return (
-    <Link href={PICK_PLAN_HREF} className="te-strip" aria-label="Tu prueba de Pro ha terminado. Elegir plan">
+    <Link href={PICK_PLAN_HREF} className="te-strip" aria-label="Prueba terminada. Cambiar plan">
       <span className="dot" aria-hidden="true" />
-      <p>
-        <b>Tu prueba de Pro ha terminado.</b> Tus datos siguen aquí; los escaneos están en pausa hasta que elijas un plan.
-      </p>
-      <span className="btn ink sm">Elegir plan</span>
+      <div className="t">
+        <b>Prueba terminada</b>
+        Solo lectura hasta que elijas plan
+      </div>
+      <span className="btn ink">Cambiar plan</span>
     </Link>
   );
 }
@@ -60,21 +61,6 @@ export function TrialEndedPlanCard({ onNavigate }: { onNavigate?: () => void }) 
         Elegir plan
       </Link>
     </div>
-  );
-}
-
-/** Barra inferior en móvil, donde no hay menú a la vista. */
-export function TrialEndedDock() {
-  const d = useShellData();
-  if (d.planId !== "free") return null;
-  return (
-    <Link href={PICK_PLAN_HREF} className="te-dock" aria-label="Prueba terminada. Elegir plan">
-      <div className="t">
-        <b>Prueba terminada</b>
-        Solo lectura hasta que elijas plan
-      </div>
-      <span className="btn ink sm">Elegir plan</span>
-    </Link>
   );
 }
 

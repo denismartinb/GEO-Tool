@@ -155,7 +155,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 ## Prueba terminada (F8b, log §367)
 
 - **Las piezas dependen de `planId === "free"` del marco**, no de una
-  consulta propia. Franja, tarjeta del menú y barra móvil no se pueden cerrar.
+  consulta propia. La franja (única pieza en todas las anchuras) y la tarjeta del menú no se pueden cerrar.
 - **El precio fundador se cita sólo si Stripe lo confirma**
   (`getActivePromoPlanIds`); nunca un descuento fijo en el texto.
 - **El aviso de primera entrada vive en `localStorage`**: sin migración no hay

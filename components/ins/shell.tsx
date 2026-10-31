@@ -12,7 +12,7 @@ import { DomainSwitcherPanel } from "@/components/ins/domain-switcher";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { avatarStyle, initialsOf, planLabel, ShellDataProvider, useShellData, type ShellDataInput } from "@/components/ins/shell-context";
 import { InsSprite } from "@/components/ins/sprite";
-import { TrialEndedDock, TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
+import { TrialEndedFirstEntry, TrialEndedPlanCard, TrialEndedStrip } from "@/components/ins/trial-ended";
 import { ToastProvider } from "@/components/ins/toasts";
 import { crumbForPath, INS_NAV, isNavActive, navHref, type InsNavItem } from "@/lib/ins/nav";
 import type { AccountNotice } from "@/lib/notifications/account-notice";
@@ -140,7 +140,6 @@ function Frame({ banner, children }: { banner?: ReactNode; children: ReactNode }
           </header>
           <TrialEndedStrip />
           <TrialEndedFirstEntry />
-          <TrialEndedDock />
           <div className="scroller dash-content" id="sc" ref={scRef}>
             {banner}
             {children}
