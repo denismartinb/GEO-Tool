@@ -1,0 +1,49 @@
+/* «Cambiar de plan» con el aspecto de Instrumento (log §383).
+   Solo pinta: el marcado, la lógica y los flujos de pago son los de
+   components/billing/change-plan-modal.tsx. Acotado a .ins / .ins-shell. */
+:is(.ins,.ins-shell) .cp-scrim{background:rgba(11,20,38,.5);backdrop-filter:blur(3px)}
+:is(.ins,.ins-shell) .cp-modal{border-radius:24px;background:var(--surface);border:1px solid var(--rule);box-shadow:0 40px 90px -30px rgba(11,20,38,.55);font-family:var(--font)}
+:is(.ins,.ins-shell) .cp-head{padding:24px 26px 18px;border-bottom:1px solid var(--rule-2)}
+:is(.ins,.ins-shell) .cp-head-ic{border-radius:13px;background:var(--blue-tint);color:var(--blue)}
+:is(.ins,.ins-shell) .cp-head h3{font-size:20px;font-weight:600;letter-spacing:-.02em}
+:is(.ins,.ins-shell) .cp-head p{color:var(--ink-3);font-weight:400}
+:is(.ins,.ins-shell) .cp-close{border-radius:12px;border:1px solid var(--rule);color:var(--ink-3)}
+:is(.ins,.ins-shell) .cp-close:hover{background:var(--surface-2);color:var(--ink)}
+:is(.ins,.ins-shell) .cp-body{padding:22px 26px}
+:is(.ins,.ins-shell) .cp-plan{border-radius:18px;border:1px solid var(--rule);background:var(--surface);padding:16px 18px;transition:border-color .14s,box-shadow .14s,background .14s}
+:is(.ins,.ins-shell) .cp-plan:hover{border-color:var(--ink-4);background:var(--surface)}
+:is(.ins,.ins-shell) .cp-plan.sel{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);background:var(--surface)}
+:is(.ins,.ins-shell) .cp-plan.cur{background:var(--surface-2)}
+:is(.ins,.ins-shell) .cp-plan-name{font-weight:600;letter-spacing:-.01em}
+:is(.ins,.ins-shell) .cp-plan-price{font-weight:600;font-variant-numeric:tabular-nums}
+:is(.ins,.ins-shell) .cp-plan-tag{color:var(--ink-3);font-weight:400}
+:is(.ins,.ins-shell) .cp-chip{border-radius:999px;background:var(--surface-2);border:1px solid var(--rule);color:var(--ink-2);font-weight:500}
+:is(.ins,.ins-shell) .cp-radio{border:1.5px solid var(--ink-4);background:var(--surface)}
+:is(.ins,.ins-shell) .cp-plan.sel .cp-radio{border-color:var(--ink);background:var(--ink);box-shadow:inset 0 0 0 3px var(--surface)}
+:is(.ins,.ins-shell) .cp-flag{font-weight:600;letter-spacing:.02em}
+:is(.ins,.ins-shell) .cp-flag.cur{background:var(--ink);color:var(--surface)}
+:is(.ins,.ins-shell) .cp-flag.rec{background:var(--blue);color:#fff}
+:is(.ins,.ins-shell) .cp-sales{border-radius:18px;border:1px dashed var(--ink-4);background:transparent}
+:is(.ins,.ins-shell) .cp-sales-t{font-weight:600}
+:is(.ins,.ins-shell) .cp-sales-cta{color:var(--blue-ink)}
+:is(.ins,.ins-shell) .cp-confirm-badge.up{background:var(--blue-tint);color:var(--blue-ink)}
+:is(.ins,.ins-shell) .cp-confirm-badge.down{background:var(--warm-tint);color:var(--warm)}
+:is(.ins,.ins-shell) .cp-move{border-radius:18px;border:1px solid var(--rule);background:var(--surface-2)}
+:is(.ins,.ins-shell) .cp-move-lbl{letter-spacing:.12em;color:var(--ink-3);font-weight:600}
+:is(.ins,.ins-shell) .cp-move-plan{font-weight:600}
+:is(.ins,.ins-shell) .cp-move-arrow{color:var(--ink-3)}
+:is(.ins,.ins-shell) .cp-proration{border-radius:18px;border:1px solid var(--rule)}
+:is(.ins,.ins-shell) .cp-pror-row{border-bottom:1px solid var(--rule-2)}
+:is(.ins,.ins-shell) .cp-pror-row.total{background:var(--surface-2)}
+:is(.ins,.ins-shell) .cp-pror-row .v.credit{color:var(--pos)}
+:is(.ins,.ins-shell) .cp-foot{padding:16px 26px;background:var(--surface);border-top:1px solid var(--rule-2)}
+:is(.ins,.ins-shell) .cp-foot-note{color:var(--ink-3)}
+:is(.ins,.ins-shell) .cp-done-badge{background:var(--blue-tint);color:var(--blue)}
+:is(.ins,.ins-shell) .cp-done h3{font-weight:600}
+@media (max-width:640px){
+  :is(.ins,.ins-shell) .cp-scrim{place-items:end center;padding:0}
+  :is(.ins,.ins-shell) .cp-modal{max-width:100%;max-height:92vh;border-radius:24px 24px 0 0}
+  :is(.ins,.ins-shell) .cp-plans{grid-template-columns:1fr}
+  :is(.ins,.ins-shell) .cp-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
+  :is(.ins,.ins-shell) .cp-foot .btn{flex:1 1 140px;min-height:48px}
+}

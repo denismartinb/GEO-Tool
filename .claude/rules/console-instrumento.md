@@ -251,3 +251,11 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   TABS-INSTANT-WEB-1, log §391). Extenderla a escritorio necesita aprobación:
   es coste de servidor por cada entrada.
 
+
+## Modal «Cambiar de plan» (PLAN-MODAL-INSTRUMENTO-1, log §392)
+
+- **Solo es aspecto.** `app/ins/plan-modal.css` repinta las clases `cp-*` del modal
+  de facturación; el marcado y los flujos de pago (`change-plan-modal.tsx`,
+  `domain-overage-gate.tsx`) no se tocan sin aprobación.
+- **Los selectores van acotados a `:is(.ins,.ins-shell)`**: el modal también sale
+  desde la puerta de exceso de dominios, fuera de `.ins`.

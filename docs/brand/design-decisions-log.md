@@ -28225,3 +28225,9 @@ recuperación; los dos botones siguen siendo los de antes.
 
 
 **Adenda a §381 (2026-10-31).** Dentro de la app (cookie `gs_app`) la pestaña «Plan» de Ajustes vuelve, solo de lectura (`components/settings/in-app-plan.tsx`): dice qué plan tiene la cuenta (o «Sin plan · solo lectura»), los días de prueba que quedan y una frase que remite a genscore.es en el navegador. Sin precios, sin «Cambiar de plan», sin checkout y **sin enlace clicable**: Denis propuso un enlace a la web, pero llevar a pagar fuera de la app arriesga el rechazo de Google Play, así que se deja como texto. Añadir el enlace es un cambio de una línea y la asume el fundador. Premisa: la app no vende; qué la verifica: `createCheckoutSession`/`createPortalSession` siguen negándose en servidor; qué se rompería si falla: el usuario vería su plan pero no podría cambiarlo desde la app.
+
+## §392 · PLAN-MODAL-INSTRUMENTO-1: «Cambiar de plan» con el aspecto de Instrumento (2026-10-31)
+
+**Qué se decidió.** Denis pidió el modal «Cambiar de plan» en el lenguaje del prototipo aprobado (`i-src/screens/perfil.js`, `pm-*`). Se hace como hoja de estilos acotada (`app/ins/plan-modal.css`, selectores `:is(.ins,.ins-shell) .cp-*`) y no se toca `components/billing/change-plan-modal.tsx`: marcado, lógica, checkout de Stripe, portal y la puerta de exceso de dominios (`domain-overage-gate.tsx`) siguen exactamente igual. Plan elegido con borde de tinta, bandera «Recomendado» azul, tarjeta de Agencia punteada, pie con el resumen y, en móvil, hoja inferior con botones de 48 px.
+
+**Qué queda pendiente o sin verificar.** El resumen en carrito pegajoso y el paso «Revisa el cambio» del prototipo conservan el marcado actual del modal (confirmación con prorrateo), no se reconstruyen. No se ha podido comprobar en navegador desde la sesión: lo juzga el fundador en el preview.
