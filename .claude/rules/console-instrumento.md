@@ -200,6 +200,9 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Las pestañas viven en `lib/ins/nav.ts` (`INS_TABS`)** y agrupan las mismas
   rutas de `INS_NAV`; una pantalla nueva del menú entra en una (y solo una)
   pestaña, lo vigila `nav.test.ts`.
+- **Seis pestañas y botones fijos (log §393).** «Tu web» reúne las auditorías
+  técnicas; las subpantallas son botones de ancho repartido con su `pin`, sin
+  desplazamiento horizontal. Una pantalla nueva con nombre largo lleva `pin`.
 - **Márgenes del sistema con `env(safe-area-inset-*)`** en la barra y en el
   padding inferior de `.page`. Un elemento fijo nuevo abajo cuenta con la barra.
 - **Se oculta en pantallas completas** (`.sc-mission`, `.sc-newdomain`).

@@ -2202,10 +2202,11 @@
 
 /* Resumen */
 .skw-todo { display: flex; flex-direction: column; }
-.skw-todo button { display: flex; gap: 10px; align-items: flex-start; text-align: left; border: 0; background: none; font: inherit; padding: 10px 0; border-bottom: 1px solid var(--line-soft); cursor: pointer; color: var(--ink); }
+.skw-todo button { display: flex; gap: 10px; align-items: center; text-align: left; border: 0; background: none; font: inherit; padding: 10px 0; border-bottom: 1px solid var(--line-soft); cursor: pointer; color: var(--ink); }
 .skw-todo button:last-child { border-bottom: 0; }
-.skw-todo button:hover b { color: var(--accent-ink); }
-.skw-todo b { display: block; font-size: 14px; font-weight: 650; }
+.skw-todo button:hover b { text-decoration: underline; }
+.skw-todo button > span:not([class]) { flex: 1; min-width: 0; }
+.skw-todo b { display: block; font-size: 14px; font-weight: 650; color: var(--blue-ink, var(--accent-ink)); }
 .skw-todo small { display: block; font-size: 12px; color: var(--ink-3); margin-top: 2px; }
 .skw-linkbars { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; }
 .skw-lb { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); }
@@ -2248,20 +2249,25 @@
 .skw-distl { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--ink-3); }
 .skw-distl span { display: inline-flex; align-items: center; gap: 5px; }
 .skw-distl i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
-.skw-next { display: block; font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--line-soft); padding-top: 8px; white-space: normal; overflow-wrap: anywhere; }
-.skw-next b { color: var(--ink); font-weight: 650; }
+.skw-next { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); border-top: 1px solid var(--line-soft); padding-top: 8px; white-space: normal; overflow-wrap: anywhere; }
+.skw-next > span { flex: 1; min-width: 0; }
+.skw-next b { color: var(--blue-ink, var(--accent-ink)); font-weight: 650; }
+.skw-topic:hover .skw-next b { text-decoration: underline; }
+/* a trailing chevron says «this opens» on rows that are buttons (log §392) */
+.skw-chev { flex: none; color: var(--blue-ink, var(--accent-ink)); }
 
 /* Panel lateral del tema */
-.skw-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, .35); z-index: 60; display: grid; place-items: center; padding: 16px; }
+.skw-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); z-index: 80; animation: skw-fade .2s ease-out; display: grid; place-items: center; padding: 16px; }
 .skw-overlay.is-drawer { display: block; padding: 0; }
-.skw-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(760px, 100%); background: var(--surface-sunk); z-index: 61; display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(15, 23, 42, .18); }
+.skw-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(760px, 100%); background: var(--surface-sunk); z-index: 81; animation: skw-in-r .26s cubic-bezier(.2, .8, .2, 1); display: flex; flex-direction: column; box-shadow: -12px 0 32px rgba(15, 23, 42, .18); }
 .skw-dh { position: sticky; top: 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 18px; background: var(--surface); border-bottom: 1px solid var(--line); }
 .skw-dh h2 { margin: 0; font-size: 18px; font-weight: 750; color: var(--ink); }
 .skw-dsub { font-size: 12.5px; color: var(--ink-3); margin-top: 3px; }
 .skw-db { flex: 1; overflow-y: auto; padding: 14px 18px 28px; display: flex; flex-direction: column; gap: 12px; }
 .skw-db .card { padding: 15px; border-radius: 14px; min-width: 0; }
 .skw-db .skw-minis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.skw-x { border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); border-radius: 8px; width: 32px; height: 32px; font-size: 14px; cursor: pointer; flex: none; }
+.skw-x { display: grid; place-items: center; border: 0; background: color-mix(in srgb, var(--ink) 7%, var(--surface)); color: var(--ink); border-radius: 50%; width: 36px; height: 36px; padding: 0; cursor: pointer; flex: none; }
+.skw-x:hover { background: color-mix(in srgb, var(--ink) 13%, var(--surface)); }
 .skw-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .skw-acts { display: flex; flex-direction: column; gap: 10px; }
 .skw-act { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: var(--surface); }
@@ -2337,7 +2343,7 @@
 .skw-tname { font: inherit; font-weight: 700; font-size: 15px; border: 0; border-bottom: 1px dashed var(--line); background: none; color: var(--ink); padding: 2px 0; width: 100%; }
 .skw-tname:focus { outline: none; border-bottom-color: var(--accent); }
 
-.skw-toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 70; background: var(--ink); color: #fff; font-size: 13.5px; padding: 10px 16px; border-radius: 10px; box-shadow: 0 10px 28px rgba(15, 23, 42, .25); max-width: calc(100vw - 32px); }
+.skw-toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 90; background: var(--ink); color: #fff; font-size: 13.5px; padding: 10px 16px; border-radius: 10px; box-shadow: 0 10px 28px rgba(15, 23, 42, .25); max-width: calc(100vw - 32px); }
 
 @media (min-width: 760px) {
   .skw-minis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
@@ -2349,9 +2355,19 @@
   .skw-dk { grid-template-columns: 24px minmax(0, 1fr) auto; }
   .skw-dk-t { grid-column: 2 / -1; }
   .skw-lb { grid-template-columns: minmax(0, 96px) minmax(0, 1fr) 48px; }
-  .skw-db { padding: 12px 12px 24px; }
-  .skw-dh { padding: 14px 12px; }
+  .skw-db { padding: 12px 12px calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .skw-dh { padding: 22px 12px 14px; }
+  /* On a phone the topic opens as a bottom sheet, not a page: the dimmed
+     console stays visible above it, the top corners are round and a grabber
+     sits on top, so nobody mistakes it for a screen that lost its header
+     (log §392). It covers the tab bar, which would otherwise sit on top. */
+  .skw-drawer { top: max(56px, calc(env(safe-area-inset-top, 0px) + 44px)); left: 0; right: 0; width: 100%; border-radius: 20px 20px 0 0; overflow: hidden; box-shadow: 0 -14px 40px rgba(15, 23, 42, .28); animation-name: skw-in-up; }
+  .skw-dh { position: relative; }
+  .skw-dh::before { content: ""; position: absolute; top: 8px; left: 50%; width: 38px; height: 5px; margin-left: -19px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 20%, transparent); }
 }
+@keyframes skw-fade { from { opacity: 0; } }
+@keyframes skw-in-r { from { transform: translateX(24px); opacity: 0; } }
+@keyframes skw-in-up { from { transform: translateY(40px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
-  .skw-spin { animation: none; }
+  .skw-spin, .skw-overlay, .skw-drawer { animation: none; }
 }

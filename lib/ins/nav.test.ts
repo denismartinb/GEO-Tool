@@ -43,7 +43,8 @@ describe("barra inferior (MOBILE-TABBAR-1)", () => {
   it("resuelve la pestaña de una ruta y no de los ajustes", () => {
     expect(tabForPath("/dashboard/projects/p1", "p1")?.key).toBe("home");
     expect(tabForPath("/dashboard/projects/p1/competitors", "p1")?.key).toBe("ia");
-    expect(tabForPath("/dashboard/projects/p1/web-audit/x", "p1")?.key).toBe("google");
+    expect(tabForPath("/dashboard/projects/p1/web-audit/x", "p1")?.key).toBe("web");
+    expect(tabForPath("/dashboard/projects/p1/search-console", "p1")?.key).toBe("google");
     expect(tabForPath("/dashboard/settings", "p1")).toBeNull();
   });
   it("una pestaña recuerda la última pantalla vista y si no, abre la primera", () => {
@@ -52,11 +53,16 @@ describe("barra inferior (MOBILE-TABBAR-1)", () => {
     expect(tabTarget(ia, { ia: "/citations" })).toBe("/citations");
     expect(tabTarget(ia, { ia: "/web-audit" })).toBe("/prompts");
   });
-  it("solo las familias con varias pantallas llevan pastillas", () => {
+  it("solo las familias con varias pantallas llevan botones", () => {
     expect(tabSubItems(INS_TABS[0])).toEqual([]);
     expect(tabSubItems(INS_TABS.find((t) => t.key === "ia")!)).toHaveLength(3);
-    // En Google: Posición en Google y las dos auditorías de la misma ruta
-    expect(tabSubItems(INS_TABS.find((t) => t.key === "google")!).map((n) => n.block ?? null)).toEqual([null, "geo", "seo"]);
+    // Buscadores: solo Posición en Google, sin botones
+    expect(tabSubItems(INS_TABS.find((t) => t.key === "google")!)).toEqual([]);
+    // Tu web: las dos auditorías de la misma ruta (log §393)
+    expect(tabSubItems(INS_TABS.find((t) => t.key === "web")!).map((n) => n.pin)).toEqual(["Para la IA", "Para Google"]);
+  });
+  it("seis pestañas con Buscadores y Tu web (log §393)", () => {
+    expect(INS_TABS.map((t) => t.short)).toEqual(["Inicio", "Plan", "En la IA", "Buscadores", "Tu web", "Agentes"]);
   });
   it("sin rayas largas", () => {
     expect(JSON.stringify(INS_TABS)).not.toContain("—");

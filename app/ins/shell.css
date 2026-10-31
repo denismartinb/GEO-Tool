@@ -84,7 +84,7 @@
  /* MOBILE-TABBAR-1: cápsula flotante, al alcance del pulgar y fuera de la barra de gestos */
  .ins-shell .tabbar{display:flex;position:fixed;z-index:70;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:6px;gap:2px;border:1px solid var(--rule);border-radius:26px;background:color-mix(in srgb,var(--surface) 78%,transparent);backdrop-filter:blur(18px) saturate(1.6);-webkit-backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 14px 34px -14px rgba(5,8,15,.4);font:400 15px/1.5 var(--font);color:var(--ink);box-sizing:border-box}
  .ins-shell .tabbar *{box-sizing:border-box}
- .ins-shell .tabbar a{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:52px;border-radius:20px;font-size:10.5px;font-weight:550;color:var(--ink-3);text-decoration:none;-webkit-tap-highlight-color:transparent;transition:background var(--d1),color var(--d1)}
+ .ins-shell .tabbar a{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:52px;border-radius:18px;font-size:10px;white-space:nowrap;font-weight:550;color:var(--ink-3);text-decoration:none;-webkit-tap-highlight-color:transparent;transition:background var(--d1),color var(--d1)}
  .ins-shell .tabbar a .i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--d2)}
  .ins-shell .tabbar a.on{color:var(--ink);font-weight:650;background:var(--blue-tint)}
  .ins-shell .tabbar a.on .i{color:var(--blue)}
@@ -93,14 +93,11 @@
  .ins-shell .tabbar .nw{position:absolute;top:3px;right:2px;height:15px;padding:0 5px;border-radius:99px;background:var(--blue);color:#fff;font:650 9px/15px var(--font)}
  .ins-shell .app:has(.sc-mission,.sc-newdomain)~.tabbar{display:none}
  /* pastillas de las pantallas de la familia, fijas al inicio de la página */
- .ins-shell .tabsub{display:flex;position:sticky;top:0;z-index:3;gap:6px;padding:12px 16px 10px;background:var(--surface);border-bottom:1px solid var(--rule-2);overflow-x:auto;scrollbar-width:none;font:400 15px/1.5 var(--font)}
- .ins-shell .tabsub::-webkit-scrollbar{display:none}
- .ins-shell .tabsub a{display:inline-flex;align-items:center;gap:7px;flex:none;height:32px;padding:0 13px;border-radius:99px;border:1px solid var(--rule);font-size:13px;font-weight:550;color:var(--ink-2);white-space:nowrap;text-decoration:none}
- .ins-shell .tabsub a .i{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;color:var(--ink-3)}
+ .ins-shell .tabsub{display:flex;position:sticky;top:0;z-index:3;gap:6px;padding:12px 16px 10px;background:var(--surface);border-bottom:1px solid var(--rule-2);font:400 15px/1.5 var(--font)}
+ .ins-shell .tabsub a{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;height:38px;padding:0 6px;border-radius:12px;border:1px solid var(--rule);background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;-webkit-tap-highlight-color:transparent}
  .ins-shell .tabsub a.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
- .ins-shell .tabsub a.on .i{color:var(--surface)}
  .ins-shell .app:has(.sc-mission,.sc-newdomain) .tabsub{display:none}
- .ins-shell .main:has(.tabsub) .pblur.t{top:119px}
+ .ins-shell .main:has(.tabsub) .pblur.t{top:125px}
  .ins-shell .pblur.b{bottom:0;height:110px}
  html .ins .toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 }

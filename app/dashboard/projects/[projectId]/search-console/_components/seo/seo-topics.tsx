@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import type { TopicActionView, TopicWithActions } from "@/lib/seo-tracking/screen";
 import { NO_TOPIC_ID } from "@/lib/seo-tracking/view-model";
 import { setSeoActionDoneAction, untrackSeoKeywordAction } from "../../seo-actions";
-import { ActionChip, DistBar, HistoryLine, PositionCell, pathOf } from "./seo-shared";
+import { ActionChip, CloseIcon, DistBar, HistoryLine, OpenChevron, PositionCell, pathOf } from "./seo-shared";
 import type { ReadyData, SeoView } from "./seo-tracking";
 
 function sameSite(domain: string, own: string) {
@@ -116,7 +116,7 @@ function TopicDrawer(props: {
             </div>
           </div>
           <button ref={closeRef} type="button" className="skw-x" onClick={props.onClose} aria-label="Cerrar">
-            ✕
+            <CloseIcon />
           </button>
         </div>
         <div className="skw-db">
@@ -342,7 +342,10 @@ export function SeoTopics(props: {
               <DistBar topic={t} />
               {!firstWeek && next && (
                 <span className="skw-next">
-                  Lo siguiente: <b>{next.title}</b>
+                  <span>
+                    Lo siguiente: <b>{next.title}</b>
+                  </span>
+                  <OpenChevron />
                 </span>
               )}
             </button>
