@@ -28213,3 +28213,13 @@ recuperación; los dos botones siguen siendo los de antes.
 
 **Pendiente.** Medido solo con tests; falta comprobarlo en el móvil.
 
+## §391 · TABS-INSTANT-WEB-1: las pestañas también son instantáneas en la web móvil (2026-10-31)
+
+**Qué se decidió.** Denis probó §390 en el móvil («mejor experiencia que la web hasta ahora») y pidió llevarlo a la web. `AppTabPrefetch` ya no se monta solo con la cookie `gs_app`: se monta siempre y decide en el cliente con `shouldPrefetchTabs` (pura, con test). En la app precarga siempre; en la web solo donde existe la barra inferior (`TAB_BAR_MEDIA_QUERY`, ≤760 px, la misma de MOBILE-TABBAR-1 §380) y nunca con ahorro de datos (`navigator.connection.saveData`) ni con conexión `slow-2g`, `2g` o `3g`.
+
+**Por qué no en escritorio.** El menú lateral ya precarga al pasar el ratón; la mejora sería pequeña y el coste en servidor, el mismo.
+
+**Coste y riesgo.** Cada entrada a la consola desde un móvil hace hasta cuatro o cinco renders más en el servidor, con sus consultas a Supabase, aunque no se abran. Con Vercel en Hobby y Supabase Free es lo que hay que vigilar. Para volver atrás sin tocar la app: que `shouldPrefetchTabs` devuelva `env.inApp`.
+
+**Pendiente.** Medir el efecto en las invocaciones de Vercel durante la primera semana.
+

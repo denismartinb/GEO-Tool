@@ -145,7 +145,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           components/session-cache-sync.tsx. */}
       <ServiceWorkerRegister />
       {/* APP-TABS-INSTANT-1 (log §390): inside the Android app the bottom tabs are prefetched in full. */}
-      {inApp ? <AppTabPrefetch /> : null}
+      <AppTabPrefetch inApp={inApp} />
       <SessionCacheSync email={user.email ?? ""} planId={plan.id} planName={plan.name} />
       {/* ADMIN-PANEL-1: a team account's browser stops sending web analytics,
           so /admin/panel counts only real visitors. */}

@@ -12,3 +12,26 @@ export function tabPrefetchTargets(pathname: string): string[] {
   const here = `${base}${m[2] ?? ""}`.replace(/\/$/, "");
   return INS_TABS.map((t) => `${base}${t.segments[0]}`).filter((href) => href !== here);
 }
+
+/** Same breakpoint as the bottom tab bar (MOBILE-TABBAR-1, log §380). */
+export const TAB_BAR_MEDIA_QUERY = "(max-width: 760px)";
+
+export type PrefetchEnv = {
+  inApp: boolean;
+  tabBarVisible: boolean;
+  saveData?: boolean;
+  effectiveType?: string;
+};
+
+/**
+ * TABS-INSTANT-WEB-1 (log §391). Always inside the app; on the web only where
+ * the bottom tab bar exists, and never with data saver or a slow connection.
+ * Desktop already prefetches on hover from the side menu.
+ */
+export function shouldPrefetchTabs(env: PrefetchEnv): boolean {
+  if (env.inApp) return true;
+  if (!env.tabBarVisible) return false;
+  if (env.saveData) return false;
+  if (env.effectiveType && /(^|-)2g$|^3g$/.test(env.effectiveType)) return false;
+  return true;
+}
