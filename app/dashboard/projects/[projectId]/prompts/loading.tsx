@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkStrip, SkTabs } from "@/components/ins/skeleton";
 
-/** Prompts while it loads (log §398): visibility strip in one row, Temas/Prompts with search, and a theme group. */
+/** Prompts while it loads (log §399): visibility strip in one row, Temas/Prompts with search, and a theme group. */
 export default function PromptsLoading() {
   return (
     <SkPage>

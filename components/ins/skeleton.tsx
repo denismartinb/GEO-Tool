@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 /**
- * Loading skeletons of the console (CONSOLE-SKELETONS-1, log §398). Every
+ * Loading skeletons of the console (CONSOLE-SKELETONS-1, log §399). Every
  * `loading.tsx` under `app/dashboard` builds from these pieces, so the shape
  * matches the Instrumento screen it stands in for (the shared `PageHead`
  * included) and the colours come from the Instrumento tokens, dark mode too.

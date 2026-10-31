@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkSection, SkStrip } from "@/components/ins/skeleton";
 
-/** Visión general while it loads (log §398): score sheet, figures, plan, breakdown and the agentic + SEO pair. */
+/** Visión general while it loads (log §399): score sheet, figures, plan, breakdown and the agentic + SEO pair. */
 export default function OverviewLoading() {
   return (
     <SkPage>

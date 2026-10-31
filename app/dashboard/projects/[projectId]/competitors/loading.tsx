@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows } from "@/components/ins/skeleton";
 
-/** Competidores while it loads (log §398): the ranking card with its five rows. */
+/** Competidores while it loads (log §399): the ranking card with its five rows. */
 export default function CompetitorsLoading() {
   return (
     <SkPage>

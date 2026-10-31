@@ -28360,16 +28360,55 @@ la tienda. Premisa: no se retira ningún camino de recuperación.
 
 **Pendiente o conocido.** La primera vez que se abre un menú en una pestaña nueva el icono sigue llegando como antes; la memoria sólo ayuda a partir de la segunda. Premisa: no se retira ningún camino de recuperación.
 
-## §398 · CONSOLE-SKELETONS-1: los esqueletos de carga pasan a «Instrumento» (2026-10-31)
+## §398 · DARK-MODE-MENU-1: el modo oscuro se publica, y se elige en el menú de cuenta (2026-10-31)
 
-**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (DARK-MODE-MENU-1, PR #714), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
+**Qué.** Denis (2026-10-31): «si el modo oscuro está desarrollado, estaría bien
+ubicarlo dentro de la sección de perfil, porque en la cabecera ya va a ser
+demasiado, especialmente en móvil». No estaba publicado: §349 dejó los tokens
+oscuros en `app/ins/tokens.css` y `lib/ins/theme.ts` sin ningún selector (el
+botón de luna que se veía era de la barra de revisión del prototipo, `#thbtn`,
+no del producto). Se le enseñaron dos sitios (menú de cuenta y un bloque
+«Apariencia» en Ajustes > Cuenta) y eligió **solo el menú de cuenta**.
+
+- Fila «Modo oscuro» con interruptor (`role="switch"`) en `AccountPanel`
+  (`components/ins/menus.tsx`, `ThemeSwitchItem`), bajo Notificaciones. El
+  mismo menú sale del avatar en escritorio y en móvil. No cierra el menú, para
+  que el cambio se vea en el sitio.
+- `applyTheme` guarda la elección en `localStorage` (`gs-theme`) de ese
+  dispositivo, sin migración. `THEME_INIT_SCRIPT` corre al principio de
+  `<body>` (`app/layout.tsx`) para que no haya parpadeo; en la web pública no
+  cambia nada porque los tokens oscuros están acotados a `.ins`. Las pantallas
+  de acceso «Bruma» sí lo leen (usan `.ins` y su niebla lee los tokens).
+- `app/ins/dark.css`, importado por el marco: en oscuro mapea las variables
+  antiguas de `globals.css` (las que siguen usando los bloques heredados de
+  Posición en Google, Comercio agéntico y Auditoría técnica) a los tokens de
+  Instrumento, y corrige los tintes claros escritos a mano en `globals.css` y
+  `console.css` (pastillas de puesto, etiquetas, avisos de conectar) y las
+  líneas de los gráficos de Search Console.
+
+**Por qué ahora y no en F8.** §349 aplazaba el selector hasta migrar todas las
+pantallas; F8e cerró la última. La auditoría de colores fijos sobre los
+bloques heredados se hizo por código (todas las reglas de esos prefijos con un
+fondo claro o un texto oscuro escritos a mano), no mirando cada pantalla con
+datos reales.
+
+**Pendiente / roto conocido.** Ninguna captura en oscuro con datos reales
+antes del PR: el entorno de trabajo no tiene sesión. Se revisa en el preview.
+Las rampas de color de los gráficos (barras de Competidores, series) se
+quedan como están: se leen en los dos temas. Sin «Sistema» ni
+`prefers-color-scheme`, por la decisión de §349. Premisa: no se retira ningún
+camino de recuperación.
+
+## §399 · CONSOLE-SKELETONS-1: los esqueletos de carga pasan a «Instrumento» (2026-10-31)
+
+**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (DARK-MODE-MENU-1, §398), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
 
 - Cada pantalla tiene la forma de su versión «Instrumento» y de la cabecera común de §396: título, acción en la misma fila (solo icono en el móvil) y la frase.
 - Pantallas con esqueleto propio: Visión general, Recomendaciones (plan primero y pilares al final), Prompts, Competidores, Páginas citadas, Auditoría técnica, Posición en Google, Visibilidad en agentes, Auditoría agéntica, Ajustes, depuración y escaneos. El resto de la consola (Dominios, Notificaciones…) usa el genérico de `app/dashboard/loading.tsx`.
-- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` de DARK-MODE-MENU-1.
+- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` de §398.
 - El pulso es ambiente, no progreso, y se queda quieto con `prefers-reduced-motion`.
 - Se retiran `components/ui/skeleton.tsx` y las reglas `.skel`/`.skel-card` de `globals.css`, que ya no usaba nadie.
 
 **Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
 
-**Pendiente o conocido.** El oscuro depende de que DARK-MODE-MENU-1 (PR #714, selector en el menú de cuenta) esté en `main`; sin él, los esqueletos salen en claro como todo lo demás. Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
+**Pendiente o conocido.** Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.

@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkSection, SkStrip, SkTabs } from "@/components/ins/skeleton";
 
-/** Recomendaciones while it loads (log §398): the plan deck first, «Más adelante», then the pillars at the bottom (log §396). */
+/** Recomendaciones while it loads (log §399): the plan deck first, «Más adelante», then the pillars at the bottom (log §396). */
 export default function RecommendationsLoading() {
   return (
     <SkPage>

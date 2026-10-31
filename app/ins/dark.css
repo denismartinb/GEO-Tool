@@ -1,0 +1,105 @@
+/* DARK-MODE-MENU-1 (log §398). Modo oscuro de la consola, elegido en el menú
+   de cuenta. Los tokens oscuros de Instrumento ya viven en tokens.css; aquí
+   solo se corrige lo que no lee esos tokens: las variables antiguas de
+   globals.css (que conservan los bloques heredados de Posición en Google,
+   Comercio agéntico y Auditoría técnica) y los tintes claros escritos a mano
+   en globals.css y console.css. Nada de esto aplica en claro ni fuera de
+   `.ins`. */
+
+/* 1 · Variables antiguas → tokens de Instrumento. En claro, cada pantalla con
+   bloques heredados ya trae su propio mapeo; en oscuro se mapean todas. */
+:root[data-theme="dark"] .ins{
+ --surface-sunk:var(--surface-2);
+ --line:var(--rule);--line-soft:var(--rule-2);--line-strong:var(--ink-4);
+ --accent:var(--blue);--accent-soft:var(--blue-tint);--accent-soft-2:var(--blue-soft);
+ --accent-ink:var(--blue-ink);--accent-ring:var(--blue-soft);--accent-700:var(--blue-ink);
+ --pos-ink:var(--pos);--pos-soft:var(--pos-tint);
+ --neg-ink:var(--warm);--neg-soft:var(--warm-tint);
+ --warn:var(--warm);--warn-ink:var(--warm);--warn-soft:var(--warm-tint);
+ --info:var(--blue);--info-soft:var(--blue-tint);
+ --brand-ink:var(--ink);--brand-ink-2:var(--ink-2);--brand-ink-3:var(--ink-3);--brand-ink-4:var(--ink-4);
+ --brand-muted:var(--ink-3);
+ --brand-blue:var(--blue);--brand-blue-soft:var(--blue-tint);--brand-blue-soft-2:var(--blue-soft);
+ --brand-canvas:var(--canvas);--brand-surface:var(--surface);
+ --brand-line:var(--rule);--brand-line-soft:var(--rule-2);
+ --brand-pos:var(--pos);--brand-pos-soft:var(--pos-tint);
+ --brand-neg:var(--warm);--brand-neg-soft:var(--warm-tint);
+ --sh-1:none;--sh-2:var(--shadow);--sh-3:var(--shadow);--sh-pop:var(--shadow);
+ --brand-shadow-card:none;
+ --vio:#b69cff;--vio-tint:#221a3d;--teal:#5fd4dc;--teal-tint:#0e2a2e;
+}
+
+/* 2 · Tintes y textos escritos a mano en los bloques heredados. */
+:root[data-theme="dark"] .ins .rec2-scope .rec-card.rec2-priority,
+:root[data-theme="dark"] .ins .rec-snippet{background:var(--surface-2)}
+:root[data-theme="dark"] .ins .rec2-chip-strong{background:var(--pos-tint);color:var(--pos)}
+:root[data-theme="dark"] .ins .rec2-chip-medium{background:var(--warm-tint);color:var(--warm)}
+:root[data-theme="dark"] .ins .rec2-chip-advice{color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .rec2-src-ia{background:var(--blue-tint);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .rec2-src-g{background:var(--pos-tint);color:var(--pos)}
+
+:root[data-theme="dark"] .ins .sa-blk-geo .sa-blk-eyb,
+:root[data-theme="dark"] .ins .skw-chip-vio{color:var(--vio)}
+:root[data-theme="dark"] .ins .sa-blk-seo .sa-blk-eyb{color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .sa-tag-g,
+:root[data-theme="dark"] .ins .sa-pts{background:var(--blue-tint);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .sa-tag-ia,
+:root[data-theme="dark"] .ins .sa-new{background:var(--vio-tint);color:var(--vio)}
+:root[data-theme="dark"] .ins .sa-vt-bands span:nth-child(1){background:#1d4a35}
+:root[data-theme="dark"] .ins .sa-vt-bands span:nth-child(2){background:#4d3a16}
+:root[data-theme="dark"] .ins .sa-vt-bands span:nth-child(3){background:#4f1f26}
+
+:root[data-theme="dark"] .ins .sa-scope,
+:root[data-theme="dark"] .ins .gsc-lock,
+:root[data-theme="dark"] .ins .gsc-invite,
+:root[data-theme="dark"] .ins .av-fixbar{background:linear-gradient(120deg,var(--blue-tint),var(--teal-tint));border-color:var(--blue-soft)}
+:root[data-theme="dark"] .ins .gsc-invite-slot{background:var(--surface-2);border-color:var(--rule)}
+
+:root[data-theme="dark"] .ins .gsc-chart .gsc-page-head.is-p2 text,
+:root[data-theme="dark"] .ins .gsc-load-search,
+:root[data-theme="dark"] .ins .gsc-load-tag{fill:var(--blue-ink);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .gsc-posb-top3,
+:root[data-theme="dark"] .ins .gsc-posb-page1{background:var(--pos-tint);color:var(--pos)}
+:root[data-theme="dark"] .ins .gsc-posb-page2{background:var(--blue-tint);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .gsc-posb-beyond{background:var(--surface-3);color:var(--ink-2)}
+:root[data-theme="dark"] .ins .gsc-qbtn{border-color:var(--blue-soft);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .gsc-qbtn:hover{background:var(--blue-tint)}
+:root[data-theme="dark"] .ins .gsc-qbtn.is-done,
+:root[data-theme="dark"] .ins .gsc-qbtn.is-done:hover{border-color:var(--pos);background:var(--pos-tint);color:var(--pos)}
+:root[data-theme="dark"] .ins .gsc-load-results li.is-you{background:var(--blue-tint)}
+:root[data-theme="dark"] .ins .gsc-load-title,
+:root[data-theme="dark"] .ins .gsc-load-url,
+:root[data-theme="dark"] .ins .skw-g3{background:var(--surface-3)}
+:root[data-theme="dark"] .ins .is-you .gsc-load-url{background:var(--blue-soft)}
+:root[data-theme="dark"] .ins .gsc-chart line.gsc-grid{stroke:var(--rule-2)}
+:root[data-theme="dark"] .ins .gsc-chart line.gsc-cursor{stroke:var(--ink-4)}
+
+:root[data-theme="dark"] .ins .grec-tag.grec-g{border-color:var(--blue-soft)}
+:root[data-theme="dark"] .ins .grec-status-ok{color:var(--pos)}
+
+:root[data-theme="dark"] .ins .ag-kind{background:var(--blue-tint);color:var(--blue-ink)}
+:root[data-theme="dark"] .ins .av-jn.is-warn .av-jn-c{color:var(--warm)}
+:root[data-theme="dark"] .ins .av-cc:hover{border-color:var(--ink-4)}
+:root[data-theme="dark"] .ins .av-cc.is-na,
+:root[data-theme="dark"] .ins .av-tbl thead th{background:var(--surface-2)}
+:root[data-theme="dark"] .ins .av-mk.is-market{background:var(--teal-tint);color:var(--teal)}
+:root[data-theme="dark"] .ins .av-jn::before{background:var(--rule)}
+
+/* El botón blanco de los avisos antiguos pasa a superficie. */
+:root[data-theme="dark"] .ins .btn-white{background:var(--surface-2);color:var(--ink);border-color:var(--rule)}
+:root[data-theme="dark"] .ins .btn-white:hover{background:var(--surface-3)}
+:root[data-theme="dark"] .ins .gsc-chart .gsc-ring,
+:root[data-theme="dark"] .ins .gsc-chart .gsc-bub{stroke:var(--surface)}
+:root[data-theme="dark"] .ins .gsc-chart .gsc-bub.is-h{stroke:var(--ink)}
+
+/* Fondo de tinta con texto blanco escrito a mano: en oscuro la tinta es clara
+   y el texto desaparecía (números de paso de «Posición en Google», avisos). */
+:root[data-theme="dark"] .ins .skw-stepn,
+:root[data-theme="dark"] .ins .skw-ah .skw-n,
+:root[data-theme="dark"] .ins .skw-toast,
+:root[data-theme="dark"] .ins .gsc-st.gsc-st-on,
+:root[data-theme="dark"] .ins .info-tip-bubble,
+:root[data-theme="dark"] .ins .notif-item-cta,
+:root[data-theme="dark"] .ins .cp-flag.cur,
+:root[data-theme="dark"] .ins .dbg-band{color:var(--canvas)}
+:root[data-theme="dark"] .ins .skw-act.is-done .skw-ah .skw-n{color:var(--canvas)}

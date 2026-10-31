@@ -2,7 +2,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// CONSOLE-SKELETONS-1 (log §398): every console loading state is an
+// CONSOLE-SKELETONS-1 (log §399): every console loading state is an
 // Instrumento skeleton, so it follows the tokens (dark mode included).
 function loadings(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {

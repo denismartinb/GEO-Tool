@@ -5,6 +5,7 @@ import { PostHogProvider } from "@/components/posthog-provider";
 import { AdsConsent } from "@/components/ads/ads-consent";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
 import { CANONICAL_DEFINITION } from "@/lib/brand/canonical-definition";
+import { THEME_INIT_SCRIPT } from "@/lib/ins/theme";
 import {
   NON_PUBLIC_PATH_PATTERN,
   SESSION_CACHE_KEY,
@@ -178,6 +179,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${sans.variable} ${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
+        {/* DARK-MODE-MENU-1 (log §398): tema de la consola antes de pintar. Sus
+            tokens oscuros están acotados a `.ins`, así que en la web pública
+            el atributo no cambia nada. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
         <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
         <AdsConsent />

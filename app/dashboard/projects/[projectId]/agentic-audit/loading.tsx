@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkTabs } from "@/components/ins/skeleton";
 
-/** Auditoría agéntica while it loads (log §398): reviewed page and score, the component tabs and the first component. */
+/** Auditoría agéntica while it loads (log §399): reviewed page and score, the component tabs and the first component. */
 export default function AgenticAuditLoading() {
   return (
     <SkPage>

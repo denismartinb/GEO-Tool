@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkTabs } from "@/components/ins/skeleton";
 
-/** Auditoría técnica while it loads (log §398): the block card with its arc, the tabs, problems and bot access. */
+/** Auditoría técnica while it loads (log §399): the block card with its arc, the tabs, problems and bot access. */
 export default function WebAuditLoading() {
   return (
     <SkPage>

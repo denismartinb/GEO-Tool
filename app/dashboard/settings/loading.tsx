@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkPage, SkTabs } from "@/components/ins/skeleton";
 
-/** Ajustes while it loads (log §398): profile head, the Plan · Cuenta · Notificaciones tabs and the plan card. */
+/** Ajustes while it loads (log §399): profile head, the Plan · Cuenta · Notificaciones tabs and the plan card. */
 export default function SettingsLoading() {
   return (
     <SkPage>

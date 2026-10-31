@@ -10,6 +10,7 @@ import { useToast } from "@/components/ins/toasts";
 import { SignOutForm } from "@/components/session-cache-sync";
 import { useTour } from "@/components/tour-provider";
 import { DEMO_FIELDS } from "@/lib/demo/request";
+import { applyTheme, currentTheme, type InsTheme } from "@/lib/ins/theme";
 import { DEMO_TIME_ZONE, listDemoSlots, type DemoSlot } from "@/lib/demo/slots";
 import type { DemoState } from "@/lib/demo/submit";
 
@@ -87,6 +88,7 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
           <Ic n="bell" />
           <span>Notificaciones</span>
         </Link>
+        <ThemeSwitchItem />
         <button
           type="button"
           className="xo-mi"
@@ -125,6 +127,34 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
         </SignOutForm>
       </div>
     </>
+  );
+}
+
+/**
+ * DARK-MODE-MENU-1 (log §398): el único interruptor del tema. No cierra el
+ * menú, así se ve el cambio en el sitio. Lee el tema de `<html>` al montar
+ * porque lo puso el script inicial antes de hidratar.
+ */
+export function ThemeSwitchItem() {
+  const [theme, setTheme] = useState<InsTheme>("light");
+  useEffect(() => setTheme(currentTheme()), []);
+  const dark = theme === "dark";
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={dark}
+      className="xo-mi xo-theme"
+      onClick={() => {
+        const next: InsTheme = dark ? "light" : "dark";
+        applyTheme(next);
+        setTheme(next);
+      }}
+    >
+      <Ic n="moon" />
+      <span>Modo oscuro</span>
+      <i className="xo-sw" aria-hidden="true" />
+    </button>
   );
 }
 

@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkSection, SkStrip } from "@/components/ins/skeleton";
 
-/** Páginas citadas while it loads (log §398): three figures in one row, then the origin ring and its legend. */
+/** Páginas citadas while it loads (log §399): three figures in one row, then the origin ring and its legend. */
 export default function CitationsLoading() {
   return (
     <SkPage>

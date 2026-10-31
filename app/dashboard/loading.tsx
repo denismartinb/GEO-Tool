@@ -5,7 +5,7 @@ import { SkCard, SkHead, SkPage, SkRows } from "@/components/ins/skeleton";
  * `loading.tsx` closer to the target segment (Dominios, Notificaciones…).
  * Next.js nests Suspense boundaries per segment, so this also covers nested
  * layouts without their own boundary — see docs/architecture-audit-2026-07.md
- * finding 1.1. Instrumento shape and tokens, dark mode included (log §398).
+ * finding 1.1. Instrumento shape and tokens, dark mode included (log §399).
  */
 export default function DashboardLoading() {
   return (
