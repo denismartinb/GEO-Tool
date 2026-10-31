@@ -40,6 +40,7 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { type GeneratedSolution, type Recommendation } from "./recommendations-client";
 import { InsRecommendations } from "@/components/ins/recs/ins-recommendations";
+import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Roll } from "@/components/ins/kit/roll";
 import { Bar } from "@/components/ins/kit/bar";
@@ -791,7 +792,6 @@ export default async function RecommendationsPage({
     pages: auditSnapshot?.pages ?? null
   });
 
-  const total = recs.length;
   const latestRunFailed = latestRun?.status === "failed";
 
   // Mirrors the FirstScanTakeover condition below: the mission owns the whole
@@ -871,19 +871,7 @@ export default async function RecommendationsPage({
     <div className="ins">
       <Motion id={`recs:${projectId}`}>
         <div className="page">
-          <div className="eyebrow bare">
-            Recomendaciones ·{" "}
-            <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
-              {project.domain}
-            </span>
-            {total > 0 ? (
-              <span className="badge b-line" style={{ letterSpacing: 0, textTransform: "none", marginLeft: 8 }}>
-                {total} {total === 1 ? "acción" : "acciones"}
-              </span>
-            ) : null}
-          </div>
-          <h1 style={{ marginTop: 14 }}>Recomendaciones</h1>
-          <p className="lead">{lead}</p>
+          <PageHead title="Recomendaciones" lead={lead} />
 
           {/* One poller per screen: the card owns the refresh when the run ends. */}
           {activeRun ? (
@@ -909,27 +897,30 @@ export default async function RecommendationsPage({
             />
           ))}
 
-          {/* Where the score stands, as context for the choices below. */}
-          {pillars.length > 0 ? (
-            <div className="pillars">
-              {pillars.map((pillar, i) => (
-                <div key={pillar.key}>
-                  <div className="l">{pillar.label}</div>
-                  <b className="num">
-                    <Roll value={pillar.value} />
-                  </b>
-                  <Bar value={pillar.value} cls={`thin${pillar.value < 25 ? " warm" : ""}`} delay={i * 80} />
-                </div>
-              ))}
-            </div>
-          ) : null}
-
           {/* RECS-ONE-QUEUE-1 (log §307): one queue. The Google cards live
               inside it (slot 2 of the plan, and a row at the top of «Más
               adelante»). With no AI list to sit in, every Google card goes to the row. */}
           {aiContent}
           {googleConnected && !aiHasList ? <GoogleLaterSlot {...googleSlotProps} includePlan /> : null}
           {!aiHasList ? googleInvite : null}
+
+          {/* Where the score stands: context, so it goes after the actions
+              (CONSOLE-PAGE-TEMPLATE-1). */}
+          {pillars.length > 0 ? (
+            <section className="sec">
+              <div className="pillars">
+                {pillars.map((pillar, i) => (
+                  <div key={pillar.key}>
+                    <div className="l">{pillar.label}</div>
+                    <b className="num">
+                      <Roll value={pillar.value} />
+                    </b>
+                    <Bar value={pillar.value} cls={`thin${pillar.value < 25 ? " warm" : ""}`} delay={i * 80} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
         </div>
       </Motion>
     </div>

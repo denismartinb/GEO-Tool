@@ -40,11 +40,11 @@ describe("console navigation: NAV-SIMPLIFY-1 (log §291)", () => {
 });
 
 describe("audit screen name", () => {
-  it("keeps «Auditoría técnica» as the kicker and names the page after its block (log §368)", () => {
+  it("names the page after its block, with the shared head and no kicker (log §368, §396)", () => {
     const page = read("app/dashboard/projects/[projectId]/web-audit/page.tsx");
-    expect(page).toContain('const SCREEN_LABEL = "Auditoría técnica";');
+    expect(page).not.toContain("SCREEN_LABEL");
     expect(page).toContain("projectScreenMetadata(BLOCK_TITLES[block]");
-    expect(page).toContain("<h1 style={{ marginTop: 14 }}>{BLOCK_TITLES[activeBlock]}</h1>");
+    expect(page).toContain("<PageHead title={BLOCK_TITLES[activeBlock]} lead={BLOCK_NOTES[activeBlock]} />");
     expect(page).toContain("<InsBlockHero ");
   });
 });

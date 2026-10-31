@@ -1,7 +1,7 @@
 // CONSOLE-INSTRUMENTO-1 · tema de la consola (log §349).
 // Claro por defecto (decisión de Denis, 2026-10-27): el oscuro solo existe si
 // la persona lo elige, nunca por `prefers-color-scheme`.
-// DARK-MODE-MENU-1 (log §397): el único sitio donde se elige es la fila
+// DARK-MODE-MENU-1 (log §398): el único sitio donde se elige es la fila
 // «Modo oscuro» del menú de cuenta. Nunca en la cabecera (Denis, 2026-10-31).
 export const THEME_STORAGE_KEY = "gs-theme";
 export type InsTheme = "light" | "dark";

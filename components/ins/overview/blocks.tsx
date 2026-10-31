@@ -2,6 +2,7 @@ import { formatMeanPosition } from "@/lib/competitors/mean-rank-copy";
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Ic } from "@/components/ins/ic";
+import { PageHead } from "@/components/ins/page-head";
 import { Roll } from "@/components/ins/kit/roll";
 import { Bar } from "@/components/ins/kit/bar";
 import { LineChart } from "@/components/ins/kit/charts";
@@ -43,22 +44,27 @@ export function HiPath({ text }: { text: string }) {
 
 function ReportButton({ projectId, className }: { projectId: string; className: string }) {
   return (
-    <a className={`btn line sm ${className}`} href={reportHref(projectId)} target="_blank" rel="noopener">
+    <a
+      className={`btn line sm ${className}`.trim()}
+      href={reportHref(projectId)}
+      target="_blank"
+      rel="noopener"
+      aria-label="Descargar informe"
+      title="Descargar informe"
+    >
       <Ic n="download" sm />
-      Descargar informe
+      <span className="ph-lbl">Descargar informe</span>
     </a>
   );
 }
 
 export function OvHeader({
   projectId,
-  domain,
   greeting,
   lead,
   hasReport
 }: {
   projectId: string;
-  domain: string;
   greeting: string;
   lead: LeadPart[] | null;
   hasReport: boolean;
@@ -69,33 +75,23 @@ export function OvHeader({
     recommendations: `${section(projectId)}/recommendations`
   };
   return (
-    <>
-      <div className="eyebrow bare">
-        Visión general · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{domain}</span>
-      </div>
-      <div className="pr-hd">
-        <h1>{greeting}</h1>
-        {hasReport ? <ReportButton projectId={projectId} className="hd-d" /> : null}
-      </div>
-      {lead ? (
-        <p className="lead">
-          {lead.map((part, i) =>
-            typeof part === "string" ? (
-              part
-            ) : (
-              <Link key={i} href={target[part.to]}>
-                {part.text}
-              </Link>
+    <PageHead
+      title={greeting}
+      action={hasReport ? <ReportButton projectId={projectId} className="" /> : null}
+      lead={
+        lead
+          ? lead.map((part, i) =>
+              typeof part === "string" ? (
+                part
+              ) : (
+                <Link key={i} href={target[part.to]}>
+                  {part.text}
+                </Link>
+              )
             )
-          )}
-        </p>
-      ) : null}
-      {hasReport ? (
-        <div className="pills hd-m">
-          <ReportButton projectId={projectId} className="" />
-        </div>
-      ) : null}
-    </>
+          : null
+      }
+    />
   );
 }
 

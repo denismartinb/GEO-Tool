@@ -71,7 +71,7 @@
  .ins-shell .app{left:0;right:0;top:0;bottom:0;border-radius:0;border:0;grid-template-columns:1fr;box-shadow:none}
  .ins-shell .side{display:none}
  .ins-shell .top{display:none}
- .ins-shell .mtop{display:flex;align-items:center;gap:8px;height:64px;padding:0 12px;border-bottom:1px solid var(--rule-2);background:var(--surface);position:relative;z-index:5}
+ .ins-shell .mtop{display:flex;align-items:center;gap:8px;height:64px;padding:0 12px 0 19px;border-bottom:1px solid var(--rule-2);background:var(--surface);position:relative;z-index:5}
  .ins-shell .mtop .msearch{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;border:1px solid var(--rule);color:var(--ink-2)}
  .ins-shell .mtop .msearch .i{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
  .ins-shell .mtop .pj{display:flex;align-items:center;gap:4px;font-weight:650;font-size:16px;letter-spacing:-.01em;height:40px}

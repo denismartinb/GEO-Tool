@@ -10,7 +10,6 @@ import {
 } from "react";
 import { Ic } from "@/components/ins/ic";
 import { Deck, ProgressTicks, type Plate } from "@/components/ins/kit/deck";
-import { FocusLayer } from "@/components/ins/kit/focus";
 import { Seg } from "@/components/ins/kit/seg";
 import { prefersReducedMotion } from "@/components/ins/kit/use-media";
 import {
@@ -33,7 +32,6 @@ import type { LeverView } from "@/lib/recommendations/levers";
 import {
   cardFromLever,
   cardFromRec,
-  cardMatches,
   groupCards,
   type CardGroup,
   type InsCard,
@@ -46,8 +44,8 @@ import { ResolvedRow } from "./resolved";
 /**
  * Recomendaciones in the «Instrumento» system (CONSOLE-INSTRUMENTO-1 F4, log
  * §357): the plan of the week as a deck, «Más adelante» as lever groups with
- * search, a quiet lever index and compact rows, a focus layer over any
- * filtered list, and «Resueltas». Every card, figure and action is the real
+ * a quiet lever index and compact rows, and «Resueltas» (CONSOLE-PAGE-TEMPLATE-1,
+ * log §396, removed the search box and the focus layer). Every card, figure and action is the real
  * one: this component only lays them out (see `lib/ins/recs-cards.ts`).
  */
 
@@ -162,15 +160,9 @@ export function InsRecommendations({
   const [done, setDoneMap] = useState<Record<string, DoneInfo>>({});
   const [idx, setIdx] = useState(0);
   const [ltab, setLtab] = useState<"pend" | "res">("pend");
-  const [q, setQ] = useState("");
   const [lever, setLever] = useState<string | null>(null);
   const [row, setRow] = useState<string | null>(null);
   const [more, setMore] = useState<Record<string, boolean>>({});
-  const [focus, setFocus] = useState<{
-    title: string;
-    cards: InsCard[];
-  } | null>(null);
-  const [fidx, setFidx] = useState(0);
   const laterRef = useRef<HTMLDivElement>(null);
 
   /* ---------- the deck ---------- */
@@ -228,34 +220,18 @@ export function InsRecommendations({
     laterCards.push(cardFromRec(rec));
   }
 
-  const searched = laterCards.filter((c) => cardMatches(c, q));
-  const groups: CardGroup[] = groupCards(searched);
+  const groups: CardGroup[] = groupCards(laterCards);
   const visibleGroups = lever ? groups.filter((g) => g.key === lever) : groups;
-  const filtered = visibleGroups.flatMap((g) => g.items);
   const groupPoints = googleInPlan
     ? (jointPointsByTypeWithGoogle ?? jointPointsByType)
     : jointPointsByType;
   const shownPlanPoints = googleInPlan ? planPointsWithGoogle : planPoints;
   const summary = planSummary(shownPlanPoints, googlePlan, shownPlan.length);
 
-  // A lever that no longer has cards (search or marked done) stops filtering.
+  // A lever that no longer has cards (marked done) stops filtering.
   useEffect(() => {
-    if (lever && !groups.some((g) => g.key === lever) && !q) setLever(null);
-  }, [lever, groups, q]);
-
-  function openFocus(title: string, cards: InsCard[]) {
-    if (cards.length === 0) return;
-    setFidx(0);
-    setFocus({ title, cards });
-  }
-
-  const focusPlates: Plate[] = focus
-    ? focus.cards.map((card) => ({
-        id: card.id,
-        done: Boolean(done[card.id]),
-        node: <PlanCard card={card} />,
-      }))
-    : [];
+    if (lever && !groups.some((g) => g.key === lever)) setLever(null);
+  }, [lever, groups]);
 
   function jumpToLater(tab: "pend" | "res") {
     setLtab(tab);
@@ -314,7 +290,7 @@ export function InsRecommendations({
               onIdx={setIdx}
               label="Plan de la semana"
               lastLabel="Ver el resto"
-              keys={!focus}
+              equal
               onLast={() => jumpToLater("pend")}
             />
           </>
@@ -342,45 +318,6 @@ export function InsRecommendations({
           />
         </div>
 
-        {ltab === "pend" ? (
-          <div className="lfilters">
-            <div className="toolbar">
-              <label className="search">
-                <Ic n="search" sm />
-                <input
-                  type="search"
-                  placeholder="Busca una acción, una página o un rival"
-                  aria-label="Buscar en Más adelante"
-                  value={q}
-                  onChange={(e) => {
-                    setQ(e.target.value);
-                    setRow(null);
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                className="btn sm line focusall"
-                disabled={filtered.length === 0}
-                onClick={() =>
-                  openFocus(
-                    lever
-                      ? (groups.find((g) => g.key === lever)?.label ??
-                          "Más adelante")
-                      : q
-                        ? "Más adelante · filtradas"
-                        : "Más adelante",
-                    filtered,
-                  )
-                }
-              >
-                <Ic n="focus" sm />
-                <span>Ver pendientes</span>
-              </button>
-            </div>
-          </div>
-        ) : null}
-
         <div className={`lgrid${ltab === "pend" ? "" : " one"}`}>
           {ltab === "pend" ? (
             <aside className="levers">
@@ -388,7 +325,7 @@ export function InsRecommendations({
                 <div className="lidx-h">Palancas</div>
                 <LeverOption
                   label="Todas"
-                  n={searched.length}
+                  n={laterCards.length}
                   pressed={lever === null}
                   onClick={() => setLever(null)}
                 />
@@ -426,7 +363,7 @@ export function InsRecommendations({
                     setRow(null);
                   }}
                 >
-                  <option value="">Todas ({searched.length})</option>
+                  <option value="">Todas ({laterCards.length})</option>
                   {groups.map((g) => (
                     <option key={g.key} value={g.key}>
                       {g.label} ({g.items.length})
@@ -470,7 +407,6 @@ export function InsRecommendations({
                             type="button"
                             className="btn sm line"
                             onClick={() => {
-                              setQ("");
                               setLever(null);
                             }}
                           >
@@ -485,7 +421,6 @@ export function InsRecommendations({
                     const expanded =
                       more[g.key] ||
                       lever === g.key ||
-                      Boolean(q) ||
                       g.items.length <= GROUP_SHOW + 1;
                     const shown = expanded
                       ? g.items
@@ -518,7 +453,7 @@ export function InsRecommendations({
                           <LaterRow
                             key={card.id}
                             card={card}
-                            q={q}
+                            q=""
                             open={row === card.id}
                             onToggle={() =>
                               setRow((cur2) =>
@@ -528,7 +463,6 @@ export function InsRecommendations({
                           />
                         ))}
                         {g.items.length > GROUP_SHOW + 1 &&
-                        !q &&
                         lever !== g.key ? (
                           <button
                             type="button"
@@ -567,34 +501,6 @@ export function InsRecommendations({
           </div>
         </div>
 
-        {focus ? (
-          <FocusLayer
-            title={focus.title}
-            onClose={() => setFocus(null)}
-            step={(delta) =>
-              setFidx((i) =>
-                Math.max(0, Math.min(focusPlates.length - 1, i + delta)),
-              )
-            }
-            prevDisabled={fidx === 0}
-            nextDisabled={fidx >= focusPlates.length - 1}
-          >
-            <ProgressTicks
-              plates={focusPlates}
-              idx={fidx}
-              onGo={setFidx}
-              labels={false}
-            />
-            <Deck
-              plates={focusPlates}
-              idx={fidx}
-              onIdx={setFidx}
-              label={focus.title}
-              lastLabel="Terminar"
-              onLast={() => setFocus(null)}
-            />
-          </FocusLayer>
-        ) : null}
       </GooglePlanReport.Provider>
     </RecsContext.Provider>
   );

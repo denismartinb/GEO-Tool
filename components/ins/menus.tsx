@@ -131,7 +131,7 @@ export function AccountPanel({ helpAnchor }: { helpAnchor: () => HTMLElement | n
 }
 
 /**
- * DARK-MODE-MENU-1 (log §397): el único interruptor del tema. No cierra el
+ * DARK-MODE-MENU-1 (log §398): el único interruptor del tema. No cierra el
  * menú, así se ve el cambio en el sitio. Lee el tema de `<html>` al montar
  * porque lo puso el script inicial antes de hidratar.
  */

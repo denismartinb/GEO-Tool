@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { VisibilityCluster, type ClusterBand, type ClusterDial, type ClusterLight } from "@/components/ins/agents/visibility-cluster";
+import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import type { AgenticCheckResult, AgenticComponentId } from "@/lib/agentic-audit/api-contract";
@@ -81,11 +82,10 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
   const auditHref = `/dashboard/projects/${projectId}/agentic-audit`;
   const head = (
     <>
-      <div className="eyebrow bare">
-        Comercio agéntico · <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>{project.domain}</span>
-      </div>
-      <h1 style={{ marginTop: 14 }}>Visibilidad en agentes</h1>
-      <p className="lead">Si un agente de IA puede encontrarte, entrar, entender lo que vendes, fiarse y llegar a comprar.</p>
+      <PageHead
+        title="Visibilidad en agentes"
+        lead="Si un agente de IA puede encontrarte, entrar, entender lo que vendes, fiarse y llegar a comprar."
+      />
     </>
   );
 

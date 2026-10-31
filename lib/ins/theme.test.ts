@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { applyTheme, currentTheme, parseTheme, THEME_INIT_SCRIPT, THEME_STORAGE_KEY } from "./theme";
 
-// DARK-MODE-MENU-1 (log §397).
+// DARK-MODE-MENU-1 (log §398).
 
 function fakeDom() {
   const attrs = new Map<string, string>();

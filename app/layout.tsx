@@ -179,7 +179,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es" className={`${sans.variable} ${display.variable} ${body.variable} ${mono.variable}`}>
       <body>
         <script dangerouslySetInnerHTML={{ __html: SESSION_HINT_SCRIPT }} />
-        {/* DARK-MODE-MENU-1 (log §397): tema de la consola antes de pintar. Sus
+        {/* DARK-MODE-MENU-1 (log §398): tema de la consola antes de pintar. Sus
             tokens oscuros están acotados a `.ins`, así que en la web pública
             el atributo no cambia nada. */}
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

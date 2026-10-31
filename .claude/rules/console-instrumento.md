@@ -12,7 +12,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   animaciones llevan prefijo `ins-` para no pisar a `globals.css`.
 - **Claro por defecto.** El oscuro solo con `data-theme="dark"` en `<html>`
   elegido por la persona; nunca `prefers-color-scheme` (decisión de Denis,
-  2026-10-27). Desde §397 el único selector es la fila «Modo oscuro» del menú
+  2026-10-27). Desde §398 el único selector es la fila «Modo oscuro» del menú
   de cuenta; nunca en la cabecera.
 - **Solo cambia el aspecto.** Consultas, acciones de servidor, RLS, esquema y
   tests de cada pantalla se conservan; al migrar una pantalla se retiran sus
@@ -80,7 +80,7 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 ## Recomendaciones (F4, log §357)
 
 - **Un solo modelo de tarjeta (`lib/ins/recs-cards.ts`)** para la baraja, las
-  filas de «Más adelante» y la capa en foco. Es puro y no calcula cifras ni
+  filas de «Más adelante» (y antes la capa en foco, retirada en §396). Es puro y no calcula cifras ni
   frases: lee `selectPlan`, `recommendationHeadline` y los puntos conjuntos.
 - **El plan se fija por visita**; marcar como hecha no reordena la baraja. El
   deshacer durable sólo vive en «Resueltas».
@@ -103,8 +103,8 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 - **El orden del ranking es por menciones**; el puesto medio sólo desempata y
   sólo si es fiable (§175, §353). Nunca se ordena por el número de fila.
-- **El denominador no se quita**: «N respuestas · M prompts en K motores» lo
-  compone `answerCountLabel`, nunca una frase suelta (§183).
+- **El denominador, si se enseña, lo compone `answerCountLabel`** (§183); desde
+  §396 el ranking ya no lo enseña, a petición de Denis.
 - **Las clases `i` de una regla móvil se escriben con `>`**: el kit `Roll` usa
   `<i>` para los dígitos y una regla `.mt i` los rompe.
 - **Las acciones de servidor de competidores y alias no cambian**; la hoja de
@@ -267,7 +267,33 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Agencia no se cambia aquí**: «Hablar con nosotros». Los flujos de pago y la
   puerta de exceso de dominios (`.cp-*`) no se tocan sin aprobación.
 
-## Modo oscuro (DARK-MODE-MENU-1, log §397)
+## Cabecera común (CONSOLE-PAGE-TEMPLATE-1, log §396)
+
+- **Toda pantalla de proyecto abre con `PageHead`**: título, una acción en la
+  misma fila y la frase con datos debajo. Sin línea «SECCIÓN · dominio» y sin
+  recuento junto al título (lo vigila `tests/console-page-template.test.ts`).
+- **En el móvil la acción se queda en la fila del título y sólo enseña el
+  icono** (`.ph-lbl` se oculta), así que lleva siempre `aria-label`.
+- **Sólo orden y compactación.** `app/ins/page-template.css` mueve, oculta o
+  aprieta lo que ya existe; no cambia tarjetas, colores ni tipos (decisión de
+  Denis). Lo secundario va debajo de lo principal (pilares tras el plan).
+- **La frase con datos bajo el título se queda** (Denis, 2026-10-31).
+- **Recomendaciones no tiene buscador ni capa en foco** (log §396): «Más adelante»
+  se filtra sólo por palanca, y las tarjetas del plan comparten la altura de la
+  más alta (`Deck equal`).
+- **Competidores no enseña el denominador junto al ranking** (Denis, log §396,
+  deja sin efecto aquí «El denominador no se quita» de F5b). Si vuelve, con
+  `answerCountLabel`.
+
+## Favicons y cabecera móvil (FAVICON-NO-FLICKER-1, log §397)
+
+- **`FaviconImg` recuerda en la pestaña lo que ya pintó y lo que no existe.**
+  Sólo memoria del módulo, nunca `localStorage` ni el service worker. La caché
+  de los bytes sigue siendo la HTTP de `/api/favicon`.
+- **El borde izquierdo de la cabecera móvil (19 px) está medido contra la «B» del
+  título a 34 px.** Si cambia el tamaño del título o su tipo, se vuelve a medir.
+
+## Modo oscuro (DARK-MODE-MENU-1, log §398)
 
 - **Se elige solo en el menú de cuenta** (`ThemeSwitchItem`), nunca en la
   cabecera ni en Ajustes (Denis, 2026-10-31). Se guarda por dispositivo

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Ic } from "@/components/ins/ic";
+import { PageHead } from "@/components/ins/page-head";
 import { ProjectFav } from "@/components/ins/project-fav";
 import { Bar } from "@/components/ins/kit/bar";
 import { Roll } from "@/components/ins/kit/roll";
@@ -31,9 +32,7 @@ type Props = {
   projectId: string;
   domain: string;
   brand: string;
-  competitorCount: number;
   /** Denominator sentence (answers, prompts, engines), composed by the page. */
-  basis: string | null;
   hasData: boolean;
   hasCompetitors: boolean;
   lead: Parameters<typeof competitorsLead>[0];
@@ -215,10 +214,16 @@ export function InsCompetitors(p: Props) {
   const goPrompts = (competitor: string | null) =>
     router.push(`/dashboard/projects/${p.projectId}/prompts${competitor ? `?competitor=${encodeURIComponent(competitor)}` : ""}`);
 
-  const manageButton = (cls: string) => (
-    <button type="button" className={cls} onClick={() => setManaging("manage")}>
+  const manageButton = (
+    <button
+      type="button"
+      className="btn line sm"
+      onClick={() => setManaging("manage")}
+      aria-label="Gestionar competidores"
+      title="Gestionar competidores"
+    >
       <Ic n="users" sm />
-      Gestionar competidores
+      <span className="ph-lbl">Gestionar competidores</span>
     </button>
   );
 
@@ -226,25 +231,15 @@ export function InsCompetitors(p: Props) {
 
   return (
     <>
-      <div className="eyebrow bare">
-        Competidores ·{" "}
-        <span className="mono" style={{ letterSpacing: 0, textTransform: "none" }}>
-          {p.domain}
-        </span>
-        <span className="badge b-line" style={{ letterSpacing: 0, textTransform: "none", marginLeft: 8 }}>
-          {p.competitorCount} {p.competitorCount === 1 ? "competidor" : "competidores"}
-        </span>
-      </div>
-      <div className="pr-hd">
-        <h1>Competidores</h1>
-        {manageButton("btn line sm hd-d")}
-      </div>
-      {lead.length > 0 ? (
-        <p className="lead">
-          {lead.map((part, i) => (part.strong ? <b key={i}>{part.text}</b> : <span key={i}>{part.text}</span>))}
-        </p>
-      ) : null}
-      <div className="pills hd-m">{manageButton("btn line sm")}</div>
+      <PageHead
+        title="Competidores"
+        action={manageButton}
+        lead={
+          lead.length > 0
+            ? lead.map((part, i) => (part.strong ? <b key={i}>{part.text}</b> : <span key={i}>{part.text}</span>))
+            : null
+        }
+      />
 
       {!p.hasCompetitors ? (
         <div className="empty-s">
@@ -265,9 +260,6 @@ export function InsCompetitors(p: Props) {
             <div className="card cx-rank">
               <div className="card-h">
                 <h3>Ranking</h3>
-                <span className="see num" style={{ cursor: "default" }}>
-                  Ordenado por menciones{p.basis ? ` · ${p.basis}` : ""}
-                </span>
               </div>
               <div className="card-b">
                 <div className="cx-h" aria-hidden="true">
