@@ -1,6 +1,7 @@
-/* «Cambiar de plan» con el aspecto de Instrumento (log §383).
-   Solo pinta: el marcado, la lógica y los flujos de pago son los de
-   components/billing/change-plan-modal.tsx. Acotado a .ins / .ins-shell. */
+/* «Cambiar de plan» con el aspecto de Instrumento (log §394).
+   `.pm-*` es el modal (components/billing/change-plan-modal.tsx), montado
+   por portal en <body> dentro de `.ins.pmx`. Los `.cp-*` repintan los pasos
+   de dominios del modal y la puerta de exceso de dominios. */
 :is(.ins,.ins-shell) .cp-scrim{background:rgba(11,20,38,.5);backdrop-filter:blur(3px)}
 :is(.ins,.ins-shell) .cp-modal{border-radius:24px;background:var(--surface);border:1px solid var(--rule);box-shadow:0 40px 90px -30px rgba(11,20,38,.55);font-family:var(--font)}
 :is(.ins,.ins-shell) .cp-head{padding:24px 26px 18px;border-bottom:1px solid var(--rule-2)}
@@ -47,3 +48,99 @@
   :is(.ins,.ins-shell) .cp-foot{padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
   :is(.ins,.ins-shell) .cp-foot .btn{flex:1 1 140px;min-height:48px}
 }
+
+/* ---- Modal «Cambiar de plan» (portal en <body>) ---- */
+.pmx .pm-scrim{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;padding:24px;background:rgba(11,20,38,.46);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:ins-pm-fade .16s ease}
+.pmx .pm-dlg{width:min(880px,100%);max-height:calc(100dvh - 48px);display:flex;flex-direction:column;overflow:hidden;background:var(--surface);color:var(--ink);border:1px solid var(--rule);border-radius:24px;box-shadow:0 40px 90px -30px rgba(11,20,38,.55);font:400 15px/1.5 var(--font);animation:ins-pm-in .22s var(--out)}
+.pmx .pm-grab{display:none}
+.pmx .pm-dh{position:relative;padding:24px 28px 18px}
+.pmx .pm-eb{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.pmx .pm-dh h2{margin:4px 0 0;padding-right:44px;font-size:24px;font-weight:600;letter-spacing:-.02em;text-wrap:balance}
+.pmx .pm-dh p{margin:4px 0 0;padding-right:30px;color:var(--ink-3);font-size:14px}
+.pmx .pm-dh p:empty{display:none}
+.pmx .pm-x{position:absolute;top:20px;right:20px;width:36px;height:36px;border-radius:50%;border:1px solid var(--rule);display:grid;place-items:center;color:var(--ink-2)}
+.pmx .pm-x:hover{background:var(--surface-2);color:var(--ink)}
+.pmx .pm-b{flex:1;min-height:0;overflow-y:auto;padding:4px 28px 22px}
+.pmx .pm-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.pmx .pm-c{position:relative;display:flex;flex-direction:column;text-align:left;padding:18px 18px 16px;border:1px solid var(--rule);border-radius:18px;background:var(--surface);transition:border-color var(--d2) var(--std),box-shadow var(--d2) var(--std),transform var(--d1) var(--std)}
+.pmx button.pm-c:hover{border-color:var(--ink-4)}
+.pmx button.pm-c:active{transform:scale(.99)}
+.pmx .pm-c.on{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-tint)}
+.pmx .pm-c.cur{background:var(--surface-2)}
+.pmx .pm-c.off{opacity:.62}
+.pmx .pm-c.sales{border-style:dashed}
+.pmx .pm-top{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start}
+.pmx .pm-r{grid-column:2;grid-row:1;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--ink-4);display:grid;place-items:center;color:#fff}
+.pmx div.pm-c .pm-r{display:none}
+.pmx .pm-c.on .pm-r{background:var(--blue);border-color:var(--blue)}
+.pmx .pm-id{grid-column:1;grid-row:1;min-width:0}
+.pmx .pm-nl{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;min-height:24px}
+.pmx .pm-n{font-size:17px;font-weight:600;letter-spacing:-.01em}
+.pmx .pm-bd{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 9px;border-radius:99px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.pmx .pm-bd.ink{background:var(--ink);color:var(--surface)}
+.pmx .pm-bd.blue{background:var(--blue-tint);color:var(--blue-ink)}
+.pmx .pm-t{margin:6px 0 0;font-size:13px;color:var(--ink-2)}
+.pmx .pm-pr{grid-column:1/-1;grid-row:2;display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-top:14px}
+.pmx .pm-pr b{order:1;font-size:40px;font-weight:300;letter-spacing:-.045em;line-height:1}
+.pmx .pm-pr b.pm-ms{font-size:28px;font-weight:400;letter-spacing:-.02em}
+.pmx .pm-pr span{order:2;font-size:13px;color:var(--ink-3)}
+.pmx .pm-pr s{order:3;font-size:14px;color:var(--ink-4)}
+.pmx .pm-id .pm-t{display:none}
+.pmx .pm-m{margin:14px 0 0;border-top:1px solid var(--rule-2)}
+.pmx .pm-m div{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid var(--rule-2);font-size:12.5px}
+.pmx .pm-m dt{color:var(--ink-3)}
+.pmx .pm-m dd{margin:0;font-weight:600}
+.pmx .pm-chips{display:none}
+.pmx .pm-link{display:inline-flex;align-items:center;gap:6px;margin-top:14px;color:var(--blue-ink);font-weight:600;font-size:14px;text-decoration:none}
+.pmx .pm-note{display:flex;gap:8px;margin:14px 0 0;font-size:13px;color:var(--ink-3)}
+.pmx .pm-err{margin-top:14px}
+.pmx .pm-cart{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:14px 28px 18px;border-top:1px solid var(--rule);background:var(--surface)}
+.pmx .pm-sum{flex:1;min-width:0;display:flex;flex-direction:column;font-size:12px;color:var(--ink-3)}
+.pmx .pm-sum b{font-size:15px;font-weight:600;color:var(--ink)}
+.pmx .pm-sum b s{margin-left:6px;font-size:13px;font-weight:400;color:var(--ink-4)}
+.pmx .pm-sum b.mut{color:var(--ink-3);font-weight:500}
+.pmx .pm-lk{display:inline-flex;align-items:center;gap:5px;margin-top:3px;font-size:11.5px}
+.pmx .pm-btns{display:flex;gap:8px}
+.pmx .pm-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:44px;padding:0 18px;border-radius:12px;font-weight:600;font-size:14.5px;white-space:nowrap;text-decoration:none}
+.pmx .pm-btn.ink{background:var(--ink);color:var(--surface)}
+.pmx .pm-btn.ghost{color:var(--ink-2)}
+.pmx .pm-btn.ghost:hover{background:var(--surface-2)}
+.pmx .pm-btn:disabled{opacity:.35;cursor:not-allowed}
+/* Los pasos de dominios y «Todo listo» reutilizan .cp-body/.cp-foot. */
+.pmx .pm-dlg .cp-body{flex:1;min-height:0;overflow-y:auto;padding:4px 28px 22px}
+.pmx .pm-dlg .cp-foot{display:flex;align-items:center;gap:10px;padding:14px 28px 18px;border-top:1px solid var(--rule)}
+@keyframes ins-pm-fade{from{opacity:0}}
+@keyframes ins-pm-in{from{opacity:0;transform:translateY(10px)}}
+@media (max-width:760px){
+  .pmx .pm-scrim{place-items:end stretch;padding:max(24px,env(safe-area-inset-top,0px)) 0 0}
+  .pmx .pm-dlg{width:100%;max-height:100%;border-radius:26px 26px 0 0;border-bottom:0;animation-name:ins-pm-up}
+  .pmx .pm-grab{display:block;width:40px;height:5px;border-radius:3px;background:var(--rule);margin:8px auto 0;flex:none}
+  .pmx .pm-dh{padding:12px 20px 14px}
+  .pmx .pm-dh h2{font-size:21px}
+  .pmx .pm-x{top:12px;right:16px}
+  .pmx .pm-b{padding:2px 16px 18px}
+  .pmx .pm-grid{grid-template-columns:minmax(0,1fr);gap:10px}
+  .pmx .pm-c{padding:14px 16px}
+  .pmx .pm-top{grid-template-columns:auto minmax(0,1fr) auto;column-gap:10px;align-items:center}
+  .pmx .pm-r{grid-column:1}
+  .pmx div.pm-c .pm-r{display:none}
+  .pmx .pm-id{grid-column:2}
+  .pmx div.pm-c .pm-id{grid-column:1/3}
+  .pmx .pm-id .pm-t{display:block;margin-top:2px}
+  .pmx .pm-t2{display:none}
+  .pmx .pm-pr{grid-column:3;grid-row:1;margin:0;display:grid;grid-template-columns:auto auto;justify-items:end;align-items:baseline;column-gap:3px}
+  .pmx .pm-pr b{font-size:26px}
+  .pmx .pm-pr b.pm-ms{grid-column:1/-1;font-size:17px}
+  .pmx .pm-pr s{grid-column:1/-1;grid-row:1;font-size:12.5px;line-height:1.2}
+  .pmx .pm-m{display:none}
+  .pmx .pm-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .pmx .pm-chips span{padding:3px 9px;border-radius:99px;background:var(--surface-3);font-size:12px;font-weight:500;color:var(--ink-2)}
+  .pmx .pm-c.on .pm-chips span{background:var(--surface)}
+  .pmx .pm-cart{gap:10px;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+  .pmx .pm-btns{width:100%}
+  .pmx .pm-btns .pm-btn{flex:1;height:48px}
+  .pmx .pm-dlg .cp-body{padding:2px 16px 18px}
+  .pmx .pm-dlg .cp-foot{flex-wrap:wrap;padding:12px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+}
+@keyframes ins-pm-up{from{transform:translateY(24px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.pmx .pm-scrim,.pmx .pm-dlg{animation:none}}

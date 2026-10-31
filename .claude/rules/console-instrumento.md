@@ -257,8 +257,11 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 
 ## Modal «Cambiar de plan» (PLAN-MODAL-INSTRUMENTO-1, log §394)
 
-- **Solo es aspecto.** `app/ins/plan-modal.css` repinta las clases `cp-*` del modal
-  de facturación; el marcado y los flujos de pago (`change-plan-modal.tsx`,
-  `domain-overage-gate.tsx`) no se tocan sin aprobación.
-- **Los selectores van acotados a `:is(.ins,.ins-shell)`**: el modal también sale
-  desde la puerta de exceso de dominios, fuera de `.ins`.
+- **Se monta por portal en `<body>` dentro de `.ins.pmx`**, por encima de la
+  barra de pestañas. Dentro de la página quedaba debajo y ocultaba el botón.
+- **Sin paso intermedio**: elegir plan y el botón va a Stripe (checkout o
+  portal). Una opción que se aplique sin Stripe necesita su propia confirmación.
+- **«Recomendado» sólo apunta hacia arriba** del plan actual, y el plan actual
+  no se vuelve a elegir salvo en la prueba de Pro.
+- **Agencia no se cambia aquí**: «Hablar con nosotros». Los flujos de pago y la
+  puerta de exceso de dominios (`.cp-*`) no se tocan sin aprobación.
