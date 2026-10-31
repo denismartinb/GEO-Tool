@@ -12,7 +12,8 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   animaciones llevan prefijo `ins-` para no pisar a `globals.css`.
 - **Claro por defecto.** El oscuro solo con `data-theme="dark"` en `<html>`
   elegido por la persona; nunca `prefers-color-scheme` (decisión de Denis,
-  2026-10-27). El selector de tema no se publica hasta que F8 cierre.
+  2026-10-27). Desde §397 el único selector es la fila «Modo oscuro» del menú
+  de cuenta; nunca en la cabecera.
 - **Solo cambia el aspecto.** Consultas, acciones de servidor, RLS, esquema y
   tests de cada pantalla se conservan; al migrar una pantalla se retiran sus
   hojas antiguas.
@@ -265,3 +266,13 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   no se vuelve a elegir salvo en la prueba de Pro.
 - **Agencia no se cambia aquí**: «Hablar con nosotros». Los flujos de pago y la
   puerta de exceso de dominios (`.cp-*`) no se tocan sin aprobación.
+
+## Modo oscuro (DARK-MODE-MENU-1, log §397)
+
+- **Se elige solo en el menú de cuenta** (`ThemeSwitchItem`), nunca en la
+  cabecera ni en Ajustes (Denis, 2026-10-31). Se guarda por dispositivo
+  (`gs-theme`), sin migración.
+- **Un color nuevo se escribe con tokens.** Si un bloque heredado necesita un
+  tinte fijo, su versión oscura va en `app/ins/dark.css`, acotada a
+  `:root[data-theme="dark"] .ins`. Una línea o punto de un gráfico SVG lleva
+  clase para que el CSS lo recolore.

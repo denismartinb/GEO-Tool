@@ -28313,3 +28313,42 @@ Presupuesto de `public/` +384 KiB, anotado en `asset-budget.test.ts`.
 **Pendiente.** Que la ficha pase a «Pública» antes de difundir el artículo: si
 sigue «Oculta», el enlace funciona pero la extensión no sale en la búsqueda de
 la tienda. Premisa: no se retira ningún camino de recuperación.
+
+## §397 · DARK-MODE-MENU-1: el modo oscuro se publica, y se elige en el menú de cuenta (2026-10-31)
+
+**Qué.** Denis (2026-10-31): «si el modo oscuro está desarrollado, estaría bien
+ubicarlo dentro de la sección de perfil, porque en la cabecera ya va a ser
+demasiado, especialmente en móvil». No estaba publicado: §349 dejó los tokens
+oscuros en `app/ins/tokens.css` y `lib/ins/theme.ts` sin ningún selector (el
+botón de luna que se veía era de la barra de revisión del prototipo, `#thbtn`,
+no del producto). Se le enseñaron dos sitios (menú de cuenta y un bloque
+«Apariencia» en Ajustes > Cuenta) y eligió **solo el menú de cuenta**.
+
+- Fila «Modo oscuro» con interruptor (`role="switch"`) en `AccountPanel`
+  (`components/ins/menus.tsx`, `ThemeSwitchItem`), bajo Notificaciones. El
+  mismo menú sale del avatar en escritorio y en móvil. No cierra el menú, para
+  que el cambio se vea en el sitio.
+- `applyTheme` guarda la elección en `localStorage` (`gs-theme`) de ese
+  dispositivo, sin migración. `THEME_INIT_SCRIPT` corre al principio de
+  `<body>` (`app/layout.tsx`) para que no haya parpadeo; en la web pública no
+  cambia nada porque los tokens oscuros están acotados a `.ins`. Las pantallas
+  de acceso «Bruma» sí lo leen (usan `.ins` y su niebla lee los tokens).
+- `app/ins/dark.css`, importado por el marco: en oscuro mapea las variables
+  antiguas de `globals.css` (las que siguen usando los bloques heredados de
+  Posición en Google, Comercio agéntico y Auditoría técnica) a los tokens de
+  Instrumento, y corrige los tintes claros escritos a mano en `globals.css` y
+  `console.css` (pastillas de puesto, etiquetas, avisos de conectar) y las
+  líneas de los gráficos de Search Console.
+
+**Por qué ahora y no en F8.** §349 aplazaba el selector hasta migrar todas las
+pantallas; F8e cerró la última. La auditoría de colores fijos sobre los
+bloques heredados se hizo por código (todas las reglas de esos prefijos con un
+fondo claro o un texto oscuro escritos a mano), no mirando cada pantalla con
+datos reales.
+
+**Pendiente / roto conocido.** Ninguna captura en oscuro con datos reales
+antes del PR: el entorno de trabajo no tiene sesión. Se revisa en el preview.
+Las rampas de color de los gráficos (barras de Competidores, series) se
+quedan como están: se leen en los dos temas. Sin «Sistema» ni
+`prefers-color-scheme`, por la decisión de §349. Premisa: no se retira ningún
+camino de recuperación.
