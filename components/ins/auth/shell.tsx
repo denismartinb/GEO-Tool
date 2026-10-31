@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { AU_N, AUFX, setAuthState, startMist } from "./fx";
@@ -28,8 +29,27 @@ function writeStore(kind: "local" | "session", key: string, value: string) {
  * the account is open at first paint: 0 email, 1 half, 2 done. `splash` is
  * true only inside the Android app: the lockup then carries the geometric G
  * and, once per opening, one of three animated entrances lands on it (log §382).
+ *
+ * APP-LAUNCH-1 (log §389): `launch` marks an opening of the app (`?source=twa`)
+ * and replays the splash even if this tab already saw it; the marker is then
+ * removed from the address so a reload does not replay it. `continueTo` is set
+ * when the session is already open: the console is prefetched while the
+ * splash plays and opened as soon as the G lands.
  */
-export function AuthShell({ children, lit = 0, splash = false }: { children: ReactNode; lit?: 0 | 1 | 2; splash?: boolean }) {
+export function AuthShell({
+  children,
+  lit = 0,
+  splash = false,
+  launch = false,
+  continueTo
+}: {
+  children: ReactNode;
+  lit?: 0 | 1 | 2;
+  splash?: boolean;
+  launch?: boolean;
+  continueTo?: string;
+}) {
+  const router = useRouter();
   const cv = useRef<HTMLCanvasElement | null>(null);
   const scRef = useRef<HTMLDivElement | null>(null);
   const spRef = useRef<HTMLDivElement | null>(null);
@@ -50,17 +70,35 @@ export function AuthShell({ children, lit = 0, splash = false }: { children: Rea
 
   useEffect(() => {
     if (!splash) return;
+    let left = false;
+    const enter = () => {
+      if (left || !continueTo) return;
+      left = true;
+      router.replace(continueTo);
+    };
+    if (continueTo) router.prefetch(continueTo);
+    if (launch) {
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("source");
+        window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
+      } catch {
+        /* the marker stays: a reload replays the splash, nothing worse */
+      }
+    }
     const sc = scRef.current;
     const root = spRef.current;
     const lockG = sc?.querySelector<SVGElement>(".au-lock svg");
     const lockW = sc?.querySelector<HTMLElement>(".au-lock span");
     if (!sc || !root || !lockG || !lockW) {
       if (sc) sc.dataset.splash = "done";
+      enter();
       return;
     }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduce || readStore("session", SPLASH_SEEN_KEY)) {
+    if (reduce || (!launch && readStore("session", SPLASH_SEEN_KEY))) {
       sc.dataset.splash = "done";
+      enter();
       return;
     }
     const variant = pickVariant(readStore("local", SPLASH_LAST_KEY));
@@ -78,6 +116,7 @@ export function AuthShell({ children, lit = 0, splash = false }: { children: Rea
       lockW,
       onRelease: () => {
         if (sc.dataset.splash === "run") sc.dataset.splash = "out";
+        enter();
       },
       onDone: () => {
         sc.dataset.splash = "done";
@@ -91,7 +130,7 @@ export function AuthShell({ children, lit = 0, splash = false }: { children: Rea
       html.style.overflow = prevOverflow;
       root.replaceChildren();
     };
-  }, [splash]);
+  }, [splash, launch, continueTo, router]);
 
   return (
     <div ref={scRef} className={`sc-full sc-auth ${cls}`.trim()} data-st={lit} data-splash={splash ? "run" : undefined}>
@@ -109,7 +148,7 @@ export function AuthShell({ children, lit = 0, splash = false }: { children: Rea
         </div>
         {children}
       </div>
-      {splash ? <div ref={spRef} className="sp-root" role="button" aria-label="Toca para ir al inicio de sesión" /> : null}
+      {splash ? <div ref={spRef} className="sp-root" role="button" aria-label={continueTo ? "Toca para entrar" : "Toca para ir al inicio de sesión"} /> : null}
     </div>
   );
 }

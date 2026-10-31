@@ -3,7 +3,9 @@ import type { MetadataRoute } from "next";
 /**
  * ANDROID-TWA-1 · manifiesto de la app web. `start_url` lleva `?source=twa`: es
  * la señal con la que el middleware activa el modo app (sin precios ni compra,
- * log §381). `scope` es todo el sitio porque la TWA no puede salir de él.
+ * log §381). Abre en el inicio de sesión, donde sale la splash en cada apertura
+ * y, con sesión, sigue a la consola (APP-LAUNCH-1, log §389). `id` no cambia:
+ * es la identidad de la app instalada. `scope` es todo el sitio porque la TWA no puede salir de él.
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -12,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Mide y mejora cómo te nombra la IA.",
     lang: "es-ES",
     id: "/dashboard",
-    start_url: "/dashboard?source=twa",
+    start_url: "/login?source=twa",
     scope: "/",
     display: "standalone",
     orientation: "portrait",

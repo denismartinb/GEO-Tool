@@ -9,8 +9,11 @@
   "themeColorDark": "#0b1426",
   "navigationColor": "#ffffff",
   "navigationColorDark": "#0b1426",
+  "navigationDividerColor": "#FFFFFF",
+  "navigationDividerColorDark": "#0B1426",
   "backgroundColor": "#ffffff",
-  "startUrl": "/dashboard?source=twa",
+  "splashScreenFadeOutDuration": 300,
+  "startUrl": "/login?source=twa",
   "iconUrl": "https://www.genscore.es/icons/icon-512.png",
   "maskableIconUrl": "https://www.genscore.es/icons/icon-maskable-512.png",
   "webManifestUrl": "https://www.genscore.es/manifest.webmanifest",
@@ -21,9 +24,11 @@
   "isChromeOSOnly": false,
   "isMetaQuest": false,
   "fallbackType": "customtabs",
-  "minSdkVersion": 23,
+  "minSdkVersion": 24,
   "signingKey": {
     "path": "./genscore-upload.keystore",
     "alias": "genscore"
-  }
+  },
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli"
 }

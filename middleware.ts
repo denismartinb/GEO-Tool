@@ -10,6 +10,7 @@ import {
   APP_MODE_COOKIE_MAX_AGE_S,
   APP_MODE_COOKIE_VALUE,
   APP_MODE_HOME,
+  appLaunchRedirect,
   appModeSignal,
   isAppModePathAllowed
 } from "@/lib/app-mode";
@@ -118,6 +119,15 @@ export async function middleware(request: NextRequest) {
   // middleware (log §381).
   const signal = appModeSignal(request.nextUrl.searchParams, request.headers.get("referer"));
   const inApp = signal === "enter" || (signal !== "leave" && request.cookies.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE);
+  // APP-LAUNCH-1 (log §389): una apertura que entra directa a la consola pasa
+  // antes por el inicio de sesión, donde sale la splash aunque haya sesión.
+  const launchTo = signal === "enter" && request.method === "GET" ? appLaunchRedirect(request.nextUrl.pathname, request.nextUrl.searchParams) : null;
+  if (launchTo) {
+    const redirect = NextResponse.redirect(new URL(launchTo, request.url));
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    redirect.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+    return redirect;
+  }
   if (inApp && !isAppModePathAllowed(request.nextUrl.pathname)) {
     const redirect = NextResponse.redirect(new URL(APP_MODE_HOME, request.url));
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
