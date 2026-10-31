@@ -1,8 +1,8 @@
 # Última entrega editorial
 
-**Fecha:** 2026-10-30
-**Carpeta:** editorial-drops/2026-10-30-convierte-mejor-el-trafico-de-la-ia/
+**Fecha:** 2026-10-31
+**Carpeta:** editorial-drops/2026-10-31-extension-chrome/
 
-Post de LinkedIn (con imagen 4:5), línea para el perfil de Denis e hilo de X sobre el artículo «¿Convierte mejor el tráfico que llega desde la IA?».
-El gancho: Adobe ve un 60% más de conversión en las visitas de la IA, Shopify un 80% más en fichas de producto, y un estudio académico ve a la búsqueda orgánica por delante.
-El artículo ya está en producción; publicar sólo con el «sí, publica» de Denis.
+Post de LinkedIn (con dos imágenes 4:5), primer comentario, línea para el perfil de Denis e hilo de X que lanzan la extensión de Chrome de GenScore.
+El gancho: tu web puede estar cerrada a la IA sin que lo sepas, y en un clic ves quién puede leerla y qué arreglar.
+ESPERA: el artículo aún no está en producción (falta el enlace de la Chrome Web Store). Comprobar el 200 y publicar sólo con el «sí, publica» de Denis.
