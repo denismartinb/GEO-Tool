@@ -95,7 +95,13 @@ export type RevenueSection =
       truncated: boolean;
     };
 
-export type BusinessData = { accounts: AccountsSection; revenue: RevenueSection };
+export type BusinessData = {
+  accounts: AccountsSection;
+  revenue: RevenueSection;
+  /** Counted accounts (`isCountedAccount`), for the email section; null when unreadable. */
+  countedUsers: AdminUserRow[] | null;
+  authUsersTruncated: boolean;
+};
 
 export async function loadBusinessSections(input: {
   service: ServiceClient;
@@ -112,7 +118,13 @@ export async function loadBusinessSections(input: {
   const stripeData = loadStripe(window, now, excludedUserIds);
   const accounts = await loadAccounts(service, window, now, usersRead, stripeData);
   const stripe = await stripeData;
-  return { accounts, revenue: stripe.section };
+  const read = await usersRead;
+  return {
+    accounts,
+    revenue: stripe.section,
+    countedUsers: read ? read.users.filter(isCountedAccount) : null,
+    authUsersTruncated: read?.authUsersTruncated ?? false
+  };
 }
 
 type UsersRead = { users: AdminUserRow[]; authUsersTruncated: boolean } | null;

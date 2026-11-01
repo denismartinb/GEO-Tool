@@ -5,6 +5,9 @@ import { PANEL_PERIODS, panelWindow, parsePanelPeriod } from "@/lib/admin/kpi/pe
 import { loadWebSection, type WebSection } from "@/lib/admin/kpi/posthog";
 import { loadBusinessSections, type AccountsSection, type RevenueSection } from "@/lib/admin/kpi/business";
 import { loadGoogleSection, type GoogleSection } from "@/lib/admin/kpi/google";
+import { loadEmailSection, readResendEmails } from "@/lib/admin/kpi/email";
+import { CardHead, DeltaLine, Kpi, Source, Unavailable } from "./pieces";
+import { EmailCapture } from "./email-capture";
 import {
   buildFunnel,
   describeDelta,
@@ -37,12 +40,21 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
   const now = new Date();
   const window = panelWindow(period, now);
 
+  const resendRead = readResendEmails(now);
   const [web, business, google] = await Promise.all([
     loadWebSection(window, now),
     loadBusinessSections({ service, window, now }),
     loadGoogleSection(service, user.id)
   ]);
   const { accounts, revenue } = business;
+  const email = await loadEmailSection({
+    service,
+    window,
+    now,
+    users: business.countedUsers,
+    authUsersTruncated: business.authUsersTruncated,
+    resend: resendRead
+  });
 
   return (
     <main className="adm-main adm-pn">
@@ -51,7 +63,7 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
           <h1 className="adm-h1">Panel de negocio</h1>
           <p className="adm-sub">
             {web.kind === "ready" ? `Datos web hasta las ${timeFormat.format(new Date(web.asOf))} · ` : ""}
-            PostHog, Stripe, Supabase y Search Console · sin cuentas propias ni de prueba
+            PostHog, Stripe, Supabase, Resend y Search Console · sin cuentas propias ni de prueba
           </p>
         </div>
         <div className="adm-pn-controls">
@@ -86,6 +98,8 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
 
       <DailyChart web={web} accounts={accounts} />
 
+      <EmailCapture email={email} periodLabel={window.label} />
+
       <div className="adm-pn-row">
         <ChannelsCard web={web} />
         <EntryPagesCard web={web} />
@@ -102,23 +116,6 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
 
 // ── Pieces ──────────────────────────────────────────────────────────────────
 
-function Source({ children }: { children: React.ReactNode }) {
-  return <span className="adm-pn-src">{children}</span>;
-}
-
-function CardHead({ title, source }: { title: string; source: string }) {
-  return (
-    <div className="adm-pn-ch">
-      <h2>{title}</h2>
-      <Source>{source}</Source>
-    </div>
-  );
-}
-
-function Unavailable({ children }: { children: React.ReactNode }) {
-  return <p className="adm-pn-empty">{children}</p>;
-}
-
 function webUnavailable(web: WebSection): string {
   return web.kind === "not_configured"
     ? "PostHog no está conectado: faltan POSTHOG_PERSONAL_API_KEY y POSTHOG_PROJECT_ID en Vercel."
@@ -127,11 +124,6 @@ function webUnavailable(web: WebSection): string {
 
 function revenueUnavailable(revenue: RevenueSection): string {
   return revenue.kind === "not_configured" ? "Stripe no está configurado en este entorno." : "No se pudo leer Stripe esta vez.";
-}
-
-function DeltaLine({ delta, fallback }: { delta: DeltaView | null; fallback?: string }) {
-  if (!delta) return <span className="adm-pn-mut">{fallback ?? "sin periodo anterior con datos"}</span>;
-  return <span className={`adm-pn-${delta.tone}`}>{delta.text}</span>;
 }
 
 function SprintGoal({ now, revenue, accounts }: { now: Date; revenue: RevenueSection; accounts: AccountsSection }) {
@@ -175,31 +167,6 @@ function SprintGoal({ now, revenue, accounts }: { now: Date; revenue: RevenueSec
         </strong>
       </div>
     </section>
-  );
-}
-
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) return null;
-  return (
-    <svg className="adm-pn-spark" viewBox="0 0 120 36" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points={linePoints(values, 120, 36)} />
-    </svg>
-  );
-}
-
-function Kpi(props: { label: string; source: string; value: string; delta?: React.ReactNode; spark?: number[] }) {
-  return (
-    <div className="adm-pn-card adm-pn-kpi">
-      <div className="adm-pn-kpi-top">
-        <span className="adm-pn-lbl">{props.label}</span>
-        <Source>{props.source}</Source>
-      </div>
-      <div className="adm-pn-big">{props.value}</div>
-      <div className="adm-pn-kpi-foot">
-        <span className="adm-pn-kpi-delta">{props.delta}</span>
-        {props.spark ? <Sparkline values={props.spark} /> : null}
-      </div>
-    </div>
   );
 }
 

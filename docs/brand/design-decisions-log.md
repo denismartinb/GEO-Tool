@@ -28682,3 +28682,22 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Interruptor y migración.** Salen apagados: hace falta `LIFECYCLE_EMAILS_ENABLED=true` y además `FEATURE_EMAILS_ENABLED=true`. Antes de encenderlo hay que aplicar a mano la migración 0047, que añade los tres tipos a `email_sends_kind_chk`. Sin ella la reserva falla y no sale nada.
 
 **Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
+
+## §418 · ADMIN-EMAIL-1: «Captación de email» en el Panel de negocio (2026-11-01)
+
+**Qué se decidió.** `/admin/panel` gana una sección «Captación de email», bajo el gráfico de visitas y altas, con el mismo selector de periodo. Denis la pidió («cuántos contactos tenemos, evolución, cuántos unsubscribes, media de emails enviados por contacto por semana») y aprobó la maqueta el 2026-11-01 («Perfecto»), guardada en `docs/design-reference/admin-email-1/`. Las cifras de la maqueta son de ejemplo.
+
+- **Cinco tarjetas:** contactos (y altas del periodo frente al anterior), porcentaje que sigue recibiendo «Consejos, novedades y ofertas», bajas (frente al periodo anterior y sobre los entregados), emails por contacto y semana, y apertura · clics.
+- **Evolución de contactos** de los últimos 28 días, con las altas y las bajas de cada día en escala propia.
+- **Bajas por tipo de correo** (las cuatro categorías de Ajustes) y por origen (enlace del correo, un clic en el gestor de correo, Ajustes), con las re-suscripciones aparte.
+- **Correos enviados por tipo:** secuencia de la prueba, recuperación, funcionalidades, resumen semanal y «Avisos y cuenta», con enviados, entregados, abiertos, clics y rebotes.
+
+**De dónde sale cada cifra.** Un contacto es una cuenta que cuenta (`isCountedAccount`, sin propias ni de prueba). Hoy ningún otro sitio guarda un email: el informe gratis y la videollamada sólo llegan al correo del operador, y el comprobador gratuito nunca escribe `public_checks.email`. Las bajas salen de `email_preference_events` (§232) y la suscripción a consejos de `profiles.notify_lifecycle`, cada lectura en su propia consulta. Los envíos salen de la lista de Resend (`emails.list`, último estado de cada correo), porque `email_sends` sólo apunta los correos de ciclo de vida. El tipo de cada correo sale de su fila de `email_sends` (misma cuenta, a menos de 15 minutos) o, en el resumen semanal, del asunto. «Emails por contacto y semana» divide los enviados entre el tiempo que cada contacto existió dentro del periodo.
+
+**Límites declarados en pantalla.** Resend guarda 30 días: con «28 días» no hay periodo anterior completo y la comparación no se pinta, y un periodo que empieza antes avisa de que se queda corto. Las aperturas y los clics no se miden hoy (§417): la tarjeta dice que el seguimiento puede estar apagado en Resend en vez de enseñar 0 %. Si la clave de Vercel es sólo de envío, Resend responde `restricted_api_key` y la sección pide una clave con acceso completo. La lectura de Resend va en la caché de 10 minutos del panel; un fallo no se guarda en la caché.
+
+**De paso.** El delta de las tarjetas del panel («+71 % vs periodo anterior») se partía una palabra por línea porque compartía fila con un minigráfico de 110 px; ahora va encima del minigráfico en todas las anchuras.
+
+**Coordinación.** La revisión quincenal propuso MAIL-METRICS-1 (webhook de Resend, tabla `email_events`, migración 0048), sin aprobar todavía. Si se aprueba, su tabla alimenta esta sección (sustituye `readResendEmails` en `lib/admin/kpi/email.ts`) y guarda más de 30 días; no se añade otra tarjeta de correos.
+
+**Pendiente.** Activar el seguimiento de aperturas y clics en el dominio de Resend (lo hace Denis). Comprobar en producción que `RESEND_API_KEY` puede listar correos. Sin migración. No retira ningún camino de recuperación.
