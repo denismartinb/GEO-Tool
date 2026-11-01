@@ -6,6 +6,7 @@ import {
   EXT_PROMO_DELAY_MS,
   EXT_PROMO_DISMISSED_AT_KEY,
   EXT_PROMO_INSTALLED_KEY,
+  EXT_PROMO_SEEN_ON_CONTENT_KEY,
   EXT_PROMO_SHOWN_THIS_VISIT_KEY,
   extPromoStoreHref,
   isDesktopChrome,
@@ -13,6 +14,7 @@ import {
   placementFor,
   type ExtPromoPlacement
 } from "@/lib/chrome-extension/install-promo";
+import { isPromoPath } from "@/lib/free-report/promo";
 
 /**
  * EXT-PROMO-1 (log §403) — the floating card offering the Chrome extension,
@@ -60,13 +62,15 @@ export function ChromeExtensionPromo() {
       now: Date.now(),
       dismissedAt: readStorage("local", EXT_PROMO_DISMISSED_AT_KEY),
       installed: readStorage("local", EXT_PROMO_INSTALLED_KEY),
-      shownThisVisit: readStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY)
+      shownThisVisit: readStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY),
+      seenOnContent: readStorage("local", EXT_PROMO_SEEN_ON_CONTENT_KEY)
     });
     if (!eligible || !pathname) return;
     const where = placementFor(pathname);
     const timer = window.setTimeout(() => {
       shown.current = true;
       writeStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY, "1");
+      if (isPromoPath(pathname)) writeStorage("local", EXT_PROMO_SEEN_ON_CONTENT_KEY, "1");
       setPlacement(where);
     }, EXT_PROMO_DELAY_MS);
     return () => window.clearTimeout(timer);

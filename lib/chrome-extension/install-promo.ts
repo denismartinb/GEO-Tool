@@ -8,14 +8,17 @@
  *    that is not theirs. The Android app is Chrome on a phone, so it is out too;
  *  - the whole domain except sign-in, MFA, operator and print pages and the
  *    new-domain wizard (the first-scan mission hides it by CSS);
- *  - on every public page, blog included (Denis, 2026-11-01). The free-report
- *    corner card waits while this one is on screen, so the two never show at
- *    once (`FreeReportPromoCard` checks for `.ext-promo`);
+ *  - on every public page. On content pages (blog, comparativas, glosario,
+ *    docs), where the free-report card lives, only once ever: after that those
+ *    pages belong to the free-report card (Denis, 2026-11-01). While this card
+ *    is on screen the free-report card waits (`FreeReportPromoCard` checks for
+ *    `.ext-promo`), so the two never show at once;
  *  - closed with the X, it stays away 30 days; «Ya la tengo» hides it for good
  *    in that browser. The site cannot tell whether the extension is installed:
  *    the 1.0.1 manifest exposes nothing to the page.
  */
 import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
+import { isPromoPath } from "@/lib/free-report/promo";
 
 export const EXT_PROMO_DELAY_MS = 4_000;
 export const EXT_PROMO_DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
@@ -24,6 +27,8 @@ export const EXT_PROMO_DISMISS_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 export const EXT_PROMO_DISMISSED_AT_KEY = "gs.chromeExt.dismissedAt";
 /** localStorage: the visitor said they already have it. */
 export const EXT_PROMO_INSTALLED_KEY = "gs.chromeExt.installed";
+/** localStorage: the card already appeared once on a content page. */
+export const EXT_PROMO_SEEN_ON_CONTENT_KEY = "gs.chromeExt.seenOnContent";
 /** sessionStorage: the card already appeared during this visit. */
 export const EXT_PROMO_SHOWN_THIS_VISIT_KEY = "gs.chromeExt.shown";
 
@@ -78,6 +83,7 @@ export type ExtPromoEligibility = {
   dismissedAt: string | null;
   installed: string | null;
   shownThisVisit: string | null;
+  seenOnContent: string | null;
 };
 
 export function isExtPromoEligible(input: ExtPromoEligibility): boolean {
@@ -85,6 +91,7 @@ export function isExtPromoEligible(input: ExtPromoEligibility): boolean {
   if (!isExtPromoPath(input.pathname)) return false;
   if (input.installed) return false;
   if (input.shownThisVisit) return false;
+  if (input.seenOnContent && isPromoPath(input.pathname)) return false;
   const dismissedAt = Number(input.dismissedAt);
   if (input.dismissedAt && Number.isFinite(dismissedAt) && input.now - dismissedAt < EXT_PROMO_DISMISS_COOLDOWN_MS) {
     return false;

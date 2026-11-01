@@ -28458,7 +28458,7 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 - Solo Google Chrome de escritorio. Chrome en Android o iPhone no instala extensiones (Denis: «en móvil no tiene sentido»), y la app de Android es Chrome en un móvil, así que tampoco sale. Edge, Brave y Opera quedan fuera porque la tienda no es la suya.
 - Todo el dominio menos acceso, MFA, `/admin`, `/debug`, `/informe`, `/baja` y el asistente de alta de dominio; la misión del primer escaneo la oculta por CSS.
 - Aparece a los 4 s (Denis bajó de 8 a 4), una vez por visita. Abajo a la izquierda en la web pública (abajo a la derecha está la tarjeta del informe gratis) y abajo a la derecha en la consola.
-- Sale también en el blog, comparativas, glosario y docs (Denis: «¿sale en cualquier url pública? debería»). Para no enseñar dos tarjetas a la vez, la del informe gratis espera mientras ésta esté en pantalla y sale después si toca.
+- Sale también en el blog, comparativas, glosario y docs (Denis: «¿sale en cualquier url pública? debería»), pero allí sólo una vez: a partir de entonces esas páginas son de la tarjeta del informe gratis (Denis: «que salga esta una vez en blog y luego en adelante la otra»). Para no enseñar dos tarjetas a la vez, la del informe gratis espera mientras ésta esté en pantalla y sale después si toca.
 - La X y «Añadir a Chrome» la apartan 30 días; «Ya la tengo», para siempre en ese navegador. Todo en `localStorage`, sin migración.
 - El enlace lleva `utm_source=genscore.es&utm_medium=aviso&utm_campaign=extension-chrome&utm_content=web|consola`.
 

@@ -24,7 +24,8 @@ const base = {
   now: 1_000_000_000_000,
   dismissedAt: null,
   installed: null,
-  shownThisVisit: null
+  shownThisVisit: null,
+  seenOnContent: null
 };
 
 describe("isDesktopChrome", () => {
@@ -73,8 +74,12 @@ describe("isExtPromoEligible", () => {
     expect(isExtPromoEligible({ ...base, desktopChrome: false })).toBe(false);
   });
 
-  it("shows on the blog too", () => {
+  it("shows on the blog once; afterwards content pages belong to the free-report card", () => {
     expect(isExtPromoEligible({ ...base, pathname: "/blog" })).toBe(true);
+    expect(isExtPromoEligible({ ...base, pathname: "/blog/x", seenOnContent: "1" })).toBe(false);
+    expect(isExtPromoEligible({ ...base, pathname: "/comparativas/x", seenOnContent: "1" })).toBe(false);
+    expect(isExtPromoEligible({ ...base, pathname: "/", seenOnContent: "1" })).toBe(true);
+    expect(isExtPromoEligible({ ...base, pathname: "/dashboard", seenOnContent: "1" })).toBe(true);
   });
 
   it("«Ya la tengo» hides it for good; once per visit", () => {
