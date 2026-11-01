@@ -263,6 +263,10 @@ seguir. Dos invariantes que no son cosméticos (log §19):
 - Actualizar `docs/content-calendar.md` **en el mismo PR** que publica la pieza
   (una fila por pieza). El calendario es el libro mayor: una pieza publicada que
   no aparece ahí queda invisible para la siguiente sesión.
+- **Regenerar el índice del conector**: `node scripts/build-guides-index.mjs`
+  en el mismo PR que añade o cambia un artículo. La herramienta MCP
+  `buscar_guias` responde con ese texto, y `lib/mcp/guides/blog-index.test.ts`
+  falla si el JSON no coincide con el MDX (MCP-ACQUISITION-1, log §425).
 
 ## Enlazado de las superficies de contenido
 

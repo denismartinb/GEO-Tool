@@ -9,6 +9,8 @@ import { SUPPORT_EMAIL } from "@/lib/support";
 const SLUG = "mcp";
 const page = getDocPage(SLUG)!;
 const ENDPOINT = "https://www.genscore.es/api/mcp";
+/** MCP-ACQUISITION-1 (log §425): ChatGPT has its own address. */
+const CHATGPT_ENDPOINT = "https://www.genscore.es/api/mcp/chatgpt";
 
 export const metadata: Metadata = contentMetadata({
   title: `${page.title} · GenScore`,
@@ -40,17 +42,14 @@ export default function McpDocPage() {
       </p>
 
       <h2>Cómo conectarlo</h2>
-      <p>La dirección del servidor es:</p>
-      <pre>
-        <code>{ENDPOINT}</code>
-      </pre>
       <ul>
         <li>
-          <strong>Claude</strong>: en Ajustes, Conectores, añade un conector personalizado con esa dirección. Al usar
-          una herramienta de tu cuenta, Claude te pedirá entrar en GenScore.
+          <strong>Claude</strong>: en Ajustes, Conectores, añade un conector personalizado con la dirección{" "}
+          <code>{ENDPOINT}</code>. Al usar una herramienta de tu cuenta, Claude te pedirá entrar en GenScore.
         </li>
         <li>
-          <strong>ChatGPT</strong>: en Ajustes, Apps y conectores, crea una con esa dirección y autenticación OAuth.
+          <strong>ChatGPT</strong>: en Ajustes, Apps y conectores, crea una con la dirección{" "}
+          <code>{CHATGPT_ENDPOINT}</code> y autenticación OAuth.
         </li>
       </ul>
       <p>
@@ -105,12 +104,22 @@ export default function McpDocPage() {
               </td>
               <td>No</td>
             </tr>
+            <tr>
+              <td>buscar_guias</td>
+              <td>Lo que dicen las guías, los estudios y el glosario de GenScore sobre una duda, con el enlace a cada uno.</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td>que_es_genscore</td>
+              <td>Qué es GenScore, qué mide y cómo empezar.</td>
+              <td>No</td>
+            </tr>
           </tbody>
         </table>
       </div>
       <p>
         Ejemplos: «¿Cómo va la visibilidad de marca.es en la IA?», «¿Qué hago primero esta semana?», «Revisa
-        https://www.tuweb.es/precios».
+        https://www.tuweb.es/precios», «¿Qué fuentes cita la IA?».
       </p>
 
       <h2>Qué datos se leen</h2>

@@ -162,6 +162,37 @@ const KIND_GROUP: Record<string, EmailGroup> = {
   feature_agentic: "feature"
 };
 
+/**
+ * How each tagged email type reads in the panel (MAIL-BY-KIND-1, log §423).
+ * Operator emails and form replies never reach the table (they go to no
+ * contact), so they need no label; an unknown tag falls back to the tag.
+ */
+export const KIND_LABEL: Record<string, string> = {
+  first_scan: "Primer escaneo listo",
+  trial_d1: "Día 1",
+  trial_d3: "Día 3",
+  trial_d5: "Último día",
+  trial_ended: "Fin de la prueba",
+  trial_ended_late: "Fin de la prueba (tardío)",
+  winback_d3: "Día +3",
+  winback_d10: "Día +10",
+  feature_gsc: "Search Console",
+  feature_extension: "Extensión de Chrome",
+  feature_agentic: "Auditoría agéntica",
+  weekly_digest: "Resumen semanal",
+  welcome: "Bienvenida",
+  plan_confirmed: "Plan confirmado",
+  payment_failed: "Pago fallido",
+  trial_ended_plain: "Fin de la prueba (cuenta)",
+  cancellation_scheduled: "Baja programada",
+  account_deleted: "Cuenta borrada",
+  score_drop: "Caída de puntuación"
+};
+
+/** Emails sent before every send carried its tag (2026-11-01). */
+export const UNTAGGED_KIND = "untagged";
+export const UNTAGGED_LABEL = "Sin tipo (enviados antes del 1 de noviembre)";
+
 /** The weekly digest's subject (`sendWeeklyDigestEmail`): the only group read from the subject. */
 const DIGEST_SUBJECT = /^Tu resumen semanal de /;
 
@@ -185,7 +216,16 @@ export type SendingView = {
   windowCovered: boolean;
   previousCovered: boolean;
   totals: GroupCounts;
-  groups: Array<{ id: EmailGroup; label: string; detail: string } & GroupCounts>;
+  groups: Array<
+    { id: EmailGroup; label: string; detail: string } & GroupCounts & {
+      /**
+       * One row per tagged type seen in the window, most sent first, plus
+       * `untagged` for the rest. Empty when nothing in the group is tagged:
+       * a lone "untagged" row would repeat the group.
+       */
+      kinds: Array<{ kind: string; label: string } & GroupCounts>;
+    }
+  >;
   /** Emails per contact per week inside the window; null with no contact-time to divide by. */
   perContactWeek: number | null;
   perContactWeekPrevious: number | null;
@@ -273,6 +313,7 @@ export function buildSending(input: {
 
   const totals = emptyCounts();
   const byGroup = new Map<EmailGroup, GroupCounts>(EMAIL_GROUPS.map((g) => [g.id, emptyCounts()]));
+  const byKind = new Map<EmailGroup, Map<string, GroupCounts>>(EMAIL_GROUPS.map((g) => [g.id, new Map()]));
   let previousSent = 0;
   let sawOpen = false;
   for (const { email, group } of classified) {
@@ -281,7 +322,10 @@ export function buildSending(input: {
     if (OPENED.has(email.lastEvent)) sawOpen = true;
     if (inRange(at, window.prevFrom, window.prevTo)) previousSent += 1;
     if (!inRange(at, window.from, window.to)) continue;
-    for (const counts of [totals, byGroup.get(group) as GroupCounts]) {
+    const kinds = byKind.get(group) as Map<string, GroupCounts>;
+    const kindKey = email.kind || UNTAGGED_KIND;
+    if (!kinds.has(kindKey)) kinds.set(kindKey, emptyCounts());
+    for (const counts of [totals, byGroup.get(group) as GroupCounts, kinds.get(kindKey) as GroupCounts]) {
       counts.sent += 1;
       if (DELIVERED.has(email.lastEvent)) counts.delivered += 1;
       if (OPENED.has(email.lastEvent)) counts.opened += 1;
@@ -305,11 +349,24 @@ export function buildSending(input: {
     windowCovered,
     previousCovered,
     totals,
-    groups: EMAIL_GROUPS.map((g) => ({ ...g, ...(byGroup.get(g.id) as GroupCounts) })),
+    groups: EMAIL_GROUPS.map((g) => ({ ...g, ...(byGroup.get(g.id) as GroupCounts), kinds: kindRows(byKind.get(g.id)) })),
     perContactWeek: weeks > 0 ? totals.sent / weeks : null,
     perContactWeekPrevious: previousCovered && previousWeeks > 0 ? previousSent / previousWeeks : null,
     tracking
   };
+}
+
+function kindRows(kinds: Map<string, GroupCounts> | undefined): Array<{ kind: string; label: string } & GroupCounts> {
+  if (!kinds || [...kinds.keys()].every((kind) => kind === UNTAGGED_KIND)) return [];
+  const rows = [...kinds.entries()].map(([kind, counts]) => ({
+    kind,
+    label: kind === UNTAGGED_KIND ? UNTAGGED_LABEL : (KIND_LABEL[kind] ?? kind),
+    ...counts
+  }));
+  // Tagged types by volume; the untagged remainder always last.
+  return rows.sort((a, b) =>
+    a.kind === UNTAGGED_KIND ? 1 : b.kind === UNTAGGED_KIND ? -1 : b.sent - a.sent || a.label.localeCompare(b.label, "es")
+  );
 }
 
 /** One decimal, Spanish comma: 1.62 → "1,6". */

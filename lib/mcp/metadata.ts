@@ -12,9 +12,19 @@ export function supabaseIssuer(supabaseUrl: string): string {
   return `${supabaseUrl.replace(/\/+$/, "")}/auth/v1`;
 }
 
-export function protectedResourceMetadata(origin: string, supabaseUrl: string) {
+/**
+ * The resource the metadata describes. `/api/mcp/chatgpt` (MCP-ACQUISITION-1,
+ * log §425) is its own resource; any other path, including none, is
+ * `/api/mcp`, so the bare `/.well-known/oauth-protected-resource` keeps
+ * answering as before.
+ */
+export function resourcePathFor(wellKnownSuffix: string): string {
+  return wellKnownSuffix.replace(/\/+$/, "") === "/api/mcp/chatgpt" ? "/api/mcp/chatgpt" : "/api/mcp";
+}
+
+export function protectedResourceMetadata(origin: string, supabaseUrl: string, resourcePath = "/api/mcp") {
   return {
-    resource: `${origin}/api/mcp`,
+    resource: `${origin}${resourcePath}`,
     authorization_servers: [supabaseIssuer(supabaseUrl)],
     bearer_methods_supported: ["header"],
     resource_name: "GenScore",

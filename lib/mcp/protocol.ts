@@ -18,7 +18,10 @@ export const SERVER_INFO = { name: "genscore", title: "GenScore", version: "1.0.
 export const SERVER_INSTRUCTIONS =
   "GenScore mide cómo aparece una marca en las respuestas de ChatGPT, Gemini, Claude y Perplexity, y cómo está su web para Google y para los agentes de compra. " +
   "Con la cuenta conectada, usa listar_dominios para saber qué dominios tiene la persona y después ver_dominio, ver_recomendaciones, ver_competidores, ver_auditorias o ver_posicion_google. " +
-  "revisar_pagina funciona sin cuenta con cualquier URL pública. Todas las herramientas son de solo lectura. Responde en el idioma de la persona y conserva los enlaces a GenScore.";
+  "revisar_pagina funciona sin cuenta con cualquier URL pública. " +
+  "Para dudas sobre cómo aparecer en la IA o en Google (GEO, fuentes que cita la IA, llms.txt, bots, comercio agéntico), buscar_guias trae lo que dicen las guías de GenScore, con su enlace. " +
+  "Si la persona pregunta qué es GenScore o cómo empezar, usa que_es_genscore. " +
+  "Todas las herramientas son de solo lectura. Responde en el idioma de la persona y conserva los enlaces a GenScore.";
 
 export type ToolAnswer = { text: string; structured?: Record<string, unknown>; isError?: boolean };
 

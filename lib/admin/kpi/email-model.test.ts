@@ -141,6 +141,48 @@ describe("emails sent", () => {
     expect(view.perContactWeekPrevious).not.toBeNull();
   });
 
+  it("breaks each group down by tagged type, most sent first, with untagged emails last", () => {
+    const view = buildSending({
+      emails: [
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T10:00:00Z", kind: "trial_d3", lastEvent: "clicked" }),
+        mail({ to: ["bea@example.com"], createdAt: "2026-10-30T11:00:00Z", kind: "trial_d1" }),
+        mail({ to: ["carla@example.com"], createdAt: "2026-10-31T11:00:00Z", kind: "trial_d3", lastEvent: "opened" }),
+        mail({ to: ["carla@example.com"], createdAt: "2026-10-31T12:00:00Z", kind: "trial_d3" }),
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-31T13:00:00Z", subject: "Tu resumen semanal de algo" })
+      ],
+      users,
+      sends: [{ ownerId: "b", kind: "trial_d5", sentAt: "2026-10-30T09:00:00Z" }],
+      window: window7,
+      now,
+      domainTracking: null
+    });
+    const trial = view.groups.find((g) => g.id === "trial");
+    expect(trial?.kinds.map((k) => [k.label, k.sent, k.opened, k.clicked])).toEqual([
+      ["Día 3", 3, 2, 1],
+      ["Día 1", 1, 0, 0]
+    ]);
+    // A group with nothing tagged has no breakdown: it would repeat the group.
+    expect(view.groups.find((g) => g.id === "digest")?.kinds).toEqual([]);
+  });
+
+  it("puts the untagged remainder of a group in its own last row", () => {
+    const view = buildSending({
+      emails: [
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T10:00:00Z", kind: "welcome" }),
+        mail({ to: ["bea@example.com"], createdAt: "2026-10-30T11:00:00Z" })
+      ],
+      users,
+      sends: [],
+      window: window7,
+      now,
+      domainTracking: null
+    });
+    expect(view.groups.find((g) => g.id === "other")?.kinds.map((k) => k.label)).toEqual([
+      "Bienvenida",
+      "Sin tipo (enviados antes del 1 de noviembre)"
+    ]);
+  });
+
   it("has no previous rate for 28 days, because Resend keeps 30", () => {
     const view = buildSending({ emails: [], users, sends: [], window: window28, now, domainTracking: null });
     expect(view.windowCovered).toBe(true);
