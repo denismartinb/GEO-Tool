@@ -1,6 +1,7 @@
+import { Fragment, type ReactNode } from "react";
 import { CATEGORY_COPY } from "@/lib/email/categories";
 import type { EmailSection } from "@/lib/admin/kpi/email";
-import { formatRate, UNSUB_CATEGORIES, UNSUB_SOURCES, type ContactDay } from "@/lib/admin/kpi/email-model";
+import { formatRate, UNSUB_CATEGORIES, UNSUB_SOURCES, type ContactDay, type GroupCounts } from "@/lib/admin/kpi/email-model";
 import { describeDelta, formatInt, formatShare } from "@/lib/admin/kpi/model";
 import { CardHead, DeltaLine, Kpi, Source, Unavailable } from "@/app/admin/panel/pieces";
 
@@ -157,24 +158,25 @@ export function EmailCapture({ email, periodLabel }: { email: EmailSection; peri
                 </thead>
                 <tbody>
                   {sendingReady.groups.map((g) => (
-                    <tr key={g.id}>
-                      <td className="adm-pn-cell-main">
+                    <Fragment key={g.id}>
+                      <SendRow counts={g} trackingOn={trackingOn}>
                         <strong>{g.label}</strong>
                         {g.detail ? <small>{g.detail}</small> : null}
-                      </td>
-                      <td className="adm-num">{formatInt(g.sent)}</td>
-                      <td className="adm-num">{formatInt(g.delivered)}</td>
-                      <td className="adm-num">{trackingOn ? formatInt(g.opened) : "—"}</td>
-                      <td className="adm-num">{trackingOn ? formatInt(g.clicked) : "—"}</td>
-                      <td className="adm-num">{formatInt(g.bounced)}</td>
-                    </tr>
+                      </SendRow>
+                      {g.kinds.map((k) => (
+                        <SendRow key={k.kind} counts={k} trackingOn={trackingOn} sub>
+                          <span>{k.label}</span>
+                        </SendRow>
+                      ))}
+                    </Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
             <p className="adm-pn-foot">
               Solo correos a contactos: los avisos al operador y las respuestas a formularios no cuentan. Resend da el último estado de cada
-              correo, así que un correo con clic cuenta también como abierto.
+              correo, así que un correo con clic cuenta también como abierto. Los porcentajes son sobre los entregados, y una apertura puede
+              ser el gestor de correo descargando las imágenes: los clics son la señal fiable.
               {sendingReady.windowCovered ? "" : " Resend solo guarda 30 días: el periodo empieza antes y las cifras se quedan cortas."}
             </p>
             {sendingReady.truncated ? (
@@ -187,6 +189,46 @@ export function EmailCapture({ email, periodLabel }: { email: EmailSection; peri
         <p className="adm-note">Hay más cuentas de las que se leen de una vez: los contactos pueden quedarse cortos.</p>
       ) : null}
     </section>
+  );
+}
+
+function SendRow({
+  counts,
+  trackingOn,
+  sub = false,
+  children
+}: {
+  counts: GroupCounts;
+  trackingOn: boolean;
+  sub?: boolean;
+  children: ReactNode;
+}) {
+  const rate = (part: number) => (counts.delivered > 0 ? <small>{formatShare(part / counts.delivered, 0)}</small> : null);
+  return (
+    <tr className={sub ? "adm-pn-subrow" : undefined}>
+      <td className="adm-pn-cell-main">{children}</td>
+      <td className="adm-num">{formatInt(counts.sent)}</td>
+      <td className="adm-num">{formatInt(counts.delivered)}</td>
+      <td className="adm-num">
+        {trackingOn ? (
+          <>
+            {formatInt(counts.opened)} {rate(counts.opened)}
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
+      <td className="adm-num">
+        {trackingOn ? (
+          <>
+            {formatInt(counts.clicked)} {rate(counts.clicked)}
+          </>
+        ) : (
+          "—"
+        )}
+      </td>
+      <td className="adm-num">{formatInt(counts.bounced)}</td>
+    </tr>
   );
 }
 

@@ -44,6 +44,34 @@ describe("EmailCapture", () => {
     expect(html).toContain("100 %");
   });
 
+  it("shows a row per tagged type under its group, with rates over delivered", () => {
+    const html = renderToStaticMarkup(
+      <EmailCapture
+        email={section({
+          sending: {
+            kind: "ready",
+            truncated: false,
+            ...buildSending({
+              emails: [
+                { id: "em_1", to: ["ana@example.com"], createdAt: "2026-10-30T10:00:00Z", lastEvent: "clicked", subject: "x", kind: "feature_gsc" },
+                { id: "em_2", to: ["bea@example.com"], createdAt: "2026-10-30T11:00:00Z", lastEvent: "delivered", subject: "y", kind: "feature_gsc" }
+              ],
+              users,
+              sends: [],
+              window,
+              now,
+              domainTracking: { open: true, click: true }
+            })
+          }
+        })}
+        periodLabel="7 días"
+      />
+    );
+    expect(html).toContain("adm-pn-subrow");
+    expect(html).toContain("Search Console");
+    expect(html).toContain("50 %");
+  });
+
   it("never shows an open rate when tracking is not proven on", () => {
     const html = renderToStaticMarkup(<EmailCapture email={section()} periodLabel="7 días" />);
     expect(html).toContain("el seguimiento puede estar apagado en Resend");
