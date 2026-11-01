@@ -28683,7 +28683,43 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
 
-## §418 · WP-PLUGIN-1: plugin de WordPress con la nota de la extensión (Fase 1) (2026-11-01)
+## §418 · MCP-SERVER-1: GenScore dentro de Claude y ChatGPT, de solo lectura (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el Task Intake del servidor MCP el 1-11 («sí, apruebo. Todas las fases»), con acceso para todos los planes (Starter, Pro, Agencia y la prueba; una cuenta en solo lectura recibe un aviso con enlace informativo a `/precios`). Esta es la Fase 1: el producto. Fase 0 es activar el servidor OAuth de Supabase (Denis, en el panel); Fases 2 y 3 son enviar el conector a los directorios de Claude y de ChatGPT, sólo con el servidor en producción y probado, y cada envío con su confirmación; Fase 4 (escrituras) se acota y se enseña antes de construirla.
+
+**Qué hace.** `POST /api/mcp` habla MCP por Streamable HTTP sin estado, sólo JSON (sin SSE: `GET` da 405). Siete herramientas, todas de solo lectura y sin LLM:
+
+- `revisar_pagina(url)`: abierta sin cuenta. Es la revisión de la extensión de Chrome hecha en el servidor. `lib/page-review/collect.cjs` y `score.cjs` se generan desde los ficheros de la extensión (`node scripts/sync-page-review.mjs`) y `sync.test.ts` falla si se separan. Lee el HTML que sirve la web (no lo que pinta su JavaScript) con el `fetchOnDomain` de la auditoría agéntica, con su guarda SSRF, sólo en el mismo origen y como mucho 12 peticiones por revisión. Con la cuenta conectada y una página de un dominio propio, añade «Esta página en tu dominio».
+- `listar_dominios`, `ver_dominio`, `ver_recomendaciones`, `ver_competidores`, `ver_auditorias`, `ver_posicion_google`: necesitan cuenta. Leen `loadExtProjectData` (`lib/ext/project-data.ts`), el mismo lector que ahora usa `/api/ext/project`, así que el chat, el panel y la consola enseñan las mismas cifras.
+
+**Autenticación.** El servidor de autorización es Supabase Auth (OAuth 2.1 con PKCE y registro dinámico, en beta). GenScore publica la metadata del recurso (RFC 9728) en `/.well-known/oauth-protected-resource/api/mcp`, reenvía la del servidor en `/.well-known/oauth-authorization-server` y pone la pantalla de consentimiento en `/oauth/consentir` (acceso «Bruma»). Una herramienta de cuenta sin token responde 401 con `WWW-Authenticate` y eso abre el flujo en Claude y ChatGPT. El token se usa como cliente de Supabase del propio usuario: RLS decide, nunca service role. Ajustes > Cuenta enseña «Apps conectadas» con «Desconectar» (`revokeGrant`).
+
+**Límites.** `revisar_pagina` cuenta en `public_checks` con `engine = mcp_page` (1.000 al día en total, 60 por cuenta o por IP, 20 por dominio), y esas filas no cuentan para el comprobador gratuito. La IP casi siempre es la de Claude o la de ChatGPT, por eso con cuenta la clave es el usuario. Cada llamada envía `mcp_tool_called` a PostHog (herramienta, cliente y si había cuenta; nunca la conversación ni la URL).
+
+**Sin vender.** Ningún texto de las herramientas cita precios, descuentos ni enlaces de pago: lo prohíbe el directorio de ChatGPT. Lo que no incluye un plan se dice como «no está incluida en tu plan». Lo vigila `format.test.ts`.
+
+**Premisa y lo que queda roto.** El acceso con cuenta depende del servidor OAuth de Supabase activado con la ruta de autorización `/oauth/consentir` y el registro dinámico encendido; sin eso sólo funciona `revisar_pagina`, y las herramientas de cuenta piden conectar sin poder completar el flujo. La Site URL de Supabase es producción, así que el flujo completo sólo se prueba de verdad en `www.genscore.es`, no en un preview. El modo mixto de ChatGPT (`securitySchemes` con `noauth` y `oauth2`) está por comprobar en un cliente real. Páginas que sólo pintan su contenido con JavaScript salen con menos texto que en la extensión. No retira ningún camino de recuperación.
+
+## §420 · ADMIN-EMAIL-1: pestaña «CRM» con la captación de email (2026-11-01)
+
+**Qué se decidió.** La consola de operador gana una pestaña «CRM» (`/admin/crm`, junto a «Panel» en el menú) con la sección «Captación de email» y el mismo selector de periodo que el Panel de negocio. La maqueta la ponía dentro del panel; al ver el PR, Denis pidió llevarla a su propia pestaña «CRM». Denis la pidió («cuántos contactos tenemos, evolución, cuántos unsubscribes, media de emails enviados por contacto por semana») y aprobó la maqueta el 2026-11-01 («Perfecto»), guardada en `docs/design-reference/admin-email-1/`. Las cifras de la maqueta son de ejemplo.
+
+- **Cinco tarjetas:** contactos (y altas del periodo frente al anterior), porcentaje que sigue recibiendo «Consejos, novedades y ofertas», bajas (frente al periodo anterior y sobre los entregados), emails por contacto y semana, y apertura · clics.
+- **Evolución de contactos** de los últimos 28 días, con las altas y las bajas de cada día en escala propia.
+- **Bajas por tipo de correo** (las cuatro categorías de Ajustes) y por origen (enlace del correo, un clic en el gestor de correo, Ajustes), con las re-suscripciones aparte.
+- **Correos enviados por tipo:** secuencia de la prueba, recuperación, funcionalidades, resumen semanal y «Avisos y cuenta», con enviados, entregados, abiertos, clics y rebotes.
+
+**De dónde sale cada cifra.** Un contacto es una cuenta que cuenta (`isCountedAccount`, sin propias ni de prueba): el mismo filtro que «Pruebas Pro en curso» y las altas del panel, leído con `loadCountedUsers`. Los correos a direcciones que no son contactos (las del equipo, el operador) no cuentan. Hoy ningún otro sitio guarda un email: el informe gratis y la videollamada sólo llegan al correo del operador, y el comprobador gratuito nunca escribe `public_checks.email`. Las bajas salen de `email_preference_events` (§232) y la suscripción a consejos de `profiles.notify_lifecycle`, cada lectura en su propia consulta. Los envíos salen de la lista de Resend (`emails.list`, último estado de cada correo), porque `email_sends` sólo apunta los correos de ciclo de vida. El tipo de cada correo sale de su fila de `email_sends` (misma cuenta, a menos de 15 minutos) o, en el resumen semanal, del asunto. «Emails por contacto y semana» divide los enviados entre el tiempo que cada contacto existió dentro del periodo.
+
+**Límites declarados en pantalla.** Resend guarda 30 días: con «28 días» no hay periodo anterior completo y la comparación no se pinta, y un periodo que empieza antes avisa de que se queda corto. Las aperturas y los clics no se miden hoy (§417): la tarjeta dice que el seguimiento puede estar apagado en Resend en vez de enseñar 0 %. Si la clave de Vercel es sólo de envío, Resend responde `restricted_api_key` y la sección pide una clave con acceso completo. La lectura de Resend va en la caché de 10 minutos del panel (mismo «Actualizar»); un fallo no se guarda en la caché.
+
+**De paso.** El delta de las tarjetas del panel («+71 % vs periodo anterior») se partía una palabra por línea porque compartía fila con un minigráfico de 110 px; ahora va encima del minigráfico en todas las anchuras.
+
+**Coordinación.** La revisión quincenal propuso MAIL-METRICS-1 (webhook de Resend, tabla `email_events`, migración 0048), sin aprobar todavía. Si se aprueba, su tabla alimenta esta pestaña (sustituye `readResendEmails` en `lib/admin/kpi/email.ts`) y guarda más de 30 días; no se añade otra tarjeta de correos.
+
+**Pendiente.** Activar el seguimiento de aperturas y clics en el dominio de Resend (lo hace Denis). Comprobar en producción que `RESEND_API_KEY` puede listar correos. Sin migración. No retira ningún camino de recuperación.
+
+## §421 · WP-PLUGIN-1: plugin de WordPress con la nota de la extensión (Fase 1) (2026-11-01)
 
 **Qué se decidió.** Denis aprobó el 2026-11-01 la Fase 1 de un plugin gratuito para WordPress.org como canal de captación (Task Intake y UX en artifact, enlaces en `docs/wordpress-plugin/README.md`). Pestañas Resumen · GEO · SEO · Agentes, en claro y con el estilo de la extensión, cada una partida en «Tu dominio» (con cuenta) y «Esta web» (se arregla aquí).
 

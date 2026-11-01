@@ -36,10 +36,23 @@ export function extJson(body: unknown, status = 200) {
 }
 
 export async function readExtAccount(): Promise<ExtAccount | null> {
-  const supabase = await createClient();
+  return readExtAccountWith(await createClient());
+}
+
+/**
+ * MCP-SERVER-1 (log §418): the same account read with any RLS-scoped client.
+ * The extension passes the cookie client; the MCP endpoint passes a client
+ * built from the OAuth bearer token Supabase issued (`lib/mcp/auth.ts`).
+ * `accessToken`, when given, is validated by Supabase rather than read from
+ * a cookie. Never a service-role client.
+ */
+export async function readExtAccountWith(
+  supabase: ExtAccount["supabase"],
+  accessToken?: string
+): Promise<ExtAccount | null> {
   const {
     data: { user }
-  } = await supabase.auth.getUser();
+  } = accessToken ? await supabase.auth.getUser(accessToken) : await supabase.auth.getUser();
   if (!user) return null;
   const { data: profile } = await supabase.from("profiles").select(SYSTEM_PLAN_COLUMNS).eq("id", user.id).maybeSingle();
   const elapsed = isTrialElapsed(profile);

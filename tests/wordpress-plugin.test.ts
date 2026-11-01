@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * WP-PLUGIN-1 (log §418). The WordPress plugin reuses the Chrome extension's
+ * WP-PLUGIN-1 (log §421). The WordPress plugin reuses the Chrome extension's
  * page reading and scoring as is, so the score a site sees in wp-admin is the
  * one the extension shows. A copy that drifts is two «Nota SEO + IA».
  */

@@ -2,7 +2,7 @@
 
 Canal de captación propuesto por Denis el 2026-11-01: un plugin gratuito para
 el directorio de WordPress.org que revisa la web desde wp-admin y lleva a la
-prueba de 7 días de Pro. Histórico: `docs/brand/design-decisions-log.md` §418.
+prueba de 7 días de Pro. Histórico: `docs/brand/design-decisions-log.md` §421.
 
 - Task Intake: https://claude.ai/artifact/NxpYX8di54nDqV79sHoiLe
 - UX aprobada (Resumen · GEO · SEO · Agentes, claro, estilo de la extensión):
@@ -34,7 +34,7 @@ role: necesita su propio Task Intake.
 
 ## Cómo probarlo en local
 
-WordPress con SQLite y `php -S`; detalle en §418. Para empaquetar:
+WordPress con SQLite y `php -S`; detalle en §421. Para empaquetar:
 `cd docs/wordpress-plugin && zip -r genscore.zip genscore`.
 
 ## Publicar en WordPress.org (lo hace Denis, con su aprobación)

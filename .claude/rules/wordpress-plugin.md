@@ -1,7 +1,7 @@
 # Plugin de WordPress — invariantes
 
 Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
-`docs/brand/design-decisions-log.md` §418.
+`docs/brand/design-decisions-log.md` §421.
 
 - **La nota es la de la extensión.** `assets/vendor/collect.js` y `score.js`
   son copia exacta de `docs/chrome-extension/prueba/extension/`. Si cambia la

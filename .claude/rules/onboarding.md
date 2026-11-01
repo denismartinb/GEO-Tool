@@ -83,7 +83,7 @@ obedecerá igual.
   una copia— porque arrastrar basura es peor que no arrastrar nada (log §54).
   Desde WP-PLUGIN-1 hay una segunda entrada, `/signup?dominio=` (el plugin
   de WordPress), que pasa por `rememberPendingDomain` con la misma función y
-  la misma clave (log §418).
+  la misma clave (log §421).
 - **El «ya visto» vive en `profiles.onboarding_tour_seen_at`, no en
   `localStorage`.** Migró ahí en ONBOARDING-TOUR-PERSIST-1 (2026-08-25, log
   §153), founder-approved vía Task Intake, precisamente porque vivir en
