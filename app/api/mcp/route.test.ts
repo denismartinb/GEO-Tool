@@ -50,6 +50,7 @@ describe("POST /api/mcp", () => {
       "ver_dominio",
       "ver_recomendaciones",
       "ver_competidores",
+      "ver_prompts",
       "ver_auditorias",
       "ver_posicion_google",
       "revisar_pagina",

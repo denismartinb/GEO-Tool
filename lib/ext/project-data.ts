@@ -5,6 +5,7 @@ import { resolveSystemPlanId } from "@/lib/billing";
 import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
 import { listExtProjects, type ExtAccount, type ExtProjectRow } from "@/lib/ext/account";
 import { buildExtAudits, type ExtAudits } from "@/lib/ext/audits";
+import { buildExtPrompts, type ActivePrompt, type ExtPrompt } from "@/lib/ext/prompts";
 import { buildExtProjectSummary, isOwnUrl, type ExtProjectSummary } from "@/lib/ext/summary";
 import { toExtSearchConsole, type ExtSearchConsole } from "@/lib/ext/search-console";
 import { loadSearchConsoleScreen, type SearchConsoleScreen } from "@/lib/search-console/load";
@@ -29,6 +30,8 @@ import { getEngineMeta } from "@/lib/scan/engine-meta";
 export type ExtProjectPayload = ExtProjectSummary & {
   searchConsole: ExtSearchConsole;
   audits: ExtAudits;
+  /** MCP-PROMPTS-1 (log §428): the active prompts and what each engine did with them in the latest scan. */
+  prompts: ExtPrompt[];
 };
 
 export type ExtProjectData =
@@ -65,7 +68,7 @@ export async function loadExtProjectData(
   const project = pickProject(await listExtProjects(account), domain);
   if (!project) return { kind: "not_found" };
 
-  const [input, audits, { data: snapshotRow }, gsc] = await Promise.all([
+  const [input, audits, { data: snapshotRow }, gsc, { data: promptRows, error: promptsError }] = await Promise.all([
     loadReportInput({ supabase: account.supabase, project }),
     readAgenticAudits(account.supabase, project.id, account.user.id),
     // The same latest technical snapshot «Tu web para la IA» and «Tu web para Google» read.
@@ -78,7 +81,14 @@ export async function loadExtProjectData(
       .maybeSingle(),
     // EXT-GSC-1/2 (log §409, §411): the same Search Console rows as «Posición en Google».
     // The project came from the account's own list, so its ids are verified.
-    readSearchConsole(project.id, account.user.id, project.domain)
+    readSearchConsole(project.id, account.user.id, project.domain),
+    // The same active list «Prompts» reads.
+    account.supabase
+      .from("project_prompts")
+      .select("id, prompt_text, category, created_at")
+      .eq("project_id", project.id)
+      .eq("is_active", true)
+      .order("created_at", { ascending: true })
   ]);
   const model = input ? buildReportModel(input) : null;
   const planId = account.profile ? resolveSystemPlanId(account.profile) : null;
@@ -107,6 +117,15 @@ export async function loadExtProjectData(
         // Same gate as the agentic card: hidden for a plan or a review the console would not show.
         agentic: agentic.kind === "card" && audits.available ? (audits.latest?.result ?? null) : null,
         ownUrl
+      }),
+      prompts: buildExtPrompts({
+        active: promptsError
+          ? null
+          : ((promptRows ?? []) as Array<{ id: string; prompt_text: string; category: string | null }>).map(
+              (r): ActivePrompt => ({ id: r.id, text: r.prompt_text, topic: r.category })
+            ),
+        matrix: model?.matrix ?? null,
+        engineLabel: (provider) => getEngineMeta(provider).label
       })
     }
   };
