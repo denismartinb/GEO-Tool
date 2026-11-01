@@ -109,6 +109,7 @@ const LABEL: Partial<Record<IssueCheckKey, { label: string; fix: string }>> = {
   open_graph: { label: "Open Graph", fix: "añadir og:title y og:description" },
   noindex: { label: "Página indexable", fix: "quitar el noindex" },
   snippet_blocked: { label: "Fragmentos permitidos", fix: "quitar nosnippet / max-snippet:0" },
+  js_required: { label: "Contenido sin JavaScript", fix: "activar el renderizado en el servidor o el prerenderizado" },
   canonical: { label: "Canonical propio", fix: "apuntar el canonical a la propia URL" },
   hreflang: { label: "Hreflang", fix: "declarar las versiones de idioma si existen" },
   list_or_table: { label: "Listas o tablas", fix: "presentar servicios o datos en listas o tablas" },

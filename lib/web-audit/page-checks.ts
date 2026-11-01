@@ -93,6 +93,16 @@ export type CitabilityCheck = {
   /** Word count over visible text only — <script>/<style> block contents are excluded, see stripToVisibleText. */
   wordCount: number;
   contentOk: boolean;
+  /**
+   * The HTML as served is an empty application shell: almost no visible text
+   * plus an empty mount node (`<div id="root"></div>`, `__next`, `app`…) or a
+   * `<noscript>` asking to turn JavaScript on. The main content only appears
+   * after a browser runs the page's scripts, and AI crawlers do not run them
+   * (JS-RENDER-CHECK-1). Optional and tri-state like `snippetBlocks`:
+   * `undefined` is "never measured" on snapshots taken before this check.
+   * Never adds or removes points, so `points` above does not change.
+   */
+  jsShell?: boolean;
 };
 
 /**
@@ -415,7 +425,34 @@ export function checkCitability(html: string): CitabilityCheck {
 
   // R3 weight: 10 + 10 = 20 — see module header.
   const points = (hasListOrTable ? 10 : 0) + (contentOk ? 10 : 0);
-  return { points, hasListOrTable, wordCount, contentOk };
+  return { points, hasListOrTable, wordCount, contentOk, jsShell: isJsShell(html, wordCount) };
+}
+
+/**
+ * Below this many visible words a page that also carries an empty mount node
+ * or a JavaScript `<noscript>` is read as an application shell. Deliberately
+ * low: a short landing page with real server-rendered text must not be
+ * flagged, and a false «tu web no se ve sin JavaScript» is worse than a miss.
+ */
+const JS_SHELL_MAX_WORDS = 50;
+
+/** An empty element with an id the common client-side frameworks mount into. */
+const EMPTY_MOUNT_RE =
+  /<(div|main|section|app-root)\b[^>]*\bid\s*=\s*["'](root|app|__next|__nuxt|svelte|q-app|main-app|application)["'][^>]*>\s*<\/\1\s*>|<app-root\b[^>]*>\s*<\/app-root\s*>/i;
+
+/** A `<noscript>` that tells the visitor to turn JavaScript on (any language we see in practice). */
+const NOSCRIPT_JS_RE = /<noscript[^>]*>[\s\S]*?(javascript|js)[\s\S]*?<\/noscript\s*>/i;
+
+/**
+ * JS-RENDER-CHECK-1: does the served HTML need JavaScript to show its content?
+ * Both conditions are required: almost no visible text AND a sign that a
+ * script is meant to fill the page. Neither alone is enough (a short page is
+ * not a shell; an empty `#root` next to real text is a hydration target).
+ */
+export function isJsShell(html: string, visibleWordCount: number): boolean {
+  if (visibleWordCount >= JS_SHELL_MAX_WORDS) return false;
+  const withoutNoscriptTracking = html.replace(/<noscript[^>]*>\s*<(img|iframe)\b[\s\S]*?<\/noscript\s*>/gi, " ");
+  return EMPTY_MOUNT_RE.test(html) || NOSCRIPT_JS_RE.test(withoutNoscriptTracking);
 }
 
 const LOCAL_BUSINESS_TYPES = new Set([

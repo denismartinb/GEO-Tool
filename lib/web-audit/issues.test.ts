@@ -510,3 +510,37 @@ describe("buildTechnicalIssuesReport — snippet_blocked", () => {
     expect(report.passing.map((p) => p.check)).not.toContain("snippet_blocked");
   });
 });
+
+/**
+ * JS-RENDER-CHECK-1. Same three states as snippet_blocked: failing, measured
+ * and clean, and never measured (older snapshots are excluded).
+ */
+describe("buildTechnicalIssuesReport — js_required", () => {
+  it("marca crítico y SIN puntos cuando la página llega vacía sin JavaScript", () => {
+    const check = passingCheck(100);
+    check.citability!.jsShell = true;
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", check)], botsReport());
+    const issue = findIssue(report.issues, "js_required");
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe("critical");
+    expect(issue!.pointDelta).toBeNull();
+  });
+
+  it("no mueve ni la nota real ni la proyectada", () => {
+    const shell = passingCheck(100);
+    shell.citability!.jsShell = true;
+    const clean = passingCheck(100);
+    clean.citability!.jsShell = false;
+    const a = buildTechnicalIssuesReport([page("https://acme.com/a", shell)], botsReport());
+    const b = buildTechnicalIssuesReport([page("https://acme.com/a", clean)], botsReport());
+    expect(a.actualReadinessScore).toBe(b.actualReadinessScore);
+    expect(a.projectedReadinessScore).toBe(b.projectedReadinessScore);
+    expect(a.totalPointPotential).toBe(b.totalPointPotential);
+  });
+
+  it("una instantánea anterior no aparece ni como fallo ni como aprobado", () => {
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
+    expect(findIssue(report.issues, "js_required")).toBeUndefined();
+    expect(report.passing.map((p) => p.check)).not.toContain("js_required");
+  });
+});
