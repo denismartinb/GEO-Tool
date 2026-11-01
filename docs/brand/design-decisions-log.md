@@ -28613,3 +28613,11 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Sin puntos.** Igual que `snippet_blocked` (§131): `gain` nulo, no mueve `readiness_score`, la Salud técnica ni la Puntuación GEO, y un test lo fija. Es bloqueo duro (crítico) porque una página vacía no se puede citar. Ponderarlo es una decisión aparte.
 
 **Pendiente.** No es renderizar la página: un sitio que pinta texto genérico en el servidor y el contenido real con JavaScript no se detecta. Medirlo de verdad pediría un navegador sin cabeza en la auditoría, con su propio Task Intake. No retira ningún camino de recuperación.
+
+## §413 · LOGIN-NEXT-UTM-1: quien llega sin sesión vuelve a la página que abrió, y el login conserva las UTM (2026-11-01)
+
+**Qué se decidió.** Al abrir una pantalla de la consola sin sesión (por ejemplo, el enlace de un correo de ciclo de vida), `requireUser` ya no manda a `/login` a secas: manda a `/login?next=<la página pedida>` y, tras entrar, se aterriza en ella. Las etiquetas `utm_*` del enlace se copian también al propio login. Sale de la revisión quincenal del 1-11: en 30 días sólo se vio una visita con `utm_source=email`, porque el clic aterrizaba en un login sin etiquetas y se perdía el destino. Denis lo aprobó el 2026-11-01 («sí»), como cambio de acceso.
+
+**Cómo.** El middleware pone en la petición la cabecera `x-gs-request-path` (ruta y query) en cada `NextResponse.next`, también al refrescar las cookies de sesión. `requireUser` la lee y construye el destino con `loginRedirectPath` (`lib/login-redirect.ts`), que pasa por `safeNextPath`: sólo una ruta de este mismo sitio, nunca el propio login. La cabecera sólo elige dónde aterrizar; no autoriza nada, y falsificarla lleva como mucho a otra página de genscore.es. El login ya aceptaba `?next=` desde §254.
+
+**Pendiente.** No retira ningún camino de recuperación. Las aperturas y clics de los correos siguen sin medirse en Resend (lo activa Denis).

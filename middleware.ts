@@ -20,6 +20,7 @@ import {
   AFFILIATE_REF_PARAM,
   resolveAffiliateCode
 } from "@/lib/affiliates/codes";
+import { REQUEST_PATH_HEADER } from "@/lib/login-redirect";
 
 /**
  * Refreshes the Supabase auth session cookie on every request.
@@ -30,9 +31,16 @@ import {
  * counterpart referenced by that file's comment.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request,
-  });
+  // LOGIN-NEXT-UTM-1: tell `requireUser` which page was asked for, so a
+  // signed-out visitor lands back on it after login. Built on every
+  // `NextResponse.next` so the refreshed session cookies are kept too.
+  const requestedPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const forward = () => {
+    const forwarded = new Headers(request.headers);
+    forwarded.set(REQUEST_PATH_HEADER, requestedPath);
+    return NextResponse.next({ request: { headers: forwarded } });
+  };
+  let response = forward();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -47,9 +55,7 @@ export async function middleware(request: NextRequest) {
             request.cookies.set(name, value);
           });
 
-          response = NextResponse.next({
-            request,
-          });
+          response = forward();
 
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);

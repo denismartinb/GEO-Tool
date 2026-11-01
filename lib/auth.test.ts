@@ -21,10 +21,14 @@ const redirect = vi.fn((_to: string) => {
 });
 vi.mock("next/navigation", () => ({ redirect: (to: string) => redirect(to) }));
 
+const requestHeaders = new Headers();
+vi.mock("next/headers", () => ({ headers: async () => requestHeaders }));
+
 import { requireUser } from "./auth";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  requestHeaders.delete("x-gs-request-path");
 });
 
 describe("requireUser", () => {
@@ -49,6 +53,16 @@ describe("requireUser", () => {
 
     await expect(requireUser()).rejects.toThrow("NEXT_REDIRECT");
     expect(redirect).toHaveBeenCalledWith("/login");
+  });
+
+  it("sin sesión vuelve a la página pedida y conserva las UTM (LOGIN-NEXT-UTM-1)", async () => {
+    getUser.mockResolvedValue({ data: { user: null } });
+    requestHeaders.set("x-gs-request-path", "/dashboard?utm_source=email&utm_campaign=trial_d1");
+
+    await expect(requireUser()).rejects.toThrow("NEXT_REDIRECT");
+    expect(redirect).toHaveBeenCalledWith(
+      "/login?next=%2Fdashboard%3Futm_source%3Demail%26utm_campaign%3Dtrial_d1&utm_source=email&utm_campaign=trial_d1"
+    );
   });
 
   /**
