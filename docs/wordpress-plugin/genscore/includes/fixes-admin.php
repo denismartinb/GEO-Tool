@@ -187,6 +187,20 @@ function genscore_propose_desc( $id ) {
 			$t = mb_strlen( $c ) > mb_strlen( $t ) ? $c : $t;
 		}
 	}
+	// The answer-first paragraph the person approved says the same thing.
+	if ( mb_strlen( $t ) < 50 && $id ) {
+		$lead = genscore_plain_text( genscore_fix_get( $id, 'lead' ) );
+		$t    = mb_strlen( $lead ) > mb_strlen( $t ) ? $lead : $t;
+	}
+	// A listing (shop, posts page) has no text of its own: its name, the
+	// site's name and the site's tagline, all written in WordPress.
+	if ( mb_strlen( $t ) < 50 && $id && genscore_is_listing_page( $id ) ) {
+		$tag = genscore_plain_text( get_bloginfo( 'description' ) );
+		if ( '' !== $tag ) {
+			/* translators: 1: page title, 2: site name, 3: site tagline. */
+			$t = sprintf( __( '%1$s de %2$s: %3$s.', 'genscore' ), genscore_post_title( $id ), wp_strip_all_tags( get_bloginfo( 'name' ) ), mb_strtolower( mb_substr( $tag, 0, 1 ) ) . mb_substr( rtrim( $tag, '.' ), 1 ) );
+		}
+	}
 	$t = genscore_cut_text( $t, 155 );
 	return mb_strlen( $t ) >= 25 ? $t : null;
 }
@@ -450,6 +464,10 @@ function genscore_fix_propose( $kind, $id ) {
 		case 'canon':
 			return genscore_page_url( $id );
 		case 'fresh':
+			if ( $id && genscore_is_listing_page( $id ) ) {
+				$when = genscore_listing_modified( $id );
+				return $when ? wp_date( get_option( 'date_format' ), $when ) : null;
+			}
 			return get_post_modified_time( get_option( 'date_format' ), false, $id, true );
 		case 'lead':
 			return genscore_propose_lead( $id );
@@ -507,7 +525,7 @@ function genscore_fix_clean( $kind, $value ) {
 			return '' !== $v ? mb_substr( $v, 0, 120 ) : null;
 		case 'lead':
 			$v = sanitize_text_field( $value );
-			return genscore_word_count( $v ) >= 12 ? mb_substr( $v, 0, 900 ) : null;
+			return genscore_word_count( $v ) >= 20 ? mb_substr( $v, 0, 900 ) : null; // Under 20 words the review keeps flagging it.
 		case 'canon':
 			$v = esc_url_raw( trim( $value ), array( 'http', 'https' ) );
 			$h = wp_parse_url( home_url( '/' ), PHP_URL_HOST );
@@ -730,8 +748,18 @@ function genscore_fix_row( $kind, $id ) {
 	$value  = 'has' === $status && ! $live ? genscore_fix_current( $kind, $id ) : genscore_fix_propose( $kind, $id );
 	// The answer-first paragraph is the person's to write when the page has
 	// no summary of its own: the row opens empty instead of being shut.
-	if ( 'ready' === $status && null === $value && 'lead' !== $kind ) {
+	if ( 'ready' === $status && null === $value && ! in_array( $kind, array( 'lead', 'desc' ), true ) ) {
 		$status = 'missing';
+	}
+	// A published answer that is too short to count opens with its own text,
+	// so the person can lengthen it instead of starting over.
+	$short = false;
+	if ( 'lead' === $kind && 'ready' === $status && null === $value ) {
+		$now = genscore_fix_get( $id, 'lead' );
+		if ( '' !== $now ) {
+			$value = $now;
+			$short = true;
+		}
 	}
 	$path = 0 === $id ? '/' : (string) wp_parse_url( get_permalink( $id ), PHP_URL_PATH );
 	return array(
@@ -744,6 +772,7 @@ function genscore_fix_row( $kind, $id ) {
 		'note'   => 'missing' === $status ? genscore_fix_missing_note( $kind, $id ) : '',
 		'value'  => null === $value ? '' : (string) $value,
 		'live'   => $live,
+		'short'  => $short,
 	);
 }
 
@@ -787,12 +816,6 @@ function genscore_ajax_fix_list() {
 	$counts = array( 'all' => 0 );
 	foreach ( $types as $t ) {
 		$by[ $t ] = genscore_fix_query( $t, $q );
-		if ( in_array( $kind, array( 'lead', 'fresh' ), true ) ) {
-			// The posts page prints no content of its own; the shop takes a
-			// lead (under its title) but no updated date.
-			$keep     = 'lead' === $kind ? genscore_shop_page_id() : 0;
-			$by[ $t ] = array_values( array_filter( $by[ $t ], function ( $id ) use ( $keep ) { return $id === $keep || ! genscore_is_listing_page( $id ); } ) );
-		}
 		$counts[ $t ] = count( $by[ $t ] );
 	}
 	$home = genscore_fix_has_home_row( $kind, $q );

@@ -518,7 +518,7 @@
   /* Which pages each fix can be published on: a fix found only on pages it
      cannot reach (product data on the shop listing, a date on a product)
      keeps its «Cómo hacerlo» instead of an «Arreglar» that would open empty. */
-  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product", "shop"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post"], returns: ["product", "shop"], lead: ["page", "post", "product", "shop"] };
+  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product", "shop"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post", "shop"], returns: ["product", "shop"], lead: ["page", "post", "product", "shop"] };
   function pageType(p) { if (p.type === "home") return Number(D.site.frontPage) ? "page" : "home"; return p.id && Number(p.id) === Number(D.site.shopPage) ? "shop" : p.type; }
   function fixKind(id, pages) {
     var k = KIND_OF[String(id).replace(/^shop-/, "")];
@@ -587,6 +587,15 @@
       M.items = reset ? r.data.items : M.items.concat(r.data.items);
       if (M.first) { M.first = false; M.ready.forEach(function (id) { M.sel[id] = true; }); var firstReady = M.items.filter(function (x) { return x.status === "ready"; })[0]; if (M.cur == null && !narrow() && firstReady) M.cur = firstReady.id; }
       M.loading = false; M.err = "";
+      /* Every page already has it: the review that flagged it is older than
+         the fix. Read those pages again so «Arreglar» stops offering it. */
+      if (reset && !M.q && M.type === "all" && !M.more && M.items.length && M.items.every(function (x) { return x.status === "has"; }) && !S.web.running) {
+        var front = Number(D.site.frontPage || 0);
+        var home = false;
+        M.items.forEach(function (x) { delete S.web.scores[x.id]; if (x.id === front || x.id === 0) { delete S.web.scores[0]; home = true; } });
+        M.allDone = true;
+        setTimeout(function () { if (S.target || home) review(false, true); else reviewSite(false); }, 0);
+      }
       drawModal();
     }).catch(function (e) { if (!M) return; M.loading = false; M.err = (e && e.message) || "No se ha podido cargar la lista. Vuelve a intentarlo."; drawModal(); });
   }
@@ -600,7 +609,7 @@
     return "Hecho con los datos de WordPress" + (D.site.woocommerce ? " y WooCommerce" : "") + ". Se guarda en la página y sale en su código.";
   }
   function editor(it) {
-    if (!it) return '<p class="gs-fm-hint">Toca una página para ver su propuesta.</p>';
+    if (!it) return '<p class="gs-fm-hint">' + (M.allDone ? "Ya está en todas tus páginas. Las volvemos a revisar para que deje de salir en la lista." : "Toca una página para ver su propuesta.") + "</p>";
     var head = '<div class="gs-fm-ph"><b>' + esc(it.title) + '</b><a href="' + esc(it.url) + '" target="_blank" rel="noopener">Ver la página</a></div>';
     if (it.status === "has") return head + '<p class="gs-fm-hint">Esta página ya lo tiene y no se toca.</p>' + (it.value && M.kind !== "fresh" && M.kind !== "returns" ? '<pre class="gs-fm-pre">' + esc(it.value) + "</pre>" : "");
     if (it.status === "missing") return head + '<p class="gs-fm-hint gs-warm">' + esc(it.note) + ". Esta página no se publica.</p>";
@@ -622,6 +631,7 @@
     if (M.bad[it.id]) return '<span class="gs-fm-st gs-miss">Revisar</span>';
     if (M.edits[it.id] != null) return '<span class="gs-fm-st gs-ed">Editada</span>';
     if (!it.value) return '<span class="gs-fm-st gs-ed">Escríbelo tú</span>';
+    if (it.short) return '<span class="gs-fm-st gs-miss">Muy corto</span>';
     return '<span class="gs-fm-st gs-ok">Propuesta lista</span>';
   }
   var TYPES = [["all", "Todas"], ["page", "Páginas"], ["post", "Entradas"], ["product", "Productos"]];
@@ -652,13 +662,14 @@
     if (!inp || !M) return;
     var id = M.cur, cnt = root.querySelector(".gs-fm-cnt");
     function upd(first) {
-      if (cnt && cnt.hasAttribute("data-words")) { var w = inp.value.trim() ? inp.value.trim().split(/\s+/).length : 0; cnt.textContent = w + " palabras (mejor entre 20 y 120)"; cnt.classList.toggle("gs-over", w < 12 || w > 120); }
+      if (cnt && cnt.hasAttribute("data-words")) { var w = inp.value.trim() ? inp.value.trim().split(/\s+/).length : 0; cnt.textContent = w + " palabras (mejor entre 20 y 120)"; cnt.classList.toggle("gs-over", w < 20 || w > 120); }
       else if (cnt) { var mx = Number(cnt.getAttribute("data-max")); cnt.textContent = inp.value.length + " / " + mx; cnt.classList.toggle("gs-over", inp.value.length > mx); }
       if (first) return;
       M.edits[id] = inp.value;
       if (M.kind === "ld" || M.kind === "product") { try { var o = JSON.parse(inp.value); if (!o || typeof o !== "object" || !o["@type"]) throw 0; delete M.bad[id]; } catch (e) { M.bad[id] = "El JSON no es válido: revísalo o deshaz el cambio."; } }
       else if (!inp.value.trim()) M.bad[id] = "No puede quedar vacío.";
-      else if (M.kind === "lead" && inp.value.trim().split(/\s+/).length < 12) M.bad[id] = "Escribe al menos 12 palabras.";
+      else if (M.kind === "desc" && (inp.value.trim().length < 50 || inp.value.trim().length > 160)) M.bad[id] = "Déjala entre 50 y 160 caracteres para que cuente.";
+      else if (M.kind === "lead" && inp.value.trim().split(/\s+/).length < 20) M.bad[id] = "Escribe al menos 20 palabras: con menos, la revisión lo sigue marcando.";
       else { delete M.bad[id]; if (!M.sel[id]) { M.sel[id] = true; var cb = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-cb'); if (cb) cb.setAttribute("aria-checked", "true"); drawFoot(); } }
       var row = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-st');
       var it = itemOf(id);
@@ -717,7 +728,7 @@
       var id = Number(b.closest(".gs-fm-it").getAttribute("data-id")); M.sel[id] = !M.sel[id]; b.setAttribute("aria-checked", String(!!M.sel[id]));
       var it0 = itemOf(id);
       /* an empty answer-first row: open it so the person can write it */
-      if (M.sel[id] && it0 && !it0.value && M.edits[id] == null) { M.bad[id] = "Escribe el párrafo antes de publicar."; M.cur = id; drawList(); drawSide(); }
+      if (M.sel[id] && it0 && (!it0.value || it0.short) && M.edits[id] == null) { M.bad[id] = it0.short ? "Amplíalo a 20 palabras o más antes de publicar." : M.kind === "desc" ? "Escribe la descripción antes de publicar." : "Escribe el párrafo antes de publicar."; M.cur = id; drawList(); drawSide(); }
       drawFoot(); return;
     }
     if (b.hasAttribute("data-open")) { var oid = Number(b.getAttribute("data-open")); M.cur = narrow() && M.cur === oid ? null : oid; drawList(); drawSide(); }

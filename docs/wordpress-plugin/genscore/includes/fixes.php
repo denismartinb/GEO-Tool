@@ -502,29 +502,77 @@ function genscore_fix_product_lead() {
 add_action( 'woocommerce_single_product_summary', 'genscore_fix_product_lead', 7 );
 
 /**
- * The answer first on the shop page: under its title, before the products.
+ * When a listing (shop, posts page) last changed: its newest product or post.
+ *
+ * @param int $id Listing page id.
+ * @return int|null Timestamp, or null.
  */
-function genscore_fix_shop_lead_html() {
-	static $done = false;
-	$shop = genscore_shop_page_id();
-	if ( $done || ! $shop || ! function_exists( 'is_shop' ) || ! is_shop() || is_search() || is_paged() ) {
-		return '';
+function genscore_listing_modified( $id ) {
+	$type = $id && genscore_shop_page_id() === $id ? 'product' : ( $id && (int) get_option( 'page_for_posts' ) === $id ? 'post' : '' );
+	if ( '' === $type ) {
+		return null;
 	}
-	$lead = genscore_fix_get( $shop, 'lead' );
-	if ( '' === $lead ) {
-		return '';
-	}
-	$done = true;
-	return '<p class="genscore-lead">' . esc_html( $lead ) . '</p>';
+	$last = get_posts(
+		array(
+			'post_type'      => $type,
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'orderby'        => 'modified',
+			'order'          => 'DESC',
+			'fields'         => 'ids',
+		)
+	);
+	return $last ? (int) get_post_modified_time( 'U', true, $last[0] ) : null;
 }
 
 /**
- * Classic themes: WooCommerce's archive description hook.
+ * What a listing (shop, posts page) prints under its title: the updated date
+ * of its newest item and the answer-first paragraph. Once per request.
+ *
+ * @return string
+ */
+function genscore_listing_top_html() {
+	static $done = false;
+	$id = $done ? null : genscore_fix_current_id();
+	if ( ! $id || is_search() || is_paged() || ! in_array( $id, array( genscore_shop_page_id(), (int) get_option( 'page_for_posts' ) ), true ) ) {
+		return '';
+	}
+	$html = '';
+	$when = genscore_fix_get( $id, 'fresh' ) ? genscore_listing_modified( $id ) : null;
+	if ( $when ) {
+		/* translators: %s: date of the last edit. */
+		$line  = sprintf( __( 'Actualizado el %s', 'genscore' ), wp_date( get_option( 'date_format' ), $when ) );
+		$html .= '<p class="genscore-updated"><time datetime="' . esc_attr( wp_date( 'c', $when ) ) . '">' . esc_html( $line ) . '</time></p>';
+	}
+	$lead = genscore_fix_get( $id, 'lead' );
+	if ( '' !== $lead ) {
+		$html .= '<p class="genscore-lead">' . esc_html( $lead ) . '</p>';
+	}
+	if ( '' !== $html ) {
+		$done = true;
+	}
+	return $html;
+}
+
+/**
+ * Classic themes: WooCommerce's archive description, or the posts loop.
  */
 function genscore_fix_shop_lead() {
-	echo genscore_fix_shop_lead_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped when built.
+	echo genscore_listing_top_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped when built.
 }
 add_action( 'woocommerce_archive_description', 'genscore_fix_shop_lead', 5 );
+
+/**
+ * Classic themes: before the posts of the posts page.
+ *
+ * @param WP_Query $q Query.
+ */
+function genscore_fix_blog_top( $q ) {
+	if ( $q->is_main_query() && is_home() && ! is_front_page() ) {
+		genscore_fix_shop_lead();
+	}
+}
+add_action( 'loop_start', 'genscore_fix_blog_top' );
 
 /**
  * Block themes: right after the archive title block.
@@ -533,6 +581,18 @@ add_action( 'woocommerce_archive_description', 'genscore_fix_shop_lead', 5 );
  * @return string
  */
 function genscore_fix_shop_lead_block( $html ) {
-	return $html . genscore_fix_shop_lead_html();
+	return $html . genscore_listing_top_html();
 }
 add_filter( 'render_block_core/query-title', 'genscore_fix_shop_lead_block' );
+add_filter( 'render_block_core/query', 'genscore_fix_blog_query_block' );
+
+/**
+ * Block themes without an archive title on the posts page: before its list
+ * of posts.
+ *
+ * @param string $html Rendered block.
+ * @return string
+ */
+function genscore_fix_blog_query_block( $html ) {
+	return is_home() && ! is_front_page() ? genscore_listing_top_html() . $html : $html;
+}

@@ -28818,6 +28818,11 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
   - Con Yoast, Rank Math o AIOSEO activos no se imprime nuestro JSON-LD de página (ya pintan su grafo) y la fila dice «Ya lo tiene». Activar o desactivar cualquier plugin vuelve a revisar la web.
   - El control que se acaba de tocar se queda quieto en pantalla al repintar, aunque aparezca o desaparezca una fila encima (el interruptor de llms.txt saltaba unos 100 px).
   - Guardar mientras se revisa la web relanza la revisión al terminar la pasada en curso.
+- **Probando en su web de Wasmer, Denis encontró tres callejones más:**
+  - **Respuesta corta.** Un párrafo de 16 palabras se publicaba, pero la revisión sólo da la mitad por debajo de 20 y lo seguía marcando. Ahora se exigen 20 palabras, y uno ya publicado más corto sale como «Muy corto» con su texto para ampliarlo.
+  - **Descripción de la Tienda y el Blog.** Salían «Sin texto para proponerla». Ahora la propuesta es «Tienda de <sitio>: <descripción corta del sitio>.», con datos escritos en WordPress, o el párrafo de entrada si existe. Si no hay nada, la fila se escribe a mano («Escríbelo tú», de 50 a 160 caracteres).
+  - **Fecha y párrafo en listados.** La Tienda y el Blog llevan «Actualizado el…» con la fecha de su producto o entrada más reciente, y el párrafo de entrada bajo el título (en temas clásicos y de bloques).
+  - **Revisión vieja.** Si «Arreglar» abre una lista donde todas las páginas «Ya lo tienen», la revisión era anterior al arreglo: esas páginas se vuelven a leer y la hoja lo explica. Las notas guardadas por compilaciones anteriores de la 1.0.7 se releen una vez.
 - **Funciona en cualquier WordPress.** Sólo los datos de producto, las devoluciones y la lista de la tienda necesitan WooCommerce.
 - **Sigue sin llamar a genscore.es.** Probado en la instalación propia: Playwright en 1280 y 390 px (publicar, editar, buscar, confirmar, deshacer), salida HTML de portada, página, entrada, ficha y tienda de WooCommerce, Plugin Check con los experimentales sin errores, y `tests/fixes-test.php`.
 

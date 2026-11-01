@@ -240,9 +240,11 @@ add_action( 'deactivated_plugin', 'genscore_forget_all_scores' );
  * they are read again once after an update.
  */
 function genscore_scores_version_check() {
-	if ( GENSCORE_VERSION !== get_option( 'genscore_scores_version' ) ) {
+	// The suffix changes when a build reads pages differently within a version.
+	$rev = GENSCORE_VERSION . '.3';
+	if ( get_option( 'genscore_scores_version' ) !== $rev ) {
 		genscore_forget_all_scores();
-		update_option( 'genscore_scores_version', GENSCORE_VERSION, false );
+		update_option( 'genscore_scores_version', $rev, false );
 	}
 }
 add_action( 'admin_init', 'genscore_scores_version_check' );
