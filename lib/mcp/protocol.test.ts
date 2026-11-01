@@ -70,4 +70,19 @@ describe("MCP protocol (MCP-SERVER-1, log §418)", () => {
     expect(await handleRpc({ jsonrpc: "2.0", id: 3, method: "sampling/createMessage" }, signed, TOOLS)).toMatchObject({ body: { error: { code: -32601 } } });
     expect(await handleRpc({ nope: true }, signed, TOOLS)).toMatchObject({ body: { error: { code: -32600 } } });
   });
+
+  it("speaks ChatGPT's dialect when asked (MCP-CHATGPT-SUBMIT-1, log §430)", async () => {
+    const opts = { oauthScopes: ["openid", "email"], outputSchema: true, authChallenge: 'Bearer resource_metadata="m", error="invalid_token", error_description="x"' };
+    const d = describeTool(TOOLS[1], opts);
+    expect(d.outputSchema).toEqual({ type: "object", additionalProperties: true });
+    expect(d.securitySchemes).toEqual([{ type: "noauth" }, { type: "oauth2", scopes: ["openid", "email"] }]);
+    run.mockClear();
+    const gated = await handleRpc(call("cuenta"), anon, TOOLS, opts);
+    expect(gated).toMatchObject({ kind: "reply", body: { result: { isError: true, _meta: { "mcp/www_authenticate": [opts.authChallenge] } } } });
+    expect(run).not.toHaveBeenCalled();
+    run.mockResolvedValueOnce({ text: "sin objeto" } as never);
+    const bare = await handleRpc(call("publica", { url: "x" }), anon, TOOLS, opts);
+    expect(bare).toMatchObject({ body: { result: { structuredContent: {} } } });
+    expect(describeTool(TOOLS[1]).outputSchema).toBeUndefined();
+  });
 });

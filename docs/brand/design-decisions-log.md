@@ -28932,3 +28932,71 @@ cuenta, y se quedaron fuera de la Fase 1.
 
 **Pendiente.** La ficha del directorio de Claude se envió sin esta
 herramienta en la descripción; Denis puede editarla después.
+
+## §429 · GSC-INVITE-FIT-1: «Conectar con Google» cabe en su tarjeta (2026-11-01)
+
+**Qué pasó.** Denis vio en Visión general que el botón negro «Conectar con
+Google» de la tarjeta «Auditoría SEO y Google» se salía por la derecha de su
+panel. La invitación (§313) vive en la segunda columna de la tarjeta, de unos
+230 px en un portátil, y el botón (una línea sin cortes, 16 px de relleno a cada
+lado dentro de un panel con 18 px más) no cabía. Al lado, «Comercio agéntico»
+quedaba con mucho hueco porque la tarjeta SEO era mucho más alta.
+
+**Qué se decidió.**
+
+- Sin conexión, la mitad de Google lleva la clase `gx-inv`. En escritorio la
+  columna de Google gana algo de ancho (1 : 1,3 frente a Salud SEO, cuyas cifras
+  son cortas), el panel se aprieta (14 px de relleno, título de 15,5 px) y el
+  botón ocupa el ancho del panel, con «Acceso de solo lectura» centrado debajo.
+- Si la tarjeta es estrecha (cuerpo de 440 px o menos, tablet con las dos
+  tarjetas al lado), Salud SEO va arriba y la invitación debajo, a todo el ancho.
+  El cuerpo de las dos tarjetas del par es el contenedor (`ovcard`), porque una
+  consulta de contenedor no puede cambiar su propio contenedor.
+- El botón nunca es más ancho que su panel (`max-width:100%`, en `google.css`):
+  si un texto no cabe, se corta dentro del botón en vez de salirse.
+- Mismo texto, mismo enlace y misma puerta (`disconnected`/`reconnect`): sólo
+  cambia el aspecto. La tarjeta SEO queda más baja, así que «Comercio agéntico»
+  tiene menos hueco; el que queda es el de la fila de recomendación al pie de
+  las dos tarjetas (Denis, 2026-10-27).
+
+**Pendiente o sabido.** Comprobado con las tarjetas reales renderizadas y las
+hojas de la consola a 1280, 860 y 390 px. No retira ningún camino de
+recuperación.
+
+## §430 · MCP-CHATGPT-SUBMIT-1: el conector, listo para el directorio de ChatGPT (2026-11-01)
+
+**Qué pasó.** Denis pidió preparar la subida a ChatGPT igual que la del
+directorio de Claude (§418, §425). Desde 2026 OpenAI publica las apps como
+«plugins»: un ZIP con `plugin.json` (ficha, casos de prueba, notas) y
+`mcp.json` (servidor y autenticación), verificación del dominio y revisión con
+cuenta de prueba, cinco casos positivos, tres negativos y un vídeo.
+
+**Qué se decidió.**
+
+- Sólo cambia el perfil `chatgpt` (`/api/mcp/chatgpt`); Claude sigue como se
+  aprobó. `protocolOptionsFor` (`lib/mcp/http.ts`) le pide al protocolo tres
+  cosas que la documentación de OpenAI exige o pide:
+  - Una herramienta de cuenta llamada sin token responde un error de
+    herramienta con `_meta["mcp/www_authenticate"]` (con `error` y
+    `error_description`), no un 401 HTTP. Es lo que abre el inicio de sesión
+    por herramienta en una app mixta. Un token caducado sigue siendo 401.
+  - `securitySchemes` con `scopes: ["openid", "email"]`, y la metadata del
+    recurso de ChatGPT los declara en `scopes_supported`. OpenAI necesita un
+    email verificado por UserInfo para las restricciones de dominio de los
+    espacios de trabajo; el servidor OAuth de Supabase ya publica ambos.
+  - Toda herramienta declara `outputSchema` (abierto a propósito: un esquema
+    exacto que se desfase fallaría la validación) y toda respuesta lleva
+    `structuredContent`, aunque sea `{}`.
+- `/.well-known/openai-apps-challenge` devuelve en texto plano el token de
+  `OPENAI_APPS_CHALLENGE_TOKEN`; sin la variable, 404.
+- El paquete vive en `docs/chatgpt-plugin/package/` (ficha en inglés con
+  traducción `es-ES`, categoría «Data & Analytics», `commerce: false`, sin
+  credenciales). Los pasos para Denis, en `docs/chatgpt-plugin/README.md`.
+
+**Pendiente.** Lo hace Denis: verificar la organización en OpenAI, poner
+`OPENAI_APPS_CHALLENGE_TOKEN`, subir el ZIP, grabar el vídeo de los casos de
+prueba con la cuenta soporte@genscore.es y enviar. El esquema genérico de
+Agent Plugins no admite `extensions` dentro de un servidor de `mcp.json`,
+aunque la documentación de OpenAI lo pone ahí; si la comprobación del portal
+lo rechaza, se sube sin ese bloque y la autenticación se configura en
+**Connect**. Las capturas de la ficha son opcionales y salen del chat real.
