@@ -28683,7 +28683,7 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
 
-## §418 · ADMIN-EMAIL-1: pestaña «CRM» con la captación de email (2026-11-01)
+## §420 · ADMIN-EMAIL-1: pestaña «CRM» con la captación de email (2026-11-01)
 
 **Qué se decidió.** La consola de operador gana una pestaña «CRM» (`/admin/crm`, junto a «Panel» en el menú) con la sección «Captación de email» y el mismo selector de periodo que el Panel de negocio. La maqueta la ponía dentro del panel; al ver el PR, Denis pidió llevarla a su propia pestaña «CRM». Denis la pidió («cuántos contactos tenemos, evolución, cuántos unsubscribes, media de emails enviados por contacto por semana») y aprobó la maqueta el 2026-11-01 («Perfecto»), guardada en `docs/design-reference/admin-email-1/`. Las cifras de la maqueta son de ejemplo.
 

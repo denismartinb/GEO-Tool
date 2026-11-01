@@ -255,7 +255,7 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   del asunto del resumen semanal; el resto es «Avisos y cuenta». Una clave de
   Resend sólo de envío (`restricted_api_key`) se dice tal cual. Si un día los
   eventos de Resend se guardan en una tabla, alimentan esta misma pestaña, no
-  una tarjeta nueva (`docs/brand/design-decisions-log.md` §418).
+  una tarjeta nueva (`docs/brand/design-decisions-log.md` §420).
 - **`/admin/seo-diagnostico` sólo llama a DataForSEO y no escribe nada.**
   Cada paso es una llamada en vivo con `requireOperator()` como primera línea
   de la acción. Valida el dominio (`normalizeStudyDomain`), los temas

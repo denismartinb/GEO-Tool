@@ -5,7 +5,7 @@ https://claude.ai/artifact/Ei7HyuzW9VKoVzneFCdoCa, copiada aquí tal cual
 (`maqueta.html`, con vista de escritorio y de móvil a 390 px).
 
 **Las cifras de la maqueta son de ejemplo.** La página real lee Supabase y
-Resend (log §418).
+Resend (log §420).
 
 ## Diferencias con la maqueta, y por qué
 
