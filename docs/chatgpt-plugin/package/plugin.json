@@ -1,0 +1,99 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "genscore",
+  "version": "1.0.0",
+  "description": "GenScore measures how a brand appears in AI answers and how its website is set up for Google and for shopping agents. Read-only.",
+  "author": {
+    "name": "GenScore",
+    "email": "soporte@genscore.es",
+    "url": "https://www.genscore.es"
+  },
+  "homepage": "https://www.genscore.es/docs/mcp",
+  "license": "Proprietary",
+  "keywords": ["seo", "geo", "ai visibility", "search console", "llms.txt", "agentic commerce", "marketing"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "GenScore",
+        "shortDescription": "Your brand in AI and Google",
+        "longDescription": "GenScore measures how a brand appears in the answers of ChatGPT, Gemini, Claude and Perplexity, and how its website is set up for Google and for shopping agents. This plugin brings that data into the chat. Every tool is read-only.\n\nWithout an account:\n- Review any public web page: whether AI engines can read it, how it is set up for Google and, if it sells something, whether a shopping agent understands it. You get an SEO + AI score, what to fix first and the code to paste.\n- Search GenScore's guides, studies and glossary (in Spanish) on how to appear in AI answers and in Google: generative engine optimization, sources AI cites, llms.txt, AI bots and agentic commerce. Every answer links to the guide it comes from.\n\nWith your GenScore account connected:\n- List the domains you follow and see each one's latest scan: GEO score, how often each AI engine names the brand and which other brands it names.\n- See the recommended actions in order, with their first step.\n- See your prompts by topic and what each engine did with each one in the latest scan.\n- See competitors, the technical audits (website for AI, website for Google, agentic commerce) and, if you connected it in GenScore, your Google Search Console data for the last 28 days.\n\nAnswers are in Spanish. Each one links to the matching GenScore screen so you can keep working there.",
+        "developerName": "GenScore",
+        "category": "Data & Analytics",
+        "capabilities": ["Read"],
+        "websiteURL": "https://www.genscore.es",
+        "supportURL": "https://www.genscore.es/docs/mcp",
+        "privacyPolicyURL": "https://www.genscore.es/privacidad",
+        "termsOfServiceURL": "https://www.genscore.es/terminos",
+        "defaultPrompt": [
+          "Review https://www.genscore.es for AI engines and Google",
+          "What do GenScore's guides say about llms.txt?",
+          "How does my domain show up in AI answers?"
+        ],
+        "brandColor": "#2563EB",
+        "composerIcon": "./assets/composer-icon.png",
+        "logo": "./assets/logo.png"
+      },
+      "review": {
+        "commerce": false,
+        "commerce_description": "This plugin does not sell products or process payments. It only reads GenScore data and public web pages.",
+        "test_cases": {
+          "positive": [
+            {
+              "description": "Page review without an account: the public tool fetches the page and returns its SEO + AI score and fixes.",
+              "prompt": "Revisa https://www.genscore.es para la IA y para Google",
+              "tools_triggered": ["revisar_pagina"],
+              "expected_behavior": "Returns the SEO + AI score of the page, whether AI bots can read it, the Google checks and the top fixes with code to paste, in Spanish, with a link to GenScore. No sign-in is requested."
+            },
+            {
+              "description": "Guide search without an account: answers only with what GenScore's own guides say, with links.",
+              "prompt": "¿Qué dicen las guías de GenScore sobre llms.txt?",
+              "tools_triggered": ["buscar_guias"],
+              "expected_behavior": "Returns short excerpts from GenScore guides about llms.txt, each with the title and link of its guide. No sign-in is requested."
+            },
+            {
+              "description": "Signed-in overview of a domain: lists the account's domains, then summarizes the latest scan of the demo domain.",
+              "prompt": "¿Cómo está genscore.es en la IA?",
+              "tools_triggered": ["listar_dominios", "ver_dominio"],
+              "expected_behavior": "The first time, ChatGPT asks to connect the GenScore account (test account below). Then it shows the GEO score of genscore.es, how often ChatGPT, Gemini, Claude and Perplexity name it, the most named brands and technical health, with a link to the GenScore console."
+            },
+            {
+              "description": "Signed-in recommendations for the demo domain.",
+              "prompt": "Dame las recomendaciones de genscore.es",
+              "tools_triggered": ["ver_recomendaciones"],
+              "expected_behavior": "Lists the recommended actions for genscore.es in order, each with its first step, and links to the Recommendations screen."
+            },
+            {
+              "description": "Signed-in prompts for the demo domain, with each engine's result.",
+              "prompt": "¿Qué prompts tengo en genscore.es y qué hizo cada motor con ellos?",
+              "tools_triggered": ["ver_prompts"],
+              "expected_behavior": "Lists the active prompts of genscore.es by topic and, for each one, whether each engine named the brand (and its position), named only other brands or named none in the latest scan. Prompts not yet scanned are shown as pending."
+            }
+          ],
+          "negative": [
+            {
+              "description": "Out of scope: a request unrelated to brand visibility, websites or GenScore must not call any tool.",
+              "prompt": "Escríbeme un poema sobre el otoño"
+            },
+            {
+              "description": "Cross-account read: the signed-in test account asks for a domain it does not follow. The tool returns no data for it; it only says the domain is not in the account and links to add it in GenScore.",
+              "prompt": "Dame las recomendaciones de amazon.es"
+            },
+            {
+              "description": "Write request: every tool is read-only, so nothing is added or changed from the chat. At most the answer points to the GenScore console, where the person decides.",
+              "prompt": "Añade nike.com como competidor de genscore.es"
+            }
+          ]
+        }
+      },
+      "publication": {
+        "release_notes": "1.0.0: first public version. Ten read-only tools: page review and guide search without an account; domains, domain summary, recommendations, competitors, prompts, audits and Google Search Console data with a GenScore account (OAuth).",
+        "translations": {
+          "es-ES": {
+            "subtitle": "Tu marca en la IA y en Google",
+            "description": "GenScore mide cómo aparece una marca en las respuestas de ChatGPT, Gemini, Claude y Perplexity, y cómo está su web para Google y para los agentes de compra. Esta app trae esos datos al chat. Todas las herramientas son de solo lectura.\n\nSin cuenta:\n- Revisa cualquier página web pública: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA, qué arreglar primero y el código para pegar.\n- Busca en las guías, estudios y glosario de GenScore qué funciona para aparecer en las respuestas de la IA y en Google: GEO, fuentes que cita la IA, llms.txt, bots de IA y comercio agéntico. Cada respuesta enlaza a su guía.\n\nCon tu cuenta de GenScore conectada:\n- Lista tus dominios y mira el último escaneo de cada uno: Puntuación GEO, en qué parte de las respuestas te nombra cada motor y qué otras marcas nombra.\n- Mira las acciones recomendadas, en orden y con su primer paso.\n- Mira tus prompts por tema y qué hizo cada motor con cada uno en el último escaneo.\n- Mira tus competidores, las auditorías técnicas (web para la IA, web para Google y comercio agéntico) y, si lo conectaste en GenScore, tus datos de Google Search Console de los últimos 28 días.\n\nCada respuesta enlaza a su pantalla de GenScore para seguir allí."
+          }
+        }
+      }
+    }
+  }
+}

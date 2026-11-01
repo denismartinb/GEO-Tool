@@ -66,15 +66,37 @@ export function negotiateVersion(requested: unknown): string {
     : SUPPORTED_PROTOCOL_VERSIONS[0];
 }
 
+/**
+ * How one endpoint speaks to its client. Claude's endpoint uses the defaults;
+ * ChatGPT's (MCP-CHATGPT-SUBMIT-1, log §430) asks for OpenAI's extras:
+ * - `oauthScopes`: the scopes its OAuth scheme declares (`openid`, `email`, so
+ *   ChatGPT's workspace domain restrictions can read a verified email).
+ * - `outputSchema`: every tool declares one, and every answer then carries a
+ *   `structuredContent` object, even an empty one, so it always validates.
+ * - `authChallenge`: an account tool called without a token answers a tool
+ *   error carrying `_meta["mcp/www_authenticate"]` instead of an HTTP 401.
+ *   That is what opens ChatGPT's per-tool sign-in in a mixed-auth app.
+ */
+export type ProtocolOptions = {
+  oauthScopes?: readonly string[];
+  outputSchema?: boolean;
+  authChallenge?: string;
+};
+
+/** Loose on purpose: each tool's object differs, and an exact schema that drifts would fail validation. */
+export const OPEN_OUTPUT_SCHEMA = { type: "object", additionalProperties: true } as const;
+
 /** What tools/list publishes for one tool, with the annotations both directories require. */
-export function describeTool<C>(t: ToolDef<C>): Record<string, unknown> {
+export function describeTool<C>(t: ToolDef<C>, opts: ProtocolOptions = {}): Record<string, unknown> {
   // OpenAI Apps: which tools need a linked account (mixed auth).
-  const securitySchemes = t.access === "account" ? [{ type: "oauth2" }] : [{ type: "noauth" }, { type: "oauth2" }];
+  const oauth = opts.oauthScopes?.length ? { type: "oauth2", scopes: [...opts.oauthScopes] } : { type: "oauth2" };
+  const securitySchemes = t.access === "account" ? [oauth] : [{ type: "noauth" }, oauth];
   return {
     name: t.name,
     title: t.title,
     description: t.description,
     inputSchema: t.inputSchema,
+    ...(opts.outputSchema ? { outputSchema: OPEN_OUTPUT_SCHEMA } : {}),
     annotations: {
       title: t.title,
       readOnlyHint: true,
@@ -90,7 +112,8 @@ export function describeTool<C>(t: ToolDef<C>): Record<string, unknown> {
 export async function handleRpc<C>(
   raw: unknown,
   ctx: C & { signedIn: boolean },
-  tools: ReadonlyArray<ToolDef<C>>
+  tools: ReadonlyArray<ToolDef<C>>,
+  opts: ProtocolOptions = {}
 ): Promise<RpcOutcome> {
   const parsed = RequestSchema.safeParse(raw);
   if (!parsed.success) {
@@ -113,25 +136,34 @@ export async function handleRpc<C>(
     case "ping":
       return result(id, {});
     case "tools/list":
-      return result(id, { tools: tools.map(describeTool) });
+      return result(id, { tools: tools.map((t) => describeTool(t, opts)) });
     case "tools/call": {
       const name = typeof params?.name === "string" ? params.name : "";
       const tool = tools.find((t) => t.name === name);
       if (!tool) return error(id, -32602, `Unknown tool: ${name.slice(0, 64)}`);
-      if (tool.access === "account" && !ctx.signedIn) return { kind: "needs_auth" };
+      if (tool.access === "account" && !ctx.signedIn) {
+        if (!opts.authChallenge) return { kind: "needs_auth" };
+        return result(id, {
+          content: [{ type: "text", text: "Para ver estos datos, conecta tu cuenta de GenScore." }],
+          ...(opts.outputSchema ? { structuredContent: { state: "sign_in_required" } } : {}),
+          isError: true,
+          _meta: { "mcp/www_authenticate": [opts.authChallenge] }
+        });
+      }
       const args = tool.args.safeParse(params?.arguments ?? {});
+      const empty = opts.outputSchema ? { structuredContent: {} } : {};
       if (!args.success) {
-        return result(id, { content: [{ type: "text", text: "Faltan datos o no son válidos para esta herramienta." }], isError: true });
+        return result(id, { content: [{ type: "text", text: "Faltan datos o no son válidos para esta herramienta." }], ...empty, isError: true });
       }
       try {
         const answer = await tool.run(args.data, ctx);
         return result(id, {
           content: [{ type: "text", text: answer.text }],
-          ...(answer.structured ? { structuredContent: answer.structured } : {}),
+          ...(answer.structured ? { structuredContent: answer.structured } : empty),
           ...(answer.isError ? { isError: true } : {})
         });
       } catch {
-        return result(id, { content: [{ type: "text", text: "GenScore no ha podido responder ahora. Inténtalo de nuevo en un momento." }], isError: true });
+        return result(id, { content: [{ type: "text", text: "GenScore no ha podido responder ahora. Inténtalo de nuevo en un momento." }], ...empty, isError: true });
       }
     }
     case "resources/list":

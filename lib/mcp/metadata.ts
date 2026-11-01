@@ -22,10 +22,19 @@ export function resourcePathFor(wellKnownSuffix: string): string {
   return wellKnownSuffix.replace(/\/+$/, "") === "/api/mcp/chatgpt" ? "/api/mcp/chatgpt" : "/api/mcp";
 }
 
+/**
+ * Scopes ChatGPT asks for (MCP-CHATGPT-SUBMIT-1, log §430). OpenAI needs a
+ * verified email from the UserInfo endpoint for workspace domain
+ * restrictions; Supabase's OAuth server publishes `openid` and `email`.
+ */
+export const MCP_OAUTH_SCOPES = ["openid", "email"] as const;
+
 export function protectedResourceMetadata(origin: string, supabaseUrl: string, resourcePath = "/api/mcp") {
   return {
     resource: `${origin}${resourcePath}`,
     authorization_servers: [supabaseIssuer(supabaseUrl)],
+    // Only ChatGPT's resource: Claude's connector was approved without scopes.
+    ...(resourcePath === "/api/mcp/chatgpt" ? { scopes_supported: [...MCP_OAUTH_SCOPES] } : {}),
     bearer_methods_supported: ["header"],
     resource_name: "GenScore",
     resource_documentation: `${origin}/docs/mcp`,
