@@ -18,7 +18,7 @@ import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
 import { SITE_URL } from "@/lib/seo/metadata";
 
 /**
- * FEATURE-EMAILS-1 (log §415). One email per feature a customer is not using
+ * FEATURE-EMAILS-1 (log §417). One email per feature a customer is not using
  * yet: Search Console, the Chrome extension and the agentic audit. Same
  * header, footer and blocks as every other GenScore email (`wrap`), texts
  * approved by the founder on 2026-11-01. Commercial: they need the signed
@@ -26,9 +26,6 @@ import { SITE_URL } from "@/lib/seo/metadata";
  */
 
 const H = (value: string): string => escapeHtml(value);
-
-export const FEATURE_KINDS = ["feature_gsc", "feature_extension", "feature_agentic"] as const;
-export type FeatureEmailKind = (typeof FEATURE_KINDS)[number];
 
 function url(path: string, campaign: string): string {
   const separator = path.includes("?") ? "&" : "?";

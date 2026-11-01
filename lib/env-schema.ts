@@ -128,6 +128,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   CRON_DIGEST_ENABLED: "interruptor del resumen por correo; apagado por defecto",
   LIFECYCLE_EMAILS_ENABLED:
     "interruptor de los correos de la prueba (primer escaneo listo, D1, D3, D5); apagado por defecto, y sin EMAIL_UNSUBSCRIBE_SECRET no se envían aunque esté encendido",
+  FEATURE_EMAILS_ENABLED:
+    "interruptor de los correos de funcionalidades (Search Console, auditoría agéntica, extensión); apagado por defecto y sólo vale con LIFECYCLE_EMAILS_ENABLED",
   AUTO_WEB_AUDIT_ENABLED: "interruptor de la auditoría automática; encendido por defecto",
   OPS_ALERT_EMAIL: "los avisos de operador no se envían a nadie",
   RESEND_API_KEY: "no se envía ningún correo transaccional",
@@ -217,6 +219,7 @@ export const envSchema = z.object({
   CRON_SCANS_ENABLED: optInFlag,
   CRON_DIGEST_ENABLED: optInFlag,
   LIFECYCLE_EMAILS_ENABLED: optInFlag,
+  FEATURE_EMAILS_ENABLED: optInFlag,
   AUTO_WEB_AUDIT_ENABLED: optOutFlag,
 
   OPS_ALERT_EMAIL: optionalText,

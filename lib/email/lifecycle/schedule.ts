@@ -24,6 +24,8 @@
  * (the `email_sends` row stops the second).
  */
 
+import { FEATURE_KINDS } from "@/lib/email/lifecycle/feature-schedule";
+
 export const TRIAL_KINDS = ["trial_d1", "trial_d3", "trial_d5"] as const;
 export type TrialEmailKind = (typeof TRIAL_KINDS)[number];
 
@@ -162,8 +164,17 @@ export type TrialEndKind = (typeof TRIAL_END_KINDS)[number];
 export const WINBACK_KINDS = ["winback_d3", "winback_d10"] as const;
 export type WinbackKind = (typeof WINBACK_KINDS)[number];
 
-/** Every kind that counts towards "one lifecycle email every 48 h". */
-export const LIFECYCLE_SPACED_KINDS: readonly string[] = [...TRIAL_KINDS, ...TRIAL_END_KINDS, ...WINBACK_KINDS];
+/**
+ * Every kind that counts towards "one lifecycle email every 48 h". The
+ * feature emails (FEATURE-EMAILS-1, log §417) count too, so a win-back never
+ * lands the day after one of them.
+ */
+export const LIFECYCLE_SPACED_KINDS: readonly string[] = [
+  ...TRIAL_KINDS,
+  ...TRIAL_END_KINDS,
+  ...WINBACK_KINDS,
+  ...FEATURE_KINDS
+];
 
 /** A trial that ended longer ago than this, unannounced, gets the «tardía» version. */
 export const TRIAL_END_LATE_AFTER_HOURS = 48;

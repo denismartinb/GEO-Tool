@@ -84,7 +84,10 @@ describe("Search Console connect invite is gated on the real state", () => {
   it("only the invite and «Posición en Google» build the consent link", () => {
     const allowed = new Set([
       "app/dashboard/projects/[projectId]/_components/gsc-connect-invite.tsx",
-      "app/dashboard/projects/[projectId]/search-console/page.tsx"
+      "app/dashboard/projects/[projectId]/search-console/page.tsx",
+      // FEATURE-EMAILS-1 (log §417): the Search Console email; its pass reads
+      // the real connections first and skips anyone already connected.
+      "lib/email/lifecycle/feature-templates.ts"
     ]);
     const builders = SOURCES.filter((f) => /["'`]\/api\/search-console\/connect\?/.test(readFileSync(f, "utf8"))).map(
       (f) => relative(ROOT, f)
