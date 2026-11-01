@@ -53,6 +53,15 @@ describe("MCP answers (MCP-SERVER-1, log §418)", () => {
     expect(t).toContain("https://www.genscore.es/dashboard/projects/p1");
   });
 
+  it("lists the questions a plan step refers to, capped", () => {
+    const qs = Array.from({ length: 8 }, (_, i) => `¿Pregunta ${i + 1}?`);
+    const t = formatRecommendations({ ...P, plan: [{ ...P.plan[0], questions: qs }] }, L).text;
+    expect(t).toContain("- «¿Pregunta 1?»");
+    expect(t).toContain("- «¿Pregunta 6?»");
+    expect(t).not.toContain("¿Pregunta 7?");
+    expect(t).toContain("y otras en la consola");
+  });
+
   it("never sells: no price, no upgrade call, no checkout (ChatGPT's directory forbids it)", () => {
     for (const a of ALL) {
       expect(a.text).not.toMatch(/€|\bPasar a Pro\b|mejora tu plan|sube de plan|checkout|stripe/i);

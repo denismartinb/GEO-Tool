@@ -28753,6 +28753,20 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
 
+## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
+
+**Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.
+
+- **Dominio que no es de la cuenta:** enlace al alta ya relleno, `/dashboard/projects/new?dominio=<dominio>`. La página lo pasa al asistente (`initialDomain`) sólo si `isWellFormedDomain` lo acepta; no guarda nada. Deja de devolverse como error.
+- **`listar_dominios`:** cada dominio con su enlace, y «añadir otro» sólo si cabe en el plan; con la cuenta llena lo dice, sin enlace.
+- **`revisar_pagina` con cuenta, en una web ajena:** «Medirla como dominio tuyo» (si cabe) y «Seguirla como competidor de X» (`?nuevo=`, EXT-AUDITS-1, §406) para hasta tres dominios. Sin cuenta, dice qué añade conectarla y nunca enlaza a la consola.
+- **`ver_recomendaciones`:** cada paso enseña sus preguntas (como mucho seis). Salen de `prompt_text_snapshot` en `report-data.ts` (`ReportPlanItem.questions`), así que extensión, informe y MCP leen las mismas.
+- **`ver_posicion_google`:** sin conectar o caducado, enlace directo al permiso de Google; conectado sin propiedad, a «Posición en Google»; sin configurar, lo dice sin botón.
+- **Enlaces también en `structuredContent`:** algunos clientes (Claude Code) enseñan el objeto estructurado y no el texto.
+- **Batería:** `lib/mcp/scenarios.test.ts`, un escenario por estado (cuenta vacía, con hueco, llena, dominio ajeno, sin escaneo, plan vacío, sin auditoría, cada estado de Search Console, revisión con y sin cuenta, anti-bots), que exige el enlace o la frase del siguiente paso, sin rayas largas ni texto de venta.
+
+**Pendiente.** Repetir la batería en producción tras el merge con el propio conector. No retira ningún camino de recuperación.
+
 ## §423 · MAIL-BY-KIND-1: tasas de cada tipo de correo en la pestaña CRM (2026-11-01)
 
 **Qué se decidió.** La tabla «Correos enviados por tipo» de `/admin/crm` deja de quedarse en los cinco grupos. Bajo cada grupo sale una fila por cada tipo de correo etiquetado (`kind`, §419) visto en el periodo, ordenadas de más a menos enviados: por ejemplo «Día 3» frente a «Último día», o «Search Console» frente a «Extensión de Chrome». Lo pidió Denis tras comprobar que el webhook guardaba bien los eventos. Las columnas de abiertos y clics enseñan también su porcentaje sobre los entregados, en el grupo y en cada tipo.

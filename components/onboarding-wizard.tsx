@@ -277,6 +277,8 @@ type OnboardingWizardProps = {
   promptCap?: number;
   /** Engines the owner's plan scans with, in scan order. */
   engines?: readonly LLMScanProvider[];
+  /** `?dominio=` already checked with `isWellFormedDomain` (MCP-SERVER-1, log §418): the chat links here prefilled. Nothing is saved until the person goes on. */
+  initialDomain?: string;
   suggestAction: (input: {
     domain: string;
     country: string;
@@ -296,12 +298,13 @@ export function OnboardingWizard({
   isFirst = false,
   promptCap = DEFAULT_PROMPT_CAP,
   engines = DEFAULT_ENGINE_PROVIDERS,
+  initialDomain = "",
   suggestAction,
   generateMorePromptsAction,
   createAction,
 }: OnboardingWizardProps) {
   const [step, setStep] = useState(0);
-  const [domain, setDomain] = useState("");
+  const [domain, setDomain] = useState(initialDomain);
   const [country, setCountry] = useState("ES");
   const [language, setLanguage] = useState("es");
   const [competitors, setCompetitors] = useState<Competitor[]>([]);
