@@ -988,3 +988,47 @@ button.pghint{cursor:pointer}button.pghint:hover{border-color:var(--blue)}
 .shopln .tx b{color:var(--ink);font-weight:600;overflow-wrap:anywhere}
 .shopln .btn{flex:none}
 .shopln.none>svg{color:var(--ink-3)}
+
+/* EXT-AUDITS-1 (log §403): the domain's audits */
+.aud{margin-top:24px}
+.aud .ey .cnt{font-family:var(--font);text-transform:none;letter-spacing:0;font-size:12px;color:var(--ink-3);order:3;margin-left:8px}
+.auc{border:1px solid var(--rule);border-radius:18px;background:var(--surface);margin-top:10px;overflow:hidden}
+.auc.solo{padding:4px 14px 14px}
+.auh{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;cursor:pointer}
+.auh:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;border-radius:18px}
+.auh .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.auh .nm b{font-size:14px;font-weight:600;color:var(--ink)}
+.auh .nm small{font-size:12px;color:var(--ink-3)}
+.auh .st{font-size:12px;color:var(--ink-2);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.auh .chev{width:14px;height:14px;color:var(--ink-3);transition:transform var(--d2) var(--out)}
+.auc.open .auh .chev{transform:rotate(180deg)}
+.aur{position:relative;width:40px;height:40px;flex:none;display:grid;place-items:center}
+.aur svg{position:absolute;inset:0;width:40px;height:40px}
+.aur .t{fill:none;stroke:var(--rule);stroke-width:3.5}
+.aur .v{fill:none;stroke:var(--pos);stroke-width:3.5;stroke-linecap:round}
+.aur.mid .v{stroke:var(--mid)} .aur.bad .v{stroke:var(--warm)}
+.aur b{font-size:13px;font-weight:600;color:var(--ink)}
+.aub{display:grid;grid-template-rows:0fr;transition:grid-template-rows var(--d3) var(--out)}
+.auc.open .aub{grid-template-rows:1fr}
+.aub>div{overflow:hidden}
+.aubi{padding:0 14px 14px;border-top:1px solid var(--rule)}
+.auc.solo .aubi{padding:0;border-top:0}
+.aui{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.aui .d{width:8px;height:8px;border-radius:50%;margin-top:6px;flex:none;background:var(--ink-4)}
+.aui .d.hi{background:var(--warm)} .aui .d.md{background:var(--mid)}
+.aui .tx{flex:1;min-width:0;font-size:13px;color:var(--ink);line-height:1.4;display:flex;flex-direction:column;gap:2px}
+.aui .tx small{font-size:12px;color:var(--ink-3)}
+.aui .pt{font-size:14px;font-weight:600;color:var(--blue-ink);white-space:nowrap}
+.aui .pt small{font-size:11px;font-weight:500;margin-left:2px;color:var(--ink-3)}
+.aug{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.aug span{flex:1} .aug b{color:var(--pos);font-weight:600}
+.aus{margin-top:12px;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-family:var(--mono)}
+.aun{margin:10px 2px 0;font-size:12px;color:var(--ink-3);line-height:1.45}
+.aud .acts{margin-top:12px}
+.aut{margin-top:10px;border:1px solid var(--rule);border-radius:18px;padding:6px 14px 16px;background:linear-gradient(180deg,var(--surface),var(--surface-2))}
+.aul{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--rule)}
+.aul .i{color:var(--ink-3)}
+.aul .nm{flex:1;display:flex;flex-direction:column;gap:1px}
+.aul .nm b{font-size:13.5px;font-weight:600;color:var(--ink)} .aul .nm small{font-size:12px;color:var(--ink-3)}
+.aul .gh{width:52px;height:8px;border-radius:4px;background:var(--surface-3)}
+.aut p{font-size:13px;color:var(--ink-2);line-height:1.45;margin:12px 0}

@@ -26,6 +26,6 @@ export async function GET() {
     trialEndsAt: account.trialEndsAt,
     domainCap: account.domainCap,
     activeDomain: resolveSelectedProject(projects, null, remembered)?.domain ?? null,
-    domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name }))
+    domains: projects.map((p) => ({ id: p.id, domain: p.domain, brand: p.brand?.trim() || p.name }))
   });
 }

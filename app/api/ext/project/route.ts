@@ -3,7 +3,10 @@ import { overviewAgenticCard } from "@/lib/agentic-audit/visibility-model";
 import { resolveSystemPlanId } from "@/lib/billing";
 import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
 import { extJson, listExtProjects, readExtAccount } from "@/lib/ext/account";
-import { buildExtProjectSummary } from "@/lib/ext/summary";
+import { buildExtAudits } from "@/lib/ext/audits";
+import { buildExtProjectSummary, isOwnUrl } from "@/lib/ext/summary";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { loadReportInput } from "@/lib/report/report-data";
 import { buildReportModel } from "@/lib/report/report-model";
 import { getEngineMeta } from "@/lib/scan/engine-meta";
@@ -37,24 +40,41 @@ export async function GET(request: Request) {
     .sort((a, b) => b.domain.length - a.domain.length)[0];
   if (!project) return extJson({ error: "not_found" }, 404);
 
-  const [input, audits] = await Promise.all([
+  const [input, audits, { data: snapshotRow }] = await Promise.all([
     loadReportInput({ supabase: account.supabase, project }),
-    readAgenticAudits(account.supabase, project.id, account.user.id)
+    readAgenticAudits(account.supabase, project.id, account.user.id),
+    // The same latest technical snapshot «Tu web para la IA» and «Tu web para Google» read.
+    account.supabase
+      .from("web_audit_snapshots")
+      .select("pages, bots, created_at")
+      .eq("project_id", project.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
   ]);
   const model = input ? buildReportModel(input) : null;
   const planId = account.profile ? resolveSystemPlanId(account.profile) : null;
   const agentic = overviewAgenticCard(planId, audits.available ? (audits.latest?.result ?? null) : null);
 
-  return extJson(
-    buildExtProjectSummary({
+  const askedUrl = url && url.length <= 2048 ? url : null;
+  const snap = snapshotRow as { pages: PageAuditEntry[] | null; bots: BotAccessReport | null; created_at: string } | null;
+  return extJson({
+    ...buildExtProjectSummary({
       project: { domain: project.domain, brand: project.brand?.trim() || project.name },
       model,
       answers: input?.answers ?? [],
       agentic,
-      url: url && url.length <= 2048 ? url : null,
+      url: askedUrl,
       engineLabel: (provider) => getEngineMeta(provider).label
+    }),
+    // EXT-AUDITS-1 (log §403): what the console already audited, read-only.
+    audits: buildExtAudits({
+      snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
+      // Same gate as the agentic card: hidden for a plan or a review the console would not show.
+      agentic: agentic.kind === "card" && audits.available ? (audits.latest?.result ?? null) : null,
+      ownUrl: askedUrl && isOwnUrl(askedUrl, project.domain) ? askedUrl : null
     })
-  );
+  });
 }
 
 function normalizeHost(raw: string | null): string | null {

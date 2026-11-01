@@ -18,6 +18,7 @@ import { getLLMScanProviders } from "@/lib/scan/providers";
 import { Motion } from "@/components/ins/kit/motion";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
 import { InsCompetitors } from "@/components/ins/competitors/ins-competitors";
+import { readCompetitorPrefill } from "@/lib/competitors/prefill";
 import type { RankEntry } from "@/lib/ins/competitors-model";
 import type { TrendPoint, TrendSeries } from "@/components/ui/position-trend-chart";
 
@@ -127,11 +128,16 @@ export async function generateMetadata({
 }
 
 export default async function CompetitorsPage({
-  params
+  params,
+  searchParams
 }: {
   params: Promise<{ projectId: string }>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { projectId } = await params;
+  // EXT-AUDITS-1 (log §403): the Chrome extension opens this screen with the
+  // site to add already written; the person still confirms it in the sheet.
+  const prefill = readCompetitorPrefill((await searchParams) ?? {});
   const project = await requireActiveProject(projectId);
   const { supabase } = await requireUser();
 
@@ -607,6 +613,7 @@ export default async function CompetitorsPage({
             heat={heat}
             terrain={topicComparison.slice(0, 8)}
             gap={promptGapSummary}
+            prefill={prefill}
             manage={{
               active: activeCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain })),
               inactive: inactiveCompetitors.map((c) => ({ id: c.id, name: c.name, domain: c.domain }))

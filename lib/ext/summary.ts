@@ -130,7 +130,7 @@ export function buildExtProjectSummary({
   };
 }
 
-function isOwnUrl(url: string, domain: string): boolean {
+export function isOwnUrl(url: string, domain: string): boolean {
   try {
     return isSameOrSubdomain(new URL(url).hostname, domain);
   } catch {

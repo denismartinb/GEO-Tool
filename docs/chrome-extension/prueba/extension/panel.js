@@ -229,7 +229,7 @@
   const arcSvg = () => { let g = ""; for (let i = 0; i <= 40; i++) { const a = ((200 + i * 3.5) * Math.PI) / 180, r0 = i % 5 ? 140 : 128; g += `<line x1="${(150 + r0 * Math.cos(a)).toFixed(1)}" y1="${(150 + r0 * Math.sin(a)).toFixed(1)}" x2="${(150 + 148 * Math.cos(a)).toFixed(1)}" y2="${(150 + 148 * Math.sin(a)).toFixed(1)}"/>`; } return `<svg class="arc" viewBox="0 0 300 300" aria-hidden="true">${g}</svg>`; };
   const ctaNoAcct = (host) => `<div class="deep">${arcSvg()}<div class="egs">${EK.map((e) => `<span>${lg(e, 15)}</span>`).join("")}</div><p class="q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>${esc(host)}</b> y a sus competidores?</p><button class="btn onink" data-act="open" data-to="/signup" data-c="analizar-dominio">Analizar dominio${ic("arrowr", "sm")}</button><p class="ft">7 días de Pro gratis. Sin tarjeta.</p></div>`;
   const ctaOther = (host) => S.real
-    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Analizar como dominio<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span></button></div>`
+    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres añadir <b>${esc(host)}</b> a tus dominios?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Añadir a mis dominios${S.real.domainCap < 100 ? `<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span>` : ""}</button>${projPath("") ? `<button class="btn lnd" data-act="open" data-to="${esc(projPath("competitors") + "?nuevo=" + encodeURIComponent(host) + (S.rec && S.rec.facts && S.rec.facts.siteName ? "&nombre=" + encodeURIComponent(S.rec.facts.siteName) : ""))}" data-c="competidor">Añadir como competidor de ${esc(curDom())}</button>` : ""}</div>`
     : `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="sample-only" data-what="analizar un dominio nuevo">Analizar como dominio<span class="dim"> · ${1 + SAMPLE.extraDomains.length} de ${SAMPLE.cap}</span></button><button class="btn lnd" data-act="sample-only" data-what="añadir un competidor">Añadir como competidor de ${esc(S.sample.domain)}</button><button class="lnk2" data-act="use-domain">Probar esta web como mi dominio de ejemplo</button></div>`;
 
   /* ---------------- header and foot ---------------- */
@@ -267,6 +267,54 @@
       <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real || !GS_SAMPLE ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
+
+  /* ---------------- EXT-AUDITS-1 (log §403): the domain's audits, read-only ----------------
+     What the console already audited (technical snapshot and agentic review),
+     from /api/ext/project. Nothing here launches a review or calls an LLM. */
+  const projPath = (sub) => { const d = S.real && S.real.domains.find((x) => x.domain === curDom()); return d && d.id ? `/dashboard/projects/${d.id}${sub ? "/" + sub : ""}` : null; };
+  const AUD_META = {
+    geo: { name: "Auditoría GEO", q: "¿Te puede citar la IA?", more: "Ver la Auditoría GEO", to: "web-audit?bloque=geo" },
+    seo: { name: "Auditoría SEO", q: "¿Te encuentra Google?", more: "Ver la Auditoría SEO", to: "web-audit?bloque=seo" },
+    agent: { name: "Auditoría agéntica", q: "¿Puede un agente comprar en tu web?", more: "Ver la visibilidad en agentes", to: "agentic-visibility" }
+  };
+  const audOf = () => { if (isSample()) return null; const p = S.proj[curDom()]; return p && typeof p === "object" && p.audits ? p.audits : null; };
+  const shortDate = (iso) => { try { return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", ""); } catch (e) { return ""; } };
+  const fmtPts = (n) => (n == null ? "" : n < 1 ? "<1" : "+" + String(Math.round(n * 10) / 10).replace(".", ","));
+  const ring = (v, cls) => { const C = 2 * Math.PI * 16, f = Math.max(0, Math.min(100, v)) / 100; return `<span class="aur ${cls}"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" class="t"/><circle cx="20" cy="20" r="16" class="v" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 20 20)"/></svg><b class="num">${v}</b></span>`; };
+  const SEV = { critical: "hi", warning: "md", improvement: "lo", agentic: "md" };
+  function audBlocks() {
+    const au = audOf();
+    if (!au || !au.blocks.length) return "";
+    const open = S.aud ?? "geo";
+    const card = (b) => {
+      const m = AUD_META[b.key], [cls, st] = band(b.score), on = open === b.key, to = projPath(m.to);
+      const rows = b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}${x.points == null ? "" : `<small>${b.key === "agent" ? "Agentes" : "pt"}</small>`}</span></div>`).join("");
+      const body = `${rows || `<div class="calm">${ic("checkc")}<span>Nada que arreglar en este bloque.</span></div>`}${b.projected ? `<div class="aug">${ic("trend", "sm")}<span>Si arreglas ${b.issues.length === 1 ? "esto" : b.issues.length === 2 ? "estos dos" : "estos tres"}</span><b class="num">${b.score} → ${b.projected}</b></div>` : ""}${to ? `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(to)}" data-c="aud-${b.key}">${m.more}${ic("arrowr", "sm")}</button></div>` : ""}`;
+      return `<div class="auc ${on ? "open" : ""}"><button class="auh" data-aud="${b.key}" aria-expanded="${on}">${ring(b.score, cls)}<span class="nm"><b>${m.name}</b><small>${m.q}</small></span><span class="st">${SH()}${st}</span>${ic("chevd", "chev")}</button><div class="aub"><div>${on ? `<div class="aubi">${body}</div>` : ""}</div></div></div>`;
+    };
+    return `<div class="aud"><div class="ey rule">Auditorías del dominio${au.auditedAt ? `<span class="cnt">Revisadas el ${esc(shortDate(au.auditedAt))}</span>` : ""}</div>${au.blocks.map(card).join("")}<p class="aun">Lo que ya revisó GenScore en tu dominio. La extensión solo lo lee: no lanza revisiones ni usa IA.</p></div>`;
+  }
+  function pageAudit() {
+    const au = audOf();
+    if (!au || !au.page) return "";
+    if (au.page.state === "not_audited") return `<div class="aud"><div class="ey rule">En tu auditoría</div><div class="calm">${svgGs(16)}<span>Esta página no está entre las que revisa la consola. Lo de arriba sale solo de tu navegador.</span></div></div>`;
+    const pa = au.page, proj = S.proj[curDom()];
+    const cited = [...new Set(((proj && proj.citingPrompts) || []).flatMap((q) => q.engines))];
+    const yn = (v, y, n) => (v == null ? "" : `<span class="w ${v ? "yes" : "no"}">${ic(v ? "check" : "x")}${v ? y : n}</span>`);
+    const facts = [
+      au.auditedAt ? `<div class="kv"><span>Revisada desde el servidor</span><span class="w">${esc(shortDate(au.auditedAt))}</span></div>` : "",
+      pa.aiBotsAllowed == null ? "" : `<div class="kv"><span>ChatGPT, Gemini, Claude y Perplexity</span>${yn(pa.aiBotsAllowed, "Pueden entrar", "Alguno bloqueado")}</div>`,
+      pa.indexable == null ? "" : `<div class="kv"><span>Google puede indexarla</span>${yn(pa.indexable, "Sí", "No, tiene noindex")}</div>`,
+      cited.length ? `<div class="kv"><span>La citan en sus respuestas</span><span class="w yes">${ic("check")}${esc(cited.join(" y ").replace(/ y (?=.* y )/g, ", "))}</span></div>` : ""
+    ].join("");
+    const rows = pa.issues.map((x) => `<div class="aui"><span class="d md"></span><span class="tx">${esc(x.label)}<small>${AUD_META[x.block].name}</small></span></div>`).join("");
+    const to = projPath("web-audit?bloque=" + (pa.issues[0] ? pa.issues[0].block : "geo"));
+    return `<div class="aud"><div class="ey rule">En tu auditoría</div><div class="auc open solo"><div class="aubi">${facts}${rows ? `<div class="aus">Problemas de esta página según GenScore</div>${rows}` : `<div class="calm">${ic("checkc")}<span>GenScore no ve problemas técnicos en esta página.</span></div>`}${to ? `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(to)}" data-c="aud-page">Ver en la Auditoría técnica${ic("arrowr", "sm")}</button></div>` : ""}</div></div></div>`;
+  }
+  function audTeaser() {
+    const it = [["geo", "Auditoría GEO"], ["seo", "Auditoría SEO"], ["agent", "Auditoría agéntica"]];
+    return `<div class="aud"><div class="ey rule">Con tu cuenta</div><div class="aut">${it.map(([k, n]) => `<div class="aul">${ic("shield", "sm")}<span class="nm"><b>${n}</b><small>${AUD_META[k].q}</small></span><span class="gh"></span></div>`).join("")}<p>Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.</p><button class="btn ink" data-act="open" data-to="/login" data-c="aud-login">Identifícate en GenScore${ic("arrowr", "sm")}</button></div></div>`;
+  }
   /* ---------------- views ---------------- */
   /* The paused panel (Denis, 2026-10-30, version B of the artifact): a small
      replica of Chrome's toolbar where a cursor presses the GenScore icon, since
@@ -301,7 +349,7 @@
   }
   function viewDom() {
     const D = A();
-    return `<div class="px">${headAcct()}${pageHint()}<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span></div>${heroDom()}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${foot(null)}</div>`;
+    return `<div class="px">${headAcct()}${pageHint()}<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span></div>${heroDom()}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${audBlocks()}${foot(null)}</div>`;
   }
   function viewReading() {
     return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
@@ -318,12 +366,14 @@
     const fixesCtx = "page:" + f.url;
     if (rel !== "none" && S.tab === "dom") {
       const D = A();
-      h += `<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span>${EJx()}</div>${heroDom()}${rel === "own" && covers(f.host, curDom()) ? alertHtml(sc) : ""}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}`;
+      h += `<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span>${EJx()}</div>${heroDom()}${rel === "own" && covers(f.host, curDom()) ? alertHtml(sc) : ""}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${audBlocks()}`;
       return h + foot(null) + "</div>";
     }
     if (rel === "none") h += `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`;
     h += heroPage(sc, rel) + alertHtml(sc);
     h += deck(sc.fixes, fixesCtx, "Nada que arreglar en esta página. La pueden leer los cuatro motores y Google.");
+    if (rel === "own" && covers(f.host, curDom())) h += pageAudit();
+    if (rel === "none") h += audTeaser();
     if (rel === "none") h += ctaNoAcct(f.host);
     if (rel === "other") h += ctaOther(f.host);
     return h + foot(f) + "</div>";
@@ -496,8 +546,9 @@
 
   /* ---------------- events ---------------- */
   document.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo]");
+    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo],[data-aud]");
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
+    if (t.dataset.aud) { S.aud = (S.aud ?? "geo") === t.dataset.aud ? "none" : t.dataset.aud; draw(); return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
     if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }
     if (t.dataset.pick != null) {
@@ -526,7 +577,7 @@
     } else if (a === "open-page") {
       Env.open(t.dataset.url);
     } else if (a === "open") {
-      Env.open(`${SITE}${t.dataset.to}?${utm(t.dataset.c || "panel")}`);
+      Env.open(`${SITE}${t.dataset.to}${t.dataset.to.includes("?") ? "&" : "?"}${utm(t.dataset.c || "panel")}`);
     } else if (a === "sample") {
       S.sample.on = !S.sample.on;
       if (S.sample.on && !S.sample.domain) S.sample.domain = S.rec && S.rec.facts ? S.rec.facts.host : "tu-dominio-ejemplo.es";

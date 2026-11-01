@@ -28458,3 +28458,39 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 **Por qué.** En vodafone.es el llms.txt propuesto tenía una sola línea. En carrefour.es, una tienda, no salía nada sobre agentes: su portada no tiene datos de producto, y su catálogo solo se ve por sitemaps de índice que no se leían. Además, las primeras capturas de Denis eran de la versión 1.0.0 de la tienda, que todavía no buscaba la tienda.
 
 **Pendiente o sin verificar.** Desde aquí no se pudo ver la portada real de Carrefour ni la de Vodafone, porque nuestro navegador recibe el desafío antibots. El caso de los sitemaps se probó con una tienda de prueba en local: índice, hijo de productos y ficha `/R-521/p`. La comprobación real la hace Denis cargando la extensión sin empaquetar. Si una tienda solo publica sitemaps `.gz`, seguirá saliendo «no detecta tu tienda».
+
+## §403 · EXT-AUDITS-1: la extensión 1.1.0 enseña las auditorías GEO, SEO y agéntica del dominio (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el artefacto el 2026-11-01 («Me gusta») y puso el texto. Con la sesión iniciada, la extensión enseña tres cosas nuevas.
+
+- **«Auditorías del dominio»**, en la visión general del dominio. Son tres tarjetas plegables y solo se abre una a la vez:
+  - Auditoría GEO, «¿Te puede citar la IA?»;
+  - Auditoría SEO, «¿Te encuentra Google?»;
+  - Auditoría agéntica, «¿Puede un agente comprar en tu web?», el texto de Denis.
+
+  Cada tarjeta lleva su nota, los tres problemas que más puntos dan con dónde fallan y sus puntos, y un botón a su pantalla de la consola.
+- **«En tu auditoría»**, al revisar una página del dominio seleccionado. Dice:
+  - si la vio el servidor;
+  - si el robots.txt deja entrar a los cuatro motores;
+  - si Google puede indexarla;
+  - qué motores la citan (de los prompts del último escaneo);
+  - sus problemas técnicos, con el bloque al que pertenecen.
+
+  Si la consola no revisa esa página, lo dice.
+- **Sin sesión**, una tarjeta «Con tu cuenta» con las tres auditorías bloqueadas y sin cifras. Lleva el texto de Denis («Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.») y «Identifícate en GenScore».
+
+**En una web ajena**, también a petición de Denis:
+- La pregunta pasa a «¿Quieres añadir X a tus dominios?», con «Añadir a mis dominios». El «N de M» solo sale con un tope real (menos de 100).
+- Hay un segundo botón, «Añadir como competidor de <dominio seleccionado>». Abre Competidores con `?nuevo=<dominio>&nombre=<og:site_name>`. La hoja de gestión sale abierta con el formulario relleno, y no se guarda nada hasta pulsar «Añadir», con el mismo `createCompetitorAction` y sus comprobaciones. `readCompetitorPrefill` (`lib/competitors/prefill.ts`) ignora lo que no sea un dominio bien formado.
+
+**Cómo se calcula, sin rehacer cifras.** `/api/ext/project` añade `audits`, que construye `lib/ext/audits.ts` (puro). Cada cifra sale de su dueño:
+- Bloques GEO y SEO: `buildAuditBlock` sobre `buildTechnicalIssuesReport`, con la última instantánea de `web_audit_snapshots`, la misma que lee la Auditoría técnica. Los nombres salen de `ISSUE_CHECK_META` y el alcance, de `issueScopeLabel`.
+- «Si arreglas estos tres → N» solo sale cuando esos tres son todos los problemas con puntos del bloque. Los puntos de bloque no se suman, así que una suma parcial sería una cifra inventada.
+- Bloque agéntico: la nota de la revisión, `firstSteps` y `scoreIfChecksPass`, igual que «Visibilidad en agentes». Sigue la misma puerta que la tarjeta de Visión general: Starter, una revisión sin nada que vender o una sin nota no enseñan el bloque.
+- Los problemas de la página salen de `pageCheckStates` de esa entrada, sin puntos (los puntos por página no son los del bloque).
+
+`/api/ext/context` devuelve también el `id` de cada proyecto, para que los botones lleven a la pantalla de ese dominio. Es el propio proyecto de la cuenta, leído con el cliente del usuario.
+
+**Regla que se mantiene.** La extensión sigue siendo de solo lectura: no lanza auditorías, no llama a ningún LLM y no escribe en la cuenta. Sin migración.
+
+**Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.
