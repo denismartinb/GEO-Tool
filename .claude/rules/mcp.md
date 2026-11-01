@@ -73,3 +73,13 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
 - **`ver_prompts` junta la lista activa con la matriz del último escaneo**
   (`buildExtPrompts`). Un prompt sin escanear es «pendiente», nunca «no te
   nombra»; la mención no se recalcula, sale de `buildReportModel`.
+
+## Directorio de ChatGPT (MCP-CHATGPT-SUBMIT-1, log §429)
+
+- **Lo que pide OpenAI va sólo en el perfil `chatgpt`** (`protocolOptionsFor`):
+  inicio de sesión por herramienta con `_meta["mcp/www_authenticate"]`,
+  scopes `openid` y `email`, y `outputSchema` con `structuredContent` siempre
+  presente. El perfil `claude` no cambia sin volver a probarlo en Claude.
+- **El paquete de `docs/chatgpt-plugin/package/` no lleva credenciales**: la
+  cuenta de revisión se escribe en el portal. Una herramienta nueva entra en su
+  descripción y, si cambia la ficha, se sube un ZIP nuevo.

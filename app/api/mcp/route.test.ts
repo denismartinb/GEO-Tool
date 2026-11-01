@@ -68,6 +68,22 @@ describe("POST /api/mcp", () => {
     expect(listExtProjects).not.toHaveBeenCalled();
   });
 
+  it("asks ChatGPT to sign in from the tool itself, with scopes and output schemas (log §429)", async () => {
+    const res = await post(call("listar_dominios"), undefined, POST_CHATGPT, "/api/mcp/chatgpt");
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.result.isError).toBe(true);
+    expect(body.result._meta["mcp/www_authenticate"][0]).toBe(
+      'Bearer resource_metadata="https://www.genscore.es/.well-known/oauth-protected-resource/api/mcp/chatgpt", error="invalid_token", error_description="Conecta tu cuenta de GenScore para continuar"'
+    );
+    expect(listExtProjects).not.toHaveBeenCalled();
+    const list = await (await post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, undefined, POST_CHATGPT, "/api/mcp/chatgpt")).json();
+    for (const t of list.result.tools) {
+      expect(t.outputSchema).toBeTruthy();
+      expect(t.securitySchemes.at(-1)).toEqual({ type: "oauth2", scopes: ["openid", "email"] });
+    }
+  });
+
   it("answers an invalid or expired token with 401 invalid_token, before reading anything", async () => {
     accountFromBearer.mockResolvedValue({ kind: "invalid" });
     const res = await post({ jsonrpc: "2.0", id: 3, method: "tools/list" }, "Bearer xxxxxxxxxxxxxxxxxxxxxxxx");
@@ -120,8 +136,7 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
 
   it("points ChatGPT's sign-in at its own resource metadata", async () => {
     const res = await post(call("listar_dominios"), undefined, POST_CHATGPT, "/api/mcp/chatgpt");
-    expect(res.status).toBe(401);
-    expect(res.headers.get("www-authenticate")).toContain("/.well-known/oauth-protected-resource/api/mcp/chatgpt");
+    expect((await res.json()).result._meta["mcp/www_authenticate"][0]).toContain("/.well-known/oauth-protected-resource/api/mcp/chatgpt");
   });
 
   it("describes que_es_genscore without prices on ChatGPT", async () => {
