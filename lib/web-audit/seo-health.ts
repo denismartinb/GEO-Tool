@@ -335,7 +335,7 @@ export function buildSeoExtras(pages: PageAuditEntry[], bots: BotAccessReport | 
 
     const local = measured.some((p) => p.check.seo!.localBusiness);
     if (local) passing.push({ check: "local_business_missing", passedCount: 1, applicableCount: 1, scopeText: "Declarado" });
-    else issues.push(issue("local_business_missing", "improvement", [], 1, 1, "No declarado"));
+    else issues.push(issue("local_business_missing", "improvement", [], 1, 1, "Ninguna página lo declara"));
   }
 
   // Site-level checks, replicated once per analyzed page.

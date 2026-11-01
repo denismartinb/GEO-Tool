@@ -25,6 +25,7 @@ import {
 import { rankMatchingProperties } from "@/lib/search-console/property";
 import {
   buildDeviceViews,
+  buildPageStats,
   buildPageViews,
   findCannibalization,
   findCtrOpportunities,
@@ -35,6 +36,7 @@ import {
   type Cannibalization,
   type CtrOpportunity,
   type DeviceView,
+  type GooglePageStats,
   type PageView,
   type QueryPageRow,
   type QuestionQuery,
@@ -247,6 +249,8 @@ export type SearchConsoleInsights = {
   /** The page Google shows most for each query. */
   pageByQuery: Record<string, string>;
   pages: PageView[];
+  /** Every page Google returned, for the audit's affected pages (log §414). */
+  pageStats: GooglePageStats;
   ctr: CtrOpportunity[];
   questions: QuestionQuery[];
   devices: DeviceView[];
@@ -378,6 +382,12 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
     position: r.position
   }));
   const pageByQuery = topPageByQuery(qp);
+  const pageList = pageRows.map((r) => ({
+    page: r.keys[0] ?? "",
+    clicks: r.clicks,
+    impressions: r.impressions,
+    position: r.position
+  }));
   return {
     kind: "ready",
     property,
@@ -385,16 +395,8 @@ export const loadSearchConsoleScreen = cache(async function loadSearchConsoleScr
     insights: {
       tiers: positionTiers(report.queries),
       pageByQuery: Object.fromEntries(pageByQuery),
-      pages: buildPageViews(
-        pageRows.map((r) => ({
-          page: r.keys[0] ?? "",
-          clicks: r.clicks,
-          impressions: r.impressions,
-          position: r.position
-        })),
-        qp,
-        auditedPages
-      ),
+      pages: buildPageViews(pageList, qp, auditedPages),
+      pageStats: buildPageStats(pageList, qp, PAGE_ROW_LIMIT),
       ctr: findCtrOpportunities(report.queries, pageByQuery),
       questions: findQuestionQueries(report.queries, trackedPrompts),
       devices: buildDeviceViews(

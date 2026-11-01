@@ -4,6 +4,7 @@ import type { IssueSeverity } from "@/lib/web-audit/issues";
 import { ISSUE_SEVERITY_LABELS } from "@/lib/web-audit/issue-labels";
 import type { LlmsTxtResult, PublishStep } from "@/lib/web-audit/llms-txt";
 import type { SitemapStep } from "@/lib/web-audit/sitemap";
+import { affectedPagesWithGoogle, type GooglePageStats } from "@/lib/search-console/insights";
 import { IssueRow, PassingRow } from "./issue-rows";
 
 /**
@@ -18,13 +19,17 @@ export function BlockIssuesCard({
   view,
   llmsTxtFile,
   llmsPublishSteps,
-  sitemapFixSteps
+  sitemapFixSteps,
+  google
 }: {
   view: AuditBlockView;
   llmsTxtFile: LlmsTxtResult | null;
   llmsPublishSteps: PublishStep[];
   sitemapFixSteps: SitemapStep[];
+  /** Search Console's pages, SEO block only (GSC-AUDIT-PAGES-1, log §414). */
+  google?: GooglePageStats | null;
 }) {
+  const withGoogle = view.key === "seo" ? google ?? null : null;
   const counts = SEVERITIES.map((severity) => ({
     severity,
     count: view.issues.filter((i) => i.issue.severity === severity).length
@@ -60,6 +65,11 @@ export function BlockIssuesCard({
                     : null
                 }
                 sitemap={issue.check === "sitemap_missing" ? { steps: sitemapFixSteps } : null}
+                google={
+                  withGoogle && issue.affectedLabels.length > 0 && issue.check !== "bot_blocked"
+                    ? affectedPagesWithGoogle(issue.affectedLabels, withGoogle)
+                    : null
+                }
               />
             ))}
           </div>

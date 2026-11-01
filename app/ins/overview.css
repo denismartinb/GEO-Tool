@@ -239,3 +239,74 @@
 .ins .ag:not(.src) .rows .tb.warm{--c:var(--warm)}
 .ins .ag-up p{font-size:14.5px;color:var(--ink-2);max-width:460px;margin-top:6px}
 .ins .ag-up .btn{margin-top:14px}
+
+/* ---- GSC-OVERVIEW-RICH-1 (log §414): the Google half reads like the Chrome panel ---- */
+.ins .gx,.ins .gx .gx-a,.ins .gx .gx-b,.ins .gx .gx-ch,.ins .gx .gx-near{min-width:0}
+.ins .gx .gx-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px}
+.ins .gx .gx-dp{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:99px}
+.ins .gx .gx-dp.up{color:var(--pos);background:var(--pos-tint)}
+.ins .gx .gx-dp.dn{color:var(--warm);background:var(--warm-tint)}
+.ins .gx .gx-sp{display:block;width:100%;height:26px;margin-top:8px;color:var(--blue)}
+.ins .gx .gx-mv{font-style:normal;font-size:12px;font-weight:600;margin-left:4px}
+.ins .gx .gx-mv.up{color:var(--pos)}
+.ins .gx .gx-mv.dn{color:var(--warm)}
+.ins .gx .trio{gap:22px}
+.ins .gx .trio>span{white-space:nowrap}
+/* Subheaders like the kit's `.rh`: title left, hint right, one line. */
+.ins .gx .gx-sh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-2)}
+.ins .gx .gx-sh b{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ins .gx .gx-sh span{font-size:12px;color:var(--ink-3);white-space:nowrap;flex:none}
+/* The chart: a stretched SVG for the line, HTML for every label, so text
+   keeps its size whatever the card's width. */
+.ins .gx .gx-ch{margin-top:18px}
+.ins .gx .gx-plot{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;margin-top:14px}
+.ins .gx .gx-yl{position:relative;font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right;min-width:16px}
+.ins .gx .gx-yl span{position:absolute;right:0;transform:translateY(-50%);line-height:1}
+.ins .gx .gx-box{position:relative;height:96px;margin-right:36px}
+.ins .gx .gx-box svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ins .gx .gx-pt,.ins .gx .gx-end{position:absolute;border-radius:50%;background:var(--blue);transform:translate(-50%,-50%)}
+.ins .gx .gx-pt{width:4px;height:4px}
+.ins .gx .gx-end{width:8px;height:8px;box-shadow:0 0 0 2px var(--surface)}
+.ins .gx .gx-ev{position:absolute;left:100%;margin-left:8px;transform:translateY(-50%);font-size:12px;font-weight:650;color:var(--ink);line-height:1}
+.ins .gx .gx-xl{grid-column:2;display:flex;justify-content:space-between;margin:8px 36px 0 0;font-size:10.5px;color:var(--ink-3)}
+.ins .gx .gx-near{margin-top:18px}
+.ins .gx .gx-q{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--rule-2);font-size:13px}
+.ins .gx .gx-q .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.ins .gx .gx-q .pp{flex:none;min-width:42px;text-align:center;font-size:12px;font-weight:600;color:var(--blue-ink);background:var(--blue-tint);border-radius:99px;padding:2px 8px}
+.ins .gx .gx-near p{margin:10px 0 0;font-size:12px;line-height:1.45;color:var(--ink-3)}
+/* Desktop (Denis 2026-11-01): the chart and «Casi en la página 1» go in a row
+   under both halves, so the card is shorter and Salud SEO leaves no gap.
+   Every track is minmax(0,…) so a long query can never push past the card. */
+@media (min-width:761px){
+ .ins .seo3.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr);container-type:inline-size}
+ .ins .seo3.two>.gx{display:contents}
+ .ins .seo3.two .gx-a{padding:4px 0 6px 22px}
+ .ins .seo3.two .gx-b{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:18px;padding-top:18px;border-top:1px solid var(--rule)}
+ .ins .seo3.two .gx-b>:only-child{grid-column:1/-1}
+ .ins .seo3.two .gx-b .gx-ch,.ins .seo3.two .gx-b .gx-near{margin-top:0}
+}
+/* A narrow card: chart and list one above the other. */
+@container (max-width:540px){
+ .ins .seo3.two .gx-b{grid-template-columns:minmax(0,1fr);gap:22px}
+}
+/* The speed line is a sentence, not a row of flex items: the gap put a space
+   before the comma («1,5 s , buena»). */
+.ins .seo3 .note.sp{display:block}
+/* Connected but no property chosen (or none covers the domain). */
+.ins .gx-pick .gx-pt1{margin:12px 0 0;font-size:14px;line-height:1.45;color:var(--ink);font-weight:550}
+.ins .gx-pick .gx-pt2{margin:8px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.ins .gx-pick .btn{margin-top:14px}
+/* With Google data the SEO card is the richer one (Denis, 2026-11-01: «que no
+   ocupe tanto»). On desktop both cards take the full row: Comercio agéntico
+   becomes a short strip (ring, the four components in two columns, its
+   recommendation on the right) and the SEO card below gets the width to put
+   its chart and list side by side. No gap left in either card. */
+@media (min-width:1000px){
+ .ins .ov-pair:has(.gx){grid-template-columns:minmax(0,1fr)}
+ .ins .ov-pair:has(.gx)>.ov-agc>.card-b:not(.ag-up){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);gap:28px;align-items:center}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src){grid-template-columns:96px minmax(0,1fr);gap:24px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) svg.tring{width:96px;height:96px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) .rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) .rows>div{grid-template-columns:100px minmax(48px,1fr) 42px}
+ .ins .ov-pair:has(.gx)>.ov-agc .fx-w{margin:0;padding:0}
+}

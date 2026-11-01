@@ -112,14 +112,29 @@
 .ins .sc-au .sa-ch h3{font:600 17px var(--font);letter-spacing:-.01em;color:var(--ink)}
 .ins .sc-au .sa-pts{background:none;color:var(--pos);font-weight:650;font-size:14px;padding:0}
 .ins .sc-au .sa-pts-0{background:none;color:var(--ink-3);font-weight:500}
-.ins .sc-au .sa-sevpill{background:none;color:var(--ink-3);padding:0;font-weight:500}
-.ins .sc-au .sa-sevpill::after{content:" ·"}
+/* Issue rows (log §414, Denis 2026-11-01: «no se entiende y se pega»): the
+   title alone on the first line; the second line starts with the severity and
+   its dot, then the scope and the tags, each with room around it. */
+.ins .sc-au .sa-iss.wa-details>summary{padding:14px 2px 14px 0;gap:14px;align-items:center}
+.ins .sc-au .sa-iss.wa-details>summary::before{content:none}
+.ins .sc-au .sa-iss-t{gap:6px}
+.ins .sc-au .sa-iss-top{gap:8px}
+.ins .sc-au .sa-iss-top b{font:600 14.5px/1.3 var(--font);letter-spacing:-.005em}
+.ins .sc-au .sa-iss-sub{gap:6px 14px;font-size:12.5px;line-height:1.4}
+.ins .sc-au .sa-iss-scope{color:var(--ink-2)}
+.ins .sc-au .sa-sevpill{display:inline-flex;align-items:center;gap:6px;background:none;padding:0;border-radius:0;font-size:12.5px;font-weight:600}
+.ins .sc-au .sa-sevpill::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--ink-4)}
+.ins .sc-au .sa-sevpill-critical{color:var(--warm)}
+.ins .sc-au .sa-sevpill-critical::before{background:var(--warm)}
+.ins .sc-au .sa-sevpill-warning{color:var(--warm)}
+.ins .sc-au .sa-sevpill-warning::before{background:none;border:2px solid var(--warm);width:6px;height:6px}
+.ins .sc-au .sa-sevpill-improvement{color:var(--ink-2)}
+.ins .sc-au .sa-who{gap:6px}
+.ins .sc-au .sa-tag{font:600 10.5px var(--font);letter-spacing:.04em;padding:2px 7px;border-radius:99px}
 .ins .sc-au .sa-tag-g,.ins .sc-au .sa-tag-ia{background:var(--surface-2);color:var(--ink-3)}
 .ins .sc-au .sa-new{background:var(--blue-tint);color:var(--blue-ink)}
 .ins .sc-au .sa-counts{display:none}
-.ins .sc-au .sa-iss.wa-details>summary::before{width:9px;height:9px;top:50%;margin-top:-4.5px;bottom:auto;border-radius:50%;left:0}
-.ins .sc-au .sa-iss[data-sev="warning"]>summary::before{background:none;border:2px solid var(--warm)}
-.ins .sc-au .sa-iss[data-sev="improvement"]>summary::before{background:var(--ink-4)}
+.ins .sc-au .sa-pts-0{font-size:12.5px}
 .ins .sc-au .sa-iss-in h4{font-family:var(--font);letter-spacing:.12em;color:var(--ink-3)}
 @media (max-width:760px){
  .ins .sc-au .sa-screen .card{padding:16px}
@@ -158,3 +173,15 @@
 /* Móvil / Escritorio de la velocidad: `.ins button{padding:0}` ganaba a `.sa-seg button` */
 .ins .sa-seg{gap:4px;padding:4px;border-radius:12px}
 .ins .sa-seg button{padding:6px 14px;border-radius:9px;font-size:12.5px;font-weight:600}
+
+/* ---- GSC-AUDIT-PAGES-1 (log §414): Google per affected page of an SEO issue ---- */
+.ins .gx-tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:var(--blue-ink);background:var(--blue-tint);padding:2px 8px;border-radius:99px}
+.ins .gx-pg{font-size:13px}
+.ins .gx-ph,.ins .gx-pr{display:grid;grid-template-columns:minmax(0,1fr) 52px 56px;gap:8px;align-items:center}
+.ins .gx-ph{font-size:11px;color:var(--ink-3);letter-spacing:.06em;text-transform:uppercase;padding-bottom:6px;border-bottom:1px solid var(--rule)}
+.ins .gx-ph span:not(:first-child),.ins .gx-pr b{text-align:right}
+.ins .gx-pr{padding:8px 0;border-bottom:1px solid var(--rule-2)}
+.ins .gx-pr .t{font-family:var(--mono);font-size:12.5px;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.ins .gx-pr .t small{display:block;font-family:var(--font);font-size:11.5px;color:var(--ink-3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ins .gx-pr b{font-weight:550}
+.ins .gx-pn{font-size:11.5px;color:var(--ink-3);margin:8px 0 0}

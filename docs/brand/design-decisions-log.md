@@ -28602,6 +28602,8 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Cómo.** `/api/ext/project` lee `loadSearchConsoleScreen` (misma entrada de caché `screen-rows` de 30 min que «Posición en Google», sin inspecciones de indexación) con un tope de 6 s; si Google tarda, el campo sale como error y el panel no pinta el bloque. `toExtSearchConsole` mantiene los campos planos de §409 (`clicks`, `position`, `nearPage1`, `empty`) para un panel antiguo y añade `trend` y `page`. Nada se guarda en nuestra base de datos (`.claude/rules/search-console.md`).
 
+**Adenda (mismo día).** Una página interna de tu dominio analizada sola («Página abierta») seguía enseñando la invitación a conectar aunque Search Console estuviera conectado. Ahora lee la misma conexión (`gscOwnPage`): conectado enseña «Esta página en Google» o, si Google no devolvió búsquedas para esa página, lo dice; mientras carga no pinta nada; sin conectar, la invitación de siempre.
+
 **Pendiente.** Subir la 1.2.0 a la tienda (Denis).
 
 ## §412 · JS-RENDER-CHECK-1: la Auditoría técnica avisa si una página necesita JavaScript para verse (2026-11-01)
@@ -28613,3 +28615,38 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Sin puntos.** Igual que `snippet_blocked` (§131): `gain` nulo, no mueve `readiness_score`, la Salud técnica ni la Puntuación GEO, y un test lo fija. Es bloqueo duro (crítico) porque una página vacía no se puede citar. Ponderarlo es una decisión aparte.
 
 **Pendiente.** No es renderizar la página: un sitio que pinta texto genérico en el servidor y el contenido real con JavaScript no se detecta. Medirlo de verdad pediría un navegador sin cabeza en la auditoría, con su propio Task Intake. No retira ningún camino de recuperación.
+
+## §413 · GSC-CONNECT-GATE-1: la invitación a conectar Search Console sólo sale con el estado real (2026-11-01)
+
+**Qué se decidió.** Lo que se aprendió de la adenda de §411 se convierte en un test (Denis: «ok al test de 4»). Invitar a conectar a quien ya está conectado es una afirmación falsa sobre su cuenta, y la extensión la hacía por pintar la invitación cada vez que no tenía estado.
+
+- `tests/gsc-connect-gate.test.ts` busca toda pantalla que pinte una invitación (`GscConnectPanel`, `GscConnectRow`, `GscConnect`) y exige que lea el estado real (`readSearchConsoleAvailability`, `loadSearchConsoleOverview` o `loadSearchConsoleScreen`) y que justo encima compruebe `"disconnected"` o `"reconnect"`. Hoy son Visión general, Recomendaciones y Posición en Google.
+- Sólo la invitación y «Posición en Google» construyen el enlace al permiso de Google (`/api/search-console/connect?`).
+- En el panel de la extensión, toda llamada a `gscInvite()` es el ejemplo sin sesión o el estado `disconnected`.
+
+**Corrección que trae.** `gscBlock()` del panel enseñaba la invitación con `!g` (proyecto cargando, con error o sin el campo). Ahora, con sesión, sin estado no pinta nada; sin sesión sigue el ejemplo.
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: la invitación sigue saliendo cuando el estado lo pide.
+
+## §414 · GSC-OVERVIEW-RICH-1 y GSC-AUDIT-PAGES-1: los datos de Google de la extensión llegan a Visión general y a Auditoría técnica (2026-11-01)
+
+**Qué se decidió.** Lo que la extensión enseña de Search Console desde §411 pasa a la consola, con diseño aprobado por Denis en artifact (móvil tal cual; en escritorio, «debe ocupar menos y no dejar ese espacio blanco a la izquierda»).
+
+- **Visión general**, mitad de Google de «Auditoría SEO y Google» (`gsc-overview-half.tsx`): clics de 28 días con su cambio y una línea por día, puesto medio con lo que ha subido, impresiones con su cambio, «Evolución del puesto» (lo mejor arriba; un día sin impresiones es un hueco, nunca un 0) y «Casi en la página 1» con las dos búsquedas de puestos 11 a 20 con más impresiones y la frase de Denis. En escritorio (≥761 px) la evolución y «Casi en la página 1» van en una fila bajo las dos mitades (`.gx-b`, `display: contents` en `.gx`), así la tarjeta es más baja y Salud SEO no deja hueco. Sale la cifra «búsquedas en página 2»: la caja la sustituye.
+- **Auditoría técnica, bloque SEO**: cada problema por páginas lleva «N clics en Google» (sólo si suman más de 0) y «Páginas afectadas» pasa a una tabla con clics, puesto y la búsqueda que más clics trae, ordenada por clics. Una página que Google no devolvió dice «Sin impresiones en 28 días» sólo si Google devolvió todas sus páginas (menos de 50 filas); si no, «Sin datos de Google», porque no podemos saberlo.
+
+**Cómo.** Las dos leen `loadSearchConsoleScreen` sin inspecciones, la misma entrada `screen-rows` de 30 min que Recomendaciones y la extensión; nada se guarda. Visión general deja `loadSearchConsoleOverview` (lo sigue usando `/admin/panel`). Auditoría técnica pinta primero la tarjeta de siempre como `fallback` de un `Suspense` y la cambia por la de Google cuando llega (`SeoIssuesWithGoogle`), así Google nunca retrasa la auditoría. `insights.pageStats` (`buildPageStats`) guarda todas las páginas que devolvió Google con su búsqueda principal; `affectedPagesWithGoogle` las cruza por `urlKey`.
+
+**Segunda pasada (Denis, 2026-11-01: «diséñalo bien con el nuevo UI de la consola» y «mal maquetado ese mejora, no declarado… no se entiende y se pega»).**
+- En Visión general, con la tarjeta a su ancho real (unos 575 px), el rótulo «Evolución del puesto / Mejor arriba» partía en dos líneas y la caja de «Casi en la página 1» se salía de la tarjeta: las columnas eran `1fr` y una búsqueda larga sin cortes empujaba. Ahora todas las pistas son `minmax(0,…)`, la búsqueda se corta con «…», y con la tarjeta estrecha (`@container`, menos de 540 px) el gráfico y la lista van uno encima del otro.
+- El gráfico sigue el estilo de `LineChart` del kit: líneas de guía con su puesto, fechas de inicio y fin, y el último día marcado con su valor. La línea es un SVG estirado con trazo que no escala, y todas las etiquetas son HTML colocadas por porcentaje, así que el texto no crece ni encoge con la tarjeta.
+- «Casi en la página 1» deja la caja azul por filas con línea, como el resto de la consola, y pierde el rótulo «Puestos 11 a 20» (la frase de Denis ya lo explica). El cambio de impresiones va junto a la cifra, como el del puesto.
+- En Auditoría técnica, la fila de un problema lleva el título sola en la primera línea; la segunda empieza por la gravedad con su punto («● Mejora», «○ Aviso», «● Crítico»), sigue el alcance y luego las etiquetas, con aire entre ellas. El punto suelto a la izquierda desaparece.
+- El alcance de «Negocio local en datos estructurados» pasa de «No declarado» a «Ninguna página lo declara».
+
+**Tercera pasada (Denis, 2026-11-01: «cambiar un poco el formato de comercio agéntico en caso de que esté conectado Search Console, para que no ocupe tanto. Y si no lo está, mejorar un poco la información/formato actual»).**
+- Con datos de Google, desde 1000 px las dos tarjetas ocupan la fila entera (`.ov-pair:has(.gx)`, sin tocar la página). Comercio agéntico pasa a ser una franja corta (anillo, los cuatro componentes en dos columnas y su recomendación a la derecha) y la tarjeta SEO de debajo tiene ancho para poner el gráfico y la lista lado a lado. Ninguna de las dos deja hueco. La tarjeta lleva la clase `ov-agc`; sus datos no cambian.
+- Conectado pero sin propiedad que cubra el dominio (`pick_property`), la mitad de Google se quedaba vacía. Ahora dice por qué («La cuenta de Google conectada no tiene X en Search Console» o «Falta elegir qué propiedad corresponde a X»), qué se verá con la propiedad, y enlaza a «Posición en Google», donde se elige o se conecta otra cuenta. No es una invitación a conectar ni lleva a la ruta de permiso.
+- La línea de velocidad decía «LCP 1,5 s , buena»: `.note` es flex y su hueco metía un espacio antes de la coma. Pasa a bloque (`.note.sp`).
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: sin conexión, todo queda como antes.
