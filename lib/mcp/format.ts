@@ -1,4 +1,5 @@
 import type { ExtProjectPayload } from "@/lib/ext/project-data";
+import type { ExtPrompt } from "@/lib/ext/prompts";
 import type { ExtGscQuery } from "@/lib/ext/search-console";
 import { formatShare } from "@/lib/report/report-model";
 import type { PageReview } from "@/lib/page-review/review";
@@ -187,6 +188,61 @@ export function formatAudits(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
   if (p.agentic?.kind === "upsell") lines.push("", "La auditoría agéntica no está incluida en tu plan.");
   lines.push("", `Detalle por página: ${screen(l, "/web-audit")}`);
   return { text: lines.join("\n"), structured: { domain: p.domain, audits: a, url: screen(l, "/web-audit") } };
+}
+
+/** More than this and the chat gets a list nobody reads; the rest are one link away. */
+export const MAX_PROMPTS = 60;
+
+const join = (xs: string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} y ${xs[xs.length - 1]}` : xs[0] ?? "");
+
+/** One prompt in words: who names the brand, who names only others, who names nobody. */
+function promptLine(x: ExtPrompt): string {
+  if (!x.engines) return `- «${x.text}»: pendiente del próximo escaneo.`;
+  const you = x.engines.filter((e) => e.cell.kind === "you").map((e) => (e.cell.kind === "you" && e.cell.position ? `${e.label} (puesto ${e.cell.position})` : e.label));
+  const others = x.engines.filter((e) => e.cell.kind === "others").map((e) => e.label);
+  const none = x.engines.filter((e) => e.cell.kind === "none").map((e) => e.label);
+  const parts = [
+    you.length ? `te nombra ${join(you)}` : null,
+    others.length ? `${join(others)} solo nombra${others.length > 1 ? "n" : ""} a otras marcas` : null,
+    none.length ? `${join(none)} no nombra${none.length > 1 ? "n" : ""} ninguna marca` : null
+  ].filter(Boolean);
+  return `- «${x.text}»: ${parts.join("; ")}.`;
+}
+
+export function formatPrompts(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
+  const link = screen(l, "/prompts");
+  if (!p.prompts.length) {
+    return {
+      text: `${p.domain} no tiene prompts activos. Se añaden en GenScore, con propuestas a partir de tu web: ${link}`,
+      structured: { domain: p.domain, prompts: [], url: link }
+    };
+  }
+  const shown = p.prompts.slice(0, MAX_PROMPTS);
+  const lines = [`Prompts que GenScore pregunta por ${p.domain}${p.scanDate ? ` (resultado del escaneo del ${p.scanDate.slice(0, 10)})` : ""}:`];
+  let topic: string | null | undefined;
+  for (const x of [...shown].sort((a, b) => (a.topic ?? "").localeCompare(b.topic ?? "", "es"))) {
+    if (x.topic !== topic) {
+      topic = x.topic;
+      lines.push("", `**${topic ?? "Sin tema"}**`);
+    }
+    lines.push(promptLine(x));
+  }
+  if (p.prompts.length > shown.length) lines.push("", "Hay más prompts; la lista completa está en la consola.");
+  lines.push("", `Ver, añadir o quitar prompts y leer cada respuesta: ${link}`);
+  return {
+    text: lines.join("\n"),
+    structured: {
+      domain: p.domain,
+      scanDate: p.scanDate,
+      prompts: shown.map((x) => ({
+        text: x.text,
+        topic: x.topic,
+        status: x.engines ? "scanned" : "pending",
+        engines: x.engines?.map((e) => ({ engine: e.label, ...e.cell })) ?? []
+      })),
+      url: link
+    }
+  };
 }
 
 const q = (x: ExtGscQuery) => `«${x.query}» · puesto ${n1(x.position)} · ${n0(x.clicks)} clics · ${n0(x.impressions)} impresiones`;

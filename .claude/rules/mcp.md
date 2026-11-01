@@ -67,3 +67,9 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   `lib/mcp/guides/blog-index.json`, generado del MDX; título y fecha, de
   `BLOG_POSTS`. Sin embeddings ni base vectorial: búsqueda por palabras, sin
   coste por consulta.
+
+## Prompts (MCP-PROMPTS-1, log §428)
+
+- **`ver_prompts` junta la lista activa con la matriz del último escaneo**
+  (`buildExtPrompts`). Un prompt sin escanear es «pendiente», nunca «no te
+  nombra»; la mención no se recalcula, sale de `buildReportModel`.

@@ -25,6 +25,7 @@ import {
   formatNotFound,
   formatPageReview,
   formatPlanNotice,
+  formatPrompts,
   formatRecommendations,
   formatSearchConsole,
   type ConsoleLinks,
@@ -140,6 +141,12 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
     "Ver competidores",
     "Qué marcas nombra más la IA en las preguntas principales de búsqueda de un dominio, con su cuota de respuestas, incluida la propia marca.",
     formatCompetitors
+  ),
+  domainTool(
+    "ver_prompts",
+    "Ver prompts",
+    "Los prompts (preguntas) que GenScore hace a la IA sobre un dominio, por tema, y qué hizo cada motor con cada uno en el último escaneo: si nombra la marca y en qué puesto, si solo nombra a otras o si no nombra a nadie.",
+    formatPrompts
   ),
   domainTool(
     "ver_auditorias",
