@@ -28569,3 +28569,21 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
 - **Permiso retirado**: «Volver a conectar», al mismo permiso. **Varias propiedades**: «Elegir propiedad» en Posición en Google. **Google sin responder** o sin búsquedas: lo dice, sin cifras. **Sin configurar o sin migración**: nada.
 
 **Pendiente o roto conocido.** Va en la misma 1.2.0, todavía sin subir a la tienda.
+
+## §410 · EXT-PROMO-1: genscore.es ofrece la extensión de Chrome (2026-11-01)
+
+**Qué.** Una tarjeta flotante en todo el dominio ofrece instalar la extensión de Chrome (`components/chrome-extension/chrome-extension-promo.tsx`, montada una vez en `app/layout.tsx`). Titular «Revisa cualquier web sin salir de Chrome» con el icono de Chrome, el cuerpo que escribió Denis, «Añadir a Chrome» y «Ya la tengo». Diseño en `docs/design-reference/ext-promo-1/`.
+
+**Reglas** (puras en `lib/chrome-extension/install-promo.ts`, con tests):
+- Solo Google Chrome de escritorio. Chrome en Android o iPhone no instala extensiones (Denis: «en móvil no tiene sentido»), y la app de Android es Chrome en un móvil, así que tampoco sale. Edge, Brave y Opera quedan fuera porque la tienda no es la suya.
+- Todo el dominio menos acceso, MFA, `/admin`, `/debug`, `/informe`, `/baja` y el asistente de alta de dominio; la misión del primer escaneo la oculta por CSS.
+- Aparece a los 4 s (Denis bajó de 8 a 4), una vez por visita. Abajo a la izquierda en la web pública (abajo a la derecha está la tarjeta del informe gratis) y abajo a la derecha en la consola.
+- Sale también en el blog, comparativas, glosario y docs (Denis: «¿sale en cualquier url pública? debería»), pero allí sólo una vez: a partir de entonces esas páginas son de la tarjeta del informe gratis (Denis: «que salga esta una vez en blog y luego en adelante la otra»). Para no enseñar dos tarjetas a la vez, la del informe gratis espera mientras ésta esté en pantalla y sale después si toca.
+- La X y «Añadir a Chrome» la apartan 30 días; «Ya la tengo», para siempre en ese navegador. Todo en `localStorage`, sin migración.
+- El enlace lleva `utm_source=genscore.es&utm_medium=aviso&utm_campaign=extension-chrome&utm_content=web|consola`.
+
+- La tarjeta del informe gratis pasa a salir a los 20 s en vez de 40 (Denis, 2026-11-01); la mitad de página sigue igual. Corrige el «40 s» de §252.
+
+**Límite conocido.** La web no puede saber si la extensión ya está instalada: el manifiesto 1.0.1 no expone nada a la página. Detectarlo pediría una versión nueva con un recurso accesible sólo desde genscore.es, y otra revisión de la tienda. Hasta entonces lo cubre «Ya la tengo».
+
+**Pendiente.** No retira ningún camino de recuperación.
