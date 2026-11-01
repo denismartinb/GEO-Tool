@@ -10,6 +10,7 @@ import {
   formatNotFound,
   formatPageReview,
   formatPlanNotice,
+  formatPrompts,
   formatRecommendations,
   formatSearchConsole,
   type ToolText
@@ -50,7 +51,19 @@ const P: ExtProjectPayload = {
   agentic: { kind: "upsell" },
   citingPrompts: null,
   searchConsole: { state: "disconnected" },
-  audits: { auditedAt: null, blocks: [], page: null }
+  audits: { auditedAt: null, blocks: [], page: null },
+  prompts: [
+    {
+      text: "¿Qué herramienta mide la visibilidad en ChatGPT?",
+      topic: "Herramientas",
+      engines: [
+        { label: "ChatGPT", cell: { kind: "you", position: 2 } },
+        { label: "Gemini", cell: { kind: "others" } },
+        { label: "Claude", cell: { kind: "none" } }
+      ]
+    },
+    { text: "¿Cómo aparecer en Gemini?", topic: "Herramientas", engines: null }
+  ]
 };
 
 const REVIEW = {
@@ -120,6 +133,21 @@ const SCENARIOS: Row[] = [
     name: "competidores → ranking y cómo seguir otra marca",
     answer: () => formatCompetitors(P, L),
     must: [`${BASE}/dashboard/projects/p1/competitors`, "revise su web"]
+  },
+  // ver_prompts
+  {
+    name: "prompts → qué hizo cada motor, los pendientes y dónde añadir más",
+    answer: () => formatPrompts(P, L),
+    must: [
+      "«¿Qué herramienta mide la visibilidad en ChatGPT?»: te nombra ChatGPT (puesto 2); Gemini solo nombra a otras marcas; Claude no nombra ninguna marca.",
+      "«¿Cómo aparecer en Gemini?»: pendiente del próximo escaneo.",
+      `${BASE}/dashboard/projects/p1/prompts`
+    ]
+  },
+  {
+    name: "sin prompts → lo dice y enlaza a añadirlos",
+    answer: () => formatPrompts({ ...P, prompts: [] }, L),
+    must: ["no tiene prompts activos", "/prompts"]
   },
   // ver_auditorias
   {

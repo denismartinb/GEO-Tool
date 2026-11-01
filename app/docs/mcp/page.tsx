@@ -87,6 +87,11 @@ export default function McpDocPage() {
               <td>Sí</td>
             </tr>
             <tr>
+              <td>ver_prompts</td>
+              <td>Tus prompts por tema y qué hizo cada motor con cada uno en el último escaneo.</td>
+              <td>Sí</td>
+            </tr>
+            <tr>
               <td>ver_auditorias</td>
               <td>Tu web para la IA, para Google y para los agentes de compra, con los problemas que más puntos suman.</td>
               <td>Sí</td>

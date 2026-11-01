@@ -28866,3 +28866,30 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
 **Plugin 1.0.5 y extensión.** El plugin de WordPress pasa a 1.0.5 con los dos interruptores de Meta (`meta-webindexer`, `meta-externalagent`) y la línea sobre los agentes que no consultan robots.txt; `PLUGIN_PENDING_SWITCHES` queda vacío y el test de paridad vuelve a cubrir los ocho. La extensión de Chrome no cambia: `score.js` puntúa motores de IA y Meta no lo es (como en las tarjetas de la consola), y su bloque agéntico llega del servidor, así que recibe a Meta con el merge, sin zip nuevo.
 
 **Pendiente o sabido.** El guion de validación en un WordPress real con Plugin Check no se pudo pasar en esta sesión (la descarga de WordPress quedó bloqueada); se pasaron `php -l`, `node --check` y los tests de PHP. Toca pasarlo antes de subir el zip 1.0.5. Que Dots firme sus visitas (`Signature-Agent`) sale de la guía de OpenAI, que no se pudo abrir: no se usa en ningún texto. No retira ningún camino de recuperación.
+
+## §428 · MCP-PROMPTS-1: el conector enseña los prompts del dominio (2026-11-01)
+
+**Qué pasó.** Denis preguntó en Claude «qué prompts tengo configurados» y el
+conector no supo responder: ninguna herramienta los devolvía. La propuesta
+aprobada de MCP-SERVER-1 (§418) incluía los prompts entre las herramientas de
+cuenta, y se quedaron fuera de la Fase 1.
+
+**Qué se decidió.**
+
+- Herramienta nueva de cuenta, de solo lectura: `ver_prompts`. Lista los
+  prompts activos del dominio por tema y, para cada uno, qué hizo cada motor en
+  el último escaneo: te nombra (con el puesto si lo hay), solo nombra a otras
+  marcas o no nombra a ninguna.
+- Las celdas salen de la matriz del informe (`buildReportModel`, la misma regla
+  de mención que el informe y «Prompts»); la lista activa, de `project_prompts`
+  con `is_active`, como la pantalla. Se juntan en `buildExtPrompts`
+  (`lib/ext/prompts.ts`, pura) y viajan en el payload compartido
+  (`loadExtProjectData`), así que el panel de la extensión también los recibe.
+- Un prompt activo que el último escaneo no preguntó sale como «pendiente del
+  próximo escaneo», nunca como «no te nombra». Uno retirado después del
+  escaneo no sale. Si la lista activa no se puede leer, salen los del escaneo.
+- Como mucho 60 en el chat (`MAX_PROMPTS`); el resto, en la consola. Sin
+  recuentos absolutos en el texto.
+
+**Pendiente.** La ficha del directorio de Claude se envió sin esta
+herramienta en la descripción; Denis puede editarla después.
