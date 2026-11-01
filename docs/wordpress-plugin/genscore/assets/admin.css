@@ -110,6 +110,15 @@
 #genscore-app .gs-ec small{font-size:11.5px;color:var(--ink-3)}
 #genscore-app .gs-ec.gs-no small{color:var(--warm);font-weight:600}
 #genscore-app .gs-ec .gs-pc{font-size:20px;font-weight:400;letter-spacing:-.03em}
+#genscore-app .gs-ecx{display:flex;align-items:center;gap:10px;margin-top:6px;border:1px solid var(--rule);border-radius:14px;padding:8px 12px}
+#genscore-app .gs-ecx .gs-lgw{position:relative;display:inline-flex}
+#genscore-app .gs-ecx .gs-lgw::after{content:"";position:absolute;right:-4px;bottom:-2px;width:9px;height:9px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
+#genscore-app .gs-ecx.gs-no .gs-lgw::after{background:var(--warm)}
+#genscore-app .gs-ecx .gs-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+#genscore-app .gs-ecx b{font-size:13px;font-weight:600}
+#genscore-app .gs-ecx small{font-size:11.5px;color:var(--ink-3)}
+#genscore-app .gs-ecx .gs-st{font-size:12px;color:var(--ink-2)}
+#genscore-app .gs-ecx.gs-no .gs-st{color:var(--warm);font-weight:600}
 #genscore-app .gs-bot{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--rule)}
 #genscore-app .gs-bot:last-child{border-bottom:0}
 #genscore-app .gs-bot .gs-tx{flex:1;min-width:0;display:flex;flex-direction:column}

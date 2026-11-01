@@ -8,6 +8,6 @@
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
-foreach ( array( 'genscore_bots', 'genscore_llms_enabled', 'genscore_llms_custom', 'genscore_last_review', 'genscore_page_scores' ) as $genscore_option ) {
+foreach ( array( 'genscore_bots', 'genscore_llms_enabled', 'genscore_llms_custom', 'genscore_last_review', 'genscore_page_scores', 'genscore_scores_version' ) as $genscore_option ) {
 	delete_option( $genscore_option );
 }

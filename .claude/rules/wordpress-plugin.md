@@ -49,3 +49,13 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   al pintar la lista.
 - **Antes de entregar un zip se pasa el guion en un WordPress real** (con
   WooCommerce y Plugin Check), no sólo los tests de PHP.
+- **Meta se enseña fuera de la nota** (adenda 1.0.6 de §421): la fila «Meta AI y
+  Muse» y el aviso de la tarjeta de bots se leen en `admin.js` del robots.txt.
+  `score.js` sigue con los cuatro motores; no se edita la copia del plugin.
+- **Lo que cuenta en todas las páginas borra todas las notas**: guardar bots o
+  llms.txt, cambiar `blog_public` o actualizar el plugin llama a
+  `genscore_forget_all_scores`, y la pantalla relee la web entera.
+- **Agentes prestado (`via`) no cuenta dos veces**: la web suma Agentes sólo
+  con las páginas que venden; una página que toma la tienda de otra sólo cuenta
+  si ninguna vende. La portada nunca guarda los arreglos `prod`, `price` ni
+  `avail`.

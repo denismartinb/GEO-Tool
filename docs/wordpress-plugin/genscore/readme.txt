@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.5
+Stable tag: 1.0.6
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,14 @@ No. It runs only when you open the GenScore screen, in your browser, reading you
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.6 =
+* «Quién puede leer» shows Meta AI and Muse too, outside the note, and the bots card warns when robots.txt blocks Meta's search.
+* Saving the bots or llms.txt, or changing «visible to search engines», reviews every page again instead of keeping old scores. Scores from an earlier version are read again once after updating.
+* A page that sells nothing no longer repeats its shop page's fixes: «Devoluciones» shows once, and Agentes counts the pages that sell.
+* The home page no longer gets the product price, stock or name fixes.
+* Cart, checkout, my account and the privacy policy show «–» in the GenScore column instead of «Revisar».
+* «+1 punto», not «+1 puntos».
 
 = 1.0.5 =
 * Bots de IA: two new switches for Meta, the search behind Meta AI and its shopping agent Muse (meta-webindexer) and model training (meta-externalagent).

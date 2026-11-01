@@ -28787,6 +28787,15 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
 - **El widget del Escritorio** pasa a «Nota SEO + IA de tu web».
 - **Agentes en el detalle de una página sin tienda** sigue siendo el de la tienda de la web, como en la extensión (`score.js` usa `f.shop`); no es un fallo.
 
+**Adenda 1.0.6 (2026-11-01).** Instinct dio la 1.0.5 (interruptores de Meta, §427) por lista para subir y dejó seis mejoras, ninguna bloqueante. Todas probadas en la instalación propia (Playwright en 1280 y 390 px, Plugin Check con los experimentales sin errores):
+
+- **Meta se ve.** «Quién puede leer» suma una fila «Meta AI y Muse» bajo los cuatro motores, con «No cuenta en la nota», leída del mismo robots.txt (`meta-webindexer`) en `admin.js`, sin tocar `score.js`: la nota sigue midiendo los cuatro motores, igual que la extensión y la consola. Si robots.txt bloquea la búsqueda de Meta, la tarjeta de bots lo avisa en naranja.
+- **Notas desfasadas.** Guardar los bots o llms.txt, o cambiar «visible para los buscadores», borra todas las notas guardadas (`genscore_forget_all_scores`), porque cuentan en todas las páginas, y la pantalla relee la web entera. Tras actualizar el plugin las notas se releen una vez (`genscore_scores_version`).
+- **«Devoluciones» una sola vez.** Una página que no vende toma Agentes de la tienda que encuentra `score.js` (arreglos «shop-…»). Se guarda como prestada (`via`) con los ids normales, y la revisión de la web cuenta Agentes sólo con las páginas que venden; si ninguna vende, con una prestada. Los arreglos de Agentes dicen «En N de M páginas que venden» y sus puntos se reparten entre esas páginas, no entre todas.
+- **La portada no recibe los arreglos de producto** (nombre, precio y stock en el JSON-LD de un producto), que no van en una portada.
+- **Carrito, finalizar compra, mi cuenta y privacidad** enseñan «–» en la columna en vez de «Revisar», porque la revisión nunca los lee.
+- **«+1 punto»** en singular.
+
 **Pendiente.** La consola y la extensión no cambian: la consola ya audita el dominio entero y la extensión sigue a la pestaña abierta. No retira ningún camino de recuperación: «Revisar todo ahora» sustituye al selector.
 
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)

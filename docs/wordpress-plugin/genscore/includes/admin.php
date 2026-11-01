@@ -170,6 +170,12 @@ function genscore_list_cell( $col, $post_id ) {
 	$front = (int) get_option( 'page_on_front' );
 	$key   = $front && $front === (int) $post_id ? 0 : (int) $post_id;
 	$link  = admin_url( 'admin.php?page=genscore' . ( $key ? '&post=' . $key : '' ) );
+	// Cart, checkout, my account and the privacy policy are never reviewed:
+	// a dash, not a «Revisar» link that leads nowhere.
+	if ( $key && in_array( (int) $post_id, genscore_llms_skipped_pages(), true ) ) {
+		echo '<span class="gs-col-na" aria-label="' . esc_attr__( 'GenScore no revisa esta página', 'genscore' ) . '">–</span>';
+		return;
+	}
 	if ( ! genscore_review_choice( $post_id ) ) {
 		echo '<span class="gs-col-na">' . esc_html__( 'Se revisa al publicarla', 'genscore' ) . '</span>';
 		return;
@@ -268,6 +274,7 @@ function genscore_ajax_save_bots() {
 		}
 	}
 	update_option( 'genscore_bots', genscore_sanitize_bot_settings( $raw ), false );
+	genscore_forget_all_scores();
 	wp_send_json_success( array( 'settings' => genscore_sanitize_bot_settings( get_option( 'genscore_bots', array() ) ) ) );
 }
 add_action( 'wp_ajax_genscore_save_bots', 'genscore_ajax_save_bots' );
@@ -280,6 +287,7 @@ function genscore_ajax_save_llms() {
 	genscore_ajax_guard();
 	$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
 	update_option( 'genscore_llms_enabled', $enabled, true );
+	genscore_forget_all_scores();
 	if ( isset( $_POST['text'] ) ) {
 		// Compare before sanitizing: sanitize_textarea_field drops the %xx of
 		// an encoded URL (a title with an emoji), so the generated text never

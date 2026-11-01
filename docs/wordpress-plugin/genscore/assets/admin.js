@@ -80,6 +80,15 @@
     if (!S.facts || !S.facts.robots || S.facts.robots.text == null) return false;
     return !SC.tokenVerdict(SC.parseRobots(S.facts.robots.text), "genscore-any-bot", "/").allowed;
   }
+  /* Meta is not one of the four engines the note measures, but blocking its
+     search bot keeps a site out of Meta AI and Muse: the screen says so,
+     read from the same robots.txt and outside the note. */
+  function metaAllowed() {
+    if (!S.facts || !S.facts.robots || S.facts.robots.text == null || !D.bots.switches["meta-search"]) return null;
+    var groups = SC.parseRobots(S.facts.robots.text);
+    return D.bots.switches["meta-search"].tokens.every(function (t) { return SC.tokenVerdict(groups, t, S.facts.path || "/").allowed; });
+  }
+  function ptsLabel(n, unit) { return "+" + n + " " + (unit === "pt" ? (n === 1 ? "punto en la nota" : "puntos en la nota") : "en Agentes"); }
   /* Which page is under review: the home page, or the one picked in the
      header (or arrived from «Revisar con GenScore» in a list of posts). */
   function tu() { return S.target ? "esta página" : "tu portada"; }
@@ -143,6 +152,7 @@
     else if (site.robotsFile) note = '<div class="gs-hint gs-warm">Tu web tiene un fichero robots.txt propio y el servidor lo sirve antes que WordPress. GenScore no lo modifica: copia las líneas de «Arreglar» en ese fichero.</div>';
     else if (!site.rootInstall) note = '<div class="gs-hint gs-warm">WordPress está instalado en una carpeta, y robots.txt sólo cuenta en la raíz del dominio. Pide a quien gestiona el dominio que añada las reglas allí.</div>';
     else if (starClosed()) note = '<div class="gs-hint gs-warm">Tu robots.txt cierra la web entera a todos los bots («User-agent: *» con «Disallow: /»), a menudo por un plugin de mantenimiento. Mientras siga así, «Permitir» no abre la web a ningún bot; «Bloquear» sí se guarda.</div>';
+    if (metaAllowed() === false) note += '<div class="gs-hint gs-warm">Tu robots.txt bloquea la búsqueda de Meta: Meta AI y Muse no pueden leer tu web para citarla. No resta en la nota, que mide ChatGPT, Gemini, Claude y Perplexity.</div>';
     var ids = Object.keys(D.bots.switches);
     var list = ids.map(function (id) {
       var on = switchWanted(id), L = SW_LABEL[id] || [id, ""];
@@ -163,12 +173,16 @@
     return '<div class="gs-card"><div class="gs-lab">llms.txt<small>' + status + '</small></div><div class="gs-bot" style="border:0;padding-top:0"><span class="gs-tx"><b style="font-size:14px;font-weight:600">Publicar /llms.txt</b><small style="font-family:var(--font);font-size:12.5px">Un resumen de tu web para los motores de IA: tus páginas, productos y artículos con su extracto. Puedes editarlo.</small></span><button class="gs-sw" role="switch" data-act="llms-toggle" aria-checked="' + !!L.enabled + '" aria-label="Publicar llms.txt"></button></div><label class="screen-reader-text" for="gs-llms-text">Contenido de llms.txt</label><textarea id="gs-llms-text" class="gs-code" spellcheck="false">' + esc(text) + '</textarea><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-llms">Guardar</button>' + (L.custom ? '<button class="gs-btn gs-line" data-act="llms-reset">Volver al generado</button>' : "") + (L.serving ? '<a class="gs-btn gs-line" href="' + esc(L.url) + '" target="_blank" rel="noopener">Ver /llms.txt</a>' : "") + (S.msg.llms || "") + "</div></div>";
   }
 
+  function metaRow() {
+    var m = metaAllowed();
+    return '<div class="gs-ecx' + (m === false ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-meta", "gs-lg") + '</span><span class="gs-tx"><b>Meta AI y Muse</b><small>No cuenta en la nota</small></span><span class="gs-st">' + (m == null ? "Sin leer" : m ? "Puede leerla" : "Bloqueado") + "</span></div>";
+  }
   function webGeo() {
     var acc = (S.score && S.score.access) || {};
     var cards = '<div class="gs-card"><div class="gs-lab">Quién puede leer ' + tu() + '<small>robots.txt</small></div><div class="gs-eng4">' + ENG.map(function (e) {
       var a = acc[e[0]];
       return '<div class="gs-ec' + (a === false ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-" + e[0], "gs-lg") + "</span><b>" + e[1] + "</b><small>" + (a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado") + "</small></div>";
-    }).join("") + "</div></div>";
+    }).join("") + "</div>" + metaRow() + "</div>";
     return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + cards + fixCard("ia", "Arreglar") + botsCard() + llmsCard() + '<div class="gs-card"><div class="gs-lab">En ' + la() + '</div>' + rows(criteria("ia", true)) + "</div>";
   }
 
@@ -222,9 +236,15 @@
     var E = webEntries();
     if (!E.length) return null;
     var lane = function (k) { return avg(E.map(function (x) { return x.e[k]; }).filter(function (v) { return v != null; })); };
+    /* Agentes: the pages that sell by themselves; only if none does, one
+       page that borrowed the shop it links to (they all borrowed the same). */
+    var sellers = E.filter(function (x) { return x.e.agent != null && !x.e.via; });
+    var agentPool = sellers.length ? sellers : E.filter(function (x) { return x.e.agent != null; }).slice(0, 1);
+    var inPool = function (x) { return agentPool.indexOf(x) >= 0; };
     var by = {};
     E.forEach(function (x) {
       (x.e.fixes || []).forEach(function (f) {
+        if (f.lane === "agent" && !inPool(x)) return;
         var g = by[f.id] || (by[f.id] = { id: f.id, lane: f.lane, t: f.t, unit: f.unit, sum: 0, hit: [] });
         g.sum += f.pts || 0;
         g.hit.push(x);
@@ -236,12 +256,14 @@
       var one = Object.keys(types).length === 1 ? Object.keys(types)[0] : null;
       var of = one ? E.filter(function (x) { return kindOf(x.page) === one; }).length : E.length;
       var nm = TYPE_N[one || "page"];
-      g.pts = Math.max(1, Math.round(g.sum / E.length));
-      g.where = g.hit.length === of ? (of === 1 ? "En la única " + nm[0] + " revisada" : "En todas tus " + nm[1] + " revisadas") : "En " + g.hit.length + " de " + of + " " + nm[1];
+      g.pts = Math.max(1, Math.round(g.sum / (g.lane === "agent" ? agentPool.length : E.length)));
+      var P = agentPool.length;
+      if (g.lane === "agent") g.where = g.hit.length === P ? (P === 1 ? "En la única página que vende" : "En todas las páginas que venden") : "En " + g.hit.length + " de " + P + " páginas que venden";
+      else g.where = g.hit.length === of ? (of === 1 ? "En la única " + nm[0] + " revisada" : "En todas tus " + nm[1] + " revisadas") : "En " + g.hit.length + " de " + of + " " + nm[1];
       g.hit.sort(function (a, b) { return a.e.nota - b.e.nota; });
       return g;
     }).sort(function (a, b) { return b.sum - a.sum; });
-    return { n: E.length, nota: avg(E.map(function (x) { return x.e.nota; })), lanes: { ia: lane("ia"), google: lane("google"), agent: lane("agent") }, fixes: F, entries: E };
+    return { n: E.length, nota: avg(E.map(function (x) { return x.e.nota; })), lanes: { ia: lane("ia"), google: lane("google"), agent: avg(agentPool.map(function (x) { return x.e.agent; })) }, fixes: F, entries: E };
   }
   function webMode() { return !S.target && !!webAgg(); }
   function scoreChip(v) { var b = band(v); return '<span class="gs-sc gs-sc-' + b[0] + '">' + (v == null ? "–" : v) + "</span>"; }
@@ -253,7 +275,7 @@
   function webFixRow(g, i) {
     var open = S.open[g.id] != null ? S.open[g.id] : i === 0;
     var pages = open ? '<div class="gs-prs">' + g.hit.slice(0, 5).map(function (x) { return pageRow(x, false); }).join("") + (g.hit.length > 5 ? '<p class="gs-more">Y ' + (g.hit.length - 5) + " más, en «Tus páginas».</p>" : "") + "</div>" : "";
-    return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">+' + g.pts + " " + (g.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span><span class="gs-chip">' + esc(g.where) + "</span>" + pages + '</span><button class="gs-btn gs-line gs-sm" data-act="toggle-fix" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + (open ? "Ocultar" : "Ver páginas") + "</button></div>";
+    return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">' + ptsLabel(g.pts, g.unit) + '</span><span class="gs-chip">' + esc(g.where) + "</span>" + pages + '</span><button class="gs-btn gs-line gs-sm" data-act="toggle-fix" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + (open ? "Ocultar" : "Ver páginas") + "</button></div>";
   }
   function progressLine() {
     if (!S.web.running) return "";
@@ -279,7 +301,7 @@
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
       return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + pagesCard + deepCard() + acctCard() + "</div></div>";
     }
-    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">+' + f.pts + " " + (f.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
     return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deepCard() + acctCard() + "</div></div>";
   }
   function deepCard() {
@@ -356,16 +378,28 @@
     }, function () { return sc; });
   }
 
-  /* What is stored of a page: its note, lanes and fixes, nothing else. */
+  /* What is stored of a page: its note, lanes and fixes, nothing else.
+     A page that sells nothing borrows Agentes from the shop page score.js
+     found (fixes «shop-…»): that is the shop page's result, not this page's,
+     so it is stored as borrowed («via») with the plain ids, and the site
+     review counts it only when no reviewed page sells by itself. The home
+     page is never where a product's JSON-LD goes, so it never carries the
+     price, stock or product fixes. */
+  var PRODUCT_FIX = { prod: 1, price: 1, avail: 1 };
   function entryOf(id, sc) {
-    return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, fixes: sc.fixes.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
+    var via = !!(sc.shop && sc.shop.state === "found" && !sc.commerce);
+    var F = sc.fixes.map(function (f) { return Object.assign({}, f, { id: String(f.id).replace(/^shop-/, "") }); })
+      .filter(function (f) { return !(id === 0 && f.lane === "agent" && PRODUCT_FIX[f.id]); });
+    return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, via: via, fixes: F.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
   }
   function keep(id, sc) {
     var e = entryOf(id, sc);
     S.web.scores[id] = e;
     post("genscore_save_page", { page: JSON.stringify(e) }).catch(function () {});
   }
-  function review() {
+  /* `all`: after a site-wide change (robots.txt, llms.txt) every important
+     page is read again, not only the ones without a stored score. */
+  function review(all) {
     S.state = "loading"; render();
     var target = S.target;
     readPage(target ? target.url : D.site.home).then(function (facts) {
@@ -379,7 +413,7 @@
       S.score = sc;
       if (!target) S.home = { facts: S.facts, score: sc };
       S.state = "ready";
-      if (!target) reviewSite(false); else render();
+      if (!target) { S.stale = false; reviewSite(!!all); } else { if (all) S.stale = true; render(); }
     }, function (msg) {
       S.state = "error"; S.error = typeof msg === "string" ? msg : "No hemos podido leer " + la() + "."; render();
     });
@@ -442,7 +476,7 @@
   }
   function goHome() {
     S.target = null; setAddress();
-    if (!S.home) { review(); return; }
+    if (!S.home || S.stale) { S.stale = false; review(true); return; }
     S.facts = S.home.facts; S.score = S.home.score; S.state = "ready"; render();
     app.scrollIntoView({ block: "start" });
   }
@@ -479,8 +513,8 @@
       a.disabled = true;
       post("genscore_save_bots", { bots: next2 }).then(function (r) {
         if (!r || !r.success) throw new Error();
-        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = '<span class="gs-saved">Guardado. Volvemos a revisar ' + tu() + '.</span>';
-        review();
+        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = '<span class="gs-saved">Guardado. Volvemos a revisar tu web.</span>';
+        review(true);
       }).catch(function () { S.msg.bots = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
       return;
     }
@@ -509,7 +543,9 @@
       if (r.data.generated != null) S.llms.generated = r.data.generated;
       if ("text" in data) { S.llmsEdited = false; S.llmsText = null; }
       S.msg.llms = '<span class="gs-saved">' + (r.data.serving ? "Guardado. Ya se publica en /llms.txt." : "Guardado.") + "</span>";
-      render();
+      // llms.txt counts on every page: the stored scores are stale now (the
+      // server already dropped them), so every page is read again.
+      review(true);
     }).catch(function () { S.msg.llms = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
   }
 
