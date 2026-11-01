@@ -32,3 +32,15 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   `resource_metadata`**: es lo que abre el flujo OAuth en los clientes.
 - **La pantalla de consentimiento sólo redirige a lo que devuelve Supabase** y
   rechaza `javascript:` y `data:` (`safeRedirect`).
+
+## Siguiente paso (MCP-NEXT-STEPS-1, log §422)
+
+- **Ninguna respuesta acaba en un callejón.** Si el siguiente paso vive en la
+  consola, la respuesta lleva el enlace (relleno si sabemos el dominio); si no
+  hay nada que hacer, dice por qué. Lo vigila `scenarios.test.ts`: un estado
+  nuevo de una herramienta entra con su escenario.
+- **Los enlaces también van en `structuredContent`**: hay clientes que sólo
+  enseñan el objeto estructurado.
+- **`?dominio=` sólo rellena el asistente**, validado con `isWellFormedDomain`;
+  no guarda nada. Una cuenta sin hueco en el plan no recibe enlace al alta.
+- **Sin cuenta, ninguna respuesta enlaza a `/dashboard/`.**

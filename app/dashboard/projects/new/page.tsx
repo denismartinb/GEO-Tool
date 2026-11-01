@@ -3,6 +3,7 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { getUsageSummary, resolvePlan } from "@/lib/billing";
 import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
+import { isWellFormedDomain } from "@/lib/projects/project-form";
 import { createProject, generateMorePrompts, suggestProjectSetup } from "../actions";
 
 // COMPETITOR-GROUNDING-1: suggestProjectSetup/createProject now fetch the
@@ -15,7 +16,7 @@ export const maxDuration = 60;
 // ROOT-METADATA-1: pestaña propia. Ver `lib/seo/console-metadata.ts`.
 export const metadata: Metadata = consoleMetadata("Nuevo dominio");
 
-export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ error?: string; dominio?: string }> }) {
   const params = await searchParams;
   const errorMessages: Record<string, string> = {
     invalid_project_data: "Revisa los datos del dominio e inténtalo de nuevo.",
@@ -58,9 +59,16 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
       isFirst={usage.projectCount === 0}
       promptCap={usage.promptCap}
       engines={engines}
+      initialDomain={prefillDomain(params.dominio)}
       suggestAction={suggestProjectSetup}
       generateMorePromptsAction={generateMorePrompts}
       createAction={createProject}
     />
   );
+}
+
+/** `?dominio=` from a GenScore link (the MCP answers, log §418). Only what the wizard itself would accept, else empty. */
+function prefillDomain(raw: string | undefined): string {
+  const value = (raw ?? "").trim().toLowerCase().slice(0, 253);
+  return value && isWellFormedDomain(value) ? value : "";
 }
