@@ -24,7 +24,10 @@ export type FunnelEvent =
   | "signup_completed"
   | "scan_completed"
   | "checkout_started"
-  | "payment_completed";
+  | "payment_completed"
+  // MCP-SERVER-1 (log §418): one call to a GenScore MCP tool. Properties are
+  // the tool name and whether an account was linked, never its arguments.
+  | "mcp_tool_called";
 
 const CAPTURE_TIMEOUT_MS = 2_000;
 
