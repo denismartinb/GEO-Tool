@@ -5,6 +5,7 @@ import "@/app/ins/components.css";
 import "@/app/ins/auth.css";
 import { AuthHead, AuthPage } from "@/components/ins/auth/page";
 import { EntryForm } from "@/components/ins/auth/entry-form";
+import { PendingDomainFromQuery } from "@/components/ins/auth/pending-domain-from-query";
 import { createClient } from "@/lib/supabase/server";
 import { signInWithGoogle } from "@/app/login/actions";
 import { signup } from "./actions";
@@ -23,7 +24,7 @@ export const metadata: Metadata = {
 };
 
 
-export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
+export default async function SignupPage({ searchParams }: { searchParams: Promise<{ error?: string; dominio?: string | string[] }> }) {
   const params = await searchParams;
 
   const supabase = await createClient();
@@ -34,6 +35,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
 
   return (
     <AuthPage>
+      <PendingDomainFromQuery domain={typeof params.dominio === "string" ? params.dominio : undefined} />
       <AuthHead title="Crea tu cuenta">7 días de Pro gratis, sin tarjeta.</AuthHead>
       <EntryForm mode="signup" action={signup} googleAction={signInWithGoogle} error={params.error} />
       <p className="au-alt">
