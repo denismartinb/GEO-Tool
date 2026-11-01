@@ -86,7 +86,12 @@ export async function middleware(request: NextRequest) {
   const activeProjectId =
     getProjectIdFromPathname(request.nextUrl.pathname) ??
     getProjectIdFromDomainsQuery(request.nextUrl.pathname, request.nextUrl.searchParams);
-  if (activeProjectId) {
+  // APP-BACK-CACHE-1 (log §402): only when it changes. A cookie written here
+  // is merged into the request's mutable cookies, so a server action posted
+  // from a project page reported "cookies changed": Next then wiped the
+  // back/forward cache and Back reloaded the previous screen (Competitors'
+  // suggestions call one on mount).
+  if (activeProjectId && request.cookies.get(ACTIVE_PROJECT_COOKIE)?.value !== activeProjectId) {
     response.cookies.set(ACTIVE_PROJECT_COOKIE, activeProjectId, {
       path: "/",
       httpOnly: true,

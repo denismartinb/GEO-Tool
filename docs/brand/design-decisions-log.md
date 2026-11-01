@@ -28437,3 +28437,15 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 - **EXT-SHOP-FIND-1 (Denis, 2026-11-01).** En una portada que no vende nada, la extensión busca la tienda en la misma web sin LLM, como `lib/agentic-audit/find-product.ts`: el catálogo público (Shopify `/products.json`, WooCommerce Store API), los enlaces de la propia página (ruta de ficha o menú «Tienda», «Productos», «Dispositivos»…) y, si no hay nada, el sitemap. Lee como mucho dos candidatas, sólo del mismo origen, y una cuenta sólo si su JSON-LD trae `Product` u oferta. Con tienda, Agentes es la nota de esa página y el panel dice «GenScore detecta tu tienda en /ruta» con un botón para abrirla; sin ella, «GenScore no detecta tu tienda ni tus productos de forma estándar». La nota SEO + IA de la portada no cambia. Sólo en la portada (`/`), para no avisar en cada artículo de un blog.
 
 **Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.
+
+## §402 · APP-BACK-CACHE-1: volver atrás en la consola no recarga la pantalla (2026-11-01)
+
+**Qué se vio.** El segundo test de la app 1.0.2 (Pixel 8, Android 14) lo pasó todo, pero volver atrás de «En la IA» a «Plan» enseñaba entre uno y cinco segundos el esqueleto «Cargando…», mientras que tocar la pestaña lo abría al instante.
+
+**Causa, reproducida con una app mínima en Next 16.2.6.** Next guarda cada pantalla visitada para volver atrás y la vacía entera cuando una acción de servidor dice que cambió cookies. El middleware escribía la cookie del proyecto activo en cada petición de `/dashboard/projects/<id>/…`, también en los POST de las acciones, y Next mezcla lo que escribe el middleware en las cookies de la acción. Así que cualquier acción lanzada desde una pantalla de proyecto contaba como «cookies cambiadas». Competidores lanza una al abrirse (las sugerencias), por eso el fallo salía justo desde «En la IA». En la reproducción, el mismo patrón (middleware que escribe una cookie, más una acción al montar) hace que atrás vuelva a pedir la pantalla. Escribiéndola sólo cuando cambia, atrás tarda unos 15 ms, sin petición.
+
+**Qué se decidió.** El middleware sólo escribe la cookie del proyecto activo cuando cambia. No vuelve a alargar su caducidad de 30 días en cada visita: si caduca, se escribe en la siguiente navegación a un proyecto. Además, cada acción lanzada desde una pantalla de proyecto deja de pedir un repintado extra de la pantalla actual. Lo vigila `middleware.test.ts`.
+
+**Dentro de la app no se invita a pagar (§381).** «Visibilidad en agentes» y «Auditoría agéntica» sin plan dicen «no está incluida en tu plan», sin «Pasar a Pro», y la tarjeta de Visión general que sólo invitaba a Pro no sale. Fuera de la app no cambia nada.
+
+**Pendiente.** Una renovación del token de Supabase en el middleware tiene el mismo efecto, pero sólo una vez por hora como mucho. No retira ningún camino de recuperación.

@@ -219,6 +219,12 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **Ajustes > Plan dentro de la app es de solo lectura** (`InAppPlan`, log §381 adenda): plan, estado y días de prueba, sin precios ni enlace a pagar fuera.
 - **Las acciones de pago se niegan en servidor**, no solo se esconden
   (`createCheckoutSession`, `createPortalSession`).
+- **Una pantalla de pago o de plan superior no invita a contratar dentro de la app**
+  (APP-BACK-CACHE-1, log §402): «no está incluida en tu plan», sin botón.
+- **El middleware no escribe cookies que no cambian** (log §402): Next mezcla lo
+  que escribe en las cookies de cada acción de servidor y, si «cambiaron», vacía
+  la caché de atrás y repinta la pantalla. Una cookie nueva del middleware se
+  escribe sólo cuando su valor cambia.
 - **Las páginas legales se ven dentro de la app sin cabecera ni pie públicos**
   (`LegalPageShell`, APP-LEGAL-1, log §400): llevan la franja de precio,
   «Precios» y los logos de pago. Una página nueva de la lista de permitidos

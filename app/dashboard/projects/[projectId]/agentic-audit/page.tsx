@@ -2,6 +2,7 @@ import { Motion } from "@/components/ins/kit/motion";
 import { PageHead } from "@/components/ins/page-head";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import {
   AGENTIC_REVIEW_DAILY_LIMIT,
@@ -76,6 +77,7 @@ export default async function AgenticAuditPage({
     supabase.from("profiles").select(SYSTEM_PLAN_COLUMNS).eq("id", user.id).maybeSingle(),
     readAgenticAudits(supabase, projectId, user.id)
   ]);
+  const inApp = await isInApp();
   const canRun = isProOrAbove(resolveSystemPlanId(profile as Parameters<typeof resolveSystemPlanId>[0]));
   const now = Date.now();
   const autoReview = audits.available && shouldAutoReview(audits, now);
@@ -97,14 +99,16 @@ export default async function AgenticAuditPage({
 
           {!canRun ? (
             <div className="card ag-upsell">
-              <h3>La auditoría agéntica está en Pro y Agencia</h3>
+              <h3>{inApp ? "La auditoría agéntica no está incluida en tu plan" : "La auditoría agéntica está en Pro y Agencia"}</h3>
               <p>
                 Revisa la página donde vendes como la leería un agente de IA: si puede entrar, si entiende lo que vendes, si
                 puede fiarse y si llega a comprar o reservar, con lo que más sube tu nota.
               </p>
-              <Link className="btn btn-primary" href="/dashboard/settings?openPlan=pro#plan">
-                Pasar a Pro
-              </Link>
+              {inApp ? null : (
+                <Link className="btn btn-primary" href="/dashboard/settings?openPlan=pro#plan">
+                  Pasar a Pro
+                </Link>
+              )}
             </div>
           ) : !audits.available ? (
             <div className="card">
