@@ -125,6 +125,18 @@ igual.
   de un informe gratis, que responde al solicitante
   (`docs/brand/design-decisions-log.md` §272).
 
+## Correos de funcionalidades (FEATURE-EMAILS-1, log §417)
+
+- **Las reglas viven en `decideFeatureEmail`** (`lib/email/lifecycle/feature-schedule.ts`,
+  pura y con tests). Una regla nueva va ahí, no en la pasada.
+- **Cuentan para las 48 h de toda la secuencia** (`LIFECYCLE_SPACED_KINDS` y
+  el espaciado de la prueba). D5 sigue sin esperar.
+- **Interruptor propio** (`isFeatureEmailEnabled`): `FEATURE_EMAILS_ENABLED`
+  encima de `LIFECYCLE_EMAILS_ENABLED`. Un tipo nuevo de `email_sends` necesita
+  migración antes de encenderlo.
+- **El correo de Search Console no sale si su botón no funcionaría**
+  (sin configurar o sin tabla), como la invitación de §313.
+
 ## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
 
 En todos los textos propios del producto y de marketing no uses rayas largas

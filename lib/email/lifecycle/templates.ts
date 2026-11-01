@@ -89,7 +89,7 @@ function url(path: string, campaign: string): string {
  * signed unsubscribe link can be built — and then the email is not sent at
  * all: never a commercial email without a working way out (log §232).
  */
-function lifecycleEnvelope(userId: string): { footerHtml: string; headers: Record<string, string> } | null {
+export function lifecycleEnvelope(userId: string): { footerHtml: string; headers: Record<string, string> } | null {
   const links = buildUnsubscribeLinks(userId, "lifecycle");
   if (!links) return null;
   return {
