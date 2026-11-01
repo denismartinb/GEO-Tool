@@ -28774,3 +28774,9 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Cómo.** `buildSending` cuenta por tipo con el mismo recorrido que por grupo, sobre la misma lista de Resend y el mismo filtro de contactos (`groups[].kinds`). Los nombres viven en `KIND_LABEL` (`lib/admin/kpi/email-model.ts`). Los correos sin etiqueta, enviados antes del 1 de noviembre, van en una última fila «Sin tipo (enviados antes del 1 de noviembre)». Un grupo sin ningún correo etiquetado no lleva desglose, porque esa fila repetiría el grupo. Sin migración y sin datos nuevos.
 
 **Pendiente o sabido.** Las aperturas pueden venir de los gestores de correo que descargan las imágenes al recibir (en la prueba de §419 llegaron a los pocos segundos de entregarse), así que el pie de la tabla avisa de que los clics son la señal fiable. Las cifras siguen limitadas a los 30 días de Resend (§419). Los correos de operador y las respuestas a formularios siguen fuera, porque no van a ningún contacto.
+
+## §424 · RECS-FAQ-COUNT-1: el primer paso de la FAQ deja de decir «tres preguntas» (2026-11-01)
+
+**Qué se decidió.** El primer paso de la tarjeta de FAQ (`rule_faq_001`) decía «Coge las tres preguntas de la lista», con el número escrito a mano. La lista sale de los prompts informativos del escaneo y puede tener una o diez; en genscore.es tenía una, y lo vio Denis probando el conector MCP (§422). Ahora dice «Coge las preguntas de la lista». Un test impide que vuelva un número delante de «preguntas de la lista».
+
+**Pendiente.** Las recomendaciones ya guardadas conservan su `first_step` hasta el siguiente escaneo del proyecto, que las regenera. No retira ningún camino de recuperación.

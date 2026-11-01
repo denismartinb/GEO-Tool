@@ -1146,7 +1146,7 @@ export function generateRecommendationsForRun(input: GenerateInput): Recommendat
         affected: informationalPrompts,
         assumptions: ["Los prompts en forma de pregunta se benefician de estructuras concisas y fáciles de responder."],
         whyThisMatters: "La IA construye sus respuestas con fragmentos. Cuanto más limpio sea el fragmento, más fácil es que use el tuyo.",
-        firstStep: "Coge las tres preguntas de la lista y respóndelas en tu web, cada una en dos frases, bajo un titular con la pregunta literal."
+        firstStep: "Coge las preguntas de la lista y respóndelas en tu web, cada una en dos frases, bajo un titular con la pregunta literal."
       })
     });
   }
