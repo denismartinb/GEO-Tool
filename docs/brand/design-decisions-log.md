@@ -28587,3 +28587,19 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
 **Límite conocido.** La web no puede saber si la extensión ya está instalada: el manifiesto 1.0.1 no expone nada a la página. Detectarlo pediría una versión nueva con un recurso accesible sólo desde genscore.es, y otra revisión de la tienda. Hasta entonces lo cubre «Ya la tengo».
 
 **Pendiente.** No retira ningún camino de recuperación.
+
+## §411 · EXT-GSC-2: el gauge de Google de la extensión enseña tendencia, evolución del puesto y búsquedas (2026-11-01)
+
+**Qué se decidió.** Con Search Console conectado, la capa «Tu dominio» del gauge de Google deja las tres cifras sueltas de §409 y enseña, con diseño aprobado por Denis en artifact:
+
+- Clics e impresiones de los últimos 28 días con su cambio frente a los 28 anteriores y una línea por día; puesto medio con lo que ha subido y dónde estaba antes.
+- «Evolución del puesto medio», con lo mejor arriba. Un día sin impresiones no tiene puesto y no se dibuja (nunca un 0).
+- «Tus búsquedas con más clics» (cuatro, con puesto y si suben, bajan o son nuevas).
+- «Casi en la página 1» (puestos 11 a 20, tres como mucho) con la nota «Las más fáciles de subir. Ya te ven, hay que optimizarlas.», texto de Denis.
+- En la capa «Esta página», si la página abierta es una de las que Google devolvió: sus clics, impresiones y puesto, y las búsquedas que la traen.
+
+El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se retiró a petición de Denis.
+
+**Cómo.** `/api/ext/project` lee `loadSearchConsoleScreen` (misma entrada de caché `screen-rows` de 30 min que «Posición en Google», sin inspecciones de indexación) con un tope de 6 s; si Google tarda, el campo sale como error y el panel no pinta el bloque. `toExtSearchConsole` mantiene los campos planos de §409 (`clicks`, `position`, `nearPage1`, `empty`) para un panel antiguo y añade `trend` y `page`. Nada se guarda en nuestra base de datos (`.claude/rules/search-console.md`).
+
+**Pendiente.** Subir la 1.2.0 a la tienda (Denis).

@@ -6,7 +6,7 @@ import { extJson, listExtProjects, readExtAccount } from "@/lib/ext/account";
 import { buildExtAudits } from "@/lib/ext/audits";
 import { buildExtProjectSummary, isOwnUrl } from "@/lib/ext/summary";
 import { toExtSearchConsole } from "@/lib/ext/search-console";
-import { loadSearchConsoleOverview, type SearchConsoleOverview } from "@/lib/search-console/load";
+import { loadSearchConsoleScreen, type SearchConsoleScreen } from "@/lib/search-console/load";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { loadReportInput } from "@/lib/report/report-data";
@@ -53,7 +53,7 @@ export async function GET(request: Request) {
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    // EXT-GSC-1 (log §409): the same Search Console overview as Visión general.
+    // EXT-GSC-1/2 (log §409, §411): the same Search Console rows as «Posición en Google».
     // The project came from the account's own list, so its ids are verified.
     readSearchConsole(project.id, account.user.id, project.domain)
   ]);
@@ -73,7 +73,7 @@ export async function GET(request: Request) {
       engineLabel: (provider) => getEngineMeta(provider).label,
       competitors: input?.competitors ?? []
     }),
-    searchConsole: toExtSearchConsole(gsc),
+    searchConsole: toExtSearchConsole(gsc, askedUrl && isOwnUrl(askedUrl, project.domain) ? askedUrl : null),
     // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
     audits: buildExtAudits({
       snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
@@ -92,11 +92,13 @@ function normalizeHost(raw: string | null): string | null {
 /** Google may be slow; the panel never waits for it past a few seconds. */
 const GSC_WAIT_MS = 6000;
 
-async function readSearchConsole(projectId: string, ownerUserId: string, domain: string): Promise<SearchConsoleOverview | null> {
+async function readSearchConsole(projectId: string, ownerUserId: string, domain: string): Promise<SearchConsoleScreen | null> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
-      loadSearchConsoleOverview(projectId, ownerUserId, domain),
+      // No audited pages, no prompts and no indexing inspections: the panel
+      // only reads the search analytics, which share the screen's cache entry.
+      loadSearchConsoleScreen(projectId, ownerUserId, domain, [], [], false),
       new Promise<null>((resolve) => {
         timer = setTimeout(() => resolve(null), GSC_WAIT_MS);
       })

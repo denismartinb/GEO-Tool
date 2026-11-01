@@ -151,10 +151,67 @@
      order: «Tu dominio» (GenScore's figures) and «Esta página» (the live review). */
   const lyr = (cls, t, src) => `<div class="lyr ${cls}"><i></i><b>${t}</b>${src ? `<span class="src">${src}</span>` : ""}</div>`;
   const auBlock = (key) => { const au = audOf(); return au ? au.blocks.find((b) => b.key === key) : null; };
+
+  // EXT-GSC-2 (log §411): the Search Console block with trend, position chart
+  // and queries, from what «Posición en Google» reads. Every figure is
+  // Google's; a missing one is left out, never drawn as 0.
+  const nES = (n, d = 0) => Number(n).toLocaleString("es-ES", { minimumFractionDigits: d, maximumFractionDigits: d });
+  const dPct = (x) => (x == null ? "" : `<span class="gd ${x >= 0 ? "up" : "down"}">${x >= 0 ? "+" : ""}${nES(x)}% <small>vs. 28 días antes</small></span>`);
+  const dPos = (x) => (x == null || Math.abs(x) < 0.05 ? "" : `<span class="gd ${x > 0 ? "up" : "down"}">${x > 0 ? "▲" : "▼"} ${nES(Math.abs(x), 1)}</span>`);
+  const MES = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const dayLabel = (iso) => { const [, m, d] = String(iso).split("-").map(Number); return m && d ? `${d} ${MES[m - 1]}` : ""; };
+  const spark = (vals, cls) => {
+    if (vals.length < 2) return "";
+    const mn = Math.min(...vals), mx = Math.max(...vals), r = mx - mn || 1;
+    const d = vals.map((v, i) => `${i ? "L" : "M"}${((i / (vals.length - 1)) * 100).toFixed(1)},${(25 - ((v - mn) / r) * 24).toFixed(1)}`).join("");
+    return `<svg class="gsp ${cls}" viewBox="0 0 100 26" preserveAspectRatio="none" aria-hidden="true"><path d="${d}"/></svg>`;
+  };
+  function posChart(daily) {
+    const pts = daily.map((d, i) => ({ i, v: d.position, label: dayLabel(d.date) })).filter((p) => p.v != null);
+    if (pts.length < 2) return "";
+    const W = 340, H = 120, n = daily.length - 1 || 1, vals = pts.map((p) => p.v);
+    const lo = Math.floor(Math.min(...vals)), hi = Math.ceil(Math.max(...vals)), r = hi - lo || 1;
+    const x = (i) => 28 + (i / n) * (W - 34), y = (v) => 8 + ((v - lo) / r) * (H - 28);
+    const line = pts.map((p, k) => `${k ? "L" : "M"}${x(p.i).toFixed(1)},${y(p.v).toFixed(1)}`).join("");
+    const first = pts[0], last = pts[pts.length - 1];
+    const area = `${line}L${x(last.i).toFixed(1)},${H - 20}L${x(first.i).toFixed(1)},${H - 20}Z`;
+    const ticks = [...new Set([lo, Math.round((lo + hi) / 2), hi])].map((t) => `<text x="22" y="${(y(t) + 3).toFixed(1)}" text-anchor="end">${t}</text><line x1="28" x2="${W - 6}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}"/>`).join("");
+    const mid = pts[Math.floor((pts.length - 1) / 2)];
+    const lbl = [[first, "start"], [mid, "middle"], [last, "end"]].map(([p, a]) => `<text x="${x(p.i).toFixed(1)}" y="${H - 6}" text-anchor="${a}">${p.label}</text>`).join("");
+    return `<svg class="gpc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Evolución del puesto medio en Google"><defs><linearGradient id="gpcg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".18"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>${ticks}<path class="ar" d="${area}"/><path class="ln" d="${line}"/><circle cx="${x(last.i).toFixed(1)}" cy="${y(last.v).toFixed(1)}" r="3.5"/>${lbl}</svg>`;
+  }
+  const qRow = (r, right) => `<div class="gq"><span class="pp num">${nES(r.position, 1)}</span><span class="n">${esc(r.query)}</span>${right}</div>`;
+  const moveTag = (m) => (m == null ? `<span class="mv nw">Nueva</span>` : Math.abs(m) < 0.5 ? `<span class="mv eq">=</span>` : `<span class="mv ${m > 0 ? "up" : "down"}">${m > 0 ? "▲" : "▼"}${nES(Math.abs(m))}</span>`);
+  const clicksTag = (c) => `<span class="c num">${nES(c)}<small> ${c === 1 ? "clic" : "clics"}</small></span>`;
+  function gscRich(g, go) {
+    const t = g.trend, daily = t.daily || [];
+    const pos = g.position == null || g.position === 0 ? "—" : nES(g.position, 1);
+    const was = g.position != null && t.positionDelta != null ? `<span class="was">antes ${nES(g.position + t.positionDelta, 1)}</span>` : "";
+    const chart = posChart(daily);
+    const q = (t.queries || []).map((r) => qRow(r, moveTag(r.movement) + clicksTag(r.clicks))).join("");
+    const near = (t.near || []).map((r) => qRow(r, `<span class="c num">${nES(r.impressions)}<small> impr.</small></span>`)).join("");
+    return `<div class="gsh"><span class="mh">Google · últimos 28 días</span><span class="src">${lg("google", 12)}Search Console</span></div>
+      <div class="gk3">
+        <div class="k"><span class="l">Clics</span><b class="num">${nES(g.clicks)}</b>${dPct(t.clicksDeltaPct)}${spark(daily.map((d) => d.clicks), "c")}</div>
+        <div class="k"><span class="l">Impresiones</span><b class="num">${nES(t.impressions)}</b>${dPct(t.impressionsDeltaPct)}${spark(daily.map((d) => d.impressions), "i")}</div>
+        <div class="k"><span class="l">Puesto medio</span><b class="num">${pos}</b>${dPos(t.positionDelta)}${was}</div>
+      </div>
+      ${chart ? `<div class="gcard"><div class="gch"><b>Evolución del puesto medio</b><small>Mejor arriba ↑</small></div>${chart}</div>` : ""}
+      ${q ? `<div class="gcard"><div class="gch"><b>Tus búsquedas con más clics</b><small>Puesto · cambio</small></div>${q}</div>` : ""}
+      ${near ? `<div class="gcard hot"><div class="gch"><b>Casi en la página 1</b><small>Puestos 11 a 20</small></div>${near}<p class="gnote">Las más fáciles de subir. Ya te ven, hay que optimizarlas.</p></div>` : ""}
+      <div class="acts">${go("Ver Posición en Google", "gsc-open")}</div>`;
+  }
+  function gscPage() {
+    const p = S.proj[curDom()], g = p && typeof p === "object" ? p.searchConsole : null;
+    const pg = g && g.state === "connected" ? g.page : null;
+    if (!pg) return "";
+    const rows = (pg.queries || []).map((r) => qRow(r, clicksTag(r.clicks))).join("");
+    return `<div class="gcard pg"><div class="gch"><b>Esta página en Google</b><small>Últimos 28 días</small></div><div class="gk3 sm"><div class="k"><span class="l">Clics</span><b class="num">${nES(pg.clicks)}</b></div><div class="k"><span class="l">Impresiones</span><b class="num">${nES(pg.impressions)}</b></div><div class="k"><span class="l">Puesto medio</span><b class="num">${nES(pg.position, 1)}</b></div></div>${rows ? `<div class="mh sub">Búsquedas que la traen</div>${rows}` : ""}</div>`;
+  }
   function pageLayer(k) {
     const sc = S.sc;
     if (!sc) return `${lyr("live", "Esta página")}<div class="calm">${svgGs(16)}<span>Pulsa el icono en cualquier página de tu web y aquí verás lo que lee ${k === "google" ? "Google" : k === "agent" ? "un agente" : "cada motor"}.</span></div>`;
-    return `${lyr("live", "Esta página", esc(pathLabel(S.scf)))}${pageLane(k, sc, k === "google" ? "page" : "own")}`;
+    return `${lyr("live", "Esta página", esc(pathLabel(S.scf)))}${k === "google" ? gscPage() : ""}${pageLane(k, sc, k === "google" ? "page" : "own")}`;
   }
   function domLane(k) {
     const D = A();
@@ -315,6 +372,7 @@
     if (g.state === "pick_property") return box(`<span>Search Console está conectado. Elige qué propiedad corresponde a ${esc(curDom())}.</span>`, go("Elegir propiedad", "gsc-property"));
     if (g.state === "error") return box(`<span>Search Console está conectado, pero Google no ha respondido ahora mismo.</span>`, go("Ver Posición en Google", "gsc-open"));
     if (g.empty) return box(`<span>Search Console conectado. Google no ha devuelto búsquedas de tu web en estos 28 días.</span>`, go("Ver Posición en Google", "gsc-open"));
+    if (g.trend) return gscRich(g, go);
     const fmtN = (n) => Number(n).toLocaleString("es-ES");
     const pos = g.position == null || g.position === 0 ? "—" : Number(g.position).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
     const cells = [[fmtN(g.clicks), g.clicks === 1 ? "clic" : "clics"], [pos, "puesto medio"]];
