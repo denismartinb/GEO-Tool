@@ -17,7 +17,8 @@ import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
  */
 
 export type ExtEngine = { provider: string; label: string; mentionShare: number };
-export type ExtRival = { name: string; share: number; isBrand: boolean };
+/** `domain` paints the rival's favicon: the project's own for the brand, a tracked competitor's when the name matches, else null (log §408). */
+export type ExtRival = { name: string; share: number; isBrand: boolean; domain: string | null };
 export type ExtPlanItem = { title: string; firstStep: string | null; engines: string[] };
 export type ExtCitingPrompt = { text: string; engines: string[]; mentioned: boolean };
 export type ExtAgentic =
@@ -105,7 +106,8 @@ export function buildExtProjectSummary({
   answers,
   agentic,
   url,
-  engineLabel
+  engineLabel,
+  competitors = []
 }: {
   project: { domain: string; brand: string };
   model: ReportModel | null;
@@ -113,6 +115,8 @@ export function buildExtProjectSummary({
   agentic: OverviewAgenticCard;
   url: string | null;
   engineLabel: (provider: string) => string;
+  /** Active tracked competitors, only to find each rival's domain. */
+  competitors?: ReadonlyArray<{ name: string; domain: string | null }>;
 }): ExtProjectSummary {
   const ownUrl = url && isOwnUrl(url, project.domain) ? url : null;
   return {
@@ -122,7 +126,7 @@ export function buildExtProjectSummary({
     geoScore: model?.geoScore ?? null,
     lede: model?.summary.lede ?? null,
     engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
-    rivals: pickRivals(model),
+    rivals: pickRivals(model, project.domain, competitors),
     seoScore: model?.technical?.score ?? null,
     plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => ({ title: p.title, firstStep: p.firstStep, engines: p.engineLabels })),
     agentic: toExtAgentic(agentic),
@@ -139,11 +143,16 @@ export function isOwnUrl(url: string, domain: string): boolean {
 }
 
 /** The brand always stays in the list, even when it is not in the top four. */
-function pickRivals(model: ReportModel | null): ExtRival[] {
+function pickRivals(
+  model: ReportModel | null,
+  ownDomain: string,
+  competitors: ReadonlyArray<{ name: string; domain: string | null }>
+): ExtRival[] {
+  const byName = new Map(competitors.filter((c) => c.domain).map((c) => [c.name.trim().toLowerCase(), c.domain as string]));
   const bars = model?.competition.bars ?? [];
   const top = bars.filter((b) => !b.isBrand).slice(0, EXT_RIVALS);
   const brand = bars.find((b) => b.isBrand);
   return [...top, ...(brand ? [brand] : [])]
     .sort((a, b) => b.share - a.share)
-    .map((b) => ({ name: b.name, share: b.share, isBrand: b.isBrand }));
+    .map((b) => ({ name: b.name, share: b.share, isBrand: b.isBrand, domain: b.isBrand ? ownDomain : byName.get(b.name.trim().toLowerCase()) ?? null }));
 }

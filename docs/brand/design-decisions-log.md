@@ -28542,3 +28542,19 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
 **Agotado, en las dos.** Si todas las ofertas dicen `OutOfStock`, `SoldOut` o `Discontinued`, «Avísame» es el botón correcto. En la consola, `add_to_cart` pasa a `unknown` y no resta; en la extensión, «Botón de compra claro» dice «No aplica, agotado». La extensión enseña la disponibilidad en castellano («Agotado», «Preventa», «En stock»). Lo encontró Denis en una ficha de El Corte Inglés.
 
 **Pendiente o roto conocido.** Siguen sin tienda las webs que se pintan sólo con JavaScript (Booking, Glovo, Miravia, Domino's, Amazon desde el servidor), las que venden en otro subdominio (Doctoralia Pro, que la extensión no puede leer por CORS) y algunas de formación y coches. Para la consola, ampliar a una segunda página extra mejoraría más casos, pero rompe la regla de §323 y necesita la aprobación del fundador. La batería vive en el scratchpad de esta sesión; su resumen por sector está en `/mnt/project-files/extension/bateria-deteccion-tiendas-2026-11-01.md`.
+
+## §408 · EXT-PANEL-LAYERS-1: la extensión 1.2.0 abre cada gauge en dos capas, «Tu dominio» y «Esta página» (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) que, con sesión y en su dominio, el panel enseñe lo más interesante de GenScore sin perder la revisión de la página, y que sin sesión o en una web no analizada cada bloque invite a entrar. Vio dos artefactos: uno con pestañas, que le gustó pero perdía la primera vista, y el definitivo sobre el panel real en claro (https://claude.ai/artifact/XotXsA3T4KgSZsrAKMdgAA), que aprobó («perfecto. Me gusta mucho»).
+
+- **La primera vista no cambia**: nota grande, frase y los tres gauges. Los gauges ya se desplegaban al pulsarlos y hacen de pestañas.
+- **Un gauge abierto enseña dos capas, siempre en este orden.** «Tu dominio» lleva los datos de GenScore y «Esta página» la revisión en vivo que ve todo el mundo (`pageLane`).
+  - **IA**: los cuatro motores en una fila (`.eng1`) y el ranking frente a los rivales con el favicon de cada web (`/api/favicon`, el mismo de la consola). Si no carga, sale la letra.
+  - **Google**: lo que más resta en la Salud SEO (los problemas del bloque SEO de `audits`), Search Console en una sola línea y lo que ve Google en la página. Ya no sale vacío.
+  - **Agentes**: un gauge por componente y lo que lee un agente en la página.
+  - Sin página leída, «Esta página» dice que se pulse el icono en una página de la web.
+- **Sin sesión, o con sesión en una web que no analizas**, cada gauge abre primero una ilustración sin cifras: «Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu dominio» y «Conoce tu nota para agentes». El botón es «Identifícate gratis» o «Analizar <dominio>». Debajo va la revisión de la página. Agentes sale siempre en estos dos casos, para poder invitar.
+- **Las auditorías del dominio siguen debajo, a primer nivel** (§406).
+- **`/api/ext/project` devuelve el dominio de cada rival** (`ExtRival.domain`): el del proyecto para la marca, el del competidor seguido cuyo nombre coincide, o `null`. Sin migración.
+
+**Pendiente o roto conocido.** Un rival que la IA nombra y no está entre los competidores seguidos no tiene dominio y sale con la letra. Hay que subir la 1.2.0 a la tienda (zip en `/mnt/project-files/extension/`).

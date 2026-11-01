@@ -99,6 +99,13 @@ describe("buildExtProjectSummary", () => {
     expect(s.rivals.at(-1)?.isBrand).toBe(true);
   });
 
+  it("gives each rival the domain that paints its favicon (log §408)", () => {
+    const s = buildExtProjectSummary({ ...base, model: model(), url: null, competitors: [{ name: "rival uno", domain: "riv1.es" }, { name: "Rival Dos", domain: null }] });
+    expect(s.rivals.find((r) => r.name === "Rival Uno")?.domain).toBe("riv1.es");
+    expect(s.rivals.find((r) => r.name === "Rival Dos")?.domain).toBeNull();
+    expect(s.rivals.find((r) => r.isBrand)?.domain).toBe(base.project.domain);
+  });
+
   it("never prints a count: every engine and rival figure is a share", () => {
     const s = buildExtProjectSummary({ ...base, model: model(), url: null });
     for (const v of [...s.engines.map((e) => e.mentionShare), ...s.rivals.map((r) => r.share)]) {

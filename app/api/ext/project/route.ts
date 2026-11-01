@@ -65,7 +65,8 @@ export async function GET(request: Request) {
       answers: input?.answers ?? [],
       agentic,
       url: askedUrl,
-      engineLabel: (provider) => getEngineMeta(provider).label
+      engineLabel: (provider) => getEngineMeta(provider).label,
+      competitors: input?.competitors ?? []
     }),
     // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
     audits: buildExtAudits({
