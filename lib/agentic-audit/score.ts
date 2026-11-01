@@ -6,8 +6,10 @@ import type {
   AgenticComponentResult,
   AgenticFix,
   AgenticOfferKind,
+  AssistantName,
   CheckState
 } from "@/lib/agentic-audit/api-contract";
+import { ASSISTANT_ROBOTS_TOKENS } from "@/lib/agentic-audit/agents";
 import { classifyOffer, type OfferReading, type PageSignals } from "@/lib/agentic-audit/html-signals";
 
 /**
@@ -103,6 +105,26 @@ export function componentScore(checks: AgenticCheck[]): number | null {
   return Math.round((earned / possible) * 100);
 }
 
+/**
+ * The robots.txt fix names what to open, from what is blocked (log §427):
+ * «Deja que Muse te encuentre» is only said when Meta is the one blocked.
+ */
+export function robotsFix(blocked: AssistantName[]): string {
+  if (blocked.length === 1 && blocked[0] === "Meta") {
+    return "Deja que Muse te encuentre: abre meta-webindexer en tu robots.txt.";
+  }
+  const tokens = blocked.flatMap((a) => ASSISTANT_ROBOTS_TOKENS[a]);
+  if (tokens.length === 0) {
+    return "Deja pasar en robots.txt a los rastreadores de búsqueda y de usuario de cada asistente (OAI-SearchBot, ChatGPT-User, Claude-User, PerplexityBot, meta-webindexer…), si quieres que puedan recomendarte y comprar.";
+  }
+  return `Deja pasar en robots.txt a ${joinTokens(tokens)}, si quieres que ${blocked.length === 1 ? "ese asistente pueda" : "esos asistentes puedan"} recomendarte y comprar.`;
+}
+
+function joinTokens(items: string[]): string {
+  if (items.length <= 1) return items.join("");
+  return `${items.slice(0, -1).join(", ")} y ${items[items.length - 1]}`;
+}
+
 function discoveryChecks(input: ScoreInput): AgenticCheck[] {
   const known = input.agents.filter((a) => a.allowed !== null);
   const allowed = known.filter((a) => a.allowed === true);
@@ -120,7 +142,7 @@ function discoveryChecks(input: ScoreInput): AgenticCheck[] {
         : robotsState === "unknown"
           ? "No pudimos leer tu robots.txt"
           : `Tu robots.txt bloquea a ${blockedNames.join(", ")}`,
-      "Deja pasar en robots.txt a los rastreadores de búsqueda y de usuario de cada asistente (OAI-SearchBot, ChatGPT-User, Claude-User, PerplexityBot…), si quieres que puedan recomendarte y comprar."
+      robotsFix(blockedNames)
     ),
     check(
       "no_challenge",

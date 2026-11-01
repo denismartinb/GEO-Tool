@@ -1,6 +1,7 @@
 import { headlinePath } from "@/lib/recommendations/headline";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
+import { AI_ENGINES, engineReadStates } from "@/lib/web-audit/ai-bots";
 
 /**
  * AUDIT-RECS-JOIN-1 Fase A — lo que impide que te citen, dicho en la pantalla
@@ -47,7 +48,10 @@ export function findCitationBlockers(input: {
 }): CitationBlocker[] {
   const blockers: CitationBlocker[] = [];
 
-  const agents = (input.bots?.bots ?? []).filter((b) => !b.allowed).map((b) => b.agent);
+  // AI-BOTS-CONSOLE-1 (log §426): engines that cannot read the site, never a
+  // closed training bot (GPTBot, ClaudeBot), which does not stop a citation.
+  const states = engineReadStates(input.bots);
+  const agents = AI_ENGINES.filter((e) => states[e.engine] === false).map((e) => e.name);
   if (agents.length > 0) blockers.push({ kind: "bots", agents });
 
   const analyzed = (input.pages ?? []).filter((p) => p.status === "analyzed" && p.check);
@@ -71,8 +75,8 @@ export function blockerTitle(blocker: CitationBlocker): string {
   if (blocker.kind === "bots") {
     const rest = blocker.agents.length - 2;
     const shown = rest > 0 ? `${blocker.agents.slice(0, 2).join(", ")} y ${rest} más` : blocker.agents.join(" y ");
-    const title = `Permite ${shown} en tu robots.txt`;
-    return title.length <= 48 ? title : "Permite los bots de IA en tu robots.txt";
+    const title = `Abre tu robots.txt a ${shown}`;
+    return title.length <= 48 ? title : "Abre tu robots.txt a los motores de IA";
   }
   const n = blocker.urls.length;
   const one = n === 1 ? pathFor(blocker.urls[0]) : null;

@@ -31,10 +31,14 @@ describe("findCitationBlockers", () => {
     expect(findCitationBlockers({ bots: bots(), pages: [page("https://acme.com/", { noindex: false, snippetBlocks: [] })] })).toEqual([]);
   });
 
-  it("saca los bots bloqueados, como ya hacía la pantalla", () => {
-    expect(findCitationBlockers({ bots: bots(["GPTBot", "OAI-SearchBot"]), pages: [] })).toEqual([
-      { kind: "bots", agents: ["GPTBot", "OAI-SearchBot"] }
+  it("saca los motores que no pueden leer la web, por su nombre (log §426)", () => {
+    expect(findCitationBlockers({ bots: bots(["GPTBot", "OAI-SearchBot", "PerplexityBot"]), pages: [] })).toEqual([
+      { kind: "bots", agents: ["ChatGPT", "Perplexity"] }
     ]);
+  });
+
+  it("un bot de entrenamiento cerrado no impide la cita", () => {
+    expect(findCitationBlockers({ bots: bots(["GPTBot", "ClaudeBot"]), pages: [] })).toEqual([]);
   });
 
   it("saca noindex con la URL concreta — lo que ninguna recomendación decía antes", () => {
@@ -54,7 +58,7 @@ describe("findCitationBlockers", () => {
       page("https://acme.com/a", { noindex: true }),
       page("https://acme.com/b", { snippetBlocks: [{ directive: "max-snippet:0", source: "meta" }] })
     ];
-    const found = findCitationBlockers({ bots: bots(["GPTBot"]), pages });
+    const found = findCitationBlockers({ bots: bots(["OAI-SearchBot"]), pages });
     expect(found.map((b) => b.kind)).toEqual(["bots", "noindex", "snippet"]);
   });
 
@@ -85,9 +89,9 @@ describe("copy del bloqueo", () => {
   });
 
   it("dice qué fichero tocar para los bots", () => {
-    expect(blockerTitle({ kind: "bots", agents: ["GPTBot", "ClaudeBot"] })).toBe("Permite GPTBot y ClaudeBot en tu robots.txt");
-    expect(blockerTitle({ kind: "bots", agents: ["GPTBot", "OAI-SearchBot", "ClaudeBot", "PerplexityBot"] })).toBe(
-      "Permite los bots de IA en tu robots.txt"
+    expect(blockerTitle({ kind: "bots", agents: ["ChatGPT", "Perplexity"] })).toBe("Abre tu robots.txt a ChatGPT y Perplexity");
+    expect(blockerTitle({ kind: "bots", agents: ["ChatGPT", "Gemini", "Claude", "Perplexity"] })).toBe(
+      "Abre tu robots.txt a ChatGPT, Gemini y 2 más"
     );
   });
 
@@ -101,7 +105,7 @@ describe("copy del bloqueo", () => {
   });
 
   it("sólo los bloqueos por página traen URLs", () => {
-    expect(blockerUrls({ kind: "bots", agents: ["GPTBot"] })).toEqual([]);
+    expect(blockerUrls({ kind: "bots", agents: ["ChatGPT"] })).toEqual([]);
     expect(blockerUrls({ kind: "noindex", urls: ["https://acme.com/a"] })).toEqual(["https://acme.com/a"]);
   });
 });

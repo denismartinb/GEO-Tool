@@ -44,7 +44,8 @@ export type InteropItem = {
   detail: string;
 };
 
-export type AssistantName = "ChatGPT" | "Claude" | "Perplexity" | "Gemini";
+/** Meta (Meta AI and its shopping agent Muse) since log §427. Reviews stored before it have four. */
+export type AssistantName = "ChatGPT" | "Claude" | "Perplexity" | "Gemini" | "Meta";
 
 export type AgentAccess = {
   assistant: AssistantName;

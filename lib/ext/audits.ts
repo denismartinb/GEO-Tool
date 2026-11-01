@@ -6,6 +6,13 @@ import { buildTechnicalIssuesReport, pageCheckStates, type IssueCheckKey, type I
 import { ISSUE_CHECK_META, issueScopeLabel } from "@/lib/web-audit/issue-labels";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
+import { engineReadStates } from "@/lib/web-audit/ai-bots";
+
+/** Every measured engine can read the site (AI-BOTS-CONSOLE-1, log §426). Null when none was measured. */
+function aiEnginesCanRead(bots: BotAccessReport): boolean | null {
+  const measured = Object.values(engineReadStates(bots)).filter((v): v is boolean => v !== null);
+  return measured.length ? measured.every(Boolean) : null;
+}
 
 /**
  * EXT-AUDITS-1 (log §406): the three audits of the selected domain, as the
@@ -43,7 +50,7 @@ export type ExtPageAudit =
   | { state: "not_audited" }
   | {
       state: "audited";
-      /** robots.txt as the server read it: every tracked AI crawler may enter. Null when unknown. */
+      /** robots.txt as the server read it: every engine's search bots may enter. Null when unknown. */
       aiBotsAllowed: boolean | null;
       /** false when the page carries noindex. Null on snapshots that never measured it. */
       indexable: boolean | null;
@@ -132,7 +139,7 @@ function pageAudit(url: string, pages: PageAuditEntry[], bots: BotAccessReport):
     });
   return {
     state: "audited",
-    aiBotsAllowed: bots.bots.length ? bots.bots.every((b) => b.allowed) : null,
+    aiBotsAllowed: aiEnginesCanRead(bots),
     indexable: entry.check.indexability ? !entry.check.indexability.noindex : null,
     issues
   };

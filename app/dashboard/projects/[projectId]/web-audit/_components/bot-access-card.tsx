@@ -1,4 +1,13 @@
-import type { BotAccessReport, BotAgent } from "@/lib/web-audit/robots";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
+import {
+  AI_BOT_SWITCHES,
+  AI_ENGINES,
+  aiTokenStates,
+  engineLabel,
+  engineReadStates,
+  switchStates
+} from "@/lib/web-audit/ai-bots";
+import type { AiBotsEngineTile, AiBotsSwitchRow } from "@/components/ins/audit/ai-bots";
 import { formatDate } from "./format";
 
 /**
@@ -11,19 +20,6 @@ import { formatDate } from "./format";
  * marcado — el `ux-pilot` es quien lo verifica, porque esta fase SÍ toca UI
  * (log §83).
  */
-
-// Display names for the AI-bot user agents tracked by robots.ts — the
-// UA token stays visible alongside it (badges), since that's what actually
-// appears in a robots.txt file and what the founder would go verify.
-const BOT_ENGINE_LABELS: Record<BotAgent, string> = {
-  GPTBot: "OpenAI (ChatGPT)",
-  "OAI-SearchBot": "OpenAI (búsqueda)",
-  "Google-Extended": "Google (Gemini)",
-  PerplexityBot: "Perplexity",
-  ClaudeBot: "Anthropic (Claude)",
-  "anthropic-ai": "Anthropic (legado)",
-  Bingbot: "Microsoft (Copilot/Bing)"
-};
 
 export function describeSitemap(bots: BotAccessReport): {
   sitemapIsReal: boolean;
@@ -80,36 +76,61 @@ export function describeSitemap(bots: BotAccessReport): {
   };
 }
 
+/**
+ * AI-BOTS-CONSOLE-1 (log §426): what `AiBotsSection` shows, from the snapshot.
+ * Server-side and pure, so the client only receives the states.
+ */
+export function aiBotsSectionProps(bots: BotAccessReport, domain: string): {
+  engines: AiBotsEngineTile[];
+  switches: AiBotsSwitchRow[];
+  starRules: string[] | null;
+  robotsUrl: string;
+  note: string | null;
+} {
+  const engineStates = engineReadStates(bots);
+  const states = switchStates(bots);
+  const token = aiTokenStates(bots);
+  const unread = bots.probes?.robots === "unknown";
+  return {
+    engines: AI_ENGINES.map(({ engine, name }) => ({
+      engine,
+      name,
+      state: engineStates[engine],
+      // Gemini also needs Googlebot, which no switch here touches.
+      hint: engine === "gemini" && token("Googlebot") === false ? "Googlebot cerrado" : null
+    })),
+    switches: AI_BOT_SWITCHES.map((sw) => ({
+      id: sw.id,
+      engine: sw.engine,
+      name: engineLabel(sw.engine),
+      what: sw.what,
+      tokens: sw.tokens,
+      training: sw.kind === "training",
+      state: states[sw.id]
+    })),
+    starRules: unread ? null : (bots.aiBots?.starRules ?? null),
+    robotsUrl: `https://${domain}/robots.txt`,
+    note: unread
+      ? "No hemos podido abrir tu robots.txt (bloqueo, error del servidor o tiempo agotado). Lo volvemos a intentar en la próxima revisión."
+      : !bots.robotsFound
+        ? "Tu web no tiene robots.txt, así que todos los bots pueden entrar."
+        : !bots.aiBots
+          ? "Algunos bots se comprueban desde la próxima revisión."
+          : null
+  };
+}
+
+/** llms.txt, sitemap.xml and Bing: the files and the crawler that are not AI-bot switches. */
 export function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; checkedAt: string }) {
   const { sitemapIsReal, sitemapBadge, sitemapDetail } = describeSitemap(bots);
+  const bing = bots.probes?.robots === "unknown" ? undefined : bots.bots?.find((b) => b.agent === "Bingbot")?.allowed;
   return (
     <div className="card">
       <div style={{ padding: "13px 16px 0" }}>
-        <div style={{ fontSize: 13.5, fontWeight: 750 }}>Acceso de bots de IA</div>
-        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>
-          Qué motores de IA puede rastrear tu robots.txt. Comprobado {formatDate(checkedAt)}.
-        </div>
+        <div style={{ fontSize: 13.5, fontWeight: 750 }}>Ficheros para la IA</div>
+        <div style={{ fontSize: 11.5, color: "var(--ink-3)", marginTop: 2 }}>Comprobado {formatDate(checkedAt)}.</div>
       </div>
       <div style={{ padding: "14px 16px 16px", display: "flex", flexDirection: "column", gap: 6 }}>
-        {!bots.robotsFound && (
-          <p style={{ fontSize: 11.5, color: "var(--ink-4)", margin: "0 0 4px" }}>
-            {bots.probes?.robots === "unknown"
-              ? "No hemos podido acceder a robots.txt (bloqueo, error del servidor o tiempo agotado). Los permisos de abajo son el comportamiento por defecto, no lo que dice tu fichero."
-              : "No se ha encontrado robots.txt — se asume acceso permitido por defecto."}
-          </p>
-        )}
-        {bots.bots.map((bot) => (
-          <div
-            key={bot.agent}
-            style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}
-          >
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>{BOT_ENGINE_LABELS[bot.agent]}</div>
-              <div style={{ fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>{bot.agent}</div>
-            </div>
-            <span className={`badge ${bot.allowed ? "badge-pos" : "badge-neg"}`}>{bot.allowed ? "Permitido" : "Bloqueado"}</span>
-          </div>
-        ))}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
           <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>llms.txt</div>
           <span className={`badge ${bots.llmsTxtFound ? "badge-pos" : "badge-outline"}`}>
@@ -137,6 +158,15 @@ export function BotAccessCard({ bots, checkedAt }: { bots: BotAccessReport; chec
             {sitemapBadge}
           </span>
         </div>
+        {bing !== undefined && (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 8px", borderRadius: 8, background: "var(--surface-2)" }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 650, color: "var(--ink)" }}>Bing y Copilot</div>
+              <div style={{ fontSize: 10.5, color: "var(--ink-4)", fontFamily: "var(--mono)" }}>Bingbot</div>
+            </div>
+            <span className={`badge ${bing ? "badge-pos" : "badge-neg"}`}>{bing ? "Abierto" : "Cerrado"}</span>
+          </div>
+        )}
       </div>
     </div>
   );

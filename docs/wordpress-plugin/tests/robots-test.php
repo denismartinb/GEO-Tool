@@ -58,6 +58,13 @@ $out = genscore_apply_bot_rules( "User-agent: Googlebot\nDisallow:\n\n" . $wp, a
 check( 'Googlebot group untouched', false !== strpos( $out, "User-agent: Googlebot\nDisallow:" ) );
 check( 'Google-Extended blocked on its own', false !== strpos( $out, "User-agent: Google-Extended\nDisallow: /" ) );
 
+// 1.0.5: Meta's two switches (search behind Meta AI and Muse, training). Never meta-externalfetcher.
+$meta = genscore_apply_bot_rules( $wp, array( 'meta-search' => 'allow', 'meta-training' => 'block' ) );
+check( 'meta-externalagent blocked', false !== strpos( $meta, "User-agent: meta-externalagent\nDisallow: /" ) );
+check( 'meta-webindexer not blocked', false === strpos( $meta, "User-agent: meta-webindexer\nDisallow: /" ) );
+check( 'meta-webindexer blocked on its own', false !== strpos( genscore_apply_bot_rules( $wp, array( 'meta-search' => 'block' ) ), "User-agent: meta-webindexer\nDisallow: /" ) );
+check( 'meta-externalfetcher never written', false === stripos( $meta, 'meta-externalfetcher' ) );
+
 // * closes the whole site (maintenance): an allow does not reopen it for that bot.
 $closed = "User-agent: *\nDisallow: /\n";
 check( 'allow does not reopen a closed site', genscore_apply_bot_rules( $closed, array( 'perplexity-search' => 'allow' ) ) === $closed );

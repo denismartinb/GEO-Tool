@@ -7,6 +7,8 @@ const SPRITE_KEY: Record<string, string> = {
   gemini: "gemini",
   claude: "claude",
   perplexity: "perplexity",
+  // Log §427: Meta (Meta AI and Muse) only appears as a bot owner, never as a scanned engine.
+  meta: "meta",
 };
 
 export function engineSpriteKey(provider: string): string | null {

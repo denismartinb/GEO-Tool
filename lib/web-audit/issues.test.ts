@@ -3,6 +3,7 @@ import { buildTechnicalIssuesReport, type TechnicalIssue } from "@/lib/web-audit
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { TRACKED_BOT_AGENTS, type BotAccessReport } from "@/lib/web-audit/robots";
+import { AI_BOT_TOKENS } from "@/lib/web-audit/ai-bots";
 
 function passingCheck(pageScore = 100): PageCheckResult {
   return {
@@ -238,23 +239,51 @@ describe("buildTechnicalIssuesReport — freshness", () => {
 });
 
 describe("buildTechnicalIssuesReport — bots, llms.txt, sitemap", () => {
-  it("flags a single blocked bot as critical with no point delta, and lists the rest as passing", () => {
-    const bots = botsReport({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "GPTBot" })) });
+  it("flags an engine whose search bot is blocked as critical, by engine name, with no point delta (log §426)", () => {
+    const bots = botsReport({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })) });
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
     const issue = findIssue(report.issues, "bot_blocked")!;
     expect(issue.severity).toBe("critical");
     expect(issue.pointDelta).toBeNull();
-    expect(issue.affectedCount).toBe(1);
-    expect(issue.applicableCount).toBe(TRACKED_BOT_AGENTS.length);
-    expect(issue.affectedLabels).toEqual(["GPTBot"]);
-    const passingBots = report.passing.find((p) => p.check === "bot_blocked")!;
-    expect(passingBots.passedCount).toBe(TRACKED_BOT_AGENTS.length - 1);
+    expect(issue.affectedLabels).toEqual(["Perplexity"]);
+    // Legacy snapshot: ChatGPT (OAI-SearchBot), Gemini (Google-Extended) and
+    // Perplexity were measured; Claude's search bots were not.
+    expect(issue.applicableCount).toBe(3);
+    expect(report.passing.find((p) => p.check === "bot_blocked")!.passedCount).toBe(2);
   });
 
-  it("produces no bot_blocked issue and a full passing entry when every tracked bot is allowed", () => {
+  it("never counts a closed training bot as a problem (GPTBot, ClaudeBot)", () => {
+    const bots = botsReport({
+      bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "GPTBot" && agent !== "ClaudeBot" }))
+    });
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
+    expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
+  });
+
+  it("reads every engine from the stored tokens when the snapshot has them", () => {
+    const tokens = Object.fromEntries(AI_BOT_TOKENS.map((t) => [t, t !== "Claude-User"]));
+    const report = buildTechnicalIssuesReport(
+      [page("https://acme.com/a", passingCheck(100))],
+      botsReport({ aiBots: { tokens, starRules: [] } })
+    );
+    const issue = findIssue(report.issues, "bot_blocked")!;
+    expect(issue.affectedLabels).toEqual(["Claude"]);
+    expect(issue.applicableCount).toBe(4);
+  });
+
+  it("produces no bot_blocked issue and a passing entry per measured engine when every bot is allowed", () => {
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
     expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
-    expect(report.passing.find((p) => p.check === "bot_blocked")?.passedCount).toBe(TRACKED_BOT_AGENTS.length);
+    expect(report.passing.find((p) => p.check === "bot_blocked")?.passedCount).toBe(3);
+  });
+
+  it("says nothing about bots when robots.txt could not be read", () => {
+    const report = buildTechnicalIssuesReport(
+      [page("https://acme.com/a", passingCheck(100))],
+      botsReport({ probes: { robots: "unknown", llmsTxt: "found", sitemap: "found" } })
+    );
+    expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
+    expect(report.passing.find((p) => p.check === "bot_blocked")).toBeUndefined();
   });
 
   it("flags missing llms.txt and sitemap.xml as warning-severity issues with no point delta", () => {

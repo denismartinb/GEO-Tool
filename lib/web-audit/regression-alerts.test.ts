@@ -34,7 +34,7 @@ function resultRow(runId: string, promptId: string, cited: boolean) {
 function bots(overrides: Partial<BotAccessReport> = {}): BotAccessReport {
   return {
     robotsFound: true,
-    bots: [{ agent: "GPTBot", allowed: true }],
+    bots: [{ agent: "OAI-SearchBot", allowed: true }],
     llmsTxtFound: true,
     llmsTxtBytes: 100,
     sitemapFound: true,
@@ -138,7 +138,7 @@ describe("emitAuditRegressionNotifications", () => {
       ...BASE,
       service,
       previousSnapshot: { pages: [], bots: bots() },
-      currentSnapshot: { pages: [], bots: bots({ bots: [{ agent: "GPTBot", allowed: false }] }) }
+      currentSnapshot: { pages: [], bots: bots({ bots: [{ agent: "OAI-SearchBot", allowed: false }] }) }
     });
 
     expect(upserts).toHaveLength(1);
@@ -147,8 +147,8 @@ describe("emitAuditRegressionNotifications", () => {
       project_id: "project-1",
       type: "ai_bot_blocked",
       severity: "critical",
-      dedupe_key: "ai_bot_blocked:snapshot-2:GPTBot",
-      payload_json: { agent: "GPTBot", snapshotId: "snapshot-2" }
+      dedupe_key: "ai_bot_blocked:snapshot-2:OAI-SearchBot",
+      payload_json: { agent: "OAI-SearchBot", snapshotId: "snapshot-2" }
     });
   });
 

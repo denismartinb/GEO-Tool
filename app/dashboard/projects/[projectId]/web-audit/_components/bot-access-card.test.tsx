@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
-import { BotAccessCard, describeSitemap } from "./bot-access-card";
+import { BotAccessCard, aiBotsSectionProps, describeSitemap } from "./bot-access-card";
+import { AI_BOT_TOKENS } from "@/lib/web-audit/ai-bots";
 
 /**
  * PRELAUNCH-HARDENING-1 R7 — tests de render de la tarjeta de acceso de bots.
@@ -83,22 +84,35 @@ describe("describeSitemap", () => {
   });
 });
 
-describe("BotAccessCard", () => {
-  it("nombra cada bot y su token de user-agent, que es lo que se verifica a mano", () => {
+describe("BotAccessCard (Ficheros para la IA, log §426)", () => {
+  it("ya no lista los bots de IA: viven en «Bots de IA»", () => {
     const html = renderToStaticMarkup(<BotAccessCard bots={report()} checkedAt="2026-08-11T10:00:00Z" />);
-    expect(html).toContain("GPTBot");
-    expect(html).toContain("OpenAI (ChatGPT)");
-    expect(html).toContain("ClaudeBot");
-  });
-
-  it("distingue permitido de bloqueado", () => {
-    const html = renderToStaticMarkup(<BotAccessCard bots={report()} checkedAt="2026-08-11T10:00:00Z" />);
-    expect(html).toContain("Permitido");
-    expect(html).toContain("Bloqueado");
+    expect(html).toContain("Ficheros para la IA");
+    expect(html).not.toContain("GPTBot");
+    expect(html).toContain("llms.txt");
+    expect(html).toContain("sitemap.xml");
   });
 
   it("fecha la comprobación, porque un permiso caduca", () => {
     const html = renderToStaticMarkup(<BotAccessCard bots={report()} checkedAt="2026-08-11T10:00:00Z" />);
     expect(html).toContain("11 ago 2026");
+  });
+});
+
+describe("aiBotsSectionProps", () => {
+  it("no ofrece el bloque para copiar sin las reglas generales guardadas", () => {
+    const props = aiBotsSectionProps(report(), "acme.es");
+    expect(props.starRules).toBeNull();
+    expect(props.note).toContain("próxima revisión");
+    expect(props.robotsUrl).toBe("https://acme.es/robots.txt");
+  });
+
+  it("un bot de entrenamiento cerrado no bloquea al motor", () => {
+    const tokens = Object.fromEntries(AI_BOT_TOKENS.map((t) => [t, t !== "GPTBot"]));
+    const props = aiBotsSectionProps(report({ aiBots: { tokens, starRules: [] } } as Partial<BotAccessReport>), "acme.es");
+    expect(props.engines.find((e) => e.engine === "chatgpt")?.state).toBe(true);
+    expect(props.switches.find((s) => s.id === "chatgpt-training")?.state).toBe(false);
+    expect(props.starRules).toEqual([]);
+    expect(props.note).toBeNull();
   });
 });
