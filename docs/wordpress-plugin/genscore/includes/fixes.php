@@ -30,6 +30,7 @@ const GENSCORE_META = array(
 	'canonical' => '_genscore_canonical',
 	'fresh'     => '_genscore_fresh',
 	'returns'   => '_genscore_returns',
+	'lead'      => '_genscore_lead',
 );
 
 /** The same fields for the home page when it is the list of latest posts. */
@@ -37,6 +38,9 @@ const GENSCORE_HOME_OPTION = 'genscore_home_fixes';
 
 /** Returns policy shared by the products that publish it. */
 const GENSCORE_RETURNS_OPTION = 'genscore_returns';
+
+/** Stored instead of JSON on the shop page: its product list is built live. */
+const GENSCORE_SHOP_LIVE = 'live';
 
 /**
  * Where the SEO plugin keeps each field, or null when it has none we can
@@ -201,6 +205,74 @@ function genscore_with_returns( $data ) {
 	return $data;
 }
 
+/**
+ * The WooCommerce shop page id, or 0.
+ *
+ * @return int
+ */
+function genscore_shop_page_id() {
+	return function_exists( 'wc_get_page_id' ) ? max( 0, (int) wc_get_page_id( 'shop' ) ) : 0;
+}
+
+/**
+ * The shop page as a list of its products, built from WooCommerce at the
+ * moment it is printed, so prices and stock are never out of date. Null when
+ * no product has a price.
+ *
+ * @param bool $returns Add the returns policy to each offer.
+ * @return array|null
+ */
+function genscore_shop_list_data( $returns ) {
+	$shop = genscore_shop_page_id();
+	if ( ! $shop || ! function_exists( 'wc_get_products' ) ) {
+		return null;
+	}
+	$products = wc_get_products(
+		array(
+			'status'     => 'publish',
+			'visibility' => 'catalog',
+			'limit'      => 20,
+			'orderby'    => array( 'menu_order' => 'ASC', 'title' => 'ASC' ),
+		)
+	);
+	$items = array();
+	foreach ( $products as $product ) {
+		$price = (string) $product->get_price();
+		if ( '' === $price ) {
+			continue;
+		}
+		$stock = $product->get_stock_status();
+		$url   = get_permalink( $product->get_id() );
+		$item  = array(
+			'@type'  => 'Product',
+			'name'   => wp_strip_all_tags( $product->get_name() ),
+			'url'    => $url,
+			'offers' => array(
+				'@type'         => 'Offer',
+				'price'         => wc_format_decimal( $price, wc_get_price_decimals() ),
+				'priceCurrency' => get_woocommerce_currency(),
+				'availability'  => 'https://schema.org/' . ( 'outofstock' === $stock ? 'OutOfStock' : ( 'onbackorder' === $stock ? 'BackOrder' : 'InStock' ) ),
+				'url'           => $url,
+			),
+		);
+		if ( $product->get_image_id() ) {
+			$item['image'] = wp_get_attachment_url( $product->get_image_id() );
+		}
+		$items[] = $returns ? genscore_with_returns( $item ) : $item;
+	}
+	if ( ! $items ) {
+		return null;
+	}
+	return array(
+		'@context'        => 'https://schema.org',
+		'@type'           => 'ItemList',
+		'name'            => wp_strip_all_tags( get_the_title( $shop ) ),
+		'url'             => get_permalink( $shop ),
+		'numberOfItems'   => count( $items ),
+		'itemListElement' => $items,
+	);
+}
+
 /** Products whose Product block WooCommerce already printed in this request. */
 $GLOBALS['genscore_wc_printed'] = array();
 
@@ -259,6 +331,13 @@ function genscore_fix_head() {
 		if ( '' !== $canon ) {
 			echo '<link rel="canonical" href="' . esc_url( $canon ) . '">' . "\n";
 		}
+	}
+	if ( $id && $id === genscore_shop_page_id() && GENSCORE_SHOP_LIVE === genscore_fix_get( $id, 'jsonld' ) ) {
+		$list = genscore_shop_list_data( '' !== genscore_fix_get( $id, 'returns' ) );
+		if ( $list ) {
+			genscore_print_jsonld( $list );
+		}
+		return;
 	}
 	$data = json_decode( genscore_fix_get( $id, 'jsonld' ), true );
 	if ( ! is_array( $data ) ) {
@@ -330,8 +409,9 @@ function genscore_fix_canonical( $url, $post ) {
 add_filter( 'get_canonical_url', 'genscore_fix_canonical', 20, 2 );
 
 /**
- * «Actualizado el…» under the title: the real date of the last edit, so it
- * can never say something the page did not do.
+ * Under the title: «Actualizado el…» with the real date of the last edit (it
+ * can never say something the page did not do) and the answer-first
+ * paragraph. The post content itself is never edited.
  *
  * @param string $content Content.
  * @return string
@@ -341,13 +421,71 @@ function genscore_fix_fresh( $content ) {
 		return $content;
 	}
 	$id = (int) get_the_ID();
-	if ( ! $id || $id !== (int) get_queried_object_id() || ! genscore_fix_get( $id, 'fresh' ) ) {
+	if ( ! $id || $id !== (int) get_queried_object_id() ) {
 		return $content;
 	}
-	$iso  = get_post_modified_time( 'c', false, $id );
-	$date = get_post_modified_time( get_option( 'date_format' ), false, $id, true );
-	/* translators: %s: date of the last edit. */
-	$line = sprintf( __( 'Actualizado el %s', 'genscore' ), $date );
-	return '<p class="genscore-updated"><time datetime="' . esc_attr( $iso ) . '">' . esc_html( $line ) . '</time></p>' . $content;
+	$top  = '';
+	if ( genscore_fix_get( $id, 'fresh' ) ) {
+		$iso  = get_post_modified_time( 'c', false, $id );
+		$date = get_post_modified_time( get_option( 'date_format' ), false, $id, true );
+		/* translators: %s: date of the last edit. */
+		$line = sprintf( __( 'Actualizado el %s', 'genscore' ), $date );
+		$top .= '<p class="genscore-updated"><time datetime="' . esc_attr( $iso ) . '">' . esc_html( $line ) . '</time></p>';
+	}
+	// The answer first: a short paragraph the person wrote or approved.
+	$lead = 'product' === get_post_type( $id ) ? '' : genscore_fix_get( $id, 'lead' );
+	if ( '' !== $lead ) {
+		$top .= '<p class="genscore-lead">' . esc_html( $lead ) . '</p>';
+	}
+	return $top . $content;
 }
 add_filter( 'the_content', 'genscore_fix_fresh', 5 );
+
+/**
+ * The answer first on a product: right under its title, not in the
+ * description tab further down.
+ */
+function genscore_fix_product_lead() {
+	$id   = (int) get_the_ID();
+	$lead = $id && is_singular( 'product' ) && $id === (int) get_queried_object_id() ? genscore_fix_get( $id, 'lead' ) : '';
+	if ( '' !== $lead ) {
+		echo '<p class="genscore-lead">' . esc_html( $lead ) . '</p>';
+	}
+}
+add_action( 'woocommerce_single_product_summary', 'genscore_fix_product_lead', 7 );
+
+/**
+ * The answer first on the shop page: under its title, before the products.
+ */
+function genscore_fix_shop_lead_html() {
+	static $done = false;
+	$shop = genscore_shop_page_id();
+	if ( $done || ! $shop || ! function_exists( 'is_shop' ) || ! is_shop() || is_search() || is_paged() ) {
+		return '';
+	}
+	$lead = genscore_fix_get( $shop, 'lead' );
+	if ( '' === $lead ) {
+		return '';
+	}
+	$done = true;
+	return '<p class="genscore-lead">' . esc_html( $lead ) . '</p>';
+}
+
+/**
+ * Classic themes: WooCommerce's archive description hook.
+ */
+function genscore_fix_shop_lead() {
+	echo genscore_fix_shop_lead_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped when built.
+}
+add_action( 'woocommerce_archive_description', 'genscore_fix_shop_lead', 5 );
+
+/**
+ * Block themes: right after the archive title block.
+ *
+ * @param string $html Rendered block.
+ * @return string
+ */
+function genscore_fix_shop_lead_block( $html ) {
+	return $html . genscore_fix_shop_lead_html();
+}
+add_filter( 'render_block_core/query-title', 'genscore_fix_shop_lead_block' );

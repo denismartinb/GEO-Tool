@@ -15,6 +15,6 @@ foreach ( array( 'genscore_bots', 'genscore_llms_enabled', 'genscore_llms_custom
 // What GenScore published in the pages through its own fields. What it wrote
 // in the SEO plugin's fields (Yoast, Rank Math, SEOPress) stays: it is the
 // page's description or title now, and the person sees it in the editor.
-foreach ( array( '_genscore_jsonld', '_genscore_desc', '_genscore_title', '_genscore_canonical', '_genscore_fresh', '_genscore_returns' ) as $genscore_meta ) {
+foreach ( array( '_genscore_jsonld', '_genscore_desc', '_genscore_title', '_genscore_canonical', '_genscore_fresh', '_genscore_returns', '_genscore_lead' ) as $genscore_meta ) {
 	delete_post_meta_by_key( $genscore_meta );
 }

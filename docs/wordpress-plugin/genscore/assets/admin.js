@@ -300,7 +300,7 @@
       var WF = W.fixes.slice(0, 3);
       var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
-      var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
+      var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
       return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + batchesCard() + pagesCard + deepCard() + acctCard() + "</div></div>";
     }
     var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
@@ -491,7 +491,7 @@
      a page and edit its proposal. «Publicar» asks once more, because it goes
      live, then writes it in chunks. Each publish can be undone. */
   var FX = D.fixes || { available: {}, batches: [], returns: { days: 30, country: "ES" }, chunk: 50 };
-  var KIND_OF = { ld: "ld", prod: "product", price: "product", avail: "product", desc: "desc", title: "title", canon: "canon", fresh: "fresh", returns: "returns" };
+  var KIND_OF = { ld: "ld", prod: "product", price: "product", avail: "product", desc: "desc", title: "title", canon: "canon", fresh: "fresh", returns: "returns", lead: "lead" };
   var KIND = {
     ld: ["Datos estructurados", "Le dicen a Google y a la IA qué es cada página: un artículo, un producto o una página de tu empresa."],
     product: ["Datos de producto", "Nombre, precio y stock de cada producto, sacados de WooCommerce, para que un agente lo entienda."],
@@ -499,14 +499,15 @@
     title: ["Títulos", "«Página · Tu web», de 65 caracteres como mucho. Edítalo si quieres."],
     canon: ["URL canónica", "Le dice a Google cuál es la dirección buena de cada página: su enlace permanente."],
     fresh: ["Fecha de actualización", "«Actualizado el…» bajo el título, siempre con la fecha real de tu última edición."],
-    returns: ["Política de devoluciones", "Tus días de devolución y el país, en los datos de cada producto, para que un agente los lea."]
+    returns: ["Política de devoluciones", "Tus días de devolución y el país, en los datos de cada producto, para que un agente los lea."],
+    lead: ["Respuesta al principio", "Un párrafo corto justo bajo el título que responde a qué es la página. Lo proponemos desde su extracto o su descripción; edítalo si quieres."]
   };
   var BOT_SW = { "bot-chatgpt": "chatgpt-search", "bot-claude": "claude-search", "bot-perplexity": "perplexity-search", "bot-gemini": "gemini" };
   /* Which pages each fix can be published on: a fix found only on pages it
      cannot reach (product data on the shop listing, a date on a product)
      keeps its «Cómo hacerlo» instead of an «Arreglar» that would open empty. */
-  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post"], returns: ["product"] };
-  function pageType(p) { return p.type === "home" ? (Number(D.site.frontPage) ? "page" : "home") : p.type; }
+  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product", "shop"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post"], returns: ["product", "shop"], lead: ["page", "post", "product", "shop"] };
+  function pageType(p) { if (p.type === "home") return Number(D.site.frontPage) ? "page" : "home"; return p.id && Number(p.id) === Number(D.site.shopPage) ? "shop" : p.type; }
   function fixKind(id, pages) {
     var k = KIND_OF[String(id).replace(/^shop-/, "")];
     if (!k || !FX.available || FX.available[k] !== true) return null;
@@ -593,8 +594,10 @@
     if (it.status === "missing") return head + '<p class="gs-fm-hint gs-warm">' + esc(it.note) + ". Esta página no se publica.</p>";
     var v = M.edits[it.id] != null ? M.edits[it.id] : it.value;
     var f = "";
-    if (M.kind === "ld" || M.kind === "product") f = '<label for="gs-fm-in">JSON-LD que se publicará</label><textarea id="gs-fm-in" class="gs-fm-code" spellcheck="false">' + esc(v) + "</textarea>";
+    if (it.live) f = '<label>Lista de productos que se publicará</label><pre class="gs-fm-pre gs-fm-code">' + esc(it.value) + '</pre><span class="gs-fm-note">Se genera al momento con tus productos: nombre, precio y stock siempre al día. ' + (FX.returnsSet ? "Incluye tu política de devoluciones." : "La política de devoluciones se añade desde su propio arreglo.") + "</span>";
+    else if (M.kind === "ld" || M.kind === "product") f = '<label for="gs-fm-in">JSON-LD que se publicará</label><textarea id="gs-fm-in" class="gs-fm-code" spellcheck="false">' + esc(v) + "</textarea>";
     else if (M.kind === "desc") f = '<label for="gs-fm-in">Descripción que se publicará</label><textarea id="gs-fm-in">' + esc(v) + '</textarea><span class="gs-fm-cnt" data-max="155"></span>';
+    else if (M.kind === "lead") f = '<label for="gs-fm-in">Párrafo que saldrá bajo el título</label><textarea id="gs-fm-in">' + esc(v) + '</textarea><span class="gs-fm-cnt" data-words="20-120"></span>';
     else if (M.kind === "title") f = '<label for="gs-fm-in">Título que se publicará</label><input id="gs-fm-in" type="text" value="' + esc(v) + '"><span class="gs-fm-cnt" data-max="65"></span>';
     else if (M.kind === "canon") f = '<label for="gs-fm-in">URL canónica que se publicará</label><input id="gs-fm-in" type="url" value="' + esc(v) + '">';
     else if (M.kind === "fresh") f = '<label>Se publicará bajo el título</label><pre class="gs-fm-pre">Actualizado el ' + esc(v) + "</pre>";
@@ -606,6 +609,7 @@
     if (it.status === "missing") return '<span class="gs-fm-st gs-miss">' + esc(it.note) + "</span>";
     if (M.bad[it.id]) return '<span class="gs-fm-st gs-miss">Revisar</span>';
     if (M.edits[it.id] != null) return '<span class="gs-fm-st gs-ed">Editada</span>';
+    if (!it.value) return '<span class="gs-fm-st gs-ed">Escríbelo tú</span>';
     return '<span class="gs-fm-st gs-ok">Propuesta lista</span>';
   }
   var TYPES = [["all", "Todas"], ["page", "Páginas"], ["post", "Entradas"], ["product", "Productos"]];
@@ -636,11 +640,14 @@
     if (!inp || !M) return;
     var id = M.cur, cnt = root.querySelector(".gs-fm-cnt");
     function upd(first) {
-      if (cnt) { var mx = Number(cnt.getAttribute("data-max")); cnt.textContent = inp.value.length + " / " + mx; cnt.classList.toggle("gs-over", inp.value.length > mx); }
+      if (cnt && cnt.hasAttribute("data-words")) { var w = inp.value.trim() ? inp.value.trim().split(/\s+/).length : 0; cnt.textContent = w + " palabras (mejor entre 20 y 120)"; cnt.classList.toggle("gs-over", w < 12 || w > 120); }
+      else if (cnt) { var mx = Number(cnt.getAttribute("data-max")); cnt.textContent = inp.value.length + " / " + mx; cnt.classList.toggle("gs-over", inp.value.length > mx); }
       if (first) return;
       M.edits[id] = inp.value;
       if (M.kind === "ld" || M.kind === "product") { try { var o = JSON.parse(inp.value); if (!o || typeof o !== "object" || !o["@type"]) throw 0; delete M.bad[id]; } catch (e) { M.bad[id] = "El JSON no es válido: revísalo o deshaz el cambio."; } }
-      else if (!inp.value.trim()) M.bad[id] = "No puede quedar vacío."; else delete M.bad[id];
+      else if (!inp.value.trim()) M.bad[id] = "No puede quedar vacío.";
+      else if (M.kind === "lead" && inp.value.trim().split(/\s+/).length < 12) M.bad[id] = "Escribe al menos 12 palabras.";
+      else { delete M.bad[id]; if (!M.sel[id]) { M.sel[id] = true; var cb = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-cb'); if (cb) cb.setAttribute("aria-checked", "true"); drawFoot(); } }
       var row = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-st');
       var it = itemOf(id);
       if (row && it) row.outerHTML = tag(it);
@@ -694,7 +701,13 @@
     if (act === "no") { M.step = "pick"; drawModal(); return; }
     if (act === "yes") { publishFix(); return; }
     if (b.hasAttribute("data-type")) { M.type = b.getAttribute("data-type"); drawModal(); loadList(true); return; }
-    if (b.classList.contains("gs-fm-cb")) { var id = Number(b.closest(".gs-fm-it").getAttribute("data-id")); M.sel[id] = !M.sel[id]; b.setAttribute("aria-checked", String(!!M.sel[id])); drawFoot(); return; }
+    if (b.classList.contains("gs-fm-cb")) {
+      var id = Number(b.closest(".gs-fm-it").getAttribute("data-id")); M.sel[id] = !M.sel[id]; b.setAttribute("aria-checked", String(!!M.sel[id]));
+      var it0 = itemOf(id);
+      /* an empty answer-first row: open it so the person can write it */
+      if (M.sel[id] && it0 && !it0.value && M.edits[id] == null) { M.bad[id] = "Escribe el párrafo antes de publicar."; M.cur = id; drawList(); drawSide(); }
+      drawFoot(); return;
+    }
     if (b.hasAttribute("data-open")) { var oid = Number(b.getAttribute("data-open")); M.cur = narrow() && M.cur === oid ? null : oid; drawList(); drawSide(); }
   });
   function alertIn(msg) { var f = fm.querySelector(".gs-fm-f .gs-fm-safe"); if (f) { f.className = "gs-fm-safe gs-err"; f.textContent = msg; } }

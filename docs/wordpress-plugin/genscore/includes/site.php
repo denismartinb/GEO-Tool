@@ -112,6 +112,7 @@ function genscore_site_facts() {
 		'readingUrl'    => admin_url( 'options-reading.php' ),
 		'permalinkPlain' => '' === (string) get_option( 'permalink_structure' ),
 		'frontPage'     => 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0,
+		'shopPage'      => genscore_shop_page_id(),
 	);
 }
 

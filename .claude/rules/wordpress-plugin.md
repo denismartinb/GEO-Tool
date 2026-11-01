@@ -79,3 +79,5 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **Repintar la pantalla conserva el scroll y el foco**, y la revisión tras un
   guardado es silenciosa: nada vuelve a pintar «Revisando» sobre una nota que ya
   existe.
+- **La lista de la tienda se genera al servir la página**, nunca se guarda: sólo la marca `live` (adenda 1.0.7). Devoluciones en la tienda exige esa lista.
+- **«Respuesta al principio» nunca se inventa**: sale del extracto o de la descripción (20 palabras o más, sin repetir el arranque del contenido) o la escribe la persona. En fichas va tras el título, no en la pestaña de descripción.
