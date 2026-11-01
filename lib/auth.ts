@@ -1,5 +1,7 @@
 import { cache } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { loginRedirectPath, REQUEST_PATH_HEADER } from "@/lib/login-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -17,11 +19,21 @@ export const requireUser = cache(async function requireUser() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/login");
+    // LOGIN-NEXT-UTM-1: back to the same page after signing in, with the
+    // link's UTM tags on the login itself (header set by middleware.ts).
+    redirect(loginRedirectPath(await requestedPath()));
   }
 
   return { supabase, user };
 });
+
+async function requestedPath(): Promise<string | null> {
+  try {
+    return (await headers()).get(REQUEST_PATH_HEADER);
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Lo que `requireUser` devuelve: el cliente de Supabase ya autenticado y el
