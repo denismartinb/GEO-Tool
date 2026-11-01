@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { EmailCapture } from "@/app/admin/panel/email-capture";
+import { EmailCapture } from "@/app/admin/crm/email-capture";
 import type { EmailSection } from "@/lib/admin/kpi/email";
 import { buildContacts, buildSending, buildUnsubscribes } from "@/lib/admin/kpi/email-model";
 import { panelWindow } from "@/lib/admin/kpi/period";

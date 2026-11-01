@@ -95,13 +95,7 @@ export type RevenueSection =
       truncated: boolean;
     };
 
-export type BusinessData = {
-  accounts: AccountsSection;
-  revenue: RevenueSection;
-  /** Counted accounts (`isCountedAccount`), for the email section; null when unreadable. */
-  countedUsers: AdminUserRow[] | null;
-  authUsersTruncated: boolean;
-};
+export type BusinessData = { accounts: AccountsSection; revenue: RevenueSection };
 
 export async function loadBusinessSections(input: {
   service: ServiceClient;
@@ -118,16 +112,19 @@ export async function loadBusinessSections(input: {
   const stripeData = loadStripe(window, now, excludedUserIds);
   const accounts = await loadAccounts(service, window, now, usersRead, stripeData);
   const stripe = await stripeData;
-  const read = await usersRead;
-  return {
-    accounts,
-    revenue: stripe.section,
-    countedUsers: read ? read.users.filter(isCountedAccount) : null,
-    authUsersTruncated: read?.authUsersTruncated ?? false
-  };
+  return { accounts, revenue: stripe.section };
 }
 
 type UsersRead = { users: AdminUserRow[]; authUsersTruncated: boolean } | null;
+
+/**
+ * ADMIN-EMAIL-1 — the counted accounts (`isCountedAccount`), the same set the
+ * panel's trials and sign-ups use, for /admin/crm. Null when unreadable.
+ */
+export async function loadCountedUsers(service: ServiceClient): Promise<UsersRead> {
+  const read = await readUsers(service);
+  return read ? { users: read.users.filter(isCountedAccount), authUsersTruncated: read.authUsersTruncated } : null;
+}
 
 async function readUsers(service: ServiceClient): Promise<UsersRead> {
   try {

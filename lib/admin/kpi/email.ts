@@ -23,7 +23,7 @@ import { PANEL_CACHE_SECONDS, PANEL_CACHE_TAG } from "@/lib/admin/kpi/posthog";
 type ServiceClient = ReturnType<typeof createServiceClient>;
 
 /**
- * ADMIN-EMAIL-1 — the email-capture section of /admin/panel. Read-only.
+ * ADMIN-EMAIL-1 — the email-capture tab of the operator console (/admin/crm). Read-only.
  * Each source fails on its own and says so; nothing unreadable becomes a zero
  * (`.claude/rules/admin.md`).
  */

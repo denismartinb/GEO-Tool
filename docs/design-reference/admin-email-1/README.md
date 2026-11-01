@@ -9,6 +9,10 @@ Resend (log §418).
 
 ## Diferencias con la maqueta, y por qué
 
+- **Vive en su propia pestaña, «CRM» (`/admin/crm`)**, no dentro del Panel de
+  negocio: lo pidió Denis al revisar el PR. Mismo selector de periodo y mismo
+  filtro de cuentas que el panel.
+
 - **El gráfico de contactos cubre los últimos 28 días**, como el de visitas y
   altas, y no cambia con el periodo. Las tarjetas sí cambian.
 - **«Emails por contacto y semana» no compara con «28 días»**: Resend guarda

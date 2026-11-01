@@ -2,12 +2,12 @@ import { CATEGORY_COPY } from "@/lib/email/categories";
 import type { EmailSection } from "@/lib/admin/kpi/email";
 import { formatRate, UNSUB_CATEGORIES, UNSUB_SOURCES, type ContactDay } from "@/lib/admin/kpi/email-model";
 import { describeDelta, formatInt, formatShare } from "@/lib/admin/kpi/model";
-import { CardHead, DeltaLine, Kpi, Source, Unavailable } from "./pieces";
+import { CardHead, DeltaLine, Kpi, Source, Unavailable } from "@/app/admin/panel/pieces";
 
 const dayFormat = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "short", timeZone: "UTC" });
 
 /**
- * ADMIN-EMAIL-1 — «Captación de email» in /admin/panel: contacts, unsubscribes
+ * ADMIN-EMAIL-1 — «Captación de email» in /admin/crm: contacts, unsubscribes
  * and emails sent. Design approved by Denis on 2026-11-01
  * (`docs/design-reference/admin-email-1/`). Every unreadable source says so;
  * none becomes a zero (`.claude/rules/admin.md`).

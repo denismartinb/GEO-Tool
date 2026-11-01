@@ -1,5 +1,5 @@
 /**
- * ADMIN-EMAIL-1 — the email-capture half of /admin/panel, as pure functions.
+ * ADMIN-EMAIL-1 — the email-capture tab of the operator console (/admin/crm), as pure functions.
  *
  * A contact is a counted account (`isCountedAccount`): today nothing else
  * stores an email (free-report and video-call requests only reach the

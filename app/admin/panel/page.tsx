@@ -5,9 +5,7 @@ import { PANEL_PERIODS, panelWindow, parsePanelPeriod } from "@/lib/admin/kpi/pe
 import { loadWebSection, type WebSection } from "@/lib/admin/kpi/posthog";
 import { loadBusinessSections, type AccountsSection, type RevenueSection } from "@/lib/admin/kpi/business";
 import { loadGoogleSection, type GoogleSection } from "@/lib/admin/kpi/google";
-import { loadEmailSection, readResendEmails } from "@/lib/admin/kpi/email";
 import { CardHead, DeltaLine, Kpi, Source, Unavailable } from "./pieces";
-import { EmailCapture } from "./email-capture";
 import {
   buildFunnel,
   describeDelta,
@@ -40,21 +38,12 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
   const now = new Date();
   const window = panelWindow(period, now);
 
-  const resendRead = readResendEmails(now);
   const [web, business, google] = await Promise.all([
     loadWebSection(window, now),
     loadBusinessSections({ service, window, now }),
     loadGoogleSection(service, user.id)
   ]);
   const { accounts, revenue } = business;
-  const email = await loadEmailSection({
-    service,
-    window,
-    now,
-    users: business.countedUsers,
-    authUsersTruncated: business.authUsersTruncated,
-    resend: resendRead
-  });
 
   return (
     <main className="adm-main adm-pn">
@@ -63,7 +52,7 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
           <h1 className="adm-h1">Panel de negocio</h1>
           <p className="adm-sub">
             {web.kind === "ready" ? `Datos web hasta las ${timeFormat.format(new Date(web.asOf))} · ` : ""}
-            PostHog, Stripe, Supabase, Resend y Search Console · sin cuentas propias ni de prueba
+            PostHog, Stripe, Supabase y Search Console · sin cuentas propias ni de prueba
           </p>
         </div>
         <div className="adm-pn-controls">
@@ -97,8 +86,6 @@ export default async function AdminPanelPage({ searchParams }: { searchParams: P
       </div>
 
       <DailyChart web={web} accounts={accounts} />
-
-      <EmailCapture email={email} periodLabel={window.label} />
 
       <div className="adm-pn-row">
         <ChannelsCard web={web} />
