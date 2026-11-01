@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { ACTIVE_PROJECT_COOKIE, resolveSelectedProject } from "@/lib/active-project-cookie";
-import { extJson, listExtProjects, readExtAccount } from "@/lib/ext/account";
+import { extJson, listExtProjects } from "@/lib/ext/account";
+import { readExtRequestAccount } from "@/lib/ext/request-account";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,12 @@ export const dynamic = "force-dynamic";
  * `geo_active_project` cookie, resolved like `/dashboard/domains` does), so
  * the panel opens on the same project (Denis, 2026-10-30). A stale or foreign
  * id falls through to the newest project, never to another account's.
+ *
+ * WP-PLUGIN-2 (log §431): also answers the WordPress plugin, with its OAuth
+ * bearer token instead of the cookie.
  */
-export async function GET() {
-  const account = await readExtAccount();
+export async function GET(request: Request) {
+  const account = await readExtRequestAccount(request);
   if (!account) return extJson({ error: "unauthenticated" }, 401);
   const projects = await listExtProjects(account);
   const remembered = (await cookies()).get(ACTIVE_PROJECT_COOKIE)?.value ?? null;

@@ -1,4 +1,5 @@
-import { extJson, readExtAccount } from "@/lib/ext/account";
+import { extJson } from "@/lib/ext/account";
+import { readExtRequestAccount } from "@/lib/ext/request-account";
 import { loadExtProjectData, normalizeHost } from "@/lib/ext/project-data";
 
 export const dynamic = "force-dynamic";
@@ -15,9 +16,12 @@ export const maxDuration = 30;
  * figure comes from the same owner as the console (see `lib/ext/summary.ts`).
  * A domain that is not one of the account's projects is a 404, never another
  * account's data.
+ *
+ * WP-PLUGIN-2 (log §431): the WordPress plugin reads the same payload with
+ * the OAuth bearer token it got through `/oauth/consentir`.
  */
 export async function GET(request: Request) {
-  const account = await readExtAccount();
+  const account = await readExtRequestAccount(request);
   if (!account) return extJson({ error: "unauthenticated" }, 401);
 
   const params = new URL(request.url).searchParams;

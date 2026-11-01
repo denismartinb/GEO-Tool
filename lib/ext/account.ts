@@ -29,7 +29,7 @@ export type ExtAccount = {
 };
 
 /** Nothing here may be cached by a browser or a proxy: it is one account's data. */
-export const EXT_HEADERS = { "Cache-Control": "private, no-store", Vary: "Cookie" } as const;
+export const EXT_HEADERS = { "Cache-Control": "private, no-store", Vary: "Cookie, Authorization" } as const;
 
 export function extJson(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: EXT_HEADERS });
