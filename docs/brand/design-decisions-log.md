@@ -28412,3 +28412,14 @@ camino de recuperación.
 **Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
 
 **Pendiente o conocido.** Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
+
+## §400 · EXT-AGENTS-SERVICE-1: la extensión 1.0.1 entiende páginas que venden software o servicios (2026-11-01)
+
+**Qué.** El informe de prueba de Instinct vio que, en la portada de genscore.es, el carril Agentes de la extensión daba 15 y pedía «Pon el precio y el stock en los datos del producto». La causa: cualquier `Offer` en el JSON-LD marcaba la página como tienda, y sin `Product` todo se leía como una ficha de producto físico.
+
+- `collect.js` lee `ld.offering` (tipo, nombre, precio y moneda) del primer nodo con `offers` que no sea `Product` ni `Offer`.
+- `score.js` marca `service` cuando hay venta sin `Product` y hay `offering` o un tipo de servicio (`SoftwareApplication`, `WebApplication`, `MobileApplication`, `Service`, `ProfessionalService`, `Course`, `Event`, `FinancialProduct`). Entonces stock y devoluciones son «No aplica» y no restan, como en la Auditoría agéntica de la consola (§325). «Entiende lo que vendes» y el precio se leen de la oferta. Las tarjetas hablan de «tu plan» y su JSON-LD no lleva `availability`.
+- «Prueba gratis», «Empieza gratis», «Start free trial» y parecidos cuentan como botón para contratar. Siguen sin hacer tienda por sí solos, igual que «Reservar».
+- En una tienda con `Product` no cambia nada.
+
+**Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.
