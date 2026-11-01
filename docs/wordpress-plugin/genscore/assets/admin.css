@@ -1,0 +1,198 @@
+/* GenScore for WordPress: the extension's «Instrumento» look, light only, scoped to #genscore-app. */
+@font-face{font-family:'GS Figtree';font-style:normal;font-weight:300 700;font-display:swap;src:url(fonts/figtree.woff2) format('woff2')}
+@font-face{font-family:'GS JetBrains Mono';font-style:normal;font-weight:400 500;font-display:swap;src:url(fonts/jbmono.woff2) format('woff2')}
+.gsw{
+ --canvas:#eceef2;--surface:#ffffff;--surface-2:#f6f7f9;--surface-3:#eff1f4;
+ --ink:#0b1426;--ink-2:#3b4759;--ink-3:#5f6b7e;--ink-4:#9aa4b3;
+ --rule:#e3e6eb;--rule-2:#eef0f3;--tick-off:#d3d9e2;
+ --blue:#2563eb;--blue-ink:#1b4fd6;--blue-tint:#ecf2ff;--blue-soft:#c9dbff;
+ --warm:#c2410c;--warm-tint:#fff3eb;--mid:#b7791f;--mid-tint:#fdf4e3;
+ --pos:#0f7a54;--pos-tint:#e8f6ef;
+ --font:'GS Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'GS JetBrains Mono',ui-monospace,monospace;
+ max-width:1180px;margin:16px 20px 0 2px}
+@media (max-width:782px){.gsw{margin:10px 10px 0 0}}
+#genscore-app{font:400 15px/1.5 var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+#genscore-app *{box-sizing:border-box}
+#genscore-app p,#genscore-app h2,#genscore-app h3{margin:0}
+#genscore-app button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0;min-height:0;box-shadow:none}
+#genscore-app a{text-decoration:none;color:inherit}
+#genscore-app a:focus,#genscore-app button:focus{box-shadow:none}
+#genscore-app :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
+#genscore-app code,#genscore-app .gs-p{font-family:var(--mono);font-size:.88em;background:var(--surface-3);padding:1px 5px;border-radius:5px}
+#genscore-app .gs-num{font-variant-numeric:tabular-nums}
+#genscore-app .gs-i{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#genscore-app .gs-lg{width:20px;height:20px;flex:none}
+#genscore-app .gs-loading{color:var(--ink-3);padding:40px 0;text-align:center}
+#genscore-app{container-type:inline-size;display:flex;flex-direction:column;gap:14px}
+#genscore-app .gs-ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#genscore-app .gs-ph .gs-gsl{width:30px;height:30px}
+#genscore-app .gs-ph .gs-who{display:flex;flex-direction:column;line-height:1.2;min-width:0}
+#genscore-app .gs-ph .gs-who b{font-size:16px;font-weight:600}
+#genscore-app .gs-ph .gs-who span{font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-ph .gs-sp{flex:1}
+#genscore-app .gs-ph .gs-lgin{font-size:12.5px;color:var(--ink-2);text-align:right;line-height:1.3;max-width:220px}
+#genscore-app .gs-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#dfe4ec,#aeb8c6);display:grid;place-items:center;font-size:12px;font-weight:700;color:var(--ink)}@container (max-width:520px){#genscore-app .gs-ph .gs-lgin{display:none}}
+#genscore-app .gs-tabs{display:flex;gap:2px;background:var(--surface-3);border-radius:99px;padding:3px;align-self:flex-start;max-width:100%;overflow-x:auto}
+#genscore-app .gs-tabs button{height:34px;padding:0 16px;border-radius:99px;font-size:13.5px;font-weight:600;color:var(--ink-3);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#genscore-app .gs-tabs button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(11,20,38,.1)}@container (max-width:520px){#genscore-app .gs-tabs{align-self:stretch}
+#genscore-app .gs-tabs button{flex:1;justify-content:center;padding:0 8px}}
+#genscore-app .gs-cols{display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start}@container (min-width:720px){#genscore-app .gs-cols{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}
+#genscore-app .gs-cols.gs-dom{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+#genscore-app .gs-col{display:flex;flex-direction:column;gap:14px;min-width:0}
+#genscore-app .gs-card{background:var(--surface);border:1px solid var(--rule);border-radius:18px;padding:16px 18px;display:flex;flex-direction:column;gap:10px;min-width:0}
+#genscore-app .gs-lab{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600;display:flex;align-items:center;gap:10px}
+#genscore-app .gs-lab::after{content:"";flex:1;height:1px;background:var(--rule)}
+#genscore-app .gs-lab small{font-size:11px;letter-spacing:0;text-transform:none;font-weight:500;color:var(--ink-4);order:3}
+#genscore-app .gs-lyr{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+#genscore-app .gs-lyr::before{content:"";width:9px;height:9px;border-radius:2px;background:var(--ink-4)}
+#genscore-app .gs-lyr.gs-gs::before{background:var(--blue)}
+#genscore-app .gs-lyr small{margin-left:auto;font-weight:500;font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-hero{align-items:center;text-align:center}
+#genscore-app .gs-dialbox{position:relative;width:220px;max-width:100%;margin:0 auto}
+#genscore-app .gs-dial{display:block;width:100%;overflow:visible}
+#genscore-app .gs-dial .gs-t{stroke:var(--tick-off);stroke-width:1.6;stroke-linecap:round}
+#genscore-app .gs-dial .gs-t.gs-on{stroke:var(--blue)}
+#genscore-app .gs-dial .gs-t.gs-mj{stroke-width:2}
+#genscore-app .gs-dial .gs-lbl{font:500 10px var(--font);fill:var(--ink-3)}
+#genscore-app .gs-dial .gs-needle{stroke:var(--ink);stroke-width:2.4;stroke-linecap:round}
+#genscore-app .gs-dial-c{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding-top:6px}
+#genscore-app .gs-dial-c b{font-size:60px;font-weight:300;letter-spacing:-.05em;line-height:1}
+#genscore-app .gs-dial-c span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;color:var(--ink-3);margin-top:4px}
+#genscore-app .gs-bands{display:flex;justify-content:center;gap:14px;font-size:11.5px;color:var(--ink-3);margin-top:-8px}
+#genscore-app .gs-bands span{display:flex;align-items:center;gap:6px}
+#genscore-app .gs-bands span::before{content:"";width:8px;height:1.5px;background:var(--tick-off)}
+#genscore-app .gs-bands .gs-on{color:var(--ink);font-weight:600}
+#genscore-app .gs-bands .gs-on::before{background:var(--blue);height:2px}
+#genscore-app .gs-say{font-size:17px;line-height:1.3;letter-spacing:-.02em;max-width:34ch;margin:0 auto;text-wrap:balance}
+#genscore-app .gs-gg3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;width:100%;border-top:1px solid var(--rule);padding-top:10px}
+#genscore-app .gs-gau{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 4px;border-radius:14px}
+#genscore-app .gs-gau:hover{background:var(--surface-2)}
+#genscore-app .gs-gau svg.gs-arc{width:72px;height:56px}
+#genscore-app .gs-gau .gs-arc .gs-tr{stroke:var(--tick-off)}
+#genscore-app .gs-gau .gs-arc path{fill:none;stroke-width:6;stroke-linecap:round}
+#genscore-app .gs-gau .gs-arc .gs-v.gs-pos{stroke:var(--pos)}
+#genscore-app .gs-gau .gs-arc .gs-v.gs-mid{stroke:var(--mid)}
+#genscore-app .gs-gau .gs-arc .gs-v.gs-low{stroke:var(--warm)}
+#genscore-app .gs-gau .gs-arc .gs-v.gs-none{stroke:transparent}
+#genscore-app .gs-gau .gs-arcw{position:relative}
+#genscore-app .gs-gau .gs-arcw b{position:absolute;inset:14px 0 0;text-align:center;font-size:22px;font-weight:400;letter-spacing:-.03em}
+#genscore-app .gs-gau .gs-nm{display:flex;align-items:center;gap:5px;font-weight:600;font-size:14px}
+#genscore-app .gs-gau .gs-st{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-dot{width:7px;height:7px;border-radius:50%;background:var(--pos);flex:none}
+#genscore-app .gs-dot.gs-mid{background:var(--mid)}
+#genscore-app .gs-dot.gs-low{background:var(--warm)}
+#genscore-app .gs-rows{display:flex;flex-direction:column}
+#genscore-app .gs-rw{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--rule);font-size:14px}
+#genscore-app .gs-rw:last-child{border-bottom:0}
+#genscore-app .gs-rw .gs-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+#genscore-app .gs-rw .gs-tx small{color:var(--ink-3);font-size:12.5px}
+#genscore-app .gs-ok{color:var(--pos);font-weight:600;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:13.5px}
+#genscore-app .gs-ko{color:var(--warm);font-weight:600;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font-size:13.5px}
+#genscore-app .gs-na{color:var(--ink-3);font-size:13px;white-space:nowrap}
+#genscore-app .gs-fx{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--rule-2)}
+#genscore-app .gs-fx:last-child{border-bottom:0}
+#genscore-app .gs-fx .gs-n{font:500 12px var(--mono);color:var(--ink-3);width:18px}
+#genscore-app .gs-fx .gs-tx{flex:1;min-width:0;font-size:14px}
+#genscore-app .gs-fx .gs-tx small{display:block;color:var(--ink-3);font-size:12.5px}
+#genscore-app .gs-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;height:40px;padding:0 18px;border-radius:99px;font-size:13.5px;font-weight:600;white-space:nowrap}
+#genscore-app .gs-btn.gs-ink{background:var(--ink);color:#fff;width:100%;height:46px;font-size:14.5px}
+#genscore-app .gs-btn.gs-line{border:1px solid var(--rule);background:var(--surface);color:var(--ink);height:34px;padding:0 14px;font-size:13px}
+#genscore-app .gs-btn.gs-line:hover{border-color:var(--ink-4)}
+#genscore-app .gs-btn.gs-blue{background:var(--blue);color:#fff}
+#genscore-app .gs-btn.gs-sm{height:32px;padding:0 12px;font-size:12.5px}
+#genscore-app .gs-btn.gs-onink{background:#fff;color:var(--ink);width:100%;height:46px}
+#genscore-app .gs-eng4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#genscore-app .gs-ec{border:1px solid var(--rule);border-radius:14px;padding:10px 4px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;position:relative}
+#genscore-app .gs-ec .gs-lgw{position:relative}
+#genscore-app .gs-ec .gs-lgw::after{content:"";position:absolute;right:-4px;bottom:-2px;width:9px;height:9px;border-radius:50%;background:var(--pos);border:2px solid var(--surface)}
+#genscore-app .gs-ec.gs-no .gs-lgw::after{background:var(--warm)}
+#genscore-app .gs-ec b{font-size:13px;font-weight:600}
+#genscore-app .gs-ec small{font-size:11.5px;color:var(--ink-3)}
+#genscore-app .gs-ec.gs-no small{color:var(--warm);font-weight:600}
+#genscore-app .gs-ec .gs-pc{font-size:20px;font-weight:400;letter-spacing:-.03em}
+#genscore-app .gs-bot{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px dashed var(--rule)}
+#genscore-app .gs-bot:last-child{border-bottom:0}
+#genscore-app .gs-bot .gs-tx{flex:1;min-width:0;display:flex;flex-direction:column}
+#genscore-app .gs-bot .gs-tx b{font:500 13.5px var(--font)}
+#genscore-app .gs-bot .gs-tx small{color:var(--ink-3);font:11.5px var(--mono)}
+#genscore-app .gs-sw{width:38px;height:22px;border-radius:99px;background:var(--tick-off);position:relative;flex:none;transition:background .15s}
+#genscore-app .gs-sw::after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.2);transition:left .15s}
+#genscore-app .gs-sw[aria-checked="true"]{background:var(--pos)}
+#genscore-app .gs-sw[aria-checked="true"]::after{left:19px}
+#genscore-app .gs-hint{background:var(--blue-tint);color:var(--blue-ink);border-radius:12px;padding:10px 12px;font-size:13px}
+#genscore-app .gs-hint.gs-warm{background:var(--warm-tint);color:var(--warm)}
+#genscore-app pre.gs-code{margin:0;font:500 12px/1.6 var(--mono);background:var(--surface-2);border:1px solid var(--rule);border-radius:12px;padding:12px;overflow-x:auto;white-space:pre;color:var(--ink-2)}
+#genscore-app .gs-acts{display:flex;gap:8px;flex-wrap:wrap}
+#genscore-app .gs-tz{border:1px solid var(--blue-soft);background:linear-gradient(180deg,var(--blue-tint),var(--surface) 70%);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+#genscore-app .gs-ill{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+#genscore-app .gs-ill .gs-lock{position:absolute;right:-8px;top:-8px;width:28px;height:28px;border-radius:50%;background:var(--surface);border:1px solid var(--blue-soft);display:grid;place-items:center;color:var(--blue)}
+#genscore-app .gs-gh4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#genscore-app .gs-gh4 > div{background:var(--surface-2);border-radius:10px;padding:8px 2px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;color:var(--ink-3);text-align:center}
+#genscore-app .gs-gh4 .gs-q{width:60%;height:10px;border-radius:4px;background:var(--surface-3)}
+#genscore-app .gs-gh4 .gs-bar{width:80%;height:3px;border-radius:2px;background:var(--tick-off)}
+#genscore-app .gs-ghr{display:flex;flex-direction:column;gap:7px}
+#genscore-app .gs-ghr div{display:grid;grid-template-columns:14px 18px 1fr 70px;gap:8px;align-items:center;font:500 11px var(--mono);color:var(--ink-4);padding:4px 6px;border-radius:8px}
+#genscore-app .gs-ghr div.gs-me{background:var(--blue-tint)}
+#genscore-app .gs-ghr i{display:block;height:18px;border-radius:5px;background:var(--surface-3)}
+#genscore-app .gs-ghr em{display:block;height:7px;border-radius:4px;background:var(--surface-3)}
+#genscore-app .gs-ghr div.gs-me em{background:var(--blue-soft)}
+#genscore-app .gs-ghr u{display:block;height:3px;border-radius:2px;background:var(--tick-off)}
+#genscore-app .gs-ghs{display:flex;gap:12px;align-items:center}
+#genscore-app .gs-ghs .gs-ring{width:46px;height:46px;border-radius:50%;border:6px solid var(--surface-3);flex:none}
+#genscore-app .gs-ghs .gs-ln{flex:1;display:flex;flex-direction:column;gap:7px}
+#genscore-app .gs-ghs .gs-ln i{display:block;height:8px;border-radius:4px;background:var(--surface-3)}
+#genscore-app .gs-ghc{height:46px;border-bottom:1px solid var(--rule);position:relative;overflow:hidden}
+#genscore-app .gs-ghc svg{position:absolute;inset:0;width:100%;height:100%}
+#genscore-app .gs-ghg{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+#genscore-app .gs-ghg div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11px;color:var(--ink-3);text-align:center}
+#genscore-app .gs-ghg svg{width:48px;height:32px}
+#genscore-app .gs-tz h3{margin:0;font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+#genscore-app .gs-tz p{margin:0;font-size:13.5px;color:var(--ink-2)}
+#genscore-app .gs-deep{background:#0b1426;color:#fff;border-radius:18px;padding:18px;display:flex;flex-direction:column;gap:12px;align-items:center;text-align:center}
+#genscore-app .gs-deep .gs-egs{display:flex;gap:8px}
+#genscore-app .gs-deep .gs-egs span{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:grid;place-items:center}
+#genscore-app .gs-deep .gs-q{font-size:17px;line-height:1.3;letter-spacing:-.015em;margin:0;text-wrap:balance}
+#genscore-app .gs-deep .gs-ft{font-size:12.5px;color:#aeb8c9;margin:0}
+#genscore-app .gs-aul{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--rule)}
+#genscore-app .gs-aul:last-of-type{border-bottom:0}
+#genscore-app .gs-aul .gs-sh{width:30px;height:30px;border-radius:50%;background:var(--blue-tint);color:var(--blue);display:grid;place-items:center;flex:none}
+#genscore-app .gs-aul .gs-t{flex:1;min-width:0;display:flex;flex-direction:column}
+#genscore-app .gs-aul .gs-t b{font-size:14px;font-weight:600}
+#genscore-app .gs-aul .gs-t small{font-size:12.5px;color:var(--ink-3)}
+#genscore-app .gs-aul .gs-gh{width:54px;height:8px;border-radius:4px;background:var(--surface-3)}
+#genscore-app .gs-ring{width:38px;height:38px;position:relative;flex:none}
+#genscore-app .gs-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+#genscore-app .gs-ring circle{fill:none;stroke-width:4}
+#genscore-app .gs-ring .gs-t2{stroke:var(--surface-3)}
+#genscore-app .gs-ring .gs-v{stroke:var(--pos);stroke-linecap:round}
+#genscore-app .gs-ring .gs-v.gs-mid{stroke:var(--mid)}
+#genscore-app .gs-ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:12.5px;font-weight:600}
+#genscore-app .gs-xk{display:flex;flex-direction:column;gap:4px}
+#genscore-app .gs-xq{display:grid;grid-template-columns:16px 22px minmax(0,1fr) 64px 38px;gap:8px;align-items:center;padding:6px;border-radius:10px;font-size:13.5px}
+#genscore-app .gs-xq.gs-me{background:var(--blue-tint);font-weight:600}
+#genscore-app .gs-xq .gs-ps{font:500 12px var(--mono);color:var(--ink-3)}
+#genscore-app .gs-xq .gs-fv{width:22px;height:22px;border-radius:6px;background:var(--surface-3);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--ink-2)}
+#genscore-app .gs-xq.gs-me .gs-fv{background:var(--blue);color:#fff}
+#genscore-app .gs-xq .gs-tb{height:4px;border-radius:2px;background:var(--tick-off);overflow:hidden}
+#genscore-app .gs-xq .gs-tb i{display:block;height:100%;background:var(--blue)}
+#genscore-app .gs-xq .gs-pc{text-align:right;font-variant-numeric:tabular-nums}
+#genscore-app .gs-big3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#genscore-app .gs-big3 div{display:flex;flex-direction:column}
+#genscore-app .gs-big3 b{font-size:24px;font-weight:300;letter-spacing:-.03em}
+#genscore-app .gs-big3 small{font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-up{color:var(--pos);font-size:12px;font-weight:600}
+#genscore-app .gs-pending{display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px 10px;color:var(--ink-3);text-align:center}
+#genscore-app .gs-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--tick-off);border-top-color:var(--blue)}
+@media (prefers-reduced-motion:no-preference){#genscore-app .gs-spin{animation:gs-spin 1s linear infinite}}
+@keyframes gs-spin{to{transform:rotate(360deg)}}
+#genscore-app .gs-btn[disabled],#genscore-app .gs-sw[disabled]{opacity:.45;cursor:not-allowed}
+#genscore-app textarea.gs-code{width:100%;min-height:220px;resize:vertical;font:500 12px/1.6 var(--mono);background:var(--surface-2);border:1px solid var(--rule);border-radius:12px;padding:12px;color:var(--ink-2)}
+#genscore-app textarea.gs-code:focus{border-color:var(--blue);outline:none;box-shadow:0 0 0 1px var(--blue)}
+#genscore-app .gs-hint a{text-decoration:underline}
+#genscore-app .gs-why{font-size:12.5px;color:var(--ink-3);display:block}
+#genscore-app .gs-pts{font:500 12px var(--mono);color:var(--pos);white-space:nowrap}
+#genscore-app .gs-saved{font-size:13px;color:var(--pos);align-self:center}
+#genscore-app .gs-err{font-size:13px;color:var(--warm);align-self:center}
+#genscore-app .gs-more{font-size:12.5px;color:var(--ink-3)}
+#genscore-app .gs-tabs{position:sticky;top:46px;z-index:2}
+@media (min-width:783px){#genscore-app .gs-tabs{top:40px}}

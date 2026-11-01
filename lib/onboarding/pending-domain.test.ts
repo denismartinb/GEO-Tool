@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { PENDING_DOMAIN_KEY, takePendingDomain } from "@/lib/onboarding/pending-domain";
+import { PENDING_DOMAIN_KEY, rememberPendingDomain, takePendingDomain } from "@/lib/onboarding/pending-domain";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 
 /**
@@ -73,5 +73,33 @@ describe("sólo se arrastra lo que el asistente aceptaría", () => {
 
   it("lo que se guarda ya viene limpio, no como se tecleó", () => {
     expect(cleanDomain("HTTPS://WWW.MiDominio.com/precios")).toBe("midominio.com");
+  });
+});
+
+describe("el dominio que llega del plugin de WordPress (?dominio=)", () => {
+  it("se guarda limpio, igual que el del hero", () => {
+    const store = withStorage();
+    expect(rememberPendingDomain("https://www.Estudio-Lumen.es/inicio")).toBe("estudio-lumen.es");
+    expect(store.get(PENDING_DOMAIN_KEY)).toBe("estudio-lumen.es");
+    expect(takePendingDomain()).toBe("estudio-lumen.es");
+  });
+
+  it("no guarda lo que el asistente no aceptaría", () => {
+    const store = withStorage();
+    for (const bad of ["", "localhost", "127.0.0.1:8899", "no es un dominio", 42, undefined]) {
+      expect(rememberPendingDomain(bad)).toBe("");
+    }
+    expect(store.size).toBe(0);
+  });
+
+  it("sin almacenamiento no rompe el alta", () => {
+    vi.stubGlobal("window", {
+      localStorage: {
+        setItem: () => {
+          throw new Error("blocked");
+        }
+      }
+    });
+    expect(rememberPendingDomain("ejemplo.es")).toBe("");
   });
 });

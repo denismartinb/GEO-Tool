@@ -28682,3 +28682,18 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Interruptor y migración.** Salen apagados: hace falta `LIFECYCLE_EMAILS_ENABLED=true` y además `FEATURE_EMAILS_ENABLED=true`. Antes de encenderlo hay que aplicar a mano la migración 0047, que añade los tres tipos a `email_sends_kind_chk`. Sin ella la reserva falla y no sale nada.
 
 **Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
+
+## §418 · WP-PLUGIN-1: plugin de WordPress con la nota de la extensión (Fase 1) (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el 2026-11-01 la Fase 1 de un plugin gratuito para WordPress.org como canal de captación (Task Intake y UX en artifact, enlaces en `docs/wordpress-plugin/README.md`). Pestañas Resumen · GEO · SEO · Agentes, en claro y con el estilo de la extensión, cada una partida en «Tu dominio» (con cuenta) y «Esta web» (se arregla aquí).
+
+- **La nota es la de la extensión.** La pantalla carga la portada en un iframe del mismo origen, le inyecta `collect.js` y puntúa con `score.js`, copiados byte a byte de la extensión (test). Mismas tres vías, mismos arreglos con sus puntos.
+- **Bots de IA.** Seis interruptores (búsqueda y entrenamiento de OpenAI, Anthropic, Perplexity, más Google-Extended) que se aplican en el filtro `robots_txt` con un bloque propio. Nunca tocan `*`, Googlebot ni Bingbot, ni escriben ficheros; con robots.txt físico, web no pública o subcarpeta se desactivan y se explica.
+- **llms.txt.** Generado de páginas, productos y artículos con su propio extracto, editable, y servido sólo si ni Yoast, ni Rank Math, ni AIOSEO, ni un fichero lo hacen ya.
+- **SEO de WordPress.** Visibilidad, sitemap, HTTPS, enlaces permanentes, plugin SEO, y páginas, entradas y productos sin descripción, con título repetido o con imágenes sin texto alternativo.
+- **Captación.** Sin cuenta, «Tu dominio» enseña maquetas sin cifras y «Analizar <dominio>». El enlace va a `/signup?dominio=`, y el alta guarda ese dominio en el mismo `localStorage` que el hero (`rememberPendingDomain`, mismo `isWellFormedDomain`), así que el asistente nace relleno. Todo enlace lleva `utm_source=wordpress`.
+- **Sin llamadas a genscore.es.** El plugin no envía nada a ningún sitio; el readme lo declara (normas de WordPress.org sobre servicios externos).
+
+**Probado** en un WordPress 7.1 local (SQLite, `php -S`): revisión, las cuatro pestañas a 1280 y 390 px, guardar robots.txt y llms.txt y leerlos servidos, widget del escritorio y `debug.log` limpio.
+
+**Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
