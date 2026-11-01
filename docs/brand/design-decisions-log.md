@@ -28559,3 +28559,13 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
 - **`/api/ext/project` devuelve el dominio de cada rival** (`ExtRival.domain`): el del proyecto para la marca, el del competidor seguido cuyo nombre coincide, o `null`. Sin migración.
 
 **Pendiente o roto conocido.** Un rival que la IA nombra y no está entre los competidores seguidos no tiene dominio y sale con la letra. Hay que subir la 1.2.0 a la tienda (zip en `/mnt/project-files/extension/`).
+
+## §409 · EXT-GSC-1: la extensión sabe si Search Console está conectado y enseña sus cifras (2026-11-01)
+
+**Qué se decidió.** Denis vio (2026-11-01) que con Search Console ya conectado en la consola el panel seguía invitando a conectar. `/api/ext/project` devuelve ahora `searchConsole` (`lib/ext/search-console.ts`), leído con `loadSearchConsoleOverview`, lo mismo que la mitad de Google de Visión general: primero nuestra base de datos y luego Google con la caché de 30 minutos. El proyecto sale de la lista de la propia cuenta, así que sus ids ya están verificados. Si Google tarda más de 6 s, el panel no espera.
+
+- **Conectado**: en «Tu dominio» del gauge Google salen clics, puesto medio y búsquedas en la página 2 de los últimos 28 días, con «Ver Posición en Google».
+- **Sin conectar** (o un servidor sin este campo): la invitación de siempre, con un solo texto («Tus búsquedas de Google, tu puesto y tus clics…»), y «Conectar con Google» abre el permiso de Google de ese proyecto (§408).
+- **Permiso retirado**: «Volver a conectar», al mismo permiso. **Varias propiedades**: «Elegir propiedad» en Posición en Google. **Google sin responder** o sin búsquedas: lo dice, sin cifras. **Sin configurar o sin migración**: nada.
+
+**Pendiente o roto conocido.** Va en la misma 1.2.0, todavía sin subir a la tienda.

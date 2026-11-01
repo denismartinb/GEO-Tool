@@ -168,7 +168,7 @@
     if (k === "google") {
       const b = auBlock("seo");
       const iss = b && b.issues.length ? `<div class="mh">Lo que más resta en tu dominio</div>${b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}<small>pt</small></span></div>`).join("")}` : "";
-      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}${gscInvite()}${pageLayer("google")}`;
+      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}${gscBlock()}${pageLayer("google")}`;
     }
     return `${lyr("gs", "Tu dominio", "Auditoría agéntica")}<div class="ag4">${D.agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div>${pageLayer("agent")}`;
   }
@@ -301,6 +301,26 @@
   // Straight to Google's consent screen for this project (the route checks the
   // session owns it and returns to «Posición en Google»); without a project id,
   // the console.
+  // EXT-GSC-1 (log §409): what /api/ext/project says about Search Console.
+  // Connected → the same three figures as Visión general; never connected or
+  // an older server → the one invitation text; "off" → nothing.
+  const gscBlock = () => {
+    const p = S.proj[curDom()], g = p && typeof p === "object" ? p.searchConsole : null;
+    if (!g || g.state === "disconnected") return gscInvite();
+    if (g.state === "off") return "";
+    const to = projPath("search-console") || "/dashboard";
+    const go = (label, c) => `<button class="btn line sm" data-act="open" data-to="${esc(c === "gsc-reconnect" ? gscTo() : to)}" data-c="${c}">${label}${ic("arrowr", "sm")}</button>`;
+    const box = (body, btn) => `<div class="calm col gsc1">${lg("google", 16)}${body}${btn}</div>`;
+    if (g.state === "reconnect") return box(`<span>Google ha retirado el permiso de Search Console. Vuelve a conectar para ver tus búsquedas, tu puesto y tus clics.</span>`, go("Volver a conectar", "gsc-reconnect"));
+    if (g.state === "pick_property") return box(`<span>Search Console está conectado. Elige qué propiedad corresponde a ${esc(curDom())}.</span>`, go("Elegir propiedad", "gsc-property"));
+    if (g.state === "error") return box(`<span>Search Console está conectado, pero Google no ha respondido ahora mismo.</span>`, go("Ver Posición en Google", "gsc-open"));
+    if (g.empty) return box(`<span>Search Console conectado. Google no ha devuelto búsquedas de tu web en estos 28 días.</span>`, go("Ver Posición en Google", "gsc-open"));
+    const fmtN = (n) => Number(n).toLocaleString("es-ES");
+    const pos = g.position == null || g.position === 0 ? "—" : Number(g.position).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const cells = [[fmtN(g.clicks), g.clicks === 1 ? "clic" : "clics"], [pos, "puesto medio"]];
+    if (g.nearPage1 > 0) cells.push([fmtN(g.nearPage1), g.nearPage1 === 1 ? "búsqueda en la página 2" : "búsquedas en la página 2"]);
+    return `<div class="mh">Google · últimos 28 días</div><div class="eng1 gscn">${cells.map(([v, l]) => `<div class="c"><b class="num">${v}</b><span class="n">${l}</span></div>`).join("")}</div><div class="acts">${go("Ver Posición en Google", "gsc-open")}</div>`;
+  };
   const gscTo = () => { const pp = projPath(""); return pp ? `/api/search-console/connect?projectId=${pp.split("/").pop()}` : "/dashboard"; };
   const projPath = (sub) => { const d = S.real && S.real.domains.find((x) => x.domain === curDom()); return d && d.id ? `/dashboard/projects/${d.id}${sub ? "/" + sub : ""}` : null; };
   const AUD_META = {

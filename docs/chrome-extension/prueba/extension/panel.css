@@ -1082,3 +1082,8 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .gseo>div{flex:1;display:flex;flex-direction:column;gap:7px}
 .gseo .aur svg{width:44px;height:44px}
 .ag4.ghost .gg .val{display:none}
+/* EXT-GSC-1 (log §409): Search Console figures in the Google lane. */
+.eng1.gscn{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.eng1.gscn .n{text-align:center;line-height:1.25}
+.gsc1 .btn{align-self:flex-start}
+.gscn + .acts{display:flex;margin-top:10px}
