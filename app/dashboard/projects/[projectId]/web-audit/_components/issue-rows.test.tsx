@@ -133,3 +133,38 @@ describe("CheckDot", () => {
     expect(notOk).toContain("Indexable");
   });
 });
+
+describe("IssueRow with Search Console (GSC-AUDIT-PAGES-1, log §413)", () => {
+  const google = [
+    { url: "https://example.com/", kind: "seen" as const, clicks: 14, position: 21.3, topQuery: "example" },
+    { url: "https://example.com/blog", kind: "seen" as const, clicks: 4, position: 8.6, topQuery: null },
+    { url: "https://example.com/precios", kind: "unseen" as const },
+    { url: "https://example.com/otra", kind: "unknown" as const }
+  ];
+
+  it("adds the clicks tag and a per-page table, in the order given", () => {
+    const html = renderToStaticMarkup(<IssueRow issue={issue()} blockPoints={12} google={google} />);
+    expect(html).toContain("18 clics en Google");
+    expect(html).toContain("Llega por «example»");
+    expect(html).toContain("21,3");
+    expect(html).toContain("Sin clics en 28 días");
+    expect(html).toContain("Sin impresiones en 28 días");
+    expect(html).toContain("Sin datos de Google");
+    expect(html.indexOf("/blog")).toBeLessThan(html.indexOf("/precios"));
+    expect(html).not.toContain("sa-urls");
+  });
+
+  it("stays exactly as before without Google", () => {
+    const plain = renderToStaticMarkup(<IssueRow issue={issue()} blockPoints={12} />);
+    expect(renderToStaticMarkup(<IssueRow issue={issue()} blockPoints={12} google={null} />)).toBe(plain);
+    expect(plain).not.toContain("en Google");
+  });
+
+  it("names no clicks when the pages have none", () => {
+    const html = renderToStaticMarkup(
+      <IssueRow issue={issue()} blockPoints={12} google={[{ url: "https://example.com/", kind: "unseen" }]} />
+    );
+    expect(html).not.toContain("clics en Google");
+    expect(html).toContain("Páginas afectadas");
+  });
+});

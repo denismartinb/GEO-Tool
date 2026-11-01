@@ -28617,3 +28617,14 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Corrección que trae.** `gscBlock()` del panel enseñaba la invitación con `!g` (proyecto cargando, con error o sin el campo). Ahora, con sesión, sin estado no pinta nada; sin sesión sigue el ejemplo.
 
 **Pendiente.** Nada. No retira ningún camino de recuperación: la invitación sigue saliendo cuando el estado lo pide.
+
+## §413 · GSC-OVERVIEW-RICH-1 y GSC-AUDIT-PAGES-1: los datos de Google de la extensión llegan a Visión general y a Auditoría técnica (2026-11-01)
+
+**Qué se decidió.** Lo que la extensión enseña de Search Console desde §411 pasa a la consola, con diseño aprobado por Denis en artifact (móvil tal cual; en escritorio, «debe ocupar menos y no dejar ese espacio blanco a la izquierda»).
+
+- **Visión general**, mitad de Google de «Auditoría SEO y Google» (`gsc-overview-half.tsx`): clics de 28 días con su cambio y una línea por día, puesto medio con lo que ha subido, impresiones con su cambio, «Evolución del puesto» (lo mejor arriba; un día sin impresiones es un hueco, nunca un 0) y «Casi en la página 1» con las dos búsquedas de puestos 11 a 20 con más impresiones y la frase de Denis. En escritorio (≥761 px) la evolución y «Casi en la página 1» van en una fila bajo las dos mitades (`.gx-b`, `display: contents` en `.gx`), así la tarjeta es más baja y Salud SEO no deja hueco. Sale la cifra «búsquedas en página 2»: la caja la sustituye.
+- **Auditoría técnica, bloque SEO**: cada problema por páginas lleva «N clics en Google» (sólo si suman más de 0) y «Páginas afectadas» pasa a una tabla con clics, puesto y la búsqueda que más clics trae, ordenada por clics. Una página que Google no devolvió dice «Sin impresiones en 28 días» sólo si Google devolvió todas sus páginas (menos de 50 filas); si no, «Sin datos de Google», porque no podemos saberlo.
+
+**Cómo.** Las dos leen `loadSearchConsoleScreen` sin inspecciones, la misma entrada `screen-rows` de 30 min que Recomendaciones y la extensión; nada se guarda. Visión general deja `loadSearchConsoleOverview` (lo sigue usando `/admin/panel`). Auditoría técnica pinta primero la tarjeta de siempre como `fallback` de un `Suspense` y la cambia por la de Google cuando llega (`SeoIssuesWithGoogle`), así Google nunca retrasa la auditoría. `insights.pageStats` (`buildPageStats`) guarda todas las páginas que devolvió Google con su búsqueda principal; `affectedPagesWithGoogle` las cruza por `urlKey`.
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: sin conexión, todo queda como antes.

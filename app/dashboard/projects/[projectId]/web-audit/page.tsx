@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { after } from "next/server";
 import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth";
@@ -17,6 +18,7 @@ import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
+import { SeoIssuesWithGoogle } from "./_components/seo-issues-google";
 import { CoverageHistory, CoverageSection } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
@@ -161,12 +163,37 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                         <div className="sa-main">
                           {!isGeo && pageSpeed !== undefined && <SpeedCard pageSpeed={pageSpeed} />}
                           <AuditTabPanel id="problemas">
-                            <BlockIssuesCard
-                              view={view}
-                              llmsTxtFile={llmsTxtFile}
-                              llmsPublishSteps={llmsPublishSteps}
-                              sitemapFixSteps={sitemapFixSteps}
-                            />
+                            {isGeo ? (
+                              <BlockIssuesCard
+                                view={view}
+                                llmsTxtFile={llmsTxtFile}
+                                llmsPublishSteps={llmsPublishSteps}
+                                sitemapFixSteps={sitemapFixSteps}
+                              />
+                            ) : (
+                              /* GSC-AUDIT-PAGES-1 (log §413): the plain card first,
+                                 Google's figures per page when they arrive. */
+                              <Suspense
+                                fallback={
+                                  <BlockIssuesCard
+                                    view={view}
+                                    llmsTxtFile={llmsTxtFile}
+                                    llmsPublishSteps={llmsPublishSteps}
+                                    sitemapFixSteps={sitemapFixSteps}
+                                  />
+                                }
+                              >
+                                <SeoIssuesWithGoogle
+                                  projectId={projectId}
+                                  ownerUserId={user.id}
+                                  domain={project.domain}
+                                  view={view}
+                                  llmsTxtFile={llmsTxtFile}
+                                  llmsPublishSteps={llmsPublishSteps}
+                                  sitemapFixSteps={sitemapFixSteps}
+                                />
+                              </Suspense>
+                            )}
                           </AuditTabPanel>
                           <AuditTabPanel id="correcto">
                             <BlockPassingCard view={view} citedTopics={isGeo ? coverage.grouped.performing : undefined} />

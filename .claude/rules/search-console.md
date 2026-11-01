@@ -144,3 +144,17 @@ revisión de data-guardian que lo precedió.
   `disconnected` o `reconnect`. Cargando, con error o sin dato, no se pinta.
   Lo vigila `tests/gsc-connect-gate.test.ts`, también en el panel de la
   extensión.
+
+## Visión general y Auditoría técnica (log §413)
+
+- **Las dos leen `loadSearchConsoleScreen(…, [], [], false)`**, la entrada
+  `screen-rows` que ya comparten Recomendaciones y la extensión. Sin
+  inspecciones: son lo lento de una carga sin caché.
+- **Auditoría técnica no espera a Google.** La tarjeta de Problemas del bloque
+  SEO se pinta sin datos de Google como `fallback` de un `Suspense`; sin
+  conexión o con Google fallando, se queda así, sin invitación.
+- **Una página ausente sólo es «Sin impresiones» si Google devolvió todas**
+  (`pageStats.complete`, menos filas que `PAGE_ROW_LIMIT`). Si no, «Sin datos
+  de Google»: decir cero sería inventarlo.
+- **Un día sin impresiones no tiene puesto** en la evolución de Visión general:
+  es un hueco, nunca un 0.

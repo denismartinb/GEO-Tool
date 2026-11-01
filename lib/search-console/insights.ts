@@ -151,6 +151,80 @@ export function buildPageViews(pages: PageRow[], queryPages: QueryPageRow[], aud
     });
 }
 
+// ── Google per audited page (GSC-AUDIT-PAGES-1, log §413) ───────────────────
+
+/** One page as Google sees it, for the affected pages of an audit issue. */
+export type GooglePageStat = {
+  /** `urlKey` of the page. */
+  key: string;
+  clicks: number;
+  impressions: number;
+  position: number;
+  /** The search that brings the most clicks to it; null without clicks. */
+  topQuery: string | null;
+};
+
+export type GooglePageStats = {
+  pages: GooglePageStat[];
+  /**
+   * Google returned fewer rows than asked for, so a page missing from the list
+   * had no impressions at all. Otherwise a missing page may still have some:
+   * it is only outside the pages with the most clicks.
+   */
+  complete: boolean;
+};
+
+export function buildPageStats(pages: PageRow[], queryPages: QueryPageRow[], rowLimit: number): GooglePageStats {
+  const top = new Map<string, { query: string; clicks: number }>();
+  for (const row of queryPages) {
+    const key = urlKey(row.page);
+    if (!key || !row.query || row.clicks <= 0) continue;
+    const best = top.get(key);
+    if (!best || row.clicks > best.clicks) top.set(key, { query: row.query, clicks: row.clicks });
+  }
+  const out = new Map<string, GooglePageStat>();
+  for (const p of pages) {
+    const key = urlKey(p.page);
+    if (!key || out.has(key) || !isWebUrl(p.page)) continue;
+    out.set(key, {
+      key,
+      clicks: p.clicks,
+      impressions: p.impressions,
+      position: p.impressions > 0 && p.position > 0 ? round1(p.position) : 0,
+      topQuery: top.get(key)?.query ?? null
+    });
+  }
+  return { pages: [...out.values()], complete: pages.length < rowLimit };
+}
+
+export type AffectedPageGoogle =
+  | { url: string; kind: "seen"; clicks: number; position: number | null; topQuery: string | null }
+  /** Google returned every page and this one was not there: no impressions in 28 days. */
+  | { url: string; kind: "unseen" }
+  /** Outside the pages Google returned: we cannot say. */
+  | { url: string; kind: "unknown" };
+
+/**
+ * The affected pages of an issue with what Google says about each, most clicks
+ * first. Pages Google said nothing about keep their audit order at the end.
+ */
+export function affectedPagesWithGoogle(urls: string[], stats: GooglePageStats): AffectedPageGoogle[] {
+  const byKey = new Map(stats.pages.map((p) => [p.key, p]));
+  const rows = urls.map((url, i): { row: AffectedPageGoogle; i: number } => {
+    const key = urlKey(url);
+    const g = key ? byKey.get(key) : undefined;
+    if (g) {
+      return {
+        i,
+        row: { url, kind: "seen", clicks: g.clicks, position: g.position > 0 ? g.position : null, topQuery: g.topQuery }
+      };
+    }
+    return { i, row: { url, kind: stats.complete ? "unseen" : "unknown" } };
+  });
+  const clicks = (r: AffectedPageGoogle) => (r.kind === "seen" ? r.clicks : -1);
+  return rows.sort((a, b) => clicks(b.row) - clicks(a.row) || a.i - b.i).map((r) => r.row);
+}
+
 // ── «Te ven, pero no entran» ────────────────────────────────────────────────
 
 export type CtrOpportunity = {
