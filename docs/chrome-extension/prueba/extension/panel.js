@@ -133,7 +133,7 @@
     return `<div class="rd4">${EK.map((e) => { const a = sc.access[e]; const cls = a == null ? "u" : a ? "y" : "n"; return `<div class="c ${cls}"><span class="lg">${lg(e, 18)}<i></i></span>${ENG[e].n}<small>${a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado"}</small></div>`; }).join("")}</div>`;
   }
   const promptRows = (list) => list.map(([q, es, s]) => `<div class="qr"><span class="q">${esc(q)}<small>${esc(s)}</small></span><span class="e">${es.map((e) => lg(e, 14)).join("")}</span></div>`).join("");
-  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="/dashboard" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar con Google</button></div>`;
+  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="${esc(gscTo())}" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar con Google</button></div>`;
 
   function pageLane(k, sc, rel) {
     const C = sc.criteria.filter((c) => c.lane === k);
@@ -168,7 +168,7 @@
     if (k === "google") {
       const b = auBlock("seo");
       const iss = b && b.issues.length ? `<div class="mh">Lo que más resta en tu dominio</div>${b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}<small>pt</small></span></div>`).join("")}` : "";
-      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}<div class="gscrow">${lg("google", 14)}<span>Añade tus clics y tu puesto en Google</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="/dashboard" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar</button></div>${pageLayer("google")}`;
+      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}<div class="gscrow">${lg("google", 14)}<span>Añade tus clics y tu puesto en Google</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="${esc(gscTo())}" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar</button></div>${pageLayer("google")}`;
     }
     return `${lyr("gs", "Tu dominio", "Auditoría agéntica")}<div class="ag4">${D.agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div>${pageLayer("agent")}`;
   }
@@ -298,6 +298,10 @@
   /* ---------------- EXT-AUDITS-1 (log §406): the domain's audits, read-only ----------------
      What the console already audited (technical snapshot and agentic review),
      from /api/ext/project. Nothing here launches a review or calls an LLM. */
+  // Straight to Google's consent screen for this project (the route checks the
+  // session owns it and returns to «Posición en Google»); without a project id,
+  // the console.
+  const gscTo = () => { const pp = projPath(""); return pp ? `/api/search-console/connect?projectId=${pp.split("/").pop()}` : "/dashboard"; };
   const projPath = (sub) => { const d = S.real && S.real.domains.find((x) => x.domain === curDom()); return d && d.id ? `/dashboard/projects/${d.id}${sub ? "/" + sub : ""}` : null; };
   const AUD_META = {
     geo: { name: "Auditoría GEO", q: "¿Te puede citar la IA?", more: "Ver la Auditoría GEO", to: "web-audit?bloque=geo" },

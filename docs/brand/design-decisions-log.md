@@ -28555,6 +28555,7 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
   - Sin página leída, «Esta página» dice que se pulse el icono en una página de la web.
 - **Sin sesión, o con sesión en una web que no analizas**, cada gauge abre primero una ilustración sin cifras: «Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu dominio» y «Conoce tu nota para agentes». El botón es «Identifícate gratis» o «Analizar <dominio>». Debajo va la revisión de la página. Agentes sale siempre en estos dos casos, para poder invitar.
 - **Las auditorías del dominio siguen debajo, a primer nivel** (§406).
+- **«Conectar» (Search Console) abre directamente el permiso de Google** (`/api/search-console/connect?projectId=`), la misma ruta que la consola (§313): comprueba que el proyecto es tuyo y vuelve a «Posición en Google». Antes llevaba a la portada de la consola (Denis, 2026-11-01). Sin proyecto, sigue yendo a la consola.
 - **`/api/ext/project` devuelve el dominio de cada rival** (`ExtRival.domain`): el del proyecto para la marca, el del competidor seguido cuyo nombre coincide, o `null`. Sin migración.
 
 **Pendiente o roto conocido.** Un rival que la IA nombra y no está entre los competidores seguidos no tiene dominio y sale con la letra. Hay que subir la 1.2.0 a la tienda (zip en `/mnt/project-files/extension/`).
