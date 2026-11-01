@@ -1,4 +1,7 @@
 import { Icon } from "@/components/ui/icon";
+import { GoogleMark } from "@/components/search-console/google-mark";
+import { displayPath, type AffectedPageGoogle } from "@/lib/search-console/insights";
+import { fmtInt, fmtPosition } from "../../search-console/_components/format";
 import type { TechnicalIssue, TechnicalPassingCheck } from "@/lib/web-audit/issues";
 import type { LlmsTxtResult, PublishStep } from "@/lib/web-audit/llms-txt";
 import type { SitemapStep } from "@/lib/web-audit/sitemap";
@@ -34,7 +37,8 @@ export function IssueRow({
   issue,
   blockPoints,
   llmsTxt,
-  sitemap
+  sitemap,
+  google
 }: {
   issue: TechnicalIssue;
   /** Block points gained by fixing it; null for an unscored check. */
@@ -47,6 +51,12 @@ export function IssueRow({
   llmsTxt?: { file: LlmsTxtResult; steps: PublishStep[] } | null;
   /** Fase sitemap: qué hacer para tener uno. Sólo para `sitemap_missing`. */
   sitemap?: { steps: SitemapStep[] } | null;
+  /**
+   * GSC-AUDIT-PAGES-1 (log §414): the affected pages with what Search Console
+   * says about each, most clicks first. Only for SEO-block page checks with a
+   * live connection; without it the row is exactly as before.
+   */
+  google?: AffectedPageGoogle[] | null;
 }) {
   const meta = CHECK_META[issue.check];
   // Founder question (2026-08-04): una incidencia que ya trae solución dentro
@@ -54,22 +64,32 @@ export function IssueRow({
   // abrirla. El distintivo lo dice en la fila cerrada.
   const hasFix = Boolean(llmsTxt || sitemap);
   const scopeLabel = issueScopeLabel(issue);
+  const withGoogle = google && google.length > 0 && issue.check !== "bot_blocked" ? google : null;
+  const googleClicks = withGoogle ? withGoogle.reduce((n, p) => n + (p.kind === "seen" ? p.clicks : 0), 0) : 0;
 
   return (
     <details className="wa-details sa-iss" data-sev={issue.severity}>
       <summary>
         <span className="sa-iss-t">
           <span className="sa-iss-top">
-            <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
             <b>{meta.label}</b>
             {isNewSeoCheck(issue.check) && <NewBadge />}
           </span>
+          {/* Log §414 (Denis, 2026-11-01): the severity leads the second
+              line with its own dot, so the title reads alone and nothing sticks. */}
           <span className="sa-iss-sub">
+            <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
             <span className="sa-iss-scope">{scopeLabel}</span>
             {hasFix && (
               <span className="badge wa2-fix-ready">
                 <Icon name="check" size={10} />
                 Solución disponible
+              </span>
+            )}
+            {googleClicks > 0 && (
+              <span className="gx-tag">
+                <GoogleMark size={10} />
+                {fmtInt(googleClicks)} {googleClicks === 1 ? "clic" : "clics"} en Google
               </span>
             )}
             <AudienceTags audience={meta.audience} />
@@ -93,7 +113,40 @@ export function IssueRow({
           {llmsTxt && <LlmsTxtBlock file={llmsTxt.file} steps={llmsTxt.steps} />}
           {sitemap && <SitemapStepsBlock steps={sitemap.steps} />}
         </div>
-        {issue.affectedLabels.length > 0 && (
+        {withGoogle ? (
+          <div>
+            <h4>Páginas afectadas</h4>
+            <div className="gx-pg">
+              <div className="gx-ph">
+                <span>Página</span>
+                <span>Clics</span>
+                <span>Puesto</span>
+              </div>
+              {withGoogle.slice(0, 12).map((p) => (
+                <div key={p.url} className="gx-pr">
+                  <span className="t">
+                    {displayPath(p.url)}
+                    {p.kind === "seen" ? (
+                      p.topQuery ? (
+                        <small>Llega por «{p.topQuery}»</small>
+                      ) : (
+                        <small>Sin clics en 28 días</small>
+                      )
+                    ) : p.kind === "unseen" ? (
+                      <small>Sin impresiones en 28 días</small>
+                    ) : (
+                      <small>Sin datos de Google</small>
+                    )}
+                  </span>
+                  <b className="num">{p.kind === "seen" ? fmtInt(p.clicks) : "—"}</b>
+                  <b className="num">{p.kind === "seen" && p.position !== null ? fmtPosition(p.position) : "—"}</b>
+                </div>
+              ))}
+              {withGoogle.length > 12 && <p className="gx-pn">y {withGoogle.length - 12} más…</p>}
+              <p className="gx-pn">Ordenadas por clics de Google en los últimos 28 días: arregla primero las que te traen visitas.</p>
+            </div>
+          </div>
+        ) : issue.affectedLabels.length > 0 && (
           <div>
             <h4>{issue.check === "bot_blocked" ? "Bots bloqueados" : "Páginas afectadas"}</h4>
             <ul className="sa-urls">

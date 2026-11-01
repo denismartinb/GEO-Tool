@@ -39,6 +39,7 @@ function ready(): SearchConsoleScreen {
       ctr: [],
       questions: [],
       devices: [],
+      pageStats: { pages: [], complete: true },
       cannibalization: []
     }
   } as unknown as SearchConsoleScreen;
