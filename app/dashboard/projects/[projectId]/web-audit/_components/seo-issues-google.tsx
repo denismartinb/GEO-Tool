@@ -3,7 +3,7 @@ import { loadSearchConsoleScreen } from "@/lib/search-console/load";
 import { BlockIssuesCard } from "./block-panels";
 
 /**
- * GSC-AUDIT-PAGES-1 (log §413): the SEO block's Problemas card with what
+ * GSC-AUDIT-PAGES-1 (log §414): the SEO block's Problemas card with what
  * Search Console says about each affected page (clicks, position and the
  * search that brings the most). Same reading as Recomendaciones and the
  * Chrome panel (`loadSearchConsoleScreen` without inspections, 30-minute

@@ -35,6 +35,7 @@ export type IssueCheckKey =
   | "open_graph"
   | "noindex"
   | "snippet_blocked"
+  | "js_required"
   | "canonical"
   | "hreflang"
   | "list_or_table"
@@ -299,6 +300,23 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     key: "snippet_blocked",
     isMeasured: (c) => c.indexability?.snippetBlocks !== undefined,
     fails: (c) => c.indexability!.snippetBlocks!.length > 0,
+    gain: () => null,
+    weight: null,
+    hardBlock: true
+  },
+  {
+    /**
+     * JS-RENDER-CHECK-1: the served HTML is an empty shell that only fills in
+     * after a browser runs its scripts. AI crawlers do not run JavaScript, so
+     * for them the page is empty. Unscored for the same reason as
+     * `snippet_blocked` (moving `readiness_score` needs its own decision,
+     * log §131), and a hard block because an empty page can never be cited.
+     * `isMeasured` requires the new field: older snapshots are excluded,
+     * never declared clean.
+     */
+    key: "js_required",
+    isMeasured: (c) => c.citability?.jsShell !== undefined,
+    fails: (c) => c.citability!.jsShell === true,
     gain: () => null,
     weight: null,
     hardBlock: true

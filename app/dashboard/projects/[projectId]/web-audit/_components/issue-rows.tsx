@@ -52,7 +52,7 @@ export function IssueRow({
   /** Fase sitemap: qué hacer para tener uno. Sólo para `sitemap_missing`. */
   sitemap?: { steps: SitemapStep[] } | null;
   /**
-   * GSC-AUDIT-PAGES-1 (log §413): the affected pages with what Search Console
+   * GSC-AUDIT-PAGES-1 (log §414): the affected pages with what Search Console
    * says about each, most clicks first. Only for SEO-block page checks with a
    * live connection; without it the row is exactly as before.
    */
@@ -75,7 +75,7 @@ export function IssueRow({
             <b>{meta.label}</b>
             {isNewSeoCheck(issue.check) && <NewBadge />}
           </span>
-          {/* Log §413 (Denis, 2026-11-01): the severity leads the second
+          {/* Log §414 (Denis, 2026-11-01): the severity leads the second
               line with its own dot, so the title reads alone and nothing sticks. */}
           <span className="sa-iss-sub">
             <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>

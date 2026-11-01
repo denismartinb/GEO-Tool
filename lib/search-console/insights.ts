@@ -151,7 +151,7 @@ export function buildPageViews(pages: PageRow[], queryPages: QueryPageRow[], aud
     });
 }
 
-// ── Google per audited page (GSC-AUDIT-PAGES-1, log §413) ───────────────────
+// ── Google per audited page (GSC-AUDIT-PAGES-1, log §414) ───────────────────
 
 /** One page as Google sees it, for the affected pages of an audit issue. */
 export type GooglePageStat = {

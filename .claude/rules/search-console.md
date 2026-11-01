@@ -136,7 +136,7 @@ revisión de data-guardian que lo precedió.
   impresiones al lado engaña (un 1,0 de una impresión parece un primer puesto
   firme). La tabla se desliza en horizontal con la búsqueda fija.
 
-## Invitación con el estado real (GSC-CONNECT-GATE-1, log §412)
+## Invitación con el estado real (GSC-CONNECT-GATE-1, log §413)
 
 - **Nunca se invita a conectar sin haber leído la conexión.** Una pantalla que
   pinta una invitación lee el estado (`readSearchConsoleAvailability`,
@@ -145,7 +145,7 @@ revisión de data-guardian que lo precedió.
   Lo vigila `tests/gsc-connect-gate.test.ts`, también en el panel de la
   extensión.
 
-## Visión general y Auditoría técnica (log §413)
+## Visión general y Auditoría técnica (log §414)
 
 - **Las dos leen `loadSearchConsoleScreen(…, [], [], false)`**, la entrada
   `screen-rows` que ya comparten Recomendaciones y la extensión. Sin

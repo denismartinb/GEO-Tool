@@ -13,7 +13,7 @@ import { fmtDay, fmtDeltaPct, fmtInt, fmtPosition } from "../search-console/_com
  * position of the last 28 days, and how many searches sit on Google's page 2.
  *
  * «Instrumento» layout (log §352): the second column of the SEO card's grid.
- * GSC-OVERVIEW-RICH-1 (log §413): the same reading as the Chrome panel
+ * GSC-OVERVIEW-RICH-1 (log §414): the same reading as the Chrome panel
  * (EXT-GSC-2, log §411): clicks with their change and one line per day,
  * average position with its move, impressions, the position over time and
  * «Casi en la página 1». It reads `loadSearchConsoleScreen` without

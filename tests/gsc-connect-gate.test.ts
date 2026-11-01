@@ -3,7 +3,7 @@ import { join, relative } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
- * GSC-CONNECT-GATE-1 (log §412): an invitation to connect Search Console is
+ * GSC-CONNECT-GATE-1 (log §413): an invitation to connect Search Console is
  * only shown after reading the project's real connection state, and only
  * when that state is "disconnected" or "reconnect". The Chrome panel showed
  * «Conectar con Google» on an inner page of a domain that was already

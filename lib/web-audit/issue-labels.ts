@@ -126,6 +126,14 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
     audience: ["google", "ia"],
     unit: "página"
   },
+  js_required: {
+    label: "Contenido visible sin JavaScript",
+    guidance:
+      "Estas páginas llegan casi vacías y solo muestran su contenido después de ejecutar JavaScript. Activa el renderizado en el servidor o el prerenderizado de tu plataforma, para que el texto principal venga ya en el HTML.",
+    why: "Los bots de los asistentes de IA no ejecutan JavaScript: leen el HTML tal como llega, y si viene vacío no tienen nada que citar.",
+    audience: ["google", "ia"],
+    unit: "página"
+  },
   bot_blocked: {
     label: "Acceso de bots de IA",
     guidance: "Revisa tu robots.txt y quita la regla que bloquea a este motor.",

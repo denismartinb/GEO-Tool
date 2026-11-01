@@ -134,7 +134,7 @@ describe("CheckDot", () => {
   });
 });
 
-describe("IssueRow with Search Console (GSC-AUDIT-PAGES-1, log §413)", () => {
+describe("IssueRow with Search Console (GSC-AUDIT-PAGES-1, log §414)", () => {
   const google = [
     { url: "https://example.com/", kind: "seen" as const, clicks: 14, position: 21.3, topQuery: "example" },
     { url: "https://example.com/blog", kind: "seen" as const, clicks: 4, position: 8.6, topQuery: null },

@@ -86,6 +86,10 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   `llms_txt_missing`, `sitemap_missing` y `snippet_blocked`—, con tests que
   fijan que la nota real y la proyectada no se mueven. Ponderarlo es una fase
   aparte (log §131).
+  `js_required` (log §412) sigue la misma regla: la página llega vacía sin
+  JavaScript y se reporta sin puntos. Necesita las dos señales (poco texto
+  visible y un nodo de montaje vacío o un `<noscript>` que pide JavaScript);
+  relajarlo a una sola acusaría a portadas cortas que sí se leen.
 - **Una señal que sólo existe en la respuesta HTTP se lee antes del cuerpo.**
   `fetchPageSafely` descartaba las cabeceras al leer el HTML, y una
   `X-Robots-Tag: nosnippet` servida por un CDN era indetectable mirando sólo el

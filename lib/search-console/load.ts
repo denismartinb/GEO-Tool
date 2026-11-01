@@ -249,7 +249,7 @@ export type SearchConsoleInsights = {
   /** The page Google shows most for each query. */
   pageByQuery: Record<string, string>;
   pages: PageView[];
-  /** Every page Google returned, for the audit's affected pages (log §413). */
+  /** Every page Google returned, for the audit's affected pages (log §414). */
   pageStats: GooglePageStats;
   ctr: CtrOpportunity[];
   questions: QuestionQuery[];

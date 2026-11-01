@@ -26,7 +26,7 @@ export function BlockIssuesCard({
   llmsTxtFile: LlmsTxtResult | null;
   llmsPublishSteps: PublishStep[];
   sitemapFixSteps: SitemapStep[];
-  /** Search Console's pages, SEO block only (GSC-AUDIT-PAGES-1, log §413). */
+  /** Search Console's pages, SEO block only (GSC-AUDIT-PAGES-1, log §414). */
   google?: GooglePageStats | null;
 }) {
   const withGoogle = view.key === "seo" ? google ?? null : null;

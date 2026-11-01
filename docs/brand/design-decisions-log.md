@@ -28606,7 +28606,17 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Subir la 1.2.0 a la tienda (Denis).
 
-## §412 · GSC-CONNECT-GATE-1: la invitación a conectar Search Console sólo sale con el estado real (2026-11-01)
+## §412 · JS-RENDER-CHECK-1: la Auditoría técnica avisa si una página necesita JavaScript para verse (2026-11-01)
+
+**Qué se decidió.** Nuevo hallazgo `js_required` («Contenido visible sin JavaScript») en el bloque «Auditoría GEO». Sale de la revisión quincenal del 1-11 (Ahrefs lo añadió a su Site Audit el 24-09): los bots de los asistentes de IA leen el HTML tal como llega y no ejecutan JavaScript, así que una web hecha como aplicación de cliente les llega vacía. Denis aprobó poner en marcha lo que salió de esa revisión.
+
+**Cómo.** `isJsShell` (`lib/web-audit/page-checks.ts`) marca una página cuando se cumplen las dos cosas: menos de 50 palabras visibles en el HTML servido y una señal de que un script tiene que rellenarla (un nodo de montaje vacío, `#root`, `#__next`, `#app`, `app-root`…, o un `<noscript>` que pide activar JavaScript; los `<noscript>` de píxeles de seguimiento no cuentan). Ninguna sola basta, para no acusar a una portada corta. Se guarda en `citability.jsShell`, opcional y tri-estado: una instantánea anterior no se declara limpia. No usa ningún fetch nuevo: lee el mismo HTML que ya traía la auditoría.
+
+**Sin puntos.** Igual que `snippet_blocked` (§131): `gain` nulo, no mueve `readiness_score`, la Salud técnica ni la Puntuación GEO, y un test lo fija. Es bloqueo duro (crítico) porque una página vacía no se puede citar. Ponderarlo es una decisión aparte.
+
+**Pendiente.** No es renderizar la página: un sitio que pinta texto genérico en el servidor y el contenido real con JavaScript no se detecta. Medirlo de verdad pediría un navegador sin cabeza en la auditoría, con su propio Task Intake. No retira ningún camino de recuperación.
+
+## §413 · GSC-CONNECT-GATE-1: la invitación a conectar Search Console sólo sale con el estado real (2026-11-01)
 
 **Qué se decidió.** Lo que se aprendió de la adenda de §411 se convierte en un test (Denis: «ok al test de 4»). Invitar a conectar a quien ya está conectado es una afirmación falsa sobre su cuenta, y la extensión la hacía por pintar la invitación cada vez que no tenía estado.
 
@@ -28618,7 +28628,7 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Nada. No retira ningún camino de recuperación: la invitación sigue saliendo cuando el estado lo pide.
 
-## §413 · GSC-OVERVIEW-RICH-1 y GSC-AUDIT-PAGES-1: los datos de Google de la extensión llegan a Visión general y a Auditoría técnica (2026-11-01)
+## §414 · GSC-OVERVIEW-RICH-1 y GSC-AUDIT-PAGES-1: los datos de Google de la extensión llegan a Visión general y a Auditoría técnica (2026-11-01)
 
 **Qué se decidió.** Lo que la extensión enseña de Search Console desde §411 pasa a la consola, con diseño aprobado por Denis en artifact (móvil tal cual; en escritorio, «debe ocupar menos y no dejar ese espacio blanco a la izquierda»).
 

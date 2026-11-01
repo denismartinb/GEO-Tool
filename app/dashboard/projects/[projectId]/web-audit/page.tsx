@@ -171,7 +171,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                                 sitemapFixSteps={sitemapFixSteps}
                               />
                             ) : (
-                              /* GSC-AUDIT-PAGES-1 (log §413): the plain card first,
+                              /* GSC-AUDIT-PAGES-1 (log §414): the plain card first,
                                  Google's figures per page when they arrive. */
                               <Suspense
                                 fallback={
