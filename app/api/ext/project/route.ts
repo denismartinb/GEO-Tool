@@ -1,17 +1,5 @@
-import { readAgenticAudits } from "@/lib/agentic-audit/console-audit";
-import { overviewAgenticCard } from "@/lib/agentic-audit/visibility-model";
-import { resolveSystemPlanId } from "@/lib/billing";
-import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
-import { extJson, listExtProjects, readExtAccount } from "@/lib/ext/account";
-import { buildExtAudits } from "@/lib/ext/audits";
-import { buildExtProjectSummary, isOwnUrl } from "@/lib/ext/summary";
-import { toExtSearchConsole } from "@/lib/ext/search-console";
-import { loadSearchConsoleScreen, type SearchConsoleScreen } from "@/lib/search-console/load";
-import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
-import type { BotAccessReport } from "@/lib/web-audit/robots";
-import { loadReportInput } from "@/lib/report/report-data";
-import { buildReportModel } from "@/lib/report/report-model";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
+import { extJson, readExtAccount } from "@/lib/ext/account";
+import { loadExtProjectData, normalizeHost } from "@/lib/ext/project-data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -22,9 +10,11 @@ export const maxDuration = 30;
  * host, or a domain from the selector); `url`, when it belongs to that
  * project, adds the prompts of the latest scan that cited it.
  *
- * Read-only, no LLM, no service role. Every figure comes from the same owner
- * as the console (see `lib/ext/summary.ts`). A domain that is not one of the
- * account's projects is a 404, never another account's data.
+ * Read-only, no LLM, no service role. The loader is shared with the MCP
+ * endpoint (MCP-SERVER-1, log §418), so both show the same figures; every
+ * figure comes from the same owner as the console (see `lib/ext/summary.ts`).
+ * A domain that is not one of the account's projects is a 404, never another
+ * account's data.
  */
 export async function GET(request: Request) {
   const account = await readExtAccount();
@@ -33,79 +23,8 @@ export async function GET(request: Request) {
   const params = new URL(request.url).searchParams;
   const domain = normalizeHost(params.get("domain"));
   if (!domain) return extJson({ error: "missing_domain" }, 400);
-  const url = params.get("url");
 
-  const projects = await listExtProjects(account);
-  // The most specific project wins (blog.marca.es over marca.es).
-  const project = projects
-    .filter((p) => isSameOrSubdomain(domain, p.domain))
-    .sort((a, b) => b.domain.length - a.domain.length)[0];
-  if (!project) return extJson({ error: "not_found" }, 404);
-
-  const [input, audits, { data: snapshotRow }, gsc] = await Promise.all([
-    loadReportInput({ supabase: account.supabase, project }),
-    readAgenticAudits(account.supabase, project.id, account.user.id),
-    // The same latest technical snapshot «Tu web para la IA» and «Tu web para Google» read.
-    account.supabase
-      .from("web_audit_snapshots")
-      .select("pages, bots, created_at")
-      .eq("project_id", project.id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    // EXT-GSC-1/2 (log §409, §411): the same Search Console rows as «Posición en Google».
-    // The project came from the account's own list, so its ids are verified.
-    readSearchConsole(project.id, account.user.id, project.domain)
-  ]);
-  const model = input ? buildReportModel(input) : null;
-  const planId = account.profile ? resolveSystemPlanId(account.profile) : null;
-  const agentic = overviewAgenticCard(planId, audits.available ? (audits.latest?.result ?? null) : null);
-
-  const askedUrl = url && url.length <= 2048 ? url : null;
-  const snap = snapshotRow as { pages: PageAuditEntry[] | null; bots: BotAccessReport | null; created_at: string } | null;
-  return extJson({
-    ...buildExtProjectSummary({
-      project: { domain: project.domain, brand: project.brand?.trim() || project.name },
-      model,
-      answers: input?.answers ?? [],
-      agentic,
-      url: askedUrl,
-      engineLabel: (provider) => getEngineMeta(provider).label,
-      competitors: input?.competitors ?? []
-    }),
-    searchConsole: toExtSearchConsole(gsc, askedUrl && isOwnUrl(askedUrl, project.domain) ? askedUrl : null),
-    // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
-    audits: buildExtAudits({
-      snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
-      // Same gate as the agentic card: hidden for a plan or a review the console would not show.
-      agentic: agentic.kind === "card" && audits.available ? (audits.latest?.result ?? null) : null,
-      ownUrl: askedUrl && isOwnUrl(askedUrl, project.domain) ? askedUrl : null
-    })
-  });
-}
-
-function normalizeHost(raw: string | null): string | null {
-  const host = (raw ?? "").trim().toLowerCase().replace(/^www\./, "");
-  return /^[a-z0-9.-]{1,253}$/.test(host) && host.includes(".") ? host : null;
-}
-
-/** Google may be slow; the panel never waits for it past a few seconds. */
-const GSC_WAIT_MS = 6000;
-
-async function readSearchConsole(projectId: string, ownerUserId: string, domain: string): Promise<SearchConsoleScreen | null> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      // No audited pages, no prompts and no indexing inspections: the panel
-      // only reads the search analytics, which share the screen's cache entry.
-      loadSearchConsoleScreen(projectId, ownerUserId, domain, [], [], false),
-      new Promise<null>((resolve) => {
-        timer = setTimeout(() => resolve(null), GSC_WAIT_MS);
-      })
-    ]);
-  } catch {
-    return null;
-  } finally {
-    clearTimeout(timer);
-  }
+  const data = await loadExtProjectData(account, { domain, url: params.get("url") });
+  if (data.kind === "not_found") return extJson({ error: "not_found" }, 404);
+  return extJson(data.payload);
 }

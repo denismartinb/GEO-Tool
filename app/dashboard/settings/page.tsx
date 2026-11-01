@@ -9,6 +9,7 @@ import { PLANS, SELLABLE_PLANS, type Plan } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
+import { ConnectedApps } from "@/components/settings/connected-apps";
 import { SettingsFrame } from "@/components/ins/settings/settings-frame";
 import { InAppPlan } from "@/components/settings/in-app-plan";
 import { BillingContent } from "@/components/billing/billing-content";
@@ -137,6 +138,8 @@ export default async function SettingsPage({
               company={company}
               billingDetails={billingDetails}
             />
+            {/* MCP-SERVER-1 (log §418): Claude, ChatGPT… reading this account. */}
+            <ConnectedApps />
             {/* Last block of the account tab and deliberately not a section of its
                 own: an irreversible action is reached by scrolling, not by one
                 click (founder, 2026-08-06). */}

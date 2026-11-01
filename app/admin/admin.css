@@ -842,18 +842,21 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ADMIN-EMAIL-1: the delta sits above the sparkline, never beside it. Side by
+   side, a 110px sparkline left a 170px card about 40px for «+71 % vs periodo
+   anterior», which broke one word per line. */
 .adm-pn-kpi-foot {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 8px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
   margin-top: auto;
   padding-top: 6px;
 }
 
 .adm-pn-kpi-delta { min-width: 0; }
 
-.adm-pn-spark { width: 110px; height: 32px; flex: 0 0 auto; }
+.adm-pn-spark { width: 100%; height: 30px; flex: 0 0 auto; }
 
 .adm-pn-spark polyline {
   fill: none;
@@ -998,6 +1001,25 @@
   vector-effect: non-scaling-stroke;
 }
 
+/* ADMIN-EMAIL-1 — «Captación de email». */
+.adm-pn-email { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+.adm-pn-email-head { margin-bottom: 0; align-items: flex-start; }
+.adm-pn-email-head h2 { font-size: 18px; }
+.adm-pn-email-head p { margin: 2px 0 0; }
+.adm-pn-kpis-5 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.adm-pn-kpi-lines { display: flex; flex-direction: column; gap: 2px; }
+.adm-pn-key-added { background: #14b8c8; }
+.adm-pn-key-unsub { background: #c2410c; }
+.adm-pn-bar-added { fill: #14b8c8; }
+.adm-pn-bar-unsub { fill: #c2410c; }
+.adm-pn-num { font-variant-numeric: tabular-nums; }
+.adm-pn-unsub-bar { height: 8px; background: #f1f4fa; border-radius: 999px; overflow: hidden; margin-top: 6px; }
+.adm-pn-email-table { min-width: 560px; }
+.adm-pn-email-table th.adm-num,
+.adm-pn-email-table td.adm-num { text-align: right; }
+.adm-pn-email-table td:first-child { white-space: normal; min-width: 180px; }
+.adm-pn-unsub-bar span { display: block; height: 100%; background: #c2410c; border-radius: 999px; }
+
 .adm-pn-ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); margin-top: 4px; }
 
 .adm-pn-hbar { display: flex; align-items: center; gap: 8px; min-width: 140px; }
@@ -1049,8 +1071,7 @@
   .adm-pn-kpis > .adm-pn-kpi:last-child:nth-child(odd) { grid-column: span 2; }
   .adm-pn-kpi { padding: 14px; }
   .adm-pn-big { font-size: 24px; }
-  .adm-pn-kpi-foot { flex-direction: column; align-items: stretch; }
-  .adm-pn-spark { width: 100%; height: 26px; }
+  .adm-pn-spark { height: 26px; }
   .adm-pn-card { padding: 16px; }
   .adm-pn-wide, .adm-pn-side, .adm-pn-half { flex-basis: 100%; }
   .adm-pn-fstep { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }

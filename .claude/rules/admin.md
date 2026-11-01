@@ -242,6 +242,20 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   quita esa marca, el panel vuelve a contar nuestras visitas. Una métrica que no se puede atar a una cuenta,
   como las altas por canal o «abrió precios», no se pinta: la analítica es sin
   cookies (`docs/brand/design-decisions-log.md` §304).
+- **«Captación de email» vive en `/admin/crm`: un contacto es una cuenta que
+  cuenta (`isCountedAccount`), y los envíos salen de Resend, no de
+  `email_sends`.** Esa tabla sólo apunta la secuencia de la prueba, la
+  recuperación y los correos de funcionalidad; el resumen semanal, los avisos y
+  los de cuenta no dejan fila. La lista de Resend (`emails.list`) guarda 30
+  días en todos los planes, así que un periodo que empieza antes lo dice y una
+  comparación sin periodo anterior completo no se pinta. Aperturas y clics sólo
+  se enseñan con el seguimiento demostrado (una apertura vista o el dominio de
+  Resend con `open_tracking`); sin eso, «—» y el motivo. El tipo de cada correo
+  sale de su fila de `email_sends` (misma cuenta, ±15 min, cada fila una vez) o
+  del asunto del resumen semanal; el resto es «Avisos y cuenta». Una clave de
+  Resend sólo de envío (`restricted_api_key`) se dice tal cual. Si un día los
+  eventos de Resend se guardan en una tabla, alimentan esta misma pestaña, no
+  una tarjeta nueva (`docs/brand/design-decisions-log.md` §420).
 - **`/admin/seo-diagnostico` sólo llama a DataForSEO y no escribe nada.**
   Cada paso es una llamada en vivo con `requireOperator()` como primera línea
   de la acción. Valida el dominio (`normalizeStudyDomain`), los temas
