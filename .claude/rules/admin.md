@@ -265,3 +265,13 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   tarifa copiada. Si algún día guarda resultados, eso es una escritura y
   necesita su Task Intake y su correo a `OPS_ALERT_EMAIL`
   (`docs/brand/design-decisions-log.md` §338).
+
+## Correos por tipo (MAIL-METRICS-1, log §419)
+
+- **La etiqueta `kind` de `email_events` manda sobre la heurística.** Si un
+  correo de Resend tiene etiqueta, `classifyEmails` lo nombra por ella y no
+  consume una fila de `email_sends`. Sin etiqueta o sin la tabla, se sigue
+  nombrando por `email_sends` y por el asunto.
+- **Los recuentos siguen saliendo de la lista de Resend**, que trae el
+  destinatario: `email_events` no lo guarda, así que sola no puede quitar
+  cuentas internas y de prueba.

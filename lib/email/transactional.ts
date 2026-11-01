@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
+import { emailKindTags, type EmailKind } from "@/lib/email/kinds";
 import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categories";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
@@ -23,13 +24,14 @@ import { SUPPORT_EMAIL } from "@/lib/support";
  * `headers` did not survive the send (REPLY-TO-SUPPORT-1, log §272).
  */
 export async function sendEmail(
+  kind: EmailKind,
   to: string,
   subject: string,
   html: string,
   headers?: Record<string, string>,
   replyTo: string = SUPPORT_EMAIL
 ): Promise<boolean> {
-  return (await sendEmailWithOutcome({ to, subject, html, headers, replyTo })) === "sent";
+  return (await sendEmailWithOutcome({ kind, to, subject, html, headers, replyTo })) === "sent";
 }
 
 /**
@@ -54,6 +56,8 @@ export function classifyResendError(error: { statusCode?: number | null; name?: 
 }
 
 export type EmailMessage = {
+  /** MAIL-METRICS-1 (log §419): sent to Resend as the `kind` tag. */
+  kind: EmailKind;
   to: string;
   subject: string;
   html: string;
@@ -74,7 +78,7 @@ export async function sendEmailWithOutcome(
   const resend = getResendClient();
   if (!resend) return "not_sent";
 
-  const { to, subject, html, headers, replyTo = SUPPORT_EMAIL } = message;
+  const { kind, to, subject, html, headers, replyTo = SUPPORT_EMAIL } = message;
   try {
     const payload = {
       from: getEmailFromAddress(),
@@ -82,6 +86,7 @@ export async function sendEmailWithOutcome(
       replyTo,
       subject,
       html,
+      tags: emailKindTags(kind),
       ...(headers ? { headers } : {})
     };
     const { error } = options.idempotencyKey
@@ -314,6 +319,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
     ? `Tu prueba termina el ${endLabel}. Te avisaremos el día antes y no se te cobra nada de forma automática.`
     : `Tu prueba termina el ${endLabel}. No se te cobra nada de forma automática.`;
   await sendEmail(
+    "welcome",
     to,
     "Bienvenido a GenScore — tu prueba de Pro ya está activa",
     wrap(
@@ -338,6 +344,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
 
 export async function sendPlanConfirmedEmail(to: string, planName: string): Promise<void> {
   await sendEmail(
+    "plan_confirmed",
     to,
     `Tu plan ${planName} ya está activo`,
     wrap(
@@ -359,6 +366,7 @@ export async function sendPlanConfirmedEmail(to: string, planName: string): Prom
 
 export async function sendPaymentFailedEmail(to: string): Promise<void> {
   await sendEmail(
+    "payment_failed",
     to,
     "No hemos podido cobrar tu suscripción de GenScore",
     wrap(
@@ -386,6 +394,7 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
 export async function sendTrialEndedEmail(to: string, options: { idempotencyKey?: string } = {}): Promise<SendOutcome> {
   return sendEmailWithOutcome(
     {
+      kind: "trial_ended_plain",
       to,
       subject: "Tu prueba de Pro ha terminado",
       html: wrap(
@@ -409,6 +418,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
 
 export async function sendCancellationScheduledEmail(to: string, activeUntil: Date): Promise<void> {
   await sendEmail(
+    "cancellation_scheduled",
     to,
     "Tu suscripción de GenScore se cancelará al final de tu periodo",
     wrap(
@@ -450,6 +460,7 @@ export async function sendScoreDropAlertEmail(
 ): Promise<void> {
   const envelope = optionalEmailEnvelope(userId, "score_drop");
   await sendEmail(
+    "score_drop",
     to,
     `${projectDomain}: tu puntuación ha bajado`,
     wrap(
@@ -646,6 +657,7 @@ export async function sendWeeklyDigestEmail(
 
   return sendEmailWithOutcome(
     {
+      kind: "weekly_digest",
       to,
       subject: `Tu resumen semanal de ${projectDomain}`,
       html: wrap(
@@ -683,6 +695,7 @@ export async function sendWeeklyDigestEmail(
 
 export async function sendAccountDeletedEmail(to: string): Promise<void> {
   await sendEmail(
+    "account_deleted",
     to,
     "Tu cuenta de GenScore se ha eliminado correctamente",
     wrap(
@@ -770,6 +783,7 @@ export async function sendWebAuditFailedAlertEmail(input: {
     `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
 
   await sendEmail(
+    "ops_web_audit_failed",
     to,
     `[GenScore] Auditoría web automática fallida — ${input.domain}`,
     `<!doctype html><html><head><meta charset="utf-8"></head>
@@ -850,6 +864,7 @@ export async function sendScanHealthAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_scan_health",
     to,
     `[GenScore] Escaneo incompleto — ${input.engine}: ${input.reason}`,
     wrap(
@@ -917,6 +932,7 @@ export async function sendLlmIncidentAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_llm_incident",
     to,
     `[GenScore] Fallo de ${input.provider} fuera del escaneo — ${input.category}`,
     wrap(
@@ -991,6 +1007,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_new_signup",
     to,
     pending ? `[GenScore] Alta nueva (sin confirmar) · ${input.email}` : `[GenScore] Alta nueva · ${input.email}`,
     wrap(
@@ -1056,6 +1073,7 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_automation_change",
     to,
     `[GenScore] /admin cambió un automatismo — ${input.domain}`,
     wrap(
@@ -1122,6 +1140,7 @@ export async function sendSweepHealthAlertEmail(input: {
       : `[GenScore] Escaneo recurrente: ${count} dominios sin escanear`;
 
   await sendEmail(
+    "ops_sweep_health",
     to,
     subject,
     wrap(
@@ -1173,6 +1192,7 @@ export async function sendChainRejectedAlertEmail(input: {
     </tr>`;
 
   await sendEmail(
+    "ops_chain_rejected",
     to,
     `[GenScore] La cadena del barrido se ha cortado — HTTP ${input.status}`,
     wrap(
@@ -1295,6 +1315,7 @@ export async function sendWatchdogAlertEmail(input: {
       : `[GenScore] ${parts.join(" · ")}`;
 
   await sendEmail(
+    "ops_watchdog",
     to,
     subject,
     wrap(
@@ -1354,6 +1375,7 @@ export async function sendSeoTrackingAlertEmail(input: {
     `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
 
   return sendEmail(
+    "ops_seo_tracking",
     to,
     `[GenScore] Seguimiento de palabras parado: ${input.category === "balance" ? "sin saldo" : "credenciales"}`,
     `<!doctype html><html><head><meta charset="utf-8"></head>

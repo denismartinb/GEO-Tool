@@ -127,7 +127,7 @@ async function fetchResendEmails(nowMs: number): Promise<Omit<Extract<ResendRead
         reachedEnd = true;
         break;
       }
-      emails.push({ to: item.to ?? [], createdAt: item.created_at, lastEvent: item.last_event, subject: item.subject ?? "" });
+      emails.push({ id: item.id, to: item.to ?? [], createdAt: item.created_at, lastEvent: item.last_event, subject: item.subject ?? "" });
     }
     if (reachedEnd || !result.data?.has_more || data.length === 0) break;
     after = data[data.length - 1].id;
@@ -177,11 +177,15 @@ export async function loadEmailSection(input: {
   if (resend.kind !== "ready") {
     sending = resend;
   } else {
+    const kinds = await readKindsByEmailId(
+      service,
+      resend.emails.map((email) => email.id)
+    );
     sending = {
       kind: "ready",
       truncated: resend.truncated,
       ...buildSending({
-        emails: resend.emails,
+        emails: kinds ? resend.emails.map((email) => ({ ...email, kind: kinds.get(email.id) ?? null })) : resend.emails,
         users,
         sends: sends ?? [],
         window,
@@ -239,6 +243,25 @@ async function readLifecycleSubscribed(service: ServiceClient, ids: string[]): P
     count += (data ?? []).filter((row) => row.notify_lifecycle !== false).length;
   }
   return count;
+}
+
+/**
+ * MAIL-METRICS-1 (log §419): the `kind` tag of each Resend email, from the
+ * webhook's `email_events`. Null when the table is missing or unreadable
+ * (migration 0048 not applied); the section then names emails as before.
+ */
+async function readKindsByEmailId(service: ServiceClient, ids: string[]): Promise<Map<string, string> | null> {
+  const out = new Map<string, string>();
+  for (const part of chunks(ids)) {
+    const { data, error } = await service
+      .from("email_events")
+      .select("resend_email_id, kind")
+      .in("resend_email_id", part)
+      .not("kind", "is", null);
+    if (error) return null;
+    for (const row of data ?? []) out.set(row.resend_email_id as string, row.kind as string);
+  }
+  return out;
 }
 
 /** `email_sends` rows of counted accounts, to name the lifecycle emails; null when unreadable. */

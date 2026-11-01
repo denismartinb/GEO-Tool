@@ -22,7 +22,7 @@ function section(overrides: Partial<Extract<EmailSection, { kind: "ready" }>> = 
       kind: "ready",
       truncated: false,
       ...buildSending({
-        emails: [{ to: ["ana@example.com"], createdAt: "2026-10-30T10:00:00Z", lastEvent: "delivered", subject: "Hola" }],
+        emails: [{ id: "em_1", to: ["ana@example.com"], createdAt: "2026-10-30T10:00:00Z", lastEvent: "delivered", subject: "Hola" }],
         users,
         sends: [],
         window,

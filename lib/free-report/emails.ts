@@ -126,11 +126,11 @@ export async function sendFreeReportOpsEmail(
   if (!to) return false;
   const { subject, html } = buildOpsEmail(request, input);
   // Reply-To the requester: answering this email writes to them directly.
-  return sendEmail(to, subject, html, undefined, request.email);
+  return sendEmail("ops_free_report", to, subject, html, undefined, request.email);
 }
 
 export async function sendFreeReportConfirmationEmail(request: FreeReportRequest): Promise<boolean> {
   const { subject, html } = buildConfirmationEmail(request);
   // Replies go to support by default (`sendEmail`): this email asks for them.
-  return sendEmail(request.email, subject, html);
+  return sendEmail("free_report_confirmation", request.email, subject, html);
 }

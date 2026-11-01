@@ -44,11 +44,18 @@ const bullets = (items: string[]): string =>
     )
     .join("")}</table>`;
 
-export type EmailParts = { subject: string; preheader: string; body: string };
+export type EmailParts = {
+  /** MAIL-METRICS-1 (log §419): the Resend tag, same name as `email_sends.kind`. */
+  kind: "feature_gsc" | "feature_extension" | "feature_agentic";
+  subject: string;
+  preheader: string;
+  body: string;
+};
 
 export function gscEmailParts(input: { projectId: string; domain: string }): EmailParts {
   const domain = H(input.domain);
   return {
+    kind: "feature_gsc",
     subject: "Ya sabes cómo te ve la IA. Falta ver cómo te ve Google",
     preheader: `Conecta Search Console y verás también tu posición en Google para ${domain}.`,
     body: `
@@ -71,6 +78,7 @@ export function gscEmailParts(input: { projectId: string; domain: string }): Ema
 export function extensionEmailParts(input: { domain: string }): EmailParts {
   const domain = H(input.domain);
   return {
+    kind: "feature_extension",
     subject: "Tu GenScore, en cualquier web que abras",
     preheader: "La extensión de GenScore para Chrome: la IA, Google y los agentes, en la página que tienes abierta.",
     body: `
@@ -98,6 +106,7 @@ export function agenticEmailParts(input: AgenticEmailInput): EmailParts {
   const intro = paragraph("Los asistentes de IA ya no solo recomiendan: empiezan a comparar y comprar por la gente.");
   if (input.variant === "upgrade") {
     return {
+      kind: "feature_agentic",
       subject: `Los agentes de IA ya compran. ¿Pueden comprar en ${input.domain}?`,
       preheader: "La auditoría agéntica revisa tu web como lo haría uno de esos agentes.",
       body: `
@@ -112,6 +121,7 @@ export function agenticEmailParts(input: AgenticEmailInput): EmailParts {
   const score = Math.max(0, Math.min(100, Math.round(input.score)));
   const color = score >= 70 ? "#15915A" : score >= 40 ? "#A8660B" : "#C2410C";
   return {
+    kind: "feature_agentic",
     subject: `¿Un agente de IA podría comprar en ${input.domain}?`,
     preheader: `Hemos revisado ${input.domain} como lo haría un agente de compra.`,
     body: `
@@ -144,5 +154,5 @@ export async function sendFeatureEmail(
   const envelope = lifecycleEnvelope(userId);
   if (!envelope) return "not_sent";
   const html = renderFeatureEmail(parts, envelope.footerHtml);
-  return sendEmailWithOutcome({ to, subject: parts.subject, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: parts.kind, to, subject: parts.subject, html, headers: envelope.headers }, options);
 }

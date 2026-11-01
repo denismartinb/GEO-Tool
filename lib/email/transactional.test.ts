@@ -44,7 +44,7 @@ const CUSTOMER = "cliente@ejemplo.com";
 const OPS = "ops@genscore.es";
 
 function lastPayload() {
-  return send.mock.calls.at(-1)?.[0] as { to: string; subject: string; html: string };
+  return send.mock.calls.at(-1)?.[0] as { to: string; subject: string; html: string; tags?: { name: string; value: string }[] };
 }
 
 beforeEach(() => {
@@ -497,7 +497,7 @@ describe("bienvenida", () => {
 });
 
 describe("sendEmailWithOutcome · LIFECYCLE-DEDUPE-1 (log §308)", () => {
-  const message = { to: CUSTOMER, subject: "Asunto", html: "<p>hola</p>" };
+  const message = { kind: "welcome" as const, to: CUSTOMER, subject: "Asunto", html: "<p>hola</p>" };
 
   it("tells a definitive rejection from an ambiguous failure", () => {
     expect(classifyResendError(null)).toBe("sent");
@@ -526,6 +526,13 @@ describe("sendEmailWithOutcome · LIFECYCLE-DEDUPE-1 (log §308)", () => {
     expect(await sendEmailWithOutcome(message)).toBe("ambiguous");
     clientAvailable = false;
     expect(await sendEmailWithOutcome(message)).toBe("not_sent");
+  });
+
+  it("tags every send with its kind (MAIL-METRICS-1, log §419)", async () => {
+    await sendEmailWithOutcome({ ...message, kind: "weekly_digest" });
+    expect(lastPayload().tags).toEqual([{ name: "kind", value: "weekly_digest" }]);
+    await sendTrialEndedEmail(CUSTOMER);
+    expect(lastPayload().tags).toEqual([{ name: "kind", value: "trial_ended_plain" }]);
   });
 
   it("the plain end-of-trial email carries the key it is given", async () => {
