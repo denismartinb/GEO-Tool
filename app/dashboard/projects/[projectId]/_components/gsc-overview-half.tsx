@@ -201,7 +201,7 @@ export function GscOverviewHalfView({
 }) {
   if (state.kind === "disconnected" || state.kind === "reconnect") {
     return (
-      <div>
+      <div className="gx-inv" /* GSC-INVITE-FIT-1, log §429 */>
         <Head />
         {/* GSC-CONNECT-CTA-1 (log §313): a panel with what Google adds, and a
             button straight to Google's consent screen. */}

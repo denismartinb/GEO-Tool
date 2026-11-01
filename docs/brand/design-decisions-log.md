@@ -28894,6 +28894,7 @@ cuenta, y se quedaron fuera de la Fase 1.
 **Pendiente.** La ficha del directorio de Claude se envió sin esta
 herramienta en la descripción; Denis puede editarla después.
 
+<<<<<<< HEAD
 ## §430 · MCP-CHATGPT-SUBMIT-1: el conector, listo para el directorio de ChatGPT (2026-11-01)
 
 **Qué pasó.** Denis pidió preparar la subida a ChatGPT igual que la del
@@ -28931,3 +28932,34 @@ Agent Plugins no admite `extensions` dentro de un servidor de `mcp.json`,
 aunque la documentación de OpenAI lo pone ahí; si la comprobación del portal
 lo rechaza, se sube sin ese bloque y la autenticación se configura en
 **Connect**. Las capturas de la ficha son opcionales y salen del chat real.
+=======
+## §429 · GSC-INVITE-FIT-1: «Conectar con Google» cabe en su tarjeta (2026-11-01)
+
+**Qué pasó.** Denis vio en Visión general que el botón negro «Conectar con
+Google» de la tarjeta «Auditoría SEO y Google» se salía por la derecha de su
+panel. La invitación (§313) vive en la segunda columna de la tarjeta, de unos
+230 px en un portátil, y el botón (una línea sin cortes, 16 px de relleno a cada
+lado dentro de un panel con 18 px más) no cabía. Al lado, «Comercio agéntico»
+quedaba con mucho hueco porque la tarjeta SEO era mucho más alta.
+
+**Qué se decidió.**
+
+- Sin conexión, la mitad de Google lleva la clase `gx-inv`. En escritorio la
+  columna de Google gana algo de ancho (1 : 1,3 frente a Salud SEO, cuyas cifras
+  son cortas), el panel se aprieta (14 px de relleno, título de 15,5 px) y el
+  botón ocupa el ancho del panel, con «Acceso de solo lectura» centrado debajo.
+- Si la tarjeta es estrecha (cuerpo de 440 px o menos, tablet con las dos
+  tarjetas al lado), Salud SEO va arriba y la invitación debajo, a todo el ancho.
+  El cuerpo de las dos tarjetas del par es el contenedor (`ovcard`), porque una
+  consulta de contenedor no puede cambiar su propio contenedor.
+- El botón nunca es más ancho que su panel (`max-width:100%`, en `google.css`):
+  si un texto no cabe, se corta dentro del botón en vez de salirse.
+- Mismo texto, mismo enlace y misma puerta (`disconnected`/`reconnect`): sólo
+  cambia el aspecto. La tarjeta SEO queda más baja, así que «Comercio agéntico»
+  tiene menos hueco; el que queda es el de la fila de recomendación al pie de
+  las dos tarjetas (Denis, 2026-10-27).
+
+**Pendiente o sabido.** Comprobado con las tarjetas reales renderizadas y las
+hojas de la consola a 1280, 860 y 390 px. No retira ningún camino de
+recuperación.
+>>>>>>> origin/main
