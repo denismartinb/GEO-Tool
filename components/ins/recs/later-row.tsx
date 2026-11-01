@@ -5,7 +5,7 @@ import { Ic } from "@/components/ins/ic";
 import { foldText, importanceLabel, type InsCard } from "@/lib/ins/recs-cards";
 import { enginesLine } from "./engines-line";
 import { EmergingAction, useCardActions } from "./actions";
-import { CardDetail, GeneratingBlock, SolutionBlock } from "./card-parts";
+import { CardDetail, GeneratingBlock, GuideLink, SolutionBlock } from "./card-parts";
 
 /** Wraps every occurrence of `q` (accent- and case-insensitive) in `<mark>`. */
 export function markText(text: string, q: string): ReactNode {
@@ -98,6 +98,7 @@ export function LaterRow({
           {card.context && card.step ? (
             <p className="rc-ctx">{card.context}</p>
           ) : null}
+          <GuideLink type={card.type} />
           <CardDetail card={card} />
           {a.generating ? <GeneratingBlock /> : null}
           {!a.generating && card.solution && showSol ? (

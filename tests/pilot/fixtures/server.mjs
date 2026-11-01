@@ -116,7 +116,8 @@ const BLOG_SLUGS = [
   "la-ia-prefiere-contenido-reciente",
   "convierte-mejor-el-trafico-de-la-ia",
   // EXT-LAUNCH-1 (2026-10-31, log §395).
-  "extension-de-chrome-de-genscore"
+  "extension-de-chrome-de-genscore",
+  "como-hacer-una-comparativa-que-la-ia-cite"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

@@ -187,6 +187,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A6 | ¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas (BLOG-FRESH-1, log §348; pasada de recuperación del 25) — slug `la-ia-prefiere-contenido-reciente` | `medicion` | ✅ Publicado (2026-10-26) | #674 |
 | A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
 | L3 | Lanzamiento: GenScore ya tiene extensión de Chrome (EXT-LAUNCH-1, log §395) — slug `extension-de-chrome-de-genscore` | `playbooks` | ✅ Publicado (2026-10-31) | — |
+| R1 | Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío) (RECS-GUIDES-1, log §416; guía de las tarjetas de comparativa) — slug `como-hacer-una-comparativa-que-la-ia-cite` | `playbooks` | En PR (2026-11-01) | #725 |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,

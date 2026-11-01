@@ -23,6 +23,8 @@ import {
 } from "@/lib/recommendations/plain-snippet";
 import { DEFINITION_LEVER_NOTE } from "@/lib/recommendations/levers";
 import type { InsCard } from "@/lib/ins/recs-cards";
+import { guideForType } from "@/lib/recommendations/guides";
+import { useOptionalShellData } from "@/components/ins/shell-context";
 
 /**
  * Pieces shared by the plan deck and the «Más adelante» rows (CONSOLE-
@@ -435,4 +437,24 @@ export function CardDetail({
 
 export function TitleWithPath({ text }: { text: string }) {
   return <HiPath text={text} />;
+}
+
+/**
+ * «Cómo hacerlo» (RECS-GUIDES-1, log §416): the blog article for this type of
+ * task. Not inside the Android app, where the blog does not open (log §381).
+ */
+export function GuideLink({ type }: { type: string }) {
+  const inApp = useOptionalShellData()?.inApp ?? false;
+  const guide = guideForType(type);
+  if (!guide || inApp) return null;
+  return (
+    <a className="rc-guide" href={guide.href} target="_blank" rel="noopener">
+      <Ic n="c-book" />
+      <span className="tx">
+        <b>Cómo hacerlo</b>
+        <span>{guide.label}</span>
+      </span>
+      <Ic n="arrowr" sm />
+    </a>
+  );
 }
