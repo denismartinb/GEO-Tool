@@ -16,6 +16,8 @@ const GUIDE_BY_TYPE: Record<string, { slug: string; label: string }> = {
   update_stale_content: { slug: "la-ia-prefiere-contenido-reciente", label: "Cómo actualizar contenido sin trampas" },
   address_negative_narrative: { slug: "chatgpt-informacion-incorrecta-de-tu-empresa", label: "Cómo corregir lo que la IA dice mal de ti" },
   strengthen_brand_entity_clarity: { slug: "chatgpt-informacion-incorrecta-de-tu-empresa", label: "Cómo corregir lo que la IA dice mal de ti" },
+  add_comparison_content: { slug: "como-hacer-una-comparativa-que-la-ia-cite", label: "Cómo hacer una comparativa que la IA cite" },
+  close_competitor_gap: { slug: "como-hacer-una-comparativa-que-la-ia-cite", label: "Cómo hacer una comparativa que la IA cite" },
   track_emerging_competitor: { slug: "como-elegir-competidores-analisis-geo", label: "Cómo elegir bien a tus competidores" }
 };
 

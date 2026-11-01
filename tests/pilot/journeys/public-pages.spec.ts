@@ -97,7 +97,8 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "la-ia-prefiere-contenido-reciente": "medicion",
   "convierte-mejor-el-trafico-de-la-ia": "fundamentos",
   // EXT-LAUNCH-1 (2026-10-31, log §395).
-  "extension-de-chrome-de-genscore": "playbooks"
+  "extension-de-chrome-de-genscore": "playbooks",
+  "como-hacer-una-comparativa-que-la-ia-cite": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

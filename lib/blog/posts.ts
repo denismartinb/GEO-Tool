@@ -870,6 +870,27 @@ export const BLOG_POSTS: BlogPost[] = [
     // real panel rendered at 2x or more with a made-up store (ADR 0028).
     primaryKeyword: "extensión chrome seo ia",
     cluster: "playbooks"
+  },
+  {
+    slug: "como-hacer-una-comparativa-que-la-ia-cite",
+    title: "Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío)",
+    seoTitle: "Cómo hacer una comparativa con tu competidor que la IA cite",
+    metaDescription:
+      "Siete pasos para publicar una comparativa con tu competidor que ChatGPT, Gemini y Claude puedan citar: criterios, fuentes, conclusión y lo que dice la ley.",
+    description:
+      "Cómo montar una página que responda «¿tu marca o la otra?»: elegir la pregunta, de tres a seis criterios que decidan la compra, una tabla con fuente y fecha en cada dato del competidor, una conclusión que diga para quién es mejor cada uno y lo que pide el artículo 10 de la Ley de Competencia Desleal.",
+    datePublished: "2026-11-01",
+    coverImage: "/blog/como-hacer-una-comparativa-que-la-ia-cite/cover.webp",
+    coverIcon: "layers",
+    // RECS-GUIDES-1 (log §416): the practical guide the comparison cards
+    // (add_comparison_content, close_competitor_gap) link to. Legal section:
+    // Ley 3/1991 de Competencia Desleal, art. 9 and 10 (BOE-A-1991-628,
+    // consolidated text). Product claims: brecha de prompts in Competidores
+    // (log §374), sitemap check of own comparisons (log §330), competitor
+    // cells as link-and-date placeholders (log §331). No figures: the example
+    // table uses made-up brands and X €/Y € placeholders.
+    primaryKeyword: "comparativa con tu competidor",
+    cluster: "playbooks"
   }
 ];
 
