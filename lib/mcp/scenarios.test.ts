@@ -157,9 +157,14 @@ const SCENARIOS: Row[] = [
     must: ["competitors?nuevo=otra.es"]
   },
   {
-    name: "página sin cuenta → qué añade conectar la cuenta",
+    name: "página sin cuenta → medir la marca en GenScore, con el alta rellena (log §425)",
     answer: () => formatPageReview(REVIEW, null, { base: BASE, account: null }),
-    must: ["Con tu cuenta de GenScore conectada"]
+    must: [`${BASE}/signup?dominio=otra.es&utm_source=claude&utm_medium=mcp&utm_campaign=revisar_pagina`, "Con tu cuenta de GenScore conectada"]
+  },
+  {
+    name: "página sin cuenta en ChatGPT → el mismo alta, sin hablar de la prueba",
+    answer: () => formatPageReview(REVIEW, null, { base: BASE, profile: "chatgpt", account: null }),
+    must: ["/signup?dominio=otra.es&utm_source=chatgpt", /^(?![\s\S]*(gratis|prueba|tarjeta))/]
   },
   { name: "web con anti-bots → alternativa (la extensión)", answer: () => ({ text: PAGE_REVIEW_FAILURE.blocked }), must: ["extensión de Chrome"] }
 ];

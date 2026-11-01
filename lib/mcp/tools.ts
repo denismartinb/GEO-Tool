@@ -10,7 +10,12 @@ import {
 } from "@/lib/free-checker/rate-limit";
 import { normalizeTarget } from "@/lib/agentic-audit/run-audit";
 import { reviewPage } from "@/lib/page-review/review";
+import { getFounderOffer } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/service";
+import { formatAboutGenScore, formatGuides, type FounderOfferView } from "./acquisition";
+import { guideIndex } from "./guides/corpus";
+import { searchGuides } from "./guides/search";
+import type { McpProfile } from "./links";
 import {
   PAGE_REVIEW_FAILURE,
   formatAudits,
@@ -42,6 +47,8 @@ export type McpContext = {
   origin: string;
   /** The caller's address as Vercel saw it: usually Claude's or ChatGPT's servers. */
   ip: string | null;
+  /** Which endpoint was called (MCP-ACQUISITION-1, log §425): `/api/mcp` or `/api/mcp/chatgpt`. */
+  profile: McpProfile;
 };
 
 const DOMAIN_ARG = {
@@ -83,6 +90,13 @@ function domainTool(
     }
   };
 }
+
+/** `que_es_genscore` says plans and prices only to Claude; ChatGPT's description promises neither. */
+const ABOUT_DESCRIPTION: Record<McpProfile, string> = {
+  claude:
+    "Qué es GenScore, qué mide, sus planes y precios y cómo probarlo. Úsala sólo cuando la persona pregunte por GenScore, por sus planes o precios o por cómo empezar.",
+  chatgpt: "Qué es GenScore, qué mide y cómo empezar. Úsala sólo cuando la persona pregunte por GenScore o por cómo empezar."
+};
 
 export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
   {
@@ -191,7 +205,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
 
       // «Esta página»: only on one of the account's own domains, and never for a read-only account.
       let own: Parameters<typeof formatPageReview>[1] = null;
-      let next: PageReviewNext | null = ctx.account ? null : { base: ctx.origin, account: null };
+      let next: PageReviewNext | null = ctx.account ? null : { base: ctx.origin, profile: ctx.profile, account: null };
       if (ctx.account && ctx.account.planId !== "free") {
         const host = normalizeHost(outcome.review.url);
         const projects = await listExtProjects(ctx.account);
@@ -202,6 +216,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
         } else {
           next = {
             base: ctx.origin,
+            profile: ctx.profile,
             account: {
               projects: projects.map((p) => ({ domain: p.domain, projectId: p.id })),
               canAddDomain: projects.length < ctx.account.domainCap
@@ -211,5 +226,51 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
       }
       return answer(formatPageReview(outcome.review, own, next));
     }
+  },
+  {
+    name: "buscar_guias",
+    title: "Buscar en las guías de GenScore",
+    description:
+      "Busca en las guías, estudios y glosario de GenScore (en español) qué funciona para aparecer en las respuestas de ChatGPT, Gemini, Claude y Perplexity y en Google: GEO, fuentes que cita la IA, llms.txt, bots de IA, comercio agéntico, medición. Devuelve fragmentos con su enlace; cita la guía al usarlos. No necesita cuenta.",
+    inputSchema: {
+      type: "object",
+      properties: { consulta: { type: "string", description: "Lo que quiere saber la persona, en pocas palabras, por ejemplo «qué fuentes cita la IA»." } },
+      required: ["consulta"],
+      additionalProperties: false
+    },
+    args: z.object({ consulta: z.string().min(2).max(200) }),
+    access: "public",
+    openWorld: false,
+    async run(args, ctx) {
+      const query = String(args.consulta).trim().slice(0, 200);
+      const hits = searchGuides(guideIndex(), query);
+      return answer(formatGuides({ query, hits, base: ctx.origin, profile: ctx.profile, signedIn: !!ctx.account }));
+    }
+  },
+  {
+    name: "que_es_genscore",
+    title: "Qué es GenScore",
+    description: ABOUT_DESCRIPTION.claude,
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    args: z.object({}).passthrough(),
+    access: "public",
+    openWorld: false,
+    async run(_args, ctx) {
+      // Founder price only when Stripe confirms it, same owner as /precios. ChatGPT never shows prices.
+      let offer: FounderOfferView = null;
+      if (ctx.profile === "claude") {
+        try {
+          offer = await getFounderOffer();
+        } catch {
+          offer = null;
+        }
+      }
+      return answer(formatAboutGenScore({ base: ctx.origin, profile: ctx.profile, offer, signedIn: !!ctx.account }));
+    }
   }
 ];
+
+/** The tool list each endpoint publishes: the same tools, worded for its client. */
+export function mcpToolsFor(profile: McpProfile): ReadonlyArray<ToolDef<McpContext>> {
+  return MCP_TOOLS.map((t) => (t.name === "que_es_genscore" ? { ...t, description: ABOUT_DESCRIPTION[profile] } : t));
+}
