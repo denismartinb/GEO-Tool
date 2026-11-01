@@ -28764,6 +28764,13 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es la propia comprobación de `collect.js`, no un fallo.
 
+**Adenda 1.0.2 (2026-11-01).** Segunda prueba de Instinct sobre la 1.0.1: robots.txt, llms.txt sin cambios, Agentes (95 sobre la ficha, antes 25) y Plugin Check con 0 errores. Quedaban:
+
+- **llms.txt seguía congelando copia en dos casos.** Un título con emoji lleva la URL codificada (`%e2%98%95`) y `sanitize_textarea_field` borraba los `%xx`, así que nunca casaba con el generado. Y un post publicado entre abrir la pantalla y guardar también rompía la comparación. Ahora el texto sólo viaja si la persona escribió en el cuadro, «Volver al generado» manda vacío, el servidor compara antes de limpiar y limpia con `wp_strip_all_tags`, que conserva los `%xx`.
+- **robots.txt:** un «Permitir» ya no reabre la web cuando `*` la cierra entera (mantenimiento). Sólo escribe grupo si el bot estaba en el grupo de otro plugin. Corrige la excepción de la 1.0.1.
+- **Plugin Check:** los tres avisos de nonce de `genscore_ajax_save_review` venían de leer `$_POST` dentro de una función anónima; se lee en el propio handler.
+- **Agentes:** el precio se pinta como `149,90 €` (formato español) en la pantalla del plugin. El dato de `score.js` no cambia; la extensión lo sigue enseñando como «149.90 EUR».
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

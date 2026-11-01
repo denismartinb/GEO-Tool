@@ -120,34 +120,15 @@ function genscore_star_rules( $blocks ) {
 }
 
 /**
- * Whether the `*` group closes the whole site («Disallow: /»).
- *
- * @param array $blocks From genscore_robots_blocks().
- * @return bool
- */
-function genscore_star_closes_site( $blocks ) {
-	foreach ( $blocks as $b ) {
-		if ( 'group' !== $b['type'] || ! in_array( '*', $b['agents'], true ) ) {
-			continue;
-		}
-		foreach ( $b['lines'] as $l ) {
-			if ( preg_match( '/^\s*disallow\s*:\s*\/\s*(#.*)?$/i', $l ) ) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
-
-/**
  * Applies the saved switches to a robots.txt. Tokens with a setting are taken
  * out of every existing group (so an older «Disallow: /» from another plugin
  * cannot win a tie) and written again in GenScore's own block at the end.
  *
  * «Allow» only writes a group when it changes something: the token was taken
- * out of another group, or `*` closes the whole site. Otherwise the bot
- * already follows `*`, and turning a switch off and on again gives back the
- * robots.txt WordPress built, byte for byte.
+ * out of another group (another plugin blocked it). Otherwise the bot follows
+ * `*`, so turning a switch off and on again gives back the robots.txt
+ * WordPress built, byte for byte, and closing the whole site with `*` (say,
+ * in maintenance) closes it to that bot too.
  *
  * @param string               $text     robots.txt as WordPress built it.
  * @param array<string,string> $settings switch id => allow|block.
@@ -213,13 +194,12 @@ function genscore_apply_bot_rules( $text, $settings ) {
 		array_pop( $out );
 	}
 
-	$closed = genscore_star_closes_site( $blocks );
 	$allow  = array();
 	$block  = array();
 	foreach ( $managed as $key => $m ) {
 		if ( 'block' === $m['value'] ) {
 			$block[] = $m['token'];
-		} elseif ( $closed || isset( $stripped[ $key ] ) ) {
+		} elseif ( isset( $stripped[ $key ] ) ) {
 			$allow[] = $m['token'];
 		}
 	}

@@ -181,18 +181,21 @@ function genscore_ajax_save_llms() {
 	$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
 	update_option( 'genscore_llms_enabled', $enabled, true );
 	if ( isset( $_POST['text'] ) ) {
-		// Browsers send textarea line breaks as \r\n: without this, saving
-		// the generated text untouched stored a frozen copy of it.
-		$text = str_replace( array( "\r\n", "\r" ), "\n", sanitize_textarea_field( wp_unslash( $_POST['text'] ) ) );
+		// Compare before sanitizing: sanitize_textarea_field drops the %xx of
+		// an encoded URL (a title with an emoji), so the generated text never
+		// matched and a frozen, broken copy was stored. Browsers also send
+		// \r\n. Empty means «use the generated one».
+		$raw  = str_replace( array( "\r\n", "\r" ), "\n", wp_unslash( $_POST['text'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- compared as is, then stripped of tags below.
 		$gen  = str_replace( array( "\r\n", "\r" ), "\n", genscore_llms_generate() );
-		$same = '' === trim( $text ) || trim( $text ) === trim( $gen );
-		update_option( 'genscore_llms_custom', $same ? '' : $text, false );
+		$same = '' === trim( $raw ) || trim( $raw ) === trim( $gen );
+		update_option( 'genscore_llms_custom', $same ? '' : wp_strip_all_tags( $raw ), false );
 	}
 	wp_send_json_success(
 		array(
 			'enabled' => $enabled,
 			'serving' => genscore_llms_serving(),
-			'custom'  => (string) get_option( 'genscore_llms_custom', '' ),
+			'custom'    => (string) get_option( 'genscore_llms_custom', '' ),
+			'generated' => genscore_llms_generate(),
 		)
 	);
 }
@@ -205,16 +208,17 @@ add_action( 'wp_ajax_genscore_save_llms', 'genscore_ajax_save_llms' );
 function genscore_ajax_save_review() {
 	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
-	$lane = function ( $k ) {
-		return isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null;
-	};
+	$lanes = array();
+	foreach ( array( 'nota', 'ia', 'google', 'agent' ) as $k ) {
+		$lanes[ $k ] = isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null;
+	}
 	update_option(
 		'genscore_last_review',
 		array(
-			'nota'   => $lane( 'nota' ),
-			'ia'     => $lane( 'ia' ),
-			'google' => $lane( 'google' ),
-			'agent'  => $lane( 'agent' ),
+			'nota'   => $lanes['nota'],
+			'ia'     => $lanes['ia'],
+			'google' => $lanes['google'],
+			'agent'  => $lanes['agent'],
 			'at'     => time(),
 		),
 		false

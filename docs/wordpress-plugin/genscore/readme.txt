@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.1
+Stable tag: 1.0.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,12 @@ No. It runs only when you open the GenScore screen, in your browser.
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.2 =
+* llms.txt: the text is only saved when you edit it, so a title with an emoji or a post published meanwhile no longer freezes a copy. «Volver al generado» goes back to the generated text.
+* robots.txt: closing the whole site for everyone (for example, in maintenance) also closes it to the AI bots you had turned on.
+* Agents: prices shown the Spanish way (149,90 €).
+* Nonce checks Plugin Check can see in every handler.
 
 = 1.0.1 =
 * robots.txt: turning a bot back on gives back the original file. GenScore only writes a group when it changes something.

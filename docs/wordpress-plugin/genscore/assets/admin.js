@@ -33,7 +33,13 @@
   function ok(t) { return '<span class="gs-ok">' + ic("i-check") + esc(t) + "</span>"; }
   function ko(t) { return '<span class="gs-ko">' + ic("i-x") + esc(t) + "</span>"; }
   function na(t) { return '<span class="gs-na">' + esc(t) + "</span>"; }
-  function verdict(c) { return c.v == null ? na(c.value) : c.v >= 1 ? ok(c.value) : ko(c.value); }
+  /* «149.90 EUR» from the page's data, written the Spanish way. */
+  function money(v) {
+    var m = typeof v === "string" && /^(\d+(?:\.\d+)?) ([A-Z]{3})$/.exec(v);
+    if (!m) return v;
+    try { return new Intl.NumberFormat("es-ES", { style: "currency", currency: m[2] }).format(Number(m[1])); } catch (e) { return v; }
+  }
+  function verdict(c) { var v = money(c.value); return c.v == null ? na(v) : c.v >= 1 ? ok(v) : ko(v); }
   function ext(href, label, cls) { return '<a class="' + (cls || "gs-btn gs-ink") + '" href="' + esc(href) + '" target="_blank" rel="noopener">' + label + ic("i-arrowr") + "</a>"; }
 
   function dial(score, bands) {
@@ -329,20 +335,27 @@
     if (act === "llms-toggle") {
       var en = a.getAttribute("aria-checked") !== "true";
       S.llms.enabled = en;
-      saveLlms(false);
+      saveLlms("toggle");
       return;
     }
-    if (act === "save-llms") { saveLlms(true); return; }
-    if (act === "llms-reset") { S.llmsText = S.llms.generated; var ta = document.getElementById("gs-llms-text"); if (ta) ta.value = S.llms.generated; saveLlms(true); }
+    if (act === "save-llms") { saveLlms("edit"); return; }
+    if (act === "llms-reset") { saveLlms("reset"); }
   });
-  function saveLlms(withText) {
+  /* The text only travels when the person typed in the box: saving the
+     generated text untouched must never store a copy of it (a post published
+     meanwhile, or an encoded URL, would freeze). «Volver al generado» sends an
+     empty text, which means «use the generated one». */
+  app.addEventListener("input", function (e) { if (e.target && e.target.id === "gs-llms-text") S.llmsEdited = true; });
+  function saveLlms(mode) {
     var ta = document.getElementById("gs-llms-text");
     var data = { enabled: S.llms.enabled ? "1" : "0" };
-    if (withText && ta) data.text = ta.value;
+    if (mode === "reset") data.text = "";
+    else if (mode === "edit" && S.llmsEdited && ta) data.text = ta.value;
     post("genscore_save_llms", data).then(function (r) {
       if (!r || !r.success) throw new Error();
       S.llms.enabled = r.data.enabled; S.llms.serving = r.data.serving; S.llms.custom = r.data.custom;
-      if (withText && ta) S.llmsText = ta.value;
+      if (r.data.generated != null) S.llms.generated = r.data.generated;
+      if ("text" in data) { S.llmsEdited = false; S.llmsText = null; }
       S.msg.llms = '<span class="gs-saved">' + (r.data.serving ? "Guardado. Ya se publica en /llms.txt." : "Guardado.") + "</span>";
       render();
     }).catch(function () { S.msg.llms = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });

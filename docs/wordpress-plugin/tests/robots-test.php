@@ -58,9 +58,8 @@ $out = genscore_apply_bot_rules( "User-agent: Googlebot\nDisallow:\n\n" . $wp, a
 check( 'Googlebot group untouched', false !== strpos( $out, "User-agent: Googlebot\nDisallow:" ) );
 check( 'Google-Extended blocked on its own', false !== strpos( $out, "User-agent: Google-Extended\nDisallow: /" ) );
 
-// A blanket Disallow: / in * is not copied into an Allow group.
+// * closes the whole site (maintenance): an allow does not reopen it for that bot.
 $closed = "User-agent: *\nDisallow: /\n";
-$out    = genscore_apply_bot_rules( $closed, array( 'perplexity-search' => 'allow' ) );
-check( 'blanket rule not repeated', false !== strpos( $out, "User-agent: Perplexity-User\nAllow: /" ) );
+check( 'allow does not reopen a closed site', genscore_apply_bot_rules( $closed, array( 'perplexity-search' => 'allow' ) ) === $closed );
 
 exit( $failures ? 1 : 0 );
