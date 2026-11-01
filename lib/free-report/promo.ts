@@ -7,7 +7,7 @@
  *  - only on content pages (blog, comparativas, glosario, docs) — never on the
  *    home, pricing, signup or the console, where a pop-up would compete with
  *    the trial signup button, which is worth more than an email;
- *  - after 40 s on the page or past half the article, whichever comes first;
+ *  - after 20 s on the page (40 s until EXT-PROMO-1, log §403) or past half the article, whichever comes first;
  *  - once per visit; closed, it stays away for 7 days; once the visitor has
  *    asked for the report, never again;
  *  - not for someone logged in, who is already a user.
@@ -18,7 +18,7 @@ export const FREE_REPORT_PATH = "/gratis/informe-geo";
 /** Where the card is allowed. Prefix match on the pathname. */
 export const PROMO_PATH_PREFIXES = ["/blog", "/comparativas", "/glosario", "/docs"] as const;
 
-export const PROMO_DELAY_MS = 40_000;
+export const PROMO_DELAY_MS = 20_000;
 export const PROMO_SCROLL_FRACTION = 0.5;
 export const PROMO_DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 

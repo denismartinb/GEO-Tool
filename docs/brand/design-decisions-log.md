@@ -28462,6 +28462,8 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 - La X y «Añadir a Chrome» la apartan 30 días; «Ya la tengo», para siempre en ese navegador. Todo en `localStorage`, sin migración.
 - El enlace lleva `utm_source=genscore.es&utm_medium=aviso&utm_campaign=extension-chrome&utm_content=web|consola`.
 
+- La tarjeta del informe gratis pasa a salir a los 20 s en vez de 40 (Denis, 2026-11-01); la mitad de página sigue igual. Corrige el «40 s» de §252.
+
 **Límite conocido.** La web no puede saber si la extensión ya está instalada: el manifiesto 1.0.1 no expone nada a la página. Detectarlo pediría una versión nueva con un recurso accesible sólo desde genscore.es, y otra revisión de la tienda. Hasta entonces lo cubre «Ya la tengo».
 
 **Pendiente.** No retira ningún camino de recuperación.
