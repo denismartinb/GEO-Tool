@@ -142,6 +142,11 @@ function genscore_fix_current_id() {
 	if ( is_front_page() && is_home() ) {
 		return 0;
 	}
+	// The page that lists the latest posts is not singular either.
+	if ( is_home() ) {
+		$blog = (int) get_option( 'page_for_posts' );
+		return $blog > 0 ? $blog : null;
+	}
 	// WooCommerce's shop page is an archive, not a singular page.
 	if ( function_exists( 'is_shop' ) && function_exists( 'wc_get_page_id' ) && is_shop() ) {
 		$shop = (int) wc_get_page_id( 'shop' );

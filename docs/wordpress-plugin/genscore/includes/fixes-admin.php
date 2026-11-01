@@ -453,6 +453,23 @@ function genscore_fix_review_says( $kind, $id ) {
 }
 
 /**
+ * Whether WordPress shows this page as a list (no canonical of its own): the
+ * home of latest posts, the posts page or the WooCommerce shop.
+ *
+ * @param int $id Post id, or 0.
+ * @return bool
+ */
+function genscore_is_listing_page( $id ) {
+	if ( 0 === $id ) {
+		return true;
+	}
+	if ( (int) get_option( 'page_for_posts' ) === $id ) {
+		return true;
+	}
+	return function_exists( 'wc_get_page_id' ) && (int) wc_get_page_id( 'shop' ) === $id;
+}
+
+/**
  * ready (GenScore proposes something), has (the page already has it).
  * Cheap: used for every page of the list.
  *
@@ -484,8 +501,9 @@ function genscore_fix_status( $kind, $id ) {
 			$l = mb_strlen( (string) $t );
 			return $l >= 15 && $l <= 65 ? 'has' : 'ready';
 		case 'canon':
-			// WordPress and the SEO plugins print it on every post.
-			return 0 === $id && ! $seo ? 'ready' : 'has';
+			// WordPress prints it on singular posts only: the home that lists
+			// posts, the posts page and the WooCommerce shop are archives.
+			return ! $seo && genscore_is_listing_page( $id ) ? 'ready' : 'has';
 		case 'ld':
 			// Yoast and Rank Math print their own graph; WooCommerce its Product.
 			return ( $seo && in_array( $seo['name'], array( 'Yoast SEO', 'Rank Math' ), true ) ) || 'product' === $type ? 'has' : 'ready';
