@@ -21,8 +21,9 @@ const users: ContactUser[] = [
   { id: "c", email: "carla@example.com", createdAt: "2026-10-31T10:00:00Z" }
 ];
 
+let mailSeq = 0;
 function mail(partial: Partial<ResendEmail> & { to: string[]; createdAt: string }): ResendEmail {
-  return { lastEvent: "delivered", subject: "Algo", ...partial };
+  return { id: `em_${++mailSeq}`, lastEvent: "delivered", subject: "Algo", ...partial };
 }
 
 describe("contacts", () => {
@@ -88,7 +89,22 @@ describe("emails sent", () => {
     expect(out.map((o) => o.group)).toEqual(["winback", "digest", "other"]);
   });
 
-  it("uses each email_sends row once", () => {
+  it("names an email by its kind tag first, without taking an email_sends row (MAIL-METRICS-1)", () => {
+    const userIdByEmail = new Map([["ana@example.com", "a"]]);
+    const out = classifyEmails({
+      emails: [
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T07:46:00Z", kind: "welcome" }),
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T07:46:30Z" }),
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T08:00:00Z", kind: "weekly_digest", subject: "Otro asunto" }),
+        mail({ to: ["ana@example.com"], createdAt: "2026-10-30T09:00:00Z", kind: "trial_d5" })
+      ],
+      userIdByEmail,
+      sends: [{ ownerId: "a", kind: "feature_gsc", sentAt: "2026-10-30T07:45:59Z" }]
+    });
+    expect(out.map((o) => o.group)).toEqual(["other", "feature", "digest", "trial"]);
+  });
+
+    it("uses each email_sends row once", () => {
     const userIdByEmail = new Map([["ana@example.com", "a"]]);
     const out = classifyEmails({
       emails: [
