@@ -268,7 +268,7 @@
   }
 
 
-  /* ---------------- EXT-AUDITS-1 (log §403): the domain's audits, read-only ----------------
+  /* ---------------- EXT-AUDITS-1 (log §406): the domain's audits, read-only ----------------
      What the console already audited (technical snapshot and agentic review),
      from /api/ext/project. Nothing here launches a review or calls an LLM. */
   const projPath = (sub) => { const d = S.real && S.real.domains.find((x) => x.domain === curDom()); return d && d.id ? `/dashboard/projects/${d.id}${sub ? "/" + sub : ""}` : null; };

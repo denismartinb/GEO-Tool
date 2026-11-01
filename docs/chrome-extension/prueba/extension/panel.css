@@ -989,7 +989,7 @@ button.pghint{cursor:pointer}button.pghint:hover{border-color:var(--blue)}
 .shopln .btn{flex:none}
 .shopln.none>svg{color:var(--ink-3)}
 
-/* EXT-AUDITS-1 (log §403): the domain's audits */
+/* EXT-AUDITS-1 (log §406): the domain's audits */
 .aud{margin-top:24px}
 .aud .ey .cnt{font-family:var(--font);text-transform:none;letter-spacing:0;font-size:12px;color:var(--ink-3);order:3;margin-left:8px}
 .auc{border:1px solid var(--rule);border-radius:18px;background:var(--surface);margin-top:10px;overflow:hidden}

@@ -144,7 +144,7 @@ export type SellCandidate = { url: string; source: "sitemap" | "home" };
 /**
  * A menu entry that names the price list: «Precios», «Pricing», «Tarifas»,
  * «Planes y precios». It can point anywhere (`/fibra-movil`), so the text
- * counts as much as a pricing path (SHOP-DETECT-2, log §404).
+ * counts as much as a pricing path (SHOP-DETECT-2, log §407).
  */
 const PRICING_TEXT = /^(?:ver |nuestr[oa]s |consulta (?:los |las )?)?(?:precios?|pricing|prices|tarifas?|planes|plans)\b/i;
 
@@ -156,7 +156,7 @@ const EXACT_PRICING_PATH = /\/(?:precios?|pricing|prices|planes|plans|tarifas?)\
  * 0 a pricing page by its path (`/precios`), 1 a link whose text names the
  * prices or whose path has a pricing word in it, then booking, course, subscription and service. An event page
  * goes last: a home links «/eventos/black-friday» or a webinar far more often
- * than it sells tickets (SHOP-DETECT-2, log §404).
+ * than it sells tickets (SHOP-DETECT-2, log §407).
  */
 const KIND_RANK: Record<string, number> = { booking: 2, course: 3, subscription: 4, service: 5, event: 6 };
 function sellRank(pathname: string, text = ""): number | null {
@@ -221,7 +221,7 @@ const CARD_PRICE = /(?:\d{1,3}(?:[.\s]\d{3})*|\d+)[,.]\d{2}\s?(?:€|&euro;|EUR)
 const CARD_ATTR = /(?:class|id|data-[\w-]+)\s*=\s*["'][^"']*\bproduct(?:[-_]?(?:item|card|tile|link|name|title|photo|image|url|box))?\b[^"']*["']|\bdata-product(?:-id|id)?\b/i;
 
 /**
- * SHOP-DETECT-2 (log §404): whether the page looks like a shop window — a
+ * SHOP-DETECT-2 (log §407): whether the page looks like a shop window — a
  * store platform, an add-to-cart or product cards. Printed prices alone do
  * not count: a telco or a theme park prints them too, and there the price
  * list in the menu is the page to judge.
@@ -236,7 +236,7 @@ export function looksLikeStorefront(html: string | null, platform: string | null
 }
 
 /**
- * SHOP-DETECT-2 (log §404): a product link from the shop window itself, for
+ * SHOP-DETECT-2 (log §407): a product link from the shop window itself, for
  * stores whose product URLs carry no `/p/` or `/product/` (Magento, custom
  * platforms): first a product card's own link, then the link closest before a
  * printed price. Only on a storefront; a wrong guess is caught by
@@ -277,7 +277,7 @@ function fromShopWindow(input: FindProductInput, base: URL): string | null {
 export type DiscoveryCandidate = { url: string; source: ProductSource };
 
 /**
- * SHOP-DETECT-2 (log §404): the ONE extra page the console may read
+ * SHOP-DETECT-2 (log §407): the ONE extra page the console may read
  * (`.claude/rules/agentic-audit.md`), chosen in an order that depends on what
  * the page is. Still one candidate and one fetch: only the order changed.
  *

@@ -67,7 +67,7 @@ export async function GET(request: Request) {
       url: askedUrl,
       engineLabel: (provider) => getEngineMeta(provider).label
     }),
-    // EXT-AUDITS-1 (log §403): what the console already audited, read-only.
+    // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
     audits: buildExtAudits({
       snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
       // Same gate as the agentic card: hidden for a plan or a review the console would not show.

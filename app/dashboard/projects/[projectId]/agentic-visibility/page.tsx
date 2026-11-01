@@ -9,6 +9,7 @@ import { readAgenticAudits } from "@/lib/agentic-audit/console-audit";
 import { componentLine, componentStatus, firstSteps, type Tone } from "@/lib/agentic-audit/console-model";
 import { loadPurchaseQuestions } from "@/lib/agentic-audit/purchase-data";
 import { fixbarLine, interopLine, stepTone, visibilityHeadline } from "@/lib/agentic-audit/visibility-model";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
@@ -73,6 +74,7 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
     readAgenticAudits(supabase, projectId, user.id),
     loadPurchaseQuestions(supabase, project)
   ]);
+  const inApp = await isInApp();
   const canRun = isProOrAbove(resolveSystemPlanId(profile as Parameters<typeof resolveSystemPlanId>[0]));
   const latest = audits.available ? audits.latest : null;
   const result = latest?.result ?? null;
@@ -104,15 +106,17 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
                   <Ic n="agent" />
                 </span>
                 <div>
-                  <h2>Visibilidad en agentes está en Pro y Agencia</h2>
+                  <h2>{inApp ? "Visibilidad en agentes no está incluida en tu plan" : "Visibilidad en agentes está en Pro y Agencia"}</h2>
                   <p>
                     Mira si la IA te nombra cuando alguien va a comprar, o si le manda a un marketplace, junto a lo que ve un
                     agente en tu web.
                   </p>
-                  <Link className="btn ink" href="/dashboard/settings?openPlan=pro#plan">
-                    <Ic n="arrowup" sm />
-                    Pasar a Pro
-                  </Link>
+                  {inApp ? null : (
+                    <Link className="btn ink" href="/dashboard/settings?openPlan=pro#plan">
+                      <Ic n="arrowup" sm />
+                      Pasar a Pro
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>

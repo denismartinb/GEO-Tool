@@ -297,7 +297,7 @@ encabezaba con Amazon/Chrome/Brave, en la misma tarjeta y sin nada que lo dijera
   ordenada de más a menos distinguible entre sí (y bajo daltonismo). Asignarla
   antes deja a las cuatro visibles con los tonos 0, 3, 5 y 7.
 
-- **`?nuevo=` solo rellena el formulario** (EXT-AUDITS-1, log §403). La
+- **`?nuevo=` solo rellena el formulario** (EXT-AUDITS-1, log §406). La
   extensión de Chrome abre Competidores con el dominio escrito; se guarda solo
   al pulsar «Añadir», por `createCompetitorAction` y sus comprobaciones. Lo que
   no sea un dominio bien formado se ignora (`lib/competitors/prefill.ts`).

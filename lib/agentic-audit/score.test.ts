@@ -180,7 +180,7 @@ describe("checks by what is sold (log §325)", () => {
   });
 });
 
-describe("sold-out product (SHOP-DETECT-2, log §404)", () => {
+describe("sold-out product (SHOP-DETECT-2, log §407)", () => {
   it("does not fail add-to-cart when every offer is sold out: «Avísame» is the right button", () => {
     const r = scoreAgenticAudit(input({ signals: { ...FULL, addToCart: false, soldOut: true } }));
     const cart = r.components.flatMap((c) => c.checks).find((k) => k.id === "add_to_cart");

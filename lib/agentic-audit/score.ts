@@ -326,7 +326,7 @@ function purchaseChecks(s: PageSignals, kind: AgenticOfferKind): AgenticCheck[] 
       check(
         "add_to_cart",
         40,
-        // An out-of-stock product shows «Avísame», not a cart: nothing to measure (log §404).
+        // An out-of-stock product shows «Avísame», not a cart: nothing to measure (log §407).
         s.addToCart ? "pass" : s.soldOut ? "unknown" : "fail",
         s.addToCart
           ? "El botón de añadir al carrito está en el HTML"

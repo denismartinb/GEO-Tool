@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { readCompetitorPrefill } from "@/lib/competitors/prefill";
 
-describe("readCompetitorPrefill (EXT-AUDITS-1, log §403)", () => {
+describe("readCompetitorPrefill (EXT-AUDITS-1, log §406)", () => {
   it("reads a well-formed domain and its name", () => {
     expect(readCompetitorPrefill({ nuevo: "www.vodafone.es", nombre: "Vodafone" })).toEqual({ domain: "vodafone.es", name: "Vodafone" });
   });

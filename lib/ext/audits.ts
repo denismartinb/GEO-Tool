@@ -8,7 +8,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 
 /**
- * EXT-AUDITS-1 (log §403): the three audits of the selected domain, as the
+ * EXT-AUDITS-1 (log §406): the three audits of the selected domain, as the
  * extension shows them. Pure: the route reads the latest technical snapshot
  * and the latest agentic review, this module only picks fields.
  *

@@ -154,7 +154,7 @@ describe("classifyOffer (log §325)", () => {
   });
 });
 
-describe("SHOP-DETECT-2 (log §404)", () => {
+describe("SHOP-DETECT-2 (log §407)", () => {
   const page = (body: string) => `<html><body>${body}</body></html>`;
   it("reads pricing words inside a path, and insurers and «contratar» pages as services", () => {
     const sig = extractPageSignals(page("<p>Hola</p>"));

@@ -88,7 +88,7 @@ describe("findSellCandidate (log §325)", () => {
   });
 });
 
-describe("findDiscoveryCandidate (SHOP-DETECT-2, log §404)", () => {
+describe("findDiscoveryCandidate (SHOP-DETECT-2, log §407)", () => {
   const peec = {
     ...base,
     origin: "https://peec.ai",
@@ -131,7 +131,7 @@ describe("findDiscoveryCandidate (SHOP-DETECT-2, log §404)", () => {
   });
 });
 
-describe("candidates that are never the page to judge (log §404)", () => {
+describe("candidates that are never the page to judge (log §407)", () => {
   it("skips files and legal pages", () => {
     const pdf = `<a href="/pdfs/planes_extincion.pdf">Planes</a>`;
     expect(findDiscoveryCandidate({ ...base, pageHtml: pdf, storefront: false })).toBeNull();

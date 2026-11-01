@@ -4,6 +4,7 @@ import { Bar } from "@/components/ins/kit/bar";
 import { TickRing } from "@/components/ins/kit/charts";
 import { readAgenticAudits } from "@/lib/agentic-audit/console-audit";
 import { overviewAgenticCard, type OverviewAgenticCard } from "@/lib/agentic-audit/visibility-model";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import { resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 
@@ -15,14 +16,18 @@ import { resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
  */
 export async function AgenticOverviewCard({ projectId }: { projectId: string }) {
   const { supabase, user } = await requireUser();
-  const [{ data: profile }, audits] = await Promise.all([
+  const [{ data: profile }, audits, inApp] = await Promise.all([
     supabase.from("profiles").select(SYSTEM_PLAN_COLUMNS).eq("id", user.id).maybeSingle(),
-    readAgenticAudits(supabase, projectId, user.id)
+    readAgenticAudits(supabase, projectId, user.id),
+    isInApp()
   ]);
   // No profile reads as no plan: the card stays hidden (fails closed).
   const planId = profile ? resolveSystemPlanId(profile as Parameters<typeof resolveSystemPlanId>[0]) : null;
   const result = audits.available ? (audits.latest?.result ?? null) : null;
-  return <AgenticOverviewCardView projectId={projectId} card={overviewAgenticCard(planId, result)} />;
+  const card = overviewAgenticCard(planId, result);
+  // ANDROID-TWA-1: inside the app nothing sells, and this card is only an invitation to Pro.
+  if (inApp && card.kind === "upsell") return null;
+  return <AgenticOverviewCardView projectId={projectId} card={card} />;
 }
 
 export function AgenticOverviewCardView({ projectId, card }: { projectId: string; card: OverviewAgenticCard }) {

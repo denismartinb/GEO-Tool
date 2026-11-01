@@ -28438,7 +28438,19 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 
 **Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.
 
-## §402 · EXT-LLMS-LINKS-1 + EXT-SHOP-FIND-2: la extensión 1.0.2 propone un llms.txt con los enlaces de la web y encuentra la tienda de las grandes superficies (2026-11-01)
+## §402 · APP-BACK-CACHE-1: volver atrás en la consola no recarga la pantalla (2026-11-01)
+
+**Qué se vio.** El segundo test de la app 1.0.2 (Pixel 8, Android 14) lo pasó todo, pero volver atrás de «En la IA» a «Plan» enseñaba entre uno y cinco segundos el esqueleto «Cargando…», mientras que tocar la pestaña lo abría al instante.
+
+**Causa, reproducida con una app mínima en Next 16.2.6.** Next guarda cada pantalla visitada para volver atrás y la vacía entera cuando una acción de servidor dice que cambió cookies. El middleware escribía la cookie del proyecto activo en cada petición de `/dashboard/projects/<id>/…`, también en los POST de las acciones, y Next mezcla lo que escribe el middleware en las cookies de la acción. Así que cualquier acción lanzada desde una pantalla de proyecto contaba como «cookies cambiadas». Competidores lanza una al abrirse (las sugerencias), por eso el fallo salía justo desde «En la IA». En la reproducción, el mismo patrón (middleware que escribe una cookie, más una acción al montar) hace que atrás vuelva a pedir la pantalla. Escribiéndola sólo cuando cambia, atrás tarda unos 15 ms, sin petición.
+
+**Qué se decidió.** El middleware sólo escribe la cookie del proyecto activo cuando cambia. No vuelve a alargar su caducidad de 30 días en cada visita: si caduca, se escribe en la siguiente navegación a un proyecto. Además, cada acción lanzada desde una pantalla de proyecto deja de pedir un repintado extra de la pantalla actual. Lo vigila `middleware.test.ts`.
+
+**Dentro de la app no se invita a pagar (§381).** «Visibilidad en agentes» y «Auditoría agéntica» sin plan dicen «no está incluida en tu plan», sin «Pasar a Pro», y la tarjeta de Visión general que sólo invitaba a Pro no sale. Fuera de la app no cambia nada.
+
+**Pendiente.** Una renovación del token de Supabase en el middleware tiene el mismo efecto, pero sólo una vez por hora como mucho. No retira ningún camino de recuperación.
+
+## §405 · EXT-LLMS-LINKS-1 + EXT-SHOP-FIND-2: la extensión 1.0.2 propone un llms.txt con los enlaces de la web y encuentra la tienda de las grandes superficies (2026-11-01)
 
 **Qué se decidió.** Dos arreglos de la extensión de Chrome, a partir de lo que vio Denis en vodafone.es y carrefour.es.
 
@@ -28459,7 +28471,7 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 
 **Pendiente o sin verificar.** Desde aquí no se pudo ver la portada real de Carrefour ni la de Vodafone, porque nuestro navegador recibe el desafío antibots. El caso de los sitemaps se probó con una tienda de prueba en local: índice, hijo de productos y ficha `/R-521/p`. La comprobación real la hace Denis cargando la extensión sin empaquetar. Si una tienda solo publica sitemaps `.gz`, seguirá saliendo «no detecta tu tienda».
 
-## §403 · EXT-AUDITS-1: la extensión 1.1.0 enseña las auditorías GEO, SEO y agéntica del dominio (2026-11-01)
+## §406 · EXT-AUDITS-1: la extensión 1.1.0 enseña las auditorías GEO, SEO y agéntica del dominio (2026-11-01)
 
 **Qué se decidió.** Denis aprobó el artefacto el 2026-11-01 («Me gusta») y puso el texto. Con la sesión iniciada, la extensión enseña tres cosas nuevas.
 
@@ -28497,7 +28509,7 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 
 **Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.
 
-## §404 · SHOP-DETECT-2: la consola y la extensión encuentran mejor qué vende una web (2026-11-01)
+## §407 · SHOP-DETECT-2: la consola y la extensión encuentran mejor qué vende una web (2026-11-01)
 
 **Qué se decidió.** Denis pidió (2026-11-01) robustecer la detección de tiendas y servicios en la consola y en la extensión, para todos los sectores, con una batería grande de webs reales. Se montó con 130 webs en 12 grupos: retail, telcos, eléctricas, SaaS, salud, seguros y banca, viajes, formación, ocio y restauración, servicios y 6 webs de control que no venden (Wikipedia, BOE, RAE, AEMET, La Moncloa, INE). La consola se probó con su propio motor (`runAgenticAudit` con `discover`) y la extensión con `collect.js` en un Chromium real.
 

@@ -1,7 +1,7 @@
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 
 /**
- * EXT-AUDITS-1 (log §403): `?nuevo=vodafone.es&nombre=Vodafone` on
+ * EXT-AUDITS-1 (log §406): `?nuevo=vodafone.es&nombre=Vodafone` on
  * Competidores, written by the Chrome extension's «Añadir como competidor».
  * It only fills the sheet's form: nothing is saved until the person presses
  * «Añadir», through the same `createCompetitorAction` as always.

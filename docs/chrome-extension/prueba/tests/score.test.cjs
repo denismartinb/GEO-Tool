@@ -141,7 +141,7 @@ test("the sentence under the dial joins both halves with the right connector", (
   for (const f of Object.values(F)) assert.doesNotMatch(S.scorePage(f, NOW).say, /pero Google no la indexará|indexará/);
 });
 
-test("sold out: «Avísame» does not fail the buy button, and availability reads in Spanish (log §404)", () => {
+test("sold out: «Avísame» does not fail the buy button, and availability reads in Spanish (log §407)", () => {
   const ld = Object.assign({}, F.a.ld, { product: Object.assign({}, F.a.ld.product, { availability: "SoldOut" }) });
   const r = S.scorePage(Object.assign({}, F.a, { ld, buy: null }), NOW);
   const buy = r.criteria.find((c) => c.id === "buy");
@@ -151,7 +151,7 @@ test("sold out: «Avísame» does not fail the buy button, and availability read
   assert.ok(!r.fixes.some((x) => x.id === "buy"));
 });
 
-test("a pricing page or a price beside a buy button sells, even with no data; an article never does (log §404)", () => {
+test("a pricing page or a price beside a buy button sells, even with no data; an article never does (log §407)", () => {
   const pricing = S.scorePage(Object.assign({}, F.b, { ld: { types: [], errors: 0 }, path: "/pricing", pricingPath: true, buy: "Start free trial", priceSeen: true, sellCta: true }), NOW);
   assert.equal(pricing.commerce, true);
   assert.equal(pricing.service, true);

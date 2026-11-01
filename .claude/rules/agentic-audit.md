@@ -18,7 +18,7 @@ Se inyectan solos al tocar `lib/agentic-audit/**`,
 `app/dashboard/projects/*/agentic-visibility/**` y la tarjeta de Visión
 general (`_components/agentic-overview-card*`). Cada
 regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
-`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325, §332, §340 y §404.
+`docs/brand/design-decisions-log.md` §317, §318, §319, §322, §323, §325, §332, §340 y §407.
 
 - **Nunca nos hacemos pasar por un agente.** Se pide como el bot de GenScore
   (`AUDIT_USER_AGENT`). Los anti-bots verifican a los agentes reales por IP o
@@ -37,12 +37,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   dominio o subdominio, mismo guardián SSRF, nunca un índice de sitemaps ni
   un segundo intento. El comprobador gratuito no usa `discover`.
 - **Qué página extra se pide lo decide `findDiscoveryCandidate`, y sólo
-  cambia el orden, nunca el número** (log §404). En un escaparate
+  cambia el orden, nunca el número** (log §407). En un escaparate
   (`looksLikeStorefront`: plataforma, carrito o tarjetas de producto) va
   primero una ficha; fuera de él, el enlace del menú a precios. Los precios
   impresos solos no hacen escaparate. Nunca se elige ayuda, legal, carrito
   ni un fichero. Un evento va el último.
-- **Un producto agotado no suspende el botón de compra** (log §404). Si
+- **Un producto agotado no suspende el botón de compra** (log §407). Si
   todas sus ofertas dicen `OutOfStock`, `SoldOut` o `Discontinued`,
   `add_to_cart` es `unknown`: «Avísame» es el botón correcto.
 - **El guardián SSRF se importa de `lib/web-audit/fetch-page.ts`.** Cada salto

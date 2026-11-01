@@ -171,7 +171,7 @@ async function collectPageFacts() {
   const looksHtml = (r) => /html/i.test(r.type) || /^\s*<(!doctype|html)/i.test(r.text);
 
   /* ---------- what this page sells, and the shop when it sells nothing ----------
-     EXT-SHOP-FIND-1, SHOP-DETECT-2 (log §404). Same idea as the console's
+     EXT-SHOP-FIND-1, SHOP-DETECT-2 (log §407). Same idea as the console's
      find-product.ts, without any LLM. A page sells when it declares a product
      or an offer, is a pricing page, or prints a price next to a buy button in
      its body. A home page, or a product listing that sells nothing itself,

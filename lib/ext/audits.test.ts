@@ -127,7 +127,7 @@ const pages = [
   page("https://www.marca.es/blog", check({ list: false, description: false }))
 ];
 
-describe("buildExtAudits (EXT-AUDITS-1, log §403)", () => {
+describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
   it("takes the GEO and SEO blocks from buildAuditBlock, never recomputed", () => {
     const r = buildExtAudits({ snapshot: { pages, bots: bots(), createdAt: AT }, agentic: null, ownUrl: null });
     const report = buildTechnicalIssuesReport(pages, bots());

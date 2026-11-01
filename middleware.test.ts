@@ -101,6 +101,24 @@ describe("middleware · cookie del proyecto activo", () => {
     const response = await middleware(request("/dashboard/domains?active=not-a-uuid"));
     expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
   });
+
+  /**
+   * APP-BACK-CACHE-1 (log §402). Next mezcla lo que escribe el middleware en
+   * las cookies de la petición; en una acción de servidor eso cuenta como
+   * «cookies cambiadas», y el navegador tira toda la caché de atrás/adelante.
+   * Por eso sólo se escribe cuando cambia.
+   */
+  it("no la vuelve a escribir si ya apunta a ese proyecto", async () => {
+    const same = new NextRequest(
+      new Request(`https://genscore.es/dashboard/projects/${PROJECT_ID}/competitors`, {
+        method: "POST",
+        headers: { cookie: `${ACTIVE_PROJECT_COOKIE}=${PROJECT_ID}`, "next-action": "abc" }
+      })
+    );
+    const response = await middleware(same);
+    expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
+    expect(response.headers.get("x-middleware-set-cookie")).toBeNull();
+  });
 });
 
 describe("middleware · alcance", () => {

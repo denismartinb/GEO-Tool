@@ -29,7 +29,7 @@ export type ProductSignals = {
   /**
    * Every offer with an availability says it cannot be bought now (OutOfStock,
    * SoldOut, Discontinued). Then «Avísame» is the right button, not a missing
-   * one (SHOP-DETECT-2, log §404). Optional for older fixtures.
+   * one (SHOP-DETECT-2, log §407). Optional for older fixtures.
    */
   soldOut?: boolean;
   gtin: boolean;
@@ -396,7 +396,7 @@ export function isProductPage(signals: Pick<PageSignals, "hasProductData" | "ogP
  * Pricing and plans pages, in Spanish and English. The word may be the whole
  * last segment (`/precios`) or one word of it (`/plan-de-precios`,
  * `/tarifas-luz`, `/precios-de-tratamientos-dentales`): telcos, utilities and
- * clinics name them that way (SHOP-DETECT-2, log §404).
+ * clinics name them that way (SHOP-DETECT-2, log §407).
  */
 export const PRICING_PATH = /\/(?:[\w%-]*[-_])?(?:precios?|pricing|prices|planes|plans|tarifas?)(?:[-_][\w%-]*)?\/?$/i;
 
@@ -404,7 +404,7 @@ export const PRICING_PATH = /\/(?:[\w%-]*[-_])?(?:precios?|pricing|prices|planes
 export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
   [
     "booking",
-    // SHOP-DETECT-2 (log §404): a hotel chain sells from «/hoteles/x», not from a «Reservar» path.
+    // SHOP-DETECT-2 (log §407): a hotel chain sells from «/hoteles/x», not from a «Reservar» path.
     /\/(?:reservar?|reservas|cita|citas|pedir-cita|pide-cita|cita-previa|booking|book|reserve|appointment)(?:\/|$)|\/(?:hoteles|hotels?)\/[^/]+/i
   ],
   ["event", /\/(?:entradas|tickets|eventos?|events?|conciertos?)\/[^/]+|\/(?:entradas|tickets)\/?$/i],
@@ -412,7 +412,7 @@ export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
   ["subscription", /\/(?:suscripci[oó]n|suscripcion|suscribete|subscribe|subscription|membres[ií]a|membership|hazte-socio|socios)\/?$/i],
   [
     "service",
-    // SHOP-DETECT-2 (log §404): insurers and utilities sell from «/seguros-de-salud» or «/contratar-luz».
+    // SHOP-DETECT-2 (log §407): insurers and utilities sell from «/seguros-de-salud» or «/contratar-luz».
     /\/(?:servicios?|services?)\/[^/]+|\/(?:presupuesto|solicitar-presupuesto|quote)\/?$|\/(?:contrata(?:r|cion)?|seguros?)(?:-[^/]*)?(?:\/|$)/i
   ]
 ];

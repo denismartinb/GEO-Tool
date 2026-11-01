@@ -117,7 +117,7 @@
   const iso = (d) => d.toISOString().slice(0, 10);
   const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   const longDate = (d) => `${d.getUTCDate()} de ${MONTHS[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
-  /* llms.txt draft (log §402): the page's own menu and footer links with
+  /* llms.txt draft (log §405): the page's own menu and footer links with
      their own text, nothing invented. Each line is a link; the reader adds
      a short sentence after it if they want. */
   function llmsDraft(f, brand, cleanUrl, h1) {
@@ -173,7 +173,7 @@
        has them too, and an Agentes 20 there alarms for nothing. */
     const cartButton = !!f.buy && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(f.buy);
     const offering = ld.offering || null;
-    /* SHOP-DETECT-2 (log §404): a pricing page, or a price printed next to a
+    /* SHOP-DETECT-2 (log §407): a pricing page, or a price printed next to a
        buy button in the body, sells too, even with nothing in its data. An
        article never does through this door. Same net as the console's
        classifyOffer. */
@@ -231,7 +231,7 @@
       add("price", "agent", 25, product && product.price ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
         product && product.price ? `${product.price}${product.currency ? " " + product.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
       add("avail", "agent", 15, product && product.availability ? 1 : 0, "Disponibilidad", product && product.availability ? availName(product.availability) : "No");
-      /* sold out: «Avísame» is the right button, there is no purchase to measure (log §404) */
+      /* sold out: «Avísame» is the right button, there is no purchase to measure (log §407) */
       const soldOut = !!(product && product.availability && SOLD_OUT.test(product.availability));
       add("buy", "agent", 20, f.buy ? 1 : soldOut ? null : 0, "Botón de compra claro", f.buy ? `«${f.buy}»` : soldOut ? "No aplica, agotado" : "No");
       add("returns", "agent", 10, product && product.returns ? 1 : f.returnsLink ? 0.5 : 0, "Devoluciones", product && product.returns ? "En los datos" : f.returnsLink ? "Sólo un enlace" : "No");

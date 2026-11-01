@@ -135,7 +135,7 @@ export default async function CompetitorsPage({
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { projectId } = await params;
-  // EXT-AUDITS-1 (log §403): the Chrome extension opens this screen with the
+  // EXT-AUDITS-1 (log §406): the Chrome extension opens this screen with the
   // site to add already written; the person still confirms it in the sheet.
   const prefill = readCompetitorPrefill((await searchParams) ?? {});
   const project = await requireActiveProject(projectId);
