@@ -28603,3 +28603,13 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Cómo.** `/api/ext/project` lee `loadSearchConsoleScreen` (misma entrada de caché `screen-rows` de 30 min que «Posición en Google», sin inspecciones de indexación) con un tope de 6 s; si Google tarda, el campo sale como error y el panel no pinta el bloque. `toExtSearchConsole` mantiene los campos planos de §409 (`clicks`, `position`, `nearPage1`, `empty`) para un panel antiguo y añade `trend` y `page`. Nada se guarda en nuestra base de datos (`.claude/rules/search-console.md`).
 
 **Pendiente.** Subir la 1.2.0 a la tienda (Denis).
+
+## §412 · JS-RENDER-CHECK-1: la Auditoría técnica avisa si una página necesita JavaScript para verse (2026-11-01)
+
+**Qué se decidió.** Nuevo hallazgo `js_required` («Contenido visible sin JavaScript») en el bloque «Auditoría GEO». Sale de la revisión quincenal del 1-11 (Ahrefs lo añadió a su Site Audit el 24-09): los bots de los asistentes de IA leen el HTML tal como llega y no ejecutan JavaScript, así que una web hecha como aplicación de cliente les llega vacía. Denis aprobó poner en marcha lo que salió de esa revisión.
+
+**Cómo.** `isJsShell` (`lib/web-audit/page-checks.ts`) marca una página cuando se cumplen las dos cosas: menos de 50 palabras visibles en el HTML servido y una señal de que un script tiene que rellenarla (un nodo de montaje vacío, `#root`, `#__next`, `#app`, `app-root`…, o un `<noscript>` que pide activar JavaScript; los `<noscript>` de píxeles de seguimiento no cuentan). Ninguna sola basta, para no acusar a una portada corta. Se guarda en `citability.jsShell`, opcional y tri-estado: una instantánea anterior no se declara limpia. No usa ningún fetch nuevo: lee el mismo HTML que ya traía la auditoría.
+
+**Sin puntos.** Igual que `snippet_blocked` (§131): `gain` nulo, no mueve `readiness_score`, la Salud técnica ni la Puntuación GEO, y un test lo fija. Es bloqueo duro (crítico) porque una página vacía no se puede citar. Ponderarlo es una decisión aparte.
+
+**Pendiente.** No es renderizar la página: un sitio que pinta texto genérico en el servidor y el contenido real con JavaScript no se detecta. Medirlo de verdad pediría un navegador sin cabeza en la auditoría, con su propio Task Intake. No retira ningún camino de recuperación.
