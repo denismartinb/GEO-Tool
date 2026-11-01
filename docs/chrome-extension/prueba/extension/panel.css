@@ -1087,3 +1087,7 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .eng1.gscn .n{text-align:center;line-height:1.25}
 .gsc1 .btn{align-self:flex-start}
 .gscn + .acts{display:flex;margin-top:10px}
+/* A long host never overflows the teaser button: it ends in an ellipsis. */
+.tz .btn{max-width:100%;min-width:0}
+.tz .tzt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tz .tzt b{font-weight:inherit}
