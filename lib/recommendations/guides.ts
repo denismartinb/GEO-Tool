@@ -9,8 +9,6 @@ const GUIDE_BY_TYPE: Record<string, { slug: string; label: string }> = {
   increase_brand_visibility: { slug: "como-conseguir-que-chatgpt-te-cite", label: "Cómo conseguir que la IA cite tu web" },
   add_citation_block: { slug: "como-conseguir-que-chatgpt-te-cite", label: "Cómo conseguir que la IA cite tu web" },
   create_faq_section: { slug: "como-conseguir-que-chatgpt-te-cite", label: "Cómo conseguir que la IA cite tu web" },
-  add_comparison_content: { slug: "la-ia-te-menciona-pero-recomienda-a-otro", label: "Qué hacer cuando la IA recomienda a otro" },
-  close_competitor_gap: { slug: "la-ia-te-menciona-pero-recomienda-a-otro", label: "Qué hacer cuando la IA recomienda a otro" },
   pursue_citation_sources: { slug: "que-fuentes-cita-la-ia", label: "Qué fuentes cita la IA y cómo entrar en ellas" },
   pursue_media_sources: { slug: "que-fuentes-cita-la-ia", label: "Qué fuentes cita la IA y cómo entrar en ellas" },
   pursue_community_sources: { slug: "que-fuentes-cita-la-ia", label: "Qué fuentes cita la IA y cómo entrar en ellas" },
