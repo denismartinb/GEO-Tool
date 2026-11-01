@@ -273,6 +273,38 @@ function genscore_shop_list_data( $returns ) {
 	);
 }
 
+/**
+ * Price, currency and stock always come from WooCommerce at render time, never
+ * from what was stored when the fix was published: a price change must show.
+ *
+ * @param array $data Product JSON-LD.
+ * @param int   $id   Product id.
+ * @return array
+ */
+function genscore_live_offer( $data, $id ) {
+	$product = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
+	if ( ! $product || ! isset( $data['offers'] ) || ! is_array( $data['offers'] ) ) {
+		return $data;
+	}
+	$live = array(
+		'availability' => $product->is_in_stock() ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+	);
+	if ( '' !== (string) $product->get_price() ) {
+		$live['price']         = wc_format_decimal( $product->get_price(), wc_get_price_decimals() );
+		$live['priceCurrency'] = get_woocommerce_currency();
+	}
+	if ( array_values( $data['offers'] ) === $data['offers'] ) {
+		foreach ( $data['offers'] as $i => $offer ) {
+			if ( is_array( $offer ) ) {
+				$data['offers'][ $i ] = array_merge( $offer, $live );
+			}
+		}
+	} else {
+		$data['offers'] = array_merge( $data['offers'], $live );
+	}
+	return $data;
+}
+
 /** Products whose Product block WooCommerce already printed in this request. */
 $GLOBALS['genscore_wc_printed'] = array();
 
@@ -295,6 +327,17 @@ function genscore_wc_product_markup( $markup, $product ) {
 	$ours                                 = json_decode( genscore_fix_get( $id, 'jsonld' ), true );
 	if ( is_array( $ours ) && isset( $ours['@type'] ) && 'Product' === $ours['@type'] ) {
 		unset( $ours['@context'] );
+		// WooCommerce's own offer already carries today's price and stock.
+		if ( isset( $ours['offers'] ) && is_array( $ours['offers'] ) ) {
+			$keys = array( 'price' => 0, 'priceCurrency' => 0, 'availability' => 0, 'priceSpecification' => 0 );
+			if ( array_values( $ours['offers'] ) === $ours['offers'] ) {
+				foreach ( $ours['offers'] as $i => $offer ) {
+					$ours['offers'][ $i ] = is_array( $offer ) ? array_diff_key( $offer, $keys ) : $offer;
+				}
+			} else {
+				$ours['offers'] = array_diff_key( $ours['offers'], $keys );
+			}
+		}
 		if ( isset( $ours['offers'], $markup['offers'] ) && array_values( (array) $markup['offers'] ) === $markup['offers'] && ! ( array_values( (array) $ours['offers'] ) === $ours['offers'] ) ) {
 			$ours['offers'] = array( $ours['offers'] );
 		}
@@ -346,6 +389,9 @@ function genscore_fix_head() {
 	if ( $id && 'product' === get_post_type( $id ) && function_exists( 'wc_get_product' ) ) {
 		return; // Merged into WooCommerce's block, or printed in the footer.
 	}
+	if ( genscore_seo_prints_schema() ) {
+		return; // Yoast, Rank Math or AIOSEO already print the page's graph.
+	}
 	if ( $id && genscore_fix_get( $id, 'fresh' ) ) {
 		$data['dateModified'] = get_post_modified_time( 'c', false, $id );
 	}
@@ -366,6 +412,7 @@ function genscore_fix_footer() {
 	if ( ! is_array( $data ) ) {
 		return;
 	}
+	$data = genscore_live_offer( $data, $id );
 	if ( genscore_fix_get( $id, 'returns' ) ) {
 		$data = genscore_with_returns( $data );
 	}

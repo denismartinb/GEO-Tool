@@ -230,6 +230,9 @@ function genscore_forget_all_scores() {
 	delete_option( GENSCORE_SCORES_OPTION );
 }
 add_action( 'update_option_blog_public', 'genscore_forget_all_scores' );
+// Turning an SEO or shop plugin on or off changes what every page prints.
+add_action( 'activated_plugin', 'genscore_forget_all_scores' );
+add_action( 'deactivated_plugin', 'genscore_forget_all_scores' );
 
 /**
  * Scores stored by another version of the plugin may have been computed

@@ -81,3 +81,5 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   existe.
 - **La lista de la tienda se genera al servir la página**, nunca se guarda: sólo la marca `live` (adenda 1.0.7). Devoluciones en la tienda exige esa lista.
 - **«Respuesta al principio» nunca se inventa**: sale del extracto o de la descripción (20 palabras o más, sin repetir el arranque del contenido) o la escribe la persona. En fichas va tras el título, no en la pestaña de descripción.
+- **Precio y stock de un producto se leen de WooCommerce al servir la página**, nunca de lo guardado al publicar (`genscore_live_offer`).
+- **Con Yoast, Rank Math o AIOSEO no se imprime JSON-LD de página propio** (`genscore_seo_prints_schema`): serían dos grafos.

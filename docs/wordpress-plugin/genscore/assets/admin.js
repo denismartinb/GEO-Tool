@@ -330,12 +330,21 @@
     if (ta) S.llmsText = S.llmsEdited ? ta.value : null;
     var y = window.scrollY, h = document.documentElement.style.minHeight;
     var fa = document.activeElement && app.contains(document.activeElement) ? focusKey(document.activeElement) : null;
+    /* The control the person last touched stays put on screen: if a row
+       above it appears or goes away, the page moves with it instead of
+       shifting it (Instinct: the llms.txt switch jumped ~100 px). */
+    var ak = uniqueKey(fa) || uniqueKey(S.anchor), ae = ak ? app.querySelector(ak) : null, at = ae ? ae.getBoundingClientRect().top : null;
+    if (at != null && (at < 0 || at > window.innerHeight)) at = null; // out of sight: nothing to hold
     document.documentElement.style.minHeight = document.documentElement.scrollHeight + "px";
     app.innerHTML = head() + tabs() + body();
     document.documentElement.style.minHeight = h;
     if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
-    if (fa) { var el = app.querySelector(fa); if (el) el.focus({ preventScroll: true }); }
+    var el = ak && uniqueKey(ak) ? app.querySelector(ak) : null;
+    if (el && at != null) { var dy = el.getBoundingClientRect().top - at; if (Math.abs(dy) > 1) window.scrollBy(0, dy); }
+    if (fa) { var fe = app.querySelector(fa); if (fe) fe.focus({ preventScroll: true }); }
   }
+  /* A key only anchors the scroll when it names one control. */
+  function uniqueKey(k) { return k && app.querySelectorAll(k).length === 1 ? k : null; }
   function focusKey(el) {
     if (el.id) return "#" + el.id;
     var n = ["data-sw", "data-act", "data-tab"].filter(function (k) { return el.hasAttribute(k); })[0];
@@ -458,7 +467,9 @@
      two at a time. The first time, the screen waits with the spinner; after
      that it shows what it has and refreshes as pages come in. */
   function reviewSite(all) {
-    if (S.web.running) return;
+    /* A save while pages are being read makes what they read stale: run
+       again as soon as this pass ends. */
+    if (S.web.running) { S.web.again = true; S.web.againAll = S.web.againAll || !!all; return; }
     var todo = S.web.pages.filter(function (p) { return p.id && (all || !S.web.scores[p.id]); });
     var have = S.web.pages.filter(function (p) { return p.id && S.web.scores[p.id]; }).length;
     if (!todo.length) { render(); saveReview(); return; }
@@ -475,6 +486,7 @@
     }
     Promise.all([next(), next()]).then(function () {
       S.web.running = false; S.web.first = false;
+      if (S.web.again) { var a = S.web.againAll; S.web.again = false; S.web.againAll = false; reviewSite(a); return; }
       render();
       saveReview();
     });
@@ -799,7 +811,9 @@
   }
   app.addEventListener("click", function (e) {
     var t = e.target.closest("[data-tab]");
-    if (t) { S.tab = t.getAttribute("data-tab"); render(); app.scrollIntoView({ block: "start" }); return; }
+    if (t) { S.anchor = null; S.tab = t.getAttribute("data-tab"); render(); app.scrollIntoView({ block: "start" }); return; }
+    var ctl = e.target.closest("[data-sw],[data-act]");
+    if (ctl && app.contains(ctl)) S.anchor = uniqueKey(focusKey(ctl));
     var sw = e.target.closest("[data-sw]");
     if (sw && !sw.disabled) {
       var id = sw.getAttribute("data-sw");

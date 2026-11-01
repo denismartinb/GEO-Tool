@@ -585,6 +585,9 @@ function genscore_fix_status( $kind, $id ) {
 		// A short one only gets half the credit: it can still be improved.
 		return genscore_word_count( $now ) >= 20 ? 'has' : 'ready';
 	}
+	if ( 'ld' === $kind && genscore_seo_prints_schema() && ! ( $id && 'product' === get_post_type( $id ) ) ) {
+		return 'has'; // The SEO plugin's graph already covers it.
+	}
 	if ( in_array( $kind, array( 'ld', 'product', 'canon', 'fresh', 'returns' ), true ) && '' !== $now ) {
 		return 'has';
 	}

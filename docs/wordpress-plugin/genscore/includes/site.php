@@ -34,6 +34,16 @@ function genscore_seo_plugin() {
 }
 
 /**
+ * Whether an active SEO plugin prints its own schema graph (WebPage, Article,
+ * WebSite). GenScore's block would then be a second one.
+ *
+ * @return bool
+ */
+function genscore_seo_prints_schema() {
+	return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' );
+}
+
+/**
  * Where the sitemap lives, or null when nothing publishes one.
  *
  * @return string|null

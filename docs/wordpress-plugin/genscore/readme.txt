@@ -81,6 +81,7 @@ No. It runs only when you open the GenScore screen, in your browser, reading you
 = 1.0.7 =
 * «Arreglar» in one click: structured data, description, title, canonical URL, visible update date, product data and returns policy. GenScore proposes the fix for each page, you review and edit it, confirm, and it is published on the pages you chose. Every publish can be undone.
 * The shop page gets a live product list (price and stock always current), and «Responde en las primeras líneas» can be fixed too: a short answer paragraph under the title, taken from the excerpt or description, or written by you.
+* Product price and stock in the structured data always come from WooCommerce when the page is served. With Yoast, Rank Math or AIOSEO active, GenScore does not add a second page graph.
 * «Ir a llms.txt» and «Ir a bots» take you to the card that already does that fix.
 * The editor shows a «Publicado por GenScore» box on pages with published fixes.
 
