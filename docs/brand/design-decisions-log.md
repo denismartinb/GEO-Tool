@@ -28775,7 +28775,27 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente o sabido.** Las aperturas pueden venir de los gestores de correo que descargan las imágenes al recibir (en la prueba de §419 llegaron a los pocos segundos de entregarse), así que el pie de la tabla avisa de que los clics son la señal fiable. Las cifras siguen limitadas a los 30 días de Resend (§419). Los correos de operador y las respuestas a formularios siguen fuera, porque no van a ningún contacto.
 
-## §424 · AI-BOTS-CONSOLE-1: los bots de IA de la consola, como en el plugin de WordPress (2026-11-01)
+## §424 · RECS-FAQ-COUNT-1: el primer paso de la FAQ deja de decir «tres preguntas» (2026-11-01)
+
+**Qué se decidió.** El primer paso de la tarjeta de FAQ (`rule_faq_001`) decía «Coge las tres preguntas de la lista», con el número escrito a mano. La lista sale de los prompts informativos del escaneo y puede tener una o diez; en genscore.es tenía una, y lo vio Denis probando el conector MCP (§422). Ahora dice «Coge las preguntas de la lista». Un test impide que vuelva un número delante de «preguntas de la lista».
+
+**Pendiente.** Las recomendaciones ya guardadas conservan su `first_step` hasta el siguiente escaneo del proyecto, que las regenera. No retira ningún camino de recuperación.
+
+## §425 · MCP-ACQUISITION-1: el conector también capta (guías, «Qué es GenScore» y dirección para ChatGPT) (2026-11-01)
+
+**Qué se decidió.** Denis pidió que las respuestas del conector lleven a querer registrarse, que informe de planes, precios y ventajas, y valorar meter el blog como RAG. Eligió la opción «Las tres partes, dos direcciones»:
+
+- **`buscar_guias`** (sin cuenta): busca en los artículos del blog, los estudios y el glosario y devuelve hasta cuatro fragmentos con título, fecha, sección y enlace, para que el chat cite a GenScore. El texto sale de `lib/mcp/guides/blog-index.json`, generado del MDX por `scripts/build-guides-index.mjs`; título, fecha y tipo se leen de `BLOG_POSTS` y `getStudies`. Búsqueda por palabras (BM25 con acentos plegados y raíces cortas), sin embeddings, sin base de datos y sin coste por consulta. Con dos palabras o menos exige todas, para no traer una guía por una palabra suelta.
+- **`que_es_genscore`** (sin cuenta, sólo si la persona pregunta): qué mide GenScore. En Claude añade los planes con el precio de `SELLABLE_PLANS` (IVA incluido), el precio fundador sólo si Stripe lo confirma (`getFounderOffer`, como `/precios`), los 7 días de Pro sin tarjeta y el alta. En ChatGPT, nada de eso: un enlace informativo a `/precios`.
+- **Gancho sin cuenta**: `revisar_pagina` y `buscar_guias` terminan con una línea que dice qué mide GenScore y el alta, rellena con el dominio revisado (`/signup?dominio=`, §421). En Claude menciona la prueba gratis; en ChatGPT no.
+- **Dos direcciones**: `/api/mcp` (Claude) y `/api/mcp/chatgpt` (ChatGPT), con el mismo manejador (`lib/mcp/http.ts`) y su metadata OAuth propia. Las normas de apps de OpenAI prohíben anunciar precios, suscripciones, pruebas o promociones; las de Anthropic no, pero piden no ser publicidad, así que en Claude los precios sólo salen cuando se preguntan.
+- **UTM por conector**: todo enlace público lleva `utm_source=claude|chatgpt`, `utm_medium=mcp` y la herramienta como campaña. El evento `mcp_tool_called` de PostHog añade `connector`.
+
+**Por qué no un RAG con embeddings.** El corpus son unos 500 fragmentos en español sobre un vocabulario muy concreto (GEO, llms.txt, GPTBot, GA4). La búsqueda por palabras acierta en las preguntas de prueba, no añade proveedor, coste ni latencia, y se regenera con un script. Si algún día no basta, se mide antes de cambiarlo.
+
+**Pendiente o sabido.** Quien conectó ChatGPT a `/api/mcp` tiene que cambiar la dirección a `/api/mcp/chatgpt` (`/docs/mcp` ya lo dice). Un artículo nuevo exige regenerar el índice en el mismo PR (`blog-index.test.ts` falla si no; regla en `growth-content.md`). Las comparativas y los docs no entran todavía. La herramienta anónima «¿Me nombra ChatGPT?» (comprobador gratuito, con coste de LLM) queda para otra fase. No retira ningún camino de recuperación.
+
+## §426 · AI-BOTS-CONSOLE-1: los bots de IA de la consola, como en el plugin de WordPress (2026-11-01)
 
 **Qué se decidió.** Denis vio la pestaña GEO del plugin de WordPress (§421) y pidió llevar a la consola su forma de enseñar los bots de IA. Aprobó la maqueta (https://claude.ai/artifact/F6mePA5RMViJnzw5FqH3t6) y el cambio de qué cuenta como problema. En Auditoría técnica, bloque GEO, bajo las pestañas:
 

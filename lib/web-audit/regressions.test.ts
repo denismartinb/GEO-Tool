@@ -132,7 +132,7 @@ describe("detectNewlyBlockedBots", () => {
     expect(detectNewlyBlockedBots(previous, current)).toEqual(["OAI-SearchBot"]);
   });
 
-  it("never fires for a training-only bot, which does not stop any engine from reading (log §424)", () => {
+  it("never fires for a training-only bot, which does not stop any engine from reading (log §426)", () => {
     const current = side({
       bots: bots({
         bots: [

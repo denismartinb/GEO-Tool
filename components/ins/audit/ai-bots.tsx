@@ -6,7 +6,7 @@ import { EngineLogo } from "@/components/ins/kit/engine";
 import { buildAiBotsRobotsBlock } from "@/lib/web-audit/ai-bots";
 
 /**
- * AI-BOTS-CONSOLE-1 (log §424): the WordPress plugin's «Bots de IA» in the
+ * AI-BOTS-CONSOLE-1 (log §426): the WordPress plugin's «Bots de IA» in the
  * console. Who can read the site (one tile per engine), the six switches by
  * engine and use, and, since the console cannot write robots.txt, the block
  * to paste. Every state comes from the audit; the switches only build text.

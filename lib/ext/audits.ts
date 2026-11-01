@@ -8,7 +8,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { engineReadStates } from "@/lib/web-audit/ai-bots";
 
-/** Every measured engine can read the site (AI-BOTS-CONSOLE-1, log §424). Null when none was measured. */
+/** Every measured engine can read the site (AI-BOTS-CONSOLE-1, log §426). Null when none was measured. */
 function aiEnginesCanRead(bots: BotAccessReport): boolean | null {
   const measured = Object.values(engineReadStates(bots)).filter((v): v is boolean => v !== null);
   return measured.length ? measured.every(Boolean) : null;

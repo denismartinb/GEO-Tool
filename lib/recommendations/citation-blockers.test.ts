@@ -31,7 +31,7 @@ describe("findCitationBlockers", () => {
     expect(findCitationBlockers({ bots: bots(), pages: [page("https://acme.com/", { noindex: false, snippetBlocks: [] })] })).toEqual([]);
   });
 
-  it("saca los motores que no pueden leer la web, por su nombre (log §424)", () => {
+  it("saca los motores que no pueden leer la web, por su nombre (log §426)", () => {
     expect(findCitationBlockers({ bots: bots(["GPTBot", "OAI-SearchBot", "PerplexityBot"]), pages: [] })).toEqual([
       { kind: "bots", agents: ["ChatGPT", "Perplexity"] }
     ]);

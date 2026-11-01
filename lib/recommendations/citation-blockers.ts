@@ -48,7 +48,7 @@ export function findCitationBlockers(input: {
 }): CitationBlocker[] {
   const blockers: CitationBlocker[] = [];
 
-  // AI-BOTS-CONSOLE-1 (log §424): engines that cannot read the site, never a
+  // AI-BOTS-CONSOLE-1 (log §426): engines that cannot read the site, never a
   // closed training bot (GPTBot, ClaudeBot), which does not stop a citation.
   const states = engineReadStates(input.bots);
   const agents = AI_ENGINES.filter((e) => states[e.engine] === false).map((e) => e.name);

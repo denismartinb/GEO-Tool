@@ -33,7 +33,7 @@ function factsFrom(content: string) {
   };
 }
 
-describe("AI-BOTS-CONSOLE-1 (log §424)", () => {
+describe("AI-BOTS-CONSOLE-1 (log §426)", () => {
   it("has the plugin's six switches, with the same ids and tokens", () => {
     const php = readFileSync("docs/wordpress-plugin/genscore/includes/robots.php", "utf8");
     for (const sw of AI_BOT_SWITCHES) {

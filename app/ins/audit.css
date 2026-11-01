@@ -186,7 +186,7 @@
 .ins .gx-pr b{font-weight:550}
 .ins .gx-pn{font-size:11.5px;color:var(--ink-3);margin:8px 0 0}
 
-/* AI-BOTS-CONSOLE-1 (log §424): «Bots de IA» as in the WordPress plugin. */
+/* AI-BOTS-CONSOLE-1 (log §426): «Bots de IA» as in the WordPress plugin. */
 .ins .sc-au .ab{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;align-items:start}
 .ins .sc-au .ab-main{display:flex;flex-direction:column;gap:12px;min-width:0}
 .ins .sc-au .ab-card{display:flex;flex-direction:column;gap:12px}

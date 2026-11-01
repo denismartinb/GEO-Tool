@@ -220,7 +220,7 @@ describe("Salud SEO (SEARCH-SEO-1 Fase 2, log §281)", () => {
     const b = bots({ site: { ...speedySite, googlebotAllowed: false, https: "missing" } });
     const report = buildTechnicalIssuesReport(withSeo, b);
     expect(report.actualReadinessScore).toBe(before.report.actualReadinessScore);
-    // A blocked Googlebot also stops Gemini from reading the site (log §424),
+    // A blocked Googlebot also stops Gemini from reading the site (log §426),
     // so the GEO block gains that unscored issue and nothing else.
     expect(report.issues.filter((i) => i.check !== "bot_blocked")).toEqual(before.report.issues);
     expect(report.issues.find((i) => i.check === "bot_blocked")?.affectedLabels).toEqual(["Gemini"]);

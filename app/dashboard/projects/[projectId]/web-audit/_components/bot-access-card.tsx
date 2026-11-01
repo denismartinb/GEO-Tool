@@ -77,7 +77,7 @@ export function describeSitemap(bots: BotAccessReport): {
 }
 
 /**
- * AI-BOTS-CONSOLE-1 (log §424): what `AiBotsSection` shows, from the snapshot.
+ * AI-BOTS-CONSOLE-1 (log §426): what `AiBotsSection` shows, from the snapshot.
  * Server-side and pure, so the client only receives the states.
  */
 export function aiBotsSectionProps(bots: BotAccessReport, domain: string): {

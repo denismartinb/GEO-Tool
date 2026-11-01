@@ -69,7 +69,7 @@ export type BotAccessReport = {
    */
   site?: SiteSeoReport;
   /**
-   * AI-BOTS-CONSOLE-1 (log §424): every token of the plugin's six switches
+   * AI-BOTS-CONSOLE-1 (log §426): every token of the plugin's six switches
    * (and the engines' read tokens) with whether it may read the root, plus
    * the `*` rules the generated robots.txt block has to repeat. Absent when
    * robots.txt could not be read, and on snapshots taken before this phase.

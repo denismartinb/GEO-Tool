@@ -1,6 +1,6 @@
 # AI-BOTS-CONSOLE-1 · diseño aprobado
 
-Maqueta aprobada por Denis el 2026-11-01 (log §424):
+Maqueta aprobada por Denis el 2026-11-01 (log §426):
 https://claude.ai/artifact/F6mePA5RMViJnzw5FqH3t6
 
 - `escritorio.dc.html`: Auditoría técnica, bloque GEO, con los interruptores funcionando.

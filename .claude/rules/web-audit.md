@@ -490,7 +490,7 @@ verdad. Copiarlas repetiría un error ya cometido y documentado en esta misma
 pantalla: alimentar la fórmula con un tope al que `.page` nunca estuvo sujeto y
 dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
 
-### Bots de IA por motor (AI-BOTS-CONSOLE-1, log §424)
+### Bots de IA por motor (AI-BOTS-CONSOLE-1, log §426)
 
 - **La unidad es el motor, no el token.** `bot_blocked`, `findCitationBlockers`,
   `aiBotsAllowed` de la extensión y la tarjeta leen `engineReadStates`

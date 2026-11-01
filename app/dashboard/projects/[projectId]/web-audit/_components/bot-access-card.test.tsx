@@ -84,7 +84,7 @@ describe("describeSitemap", () => {
   });
 });
 
-describe("BotAccessCard (Ficheros para la IA, log §424)", () => {
+describe("BotAccessCard (Ficheros para la IA, log §426)", () => {
   it("ya no lista los bots de IA: viven en «Bots de IA»", () => {
     const html = renderToStaticMarkup(<BotAccessCard bots={report()} checkedAt="2026-08-11T10:00:00Z" />);
     expect(html).toContain("Ficheros para la IA");

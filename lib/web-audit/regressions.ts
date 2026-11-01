@@ -155,7 +155,7 @@ export function detectNewlyBlockedBots(previous: AuditSide, current: AuditSide):
   const after = Array.isArray(current.bots?.bots) ? current.bots.bots : [];
   const allowedBefore = new Map(before.map((entry) => [entry.agent, entry.allowed]));
 
-  // AI-BOTS-CONSOLE-1 (log §424): closing a training-only bot is the owner's
+  // AI-BOTS-CONSOLE-1 (log §426): closing a training-only bot is the owner's
   // call and does not stop any engine from reading the site, so it never alerts.
   return after
     .filter((entry) => !TRAINING_ONLY_TOKENS.has(entry.agent))

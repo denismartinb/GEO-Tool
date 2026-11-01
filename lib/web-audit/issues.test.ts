@@ -239,7 +239,7 @@ describe("buildTechnicalIssuesReport — freshness", () => {
 });
 
 describe("buildTechnicalIssuesReport — bots, llms.txt, sitemap", () => {
-  it("flags an engine whose search bot is blocked as critical, by engine name, with no point delta (log §424)", () => {
+  it("flags an engine whose search bot is blocked as critical, by engine name, with no point delta (log §426)", () => {
     const bots = botsReport({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })) });
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
     const issue = findIssue(report.issues, "bot_blocked")!;

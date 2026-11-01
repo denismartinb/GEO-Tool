@@ -13,10 +13,11 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
 - **El token OAuth se usa como cliente del propio usuario** (anon key +
   `Authorization: Bearer`), y RLS decide qué ve. Nunca service role para datos
   de cuenta. Un dominio que no es de la cuenta es «no encontrado».
-- **Ningún texto vende**: ni precios, ni descuentos, ni enlaces de pago o de
-  cambio de plan (directorio de ChatGPT). Sólo un enlace informativo a
-  `/precios` en el aviso de solo lectura. Lo vigila `format.test.ts`, junto con
-  rayas largas y versiones de modelo.
+- **Ningún texto vende fuera de `que_es_genscore`**: ni precios, ni
+  descuentos, ni enlaces de pago o de cambio de plan. Sólo un enlace
+  informativo a `/precios` en el aviso de solo lectura. Lo vigila
+  `format.test.ts`, junto con rayas largas y versiones de modelo. Las
+  excepciones de captación están abajo (log §425).
 - **`lib/page-review/collect.cjs` y `score.cjs` no se editan a mano**: se
   regeneran con `node scripts/sync-page-review.mjs` desde la extensión y
   `sync.test.ts` falla si se separan.
@@ -44,3 +45,25 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
 - **`?dominio=` sólo rellena el asistente**, validado con `isWellFormedDomain`;
   no guarda nada. Una cuenta sin hueco en el plan no recibe enlace al alta.
 - **Sin cuenta, ninguna respuesta enlaza a `/dashboard/`.**
+
+## Captación (MCP-ACQUISITION-1, log §425)
+
+- **Dos direcciones, un manejador** (`lib/mcp/http.ts`): `/api/mcp` es el
+  perfil `claude` y `/api/mcp/chatgpt` el perfil `chatgpt`. Cada una tiene su
+  metadata en `/.well-known/oauth-protected-resource<ruta>`.
+- **En ChatGPT nada nombra un precio, un plan, la prueba ni un descuento**
+  (normas de apps de OpenAI), ni en el texto ni en `structuredContent`, y no
+  se llama a Stripe. Sólo un enlace informativo a `/precios`. Lo vigilan
+  `acquisition.test.ts` y `route.test.ts`.
+- **En Claude, planes y precios sólo en `que_es_genscore`, y sólo cuando la
+  persona pregunta.** Los precios salen de `SELLABLE_PLANS`; el precio
+  fundador, sólo si `getFounderOffer` lo confirma. Nunca un enlace a checkout.
+- **El gancho es una línea, sólo sin cuenta** (`measureHook`), con el alta
+  rellena (`/signup?dominio=`) cuando sabemos el dominio.
+- **Todo enlace público lleva `utm_source=<perfil>&utm_medium=mcp` y la
+  herramienta como campaña** (`publicUrl`). Los de la consola no.
+- **`buscar_guias` sólo responde con lo que dicen nuestras guías**, con su
+  enlace; sin coincidencia lo dice y enlaza al blog. El texto sale de
+  `lib/mcp/guides/blog-index.json`, generado del MDX; título y fecha, de
+  `BLOG_POSTS`. Sin embeddings ni base vectorial: búsqueda por palabras, sin
+  coste por consulta.

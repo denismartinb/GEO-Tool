@@ -1,5 +1,5 @@
 /**
- * AI-BOTS-CONSOLE-1 (log §424): the AI bots of robots.txt the way the
+ * AI-BOTS-CONSOLE-1 (log §426): the AI bots of robots.txt the way the
  * WordPress plugin shows them (`docs/wordpress-plugin/genscore/includes/robots.php`):
  * six switches, one per engine and use (search or training), and per engine
  * whether it can read the site.

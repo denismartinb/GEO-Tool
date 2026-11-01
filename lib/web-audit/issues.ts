@@ -535,7 +535,7 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     });
   }
 
-  // Bot access — not per-page. AI-BOTS-CONSOLE-1 (log §424): the unit is the
+  // Bot access — not per-page. AI-BOTS-CONSOLE-1 (log §426): the unit is the
   // engine, not the token, and only its SEARCH tokens decide (same rule as the
   // plugin, the extension and the agentic audit). A closed training bot
   // (GPTBot, ClaudeBot) is the owner's call and is neither an issue nor a pass.
