@@ -133,3 +133,10 @@ test("the llms.txt draft lists the menu and footer links with their own text (EX
   assert.doesNotMatch(solo.snippet, /## Más información/);
   assert.match(solo.why, /parte de esta página/);
 });
+
+test("the sentence under the dial joins both halves with the right connector", () => {
+  const allBlocked = { status: 200, text: "User-agent: *\nDisallow: /\n" };
+  assert.equal(S.scorePage(Object.assign({}, F.b, { robots: allBlocked }), NOW).say, "Ningún motor de IA puede leer esta página, y Google tampoco la indexa.");
+  assert.equal(S.scorePage(F.b, NOW).say, "Los cuatro motores pueden leerla, y Google la indexa.");
+  for (const f of Object.values(F)) assert.doesNotMatch(S.scorePage(f, NOW).say, /pero Google no la indexará|indexará/);
+});

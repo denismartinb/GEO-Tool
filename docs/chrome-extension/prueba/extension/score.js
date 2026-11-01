@@ -259,7 +259,7 @@
 
     /* layer 2: the one warm alert */
     let alert = null;
-    if (noindex) alert = { id: "index", t: "Google no la indexará.", s: "La página pide noindex." };
+    if (noindex) alert = { id: "index", t: "Google no la indexa.", s: "La página pide noindex." };
     else if (gBlocked) alert = { id: "index", t: "Google no puede leerla.", s: "Tu robots.txt bloquea a Googlebot." };
     else if (blockedEngines.length) alert = { id: "bot-" + blockedEngines[0], t: `${listNames(blockedEngines)} no ${blockedEngines.length > 1 ? "pueden" : "puede"} leer esta página.`, s: "Tu robots.txt lo bloquea." };
     else if (nosnippet) alert = { id: "snippet", t: "Pide que no se cite su texto.", s: "Lleva nosnippet." };
@@ -268,10 +268,13 @@
     const known = ENGINES.filter((e) => access[e].allowed != null).length;
     let say;
     if (!known) say = "No hemos podido leer su robots.txt.";
-    else if (readers.length === 4) say = "Los cuatro motores pueden leerla";
-    else if (!readers.length) say = "Ningún motor de IA puede leerla";
-    else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no`;
-    if (known) say += noindex || gBlocked ? ", pero Google no la indexará." : ", y Google la indexa.";
+    else {
+      /* the connector follows both halves: «y» when they agree, «pero»/«aunque» when they don't (Denis, 2026-11-01) */
+      const gOk = !(noindex || gBlocked);
+      if (readers.length === 4) say = gOk ? "Los cuatro motores pueden leerla, y Google la indexa." : "Los cuatro motores pueden leerla, pero Google no la indexa.";
+      else if (!readers.length) say = gOk ? "Ningún motor de IA puede leer esta página, aunque Google sí la indexa." : "Ningún motor de IA puede leer esta página, y Google tampoco la indexa.";
+      else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no. ${gOk ? "Google sí la indexa." : "Google no la indexa."}`;
+    }
 
     return { nota, lanes, criteria: C, fixes, alert, say, commerce, service, shop, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
   }

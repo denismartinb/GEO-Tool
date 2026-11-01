@@ -28493,4 +28493,6 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 
 **Regla que se mantiene.** La extensión sigue siendo de solo lectura: no lanza auditorías, no llama a ningún LLM y no escribe en la cuenta. Sin migración.
 
+**Ajustes de Denis en la misma versión.** La tienda encontrada ya no sale en la portada con su ruta y un botón «Abrir»: dentro de Agentes aparece «GenScore detecta tu tienda» con un check verde, sin URL, y las tareas de esa tienda dicen «En tu tienda». Si no se encuentra, la línea «no detecta tu tienda» se queda y Agentes sigue sin nota. Una nota baja ahí sería falsa, porque no encontrarla no demuestra que un agente no pueda comprar. La frase bajo la nota usa el conector que toca: «Ningún motor de IA puede leer esta página, y Google tampoco la indexa» en vez de «…, pero Google no la indexará». Y «indexará» pasa a «indexa» en toda la extensión.
+
 **Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.

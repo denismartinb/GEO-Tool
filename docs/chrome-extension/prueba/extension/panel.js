@@ -143,7 +143,7 @@
       return h + `<div class="mh">En la página</div>${kv(C.filter((c) => !c.id.startsWith("bot-")))}`;
     }
     if (k === "google") return (rel === "own" ? `<div class="mh">Search Console</div>${gscInvite()}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
-    if (sc.shop && sc.shop.state === "found") return `<div class="mh">Lo que lee un agente<span class="r">${esc(sc.shop.path)}</span></div>${kv(sc.shop.criteria)}<p class="mini-note">Puntuado sobre tu tienda, no sobre esta página. No entra en la nota.</p>`;
+    if (sc.shop && sc.shop.state === "found") return `<div class="shopln ok">${ic("checkc")}<span class="tx">GenScore detecta tu tienda</span></div><div class="mh">Lo que lee un agente</div>${kv(sc.shop.criteria)}<p class="mini-note">No entra en la nota.</p>`;
     return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo. No entra en la nota.</p>`;
   }
   function domLane(k) {
@@ -170,10 +170,10 @@
       <div class="gg3" style="grid-template-columns:repeat(${lanes.length},minmax(0,1fr))">${lanes.map((k, i) => gauge({ v: sc.lanes[k], cls: band(sc.lanes[k])[0], nm: laneName(k), icon: laneIcon(k), st: st[k], lane: k, i })).join("")}</div>
       ${lanes.map((k) => laneBox(k, () => pageLane(k, sc, rel))).join("")}${shopLine(sc)}</div>`;
   }
-  /* EXT-SHOP-FIND-1: on a home page that sells nothing, say where the shop is, or that it was not found */
+  /* EXT-SHOP-FIND-1: on a home page that sells nothing and no shop was found, say so.
+     A found shop is announced inside Agentes only, without its URL (Denis, 2026-11-01). */
   function shopLine(sc) {
-    if (!sc.shop) return "";
-    if (sc.shop.state === "found") return `<div class="shopln">${ic("cart")}<span class="tx">GenScore detecta tu tienda en <b>${esc(sc.shop.path)}</b>. La nota de Agentes es la de esa página.</span><button class="btn line sm" data-act="open-page" data-url="${esc(sc.shop.url)}">Abrir${ic("arrowr", "sm")}</button></div>`;
+    if (!sc.shop || sc.shop.state === "found") return "";
     return `<div class="shopln none">${ic("cart")}<span class="tx">GenScore no detecta tu tienda ni tus productos de forma estándar.</span></div>`;
   }
   function heroDom() {
@@ -197,7 +197,7 @@
   const alertHtml = (sc) => (sc.alert ? `<div class="alert" role="status">${ic("warn")}<div class="tx"><b>${sc.alert.t}</b> ${sc.alert.s}</div><button class="btn warm" data-act="jump" data-id="${sc.alert.id}">Arreglarlo</button></div>` : "");
 
   /* ---------------- layer 3: «Haz esto», one card at a time ---------------- */
-  const whereOf = (f) => (f.where ? `En ${esc(f.where)}` : f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
+  const whereOf = (f) => (f.where ? (f.id.startsWith("shop-") ? "En tu tienda" : `En ${esc(f.where)}`) : f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
   function plate(f, ctx) {
     const key = ctx + ":" + f.id, kind = f.kind || "local", done = S.done[key];
     const pts = f.pts == null && kind !== "goal" ? "" : kind === "goal" ? `<span class="pt q">Objetivo</span>` : f.unit === "en Agentes" ? `<span class="pt num">+${f.pts}<small>Agentes</small></span>` : `<span class="pt num">+${f.pts}<small>pt</small></span>`;
