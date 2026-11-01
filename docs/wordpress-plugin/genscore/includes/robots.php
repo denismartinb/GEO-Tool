@@ -10,7 +10,7 @@
  * @package GenScore
  */
 
-defined( 'ABSPATH' ) || defined( 'GENSCORE_TESTING' ) || exit;
+defined( 'ABSPATH' ) || exit;
 
 /**
  * The switches the screen shows. Each switch owns one or more tokens and they
@@ -120,9 +120,34 @@ function genscore_star_rules( $blocks ) {
 }
 
 /**
+ * Whether the `*` group closes the whole site («Disallow: /»).
+ *
+ * @param array $blocks From genscore_robots_blocks().
+ * @return bool
+ */
+function genscore_star_closes_site( $blocks ) {
+	foreach ( $blocks as $b ) {
+		if ( 'group' !== $b['type'] || ! in_array( '*', $b['agents'], true ) ) {
+			continue;
+		}
+		foreach ( $b['lines'] as $l ) {
+			if ( preg_match( '/^\s*disallow\s*:\s*\/\s*(#.*)?$/i', $l ) ) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+/**
  * Applies the saved switches to a robots.txt. Tokens with a setting are taken
  * out of every existing group (so an older «Disallow: /» from another plugin
  * cannot win a tie) and written again in GenScore's own block at the end.
+ *
+ * «Allow» only writes a group when it changes something: the token was taken
+ * out of another group, or `*` closes the whole site. Otherwise the bot
+ * already follows `*`, and turning a switch off and on again gives back the
+ * robots.txt WordPress built, byte for byte.
  *
  * @param string               $text     robots.txt as WordPress built it.
  * @param array<string,string> $settings switch id => allow|block.
@@ -143,8 +168,9 @@ function genscore_apply_bot_rules( $text, $settings ) {
 
 	$blocks = genscore_robots_blocks( $text );
 	$star   = genscore_star_rules( $blocks );
-	$out    = array();
-	$skip   = false;
+	$out      = array();
+	$skip     = false;
+	$stripped = array();
 	foreach ( $blocks as $b ) {
 		if ( 'loose' === $b['type'] ) {
 			// Our own block from an earlier pass is rebuilt below.
@@ -164,14 +190,14 @@ function genscore_apply_bot_rules( $text, $settings ) {
 		if ( $skip ) {
 			continue;
 		}
-		$agents = array_values(
-			array_filter(
-				$b['agents'],
-				function ( $a ) use ( $managed ) {
-					return ! isset( $managed[ strtolower( $a ) ] );
-				}
-			)
-		);
+		$agents = array();
+		foreach ( $b['agents'] as $a ) {
+			if ( isset( $managed[ strtolower( $a ) ] ) ) {
+				$stripped[ strtolower( $a ) ] = true;
+			} else {
+				$agents[] = $a;
+			}
+		}
 		if ( ! $agents ) {
 			continue;
 		}
@@ -187,14 +213,20 @@ function genscore_apply_bot_rules( $text, $settings ) {
 		array_pop( $out );
 	}
 
-	$allow = array();
-	$block = array();
-	foreach ( $managed as $m ) {
-		if ( 'allow' === $m['value'] ) {
-			$allow[] = $m['token'];
-		} else {
+	$closed = genscore_star_closes_site( $blocks );
+	$allow  = array();
+	$block  = array();
+	foreach ( $managed as $key => $m ) {
+		if ( 'block' === $m['value'] ) {
 			$block[] = $m['token'];
+		} elseif ( $closed || isset( $stripped[ $key ] ) ) {
+			$allow[] = $m['token'];
 		}
+	}
+	if ( ! $allow && ! $block ) {
+		// Nothing to say: the bots follow `*`. An older GenScore block, if
+		// any, is dropped above; otherwise the text goes back untouched.
+		return $stripped || false !== strpos( $text, '# BEGIN GenScore' ) ? implode( "\n", $out ) . "\n" : $text;
 	}
 	$own = array( '', '# BEGIN GenScore' );
 	if ( $allow ) {

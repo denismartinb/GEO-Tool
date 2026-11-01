@@ -172,12 +172,12 @@
   function webAg() {
     var sc = S.score || {};
     var shop = sc.shop && sc.shop.state === "found" ? sc.shop : null;
-    var C = sc.commerce ? criteria("agent") : shop ? shop.criteria : [];
+    var C = shop ? shop.criteria : sc.commerce ? criteria("agent") : [];
     if (!C.length) {
       return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Qué lee un agente</div><p>No hemos encontrado nada a la venta en tu portada ni en las páginas que enlaza.' + (D.site.woocommerce ? " Si vendes con WooCommerce, publica algún producto y enlázalo desde la portada o el menú." : " Si vendes algo (productos, servicios, reservas), enlaza la página desde la portada o el menú.") + "</p></div>";
     }
     var where = shop ? "<small>" + esc(shop.path) + "</small>" : "<small>tu portada</small>";
-    return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Lo que lee un agente</div><div class="gs-rw" style="border:0;padding-top:0">' + ic("i-cart") + '<span class="gs-tx"><b style="font-weight:600">' + (shop ? "Página de venta analizada" : "Tu portada vende") + "</b>" + where + "</span></div>" + rows(C) + "</div>" + fixCard("agent", "Arreglar");
+    return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Lo que lee un agente</div><div class="gs-rw" style="border:0;padding-top:0">' + ic("i-cart") + '<span class="gs-tx"><b style="font-weight:600">' + (shop ? (D.site.woocommerce ? "Ficha de producto analizada" : "Página de venta analizada") : "Tu portada vende") + "</b>" + where + "</span></div>" + rows(C) + "</div>" + fixCard("agent", "Arreglar");
   }
 
   /* ---------------- Resumen ---------------- */
@@ -192,7 +192,7 @@
     var tabOf = { ia: "geo", google: "seo", agent: "ag" };
     var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">+' + f.pts + " " + (f.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu portada está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
     var deep = '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
-    var acct = '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
+    var acct = '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
     return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deep + acct + "</div></div>";
   }
 
@@ -212,39 +212,70 @@
   }
 
   /* ---------------- the review ---------------- */
+  /* Opens one page of this site in a hidden same-origin frame and reads it
+     with the extension's collect.js. */
+  function readPage(url) {
+    return new Promise(function (resolve, reject) {
+      var frame = document.createElement("iframe");
+      var done = false;
+      frame.setAttribute("aria-hidden", "true");
+      frame.tabIndex = -1;
+      frame.style.cssText = "position:absolute;left:-10000px;top:0;width:1280px;height:900px;visibility:hidden;border:0";
+      function end(err, facts) { if (done) return; done = true; clearTimeout(timer); frame.remove(); if (err) reject(err); else resolve(facts); }
+      var timer = setTimeout(function () { end("La portada ha tardado demasiado en cargar. Puede que tu servidor esté lento ahora mismo."); }, 25000);
+      frame.onload = function () {
+        var doc;
+        try { doc = frame.contentDocument; } catch (e) { doc = null; }
+        if (!doc || !doc.body) { end("Tu web no deja abrir la portada dentro del escritorio (cabecera X-Frame-Options o una regla de seguridad)."); return; }
+        var bar = doc.getElementById("wpadminbar");
+        if (bar) bar.remove();
+        var s = doc.createElement("script");
+        s.src = D.assets + "vendor/collect.js?ver=" + encodeURIComponent(D.version);
+        s.onload = function () {
+          frame.contentWindow.collectPageFacts().then(function (facts) { end(null, facts); }, function () { end("No hemos podido leer la portada."); });
+        };
+        s.onerror = function () { end("No se ha podido cargar el lector de la página."); };
+        doc.head.appendChild(s);
+      };
+      frame.src = url;
+      document.body.appendChild(frame);
+    });
+  }
+
+  /* WooCommerce: the home page is a shop window, and what an agent reads to
+     buy is a product page. Agentes is that page's score, and the screen says
+     which page it is (same shape the extension uses for a shop found on
+     another page). The nota stays the home page's. */
+  function withProduct(sc) {
+    var url = D.site.product;
+    if (!D.site.woocommerce || !url || (sc.shop && sc.shop.state === "found")) return Promise.resolve(sc);
+    var path;
+    try { var u = new URL(url); path = u.pathname + u.search; } catch (e) { return Promise.resolve(sc); }
+    if (S.facts && S.facts.path === path) return Promise.resolve(sc);
+    return readPage(url).then(function (facts) {
+      var ps = SC.scorePage(facts);
+      if (!ps.commerce) return sc;
+      sc.lanes.agent = ps.lanes.agent;
+      sc.criteria = sc.criteria.filter(function (c) { return c.lane !== "agent"; });
+      sc.fixes = sc.fixes.filter(function (f) { return f.lane !== "agent"; }).concat(ps.fixes.filter(function (f) { return f.lane === "agent"; }).map(function (f) { return Object.assign({}, f, { id: "shop-" + f.id, where: path }); }));
+      sc.shop = { state: "found", path: path, url: url, criteria: ps.criteria.filter(function (c) { return c.lane === "agent"; }) };
+      return sc;
+    }, function () { return sc; });
+  }
+
   function review() {
     S.state = "loading"; render();
-    var frame = document.createElement("iframe");
-    var done = false;
-    frame.setAttribute("aria-hidden", "true");
-    frame.tabIndex = -1;
-    frame.style.cssText = "position:absolute;left:-10000px;top:0;width:1280px;height:900px;visibility:hidden;border:0";
-    function fail(msg) { if (done) return; done = true; frame.remove(); S.state = "error"; S.error = msg; render(); }
-    var timer = setTimeout(function () { fail("La portada ha tardado demasiado en cargar. Puede que tu servidor esté lento ahora mismo."); }, 25000);
-    frame.onload = function () {
-      var doc;
-      try { doc = frame.contentDocument; } catch (e) { doc = null; }
-      if (!doc || !doc.body) { clearTimeout(timer); fail("Tu web no deja abrir la portada dentro del escritorio (cabecera X-Frame-Options o una regla de seguridad)."); return; }
-      var bar = doc.getElementById("wpadminbar");
-      if (bar) bar.remove();
-      var s = doc.createElement("script");
-      s.src = D.assets + "vendor/collect.js?ver=" + encodeURIComponent(D.version);
-      s.onload = function () {
-        frame.contentWindow.collectPageFacts().then(function (facts) {
-          if (done) return;
-          done = true; clearTimeout(timer); frame.remove();
-          S.facts = facts;
-          S.score = SC.scorePage(facts);
-          S.state = "ready";
-          render();
-          saveReview();
-        }, function () { clearTimeout(timer); fail("No hemos podido leer la portada."); });
-      };
-      s.onerror = function () { clearTimeout(timer); fail("No se ha podido cargar el lector de la página."); };
-      doc.head.appendChild(s);
-    };
-    frame.src = D.site.home;
-    document.body.appendChild(frame);
+    readPage(D.site.home).then(function (facts) {
+      S.facts = facts;
+      return withProduct(SC.scorePage(facts));
+    }).then(function (sc) {
+      S.score = sc;
+      S.state = "ready";
+      render();
+      saveReview();
+    }, function (msg) {
+      S.state = "error"; S.error = typeof msg === "string" ? msg : "No hemos podido leer la portada."; render();
+    });
   }
 
   function post(action, data) {

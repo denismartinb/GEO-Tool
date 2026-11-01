@@ -146,10 +146,10 @@ function genscore_render_screen() {
 }
 
 /**
- * Common guard for the three actions.
+ * Capability check shared by the three actions. Each handler checks its own
+ * nonce first, in the same function that reads $_POST (Plugin Check).
  */
 function genscore_ajax_guard() {
-	check_ajax_referer( 'genscore', 'nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_send_json_error( array( 'message' => __( 'No tienes permiso para cambiar esto.', 'genscore' ) ), 403 );
 	}
@@ -159,6 +159,7 @@ function genscore_ajax_guard() {
  * Saves the AI bot switches.
  */
 function genscore_ajax_save_bots() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$raw = array();
 	if ( isset( $_POST['bots'] ) && is_array( $_POST['bots'] ) ) {
@@ -175,12 +176,16 @@ add_action( 'wp_ajax_genscore_save_bots', 'genscore_ajax_save_bots' );
  * Turns llms.txt on or off and saves the edited text (empty = generated).
  */
 function genscore_ajax_save_llms() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
 	update_option( 'genscore_llms_enabled', $enabled, true );
 	if ( isset( $_POST['text'] ) ) {
-		$text = sanitize_textarea_field( wp_unslash( $_POST['text'] ) );
-		$same = trim( $text ) === trim( genscore_llms_generate() );
+		// Browsers send textarea line breaks as \r\n: without this, saving
+		// the generated text untouched stored a frozen copy of it.
+		$text = str_replace( array( "\r\n", "\r" ), "\n", sanitize_textarea_field( wp_unslash( $_POST['text'] ) ) );
+		$gen  = str_replace( array( "\r\n", "\r" ), "\n", genscore_llms_generate() );
+		$same = '' === trim( $text ) || trim( $text ) === trim( $gen );
 		update_option( 'genscore_llms_custom', $same ? '' : $text, false );
 	}
 	wp_send_json_success(
@@ -198,9 +203,10 @@ add_action( 'wp_ajax_genscore_save_llms', 'genscore_ajax_save_llms' );
  * browser computed on this same site.
  */
 function genscore_ajax_save_review() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$lane = function ( $k ) {
-		return isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in genscore_ajax_guard().
+		return isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null;
 	};
 	update_option(
 		'genscore_last_review',

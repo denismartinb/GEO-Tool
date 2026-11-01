@@ -1,10 +1,10 @@
-=== GenScore: AI visibility, llms.txt and AI bots ===
+=== GenScore: visibilidad en IA, llms.txt y bots de IA ===
 Contributors: genscore
 Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,13 @@ No. It runs only when you open the GenScore screen, in your browser.
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.1 =
+* robots.txt: turning a bot back on gives back the original file. GenScore only writes a group when it changes something.
+* llms.txt: saving the generated text without changes no longer stores a frozen copy.
+* llms.txt: leaves out the WooCommerce cart, checkout and account pages, and the privacy policy description while it is still WordPress's template.
+* Agents: with WooCommerce, reviews a product page instead of the shop window.
+* Nonce checked in each AJAX handler.
 
 = 1.0.0 =
 * First release.

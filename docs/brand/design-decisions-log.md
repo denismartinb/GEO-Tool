@@ -28753,6 +28753,17 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
 
+**Adenda 1.0.1 (2026-11-01).** Instinct probó el zip 1.0.0 en un WordPress 7.1 con WooCommerce (PHP 8.2) y Plugin Check. Arreglado en la versión 1.0.1:
+
+- **robots.txt, apagar y volver a encender.** «Permitir» se guardaba y escribía un grupo `GPTBot` con las reglas de `*` y `Allow: /` aunque nada lo pidiera, así que el fichero no volvía a ser el original. Ahora un «Permitir» sólo escribe grupo si cambia algo: el bot estaba en un grupo de otro plugin, o `*` cierra la web entera. Si no, el texto vuelve tal cual (test de ida y vuelta en `robots-test.php`).
+- **llms.txt, «Guardar» sin cambios.** El navegador manda `\r\n`, la comparación con el texto generado fallaba y se guardaba una copia fija que dejaba de actualizarse. Se normalizan los saltos antes de comparar y guardar.
+- **Plugin Check.** La guarda de `robots.php` vuelve a ser `defined( 'ABSPATH' ) || exit;` (el test define `ABSPATH`), cada acción AJAX comprueba su nonce en la misma función que lee `$_POST`, y el nombre del readme es el de la cabecera.
+- **llms.txt** deja fuera carrito, finalizar compra y mi cuenta de WooCommerce, y no usa como descripción la plantilla de la política de privacidad de WordPress.
+- **Agentes con WooCommerce.** La portada de una tienda es un escaparate, y salía 25 puntuando el escaparate. La pantalla revisa también una ficha publicada (en stock primero) y Agentes es la nota de esa ficha, con su ruta a la vista. La Nota SEO + IA sigue siendo la de la portada.
+- **Copy.** «Con tu cuenta» deja de decir «en tiempo real».
+
+El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es la propia comprobación de `collect.js`, no un fallo.
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

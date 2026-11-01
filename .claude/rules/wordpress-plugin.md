@@ -13,6 +13,13 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   sólo el filtro `robots_txt` con su bloque `# BEGIN GenScore`. Con robots.txt
   físico, web no pública o WordPress en subcarpeta, los interruptores se
   desactivan y se dice por qué.
+- **«Permitir» sólo escribe si cambia algo** (adenda 1.0.1 de §421): el bot
+  estaba en un grupo de otro plugin o `*` cierra la web. Apagar y volver a
+  encender un bot devuelve el robots.txt original, byte a byte (test).
+- **La guarda de cada PHP es `defined( 'ABSPATH' ) || exit;` a secas**, y cada
+  acción AJAX llama a `check_ajax_referer` en su propia función (Plugin Check).
+- **Agentes en WooCommerce es la nota de una ficha**, no del escaparate de la
+  portada; la Nota SEO + IA sigue siendo la de la portada.
 - **llms.txt cede ante otro**: Yoast, Rank Math, AIOSEO o un fichero físico.
   Las descripciones salen del extracto, del meta del plugin SEO o de la propia
   página; nunca se inventan.

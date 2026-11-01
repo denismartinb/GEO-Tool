@@ -4,7 +4,7 @@
  * (also run by tests/wordpress-plugin.test.ts when php is installed).
  */
 
-define( 'GENSCORE_TESTING', true );
+define( 'ABSPATH', __DIR__ . '/' );
 require __DIR__ . '/../genscore/includes/robots.php';
 
 $failures = 0;
@@ -23,11 +23,14 @@ $wp = "User-agent: *\nDisallow: /wp-admin/\nAllow: /wp-admin/admin-ajax.php\n\nS
 // No settings: untouched.
 check( 'no settings leaves robots.txt as is', genscore_apply_bot_rules( $wp, array() ) === $wp );
 
-// Allow: named group repeats the * rules, never opens /wp-admin/.
-$out = genscore_apply_bot_rules( $wp, array( 'chatgpt-search' => 'allow' ) );
-check( 'allow writes both ChatGPT search tokens', false !== strpos( $out, "User-agent: OAI-SearchBot\nUser-agent: ChatGPT-User\nDisallow: /wp-admin/\nAllow: /wp-admin/admin-ajax.php\nAllow: /" ) );
-check( 'the * group stays', 0 === strpos( $out, "User-agent: *\nDisallow: /wp-admin/" ) );
-check( 'sitemap stays', false !== strpos( $out, 'Sitemap: https://ejemplo.es/wp-sitemap.xml' ) );
+// Allow on a plain WordPress robots.txt: the bot already follows *, nothing to write.
+check( 'allow alone leaves robots.txt as is', genscore_apply_bot_rules( $wp, array( 'chatgpt-search' => 'allow' ) ) === $wp );
+
+// Off and on again gives back the original, byte for byte (Instinct, 2026-11-01).
+$off = genscore_apply_bot_rules( $wp, array( 'chatgpt-training' => 'block' ) );
+check( 'off writes the block', false !== strpos( $off, "User-agent: GPTBot\nDisallow: /" ) );
+check( 'on again returns the original', genscore_apply_bot_rules( $wp, array( 'chatgpt-training' => 'allow' ) ) === $wp );
+check( 'on again over an old GenScore block drops it', false === strpos( genscore_apply_bot_rules( $off, array( 'chatgpt-training' => 'allow' ) ), 'GPTBot' ) );
 
 // Block.
 $out = genscore_apply_bot_rules( $wp, array( 'chatgpt-training' => 'block' ) );
@@ -37,6 +40,9 @@ check( 'block writes Disallow: /', false !== strpos( $out, "User-agent: GPTBot\n
 $other = $wp . "\nUser-agent: GPTBot\nUser-agent: ClaudeBot\nDisallow: /\n";
 $out   = genscore_apply_bot_rules( $other, array( 'chatgpt-training' => 'allow' ) );
 check( 'managed token removed from the other group', 1 === substr_count( $out, 'User-agent: GPTBot' ) );
+check( 'allow group repeats the * rules', false !== strpos( $out, "User-agent: GPTBot\nDisallow: /wp-admin/\nAllow: /wp-admin/admin-ajax.php\nAllow: /" ) );
+check( 'the * group stays', 0 === strpos( $out, "User-agent: *\nDisallow: /wp-admin/" ) );
+check( 'sitemap stays', false !== strpos( $out, 'Sitemap: https://ejemplo.es/wp-sitemap.xml' ) );
 check( 'unmanaged token in that group keeps its rule', false !== strpos( $out, "User-agent: ClaudeBot\nDisallow: /" ) );
 
 // Running twice gives the same result (our own block is rebuilt, not repeated).
