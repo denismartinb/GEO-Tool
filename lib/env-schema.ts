@@ -134,6 +134,7 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   OPS_ALERT_EMAIL: "los avisos de operador no se envían a nadie",
   RESEND_API_KEY: "no se envía ningún correo transaccional",
   RESEND_FROM_EMAIL: "se usa el remitente compartido de pruebas de Resend",
+  RESEND_WEBHOOK_SECRET: "el webhook de Resend responde 503 y no se guardan entregas, aperturas ni clics",
   EMAIL_UNSUBSCRIBE_SECRET:
     "los correos no llevan enlace de baja en un clic (los avisos caen al pie de Ajustes) y los de consejos y ofertas no se envían",
   STRIPE_SECRET_KEY: "no se puede cobrar ni abrir el portal de cliente",
@@ -225,6 +226,7 @@ export const envSchema = z.object({
   OPS_ALERT_EMAIL: optionalText,
   RESEND_API_KEY: optionalText,
   RESEND_FROM_EMAIL: optionalText,
+  RESEND_WEBHOOK_SECRET: optionalText,
   EMAIL_UNSUBSCRIBE_SECRET: optionalText,
 
   STRIPE_SECRET_KEY: optionalText,

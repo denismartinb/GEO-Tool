@@ -30,10 +30,18 @@ export type PrefEvent = {
 };
 
 export type ResendEmail = {
+  /** Resend's email id, the key of `email_events` (MAIL-METRICS-1, log §419). */
+  id: string;
   to: string[];
   createdAt: string;
   lastEvent: string;
   subject: string;
+  /**
+   * The `kind` tag the email was sent with, read from `email_events`. Absent
+   * for emails sent before the tag existed or when the table is unreadable;
+   * they keep being named by `email_sends` and the subject.
+   */
+  kind?: string | null;
 };
 
 export type SendRecord = { ownerId: string; kind: string; sentAt: string };
@@ -199,7 +207,8 @@ export function contactWeeks(users: ContactUser[], from: Date, to: Date): number
 }
 
 /**
- * Each Resend email to a contact, with its group: an `email_sends` row of the
+ * Each Resend email to a contact, with its group. Its `kind` tag names it when
+ * known (MAIL-METRICS-1, log §419). Otherwise an `email_sends` row of the
  * same account within `SEND_MATCH_WINDOW_MS` names it (each row used once,
  * closest first), the digest is known by its subject, the rest is "other".
  */
@@ -221,7 +230,10 @@ export function classifyEmails(input: {
     const ownerId = email.to.map((to) => input.userIdByEmail.get(to.trim().toLowerCase())).find(Boolean);
     if (!ownerId) continue;
     let group: EmailGroup = "other";
-    if (DIGEST_SUBJECT.test(email.subject)) {
+    if (email.kind) {
+      // The tag names the email exactly, and it never takes an `email_sends` row.
+      group = email.kind === "weekly_digest" ? "digest" : (KIND_GROUP[email.kind] ?? "other");
+    } else if (DIGEST_SUBJECT.test(email.subject)) {
       group = "digest";
     } else {
       const at = Date.parse(email.createdAt);

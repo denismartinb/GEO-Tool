@@ -52,6 +52,11 @@ import { readFileSync } from "node:fs";
  *   no hay sesión que pedir. El token está atado a (cuenta, categoría) y sólo
  *   deja cambiar UNA columna de preferencia de ESA cuenta
  *   (`setEmailPreferenceAsService`, `lib/email/unsubscribe.ts`).
+ * - `webhooks.verify(` — la firma Svix del webhook de Resend (MAIL-METRICS-1,
+ *   log §419), el mismo caso que `constructEvent(` de Stripe: la firma es lo
+ *   que prueba que la petición viene de Resend. Sexta forma, a conciencia:
+ *   Resend no tiene sesión que enseñar. La ruta sólo escribe `email_events`,
+ *   sin dirección, asunto ni enlace (`toEmailEventRow`).
  *
  * Añadir una quinta forma a esta lista es una decisión, no un trámite: es
  * exactamente el momento de preguntarse si de verdad hace falta.
@@ -61,7 +66,8 @@ const IDENTITY_GATES = [
   "requireActiveProject(",
   "isAuthorizedInternalRequest(",
   "constructEvent(",
-  "verifyUnsubscribeToken("
+  "verifyUnsubscribeToken(",
+  "webhooks.verify("
 ] as const;
 
 /**
