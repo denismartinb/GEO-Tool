@@ -633,7 +633,7 @@ function genscore_fix_query( $type, $q ) {
 		'fields'         => 'ids',
 		'orderby'        => 'modified',
 		'order'          => 'DESC',
-		'post__not_in'   => genscore_llms_skipped_pages(), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- a handful of ids (cart, checkout, account, privacy).
+		'post__not_in'   => genscore_fix_skipped_pages(), // phpcs:ignore WordPressVIPMinimum.Performance.WPQueryParams.PostNotIn_post__not_in -- a handful of ids (cart, checkout, account, privacy).
 		'no_found_rows'  => true,
 	);
 	if ( '' !== $q ) {
@@ -657,6 +657,17 @@ function genscore_fix_has_home_row( $kind, $q ) {
 		return $ok_seo && ( '' === $q || false !== mb_stripos( __( 'Portada', 'genscore' ), $q ) );
 	}
 	return false;
+}
+
+/**
+ * Pages that never get a fix: cart, checkout, account and privacy. The static
+ * front page is left out of llms.txt but it is the first page to fix.
+ *
+ * @return int[]
+ */
+function genscore_fix_skipped_pages() {
+	$front = (int) get_option( 'page_on_front' );
+	return array_values( array_diff( genscore_llms_skipped_pages(), array( $front ) ) );
 }
 
 /**
@@ -846,7 +857,7 @@ function genscore_fix_can_publish( $kind, $id ) {
 		return current_user_can( 'edit_post', $id );
 	}
 	$c = genscore_review_choice( $id );
-	return $c && in_array( $c['type'], genscore_fix_kinds()[ $kind ]['types'], true ) && current_user_can( 'edit_post', $id ) && ! in_array( $id, genscore_llms_skipped_pages(), true );
+	return $c && in_array( $c['type'], genscore_fix_kinds()[ $kind ]['types'], true ) && current_user_can( 'edit_post', $id ) && ! in_array( $id, genscore_fix_skipped_pages(), true );
 }
 
 /**
