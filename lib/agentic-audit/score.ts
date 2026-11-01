@@ -326,8 +326,13 @@ function purchaseChecks(s: PageSignals, kind: AgenticOfferKind): AgenticCheck[] 
       check(
         "add_to_cart",
         40,
-        s.addToCart ? "pass" : "fail",
-        s.addToCart ? "El botón de añadir al carrito está en el HTML" : "No vemos el botón de añadir al carrito sin JavaScript",
+        // An out-of-stock product shows «Avísame», not a cart: nothing to measure (log §407).
+        s.addToCart ? "pass" : s.soldOut ? "unknown" : "fail",
+        s.addToCart
+          ? "El botón de añadir al carrito está en el HTML"
+          : s.soldOut
+            ? "Agotado: la ficha no puede tener botón de compra ahora"
+            : "No vemos el botón de añadir al carrito sin JavaScript",
         "Sirve el formulario de añadir al carrito en el HTML de la ficha, con un botón con texto claro."
       )
     );

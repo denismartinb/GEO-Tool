@@ -11,4 +11,4 @@ y el icono:
   del lienzo no se usa). En móvil no sale: «en móvil no tiene sentido».
 
 Los `.dc.html` son las tablas del lienzo tal cual; el texto que manda es el de
-arriba. Histórico: `docs/brand/design-decisions-log.md` §403.
+arriba. Histórico: `docs/brand/design-decisions-log.md` §410.

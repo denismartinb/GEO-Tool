@@ -26,6 +26,7 @@ export function ManageSheet({
   active,
   inactive,
   aliases,
+  prefill = null,
   onClose,
 }: {
   projectId: string;
@@ -33,12 +34,13 @@ export function ManageSheet({
   active: Competitor[];
   inactive: Competitor[];
   aliases: string[];
+  prefill?: { name: string; domain: string } | null;
   onClose: () => void;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
-  const [name, setName] = useState("");
-  const [domain, setDomain] = useState("");
+  const [name, setName] = useState(prefill?.name ?? "");
+  const [domain, setDomain] = useState(prefill?.domain ?? "");
   const [alias, setAlias] = useState("");
   const [askOff, setAskOff] = useState<string | null>(null);
   const [askAlias, setAskAlias] = useState<string | null>(null);

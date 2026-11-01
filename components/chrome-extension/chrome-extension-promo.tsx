@@ -17,7 +17,7 @@ import {
 import { isPromoPath } from "@/lib/free-report/promo";
 
 /**
- * EXT-PROMO-1 (log §403) — the floating card offering the Chrome extension,
+ * EXT-PROMO-1 (log §410) — the floating card offering the Chrome extension,
  * mounted once in the root layout so it covers the whole domain. The rules
  * live in `lib/chrome-extension/install-promo.ts`; this component only reads
  * the browser, storage and time, and renders. Not a modal: it never takes

@@ -117,6 +117,23 @@
   const iso = (d) => d.toISOString().slice(0, 10);
   const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   const longDate = (d) => `${d.getUTCDate()} de ${MONTHS[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+  /* llms.txt draft (log §405): the page's own menu and footer links with
+     their own text, nothing invented. Each line is a link; the reader adds
+     a short sentence after it if they want. */
+  function llmsDraft(f, brand, cleanUrl, h1) {
+    const L = f.links || { main: [], footer: [], legal: [] };
+    const name = (f.siteName || brand).replace(/[[\]]/g, "");
+    const li = (x) => `- [${x.text}](${x.url})`;
+    const out = [`# ${name}`, "", `> ${trimTo(f.description || (f.lead && f.lead.text) || f.title, 200)}`, "", "## Páginas principales", "",
+      `- [${(f.path === "/" || f.path === "" ? "Portada" : (f.title || h1)).replace(/[[\]]/g, "")}](${cleanUrl})`].concat(L.main.map(li));
+    if (L.footer.length) out.push("", "## Más información", "", ...L.footer.map(li));
+    if (L.legal.length) out.push("", "## Optional", "", ...L.legal.map(li));
+    return out.join("\n");
+  }
+  function llmsWhy(f) {
+    const n = f.links ? f.links.main.length + f.links.footer.length : 0;
+    return n ? "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este sale de los enlaces de tu menú y tu pie: quita lo que no importe y, si quieres, añade una frase tras cada enlace." : "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este parte de esta página: añade tus páginas principales.";
+  }
   function trimTo(s, n) {
     s = String(s || "").replace(/\s+/g, " ").trim();
     if (s.length <= n) return s;
@@ -140,6 +157,10 @@
     return n.length > 1 ? n.slice(0, -1).join(", ") + " y " + n[n.length - 1] : n[0] || "";
   }
 
+  const SOLD_OUT = /^(OutOfStock|SoldOut|Discontinued)$/i;
+  const AVAIL_ES = { instock: "En stock", outofstock: "Agotado", soldout: "Agotado", preorder: "Preventa", presale: "Preventa", backorder: "Bajo pedido", discontinued: "Descatalogado", limitedavailability: "Pocas unidades", onlineonly: "Solo online", instoreonly: "Solo en tienda", madetoorder: "Por encargo" };
+  const availName = (a) => AVAIL_ES[String(a).toLowerCase()] || a;
+
   /* ---------------- scoring ---------------- */
   function scorePage(f, now = Date.now()) {
     const path = (f.path || "/").split("#")[0] || "/";
@@ -151,12 +172,18 @@
     /* «Reservar» or «Contratar» alone do not make a shop: a clinic or a gestoría
        has them too, and an Agentes 20 there alarms for nothing. */
     const cartButton = !!f.buy && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(f.buy);
-    const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount);
+    const offering = ld.offering || null;
+    /* SHOP-DETECT-2 (log §407): a pricing page, or a price printed next to a
+       buy button in the body, sells too, even with nothing in its data. An
+       article never does through this door. Same net as the console's
+       classifyOffer. */
+    const ARTICLE_T = ["Article", "NewsArticle", "BlogPosting", "TechArticle"];
+    const looseSell = !(ld.types || []).some((t) => ARTICLE_T.includes(t)) && (!!f.pricingPath || (!!f.priceSeen && !!f.sellCta));
+    const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount || offering || looseSell);
     /* software, a service, a course: it sells, but there is no stock to declare
        or parcel to return (same rule as the console's agentic audit, log §325) */
-    const offering = ld.offering || null;
     const SERVICE_TYPES = ["SoftwareApplication", "WebApplication", "MobileApplication", "Service", "ProfessionalService", "Course", "Event", "FinancialProduct"];
-    const service = commerce && !product && (!!offering || (ld.types || []).some((t) => SERVICE_TYPES.includes(t)));
+    const service = commerce && !product && (!!offering || (ld.types || []).some((t) => SERVICE_TYPES.includes(t)) || (looseSell && !cartButton && !f.microPrice && !ld.offerCount));
     const titleLen = (f.title || "").length;
     const descLen = (f.description || "").length;
     const lead = f.lead || { words: 0 };
@@ -195,7 +222,7 @@
       const op = offering && offering.price;
       add("prod", "agent", 30, offering && offering.name ? 1 : 0.5, "Entiende lo que vendes", offering && offering.name ? trimTo(offering.name, 28) : "No");
       add("price", "agent", 25, op ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
-        op ? `${offering.price}${offering.currency ? " " + offering.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
+        op ? `${offering.price}${offering.currency ? " " + offering.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : f.priceSeen ? "Sólo en el texto" : "No");
       add("avail", "agent", 15, null, "Disponibilidad", "No aplica");
       add("buy", "agent", 20, f.buy ? 1 : 0, "Botón para contratar claro", f.buy ? `«${f.buy}»` : "No");
       add("returns", "agent", 10, null, "Devoluciones", "No aplica");
@@ -203,8 +230,10 @@
       add("prod", "agent", 30, product && product.name ? 1 : ld.offerCount ? 0.5 : 0, "Entiende el producto", product && product.name ? trimTo(product.name, 28) : "No");
       add("price", "agent", 25, product && product.price ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
         product && product.price ? `${product.price}${product.currency ? " " + product.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
-      add("avail", "agent", 15, product && product.availability ? 1 : 0, "Disponibilidad", product && product.availability ? product.availability : "No");
-      add("buy", "agent", 20, f.buy ? 1 : 0, "Botón de compra claro", f.buy ? `«${f.buy}»` : "No");
+      add("avail", "agent", 15, product && product.availability ? 1 : 0, "Disponibilidad", product && product.availability ? availName(product.availability) : "No");
+      /* sold out: «Avísame» is the right button, there is no purchase to measure (log §407) */
+      const soldOut = !!(product && product.availability && SOLD_OUT.test(product.availability));
+      add("buy", "agent", 20, f.buy ? 1 : soldOut ? null : 0, "Botón de compra claro", f.buy ? `«${f.buy}»` : soldOut ? "No aplica, agotado" : "No");
       add("returns", "agent", 10, product && product.returns ? 1 : f.returnsLink ? 0.5 : 0, "Devoluciones", product && product.returns ? "En los datos" : f.returnsLink ? "Sólo un enlace" : "No");
     }
 
@@ -219,13 +248,13 @@
        never this page's, and the panel says which page it is. */
     let shop = null;
     if (!commerce && f.shop && f.shop.state === "found" && f.shop.facts) {
-      const ss = scorePage(Object.assign({}, f, f.shop.facts, { shop: null, host: f.host }), now);
+      const ss = scorePage(Object.assign({}, f, { priceSeen: false, sellCta: false, pricingPath: false, listing: false }, f.shop.facts, { shop: null, host: f.host }), now);
       if (ss.commerce) {
         lanes.agent = ss.lanes.agent;
         shop = { state: "found", path: f.shop.path, url: f.shop.facts.url, criteria: ss.criteria.filter((c) => c.lane === "agent"), fixes: ss.fixes.filter((x) => x.lane === "agent").map((x) => Object.assign({}, x, { id: "shop-" + x.id, where: f.shop.path })) };
       }
     }
-    if (!commerce && !shop && f.shop) shop = { state: "none" };
+    if (!commerce && !shop && f.shop && !f.listing) shop = { state: "none" };
     const nota = Math.round(LANE_WEIGHT.ia * lanes.ia + LANE_WEIGHT.google * lanes.google);
     /* what each criterion is worth in the nota (or in its own lane, for Agentes) */
     const laneW = (k) => C.filter((c) => c.lane === k && c.v != null).reduce((a, c) => a + c.w, 0);
@@ -242,7 +271,7 @@
 
     /* layer 2: the one warm alert */
     let alert = null;
-    if (noindex) alert = { id: "index", t: "Google no la indexará.", s: "La página pide noindex." };
+    if (noindex) alert = { id: "index", t: "Google no la indexa.", s: "La página pide noindex." };
     else if (gBlocked) alert = { id: "index", t: "Google no puede leerla.", s: "Tu robots.txt bloquea a Googlebot." };
     else if (blockedEngines.length) alert = { id: "bot-" + blockedEngines[0], t: `${listNames(blockedEngines)} no ${blockedEngines.length > 1 ? "pueden" : "puede"} leer esta página.`, s: "Tu robots.txt lo bloquea." };
     else if (nosnippet) alert = { id: "snippet", t: "Pide que no se cite su texto.", s: "Lleva nosnippet." };
@@ -251,10 +280,13 @@
     const known = ENGINES.filter((e) => access[e].allowed != null).length;
     let say;
     if (!known) say = "No hemos podido leer su robots.txt.";
-    else if (readers.length === 4) say = "Los cuatro motores pueden leerla";
-    else if (!readers.length) say = "Ningún motor de IA puede leerla";
-    else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no`;
-    if (known) say += noindex || gBlocked ? ", pero Google no la indexará." : ", y Google la indexa.";
+    else {
+      /* the connector follows both halves: «y» when they agree, «pero»/«aunque» when they don't (Denis, 2026-11-01) */
+      const gOk = !(noindex || gBlocked);
+      if (readers.length === 4) say = gOk ? "Los cuatro motores pueden leerla, y Google la indexa." : "Los cuatro motores pueden leerla, pero Google no la indexa.";
+      else if (!readers.length) say = gOk ? "Ningún motor de IA puede leer esta página, aunque Google sí la indexa." : "Ningún motor de IA puede leer esta página, y Google tampoco la indexa.";
+      else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no. ${gOk ? "Google sí la indexa." : "Google no la indexa."}`;
+    }
 
     return { nota, lanes, criteria: C, fixes, alert, say, commerce, service, shop, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
   }
@@ -313,7 +345,7 @@
     push("canon", { t: f.canonical ? "Revisa la canónica: apunta a otra página" : "Añade una URL canónica", why: f.canonical ? "Google tomará la otra como la buena." : "Evita que Google dude entre versiones de la misma página.", snippet: f.canonical ? null : `<link rel="canonical" href="${attr(cleanUrl)}">`, copyWhat: "la etiqueta canónica" });
     push("h1", { t: f.h1 && f.h1.length > 1 ? `Deja un solo h1 (ahora hay ${f.h1.length})` : "Añade un h1 con el tema de la página", why: "Es el título que leen Google y la IA dentro de la página." });
     push("lang", { t: "Declara el idioma de la página", why: "Ayuda a Google y a la IA a enseñarla en el idioma correcto.", snippet: '<html lang="es">', copyWhat: "el atributo de idioma" });
-    push("llms", { t: "Publica un <code class=\"p\">llms.txt</code>", why: "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este parte de esta página: añade tus páginas principales.", snippet: `# ${brand}\n\n> ${trimTo(f.description || (f.lead && f.lead.text) || f.title, 200)}\n\n## Páginas principales\n\n- [${(f.title || h1).replace(/[[\]]/g, "")}](${cleanUrl})`, copyWhat: "el llms.txt" });
+    push("llms", { t: "Publica un <code class=\"p\">llms.txt</code>", why: llmsWhy(f), snippet: llmsDraft(f, brand, cleanUrl, h1), copyWhat: "el llms.txt" });
     if (x.service) {
       push("prod", { t: "Pon el nombre de lo que vendes en el JSON-LD", why: "Un agente no adivina: lee el nombre y la oferta del bloque que describe tu servicio.", snippet: serviceLd(h1, cleanUrl, x.offering), copyWhat: "el bloque JSON-LD" });
       push("price", { t: "Pon el precio en los datos de tu plan", why: "Si sólo está en la página, un agente puede no verlo. Va en <code class=\"p\">offers.price</code>: cambia PRECIO por el tuyo.", snippet: serviceOfferLd(x.offering, cleanUrl), copyWhat: "la oferta" });

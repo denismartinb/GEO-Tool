@@ -73,8 +73,8 @@ describe("GET /api/ext/context", () => {
     const body = await res.json();
     expect(body.plan.id).toBe("pro");
     expect(body.domains).toEqual([
-      { domain: "marca.es", brand: "Marca" },
-      { domain: "blog.marca.es", brand: "Blog" }
+      { id: "p1", domain: "marca.es", brand: "Marca" },
+      { id: "p2", domain: "blog.marca.es", brand: "Blog" }
     ]);
   });
 
@@ -129,5 +129,8 @@ describe("GET /api/ext/project", () => {
     expect(loadReportInput.mock.calls[0][0].project.id).toBe("p2");
     const body = await res.json();
     expect(body).toMatchObject({ domain: "blog.marca.es", brand: "Blog", geoScore: null, citingPrompts: [] });
+    // EXT-AUDITS-1: no snapshot and no review means no blocks, never a zero
+    expect(body.audits).toEqual({ auditedAt: null, blocks: [], page: null });
+    expect(fromCalls).toContain("web_audit_snapshots");
   });
 });

@@ -85,6 +85,7 @@
     const h = String(host || "?"), c = ["#1d4fd6", "#0f7a54", "#7c3aed", "#c2410c", "#0e7490", "#334155"][[...h].reduce((a, x) => a + x.charCodeAt(0), 0) % 6];
     return `<span class="fav tl" style="background:${c}" aria-hidden="true">${esc(h[0].toUpperCase())}</span>`;
   };
+  const favImg = (dom, name) => { const u = dom ? `${GS_API}/api/favicon?domain=${encodeURIComponent(dom)}&sz=64` : null; return u ? `<img class="fav fi" src="${u}" alt="" width="18" height="18" data-n="${esc(name)}">` : tile(name); };
   const brandOf = (host) => { const b = String(host || "").split(".")[0].replace(/-/g, " "); return b.charAt(0).toUpperCase() + b.slice(1); };
   const pathLabel = (f) => (f.path === "/" ? "portada" : f.path.length > 34 ? f.path.slice(0, 33) + "…" : f.path);
   const EJ0 = `<span class="badge b-ej">Ejemplo</span>`;
@@ -104,7 +105,7 @@
     const card = p.agentic && p.agentic.kind === "card" ? p.agentic : null;
     return {
       score: p.geoScore, say: p.lede || "Todavía no hay un escaneo completado de este dominio.",
-      engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand]), seo: p.seoScore,
+      engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand, r.domain || null]), seo: p.seoScore,
       agent: card ? card.score : null, agentParts: card ? card.components.map((c) => [c.name, c.points ?? 0, c.weight]) : [],
       plan: p.plan.map((x, i) => ({ id: "r" + i, kind: "plan", lane: "ia", pts: null, t: esc(x.title), why: esc(x.firstStep || "") })),
       prompts: (p.citingPrompts || []).map((q) => [q.text, q.engines.map((l) => LABELKEY[l]).filter(Boolean), q.mentioned ? "Te nombran" : "No te nombran"])
@@ -132,7 +133,7 @@
     return `<div class="rd4">${EK.map((e) => { const a = sc.access[e]; const cls = a == null ? "u" : a ? "y" : "n"; return `<div class="c ${cls}"><span class="lg">${lg(e, 18)}<i></i></span>${ENG[e].n}<small>${a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado"}</small></div>`; }).join("")}</div>`;
   }
   const promptRows = (list) => list.map(([q, es, s]) => `<div class="qr"><span class="q">${esc(q)}<small>${esc(s)}</small></span><span class="e">${es.map((e) => lg(e, 14)).join("")}</span></div>`).join("");
-  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="/dashboard" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar con Google</button></div>`;
+  const gscInvite = () => `<div class="calm col">${lg("google", 16)}<span>Tus búsquedas de Google, tu puesto y tus clics, leídos de tu Search Console. Sólo lectura, la misma conexión que en la consola.</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="${esc(gscTo())}" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar con Google</button></div>`;
 
   function pageLane(k, sc, rel) {
     const C = sc.criteria.filter((c) => c.lane === k);
@@ -143,37 +144,63 @@
       return h + `<div class="mh">En la página</div>${kv(C.filter((c) => !c.id.startsWith("bot-")))}`;
     }
     if (k === "google") return (rel === "own" ? `<div class="mh">Search Console</div>${gscInvite()}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
-    if (sc.shop && sc.shop.state === "found") return `<div class="mh">Lo que lee un agente<span class="r">${esc(sc.shop.path)}</span></div>${kv(sc.shop.criteria)}<p class="mini-note">Puntuado sobre tu tienda, no sobre esta página. No entra en la nota.</p>`;
-    return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo. No entra en la nota.</p>`;
+    if (sc.shop && sc.shop.state === "found") return `<div class="shopln ok">${ic("checkc")}<span class="tx">GenScore detecta tu tienda</span></div><div class="mh">Lo que lee un agente</div>${kv(sc.shop.criteria)}`;
+    return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo.</p>`;
+  }
+  /* EXT-PANEL-LAYERS-1 (log §408): an open gauge shows two layers, always in this
+     order: «Tu dominio» (GenScore's figures) and «Esta página» (the live review). */
+  const lyr = (cls, t, src) => `<div class="lyr ${cls}"><i></i><b>${t}</b>${src ? `<span class="src">${src}</span>` : ""}</div>`;
+  const auBlock = (key) => { const au = audOf(); return au ? au.blocks.find((b) => b.key === key) : null; };
+  function pageLayer(k) {
+    const sc = S.sc;
+    if (!sc) return `${lyr("live", "Esta página")}<div class="calm">${svgGs(16)}<span>Pulsa el icono en cualquier página de tu web y aquí verás lo que lee ${k === "google" ? "Google" : k === "agent" ? "un agente" : "cada motor"}.</span></div>`;
+    return `${lyr("live", "Esta página", esc(pathLabel(S.scf)))}${pageLane(k, sc, k === "google" ? "page" : "own")}`;
   }
   function domLane(k) {
+    const D = A();
     if (k === "ia") {
-      const D = A(), max = Math.max(1, ...D.rivals.map((r) => r[1] || 0)), emax = Math.max(60, ...EK.map((e) => D.engines[e] || 0));
+      const max = Math.max(1, ...D.rivals.map((r) => r[1] || 0));
       const engs = EK.filter((e) => D.engines[e] != null);
-      return `<div class="mh">Te nombran por motor${EJx()}</div>${engs.map((e, i) => `<div class="er"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><span class="n">${ENG[e].n}</span>${bar(D.engines[e], { max: emax, cls: "thin", delay: i * 60 })}<span class="v num">${D.engines[e]}<small>%</small></span></div>`).join("")}
-        ${D.rivals.length ? `<div class="mh">Frente a tus rivales${EJx()}</div>${D.rivals.map(([n, m, me], i) => `<div class="er">${me ? tile(curDom()) : tile(n)}<span class="n" style="${me ? "color:var(--blue-ink)" : ""}">${esc(me ? (isSample() ? brandOf(curDom()) : n) : n)}</span>${bar(m, { max: max * 1.1, cls: "thin " + (me ? "" : "ink nomark"), delay: i * 60 })}<span class="v num">${m}<small>%</small></span></div>`).join("")}` : ""}`;
+      return `${lyr("gs", "Tu dominio", "Último escaneo")}<div class="mh">Te nombran por motor</div><div class="eng1">${engs.map((e) => `<div class="c"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="num">${D.engines[e]}<small>%</small></b><span class="n">${ENG[e].n}</span><span class="tb"><i style="width:${D.engines[e]}%"></i></span></div>`).join("")}</div>
+        ${D.rivals.length ? `<div class="mh">Frente a tus rivales</div><div class="xk">${D.rivals.map(([n, m, me, dom], i) => `<div class="xq${me ? " me" : ""}"><span class="ps num">${i + 1}</span>${favImg(me ? curDom() : dom, n)}<span class="n">${esc(n)}</span><span class="tb"><i style="width:${Math.round((m / max) * 100)}%"></i></span><span class="v num">${m}<small>%</small></span></div>`).join("")}</div>` : ""}
+        ${pageLayer("ia")}`;
     }
-    if (k === "google") return gscInvite();
-    return `<div class="ag4">${A().agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div><p class="mini-note">De la auditoría agéntica de tu web. ${EJx()}</p>`;
+    if (k === "google") {
+      const b = auBlock("seo");
+      const iss = b && b.issues.length ? `<div class="mh">Lo que más resta en tu dominio</div>${b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}<small>pt</small></span></div>`).join("")}` : "";
+      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}${gscBlock()}${pageLayer("google")}`;
+    }
+    return `${lyr("gs", "Tu dominio", "Auditoría agéntica")}<div class="ag4">${D.agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div>${pageLayer("agent")}`;
+  }
+  /* EXT-PANEL-LAYERS-1 (log §408): signed out, or a site you do not analyse.
+     No figures: an illustration of what an account shows, and one button. */
+  function teaser(k, rel, host) {
+    const T = { ia: ["Conoce cómo te citan los motores", "Cuánto te nombra cada motor y quién sale antes que tú."], google: ["Conoce la Salud SEO de todo tu dominio", "Todas tus páginas clave, no solo esta, y qué arreglar primero."], agent: ["Conoce tu nota para agentes", "Cómo te descubren, te entienden, se fían y te compran."] }[k];
+    let ill;
+    if (k === "ia") ill = `<div class="eng1 ghost">${EK.map((e) => `<div class="c"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="q"></b><span class="n">${ENG[e].n}</span><span class="tb"><i></i></span></div>`).join("")}</div><div class="xk ghost">${[86, 64, 52, 38].map((w, i) => `<div class="xq${i === 1 ? " me" : ""}"><span class="ps num">${i + 1}</span><span class="fav gh"></span><span class="q" style="width:${70 - i * 8}%"></span><span class="tb"><i style="width:${w}%"></i></span><span></span></div>`).join("")}</div>`;
+    else if (k === "google") ill = `<div class="gseo ghost"><span class="aur"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" class="t"/></svg></span><div>${[92, 74, 84].map((w) => `<span class="q" style="width:${w}%"></span>`).join("")}</div></div>`;
+    else ill = `<div class="ag4 ghost">${["Descubrimiento", "Comprensión", "Confianza", "Compra"].map((n) => gauge({ v: null, cls: "", nm: n, st: "", tag: "div" })).join("")}</div>`;
+    const btn = rel === "none" ? `<button class="btn ink" data-act="open" data-to="/login" data-c="tz-login">Identifícate gratis${ic("arrowr", "sm")}</button>` : `<button class="btn ink" data-act="open" data-to="/dashboard/projects/new" data-c="tz-add">Analizar ${esc(host)}${ic("arrowr", "sm")}</button>`;
+    return `<div class="tz"><div class="ill">${ill}<span class="lk">${ic("shield", "sm")}</span></div><b class="h">${T[0]}</b><p>${T[1]}</p>${btn}</div>`;
   }
 
   /* ---------------- layer 1: hero «Cuadro» ---------------- */
   function heroPage(sc, rel) {
     const n = sc.nota;
     const shopOn = !!(sc.shop && sc.shop.state === "found");
-    const lanes = ["ia", "google"].concat(sc.commerce || shopOn ? ["agent"] : []);
+    const lanes = ["ia", "google"].concat(sc.commerce || shopOn || relation() !== "own" ? ["agent"] : []);
     const st = { ia: sc.blockedEngines.length ? `${4 - sc.blockedEngines.length} de 4 la leen` : band(sc.lanes.ia)[1], google: band(sc.lanes.google)[1], agent: band(sc.lanes.agent)[1] };
     const d = dial(n, { bands: [50, 75] }).replace(/aria-label="[^"]*"/, `aria-label="Nota SEO + IA ${n} de 100"`);
     return `<div class="hq"><div class="dialbox">${d}<div class="dial-c"><span class="big num" id="heroN">${roll(S.from ?? n)}</span><span class="of">Nota SEO + IA</span></div></div>
       <div class="bands"><span class="${n < 50 ? "on" : ""}">Se frena</span><span class="${n >= 50 && n < 75 ? "on" : ""}">Mejorable</span><span class="${n >= 75 ? "on" : ""}">Bien</span></div>
       <p class="say">${sc.say}</p>
       <div class="gg3" style="grid-template-columns:repeat(${lanes.length},minmax(0,1fr))">${lanes.map((k, i) => gauge({ v: sc.lanes[k], cls: band(sc.lanes[k])[0], nm: laneName(k), icon: laneIcon(k), st: st[k], lane: k, i })).join("")}</div>
-      ${lanes.map((k) => laneBox(k, () => pageLane(k, sc, rel))).join("")}${shopLine(sc)}</div>`;
+      ${lanes.map((k) => laneBox(k, () => (rel === "own" ? "" : teaser(k, rel, S.scf ? S.scf.host : "") + lyr("live", "Esta página")) + pageLane(k, sc, rel))).join("")}${shopLine(sc)}</div>`;
   }
-  /* EXT-SHOP-FIND-1: on a home page that sells nothing, say where the shop is, or that it was not found */
+  /* EXT-SHOP-FIND-1: on a home page that sells nothing and no shop was found, say so.
+     A found shop is announced inside Agentes only, without its URL (Denis, 2026-11-01). */
   function shopLine(sc) {
-    if (!sc.shop) return "";
-    if (sc.shop.state === "found") return `<div class="shopln">${ic("cart")}<span class="tx">GenScore detecta tu tienda en <b>${esc(sc.shop.path)}</b>. La nota de Agentes es la de esa página.</span><button class="btn line sm" data-act="open-page" data-url="${esc(sc.shop.url)}">Abrir${ic("arrowr", "sm")}</button></div>`;
+    if (!sc.shop || sc.shop.state === "found") return "";
     return `<div class="shopln none">${ic("cart")}<span class="tx">GenScore no detecta tu tienda ni tus productos de forma estándar.</span></div>`;
   }
   function heroDom() {
@@ -197,7 +224,7 @@
   const alertHtml = (sc) => (sc.alert ? `<div class="alert" role="status">${ic("warn")}<div class="tx"><b>${sc.alert.t}</b> ${sc.alert.s}</div><button class="btn warm" data-act="jump" data-id="${sc.alert.id}">Arreglarlo</button></div>` : "");
 
   /* ---------------- layer 3: «Haz esto», one card at a time ---------------- */
-  const whereOf = (f) => (f.where ? `En ${esc(f.where)}` : f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
+  const whereOf = (f) => (f.where ? (f.id.startsWith("shop-") ? "En tu tienda" : `En ${esc(f.where)}`) : f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
   function plate(f, ctx) {
     const key = ctx + ":" + f.id, kind = f.kind || "local", done = S.done[key];
     const pts = f.pts == null && kind !== "goal" ? "" : kind === "goal" ? `<span class="pt q">Objetivo</span>` : f.unit === "en Agentes" ? `<span class="pt num">+${f.pts}<small>Agentes</small></span>` : `<span class="pt num">+${f.pts}<small>pt</small></span>`;
@@ -229,7 +256,7 @@
   const arcSvg = () => { let g = ""; for (let i = 0; i <= 40; i++) { const a = ((200 + i * 3.5) * Math.PI) / 180, r0 = i % 5 ? 140 : 128; g += `<line x1="${(150 + r0 * Math.cos(a)).toFixed(1)}" y1="${(150 + r0 * Math.sin(a)).toFixed(1)}" x2="${(150 + 148 * Math.cos(a)).toFixed(1)}" y2="${(150 + 148 * Math.sin(a)).toFixed(1)}"/>`; } return `<svg class="arc" viewBox="0 0 300 300" aria-hidden="true">${g}</svg>`; };
   const ctaNoAcct = (host) => `<div class="deep">${arcSvg()}<div class="egs">${EK.map((e) => `<span>${lg(e, 15)}</span>`).join("")}</div><p class="q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>${esc(host)}</b> y a sus competidores?</p><button class="btn onink" data-act="open" data-to="/signup" data-c="analizar-dominio">Analizar dominio${ic("arrowr", "sm")}</button><p class="ft">7 días de Pro gratis. Sin tarjeta.</p></div>`;
   const ctaOther = (host) => S.real
-    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Analizar como dominio<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span></button></div>`
+    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres añadir <b>${esc(host)}</b> a tus dominios?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Añadir a mis dominios${S.real.domainCap < 100 ? `<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span>` : ""}</button>${projPath("") ? `<button class="btn lnd" data-act="open" data-to="${esc(projPath("competitors") + "?nuevo=" + encodeURIComponent(host) + (S.rec && S.rec.facts && S.rec.facts.siteName ? "&nombre=" + encodeURIComponent(S.rec.facts.siteName) : ""))}" data-c="competidor">Añadir como competidor de ${esc(curDom())}</button>` : ""}</div>`
     : `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="sample-only" data-what="analizar un dominio nuevo">Analizar como dominio<span class="dim"> · ${1 + SAMPLE.extraDomains.length} de ${SAMPLE.cap}</span></button><button class="btn lnd" data-act="sample-only" data-what="añadir un competidor">Añadir como competidor de ${esc(S.sample.domain)}</button><button class="lnk2" data-act="use-domain">Probar esta web como mi dominio de ejemplo</button></div>`;
 
   /* ---------------- header and foot ---------------- */
@@ -267,6 +294,78 @@
       <div class="sets"><div class="sws"><button class="sw ${S.autoOn && S.read ? "on" : ""}" data-act="auto" role="switch" aria-checked="${S.autoOn && S.read}"><i></i>Revisar automáticamente las páginas</button>${S.real || !GS_SAMPLE ? "" : `<button class="sw ${S.sample.on ? "on" : ""}" data-act="sample" role="switch" aria-checked="${S.sample.on}"><i></i>Cuenta de ejemplo</button>`}</div><span class="sp"></span><button class="thb" data-act="theme" aria-label="Cambiar de tema">${ic(curTheme() === "dark" ? "sun" : "moon", "sm")}</button></div></div>`;
   }
 
+
+  /* ---------------- EXT-AUDITS-1 (log §406): the domain's audits, read-only ----------------
+     What the console already audited (technical snapshot and agentic review),
+     from /api/ext/project. Nothing here launches a review or calls an LLM. */
+  // Straight to Google's consent screen for this project (the route checks the
+  // session owns it and returns to «Posición en Google»); without a project id,
+  // the console.
+  // EXT-GSC-1 (log §409): what /api/ext/project says about Search Console.
+  // Connected → the same three figures as Visión general; never connected or
+  // an older server → the one invitation text; "off" → nothing.
+  const gscBlock = () => {
+    const p = S.proj[curDom()], g = p && typeof p === "object" ? p.searchConsole : null;
+    if (!g || g.state === "disconnected") return gscInvite();
+    if (g.state === "off") return "";
+    const to = projPath("search-console") || "/dashboard";
+    const go = (label, c) => `<button class="btn line sm" data-act="open" data-to="${esc(c === "gsc-reconnect" ? gscTo() : to)}" data-c="${c}">${label}${ic("arrowr", "sm")}</button>`;
+    const box = (body, btn) => `<div class="calm col gsc1">${lg("google", 16)}${body}${btn}</div>`;
+    if (g.state === "reconnect") return box(`<span>Google ha retirado el permiso de Search Console. Vuelve a conectar para ver tus búsquedas, tu puesto y tus clics.</span>`, go("Volver a conectar", "gsc-reconnect"));
+    if (g.state === "pick_property") return box(`<span>Search Console está conectado. Elige qué propiedad corresponde a ${esc(curDom())}.</span>`, go("Elegir propiedad", "gsc-property"));
+    if (g.state === "error") return box(`<span>Search Console está conectado, pero Google no ha respondido ahora mismo.</span>`, go("Ver Posición en Google", "gsc-open"));
+    if (g.empty) return box(`<span>Search Console conectado. Google no ha devuelto búsquedas de tu web en estos 28 días.</span>`, go("Ver Posición en Google", "gsc-open"));
+    const fmtN = (n) => Number(n).toLocaleString("es-ES");
+    const pos = g.position == null || g.position === 0 ? "—" : Number(g.position).toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const cells = [[fmtN(g.clicks), g.clicks === 1 ? "clic" : "clics"], [pos, "puesto medio"]];
+    if (g.nearPage1 > 0) cells.push([fmtN(g.nearPage1), g.nearPage1 === 1 ? "búsqueda en la página 2" : "búsquedas en la página 2"]);
+    return `<div class="mh">Google · últimos 28 días</div><div class="eng1 gscn">${cells.map(([v, l]) => `<div class="c"><b class="num">${v}</b><span class="n">${l}</span></div>`).join("")}</div><div class="acts">${go("Ver Posición en Google", "gsc-open")}</div>`;
+  };
+  const gscTo = () => { const pp = projPath(""); return pp ? `/api/search-console/connect?projectId=${pp.split("/").pop()}` : "/dashboard"; };
+  const projPath = (sub) => { const d = S.real && S.real.domains.find((x) => x.domain === curDom()); return d && d.id ? `/dashboard/projects/${d.id}${sub ? "/" + sub : ""}` : null; };
+  const AUD_META = {
+    geo: { name: "Auditoría GEO", q: "¿Te puede citar la IA?", more: "Ver la Auditoría GEO", to: "web-audit?bloque=geo" },
+    seo: { name: "Auditoría SEO", q: "¿Te encuentra Google?", more: "Ver la Auditoría SEO", to: "web-audit?bloque=seo" },
+    agent: { name: "Auditoría agéntica", q: "¿Puede un agente comprar en tu web?", more: "Ver la visibilidad en agentes", to: "agentic-visibility" }
+  };
+  const audOf = () => { if (isSample()) return null; const p = S.proj[curDom()]; return p && typeof p === "object" && p.audits ? p.audits : null; };
+  const shortDate = (iso) => { try { return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" }).replace(".", ""); } catch (e) { return ""; } };
+  const fmtPts = (n) => (n == null ? "" : n < 1 ? "<1" : "+" + String(Math.round(n * 10) / 10).replace(".", ","));
+  const ring = (v, cls) => { const C = 2 * Math.PI * 16, f = Math.max(0, Math.min(100, v)) / 100; return `<span class="aur ${cls}"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" class="t"/><circle cx="20" cy="20" r="16" class="v" stroke-dasharray="${(C * f).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 20 20)"/></svg><b class="num">${v}</b></span>`; };
+  const SEV = { critical: "hi", warning: "md", improvement: "lo", agentic: "md" };
+  function audBlocks() {
+    const au = audOf();
+    if (!au || !au.blocks.length) return "";
+    const open = S.aud ?? "geo";
+    const card = (b) => {
+      const m = AUD_META[b.key], [cls, st] = band(b.score), on = open === b.key, to = projPath(m.to);
+      const rows = b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}${x.points == null ? "" : `<small>${b.key === "agent" ? "Agentes" : "pt"}</small>`}</span></div>`).join("");
+      const body = `${rows || `<div class="calm">${ic("checkc")}<span>Nada que arreglar en este bloque.</span></div>`}${b.projected ? `<div class="aug">${ic("trend", "sm")}<span>Si arreglas ${b.issues.length === 1 ? "esto" : b.issues.length === 2 ? "estos dos" : "estos tres"}</span><b class="num">${b.score} → ${b.projected}</b></div>` : ""}${to ? `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(to)}" data-c="aud-${b.key}">${m.more}${ic("arrowr", "sm")}</button></div>` : ""}`;
+      return `<div class="auc ${on ? "open" : ""}"><button class="auh" data-aud="${b.key}" aria-expanded="${on}">${ring(b.score, cls)}<span class="nm"><b>${m.name}</b><small>${m.q}</small></span><span class="st">${SH()}${st}</span>${ic("chevd", "chev")}</button><div class="aub"><div>${on ? `<div class="aubi">${body}</div>` : ""}</div></div></div>`;
+    };
+    return `<div class="aud"><div class="ey rule">Auditorías del dominio${au.auditedAt ? `<span class="cnt">Revisadas el ${esc(shortDate(au.auditedAt))}</span>` : ""}</div>${au.blocks.map(card).join("")}<p class="aun">Lo que ya revisó GenScore en tu dominio. La extensión solo lo lee: no lanza revisiones ni usa IA.</p></div>`;
+  }
+  function pageAudit() {
+    const au = audOf();
+    if (!au || !au.page) return "";
+    if (au.page.state === "not_audited") return `<div class="aud"><div class="ey rule">En tu auditoría</div><div class="calm">${svgGs(16)}<span>Esta página no está entre las que revisa la consola. Lo de arriba sale solo de tu navegador.</span></div></div>`;
+    const pa = au.page, proj = S.proj[curDom()];
+    const cited = [...new Set(((proj && proj.citingPrompts) || []).flatMap((q) => q.engines))];
+    const yn = (v, y, n) => (v == null ? "" : `<span class="w ${v ? "yes" : "no"}">${ic(v ? "check" : "x")}${v ? y : n}</span>`);
+    const facts = [
+      au.auditedAt ? `<div class="kv"><span>Revisada desde el servidor</span><span class="w">${esc(shortDate(au.auditedAt))}</span></div>` : "",
+      pa.aiBotsAllowed == null ? "" : `<div class="kv"><span>ChatGPT, Gemini, Claude y Perplexity</span>${yn(pa.aiBotsAllowed, "Pueden entrar", "Alguno bloqueado")}</div>`,
+      pa.indexable == null ? "" : `<div class="kv"><span>Google puede indexarla</span>${yn(pa.indexable, "Sí", "No, tiene noindex")}</div>`,
+      cited.length ? `<div class="kv"><span>La citan en sus respuestas</span><span class="w yes">${ic("check")}${esc(cited.join(" y ").replace(/ y (?=.* y )/g, ", "))}</span></div>` : ""
+    ].join("");
+    const rows = pa.issues.map((x) => `<div class="aui"><span class="d md"></span><span class="tx">${esc(x.label)}<small>${AUD_META[x.block].name}</small></span></div>`).join("");
+    const to = projPath("web-audit?bloque=" + (pa.issues[0] ? pa.issues[0].block : "geo"));
+    return `<div class="aud"><div class="ey rule">En tu auditoría</div><div class="auc open solo"><div class="aubi">${facts}${rows ? `<div class="aus">Problemas de esta página según GenScore</div>${rows}` : `<div class="calm">${ic("checkc")}<span>GenScore no ve problemas técnicos en esta página.</span></div>`}${to ? `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(to)}" data-c="aud-page">Ver en la Auditoría técnica${ic("arrowr", "sm")}</button></div>` : ""}</div></div></div>`;
+  }
+  function audTeaser() {
+    const it = [["geo", "Auditoría GEO"], ["seo", "Auditoría SEO"], ["agent", "Auditoría agéntica"]];
+    return `<div class="aud"><div class="ey rule">Con tu cuenta</div><div class="aut">${it.map(([k, n]) => `<div class="aul">${ic("shield", "sm")}<span class="nm"><b>${n}</b><small>${AUD_META[k].q}</small></span><span class="gh"></span></div>`).join("")}<p>Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.</p><button class="btn ink" data-act="open" data-to="/login" data-c="aud-login">Identifícate en GenScore${ic("arrowr", "sm")}</button></div></div>`;
+  }
   /* ---------------- views ---------------- */
   /* The paused panel (Denis, 2026-10-30, version B of the artifact): a small
      replica of Chrome's toolbar where a cursor presses the GenScore icon, since
@@ -300,8 +399,9 @@
     return `<div class="pghint" role="note"><span class="k2">${svgGs(14)}</span><span class="tx"><b>Para analizar la página actual, pulsa el icono de nuevo</b><span class="ks"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></span></span></div>`;
   }
   function viewDom() {
+    S.sc = null;
     const D = A();
-    return `<div class="px">${headAcct()}${pageHint()}<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span></div>${heroDom()}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${foot(null)}</div>`;
+    return `<div class="px">${headAcct()}${pageHint()}<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span></div>${heroDom()}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${audBlocks()}${foot(null)}</div>`;
   }
   function viewReading() {
     return `<div class="px pfull">${acctOn() ? headAcct() : headNo("")}<div class="paused"><span class="ring spin">${svgGs(30)}</span><h2>Leyendo la página</h2><p>Su HTML, su robots.txt y su llms.txt. Desde tu navegador.</p></div></div>`;
@@ -312,18 +412,21 @@
   }
   function viewReview(f, sc) {
     const rel = relation();
+    S.sc = sc; S.scf = f;
     /* a new page starts on itself, or on the domain when it is your homepage */
     if (S.tabUrl !== f.url) { S.tabUrl = f.url; S.tab = rel === "own" && f.path === "/" ? "dom" : "page"; }
     let h = `<div class="px">${rel === "none" ? headNo(f.host) : headAcct()}`;
     const fixesCtx = "page:" + f.url;
     if (rel !== "none" && S.tab === "dom") {
       const D = A();
-      h += `<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span>${EJx()}</div>${heroDom()}${rel === "own" && covers(f.host, curDom()) ? alertHtml(sc) : ""}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}`;
+      h += `<div class="ey">Visión general · <span class="mono">${esc(curDom())}</span>${EJx()}</div>${heroDom()}${rel === "own" && covers(f.host, curDom()) ? alertHtml(sc) : ""}${D ? deck(D.plan, "dom", "Tu plan está al día.") : ""}${audBlocks()}`;
       return h + foot(null) + "</div>";
     }
     if (rel === "none") h += `<div class="ey">Revisión gratis · <span class="mono">${esc(pathLabel(f))}</span></div>`;
     h += heroPage(sc, rel) + alertHtml(sc);
     h += deck(sc.fixes, fixesCtx, "Nada que arreglar en esta página. La pueden leer los cuatro motores y Google.");
+    if (rel === "own" && covers(f.host, curDom())) h += pageAudit();
+    if (rel === "none") h += audTeaser();
     if (rel === "none") h += ctaNoAcct(f.host);
     if (rel === "other") h += ctaOther(f.host);
     return h + foot(f) + "</div>";
@@ -369,6 +472,8 @@
       S.shown = true;
     }
     pn.innerHTML = html;
+    /* a favicon that does not load (204 from /api/favicon, offline) falls back to the letter tile */
+    $$("img.fi", pn).forEach((im) => { const bad = () => { im.outerHTML = tile(im.dataset.n || "?"); }; if (im.complete && !im.naturalWidth) bad(); else im.addEventListener("error", bad, { once: true }); });
     const first = !S.seen[ctx]; S.seen[ctx] = 1;
     armMotion(pn, first);
     $$(".gg", pn).forEach((g) => {
@@ -496,8 +601,9 @@
 
   /* ---------------- events ---------------- */
   document.addEventListener("click", async (ev) => {
-    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo]");
+    const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo],[data-aud]");
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
+    if (t.dataset.aud) { S.aud = (S.aud ?? "geo") === t.dataset.aud ? "none" : t.dataset.aud; draw(); return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
     if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }
     if (t.dataset.pick != null) {
@@ -526,7 +632,7 @@
     } else if (a === "open-page") {
       Env.open(t.dataset.url);
     } else if (a === "open") {
-      Env.open(`${SITE}${t.dataset.to}?${utm(t.dataset.c || "panel")}`);
+      Env.open(`${SITE}${t.dataset.to}${t.dataset.to.includes("?") ? "&" : "?"}${utm(t.dataset.c || "panel")}`);
     } else if (a === "sample") {
       S.sample.on = !S.sample.on;
       if (S.sample.on && !S.sample.domain) S.sample.domain = S.rec && S.rec.facts ? S.rec.facts.host : "tu-dominio-ejemplo.es";

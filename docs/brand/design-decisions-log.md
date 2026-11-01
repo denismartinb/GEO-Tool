@@ -28450,7 +28450,127 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 
 **Pendiente.** Una renovación del token de Supabase en el middleware tiene el mismo efecto, pero sólo una vez por hora como mucho. No retira ningún camino de recuperación.
 
-## §403 · EXT-PROMO-1: genscore.es ofrece la extensión de Chrome (2026-11-01)
+## §405 · EXT-LLMS-LINKS-1 + EXT-SHOP-FIND-2: la extensión 1.0.2 propone un llms.txt con los enlaces de la web y encuentra la tienda de las grandes superficies (2026-11-01)
+
+**Qué se decidió.** Dos arreglos de la extensión de Chrome, a partir de lo que vio Denis en vodafone.es y carrefour.es.
+
+- **El llms.txt propuesto deja de ser una sola línea.** Antes solo llevaba la página abierta. Ahora `collect.js` lee los enlaces del menú y del pie de la propia página (`header`, `nav`, `footer` y sus roles). Solo cuenta los del mismo origen, con su texto, y quita duplicados. También deja fuera los de cuenta, cesta y búsqueda. `score.js` los ordena en tres apartados:
+  - «Páginas principales» (máximo 12): primero un enlace por sección, para que un megamenú no llene la lista con hijos de la primera;
+  - «Más información», con los del pie (máximo 8);
+  - «Optional», con los legales (máximo 4).
+
+  El nombre sale de `og:site_name` si existe. No se inventa ninguna descripción: cada línea es un enlace con el texto que tiene en la web, y la tarjeta invita a añadir una frase. Es la misma regla de la consola (`lib/web-audit/llms-txt.ts`: nada de texto de modelo en un fichero que el cliente publica). Aquí no hacen falta marcadores porque el texto del enlace es real.
+- **La búsqueda de la tienda llega a las grandes superficies.**
+  - Las rutas de ficha reconocen también `/<id>/p` (estilo Carrefour) y `-p123.html`.
+  - El sitemap ya no es solo el primero de robots.txt: se leen todos los que nombra.
+  - Se sigue un nivel de índice de sitemaps, prefiriendo el hijo que nombra productos.
+  - Como mucho se leen cuatro ficheros de sitemap y nunca un `.gz`.
+- **Esas lecturas mandan las cookies de la propia web** (`credentials: "same-origin"`, solo mismo origen). Las tiendas grandes están detrás de un control antibots, y sin el pase del visitante responden con una página de desafío. Lo comprobamos con Carrefour: desde un navegador sin pase, sus sitemaps de catálogo devuelven 403 «Just a moment». robots.txt, llms.txt y el HEAD siguen sin cookies.
+
+**Por qué.** En vodafone.es el llms.txt propuesto tenía una sola línea. En carrefour.es, una tienda, no salía nada sobre agentes: su portada no tiene datos de producto, y su catálogo solo se ve por sitemaps de índice que no se leían. Además, las primeras capturas de Denis eran de la versión 1.0.0 de la tienda, que todavía no buscaba la tienda.
+
+**Pendiente o sin verificar.** Desde aquí no se pudo ver la portada real de Carrefour ni la de Vodafone, porque nuestro navegador recibe el desafío antibots. El caso de los sitemaps se probó con una tienda de prueba en local: índice, hijo de productos y ficha `/R-521/p`. La comprobación real la hace Denis cargando la extensión sin empaquetar. Si una tienda solo publica sitemaps `.gz`, seguirá saliendo «no detecta tu tienda».
+
+## §406 · EXT-AUDITS-1: la extensión 1.1.0 enseña las auditorías GEO, SEO y agéntica del dominio (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el artefacto el 2026-11-01 («Me gusta») y puso el texto. Con la sesión iniciada, la extensión enseña tres cosas nuevas.
+
+- **«Auditorías del dominio»**, en la visión general del dominio. Son tres tarjetas plegables y solo se abre una a la vez:
+  - Auditoría GEO, «¿Te puede citar la IA?»;
+  - Auditoría SEO, «¿Te encuentra Google?»;
+  - Auditoría agéntica, «¿Puede un agente comprar en tu web?», el texto de Denis.
+
+  Cada tarjeta lleva su nota, los tres problemas que más puntos dan con dónde fallan y sus puntos, y un botón a su pantalla de la consola.
+- **«En tu auditoría»**, al revisar una página del dominio seleccionado. Dice:
+  - si la vio el servidor;
+  - si el robots.txt deja entrar a los cuatro motores;
+  - si Google puede indexarla;
+  - qué motores la citan (de los prompts del último escaneo);
+  - sus problemas técnicos, con el bloque al que pertenecen.
+
+  Si la consola no revisa esa página, lo dice.
+- **Sin sesión**, una tarjeta «Con tu cuenta» con las tres auditorías bloqueadas y sin cifras. Lleva el texto de Denis («Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.») y «Identifícate en GenScore».
+
+**En una web ajena**, también a petición de Denis:
+- La pregunta pasa a «¿Quieres añadir X a tus dominios?», con «Añadir a mis dominios». El «N de M» solo sale con un tope real (menos de 100).
+- Hay un segundo botón, «Añadir como competidor de <dominio seleccionado>». Abre Competidores con `?nuevo=<dominio>&nombre=<og:site_name>`. La hoja de gestión sale abierta con el formulario relleno, y no se guarda nada hasta pulsar «Añadir», con el mismo `createCompetitorAction` y sus comprobaciones. `readCompetitorPrefill` (`lib/competitors/prefill.ts`) ignora lo que no sea un dominio bien formado.
+
+**Cómo se calcula, sin rehacer cifras.** `/api/ext/project` añade `audits`, que construye `lib/ext/audits.ts` (puro). Cada cifra sale de su dueño:
+- Bloques GEO y SEO: `buildAuditBlock` sobre `buildTechnicalIssuesReport`, con la última instantánea de `web_audit_snapshots`, la misma que lee la Auditoría técnica. Los nombres salen de `ISSUE_CHECK_META` y el alcance, de `issueScopeLabel`.
+- «Si arreglas estos tres → N» solo sale cuando esos tres son todos los problemas con puntos del bloque. Los puntos de bloque no se suman, así que una suma parcial sería una cifra inventada.
+- Bloque agéntico: la nota de la revisión, `firstSteps` y `scoreIfChecksPass`, igual que «Visibilidad en agentes». Sigue la misma puerta que la tarjeta de Visión general: Starter, una revisión sin nada que vender o una sin nota no enseñan el bloque.
+- Los problemas de la página salen de `pageCheckStates` de esa entrada, sin puntos (los puntos por página no son los del bloque).
+
+`/api/ext/context` devuelve también el `id` de cada proyecto, para que los botones lleven a la pantalla de ese dominio. Es el propio proyecto de la cuenta, leído con el cliente del usuario.
+
+**Regla que se mantiene.** La extensión sigue siendo de solo lectura: no lanza auditorías, no llama a ningún LLM y no escribe en la cuenta. Sin migración.
+
+**Ajustes de Denis en la misma versión.** La tienda encontrada ya no sale en la portada con su ruta y un botón «Abrir»: dentro de Agentes aparece «GenScore detecta tu tienda» con un check verde, sin URL, y las tareas de esa tienda dicen «En tu tienda». Si no se encuentra, la línea «no detecta tu tienda» se queda y Agentes sigue sin nota. Una nota baja ahí sería falsa, porque no encontrarla no demuestra que un agente no pueda comprar. La frase bajo la nota usa el conector que toca: «Ningún motor de IA puede leer esta página, y Google tampoco la indexa» en vez de «…, pero Google no la indexará». Y «indexará» pasa a «indexa» en toda la extensión.
+
+**Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.
+
+## §407 · SHOP-DETECT-2: la consola y la extensión encuentran mejor qué vende una web (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) robustecer la detección de tiendas y servicios en la consola y en la extensión, para todos los sectores, con una batería grande de webs reales. Se montó con 130 webs en 12 grupos: retail, telcos, eléctricas, SaaS, salud, seguros y banca, viajes, formación, ocio y restauración, servicios y 6 webs de control que no venden (Wikipedia, BOE, RAE, AEMET, La Moncloa, INE). La consola se probó con su propio motor (`runAgenticAudit` con `discover`) y la extensión con `collect.js` en un Chromium real.
+
+Resultado, contando sólo las webs que se pudieron leer y venden algo:
+
+| | Antes | Después |
+|---|---|---|
+| Consola | 61 de 84 | 69 de 82 |
+| Extensión | 23 de 73 | 52 de 76 |
+| Controles con tienda inventada | 0 | 0 |
+
+Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro robot con un reto (El Corte Inglés, Carrefour, MediaMarkt, Iberdrola, BBVA, Meliá…). Eso no cambia y sigue siendo `unknown` (§319). La extensión, que lee con el navegador del cliente, sí entra en muchas de ellas.
+
+**Consola, sin pedir ninguna página más.** Sigue la regla de §323: una sola página extra. Lo que cambia es cuál se elige (`findDiscoveryCandidate`).
+
+- **En una web que no es una tienda**, el enlace del menú a precios gana a una «ficha» adivinada. Peec AI salía «sin tienda» porque su sitemap tenía `/product/brand-perception` (una página de funciones) y ganaba a «Pricing».
+- **Precios por el texto del enlace o por una palabra dentro de la ruta**: «Tarifas Fibra y Móvil» → `/fibra-movil`, `/plan-de-precios`, `/tarifas-luz`, `/precios-de-tratamientos-dentales`. `PRICING_PATH` acepta ya la palabra dentro del último tramo.
+- **Seguros y contratación** (`/seguros-de-salud`, `/contratacion-seguros-salud`, `/contratar-luz`) y **hoteles** (`/hoteles/x`) cuentan como páginas de venta. Un evento va el último: «/eventos/black-friday» o un webinar salían antes que la página de precios.
+- **Escaparates sin `/p/` en la URL** (Magento y similares): el enlace de la tarjeta de producto (`product-item-link`, `data-product-id`) o el enlace justo antes de un precio. Nunca ayuda, legal, carrito o un fichero (`.pdf`).
+- **Escaparate** (`looksLikeStorefront`) es plataforma de tienda, carrito o tarjetas de producto. Los precios impresos solos no cuentan: una telco o un parque los imprimen y allí la página a juzgar es la de tarifas.
+- **Botones**: «Lo quiero», «Me interesa» y «Calcula tu seguro» cuentan como botón para contratar.
+
+**Extensión.** La búsqueda de la tienda se rehace con el mismo orden, y además:
+
+- Se busca también desde un listado de productos y desde la primera sección de la web (`/es/`, `/hogar`), no sólo desde la portada. Un listado con precios salta a su primera ficha, que es lo que lee un agente (Denis, con El Corte Inglés).
+- Una página vende también si es de precios, o si enseña un precio junto a un botón de compra en el cuerpo, aunque no lo diga en sus datos. Entonces Agentes la puntúa como servicio y «Precio en los datos» dice «Sólo en el texto». Un botón de la cabecera no cuenta, y un artículo nunca vende por esta vía.
+- Se leen dos candidatas como mucho, y la segunda es de otro tipo que la primera (una ficha y una página de precios).
+- Un listado sin ficha encontrada no dice «no detecta tu tienda».
+
+**Agotado, en las dos.** Si todas las ofertas dicen `OutOfStock`, `SoldOut` o `Discontinued`, «Avísame» es el botón correcto. En la consola, `add_to_cart` pasa a `unknown` y no resta; en la extensión, «Botón de compra claro» dice «No aplica, agotado». La extensión enseña la disponibilidad en castellano («Agotado», «Preventa», «En stock»). Lo encontró Denis en una ficha de El Corte Inglés.
+
+**Pendiente o roto conocido.** Siguen sin tienda las webs que se pintan sólo con JavaScript (Booking, Glovo, Miravia, Domino's, Amazon desde el servidor), las que venden en otro subdominio (Doctoralia Pro, que la extensión no puede leer por CORS) y algunas de formación y coches. Para la consola, ampliar a una segunda página extra mejoraría más casos, pero rompe la regla de §323 y necesita la aprobación del fundador. La batería vive en el scratchpad de esta sesión; su resumen por sector está en `/mnt/project-files/extension/bateria-deteccion-tiendas-2026-11-01.md`.
+
+## §408 · EXT-PANEL-LAYERS-1: la extensión 1.2.0 abre cada gauge en dos capas, «Tu dominio» y «Esta página» (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) que, con sesión y en su dominio, el panel enseñe lo más interesante de GenScore sin perder la revisión de la página, y que sin sesión o en una web no analizada cada bloque invite a entrar. Vio dos artefactos: uno con pestañas, que le gustó pero perdía la primera vista, y el definitivo sobre el panel real en claro (https://claude.ai/artifact/XotXsA3T4KgSZsrAKMdgAA), que aprobó («perfecto. Me gusta mucho»).
+
+- **La primera vista no cambia**: nota grande, frase y los tres gauges. Los gauges ya se desplegaban al pulsarlos y hacen de pestañas.
+- **Un gauge abierto enseña dos capas, siempre en este orden.** «Tu dominio» lleva los datos de GenScore y «Esta página» la revisión en vivo que ve todo el mundo (`pageLane`).
+  - **IA**: los cuatro motores en una fila (`.eng1`) y el ranking frente a los rivales con el favicon de cada web (`/api/favicon`, el mismo de la consola). Si no carga, sale la letra.
+  - **Google**: lo que más resta en la Salud SEO (los problemas del bloque SEO de `audits`), la misma invitación a Search Console que en la página («Tus búsquedas de Google, tu puesto y tus clics…», nunca otra frase) y lo que ve Google en la página. Ya no sale vacío.
+  - **Agentes**: un gauge por componente y lo que lee un agente en la página.
+  - Sin página leída, «Esta página» dice que se pulse el icono en una página de la web.
+- **Sin sesión, o con sesión en una web que no analizas**, cada gauge abre primero una ilustración sin cifras: «Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu dominio» y «Conoce tu nota para agentes». El botón es «Identifícate gratis» o «Analizar <dominio>». Debajo va la revisión de la página. Agentes sale siempre en estos dos casos, para poder invitar.
+- **Las auditorías del dominio siguen debajo, a primer nivel** (§406).
+- **«Conectar» (Search Console) abre directamente el permiso de Google** (`/api/search-console/connect?projectId=`), la misma ruta que la consola (§313): comprueba que el proyecto es tuyo y vuelve a «Posición en Google». Antes llevaba a la portada de la consola (Denis, 2026-11-01). Sin proyecto, sigue yendo a la consola.
+- **`/api/ext/project` devuelve el dominio de cada rival** (`ExtRival.domain`): el del proyecto para la marca, el del competidor seguido cuyo nombre coincide, o `null`. Sin migración.
+
+**Pendiente o roto conocido.** Un rival que la IA nombra y no está entre los competidores seguidos no tiene dominio y sale con la letra. Hay que subir la 1.2.0 a la tienda (zip en `/mnt/project-files/extension/`).
+
+## §409 · EXT-GSC-1: la extensión sabe si Search Console está conectado y enseña sus cifras (2026-11-01)
+
+**Qué se decidió.** Denis vio (2026-11-01) que con Search Console ya conectado en la consola el panel seguía invitando a conectar. `/api/ext/project` devuelve ahora `searchConsole` (`lib/ext/search-console.ts`), leído con `loadSearchConsoleOverview`, lo mismo que la mitad de Google de Visión general: primero nuestra base de datos y luego Google con la caché de 30 minutos. El proyecto sale de la lista de la propia cuenta, así que sus ids ya están verificados. Si Google tarda más de 6 s, el panel no espera.
+
+- **Conectado**: en «Tu dominio» del gauge Google salen clics, puesto medio y búsquedas en la página 2 de los últimos 28 días, con «Ver Posición en Google».
+- **Sin conectar** (o un servidor sin este campo): la invitación de siempre, con un solo texto («Tus búsquedas de Google, tu puesto y tus clics…»), y «Conectar con Google» abre el permiso de Google de ese proyecto (§408).
+- **Permiso retirado**: «Volver a conectar», al mismo permiso. **Varias propiedades**: «Elegir propiedad» en Posición en Google. **Google sin responder** o sin búsquedas: lo dice, sin cifras. **Sin configurar o sin migración**: nada.
+
+**Pendiente o roto conocido.** Va en la misma 1.2.0, todavía sin subir a la tienda.
+
+## §410 · EXT-PROMO-1: genscore.es ofrece la extensión de Chrome (2026-11-01)
 
 **Qué.** Una tarjeta flotante en todo el dominio ofrece instalar la extensión de Chrome (`components/chrome-extension/chrome-extension-promo.tsx`, montada una vez en `app/layout.tsx`). Titular «Revisa cualquier web sin salir de Chrome» con el icono de Chrome, el cuerpo que escribió Denis, «Añadir a Chrome» y «Ya la tengo». Diseño en `docs/design-reference/ext-promo-1/`.
 

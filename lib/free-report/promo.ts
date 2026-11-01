@@ -7,7 +7,7 @@
  *  - only on content pages (blog, comparativas, glosario, docs) — never on the
  *    home, pricing, signup or the console, where a pop-up would compete with
  *    the trial signup button, which is worth more than an email;
- *  - after 20 s on the page (40 s until EXT-PROMO-1, log §403) or past half the article, whichever comes first;
+ *  - after 20 s on the page (40 s until EXT-PROMO-1, log §410) or past half the article, whichever comes first;
  *  - once per visit; closed, it stays away for 7 days; once the visitor has
  *    asked for the report, never again;
  *  - not for someone logged in, who is already a user.

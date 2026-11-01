@@ -42,6 +42,8 @@ type Props = {
   heat: { engines: string[]; rows: HeatRow[] } | null;
   terrain: TerrainRow[];
   gap: PromptGapSummary | null;
+  /** A site to add, written in from a link (the Chrome extension). Only fills the sheet's form. */
+  prefill?: { name: string; domain: string } | null;
   manage: {
     active: Array<{ id: string; name: string; domain: string }>;
     inactive: Array<{ id: string; name: string; domain: string }>;
@@ -189,7 +191,7 @@ const GAP_PAGE = 5;
 export function InsCompetitors(p: Props) {
   const router = useRouter();
   const mobile = useMedia(MOBILE_QUERY);
-  const [managing, setManaging] = useState<"manage" | null>(null);
+  const [managing, setManaging] = useState<"manage" | null>(p.prefill ? "manage" : null);
   const [off, setOff] = useState<ReadonlySet<string>>(
     () => new Set(p.evo ? p.evo.series.filter((s) => !p.evo!.visibleKeys.includes(s.key)).map((s) => s.key) : []),
   );
@@ -499,7 +501,7 @@ export function InsCompetitors(p: Props) {
       </section>
 
       {managing ? (
-        <ManageSheet projectId={p.projectId} brand={p.brand} active={p.manage.active} inactive={p.manage.inactive} aliases={p.aliases} onClose={() => setManaging(null)} />
+        <ManageSheet projectId={p.projectId} brand={p.brand} prefill={p.prefill ?? null} active={p.manage.active} inactive={p.manage.inactive} aliases={p.aliases} onClose={() => setManaging(null)} />
       ) : null}
     </>
   );

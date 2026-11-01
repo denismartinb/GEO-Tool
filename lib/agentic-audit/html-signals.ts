@@ -26,6 +26,12 @@ export type ProductSignals = {
   /** A price only in Open Graph tags or the visible text. */
   textPrice: boolean;
   availability: boolean;
+  /**
+   * Every offer with an availability says it cannot be bought now (OutOfStock,
+   * SoldOut, Discontinued). Then «Avísame» is the right button, not a missing
+   * one (SHOP-DETECT-2, log §407). Optional for older fixtures.
+   */
+  soldOut?: boolean;
   gtin: boolean;
   skuOrMpn: boolean;
   shippingData: boolean;
@@ -161,6 +167,12 @@ function offerTypesFromJsonLd(nodes: JsonNode[]): { kinds: AgenticOfferKind[]; a
   return { kinds: [...kinds], anyOffer: offers.length > 0, anyPrice: offers.some(offerHasPrice), recurring };
 }
 
+const SOLD_OUT = /(?:^|\/)(?:outofstock|soldout|discontinued)$/i;
+function soldOutOffers(offers: JsonNode[]): boolean {
+  const states = offers.map((o) => (typeof o.availability === "string" ? o.availability.trim() : "")).filter(Boolean);
+  return states.length > 0 && states.every((a) => SOLD_OUT.test(a));
+}
+
 function productSignalsFromJsonLd(nodes: JsonNode[]): Omit<ProductSignals, "ogProduct" | "textPrice"> {
   const products = nodes.filter((n) => typesOf(n).some((t) => PRODUCT_TYPES.has(t)));
   // A ProductGroup's variants carry the offers; they are already in `nodes`
@@ -177,6 +189,7 @@ function productSignalsFromJsonLd(nodes: JsonNode[]): Omit<ProductSignals, "ogPr
     hasOffer: allOffers.length > 0,
     structuredPrice: allOffers.some(offerHasPrice),
     availability: allOffers.some((o) => hasValue(o.availability)),
+    soldOut: soldOutOffers(allOffers),
     gtin: [...products, ...allOffers].some((n) =>
       ["gtin", "gtin8", "gtin12", "gtin13", "gtin14", "isbn"].some((k) => hasValue(n[k]))
     ),
@@ -304,7 +317,7 @@ function ctaTexts(html: string): string[] {
 }
 
 const BUY_CTA =
-  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|prueba gratis|probar gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
+  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|prueba gratis|probar gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
 
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;
@@ -351,6 +364,7 @@ export function extractPageSignals(html: string): PageSignals {
       Boolean(metaContent(html, "product:price:amount") || metaContent(html, "og:price:amount")) ||
       PRICE_IN_TEXT.test(text),
     availability: ld.availability || hasItemprop(html, "availability"),
+    soldOut: ld.soldOut,
     gtin: ld.gtin || /itemprop\s*=\s*["']gtin(?:8|12|13|14)?["']/i.test(html),
     skuOrMpn: ld.skuOrMpn || hasItemprop(html, "sku") || hasItemprop(html, "mpn"),
     shippingData: ld.shippingData,
@@ -378,16 +392,29 @@ export function isProductPage(signals: Pick<PageSignals, "hasProductData" | "ogP
   return signals.hasProductData || signals.ogProduct;
 }
 
-/** Pricing and plans pages, in Spanish and English. */
-export const PRICING_PATH = /\/(?:precios?|pricing|prices|planes|plans|tarifas?)\/?$/i;
+/**
+ * Pricing and plans pages, in Spanish and English. The word may be the whole
+ * last segment (`/precios`) or one word of it (`/plan-de-precios`,
+ * `/tarifas-luz`, `/precios-de-tratamientos-dentales`): telcos, utilities and
+ * clinics name them that way (SHOP-DETECT-2, log §407).
+ */
+export const PRICING_PATH = /\/(?:[\w%-]*[-_])?(?:precios?|pricing|prices|planes|plans|tarifas?)(?:[-_][\w%-]*)?\/?$/i;
 
 /** Log §325: paths that usually sell one kind of thing, checked after the structured data. */
 export const PATH_KINDS: Array<[AgenticOfferKind, RegExp]> = [
-  ["booking", /\/(?:reservar?|reservas|cita|citas|pedir-cita|pide-cita|cita-previa|booking|book|reserve|appointment)(?:\/|$)/i],
+  [
+    "booking",
+    // SHOP-DETECT-2 (log §407): a hotel chain sells from «/hoteles/x», not from a «Reservar» path.
+    /\/(?:reservar?|reservas|cita|citas|pedir-cita|pide-cita|cita-previa|booking|book|reserve|appointment)(?:\/|$)|\/(?:hoteles|hotels?)\/[^/]+/i
+  ],
   ["event", /\/(?:entradas|tickets|eventos?|events?|conciertos?)\/[^/]+|\/(?:entradas|tickets)\/?$/i],
   ["course", /\/(?:cursos?|courses?|formacion|formaci%c3%b3n|masters?|academia)\/[^/]+/i],
   ["subscription", /\/(?:suscripci[oó]n|suscripcion|suscribete|subscribe|subscription|membres[ií]a|membership|hazte-socio|socios)\/?$/i],
-  ["service", /\/(?:servicios?|services?)\/[^/]+|\/(?:presupuesto|solicitar-presupuesto|quote)\/?$/i]
+  [
+    "service",
+    // SHOP-DETECT-2 (log §407): insurers and utilities sell from «/seguros-de-salud» or «/contratar-luz».
+    /\/(?:servicios?|services?)\/[^/]+|\/(?:presupuesto|solicitar-presupuesto|quote)\/?$|\/(?:contrata(?:r|cion)?|seguros?)(?:-[^/]*)?(?:\/|$)/i
+  ]
 ];
 
 export type OfferReading = { kind: AgenticOfferKind; pricingPage: boolean };

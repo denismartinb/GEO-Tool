@@ -1,5 +1,5 @@
 /**
- * EXT-PROMO-1 (log §403) — when genscore.es offers to install the Chrome
+ * EXT-PROMO-1 (log §410) — when genscore.es offers to install the Chrome
  * extension. Pure, so the rules Denis approved on the canvas
  * (`docs/design-reference/ext-promo-1/`) are tested without a browser:
  *

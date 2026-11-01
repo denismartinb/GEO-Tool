@@ -12703,7 +12703,7 @@ select.set-field {
 }
 
 /* -------------------------------------------------------------------------
-   EXT-PROMO-1 (log §403) — floating card offering the Chrome extension, on
+   EXT-PROMO-1 (log §410) — floating card offering the Chrome extension, on
    the whole domain, only in desktop Chrome. Design approved by Denis on
    2026-11-01: docs/design-reference/ext-promo-1/. Rules for when it appears:
    lib/chrome-extension/install-promo.ts. Bottom-left on the public site (the
