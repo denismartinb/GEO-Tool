@@ -25,7 +25,7 @@ export type GlossaryTerm = {
   slug: string;
   term: string;
   /**
-   * MCP-SITE-FIXES-1 (log §429). The `<meta name="description">` of the term
+   * MCP-SITE-FIXES-1 (log §430). The `<meta name="description">` of the term
    * page: 50 to 160 characters, the range the web audit checks. `definition`
    * stays the visible short definition and the DefinedTerm schema text.
    */
@@ -343,7 +343,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
 ];
 
 /**
- * MCP-SITE-FIXES-1 (log §429). The web audit accepts titles of 15 to 70
+ * MCP-SITE-FIXES-1 (log §430). The web audit accepts titles of 15 to 70
  * characters; a long term drops the «Glosario GEO» middle part instead of
  * overflowing.
  */

@@ -14,7 +14,7 @@ const CHATGPT_ENDPOINT = "https://www.genscore.es/api/mcp/chatgpt";
 
 export const metadata: Metadata = contentMetadata({
   title: `${page.title} · GenScore`,
-  // MCP-SITE-FIXES-1 (log §429): the nav description runs past 160 characters.
+  // MCP-SITE-FIXES-1 (log §430): the nav description runs past 160 characters.
   description: "Conecta GenScore a Claude o ChatGPT: consulta tu Puntuación GEO, recomendaciones y auditorías desde el chat, o revisa cualquier página sin cuenta.",
   path: `/docs/${SLUG}`
 });

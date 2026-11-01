@@ -365,7 +365,7 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   `/estudios` o `/sobre-genscore`, descripción de `docs/nav.ts`), la página
   pone su propia descripción y la constante no se toca. El glosario usa
   `metaDescription` (con test) y `glossaryTermTitle`, que quita «Glosario
-  GEO» cuando no cabe (log §429).
+  GEO» cuando no cabe (log §430).
 - **«GEO» a secas se lee como geolocalización.** En la medición del
   2026-10-10, Claude y ChatGPT respondieron a «herramientas GEO» con mapas y
   GPS. Un texto que quiera ser citado en esa pregunta dice en su primer

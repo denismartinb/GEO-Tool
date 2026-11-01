@@ -18,7 +18,7 @@ export type BlogCluster = {
   key: "fundamentos" | "medicion" | "playbooks" | "sectores";
   title: string;
   description: string;
-  /** MCP-SITE-FIXES-1 (log §429): meta description when `description` is outside 50 to 160 characters. */
+  /** MCP-SITE-FIXES-1 (log §430): meta description when `description` is outside 50 to 160 characters. */
   metaDescription?: string;
   /**
    * GROWTH-2 Fase 2.9 (B1b): longer synthesis paragraph(s) for the cluster's
