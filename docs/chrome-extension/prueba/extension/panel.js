@@ -144,8 +144,8 @@
       return h + `<div class="mh">En la página</div>${kv(C.filter((c) => !c.id.startsWith("bot-")))}`;
     }
     if (k === "google") return (rel === "own" ? `<div class="mh">Search Console</div>${gscInvite()}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
-    if (sc.shop && sc.shop.state === "found") return `<div class="shopln ok">${ic("checkc")}<span class="tx">GenScore detecta tu tienda</span></div><div class="mh">Lo que lee un agente</div>${kv(sc.shop.criteria)}<p class="mini-note">No entra en la nota.</p>`;
-    return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo. No entra en la nota.</p>`;
+    if (sc.shop && sc.shop.state === "found") return `<div class="shopln ok">${ic("checkc")}<span class="tx">GenScore detecta tu tienda</span></div><div class="mh">Lo que lee un agente</div>${kv(sc.shop.criteria)}`;
+    return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo.</p>`;
   }
   /* EXT-PANEL-LAYERS-1 (log §408): an open gauge shows two layers, always in this
      order: «Tu dominio» (GenScore's figures) and «Esta página» (the live review). */
