@@ -168,7 +168,7 @@
     if (k === "google") {
       const b = auBlock("seo");
       const iss = b && b.issues.length ? `<div class="mh">Lo que más resta en tu dominio</div>${b.issues.map((x) => `<div class="aui"><span class="d ${SEV[x.severity] || "lo"}"></span><span class="tx">${esc(x.label)}${x.scope ? `<small>${esc(x.scope)}</small>` : ""}</span><span class="pt num">${fmtPts(x.points)}<small>pt</small></span></div>`).join("")}` : "";
-      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}<div class="gscrow">${lg("google", 14)}<span>Añade tus clics y tu puesto en Google</span><button class="btn ink sm" ${S.real ? `data-act="open" data-to="${esc(gscTo())}" data-c="search-console"` : `data-act="sample-only" data-what="conectar Search Console"`}>Conectar</button></div>${pageLayer("google")}`;
+      return `${lyr("gs", "Tu dominio", b && b.projected ? `Salud SEO ${b.score} → ${b.projected}` : "Auditoría SEO")}${iss}${gscInvite()}${pageLayer("google")}`;
     }
     return `${lyr("gs", "Tu dominio", "Auditoría agéntica")}<div class="ag4">${D.agentParts.map(([n, v, w], i) => { const pc = Math.round((v / w) * 100), [cl, st] = band(pc); return gauge({ v: pc, cls: cl, nm: n, st, i, tag: "div" }); }).join("")}</div>${pageLayer("agent")}`;
   }

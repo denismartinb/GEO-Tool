@@ -28550,7 +28550,7 @@ Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro rob
 - **La primera vista no cambia**: nota grande, frase y los tres gauges. Los gauges ya se desplegaban al pulsarlos y hacen de pestañas.
 - **Un gauge abierto enseña dos capas, siempre en este orden.** «Tu dominio» lleva los datos de GenScore y «Esta página» la revisión en vivo que ve todo el mundo (`pageLane`).
   - **IA**: los cuatro motores en una fila (`.eng1`) y el ranking frente a los rivales con el favicon de cada web (`/api/favicon`, el mismo de la consola). Si no carga, sale la letra.
-  - **Google**: lo que más resta en la Salud SEO (los problemas del bloque SEO de `audits`), Search Console en una sola línea y lo que ve Google en la página. Ya no sale vacío.
+  - **Google**: lo que más resta en la Salud SEO (los problemas del bloque SEO de `audits`), la misma invitación a Search Console que en la página («Tus búsquedas de Google, tu puesto y tus clics…», nunca otra frase) y lo que ve Google en la página. Ya no sale vacío.
   - **Agentes**: un gauge por componente y lo que lee un agente en la página.
   - Sin página leída, «Esta página» dice que se pulse el icono en una página de la web.
 - **Sin sesión, o con sesión en una web que no analizas**, cada gauge abre primero una ilustración sin cifras: «Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu dominio» y «Conoce tu nota para agentes». El botón es «Identifícate gratis» o «Analizar <dominio>». Debajo va la revisión de la página. Agentes sale siempre en estos dos casos, para poder invitar.
