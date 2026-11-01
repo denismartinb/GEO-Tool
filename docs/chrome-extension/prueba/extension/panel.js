@@ -380,7 +380,10 @@
   // an older server → the one invitation text; "off" → nothing.
   const gscBlock = () => {
     const p = S.proj[curDom()], g = p && typeof p === "object" ? p.searchConsole : null;
-    if (!g || g.state === "disconnected") return gscInvite();
+    // Signed out: the sample teaser. Signed in: invite only on the real state,
+    // never while the project is loading, failed or did not report it.
+    if (!g) return S.real ? "" : gscInvite();
+    if (g.state === "disconnected") return gscInvite();
     if (g.state === "off") return "";
     const to = projPath("search-console") || "/dashboard";
     const go = (label, c) => `<button class="btn line sm" data-act="open" data-to="${esc(c === "gsc-reconnect" ? gscTo() : to)}" data-c="${c}">${label}${ic("arrowr", "sm")}</button>`;

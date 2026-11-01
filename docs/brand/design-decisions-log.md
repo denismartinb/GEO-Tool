@@ -28605,3 +28605,15 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Adenda (mismo día).** Una página interna de tu dominio analizada sola («Página abierta») seguía enseñando la invitación a conectar aunque Search Console estuviera conectado. Ahora lee la misma conexión (`gscOwnPage`): conectado enseña «Esta página en Google» o, si Google no devolvió búsquedas para esa página, lo dice; mientras carga no pinta nada; sin conectar, la invitación de siempre.
 
 **Pendiente.** Subir la 1.2.0 a la tienda (Denis).
+
+## §412 · GSC-CONNECT-GATE-1: la invitación a conectar Search Console sólo sale con el estado real (2026-11-01)
+
+**Qué se decidió.** Lo que se aprendió de la adenda de §411 se convierte en un test (Denis: «ok al test de 4»). Invitar a conectar a quien ya está conectado es una afirmación falsa sobre su cuenta, y la extensión la hacía por pintar la invitación cada vez que no tenía estado.
+
+- `tests/gsc-connect-gate.test.ts` busca toda pantalla que pinte una invitación (`GscConnectPanel`, `GscConnectRow`, `GscConnect`) y exige que lea el estado real (`readSearchConsoleAvailability`, `loadSearchConsoleOverview` o `loadSearchConsoleScreen`) y que justo encima compruebe `"disconnected"` o `"reconnect"`. Hoy son Visión general, Recomendaciones y Posición en Google.
+- Sólo la invitación y «Posición en Google» construyen el enlace al permiso de Google (`/api/search-console/connect?`).
+- En el panel de la extensión, toda llamada a `gscInvite()` es el ejemplo sin sesión o el estado `disconnected`.
+
+**Corrección que trae.** `gscBlock()` del panel enseñaba la invitación con `!g` (proyecto cargando, con error o sin el campo). Ahora, con sesión, sin estado no pinta nada; sin sesión sigue el ejemplo.
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: la invitación sigue saliendo cuando el estado lo pide.

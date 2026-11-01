@@ -135,3 +135,12 @@ revisión de data-guardian que lo precedió.
 - **En móvil no se oculta ninguna columna de esta tabla.** Un puesto sin sus
   impresiones al lado engaña (un 1,0 de una impresión parece un primer puesto
   firme). La tabla se desliza en horizontal con la búsqueda fija.
+
+## Invitación con el estado real (GSC-CONNECT-GATE-1, log §412)
+
+- **Nunca se invita a conectar sin haber leído la conexión.** Una pantalla que
+  pinta una invitación lee el estado (`readSearchConsoleAvailability`,
+  `loadSearchConsoleOverview` o `loadSearchConsoleScreen`) y la pinta sólo con
+  `disconnected` o `reconnect`. Cargando, con error o sin dato, no se pinta.
+  Lo vigila `tests/gsc-connect-gate.test.ts`, también en el panel de la
+  extensión.
