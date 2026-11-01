@@ -28658,3 +28658,11 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Cómo.** El middleware pone en la petición la cabecera `x-gs-request-path` (ruta y query) en cada `NextResponse.next`, también al refrescar las cookies de sesión. `requireUser` la lee y construye el destino con `loginRedirectPath` (`lib/login-redirect.ts`), que pasa por `safeNextPath`: sólo una ruta de este mismo sitio, nunca el propio login. La cabecera sólo elige dónde aterrizar; no autoriza nada, y falsificarla lleva como mucho a otra página de genscore.es. El login ya aceptaba `?next=` desde §254.
 
 **Pendiente.** No retira ningún camino de recuperación. Las aperturas y clics de los correos siguen sin medirse en Resend (lo activa Denis).
+
+## §416 · RECS-GUIDES-1: cada recomendación enlaza su guía del blog («Cómo hacerlo») (2026-11-01)
+
+**Qué se decidió.** Las tarjetas del plan y las filas abiertas de «Más adelante» llevan una línea «Cómo hacerlo» que abre, en una pestaña nueva, el artículo del blog que explica ese tipo de tarea. Sale de la revisión quincenal del 1-11; Denis aprobó la maqueta (https://claude.ai/artifact/V7KGvGH2GgC7AZjKtQBeqA) el mismo día.
+
+**Cómo.** `guideForType` (`lib/recommendations/guides.ts`, puro) asigna a cada tipo un artículo que ya existe y trata justo eso: citar tu web (contenido, bloque de cita, FAQ), «la IA recomienda a otro» (comparativa, brecha), fuentes que cita la IA (las cuatro `pursue_*`), contenido reciente, corregir lo que la IA dice mal (narrativa, claridad de marca) y elegir competidores (competidor emergente). Un tipo sin artículo, y las tarjetas de Google, no llevan línea. El enlace lleva `?desde=recomendaciones` para medirlo en PostHog. No importa el índice del blog en el cliente; el test comprueba que cada artículo existe. Dentro de la app de Android no sale, porque el blog no se abre allí (§381).
+
+**Pendiente.** No cambia el plan, los puntos ni las acciones. No retira ningún camino de recuperación. Un artículo nuevo que encaje con un tipo sin guía (tarjetas de Google, por ejemplo) se añade al mapa.

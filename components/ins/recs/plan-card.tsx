@@ -12,6 +12,7 @@ import {
   CardDetail,
   EngineRow,
   GeneratingBlock,
+  GuideLink,
   SolutionBlock,
   SrcChip,
   TitleWithPath,
@@ -79,6 +80,7 @@ export function PlanCard({ card }: { card: InsCard }) {
       </h3>
       {card.context && !emerging ? <p className="rc-ctx">{card.context}</p> : null}
       {card.step ? <p className="why">{card.step}</p> : null}
+      <GuideLink type={card.type} />
       {emerging && card.reach ? (
         <p className="eng-l">
           <EngineRow providers={card.providers} size={13} />

@@ -73,6 +73,11 @@ export function useShellData(): ShellData {
   return ctx;
 }
 
+/** Como `useShellData`, pero `null` fuera del marco (tests, páginas sueltas). */
+export function useOptionalShellData(): ShellData | null {
+  return useContext(ShellDataCtx);
+}
+
 /** Etiqueta del plan bajo el nombre (`xoPlanLabel` del prototipo). */
 export function planLabel(d: Pick<ShellData, "planId" | "planName" | "onTrial">): string {
   if (d.planId === "free") return "Sin plan · solo lectura";

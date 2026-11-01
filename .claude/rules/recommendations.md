@@ -845,3 +845,11 @@ log §306).
   marca.** `address_negative_narrative` cita con `negativeExcerpts` frases
   reales con señal de queja; la tarjeta descarta citas de menos de cuatro
   palabras y repetidas (`docs/brand/design-decisions-log.md` §358).
+
+## «Cómo hacerlo» (RECS-GUIDES-1, log §416)
+
+- **Cada tipo enlaza sólo a un artículo que ya existe y trata esa tarea**
+  (`lib/recommendations/guides.ts`). Sin artículo, sin línea: nunca un enlace
+  genérico al blog. `guides.test.ts` comprueba que cada slug existe.
+- **No sale dentro de la app de Android** (`inApp`), porque el blog no está en
+  la lista de rutas permitidas (log §381).

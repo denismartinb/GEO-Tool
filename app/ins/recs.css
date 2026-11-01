@@ -187,3 +187,13 @@
 .ins .gen ol{display:block;list-style:decimal;padding-left:22px}
 .ins .gen ol li{padding-left:2px}
 .ins .gen ol li+li{margin-top:8px}
+
+/* «Cómo hacerlo» (RECS-GUIDES-1, log §416). Tokens only, so dark mode follows. */
+.ins .rc-guide{display:flex;align-items:center;gap:10px;margin-top:12px;max-width:640px;padding:10px 12px;border-radius:10px;background:var(--blue-tint);color:var(--ink);text-decoration:none}
+.ins .rc-guide:hover{background:var(--blue-soft)}
+.ins .rc-guide > .i{flex:none;color:var(--blue-ink)}
+.ins .rc-guide .tx{display:grid;min-width:0}
+.ins .rc-guide .tx b{font-size:13px;font-weight:600;color:var(--blue-ink)}
+.ins .rc-guide .tx span{font-size:13px;color:var(--ink-2);overflow-wrap:anywhere}
+.ins .rc-guide > .i.sm{margin-left:auto}
+.ins .lrow .ex .rc-guide{margin-top:0}
