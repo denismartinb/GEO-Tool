@@ -38,7 +38,7 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
  * marcado inventado cuando lo detecta.
  */
 /**
- * MCP-SITE-FIXES-1 (log §430). On `/precios` the same node declares one Offer
+ * MCP-SITE-FIXES-1 (log §431). On `/precios` the same node declares one Offer
  * per sellable plan with a list price, so an agent reading the pricing page
  * sees what is sold and at what price (agentic audit, «Comprensión»). Prices
  * come from `PLANS`, VAT included, monthly. Agencia has no list price

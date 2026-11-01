@@ -22,7 +22,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
  */
 export const metadata: Metadata = contentMetadata({
   title: "Quiénes somos: GenScore, herramienta GEO hecha en España · GenScore",
-  // MCP-SITE-FIXES-1 (log §430): ABOUT_LEAD runs past 160 characters.
+  // MCP-SITE-FIXES-1 (log §431): ABOUT_LEAD runs past 160 characters.
   description: "Quiénes somos: GenScore es una herramienta GEO hecha en España que mide cómo aparece tu marca en ChatGPT, Gemini, Claude y Perplexity.",
   path: PAGE_PATH
 });

@@ -5,7 +5,7 @@ import { extractPageSignals } from "@/lib/agentic-audit/html-signals";
 import { SoftwareApplicationSchema } from "./software-application-schema";
 
 /**
- * MCP-SITE-FIXES-1 (log §430). `/precios` declares one Offer per plan with a
+ * MCP-SITE-FIXES-1 (log §431). `/precios` declares one Offer per plan with a
  * list price, so the agentic audit reads it as software with a price.
  */
 function render(withPlanOffers: boolean): { html: string; json: Record<string, unknown> } {

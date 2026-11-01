@@ -4,7 +4,8 @@ import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { clientIpFromHeaders } from "@/lib/free-checker/rate-limit";
 import { accountFromBearer } from "./auth";
 import { MCP_ENDPOINT, type McpProfile } from "./links";
-import { handleRpc, type RpcOutcome } from "./protocol";
+import { MCP_OAUTH_SCOPES } from "./metadata";
+import { handleRpc, type ProtocolOptions, type RpcOutcome } from "./protocol";
 import { mcpToolsFor } from "./tools";
 
 /**
@@ -30,8 +31,24 @@ export const MCP_CORS = {
 } as const;
 const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 
+const metadataUrl = (origin: string, profile: McpProfile) => `${origin}/.well-known/oauth-protected-resource${MCP_ENDPOINT[profile]}`;
+
+/**
+ * MCP-CHATGPT-SUBMIT-1 (log §430): what each endpoint asks of the protocol.
+ * ChatGPT gets OAuth scopes, output schemas and the per-tool sign-in
+ * challenge; Claude keeps the HTTP 401 it was approved with.
+ */
+export function protocolOptionsFor(origin: string, profile: McpProfile): ProtocolOptions {
+  if (profile !== "chatgpt") return {};
+  return {
+    oauthScopes: MCP_OAUTH_SCOPES,
+    outputSchema: true,
+    authChallenge: `Bearer resource_metadata="${metadataUrl(origin, profile)}", error="invalid_token", error_description="Conecta tu cuenta de GenScore para continuar"`
+  };
+}
+
 function unauthorized(origin: string, profile: McpProfile, invalid: boolean) {
-  const metadata = `${origin}/.well-known/oauth-protected-resource${MCP_ENDPOINT[profile]}`;
+  const metadata = metadataUrl(origin, profile);
   const challenge = `Bearer realm="GenScore", resource_metadata="${metadata}"${invalid ? ', error="invalid_token"' : ""}`;
   return NextResponse.json(
     { jsonrpc: "2.0", id: null, error: { code: -32001, message: invalid ? "Invalid or expired token" : "Authentication required" } },
@@ -59,8 +76,9 @@ export async function handleMcpPost(request: Request, profile: McpProfile) {
   const ctx = { account, signedIn: !!account, origin, ip: clientIpFromHeaders(request.headers), profile };
   const tools = mcpToolsFor(profile);
   const messages = Array.isArray(body) ? body.slice(0, 20) : [body];
+  const options = protocolOptionsFor(origin, profile);
   const outcomes: RpcOutcome[] = [];
-  for (const m of messages) outcomes.push(await handleRpc(m, ctx, tools));
+  for (const m of messages) outcomes.push(await handleRpc(m, ctx, tools, options));
   if (outcomes.some((o) => o.kind === "needs_auth")) return unauthorized(origin, profile, false);
 
   // One event per tool call, after the answer is sent: analytics never slows a tool.

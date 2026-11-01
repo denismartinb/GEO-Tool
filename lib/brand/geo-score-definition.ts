@@ -76,7 +76,7 @@ export const GEO_SCORE_DEFINITION =
   "La métrica de GenScore (0-100) que resume cómo aparece una marca en respuestas de IA: si la mencionan, con qué protagonismo, cómo sale frente a su competencia, si hay una fuente real detrás y si su web puede ser citada.";
 
 /**
- * MCP-SITE-FIXES-1 (log §430). Meta description of the GEO Score glossary and
+ * MCP-SITE-FIXES-1 (log §431). Meta description of the GEO Score glossary and
  * methodology pages. `GEO_SCORE_DEFINITION` is longer than the 160 characters
  * the web audit accepts, and it stays the visible and schema text.
  */

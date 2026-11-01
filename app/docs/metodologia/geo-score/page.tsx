@@ -19,7 +19,7 @@ const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
   title: `${page.title} · GenScore`,
-  // MCP-SITE-FIXES-1 (log §430): the definition runs past 160 characters.
+  // MCP-SITE-FIXES-1 (log §431): the definition runs past 160 characters.
   description: GEO_SCORE_META_DESCRIPTION,
   path: `/docs/${SLUG}`
 });

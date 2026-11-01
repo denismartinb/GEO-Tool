@@ -93,7 +93,7 @@ describe("la fecha del glosario es la misma para el lector y para el rastreador"
   });
 });
 
-// MCP-SITE-FIXES-1 (log §430): the web audit checks 15–70 characters of title
+// MCP-SITE-FIXES-1 (log §431): the web audit checks 15–70 characters of title
 // and 50–160 of meta description on every page it reads.
 describe("glossary page metadata length", () => {
   it("every meta description is 50 to 160 characters, without long dashes", async () => {
