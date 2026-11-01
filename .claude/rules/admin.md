@@ -275,3 +275,8 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
 - **Los recuentos siguen saliendo de la lista de Resend**, que trae el
   destinatario: `email_events` no lo guarda, así que sola no puede quitar
   cuentas internas y de prueba.
+- **El desglose por tipo sale del mismo recorrido que los grupos** (log §423):
+  mismo filtro de contactos y misma lista de Resend, así que las filas de un
+  grupo suman lo que dice el grupo. Un tipo nuevo de correo lleva su nombre en
+  `KIND_LABEL`; sin él se enseña la etiqueta tal cual. Los porcentajes de
+  abiertos y clics son sobre los entregados.

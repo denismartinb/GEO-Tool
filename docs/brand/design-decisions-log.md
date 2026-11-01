@@ -28752,3 +28752,11 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Probado** en un WordPress 7.1 local (SQLite, `php -S`): revisión, las cuatro pestañas a 1280 y 390 px, guardar robots.txt y llms.txt y leerlos servidos, widget del escritorio y `debug.log` limpio.
 
 **Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
+
+## §423 · MAIL-BY-KIND-1: tasas de cada tipo de correo en la pestaña CRM (2026-11-01)
+
+**Qué se decidió.** La tabla «Correos enviados por tipo» de `/admin/crm` deja de quedarse en los cinco grupos. Bajo cada grupo sale una fila por cada tipo de correo etiquetado (`kind`, §419) visto en el periodo, ordenadas de más a menos enviados: por ejemplo «Día 3» frente a «Último día», o «Search Console» frente a «Extensión de Chrome». Lo pidió Denis tras comprobar que el webhook guardaba bien los eventos. Las columnas de abiertos y clics enseñan también su porcentaje sobre los entregados, en el grupo y en cada tipo.
+
+**Cómo.** `buildSending` cuenta por tipo con el mismo recorrido que por grupo, sobre la misma lista de Resend y el mismo filtro de contactos (`groups[].kinds`). Los nombres viven en `KIND_LABEL` (`lib/admin/kpi/email-model.ts`). Los correos sin etiqueta, enviados antes del 1 de noviembre, van en una última fila «Sin tipo (enviados antes del 1 de noviembre)». Un grupo sin ningún correo etiquetado no lleva desglose, porque esa fila repetiría el grupo. Sin migración y sin datos nuevos.
+
+**Pendiente o sabido.** Las aperturas pueden venir de los gestores de correo que descargan las imágenes al recibir (en la prueba de §419 llegaron a los pocos segundos de entregarse), así que el pie de la tabla avisa de que los clics son la señal fiable. Las cifras siguen limitadas a los 30 días de Resend (§419). Los correos de operador y las respuestas a formularios siguen fuera, porque no van a ningún contacto.
