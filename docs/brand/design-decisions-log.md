@@ -28694,6 +28694,8 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 - **Captación.** Sin cuenta, «Tu dominio» enseña maquetas sin cifras y «Analizar <dominio>». El enlace va a `/signup?dominio=`, y el alta guarda ese dominio en el mismo `localStorage` que el hero (`rememberPendingDomain`, mismo `isWellFormedDomain`), así que el asistente nace relleno. Todo enlace lleva `utm_source=wordpress`.
 - **Sin llamadas a genscore.es.** El plugin no envía nada a ningún sitio; el readme lo declara (normas de WordPress.org sobre servicios externos).
 
+**La cabecera lleva la marca del sitio, no la de GenScore** (Denis, 2026-11-01: el logo de GenScore junto al nombre de la web confundía): el icono del sitio de WordPress (`get_site_icon_url`) o, sin él, su inicial.
+
 **Probado** en un WordPress 7.1 local (SQLite, `php -S`): revisión, las cuatro pestañas a 1280 y 390 px, guardar robots.txt y llms.txt y leerlos servidos, widget del escritorio y `debug.log` limpio.
 
 **Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.

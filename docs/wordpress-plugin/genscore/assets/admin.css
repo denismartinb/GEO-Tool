@@ -196,3 +196,5 @@
 #genscore-app .gs-more{font-size:12.5px;color:var(--ink-3)}
 #genscore-app .gs-tabs{position:sticky;top:46px;z-index:2}
 @media (min-width:783px){#genscore-app .gs-tabs{top:40px}}
+#genscore-app .gs-site{width:32px;height:32px;flex:none;border-radius:8px;object-fit:cover;border:1px solid var(--rule)}
+#genscore-app .gs-ini{display:grid;place-items:center;background:var(--surface-3);color:var(--ink);font-weight:600;font-size:15px}

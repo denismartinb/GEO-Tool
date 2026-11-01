@@ -70,8 +70,15 @@
   }
 
   /* ---------------- header and tabs ---------------- */
+  /* The site's own mark: its WordPress site icon, or its initial. Never the
+     GenScore logo, which read as if the screen were about GenScore itself. */
+  function siteMark() {
+    var name = D.site.name || D.site.domain || "";
+    if (D.site.icon) return '<img class="gs-site" src="' + esc(D.site.icon) + '" alt="" width="32" height="32">';
+    return '<span class="gs-site gs-ini" aria-hidden="true">' + esc((name.trim()[0] || "?").toUpperCase()) + "</span>";
+  }
   function head() {
-    return '<div class="gs-ph">' + ic("e-gs", "gs-lg gs-gsl") + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span><span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
+    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span><span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
   }
   function tabs() {
     var T = [["res", "Resumen"], ["geo", "GEO"], ["seo", "SEO"], ["ag", "Agentes"]];

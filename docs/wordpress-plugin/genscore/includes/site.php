@@ -73,6 +73,7 @@ function genscore_site_facts() {
 	$seo  = genscore_seo_plugin();
 	return array(
 		'name'          => get_bloginfo( 'name' ),
+		'icon'          => get_site_icon_url( 64 ),
 		'domain'        => preg_replace( '/^www\./', '', strtolower( $host ) ),
 		'home'          => $home,
 		'https'         => 0 === strpos( $home, 'https://' ),
