@@ -98,3 +98,22 @@ test("a real shop keeps its goods cards", () => {
   const r = S.scorePage(F.a, NOW);
   assert.ok(!r.service);
 });
+
+test("a home page that sells nothing takes Agentes from the shop it found (EXT-SHOP-FIND-1)", () => {
+  const shopFacts = { url: "http://localhost:8302/tienda/zapatillas", path: "/tienda/zapatillas", ld: F.a.ld, og: F.a.og, microPrice: F.a.microPrice, buy: F.a.buy, returnsLink: F.a.returnsLink };
+  const home = Object.assign({}, F.b, { path: "/", shop: { state: "found", path: "/tienda/zapatillas", source: "menu", facts: shopFacts } });
+  const r = S.scorePage(home, NOW);
+  assert.equal(r.commerce, false);
+  assert.equal(r.shop.state, "found");
+  assert.equal(r.lanes.agent, S.scorePage(F.a, NOW).lanes.agent);
+  assert.ok(r.shop.fixes.every((x) => x.where === "/tienda/zapatillas" && x.id.startsWith("shop-")));
+  /* the home's own nota does not change */
+  assert.equal(r.nota, S.scorePage(Object.assign({}, F.b, { path: "/" }), NOW).nota);
+
+  const none = S.scorePage(Object.assign({}, F.b, { path: "/", shop: { state: "none" } }), NOW);
+  assert.equal(none.shop.state, "none");
+  assert.equal(none.lanes.agent, null);
+  /* a candidate that turns out not to sell is «none», not a score */
+  const fake = S.scorePage(Object.assign({}, home, { shop: { state: "found", path: "/x", facts: { url: "http://localhost:8302/x", path: "/x", ld: F.b.ld, og: {}, microPrice: false, buy: null } } }), NOW);
+  assert.equal(fake.shop.state, "none");
+});

@@ -28434,4 +28434,6 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 - «Prueba gratis», «Empieza gratis», «Start free trial» y parecidos cuentan como botón para contratar. Siguen sin hacer tienda por sí solos, igual que «Reservar».
 - En una tienda con `Product` no cambia nada.
 
+- **EXT-SHOP-FIND-1 (Denis, 2026-11-01).** En una portada que no vende nada, la extensión busca la tienda en la misma web sin LLM, como `lib/agentic-audit/find-product.ts`: el catálogo público (Shopify `/products.json`, WooCommerce Store API), los enlaces de la propia página (ruta de ficha o menú «Tienda», «Productos», «Dispositivos»…) y, si no hay nada, el sitemap. Lee como mucho dos candidatas, sólo del mismo origen, y una cuenta sólo si su JSON-LD trae `Product` u oferta. Con tienda, Agentes es la nota de esa página y el panel dice «GenScore detecta tu tienda en /ruta» con un botón para abrirla; sin ella, «GenScore no detecta tu tienda ni tus productos de forma estándar». La nota SEO + IA de la portada no cambia. Sólo en la portada (`/`), para no avisar en cada artículo de un blog.
+
 **Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.

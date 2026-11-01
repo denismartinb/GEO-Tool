@@ -214,6 +214,18 @@
       return W ? Math.round((xs.reduce((a, c) => a + c.w * c.v, 0) / W) * 100) : null;
     };
     const lanes = { ia: laneScore("ia"), google: laneScore("google"), agent: commerce ? laneScore("agent") : null };
+    /* EXT-SHOP-FIND-1: a home page that sells nothing, but whose shop was
+       found on another page of the same site. Agentes is that page's score,
+       never this page's, and the panel says which page it is. */
+    let shop = null;
+    if (!commerce && f.shop && f.shop.state === "found" && f.shop.facts) {
+      const ss = scorePage(Object.assign({}, f, f.shop.facts, { shop: null, host: f.host }), now);
+      if (ss.commerce) {
+        lanes.agent = ss.lanes.agent;
+        shop = { state: "found", path: f.shop.path, url: f.shop.facts.url, criteria: ss.criteria.filter((c) => c.lane === "agent"), fixes: ss.fixes.filter((x) => x.lane === "agent").map((x) => Object.assign({}, x, { id: "shop-" + x.id, where: f.shop.path })) };
+      }
+    }
+    if (!commerce && !shop && f.shop) shop = { state: "none" };
     const nota = Math.round(LANE_WEIGHT.ia * lanes.ia + LANE_WEIGHT.google * lanes.google);
     /* what each criterion is worth in the nota (or in its own lane, for Agentes) */
     const laneW = (k) => C.filter((c) => c.lane === k && c.v != null).reduce((a, c) => a + c.w, 0);
@@ -226,6 +238,7 @@
     const readers = ENGINES.filter((e) => access[e].allowed === true);
     const blockedEngines = ENGINES.filter((e) => access[e].allowed === false);
     const fixes = buildFixes(f, C, gain, { access, path, product, offering, service, commerce, noindex, nosnippet, gBlocked, now });
+    if (shop && shop.fixes) fixes.push(...shop.fixes);
 
     /* layer 2: the one warm alert */
     let alert = null;
@@ -243,7 +256,7 @@
     else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no`;
     if (known) say += noindex || gBlocked ? ", pero Google no la indexará." : ", y Google la indexa.";
 
-    return { nota, lanes, criteria: C, fixes, alert, say, commerce, service, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
+    return { nota, lanes, criteria: C, fixes, alert, say, commerce, service, shop, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
   }
 
   /* ---------------- «Haz esto»: one card per failing criterion ---------------- */
