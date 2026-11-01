@@ -99,4 +99,17 @@ describe("GscOverviewHalfView", () => {
     expect(html).not.toContain("Casi en la página 1");
     expect(html).not.toContain("gx-b");
   });
+
+  it("says why there is no data when no property covers the domain, and links to Posición en Google", () => {
+    const none = renderToStaticMarkup(
+      <GscOverviewHalfView projectId={P} domain="ejemplo.es" state={{ kind: "pick_property", candidates: [], verifiedCount: 2 }} />
+    );
+    expect(none).toContain("no tiene ejemplo.es en Search Console");
+    expect(none).toContain("Revisar la conexión");
+    expect(none).toContain(`/dashboard/projects/${P}/search-console`);
+    expect(none).not.toContain("/api/search-console/connect");
+    const many = render({ kind: "pick_property", candidates: ["sc-domain:ejemplo.es", "https://ejemplo.es/"], verifiedCount: 2 });
+    expect(many).toContain("Falta elegir qué propiedad");
+    expect(many).toContain("Elegir propiedad");
+  });
 });

@@ -289,3 +289,24 @@
 @container (max-width:540px){
  .ins .seo3.two .gx-b{grid-template-columns:minmax(0,1fr);gap:22px}
 }
+/* The speed line is a sentence, not a row of flex items: the gap put a space
+   before the comma («1,5 s , buena»). */
+.ins .seo3 .note.sp{display:block}
+/* Connected but no property chosen (or none covers the domain). */
+.ins .gx-pick .gx-pt1{margin:12px 0 0;font-size:14px;line-height:1.45;color:var(--ink);font-weight:550}
+.ins .gx-pick .gx-pt2{margin:8px 0 0;font-size:12.5px;line-height:1.45;color:var(--ink-3)}
+.ins .gx-pick .btn{margin-top:14px}
+/* With Google data the SEO card is the richer one (Denis, 2026-11-01: «que no
+   ocupe tanto»). On desktop both cards take the full row: Comercio agéntico
+   becomes a short strip (ring, the four components in two columns, its
+   recommendation on the right) and the SEO card below gets the width to put
+   its chart and list side by side. No gap left in either card. */
+@media (min-width:1000px){
+ .ins .ov-pair:has(.gx){grid-template-columns:minmax(0,1fr)}
+ .ins .ov-pair:has(.gx)>.ov-agc>.card-b:not(.ag-up){display:grid;grid-template-columns:minmax(0,1fr) minmax(0,280px);gap:28px;align-items:center}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src){grid-template-columns:96px minmax(0,1fr);gap:24px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) svg.tring{width:96px;height:96px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) .rows{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:28px}
+ .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) .rows>div{grid-template-columns:100px minmax(48px,1fr) 42px}
+ .ins .ov-pair:has(.gx)>.ov-agc .fx-w{margin:0;padding:0}
+}

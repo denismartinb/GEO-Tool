@@ -34,7 +34,7 @@ export function AgenticOverviewCardView({ projectId, card }: { projectId: string
   if (card.kind === "hidden") return null;
   const href = `/dashboard/projects/${projectId}/agentic-visibility`;
   return (
-    <div className="card">
+    <div className="card ov-agc">
       <div className="card-h">
         <h3>Comercio agéntico</h3>
         <span className="new">Nuevo</span>

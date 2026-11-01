@@ -158,3 +158,6 @@ revisión de data-guardian que lo precedió.
   de Google»: decir cero sería inventarlo.
 - **Un día sin impresiones no tiene puesto** en la evolución de Visión general:
   es un hueco, nunca un 0.
+- **Conectado sin propiedad (`pick_property`), la mitad de Google lo dice y
+  enlaza a «Posición en Google»**, nunca a la ruta de permiso ni con cifras de
+  ejemplo. Una columna vacía no explica nada.

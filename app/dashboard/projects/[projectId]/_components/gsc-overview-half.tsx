@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { GoogleMark } from "@/components/search-console/google-mark";
 import { loadSearchConsoleScreen, type SearchConsoleState } from "@/lib/search-console/load";
 import type { DailyPoint, SearchConsoleReport } from "@/lib/search-console/report";
@@ -36,7 +37,7 @@ export async function GscOverviewHalf({
   domain: string;
 }) {
   const state = await loadSearchConsoleScreen(projectId, ownerUserId, domain, [], [], false);
-  return <GscOverviewHalfView projectId={projectId} state={state} />;
+  return <GscOverviewHalfView projectId={projectId} domain={domain} state={state} />;
 }
 
 function Head() {
@@ -189,7 +190,15 @@ function PositionChart({ daily }: { daily: DailyPoint[] }) {
   );
 }
 
-export function GscOverviewHalfView({ projectId, state }: { projectId: string; state: GscOverviewHalfState }) {
+export function GscOverviewHalfView({
+  projectId,
+  domain,
+  state
+}: {
+  projectId: string;
+  domain?: string;
+  state: GscOverviewHalfState;
+}) {
   if (state.kind === "disconnected" || state.kind === "reconnect") {
     return (
       <div>
@@ -207,6 +216,26 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
         <p className="ov-note" style={{ marginTop: 10 }}>
           Google no ha respondido ahora mismo. Se volverá a leer en la próxima visita.
         </p>
+      </div>
+    );
+  }
+  if (state.kind === "pick_property") {
+    // Connected, but no single property covers the domain: the column used to
+    // stay empty (Denis, 2026-11-01). Say why and send to «Posición en
+    // Google», where the property is chosen or another account connected.
+    const site = domain ?? "esta web";
+    return (
+      <div className="gx-pick">
+        <Head />
+        <p className="gx-pt1">
+          {state.candidates.length > 0
+            ? `Search Console está conectado. Falta elegir qué propiedad corresponde a ${site}.`
+            : `La cuenta de Google conectada no tiene ${site} en Search Console.`}
+        </p>
+        <p className="gx-pt2">Con la propiedad verás aquí los clics, el puesto medio y las búsquedas que casi llegan a la página 1.</p>
+        <Link className="btn line sm" href={`/dashboard/projects/${projectId}/search-console`}>
+          {state.candidates.length > 0 ? "Elegir propiedad" : "Revisar la conexión"}
+        </Link>
       </div>
     );
   }

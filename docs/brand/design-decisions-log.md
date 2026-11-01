@@ -28634,4 +28634,9 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 - En Auditoría técnica, la fila de un problema lleva el título sola en la primera línea; la segunda empieza por la gravedad con su punto («● Mejora», «○ Aviso», «● Crítico»), sigue el alcance y luego las etiquetas, con aire entre ellas. El punto suelto a la izquierda desaparece.
 - El alcance de «Negocio local en datos estructurados» pasa de «No declarado» a «Ninguna página lo declara».
 
+**Tercera pasada (Denis, 2026-11-01: «cambiar un poco el formato de comercio agéntico en caso de que esté conectado Search Console, para que no ocupe tanto. Y si no lo está, mejorar un poco la información/formato actual»).**
+- Con datos de Google, desde 1000 px las dos tarjetas ocupan la fila entera (`.ov-pair:has(.gx)`, sin tocar la página). Comercio agéntico pasa a ser una franja corta (anillo, los cuatro componentes en dos columnas y su recomendación a la derecha) y la tarjeta SEO de debajo tiene ancho para poner el gráfico y la lista lado a lado. Ninguna de las dos deja hueco. La tarjeta lleva la clase `ov-agc`; sus datos no cambian.
+- Conectado pero sin propiedad que cubra el dominio (`pick_property`), la mitad de Google se quedaba vacía. Ahora dice por qué («La cuenta de Google conectada no tiene X en Search Console» o «Falta elegir qué propiedad corresponde a X»), qué se verá con la propiedad, y enlaza a «Posición en Google», donde se elige o se conecta otra cuenta. No es una invitación a conectar ni lleva a la ruta de permiso.
+- La línea de velocidad decía «LCP 1,5 s , buena»: `.note` es flex y su hueco metía un espacio antes de la coma. Pasa a bloque (`.note.sp`).
+
 **Pendiente.** Nada. No retira ningún camino de recuperación: sin conexión, todo queda como antes.

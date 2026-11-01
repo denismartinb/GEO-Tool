@@ -49,7 +49,7 @@ export function SeoAuditCard({
   const blockHref = `${href}?${AUDIT_BLOCK_PARAM}=seo`;
   const first = summary.top[0] ?? null;
   const speedLine = summary.speed ? (
-    <div className="note">
+    <div className="note sp">
       Velocidad en móvil: <b>{summary.speed.vital.toUpperCase()} {formatVital(summary.speed.vital, summary.speed.value)}</b>,{" "}
       {RATING_TEXT[summary.speed.rating]}
     </div>
