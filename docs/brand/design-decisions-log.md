@@ -28778,6 +28778,17 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
 - **llms.txt, extractos:** los títulos se pegaban al párrafo anterior («extracción.Molienda…»); las etiquetas de bloque pasan a espacio antes de limpiar. Lo encontró la instalación propia.
 - **Revisar cualquier página** (lo que la extensión llama «Esta página»): selector «Página revisada» en la cabecera con páginas, productos y entradas publicadas, y «Revisar con GenScore» en las listas de WordPress. Viaja sólo el id (`?post=`); la dirección la da `get_permalink` y sólo vale si es pública y de esta web. La nota del widget del Escritorio sigue siendo la de la portada.
 
+**Adenda 1.0.4 (2026-11-01).** Denis vio en 1.0.3 que elegir a mano la «Página revisada» no es buena experiencia y eligió (tarjeta de decisión, maqueta https://claude.ai/artifact/TmBfDKoziKWZDrhXaELRbo) revisar la web entera y poner una columna en las listas.
+
+- **Revisión de la web entera:** al abrir la pantalla se leen solas las páginas importantes (`genscore_key_pages`, hasta 15: portada, lo enlazado en los menús, los cuatro productos más vendidos, las tres últimas entradas y las páginas y productos tocados hace poco), dos a la vez en un iframe oculto con el mismo `score.js`. La primera vez sale una tarjeta con un spinner pequeño y el texto de Denis, «Revisando tus páginas más importantes para calcular tu nota».
+- **La nota es la media de las páginas**; cada carril es la media de las que lo tienen. «Arregla primero» agrupa el mismo arreglo en varias páginas («En 3 de 4 productos»), con sus puntos medios, y la tarjeta «Tus páginas» las ordena de peor a mejor. Pulsar una abre su detalle (`?post=`) con «← Tu web» para volver.
+- **Se guarda cada nota en `genscore_page_scores`** (opción de la propia web, saneada, tope de 60). Guardar o borrar un post borra su nota, así que al volver sólo se lee esa página (6,6 s la primera vez con 10 páginas, 1,6 s después en la instalación propia). «Revisar todo ahora» las relee todas.
+- **Columna «GenScore» en Páginas, Entradas y Productos**, con la nota y el primer arreglo, que sólo lee lo guardado. Sustituye a la acción de fila «Revisar con GenScore» y al selector de 1.0.3.
+- **El widget del Escritorio** pasa a «Nota SEO + IA de tu web».
+- **Agentes en el detalle de una página sin tienda** sigue siendo el de la tienda de la web, como en la extensión (`score.js` usa `f.shop`); no es un fallo.
+
+**Pendiente.** La consola y la extensión no cambian: la consola ya audita el dominio entero y la extensión sigue a la pestaña abierta. No retira ningún camino de recuperación: «Revisar todo ahora» sustituye al selector.
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

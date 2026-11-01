@@ -1,9 +1,13 @@
 /* GenScore for WordPress: the plugin screen.
  *
- * The «Nota SEO + IA» is the Chrome extension's, computed the same way: the
- * home page is opened in a hidden same-origin frame, vendor/collect.js reads
- * it there and vendor/score.js scores it. Nothing leaves this site. The only
- * links to genscore.es are buttons the person clicks.
+ * The «Nota SEO + IA» is the Chrome extension's, computed the same way: each
+ * page is opened in a hidden same-origin frame, vendor/collect.js reads it
+ * there and vendor/score.js scores it. The screen reviews the home page and
+ * the site's important pages (genscore_key_pages) by itself, and the note is
+ * the site's. Each page's result is stored in this site's options, so the
+ * next visit opens at once and only pages that changed are read again.
+ * Nothing leaves this site. The only links to genscore.es are buttons the
+ * person clicks.
  *
  * «Tu dominio» blocks never carry a figure: without a GenScore account there
  * is no data, so they are a drawing with a lock and a button.
@@ -15,7 +19,7 @@
   var app = document.getElementById("genscore-app");
   if (!app || !SC) return;
 
-  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null, target: D.target || null };
+  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null, target: D.target || null, home: null, open: {}, web: { pages: (D.web && D.web.pages) || [], scores: (D.web && D.web.scores) || {}, running: false, first: false, left: 0 } };
   var ENG = [["chatgpt", "ChatGPT"], ["gemini", "Gemini"], ["claude", "Claude"], ["perplexity", "Perplexity"]];
   var SW_LABEL = {
     "chatgpt-search": ["ChatGPT", "Búsqueda y enlaces que abre ChatGPT"],
@@ -93,21 +97,8 @@
     if (D.site.icon) return '<img class="gs-site" src="' + esc(D.site.icon) + '" alt="" width="32" height="32">';
     return '<span class="gs-site gs-ini" aria-hidden="true">' + esc((name.trim()[0] || "?").toUpperCase()) + "</span>";
   }
-  /* «Página revisada»: the home page by default, or any published page,
-     post or product of this site (the extension's «Esta página»). */
-  function picker() {
-    var C = D.choices || [];
-    if (!C.length) return "";
-    var cur = S.target ? String(S.target.id) : "";
-    var groups = [["page", "Páginas"], ["product", "Productos"], ["post", "Entradas"]].map(function (g) {
-      var it = C.filter(function (c) { return c.type === g[0]; });
-      if (S.target && S.target.type === g[0] && !it.some(function (c) { return String(c.id) === cur; })) it = [S.target].concat(it);
-      return it.length ? '<optgroup label="' + g[1] + '">' + it.map(function (c) { return '<option value="' + c.id + '"' + (String(c.id) === cur ? " selected" : "") + ">" + esc(c.title || "(sin título)") + "</option>"; }).join("") + "</optgroup>" : "";
-    }).join("");
-    return '<label class="gs-pick"><span>Página revisada</span><select data-act="pick"' + (S.state === "loading" ? " disabled" : "") + '><option value=""' + (cur ? "" : " selected") + ">Portada</option>" + groups + "</select></label>";
-  }
   function head() {
-    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span>' + picker() + '<span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
+    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span>' + (S.target ? '<button class="gs-btn gs-line gs-sm gs-back" data-act="back">' + ic("i-arrowl") + 'Tu web</button><span class="gs-who gs-pg-t"><b>' + esc(S.target.title || "") + "</b><span>" + esc(S.target.path) + "</span></span>" : "") + '<span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
   }
   function tabs() {
     var T = [["res", "Resumen"], ["geo", "GEO"], ["seo", "SEO"], ["ag", "Agentes"]];
@@ -133,6 +124,11 @@
   }
   function rows(list) { return '<div class="gs-rows">' + list.map(function (c) { return '<div class="gs-rw"><span class="gs-tx">' + esc(c.label) + "</span>" + verdict(c) + "</div>"; }).join("") + "</div>"; }
   function fixCard(lane, title) {
+    if (webMode()) {
+      var G = webAgg().fixes.filter(function (g) { return g.lane === lane; });
+      if (!G.length) return "";
+      return '<div class="gs-card"><div class="gs-lab">Arreglar<small>en toda la web</small></div>' + G.slice(0, 5).map(function (g, i) { return webFixRow(g, i); }).join("") + "</div>";
+    }
     var F = ((S.score && S.score.fixes) || []).filter(function (f) { return f.lane === lane; });
     if (!F.length) return "";
     return '<div class="gs-card"><div class="gs-lab">' + title + "</div>" + F.slice(0, 5).map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + (f.why ? '<span class="gs-why">' + f.why + "</span>" : "") + '</span><span class="gs-pts">+' + f.pts + " " + esc(f.unit === "pt" ? "pt" : "") + "</span></div>"; }).join("") + "</div>";
@@ -210,25 +206,90 @@
     return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Lo que lee un agente</div><div class="gs-rw" style="border:0;padding-top:0">' + ic("i-cart") + '<span class="gs-tx"><b style="font-weight:600">' + (shop ? (D.site.woocommerce ? "Ficha de producto analizada" : "Página de venta analizada") : cap(tu()) + " vende") + "</b>" + where + "</span></div>" + rows(C) + "</div>" + fixCard("agent", "Arreglar");
   }
 
+  /* ---------------- the site review ---------------- */
+  var TYPE_N = { page: ["página", "páginas"], post: ["entrada", "entradas"], product: ["producto", "productos"] };
+  function kindOf(p) { return p.type === "home" ? "page" : p.type; }
+  function webEntries() {
+    return S.web.pages.map(function (p) { var e = S.web.scores[p.id]; return e && e.nota != null ? { page: p, e: e } : null; }).filter(Boolean);
+  }
+  function avg(list) { return list.length ? Math.round(list.reduce(function (a, b) { return a + b; }, 0) / list.length) : null; }
+  /* The site's note: the mean of its pages. Agentes only counts pages that
+     sell. A fix weighs what it gives on each page it affects, spread over
+     every page reviewed, so one bad page does not outrank a site-wide gap. */
+  function webAgg() {
+    var E = webEntries();
+    if (!E.length) return null;
+    var lane = function (k) { return avg(E.map(function (x) { return x.e[k]; }).filter(function (v) { return v != null; })); };
+    var by = {};
+    E.forEach(function (x) {
+      (x.e.fixes || []).forEach(function (f) {
+        var g = by[f.id] || (by[f.id] = { id: f.id, lane: f.lane, t: f.t, unit: f.unit, sum: 0, hit: [] });
+        g.sum += f.pts || 0;
+        g.hit.push(x);
+      });
+    });
+    var F = Object.keys(by).map(function (k) {
+      var g = by[k];
+      var types = {}; g.hit.forEach(function (x) { types[kindOf(x.page)] = 1; });
+      var one = Object.keys(types).length === 1 ? Object.keys(types)[0] : null;
+      var of = one ? E.filter(function (x) { return kindOf(x.page) === one; }).length : E.length;
+      var nm = TYPE_N[one || "page"];
+      g.pts = Math.max(1, Math.round(g.sum / E.length));
+      g.where = g.hit.length === of ? (of === 1 ? "En la única " + nm[0] + " revisada" : "En todas tus " + nm[1] + " revisadas") : "En " + g.hit.length + " de " + of + " " + nm[1];
+      g.hit.sort(function (a, b) { return a.e.nota - b.e.nota; });
+      return g;
+    }).sort(function (a, b) { return b.sum - a.sum; });
+    return { n: E.length, nota: avg(E.map(function (x) { return x.e.nota; })), lanes: { ia: lane("ia"), google: lane("google"), agent: lane("agent") }, fixes: F, entries: E };
+  }
+  function webMode() { return !S.target && !!webAgg(); }
+  function scoreChip(v) { var b = band(v); return '<span class="gs-sc gs-sc-' + b[0] + '">' + (v == null ? "–" : v) + "</span>"; }
+  function pageRow(x, withFix) {
+    var first = x.e.fixes && x.e.fixes[0] ? x.e.fixes[0].t.replace(/<[^>]+>/g, "") : "Nada urgente";
+    var kind = x.page.type === "home" ? "Portada" : TYPE[x.page.type] || "";
+    return '<div class="gs-pr">' + scoreChip(x.e.nota) + '<button class="gs-tx gs-prt" data-act="open-page" data-id="' + x.page.id + '"><b>' + esc(x.page.title || "(sin título)") + "</b><small>" + esc(kind + (withFix === false ? "" : " · " + first)) + "</small></button>" + (x.page.edit ? '<a class="gs-pr-e" href="' + esc(x.page.edit) + '">Editar</a>' : "") + "</div>";
+  }
+  function webFixRow(g, i) {
+    var open = S.open[g.id] != null ? S.open[g.id] : i === 0;
+    var pages = open ? '<div class="gs-prs">' + g.hit.slice(0, 5).map(function (x) { return pageRow(x, false); }).join("") + (g.hit.length > 5 ? '<p class="gs-more">Y ' + (g.hit.length - 5) + " más, en «Tus páginas».</p>" : "") + "</div>" : "";
+    return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">+' + g.pts + " " + (g.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span><span class="gs-chip">' + esc(g.where) + "</span>" + pages + '</span><button class="gs-btn gs-line gs-sm" data-act="toggle-fix" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + (open ? "Ocultar" : "Ver páginas") + "</button></div>";
+  }
+  function progressLine() {
+    if (!S.web.running) return "";
+    return '<p class="gs-bgrev"><span class="gs-spin gs-spin-sm"></span>Revisando tus páginas más importantes para calcular tu nota</p>';
+  }
+
   /* ---------------- Resumen ---------------- */
   function resumen() {
     var sc = S.score;
+    var W = webMode() ? webAgg() : null;
+    var nota = W ? W.nota : sc.nota, lanes = W ? W.lanes : sc.lanes;
     var blocked = sc.blockedEngines.length;
-    var hero = '<div class="gs-card gs-hero"><div class="gs-lab" style="width:100%">Revisión gratis<small class="gs-mono">' + esc(S.target ? S.target.path : "portada") + '</small></div><div class="gs-dialbox">' + dial(sc.nota, [50, 75]) + '<div class="gs-dial-c"><b class="gs-num">' + sc.nota + '</b><span>Nota SEO + IA</span></div></div>'
-      + '<div class="gs-bands"><span class="' + (sc.nota < 50 ? "gs-on" : "") + '">Se frena</span><span class="' + (sc.nota >= 50 && sc.nota < 75 ? "gs-on" : "") + '">Mejorable</span><span class="' + (sc.nota >= 75 ? "gs-on" : "") + '">Bien</span></div>'
-      + '<p class="gs-say">' + esc(sc.say) + "</p>"
-      + '<div class="gs-gg3">' + gauge("geo", "GEO", ic("i-sparkles"), sc.lanes.ia, blocked ? 4 - blocked + " de 4 la leen" : null) + gauge("seo", "SEO", ic("e-google", "gs-i"), sc.lanes.google) + gauge("ag", "Agentes", ic("i-cart"), sc.lanes.agent, sc.lanes.agent == null ? "Sin tienda" : null) + "</div></div>";
+    var hero = '<div class="gs-card gs-hero"><div class="gs-lab" style="width:100%">Revisión gratis<small class="gs-mono">' + esc(S.target ? S.target.path : W ? (W.n === 1 ? "tu portada" : "tu web · " + W.n + " páginas") : "portada") + '</small></div><div class="gs-dialbox">' + dial(nota, [50, 75]) + '<div class="gs-dial-c"><b class="gs-num">' + nota + '</b><span>Nota SEO + IA</span></div></div>'
+      + '<div class="gs-bands"><span class="' + (nota < 50 ? "gs-on" : "") + '">Se frena</span><span class="' + (nota >= 50 && nota < 75 ? "gs-on" : "") + '">Mejorable</span><span class="' + (nota >= 75 ? "gs-on" : "") + '">Bien</span></div>'
+      + '<p class="gs-say">' + esc(sc.say) + "</p>" + (W ? progressLine() : "")
+      + '<div class="gs-gg3">' + gauge("geo", "GEO", ic("i-sparkles"), lanes.ia, blocked ? 4 - blocked + " de 4 la leen" : null) + gauge("seo", "SEO", ic("e-google", "gs-i"), lanes.google) + gauge("ag", "Agentes", ic("i-cart"), lanes.agent, lanes.agent == null ? "Sin tienda" : null) + "</div></div>";
     var F = sc.fixes.slice(0, 3);
     var tabOf = { ia: "geo", google: "seo", agent: "ag" };
+    if (W) {
+      var WF = W.fixes.slice(0, 3);
+      var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+      var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
+      var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
+      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + pagesCard + deepCard() + acctCard() + "</div></div>";
+    }
     var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">+' + f.pts + " " + (f.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
-    var deep = '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
-    var acct = '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
-    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deep + acct + "</div></div>";
+    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deepCard() + acctCard() + "</div></div>";
+  }
+  function deepCard() {
+    return '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
+  }
+  function acctCard() {
+    return '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
   }
 
   /* ---------------- render ---------------- */
   function body() {
-    if (S.state === "loading") return '<div class="gs-card gs-pending"><span class="gs-spin"></span><p>Revisando ' + tu() + ' como la ven los motores…</p></div>';
+    if (S.state === "loading" || (S.web.running && S.web.first && !S.target)) return '<div class="gs-card gs-pending"><span class="gs-spin"></span><p>' + (S.target ? "Revisando " + tu() + " como la ven los motores…" : "Revisando tus páginas más importantes para calcular tu nota") + "</p></div>";
     if (S.state === "error") return '<div class="gs-card gs-pending"><p><b>No hemos podido revisar ' + tu() + '.</b></p><p>' + esc(S.error) + '</p><button class="gs-btn gs-blue" data-act="rerun">Volver a intentarlo</button></div>';
     if (S.tab === "res") return resumen();
     var d = S.tab === "geo" ? domGeo() : S.tab === "seo" ? domSeo() : domAg();
@@ -293,16 +354,30 @@
     }, function () { return sc; });
   }
 
+  /* What is stored of a page: its note, lanes and fixes, nothing else. */
+  function entryOf(id, sc) {
+    return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, fixes: sc.fixes.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
+  }
+  function keep(id, sc) {
+    var e = entryOf(id, sc);
+    S.web.scores[id] = e;
+    post("genscore_save_page", { page: JSON.stringify(e) }).catch(function () {});
+  }
   function review() {
     S.state = "loading"; render();
-    readPage(S.target ? S.target.url : D.site.home).then(function (facts) {
+    var target = S.target;
+    readPage(target ? target.url : D.site.home).then(function (facts) {
       S.facts = facts;
-      return withProduct(SC.scorePage(facts));
+      var raw = SC.scorePage(facts);
+      keep(target ? target.id : 0, raw);
+      // Only the home page borrows a product page for Agentes: a page opened
+      // from the list is scored on its own.
+      return target ? SC.scorePage(facts) : withProduct(SC.scorePage(facts));
     }).then(function (sc) {
       S.score = sc;
+      if (!target) S.home = { facts: S.facts, score: sc };
       S.state = "ready";
-      render();
-      saveReview();
+      if (!target) reviewSite(false); else render();
     }, function (msg) {
       S.state = "error"; S.error = typeof msg === "string" ? msg : "No hemos podido leer " + la() + "."; render();
     });
@@ -319,10 +394,36 @@
     });
     return fetch(D.ajax, { method: "POST", credentials: "same-origin", body: fd }).then(function (r) { return r.json(); });
   }
+  /* The Escritorio widget shows the site's note. */
   function saveReview() {
-    var sc = S.score;
-    if (S.target) return; // The Escritorio widget shows the home page's note.
-    post("genscore_save_review", { nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent == null ? "" : sc.lanes.agent }).catch(function () {});
+    var W = webAgg();
+    if (!W) return;
+    post("genscore_save_review", { nota: W.nota, ia: W.lanes.ia, google: W.lanes.google, agent: W.lanes.agent == null ? "" : W.lanes.agent }).catch(function () {});
+  }
+  /* Reads the important pages that have no stored score yet (or all of them),
+     two at a time. The first time, the screen waits with the spinner; after
+     that it shows what it has and refreshes as pages come in. */
+  function reviewSite(all) {
+    if (S.web.running) return;
+    var todo = S.web.pages.filter(function (p) { return p.id && (all || !S.web.scores[p.id]); });
+    var have = S.web.pages.filter(function (p) { return p.id && S.web.scores[p.id]; }).length;
+    if (!todo.length) { render(); saveReview(); return; }
+    S.web.running = true;
+    S.web.first = have === 0;
+    S.web.left = todo.length;
+    render();
+    var i = 0;
+    function next() {
+      if (i >= todo.length) return Promise.resolve();
+      var p = todo[i++];
+      return readPage(p.url).then(function (facts) { keep(p.id, SC.scorePage(facts)); }, function () { /* a page that will not open is left out */ })
+        .then(function () { S.web.left--; if (!S.web.first && !S.target) render(); return next(); });
+    }
+    Promise.all([next(), next()]).then(function () {
+      S.web.running = false; S.web.first = false;
+      render();
+      saveReview();
+    });
   }
   function checkSitemap() {
     if (!D.site.sitemap) return;
@@ -330,18 +431,19 @@
   }
 
   /* ---------------- events ---------------- */
-  app.addEventListener("change", function (e) {
-    if (!e.target || e.target.getAttribute("data-act") !== "pick") return;
-    var id = e.target.value;
-    var C = (D.choices || []).concat(S.target ? [S.target] : []);
-    S.target = id ? C.filter(function (c) { return String(c.id) === id; })[0] || null : null;
+  function setAddress() {
     try {
       var u = new URL(location.href);
       if (S.target) u.searchParams.set("post", S.target.id); else u.searchParams.delete("post");
       history.replaceState(null, "", u.toString());
-    } catch (err) { /* the address only helps a reload; the review goes on */ }
-    review();
-  });
+    } catch (err) { /* the address only helps a reload */ }
+  }
+  function goHome() {
+    S.target = null; setAddress();
+    if (!S.home) { review(); return; }
+    S.facts = S.home.facts; S.score = S.home.score; S.state = "ready"; render();
+    app.scrollIntoView({ block: "start" });
+  }
   app.addEventListener("click", function (e) {
     var t = e.target.closest("[data-tab]");
     if (t) { S.tab = t.getAttribute("data-tab"); render(); app.scrollIntoView({ block: "start" }); return; }
@@ -359,6 +461,17 @@
     if (!a) return;
     var act = a.getAttribute("data-act");
     if (act === "rerun") { review(); return; }
+    if (act === "rerun-web") { reviewSite(true); return; }
+    if (act === "toggle-fix") { var fid = a.getAttribute("data-id"); S.open[fid] = a.getAttribute("aria-expanded") !== "true"; render(); return; }
+    if (act === "open-page") {
+      var pid = Number(a.getAttribute("data-id"));
+      if (!pid) { goHome(); S.tab = "res"; render(); return; }
+      S.target = S.web.pages.filter(function (p) { return p.id === pid; })[0] || null;
+      if (!S.target) return;
+      setAddress(); review(); app.scrollIntoView({ block: "start" });
+      return;
+    }
+    if (act === "back") { goHome(); return; }
     if (act === "save-bots") {
       var next2 = Object.assign({}, S.bots, S.dirty);
       a.disabled = true;

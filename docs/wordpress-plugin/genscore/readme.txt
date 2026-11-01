@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.3
+Stable tag: 1.0.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Check whether ChatGPT, Gemini, Claude and Perplexity can read your site, publish
 
 == Description ==
 
-GenScore reviews your home page, or any published page, post or product, from inside wp-admin and gives it an SEO + AI score, split into three lanes:
+GenScore reviews your site from inside wp-admin (the home page and your most important pages, products and posts) and gives it an SEO + AI score, split into three lanes:
 
 * **GEO**: can ChatGPT, Gemini, Claude and Perplexity read and quote your site? Which AI bots does your robots.txt let in? Do you publish an llms.txt?
 * **SEO**: title, description, canonical, headings, language, structured data, plus WordPress settings (search engine visibility, sitemap, HTTPS, permalinks) and a list of pages, posts and products missing a description or image alt text.
@@ -25,7 +25,7 @@ It also lets you:
 * **Allow or block AI bots** (OpenAI, Anthropic, Perplexity and Google-Extended), search bots and training bots separately. GenScore only adds its own group to the robots.txt WordPress serves. It never touches the `*` group, Googlebot or Bingbot, and it never writes a file.
 * **Publish /llms.txt**, generated from your pages, products and posts with their own excerpts. You can edit it. If Yoast SEO, Rank Math or All in One SEO already publish one, or a physical llms.txt exists, GenScore leaves it alone.
 
-The review runs in your browser, on your own site. Nothing is sent anywhere.
+The review runs in your browser, on your own site, and the scores are stored in your own WordPress. Nothing is sent anywhere.
 
 = Full analysis with a GenScore account =
 
@@ -57,7 +57,7 @@ Yes. It reads their meta descriptions and sitemaps, and it does not publish an l
 
 = Does the review slow down my site? =
 
-No. It runs only when you open the GenScore screen, in your browser.
+No. It runs only when you open the GenScore screen, in your browser, reading your important pages one after another (two at a time). The scores are stored in your site, so the next time only pages that changed are read again.
 
 == Screenshots ==
 
@@ -67,6 +67,12 @@ No. It runs only when you open the GenScore screen, in your browser.
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.4 =
+* GenScore now reviews your site by itself: the home page, the pages in your menus, your best-selling products and your latest posts. The note is your site's, and each fix says how many pages it affects and which ones.
+* «Tus páginas»: every page reviewed, worst first, with a link to open its detail or edit it.
+* New «GenScore» column in the lists of pages, posts and products. When you publish or update something, only that page is reviewed again.
+* The page picker of 1.0.3 is gone: there is nothing to choose.
 
 = 1.0.3 =
 * Review any published page, post or product, not only the home page: pick it at the top of the screen, or use «Revisar con GenScore» in the lists of pages, posts and products.

@@ -37,7 +37,15 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   ni siquiera para un bot que otro plugin bloqueaba (adenda 1.0.3 de §421).
 - **La página revisada viaja como id (`?post=`), nunca como URL**: la dirección
   sale de `get_permalink` y sólo vale si es pública y de esta web
-  (`genscore_review_choice`). La nota guardada para el Escritorio es siempre la
-  de la portada.
+  (`genscore_review_choice`).
+- **La nota del plugin es la de la web entera** (adenda 1.0.4 de §421): la media
+  de las páginas importantes (`genscore_key_pages`, como mucho
+  `GENSCORE_KEY_PAGES`: portada, menús, productos más vendidos, últimas
+  entradas y páginas recientes). Nunca se pide a la persona que elija página.
+- **Cada nota de página se guarda en `genscore_page_scores`, en la propia web**,
+  saneada (`genscore_sanitize_page_score`) y con tope de 60. Guardar o borrar
+  un post borra sólo su nota, y sólo esa página se vuelve a leer.
+- **La columna «GenScore» de las listas sólo lee lo guardado**: no revisa nada
+  al pintar la lista.
 - **Antes de entregar un zip se pasa el guion en un WordPress real** (con
   WooCommerce y Plugin Check), no sólo los tests de PHP.

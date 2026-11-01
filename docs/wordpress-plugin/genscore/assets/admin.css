@@ -199,7 +199,28 @@
 #genscore-app .gs-site{width:32px;height:32px;flex:none;border-radius:8px;object-fit:cover;border:1px solid var(--rule)}
 #genscore-app .gs-ini{display:grid;place-items:center;background:var(--surface-3);color:var(--ink);font-weight:600;font-size:15px}
 @media (min-width:783px){#genscore-app .gs-ph{padding-top:18px}}
-#genscore-app .gs-pick{display:flex;flex-direction:column;gap:2px;margin-left:14px;padding-left:14px;border-left:1px solid var(--rule);min-width:0}
-#genscore-app .gs-pick span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
-#genscore-app .gs-pick select{font:inherit;font-size:13.5px;color:var(--ink);background-color:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:3px 28px 3px 8px;min-height:30px;max-width:340px;line-height:1.3}
-@container (max-width:520px){#genscore-app .gs-pick{order:5;flex-basis:100%;margin-left:0;padding-left:0;border-left:0}#genscore-app .gs-pick select{max-width:100%;width:100%}}
+/* site review */
+#genscore-app .gs-back{gap:4px;margin-left:8px}
+#genscore-app .gs-back .gs-i{width:14px;height:14px}
+#genscore-app .gs-pg-t{min-width:0;max-width:340px}
+#genscore-app .gs-pg-t b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#genscore-app .gs-sc{flex:none;min-width:32px;text-align:center;font-weight:600;font-size:12.5px;border-radius:6px;padding:2px 6px;font-variant-numeric:tabular-nums;background:var(--surface-3);color:var(--ink-2)}
+#genscore-app .gs-sc-pos{background:var(--pos-tint);color:var(--pos)}
+#genscore-app .gs-sc-mid{background:var(--mid-tint);color:var(--mid)}
+#genscore-app .gs-sc-low{background:var(--warm-tint);color:var(--warm)}
+#genscore-app .gs-prs{display:flex;flex-direction:column}
+#genscore-app .gs-fxw .gs-prs{margin-top:8px;border:1px solid var(--rule-2);border-radius:10px;padding:0 10px}
+#genscore-app .gs-pr{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rule-2);font-size:13.5px}
+#genscore-app .gs-pr:last-child{border-bottom:0}
+#genscore-app .gs-pr .gs-tx{flex:1;min-width:0}
+#genscore-app .gs-pr .gs-tx small{display:block;color:var(--ink-3);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#genscore-app .gs-prt{text-align:left;cursor:pointer}
+#genscore-app .gs-prt b{font-weight:500;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#genscore-app .gs-prt:hover b{color:var(--blue);text-decoration:underline;text-underline-offset:2px}
+#genscore-app .gs-pr-e{flex:none;font-size:12.5px;font-weight:600;color:var(--blue)}
+#genscore-app .gs-fxw{align-items:flex-start}
+#genscore-app .gs-chip{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--mid-tint);color:var(--mid)}
+#genscore-app .gs-link{color:var(--blue);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+#genscore-app .gs-bgrev{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12.5px;color:var(--ink-3);margin:2px 0 4px}
+#genscore-app .gs-spin.gs-spin-sm{width:14px;height:14px;border-width:2px}
+@container (max-width:520px){#genscore-app .gs-fxw{flex-wrap:wrap}#genscore-app .gs-fxw>.gs-tx{flex-basis:calc(100% - 28px)}#genscore-app .gs-fxw>.gs-btn{margin-left:28px}#genscore-app .gs-pg-t{flex-basis:100%;max-width:100%;order:4}}
