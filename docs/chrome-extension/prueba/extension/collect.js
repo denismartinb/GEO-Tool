@@ -79,6 +79,20 @@ async function collectPageFacts() {
   const faq = nodes.some((n) => isT(n, "FAQPage"));
   const org = nodes.some((n) => isT(n, "Organization", "LocalBusiness", "OnlineStore", "Store"));
   const offerCount = nodes.filter((n) => isT(n, "Offer", "AggregateOffer")).length;
+  /* what a non-goods page sells (software, a service, a course): the first
+     typed node with offers that is not a Product or an Offer itself */
+  const offNode = prodNode ? null : nodes.find((n) => n.offers && !isT(n, "Product", "ProductGroup", "Offer", "AggregateOffer"));
+  let offering = null;
+  if (offNode) {
+    const o = [].concat(offNode.offers || []).flatMap((x) => (x && x.offers ? [].concat(x.offers) : [x])).filter(Boolean)[0] || {};
+    const price = o.price ?? o.lowPrice ?? (o.priceSpecification && o.priceSpecification.price) ?? null;
+    offering = {
+      type: String([].concat(offNode["@type"])[0]),
+      name: clean(offNode.name),
+      price: price != null && price !== "" ? String(price) : null,
+      currency: o.priceCurrency || (o.priceSpecification && o.priceSpecification.priceCurrency) || null
+    };
+  }
   const microPrice = !!q('[itemprop="price"]');
 
   /* ---------- visible date ---------- */
@@ -102,7 +116,7 @@ async function collectPageFacts() {
   /* ---------- buy and returns ---------- */
   const actionable = qa('button, a[href], input[type="submit"], [role="button"]').filter(visible);
   const label = (el) => clean(el.innerText || el.value || el.getAttribute("aria-label") || "");
-  const BUY = /(añadir al carrito|añadir a la cesta|agregar al carrito|comprar( ahora| ya)?$|^comprar|add to (cart|bag|basket)|buy( it)? now|reservar|suscríbete|suscribirme|contratar)/i;
+  const BUY = /(añadir al carrito|añadir a la cesta|agregar al carrito|comprar( ahora| ya)?$|^comprar|add to (cart|bag|basket)|buy( it)? now|reservar|suscríbete|suscribirme|contratar|pru[eé]ba(lo)? gratis|empieza gratis|empezar (la )?prueba|start (a |your )?free trial|try (it )?(for )?free)/i;
   const buyEl = actionable.find((el) => BUY.test(label(el)) && label(el).length < 40);
   const RET = /(devoluci|devolver|cambios y devol|returns?\b|refund)/i;
   const retEl = qa("a[href]").find((a) => RET.test(label(a)) || /devoluc|returns|refund/i.test(a.getAttribute("href") || ""));
@@ -125,7 +139,7 @@ async function collectPageFacts() {
     lang,
     h1,
     og,
-    ld: { types: [...types], errors: ldErrors, product, article, faq, org, offerCount },
+    ld: { types: [...types], errors: ldErrors, product, offering, article, faq, org, offerCount },
     microPrice,
     visibleDate: visibleDate || metaDate || (article && (article.modified || article.published)) || null,
     lead,

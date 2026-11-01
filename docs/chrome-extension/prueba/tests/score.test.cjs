@@ -73,3 +73,28 @@ test("the title card explains the real problem: too long or too short", () => {
   const short = S.scorePage(Object.assign({}, F.b, { title: "Inicio" }), NOW).fixes.find((f) => f.id === "title");
   assert.match(short.why, /Tan corto/);
 });
+
+test("software or a service: no stock or returns, no «producto» copy (Instinct report, 1.0.1)", () => {
+  const saas = Object.assign({}, F.b, {
+    buy: "Prueba gratis",
+    ld: { types: ["Organization", "SoftwareApplication", "Offer", "FAQPage"], errors: 0, product: null, offering: { type: "SoftwareApplication", name: "GenScore", price: "29", currency: "EUR" }, article: null, faq: true, org: true, offerCount: 1 }
+  });
+  const r = S.scorePage(saas, NOW);
+  assert.equal(r.service, true);
+  assert.equal(r.lanes.agent, 100);
+  assert.equal(r.criteria.find((c) => c.id === "avail").v, null);
+  assert.equal(r.criteria.find((c) => c.id === "returns").v, null);
+  assert.equal(r.fixes.filter((x) => x.lane === "agent").length, 0);
+
+  const noPrice = Object.assign({}, saas, { buy: null, ld: Object.assign({}, saas.ld, { offering: Object.assign({}, saas.ld.offering, { price: null }) }) });
+  const fx = S.scorePage(noPrice, NOW).fixes.filter((x) => x.lane === "agent");
+  const text = fx.map((x) => x.t + " " + x.why + " " + (x.snippet || "")).join(" ");
+  assert.match(text, /datos de tu plan/);
+  assert.doesNotMatch(text, /stock|InStock|producto|devoluci/i);
+  assert.match(fx.find((x) => x.id === "price").snippet, /"price": "PRECIO"/);
+});
+
+test("a real shop keeps its goods cards", () => {
+  const r = S.scorePage(F.a, NOW);
+  assert.ok(!r.service);
+});

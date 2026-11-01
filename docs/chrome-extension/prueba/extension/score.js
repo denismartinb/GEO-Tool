@@ -152,6 +152,11 @@
        has them too, and an Agentes 20 there alarms for nothing. */
     const cartButton = !!f.buy && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(f.buy);
     const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount);
+    /* software, a service, a course: it sells, but there is no stock to declare
+       or parcel to return (same rule as the console's agentic audit, log §325) */
+    const offering = ld.offering || null;
+    const SERVICE_TYPES = ["SoftwareApplication", "WebApplication", "MobileApplication", "Service", "ProfessionalService", "Course", "Event", "FinancialProduct"];
+    const service = commerce && !product && (!!offering || (ld.types || []).some((t) => SERVICE_TYPES.includes(t)));
     const titleLen = (f.title || "").length;
     const descLen = (f.description || "").length;
     const lead = f.lead || { words: 0 };
@@ -170,7 +175,7 @@
     add("lead", "ia", 15, leadOk ? 1 : lead.words >= 12 ? 0.5 : 0, "Responde en las primeras líneas",
       leadOk ? `Sí, ${lead.words} palabras` : lead.words >= 12 ? (lead.words > 120 ? "Párrafo muy largo" : "Tarda en llegar") : "No");
     add("fresh", "ia", 15, commerce ? null : age == null ? 0 : age <= 365 ? 1 : age <= 730 ? 0.5 : 0.2, "Fecha visible y reciente",
-      commerce ? "No aplica en una ficha" : age == null ? "Sin fecha" : age <= 365 ? "Sí" : `Hace ${Math.round(age / 30)} meses`);
+      commerce ? (service ? "No aplica en una página de venta" : "No aplica en una ficha") : age == null ? "Sin fecha" : age <= 365 ? "Sí" : `Hace ${Math.round(age / 30)} meses`);
     add("ld", "ia", 15, ld.types.length ? (ld.errors ? 0.5 : 1) : ld.errors ? 0.25 : 0, "Datos estructurados",
       ld.types.length ? ld.types.slice(0, 3).join(", ") + (ld.errors ? " (con errores)" : "") : ld.errors ? "Con errores" : "No");
     add("llms", "ia", 5, f.llms && f.llms.ok ? 1 : 0, "llms.txt", f.llms && f.llms.ok ? "Sí" : "No");
@@ -186,7 +191,15 @@
     add("ldg", "google", 10, ld.types.length ? (ld.errors ? 0.5 : 1) : 0, "Datos estructurados", ld.types.length ? "Sí" : "No");
 
     /* Agentes, only when the page sells something */
-    if (commerce) {
+    if (service) {
+      const op = offering && offering.price;
+      add("prod", "agent", 30, offering && offering.name ? 1 : 0.5, "Entiende lo que vendes", offering && offering.name ? trimTo(offering.name, 28) : "No");
+      add("price", "agent", 25, op ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
+        op ? `${offering.price}${offering.currency ? " " + offering.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
+      add("avail", "agent", 15, null, "Disponibilidad", "No aplica");
+      add("buy", "agent", 20, f.buy ? 1 : 0, "Botón para contratar claro", f.buy ? `«${f.buy}»` : "No");
+      add("returns", "agent", 10, null, "Devoluciones", "No aplica");
+    } else if (commerce) {
       add("prod", "agent", 30, product && product.name ? 1 : ld.offerCount ? 0.5 : 0, "Entiende el producto", product && product.name ? trimTo(product.name, 28) : "No");
       add("price", "agent", 25, product && product.price ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
         product && product.price ? `${product.price}${product.currency ? " " + product.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
@@ -212,7 +225,7 @@
 
     const readers = ENGINES.filter((e) => access[e].allowed === true);
     const blockedEngines = ENGINES.filter((e) => access[e].allowed === false);
-    const fixes = buildFixes(f, C, gain, { access, path, product, commerce, noindex, nosnippet, gBlocked, now });
+    const fixes = buildFixes(f, C, gain, { access, path, product, offering, service, commerce, noindex, nosnippet, gBlocked, now });
 
     /* layer 2: the one warm alert */
     let alert = null;
@@ -230,7 +243,7 @@
     else say = `${listNames(readers)} pueden leerla, ${listNames(blockedEngines)} no`;
     if (known) say += noindex || gBlocked ? ", pero Google no la indexará." : ", y Google la indexa.";
 
-    return { nota, lanes, criteria: C, fixes, alert, say, commerce, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
+    return { nota, lanes, criteria: C, fixes, alert, say, commerce, service, readers, blockedEngines, access: ENGINES.reduce((o, e) => ((o[e] = access[e].allowed), o), {}) };
   }
 
   /* ---------------- «Haz esto»: one card per failing criterion ---------------- */
@@ -264,14 +277,17 @@
       });
     }
     push("snippet", { t: "Quita el <code class=\"p\">nosnippet</code>", why: "Pide a los buscadores que no citen el texto de la página. Es lo contrario de lo que buscas en la IA.", how: "Está en la etiqueta <code class=\"p\">meta name=\"robots\"</code> o en la cabecera <code class=\"p\">X-Robots-Tag</code>." });
-    push("lead", { t: "Responde en las primeras líneas", why: "Justo bajo el título, un párrafo de dos o tres frases que conteste la pregunta de la página. Es el texto que los motores suelen citar.", how: x.commerce ? "En una ficha: qué es, para quién y qué la diferencia, antes de la galería y las opciones." : "Empieza por la respuesta y deja el contexto para después." });
+    push("lead", { t: "Responde en las primeras líneas", why: "Justo bajo el título, un párrafo de dos o tres frases que conteste la pregunta de la página. Es el texto que los motores suelen citar.", how: x.service ? "Qué ofreces, para quién y qué lo diferencia, antes de los detalles." : x.commerce ? "En una ficha: qué es, para quién y qué la diferencia, antes de la galería y las opciones." : "Empieza por la respuesta y deja el contexto para después." });
     push("desc", {
       t: f.description ? "Deja la descripción entre 50 y 160 caracteres" : "Añade una descripción",
       why: f.description ? `Ahora tiene ${(f.description || "").length} caracteres.` : "Es el texto que Google enseña bajo el título. Esta sale del primer párrafo de la página: revísala antes de pegarla.",
       snippet: `<meta name="description" content="${attr(trimTo(f.lead && f.lead.text ? f.lead.text : f.title, 155))}">`, copyWhat: "la etiqueta de descripción"
     });
     push("title", { t: f.title ? "Deja el título entre 15 y 65 caracteres" : "Añade un título", why: !f.title ? "Sin título, Google se inventa uno." : f.title.length > 65 ? `Ahora tiene ${f.title.length}. Google corta lo que pasa de unos 65 y se pierde el final.` : `Ahora tiene ${f.title.length}. Tan corto no dice de qué va la página.`, how: "Lo que la página resuelve primero, y la marca al final." });
-    push("ld", x.commerce ? {
+    push("ld", x.service ? {
+      t: "Describe lo que vendes con JSON-LD", why: "Es lo que leen Google y los agentes para saber qué ofreces y a qué precio. Rellena lo que va en mayúsculas.",
+      snippet: serviceLd(h1, cleanUrl, x.offering, x.service), copyWhat: "el bloque JSON-LD"
+    } : x.commerce ? {
       t: "Describe el producto con JSON-LD", why: "Es lo que leen Google y los agentes para saber qué vendes, a qué precio y si hay stock. Rellena lo que va en mayúsculas.",
       snippet: productLd(h1, cleanUrl, x.product), copyWhat: "el bloque JSON-LD"
     } : {
@@ -285,16 +301,21 @@
     push("h1", { t: f.h1 && f.h1.length > 1 ? `Deja un solo h1 (ahora hay ${f.h1.length})` : "Añade un h1 con el tema de la página", why: "Es el título que leen Google y la IA dentro de la página." });
     push("lang", { t: "Declara el idioma de la página", why: "Ayuda a Google y a la IA a enseñarla en el idioma correcto.", snippet: '<html lang="es">', copyWhat: "el atributo de idioma" });
     push("llms", { t: "Publica un <code class=\"p\">llms.txt</code>", why: "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este parte de esta página: añade tus páginas principales.", snippet: `# ${brand}\n\n> ${trimTo(f.description || (f.lead && f.lead.text) || f.title, 200)}\n\n## Páginas principales\n\n- [${(f.title || h1).replace(/[[\]]/g, "")}](${cleanUrl})`, copyWhat: "el llms.txt" });
-    push("prod", { t: "Di qué producto es con JSON-LD", why: "Un agente no adivina: lee <code class=\"p\">Product</code> con su nombre, precio y stock.", snippet: productLd(h1, cleanUrl, x.product), copyWhat: "el bloque JSON-LD" });
-    push("price", { t: "Pon el precio en los datos del producto", why: "Si sólo está en la página, un agente puede no verlo. Va en <code class=\"p\">offers.price</code>.", snippet: offerLd(x.product, cleanUrl), copyWhat: "la oferta" });
-    push("avail", { t: "Di si hay stock", why: "Un agente no recomienda lo que no sabe si puede comprar.", snippet: offerLd(x.product, cleanUrl), copyWhat: "la oferta" });
+    if (x.service) {
+      push("prod", { t: "Pon el nombre de lo que vendes en el JSON-LD", why: "Un agente no adivina: lee el nombre y la oferta del bloque que describe tu servicio.", snippet: serviceLd(h1, cleanUrl, x.offering), copyWhat: "el bloque JSON-LD" });
+      push("price", { t: "Pon el precio en los datos de tu plan", why: "Si sólo está en la página, un agente puede no verlo. Va en <code class=\"p\">offers.price</code>: cambia PRECIO por el tuyo.", snippet: serviceOfferLd(x.offering, cleanUrl), copyWhat: "la oferta" });
+      push("buy", { t: "Que el botón para contratar diga lo que hace", why: "«Prueba gratis», «Contratar» o «Suscribirme», a la vista y como botón de verdad. Un agente busca esas palabras." });
+    }
+    if (!x.service) push("prod", { t: "Di qué producto es con JSON-LD", why: "Un agente no adivina: lee <code class=\"p\">Product</code> con su nombre, precio y stock.", snippet: productLd(h1, cleanUrl, x.product), copyWhat: "el bloque JSON-LD" });
+    if (!x.service) push("price", { t: "Pon el precio en los datos del producto", why: "Si sólo está en la página, un agente puede no verlo. Va en <code class=\"p\">offers.price</code>.", snippet: offerLd(x.product, cleanUrl), copyWhat: "la oferta" });
+    if (!x.service) push("avail", { t: "Di si hay stock", why: "Un agente no recomienda lo que no sabe si puede comprar.", snippet: offerLd(x.product, cleanUrl), copyWhat: "la oferta" });
     /* price and stock paste the same Offer: one card, both gains */
     const pi = out.findIndex((r) => r.id === "price"), ai = out.findIndex((r) => r.id === "avail");
     if (pi > -1 && ai > -1) {
       out[pi] = Object.assign({}, out[pi], { t: "Pon el precio y el stock en los datos del producto", why: "Si sólo están en la página, un agente puede no verlos. Van en <code class=\"p\">offers</code>: cambia PRECIO por el tuyo.", pts: out[pi].pts + out[ai].pts });
       out.splice(ai, 1);
     }
-    push("buy", { t: "Que el botón de compra diga lo que hace", why: "«Añadir al carrito» o «Comprar», a la vista y como botón de verdad. Un agente busca esas palabras." });
+    if (!x.service) push("buy", { t: "Que el botón de compra diga lo que hace", why: "«Añadir al carrito» o «Comprar», a la vista y como botón de verdad. Un agente busca esas palabras." });
     push("returns", { t: "Pon tu política de devoluciones en los datos", why: "Es lo que más pregunta quien compra a través de un agente. Ajusta los días.", snippet: JSON.stringify({ "@type": "MerchantReturnPolicy", applicableCountry: "ES", returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow", merchantReturnDays: 30, returnMethod: "https://schema.org/ReturnByMail" }, null, 2), copyWhat: "la política de devoluciones" });
 
     /* a domain-wide fix first only when it blocks; then by points */
@@ -306,6 +327,13 @@
   }
   function offerLd(p, url) {
     return JSON.stringify({ "@type": "Offer", url, price: (p && p.price) || "PRECIO", priceCurrency: (p && p.currency) || "EUR", availability: "https://schema.org/InStock" }, null, 2);
+  }
+  function serviceOfferLd(o, url) {
+    return JSON.stringify({ "@type": "Offer", url, price: (o && o.price) || "PRECIO", priceCurrency: (o && o.currency) || "EUR" }, null, 2);
+  }
+  function serviceLd(name, url, o) {
+    const type = (o && o.type) || "Service";
+    return '<script type="application/ld+json">\n' + JSON.stringify({ "@context": "https://schema.org", "@type": type, name: (o && o.name) || name, description: "DESCRIPCIÓN EN UNA FRASE", url, offers: JSON.parse(serviceOfferLd(o, url)) }, null, 2) + "\n</script>";
   }
   function productLd(name, url, p) {
     return '<script type="application/ld+json">\n' + JSON.stringify({ "@context": "https://schema.org", "@type": "Product", name: (p && p.name) || name, description: "DESCRIPCIÓN EN UNA FRASE", image: "URL DE LA IMAGEN", offers: JSON.parse(offerLd(p, url)) }, null, 2) + "\n</script>";
