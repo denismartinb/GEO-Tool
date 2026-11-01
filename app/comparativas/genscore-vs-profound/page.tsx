@@ -10,9 +10,9 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-profound`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "GenScore vs Profound: alternativa en español a la plataforma AEO · GenScore",
+  title: "GenScore vs Profound: la alternativa en español · GenScore",
   description:
-    "GenScore frente a Profound: precio de entrada, motores cubiertos, a quién se dirige cada una y gestión multi-cliente. Comparativa honesta, con lo que cada una hace mejor.",
+    "GenScore frente a Profound: precio de entrada, motores cubiertos, a quién se dirige cada una y gestión multicliente. Con lo que cada una hace mejor.",
   path: "/comparativas/genscore-vs-profound"
 });
 

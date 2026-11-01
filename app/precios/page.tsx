@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PricingPage } from "@/components/pricing/pricing-page";
 import { contentMetadata } from "@/lib/seo/metadata";
 import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { SoftwareApplicationSchema } from "@/components/seo/software-application-schema";
 import { PLAN_FAQ, PLANS } from "@/app/pricing/plans-data";
 
 const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
@@ -34,7 +35,7 @@ export const revalidate = 600;
  */
 export const metadata: Metadata = contentMetadata({
   title: `Precios de GenScore: planes de posicionamiento GEO desde ${STARTER_PRICE} €/mes`,
-  description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) cuando quieras seguimiento continuo de tu visibilidad en ChatGPT, Gemini, Claude y Perplexity. Sin permanencia.`,
+  description: `Prueba Pro 7 días gratis, sin tarjeta, y sigue con Starter (${STARTER_PRICE} €/mes) o Pro (${PRO_PRICE} €/mes) para medir tu visibilidad en la IA. Sin permanencia.`,
   path: "/precios"
 });
 
@@ -50,6 +51,7 @@ export const metadata: Metadata = contentMetadata({
 export default function Page() {
   return (
     <>
+      <SoftwareApplicationSchema withPlanOffers />
       <FaqPageSchema items={PLAN_FAQ.map((f) => ({ question: f.q, answer: f.a }))} />
       <PricingPage />
     </>

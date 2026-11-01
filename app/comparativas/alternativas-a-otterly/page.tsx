@@ -29,7 +29,7 @@ const PAGE_URL = `${SITE_URL}/comparativas/alternativas-a-otterly`;
 export const metadata: Metadata = contentMetadata({
   title: "Alternativas a Otterly en 2026: cuál elegir según tu caso · GenScore",
   description:
-    "Cinco alternativas a Otterly comparadas por el motivo que te hace buscarlas: quince prompts en el plan de entrada, motores que se cobran aparte, diagnóstico sin ejecución o producto en inglés. GenScore resuelve tres de los cuatro y se prueba 7 días sin tarjeta.",
+    "Cinco alternativas a Otterly según el motivo que te hace buscarlas: pocos prompts de entrada, motores aparte, diagnóstico sin ejecución o producto en inglés.",
   path: "/comparativas/alternativas-a-otterly"
 });
 

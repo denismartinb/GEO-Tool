@@ -29000,3 +29000,38 @@ Agent Plugins no admite `extensions` dentro de un servidor de `mcp.json`,
 aunque la documentación de OpenAI lo pone ahí; si la comprobación del portal
 lo rechaza, se sube sin ese bloque y la autenticación se configura en
 **Connect**. Las capturas de la ficha son opcionales y salen del chat real.
+
+## §431 · MCP-SITE-FIXES-1: /precios declara sus planes y las páginas públicas caben en el SERP (2026-11-01)
+
+**Qué pasó.** Denis probó el conector de GenScore en Claude para aplicar las
+recomendaciones de genscore.es. Las auditorías del conector daban 68 en la
+agéntica (lo que más restaba: «Declara lo que vendes con datos estructurados»,
+13 puntos) y señalaban títulos y descripciones fuera de longitud. Denis eligió
+arreglar las dos cosas, sin cambios visibles.
+
+**Qué se decidió.**
+
+- `/precios` monta `SoftwareApplicationSchema withPlanOffers`: el mismo nodo
+  (`@id` de siempre) con una `Offer` por plan con precio de lista, Starter y
+  Pro, mensual (`unitCode: MON`), IVA incluido, desde `PLANS`. Agencia no se
+  declara porque no tiene precio de lista («Plan a medida»), y el precio
+  fundador tampoco, porque es un cupón y no el precio del plan. La home y
+  `/que-es-genscore` siguen con la oferta «desde».
+- Las páginas públicas indexables pasan a 15–70 caracteres de título y
+  50–160 de descripción. Medido sobre el HTML de `next build`, eran 37 (20
+  términos del glosario, 7 comparativas, `/precios`, `/que-es-genscore`,
+  `/sobre-genscore`, `/estudios`, `/demo`, los dos `/gratis`, dos de `/docs` y
+  `/blog/sectores`); ahora no queda ninguna. Los artículos del blog ya
+  cumplían desde §265.
+- Las constantes compartidas (definición canónica, definición del GEO Score,
+  entradillas) no se tocan: son texto visible y de schema. La página pone su
+  propia descripción. El glosario gana `metaDescription` por término y
+  `glossaryTermTitle`.
+
+**Pendiente o sabido.** La 404, `forgot-password` y el error global heredan
+la descripción raíz de 171 caracteres; son `noindex` y la auditoría no las
+lee. Las otras recomendaciones del conector (enlace a cancelación y reembolso
+en `/precios`, LCP móvil de 2,7 s) quedan para otra fase: la primera toca
+texto visible congelado y la segunda hay que investigarla. Fricciones del
+conector anotadas en `/mnt/project-files/conector-mcp/`. No retira ningún
+camino de recuperación.
