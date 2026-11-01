@@ -28412,3 +28412,15 @@ camino de recuperación.
 **Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
 
 **Pendiente o conocido.** Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
+
+## §400 · APP-LEGAL-1: las páginas legales no venden dentro de la app (2026-10-31)
+
+**Qué se decidió.** La prueba de la versión 1.0.2 de la app de Android en BrowserStack (Pixel 8 y Galaxy S24, Android 14) pasó arranque, ausencia de barra de dirección, registro, recuperar contraseña y reapertura, pero falló «sin precios»: Términos, Privacidad y Cookies, que se abren desde el inicio de sesión y están en la lista de permitidos de §381, pintaban la cabecera pública (franja «Pro 99 € → 69 €/mes para siempre», «Precios») y el pie público (enlace a precios y logos de pago). Google Play no lo acepta dentro de la app.
+
+Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una barra con la marca y «Volver» (a `/login`, que con sesión sigue a la consola) y no pinta el pie. La cláusula «Planes y precios» de Términos nombra la página de precios en genscore.es sin enlazarla. Fuera de la app no cambia nada. Lo vigila `components/legal-page-shell.test.tsx`.
+
+**Coste.** Las tres páginas leen la cookie, así que dejan de ser estáticas y se generan en cada visita.
+
+**Paquete Android (fuera del repo, para la siguiente sesión).** La 1.0.0 y la 1.0.1 se cerraban al abrir: con `enableSiteSettingsShortcut: false`, androidbrowserhelper desactiva `ManageDataLauncherActivity`, que no estaba declarada. La 1.0.2 (código 3) la activa y la declara como la plantilla de Bubblewrap, y compila sin minificar. Cualquier regeneración del proyecto tiene que conservar las dos cosas.
+
+**Pendiente.** Hay como un segundo en blanco entre la pantalla de arranque nativa y la animación de la splash; sin medir.
