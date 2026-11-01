@@ -28602,4 +28602,6 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Cómo.** `/api/ext/project` lee `loadSearchConsoleScreen` (misma entrada de caché `screen-rows` de 30 min que «Posición en Google», sin inspecciones de indexación) con un tope de 6 s; si Google tarda, el campo sale como error y el panel no pinta el bloque. `toExtSearchConsole` mantiene los campos planos de §409 (`clicks`, `position`, `nearPage1`, `empty`) para un panel antiguo y añade `trend` y `page`. Nada se guarda en nuestra base de datos (`.claude/rules/search-console.md`).
 
+**Adenda (mismo día).** Una página interna de tu dominio analizada sola («Página abierta») seguía enseñando la invitación a conectar aunque Search Console estuviera conectado. Ahora lee la misma conexión (`gscOwnPage`): conectado enseña «Esta página en Google» o, si Google no devolvió búsquedas para esa página, lo dice; mientras carga no pinta nada; sin conectar, la invitación de siempre.
+
 **Pendiente.** Subir la 1.2.0 a la tienda (Denis).

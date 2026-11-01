@@ -143,7 +143,7 @@
       if (pr.length) h += `<div class="mh">La citan en tus prompts${EJx()}</div>${promptRows(pr.slice(0, 3))}`;
       return h + `<div class="mh">En la página</div>${kv(C.filter((c) => !c.id.startsWith("bot-")))}`;
     }
-    if (k === "google") return (rel === "own" ? `<div class="mh">Search Console</div>${gscInvite()}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
+    if (k === "google") return (rel === "own" ? gscOwnPage() : "") + `<div class="mh">En la página</div>${kv(C)}`;
     if (sc.shop && sc.shop.state === "found") return `<div class="shopln ok">${ic("checkc")}<span class="tx">GenScore detecta tu tienda</span></div><div class="mh">Lo que lee un agente</div>${kv(sc.shop.criteria)}`;
     return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">Se mira sólo cuando la página vende algo.</p>`;
   }
@@ -207,6 +207,23 @@
     if (!pg) return "";
     const rows = (pg.queries || []).map((r) => qRow(r, clicksTag(r.clicks))).join("");
     return `<div class="gcard pg"><div class="gch"><b>Esta página en Google</b><small>Últimos 28 días</small></div><div class="gk3 sm"><div class="k"><span class="l">Clics</span><b class="num">${nES(pg.clicks)}</b></div><div class="k"><span class="l">Impresiones</span><b class="num">${nES(pg.impressions)}</b></div><div class="k"><span class="l">Puesto medio</span><b class="num">${nES(pg.position, 1)}</b></div></div>${rows ? `<div class="mh sub">Búsquedas que la traen</div>${rows}` : ""}</div>`;
+  }
+  /* EXT-GSC-2 (log §411): the open page of your own domain, analysed on its
+     own («Página abierta»), reads the same Search Console connection as the
+     domain view. Connected: the page's own figures, or a plain line when
+     Google returned none for it. Still loading: nothing, never the invite. */
+  function gscOwnPage() {
+    if (!S.real) return `<div class="mh">Search Console</div>${gscInvite()}`;
+    const p = S.proj[curDom()];
+    if (!p || p === "loading") return "";
+    const g = typeof p === "object" ? p.searchConsole : null;
+    if (g && g.state === "connected") {
+      const pg = gscPage();
+      if (pg) return pg;
+      return `<div class="mh">Search Console</div><div class="calm col">${lg("google", 16)}<span>Search Console está conectado. Google no ha devuelto búsquedas que lleven a esta página en los últimos 28 días.</span><button class="btn line sm" data-act="open" data-to="${esc(projPath("search-console") || "/dashboard")}" data-c="gsc-open">Ver Posición en Google${ic("arrowr", "sm")}</button></div>`;
+    }
+    if (g && g.state === "off") return "";
+    return `<div class="mh">Search Console</div>${gscBlock()}`;
   }
   function pageLayer(k) {
     const sc = S.sc;
