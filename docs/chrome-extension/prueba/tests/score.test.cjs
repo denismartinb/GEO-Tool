@@ -117,3 +117,48 @@ test("a home page that sells nothing takes Agentes from the shop it found (EXT-S
   const fake = S.scorePage(Object.assign({}, home, { shop: { state: "found", path: "/x", facts: { url: "http://localhost:8302/x", path: "/x", ld: F.b.ld, og: {}, microPrice: false, buy: null } } }), NOW);
   assert.equal(fake.shop.state, "none");
 });
+
+test("the llms.txt draft lists the menu and footer links with their own text (EXT-LLMS-LINKS-1)", () => {
+  const links = { main: [{ text: "Móvil", url: "https://x.es/movil/" }, { text: "Fibra", url: "https://x.es/fibra/" }], footer: [{ text: "Ayuda", url: "https://x.es/ayuda/" }], legal: [{ text: "Privacidad", url: "https://x.es/privacidad/" }] };
+  const base = Object.assign({}, F.b, { llms: { status: 404, ok: false } });
+  const fx = (f) => S.scorePage(f, NOW).fixes.find((x) => x.id === "llms");
+  const d = fx(Object.assign({}, base, { links, siteName: "Marca X" }));
+  assert.match(d.snippet, /^# Marca X\n/);
+  assert.match(d.snippet, /## Páginas principales[\s\S]*- \[Móvil\]\(https:\/\/x\.es\/movil\/\)\n- \[Fibra\]/);
+  assert.match(d.snippet, /## Más información\n\n- \[Ayuda\]/);
+  assert.match(d.snippet, /## Optional\n\n- \[Privacidad\]/);
+  assert.doesNotMatch(d.snippet, /: \S/m, "no invented description after a link");
+  /* without links it still works, from this page alone */
+  const solo = fx(base);
+  assert.doesNotMatch(solo.snippet, /## Más información/);
+  assert.match(solo.why, /parte de esta página/);
+});
+
+test("the sentence under the dial joins both halves with the right connector", () => {
+  const allBlocked = { status: 200, text: "User-agent: *\nDisallow: /\n" };
+  assert.equal(S.scorePage(Object.assign({}, F.b, { robots: allBlocked }), NOW).say, "Ningún motor de IA puede leer esta página, y Google tampoco la indexa.");
+  assert.equal(S.scorePage(F.b, NOW).say, "Los cuatro motores pueden leerla, y Google la indexa.");
+  for (const f of Object.values(F)) assert.doesNotMatch(S.scorePage(f, NOW).say, /pero Google no la indexará|indexará/);
+});
+
+test("sold out: «Avísame» does not fail the buy button, and availability reads in Spanish (log §407)", () => {
+  const ld = Object.assign({}, F.a.ld, { product: Object.assign({}, F.a.ld.product, { availability: "SoldOut" }) });
+  const r = S.scorePage(Object.assign({}, F.a, { ld, buy: null }), NOW);
+  const buy = r.criteria.find((c) => c.id === "buy");
+  assert.equal(buy.v, null);
+  assert.equal(buy.value, "No aplica, agotado");
+  assert.equal(r.criteria.find((c) => c.id === "avail").value, "Agotado");
+  assert.ok(!r.fixes.some((x) => x.id === "buy"));
+});
+
+test("a pricing page or a price beside a buy button sells, even with no data; an article never does (log §407)", () => {
+  const pricing = S.scorePage(Object.assign({}, F.b, { ld: { types: [], errors: 0 }, path: "/pricing", pricingPath: true, buy: "Start free trial", priceSeen: true, sellCta: true }), NOW);
+  assert.equal(pricing.commerce, true);
+  assert.equal(pricing.service, true);
+  assert.equal(pricing.criteria.find((c) => c.id === "price").value, "Sólo en el texto");
+  assert.equal(pricing.criteria.find((c) => c.id === "avail").v, null);
+  const post = S.scorePage(Object.assign({}, F.b, { priceSeen: true, sellCta: true }), NOW);
+  if ((F.b.ld.types || []).some((t) => /Article|BlogPosting/.test(t))) assert.equal(post.commerce, false);
+  const listing = S.scorePage(Object.assign({}, F.b, { ld: { types: [], errors: 0 }, path: "/portatiles", listing: true, shop: { state: "none" } }), NOW);
+  assert.equal(listing.shop, null, "a listing without a product found does not say «no detecta tu tienda»");
+});

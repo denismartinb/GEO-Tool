@@ -153,3 +153,22 @@ describe("classifyOffer (log §325)", () => {
     expect(extractPageSignals(page("<a href='/blog'>Entradas</a>")).buyCta).toBe(false);
   });
 });
+
+describe("SHOP-DETECT-2 (log §407)", () => {
+  const page = (body: string) => `<html><body>${body}</body></html>`;
+  it("reads pricing words inside a path, and insurers and «contratar» pages as services", () => {
+    const sig = extractPageSignals(page("<p>Hola</p>"));
+    expect(classifyOffer(sig, "https://x.es/plan-de-precios")?.pricingPage).toBe(true);
+    expect(classifyOffer(sig, "https://x.es/es/hogares/tarifas-luz")?.pricingPage).toBe(true);
+    expect(classifyOffer(sig, "https://x.es/tarifas/roaming")).toBeNull();
+    expect(classifyOffer(sig, "https://x.es/particulares/seguros-de-salud")?.kind).toBe("service");
+    expect(classifyOffer(sig, "https://x.es/es/luz/contratar-luz/")?.kind).toBe("service");
+    expect(classifyOffer(sig, "https://x.es/seguridad")).toBeNull();
+  });
+
+  it("marks a product whose every offer is sold out", () => {
+    const ld = (a: string) => page(`<script type="application/ld+json">{"@type":"Product","name":"X","offers":{"@type":"Offer","price":"10","availability":"${a}"}}</script>`);
+    expect(extractPageSignals(ld("https://schema.org/SoldOut")).soldOut).toBe(true);
+    expect(extractPageSignals(ld("https://schema.org/InStock")).soldOut).toBe(false);
+  });
+});
