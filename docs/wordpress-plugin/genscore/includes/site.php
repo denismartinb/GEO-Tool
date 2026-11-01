@@ -34,6 +34,16 @@ function genscore_seo_plugin() {
 }
 
 /**
+ * Whether an active SEO plugin prints its own schema graph (WebPage, Article,
+ * WebSite). GenScore's block would then be a second one.
+ *
+ * @return bool
+ */
+function genscore_seo_prints_schema() {
+	return defined( 'WPSEO_VERSION' ) || defined( 'RANK_MATH_VERSION' ) || defined( 'AIOSEO_VERSION' );
+}
+
+/**
  * Where the sitemap lives, or null when nothing publishes one.
  *
  * @return string|null
@@ -111,6 +121,8 @@ function genscore_site_facts() {
 		'product'       => genscore_sample_product_url(),
 		'readingUrl'    => admin_url( 'options-reading.php' ),
 		'permalinkPlain' => '' === (string) get_option( 'permalink_structure' ),
+		'frontPage'     => 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0,
+		'shopPage'      => genscore_shop_page_id(),
 	);
 }
 

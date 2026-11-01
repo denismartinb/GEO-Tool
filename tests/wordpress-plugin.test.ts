@@ -59,4 +59,11 @@ describe("WordPress plugin", () => {
     });
     expect(out).not.toContain("FAIL");
   });
+
+  it.skipIf(!php)("one-click fixes helpers pass their PHP tests", () => {
+    const out = execFileSync("php", [join(ROOT, "docs/wordpress-plugin/tests/fixes-test.php")], {
+      encoding: "utf8"
+    });
+    expect(out).not.toContain("FAIL");
+  });
 });

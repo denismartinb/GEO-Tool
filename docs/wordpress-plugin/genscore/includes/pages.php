@@ -149,6 +149,7 @@ function genscore_sanitize_page_score( $raw ) {
 		'google' => $score( isset( $raw['google'] ) ? $raw['google'] : null ),
 		'agent'  => $score( isset( $raw['agent'] ) ? $raw['agent'] : null ),
 		'at'     => time(),
+		'via'    => ! empty( $raw['via'] ),
 		'fixes'  => array(),
 	);
 	if ( null === $out['nota'] ) {
@@ -219,3 +220,31 @@ function genscore_forget_page_score( $post_id ) {
 }
 add_action( 'save_post', 'genscore_forget_page_score' );
 add_action( 'deleted_post', 'genscore_forget_page_score' );
+
+/**
+ * Forgets every stored score. robots.txt, llms.txt and «visible to search
+ * engines» count on every page, so a change to any of them makes every
+ * score stale: the next visit to the screen reads the pages again.
+ */
+function genscore_forget_all_scores() {
+	delete_option( GENSCORE_SCORES_OPTION );
+}
+add_action( 'update_option_blog_public', 'genscore_forget_all_scores' );
+// Turning an SEO or shop plugin on or off changes what every page prints.
+add_action( 'activated_plugin', 'genscore_forget_all_scores' );
+add_action( 'deactivated_plugin', 'genscore_forget_all_scores' );
+
+/**
+ * Scores stored by another version of the plugin may have been computed
+ * differently (1.0.5 stored the borrowed shop fixes with their own ids), so
+ * they are read again once after an update.
+ */
+function genscore_scores_version_check() {
+	// The suffix changes when a build reads pages differently within a version.
+	$rev = GENSCORE_VERSION . '.3';
+	if ( get_option( 'genscore_scores_version' ) !== $rev ) {
+		genscore_forget_all_scores();
+		update_option( 'genscore_scores_version', $rev, false );
+	}
+}
+add_action( 'admin_init', 'genscore_scores_version_check' );
