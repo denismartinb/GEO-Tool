@@ -89,6 +89,28 @@ export default function PrivacidadPage() {
         usuario de Chrome Web Store, incluidos sus requisitos de uso limitado (Limited Use).
       </p>
 
+      <h2>Apps conectadas (Claude, ChatGPT y otros clientes MCP)</h2>
+      <p>
+        Puedes conectar tu cuenta de GenScore a Claude, ChatGPT u otra aplicación compatible con
+        el protocolo MCP. Al conectarla, una pantalla de GenScore te dice qué aplicación pide
+        acceso y a qué cuenta, y solo se conecta si pulsas Permitir. La aplicación recibe un
+        permiso de solo lectura: puede consultar tus dominios y sus resultados (Puntuación GEO,
+        recomendaciones, competidores, auditorías y, si lo has conectado, tus datos de Search
+        Console) para responder a lo que preguntas en el chat. No puede cambiar nada de tu cuenta,
+        lanzar escaneos ni ver tu facturación. GenScore no guarda tus conversaciones ni las
+        preguntas que hace la aplicación; registramos solo qué herramienta se usó, para medir el
+        uso del servicio. Estos datos se tratan para prestarte el servicio que has pedido (art.
+        6.1.b RGPD). Lo que la aplicación haga después con las respuestas se rige por la política
+        de privacidad de esa aplicación.
+      </p>
+      <p>
+        La herramienta de revisar una página funciona también sin cuenta: lee desde los servidores
+        de GenScore la página pública que indiques, su robots.txt y su llms.txt, y no sigue sus
+        enlaces. Para limitar el uso guardamos el dominio revisado y un identificador
+        cifrado de quien lo pide, nunca la dirección IP en claro. Puedes desconectar una aplicación
+        en cualquier momento en Ajustes, pestaña Cuenta, apartado Apps conectadas.
+      </p>
+
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>
       <p>Para prestar el servicio, algunos datos se comparten con los siguientes proveedores, que actúan como encargados del tratamiento:</p>
       <ul>
