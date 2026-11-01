@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { useSessionUser } from "@/lib/use-session-user";
 import {
   EXT_PROMO_DELAY_MS,
   EXT_PROMO_DISMISSED_AT_KEY,
@@ -14,12 +13,6 @@ import {
   placementFor,
   type ExtPromoPlacement
 } from "@/lib/chrome-extension/install-promo";
-import {
-  isPromoEligible,
-  PROMO_DISMISSED_AT_KEY,
-  PROMO_REQUESTED_KEY,
-  PROMO_SHOWN_THIS_VISIT_KEY
-} from "@/lib/free-report/promo";
 
 /**
  * EXT-PROMO-1 (log §403) — the floating card offering the Chrome extension,
@@ -51,14 +44,12 @@ function writeStorage(kind: "local" | "session", key: string, value: string): vo
 
 export function ChromeExtensionPromo() {
   const pathname = usePathname();
-  const user = useSessionUser();
   const [placement, setPlacement] = useState<ExtPromoPlacement | null>(null);
   const shown = useRef(false);
 
   useEffect(() => {
     if (shown.current) return;
     const nav = navigator as NavigatorWithHints;
-    const now = Date.now();
     const eligible = isExtPromoEligible({
       pathname,
       desktopChrome: isDesktopChrome({
@@ -66,18 +57,10 @@ export function ChromeExtensionPromo() {
         brands: nav.userAgentData?.brands ?? null,
         mobile: nav.userAgentData?.mobile ?? null
       }),
-      now,
+      now: Date.now(),
       dismissedAt: readStorage("local", EXT_PROMO_DISMISSED_AT_KEY),
       installed: readStorage("local", EXT_PROMO_INSTALLED_KEY),
-      shownThisVisit: readStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY),
-      freeReportEligible: isPromoEligible({
-        pathname,
-        loggedIn: user !== null,
-        now,
-        dismissedAt: readStorage("local", PROMO_DISMISSED_AT_KEY),
-        requested: readStorage("local", PROMO_REQUESTED_KEY),
-        shownThisVisit: readStorage("session", PROMO_SHOWN_THIS_VISIT_KEY)
-      })
+      shownThisVisit: readStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY)
     });
     if (!eligible || !pathname) return;
     const where = placementFor(pathname);
@@ -87,7 +70,7 @@ export function ChromeExtensionPromo() {
       setPlacement(where);
     }, EXT_PROMO_DELAY_MS);
     return () => window.clearTimeout(timer);
-  }, [pathname, user]);
+  }, [pathname]);
 
   if (!placement) return null;
 
