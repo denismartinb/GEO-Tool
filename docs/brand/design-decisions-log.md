@@ -28798,6 +28798,20 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
 
 **Pendiente.** La consola y la extensión no cambian: la consola ya audita el dominio entero y la extensión sigue a la pestaña abierta. No retira ningún camino de recuperación: «Revisar todo ahora» sustituye al selector.
 
+**Adenda 1.0.7 (2026-11-01): arreglos con un clic.** Denis pidió que lo que propone «Arregla primero» (y cada fila de GEO, SEO y Agentes) se pueda hacer con un clic, revisando antes lo que se va a publicar. Maqueta aprobada en `docs/design-reference/wp-plugin-fixes-1/arreglos-un-clic.html` («perfecto», tras pedir un último paso de confirmación porque publica en producción).
+
+- **«Arreglar» abre una hoja con las páginas afectadas**, todas marcadas si tienen propuesta, con buscador, filtros por tipo, «Seleccionar todas» y «Deseleccionar todas». Cada fila dice «Propuesta lista», «Ya lo tiene» o «Sin texto para proponerla», y al abrirla se ve y se edita lo que se publicará (JSON-LD validado al escribir, contadores de caracteres). En móvil es una hoja inferior.
+- **Un último paso pregunta «¿Publicar en N páginas?»** y avisa de que va a la web en producción. Sin «Sí, publicar» no se escribe nada.
+- **Siete arreglos:** JSON-LD (WebSite, Article, WebPage o Product), los datos de producto (nombre, precio, stock), descripción, título, URL canónica, «Actualizado el …» con su `dateModified`, y política de devoluciones en las fichas de WooCommerce. llms.txt y los bots de IA llevan a su tarjeta («Ir a llms.txt», «Ir a bots»), que ya los publica.
+- **Las propuestas salen de los datos de WordPress, sin IA:** extracto o contenido recortado por frase entera, título de la página con el nombre del sitio, precio y stock de WooCommerce. Una página sin texto no recibe propuesta inventada.
+- **Nunca se toca el contenido del post.** Lo publicado vive en metadatos propios (`_genscore_*`) o, con Yoast, Rank Math o SEOPress, en sus campos de descripción, título y canónica, y se imprime por filtros (`wp_head`, `pre_get_document_title`, `get_canonical_url`, `the_content` para la línea de fecha, `woocommerce_structured_data_product` para el producto). Con AIOSEO, descripción, título y canónica no se ofrecen.
+- **Todo se puede deshacer.** Cada publicación guarda un lote con el valor anterior (`genscore_fix_batches`, los 20 últimos). El aviso flotante lleva «Deshacer», el Resumen enseña «Publicado por GenScore» con un «Deshacer» por lote, y el editor de cada página tiene una caja con lo publicado. Desinstalar borra los metadatos `_genscore_*` y las opciones; los campos del plugin SEO se quedan.
+- **Aviso flotante** en cada cambio real de la web (publicar, deshacer, guardar bots o llms.txt), que se va solo a los 4,5 s (8 s con «Deshacer»).
+- **Corregido: el interruptor de llms.txt movía la página.** Cada guardado volvía a pintar la pantalla con el «Revisando» y la página saltaba arriba. Ahora se conserva el scroll y el foco al repintar, y la revisión posterior es silenciosa.
+- **Sigue sin llamar a genscore.es.** Probado en la instalación propia: Playwright en 1280 y 390 px (publicar, editar, buscar, confirmar, deshacer), salida HTML de portada, página, entrada, ficha y tienda de WooCommerce, Plugin Check con los experimentales sin errores, y `tests/fixes-test.php`.
+
+**Pendiente.** No se propone texto nuevo con IA (sería la Fase 2, con llamada a genscore.es). No retira ningún camino de recuperación: «Cómo hacerlo» sigue en las filas que no tienen arreglo automático.
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

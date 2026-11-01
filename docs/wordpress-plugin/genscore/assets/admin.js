@@ -142,7 +142,7 @@
     }
     var F = ((S.score && S.score.fixes) || []).filter(function (f) { return f.lane === lane; });
     if (!F.length) return "";
-    return '<div class="gs-card"><div class="gs-lab">' + title + "</div>" + F.slice(0, 5).map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + (f.why ? '<span class="gs-why">' + f.why + "</span>" : "") + '</span><span class="gs-pts">+' + f.pts + " " + esc(f.unit === "pt" ? "pt" : "") + "</span></div>"; }).join("") + "</div>";
+    return '<div class="gs-card"><div class="gs-lab">' + title + "</div>" + F.slice(0, 5).map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + (f.why ? '<span class="gs-why">' + f.why + "</span>" : "") + '</span><span class="gs-pts">+' + f.pts + " " + esc(f.unit === "pt" ? "pt" : "") + "</span>" + fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) + "</div>"; }).join("") + "</div>";
   }
 
   function botsCard() {
@@ -160,7 +160,7 @@
       return '<div class="gs-bot"><span class="gs-tx"><b>' + esc(L[0]) + " · " + esc(L[1]) + "</b><small>" + esc(tokens) + '</small></span><button class="gs-sw" role="switch" data-sw="' + id + '" aria-checked="' + on + '" aria-label="' + esc(L[0] + ", " + L[1]) + '"' + (blocked ? " disabled" : "") + "></button></div>";
     }).join("");
     var dirty = Object.keys(S.dirty).length > 0;
-    return '<div class="gs-card"><div class="gs-lab">Bots de IA<small>robots.txt</small></div>' + note + '<div class="gs-rows">' + list + '</div><div class="gs-hint">Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión tuya y no te quita de las respuestas con búsqueda.</div><div class="gs-hint">Cuando un agente entra a comprar por alguien (Muse, Dots, el agente de Gemini), no consulta robots.txt: lo que lo frena es tu protección anti-bots.</div><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-bots"' + (dirty && !blocked ? "" : " disabled") + '>Guardar robots.txt</button><a class="gs-btn gs-line" href="' + esc(D.site.home + "robots.txt") + '" target="_blank" rel="noopener">Ver el fichero</a>' + (S.msg.bots ? S.msg.bots : "") + "</div></div>";
+    return '<div class="gs-card" id="gs-card-bots"><div class="gs-lab">Bots de IA<small>robots.txt</small></div>' + note + '<div class="gs-rows">' + list + '</div><div class="gs-hint">Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión tuya y no te quita de las respuestas con búsqueda.</div><div class="gs-hint">Cuando un agente entra a comprar por alguien (Muse, Dots, el agente de Gemini), no consulta robots.txt: lo que lo frena es tu protección anti-bots.</div><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-bots"' + (dirty && !blocked ? "" : " disabled") + '>Guardar robots.txt</button><a class="gs-btn gs-line" href="' + esc(D.site.home + "robots.txt") + '" target="_blank" rel="noopener">Ver el fichero</a>' + (S.msg.bots ? S.msg.bots : "") + "</div></div>";
   }
 
   function llmsCard() {
@@ -170,7 +170,7 @@
     var text = S.llmsText != null ? S.llmsText : L.custom || L.generated;
     var live = S.facts && S.facts.llms && S.facts.llms.ok;
     var status = L.serving ? "publicado" : live ? "lo publica otra parte" : "no existe todavía";
-    return '<div class="gs-card"><div class="gs-lab">llms.txt<small>' + status + '</small></div><div class="gs-bot" style="border:0;padding-top:0"><span class="gs-tx"><b style="font-size:14px;font-weight:600">Publicar /llms.txt</b><small style="font-family:var(--font);font-size:12.5px">Un resumen de tu web para los motores de IA: tus páginas, productos y artículos con su extracto. Puedes editarlo.</small></span><button class="gs-sw" role="switch" data-act="llms-toggle" aria-checked="' + !!L.enabled + '" aria-label="Publicar llms.txt"></button></div><label class="screen-reader-text" for="gs-llms-text">Contenido de llms.txt</label><textarea id="gs-llms-text" class="gs-code" spellcheck="false">' + esc(text) + '</textarea><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-llms">Guardar</button>' + (L.custom ? '<button class="gs-btn gs-line" data-act="llms-reset">Volver al generado</button>' : "") + (L.serving ? '<a class="gs-btn gs-line" href="' + esc(L.url) + '" target="_blank" rel="noopener">Ver /llms.txt</a>' : "") + (S.msg.llms || "") + "</div></div>";
+    return '<div class="gs-card" id="gs-card-llms"><div class="gs-lab">llms.txt<small>' + status + '</small></div><div class="gs-bot" style="border:0;padding-top:0"><span class="gs-tx"><b style="font-size:14px;font-weight:600">Publicar /llms.txt</b><small style="font-family:var(--font);font-size:12.5px">Un resumen de tu web para los motores de IA: tus páginas, productos y artículos con su extracto. Puedes editarlo.</small></span><button class="gs-sw" role="switch" data-act="llms-toggle" aria-checked="' + !!L.enabled + '" aria-label="Publicar llms.txt"></button></div><label class="screen-reader-text" for="gs-llms-text">Contenido de llms.txt</label><textarea id="gs-llms-text" class="gs-code" spellcheck="false">' + esc(text) + '</textarea><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-llms">Guardar</button>' + (L.custom ? '<button class="gs-btn gs-line" data-act="llms-reset">Volver al generado</button>' : "") + (L.serving ? '<a class="gs-btn gs-line" href="' + esc(L.url) + '" target="_blank" rel="noopener">Ver /llms.txt</a>' : "") + (S.msg.llms || "") + "</div></div>";
   }
 
   function metaRow() {
@@ -273,9 +273,11 @@
     return '<div class="gs-pr">' + scoreChip(x.e.nota) + '<button class="gs-tx gs-prt" data-act="open-page" data-id="' + x.page.id + '"><b>' + esc(x.page.title || "(sin título)") + "</b><small>" + esc(kind + (withFix === false ? "" : " · " + first)) + "</small></button>" + (x.page.edit ? '<a class="gs-pr-e" href="' + esc(x.page.edit) + '">Editar</a>' : "") + "</div>";
   }
   function webFixRow(g, i) {
+    var act = fixBtn(g.id, g.hit.map(function (x) { return x.page; }));
+    if (act) return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">' + ptsLabel(g.pts, g.unit) + '</span><span class="gs-chip">' + esc(g.where) + "</span></span>" + act + "</div>";
     var open = S.open[g.id] != null ? S.open[g.id] : i === 0;
     var pages = open ? '<div class="gs-prs">' + g.hit.slice(0, 5).map(function (x) { return pageRow(x, false); }).join("") + (g.hit.length > 5 ? '<p class="gs-more">Y ' + (g.hit.length - 5) + " más, en «Tus páginas».</p>" : "") + "</div>" : "";
-    return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">' + ptsLabel(g.pts, g.unit) + '</span><span class="gs-chip">' + esc(g.where) + "</span>" + pages + '</span><button class="gs-btn gs-line gs-sm" data-act="toggle-fix" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + (open ? "Ocultar" : "Ver páginas") + "</button></div>";
+    return '<div class="gs-fx gs-fxw"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + g.t + '<span class="gs-why">' + ptsLabel(g.pts, g.unit) + '</span><span class="gs-chip">' + esc(g.where) + "</span>" + pages + '</span><button class="gs-btn gs-line gs-sm" data-act="toggle-fix" data-id="' + esc(g.id) + '" aria-expanded="' + open + '">' + (open ? "Ocultar" : "Cómo hacerlo") + "</button></div>";
   }
   function progressLine() {
     if (!S.web.running) return "";
@@ -299,10 +301,10 @@
       var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
-      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + pagesCard + deepCard() + acctCard() + "</div></div>";
+      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + batchesCard() + pagesCard + deepCard() + acctCard() + "</div></div>";
     }
-    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
-    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deepCard() + acctCard() + "</div></div>";
+    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + batchesCard() + deepCard() + acctCard() + "</div></div>";
   }
   function deepCard() {
     return '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
@@ -320,10 +322,24 @@
     var w = S.tab === "geo" ? webGeo() : S.tab === "seo" ? webSeo() : webAg();
     return '<div class="gs-cols gs-dom"><div class="gs-col">' + d + '</div><div class="gs-col">' + w + "</div></div>";
   }
+  /* Re-rendering swaps the screen's HTML: keep the scroll where it was and
+     the focus on the same control, or every refresh while pages are read
+     jumps the page (Denis, 2026-11-01: «se vuelve hacia arriba solo»). */
   function render() {
     var ta = document.getElementById("gs-llms-text");
     if (ta) S.llmsText = S.llmsEdited ? ta.value : null;
+    var y = window.scrollY, h = document.documentElement.style.minHeight;
+    var fa = document.activeElement && app.contains(document.activeElement) ? focusKey(document.activeElement) : null;
+    document.documentElement.style.minHeight = document.documentElement.scrollHeight + "px";
     app.innerHTML = head() + tabs() + body();
+    document.documentElement.style.minHeight = h;
+    if (Math.abs(window.scrollY - y) > 1) window.scrollTo(0, y);
+    if (fa) { var el = app.querySelector(fa); if (el) el.focus({ preventScroll: true }); }
+  }
+  function focusKey(el) {
+    if (el.id) return "#" + el.id;
+    var n = ["data-sw", "data-act", "data-tab"].filter(function (k) { return el.hasAttribute(k); })[0];
+    return n ? "[" + n + '="' + el.getAttribute(n) + '"]' : null;
   }
 
   /* ---------------- the review ---------------- */
@@ -399,8 +415,10 @@
   }
   /* `all`: after a site-wide change (robots.txt, llms.txt) every important
      page is read again, not only the ones without a stored score. */
-  function review(all) {
-    S.state = "loading"; render();
+  /* `quiet`: the page is already on screen (a save, a publish): read it
+     again behind it instead of swapping the screen for the spinner. */
+  function review(all, quiet) {
+    if (!(quiet && S.score)) { S.state = "loading"; render(); }
     var target = S.target;
     readPage(target ? target.url : D.site.home).then(function (facts) {
       S.facts = facts;
@@ -466,6 +484,292 @@
     fetch(D.site.sitemap, { method: "GET", credentials: "omit", cache: "no-store" }).then(function (r) { S.sitemapOk = r.ok; if (S.tab === "seo") render(); }, function () { S.sitemapOk = false; if (S.tab === "seo") render(); });
   }
 
+  /* ---------------- one-click fixes ----------------
+     «Arreglar» opens the pages of that fix with GenScore's proposal for each
+     (built in PHP from WordPress data, no model involved). Every page that
+     needs it starts ticked; the person can search, filter, tick, untick, open
+     a page and edit its proposal. «Publicar» asks once more, because it goes
+     live, then writes it in chunks. Each publish can be undone. */
+  var FX = D.fixes || { available: {}, batches: [], returns: { days: 30, country: "ES" }, chunk: 50 };
+  var KIND_OF = { ld: "ld", prod: "product", price: "product", avail: "product", desc: "desc", title: "title", canon: "canon", fresh: "fresh", returns: "returns" };
+  var KIND = {
+    ld: ["Datos estructurados", "Le dicen a Google y a la IA qué es cada página: un artículo, un producto o una página de tu empresa."],
+    product: ["Datos de producto", "Nombre, precio y stock de cada producto, sacados de WooCommerce, para que un agente lo entienda."],
+    desc: ["Descripciones", "Te proponemos una por página a partir de su extracto o de su primer párrafo. Edítala si quieres."],
+    title: ["Títulos", "«Página · Tu web», de 65 caracteres como mucho. Edítalo si quieres."],
+    canon: ["URL canónica", "Le dice a Google cuál es la dirección buena de cada página: su enlace permanente."],
+    fresh: ["Fecha de actualización", "«Actualizado el…» bajo el título, siempre con la fecha real de tu última edición."],
+    returns: ["Política de devoluciones", "Tus días de devolución y el país, en los datos de cada producto, para que un agente los lea."]
+  };
+  var BOT_SW = { "bot-chatgpt": "chatgpt-search", "bot-claude": "claude-search", "bot-perplexity": "perplexity-search", "bot-gemini": "gemini" };
+  /* Which pages each fix can be published on: a fix found only on pages it
+     cannot reach (product data on the shop listing, a date on a product)
+     keeps its «Cómo hacerlo» instead of an «Arreglar» that would open empty. */
+  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post"], returns: ["product"] };
+  function pageType(p) { return p.type === "home" ? (Number(D.site.frontPage) ? "page" : "home") : p.type; }
+  function fixKind(id, pages) {
+    var k = KIND_OF[String(id).replace(/^shop-/, "")];
+    if (!k || !FX.available || FX.available[k] !== true) return null;
+    if (pages && !pages.some(function (p) { return KIND_TYPES[k].indexOf(pageType(p)) >= 0; })) return null;
+    return k;
+  }
+  function fixBtn(id, pages) {
+    var cls = "";
+    var k = fixKind(id, pages);
+    if (k) return '<button class="gs-btn gs-blue gs-sm' + (cls || "") + '" data-act="fix" data-kind="' + k + '">Arreglar</button>';
+    if (id === "llms") return '<button class="gs-btn gs-line gs-sm' + (cls || "") + '" data-act="goto" data-to="llms">Ir a llms.txt' + ic("i-arrowr") + "</button>";
+    if (String(id).indexOf("bot-") === 0) return '<button class="gs-btn gs-line gs-sm' + (cls || "") + '" data-act="goto" data-to="bots" data-sw-id="' + esc(BOT_SW[id] || "") + '">Ir a bots' + ic("i-arrowr") + "</button>";
+    return "";
+  }
+  function gotoCard(to, sw) {
+    S.tab = "geo"; render();
+    var card = document.getElementById(to === "llms" ? "gs-card-llms" : "gs-card-bots");
+    if (!card) return;
+    card.scrollIntoView({ block: "center", behavior: "smooth" });
+    var hit = sw ? card.querySelector('[data-sw="' + sw + '"]') : null;
+    [card, hit].forEach(function (el) { if (!el) return; el.classList.remove("gs-flash"); void el.offsetWidth; el.classList.add("gs-flash"); });
+    if (hit) setTimeout(function () { hit.focus({ preventScroll: true }); }, 400);
+  }
+  function ago(at) {
+    var s = Math.max(0, Math.round(Date.now() / 1000 - at));
+    return s < 90 ? "hace un momento" : s < 5400 ? "hace " + Math.round(s / 60) + " min" : s < 129600 ? "hace " + Math.round(s / 3600) + " h" : "hace " + Math.round(s / 86400) + " días";
+  }
+  function batchesCard() {
+    var B = (FX.batches || []).slice(0, 5);
+    if (!B.length) return "";
+    return '<div class="gs-card"><div class="gs-lab">Publicado por GenScore<small>se puede deshacer</small></div><div class="gs-rows">' + B.map(function (b) {
+      return '<div class="gs-rw"><span class="gs-tx">' + esc((KIND[b.kind] || [b.kind])[0]) + "<small>" + b.n + " " + (b.n === 1 ? "página" : "páginas") + " · " + ago(b.at) + '</small></span><button class="gs-btn gs-line gs-sm" data-act="undo" data-batch="' + esc(b.id) + '">Deshacer</button></div>';
+    }).join("") + "</div></div>";
+  }
+
+  var host = app.parentNode;
+  var M = null;
+  var fm = document.createElement("div");
+  fm.id = "gs-fixm";
+  fm.hidden = true;
+  host.appendChild(fm);
+  function narrow() { return window.matchMedia("(max-width: 782px)").matches; }
+  function openFix(kind, opener) {
+    M = { kind: kind, type: "all", q: "", items: [], counts: {}, ready: [], more: false, loading: true, sel: {}, first: true, edits: {}, bad: {}, cur: S.target ? S.target.id : null, opener: opener, step: "pick", busy: "", returns: { days: FX.returns.days || 30, country: FX.returns.country || "ES" } };
+    fm.hidden = false;
+    document.documentElement.classList.add("gs-fm-open");
+    drawModal();
+    loadList(true);
+  }
+  function closeFix() {
+    if (!M || M.busy) return;
+    var op = M.opener; M = null;
+    fm.hidden = true; fm.innerHTML = "";
+    document.documentElement.classList.remove("gs-fm-open");
+    if (op && document.body.contains(op)) op.focus();
+  }
+  var listSeq = 0;
+  function loadList(reset) {
+    var seq = ++listSeq;
+    M.loading = true; if (reset) { M.items = []; } drawList();
+    post("genscore_fix_list", { kind: M.kind, type: M.type, q: M.q, offset: reset ? 0 : M.items.length }).then(function (r) {
+      if (!M || seq !== listSeq) return;
+      if (!r || !r.success) throw new Error(r && r.data && r.data.message);
+      M.counts = r.data.counts; M.ready = r.data.ready; M.more = r.data.more;
+      M.items = reset ? r.data.items : M.items.concat(r.data.items);
+      if (M.first) { M.first = false; M.ready.forEach(function (id) { M.sel[id] = true; }); var firstReady = M.items.filter(function (x) { return x.status === "ready"; })[0]; if (M.cur == null && !narrow() && firstReady) M.cur = firstReady.id; }
+      M.loading = false; M.err = "";
+      drawModal();
+    }).catch(function (e) { if (!M) return; M.loading = false; M.err = (e && e.message) || "No se ha podido cargar la lista. Vuelve a intentarlo."; drawModal(); });
+  }
+  function selCount() { return Object.keys(M.sel).filter(function (k) { return M.sel[k]; }).length; }
+  function itemOf(id) { return M.items.filter(function (x) { return x.id === id; })[0]; }
+  function where() {
+    var seo = FX.seo;
+    if (M.kind === "desc" || M.kind === "title" || M.kind === "canon") return seo ? "Se guarda en el campo de " + esc(seo) + " de esta página." : "Se guarda en la página y sale en su código.";
+    if (M.kind === "fresh") return "Es la fecha de tu última edición y no se edita a mano. También va en los datos de la página.";
+    if (M.kind === "returns") return "Se añade a los datos de cada producto que marques.";
+    return "Hecho con los datos de WordPress" + (D.site.woocommerce ? " y WooCommerce" : "") + ". Se guarda en la página y sale en su código.";
+  }
+  function editor(it) {
+    if (!it) return '<p class="gs-fm-hint">Toca una página para ver su propuesta.</p>';
+    var head = '<div class="gs-fm-ph"><b>' + esc(it.title) + '</b><a href="' + esc(it.url) + '" target="_blank" rel="noopener">Ver la página</a></div>';
+    if (it.status === "has") return head + '<p class="gs-fm-hint">Esta página ya lo tiene y no se toca.</p>' + (it.value && M.kind !== "fresh" && M.kind !== "returns" ? '<pre class="gs-fm-pre">' + esc(it.value) + "</pre>" : "");
+    if (it.status === "missing") return head + '<p class="gs-fm-hint gs-warm">' + esc(it.note) + ". Esta página no se publica.</p>";
+    var v = M.edits[it.id] != null ? M.edits[it.id] : it.value;
+    var f = "";
+    if (M.kind === "ld" || M.kind === "product") f = '<label for="gs-fm-in">JSON-LD que se publicará</label><textarea id="gs-fm-in" class="gs-fm-code" spellcheck="false">' + esc(v) + "</textarea>";
+    else if (M.kind === "desc") f = '<label for="gs-fm-in">Descripción que se publicará</label><textarea id="gs-fm-in">' + esc(v) + '</textarea><span class="gs-fm-cnt" data-max="155"></span>';
+    else if (M.kind === "title") f = '<label for="gs-fm-in">Título que se publicará</label><input id="gs-fm-in" type="text" value="' + esc(v) + '"><span class="gs-fm-cnt" data-max="65"></span>';
+    else if (M.kind === "canon") f = '<label for="gs-fm-in">URL canónica que se publicará</label><input id="gs-fm-in" type="url" value="' + esc(v) + '">';
+    else if (M.kind === "fresh") f = '<label>Se publicará bajo el título</label><pre class="gs-fm-pre">Actualizado el ' + esc(v) + "</pre>";
+    else if (M.kind === "returns") f = '<label>Se añadirá a sus datos</label><pre class="gs-fm-pre">' + esc(JSON.stringify({ "@type": "MerchantReturnPolicy", applicableCountry: M.returns.country, merchantReturnDays: Number(M.returns.days), returnMethod: "https://schema.org/ReturnByMail" }, null, 2)) + "</pre>";
+    return head + '<div class="gs-fm-field">' + f + (M.bad[it.id] ? '<span class="gs-fm-bad">' + esc(M.bad[it.id]) + "</span>" : "") + '</div><p class="gs-fm-hint">' + where() + "</p>";
+  }
+  function tag(it) {
+    if (it.status === "has") return '<span class="gs-fm-st gs-has">Ya lo tiene</span>';
+    if (it.status === "missing") return '<span class="gs-fm-st gs-miss">' + esc(it.note) + "</span>";
+    if (M.bad[it.id]) return '<span class="gs-fm-st gs-miss">Revisar</span>';
+    if (M.edits[it.id] != null) return '<span class="gs-fm-st gs-ed">Editada</span>';
+    return '<span class="gs-fm-st gs-ok">Propuesta lista</span>';
+  }
+  var TYPES = [["all", "Todas"], ["page", "Páginas"], ["post", "Entradas"], ["product", "Productos"]];
+  function drawList() {
+    var box = fm.querySelector(".gs-fm-list");
+    if (!box || !M) return;
+    var nw = narrow();
+    var h = M.items.map(function (it) {
+      var can = it.status === "ready", on = can && !!M.sel[it.id], cur = M.cur === it.id;
+      var row = '<div class="gs-fm-it' + (cur ? " gs-cur" : "") + (can ? "" : " gs-off") + '" data-id="' + it.id + '"><button type="button" class="gs-fm-cb" role="checkbox" aria-checked="' + on + '" aria-label="Publicar en ' + esc(it.title) + '"' + (can ? "" : " disabled") + ">" + ic("i-check") + '</button><button type="button" class="gs-fm-nm" data-open="' + it.id + '" aria-expanded="' + cur + '"><b>' + esc(it.title || "(sin título)") + "</b><small>" + esc(it.path) + "</small></button>" + tag(it) + "</div>";
+      if (nw && cur) row += '<div class="gs-fm-inl">' + editor(it) + "</div>";
+      return row;
+    }).join("");
+    if (!M.items.length && !M.loading) h = '<p class="gs-fm-empty">' + (M.err ? esc(M.err) : M.q ? "Ninguna página coincide con «" + esc(M.q) + "»." : "No hay páginas de este tipo.") + "</p>";
+    if (M.loading) h += '<p class="gs-fm-empty"><span class="gs-spin gs-spin-sm"></span> Preparando las propuestas…</p>';
+    else if (M.more) h += '<button type="button" class="gs-fm-more" data-fm="more">Cargar más</button>';
+    box.innerHTML = h;
+    bindInput(box);
+  }
+  function drawSide() {
+    var side = fm.querySelector(".gs-fm-side");
+    if (!side || !M) return;
+    side.innerHTML = '<div class="gs-fm-lab">Propuesta para esta página</div>' + editor(itemOf(M.cur));
+    bindInput(side);
+  }
+  function bindInput(root) {
+    var inp = root.querySelector("#gs-fm-in");
+    if (!inp || !M) return;
+    var id = M.cur, cnt = root.querySelector(".gs-fm-cnt");
+    function upd(first) {
+      if (cnt) { var mx = Number(cnt.getAttribute("data-max")); cnt.textContent = inp.value.length + " / " + mx; cnt.classList.toggle("gs-over", inp.value.length > mx); }
+      if (first) return;
+      M.edits[id] = inp.value;
+      if (M.kind === "ld" || M.kind === "product") { try { var o = JSON.parse(inp.value); if (!o || typeof o !== "object" || !o["@type"]) throw 0; delete M.bad[id]; } catch (e) { M.bad[id] = "El JSON no es válido: revísalo o deshaz el cambio."; } }
+      else if (!inp.value.trim()) M.bad[id] = "No puede quedar vacío."; else delete M.bad[id];
+      var row = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-st');
+      var it = itemOf(id);
+      if (row && it) row.outerHTML = tag(it);
+      var bad = root.querySelector(".gs-fm-bad");
+      if (M.bad[id] && !bad) inp.insertAdjacentHTML("afterend", '<span class="gs-fm-bad">' + esc(M.bad[id]) + "</span>");
+      else if (bad) { if (M.bad[id]) bad.textContent = M.bad[id]; else bad.remove(); }
+      drawFoot();
+    }
+    inp.addEventListener("input", function () { upd(false); });
+    upd(true);
+  }
+  function drawFoot() {
+    var b = fm.querySelector('[data-fm="publish"]');
+    if (!b || !M) return;
+    var n = selCount(), bad = Object.keys(M.bad).filter(function (k) { return M.sel[k]; }).length;
+    b.disabled = !n || !!bad || !!M.busy;
+    b.textContent = M.busy || (bad ? "Revisa " + (bad === 1 ? "la página marcada" : "las " + bad + " páginas marcadas") : n ? "Publicar en " + n + " " + (n === 1 ? "página" : "páginas") : "Elige alguna página");
+  }
+  function drawModal() {
+    if (!M) return;
+    var K = KIND[M.kind];
+    var chips = TYPES.filter(function (t) { return t[0] === "all" || M.counts[t[0]] != null; }).map(function (t) { return '<button type="button" class="gs-fm-chip" data-type="' + t[0] + '" aria-pressed="' + (M.type === t[0]) + '">' + t[1] + (M.counts[t[0]] != null ? "<em>" + M.counts[t[0]] + "</em>" : "") + "</button>"; }).join("");
+    var ret = M.kind === "returns" ? '<div class="gs-fm-ret"><label>Días para devolver<input type="number" min="1" max="365" data-ret="days" value="' + esc(M.returns.days) + '"></label><label>País<input type="text" maxlength="2" data-ret="country" value="' + esc(M.returns.country) + '"></label></div>' : "";
+    var n = selCount();
+    var confirm = M.step === "confirm" ? '<div class="gs-fm-cf" role="alertdialog" aria-modal="true" aria-labelledby="gs-fm-cft"><div class="gs-fm-cfb"><span class="gs-fm-cfi">!</span><h3 id="gs-fm-cft">¿Publicar en ' + n + " " + (n === 1 ? "página" : "páginas") + '?</h3><p>Se publica ya en tu web en producción: lo verán tus visitantes, Google y los asistentes de IA. Podrás deshacerlo desde GenScore.</p><ul><li><b>' + esc(K[0]) + "</b></li><li>" + n + " " + (n === 1 ? "página" : "páginas") + (function () { var e = Object.keys(M.edits).filter(function (k) { return M.sel[k]; }).length; return e ? " · " + e + " " + (e === 1 ? "editada" : "editadas") + " por ti" : ""; })() + '</li></ul><div class="gs-fm-cfa"><button type="button" class="gs-btn gs-line" data-fm="no">No, volver</button><button type="button" class="gs-btn gs-blue" data-fm="yes">Sí, publicar</button></div></div></div>' : "";
+    fm.innerHTML = '<div class="gs-fm-scrim" data-fm="scrim"></div><div class="gs-fm" role="dialog" aria-modal="true" aria-labelledby="gs-fm-t"><div class="gs-fm-h"><div><h2 id="gs-fm-t">' + esc(K[0]) + "</h2><p>" + esc(K[1]) + '</p></div><button type="button" class="gs-fm-x" data-fm="close" aria-label="Cerrar">' + ic("i-x") + '</button></div><div class="gs-fm-b"><div class="gs-fm-pick"><div class="gs-fm-tools">' + ret + '<div class="gs-fm-search">' + ic("i-search") + '<input type="search" placeholder="Buscar por título" aria-label="Buscar páginas" value="' + esc(M.q) + '"></div><div class="gs-fm-row"><div class="gs-fm-chips">' + chips + '</div><div class="gs-fm-all"><button type="button" data-fm="all">Seleccionar todas</button><button type="button" data-fm="none">Deseleccionar todas</button></div></div></div><div class="gs-fm-list" role="list"></div></div><div class="gs-fm-side"></div></div><div class="gs-fm-f"><span class="gs-fm-safe">' + ic("i-check") + 'Solo se publica lo que revisas aquí. Se puede deshacer.</span><button type="button" class="gs-btn gs-line" data-fm="close">Cancelar</button><button type="button" class="gs-btn gs-blue" data-fm="publish"></button></div>' + confirm + "</div>";
+    drawList(); drawSide(); drawFoot();
+    var focus = M.step === "confirm" ? fm.querySelector('[data-fm="no"]') : null;
+    if (focus) focus.focus();
+    else if (!fm.contains(document.activeElement)) { var s = fm.querySelector(".gs-fm-search input"); if (s) s.focus({ preventScroll: true }); }
+  }
+  var qTimer;
+  fm.addEventListener("input", function (e) {
+    if (!M) return;
+    if (e.target.matches(".gs-fm-search input")) { clearTimeout(qTimer); var v = e.target.value; qTimer = setTimeout(function () { M.q = v; loadList(true); }, 250); }
+    var r = e.target.getAttribute && e.target.getAttribute("data-ret");
+    if (r) { M.returns[r] = r === "country" ? e.target.value.toUpperCase() : e.target.value; drawSide(); }
+  });
+  fm.addEventListener("click", function (e) {
+    if (!M) return;
+    var b = e.target.closest("[data-fm],[data-type],[data-open],.gs-fm-cb");
+    if (!b) return;
+    var act = b.getAttribute("data-fm");
+    if (act === "close" || act === "scrim") { if (M.step === "confirm") { M.step = "pick"; drawModal(); } else closeFix(); return; }
+    if (act === "more") { loadList(false); return; }
+    if (act === "all" || act === "none") { M.ready.forEach(function (id) { M.sel[id] = act === "all"; }); drawList(); drawFoot(); return; }
+    if (act === "publish") {
+      if (M.kind === "returns" && !(Number(M.returns.days) >= 1 && Number(M.returns.days) <= 365 && /^[A-Z]{2}$/.test(M.returns.country))) { M.err = ""; alertIn("Pon los días (1 a 365) y el país en dos letras, como ES."); return; }
+      M.step = "confirm"; drawModal(); return;
+    }
+    if (act === "no") { M.step = "pick"; drawModal(); return; }
+    if (act === "yes") { publishFix(); return; }
+    if (b.hasAttribute("data-type")) { M.type = b.getAttribute("data-type"); drawModal(); loadList(true); return; }
+    if (b.classList.contains("gs-fm-cb")) { var id = Number(b.closest(".gs-fm-it").getAttribute("data-id")); M.sel[id] = !M.sel[id]; b.setAttribute("aria-checked", String(!!M.sel[id])); drawFoot(); return; }
+    if (b.hasAttribute("data-open")) { var oid = Number(b.getAttribute("data-open")); M.cur = narrow() && M.cur === oid ? null : oid; drawList(); drawSide(); }
+  });
+  function alertIn(msg) { var f = fm.querySelector(".gs-fm-f .gs-fm-safe"); if (f) { f.className = "gs-fm-safe gs-err"; f.textContent = msg; } }
+  fm.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && M) { e.preventDefault(); if (M.step === "confirm") { M.step = "pick"; drawModal(); } else closeFix(); return; }
+    if (e.key === "Tab") {
+      var scope = fm.querySelector(M && M.step === "confirm" ? ".gs-fm-cfb" : ".gs-fm");
+      var f = scope ? Array.prototype.filter.call(scope.querySelectorAll("button:not([disabled]),input,textarea,a[href]"), function (x) { return x.offsetParent !== null; }) : [];
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    }
+  });
+  function rid() { var a = "abcdefghijklmnopqrstuvwxyz0123456789", s = ""; for (var i = 0; i < 12; i++) s += a[Math.floor(Math.random() * a.length)]; return s; }
+  function publishFix() {
+    var ids = Object.keys(M.sel).filter(function (k) { return M.sel[k]; }).map(Number);
+    var batch = rid(), chunk = FX.chunk || 50, done = [], skipped = [], i = 0, kind = M.kind;
+    M.step = "pick"; drawModal();
+    function next() {
+      if (i >= ids.length) return Promise.resolve();
+      var part = ids.slice(i, i + chunk); i += chunk;
+      M.busy = "Publicando " + Math.min(i, ids.length) + " de " + ids.length + "…"; drawFoot();
+      var edits = {}; part.forEach(function (id) { if (M.edits[id] != null) edits[id] = M.edits[id]; });
+      var data = { kind: kind, ids: part, edits: JSON.stringify(edits), batch: batch };
+      if (kind === "returns") { data.days = M.returns.days; data.country = M.returns.country; }
+      return post("genscore_fix_publish", data).then(function (r) {
+        if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
+        done = done.concat(r.data.done); skipped = skipped.concat(r.data.skipped); FX.batches = r.data.batches;
+        return next();
+      });
+    }
+    next().then(function () {
+      if (kind === "returns") FX.returns = { days: Number(M.returns.days), country: M.returns.country };
+      M.busy = ""; closeFix();
+      afterPublish(done, skipped, batch);
+    }).catch(function (e) {
+      M.busy = "";
+      if (done.length) { closeFix(); afterPublish(done, skipped, batch, true); return; }
+      drawFoot(); alertIn((e && e.message) || "No se ha podido publicar. Vuelve a intentarlo.");
+    });
+  }
+  function afterPublish(done, skipped, batch, cut) {
+    var front = Number(D.site.frontPage || 0);
+    done.forEach(function (id) { delete S.web.scores[id]; if (id === front) delete S.web.scores[0]; if (id === 0) delete S.web.scores[0]; });
+    var msg = "Publicado en " + done.length + " " + (done.length === 1 ? "página" : "páginas") + (skipped.length ? " · " + skipped.length + " sin publicar" : "") + (cut ? " · se cortó antes de terminar" : "");
+    toast(msg, done.length ? batch : null);
+    if (S.target) review(false, true); else if (S.web.scores[0]) reviewSite(false); else review(false, true);
+  }
+  var tTimer;
+  /* Every real change to the site (robots.txt, llms.txt, a publish, an
+     undo) confirms itself in a floating message that goes away on its own
+     (Denis, 2026-11-01). */
+  function toast(msg, batch) {
+    var t = document.getElementById("gs-toast");
+    if (!t) { t = document.createElement("div"); t.id = "gs-toast"; t.setAttribute("role", "status"); host.appendChild(t); }
+    t.innerHTML = "<span>" + esc(msg) + "</span>" + (batch ? '<button type="button" data-batch="' + esc(batch) + '">Deshacer</button>' : "");
+    t.hidden = false;
+    clearTimeout(tTimer); tTimer = setTimeout(function () { t.hidden = true; }, batch ? 8000 : 4500);
+  }
+  function undo(batch) {
+    post("genscore_fix_undo", { batch: batch }).then(function (r) {
+      if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
+      FX.batches = r.data.batches;
+      toast("Deshecho. Volvemos a revisar tu web.", null);
+      review(true, true);
+    }).catch(function (e) { toast((e && e.message) || "No se ha podido deshacer.", null); });
+  }
+  host.addEventListener("click", function (e) {
+    var b = e.target.closest("#gs-toast [data-batch]");
+    if (b) { b.closest("#gs-toast").hidden = true; undo(b.getAttribute("data-batch")); }
+  });
+  var wasNarrow = narrow();
+  window.addEventListener("resize", function () { var n = narrow(); if (n === wasNarrow) return; wasNarrow = n; if (M && M.step === "pick") { drawList(); drawSide(); } });
+
+
   /* ---------------- events ---------------- */
   function setAddress() {
     try {
@@ -497,6 +801,9 @@
     if (!a) return;
     var act = a.getAttribute("data-act");
     if (act === "rerun") { review(); return; }
+    if (act === "fix") { openFix(a.getAttribute("data-kind"), a); return; }
+    if (act === "goto") { gotoCard(a.getAttribute("data-to"), a.getAttribute("data-sw-id")); return; }
+    if (act === "undo") { a.disabled = true; undo(a.getAttribute("data-batch")); return; }
     if (act === "rerun-web") { reviewSite(true); return; }
     if (act === "toggle-fix") { var fid = a.getAttribute("data-id"); S.open[fid] = a.getAttribute("aria-expanded") !== "true"; render(); return; }
     if (act === "open-page") {
@@ -513,8 +820,10 @@
       a.disabled = true;
       post("genscore_save_bots", { bots: next2 }).then(function (r) {
         if (!r || !r.success) throw new Error();
-        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = '<span class="gs-saved">Guardado. Volvemos a revisar tu web.</span>';
-        review(true);
+        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = "";
+        toast("robots.txt guardado y publicado en tu web.");
+        render();
+        review(true, true);
       }).catch(function () { S.msg.bots = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
       return;
     }
@@ -542,10 +851,12 @@
       S.llms.enabled = r.data.enabled; S.llms.serving = r.data.serving; S.llms.custom = r.data.custom;
       if (r.data.generated != null) S.llms.generated = r.data.generated;
       if ("text" in data) { S.llmsEdited = false; S.llmsText = null; }
-      S.msg.llms = '<span class="gs-saved">' + (r.data.serving ? "Guardado. Ya se publica en /llms.txt." : "Guardado.") + "</span>";
+      S.msg.llms = "";
+      toast(r.data.serving ? "llms.txt guardado. Ya se publica en /llms.txt." : mode === "toggle" ? "llms.txt despublicado de tu web." : "llms.txt guardado. No se publica hasta que lo actives.");
       // llms.txt counts on every page: the stored scores are stale now (the
       // server already dropped them), so every page is read again.
-      review(true);
+      render();
+      review(true, true);
     }).catch(function () { S.msg.llms = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
   }
 

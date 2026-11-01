@@ -59,3 +59,23 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   con las páginas que venden; una página que toma la tienda de otra sólo cuenta
   si ninguna vende. La portada nunca guarda los arreglos `prod`, `price` ni
   `avail`.
+
+## Arreglos con un clic (adenda 1.0.7 de §421)
+
+- **Nada se publica sin el paso «¿Publicar en N páginas?»**, que avisa de que va
+  a producción. La hoja de páginas sólo selecciona y edita.
+- **Las propuestas salen de los datos de WordPress, nunca de un LLM** (extracto,
+  contenido, título, precio y stock de WooCommerce). Sin texto, no hay propuesta.
+- **Nunca se edita el contenido del post.** Lo publicado vive en `_genscore_*`
+  (u opciones para la portada de entradas) o en los campos de Yoast, Rank Math o
+  SEOPress, y sale por filtros. Con AIOSEO no se ofrecen descripción, título ni
+  canónica.
+- **Todo cambio guarda su lote para deshacer** (`genscore_fix_batches`) con el
+  valor anterior. Desinstalar borra lo nuestro, no los campos del plugin SEO.
+- **El JSON-LD que se guarda pasa por `genscore_clean_jsonld`** (objeto
+  schema.org con `@type`) y se imprime con `JSON_HEX_TAG`. Una canónica sólo vale
+  en el mismo host.
+- **Cada cambio real de la web avisa con un mensaje flotante** que se va solo.
+- **Repintar la pantalla conserva el scroll y el foco**, y la revisión tras un
+  guardado es silenciosa: nada vuelve a pintar «Revisando» sobre una nota que ya
+  existe.

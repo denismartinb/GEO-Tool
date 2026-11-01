@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.6
+Stable tag: 1.0.7
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -21,6 +21,8 @@ GenScore reviews your site from inside wp-admin (the home page and your most imp
 Each lane lists what to fix first, with the points it adds and, where it applies, the exact snippet to paste.
 
 It also lets you:
+
+* **Fix it in one click.** For structured data (JSON-LD), descriptions, titles, canonical URLs, a visible update date and, with WooCommerce, product data and your returns policy, GenScore proposes the fix for each page from data WordPress already has (title, excerpt, permalink, last edit, price, stock). You pick the pages, review and edit each proposal, confirm, and it is published on those pages. Descriptions, titles and canonicals go to your SEO plugin's own fields when you use Yoast SEO, Rank Math or SEOPress. Post content is never rewritten, and every publish can be undone.
 
 * **Allow or block AI bots** (OpenAI, Anthropic, Perplexity and Google-Extended), search bots and training bots separately. GenScore only adds its own group to the robots.txt WordPress serves. It never touches the `*` group, Googlebot or Bingbot, and it never writes a file.
 * **Publish /llms.txt**, generated from your pages, products and posts with their own excerpts. You can edit it. If Yoast SEO, Rank Math or All in One SEO already publish one, or a physical llms.txt exists, GenScore leaves it alone.
@@ -55,6 +57,14 @@ The web server serves that file before WordPress, so the switches cannot change 
 
 Yes. It reads their meta descriptions and sitemaps, and it does not publish an llms.txt when one of them already does.
 
+= Does it write anything in my pages? =
+
+Only what you accept in «Arreglar», after a confirmation. It is stored as page data (post meta), never in the post content: the editor shows a «Publicado por GenScore» box, and «Deshacer» puts back what was there. Uninstalling the plugin removes GenScore's own fields; what it wrote in your SEO plugin's fields stays, as your description or title.
+
+= Does it use AI to write the proposals? =
+
+No. Every proposal is built from your own WordPress data, with no external service.
+
 = Does the review slow down my site? =
 
 No. It runs only when you open the GenScore screen, in your browser, reading your important pages one after another (two at a time). The scores are stored in your site, so the next time only pages that changed are read again.
@@ -67,6 +77,11 @@ No. It runs only when you open the GenScore screen, in your browser, reading you
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.7 =
+* «Arreglar» in one click: structured data, description, title, canonical URL, visible update date, product data and returns policy. GenScore proposes the fix for each page, you review and edit it, confirm, and it is published on the pages you chose. Every publish can be undone.
+* «Ir a llms.txt» and «Ir a bots» take you to the card that already does that fix.
+* The editor shows a «Publicado por GenScore» box on pages with published fixes.
 
 = 1.0.6 =
 * «Quién puede leer» shows Meta AI and Muse too, outside the note, and the bots card warns when robots.txt blocks Meta's search.

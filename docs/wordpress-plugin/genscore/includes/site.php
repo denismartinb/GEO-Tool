@@ -111,6 +111,7 @@ function genscore_site_facts() {
 		'product'       => genscore_sample_product_url(),
 		'readingUrl'    => admin_url( 'options-reading.php' ),
 		'permalinkPlain' => '' === (string) get_option( 'permalink_structure' ),
+		'frontPage'     => 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0,
 	);
 }
 

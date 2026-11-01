@@ -105,6 +105,7 @@ function genscore_screen_data() {
 			'pages'  => genscore_key_pages(),
 			'scores' => (object) genscore_page_scores(),
 		),
+		'fixes'    => genscore_fix_screen_data(),
 		'last'     => get_option( 'genscore_last_review', null ),
 		'links'    => array(
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),
