@@ -15,9 +15,12 @@
 
 export type AiEngine = "chatgpt" | "gemini" | "claude" | "perplexity";
 
+/** Who runs a switch: one of the engines we measure, or Meta (Meta AI and its agent Muse, log §427). */
+export type AiBotVendor = AiEngine | "meta";
+
 export type AiBotSwitch = {
   id: string;
-  engine: AiEngine;
+  engine: AiBotVendor;
   kind: "search" | "training";
   /** What the switch controls, after «Engine ·». */
   what: string;
@@ -31,8 +34,15 @@ export const AI_BOT_SWITCHES: AiBotSwitch[] = [
   { id: "claude-search", engine: "claude", kind: "search", what: "Búsqueda y enlaces que abre Claude", tokens: ["Claude-SearchBot", "Claude-User"] },
   { id: "claude-training", engine: "claude", kind: "training", what: "Entrenamiento de modelos", tokens: ["ClaudeBot"] },
   { id: "perplexity-search", engine: "perplexity", kind: "search", what: "Búsqueda y enlaces que abre Perplexity", tokens: ["PerplexityBot", "Perplexity-User"] },
-  { id: "gemini", engine: "gemini", kind: "search", what: "Respuestas y entrenamiento de Gemini", tokens: ["Google-Extended"] }
+  { id: "gemini", engine: "gemini", kind: "search", what: "Respuestas y entrenamiento de Gemini", tokens: ["Google-Extended"] },
+  // Log §427: Meta publishes these two (developers.facebook.com, web crawlers).
+  // `meta-externalfetcher` is left out on purpose: Meta says it may bypass robots.txt.
+  { id: "meta-search", engine: "meta", kind: "search", what: "Búsqueda de Meta AI y Muse", tokens: ["meta-webindexer"] },
+  { id: "meta-training", engine: "meta", kind: "training", what: "Entrenamiento de modelos", tokens: ["meta-externalagent"] }
 ];
+
+/** Switches the WordPress plugin does not have yet (it gets them in its next version, log §427). */
+export const PLUGIN_PENDING_SWITCHES = new Set(["meta-search", "meta-training"]);
 
 export const AI_ENGINES: { engine: AiEngine; name: string }[] = [
   { engine: "chatgpt", name: "ChatGPT" },
@@ -59,7 +69,7 @@ export const AI_BOT_TOKENS: string[] = Array.from(
 );
 
 /** Tokens that only feed model training: never a reason to say a site cannot be read. */
-export const TRAINING_ONLY_TOKENS = new Set(["GPTBot", "ClaudeBot", "anthropic-ai"]);
+export const TRAINING_ONLY_TOKENS = new Set(["GPTBot", "ClaudeBot", "anthropic-ai", "meta-externalagent"]);
 
 /** What the audit stored about these bots (`BotAccessReport.aiBots`). */
 export type AiBotsFacts = {
@@ -121,7 +131,8 @@ export function switchStates(report: AiBotsInput): Record<string, boolean | null
   return out;
 }
 
-export function engineLabel(engine: AiEngine): string {
+export function engineLabel(engine: AiBotVendor): string {
+  if (engine === "meta") return "Meta";
   return AI_ENGINES.find((e) => e.engine === engine)!.name;
 }
 

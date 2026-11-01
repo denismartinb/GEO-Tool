@@ -13,12 +13,18 @@ import type { AgentAccess, AssistantName } from "@/lib/agentic-audit/api-contrac
  *
  * Gemini answers from Google's index and Google documents `Google-Extended`
  * as the control for Gemini's use of a site, so both count.
+ *
+ * Meta (log §427): Muse and Meta AI pick sites from `meta-webindexer`'s index.
+ * `meta-externalfetcher`, the fetcher that acts for a user, is left out on
+ * purpose: Meta documents that it may bypass robots.txt, so no rule of the
+ * file decides whether it gets in.
  */
 export const ASSISTANT_ROBOTS_TOKENS: Record<AssistantName, readonly string[]> = {
   ChatGPT: ["ChatGPT-User", "OAI-SearchBot"],
   Claude: ["Claude-User", "Claude-SearchBot"],
   Perplexity: ["Perplexity-User", "PerplexityBot"],
-  Gemini: ["Googlebot", "Google-Extended"]
+  Gemini: ["Googlebot", "Google-Extended"],
+  Meta: ["meta-webindexer"]
 };
 
 export const ASSISTANTS = Object.keys(ASSISTANT_ROBOTS_TOKENS) as AssistantName[];

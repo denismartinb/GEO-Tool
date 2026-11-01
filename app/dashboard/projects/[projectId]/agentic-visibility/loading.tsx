@@ -1,6 +1,6 @@
 import { Sk, SkCard, SkHead, SkPage, SkRows, SkSection } from "@/components/ins/skeleton";
 
-/** Visibilidad en agentes while it loads (log §399): the dial board, then the shopping questions. */
+/** Visibilidad en agentes while it loads (log §399): the dial board, «Agentes que compran» (log §427), then the shopping questions. */
 export default function AgenticVisibilityLoading() {
   return (
     <SkPage>
@@ -20,6 +20,12 @@ export default function AgenticVisibilityLoading() {
           ))}
         </div>
       </SkCard>
+
+      <SkSection>
+        <SkCard flush>
+          <SkRows n={3} lead="icon" />
+        </SkCard>
+      </SkSection>
 
       <SkSection>
         <SkCard flush>

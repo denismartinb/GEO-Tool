@@ -188,3 +188,17 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   fundador quitó esa frase (log §340).
 - **Va en su propio `Suspense`.** La auditoría agéntica no puede retrasar
   Visión general.
+
+## Agentes que compran (AGENTIC-SHOPPERS-1, log §427)
+
+- **Encontrar y entrar son dos preguntas.** «Te encuentra» sale de robots.txt
+  y sólo con el índice que documenta el fabricante (`SHOPPING_AGENTS.findsVia`).
+  «Para entrar» es lo que encontró nuestro robot identificado y nunca afirma
+  qué le pasa a un agente verificado (§319).
+- **Un agente que no publica cómo se identifica es «No se ve desde fuera»**,
+  nunca verde, y no recibe interruptor ni token inventado (Grok Bot,
+  Instinct, Tab). Se añade uno sólo con documentación del fabricante.
+- **Meta cuenta por `meta-webindexer`, nunca por `meta-externalfetcher`**:
+  Meta dice que ese puede saltarse robots.txt.
+- **Los consejos de esa tarjeta no tienen puntos** y salen de un dato medido
+  (reto anti-bots, plataforma Shopify).

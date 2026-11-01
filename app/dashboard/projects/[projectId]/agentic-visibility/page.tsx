@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { VisibilityCluster, type ClusterBand, type ClusterDial, type ClusterLight } from "@/components/ins/agents/visibility-cluster";
+import { ShoppingAgentsCard } from "@/components/ins/agents/shopping-agents";
 import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
@@ -8,6 +9,7 @@ import type { AgenticCheckResult, AgenticComponentId } from "@/lib/agentic-audit
 import { readAgenticAudits } from "@/lib/agentic-audit/console-audit";
 import { componentLine, componentStatus, firstSteps, type Tone } from "@/lib/agentic-audit/console-model";
 import { loadPurchaseQuestions } from "@/lib/agentic-audit/purchase-data";
+import { discoveryLightLine } from "@/lib/agentic-audit/shopping-agents";
 import { fixbarLine, interopLine, stepTone, visibilityHeadline } from "@/lib/agentic-audit/visibility-model";
 import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
@@ -57,7 +59,9 @@ function clusterParts(result: AgenticCheckResult) {
       band,
       label: component.score === null ? BAND_WORD.na : `${component.score} de 100, ${BAND_WORD[band]}`
     });
-    lights.push({ id, icon: LIGHT_ICON[id], band, title: component.name, line: componentLine(result, component) });
+    // Log §427: «Entra» says who can find you and whether an automatic visit gets in, apart.
+    const line = id === "discovery" ? discoveryLightLine(result) : componentLine(result, component);
+    lights.push({ id, icon: LIGHT_ICON[id], band, title: component.name, line });
   }
   const interop = interopLine(result);
   lights.push({ id: "interop", icon: LIGHT_ICON.interop, band: BAND[interop.tone], title: "Interoperabilidad", line: interop.line });
@@ -168,6 +172,12 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
                   </div>
                 </section>
               )}
+
+              {result && result.found !== "none" ? (
+                <section className="sec">
+                  <ShoppingAgentsCard result={result} />
+                </section>
+              ) : null}
 
               <section className="sec agx-g75">
                 <PurchaseQuestionsCard projectId={projectId} report={report} />

@@ -139,6 +139,10 @@ export function AiBotsSection({
             Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión
             tuya y no te quita de las respuestas con búsqueda.
           </p>
+          <p className="ab-hint ab-hint-2">
+            Cuando un agente entra a comprar por alguien (Muse, Dots, el agente de Gemini), no consulta robots.txt: lo que
+            lo frena es tu protección anti-bots. Lo verás en Visibilidad en agentes.
+          </p>
         </div>
       </div>
 

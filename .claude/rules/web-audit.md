@@ -505,3 +505,7 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   robots.txt sin leer) no se ofrece «Cambiar acceso».
 - **Lo no medido no se afirma**: un motor sin ningún token medido es «Sin
   comprobar», nunca «Puede leerla».
+- **Meta es un interruptor, no una tarjeta de motor** (log §427): no medimos
+  sus respuestas. `meta-externalagent` es de entrenamiento y nunca es un
+  problema. Mientras el plugin no tenga a Meta, `PLUGIN_PENDING_SWITCHES` lo
+  saca del test de paridad; al publicarlo en el plugin, se vacía.
