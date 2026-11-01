@@ -981,3 +981,10 @@ button.pghint{cursor:pointer}button.pghint:hover{border-color:var(--blue)}
 /* idle selector: «Analiza la página actual» instead of a domain (Denis, 2026-10-30) */
 .fav.pgi{background:var(--blue-tint);color:var(--blue)}
 .ph .pj span.d.sans{font:400 11.5px var(--font)}
+/* EXT-SHOP-FIND-1: where the shop is, under the three gauges */
+.shopln{display:flex;align-items:center;gap:10px;margin-top:12px;padding:10px 12px;border:1px solid var(--rule);border-radius:14px;font-size:13px;line-height:1.4;color:var(--ink-2);text-align:left}
+.shopln>svg{flex:none;width:16px;height:16px;color:var(--blue-ink)}
+.shopln .tx{flex:1;min-width:0}
+.shopln .tx b{color:var(--ink);font-weight:600;overflow-wrap:anywhere}
+.shopln .btn{flex:none}
+.shopln.none>svg{color:var(--ink-3)}

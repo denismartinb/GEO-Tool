@@ -28424,3 +28424,16 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 **Paquete Android (fuera del repo, para la siguiente sesión).** La 1.0.0 y la 1.0.1 se cerraban al abrir: con `enableSiteSettingsShortcut: false`, androidbrowserhelper desactiva `ManageDataLauncherActivity`, que no estaba declarada. La 1.0.2 (código 3) la activa y la declara como la plantilla de Bubblewrap, y compila sin minificar. Cualquier regeneración del proyecto tiene que conservar las dos cosas.
 
 **Pendiente.** Hay como un segundo en blanco entre la pantalla de arranque nativa y la animación de la splash; sin medir.
+
+## §401 · EXT-AGENTS-SERVICE-1: la extensión 1.0.1 entiende páginas que venden software o servicios (2026-11-01)
+
+**Qué.** El informe de prueba de Instinct vio que, en la portada de genscore.es, el carril Agentes de la extensión daba 15 y pedía «Pon el precio y el stock en los datos del producto». La causa: cualquier `Offer` en el JSON-LD marcaba la página como tienda, y sin `Product` todo se leía como una ficha de producto físico.
+
+- `collect.js` lee `ld.offering` (tipo, nombre, precio y moneda) del primer nodo con `offers` que no sea `Product` ni `Offer`.
+- `score.js` marca `service` cuando hay venta sin `Product` y hay `offering` o un tipo de servicio (`SoftwareApplication`, `WebApplication`, `MobileApplication`, `Service`, `ProfessionalService`, `Course`, `Event`, `FinancialProduct`). Entonces stock y devoluciones son «No aplica» y no restan, como en la Auditoría agéntica de la consola (§325). «Entiende lo que vendes» y el precio se leen de la oferta. Las tarjetas hablan de «tu plan» y su JSON-LD no lleva `availability`.
+- «Prueba gratis», «Empieza gratis», «Start free trial» y parecidos cuentan como botón para contratar. Siguen sin hacer tienda por sí solos, igual que «Reservar».
+- En una tienda con `Product` no cambia nada.
+
+- **EXT-SHOP-FIND-1 (Denis, 2026-11-01).** En una portada que no vende nada, la extensión busca la tienda en la misma web sin LLM, como `lib/agentic-audit/find-product.ts`: el catálogo público (Shopify `/products.json`, WooCommerce Store API), los enlaces de la propia página (ruta de ficha o menú «Tienda», «Productos», «Dispositivos»…) y, si no hay nada, el sitemap. Lee como mucho dos candidatas, sólo del mismo origen, y una cuenta sólo si su JSON-LD trae `Product` u oferta. Con tienda, Agentes es la nota de esa página y el panel dice «GenScore detecta tu tienda en /ruta» con un botón para abrirla; sin ella, «GenScore no detecta tu tienda ni tus productos de forma estándar». La nota SEO + IA de la portada no cambia. Sólo en la portada (`/`), para no avisar en cada artículo de un blog.
+
+**Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.

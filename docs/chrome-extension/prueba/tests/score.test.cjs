@@ -73,3 +73,47 @@ test("the title card explains the real problem: too long or too short", () => {
   const short = S.scorePage(Object.assign({}, F.b, { title: "Inicio" }), NOW).fixes.find((f) => f.id === "title");
   assert.match(short.why, /Tan corto/);
 });
+
+test("software or a service: no stock or returns, no «producto» copy (Instinct report, 1.0.1)", () => {
+  const saas = Object.assign({}, F.b, {
+    buy: "Prueba gratis",
+    ld: { types: ["Organization", "SoftwareApplication", "Offer", "FAQPage"], errors: 0, product: null, offering: { type: "SoftwareApplication", name: "GenScore", price: "29", currency: "EUR" }, article: null, faq: true, org: true, offerCount: 1 }
+  });
+  const r = S.scorePage(saas, NOW);
+  assert.equal(r.service, true);
+  assert.equal(r.lanes.agent, 100);
+  assert.equal(r.criteria.find((c) => c.id === "avail").v, null);
+  assert.equal(r.criteria.find((c) => c.id === "returns").v, null);
+  assert.equal(r.fixes.filter((x) => x.lane === "agent").length, 0);
+
+  const noPrice = Object.assign({}, saas, { buy: null, ld: Object.assign({}, saas.ld, { offering: Object.assign({}, saas.ld.offering, { price: null }) }) });
+  const fx = S.scorePage(noPrice, NOW).fixes.filter((x) => x.lane === "agent");
+  const text = fx.map((x) => x.t + " " + x.why + " " + (x.snippet || "")).join(" ");
+  assert.match(text, /datos de tu plan/);
+  assert.doesNotMatch(text, /stock|InStock|producto|devoluci/i);
+  assert.match(fx.find((x) => x.id === "price").snippet, /"price": "PRECIO"/);
+});
+
+test("a real shop keeps its goods cards", () => {
+  const r = S.scorePage(F.a, NOW);
+  assert.ok(!r.service);
+});
+
+test("a home page that sells nothing takes Agentes from the shop it found (EXT-SHOP-FIND-1)", () => {
+  const shopFacts = { url: "http://localhost:8302/tienda/zapatillas", path: "/tienda/zapatillas", ld: F.a.ld, og: F.a.og, microPrice: F.a.microPrice, buy: F.a.buy, returnsLink: F.a.returnsLink };
+  const home = Object.assign({}, F.b, { path: "/", shop: { state: "found", path: "/tienda/zapatillas", source: "menu", facts: shopFacts } });
+  const r = S.scorePage(home, NOW);
+  assert.equal(r.commerce, false);
+  assert.equal(r.shop.state, "found");
+  assert.equal(r.lanes.agent, S.scorePage(F.a, NOW).lanes.agent);
+  assert.ok(r.shop.fixes.every((x) => x.where === "/tienda/zapatillas" && x.id.startsWith("shop-")));
+  /* the home's own nota does not change */
+  assert.equal(r.nota, S.scorePage(Object.assign({}, F.b, { path: "/" }), NOW).nota);
+
+  const none = S.scorePage(Object.assign({}, F.b, { path: "/", shop: { state: "none" } }), NOW);
+  assert.equal(none.shop.state, "none");
+  assert.equal(none.lanes.agent, null);
+  /* a candidate that turns out not to sell is «none», not a score */
+  const fake = S.scorePage(Object.assign({}, home, { shop: { state: "found", path: "/x", facts: { url: "http://localhost:8302/x", path: "/x", ld: F.b.ld, og: {}, microPrice: false, buy: null } } }), NOW);
+  assert.equal(fake.shop.state, "none");
+});
