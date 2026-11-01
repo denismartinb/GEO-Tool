@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.4
+Stable tag: 1.0.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -67,6 +67,10 @@ No. It runs only when you open the GenScore screen, in your browser, reading you
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.5 =
+* Bots de IA: two new switches for Meta, the search behind Meta AI and its shopping agent Muse (meta-webindexer) and model training (meta-externalagent).
+* A line explains that agents buying for someone do not read robots.txt when they visit: your anti-bot protection decides.
 
 = 1.0.4 =
 * GenScore now reviews your site by itself: the home page, the pages in your menus, your best-selling products and your latest posts. The note is your site's, and each fix says how many pages it affects and which ones.

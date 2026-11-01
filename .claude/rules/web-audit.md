@@ -507,5 +507,5 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   comprobar», nunca «Puede leerla».
 - **Meta es un interruptor, no una tarjeta de motor** (log §427): no medimos
   sus respuestas. `meta-externalagent` es de entrenamiento y nunca es un
-  problema. Mientras el plugin no tenga a Meta, `PLUGIN_PENDING_SWITCHES` lo
-  saca del test de paridad; al publicarlo en el plugin, se vacía.
+  problema. El plugin lo tiene desde 1.0.5; `PLUGIN_PENDING_SWITCHES` sólo
+  saca del test de paridad un interruptor que el plugin aún no publica.

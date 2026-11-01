@@ -27,7 +27,9 @@
     "claude-search": ["Claude", "Búsqueda y enlaces que abre Claude"],
     "claude-training": ["Claude", "Entrenamiento de modelos"],
     "perplexity-search": ["Perplexity", "Búsqueda y enlaces que abre Perplexity"],
-    "gemini": ["Gemini", "Respuestas y entrenamiento de Gemini"]
+    "gemini": ["Gemini", "Respuestas y entrenamiento de Gemini"],
+    "meta-search": ["Meta", "Búsqueda de Meta AI y Muse"],
+    "meta-training": ["Meta", "Entrenamiento de modelos"]
   };
 
   /* ---------------- helpers ---------------- */
@@ -148,7 +150,7 @@
       return '<div class="gs-bot"><span class="gs-tx"><b>' + esc(L[0]) + " · " + esc(L[1]) + "</b><small>" + esc(tokens) + '</small></span><button class="gs-sw" role="switch" data-sw="' + id + '" aria-checked="' + on + '" aria-label="' + esc(L[0] + ", " + L[1]) + '"' + (blocked ? " disabled" : "") + "></button></div>";
     }).join("");
     var dirty = Object.keys(S.dirty).length > 0;
-    return '<div class="gs-card"><div class="gs-lab">Bots de IA<small>robots.txt</small></div>' + note + '<div class="gs-rows">' + list + '</div><div class="gs-hint">Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión tuya y no te quita de las respuestas con búsqueda.</div><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-bots"' + (dirty && !blocked ? "" : " disabled") + '>Guardar robots.txt</button><a class="gs-btn gs-line" href="' + esc(D.site.home + "robots.txt") + '" target="_blank" rel="noopener">Ver el fichero</a>' + (S.msg.bots ? S.msg.bots : "") + "</div></div>";
+    return '<div class="gs-card"><div class="gs-lab">Bots de IA<small>robots.txt</small></div>' + note + '<div class="gs-rows">' + list + '</div><div class="gs-hint">Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión tuya y no te quita de las respuestas con búsqueda.</div><div class="gs-hint">Cuando un agente entra a comprar por alguien (Muse, Dots, el agente de Gemini), no consulta robots.txt: lo que lo frena es tu protección anti-bots.</div><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-bots"' + (dirty && !blocked ? "" : " disabled") + '>Guardar robots.txt</button><a class="gs-btn gs-line" href="' + esc(D.site.home + "robots.txt") + '" target="_blank" rel="noopener">Ver el fichero</a>' + (S.msg.bots ? S.msg.bots : "") + "</div></div>";
   }
 
   function llmsCard() {

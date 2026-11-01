@@ -41,8 +41,8 @@ export const AI_BOT_SWITCHES: AiBotSwitch[] = [
   { id: "meta-training", engine: "meta", kind: "training", what: "Entrenamiento de modelos", tokens: ["meta-externalagent"] }
 ];
 
-/** Switches the WordPress plugin does not have yet (it gets them in its next version, log §427). */
-export const PLUGIN_PENDING_SWITCHES = new Set(["meta-search", "meta-training"]);
+/** Switches the WordPress plugin does not have yet. Empty since plugin 1.0.5 (log §427); keep it for the next one. */
+export const PLUGIN_PENDING_SWITCHES = new Set<string>();
 
 export const AI_ENGINES: { engine: AiEngine; name: string }[] = [
   { engine: "chatgpt", name: "ChatGPT" },

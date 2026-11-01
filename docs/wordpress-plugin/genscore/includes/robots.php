@@ -27,6 +27,9 @@ function genscore_bot_switches() {
 		'claude-training'   => array( 'tokens' => array( 'ClaudeBot' ), 'engine' => 'claude', 'kind' => 'training' ),
 		'perplexity-search' => array( 'tokens' => array( 'PerplexityBot', 'Perplexity-User' ), 'engine' => 'perplexity', 'kind' => 'search' ),
 		'gemini'            => array( 'tokens' => array( 'Google-Extended' ), 'engine' => 'gemini', 'kind' => 'search' ),
+		// Meta AI and its shopping agent Muse. meta-externalfetcher is left out: Meta says it may bypass robots.txt.
+		'meta-search'       => array( 'tokens' => array( 'meta-webindexer' ), 'engine' => 'meta', 'kind' => 'search' ),
+		'meta-training'     => array( 'tokens' => array( 'meta-externalagent' ), 'engine' => 'meta', 'kind' => 'training' ),
 	);
 }
 
