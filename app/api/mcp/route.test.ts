@@ -68,7 +68,7 @@ describe("POST /api/mcp", () => {
     expect(listExtProjects).not.toHaveBeenCalled();
   });
 
-  it("asks ChatGPT to sign in from the tool itself, with scopes and output schemas (log §429)", async () => {
+  it("asks ChatGPT to sign in from the tool itself, with scopes and output schemas (log §430)", async () => {
     const res = await post(call("listar_dominios"), undefined, POST_CHATGPT, "/api/mcp/chatgpt");
     expect(res.status).toBe(200);
     const body = await res.json();

@@ -1,5 +1,5 @@
 /**
- * MCP-CHATGPT-SUBMIT-1 (log §429): OpenAI's domain verification for the
+ * MCP-CHATGPT-SUBMIT-1 (log §430): OpenAI's domain verification for the
  * ChatGPT plugin. The portal gives a token; it goes in
  * `OPENAI_APPS_CHALLENGE_TOKEN` and this route answers it as plain text,
  * with nothing else (no JSON, no newline), as the portal requires. Without

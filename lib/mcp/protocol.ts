@@ -68,7 +68,7 @@ export function negotiateVersion(requested: unknown): string {
 
 /**
  * How one endpoint speaks to its client. Claude's endpoint uses the defaults;
- * ChatGPT's (MCP-CHATGPT-SUBMIT-1, log §429) asks for OpenAI's extras:
+ * ChatGPT's (MCP-CHATGPT-SUBMIT-1, log §430) asks for OpenAI's extras:
  * - `oauthScopes`: the scopes its OAuth scheme declares (`openid`, `email`, so
  *   ChatGPT's workspace domain restrictions can read a verified email).
  * - `outputSchema`: every tool declares one, and every answer then carries a

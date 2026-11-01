@@ -23,7 +23,7 @@ export function resourcePathFor(wellKnownSuffix: string): string {
 }
 
 /**
- * Scopes ChatGPT asks for (MCP-CHATGPT-SUBMIT-1, log §429). OpenAI needs a
+ * Scopes ChatGPT asks for (MCP-CHATGPT-SUBMIT-1, log §430). OpenAI needs a
  * verified email from the UserInfo endpoint for workspace domain
  * restrictions; Supabase's OAuth server publishes `openid` and `email`.
  */

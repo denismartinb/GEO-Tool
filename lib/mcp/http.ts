@@ -34,7 +34,7 @@ const NO_STORE = { "Cache-Control": "private, no-store" } as const;
 const metadataUrl = (origin: string, profile: McpProfile) => `${origin}/.well-known/oauth-protected-resource${MCP_ENDPOINT[profile]}`;
 
 /**
- * MCP-CHATGPT-SUBMIT-1 (log §429): what each endpoint asks of the protocol.
+ * MCP-CHATGPT-SUBMIT-1 (log §430): what each endpoint asks of the protocol.
  * ChatGPT gets OAuth scopes, output schemas and the per-tool sign-in
  * challenge; Claude keeps the HTTP 401 it was approved with.
  */

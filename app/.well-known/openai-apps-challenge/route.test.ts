@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { GET } from "./route";
 
-describe("OpenAI domain challenge (MCP-CHATGPT-SUBMIT-1, log §429)", () => {
+describe("OpenAI domain challenge (MCP-CHATGPT-SUBMIT-1, log §430)", () => {
   afterEach(() => {
     delete process.env.OPENAI_APPS_CHALLENGE_TOKEN;
   });

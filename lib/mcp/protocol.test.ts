@@ -71,7 +71,7 @@ describe("MCP protocol (MCP-SERVER-1, log §418)", () => {
     expect(await handleRpc({ nope: true }, signed, TOOLS)).toMatchObject({ body: { error: { code: -32600 } } });
   });
 
-  it("speaks ChatGPT's dialect when asked (MCP-CHATGPT-SUBMIT-1, log §429)", async () => {
+  it("speaks ChatGPT's dialect when asked (MCP-CHATGPT-SUBMIT-1, log §430)", async () => {
     const opts = { oauthScopes: ["openid", "email"], outputSchema: true, authChallenge: 'Bearer resource_metadata="m", error="invalid_token", error_description="x"' };
     const d = describeTool(TOOLS[1], opts);
     expect(d.outputSchema).toEqual({ type: "object", additionalProperties: true });

@@ -28894,7 +28894,7 @@ cuenta, y se quedaron fuera de la Fase 1.
 **Pendiente.** La ficha del directorio de Claude se envió sin esta
 herramienta en la descripción; Denis puede editarla después.
 
-## §429 · MCP-CHATGPT-SUBMIT-1: el conector, listo para el directorio de ChatGPT (2026-11-01)
+## §430 · MCP-CHATGPT-SUBMIT-1: el conector, listo para el directorio de ChatGPT (2026-11-01)
 
 **Qué pasó.** Denis pidió preparar la subida a ChatGPT igual que la del
 directorio de Claude (§418, §425). Desde 2026 OpenAI publica las apps como

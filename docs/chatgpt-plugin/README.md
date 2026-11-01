@@ -1,7 +1,7 @@
 # GenScore en el directorio de ChatGPT
 
 Paquete y pasos para publicar el conector MCP de GenScore en ChatGPT
-(MCP-CHATGPT-SUBMIT-1, `docs/brand/design-decisions-log.md` §429).
+(MCP-CHATGPT-SUBMIT-1, `docs/brand/design-decisions-log.md` §430).
 
 - Servidor: `https://www.genscore.es/api/mcp/chatgpt` (sin precios, planes ni
   prueba, por las normas de OpenAI).
