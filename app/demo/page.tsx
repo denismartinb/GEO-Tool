@@ -20,7 +20,7 @@ import { PublicFooter } from "@/components/marketing/public-footer";
 export const metadata: Metadata = contentMetadata({
   title: "Agenda una videollamada con GenScore",
   description:
-    "Una videollamada de 20 minutos con el equipo de GenScore: qué responden ChatGPT, Gemini, Claude y Perplexity sobre tu sector, a quién recomiendan en tu lugar y qué plan encaja contigo.",
+    "Videollamada de 20 minutos con GenScore: qué responden ChatGPT, Gemini, Claude y Perplexity sobre tu sector y a quién recomiendan en tu lugar.",
   path: "/demo"
 });
 

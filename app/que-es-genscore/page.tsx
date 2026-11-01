@@ -25,7 +25,8 @@ const PAGE_URL = `${SITE_URL}/que-es-genscore`;
 
 export const metadata: Metadata = contentMetadata({
   title: "Qué es GenScore: visibilidad de tu marca en la IA · GenScore",
-  description: CANONICAL_DEFINITION,
+  // MCP-SITE-FIXES-1 (log §429): CANONICAL_DEFINITION runs past 160 characters.
+  description: "GenScore mide cómo aparece tu marca en las respuestas de ChatGPT, Gemini, Claude y Perplexity, te compara con tu competencia y te dice qué hacer.",
   path: "/que-es-genscore"
 });
 

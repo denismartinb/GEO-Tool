@@ -3,6 +3,7 @@ import {
   GEO_SCORE_ALTERNATE_PATHS,
   GEO_SCORE_CANONICAL_URL,
   GEO_SCORE_DEFINITION,
+  GEO_SCORE_META_DESCRIPTION,
   GEO_SCORE_TERM_ID
 } from "@/lib/brand/geo-score-definition";
 
@@ -23,6 +24,12 @@ import {
 export type GlossaryTerm = {
   slug: string;
   term: string;
+  /**
+   * MCP-SITE-FIXES-1 (log §429). The `<meta name="description">` of the term
+   * page: 50 to 160 characters, the range the web audit checks. `definition`
+   * stays the visible short definition and the DefinedTerm schema text.
+   */
+  metaDescription: string;
   definition: string;
   longDefinition: string;
   relatedLinks: { href: string; label: string }[];
@@ -44,6 +51,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "geo",
     term: "GEO (Generative Engine Optimization)",
+    metaDescription: "GEO (Generative Engine Optimization) es optimizar tu marca para aparecer en las respuestas de ChatGPT, Gemini, Claude y AI Overviews, no solo en Google.",
     definition:
       "Optimizar el contenido y la presencia de una marca para aparecer en las respuestas de motores generativos (ChatGPT, Gemini, Claude, AI Overviews), no solo en los resultados de búsqueda tradicionales. A diferencia del SEO, no se mide en clics ni posiciones en una lista — se mide en si el modelo te menciona, te cita, y con qué prominencia.",
     longDefinition:
@@ -58,6 +66,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "aeo",
     term: "AEO (Answer Engine Optimization)",
+    metaDescription: "AEO (Answer Engine Optimization) es optimizar contenido para motores que dan una respuesta directa: fragmentos destacados, asistentes de voz y AI Overviews.",
     definition:
       "Término hermano de GEO, centrado en optimizar contenido para motores que devuelven una respuesta directa en vez de una lista de enlaces — fragmentos destacados, asistentes de voz, AI Overviews. En la práctica, GEO y AEO comparten casi todas las mismas prácticas.",
     longDefinition:
@@ -71,6 +80,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "geo-score",
     term: "GEO Score",
+    metaDescription: GEO_SCORE_META_DESCRIPTION,
     // E4: la definición corta ya no se escribe aquí — se importa, para que
     // esta entrada, el schema de `/docs/metodologia/geo-score` y la metadata
     // de esa página digan literalmente lo mismo.
@@ -92,6 +102,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "cuota-de-voz-en-ia",
     term: "Cuota de voz en IA (Share of Voice)",
+    metaDescription: "La cuota de voz en IA es el porcentaje de la atención que un motor generativo reparte entre marcas que es tuyo frente al de tus competidores.",
     definition:
       "De toda la atención que un motor generativo reparte entre las marcas que menciona para un prompt, qué porcentaje es tuyo frente a tus competidores. Si ni tu marca ni ningún competidor rastreado aparece mencionado, no hay voz que repartir — la cuota se descarta en vez de asumir un valor por defecto.",
     longDefinition:
@@ -106,6 +117,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "llms-txt",
     term: "llms.txt",
+    metaDescription: "llms.txt es un fichero en la raíz de tu web que resume el sitio en lenguaje natural para que los modelos de IA lo lean con facilidad.",
     definition:
       "Fichero en la raíz de un dominio (`/llms.txt`) que resume el sitio en lenguaje natural pensado para que un modelo lo consuma con facilidad al hacer grounding — el equivalente a robots.txt, pero dirigido a agentes de IA en vez de a rastreadores de búsqueda.",
     longDefinition:
@@ -119,6 +131,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "grounding",
     term: "Grounding",
+    metaDescription: "Grounding es cuando un motor de IA respalda su respuesta con una búsqueda o una fuente real en vez de responder solo de memoria.",
     definition:
       "Cuando un motor generativo respalda su respuesta con una búsqueda o una fuente real en vez de responder solo de memoria de su entrenamiento. Una respuesta \"grounded\" suele venir acompañada de citas o enlaces verificables.",
     longDefinition:
@@ -132,6 +145,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "ai-overviews",
     term: "AI Overviews",
+    metaDescription: "AI Overviews es el resumen generado por IA que Google muestra encima de los resultados de búsqueda, combinando varias fuentes en una respuesta.",
     definition:
       "El resumen generado por IA que Google muestra encima de los resultados de búsqueda tradicionales para ciertas consultas, combinando información de varias fuentes en una sola respuesta.",
     longDefinition:
@@ -145,6 +159,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "prompt-tracking",
     term: "Prompt tracking",
+    metaDescription: "Prompt tracking es medir de forma repetida cómo responde la IA a un conjunto fijo de preguntas de tu sector, el rank tracking del GEO.",
     definition:
       "Monitorizar de forma repetida (diaria, semanal) cómo responde un motor generativo a un conjunto fijo de preguntas reales de tu categoría, para ver si la presencia o la posición de una marca cambia con el tiempo — el equivalente en GEO al rank tracking de palabras clave en SEO.",
     longDefinition:
@@ -158,6 +173,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "rag",
     term: "RAG (Retrieval-Augmented Generation)",
+    metaDescription: "RAG (Retrieval-Augmented Generation) es la arquitectura en la que un modelo recupera documentos externos antes de responder. Es la base del grounding.",
     definition:
       "Arquitectura en la que un modelo generativo recupera documentos externos (una búsqueda, una base de datos) antes de generar su respuesta, en vez de depender solo de lo aprendido durante el entrenamiento. Es el mecanismo técnico detrás del grounding.",
     longDefinition:
@@ -171,6 +187,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "datos-estructurados",
     term: "Datos estructurados (Schema.org)",
+    metaDescription: "Los datos estructurados (Schema.org) son marcado JSON-LD o microdata que describe el contenido de una página para buscadores y modelos de IA.",
     definition:
       "Marcado JSON-LD o microdata en una página que describe explícitamente su contenido (artículo, producto, pregunta frecuente, término de un glosario) para que buscadores y modelos lo interpreten sin ambigüedad, en vez de tener que inferirlo del texto visible.",
     longDefinition:
@@ -184,6 +201,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "url-canonica",
     term: "URL canónica",
+    metaDescription: "La URL canónica es la versión oficial de una página, declarada con rel=\"canonical\", para que los buscadores no traten las copias como duplicados.",
     definition:
       "La URL que un sitio declara como versión \"oficial\" de una página, mediante la etiqueta `<link rel=\"canonical\">`, para evitar que buscadores traten copias o variantes con parámetros como contenido duplicado.",
     longDefinition:
@@ -197,6 +215,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "citacion-en-ia",
     term: "Citación (en respuestas de IA)",
+    metaDescription: "Una citación en IA es cuando la respuesta de un motor enlaza una fuente como respaldo. Que te mencionen no garantiza que te citen.",
     definition:
       "Cuando la respuesta de un motor generativo enlaza o menciona explícitamente una fuente como respaldo de lo que afirma. Que una marca aparezca mencionada no garantiza que también sea citada — son señales distintas.",
     longDefinition:
@@ -211,6 +230,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "analisis-de-sentimiento",
     term: "Análisis de sentimiento",
+    metaDescription: "El análisis de sentimiento clasifica si una mención de tu marca en una respuesta de IA es positiva, neutra o negativa.",
     definition:
       "Clasificar si una mención de marca en una respuesta de IA es positiva, neutra o negativa, más allá de si aparece o no. Una marca puede tener alta presencia y sentimiento negativo a la vez — son ejes distintos.",
     longDefinition:
@@ -224,6 +244,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "eeat",
     term: "E-E-A-T",
+    metaDescription: "E-E-A-T (experiencia, conocimiento, autoridad y confianza) es el marco de Google para valorar un contenido, y la IA hereda buena parte de él.",
     definition:
       "Experience, Expertise, Authoritativeness, Trustworthiness — el marco de Google para evaluar la calidad y credibilidad de un contenido. GEO hereda buena parte de este criterio porque los motores generativos también tienden a priorizar fuentes con autoridad real y verificable.",
     longDefinition:
@@ -237,6 +258,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "fragmento-destacado",
     term: "Fragmento destacado (Featured snippet)",
+    metaDescription: "Un fragmento destacado es el bloque de respuesta directa que Google extrae de una página y muestra encima de los resultados orgánicos.",
     definition:
       "El bloque de respuesta directa que Google extrae de una página y muestra encima de los resultados orgánicos para ciertas búsquedas, sin que el usuario tenga que hacer clic.",
     longDefinition:
@@ -250,6 +272,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "tasa-de-mencion",
     term: "Tasa de mención (Mention Rate)",
+    metaDescription: "La tasa de mención es el porcentaje de respuestas de un motor de IA en las que aparece tu marca. Es la señal más básica de visibilidad en IA.",
     definition:
       "El porcentaje de respuestas de un motor generativo en las que aparece nombrada una marca, sobre el total de respuestas evaluadas. Es la señal más básica de visibilidad en IA: sin mención, ninguna otra métrica tiene sentido.",
     longDefinition:
@@ -264,6 +287,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "prominencia",
     term: "Prominencia (posición cuando se menciona)",
+    metaDescription: "La prominencia es el puesto en el que aparece una marca dentro de una respuesta de IA, contado solo en las respuestas donde la nombran.",
     definition:
       "El puesto en el que aparece una marca dentro de una respuesta de IA, calculado solo sobre las respuestas donde la marca fue mencionada — nunca promediando también las respuestas donde no apareció.",
     longDefinition:
@@ -277,6 +301,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "mencion-verificada",
     term: "Mención verificada",
+    metaDescription: "Una mención verificada es una mención de marca confirmada contra el texto real de la respuesta de la IA, no aceptada porque el modelo lo diga.",
     definition:
       "Una mención de marca confirmada contra el texto real de la respuesta de un motor generativo, en vez de aceptada porque el propio modelo afirma haberla incluido — dos cosas que no siempre coinciden.",
     longDefinition:
@@ -290,6 +315,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "variabilidad-respuestas-ia",
     term: "Variabilidad de las respuestas de IA",
+    metaDescription: "Dos preguntas idénticas a un motor de IA pueden dar respuestas distintas. Por qué pasa y cómo afecta a medir tu visibilidad en IA.",
     definition:
       "El hecho de que dos consultas idénticas a un motor generativo pueden producir respuestas distintas, porque muchos motores buscan información en tiempo real y no son deterministas. Afecta directamente a cualquier medición de visibilidad en IA.",
     longDefinition:
@@ -303,6 +329,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
   {
     slug: "llmo",
     term: "LLMO (Large Language Model Optimization)",
+    metaDescription: "LLMO (Large Language Model Optimization) es optimizar contenido para que los modelos de lenguaje lo encuentren, lo entiendan y lo citen al responder.",
     definition:
       "Término alternativo a GEO, centrado explícitamente en optimizar contenido para que los propios modelos de lenguaje —no solo los buscadores construidos sobre ellos— lo encuentren, lo entiendan y lo citen al responder.",
     longDefinition:
@@ -314,3 +341,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ]
   }
 ];
+
+/**
+ * MCP-SITE-FIXES-1 (log §429). The web audit accepts titles of 15 to 70
+ * characters; a long term drops the «Glosario GEO» middle part instead of
+ * overflowing.
+ */
+export function glossaryTermTitle(term: string): string {
+  const full = `¿Qué es ${term}? · Glosario GEO · GenScore`;
+  return full.length <= 70 ? full : `¿Qué es ${term}? · GenScore`;
+}

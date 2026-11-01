@@ -37,7 +37,35 @@ const STARTER_PRICE = PLANS.find((p) => p.id === "starter")!.price;
  * falso que CLAUDE.md prohíbe — con el agravante de que Google penaliza el
  * marcado inventado cuando lo detecta.
  */
-export function SoftwareApplicationSchema() {
+/**
+ * MCP-SITE-FIXES-1 (log §429). On `/precios` the same node declares one Offer
+ * per sellable plan with a list price, so an agent reading the pricing page
+ * sees what is sold and at what price (agentic audit, «Comprensión»). Prices
+ * come from `PLANS`, VAT included, monthly. Agencia has no list price
+ * («Plan a medida»), so it is not declared: an invented price is a fake
+ * metric. The founder price is a Stripe coupon, not the list price, and is
+ * never put here.
+ */
+export function planOffers() {
+  return PLANS.filter((p) => (p.id === "starter" || p.id === "pro") && !p.priceLabel).map((p) => ({
+    "@type": "Offer",
+    name: `GenScore ${p.name}`,
+    url: `${SITE_ORIGIN}/precios`,
+    price: String(p.price),
+    priceCurrency: "EUR",
+    availability: "https://schema.org/InStock",
+    priceSpecification: {
+      "@type": "UnitPriceSpecification",
+      price: String(p.price),
+      priceCurrency: "EUR",
+      unitCode: "MON",
+      billingDuration: 1,
+      valueAddedTaxIncluded: true
+    }
+  }));
+}
+
+export function SoftwareApplicationSchema({ withPlanOffers = false }: { withPlanOffers?: boolean } = {}) {
   const json = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
@@ -50,7 +78,7 @@ export function SoftwareApplicationSchema() {
     inLanguage: "es",
     description: CANONICAL_DEFINITION_LONG,
     publisher: { "@id": ORGANIZATION_ID },
-    offers: {
+    offers: withPlanOffers ? planOffers() : {
       "@type": "Offer",
       price: String(STARTER_PRICE),
       priceCurrency: "EUR",
