@@ -19,7 +19,7 @@ import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
 export type ExtEngine = { provider: string; label: string; mentionShare: number };
 /** `domain` paints the rival's favicon: the project's own for the brand, a tracked competitor's when the name matches, else null (log §408). */
 export type ExtRival = { name: string; share: number; isBrand: boolean; domain: string | null };
-export type ExtPlanItem = { title: string; firstStep: string | null; engines: string[] };
+export type ExtPlanItem = { title: string; firstStep: string | null; engines: string[]; questions?: string[] };
 export type ExtCitingPrompt = { text: string; engines: string[]; mentioned: boolean };
 export type ExtAgentic =
   | { kind: "card"; score: number; headline: string; components: Array<{ name: string; points: number | null; weight: number }> }
@@ -128,7 +128,7 @@ export function buildExtProjectSummary({
     engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
     rivals: pickRivals(model, project.domain, competitors),
     seoScore: model?.technical?.score ?? null,
-    plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => ({ title: p.title, firstStep: p.firstStep, engines: p.engineLabels })),
+    plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => ({ title: p.title, firstStep: p.firstStep, engines: p.engineLabels, questions: p.questions ?? [] })),
     agentic: toExtAgentic(agentic),
     citingPrompts: ownUrl ? findCitingPrompts(answers, ownUrl, engineLabel) : null
   };

@@ -21,6 +21,17 @@ export type ToolText = { text: string; structured?: Record<string, unknown> };
 export type ConsoleLinks = { base: string; projectId: string };
 
 const screen = (l: ConsoleLinks, path = "") => `${l.base}/dashboard/projects/${l.projectId}${path}`;
+
+/** The new-domain wizard, prefilled when the domain is known (`?dominio=`, read by `app/dashboard/projects/new`). */
+export const addDomainUrl = (base: string, domain?: string | null) =>
+  `${base}/dashboard/projects/new${domain ? `?dominio=${encodeURIComponent(domain)}` : ""}`;
+
+/** Competidores with the add sheet open and filled (`?nuevo=&nombre=`, EXT-AUDITS-1, log §406). Nothing is saved until «Añadir». */
+export const addCompetitorUrl = (l: ConsoleLinks, domain: string, name?: string | null) =>
+  `${screen(l, "/competitors")}?nuevo=${encodeURIComponent(domain)}${name ? `&nombre=${encodeURIComponent(name)}` : ""}`;
+
+/** The direct Google permission, same as the console's invitation (GSC-CONNECT-CTA-1, log §313). */
+const gscConnectUrl = (l: ConsoleLinks) => `${l.base}/api/search-console/connect?projectId=${encodeURIComponent(l.projectId)}`;
 const n1 = (x: number) => x.toLocaleString("es-ES", { maximumFractionDigits: 1 });
 const n0 = (x: number) => Math.round(x).toLocaleString("es-ES");
 const pct = (x: number | null) => (x == null ? null : `${x > 0 ? "+" : ""}${Math.round(x)}%`);
@@ -45,32 +56,49 @@ export function formatPlanNotice(): ToolText {
   };
 }
 
-export function formatNotFound(domain: string): ToolText {
+export function formatNotFound(domain: string, base: string): ToolText {
   return {
-    text: `${domain} no es uno de los dominios de tu cuenta de GenScore. Usa listar_dominios para ver cuáles tienes.`,
-    structured: { state: "not_found", domain }
+    text:
+      `${domain} no es uno de los dominios de tu cuenta de GenScore (usa listar_dominios para ver cuáles tienes). ` +
+      `Para empezar a medirlo, añádelo aquí, ya viene relleno: ${addDomainUrl(base, domain)}`,
+    structured: { state: "not_found", domain, addDomainUrl: addDomainUrl(base, domain) }
   };
 }
 
 export function formatDomains(input: {
+  base: string;
   email: string | null;
   planName: string;
   trialEndsAt: string | null;
-  domains: Array<{ domain: string; brand: string }>;
+  domainCap: number;
+  domains: Array<{ domain: string; brand: string; projectId: string }>;
 }): ToolText {
   const lines = [
     `Cuenta de GenScore${input.email ? ` de ${input.email}` : ""}, plan ${input.planName}${input.trialEndsAt ? ` (prueba hasta el ${input.trialEndsAt.slice(0, 10)})` : ""}.`,
     ""
   ];
-  if (!input.domains.length) lines.push("Todavía no hay ningún dominio. Se añade desde la consola: https://www.genscore.es/dashboard.");
-  else for (const d of input.domains) lines.push(`- ${d.domain} (${d.brand})`);
-  return { text: lines.join("\n"), structured: input };
+  if (!input.domains.length) lines.push(`Todavía no hay ningún dominio. Añade el primero aquí: ${addDomainUrl(input.base)}`);
+  else {
+    for (const d of input.domains) lines.push(`- ${d.domain} (${d.brand}): ${input.base}/dashboard/projects/${d.projectId}`);
+    if (input.domains.length < input.domainCap) lines.push("", `Para añadir otro dominio: ${addDomainUrl(input.base)}`);
+    else lines.push("", "La cuenta ya tiene todos los dominios que incluye su plan.");
+  }
+  return {
+    text: lines.join("\n"),
+    structured: {
+      email: input.email,
+      planName: input.planName,
+      trialEndsAt: input.trialEndsAt,
+      domains: input.domains.map((d) => ({ domain: d.domain, brand: d.brand, url: `${input.base}/dashboard/projects/${d.projectId}` })),
+      ...(input.domains.length < input.domainCap ? { addDomainUrl: addDomainUrl(input.base) } : {})
+    }
+  };
 }
 
 function noScan(domain: string, l: ConsoleLinks): ToolText {
   return {
     text: `${domain} todavía no tiene un escaneo completado, así que no hay cifras que enseñar. Lo verás aquí en cuanto termine: ${screen(l)}`,
-    structured: { state: "no_scan" }
+    structured: { state: "no_scan", url: screen(l) }
   };
 }
 
@@ -100,7 +128,8 @@ export function formatDomainSummary(p: ExtProjectPayload, l: ConsoleLinks): Tool
       engines: p.engines,
       rivals: p.rivals,
       seoScore: p.seoScore,
-      agentic: p.agentic
+      agentic: p.agentic,
+      url: screen(l)
     }
   };
 }
@@ -109,24 +138,37 @@ export function formatCompetitors(p: ExtProjectPayload, l: ConsoleLinks): ToolTe
   if (!p.rivals.length) return noScan(p.domain, l);
   const lines = [`Marcas que más nombra la IA en las preguntas principales de búsqueda de ${p.domain}:`, ""];
   p.rivals.forEach((r, i) => lines.push(`${i + 1}. ${r.name}${r.isBrand ? " (tú)" : ""}: aparece en el ${formatShare(r.share)} de las respuestas${r.domain && !r.isBrand ? ` · ${r.domain}` : ""}`));
-  lines.push("", `Ranking completo y evolución: ${screen(l, "/competitors")}`);
-  return { text: lines.join("\n"), structured: { domain: p.domain, rivals: p.rivals } };
+  lines.push(
+    "",
+    `Ranking completo y evolución: ${screen(l, "/competitors")}`,
+    "Para seguir a otra marca, pídeme que revise su web y te doy el enlace para añadirla, o hazlo en esa misma pantalla."
+  );
+  return { text: lines.join("\n"), structured: { domain: p.domain, rivals: p.rivals, url: screen(l, "/competitors") } };
 }
+
+const MAX_PLAN_QUESTIONS = 6;
 
 export function formatRecommendations(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
   if (!p.plan.length) {
     return {
       text: `${p.domain} no tiene acciones pendientes en su plan ahora mismo. El plan se recalcula con cada escaneo: ${screen(l, "/recommendations")}`,
-      structured: { domain: p.domain, plan: [] }
+      structured: { domain: p.domain, plan: [], url: screen(l, "/recommendations") }
     };
   }
   const lines = [`Lo primero que haría en ${p.domain}, en este orden:`, ""];
   p.plan.forEach((r, i) => {
     lines.push(`${i + 1}. **${r.title}**${r.engines.length ? ` (${r.engines.join(", ")})` : ""}`);
     if (r.firstStep) lines.push(`   Primer paso: ${r.firstStep}`);
+    // The first step often points at «las preguntas de la lista»: the console shows them on the card.
+    const qs = r.questions ?? [];
+    if (qs.length) {
+      lines.push(`   Preguntas:`);
+      for (const q of qs.slice(0, MAX_PLAN_QUESTIONS)) lines.push(`   - «${q}»`);
+      if (qs.length > MAX_PLAN_QUESTIONS) lines.push(`   - y otras en la consola`);
+    }
   });
   lines.push("", `El plan completo, con cómo hacerlo y «Marcar como hecho»: ${screen(l, "/recommendations")}`);
-  return { text: lines.join("\n"), structured: { domain: p.domain, plan: p.plan } };
+  return { text: lines.join("\n"), structured: { domain: p.domain, plan: p.plan, url: screen(l, "/recommendations") } };
 }
 
 export function formatAudits(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
@@ -141,7 +183,7 @@ export function formatAudits(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
   }
   if (p.agentic?.kind === "upsell") lines.push("", "La auditoría agéntica no está incluida en tu plan.");
   lines.push("", `Detalle por página: ${screen(l, "/web-audit")}`);
-  return { text: lines.join("\n"), structured: { domain: p.domain, audits: a } };
+  return { text: lines.join("\n"), structured: { domain: p.domain, audits: a, url: screen(l, "/web-audit") } };
 }
 
 const q = (x: ExtGscQuery) => `«${x.query}» · puesto ${n1(x.position)} · ${n0(x.clicks)} clics · ${n0(x.impressions)} impresiones`;
@@ -151,13 +193,14 @@ export function formatSearchConsole(p: ExtProjectPayload, l: ConsoleLinks): Tool
   const link = screen(l, "/search-console");
   if (g.state === "disconnected" || g.state === "reconnect") {
     return {
-      text: `${p.domain} no tiene Search Console conectado${g.state === "reconnect" ? " (el permiso de Google ha caducado)" : ""}. Se conecta en un clic desde ${link}.`,
-      structured: { state: g.state }
+      text: `${p.domain} no tiene Search Console conectado${g.state === "reconnect" ? " (el permiso de Google ha caducado)" : ""}. Se conecta en un clic, con permiso de solo lectura: ${gscConnectUrl(l)}`,
+      structured: { state: g.state, connectUrl: gscConnectUrl(l) }
     };
   }
   if (g.state === "pick_property") return { text: `Falta elegir la propiedad de Search Console de ${p.domain} en ${link}.`, structured: { state: g.state } };
+  if (g.state === "off") return { text: `Los datos de Search Console no están disponibles ahora mismo en GenScore.`, structured: { state: g.state } };
   if (g.state !== "connected") return { text: `Ahora no se pueden leer los datos de Google de ${p.domain}. Prueba en unos minutos o mira ${link}.`, structured: { state: g.state } };
-  if (g.empty) return { text: `Google todavía no tiene datos de ${p.domain} en los últimos 28 días.`, structured: { state: "empty" } };
+  if (g.empty) return { text: `Google todavía no tiene datos de ${p.domain} en los últimos 28 días. Suele tardar unos días tras dar de alta la web en Search Console: ${link}`, structured: { state: "empty" } };
   const t = g.trend;
   const lines = [`Google, últimos 28 días, ${p.domain}:`, ""];
   lines.push(`- Clics: ${n0(g.clicks)}${pct(t.clicksDeltaPct) ? ` (${pct(t.clicksDeltaPct)} frente a los 28 anteriores)` : ""}`);
@@ -177,14 +220,24 @@ export function formatSearchConsole(p: ExtProjectPayload, l: ConsoleLinks): Tool
   lines.push("", `Todo el detalle: ${link}`);
   return {
     text: lines.join("\n"),
-    structured: { state: "connected", clicks: g.clicks, position: g.position, impressions: t.impressions, queries: t.queries, near: t.near }
+    structured: { state: "connected", clicks: g.clicks, position: g.position, impressions: t.impressions, queries: t.queries, near: t.near, url: link }
   };
 }
 
 const LANE: Record<string, string> = { ia: "IA", google: "Google", agent: "Agentes" };
 
 /** The extension's «Nota SEO + IA» for one page, plus «Esta página» when it is one of the account's domains. */
-export function formatPageReview(r: PageReview, own: { payload: ExtProjectPayload; links: ConsoleLinks } | null): ToolText {
+export type PageReviewNext = {
+  base: string;
+  /** null without an account. */
+  account: { projects: Array<{ domain: string; projectId: string }>; canAddDomain: boolean } | null;
+};
+
+export function formatPageReview(
+  r: PageReview,
+  own: { payload: ExtProjectPayload; links: ConsoleLinks } | null,
+  next: PageReviewNext | null = null
+): ToolText {
   const s = r.score;
   const lines = [`**Nota SEO + IA de ${r.url}: ${s.nota}/100**`, s.say];
   if (s.alert) lines.push(`Aviso: ${s.alert.t} ${s.alert.s}`);
@@ -227,7 +280,28 @@ export function formatPageReview(r: PageReview, own: { payload: ExtProjectPayloa
       for (const x of g.page.queries) lines.push(`- ${q(x)}`);
     }
     lines.push(`Tu dominio en GenScore: ${screen(links)}`);
-    structured.ownDomain = { domain: p.domain, citingPrompts: p.citingPrompts, page: p.audits.page, searchConsole: g.state === "connected" ? g.page : null };
+    structured.ownDomain = { url: screen(links), domain: p.domain, citingPrompts: p.citingPrompts, page: p.audits.page, searchConsole: g.state === "connected" ? g.page : null };
+  } else if (next) {
+    // EXT-AUDITS-1 (log §406) in the chat: a web that is not one of yours can become a domain or a competitor.
+    const host = r.host.replace(/^www\./, "");
+    if (!next.account) {
+      lines.push("", "Con tu cuenta de GenScore conectada, en una página de tus dominios también te digo qué preguntas la citan y sus datos de Google.");
+    } else {
+      lines.push("", `**¿Qué hacer con ${host}?**`);
+      const links: Array<{ kind: string; url: string }> = [];
+      if (next.account.canAddDomain) {
+        const url = addDomainUrl(next.base, host);
+        lines.push(`- Medirla como dominio tuyo: ${url}`);
+        links.push({ kind: "add_domain", url });
+      }
+      for (const pr of next.account.projects.slice(0, 3)) {
+        const url = addCompetitorUrl({ base: next.base, projectId: pr.projectId }, host);
+        lines.push(`- Seguirla como competidor de ${pr.domain}: ${url}`);
+        links.push({ kind: "add_competitor", url });
+      }
+      if (!links.length) lines.push("- La cuenta ya tiene todos los dominios de su plan; puedes seguirla como competidor desde la consola.");
+      structured.next = links;
+    }
   }
   return { text: lines.join("\n"), structured };
 }

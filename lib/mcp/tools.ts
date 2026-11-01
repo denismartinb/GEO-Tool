@@ -23,6 +23,7 @@ import {
   formatRecommendations,
   formatSearchConsole,
   type ConsoleLinks,
+  type PageReviewNext,
   type ToolText
 } from "./format";
 import type { ToolAnswer, ToolDef } from "./protocol";
@@ -75,9 +76,9 @@ function domainTool(
       if (!account) throw new Error("unreachable: access=account");
       if (account.planId === "free") return answer(formatPlanNotice());
       const domain = normalizeHost(String(args.dominio));
-      if (!domain) return { ...answer(formatNotFound(String(args.dominio).slice(0, 100))), isError: true };
+      if (!domain) return { ...answer(formatNotFound(String(args.dominio).slice(0, 100), ctx.origin)), isError: true };
       const data = await loadExtProjectData(account, { domain, url: null });
-      if (data.kind === "not_found") return { ...answer(formatNotFound(domain)), isError: true };
+      if (data.kind === "not_found") return answer(formatNotFound(domain, ctx.origin));
       return answer(format(data.payload, { base: ctx.origin, projectId: data.project.id }));
     }
   };
@@ -98,10 +99,12 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
       const projects = await listExtProjects(account);
       return answer(
         formatDomains({
+          base: ctx.origin,
           email: account.user.email,
           planName: account.planName,
           trialEndsAt: account.trialEndsAt,
-          domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name }))
+          domainCap: account.domainCap,
+          domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name, projectId: p.id }))
         })
       );
     }
@@ -188,15 +191,25 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
 
       // «Esta página»: only on one of the account's own domains, and never for a read-only account.
       let own: Parameters<typeof formatPageReview>[1] = null;
+      let next: PageReviewNext | null = ctx.account ? null : { base: ctx.origin, account: null };
       if (ctx.account && ctx.account.planId !== "free") {
         const host = normalizeHost(outcome.review.url);
-        const project = host ? pickProject(await listExtProjects(ctx.account), host) : null;
+        const projects = await listExtProjects(ctx.account);
+        const project = host ? pickProject(projects, host) : null;
         if (project && host) {
           const data = await loadExtProjectData(ctx.account, { domain: host, url: outcome.review.url });
           if (data.kind === "ok") own = { payload: data.payload, links: { base: ctx.origin, projectId: data.project.id } };
+        } else {
+          next = {
+            base: ctx.origin,
+            account: {
+              projects: projects.map((p) => ({ domain: p.domain, projectId: p.id })),
+              canAddDomain: projects.length < ctx.account.domainCap
+            }
+          };
         }
       }
-      return answer(formatPageReview(outcome.review, own));
+      return answer(formatPageReview(outcome.review, own, next));
     }
   }
 ];

@@ -65,6 +65,8 @@ export type ReportPlanItem = {
   providers: string[];
   /** Topics of the questions the recommendation targets. */
   topics: string[];
+  /** The questions themselves, as asked in the scan (distinct). MCP-SERVER-1 (log §418): a first step that says «las preguntas de la lista» needs the list. */
+  questions?: string[];
 };
 
 export type ReportInput = {

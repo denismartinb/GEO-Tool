@@ -240,7 +240,10 @@ export async function loadReportInput({
     const overlay = overlayByRecId.get(r.id);
     const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
     const topics = new Set<string>();
+    const questions = new Set<string>();
     for (const id of affectedIds(r.evidence_json)) {
+      const text = resultById.get(id)?.prompt_text_snapshot;
+      if (typeof text === "string" && text.trim()) questions.add(text.trim());
       const promptId = resultById.get(id)?.prompt_id;
       const topic = promptId ? categoryByPrompt.get(promptId)?.trim() : null;
       if (topic) topics.add(topic);
@@ -252,7 +255,8 @@ export async function loadReportInput({
       providers: (r.evidence_json?.affected_prompt_details ?? [])
         .map((d) => d?.provider)
         .filter((p): p is string => typeof p === "string" && p.length > 0),
-      topics: [...topics]
+      topics: [...topics],
+      questions: [...questions]
     };
   });
 
