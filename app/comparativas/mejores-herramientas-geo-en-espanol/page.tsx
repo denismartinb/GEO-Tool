@@ -12,9 +12,9 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/mejores-herramientas-geo-en-espanol`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "Las mejores herramientas GEO en 2026 (y cuál elegir según tu caso) · GenScore",
+  title: "Las mejores herramientas GEO en 2026 y cuál elegir · GenScore",
   description:
-    "GenScore, CreceRank, Otterly, Peec AI, Profound, Mentio, Scrunch AI y AthenaHQ comparadas: qué hace cada una, para quién es, y cuál elegir según tus motores, tu presupuesto y tu idioma.",
+    "Ocho herramientas GEO comparadas, de GenScore a Peec AI, Profound y Otterly: qué hace cada una y cuál elegir según tus motores, presupuesto e idioma.",
   path: "/comparativas/mejores-herramientas-geo-en-espanol"
 });
 

@@ -358,6 +358,14 @@ seguir. Dos invariantes que no son cosméticos (log §19):
   o `metaDescription`, nunca se recorta el visible. Y cada página declara su
   idioma (`es-ES` + `x-default`) desde `contentMetadata`: el sitio sólo tiene
   castellano (`posts.test.ts`, `metadata.test.ts`; log §265).
+- **Toda página pública indexable, no sólo los artículos, cabe en 15–70
+  caracteres de `<title>` y 50–160 de descripción**, el rango que mide la
+  Auditoría técnica (`lib/web-audit/page-checks.ts`). Si la descripción sale
+  de una constante compartida más larga (definición canónica, entradilla de
+  `/estudios` o `/sobre-genscore`, descripción de `docs/nav.ts`), la página
+  pone su propia descripción y la constante no se toca. El glosario usa
+  `metaDescription` (con test) y `glossaryTermTitle`, que quita «Glosario
+  GEO» cuando no cabe (log §431).
 - **«GEO» a secas se lee como geolocalización.** En la medición del
   2026-10-10, Claude y ChatGPT respondieron a «herramientas GEO» con mapas y
   GPS. Un texto que quiera ser citado en esa pregunta dice en su primer

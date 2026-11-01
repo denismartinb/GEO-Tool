@@ -18,6 +18,8 @@ export type BlogCluster = {
   key: "fundamentos" | "medicion" | "playbooks" | "sectores";
   title: string;
   description: string;
+  /** MCP-SITE-FIXES-1 (log §431): meta description when `description` is outside 50 to 160 characters. */
+  metaDescription?: string;
   /**
    * GROWTH-2 Fase 2.9 (B1b): longer synthesis paragraph(s) for the cluster's
    * own pillar page (/blog/<key>) — only set once a cluster has enough real
@@ -54,6 +56,8 @@ export const BLOG_CLUSTERS: BlogCluster[] = [
     key: "sectores",
     title: "GEO por sector",
     description: "GEO aplicado a ecommerce, SaaS y agencias.",
+    metaDescription:
+      "GEO aplicado a cada sector: qué preguntas hacen los clientes de ecommerce, SaaS B2B y agencias a la IA y qué palanca rinde primero en cada caso.",
     pillarIntro:
       "Las reglas del GEO son las mismas para todos, pero la pregunta que hace un comprador no se parece en nada a la que hace un comité de compra de software. Un cliente de ecommerce pregunta por una decisión con presupuesto y restricción —\"un regalo para alguien que empieza a correr, menos de 60 euros\"— y recibe dos o tres nombres. Un comprador B2B hace una secuencia larga de preguntas antes de pedir una demo, y ninguna de ellas menciona todavía a un proveedor. Medir lo mismo en los dos casos da un número que no significa nada.\n\nEsta sección traduce la metodología a cada sector: qué preguntas representan de verdad a sus clientes, qué fuentes cita el modelo en ese mercado, y cuál es la palanca que rinde primero. Empieza por ecommerce, donde la lista corta de marcas es literalmente corta y el trabajo útil está casi todo fuera de tu propia web."
   }
