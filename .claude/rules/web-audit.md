@@ -489,3 +489,19 @@ siquiera está dentro de él— así que las dos fórmulas de bleed ya leen el t
 verdad. Copiarlas repetiría un error ya cometido y documentado en esta misma
 pantalla: alimentar la fórmula con un tope al que `.page` nunca estuvo sujeto y
 dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
+
+### Bots de IA por motor (AI-BOTS-CONSOLE-1, log §424)
+
+- **La unidad es el motor, no el token.** `bot_blocked`, `findCitationBlockers`,
+  `aiBotsAllowed` de la extensión y la tarjeta leen `engineReadStates`
+  (`lib/web-audit/ai-bots.ts`): un motor puede leerte si todos sus bots de
+  búsqueda pueden. Un bot sólo de entrenamiento (GPTBot, ClaudeBot) cerrado es
+  decisión del cliente: nunca es problema, recomendación ni aviso.
+- **Los seis interruptores son los del plugin** (`genscore_bot_switches()`),
+  mismos ids y tokens; lo vigila `ai-bots.test.ts`. Si cambia uno, cambia el
+  otro en el mismo PR.
+- **La consola no escribe robots.txt: genera el bloque.** Un grupo «Allow»
+  repite las reglas de `*`; sin `bots.aiBots.starRules` (foto antigua o
+  robots.txt sin leer) no se ofrece «Cambiar acceso».
+- **Lo no medido no se afirma**: un motor sin ningún token medido es «Sin
+  comprobar», nunca «Puede leerla».

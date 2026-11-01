@@ -40,12 +40,12 @@ describe("buildReportTechChecks", () => {
     const rows = buildReportTechChecks(
       report({
         issues: [
-          { check: "bot_blocked", severity: "critical", affectedCount: 2, applicableCount: 8, pointDelta: null, affectedLabels: ["GPTBot", "ClaudeBot"] },
+          { check: "bot_blocked", severity: "critical", affectedCount: 2, applicableCount: 8, pointDelta: null, affectedLabels: ["ChatGPT", "Claude"] },
           { check: "answer_first_intro", severity: "improvement", affectedCount: 3, applicableCount: 3, pointDelta: 5, affectedLabels: [] }
         ]
       })
     );
-    expect(rows[0]).toMatchObject({ state: "bad", text: "Bloqueas a GPTBot, ClaudeBot" });
+    expect(rows[0]).toMatchObject({ state: "bad", text: "No pueden leerte: ChatGPT, Claude" });
     expect(rows[1]).toMatchObject({ state: "bad", text: "Falla en todas las páginas" });
   });
 

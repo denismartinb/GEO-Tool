@@ -12,7 +12,8 @@ import { loadCoverageSectionData } from "@/lib/web-audit/coverage-section-data";
 import { AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { Delta } from "@/components/ui/delta";
-import { BotAccessCard } from "./_components/bot-access-card";
+import { BotAccessCard, aiBotsSectionProps } from "./_components/bot-access-card";
+import { AiBotsSection } from "@/components/ins/audit/ai-bots";
 import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
 import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
@@ -206,6 +207,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </div>
                         )}
                       </div>
+                      {isGeo && <AiBotsSection {...aiBotsSectionProps(technicalSnapshot.bots, project.domain)} />}
                       {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
                   </div>

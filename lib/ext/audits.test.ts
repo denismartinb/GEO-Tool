@@ -164,7 +164,7 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
     });
     const other = buildExtAudits({ snapshot: { pages, bots: bots(), createdAt: AT }, agentic: null, ownUrl: "https://www.marca.es/contacto" });
     expect(other.page).toEqual({ state: "not_audited" });
-    const blocked = buildExtAudits({ snapshot: { pages, bots: bots({ bots: TRACKED_BOT_AGENTS.map((agent, i) => ({ agent, allowed: i > 0 })) }), createdAt: AT }, agentic: null, ownUrl: "https://www.marca.es/" });
+    const blocked = buildExtAudits({ snapshot: { pages, bots: bots({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "OAI-SearchBot" })) }), createdAt: AT }, agentic: null, ownUrl: "https://www.marca.es/" });
     expect(blocked.page && blocked.page.state === "audited" && blocked.page.aiBotsAllowed).toBe(false);
   });
 

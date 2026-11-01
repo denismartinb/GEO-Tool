@@ -2,6 +2,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { SeoExtraCheckKey } from "@/lib/web-audit/seo-health";
+import { AI_ENGINES, engineReadStates } from "@/lib/web-audit/ai-bots";
 
 /**
  * WEB-AUDIT-ISSUES-1 (founder-approved 2026-08-02, design artifact "Auditoría
@@ -534,21 +535,30 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     });
   }
 
-  // Bot access — not per-page, so its applicable/affected units are tracked agents.
-  const blockedAgents = bots.bots.filter((b) => !b.allowed);
-  const allowedAgentCount = bots.bots.length - blockedAgents.length;
-  if (blockedAgents.length > 0) {
+  // Bot access — not per-page. AI-BOTS-CONSOLE-1 (log §424): the unit is the
+  // engine, not the token, and only its SEARCH tokens decide (same rule as the
+  // plugin, the extension and the agentic audit). A closed training bot
+  // (GPTBot, ClaudeBot) is the owner's call and is neither an issue nor a pass.
+  // An engine none of whose tokens was measured is left out of both lists.
+  const engineStates = engineReadStates(bots);
+  const measuredEngines = AI_ENGINES.filter((e) => engineStates[e.engine] !== null);
+  const blockedEngines = measuredEngines.filter((e) => engineStates[e.engine] === false);
+  if (blockedEngines.length > 0) {
     issues.push({
       check: "bot_blocked",
-      severity: "critical", // hard block: that whole AI engine can never read any page while it's disallowed
-      affectedCount: blockedAgents.length,
-      applicableCount: bots.bots.length,
+      severity: "critical", // hard block: that engine can never read any page while it's disallowed
+      affectedCount: blockedEngines.length,
+      applicableCount: measuredEngines.length,
       pointDelta: null, // bot access carries no readiness-score weight — see robots.ts
-      affectedLabels: blockedAgents.map((b) => b.agent)
+      affectedLabels: blockedEngines.map((e) => e.name)
     });
   }
-  if (allowedAgentCount > 0) {
-    passing.push({ check: "bot_blocked", passedCount: allowedAgentCount, applicableCount: bots.bots.length });
+  if (measuredEngines.length > blockedEngines.length) {
+    passing.push({
+      check: "bot_blocked",
+      passedCount: measuredEngines.length - blockedEngines.length,
+      applicableCount: measuredEngines.length
+    });
   }
 
   // llms.txt / sitemap.xml — single project-level facts, always "warning": a

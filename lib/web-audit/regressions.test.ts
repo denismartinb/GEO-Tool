@@ -32,6 +32,7 @@ function bots(overrides: Partial<BotAccessReport> = {}): BotAccessReport {
   return {
     robotsFound: true,
     bots: [
+      { agent: "OAI-SearchBot", allowed: true },
       { agent: "GPTBot", allowed: true },
       { agent: "PerplexityBot", allowed: true }
     ],
@@ -122,13 +123,27 @@ describe("detectNewlyBlockedBots", () => {
     const current = side({
       bots: bots({
         bots: [
+          { agent: "OAI-SearchBot", allowed: false },
+          { agent: "PerplexityBot", allowed: true }
+        ]
+      })
+    });
+
+    expect(detectNewlyBlockedBots(previous, current)).toEqual(["OAI-SearchBot"]);
+  });
+
+  it("never fires for a training-only bot, which does not stop any engine from reading (log §424)", () => {
+    const current = side({
+      bots: bots({
+        bots: [
+          { agent: "OAI-SearchBot", allowed: true },
           { agent: "GPTBot", allowed: false },
           { agent: "PerplexityBot", allowed: true }
         ]
       })
     });
 
-    expect(detectNewlyBlockedBots(previous, current)).toEqual(["GPTBot"]);
+    expect(detectNewlyBlockedBots(side(), current)).toEqual([]);
   });
 
   it("stays silent while a bot remains blocked", () => {
@@ -158,7 +173,8 @@ describe("detectNewlyBlockedBots", () => {
         bots: [
           { agent: "GPTBot", allowed: true },
           { agent: "PerplexityBot", allowed: true },
-          { agent: "ClaudeBot", allowed: true },
+          { agent: "OAI-SearchBot", allowed: true },
+          { agent: "Google-Extended", allowed: true },
           { agent: "Bingbot", allowed: true }
         ]
       })
@@ -168,12 +184,14 @@ describe("detectNewlyBlockedBots", () => {
         bots: [
           { agent: "GPTBot", allowed: false },
           { agent: "PerplexityBot", allowed: false },
-          { agent: "ClaudeBot", allowed: false },
+          { agent: "OAI-SearchBot", allowed: false },
+          { agent: "Google-Extended", allowed: false },
           { agent: "Bingbot", allowed: false }
         ]
       })
     });
 
+    // Every bot but the training-only GPTBot.
     expect(detectNewlyBlockedBots(previous, current)).toHaveLength(4);
   });
 
@@ -318,7 +336,7 @@ describe("detectAuditRegressions", () => {
     const previous = side({ summary: summary([{ promptId: "p1", topic: "precios", found: true, outcome: "performing" }]) });
     const current = side({
       summary: summary([{ promptId: "p1", topic: "precios", found: false, outcome: "content_gap" }]),
-      bots: bots({ bots: [{ agent: "GPTBot", allowed: false }, { agent: "PerplexityBot", allowed: true }], llmsTxtFound: false })
+      bots: bots({ bots: [{ agent: "OAI-SearchBot", allowed: false }, { agent: "PerplexityBot", allowed: true }], llmsTxtFound: false })
     });
 
     expect(detectAuditRegressions(previous, current).map((r) => r.kind)).toEqual([

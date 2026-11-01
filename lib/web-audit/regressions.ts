@@ -1,4 +1,5 @@
 import type { BotAccessReport, BotAgent, ProbeState } from "@/lib/web-audit/robots";
+import { TRAINING_ONLY_TOKENS } from "@/lib/web-audit/ai-bots";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { WebAuditSummary } from "@/lib/web-audit/opportunity-matrix";
 
@@ -154,7 +155,10 @@ export function detectNewlyBlockedBots(previous: AuditSide, current: AuditSide):
   const after = Array.isArray(current.bots?.bots) ? current.bots.bots : [];
   const allowedBefore = new Map(before.map((entry) => [entry.agent, entry.allowed]));
 
+  // AI-BOTS-CONSOLE-1 (log §424): closing a training-only bot is the owner's
+  // call and does not stop any engine from reading the site, so it never alerts.
   return after
+    .filter((entry) => !TRAINING_ONLY_TOKENS.has(entry.agent))
     .filter((entry) => entry.allowed === false && allowedBefore.get(entry.agent) === true)
     .map((entry) => entry.agent);
 }
