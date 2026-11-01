@@ -28753,6 +28753,42 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
 
+**Adenda 1.0.1 (2026-11-01).** Instinct probó el zip 1.0.0 en un WordPress 7.1 con WooCommerce (PHP 8.2) y Plugin Check. Arreglado en la versión 1.0.1:
+
+- **robots.txt, apagar y volver a encender.** «Permitir» se guardaba y escribía un grupo `GPTBot` con las reglas de `*` y `Allow: /` aunque nada lo pidiera, así que el fichero no volvía a ser el original. Ahora un «Permitir» sólo escribe grupo si cambia algo: el bot estaba en un grupo de otro plugin, o `*` cierra la web entera. Si no, el texto vuelve tal cual (test de ida y vuelta en `robots-test.php`).
+- **llms.txt, «Guardar» sin cambios.** El navegador manda `\r\n`, la comparación con el texto generado fallaba y se guardaba una copia fija que dejaba de actualizarse. Se normalizan los saltos antes de comparar y guardar.
+- **Plugin Check.** La guarda de `robots.php` vuelve a ser `defined( 'ABSPATH' ) || exit;` (el test define `ABSPATH`), cada acción AJAX comprueba su nonce en la misma función que lee `$_POST`, y el nombre del readme es el de la cabecera.
+- **llms.txt** deja fuera carrito, finalizar compra y mi cuenta de WooCommerce, y no usa como descripción la plantilla de la política de privacidad de WordPress.
+- **Agentes con WooCommerce.** La portada de una tienda es un escaparate, y salía 25 puntuando el escaparate. La pantalla revisa también una ficha publicada (en stock primero) y Agentes es la nota de esa ficha, con su ruta a la vista. La Nota SEO + IA sigue siendo la de la portada.
+- **Copy.** «Con tu cuenta» deja de decir «en tiempo real».
+
+El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es la propia comprobación de `collect.js`, no un fallo.
+
+**Adenda 1.0.2 (2026-11-01).** Segunda prueba de Instinct sobre la 1.0.1: robots.txt, llms.txt sin cambios, Agentes (95 sobre la ficha, antes 25) y Plugin Check con 0 errores. Quedaban:
+
+- **llms.txt seguía congelando copia en dos casos.** Un título con emoji lleva la URL codificada (`%e2%98%95`) y `sanitize_textarea_field` borraba los `%xx`, así que nunca casaba con el generado. Y un post publicado entre abrir la pantalla y guardar también rompía la comparación. Ahora el texto sólo viaja si la persona escribió en el cuadro, «Volver al generado» manda vacío, el servidor compara antes de limpiar y limpia con `wp_strip_all_tags`, que conserva los `%xx`.
+- **robots.txt:** un «Permitir» ya no reabre la web cuando `*` la cierra entera (mantenimiento). Sólo escribe grupo si el bot estaba en el grupo de otro plugin. Corrige la excepción de la 1.0.1.
+- **Plugin Check:** los tres avisos de nonce de `genscore_ajax_save_review` venían de leer `$_POST` dentro de una función anónima; se lee en el propio handler.
+- **Agentes:** el precio se pinta como `149,90 €` (formato español) en la pantalla del plugin. El dato de `score.js` no cambia; la extensión lo sigue enseñando como «149.90 EUR».
+
+**Adenda 1.0.3 (2026-11-01).** Tercera prueba de Instinct, y desde esta versión también una instalación propia (WordPress 7.1.4 + WooCommerce + Plugin Check sobre SQLite, con Playwright en 1280 y 390 px) antes de entregar el zip, para que Instinct confirme en vez de descubrir.
+
+- **llms.txt:** `render()` volvía a copiar el cuadro en cada repintado, así que tras «Volver al generado» o «Guardar» el cuadro seguía enseñando el texto viejo hasta recargar, y tocarlo congelaba una copia vieja. Ahora sólo se guarda el texto del cuadro si la persona lo editó.
+- **robots.txt:** con `*` cerrando la web y otro plugin bloqueando un bot, «Permitir» escribía un grupo propio con «Allow: /» y le abría la web. Mientras `*` cierre la web (`genscore_star_closes_site`) no se escribe ningún grupo de permitir; el grupo del otro plugin se quita igual y el bot vuelve a seguir a `*`. La pantalla lo explica en la tarjeta de bots.
+- **llms.txt, extractos:** los títulos se pegaban al párrafo anterior («extracción.Molienda…»); las etiquetas de bloque pasan a espacio antes de limpiar. Lo encontró la instalación propia.
+- **Revisar cualquier página** (lo que la extensión llama «Esta página»): selector «Página revisada» en la cabecera con páginas, productos y entradas publicadas, y «Revisar con GenScore» en las listas de WordPress. Viaja sólo el id (`?post=`); la dirección la da `get_permalink` y sólo vale si es pública y de esta web. La nota del widget del Escritorio sigue siendo la de la portada.
+
+**Adenda 1.0.4 (2026-11-01).** Denis vio en 1.0.3 que elegir a mano la «Página revisada» no es buena experiencia y eligió (tarjeta de decisión, maqueta https://claude.ai/artifact/TmBfDKoziKWZDrhXaELRbo) revisar la web entera y poner una columna en las listas.
+
+- **Revisión de la web entera:** al abrir la pantalla se leen solas las páginas importantes (`genscore_key_pages`, hasta 15: portada, lo enlazado en los menús, los cuatro productos más vendidos, las tres últimas entradas y las páginas y productos tocados hace poco), dos a la vez en un iframe oculto con el mismo `score.js`. La primera vez sale una tarjeta con un spinner pequeño y el texto de Denis, «Revisando tus páginas más importantes para calcular tu nota».
+- **La nota es la media de las páginas**; cada carril es la media de las que lo tienen. «Arregla primero» agrupa el mismo arreglo en varias páginas («En 3 de 4 productos»), con sus puntos medios, y la tarjeta «Tus páginas» las ordena de peor a mejor. Pulsar una abre su detalle (`?post=`) con «← Tu web» para volver.
+- **Se guarda cada nota en `genscore_page_scores`** (opción de la propia web, saneada, tope de 60). Guardar o borrar un post borra su nota, así que al volver sólo se lee esa página (6,6 s la primera vez con 10 páginas, 1,6 s después en la instalación propia). «Revisar todo ahora» las relee todas.
+- **Columna «GenScore» en Páginas, Entradas y Productos**, con la nota y el primer arreglo, que sólo lee lo guardado. Sustituye a la acción de fila «Revisar con GenScore» y al selector de 1.0.3.
+- **El widget del Escritorio** pasa a «Nota SEO + IA de tu web».
+- **Agentes en el detalle de una página sin tienda** sigue siendo el de la tienda de la web, como en la extensión (`score.js` usa `f.shop`); no es un fallo.
+
+**Pendiente.** La consola y la extensión no cambian: la consola ya audita el dominio entero y la extensión sigue a la pestaña abierta. No retira ningún camino de recuperación: «Revisar todo ahora» sustituye al selector.
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

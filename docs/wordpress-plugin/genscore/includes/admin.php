@@ -100,6 +100,11 @@ function genscore_screen_data() {
 			'url'       => home_url( '/llms.txt' ),
 		),
 		'pages'    => genscore_pages_to_review(),
+		'target'   => genscore_review_target(),
+		'web'      => array(
+			'pages'  => genscore_key_pages(),
+			'scores' => (object) genscore_page_scores(),
+		),
 		'last'     => get_option( 'genscore_last_review', null ),
 		'links'    => array(
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),
@@ -109,6 +114,101 @@ function genscore_screen_data() {
 		),
 	);
 }
+
+/**
+ * The page opened from «Ver» in the screen or from the GenScore column (`?post=`).
+ *
+ * @return array|null
+ */
+function genscore_review_target() {
+	$id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: picks which public page this screen reviews.
+	if ( ! $id || (int) get_option( 'page_on_front' ) === $id ) {
+		return null;
+	}
+	return genscore_review_choice( $id );
+}
+
+/**
+ * The «GenScore» column in the lists of pages, posts and products.
+ *
+ * @param string[] $cols Columns.
+ * @return string[]
+ */
+function genscore_list_column( $cols ) {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		return $cols;
+	}
+	$out = array();
+	foreach ( $cols as $k => $v ) {
+		if ( 'date' === $k ) {
+			$out['genscore'] = esc_html__( 'GenScore', 'genscore' );
+		}
+		$out[ $k ] = $v;
+	}
+	if ( ! isset( $out['genscore'] ) ) {
+		$out['genscore'] = esc_html__( 'GenScore', 'genscore' );
+	}
+	return $out;
+}
+
+/**
+ * One cell: the page's score and its first thing to fix, linking to the
+ * screen opened on that page. Unpublished or private, it says it is
+ * reviewed once published.
+ *
+ * @param string $col     Column.
+ * @param int    $post_id Post id.
+ */
+function genscore_list_cell( $col, $post_id ) {
+	if ( 'genscore' !== $col ) {
+		return;
+	}
+	static $scores = null;
+	if ( null === $scores ) {
+		$scores = genscore_page_scores();
+	}
+	$front = (int) get_option( 'page_on_front' );
+	$key   = $front && $front === (int) $post_id ? 0 : (int) $post_id;
+	$link  = admin_url( 'admin.php?page=genscore' . ( $key ? '&post=' . $key : '' ) );
+	if ( ! genscore_review_choice( $post_id ) ) {
+		echo '<span class="gs-col-na">' . esc_html__( 'Se revisa al publicarla', 'genscore' ) . '</span>';
+		return;
+	}
+	if ( ! isset( $scores[ $key ]['nota'] ) ) {
+		echo '<a href="' . esc_url( $link ) . '">' . esc_html__( 'Revisar', 'genscore' ) . '</a>';
+		return;
+	}
+	$s     = $scores[ $key ];
+	$band  = $s['nota'] >= 75 ? 'pos' : ( $s['nota'] >= 50 ? 'mid' : 'low' );
+	$first = isset( $s['fixes'][0]['t'] ) ? wp_strip_all_tags( $s['fixes'][0]['t'] ) : __( 'Nada urgente', 'genscore' );
+	/* translators: %d: score from 0 to 100. */
+	$label = sprintf( __( 'Nota SEO + IA %d de 100. Ver en GenScore', 'genscore' ), (int) $s['nota'] );
+	echo '<a class="gs-col" href="' . esc_url( $link ) . '" aria-label="' . esc_attr( $label ) . '"><span class="gs-col-n gs-col-' . esc_attr( $band ) . '">' . esc_html( (string) $s['nota'] ) . '</span><span class="gs-col-t">' . esc_html( $first ) . '</span></a>';
+}
+
+/**
+ * Hooks the column for the three types the review reads.
+ */
+function genscore_list_hooks() {
+	foreach ( array( 'post', 'page', 'product' ) as $type ) {
+		add_filter( "manage_{$type}_posts_columns", 'genscore_list_column' );
+		add_action( "manage_{$type}_posts_custom_column", 'genscore_list_cell', 10, 2 );
+	}
+}
+add_action( 'admin_init', 'genscore_list_hooks' );
+
+/**
+ * The column's few styles, only on those lists.
+ *
+ * @param string $hook Current admin page.
+ */
+function genscore_list_assets( $hook ) {
+	if ( 'edit.php' !== $hook ) {
+		return;
+	}
+	wp_enqueue_style( 'genscore-list', GENSCORE_URL . 'assets/list.css', array(), GENSCORE_VERSION );
+}
+add_action( 'admin_enqueue_scripts', 'genscore_list_assets' );
 
 /**
  * Assets, only on our screen.
@@ -140,16 +240,16 @@ function genscore_render_screen() {
 		// Our own static SVG sprite, shipped with the plugin.
 		echo file_get_contents( $sprite ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped, WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 	}
-	echo '<div id="genscore-app" class="gs-pg" aria-live="polite"><p class="gs-loading">' . esc_html__( 'Revisando tu portada…', 'genscore' ) . '</p></div>';
+	echo '<div id="genscore-app" class="gs-pg" aria-live="polite"><p class="gs-loading">' . esc_html__( 'Revisando tus páginas más importantes para calcular tu nota…', 'genscore' ) . '</p></div>';
 	echo '<noscript><p>' . esc_html__( 'Esta pantalla necesita JavaScript.', 'genscore' ) . '</p></noscript>';
 	echo '</div>';
 }
 
 /**
- * Common guard for the three actions.
+ * Capability check shared by the three actions. Each handler checks its own
+ * nonce first, in the same function that reads $_POST (Plugin Check).
  */
 function genscore_ajax_guard() {
-	check_ajax_referer( 'genscore', 'nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_send_json_error( array( 'message' => __( 'No tienes permiso para cambiar esto.', 'genscore' ) ), 403 );
 	}
@@ -159,6 +259,7 @@ function genscore_ajax_guard() {
  * Saves the AI bot switches.
  */
 function genscore_ajax_save_bots() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$raw = array();
 	if ( isset( $_POST['bots'] ) && is_array( $_POST['bots'] ) ) {
@@ -175,19 +276,26 @@ add_action( 'wp_ajax_genscore_save_bots', 'genscore_ajax_save_bots' );
  * Turns llms.txt on or off and saves the edited text (empty = generated).
  */
 function genscore_ajax_save_llms() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
 	update_option( 'genscore_llms_enabled', $enabled, true );
 	if ( isset( $_POST['text'] ) ) {
-		$text = sanitize_textarea_field( wp_unslash( $_POST['text'] ) );
-		$same = trim( $text ) === trim( genscore_llms_generate() );
-		update_option( 'genscore_llms_custom', $same ? '' : $text, false );
+		// Compare before sanitizing: sanitize_textarea_field drops the %xx of
+		// an encoded URL (a title with an emoji), so the generated text never
+		// matched and a frozen, broken copy was stored. Browsers also send
+		// \r\n. Empty means «use the generated one».
+		$raw  = str_replace( array( "\r\n", "\r" ), "\n", wp_unslash( $_POST['text'] ) ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- compared as is, then stripped of tags below.
+		$gen  = str_replace( array( "\r\n", "\r" ), "\n", genscore_llms_generate() );
+		$same = '' === trim( $raw ) || trim( $raw ) === trim( $gen );
+		update_option( 'genscore_llms_custom', $same ? '' : wp_strip_all_tags( $raw ), false );
 	}
 	wp_send_json_success(
 		array(
 			'enabled' => $enabled,
 			'serving' => genscore_llms_serving(),
-			'custom'  => (string) get_option( 'genscore_llms_custom', '' ),
+			'custom'    => (string) get_option( 'genscore_llms_custom', '' ),
+			'generated' => genscore_llms_generate(),
 		)
 	);
 }
@@ -198,17 +306,19 @@ add_action( 'wp_ajax_genscore_save_llms', 'genscore_ajax_save_llms' );
  * browser computed on this same site.
  */
 function genscore_ajax_save_review() {
+	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
-	$lane = function ( $k ) {
-		return isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked in genscore_ajax_guard().
-	};
+	$lanes = array();
+	foreach ( array( 'nota', 'ia', 'google', 'agent' ) as $k ) {
+		$lanes[ $k ] = isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null;
+	}
 	update_option(
 		'genscore_last_review',
 		array(
-			'nota'   => $lane( 'nota' ),
-			'ia'     => $lane( 'ia' ),
-			'google' => $lane( 'google' ),
-			'agent'  => $lane( 'agent' ),
+			'nota'   => $lanes['nota'],
+			'ia'     => $lanes['ia'],
+			'google' => $lanes['google'],
+			'agent'  => $lanes['agent'],
 			'at'     => time(),
 		),
 		false
@@ -216,6 +326,27 @@ function genscore_ajax_save_review() {
 	wp_send_json_success();
 }
 add_action( 'wp_ajax_genscore_save_review', 'genscore_ajax_save_review' );
+
+/**
+ * Stores one page's score from the site review. The id must be the home
+ * page (0) or a page the screen could review.
+ */
+function genscore_ajax_save_page() {
+	check_ajax_referer( 'genscore', 'nonce' );
+	genscore_ajax_guard();
+	$raw = isset( $_POST['page'] ) ? json_decode( wp_unslash( $_POST['page'] ), true ) : null; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- decoded JSON, every field is checked in genscore_sanitize_page_score().
+	$id  = is_array( $raw ) && isset( $raw['id'] ) ? absint( $raw['id'] ) : -1;
+	if ( $id < 0 || ( $id > 0 && ( (int) get_option( 'page_on_front' ) === $id || ! genscore_review_choice( $id ) ) ) ) {
+		wp_send_json_error( null, 400 );
+	}
+	$score = genscore_sanitize_page_score( $raw );
+	if ( ! $score ) {
+		wp_send_json_error( null, 400 );
+	}
+	genscore_store_page_score( $id, $score );
+	wp_send_json_success();
+}
+add_action( 'wp_ajax_genscore_save_page', 'genscore_ajax_save_page' );
 
 /**
  * Dashboard widget: the last nota and a link to the screen. People can hide
@@ -235,7 +366,7 @@ function genscore_render_widget() {
 	$last = get_option( 'genscore_last_review', null );
 	echo '<div class="gs-widget">';
 	if ( is_array( $last ) && isset( $last['nota'] ) && null !== $last['nota'] ) {
-		echo '<p style="display:flex;align-items:baseline;gap:8px;margin:0 0 6px"><strong style="font-size:32px;font-weight:400;line-height:1">' . esc_html( (string) $last['nota'] ) . '</strong><span>' . esc_html__( 'Nota SEO + IA de tu portada', 'genscore' ) . '</span></p>';
+		echo '<p style="display:flex;align-items:baseline;gap:8px;margin:0 0 6px"><strong style="font-size:32px;font-weight:400;line-height:1">' . esc_html( (string) $last['nota'] ) . '</strong><span>' . esc_html__( 'Nota SEO + IA de tu web', 'genscore' ) . '</span></p>';
 		/* translators: %s: how long ago, e.g. «2 horas». */
 		echo '<p style="margin:0 0 10px;color:#646970">' . esc_html( sprintf( __( 'Revisada hace %s.', 'genscore' ), human_time_diff( (int) $last['at'] ) ) ) . '</p>';
 	} else {
