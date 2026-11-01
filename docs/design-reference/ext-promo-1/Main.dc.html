@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Web pública con el aviso de la extensión</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; position: relative; overflow: hidden; background: #f5f7fb; font-family: Figtree, system-ui, sans-serif; color: #0b1426;">
+  <div style="height: 72px; display: flex; align-items: center; gap: 32px; padding: 0 56px; background: #ffffff; border-bottom: 1px solid #e3e8f0;">
+    <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 22px;">GenScore</span>
+    <div style="display: flex; gap: 24px; font-size: 15px; color: #3d4a63; flex-grow: 1;">
+      <span>Producto</span><span>Precios</span><span>Qué es GEO</span><span>Comercio agéntico</span><span>Blog</span>
+    </div>
+    <span style="font-size: 15px; color: #3d4a63;">Entrar</span>
+    <span style="padding: 10px 18px; border-radius: 10px; background: #2563eb; color: #fff; font-weight: 600; font-size: 15px;">Prueba gratis</span>
+  </div>
+  <div style="max-width: 760px; margin: 56px auto 0; display: flex; flex-direction: column; gap: 18px;">
+    <span style="font-size: 13px; font-weight: 600; color: #2563eb; letter-spacing: .04em; text-transform: uppercase;">Blog · Guía</span>
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 44px; line-height: 1.08;">Qué fuentes cita la IA cuando recomienda una marca</h1>
+    <p style="margin: 0; font-size: 18px; line-height: 1.6; color: #3d4a63;">[Contenido del artículo] La página sigue igual: el aviso no tapa el texto, no oscurece la página y no roba el foco.</p>
+    <div style="height: 14px; width: 100%; border-radius: 7px; background: #e3e8f0;"></div>
+    <div style="height: 14px; width: 92%; border-radius: 7px; background: #e3e8f0;"></div>
+    <div style="height: 14px; width: 96%; border-radius: 7px; background: #e3e8f0;"></div>
+    <div style="height: 14px; width: 70%; border-radius: 7px; background: #e3e8f0;"></div>
+  </div>
+
+  <aside aria-label="Extensión de Chrome de GenScore" style="position: absolute; left: 24px; bottom: 24px; width: 360px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px; padding: 20px 20px 18px; border-radius: 16px; background: #ffffff; border: 1px solid #dfe5ee; box-shadow: 0 18px 44px rgba(8, 18, 35, .18);">
+    <button type="button" aria-label="Cerrar" style="position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; border: 0; border-radius: 8px; background: transparent; color: #66738c; display: flex; align-items: center; justify-content: center;">
+      <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5 L12.5 12.5 M12.5 3.5 L3.5 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+    </button>
+    <div style="display: flex; align-items: center; gap: 12px; padding-right: 28px;">
+      <img src="/_blob/186fd7e137103a2b020a1550a3ba6946" alt="" style="width: 44px; height: 44px; border-radius: 10px;">
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <span style="font-size: 12px; font-weight: 600; color: #0e7f8c;">Extensión de Chrome · Gratis</span>
+        <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 19px; line-height: 1.15;">Revisa cualquier web sin salir de Chrome</span>
+      </div>
+    </div>
+    <p style="margin: 0; font-size: 14px; line-height: 1.5; color: #3d4a63;">Auditoría SEO de la página en un clic y qué motores de IA pueden leerla: ChatGPT, Gemini, Claude y Perplexity. Sin cuenta.</p>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <a href="#" style="display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 18px; border-radius: 10px; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 15px; text-decoration: none;">
+        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 3 V13 M3 8 H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>
+        Añadir a Chrome
+      </a>
+      <button type="button" style="border: 0; background: transparent; padding: 10px 4px; font-family: inherit; font-size: 14px; color: #3d4a63; text-decoration: underline;">Ya la tengo</button>
+    </div>
+  </aside>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

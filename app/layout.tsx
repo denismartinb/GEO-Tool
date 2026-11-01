@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { Hanken_Grotesk, Bricolage_Grotesque, Figtree, JetBrains_Mono } from "next/font/google";
+import { ChromeExtensionPromo } from "@/components/chrome-extension/chrome-extension-promo";
 import { PostHogProvider } from "@/components/posthog-provider";
 import { AdsConsent } from "@/components/ads/ads-consent";
 import { OrganizationSchema } from "@/components/seo/organization-schema";
@@ -186,6 +187,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <OrganizationSchema />
         <PostHogProvider>{children}</PostHogProvider>
         <AdsConsent />
+        <ChromeExtensionPromo />
       </body>
     </html>
   );

@@ -67,9 +67,9 @@ describe("isPromoEligible", () => {
 });
 
 describe("shouldTriggerPromo", () => {
-  it("fires after 40 seconds or past half the page, whichever comes first", () => {
-    expect(shouldTriggerPromo({ elapsedMs: 39_999, scrollFraction: 0.49 })).toBe(false);
-    expect(shouldTriggerPromo({ elapsedMs: 40_000, scrollFraction: 0 })).toBe(true);
+  it("fires after 20 seconds or past half the page, whichever comes first", () => {
+    expect(shouldTriggerPromo({ elapsedMs: 19_999, scrollFraction: 0.49 })).toBe(false);
+    expect(shouldTriggerPromo({ elapsedMs: 20_000, scrollFraction: 0 })).toBe(true);
     expect(shouldTriggerPromo({ elapsedMs: 0, scrollFraction: 0.5 })).toBe(true);
   });
 });

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Consola con el aviso de la extensión</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&amp;family=Figtree:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#2563eb}a:hover{color:#1d4ed8}
+</style>
+</helmet>
+<div style="width: 1280px; height: 800px; display: flex; overflow: hidden; background: #f4f6fa; font-family: Figtree, system-ui, sans-serif; color: #0b1426;">
+  <nav aria-label="Menú de la consola" style="width: 264px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px; padding: 20px 16px; background: #ffffff; border-right: 1px solid #e3e8f0;">
+    <span style="font-family: 'Bricolage Grotesque', sans-serif; font-weight: 700; font-size: 20px; padding: 0 8px;">GenScore</span>
+    <div style="padding: 10px 12px; border: 1px solid #e3e8f0; border-radius: 10px; font-size: 14px; font-weight: 600;">tudominio.es</div>
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: #3d4a63;">
+      <span style="font-size: 11px; font-weight: 700; color: #66738c; letter-spacing: .06em; text-transform: uppercase; padding: 0 12px 4px;">Posicionamiento en la IA</span>
+      <span style="padding: 8px 12px; border-radius: 8px; background: #eef3fe; color: #1d4ed8; font-weight: 600;">Visión general</span>
+      <span style="padding: 8px 12px;">Prompts</span>
+      <span style="padding: 8px 12px;">Competidores</span>
+      <span style="padding: 8px 12px;">Páginas citadas</span>
+      <span style="font-size: 11px; font-weight: 700; color: #66738c; letter-spacing: .06em; text-transform: uppercase; padding: 12px 12px 4px;">Actuar</span>
+      <span style="padding: 8px 12px;">Recomendaciones</span>
+      <span style="padding: 8px 12px;">Auditoría técnica</span>
+    </div>
+    <div style="flex-grow: 1;"></div>
+
+    <aside aria-label="Extensión de Chrome de GenScore" style="position: relative; display: flex; flex-direction: column; gap: 10px; padding: 14px 14px 12px; border-radius: 12px; background: #f5f8fd; border: 1px solid #dfe5ee;">
+      <button type="button" aria-label="Cerrar" style="position: absolute; top: 4px; right: 4px; width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; color: #66738c; display: flex; align-items: center; justify-content: center;">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 3.5 L12.5 12.5 M12.5 3.5 L3.5 12.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path></svg>
+      </button>
+      <div style="display: flex; align-items: center; gap: 10px; padding-right: 22px;">
+        <img src="/_blob/186fd7e137103a2b020a1550a3ba6946" alt="" style="width: 32px; height: 32px; border-radius: 8px;">
+        <span style="font-weight: 700; font-size: 14px; line-height: 1.25;">Tu GenScore, también en Chrome</span>
+      </div>
+      <p style="margin: 0; font-size: 13px; line-height: 1.45; color: #3d4a63;">Abre el panel en cualquier página: su auditoría SEO y, en tus dominios, su visión general.</p>
+      <a href="#" style="display: flex; align-items: center; justify-content: center; min-height: 38px; border-radius: 9px; background: #2563eb; color: #ffffff; font-weight: 700; font-size: 14px; text-decoration: none;">Añadir a Chrome</a>
+      <button type="button" style="border: 0; background: transparent; padding: 4px; font-family: inherit; font-size: 13px; color: #3d4a63; text-decoration: underline;">Ya la tengo</button>
+    </aside>
+
+    <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-top: 1px solid #e3e8f0;">
+      <span style="width: 32px; height: 32px; border-radius: 16px; background: #dbe4f5;"></span>
+      <span style="font-size: 14px; color: #3d4a63;">Tu cuenta</span>
+    </div>
+  </nav>
+  <main style="flex-grow: 1; padding: 32px 40px; display: flex; flex-direction: column; gap: 20px;">
+    <h1 style="margin: 0; font-family: 'Bricolage Grotesque', sans-serif; font-size: 32px;">Visión general</h1>
+    <p style="margin: 0; font-size: 15px; color: #3d4a63;">[Pantalla de la consola, sin cambios]</p>
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+      <div style="height: 180px; border-radius: 14px; background: #ffffff; border: 1px solid #e3e8f0;"></div>
+      <div style="height: 180px; border-radius: 14px; background: #ffffff; border: 1px solid #e3e8f0;"></div>
+      <div style="height: 180px; border-radius: 14px; background: #ffffff; border: 1px solid #e3e8f0;"></div>
+    </div>
+    <div style="height: 300px; border-radius: 14px; background: #ffffff; border: 1px solid #e3e8f0;"></div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
