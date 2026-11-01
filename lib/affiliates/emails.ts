@@ -108,13 +108,13 @@ export async function sendAffiliateOpsEmail(
   if (!to) return false;
   const { subject, html } = buildAffiliateOpsEmail(application, input);
   // Reply-To the applicant: answering this email writes to them directly (log §272).
-  return sendEmail(to, subject, html, undefined, application.email);
+  return sendEmail("ops_affiliate", to, subject, html, undefined, application.email);
 }
 
 export async function sendAffiliateConfirmationEmail(application: AffiliateApplication): Promise<boolean> {
   const { subject, html } = buildAffiliateConfirmationEmail(application);
   // Replies go to support by default (`sendEmail`).
-  return sendEmail(application.email, subject, html);
+  return sendEmail("affiliate_confirmation", application.email, subject, html);
 }
 
 const EXCLUSION_LABELS: Record<ExclusionReason, string> = {
@@ -234,12 +234,12 @@ export async function sendAffiliateReportEmail(report: AffiliateReport): Promise
   const to = getOpsAddress();
   if (!to) return false;
   const { subject, html } = buildAffiliateReportEmail(report);
-  return sendEmail(to, subject, html);
+  return sendEmail("ops_affiliate_report", to, subject, html);
 }
 
 export async function sendAffiliateReportFailureEmail(input: AffiliateReportFailure): Promise<boolean> {
   const to = getOpsAddress();
   if (!to) return false;
   const { subject, html } = buildAffiliateReportFailureEmail(input);
-  return sendEmail(to, subject, html);
+  return sendEmail("ops_affiliate_report_failure", to, subject, html);
 }

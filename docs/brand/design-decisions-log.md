@@ -28682,3 +28682,18 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 **Interruptor y migración.** Salen apagados: hace falta `LIFECYCLE_EMAILS_ENABLED=true` y además `FEATURE_EMAILS_ENABLED=true`. Antes de encenderlo hay que aplicar a mano la migración 0047, que añade los tres tipos a `email_sends_kind_chk`. Sin ella la reserva falla y no sale nada.
 
 **Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
+
+## §419 · MAIL-METRICS-1: cada correo lleva su tipo, y Resend nos cuenta qué pasó con él (2026-11-01)
+
+**Qué se decidió.** De la revisión quincenal del 1-11 («medir correos», prioridad 1 de la tanda B). Denis aprobó el plan recortado el mismo día («sí»): no hay tarjeta propia, porque la sección de correo de ADMIN-EMAIL-1 (otro hilo, misma fecha; pasa a la pestaña de operador /admin/crm en el PR #727) ya es el sitio único del correo para el operador. Este PR pone las piezas que le faltan a esa sección para ir más allá de los 30 días que guarda Resend y para nombrar cada correo por su tipo.
+
+**Cómo.**
+- **Etiqueta de tipo.** Todo envío pasa por `sendEmailWithOutcome`, que ahora exige `kind` (`lib/email/kinds.ts`) y lo manda a Resend como etiqueta `kind`. `sendEmail` lo recibe como primer argumento, así que un correo nuevo sin tipo no compila. Los nombres repiten los de `email_sends` donde existen; los avisos al operador empiezan por `ops_`.
+- **Webhook.** `/api/webhooks/resend` verifica la firma (esquema Svix, `RESEND_WEBHOOK_SECRET`, con la ventana de tiempo que rechaza reenvíos viejos) antes de leer nada. Sin secreto responde 503.
+- **Qué se guarda.** `toEmailEventRow` (`lib/email/events.ts`, pura) se queda con el id del correo en Resend, el evento (entregado, abierto, clic, rebote, queja, fallo, retrasado, suprimido), el tipo y la hora. Nunca la dirección, el asunto, el enlace, la IP ni el navegador, y nada de eso va a los logs. Una etiqueta desconocida se guarda como `null`.
+- **Tabla `email_events`** (migración 0048, a mano): única por `webhook_id` (el `svix-id`, igual en cada reintento), así que un reintento no duplica. RLS sin política y permisos retirados a `anon`/`authenticated`. Sin la tabla, el webhook responde 503 y Resend reintenta.
+- **Privacidad.** La línea de Resend en `/privacidad` dice ahora que Resend nos indica entrega, apertura y clic, y que solo guardamos tipo, evento y fecha.
+
+**Pasos de Denis.** Aplicar la 0048. En Resend: activar el seguimiento de aperturas y clics del dominio de envío y crear el webhook a `https://www.genscore.es/api/webhooks/resend` con los eventos `email.*` de entrega, apertura, clic, rebote y queja. Poner su secreto en `RESEND_WEBHOOK_SECRET` (Vercel, Production).
+
+**Pendiente.** Que la sección de correo de /admin/crm lea de `email_events` en vez de la lista de Resend (`readResendEmails`) cuando ADMIN-EMAIL-1 esté en `main`. Las aperturas son orientativas (Apple Mail abre las imágenes por su cuenta); el clic es la cifra fiable. El píxel de apertura se activa sin una casilla de consentimiento propia; se avisa a Denis al abrir el PR. Si prefiere evitarlo, basta con dejar apagado el seguimiento de aperturas en Resend: clics, entregas y rebotes siguen igual. No retira ningún camino de recuperación.

@@ -146,3 +146,15 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Medición de correos (MAIL-METRICS-1, log §419)
+
+- **Todo envío lleva su tipo** (`EmailKind`, `lib/email/kinds.ts`), que va a
+  Resend como etiqueta `kind`. Un correo nuevo añade su tipo a la lista; los
+  avisos al operador empiezan por `ops_`.
+- **El webhook guarda solo id del correo, evento, tipo y hora**
+  (`toEmailEventRow`). Nunca la dirección, el asunto, el enlace, la IP ni el
+  navegador, tampoco en los logs.
+- **La firma se comprueba antes de leer el cuerpo**, y sin
+  `RESEND_WEBHOOK_SECRET` o sin la tabla (migración 0048) se responde 5xx para
+  que Resend reintente; nunca 200 sin guardar.
