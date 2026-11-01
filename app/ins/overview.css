@@ -310,3 +310,28 @@
  .ins .ov-pair:has(.gx)>.ov-agc .ag:not(.src) .rows>div{grid-template-columns:100px minmax(48px,1fr) 42px}
  .ins .ov-pair:has(.gx)>.ov-agc .fx-w{margin:0;padding:0}
 }
+/* GSC-INVITE-FIT-1 (log §429): the invitation to connect Google lives in the
+   card's second column, about 230px wide on a laptop, and «Conectar con
+   Google» (one line, no wrap, 16px of padding each side inside a panel with
+   18px more) spilled past the panel. In that column the panel is tighter and
+   the button takes its full width, so it always fits. The Google column gets
+   a little more of the card than Salud SEO, whose figures are short; the heading and list are
+   a step smaller so the card is not taller than Comercio agéntico beside it. */
+@media (min-width:761px){
+ .ins .seo3.two:has(>.gx-inv){grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)}
+ .ins .gx-inv .gsc-invite{margin-top:10px;padding:14px 16px;gap:10px}
+ .ins .gx-inv .gsc-invite h4{font-size:15.5px}
+ .ins .gx-inv .gsc-invite ul{font-size:13px;gap:5px}
+ .ins .gx-inv .gsc-invite-row{flex-direction:column;align-items:stretch;gap:6px;text-align:center}
+ .ins .gx-inv .gsc-invite-btn{width:100%;padding-left:12px;padding-right:12px}
+}
+/* A narrow card (tablet widths, both cards side by side): Salud SEO on top and
+   the invitation below it, so the button keeps its one line. The card body is
+   the container because a container query cannot restyle its own container. */
+.ins .ov-pair>.card>.card-b{container:ovcard/inline-size}
+@container ovcard (max-width:440px){
+ .ins .seo3.two:has(>.gx-inv){grid-template-columns:minmax(0,1fr)}
+ .ins .seo3.two:has(>.gx-inv)>div:first-child{border-right:0;padding-right:0}
+ .ins .seo3.two:has(>.gx-inv)>div:first-child{border-bottom:0}
+ .ins .seo3.two>.gx-inv{padding:16px 0 0;margin-top:16px;border-top:1px solid var(--rule)}
+}
