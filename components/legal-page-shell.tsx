@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { PublicHeader } from "@/components/marketing/public-header";
 import { PublicFooter } from "@/components/marketing/public-footer";
+import { BrandLogo } from "@/components/ui/brand-logo";
+import { isInApp } from "@/lib/app-mode-server";
 
 /**
  * Cross-nav between the three legal docs. Not part of the unified
@@ -15,7 +17,25 @@ const LEGAL_NAV_LINKS = [
   { href: "/terminos", label: "Términos" }
 ];
 
-export function LegalPageShell({
+/**
+ * APP-LEGAL-1 (log §400). Inside the Android app (`gs_app`) the legal pages
+ * are reachable from the login, but the public header and footer carry the
+ * launch-price strip, «Precios» and the payment logos, which Google Play does
+ * not allow in the app. There they get a bare bar with the brand and a way
+ * back, and no footer.
+ */
+function AppLegalBar() {
+  return (
+    <div className="legal-appbar">
+      <BrandLogo size={22} />
+      <Link href="/login" className="link-mini">
+        Volver
+      </Link>
+    </div>
+  );
+}
+
+export async function LegalPageShell({
   title,
   updated,
   activeHref,
@@ -26,9 +46,10 @@ export function LegalPageShell({
   activeHref: string;
   children: ReactNode;
 }) {
+  const inApp = await isInApp();
   return (
     <div className="lp">
-      <PublicHeader />
+      {inApp ? <AppLegalBar /> : <PublicHeader />}
 
       <main>
         <section className="lp-section" style={{ paddingBottom: 0 }}>
@@ -56,7 +77,7 @@ export function LegalPageShell({
         </section>
       </main>
 
-      <PublicFooter />
+      {inApp ? null : <PublicFooter />}
     </div>
   );
 }
