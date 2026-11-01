@@ -50,3 +50,6 @@
  .ins .gsc-invite-kinds span{flex:none;white-space:nowrap}
  .ins .gsc-invite-slot .gsc-invite-btn,.ins .gsc-invite-row .gsc-invite-btn{width:100%;height:44px;font-size:14px}
 }
+/* GSC-INVITE-FIT-1 (log §429): the button can never be wider than its panel;
+   a long label wraps inside it instead of spilling out. */
+.ins .gsc-invite-btn{max-width:100%;height:auto;white-space:normal;text-align:center;padding-top:8px;padding-bottom:8px}

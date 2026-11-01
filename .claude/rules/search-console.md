@@ -161,3 +161,10 @@ revisión de data-guardian que lo precedió.
 - **Conectado sin propiedad (`pick_property`), la mitad de Google lo dice y
   enlaza a «Posición en Google»**, nunca a la ruta de permiso ni con cifras de
   ejemplo. Una columna vacía no explica nada.
+
+## Invitación que cabe (GSC-INVITE-FIT-1, log §429)
+
+- **El botón de conectar nunca es más ancho que su panel.** En Visión general
+  la invitación lleva `gx-inv` y el botón ocupa el ancho del panel; en una
+  tarjeta estrecha va debajo de Salud SEO. Sólo aspecto: texto, enlace y puerta
+  de estado no cambian.
