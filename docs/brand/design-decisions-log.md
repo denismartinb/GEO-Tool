@@ -28496,3 +28496,37 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 **Ajustes de Denis en la misma versión.** La tienda encontrada ya no sale en la portada con su ruta y un botón «Abrir»: dentro de Agentes aparece «GenScore detecta tu tienda» con un check verde, sin URL, y las tareas de esa tienda dicen «En tu tienda». Si no se encuentra, la línea «no detecta tu tienda» se queda y Agentes sigue sin nota. Una nota baja ahí sería falsa, porque no encontrarla no demuestra que un agente no pueda comprar. La frase bajo la nota usa el conector que toca: «Ningún motor de IA puede leer esta página, y Google tampoco la indexa» en vez de «…, pero Google no la indexará». Y «indexará» pasa a «indexa» en toda la extensión.
 
 **Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.
+
+## §404 · SHOP-DETECT-2: la consola y la extensión encuentran mejor qué vende una web (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) robustecer la detección de tiendas y servicios en la consola y en la extensión, para todos los sectores, con una batería grande de webs reales. Se montó con 130 webs en 12 grupos: retail, telcos, eléctricas, SaaS, salud, seguros y banca, viajes, formación, ocio y restauración, servicios y 6 webs de control que no venden (Wikipedia, BOE, RAE, AEMET, La Moncloa, INE). La consola se probó con su propio motor (`runAgenticAudit` con `discover`) y la extensión con `collect.js` en un Chromium real.
+
+Resultado, contando sólo las webs que se pudieron leer y venden algo:
+
+| | Antes | Después |
+|---|---|---|
+| Consola | 61 de 84 | 69 de 82 |
+| Extensión | 23 de 73 | 52 de 76 |
+| Controles con tienda inventada | 0 | 0 |
+
+Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro robot con un reto (El Corte Inglés, Carrefour, MediaMarkt, Iberdrola, BBVA, Meliá…). Eso no cambia y sigue siendo `unknown` (§319). La extensión, que lee con el navegador del cliente, sí entra en muchas de ellas.
+
+**Consola, sin pedir ninguna página más.** Sigue la regla de §323: una sola página extra. Lo que cambia es cuál se elige (`findDiscoveryCandidate`).
+
+- **En una web que no es una tienda**, el enlace del menú a precios gana a una «ficha» adivinada. Peec AI salía «sin tienda» porque su sitemap tenía `/product/brand-perception` (una página de funciones) y ganaba a «Pricing».
+- **Precios por el texto del enlace o por una palabra dentro de la ruta**: «Tarifas Fibra y Móvil» → `/fibra-movil`, `/plan-de-precios`, `/tarifas-luz`, `/precios-de-tratamientos-dentales`. `PRICING_PATH` acepta ya la palabra dentro del último tramo.
+- **Seguros y contratación** (`/seguros-de-salud`, `/contratacion-seguros-salud`, `/contratar-luz`) y **hoteles** (`/hoteles/x`) cuentan como páginas de venta. Un evento va el último: «/eventos/black-friday» o un webinar salían antes que la página de precios.
+- **Escaparates sin `/p/` en la URL** (Magento y similares): el enlace de la tarjeta de producto (`product-item-link`, `data-product-id`) o el enlace justo antes de un precio. Nunca ayuda, legal, carrito o un fichero (`.pdf`).
+- **Escaparate** (`looksLikeStorefront`) es plataforma de tienda, carrito o tarjetas de producto. Los precios impresos solos no cuentan: una telco o un parque los imprimen y allí la página a juzgar es la de tarifas.
+- **Botones**: «Lo quiero», «Me interesa» y «Calcula tu seguro» cuentan como botón para contratar.
+
+**Extensión.** La búsqueda de la tienda se rehace con el mismo orden, y además:
+
+- Se busca también desde un listado de productos y desde la primera sección de la web (`/es/`, `/hogar`), no sólo desde la portada. Un listado con precios salta a su primera ficha, que es lo que lee un agente (Denis, con El Corte Inglés).
+- Una página vende también si es de precios, o si enseña un precio junto a un botón de compra en el cuerpo, aunque no lo diga en sus datos. Entonces Agentes la puntúa como servicio y «Precio en los datos» dice «Sólo en el texto». Un botón de la cabecera no cuenta, y un artículo nunca vende por esta vía.
+- Se leen dos candidatas como mucho, y la segunda es de otro tipo que la primera (una ficha y una página de precios).
+- Un listado sin ficha encontrada no dice «no detecta tu tienda».
+
+**Agotado, en las dos.** Si todas las ofertas dicen `OutOfStock`, `SoldOut` o `Discontinued`, «Avísame» es el botón correcto. En la consola, `add_to_cart` pasa a `unknown` y no resta; en la extensión, «Botón de compra claro» dice «No aplica, agotado». La extensión enseña la disponibilidad en castellano («Agotado», «Preventa», «En stock»). Lo encontró Denis en una ficha de El Corte Inglés.
+
+**Pendiente o roto conocido.** Siguen sin tienda las webs que se pintan sólo con JavaScript (Booking, Glovo, Miravia, Domino's, Amazon desde el servidor), las que venden en otro subdominio (Doctoralia Pro, que la extensión no puede leer por CORS) y algunas de formación y coches. Para la consola, ampliar a una segunda página extra mejoraría más casos, pero rompe la regla de §323 y necesita la aprobación del fundador. La batería vive en el scratchpad de esta sesión; su resumen por sector está en `/mnt/project-files/extension/bateria-deteccion-tiendas-2026-11-01.md`.

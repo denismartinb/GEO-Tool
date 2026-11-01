@@ -157,6 +157,10 @@
     return n.length > 1 ? n.slice(0, -1).join(", ") + " y " + n[n.length - 1] : n[0] || "";
   }
 
+  const SOLD_OUT = /^(OutOfStock|SoldOut|Discontinued)$/i;
+  const AVAIL_ES = { instock: "En stock", outofstock: "Agotado", soldout: "Agotado", preorder: "Preventa", presale: "Preventa", backorder: "Bajo pedido", discontinued: "Descatalogado", limitedavailability: "Pocas unidades", onlineonly: "Solo online", instoreonly: "Solo en tienda", madetoorder: "Por encargo" };
+  const availName = (a) => AVAIL_ES[String(a).toLowerCase()] || a;
+
   /* ---------------- scoring ---------------- */
   function scorePage(f, now = Date.now()) {
     const path = (f.path || "/").split("#")[0] || "/";
@@ -168,12 +172,18 @@
     /* «Reservar» or «Contratar» alone do not make a shop: a clinic or a gestoría
        has them too, and an Agentes 20 there alarms for nothing. */
     const cartButton = !!f.buy && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(f.buy);
-    const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount);
+    const offering = ld.offering || null;
+    /* SHOP-DETECT-2 (log §404): a pricing page, or a price printed next to a
+       buy button in the body, sells too, even with nothing in its data. An
+       article never does through this door. Same net as the console's
+       classifyOffer. */
+    const ARTICLE_T = ["Article", "NewsArticle", "BlogPosting", "TechArticle"];
+    const looseSell = !(ld.types || []).some((t) => ARTICLE_T.includes(t)) && (!!f.pricingPath || (!!f.priceSeen && !!f.sellCta));
+    const commerce = !!(product || cartButton || f.microPrice || (f.og && /product/i.test(f.og.type || "")) || ld.offerCount || offering || looseSell);
     /* software, a service, a course: it sells, but there is no stock to declare
        or parcel to return (same rule as the console's agentic audit, log §325) */
-    const offering = ld.offering || null;
     const SERVICE_TYPES = ["SoftwareApplication", "WebApplication", "MobileApplication", "Service", "ProfessionalService", "Course", "Event", "FinancialProduct"];
-    const service = commerce && !product && (!!offering || (ld.types || []).some((t) => SERVICE_TYPES.includes(t)));
+    const service = commerce && !product && (!!offering || (ld.types || []).some((t) => SERVICE_TYPES.includes(t)) || (looseSell && !cartButton && !f.microPrice && !ld.offerCount));
     const titleLen = (f.title || "").length;
     const descLen = (f.description || "").length;
     const lead = f.lead || { words: 0 };
@@ -212,7 +222,7 @@
       const op = offering && offering.price;
       add("prod", "agent", 30, offering && offering.name ? 1 : 0.5, "Entiende lo que vendes", offering && offering.name ? trimTo(offering.name, 28) : "No");
       add("price", "agent", 25, op ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
-        op ? `${offering.price}${offering.currency ? " " + offering.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
+        op ? `${offering.price}${offering.currency ? " " + offering.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : f.priceSeen ? "Sólo en el texto" : "No");
       add("avail", "agent", 15, null, "Disponibilidad", "No aplica");
       add("buy", "agent", 20, f.buy ? 1 : 0, "Botón para contratar claro", f.buy ? `«${f.buy}»` : "No");
       add("returns", "agent", 10, null, "Devoluciones", "No aplica");
@@ -220,8 +230,10 @@
       add("prod", "agent", 30, product && product.name ? 1 : ld.offerCount ? 0.5 : 0, "Entiende el producto", product && product.name ? trimTo(product.name, 28) : "No");
       add("price", "agent", 25, product && product.price ? 1 : f.microPrice || (f.og && f.og.price) ? 0.5 : 0, "Precio en los datos",
         product && product.price ? `${product.price}${product.currency ? " " + product.currency : ""}` : f.microPrice || (f.og && f.og.price) ? "Sólo fuera del JSON-LD" : "No");
-      add("avail", "agent", 15, product && product.availability ? 1 : 0, "Disponibilidad", product && product.availability ? product.availability : "No");
-      add("buy", "agent", 20, f.buy ? 1 : 0, "Botón de compra claro", f.buy ? `«${f.buy}»` : "No");
+      add("avail", "agent", 15, product && product.availability ? 1 : 0, "Disponibilidad", product && product.availability ? availName(product.availability) : "No");
+      /* sold out: «Avísame» is the right button, there is no purchase to measure (log §404) */
+      const soldOut = !!(product && product.availability && SOLD_OUT.test(product.availability));
+      add("buy", "agent", 20, f.buy ? 1 : soldOut ? null : 0, "Botón de compra claro", f.buy ? `«${f.buy}»` : soldOut ? "No aplica, agotado" : "No");
       add("returns", "agent", 10, product && product.returns ? 1 : f.returnsLink ? 0.5 : 0, "Devoluciones", product && product.returns ? "En los datos" : f.returnsLink ? "Sólo un enlace" : "No");
     }
 
@@ -236,13 +248,13 @@
        never this page's, and the panel says which page it is. */
     let shop = null;
     if (!commerce && f.shop && f.shop.state === "found" && f.shop.facts) {
-      const ss = scorePage(Object.assign({}, f, f.shop.facts, { shop: null, host: f.host }), now);
+      const ss = scorePage(Object.assign({}, f, { priceSeen: false, sellCta: false, pricingPath: false, listing: false }, f.shop.facts, { shop: null, host: f.host }), now);
       if (ss.commerce) {
         lanes.agent = ss.lanes.agent;
         shop = { state: "found", path: f.shop.path, url: f.shop.facts.url, criteria: ss.criteria.filter((c) => c.lane === "agent"), fixes: ss.fixes.filter((x) => x.lane === "agent").map((x) => Object.assign({}, x, { id: "shop-" + x.id, where: f.shop.path })) };
       }
     }
-    if (!commerce && !shop && f.shop) shop = { state: "none" };
+    if (!commerce && !shop && f.shop && !f.listing) shop = { state: "none" };
     const nota = Math.round(LANE_WEIGHT.ia * lanes.ia + LANE_WEIGHT.google * lanes.google);
     /* what each criterion is worth in the nota (or in its own lane, for Agentes) */
     const laneW = (k) => C.filter((c) => c.lane === k && c.v != null).reduce((a, c) => a + c.w, 0);

@@ -179,3 +179,14 @@ describe("checks by what is sold (log §325)", () => {
     expect(r.pageKind).toBe("other");
   });
 });
+
+describe("sold-out product (SHOP-DETECT-2, log §404)", () => {
+  it("does not fail add-to-cart when every offer is sold out: «Avísame» is the right button", () => {
+    const r = scoreAgenticAudit(input({ signals: { ...FULL, addToCart: false, soldOut: true } }));
+    const cart = r.components.flatMap((c) => c.checks).find((k) => k.id === "add_to_cart");
+    expect(cart?.state).toBe("unknown");
+    expect(r.fixes.some((f) => f.checkId === "add_to_cart")).toBe(false);
+    const inStock = scoreAgenticAudit(input({ signals: { ...FULL, addToCart: false } }));
+    expect(inStock.components.flatMap((c) => c.checks).find((k) => k.id === "add_to_cart")?.state).toBe("fail");
+  });
+});
