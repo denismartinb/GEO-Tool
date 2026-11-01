@@ -2,6 +2,8 @@ import type { ExtProjectPayload } from "@/lib/ext/project-data";
 import type { ExtGscQuery } from "@/lib/ext/search-console";
 import { formatShare } from "@/lib/report/report-model";
 import type { PageReview } from "@/lib/page-review/review";
+import { measureHook } from "./acquisition";
+import { signupUrl, type McpProfile } from "./links";
 
 /**
  * MCP-SERVER-1 (log §418): how each MCP tool answers in the chat. Pure: it
@@ -11,7 +13,8 @@ import type { PageReview } from "@/lib/page-review/review";
  * Rules every text keeps (`.claude/rules/mcp.md`):
  *  - engines by name only (ChatGPT, Gemini, Claude, Perplexity);
  *  - no price, no «Pasar a Pro», no checkout link: ChatGPT's directory
- *    forbids selling inside an app, and one text serves every client;
+ *    forbids selling inside an app. Plans and prices live only in
+ *    `que_es_genscore`, and only in the Claude profile (`acquisition.ts`);
  *  - what was not measured is said so, never a zero;
  *  - every answer ends with the console screen that shows the same thing.
  */
@@ -229,6 +232,8 @@ const LANE: Record<string, string> = { ia: "IA", google: "Google", agent: "Agent
 /** The extension's «Nota SEO + IA» for one page, plus «Esta página» when it is one of the account's domains. */
 export type PageReviewNext = {
   base: string;
+  /** Which connector asked (MCP-ACQUISITION-1, log §425): decides the hook's wording and its UTM. Claude when unset. */
+  profile?: McpProfile;
   /** null without an account. */
   account: { projects: Array<{ domain: string; projectId: string }>; canAddDomain: boolean } | null;
 };
@@ -285,7 +290,14 @@ export function formatPageReview(
     // EXT-AUDITS-1 (log §406) in the chat: a web that is not one of yours can become a domain or a competitor.
     const host = r.host.replace(/^www\./, "");
     if (!next.account) {
-      lines.push("", "Con tu cuenta de GenScore conectada, en una página de tus dominios también te digo qué preguntas la citan y sus datos de Google.");
+      // MCP-ACQUISITION-1 (log §425): the page is one thing, the brand in the answers is what GenScore measures.
+      const profile = next.profile ?? "claude";
+      lines.push(
+        "",
+        measureHook(next.base, profile, "revisar_pagina", host),
+        "Con tu cuenta de GenScore conectada, en una página de tus dominios también te digo qué preguntas la citan y sus datos de Google."
+      );
+      structured.next = [{ kind: "signup", url: signupUrl(next.base, profile, "revisar_pagina", host) }];
     } else {
       lines.push("", `**¿Qué hacer con ${host}?**`);
       const links: Array<{ kind: string; url: string }> = [];
