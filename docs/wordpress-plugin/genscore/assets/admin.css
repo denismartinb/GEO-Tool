@@ -199,3 +199,7 @@
 #genscore-app .gs-site{width:32px;height:32px;flex:none;border-radius:8px;object-fit:cover;border:1px solid var(--rule)}
 #genscore-app .gs-ini{display:grid;place-items:center;background:var(--surface-3);color:var(--ink);font-weight:600;font-size:15px}
 @media (min-width:783px){#genscore-app .gs-ph{padding-top:18px}}
+#genscore-app .gs-pick{display:flex;flex-direction:column;gap:2px;margin-left:14px;padding-left:14px;border-left:1px solid var(--rule);min-width:0}
+#genscore-app .gs-pick span{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+#genscore-app .gs-pick select{font:inherit;font-size:13.5px;color:var(--ink);background-color:var(--surface);border:1px solid var(--rule);border-radius:8px;padding:3px 28px 3px 8px;min-height:30px;max-width:340px;line-height:1.3}
+@container (max-width:520px){#genscore-app .gs-pick{order:5;flex-basis:100%;margin-left:0;padding-left:0;border-left:0}#genscore-app .gs-pick select{max-width:100%;width:100%}}

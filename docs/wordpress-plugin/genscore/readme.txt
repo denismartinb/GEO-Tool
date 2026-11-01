@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.0.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -12,7 +12,7 @@ Check whether ChatGPT, Gemini, Claude and Perplexity can read your site, publish
 
 == Description ==
 
-GenScore reviews your home page from inside wp-admin and gives it an SEO + AI score, split into three lanes:
+GenScore reviews your home page, or any published page, post or product, from inside wp-admin and gives it an SEO + AI score, split into three lanes:
 
 * **GEO**: can ChatGPT, Gemini, Claude and Perplexity read and quote your site? Which AI bots does your robots.txt let in? Do you publish an llms.txt?
 * **SEO**: title, description, canonical, headings, language, structured data, plus WordPress settings (search engine visibility, sitemap, HTTPS, permalinks) and a list of pages, posts and products missing a description or image alt text.
@@ -67,6 +67,12 @@ No. It runs only when you open the GenScore screen, in your browser.
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.0.3 =
+* Review any published page, post or product, not only the home page: pick it at the top of the screen, or use «Revisar con GenScore» in the lists of pages, posts and products.
+* llms.txt: after «Volver al generado» or «Guardar», the box shows the current generated text straight away (new posts included).
+* robots.txt: while the whole site is closed for everyone, allowing a bot another plugin had blocked no longer opens the site to it. The screen says why.
+* llms.txt: descriptions taken from the content no longer glue a heading to the paragraph before it.
 
 = 1.0.2 =
 * llms.txt: the text is only saved when you edit it, so a title with an emoji or a post published meanwhile no longer freezes a copy. «Volver al generado» goes back to the generated text.

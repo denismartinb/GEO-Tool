@@ -28771,6 +28771,13 @@ El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es
 - **Plugin Check:** los tres avisos de nonce de `genscore_ajax_save_review` venían de leer `$_POST` dentro de una función anónima; se lee en el propio handler.
 - **Agentes:** el precio se pinta como `149,90 €` (formato español) en la pantalla del plugin. El dato de `score.js` no cambia; la extensión lo sigue enseñando como «149.90 EUR».
 
+**Adenda 1.0.3 (2026-11-01).** Tercera prueba de Instinct, y desde esta versión también una instalación propia (WordPress 7.1.4 + WooCommerce + Plugin Check sobre SQLite, con Playwright en 1280 y 390 px) antes de entregar el zip, para que Instinct confirme en vez de descubrir.
+
+- **llms.txt:** `render()` volvía a copiar el cuadro en cada repintado, así que tras «Volver al generado» o «Guardar» el cuadro seguía enseñando el texto viejo hasta recargar, y tocarlo congelaba una copia vieja. Ahora sólo se guarda el texto del cuadro si la persona lo editó.
+- **robots.txt:** con `*` cerrando la web y otro plugin bloqueando un bot, «Permitir» escribía un grupo propio con «Allow: /» y le abría la web. Mientras `*` cierre la web (`genscore_star_closes_site`) no se escribe ningún grupo de permitir; el grupo del otro plugin se quita igual y el bot vuelve a seguir a `*`. La pantalla lo explica en la tarjeta de bots.
+- **llms.txt, extractos:** los títulos se pegaban al párrafo anterior («extracción.Molienda…»); las etiquetas de bloque pasan a espacio antes de limpiar. Lo encontró la instalación propia.
+- **Revisar cualquier página** (lo que la extensión llama «Esta página»): selector «Página revisada» en la cabecera con páginas, productos y entradas publicadas, y «Revisar con GenScore» en las listas de WordPress. Viaja sólo el id (`?post=`); la dirección la da `get_permalink` y sólo vale si es pública y de esta web. La nota del widget del Escritorio sigue siendo la de la portada.
+
 ## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
 
 **Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.

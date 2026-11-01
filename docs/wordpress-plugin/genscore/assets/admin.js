@@ -15,7 +15,7 @@
   var app = document.getElementById("genscore-app");
   if (!app || !SC) return;
 
-  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null };
+  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null, target: D.target || null };
   var ENG = [["chatgpt", "ChatGPT"], ["gemini", "Gemini"], ["claude", "Claude"], ["perplexity", "Perplexity"]];
   var SW_LABEL = {
     "chatgpt-search": ["ChatGPT", "Búsqueda y enlaces que abre ChatGPT"],
@@ -69,6 +69,16 @@
     var groups = SC.parseRobots(S.facts.robots.text);
     return D.bots.switches[id].tokens.every(function (t) { return SC.tokenVerdict(groups, t, "/").allowed; });
   }
+  /* `*` closes the whole site: what any bot without its own group gets. */
+  function starClosed() {
+    if (!S.facts || !S.facts.robots || S.facts.robots.text == null) return false;
+    return !SC.tokenVerdict(SC.parseRobots(S.facts.robots.text), "genscore-any-bot", "/").allowed;
+  }
+  /* Which page is under review: the home page, or the one picked in the
+     header (or arrived from «Revisar con GenScore» in a list of posts). */
+  function tu() { return S.target ? "esta página" : "tu portada"; }
+  function la() { return S.target ? "esta página" : "la portada"; }
+  function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
   function switchWanted(id) {
     if (S.dirty[id]) return S.dirty[id] === "allow";
     var now = switchAllowed(id);
@@ -83,8 +93,21 @@
     if (D.site.icon) return '<img class="gs-site" src="' + esc(D.site.icon) + '" alt="" width="32" height="32">';
     return '<span class="gs-site gs-ini" aria-hidden="true">' + esc((name.trim()[0] || "?").toUpperCase()) + "</span>";
   }
+  /* «Página revisada»: the home page by default, or any published page,
+     post or product of this site (the extension's «Esta página»). */
+  function picker() {
+    var C = D.choices || [];
+    if (!C.length) return "";
+    var cur = S.target ? String(S.target.id) : "";
+    var groups = [["page", "Páginas"], ["product", "Productos"], ["post", "Entradas"]].map(function (g) {
+      var it = C.filter(function (c) { return c.type === g[0]; });
+      if (S.target && S.target.type === g[0] && !it.some(function (c) { return String(c.id) === cur; })) it = [S.target].concat(it);
+      return it.length ? '<optgroup label="' + g[1] + '">' + it.map(function (c) { return '<option value="' + c.id + '"' + (String(c.id) === cur ? " selected" : "") + ">" + esc(c.title || "(sin título)") + "</option>"; }).join("") + "</optgroup>" : "";
+    }).join("");
+    return '<label class="gs-pick"><span>Página revisada</span><select data-act="pick"' + (S.state === "loading" ? " disabled" : "") + '><option value=""' + (cur ? "" : " selected") + ">Portada</option>" + groups + "</select></label>";
+  }
   function head() {
-    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span><span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
+    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span>' + picker() + '<span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
   }
   function tabs() {
     var T = [["res", "Resumen"], ["geo", "GEO"], ["seo", "SEO"], ["ag", "Agentes"]];
@@ -121,6 +144,7 @@
     if (!site.public) note = '<div class="gs-hint gs-warm">WordPress pide a los buscadores que no indexen esta web, así que robots.txt cierra la puerta a todos. Cámbialo en <a href="' + esc(site.readingUrl) + '">Ajustes, Lectura</a>.</div>';
     else if (site.robotsFile) note = '<div class="gs-hint gs-warm">Tu web tiene un fichero robots.txt propio y el servidor lo sirve antes que WordPress. GenScore no lo modifica: copia las líneas de «Arreglar» en ese fichero.</div>';
     else if (!site.rootInstall) note = '<div class="gs-hint gs-warm">WordPress está instalado en una carpeta, y robots.txt sólo cuenta en la raíz del dominio. Pide a quien gestiona el dominio que añada las reglas allí.</div>';
+    else if (starClosed()) note = '<div class="gs-hint gs-warm">Tu robots.txt cierra la web entera a todos los bots («User-agent: *» con «Disallow: /»), a menudo por un plugin de mantenimiento. Mientras siga así, «Permitir» no abre la web a ningún bot; «Bloquear» sí se guarda.</div>';
     var ids = Object.keys(D.bots.switches);
     var list = ids.map(function (id) {
       var on = switchWanted(id), L = SW_LABEL[id] || [id, ""];
@@ -143,11 +167,11 @@
 
   function webGeo() {
     var acc = (S.score && S.score.access) || {};
-    var cards = '<div class="gs-card"><div class="gs-lab">Quién puede leer tu portada<small>robots.txt</small></div><div class="gs-eng4">' + ENG.map(function (e) {
+    var cards = '<div class="gs-card"><div class="gs-lab">Quién puede leer ' + tu() + '<small>robots.txt</small></div><div class="gs-eng4">' + ENG.map(function (e) {
       var a = acc[e[0]];
       return '<div class="gs-ec' + (a === false ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-" + e[0], "gs-lg") + "</span><b>" + e[1] + "</b><small>" + (a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado") + "</small></div>";
     }).join("") + "</div></div>";
-    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + cards + fixCard("ia", "Arreglar") + botsCard() + llmsCard() + '<div class="gs-card"><div class="gs-lab">En la portada</div>' + rows(criteria("ia", true)) + "</div>";
+    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + cards + fixCard("ia", "Arreglar") + botsCard() + llmsCard() + '<div class="gs-card"><div class="gs-lab">En ' + la() + '</div>' + rows(criteria("ia", true)) + "</div>";
   }
 
   var ISSUE = { desc: "Sin meta descripción", duptitle: "Título repetido con otra página", notitle: "Sin título", alt: "Imágenes sin texto alternativo" };
@@ -170,9 +194,9 @@
       var lab = it.issues.map(function (k) { return k === "alt" && it.noAlt > 1 ? it.noAlt + " imágenes sin texto alternativo" : ISSUE[k]; }).join(" · ");
       return '<div class="gs-rw"><span class="gs-dot gs-mid"></span><span class="gs-tx">' + esc(it.title || "(sin título)") + "<small>" + esc((TYPE[it.type] || "") + " · " + lab) + "</small></span>" + (it.edit ? '<a class="gs-btn gs-line gs-sm" href="' + esc(it.edit) + '">Editar</a>' : "") + "</div>";
     }).join("") + (items.length > 12 ? '<p class="gs-more">Y ' + (items.length - 12) + " más.</p>" : "") : '<div class="gs-rw"><span class="gs-tx">No vemos nada que revisar.</span>' + ok("Bien") + "</div>";
-    var descNote = P.canCheckDescriptions ? "" : '<div class="gs-hint">' + (s.seoPlugin ? esc(s.seoPlugin) + " guarda las meta descripciones a su manera y no podemos leerlas desde aquí." : "Sin un plugin SEO, WordPress no escribe meta descripciones en tus páginas. La de la portada la ves abajo.") + "</div>";
+    var descNote = P.canCheckDescriptions ? "" : '<div class="gs-hint">' + (s.seoPlugin ? esc(s.seoPlugin) + " guarda las meta descripciones a su manera y no podemos leerlas desde aquí." : "Sin un plugin SEO, WordPress no escribe meta descripciones en tus páginas. La de " + la() + " la ves abajo.") + "</div>";
     var pages = '<div class="gs-card"><div class="gs-lab">Páginas que revisar</div>' + descNote + '<div class="gs-rows">' + list + '</div><p class="gs-more">' + esc(scope) + "</p></div>";
-    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + fixCard("google", "Arreglar en la portada") + wp + pages + '<div class="gs-card"><div class="gs-lab">Lo que ve Google en la portada</div>' + rows(criteria("google")) + "</div>";
+    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + fixCard("google", "Arreglar en " + la()) + wp + pages + '<div class="gs-card"><div class="gs-lab">Lo que ve Google en ' + la() + '</div>' + rows(criteria("google")) + "</div>";
   }
 
   function webAg() {
@@ -180,23 +204,23 @@
     var shop = sc.shop && sc.shop.state === "found" ? sc.shop : null;
     var C = shop ? shop.criteria : sc.commerce ? criteria("agent") : [];
     if (!C.length) {
-      return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Qué lee un agente</div><p>No hemos encontrado nada a la venta en tu portada ni en las páginas que enlaza.' + (D.site.woocommerce ? " Si vendes con WooCommerce, publica algún producto y enlázalo desde la portada o el menú." : " Si vendes algo (productos, servicios, reservas), enlaza la página desde la portada o el menú.") + "</p></div>";
+      return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Qué lee un agente</div><p>No hemos encontrado nada a la venta en ' + tu() + ' ni en las páginas que enlaza.' + (D.site.woocommerce ? " Si vendes con WooCommerce, publica algún producto y enlázalo desde la portada o el menú." : " Si vendes algo (productos, servicios, reservas), enlaza la página desde la portada o el menú.") + "</p></div>";
     }
-    var where = shop ? "<small>" + esc(shop.path) + "</small>" : "<small>tu portada</small>";
-    return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Lo que lee un agente</div><div class="gs-rw" style="border:0;padding-top:0">' + ic("i-cart") + '<span class="gs-tx"><b style="font-weight:600">' + (shop ? (D.site.woocommerce ? "Ficha de producto analizada" : "Página de venta analizada") : "Tu portada vende") + "</b>" + where + "</span></div>" + rows(C) + "</div>" + fixCard("agent", "Arreglar");
+    var where = "<small>" + esc(shop ? shop.path : S.target ? S.target.path : "tu portada") + "</small>";
+    return '<div class="gs-lyr">Esta web<small>' + (D.site.woocommerce ? "WooCommerce detectado" : "se arregla aquí") + '</small></div><div class="gs-card"><div class="gs-lab">Lo que lee un agente</div><div class="gs-rw" style="border:0;padding-top:0">' + ic("i-cart") + '<span class="gs-tx"><b style="font-weight:600">' + (shop ? (D.site.woocommerce ? "Ficha de producto analizada" : "Página de venta analizada") : cap(tu()) + " vende") + "</b>" + where + "</span></div>" + rows(C) + "</div>" + fixCard("agent", "Arreglar");
   }
 
   /* ---------------- Resumen ---------------- */
   function resumen() {
     var sc = S.score;
     var blocked = sc.blockedEngines.length;
-    var hero = '<div class="gs-card gs-hero"><div class="gs-lab" style="width:100%">Revisión gratis<small class="gs-mono">portada</small></div><div class="gs-dialbox">' + dial(sc.nota, [50, 75]) + '<div class="gs-dial-c"><b class="gs-num">' + sc.nota + '</b><span>Nota SEO + IA</span></div></div>'
+    var hero = '<div class="gs-card gs-hero"><div class="gs-lab" style="width:100%">Revisión gratis<small class="gs-mono">' + esc(S.target ? S.target.path : "portada") + '</small></div><div class="gs-dialbox">' + dial(sc.nota, [50, 75]) + '<div class="gs-dial-c"><b class="gs-num">' + sc.nota + '</b><span>Nota SEO + IA</span></div></div>'
       + '<div class="gs-bands"><span class="' + (sc.nota < 50 ? "gs-on" : "") + '">Se frena</span><span class="' + (sc.nota >= 50 && sc.nota < 75 ? "gs-on" : "") + '">Mejorable</span><span class="' + (sc.nota >= 75 ? "gs-on" : "") + '">Bien</span></div>'
       + '<p class="gs-say">' + esc(sc.say) + "</p>"
       + '<div class="gs-gg3">' + gauge("geo", "GEO", ic("i-sparkles"), sc.lanes.ia, blocked ? 4 - blocked + " de 4 la leen" : null) + gauge("seo", "SEO", ic("e-google", "gs-i"), sc.lanes.google) + gauge("ag", "Agentes", ic("i-cart"), sc.lanes.agent, sc.lanes.agent == null ? "Sin tienda" : null) + "</div></div>";
     var F = sc.fixes.slice(0, 3);
     var tabOf = { ia: "geo", google: "seo", agent: "ag" };
-    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">+' + f.pts + " " + (f.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu portada está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">+' + f.pts + " " + (f.unit === "pt" ? "puntos en la nota" : "en Agentes") + '</span></span><button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Arreglar</button></div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
     var deep = '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
     var acct = '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
     return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + deep + acct + "</div></div>";
@@ -204,8 +228,8 @@
 
   /* ---------------- render ---------------- */
   function body() {
-    if (S.state === "loading") return '<div class="gs-card gs-pending"><span class="gs-spin"></span><p>Revisando tu portada como la ven los motores…</p></div>';
-    if (S.state === "error") return '<div class="gs-card gs-pending"><p><b>No hemos podido revisar tu portada.</b></p><p>' + esc(S.error) + '</p><button class="gs-btn gs-blue" data-act="rerun">Volver a intentarlo</button></div>';
+    if (S.state === "loading") return '<div class="gs-card gs-pending"><span class="gs-spin"></span><p>Revisando ' + tu() + ' como la ven los motores…</p></div>';
+    if (S.state === "error") return '<div class="gs-card gs-pending"><p><b>No hemos podido revisar ' + tu() + '.</b></p><p>' + esc(S.error) + '</p><button class="gs-btn gs-blue" data-act="rerun">Volver a intentarlo</button></div>';
     if (S.tab === "res") return resumen();
     var d = S.tab === "geo" ? domGeo() : S.tab === "seo" ? domSeo() : domAg();
     var w = S.tab === "geo" ? webGeo() : S.tab === "seo" ? webSeo() : webAg();
@@ -213,7 +237,7 @@
   }
   function render() {
     var ta = document.getElementById("gs-llms-text");
-    if (ta) S.llmsText = ta.value;
+    if (ta) S.llmsText = S.llmsEdited ? ta.value : null;
     app.innerHTML = head() + tabs() + body();
   }
 
@@ -228,17 +252,17 @@
       frame.tabIndex = -1;
       frame.style.cssText = "position:absolute;left:-10000px;top:0;width:1280px;height:900px;visibility:hidden;border:0";
       function end(err, facts) { if (done) return; done = true; clearTimeout(timer); frame.remove(); if (err) reject(err); else resolve(facts); }
-      var timer = setTimeout(function () { end("La portada ha tardado demasiado en cargar. Puede que tu servidor esté lento ahora mismo."); }, 25000);
+      var timer = setTimeout(function () { end(cap(la()) + " ha tardado demasiado en cargar. Puede que tu servidor esté lento ahora mismo."); }, 25000);
       frame.onload = function () {
         var doc;
         try { doc = frame.contentDocument; } catch (e) { doc = null; }
-        if (!doc || !doc.body) { end("Tu web no deja abrir la portada dentro del escritorio (cabecera X-Frame-Options o una regla de seguridad)."); return; }
+        if (!doc || !doc.body) { end("Tu web no deja abrir " + la() + " dentro del escritorio (cabecera X-Frame-Options o una regla de seguridad)."); return; }
         var bar = doc.getElementById("wpadminbar");
         if (bar) bar.remove();
         var s = doc.createElement("script");
         s.src = D.assets + "vendor/collect.js?ver=" + encodeURIComponent(D.version);
         s.onload = function () {
-          frame.contentWindow.collectPageFacts().then(function (facts) { end(null, facts); }, function () { end("No hemos podido leer la portada."); });
+          frame.contentWindow.collectPageFacts().then(function (facts) { end(null, facts); }, function () { end("No hemos podido leer " + la() + "."); });
         };
         s.onerror = function () { end("No se ha podido cargar el lector de la página."); };
         doc.head.appendChild(s);
@@ -271,7 +295,7 @@
 
   function review() {
     S.state = "loading"; render();
-    readPage(D.site.home).then(function (facts) {
+    readPage(S.target ? S.target.url : D.site.home).then(function (facts) {
       S.facts = facts;
       return withProduct(SC.scorePage(facts));
     }).then(function (sc) {
@@ -280,7 +304,7 @@
       render();
       saveReview();
     }, function (msg) {
-      S.state = "error"; S.error = typeof msg === "string" ? msg : "No hemos podido leer la portada."; render();
+      S.state = "error"; S.error = typeof msg === "string" ? msg : "No hemos podido leer " + la() + "."; render();
     });
   }
 
@@ -297,6 +321,7 @@
   }
   function saveReview() {
     var sc = S.score;
+    if (S.target) return; // The Escritorio widget shows the home page's note.
     post("genscore_save_review", { nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent == null ? "" : sc.lanes.agent }).catch(function () {});
   }
   function checkSitemap() {
@@ -305,6 +330,18 @@
   }
 
   /* ---------------- events ---------------- */
+  app.addEventListener("change", function (e) {
+    if (!e.target || e.target.getAttribute("data-act") !== "pick") return;
+    var id = e.target.value;
+    var C = (D.choices || []).concat(S.target ? [S.target] : []);
+    S.target = id ? C.filter(function (c) { return String(c.id) === id; })[0] || null : null;
+    try {
+      var u = new URL(location.href);
+      if (S.target) u.searchParams.set("post", S.target.id); else u.searchParams.delete("post");
+      history.replaceState(null, "", u.toString());
+    } catch (err) { /* the address only helps a reload; the review goes on */ }
+    review();
+  });
   app.addEventListener("click", function (e) {
     var t = e.target.closest("[data-tab]");
     if (t) { S.tab = t.getAttribute("data-tab"); render(); app.scrollIntoView({ block: "start" }); return; }
@@ -327,7 +364,7 @@
       a.disabled = true;
       post("genscore_save_bots", { bots: next2 }).then(function (r) {
         if (!r || !r.success) throw new Error();
-        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = '<span class="gs-saved">Guardado. Volvemos a revisar tu portada.</span>';
+        S.bots = r.data.settings; S.dirty = {}; S.msg.bots = '<span class="gs-saved">Guardado. Volvemos a revisar ' + tu() + '.</span>';
         review();
       }).catch(function () { S.msg.bots = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
       return;

@@ -62,4 +62,14 @@ check( 'Google-Extended blocked on its own', false !== strpos( $out, "User-agent
 $closed = "User-agent: *\nDisallow: /\n";
 check( 'allow does not reopen a closed site', genscore_apply_bot_rules( $closed, array( 'perplexity-search' => 'allow' ) ) === $closed );
 
+// * closed AND another plugin blocks GPTBot: allowing it must not open the
+// site to GPTBot (Instinct, 1.0.2). The other plugin's group goes, and GPTBot
+// follows * again, which is closed.
+$closed_other = "User-agent: *\nDisallow: /\n\nUser-agent: GPTBot\nDisallow: /\n";
+$out          = genscore_apply_bot_rules( $closed_other, array( 'chatgpt-training' => 'allow' ) );
+check( 'closed site + other plugin: no allow group', ! preg_match( '/^Allow:/mi', $out ) && false === stripos( $out, 'User-agent: GPTBot' ) );
+check( 'closed site + other plugin: * still closed', false !== strpos( $out, "User-agent: *\nDisallow: /" ) );
+// «Allow: /» in * means open, even with a «Disallow: /» line before it.
+check( 'star allow wins over star disallow', ! genscore_star_closes_site( genscore_robots_blocks( "User-agent: *\nDisallow: /\nAllow: /\n" ) ) );
+
 exit( $failures ? 1 : 0 );

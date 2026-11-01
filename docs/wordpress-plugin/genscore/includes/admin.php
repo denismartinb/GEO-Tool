@@ -100,6 +100,8 @@ function genscore_screen_data() {
 			'url'       => home_url( '/llms.txt' ),
 		),
 		'pages'    => genscore_pages_to_review(),
+		'choices'  => genscore_review_choices(),
+		'target'   => genscore_review_target(),
 		'last'     => get_option( 'genscore_last_review', null ),
 		'links'    => array(
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),
@@ -109,6 +111,97 @@ function genscore_screen_data() {
 		),
 	);
 }
+
+/**
+ * A page the screen can review instead of the home page: published, public,
+ * of this site, and one the current user may read. Only the id travels; the
+ * address always comes from WordPress, never from the request.
+ *
+ * @param WP_Post|int|null $post Post.
+ * @return array|null
+ */
+function genscore_review_choice( $post ) {
+	$post = get_post( $post );
+	if ( ! $post || 'publish' !== $post->post_status || ! in_array( $post->post_type, array( 'page', 'post', 'product' ), true ) || post_password_required( $post ) || ! is_post_publicly_viewable( $post ) ) {
+		return null;
+	}
+	$url = get_permalink( $post );
+	if ( ! $url || 0 !== strpos( $url, home_url( '/' ) ) ) {
+		return null;
+	}
+	$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+	$q    = (string) wp_parse_url( $url, PHP_URL_QUERY );
+	return array(
+		'id'    => $post->ID,
+		'type'  => $post->post_type,
+		'title' => html_entity_decode( get_the_title( $post ), ENT_QUOTES, 'UTF-8' ),
+		'url'   => $url,
+		'path'  => rawurldecode( $path . ( '' !== $q ? '?' . $q : '' ) ),
+	);
+}
+
+/**
+ * The page picked in the header or from «Revisar con GenScore» (`?post=`).
+ *
+ * @return array|null
+ */
+function genscore_review_target() {
+	$id = isset( $_GET['post'] ) ? absint( $_GET['post'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only: picks which public page this screen reviews.
+	if ( ! $id || (int) get_option( 'page_on_front' ) === $id ) {
+		return null;
+	}
+	return genscore_review_choice( $id );
+}
+
+/**
+ * What the «Página revisada» menu offers: recent pages, products and posts.
+ *
+ * @return array[]
+ */
+function genscore_review_choices() {
+	$out  = array();
+	$skip = genscore_llms_skipped_pages();
+	foreach ( array( 'page' => 30, 'product' => 30, 'post' => 20 ) as $type => $limit ) {
+		if ( ! post_type_exists( $type ) ) {
+			continue;
+		}
+		$found = get_posts(
+			array(
+				'post_type'      => $type,
+				'post_status'    => 'publish',
+				'posts_per_page' => $limit,
+				'has_password'   => false,
+				'orderby'        => 'modified',
+			)
+		);
+		foreach ( $found as $p ) {
+			if ( in_array( $p->ID, $skip, true ) ) {
+				continue;
+			}
+			$c = genscore_review_choice( $p );
+			if ( $c ) {
+				$out[] = $c;
+			}
+		}
+	}
+	return $out;
+}
+
+/**
+ * «Revisar con GenScore» under each published page, post and product.
+ *
+ * @param string[] $actions Row actions.
+ * @param WP_Post  $post    Post.
+ * @return string[]
+ */
+function genscore_row_action( $actions, $post ) {
+	if ( current_user_can( 'manage_options' ) && genscore_review_choice( $post ) ) {
+		$actions['genscore'] = '<a href="' . esc_url( admin_url( 'admin.php?page=genscore&post=' . $post->ID ) ) . '">' . esc_html__( 'Revisar con GenScore', 'genscore' ) . '</a>';
+	}
+	return $actions;
+}
+add_filter( 'post_row_actions', 'genscore_row_action', 10, 2 );
+add_filter( 'page_row_actions', 'genscore_row_action', 10, 2 );
 
 /**
  * Assets, only on our screen.

@@ -33,3 +33,11 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **Cada acción AJAX comprueba nonce y `manage_options`**, y todo valor de
   entrada se contrasta con una lista fija.
 - **Publicar en WordPress.org lo decide Denis.**
+- **Mientras `*` cierre la web, ningún interruptor escribe un grupo de permitir**,
+  ni siquiera para un bot que otro plugin bloqueaba (adenda 1.0.3 de §421).
+- **La página revisada viaja como id (`?post=`), nunca como URL**: la dirección
+  sale de `get_permalink` y sólo vale si es pública y de esta web
+  (`genscore_review_choice`). La nota guardada para el Escritorio es siempre la
+  de la portada.
+- **Antes de entregar un zip se pasa el guion en un WordPress real** (con
+  WooCommerce y Plugin Check), no sólo los tests de PHP.

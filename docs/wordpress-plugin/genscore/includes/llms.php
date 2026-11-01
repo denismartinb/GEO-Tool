@@ -68,7 +68,10 @@ function genscore_post_description( $post ) {
 	if ( genscore_is_sample_content( $post->post_content ) ) {
 		return '';
 	}
-	$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( strip_shortcodes( $post->post_content ) ) ) );
+	// Block tags become spaces first, or «extracción.</p><h2>Molienda» would
+	// glue into one sentence.
+	$html = preg_replace( '#</?(p|h[1-6]|li|ul|ol|div|br|blockquote|figure|figcaption|section|table|tr|td|th)\b[^>]*>#i', ' ', strip_shortcodes( $post->post_content ) );
+	$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $html ) ) );
 	if ( '' === $text ) {
 		return '';
 	}
