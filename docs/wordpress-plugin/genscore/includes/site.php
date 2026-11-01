@@ -63,6 +63,31 @@ function genscore_sitemap_url() {
 }
 
 /**
+ * One published product to show the agent lane: a shop's home page is a
+ * shop window, and what an agent reads to buy is the product page. In stock
+ * first, most recently updated. Null without WooCommerce or products.
+ *
+ * @return string|null
+ */
+function genscore_sample_product_url() {
+	if ( ! class_exists( 'WooCommerce' ) || ! function_exists( 'wc_get_products' ) ) {
+		return null;
+	}
+	foreach ( array( 'instock', null ) as $stock ) {
+		$args = array( 'status' => 'publish', 'visibility' => 'visible', 'limit' => 1, 'orderby' => 'modified', 'order' => 'DESC', 'return' => 'ids' );
+		if ( $stock ) {
+			$args['stock_status'] = $stock;
+		}
+		$ids = wc_get_products( $args );
+		if ( $ids ) {
+			$url = get_permalink( (int) $ids[0] );
+			return $url ? $url : null;
+		}
+	}
+	return null;
+}
+
+/**
  * Site-wide facts for the screen.
  *
  * @return array
@@ -83,6 +108,7 @@ function genscore_site_facts() {
 		'robotsFile'    => file_exists( trailingslashit( ABSPATH ) . 'robots.txt' ),
 		'rootInstall'   => '/' === (string) wp_parse_url( $home, PHP_URL_PATH ) || '' === (string) wp_parse_url( $home, PHP_URL_PATH ),
 		'woocommerce'   => class_exists( 'WooCommerce' ),
+		'product'       => genscore_sample_product_url(),
 		'readingUrl'    => admin_url( 'options-reading.php' ),
 		'permalinkPlain' => '' === (string) get_option( 'permalink_structure' ),
 	);

@@ -65,7 +65,13 @@ function genscore_post_description( $post ) {
 			return genscore_one_line( $c );
 		}
 	}
-	$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( strip_shortcodes( $post->post_content ) ) ) );
+	if ( genscore_is_sample_content( $post->post_content ) ) {
+		return '';
+	}
+	// Block tags become spaces first, or «extracción.</p><h2>Molienda» would
+	// glue into one sentence.
+	$html = preg_replace( '#</?(p|h[1-6]|li|ul|ol|div|br|blockquote|figure|figcaption|section|table|tr|td|th)\b[^>]*>#i', ' ', strip_shortcodes( $post->post_content ) );
+	$text = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $html ) ) );
 	if ( '' === $text ) {
 		return '';
 	}
@@ -73,6 +79,40 @@ function genscore_post_description( $post ) {
 		return genscore_one_line( $m[1] );
 	}
 	return '';
+}
+
+/**
+ * Whether a page still holds WordPress's own template text (the privacy
+ * policy guide), which says nothing about this site.
+ *
+ * @param string $content Post content.
+ * @return bool
+ */
+function genscore_is_sample_content( $content ) {
+	foreach ( array( 'Texto sugerido', 'Suggested text', 'wp-policy-help', 'privacy-policy-tutorial' ) as $needle ) {
+		if ( false !== strpos( (string) $content, $needle ) ) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Pages that only work for a shopper with a session (WooCommerce cart,
+ * checkout and account): nothing there for an AI to read.
+ *
+ * @return int[]
+ */
+function genscore_llms_skipped_pages() {
+	$ids = array( (int) get_option( 'page_on_front' ), (int) get_option( 'wp_page_for_privacy_policy' ) );
+	if ( function_exists( 'wc_get_page_id' ) ) {
+		foreach ( array( 'cart', 'checkout', 'myaccount' ) as $wc ) {
+			$ids[] = (int) wc_get_page_id( $wc );
+		}
+	}
+	return array_values( array_filter( $ids, function ( $id ) {
+		return $id > 0;
+	} ) );
 }
 
 /**
@@ -117,7 +157,7 @@ function genscore_llms_generate() {
 		$out[] = '> ' . $tag;
 	}
 
-	$front = (int) get_option( 'page_on_front' );
+	$skip  = genscore_llms_skipped_pages();
 	$pages = get_posts(
 		array(
 			'post_type'      => 'page',
@@ -129,7 +169,7 @@ function genscore_llms_generate() {
 	);
 	$lines = array();
 	foreach ( $pages as $p ) {
-		if ( $p->ID === $front || (int) get_option( 'wp_page_for_privacy_policy' ) === $p->ID ) {
+		if ( in_array( (int) $p->ID, $skip, true ) ) {
 			continue;
 		}
 		$l = genscore_llms_line( $p );
