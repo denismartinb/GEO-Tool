@@ -117,3 +117,19 @@ test("a home page that sells nothing takes Agentes from the shop it found (EXT-S
   const fake = S.scorePage(Object.assign({}, home, { shop: { state: "found", path: "/x", facts: { url: "http://localhost:8302/x", path: "/x", ld: F.b.ld, og: {}, microPrice: false, buy: null } } }), NOW);
   assert.equal(fake.shop.state, "none");
 });
+
+test("the llms.txt draft lists the menu and footer links with their own text (EXT-LLMS-LINKS-1)", () => {
+  const links = { main: [{ text: "Móvil", url: "https://x.es/movil/" }, { text: "Fibra", url: "https://x.es/fibra/" }], footer: [{ text: "Ayuda", url: "https://x.es/ayuda/" }], legal: [{ text: "Privacidad", url: "https://x.es/privacidad/" }] };
+  const base = Object.assign({}, F.b, { llms: { status: 404, ok: false } });
+  const fx = (f) => S.scorePage(f, NOW).fixes.find((x) => x.id === "llms");
+  const d = fx(Object.assign({}, base, { links, siteName: "Marca X" }));
+  assert.match(d.snippet, /^# Marca X\n/);
+  assert.match(d.snippet, /## Páginas principales[\s\S]*- \[Móvil\]\(https:\/\/x\.es\/movil\/\)\n- \[Fibra\]/);
+  assert.match(d.snippet, /## Más información\n\n- \[Ayuda\]/);
+  assert.match(d.snippet, /## Optional\n\n- \[Privacidad\]/);
+  assert.doesNotMatch(d.snippet, /: \S/m, "no invented description after a link");
+  /* without links it still works, from this page alone */
+  const solo = fx(base);
+  assert.doesNotMatch(solo.snippet, /## Más información/);
+  assert.match(solo.why, /parte de esta página/);
+});

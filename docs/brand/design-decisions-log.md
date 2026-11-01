@@ -28437,3 +28437,24 @@ Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una 
 - **EXT-SHOP-FIND-1 (Denis, 2026-11-01).** En una portada que no vende nada, la extensión busca la tienda en la misma web sin LLM, como `lib/agentic-audit/find-product.ts`: el catálogo público (Shopify `/products.json`, WooCommerce Store API), los enlaces de la propia página (ruta de ficha o menú «Tienda», «Productos», «Dispositivos»…) y, si no hay nada, el sitemap. Lee como mucho dos candidatas, sólo del mismo origen, y una cuenta sólo si su JSON-LD trae `Product` u oferta. Con tienda, Agentes es la nota de esa página y el panel dice «GenScore detecta tu tienda en /ruta» con un botón para abrirla; sin ella, «GenScore no detecta tu tienda ni tus productos de forma estándar». La nota SEO + IA de la portada no cambia. Sólo en la portada (`/`), para no avisar en cada artículo de un blog.
 
 **Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.
+
+## §402 · EXT-LLMS-LINKS-1 + EXT-SHOP-FIND-2: la extensión 1.0.2 propone un llms.txt con los enlaces de la web y encuentra la tienda de las grandes superficies (2026-11-01)
+
+**Qué se decidió.** Dos arreglos de la extensión de Chrome, a partir de lo que vio Denis en vodafone.es y carrefour.es.
+
+- **El llms.txt propuesto deja de ser una sola línea.** Antes solo llevaba la página abierta. Ahora `collect.js` lee los enlaces del menú y del pie de la propia página (`header`, `nav`, `footer` y sus roles). Solo cuenta los del mismo origen, con su texto, y quita duplicados. También deja fuera los de cuenta, cesta y búsqueda. `score.js` los ordena en tres apartados:
+  - «Páginas principales» (máximo 12): primero un enlace por sección, para que un megamenú no llene la lista con hijos de la primera;
+  - «Más información», con los del pie (máximo 8);
+  - «Optional», con los legales (máximo 4).
+
+  El nombre sale de `og:site_name` si existe. No se inventa ninguna descripción: cada línea es un enlace con el texto que tiene en la web, y la tarjeta invita a añadir una frase. Es la misma regla de la consola (`lib/web-audit/llms-txt.ts`: nada de texto de modelo en un fichero que el cliente publica). Aquí no hacen falta marcadores porque el texto del enlace es real.
+- **La búsqueda de la tienda llega a las grandes superficies.**
+  - Las rutas de ficha reconocen también `/<id>/p` (estilo Carrefour) y `-p123.html`.
+  - El sitemap ya no es solo el primero de robots.txt: se leen todos los que nombra.
+  - Se sigue un nivel de índice de sitemaps, prefiriendo el hijo que nombra productos.
+  - Como mucho se leen cuatro ficheros de sitemap y nunca un `.gz`.
+- **Esas lecturas mandan las cookies de la propia web** (`credentials: "same-origin"`, solo mismo origen). Las tiendas grandes están detrás de un control antibots, y sin el pase del visitante responden con una página de desafío. Lo comprobamos con Carrefour: desde un navegador sin pase, sus sitemaps de catálogo devuelven 403 «Just a moment». robots.txt, llms.txt y el HEAD siguen sin cookies.
+
+**Por qué.** En vodafone.es el llms.txt propuesto tenía una sola línea. En carrefour.es, una tienda, no salía nada sobre agentes: su portada no tiene datos de producto, y su catálogo solo se ve por sitemaps de índice que no se leían. Además, las primeras capturas de Denis eran de la versión 1.0.0 de la tienda, que todavía no buscaba la tienda.
+
+**Pendiente o sin verificar.** Desde aquí no se pudo ver la portada real de Carrefour ni la de Vodafone, porque nuestro navegador recibe el desafío antibots. El caso de los sitemaps se probó con una tienda de prueba en local: índice, hijo de productos y ficha `/R-521/p`. La comprobación real la hace Denis cargando la extensión sin empaquetar. Si una tienda solo publica sitemaps `.gz`, seguirá saliendo «no detecta tu tienda».

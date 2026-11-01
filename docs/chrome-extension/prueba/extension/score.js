@@ -117,6 +117,23 @@
   const iso = (d) => d.toISOString().slice(0, 10);
   const MONTHS = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
   const longDate = (d) => `${d.getUTCDate()} de ${MONTHS[d.getUTCMonth()]} de ${d.getUTCFullYear()}`;
+  /* llms.txt draft (log §402): the page's own menu and footer links with
+     their own text, nothing invented. Each line is a link; the reader adds
+     a short sentence after it if they want. */
+  function llmsDraft(f, brand, cleanUrl, h1) {
+    const L = f.links || { main: [], footer: [], legal: [] };
+    const name = (f.siteName || brand).replace(/[[\]]/g, "");
+    const li = (x) => `- [${x.text}](${x.url})`;
+    const out = [`# ${name}`, "", `> ${trimTo(f.description || (f.lead && f.lead.text) || f.title, 200)}`, "", "## Páginas principales", "",
+      `- [${(f.path === "/" || f.path === "" ? "Portada" : (f.title || h1)).replace(/[[\]]/g, "")}](${cleanUrl})`].concat(L.main.map(li));
+    if (L.footer.length) out.push("", "## Más información", "", ...L.footer.map(li));
+    if (L.legal.length) out.push("", "## Optional", "", ...L.legal.map(li));
+    return out.join("\n");
+  }
+  function llmsWhy(f) {
+    const n = f.links ? f.links.main.length + f.links.footer.length : 0;
+    return n ? "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este sale de los enlaces de tu menú y tu pie: quita lo que no importe y, si quieres, añade una frase tras cada enlace." : "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este parte de esta página: añade tus páginas principales.";
+  }
   function trimTo(s, n) {
     s = String(s || "").replace(/\s+/g, " ").trim();
     if (s.length <= n) return s;
@@ -313,7 +330,7 @@
     push("canon", { t: f.canonical ? "Revisa la canónica: apunta a otra página" : "Añade una URL canónica", why: f.canonical ? "Google tomará la otra como la buena." : "Evita que Google dude entre versiones de la misma página.", snippet: f.canonical ? null : `<link rel="canonical" href="${attr(cleanUrl)}">`, copyWhat: "la etiqueta canónica" });
     push("h1", { t: f.h1 && f.h1.length > 1 ? `Deja un solo h1 (ahora hay ${f.h1.length})` : "Añade un h1 con el tema de la página", why: "Es el título que leen Google y la IA dentro de la página." });
     push("lang", { t: "Declara el idioma de la página", why: "Ayuda a Google y a la IA a enseñarla en el idioma correcto.", snippet: '<html lang="es">', copyWhat: "el atributo de idioma" });
-    push("llms", { t: "Publica un <code class=\"p\">llms.txt</code>", why: "Un resumen de tu web para los motores de IA, en la raíz del dominio. Este parte de esta página: añade tus páginas principales.", snippet: `# ${brand}\n\n> ${trimTo(f.description || (f.lead && f.lead.text) || f.title, 200)}\n\n## Páginas principales\n\n- [${(f.title || h1).replace(/[[\]]/g, "")}](${cleanUrl})`, copyWhat: "el llms.txt" });
+    push("llms", { t: "Publica un <code class=\"p\">llms.txt</code>", why: llmsWhy(f), snippet: llmsDraft(f, brand, cleanUrl, h1), copyWhat: "el llms.txt" });
     if (x.service) {
       push("prod", { t: "Pon el nombre de lo que vendes en el JSON-LD", why: "Un agente no adivina: lee el nombre y la oferta del bloque que describe tu servicio.", snippet: serviceLd(h1, cleanUrl, x.offering), copyWhat: "el bloque JSON-LD" });
       push("price", { t: "Pon el precio en los datos de tu plan", why: "Si sólo está en la página, un agente puede no verlo. Va en <code class=\"p\">offers.price</code>: cambia PRECIO por el tuyo.", snippet: serviceOfferLd(x.offering, cleanUrl), copyWhat: "la oferta" });

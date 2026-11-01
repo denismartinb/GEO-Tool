@@ -128,6 +128,39 @@ async function collectPageFacts() {
   const RET = /(devoluci|devolver|cambios y devol|returns?\b|refund)/i;
   const retEl = qa("a[href]").find((a) => RET.test(label(a)) || /devoluc|returns|refund/i.test(a.getAttribute("href") || ""));
 
+  /* ---------- menu and footer links, for the llms.txt draft ----------
+     Real links with their own text, same origin. Account, basket and search
+     are left out; legal pages go to the «Optional» section. */
+  const SKIP_LINK = /(login|signin|sign-in|registro|register|cuenta|account|mi-area|cart|cesta|carrito|checkout|wishlist|favoritos|buscar|search)/i;
+  const LEGAL_LINK = /(privacidad|privacy|cookies|aviso-legal|legal|condiciones|terminos|terms|accesibilidad)/i;
+  function siteLinks() {
+    const seen = new Set([location.pathname.replace(/\/+$/, "") || "/"]);
+    const out = { main: [], footer: [], legal: [] };
+    for (const a of qa("header a[href], nav a[href], [role=navigation] a[href], [role=banner] a[href], footer a[href], [role=contentinfo] a[href]")) {
+      let u; try { u = new URL(a.getAttribute("href"), location.href); } catch (e) { continue; }
+      if (u.origin !== location.origin || !/^https?:$/.test(u.protocol)) continue;
+      const key = u.pathname.replace(/\/+$/, "") || "/";
+      const text = clean(a.innerText || a.textContent || a.getAttribute("aria-label") || a.getAttribute("title") || "").replace(/[[\]]/g, "").replace(/(?<=\p{Ll}|\s)(Nuevo|New)$/u, "").trim();
+      if (seen.has(key) || text.length < 2 || text.length > 48 || SKIP_LINK.test(key)) continue;
+      seen.add(key);
+      const item = { text, url: u.origin + u.pathname };
+      if (LEGAL_LINK.test(key) || LEGAL_LINK.test(text)) out.legal.push(item);
+      else if (a.closest("footer,[role=contentinfo]")) out.footer.push(item);
+      else out.main.push(item);
+    }
+    /* a mega menu lists dozens of children: take one link per section first */
+    const spread = (list, n) => {
+      const segs = list.map((x) => new URL(x.url).pathname.split("/").filter(Boolean));
+      let d = 0; while (segs.length > 1 && segs.every((s) => s[d] && s[d] === segs[0][d])) d++;
+      const first = [], rest = [], used = new Set();
+      list.forEach((x, i) => { const k = segs[i][d] || ""; (used.has(k) ? rest : (used.add(k), first)).push(x); });
+      return first.concat(rest).slice(0, n);
+    };
+    return { main: spread(out.main, 12), footer: spread(out.footer, 8), legal: out.legal.slice(0, 4) };
+  }
+  const links = siteLinks();
+  const siteName = meta("og:site_name") || meta("application-name") || null;
+
   /* ---------- same-origin files ---------- */
   const [robots, llms, head] = await Promise.all([get("/robots.txt"), get("/llms.txt"), get(location.href, { method: "HEAD" })]);
   const xRobots = head.headers ? clean(head.headers.get("x-robots-tag") || "").toLowerCase() : "";
@@ -138,11 +171,13 @@ async function collectPageFacts() {
      catalogue (Shopify, WooCommerce), then the page's own links (a product
      path, or a menu entry like «Tienda» or «Dispositivos»), then the sitemap.
      At most two candidate pages are read, same origin only, and one counts
-     only if its JSON-LD really carries a Product or an Offer. */
+     only if its JSON-LD really carries a Product or an Offer. These reads
+     send the site's own cookies (same origin only): big shops sit behind a
+     bot check, and without the visitor's pass they answer a challenge page. */
   const sellsHere = !!(product || LD.offering || LD.offerCount || microPrice || (og.type && /product/i.test(og.type)) || (buyEl && /(carrito|cesta|comprar|cart|bag|basket|buy)/i.test(label(buyEl))));
   const isHome = location.pathname.replace(/\/+$/, "") === "" ;
   async function findShop() {
-    const PRODUCT_PATH = /\/(?:products?|productos?|p|dp|item|articulo)\/[^/?#]+\/?$|\/\d+-[a-z0-9-]+\.html$/i;
+    const PRODUCT_PATH = /\/(?:products?|productos?|p|dp|item|articulo)\/[^/?#]+\/?$|\/\d+-[a-z0-9-]+\.html$|\/[^/?#]*\d[^/?#]*\/p\/?$|-p-?\d+\.html$/i;
     const SHOP_WORD = /^(tienda( online)?|shop|store|productos|cat[aá]logo|comprar|dispositivos|m[oó]viles|ofertas)$/i;
     const SHOP_PATH = /^\/(tienda|shop|store|productos|catalogo|dispositivos|moviles|collections\/all|ofertas)\/?$/i;
     const same = (h) => { try { const u = new URL(h, location.href); return u.origin === location.origin && u.pathname !== location.pathname ? u : null; } catch (e) { return null; } };
@@ -160,15 +195,28 @@ async function collectPageFacts() {
     const menu = links.find((a) => { const u = same(a.getAttribute("href")); return u && (SHOP_WORD.test(label(a)) || SHOP_PATH.test(u.pathname)); });
     if (menu) add(same(menu.getAttribute("href")), "menu");
     if (!tries.length) {
-      const sm = (robots.status === 200 && (robots.text.match(/^\s*sitemap:\s*(\S+)/im) || [])[1]) || "/sitemap.xml";
-      const r = await get(sm);
-      if (r.status === 200 && /<urlset/i.test(r.text)) {
-        const loc = [...r.text.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => same(m[1].replace(/&amp;/g, "&"))).find((u) => u && PRODUCT_PATH.test(u.pathname));
-        add(loc, "sitemap");
+      /* every sitemap robots.txt names (big shops split them by section), and
+         one level of sitemap index, preferring a child that names products.
+         At most four sitemap files are read; .gz is skipped. */
+      const locs = (t) => [...t.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map((m) => m[1].replace(/&amp;/g, "&"));
+      const sameAny = (h) => { try { const u = new URL(h, location.href); return u.origin === location.origin && !/\.gz$/i.test(u.pathname) ? u.pathname + u.search : null; } catch (e) { return null; } };
+      const queue = ((robots.status === 200 && [...robots.text.matchAll(/^\s*sitemap:\s*(\S+)/gim)].map((m) => sameAny(m[1])).filter(Boolean)) || []);
+      if (!queue.length) queue.push("/sitemap.xml");
+      const PRODUCTISH = /product|producto|articulo|item|food|tienda|shop|catalog|tecno|p-\d/i;
+      for (let read = 0; read < 4 && queue.length && !tries.length; read++) {
+        const r = await get(queue.shift(), { max: 3000000, ms: 6000, credentials: "same-origin" });
+        if (r.status !== 200) continue;
+        if (/<sitemapindex/i.test(r.text)) {
+          const kids = locs(r.text).map(sameAny).filter(Boolean);
+          const pick = kids.find((k) => PRODUCTISH.test(k)) || kids[0];
+          if (pick) queue.unshift(pick);
+        } else if (/<urlset/i.test(r.text)) {
+          add(locs(r.text).map(same).find((u) => u && PRODUCT_PATH.test(u.pathname)), "sitemap");
+        }
       }
     }
     for (const [path, source] of tries.slice(0, 2)) {
-      const r = await get(path, { max: 3000000, ms: 6000 });
+      const r = await get(path, { max: 3000000, ms: 6000, credentials: "same-origin" });
       if (r.status !== 200 || !/html/i.test(r.type)) continue;
       const doc = new DOMParser().parseFromString(r.text, "text/html");
       const ld = readLd(doc);
@@ -209,6 +257,8 @@ async function collectPageFacts() {
     visibleDate: visibleDate || metaDate || (article && (article.modified || article.published)) || null,
     lead,
     shop,
+    links,
+    siteName,
     words: words(mainText),
     buy: buyEl ? label(buyEl).slice(0, 40) : null,
     returnsLink: !!retEl,
