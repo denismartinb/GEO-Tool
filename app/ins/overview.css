@@ -241,7 +241,8 @@
 .ins .ag-up .btn{margin-top:14px}
 
 /* ---- GSC-OVERVIEW-RICH-1 (log §413): the Google half reads like the Chrome panel ---- */
-.ins .gx .gx-top{display:flex;align-items:baseline;gap:10px}
+.ins .gx,.ins .gx .gx-a,.ins .gx .gx-b,.ins .gx .gx-ch,.ins .gx .gx-near{min-width:0}
+.ins .gx .gx-top{display:flex;align-items:baseline;flex-wrap:wrap;gap:10px}
 .ins .gx .gx-dp{font-size:12.5px;font-weight:600;padding:2px 8px;border-radius:99px}
 .ins .gx .gx-dp.up{color:var(--pos);background:var(--pos-tint)}
 .ins .gx .gx-dp.dn{color:var(--warm);background:var(--warm-tint)}
@@ -249,24 +250,42 @@
 .ins .gx .gx-mv{font-style:normal;font-size:12px;font-weight:600;margin-left:4px}
 .ins .gx .gx-mv.up{color:var(--pos)}
 .ins .gx .gx-mv.dn{color:var(--warm)}
-.ins .gx .gx-ch{margin-top:16px;color:var(--blue)}
-.ins .gx .gx-cl,.ins .gx .gx-dl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-3)}
-.ins .gx .gx-cl span:first-child{color:var(--ink-2);font-weight:550}
-.ins .gx .gx-pc{display:block;width:100%;height:74px;margin:6px 0 4px}
-.ins .gx .gx-near{margin-top:16px;padding:12px 12px 10px;border-radius:12px;background:var(--blue-tint)}
-.ins .gx .gx-nh{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:12px;color:var(--ink-3)}
-.ins .gx .gx-nh b{font-size:13px;color:var(--ink);font-weight:600}
-.ins .gx .gx-q{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:13px}
-.ins .gx .gx-q .pp{flex:none;min-width:40px;text-align:center;font-size:12px;font-weight:600;color:var(--blue-ink);background:var(--surface);border-radius:7px;padding:2px 6px}
-.ins .gx .gx-q .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ins .gx .gx-near p{margin:10px 0 0;font-size:12px;color:var(--ink-2)}
+.ins .gx .trio{gap:22px}
+.ins .gx .trio>span{white-space:nowrap}
+/* Subheaders like the kit's `.rh`: title left, hint right, one line. */
+.ins .gx .gx-sh{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-bottom:8px;border-bottom:1px solid var(--rule-2)}
+.ins .gx .gx-sh b{font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ins .gx .gx-sh span{font-size:12px;color:var(--ink-3);white-space:nowrap;flex:none}
+/* The chart: a stretched SVG for the line, HTML for every label, so text
+   keeps its size whatever the card's width. */
+.ins .gx .gx-ch{margin-top:18px}
+.ins .gx .gx-plot{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:8px;margin-top:14px}
+.ins .gx .gx-yl{position:relative;font-size:10.5px;color:var(--ink-3);font-variant-numeric:tabular-nums;text-align:right;min-width:16px}
+.ins .gx .gx-yl span{position:absolute;right:0;transform:translateY(-50%);line-height:1}
+.ins .gx .gx-box{position:relative;height:96px;margin-right:36px}
+.ins .gx .gx-box svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.ins .gx .gx-pt,.ins .gx .gx-end{position:absolute;border-radius:50%;background:var(--blue);transform:translate(-50%,-50%)}
+.ins .gx .gx-pt{width:4px;height:4px}
+.ins .gx .gx-end{width:8px;height:8px;box-shadow:0 0 0 2px var(--surface)}
+.ins .gx .gx-ev{position:absolute;left:100%;margin-left:8px;transform:translateY(-50%);font-size:12px;font-weight:650;color:var(--ink);line-height:1}
+.ins .gx .gx-xl{grid-column:2;display:flex;justify-content:space-between;margin:8px 36px 0 0;font-size:10.5px;color:var(--ink-3)}
+.ins .gx .gx-near{margin-top:18px}
+.ins .gx .gx-q{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--rule-2);font-size:13px}
+.ins .gx .gx-q .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.ins .gx .gx-q .pp{flex:none;min-width:42px;text-align:center;font-size:12px;font-weight:600;color:var(--blue-ink);background:var(--blue-tint);border-radius:99px;padding:2px 8px}
+.ins .gx .gx-near p{margin:10px 0 0;font-size:12px;line-height:1.45;color:var(--ink-3)}
 /* Desktop (Denis 2026-11-01): the chart and «Casi en la página 1» go in a row
-   under both halves, so the card is shorter and Salud SEO leaves no gap. */
+   under both halves, so the card is shorter and Salud SEO leaves no gap.
+   Every track is minmax(0,…) so a long query can never push past the card. */
 @media (min-width:761px){
+ .ins .seo3.two{grid-template-columns:minmax(0,1fr) minmax(0,1fr);container-type:inline-size}
  .ins .seo3.two>.gx{display:contents}
  .ins .seo3.two .gx-a{padding:4px 0 6px 22px}
- .ins .seo3.two .gx-a .trio>span,.ins .seo3.two .gx-a .trio b{white-space:nowrap}
- .ins .seo3.two .gx-b{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start;margin-top:16px;padding-top:16px;border-top:1px solid var(--rule)}
+ .ins .seo3.two .gx-b{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:18px;padding-top:18px;border-top:1px solid var(--rule)}
  .ins .seo3.two .gx-b>:only-child{grid-column:1/-1}
  .ins .seo3.two .gx-b .gx-ch,.ins .seo3.two .gx-b .gx-near{margin-top:0}
+}
+/* A narrow card: chart and list one above the other. */
+@container (max-width:540px){
+ .ins .seo3.two .gx-b{grid-template-columns:minmax(0,1fr);gap:22px}
 }

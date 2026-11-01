@@ -28627,4 +28627,11 @@ El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se 
 
 **Cómo.** Las dos leen `loadSearchConsoleScreen` sin inspecciones, la misma entrada `screen-rows` de 30 min que Recomendaciones y la extensión; nada se guarda. Visión general deja `loadSearchConsoleOverview` (lo sigue usando `/admin/panel`). Auditoría técnica pinta primero la tarjeta de siempre como `fallback` de un `Suspense` y la cambia por la de Google cuando llega (`SeoIssuesWithGoogle`), así Google nunca retrasa la auditoría. `insights.pageStats` (`buildPageStats`) guarda todas las páginas que devolvió Google con su búsqueda principal; `affectedPagesWithGoogle` las cruza por `urlKey`.
 
+**Segunda pasada (Denis, 2026-11-01: «diséñalo bien con el nuevo UI de la consola» y «mal maquetado ese mejora, no declarado… no se entiende y se pega»).**
+- En Visión general, con la tarjeta a su ancho real (unos 575 px), el rótulo «Evolución del puesto / Mejor arriba» partía en dos líneas y la caja de «Casi en la página 1» se salía de la tarjeta: las columnas eran `1fr` y una búsqueda larga sin cortes empujaba. Ahora todas las pistas son `minmax(0,…)`, la búsqueda se corta con «…», y con la tarjeta estrecha (`@container`, menos de 540 px) el gráfico y la lista van uno encima del otro.
+- El gráfico sigue el estilo de `LineChart` del kit: líneas de guía con su puesto, fechas de inicio y fin, y el último día marcado con su valor. La línea es un SVG estirado con trazo que no escala, y todas las etiquetas son HTML colocadas por porcentaje, así que el texto no crece ni encoge con la tarjeta.
+- «Casi en la página 1» deja la caja azul por filas con línea, como el resto de la consola, y pierde el rótulo «Puestos 11 a 20» (la frase de Denis ya lo explica). El cambio de impresiones va junto a la cifra, como el del puesto.
+- En Auditoría técnica, la fila de un problema lleva el título sola en la primera línea; la segunda empieza por la gravedad con su punto («● Mejora», «○ Aviso», «● Crítico»), sigue el alcance y luego las etiquetas, con aire entre ellas. El punto suelto a la izquierda desaparece.
+- El alcance de «Negocio local en datos estructurados» pasa de «No declarado» a «Ninguna página lo declara».
+
 **Pendiente.** Nada. No retira ningún camino de recuperación: sin conexión, todo queda como antes.

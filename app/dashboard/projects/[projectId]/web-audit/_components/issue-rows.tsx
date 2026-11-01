@@ -72,11 +72,13 @@ export function IssueRow({
       <summary>
         <span className="sa-iss-t">
           <span className="sa-iss-top">
-            <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
             <b>{meta.label}</b>
             {isNewSeoCheck(issue.check) && <NewBadge />}
           </span>
+          {/* Log §413 (Denis, 2026-11-01): the severity leads the second
+              line with its own dot, so the title reads alone and nothing sticks. */}
           <span className="sa-iss-sub">
+            <span className={`sa-sevpill sa-sevpill-${issue.severity}`}>{ISSUE_SEVERITY_LABELS[issue.severity][0]}</span>
             <span className="sa-iss-scope">{scopeLabel}</span>
             {hasFix && (
               <span className="badge wa2-fix-ready">

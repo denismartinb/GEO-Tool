@@ -94,44 +94,96 @@ function dailyPositions(daily: DailyPoint[]): (number | null)[] {
   return daily.map((d) => (d.impressions > 0 && d.position && d.position > 0 ? d.position : null));
 }
 
-/** Average position per day, best at the top. Null when fewer than two days have one. */
+/** Gridlines for a position axis: round steps a little outside the data. */
+function positionGrid(lo: number, hi: number): { min: number; max: number; grid: number[] } {
+  const span = hi - lo;
+  const step = span > 20 ? 10 : span > 8 ? 5 : span > 3 ? 2 : 1;
+  const min = Math.max(1, Math.floor(lo / step) * step);
+  let max = Math.ceil(hi / step) * step;
+  if (max <= min) max = min + step;
+  const grid: number[] = [];
+  for (let v = min; v <= max; v += step) grid.push(v);
+  return { min, max, grid };
+}
+
+/**
+ * Average position per day in the console's line style (`LineChart`):
+ * gridlines with their position, best at the top, the last day marked with
+ * its value. A day without impressions breaks the line. Null when fewer
+ * than two days have a position.
+ *
+ * The card's width changes a lot (phone, narrow and wide desktop), so the
+ * line is a stretched SVG with non-scaling strokes and every label is HTML
+ * placed by percentage: text never grows or shrinks with the card.
+ */
 function PositionChart({ daily }: { daily: DailyPoint[] }) {
   const vals = dailyPositions(daily);
   const known = vals.filter((v): v is number => v !== null);
   if (known.length < 2) return null;
-  const w = 300;
-  const h = 74;
-  const lo = Math.min(...known);
-  const hi = Math.max(...known);
-  const x = (i: number) => ((i / (vals.length - 1)) * w).toFixed(1);
-  const y = (v: number) => (6 + ((v - lo) / Math.max(1, hi - lo)) * (h - 14)).toFixed(1);
-  const segments: string[][] = [];
-  let run: string[] = [];
+  const { min, max, grid } = positionGrid(Math.min(...known), Math.max(...known));
+  // Percent of the plot box. Position 1 is best: smaller values sit higher.
+  const Y = (v: number) => ((v - min) / (max - min)) * 100;
+  const X = (i: number) => (i * 100) / Math.max(1, vals.length - 1);
+  const segments: { i: number; v: number }[][] = [];
+  let run: { i: number; v: number }[] = [];
   vals.forEach((v, i) => {
     if (v === null) {
       if (run.length) segments.push(run);
       run = [];
-    } else run.push(`${x(i)},${y(v)}`);
+    } else run.push({ i, v });
   });
   if (run.length) segments.push(run);
+  let lastIdx = vals.length - 1;
+  while (vals[lastIdx] === null) lastIdx -= 1;
+  const lastVal = vals[lastIdx] as number;
   return (
     <div className="gx-ch">
-      <div className="gx-cl">
-        <span>Evolución del puesto</span>
-        <span>Mejor arriba ↑</span>
+      <div className="gx-sh">
+        <b>Evolución del puesto</b>
+        <span>Mejor arriba</span>
       </div>
-      <svg className="gx-pc" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" role="img" aria-label="Evolución del puesto medio">
-        {segments.map((seg, i) =>
-          seg.length > 1 ? (
-            <polyline key={i} points={seg.join(" ")} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-          ) : (
-            <circle key={i} cx={seg[0].split(",")[0]} cy={seg[0].split(",")[1]} r="1.6" fill="currentColor" />
-          )
-        )}
-      </svg>
-      <div className="gx-dl">
-        <span>{fmtDay(daily[0].date)}</span>
-        <span>{fmtDay(daily[daily.length - 1].date)}</span>
+      <div className="gx-plot" role="img" aria-label={`Puesto medio por día, del ${fmtDay(daily[0].date)} al ${fmtDay(daily[daily.length - 1].date)}`}>
+        <div className="gx-yl" aria-hidden="true">
+          {grid.map((v) => (
+            <span key={v} style={{ top: `${Y(v)}%` }}>
+              {v}
+            </span>
+          ))}
+        </div>
+        <div className="gx-box" aria-hidden="true">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none">
+            {grid.map((v) => (
+              <line key={v} x1={0} x2={100} y1={Y(v)} y2={Y(v)} stroke="var(--rule-2)" vectorEffect="non-scaling-stroke" />
+            ))}
+            {segments.map((seg, k) =>
+              seg.length > 1 ? (
+                <polyline
+                  key={k}
+                  points={seg.map((p) => `${X(p.i).toFixed(2)},${Y(p.v).toFixed(2)}`).join(" ")}
+                  fill="none"
+                  stroke="var(--blue)"
+                  strokeWidth={1.6}
+                  strokeLinejoin="round"
+                  strokeLinecap="round"
+                  vectorEffect="non-scaling-stroke"
+                />
+              ) : null
+            )}
+          </svg>
+          {segments
+            .filter((seg) => seg.length === 1)
+            .map((seg) => (
+              <i key={seg[0].i} className="gx-pt" style={{ left: `${X(seg[0].i)}%`, top: `${Y(seg[0].v)}%` }} />
+            ))}
+          <i className="gx-end" style={{ left: `${X(lastIdx)}%`, top: `${Y(lastVal)}%` }} />
+          <b className="gx-ev num" style={{ top: `${Y(lastVal)}%` }}>
+            {fmtPosition(lastVal)}
+          </b>
+        </div>
+        <div className="gx-xl" aria-hidden="true">
+          <span>{fmtDay(daily[0].date)}</span>
+          <span>{fmtDay(daily[daily.length - 1].date)}</span>
+        </div>
       </div>
     </div>
   );
@@ -203,9 +255,13 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
             Puesto medio
           </span>
           <span>
-            <b className="num">{fmtInt(impressions.value)}</b>
+            <b className="num">
+              {fmtInt(impressions.value)}
+              {impPct !== null && Math.round(impPct) !== 0 ? (
+                <i className={`gx-mv ${impPct > 0 ? "up" : "dn"}`}>{fmtDeltaPct(impPct)}</i>
+              ) : null}
+            </b>
             Impresiones
-            {impPct !== null && Math.round(impPct) !== 0 ? ` · ${fmtDeltaPct(impPct)}` : ""}
           </span>
         </div>
       </div>
@@ -214,14 +270,13 @@ export function GscOverviewHalfView({ projectId, state }: { projectId: string; s
           {hasChart ? <PositionChart daily={daily} /> : null}
           {near.length > 0 ? (
             <div className="gx-near">
-              <div className="gx-nh">
+              <div className="gx-sh">
                 <b>Casi en la página 1</b>
-                <span>Puestos 11 a 20</span>
               </div>
               {near.map((q) => (
                 <div key={q.query} className="gx-q">
-                  <span className="pp num">{fmtPosition(q.position)}</span>
                   <span className="t">{q.query}</span>
+                  <span className="pp num">{fmtPosition(q.position)}</span>
                 </div>
               ))}
               {/* Denis's line (2026-11-01, log §411). */}

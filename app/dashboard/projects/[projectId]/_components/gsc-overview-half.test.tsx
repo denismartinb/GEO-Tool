@@ -40,7 +40,8 @@ describe("GscOverviewHalfView", () => {
     expect(html).toContain("9,6");
     expect(html).toContain("▲ 1,3");
     expect(html).toContain("30.120");
-    expect(html).toContain("Impresiones · +8%");
+    expect(html).toContain('<i class="gx-mv up">+8%</i>');
+    expect(html).toContain("Impresiones");
     expect(html).toContain("gx-sp");
   });
 
@@ -50,7 +51,9 @@ describe("GscOverviewHalfView", () => {
     expect(html).toContain("4 oct");
     expect(html).toContain("31 oct");
     // 2026-10-05 has no impressions: the line breaks there.
-    expect(html.match(/<circle /g)?.length).toBe(1);
+    // The lone day before the gap is a dot; the last day carries its value.
+    expect(html.match(/class="gx-pt"/g)?.length).toBe(1);
+    expect(html).toContain("gx-end");
     expect(html.match(/<polyline /g)?.length).toBe(2);
   });
 
