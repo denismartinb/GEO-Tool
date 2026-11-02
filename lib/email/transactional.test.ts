@@ -32,6 +32,7 @@ import {
   sendTrialEndedEmail,
   sendLlmIncidentAlertEmail,
   sendNewSignupOpsAlertEmail,
+  sendFirstScanOpsAlertEmail,
   sendPaymentFailedEmail,
   sendScanHealthAlertEmail,
   sendScoreDropAlertEmail,
@@ -128,6 +129,25 @@ const opsAlerts: Array<[string, () => Promise<void>]> = [
         createdAt: new Date("2026-10-28T10:00:00Z"),
         status: "pending"
       })
+  ],
+  [
+    "sendFirstScanOpsAlertEmail",
+    async () => {
+      await sendFirstScanOpsAlertEmail({
+        domain: "ejemplo.com",
+        projectId: "p1",
+        runId: "r1",
+        ownerEmail: CUSTOMER,
+        ownerUserId: "u1",
+        planId: "pro",
+        triggerSource: "user",
+        prompts: 17,
+        samples: 1,
+        engines: ["gemini", "claude", "openai", "perplexity"],
+        internalAccount: false,
+        createdAt: new Date("2026-11-02T10:00:00Z")
+      });
+    }
   ]
 ];
 
@@ -164,6 +184,32 @@ describe("a quién va cada correo", () => {
     expect(payload.to).toBe(OPS);
     expect(payload.subject).toContain("sin confirmar");
     expect(payload.html).toContain("pendiente de confirmar");
+  });
+
+  it("el aviso de alta lleva el dominio en el asunto y el cuerpo cuando se conoce (log §441)", async () => {
+    await sendNewSignupOpsAlertEmail({
+      email: CUSTOMER,
+      userId: "u1",
+      method: "password",
+      planId: "pro",
+      trialEndsAt: null,
+      createdAt: new Date("2026-11-02T10:00:00Z"),
+      status: "pending",
+      domain: "ejemplo.es"
+    });
+    expect(lastPayload().subject).toContain("ejemplo.es");
+    expect(lastPayload().html).toContain("Dominio indicado");
+  });
+
+  it("el aviso de primer escaneo nombra el dominio, la cuenta y las llamadas del run (log §441)", async () => {
+    await opsAlerts[5][1]();
+    const payload = lastPayload();
+
+    expect(payload.to).toBe(OPS);
+    expect(payload.subject).toContain("Primer escaneo · ejemplo.com");
+    expect(payload.html).toContain(CUSTOMER);
+    expect(payload.html).toContain("68 (17 prompts × 1 muestra × 4 motores)");
+    expect(payload.tags).toEqual([{ name: "kind", value: "ops_first_scan" }]);
   });
 
   it("los correos de cliente van a la dirección que les pasan", async () => {
