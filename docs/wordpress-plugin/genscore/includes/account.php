@@ -73,11 +73,14 @@ function genscore_oauth_metadata() {
  */
 function genscore_oauth_client_id( $meta ) {
 	$redirect = genscore_oauth_redirect_uri();
-	$client   = get_option( GENSCORE_CLIENT_OPTION );
-	if ( is_array( $client ) && ! empty( $client['id'] ) && isset( $client['redirect'] ) && $client['redirect'] === $redirect ) {
+	$facts    = genscore_site_facts();
+	/* translators: %s: the site's domain. GenScore's consent page reads «Conectar <name> con GenScore», so the name never says GenScore. */
+	$name   = sprintf( __( 'WordPress (%s)', 'genscore' ), $facts['domain'] );
+	$client = get_option( GENSCORE_CLIENT_OPTION );
+	// A client registered under another name (1.1.0 said «GenScore para WordPress») registers again once.
+	if ( is_array( $client ) && ! empty( $client['id'] ) && isset( $client['redirect'], $client['name'] ) && $client['redirect'] === $redirect && $client['name'] === $name ) {
 		return $client['id'];
 	}
-	$facts = genscore_site_facts();
 	$res   = wp_remote_post(
 		$meta['registration_endpoint'],
 		array(
@@ -85,8 +88,7 @@ function genscore_oauth_client_id( $meta ) {
 			'headers' => array( 'Content-Type' => 'application/json' ),
 			'body'    => wp_json_encode(
 				array(
-					/* translators: %s: the site's domain. */
-					'client_name'                => sprintf( __( 'GenScore para WordPress (%s)', 'genscore' ), $facts['domain'] ),
+					'client_name'                => $name,
 					'redirect_uris'              => array( $redirect ),
 					'grant_types'                => array( 'authorization_code', 'refresh_token' ),
 					'response_types'             => array( 'code' ),
@@ -108,6 +110,7 @@ function genscore_oauth_client_id( $meta ) {
 		array(
 			'id'       => sanitize_text_field( $body['client_id'] ),
 			'redirect' => $redirect,
+			'name'     => $name,
 		),
 		false
 	);

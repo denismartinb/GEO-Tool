@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,10 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.1.1 =
+* After connecting, the message only says you can see your figures when this domain is in your GenScore account; otherwise it asks you to add it.
+* GenScore's permission screen now reads «Conectar WordPress (your-site) con GenScore», without repeating the brand.
 
 = 1.1.0 =
 * «Conectar con GenScore»: with a GenScore account, «Tu dominio» shows your account's figures for this domain (Puntuación GEO, engines, competitors, SEO health, Search Console, agent score and next actions), the same ones as the Chrome extension. Read-only, approved on genscore.es, and «Desconectar» removes the access.

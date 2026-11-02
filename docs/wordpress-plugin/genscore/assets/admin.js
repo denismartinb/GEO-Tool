@@ -423,6 +423,7 @@
     if (!S.acct.state || S.acct.state === "off" || S.acct.state === "error") S.acct = { state: "loading" };
     post("genscore_account", fresh ? { fresh: "1" } : {}).then(function (r) {
       S.acct = r && r.success && r.data ? r.data : { state: "error" };
+      if (AC.result === "connected") { AC.result = ""; toast(S.acct.state === "connected" ? "Conectada con GenScore. Ya ves aquí las cifras de tu cuenta." : S.acct.state === "not_found" ? "Conectada con GenScore. Añade este dominio a tu cuenta para ver aquí sus cifras." : "Conectada con GenScore."); }
       if (S.acct.state === "expired" || S.acct.state === "off") { AC.connected = false; if (S.acct.state === "expired") toast("Tu conexión con GenScore ha caducado. Vuelve a conectar para ver tus cifras."); S.acct = { state: "off" }; }
       render();
     }, function () { S.acct = { state: "error" }; render(); });
@@ -1019,7 +1020,9 @@
   }
 
   if (AC.result) {
-    var RES = { connected: "Conectada con GenScore. Ya ves aquí las cifras de tu cuenta.", denied: "No se ha conectado: has cancelado el permiso en GenScore.", expired: "El permiso ha tardado demasiado. Vuelve a pulsar «Conectar con GenScore».", unreachable: "No hemos podido hablar con GenScore. Vuelve a intentarlo en un momento." };
+    /* «connected» waits for the account figures (loadAccount): it only says
+       «ya ves tus cifras» when this domain is in the account. */
+    var RES = { denied: "No se ha conectado: has cancelado el permiso en GenScore.", expired: "El permiso ha tardado demasiado. Vuelve a pulsar «Conectar con GenScore».", unreachable: "No hemos podido hablar con GenScore. Vuelve a intentarlo en un momento." };
     if (RES[AC.result]) toast(RES[AC.result]);
   }
   review();

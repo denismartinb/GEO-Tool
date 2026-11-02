@@ -29090,3 +29090,12 @@ como con cualquier plugin conectado; se mitiga con tokens cortos y la
 retirada desde Apps conectadas. El token de Supabase lleva los permisos RLS de
 la cuenta: el plugin sólo hace GET a las dos rutas de lectura. No retira ningún
 camino de recuperación.
+
+**Adenda 1.1.1 (2026-11-02).** Denis probó la conexión real en su web de
+Wasmer: OAuth, consentimiento y vuelta funcionan sin tocar Supabase. Dos
+arreglos menores: el aviso «Ya ves aquí las cifras de tu cuenta» esperaba a
+las cifras, así que salía también con un dominio que no está en la cuenta;
+ahora el aviso de conexión sale cuando llegan y, sin el dominio, pide añadirlo.
+Y la pantalla de permiso decía «Conectar GenScore para WordPress (…) con
+GenScore»: el cliente se registra como «WordPress (<dominio>)», y un cliente
+guardado con otro nombre se registra otra vez una sola vez.
