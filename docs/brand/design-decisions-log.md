@@ -29637,3 +29637,18 @@ sustituye a las primeras reseñas.
 **Por qué así.** El operador tiene que ver el mismo número que el cliente; dos puntuaciones distintas para el mismo dominio es justo el fallo que TRUST-METRICS-1 cerró. Sólo lectura, sin migración, sin escrituras nuevas en `/admin`.
 
 **Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
+
+## §448 · EXT-EDGE-1: el artículo de la extensión dice que también está en Microsoft Edge (2026-11-02)
+
+**Qué:** `extension-de-chrome-de-genscore` añade el enlace a la ficha de
+Microsoft Edge Add-ons (debajo del enlace de Chrome y tras los pasos de
+instalación) y una pregunta del FAQ «¿La extensión funciona en Microsoft
+Edge?». El enlace vive en `EDGE_ADDONS_URL` (`lib/blog/chrome-extension.ts`),
+igual que el de Chrome, y `chrome-extension.test.ts` exige que el artículo lo
+lea de la constante. `dateUpdated` del post pasa a 2026-11-02.
+
+**Por qué:** petición de Denis (2026-11-02), con la ficha de Edge ya publicada.
+
+**Pendiente:** título, portada, CTA final y la tarjeta flotante de genscore.es
+siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
+(EXT-PROMO-1, §410).
