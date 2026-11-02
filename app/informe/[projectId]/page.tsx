@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import { Figtree, JetBrains_Mono } from "next/font/google";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { loadReportInput } from "@/lib/report/report-data";
@@ -16,21 +16,22 @@ import { ReportToolbar } from "@/components/report/report-toolbar";
  * (sidebar, fixed header, scroll container) sits around the printed pages.
  * "Descargar informe" in Visión general and Recomendaciones opens it.
  *
- * Its own copy of the two brand fonts with the weights the approved design
- * uses (Figtree up to 800, Bricolage from 600): the root layout loads fewer,
- * and widening those would change the weight of text across the whole site.
+ * Its own copy of the console's two fonts with the weights the Instrumento
+ * look uses (Figtree from 300 for the big figures, JetBrains Mono for labels;
+ * REPORT-INSTRUMENTO-1, log §439): the root layout loads fewer, and widening
+ * those would change the weight of text across the whole site.
  */
 
-const reportDisplay = Bricolage_Grotesque({
+const reportMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--gr-font-display",
+  weight: ["400", "500"],
+  variable: "--gr-font-mono",
   display: "swap"
 });
 
 const reportBody = Figtree({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   variable: "--gr-font-body",
   display: "swap"
 });
@@ -88,7 +89,7 @@ export default async function ReportPage({ params }: Params) {
   return (
     <>
       <ReportToolbar backHref={backHref} />
-      <GeoReport model={model} fontClassName={`${reportDisplay.variable} ${reportBody.variable}`} />
+      <GeoReport model={model} fontClassName={`${reportMono.variable} ${reportBody.variable}`} />
     </>
   );
 }
