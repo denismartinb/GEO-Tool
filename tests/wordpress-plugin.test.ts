@@ -171,6 +171,38 @@ describe("WordPress plugin", () => {
     expect(out).not.toContain("FAIL");
   });
 
+  it.skipIf(!php)("Markdown versions and «Lo que lee la IA» pass their PHP tests", () => {
+    const out = execFileSync("php", [join(ROOT, "docs/wordpress-plugin/tests/markdown-test.php")], {
+      encoding: "utf8"
+    });
+    expect(out).not.toContain("FAIL");
+  });
+
+  // WP-PLUGIN-5 (log §450): the .md section is added when llms.txt is served,
+  // never saved into the person's text, so the switch undoes it entirely.
+  it("the .md versions are appended to llms.txt when served, never saved", () => {
+    const llms = read(join(PLUGIN, "includes/llms.php"));
+    const content = llms.slice(llms.indexOf("function genscore_llms_content("));
+    expect(content).toContain("genscore_md_section()");
+    const admin = read(join(PLUGIN, "includes/admin.php"));
+    const save = admin.slice(admin.indexOf("function genscore_ajax_save_llms("), admin.indexOf("add_action( 'wp_ajax_genscore_save_llms'"));
+    expect(save).not.toContain("genscore_md_");
+    expect(read(join(PLUGIN, "uninstall.php"))).toContain("'genscore_md_enabled'");
+  });
+
+  // WP-PLUGIN-5 (log §450): «Lo que lee la IA» gives global figures, never a
+  // list of pages, and stores only numbers.
+  it("«Lo que lee la IA» never lists pages and stores only numbers", () => {
+    const js = read(join(PLUGIN, "assets/admin.js"));
+    const ai = js.slice(js.indexOf("function aiCard("), js.indexOf("function aiMini("));
+    expect(ai).not.toMatch(/page\.(title|path|url)/);
+    const view = read(join(PLUGIN, "assets/aiview.js"));
+    expect(view).toMatch(/return \{ state: "ok", pct: pct, words: seen\.length, k: k \}/);
+    const pages = read(join(PLUGIN, "includes/pages.php"));
+    const san = pages.slice(pages.indexOf("function genscore_sanitize_ai_view("), pages.indexOf("function genscore_store_page_score("));
+    expect(san).toMatch(/'pct' +=>[\s\S]*'w' +=>[\s\S]*'k' +=>/);
+  });
+
   it.skipIf(!php)("one-click fixes helpers pass their PHP tests", () => {
     const out = execFileSync("php", [join(ROOT, "docs/wordpress-plugin/tests/fixes-test.php")], {
       encoding: "utf8"

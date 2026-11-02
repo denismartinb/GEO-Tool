@@ -165,3 +165,18 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **Cancelación sólo en productos; la tabla de características no se ofrece
   si WooCommerce ya la enseña**, y «quién está detrás» no rellena el email con
   el remitente de la tienda.
+
+## Lo que lee la IA y Markdown (WP-PLUGIN-5, log §450)
+
+- **«Lo que lee la IA» sólo enseña cifras de la web entera**: porcentaje,
+  tipo de contenido y tipo de página. Nunca una lista ni el nombre de una
+  página (Denis). Lo vigila `tests/wordpress-plugin.test.ts`.
+- **De la medición sólo se guardan números** (`aiv`, saneado por
+  `genscore_sanitize_ai_view`), nunca texto de la página.
+- **Un precio llega si está en el texto, el JSON-LD o una `meta`**; otros
+  scripts no cuentan.
+- **Una recomendación nueva sólo sale con causa segura** y va en
+  «Recomendaciones técnicas», nunca dentro de la tarjeta de la medición.
+- **La sección `.md` de llms.txt se añade al servir, nunca se guarda**, y los
+  `.md` salen del HTML guardado (sin renderizar bloques), con `noindex` y
+  canónica a la página.

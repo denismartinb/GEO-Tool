@@ -4,7 +4,7 @@ Tags: ai seo, geo, llms.txt, schema, woocommerce
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -149,6 +149,14 @@ Not yet: the screens are in Spanish.
 10. GenScore column in your pages, posts and products lists.
 
 == Changelog ==
+
+= 1.5.0 =
+* «Lo que lee la IA» in the GEO tab: how much of what your customers see reaches ChatGPT, Claude and Perplexity, measured in your browser (each important page without JavaScript against how it shows), what kind of content is lost (prices, headings, buttons, text) and on what kind of page. The Summary shows the figure in a small block.
+* When product prices only appear with JavaScript and WooCommerce has them, a recommendation publishes them in the product structured data with one click, undoable.
+* «Versiones en Markdown»: each page, post and product answers at its address ending in .md, and your llms.txt lists them. One switch turns it all off.
+* «Desde la última revisión»: technical optimization, what the AI reads and how many engines can enter, against your previous review.
+* Bot access says where each claim comes from: «Comprobado» (your robots.txt, read now) or «Simulación» (GenScore asking your home page as each search bot, with your account).
+* With your account connected and a completed scan, «Descargar informe» opens GenScore's report.
 
 = 1.4.2 =
 * Open Graph descriptions keep a space between blocks and no longer render blocks inside the page head, so the theme's block styles stay as they were.

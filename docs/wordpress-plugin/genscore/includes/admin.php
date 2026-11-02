@@ -108,6 +108,7 @@ function genscore_screen_data() {
 		),
 		'fixes'    => genscore_fix_screen_data(),
 		'last'     => get_option( 'genscore_last_review', null ),
+		'md'       => genscore_md_screen_data(),
 		'account'  => genscore_account_screen_data(),
 		'drafts'   => genscore_drafts_screen_data(),
 		'planPages' => genscore_plan_pages_screen_data(),
@@ -322,6 +323,18 @@ function genscore_ajax_save_llms() {
 add_action( 'wp_ajax_genscore_save_llms', 'genscore_ajax_save_llms' );
 
 /**
+ * Turns the .md versions on or off (plugin 1.5.0).
+ */
+function genscore_ajax_save_md() {
+	check_ajax_referer( 'genscore', 'nonce' );
+	genscore_ajax_guard();
+	$enabled = isset( $_POST['enabled'] ) && '1' === sanitize_text_field( wp_unslash( $_POST['enabled'] ) );
+	update_option( GENSCORE_MD_OPTION, $enabled, true );
+	wp_send_json_success( genscore_md_screen_data() );
+}
+add_action( 'wp_ajax_genscore_save_md', 'genscore_ajax_save_md' );
+
+/**
  * Keeps the last «Optimización técnica» for the dashboard widget. Only numbers the
  * browser computed on this same site.
  */
@@ -329,21 +342,35 @@ function genscore_ajax_save_review() {
 	check_ajax_referer( 'genscore', 'nonce' );
 	genscore_ajax_guard();
 	$lanes = array();
-	foreach ( array( 'nota', 'ia', 'google', 'agent' ) as $k ) {
+	foreach ( array( 'nota', 'ia', 'google', 'agent', 'ai', 'eng' ) as $k ) {
 		$lanes[ $k ] = isset( $_POST[ $k ] ) && '' !== $_POST[ $k ] ? max( 0, min( 100, absint( wp_unslash( $_POST[ $k ] ) ) ) ) : null;
 	}
-	update_option(
-		'genscore_last_review',
-		array(
-			'nota'   => $lanes['nota'],
-			'ia'     => $lanes['ia'],
-			'google' => $lanes['google'],
-			'agent'  => $lanes['agent'],
-			'at'     => time(),
-		),
-		false
+	$lanes['eng'] = null === $lanes['eng'] ? null : min( 4, $lanes['eng'] );
+	// 1.5.0 «Desde la última revisión»: the previous review is the last one
+	// stored at least six hours before, so reloading the screen never
+	// compares a review with itself.
+	$last = get_option( 'genscore_last_review', null );
+	$prev = null;
+	if ( is_array( $last ) && isset( $last['at'] ) ) {
+		if ( time() - (int) $last['at'] >= 6 * HOUR_IN_SECONDS ) {
+			unset( $last['prev'] );
+			$prev = $last;
+		} elseif ( isset( $last['prev'] ) && is_array( $last['prev'] ) ) {
+			$prev = $last['prev'];
+		}
+	}
+	$record = array(
+		'nota'   => $lanes['nota'],
+		'ia'     => $lanes['ia'],
+		'google' => $lanes['google'],
+		'agent'  => $lanes['agent'],
+		'ai'     => $lanes['ai'],
+		'eng'    => $lanes['eng'],
+		'at'     => time(),
+		'prev'   => $prev,
 	);
-	wp_send_json_success();
+	update_option( 'genscore_last_review', $record, false );
+	wp_send_json_success( array( 'last' => $record ) );
 }
 add_action( 'wp_ajax_genscore_save_review', 'genscore_ajax_save_review' );
 

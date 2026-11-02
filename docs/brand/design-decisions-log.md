@@ -29689,3 +29689,27 @@ siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
 **Premisa.** No retira ningún camino de recuperación.
 
 **Pendiente.** El porcentaje exacto y el `.md` de cada página desde la consola (navegador en el servidor). Ponderar `js_required` en la nota sigue siendo una fase aparte (§131).
+
+## §450 · WP-PLUGIN-5: el plugin de WordPress 1.5.0 lee lo que llega a la IA, sirve Markdown y compara con la revisión anterior (2026-11-02)
+
+**Qué se decidió.** Denis pidió valorar qué mejoras de la extensión (§446, §447) y de la consola (§449) merecían ir al plugin. Aprobó la maqueta (`docs/design-reference/wp-plugin-1-5-0/`) con tres condiciones: «no mostraría el detalle de las páginas porque si no va a parecer que escaneamos muy pocas… mejor dar datos e insights globales», «solo si estamos seguros de dar una recomendación la visualizamos en la sección recomendaciones» y fondo blanco. Al aprobarla añadió un bloque pequeño de «Lo que lee la IA» en Resumen.
+
+- **«Lo que lee la IA» (pestaña GEO y bloque en Resumen).** La revisión de la web ya abre cada página importante (hasta 15) en un marco oculto del mismo origen. `assets/aiview.js` pide esa página otra vez sin sesión y sin JavaScript y la compara con lo que pinta el marco; el porcentaje se calcula igual que `readAiView` de la extensión. Además cuenta, por tipo de contenido (precios, titulares, botones, texto), cuánto se ve y cuánto llega. La pantalla enseña la cifra de la web (ponderada por palabras), qué tipo de contenido se pierde, en qué tipo de página (productos, páginas, entradas) y una frase de lectura. Nunca una lista de páginas.
+- **Un precio cuenta como entregado** si sus cifras están en el texto, en el JSON-LD o en una etiqueta `meta`. No cuentan otros scripts: los datos precargados de un tema no son algo que lea un motor.
+- **Recomendación sólo con causa segura.** Con WooCommerce, el arreglo de producto disponible y al menos un 20% de los precios de fichas sin llegar, la primera fila de «Recomendaciones técnicas» (pestaña GEO) abre el arreglo de producto que ya existía (precio en los datos estructurados, con deshacer). No hay otra recomendación nueva: el resto de huecos no tiene una causa que el plugin pueda asegurar.
+- **«Versiones en Markdown»** (`includes/markdown.php`, opción `genscore_md_enabled`). Cada página, entrada y producto responde en su dirección terminada en `.md` (`/index.md` para la portada) con `text/markdown`, `X-Robots-Tag: noindex` y `Link` canónico a la página; la página lleva `<link rel="alternate" type="text/markdown">`. El Markdown sale del HTML guardado (`genscore_blocks_html`, sin renderizar bloques), y de WooCommerce en vivo para precio y disponibilidad. La sección de llms.txt se añade al servirlo, nunca se guarda. Exige enlaces permanentes bonitos y web pública; un aviso ofrece «Deshacer».
+- **«Desde la última revisión».** `genscore_last_review` guarda también lo que lee la IA y cuántos motores pueden entrar, y la revisión anterior con al menos 6 horas de antigüedad (`prev`). La pestaña GEO compara las tres cifras.
+- **«Quién puede leer tu web» dice de dónde sale cada dato:** «Comprobado» (robots.txt leído ahora) y, con la cuenta, «Simulación» con las filas `audits.server` de §446; un motor bloqueado por el servidor dice «Tu servidor lo bloquea». Sólo en la portada.
+- **«Descargar informe»** en la cabecera, con la cuenta conectada y un escaneo completado: enlaza a `/informe/<proyecto>`.
+
+**Privacidad.** De la medición sólo se guardan números en la propia web (`aiv: {pct, w, k}` en `genscore_page_scores`, saneado por `genscore_sanitize_ai_view`). Ningún texto de la página sale del navegador ni se guarda.
+
+**Premisa.** No retira ningún camino de recuperación.
+
+**Validación.** WordPress 7.1 + WooCommerce local, con un tema de bloques y un fixture que pinta el precio con JavaScript: 84% en la web, «Precios» como lo que no llega, la recomendación de precio la primera, `/product/<x>.md` y llms.txt con su sección. Sin probar con una cuenta real: la etiqueta «Simulación» y «Descargar informe».
+
+**Pendiente o roto conocido.**
+- La cifra global incluye cabecera y pie, así que puede quedar por debajo de las cifras por tipo.
+- Un modo «próximamente» o de mantenimiento sirve otra página a quien no tiene sesión y falsea la cifra; no se detecta.
+- La página de la tienda de WooCommerce en `.md` sale sin cuerpo (su contenido es la lista de productos).
+- Plugin Check sin pasar en esta versión.

@@ -452,3 +452,47 @@ html.gs-fm-open{overflow:hidden}
 #gs-fixm .gs-fm-field textarea[rows="3"]{min-height:64px}
 @media (max-width:520px){#gs-fixm .gs-fm-pair{grid-template-columns:1fr}}
 #genscore-app .gs-muted{color:var(--ink-3);font-size:13.5px;font-weight:600;white-space:nowrap}
+/* 1.5.0 (WP-PLUGIN-5): «Lo que lee la IA», history, evidence tags, .md versions */
+#genscore-app .gs-new{font-size:10.5px;font-weight:700;letter-spacing:.02em;text-transform:none;color:var(--blue-ink);background:var(--blue-tint);border-radius:99px;padding:1px 7px}
+#genscore-app .gs-aif{display:flex;gap:16px;align-items:center}
+#genscore-app .gs-air{width:88px;height:88px;flex:none}
+#genscore-app .gs-air circle{fill:none;stroke-width:9}
+#genscore-app .gs-air .gs-tr{stroke:var(--surface-3)}
+#genscore-app .gs-air .gs-v{stroke-linecap:round}
+#genscore-app .gs-air .gs-pos{stroke:var(--pos)}#genscore-app .gs-air .gs-mid{stroke:var(--mid)}#genscore-app .gs-air .gs-low{stroke:var(--warm)}
+#genscore-app .gs-aif b{display:block;font-size:40px;font-weight:300;line-height:1}
+#genscore-app .gs-aif p{margin:6px 0 0;font-size:14px;color:var(--ink-2)}
+#genscore-app .gs-aif small{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:6px;font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-tagx{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:600;border-radius:99px;padding:2px 9px;white-space:nowrap}
+#genscore-app .gs-tagx .gs-i{width:12px;height:12px}
+#genscore-app .gs-tx-ok{background:var(--pos-tint);color:var(--pos)}
+#genscore-app .gs-tx-sim{background:var(--surface-3);color:var(--ink-2)}
+#genscore-app .gs-aik{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@container (min-width:560px){#genscore-app .gs-aik{grid-template-columns:repeat(4,minmax(0,1fr))}}
+#genscore-app .gs-aik div{background:var(--surface-2);border:1px solid var(--rule);border-radius:12px;padding:10px 12px;min-width:0}
+#genscore-app .gs-aik span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+#genscore-app .gs-aik b{display:block;font-size:17px;font-weight:600;margin-top:2px}
+#genscore-app .gs-aik em{font-style:normal;font-size:12px;color:var(--warm)}
+#genscore-app .gs-aik .gs-okk em{color:var(--pos)}
+#genscore-app .gs-ait{display:flex;flex-direction:column;gap:9px}
+#genscore-app .gs-aitr{display:grid;grid-template-columns:minmax(0,1fr) 110px 40px;gap:10px;align-items:center;font-size:13.5px;color:var(--ink-2)}
+#genscore-app .gs-aitr .gs-pbar{height:6px}
+#genscore-app .gs-aitr b{font-size:12.5px;font-weight:500;text-align:right;color:var(--ink)}
+#genscore-app .gs-ains{margin:0;font-size:13.5px;font-weight:500;color:var(--ink);border-top:1px solid var(--rule);padding-top:11px}
+#genscore-app .gs-aim-t{margin:0 0 10px;font-size:15px;font-weight:600;line-height:1.35;color:var(--ink)}
+#genscore-app .gs-aim-t span{white-space:nowrap}
+#genscore-app .gs-aim-t b{font-size:26px;font-weight:700;letter-spacing:-.01em;vertical-align:-2px;margin-left:2px}
+
+
+
+#genscore-app .gs-ev{margin:0;font-size:12.5px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+#genscore-app .gs-hss{display:flex;gap:10px;flex-wrap:wrap}
+#genscore-app .gs-hs{flex:1 1 150px;background:var(--surface-2);border-radius:12px;padding:10px 12px;min-width:0}
+#genscore-app .gs-hs b{display:block;font-size:20px;font-weight:300}
+#genscore-app .gs-hs b em{font-style:normal;font-size:12px;font-weight:500;margin-left:6px;color:var(--ink-3)}
+#genscore-app .gs-hs b em.gs-up{color:var(--pos)}#genscore-app .gs-hs b em.gs-down{color:var(--warm)}
+#genscore-app .gs-hs span{font-size:12px;color:var(--ink-3)}
+#genscore-app .gs-md{max-height:140px}
+#genscore-app .gs-rep .gs-i{width:14px;height:14px}
+#genscore-app .gs-say-in{margin:0 0 16px;color:var(--ink)}
+#genscore-app .gs-card>.gs-say-in:only-child{margin:0}
