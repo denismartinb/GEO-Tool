@@ -180,3 +180,13 @@ log §306).
 - **Categoría `site_alerts` con baja propia** (`notify_site_alerts`,
   migración 0049). Se lee en su propia consulta y falla cerrado; sale sólo con
   `isLifecycleEmailEnabled`.
+
+## Primer escaneo (OPS-FIRST-SCAN-1, log §441)
+
+- **El aviso `ops_first_scan` sale cuando el run creado es el único del
+  proyecto** (`lib/scan/first-scan-alert.ts`), con clave de idempotencia
+  `ops-first-scan/<proyecto>`. Nunca lanza ni retrasa la creación del escaneo
+  más allá del envío, y sin `OPS_ALERT_EMAIL`/`RESEND_API_KEY` no consulta nada.
+- **El dominio del aviso de alta sólo es el que la persona trajo**, validado
+  con `isWellFormedDomain` en el servidor; el formulario lo lee sin consumirlo
+  (`peekPendingDomain`) para que el asistente lo siga encontrando.

@@ -293,3 +293,9 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   ofertas», sin emails sin confirmar, 48 h tras otro correo de ciclo de vida y
   nunca en lunes. Cada envío reserva antes en `email_sends`
   (`sendClaimedOnce`), así que nunca sale dos veces a la misma cuenta.
+
+- **Una puntuación que enseña `/admin` es la del producto, nunca otra.** La
+  Puntuación GEO de cada dominio sale de `resolveGeoScore` sobre
+  `GEO_SCORE_LOOKBACK_ROWS` filas de `run_scores` (`lib/admin/geo-scores.ts`),
+  igual que Visión general. «Sin escanear» y «sin dato» no son un cero
+  (`docs/brand/design-decisions-log.md` §445).

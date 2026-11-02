@@ -1097,3 +1097,11 @@
 .adm-ann-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; margin-top: 16px; }
 .adm-ann-send { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 13.5px; }
 .adm-ann-go { background: #2563eb; color: #fff; border-color: #2563eb; }
+
+/* ADMIN-GEO-SCORE-1: Puntuación GEO por dominio (tabla de usuarios y ficha). */
+.adm-geo-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; min-width: 150px; }
+.adm-geo-list li { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; line-height: 1.35; }
+.adm-geo-d { color: var(--ink-3); max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-geo-v { font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.adm-geo-low { color: var(--ink-4); font-weight: 600; margin-left: 1px; }
+.adm-proj-geo { color: var(--ink-3); }

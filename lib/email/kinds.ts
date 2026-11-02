@@ -54,6 +54,7 @@ export const EMAIL_KINDS = [
   "ops_scan_health",
   "ops_llm_incident",
   "ops_new_signup",
+  "ops_first_scan",
   "ops_automation_change",
   "ops_announcement",
   "ops_sweep_health",

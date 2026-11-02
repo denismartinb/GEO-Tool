@@ -29608,3 +29608,32 @@ sustituye a las primeras reseñas.
 **Premisa.** No retira ningún camino de recuperación. Si `readAiView` falla (CSP, 4xx o tiempo), la tarjeta no sale y la revisión sigue igual.
 
 **Pendiente.** Subir la 1.5.0 a la tienda (Denis). La tarjeta del servidor necesita este despliegue y una auditoría con sonda (§440). El «+N Diagnóstico técnico» de §440 sigue sin construir.
+
+## §441 · OPS-FIRST-SCAN-1: aviso al operador del primer escaneo de un dominio, y el dominio en el aviso de alta (2026-11-02)
+
+**Qué.** Dos cambios en los correos de operador (`OPS_ALERT_EMAIL`, nunca al cliente):
+
+- **Aviso de alta nueva con dominio.** Si la persona llega al registro con un dominio (campo de la portada, comprobador o `/signup?dominio=`), el formulario lo lee de `localStorage` sin consumirlo (`peekPendingDomain`) y lo manda en un campo oculto `dominio`. La acción `signup` lo limpia con `cleanDomain` + `isWellFormedDomain` y lo pasa al aviso: fila «Dominio indicado» y dominio al final del asunto. El asistente sigue encontrándolo igual (se consume al leerlo allí, como antes).
+- **Aviso nuevo «Primer escaneo» (`ops_first_scan`).** `createPendingScanRunCore` llama a `sendFirstScanOpsAlert` (`lib/scan/first-scan-alert.ts`) tras crear el run y sus jobs. Sólo envía si ese run es el único `scan_runs` del proyecto. Lleva dominio, cuenta, plan, si es cuenta interna de prueba, quién lo lanzó, motores y las llamadas previstas del propio run (prompts × muestras × motores), con clave de idempotencia de Resend `ops-first-scan/<proyecto>`.
+
+**Por qué.** Petición de Denis: el aviso de alta muchas veces llega sin dominio (alta con Google, o sin escribirlo) y lo que cuesta dinero es escanear. El primer run es el momento en que un dominio empieza a gastar llamadas, y ahí el dominio siempre se conoce.
+
+**Decisiones.**
+- «Primero» = único run del proyecto. Un reintento de `reconciliation.ts` de un primer run fallido ya ve dos filas y calla. Un proyecto borrado y creado otra vez avisa de nuevo, porque vuelve a costar.
+- Nunca lanza ni bloquea el escaneo: sin canal de aviso configurado no hace ni una consulta, y cualquier fallo va a `console.error`.
+- El alta con Google sigue sin dominio en su aviso: llevarlo por la URL de vuelta de OAuth tocaría la lista de redirecciones de Supabase. Lo cubre el aviso de primer escaneo.
+
+**Pendiente o conocido.** El pilot de escritura (`mozilla.org`) también avisa la primera vez que crea su proyecto; sale marcado como «Cuenta interna de prueba: Sí».
+
+## §445 · ADMIN-GEO-SCORE-1: Puntuación GEO de cada dominio en la consola de operador (2026-11-02)
+
+**Qué se decidió.** Denis pidió ver en `/admin/users` la Puntuación GEO de cada dominio que registran y escanean los usuarios.
+
+- **Columna «Puntuación GEO»** en la tabla de usuarios: una línea por dominio activo de la cuenta, con su cifra. En la ficha, cada dominio (también los archivados) añade «Puntuación GEO N» antes del último escaneo.
+- **La cifra es la de Visión general.** `lib/admin/geo-scores.ts` lee las `GEO_SCORE_LOOKBACK_ROWS` filas más recientes de `run_scores` de cada proyecto y llama a `resolveGeoScore`, igual que la consola, el informe y los correos (TRUST-METRICS-1, §183). No se recalcula ni se usa `visibility_score`.
+- **Nada se pinta como cero.** Sin escaneos puntuados dice «sin escanear»; si la lectura falla, «sin dato». Un asterisco marca muestra pequeña (`lowConfidence`), con la fecha del último escaneo en el `title`.
+- **Una consulta por proyecto**, de ocho en ocho, con `limit` propio: es la única forma de leer las siete últimas de cada uno sin traer el historial entero de `run_scores` con su `details_json`.
+
+**Por qué así.** El operador tiene que ver el mismo número que el cliente; dos puntuaciones distintas para el mismo dominio es justo el fallo que TRUST-METRICS-1 cerró. Sólo lectura, sin migración, sin escrituras nuevas en `/admin`.
+
+**Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
