@@ -22,6 +22,7 @@ const P: ExtProjectPayload = {
     { provider: "openai", label: "ChatGPT", mentionShare: 0.4 },
     { provider: "gemini", label: "Gemini", mentionShare: 0.25 }
   ],
+  competitorDomains: [],
   rivals: [
     { name: "Rival", share: 0.5, isBrand: false, domain: "rival.es" },
     { name: "Marca", share: 0.33, isBrand: true, domain: "marca.es" }
@@ -31,7 +32,7 @@ const P: ExtProjectPayload = {
   agentic: { kind: "upsell" },
   citingPrompts: null,
   searchConsole: { state: "disconnected" },
-  audits: { auditedAt: "2026-10-30T00:00:00Z", blocks: [{ key: "geo", score: 70, projected: 82, projectedAll: 82, issues: [{ label: "Sin llms.txt", scope: "Todo el sitio", points: 6, severity: "medium" as never, check: "llms_txt_missing", urls: [] }] }], page: null },
+  audits: { auditedAt: "2026-10-30T00:00:00Z", readiness: 70, blocks: [{ key: "geo", score: 70, projected: 82, projectedAll: 82, issues: [{ label: "Sin llms.txt", scope: "Todo el sitio", points: 6, severity: "medium" as never, check: "llms_txt_missing", urls: [] }] }], page: null },
   prompts: []
 };
 

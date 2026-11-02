@@ -280,3 +280,16 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   grupo suman lo que dice el grupo. Un tipo nuevo de correo lleva su nombre en
   `KIND_LABEL`; sin él se enseña la etiqueta tal cual. Los porcentajes de
   abiertos y clics son sobre los entregados.
+
+## Anuncios por correo (EXT-REACH-1, log §436)
+
+- **Un anuncio a toda la base es una escritura aprobada sólo para la extensión
+  de Chrome** (Denis, 2026-11-02). Otro anuncio necesita su propia aprobación.
+- **Nada sale sin pulsar**: copia al operador, y lotes de `ANNOUNCEMENT_BATCH`
+  con casilla de confirmación. Cada lote deja constancia por correo a
+  `OPS_ALERT_EMAIL` con recuentos, nunca direcciones.
+- **Quién lo recibe es `selectAnnouncementRecipients`, puro y con tests**: sin
+  cuentas propias, internas ni comped, sin bajas de «consejos, novedades y
+  ofertas», sin emails sin confirmar, 48 h tras otro correo de ciclo de vida y
+  nunca en lunes. Cada envío reserva antes en `email_sends`
+  (`sendClaimedOnce`), así que nunca sale dos veces a la misma cuenta.

@@ -78,6 +78,14 @@ export type ExtPageAudit =
 export type ExtAudits = {
   /** When the technical audit was taken (ISO). Null without one. */
   auditedAt: string | null;
+  /**
+   * EXT-PANEL-COHERENCE-1 (log §433): the Salud técnica of the audited pages,
+   * `actualReadinessScore` of `buildTechnicalIssuesReport` (mean of their
+   * pageScore, the same 55/45 mix of IA and Google the panel's page note uses).
+   * The panel shows it as «Optimización técnica · Toda la web». Null without
+   * an analysed page.
+   */
+  readiness: number | null;
   blocks: ExtAuditBlock[];
   /** Only when the panel asked about a page of this domain. */
   page: ExtPageAudit | null;
@@ -194,6 +202,7 @@ export function buildExtAudits({ snapshot, agentic, ownUrl }: ExtAuditsInput): E
   }
   return {
     auditedAt: snapshot?.createdAt ?? null,
+    readiness: snapshot ? buildTechnicalIssuesReport(snapshot.pages, snapshot.bots).actualReadinessScore : null,
     blocks,
     page: ownUrl && snapshot ? pageAudit(ownUrl, snapshot.pages, snapshot.bots) : null
   };

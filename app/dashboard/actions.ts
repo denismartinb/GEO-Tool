@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  // SPLASH-WEB-1: `?salida=1` keeps the web entrance out of a goodbye.
+  redirect("/login?salida=1");
 }
 
 /**

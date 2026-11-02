@@ -6,6 +6,7 @@ import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categorie
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -273,6 +274,16 @@ export const subtext = (html: string) =>
   `<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">${html}</p>`;
 
 /**
+ * EXT-REACH-1 (log §436): the one-line postscript that offers the Chrome
+ * extension under an email's main button, never above it. The store link is
+ * tagged with the email it came from.
+ */
+export function extensionPostscript(campaign: string): string {
+  const href = `${CHROME_WEB_STORE_URL}?utm_source=email&utm_medium=posdata&utm_campaign=${encodeURIComponent(campaign)}`;
+  return `<p style="margin:22px 0 0;padding-top:16px;border-top:1px solid #E7EAF0;font-size:14px;line-height:1.55;color:#3B4759;"><b style="color:#0B1426;">P. D.</b> Revisa cualquier página sin salir de Chrome. La extensión gratuita te dice si la IA puede leerla. <a href="${href}" style="${FOOTER_LINK_STYLE}">Añadir a Chrome</a></p>`;
+}
+
+/**
  * Numbered steps with done / current / next states — the progress block of
  * the lifecycle design (docs/design-reference/lifecycle-emails-1/). Lives here
  * rather than with the lifecycle templates because the welcome email uses it
@@ -336,6 +347,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
       ])}
       ${button("https://www.genscore.es/dashboard/projects/new", "Añadir mi dominio")}
       ${subtext(closing)}
+      ${extensionPostscript("welcome")}
     `,
       { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini, Claude y Perplexity te recomiendan." }
     )
@@ -1087,6 +1099,51 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
         preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
+    )
+  );
+}
+
+/**
+ * EXT-REACH-1 (log §436): the record of an announcement batch sent from
+ * /admin/crm. /admin has no audit table, so this email is the record
+ * (`.claude/rules/admin.md`). Counts only, never a recipient's address.
+ */
+export async function sendAnnouncementOpsAlertEmail(input: {
+  operatorEmail: string;
+  announcement: string;
+  sent: number;
+  failed: number;
+  remaining: number;
+  at: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;">${escapeHtml(value)}</td>
+    </tr>`;
+  await sendEmail(
+    "ops_announcement",
+    to,
+    `[GenScore] /admin envió un anuncio: ${input.announcement}`,
+    wrap(
+      `
+      ${eyebrow("Acción de operador · sólo equipo GenScore")}
+      ${heading("Se ha enviado un lote del anuncio")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${row("Operador", input.operatorEmail)}
+        ${row("Anuncio", input.announcement)}
+        ${row("Enviados", String(input.sent))}
+        ${row("Fallidos", String(input.failed))}
+        ${row("Pendientes", String(input.remaining))}
+        ${row("Fecha", input.at.toISOString())}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno. Sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `${input.sent} enviados, ${input.remaining} pendientes`
       }
     )
   );
