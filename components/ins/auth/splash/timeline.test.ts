@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LANDING_AT, SPLASH_VARIANTS, ease, pickVariant, seg } from "./timeline";
+import { LANDING_AT, SPLASH_VARIANTS, ease, pickVariant, seg, splashLength } from "./timeline";
 import { gMarkInner } from "./g-mark";
 
 describe("pickVariant", () => {
@@ -52,5 +52,14 @@ describe("gMarkInner", () => {
 
   it("has no long dash", () => {
     expect(gMarkInner("a")).not.toContain("—");
+  });
+});
+
+describe("web entrance (SPLASH-WEB-1)", () => {
+  it("is short and never joins the app rotation", () => {
+    expect(splashLength("breve")).toBeLessThanOrEqual(1700);
+    expect(splashLength("calibre")).toBeGreaterThan(3000);
+    expect(SPLASH_VARIANTS).not.toContain("breve" as never);
+    for (const r of [0, 0.5, 0.99]) expect(pickVariant(null, () => r)).not.toBe("breve");
   });
 });

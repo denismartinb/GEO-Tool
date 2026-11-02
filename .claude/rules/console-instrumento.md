@@ -240,9 +240,21 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   aterriza en la marca y sigue a la consola (`continueTo`), sin formulario.
 - **No bloquea el acceso**: un toque o Esc llevan (sin botón visible, a petición de Denis) al formulario, y si
   el JavaScript falla el formulario aparece a los 6 s.
-- **La G geométrica (`splash/g-mark.ts`) es de la splash y del login de la app.**
+- **La G geométrica (`splash/g-mark.ts`) es de la splash y del login (app y, desde §438, web).**
   Sustituir `app/icon.svg` o las marcas del resto del producto no está aprobado.
 - **El movimiento es ambiente**: ninguna cifra ni barra representa un dato.
+
+## Entrada en el login web (SPLASH-WEB-1, log §438)
+
+- **En la web, sólo la entrada `breve`, una vez por navegador** (`gs_splash_web_seen`);
+  después, sólo se dibuja la G del logo. Nunca la rotación de la app.
+- **Nunca anima con `?error=`, `?next=`, `?deleted=` ni `?salida=`** (cierre de
+  sesión), ni con movimiento reducido o almacenamiento bloqueado.
+- **La decisión se toma antes de pintar** (script en línea y `useLayoutEffect`
+  con la misma regla). Un cambio en una se copia en la otra.
+- **La web no lee `gs_app`**: la splash de la app sigue su propia regla.
+- **La G geométrica también va en el logo de `/login` en la web** (Denis, log §438);
+  el resto de marcas no cambia.
 
 ## Apertura y caché de la app (APP-LAUNCH-1, log §389)
 
