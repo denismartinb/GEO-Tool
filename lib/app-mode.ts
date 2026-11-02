@@ -91,3 +91,27 @@ export function appLaunchRedirect(pathname: string, searchParams: URLSearchParam
   if (next !== APP_MODE_HOME) target.set("next", next);
   return `${APP_LAUNCH_PATH}?${target.toString()}`;
 }
+
+/**
+ * APP-LINK-OUT-1 (log §436). ¿Esta navegación viene de nuestra propia web?
+ * Dentro de la app, ir de la consola a una página pública (blog, precios…)
+ * lleva siempre como referrer una página de genscore.es, y ahí sí se devuelve
+ * a la consola. Un enlace que llega de fuera (un medio, un buscador, un correo,
+ * otra app de Android o una URL escrita, sin referrer) no es navegación dentro
+ * de la app: la cookie `gs_app` se comparte con Chrome en el mismo móvil, y la
+ * app reclama todos los enlaces de genscore.es, así que tratarlo como app
+ * mandaba a quien abría un artículo enlazado al inicio de sesión.
+ */
+export function isOwnSiteReferer(referer: string | null, host: string): boolean {
+  if (!referer) return false;
+  let refHost: string;
+  try {
+    const url = new URL(referer);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    refHost = url.host;
+  } catch {
+    return false;
+  }
+  const bare = (h: string) => h.toLowerCase().replace(/^www\./, "");
+  return bare(refHost) === bare(host);
+}

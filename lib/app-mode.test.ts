@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ANDROID_PACKAGE, appLaunchRedirect, appModeSignal, isAppModePathAllowed } from "./app-mode";
+import { ANDROID_PACKAGE, appLaunchRedirect, appModeSignal, isAppModePathAllowed, isOwnSiteReferer } from "./app-mode";
 
 const q = (s: string) => new URLSearchParams(s);
 
@@ -29,6 +29,16 @@ describe("modo app (TWA)", () => {
     );
     for (const no of ["/login", "/signup", "/forgot-password", "/dashboard-falso", "/privacidad"]) {
       expect(appLaunchRedirect(no, q("source=twa")), no).toBeNull();
+    }
+  });
+  it("sólo un referrer de nuestra propia web cuenta como navegación dentro de la app (log §436)", () => {
+    const host = "www.genscore.es";
+    for (const own of ["https://www.genscore.es/dashboard", "https://genscore.es/login", "https://www.genscore.es/"]) {
+      expect(isOwnSiteReferer(own, host), own).toBe(true);
+    }
+    expect(isOwnSiteReferer("https://www.genscore.es/x", "genscore.es")).toBe(true);
+    for (const ext of [null, "", "https://www.elperiodico.com/noticia", "https://www.google.com/", `android-app://${ANDROID_PACKAGE}`, "android-app://com.google.android.gm", "https://genscore.es.evil.com/", "no es una url"]) {
+      expect(isOwnSiteReferer(ext, host), String(ext)).toBe(false);
     }
   });
 });

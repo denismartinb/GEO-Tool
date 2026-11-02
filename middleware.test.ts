@@ -220,8 +220,10 @@ describe("middleware · enlace de afiliado (AFFILIATES-1)", () => {
 });
 
 describe("middleware · modo app (ANDROID-TWA-1)", () => {
-  function inApp(pathname: string, cookie = "gs_app=android") {
-    return new NextRequest(new Request(`https://genscore.es${pathname}`, { headers: { cookie } }));
+  function inApp(pathname: string, cookie = "gs_app=android", referer: string | null = "https://genscore.es/dashboard") {
+    const headers: Record<string, string> = { cookie };
+    if (referer) headers.referer = referer;
+    return new NextRequest(new Request(`https://genscore.es${pathname}`, { headers }));
   }
 
   it("?source=twa en el inicio de sesión deja la cookie y no redirige", async () => {
@@ -248,7 +250,18 @@ describe("middleware · modo app (ANDROID-TWA-1)", () => {
     expect(res.status).toBe(200);
   });
 
-  it("con la cookie, /precios y la portada vuelven a la consola", async () => {
+  it("un enlace de fuera a una página pública se sirve y sale del modo app (APP-LINK-OUT-1)", async () => {
+    const outside = [null, "https://www.elperiodico.com/noticia", "https://www.google.com/", "android-app://com.google.android.gm"];
+    for (const referer of outside) {
+      const res = await middleware(inApp("/blog/que-clinicas-dentales-recomienda-la-ia?utm_source=medio", "gs_app=android", referer));
+      expect(res.status, String(referer)).toBe(200);
+      expect(res.cookies.get("gs_app")?.value ?? "", String(referer)).toBe("");
+    }
+    const launch = await middleware(request("/blog/x?source=twa"));
+    expect(launch.status).toBe(200);
+  });
+
+  it("con la cookie, /precios y la portada vuelven a la consola si se llega desde la propia web", async () => {
     for (const path of ["/precios", "/pricing", "/", "/blog/x"]) {
       const res = await middleware(inApp(path));
       expect(res.status, path).toBe(307);

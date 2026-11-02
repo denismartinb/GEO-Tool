@@ -216,6 +216,10 @@ trazable a `docs/brand/design-decisions-log.md` §349.
   contratar la oculta con `ShellData.inApp` o `isInApp()` (servidor).
 - **La lista de rutas permitidas dentro de la app es de permitidos**
   (`isAppModePathAllowed`): una página pública nueva no entra sola.
+- **Sólo la navegación desde genscore.es vuelve a la consola** (APP-LINK-OUT-1,
+  log §436): un enlace de fuera (otro sitio, otra app, sin referrer) a una página
+  pública se sirve y borra `gs_app` (`isOwnSiteReferer`), porque la cookie se
+  comparte con Chrome y la app reclama todos los enlaces del dominio.
 - **Ajustes > Plan dentro de la app es de solo lectura** (`InAppPlan`, log §381 adenda): plan, estado y días de prueba, sin precios ni enlace a pagar fuera.
 - **Las acciones de pago se niegan en servidor**, no solo se esconden
   (`createCheckoutSession`, `createPortalSession`).
