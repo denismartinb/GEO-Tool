@@ -101,6 +101,13 @@ describe("WordPress plugin", () => {
     expect(body).toContain("GENSCORE_PENDING . ': dato, enlace y fecha]'");
   });
 
+  // Plugin Check (mismatched_plugin_name): the header and the readme title match.
+  it("the plugin name matches the readme title", () => {
+    const header = /Plugin Name:\s*(.+)/.exec(read(join(PLUGIN, "genscore.php")))?.[1].trim();
+    const title = /^===\s*(.+?)\s*===/.exec(read(join(PLUGIN, "readme.txt")))?.[1];
+    expect(header).toBe(title);
+  });
+
   // 1.4.2 (log §432 adenda): rendering blocks inside wp_head turns the theme's
   // inline block styles into <link> tags, so text is read from parse_blocks.
   it("never renders blocks to get text", () => {

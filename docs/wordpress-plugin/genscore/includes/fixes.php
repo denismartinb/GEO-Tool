@@ -657,8 +657,13 @@ function genscore_blocks_html( $html ) {
 function genscore_plain_text( $html ) {
 	$t = genscore_blocks_html( (string) $html );
 	// Blocks end where a word ends: «Molienda</h3><p>Fina» is two words.
-	$t = preg_replace( '#<br\s*/?>|</(p|h[1-6]|li|div|td|th|blockquote|figcaption)>#i', ' ', $t );
+	// A heading ends a sentence: «…cada semana</h1><p>En Café…» reads
+	// «…cada semana. En Café…», not one run-on sentence.
+	$t = preg_replace( '#</h[1-6]>#i', "\x1E ", $t );
+	$t = preg_replace( '#<br\s*/?>|</(p|li|div|td|th|blockquote|figcaption)>#i', ' ', $t );
 	$t = wp_strip_all_tags( strip_shortcodes( $t ), true );
 	$t = html_entity_decode( $t, ENT_QUOTES, 'UTF-8' );
+	$t = preg_replace( '/([^\s.!?:;…])\s*\x1E/u', '$1.', $t );
+	$t = str_replace( "\x1E", '', $t );
 	return trim( preg_replace( '/\s+/u', ' ', $t ) );
 }

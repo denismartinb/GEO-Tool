@@ -29350,6 +29350,14 @@ probando la 1.4.0 entera en la tienda de Wasmer:
   de sus tarjetas con página confirmada (comparten tema). El borrador de
   críticas sólo sale con una tarjeta `address_negative_narrative` con
   críticas, y esa cuenta no tenía ninguna.
+- **Un título termina su frase.** La descripción propuesta para el JSON-LD de
+  la portada pegaba el H1 al párrafo siguiente («…tostado cada semana En Café
+  Ventura…»). `genscore_plain_text` cierra cada encabezado con punto si no
+  acaba ya en puntuación; lo usan descripción, Open Graph y datos
+  estructurados.
+- **Nombre de la ficha de WordPress.org**: «GenScore: AI SEO & GEO Optimizer,
+  llms.txt, Schema & AI Bots», igual en el readme y en la cabecera `Plugin
+  Name` (Plugin Check pide que coincidan; lo vigila un test).
 - **Probado** en el WordPress de pruebas: og:description con espacios y mismo
   recuento de `<style>`/`<link>` antes y después de publicar; «Sin reseñas» con
   las reseñas a cero; borrador de comparativa sin avisos de bloque no válido y

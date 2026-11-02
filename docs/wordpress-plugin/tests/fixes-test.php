@@ -100,5 +100,16 @@ check( 'cancel rejects days out of range', null === genscore_clean_cancel( array
 check( 'a camera file name is a file name', genscore_is_file_name( 'IMG_20240101_1234' ) && genscore_is_file_name( 'cafe-ventura-1.jpg' ) );
 check( 'a real title is not a file name', ! genscore_is_file_name( 'Café de Etiopía en grano' ) );
 
+// Plain text: blocks are separated, and a heading ends its sentence.
+if ( ! function_exists( 'wp_strip_all_tags' ) ) {
+	function wp_strip_all_tags( $t, $b = false ) { $t = strip_tags( (string) $t ); return $b ? preg_replace( '/[\r\n\t ]+/', ' ', $t ) : $t; }
+}
+if ( ! function_exists( 'strip_shortcodes' ) ) {
+	function strip_shortcodes( $t ) { return $t; }
+}
+check( 'a heading ends its sentence', 'Café tostado cada semana. En Café Ventura seleccionamos.' === genscore_plain_text( '<h1>Café tostado cada semana</h1><p>En Café Ventura seleccionamos.</p>' ) );
+check( 'a heading with its own stop keeps it', '¿Qué café? Este.' === genscore_plain_text( '<h2>¿Qué café?</h2><p>Este.</p>' ) );
+check( 'paragraphs keep a space', 'Uno Dos' === genscore_plain_text( '<p>Uno</p><p>Dos</p>' ) );
+
 echo $failures ? "\n$failures failed\n" : "\nall passed\n";
 exit( $failures ? 1 : 0 );

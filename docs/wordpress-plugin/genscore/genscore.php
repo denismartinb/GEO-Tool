@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       GenScore: visibilidad en IA, llms.txt y bots de IA
+ * Plugin Name:       GenScore: AI SEO & GEO Optimizer, llms.txt, Schema & AI Bots
  * Plugin URI:        https://www.genscore.es/
  * Description:       Comprueba si ChatGPT, Gemini, Claude y Perplexity pueden leer tu web, publica tu llms.txt, controla los bots de IA en robots.txt y revisa el SEO básico de tus páginas y publica los arreglos con un clic.
  * Version:           1.4.2
