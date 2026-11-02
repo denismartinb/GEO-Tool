@@ -23,7 +23,7 @@ import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
 import { SeoIssuesWithGoogle } from "./_components/seo-issues-google";
-import { CoverageHistory, CoverageSection } from "./_components/coverage-section";
+import { CoverageHistory, CoverageNotices } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
@@ -217,7 +217,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           <AuditTabPanel id="correcto">
                             <BlockPassingCard view={view} citedTopics={isGeo ? coverage.grouped.performing : undefined} />
                           </AuditTabPanel>
-                          {isGeo && <CoverageSection data={coverage} />}
+                          {isGeo && <CoverageNotices data={coverage} />}
                         </div>
                         {isGeo && (
                           <div className="sa-side">

@@ -29689,3 +29689,13 @@ siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
 **Premisa.** No retira ningún camino de recuperación.
 
 **Pendiente.** El porcentaje exacto y el `.md` de cada página desde la consola (navegador en el servidor). Ponderar `js_required` en la nota sigue siendo una fase aparte (§131).
+
+## §450 · COVERAGE-CARD-REMOVE-1: Auditoría GEO deja de enseñar «Cobertura de tu contenido» (2026-11-02)
+
+**Qué.** A petición de Denis («elimina este bloque», con captura), la tarjeta «Cobertura de tu contenido» sale de Auditoría GEO: las tarjetas Contenido e Implementado, la frase «Tema a tema…», la píldora «Auditando…» / «Comprobación pendiente» de esa tarjeta y la gráfica «Evolución entre comprobaciones». Se borran `TrendChart`, `SubScoreTile` y `LockedSubScoreTile`, que sólo usaba esa tarjeta, y su CSS.
+
+**Qué se queda.** No se borra ningún dato ni se toca la comprobación de cobertura: sigue corriendo, guardándose y alimentando lo que la lee (temas citados en «Correcto», «Historial de comprobaciones», recomendaciones, informe). `loadCoverageSectionData` no cambia.
+
+**Premisa (regla de recuperación).** La tarjeta llevaba dentro los dos únicos avisos que explican por qué se paró la comprobación: el error del conductor (`WebAuditDriveNotice`) y «Comprobación pausada por cambio de plan». No se retiran: pasan a `CoverageNotices`, sin tarjeta, en el mismo sitio, y no pintan nada en el caso normal. Lo que sí desaparece es la píldora de estado «Auditando…» de la tarjeta; si una comprobación se alarga, la pantalla ya no lo dice hasta que acaba o falla (y si falla, lo dice el aviso).
+
+**Pendiente.** Nada.

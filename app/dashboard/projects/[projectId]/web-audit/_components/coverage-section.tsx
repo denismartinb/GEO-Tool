@@ -1,58 +1,25 @@
 import Link from "next/link";
 import { Icon } from "@/components/ui/icon";
-import { ScanStatePill } from "@/components/scan-state-pill";
 import type { CoverageSectionData } from "@/lib/web-audit/coverage-section-data";
 import { formatDate } from "./format";
-import { LockedSubScoreTile, MiniBar, SubScoreTile } from "./coverage-tiles";
-import { TrendChart } from "./trend-chart";
+import { MiniBar } from "./coverage-tiles";
 import { WebAuditDriveNotice } from "../web-audit-drive-notice";
 
 /**
- * «Cobertura de tu contenido», at the top of the Auditoría GEO block
- * (SEARCH-SEO-1 Fase 1b, log §275). It answers, topic by topic, whether the
- * site publishes something about each prompt and whether the AI cites it:
- * the part of the audit that is GEO and nothing else.
- *
- * Same thresholds as before the redesign: Evolución from 4 audits (two points
- * draw a line that reads as a trend without being one), Historial from 2.
- * Both sit behind one disclosure so the problems list stays near the top.
- * The topics the AI already cites are listed in the Correcto tab.
+ * What is left of «Cobertura de tu contenido» after the founder removed the
+ * card (tiles Contenido / Implementado and «Evolución entre comprobaciones»,
+ * 2026-11-02, log §450). Only the two recovery messages stay, without a card
+ * around them, because they are the only place that explains why the coverage
+ * check stopped: the driver's error and the plan that lapsed mid-campaign.
+ * Both render nothing in the normal case.
  *
  * Must render inside `WebAuditProvider`: the drive notice reads its state.
  */
-export function CoverageSection({ data }: { data: CoverageSectionData }) {
-  const {
-    canAuditCoverage,
-    summary,
-    grouped,
-    trend,
-    latestMap,
-    coverageDelta,
-    surfacingDelta,
-    activeCampaignProgress,
-    auditPillState,
-  } = data;
-
+export function CoverageNotices({ data }: { data: CoverageSectionData }) {
+  const { canAuditCoverage, activeCampaignProgress } = data;
   return (
-    <section className="card cov-sec" aria-labelledby="cov-sec-title">
-      <div className="cov-head">
-        <h3 id="cov-sec-title">Cobertura de tu contenido</h3>
-        <div className="cov-head-r">
-          {canAuditCoverage && auditPillState === "auditing" && (
-            <ScanStatePill auditing />
-          )}
-          {canAuditCoverage && auditPillState === "pending" && (
-            <span className="badge">Comprobación pendiente</span>
-          )}
-        </div>
-      </div>
-      <p className="cov-desc">
-        Tema a tema: si tu web publica una página sobre cada uno de tus prompts,
-        y si la IA la cita al responder.
-      </p>
-
+    <>
       <WebAuditDriveNotice />
-
       {/* The plan lapsed mid-campaign: the provider will not resume it, so
           this banner is the only thing explaining why it stopped. */}
       {activeCampaignProgress && !canAuditCoverage && (
@@ -77,73 +44,7 @@ export function CoverageSection({ data }: { data: CoverageSectionData }) {
           </Link>
         </div>
       )}
-
-      {!canAuditCoverage && !summary ? (
-        <div className="cov-tiles">
-          <LockedSubScoreTile
-            label="Contenido"
-            hint="Temas con contenido propio verificado por la IA"
-          />
-          <LockedSubScoreTile
-            label="Implementado"
-            hint="Cuánto de ese contenido cita la IA en sus respuestas"
-          />
-        </div>
-      ) : !summary ? (
-        <p className="cov-empty">
-          Todavía no hemos comprobado tu contenido. Se comprueba sola después de
-          los escaneos.
-        </p>
-      ) : (
-        <>
-          <div className="cov-tiles">
-            <SubScoreTile
-              label="Contenido"
-              value={
-                summary.coveragePct == null
-                  ? "—"
-                  : `${summary.coveredCount} / ${summary.conclusiveCount}`
-              }
-              hint="Temas con contenido propio verificado"
-              delta={coverageDelta}
-              pct={summary.coveragePct ?? null}
-            />
-            <SubScoreTile
-              label="Implementado"
-              value={
-                summary.surfacingPct == null
-                  ? "—"
-                  : `${summary.surfacedCount} / ${summary.coveredCount}`
-              }
-              hint={
-                summary.surfacingPct != null && grouped.invisible.length > 0
-                  ? `Palanca rápida: ${grouped.invisible.length} ${grouped.invisible.length === 1 ? "tema aún sin citar" : "temas aún sin citar"}`
-                  : "De tus temas con contenido, cuántos cita la IA"
-              }
-              delta={surfacingDelta}
-              pct={summary.surfacingPct ?? null}
-            />
-          </div>
-
-          {trend.length >= 4 && (
-            <div className="cov-blk cov-more">
-              <div className="cov-blk-t">Evolución entre comprobaciones</div>
-              <div className="cov-legend">
-                <span>
-                  <i style={{ background: "var(--accent)" }} />
-                  Cobertura de temas
-                </span>
-                <span>
-                  <i style={{ background: "var(--pos)" }} />
-                  Tasa de implementación
-                </span>
-              </div>
-              <TrendChart points={trend} />
-            </div>
-          )}
-        </>
-      )}
-    </section>
+    </>
   );
 }
 
