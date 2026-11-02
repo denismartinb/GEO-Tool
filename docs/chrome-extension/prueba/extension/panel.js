@@ -435,7 +435,7 @@
     const st = (via) => { if (via == null) return "h"; const a = acc(via); return a == null ? "u" : a ? "y" : "n"; };
     const T = { y: k === "ia" ? "Puede leerla" : "Te encuentra", n: "Bloqueado", u: "Sin comprobar", h: "No se ve desde fuera" };
     const rows = WHO[k].map(([logo, n, via]) => [logo, n, st(via)]);
-    const items = rows.map(([logo, n, s]) => `<span class="wi ${s}" title="${n}: ${T[s]}">${logo ? `<svg aria-hidden="true"${logo === "grok" ? ' class="mo"' : ""}><use href="#e-${logo}"/></svg>` : `<span class="mono1" aria-hidden="true">${n[0]}</span>`}<i></i><span class="sr">${n}: ${T[s]}</span></span>`).join("");
+    const items = rows.map(([logo, n, s]) => `<span class="wi ${s}" data-tip="${n} · ${T[s]}">${logo ? `<svg aria-hidden="true"${logo === "grok" ? ' class="mo"' : ""}><use href="#e-${logo}"/></svg>` : `<span class="mono1" aria-hidden="true">${n[0]}</span>`}<i></i><span class="sr">${n}: ${T[s]}</span></span>`).join("");
     const used = new Set(rows.map((r) => r[2]));
     return `<div class="wrow"><span class="wl">${k === "ia" ? "Quién puede leerla" : "Agentes que compran"}</span><span class="wis">${items}</span></div><div class="wleg">${["y", "n", "u", "h"].filter((x) => used.has(x)).map((x) => `<span><i class="${x}"></i>${T[x]}</span>`).join("")}</div>`;
   }
@@ -514,11 +514,26 @@
     return `<section class="sgeo">${head}<div class="hq"><div class="dialbox">${dial(s ?? 0)}<div class="dial-c"><span class="big num">${s == null ? "–" : roll(s)}</span><span class="of">Puntuación GEO</span></div></div>
       <div class="bands"><span class="${s != null && s < 40 ? "on" : ""}">Inicial</span><span class="${s != null && s >= 40 && s < 70 ? "on" : ""}">Emergente</span><span class="${s != null && s >= 70 ? "on" : ""}">Competitivo</span></div>
       <p class="say">${say}</p>
-      ${engs.length ? `<div class="eng1 sm">${engs.map((e) => `<div class="c"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="num">${D.engines[e]}<small>%</small></b><span class="n">${ENG[e].n}</span><span class="tb"><i style="width:${D.engines[e]}%"></i></span></div>`).join("")}</div>` : ""}
+      ${engs.length ? `<div class="eng1 sm">${engs.map((e) => `<div class="c" data-tip="${ENG[e].n}"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="num">${D.engines[e]}<small>%</small></b><span class="n">${ENG[e].n}</span><span class="tb"><i style="width:${D.engines[e]}%"></i></span></div>`).join("")}</div>` : ""}
       ${top && me && top[1] > me[1] ? `<div class="rv1">${favImg(top[3], top[0])}<span><b>${esc(top[0])}</b> sale más que tú: en el ${top[1]}% de las respuestas.</span></div>` : ""}</div>
       ${deck(D.plan, "dom", "Tu plan está al día.", "Recomendaciones de GenScore")}</section>`;
   }
-  const justIn = () => (S.justIn ? `<div class="justin" role="status">${ic("checkc", "sm")}<span>Has entrado. El panel se ha actualizado solo.</span></div>` : "");
+  const justIn = () => (S.justIn ? `<div class="justin" role="status">${ic("checkc", "sm")}<span>Has entrado. El panel se ha actualizado solo.</span><button class="jx" data-act="justin-x" aria-label="Cerrar aviso">${ic("x", "sm")}</button></div>` : "");
+  /* Closing the notice collapses its own height, so what sits below slides up
+     instead of jumping (Denis, 2026-11-02). It also leaves on its own. */
+  let justInTimer = 0;
+  function dismissJustIn() {
+    S.justIn = false;
+    clearTimeout(justInTimer);
+    const el = document.querySelector(".justin");
+    if (!el) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) { el.remove(); return; }
+    el.style.height = el.offsetHeight + "px";
+    void el.offsetHeight;
+    el.classList.add("out");
+    el.addEventListener("transitionend", (e) => { if (e.propertyName === "height") el.remove(); });
+    setTimeout(() => el.remove(), 600);
+  }
   function viewReview(f, sc) {
     const rel = relation();
     S.sc = sc; S.scf = f;
@@ -611,7 +626,7 @@
       S.real = Object.assign({}, r.body, { sel: null });
       S.real.sel = pickSel(prev, r.body.activeDomain !== prevAct);
       /* signed in while the panel was open: say so once, and open the whole site */
-      if (!was) { S.lane = null; S.seen = {}; if (S.ctxSeen) { S.justIn = true; S.tab = "dom"; } }
+      if (!was) { S.lane = null; S.seen = {}; if (S.ctxSeen) { S.justIn = true; S.tab = "dom"; clearTimeout(justInTimer); justInTimer = setTimeout(dismissJustIn, 8000); } }
       ensureProj();
     } else if (r.status === 401) {
       S.real = null;
@@ -702,7 +717,7 @@
   /* ---------------- events ---------------- */
   document.addEventListener("click", async (ev) => {
     const t = ev.target.closest("[data-act],[data-lane],[data-tab],[data-pick],[data-dk],[data-dkgo]");
-    if (S.justIn && t) { S.justIn = false; }
+    if (S.justIn && t) { dismissJustIn(); if (t.dataset.act === "justin-x") return; }
     if (!t) { if (S.dd && !ev.target.closest(".dd")) { S.dd = false; draw(); } return; }
     if (t.dataset.lane) { S.lane = S.lane === t.dataset.lane ? null : t.dataset.lane; draw(); return; }
     if (t.dataset.tab) { S.tab = t.dataset.tab; S.lane = null; S.dd = false; draw(); return; }

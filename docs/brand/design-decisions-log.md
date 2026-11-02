@@ -29321,3 +29321,11 @@ candado por indicador (§408), sustituidos por el bloque con candado.
 
 **Pendiente o sabido.** Ningún camino de recuperación se retira. Denis sube
 el zip a la tienda.
+
+**Adenda (Denis, 2026-11-02, revisión en el navegador).** Sobraba aire
+encima de «Puntuación GEO» cuando es el primer bloque: el margen grande sólo
+queda cuando va tras «Optimización técnica». El aviso «Has entrado» lleva
+una X, se va solo a los 8 s y al irse recoge su altura, así que lo de debajo
+sube en vez de saltar. Los iconos de motores y agentes enseñan su nombre al
+pasar el ratón (y con el foco), con un globo propio en vez del `title` del
+navegador, que tarda en salir.

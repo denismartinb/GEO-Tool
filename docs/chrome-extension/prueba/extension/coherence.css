@@ -1,8 +1,11 @@
 /* EXT-PANEL-COHERENCE-1 (log §433): the two fixed blocks, Optimización técnica and
    Puntuación GEO, the same signed in and out. Instrumento tokens only. */
 .sct,.sgeo{display:block}
-.sgeo{margin-top:34px;padding-top:4px}
+.sgeo{margin-top:14px;padding-top:0}
+.sgeo>.sh2:first-child{margin-top:4px}
 .sct+.sgeo,.sgeo+.sct{border-top:1px solid var(--rule);padding-top:8px}
+.sct+.sgeo{margin-top:34px}
+.sct+.sgeo>.sh2:first-child{margin-top:18px}
 .sgeo+.sct{margin-top:34px}
 .sh2{display:flex;align-items:center;gap:10px;margin-top:18px;min-width:0}
 .sh2 .ey{margin-top:0;flex:1}
@@ -74,6 +77,16 @@
 /* login moment */
 .justin{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:12.5px;font-weight:550;animation:jin var(--d4) var(--out) both}
 @keyframes jin{from{opacity:0;transform:translateY(-6px)}}
+.justin>span{flex:1;min-width:0}
+.justin .jx{flex:none;width:24px;height:24px;margin:-4px -6px -4px 0;border:0;border-radius:8px;background:transparent;color:inherit;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.justin .jx:hover{background:color-mix(in srgb,var(--pos) 12%,transparent)}
+.justin.out{overflow:hidden;height:0!important;margin-top:0;padding-top:0;padding-bottom:0;opacity:0;transition:height var(--d3) var(--out),margin var(--d3) var(--out),padding var(--d3) var(--out),opacity 140ms linear}
+[data-tip]{position:relative}
+[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);right:-4px;z-index:30;padding:5px 8px;border-radius:8px;background:var(--ink);color:var(--surface);font:550 11.5px/1.2 var(--font);white-space:nowrap;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity 120ms linear,transform 120ms var(--out)}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1;transform:none}
+[data-tip]:hover{z-index:30}
+.eng1 [data-tip]::after{right:auto;left:50%;transform:translate(-50%,-3px)}
+.eng1 [data-tip]:hover::after{transform:translate(-50%,0)}
 @media (prefers-reduced-motion:reduce){.wi,.justin{animation:none;opacity:1;transform:none}.osc .f,.osc .mk{transition:none}}
 .oh .say{text-align:left;font-size:15px;color:var(--ink-2)}
 .sgeo .hq .say{font-size:15px}
