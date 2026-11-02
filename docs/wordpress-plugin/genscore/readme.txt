@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,11 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.2.1 =
+* The domain's agentic gauge is called «Auditoría agéntica», so it is not mistaken for the page's Agentes row.
+* Every audit in «Recomendaciones de GenScore» shows where it would get to if fixed (also the GEO audit).
+* Page scores in the list carry the % sign, like the widget.
 
 = 1.2.0 =
 * The page review is now «Optimización técnica»: a bar with a state (Optimizada, Mejorable, Se frena), never a dial, so it is not read as the Puntuación GEO.

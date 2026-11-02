@@ -282,7 +282,7 @@
     return { n: E.length, nota: avg(E.map(function (x) { return x.e.nota; })), lanes: { ia: lane("ia"), google: lane("google"), agent: avg(agentPool.map(function (x) { return x.e.agent; })) }, fixes: F, entries: E };
   }
   function webMode() { return !S.target && !!webAgg(); }
-  function scoreChip(v) { var b = band(v); return '<span class="gs-sc gs-sc-' + b[0] + '">' + (v == null ? "–" : v) + "</span>"; }
+  function scoreChip(v) { var b = band(v); return '<span class="gs-sc gs-sc-' + b[0] + '">' + (v == null ? "–" : v + "%") + "</span>"; }
   function pageRow(x, withFix) {
     var first = x.e.fixes && x.e.fixes[0] ? x.e.fixes[0].t.replace(/<[^>]+>/g, "") : "Nada urgente";
     var kind = x.page.type === "home" ? "Portada" : TYPE[x.page.type] || "";
@@ -346,7 +346,7 @@
     if (!acctOn()) return '<div class="gs-card gs-qc">' + acctWait() + "</div>";
     var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null, sb = auBlock("seo");
     return '<div class="gs-card gs-qc gs-hero gs-domc">' + domLyr(scanLabel(P)) + q + noScan(P) + geoDial(P.geoScore, P.geoScore == null ? "–" : P.geoScore) + (P.lede ? '<p class="gs-qs">' + esc(P.lede) + "</p>" : "")
-      + '<div class="gs-mh">Auditoría de tu dominio</div><div class="gs-gg3 gs-gg2">' + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), sb ? sb.score : P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null, agBand)) + "</div></div>";
+      + '<div class="gs-mh">Auditoría de tu dominio</div><div class="gs-gg3 gs-gg2">' + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), sb ? sb.score : P.seoScore, null) + (ag == null ? "" : gauge("ag", "Auditoría agéntica", ic("i-cart"), ag, null, agBand)) + "</div></div>";
   }
   /* The gap explained with the site's own figures, only when there is one. */
   function bridge(nota) {
@@ -371,7 +371,7 @@
     [["geo", "Auditoría GEO", "web-audit?bloque=geo", "auditoria-geo"], ["seo", "Auditoría SEO", "web-audit?bloque=seo", "auditoria-seo"], ["agent", "Auditoría agéntica", "agentic-visibility", "agentes"]].forEach(function (k) {
       var b = auBlock(k[0]);
       if (!b || !b.issues.length) return;
-      out += '<div class="gs-mh">' + k[1] + "<small>" + b.score + (b.projected ? " → " + b.projected : "") + "</small>" + goApp(k[2], "Ver", k[3], "gs-lnk") + '</div><div class="gs-rows">' + issueRows(b) + "</div>";
+      out += '<div class="gs-mh">' + k[1] + "<small>" + b.score + (b.projected || b.projectedAll ? " → " + (b.projected || b.projectedAll) : "") + "</small>" + goApp(k[2], "Ver", k[3], "gs-lnk") + '</div><div class="gs-rows">' + issueRows(b) + "</div>";
     });
     return out ? '<div class="gs-card gs-recs"><div class="gs-lab">Recomendaciones de GenScore<small>de tu consola</small></div>' + out + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "";
   }

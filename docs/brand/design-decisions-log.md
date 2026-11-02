@@ -29190,3 +29190,23 @@ sin ella:
   la extensión, copiado al plugin y a `lib/page-review`). Un llms.txt que
   respondía 200 salió como ausente mientras se revisaban muchas páginas a la
   vez.
+
+**Adenda 1.2.1 (plugin, 2026-11-02).** Prueba de Denis en su Wasmer con la
+1.2.0:
+
+- **El arco del dominio se llama «Auditoría agéntica»**, no «Agentes»: la
+  barra de la página ya tiene una fila «Agentes» y los dos números se leían
+  como lo mismo.
+- **`projectedAll` en cada bloque de `/api/ext/project`**: la nota del bloque
+  si se arreglara todo lo que puntúa, aunque haya más problemas de los tres
+  listados. Es para una cabecera («Auditoría GEO 25 → 100»). `projected` no
+  cambia y sigue siendo sólo «si arreglas estos tres», porque los puntos de
+  bloque no se suman y una suma parcial sería inventada. Sin `projectedAll`,
+  la Auditoría GEO de la cuenta de Denis (25, con más de tres problemas)
+  salía sin destino.
+- **La nota de cada página lleva %** en la lista de «Tus páginas» y en la
+  columna de las listas de WordPress, igual que el widget y la barra.
+- Pendiente sin reproducir: una vez «Cómo conservar…» salió en «Fecha» como
+  «Propuesta lista» con una nota vieja, y al revisarla volvió a «Ya lo tiene».
+  La generación `genscore_scores_gen` ya rechaza notas leídas antes de un
+  borrado general; si se repite, mirar qué guardó esa nota.

@@ -43,6 +43,12 @@ export type ExtAuditBlock = {
   score: number;
   /** The score if the listed issues were fixed. Null when nothing would move it. */
   projected: number | null;
+  /**
+   * The block's score if every scored issue were fixed, even when there are
+   * more than the listed ones. For a header («25 → 100»), never for «si
+   * arreglas estos tres». Null when nothing would move it.
+   */
+  projectedAll: number | null;
   issues: ExtAuditIssue[];
 };
 
@@ -86,6 +92,7 @@ function technicalBlock(key: AuditBlockKey, pages: PageAuditEntry[], bots: BotAc
     key,
     score: view.score,
     projected: covered && view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
+    projectedAll: view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
     issues: top.map((i) => ({
       label: ISSUE_CHECK_META[i.issue.check].label,
       scope: issueScopeLabel(i.issue),
@@ -100,10 +107,13 @@ function agenticBlock(result: AgenticCheckResult): ExtAuditBlock | null {
   const score = result.score;
   const steps = firstSteps(result, EXT_AUDIT_ISSUES);
   const projected = steps.length ? scoreIfChecksPass(result, new Set(steps.map((s) => s.checkId))) : null;
+  const all = firstSteps(result, Number.MAX_SAFE_INTEGER);
+  const projectedAll = all.length ? scoreIfChecksPass(result, new Set(all.map((s) => s.checkId))) : null;
   return {
     key: "agent",
     score,
     projected: projected !== null && projected > score ? projected : null,
+    projectedAll: projectedAll !== null && projectedAll > score ? projectedAll : null,
     issues: steps.map((s) => {
       const alone = scoreIfChecksPass(result, new Set([s.checkId]));
       return {

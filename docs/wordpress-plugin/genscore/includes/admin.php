@@ -193,7 +193,7 @@ function genscore_list_cell( $col, $post_id ) {
 	$first = isset( $s['fixes'][0]['t'] ) ? wp_strip_all_tags( $s['fixes'][0]['t'] ) : __( 'Nada urgente', 'genscore' );
 	/* translators: %d: score from 0 to 100. */
 	$label = sprintf( __( 'Optimización técnica %d%%. Ver en GenScore', 'genscore' ), (int) $s['nota'] );
-	echo '<a class="gs-col" href="' . esc_url( $link ) . '" aria-label="' . esc_attr( $label ) . '"><span class="gs-col-n gs-col-' . esc_attr( $band ) . '">' . esc_html( (string) $s['nota'] ) . '</span><span class="gs-col-t">' . esc_html( $first ) . '</span></a>';
+	echo '<a class="gs-col" href="' . esc_url( $link ) . '" aria-label="' . esc_attr( $label ) . '"><span class="gs-col-n gs-col-' . esc_attr( $band ) . '">' . esc_html( $s['nota'] . '%' ) . '</span><span class="gs-col-t">' . esc_html( $first ) . '</span></a>';
 }
 
 /**
