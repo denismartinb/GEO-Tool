@@ -540,6 +540,7 @@ add_action( 'wp_ajax_genscore_faq_publish', 'genscore_ajax_faq_publish' );
  */
 function genscore_compare_table_html( $rival ) {
 	$brand = genscore_site_name();
+	$d     = '' === $brand ? genscore_plan_data() : null;
 	if ( '' === $brand && $d && ! empty( $d['project']['brand'] ) ) {
 		$brand = sanitize_text_field( (string) $d['project']['brand'] );
 	}

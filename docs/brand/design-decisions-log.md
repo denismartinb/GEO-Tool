@@ -29370,6 +29370,12 @@ probando la 1.4.0 entera en la tienda de Wasmer:
   los correos de la tienda, que no siempre es público. «Añadir dato» y
   «Copiar tabla y abrir» dependen de `page`, que en esa tienda llega vacío por
   la misma razón que «Añadir preguntas».
+- **Segunda prueba de Instinct en la 1.4.2**: una subida duplicada
+  («bolsa-cafe-etiopia-250g-1.jpg») seguía proponiendo el nombre del fichero,
+  porque el título no lleva el «-1». `genscore_title_is_file` compara también
+  sin el número final (y sigue valiendo con el número, para nombres como
+  «cafe-2024»). En la tabla de comparativa se restituye la lectura del plan
+  que daba la marca de la cuenta cuando la web no tiene nombre.
 - **Nombre de la ficha de WordPress.org**: «GenScore: AI SEO & GEO Optimizer,
   llms.txt, Schema & AI Bots», igual en el readme y en la cabecera `Plugin
   Name` (Plugin Check pide que coincidan; lo vigila un test).

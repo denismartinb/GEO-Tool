@@ -115,6 +115,7 @@ if ( ! function_exists( 'remove_accents' ) ) {
 	function remove_accents( $t ) { return iconv( 'UTF-8', 'ASCII//TRANSLIT', $t ); }
 }
 check( 'a title made from the file name is the file name', genscore_title_is_file( 'bolsa-cafe-etiopia-250g', '/u/bolsa-cafe-etiopia-250g-scaled.jpg' ) && genscore_title_is_file( 'Bolsa cafe etiopia 250g', '/u/bolsa-cafe-etiopia-250g-1024x768.jpg' ) );
+check( 'a duplicate upload («-1») still counts as the file name', genscore_title_is_file( 'bolsa-cafe-etiopia-250g', '/u/bolsa-cafe-etiopia-250g-1.jpg' ) && genscore_title_is_file( 'cafe-2024', '/u/cafe-2024.jpg' ) && genscore_title_is_file( 'cafe-2024', '/u/cafe-2024-2-scaled.jpg' ) );
 check( 'a written title is not the file name', ! genscore_title_is_file( 'Café de Etiopía en grano', '/u/bolsa-cafe-etiopia-250g.jpg' ) );
 
 echo $failures ? "\n$failures failed\n" : "\nall passed\n";

@@ -102,7 +102,7 @@ function genscore_is_file_name( $t ) {
 
 /**
  * Whether an attachment's title is just its file name, as WordPress sets it
- * on upload (also after «-scaled» or a size suffix).
+ * on upload (also after «-scaled», a size suffix or a duplicate «-1»).
  *
  * @param string $title Attachment title.
  * @param string $file  Attached file path.
@@ -114,7 +114,10 @@ function genscore_title_is_file( $title, $file ) {
 		return preg_replace( '/[^a-z0-9]+/', '', $t );
 	};
 	$base = preg_replace( '/(-scaled|-rotated|-\d+x\d+|-e\d{10,})+$/i', '', pathinfo( $file, PATHINFO_FILENAME ) );
-	return '' !== $base && $key( $title ) === $key( $base );
+	// A duplicate upload adds «-1», «-2»… to the file name but not to the title.
+	$dup = preg_replace( '/-\d+$/', '', $base );
+	$t   = $key( $title );
+	return '' !== $t && ( ( '' !== $base && $t === $key( $base ) ) || ( '' !== $dup && $t === $key( $dup ) ) );
 }
 
 /**
