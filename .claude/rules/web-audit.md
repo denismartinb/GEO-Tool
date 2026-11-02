@@ -532,3 +532,16 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
 - **«Arreglado desde la revisión anterior» sólo nombra comprobaciones que
   fallaron antes y que ahora se miden y pasan** (`fixedSincePrevious`). Una que
   ya no se mide no cuenta como arreglada.
+
+## Lo que lee la IA (AI-VIEW-CONSOLE-1, log §448)
+
+- **Sólo lo que prueba el HTML.** «Llega vacía» es `jsShell`, «Poco texto» es
+  `jsThin` y lo demás «Llega completa». Un hueco parcial en una página larga no
+  se adivina: lo mide la extensión, o un navegador en el servidor con su propio
+  Task Intake. Una foto sin `jsShell` no se declara limpia.
+- **La foto no guarda texto de la página**: recuentos, booleanos, tipos de
+  datos estructurados y `platform`. Ni titulares ni precios.
+- **`js_required` sigue sin puntos** aunque ahora falle también con `jsThin`.
+- **La solución es para todo el dominio y va plegada dentro del bloque**
+  (Denis, 2026-11-02); el Markdown es la segunda opción, en su propio
+  desplegable. Los ejemplos de código son ejemplos y lo dicen.

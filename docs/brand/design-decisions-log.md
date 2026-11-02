@@ -29658,3 +29658,19 @@ sustituye a las primeras reseñas.
 **Adenda 1.5.2, recomendaciones del dominio (Denis, 2026-11-02).** Con sesión, en «Todo <dominio>», la tarjeta «Pon en el HTML lo que hoy sólo sale con JavaScript» de la página abierta va la primera de «Recomendaciones técnicas», marcada «En esta página». La auditoría del servidor sólo ve el HTML y sólo avisa cuando la página llega vacía (`js_required`, sin puntos), así que este caso nunca llegaba a las tarjetas del dominio. Que la consola lo cuente como problema del dominio es la fase del bloque «Lo que lee la IA» de Auditoría GEO.
 
 **Adenda 1.5.2, la solución dentro del bloque (Denis, 2026-11-02).** «Cómo arreglarlo» deja de saltar a la tarjeta y se despliega dentro de «Lo que lee la IA», con menos texto: una frase, el HTML para copiar, «Descargar el .md» y una nota corta de que el .md es la segunda opción. Usa los mismos datos y botones que la tarjeta (`GS_X.aiFix`), que sigue en las recomendaciones.
+
+## §448 · AI-VIEW-CONSOLE-1: «Lo que lee la IA» en Auditoría GEO, con la solución para todo el dominio (2026-11-02)
+
+**Qué.** Auditoría GEO gana el bloque «Lo que lee la IA» (`components/ins/audit/ai-view.tsx`, modelo puro `lib/web-audit/ai-view.ts`), debajo de «Quién puede leer tu web». Una cifra («3 de 5 páginas llegan completas…», con la frase de Denis), una barra por página y la lista de páginas auditadas con las palabras que llegan en el HTML y su estado: «Llega completa», «Poco texto» o «Llega vacía». Cada fila se abre y dice si el titular y las secciones están en el HTML y qué datos estructurados trae. Debajo, plegado, «Cómo arreglarlo» para todo el dominio: pasos por plataforma (WordPress, Shopify, React / Next.js, Otra, marcada según lo que detecta la auditoría), un ejemplo para copiar y, en un segundo desplegable, la opción del Markdown con las líneas para llms.txt. Diseño aprobado en `docs/design-reference/ai-view-console-1/`.
+
+**Cómo se mide (sólo HTML).** `checkCitability` guarda dos campos opcionales más en la foto, sin migración: `jsThin` (la página no está vacía, pero su contenido principal lo pinta un script: menos de 150 palabras con un nodo de montaje o el estado de un framework, o un estado de framework con 200 palabras o más y más del doble de las que enseña el HTML) y `platform` (WordPress, Shopify, Next o React por las huellas del HTML). «Llega vacía» sigue siendo `jsShell` (§412). Una foto anterior a §412 no se declara limpia: sin `jsShell` medido la página no sale.
+
+**Lo que no mide.** Un hueco parcial en una página larga (la ficha de Movistar que llegaba al 70%) sólo se ve pintando la página. Eso lo hace hoy la extensión; en la consola es la segunda fase (navegador en el servidor, con su Task Intake y el coste medido). «Llega completa» quiere decir que llega con texto y sin señales de que un script lo rellene.
+
+**Problema del dominio.** `js_required` (sin puntos, §412) pasa a fallar también con `jsThin`, y su guía dice «vacías o sin su contenido principal». La extensión, en «Todo el dominio», pone esa tarjeta justo después de la de la página abierta, aunque no tenga puntos (Denis: «y el dos también»), enlazando a `#lo-que-lee-la-ia`.
+
+**Sin texto de la página.** La foto no guarda titulares, secciones ni precios de la web: sólo recuentos, booleanos y tipos de datos estructurados. La maqueta enseñaba el texto; la implementación enseña «Está en el HTML» o «No está en el HTML».
+
+**Premisa.** No retira ningún camino de recuperación.
+
+**Pendiente.** El porcentaje exacto y el `.md` de cada página desde la consola (navegador en el servidor). Ponderar `js_required` en la nota sigue siendo una fase aparte (§131).
