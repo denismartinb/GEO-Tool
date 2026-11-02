@@ -1,0 +1,180 @@
+<title>Lo que lee la IA v2</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--canvas:#eceef2;--surface:#fff;--surface-2:#f6f7f9;--surface-3:#eff1f4;--ink:#0b1426;--ink-2:#3b4759;--ink-3:#5f6b7e;--ink-4:#9aa4b3;--rule:#e3e6eb;--rule-2:#eef0f3;--blue:#2563eb;--blue-ink:#1b4fd6;--blue-tint:#ecf2ff;--warm:#c2410c;--warm-tint:#fff3eb;--warm-rule:#fbd3bb;--mid:#b7791f;--mid-tint:#fdf4e3;--mid-ink:#8a5a12;--pos:#0f7a54;--pos-tint:#e8f6ef;--page:#dfe3ea;--frame:#0b1426;color-scheme:light;--font:'Figtree',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font:400 15px/1.5 var(--font);color:var(--ink);padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.rv{max-width:1560px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.rv h1{font-size:18px;font-weight:600;margin:0}
+.rv p{margin:2px 0 0;font-size:13px;color:var(--ink-3);max-width:76ch}
+.seg{display:flex;background:var(--surface);border-radius:99px;padding:3px;gap:2px;border:1px solid var(--rule)}
+.seg button{border:0;background:none;font:600 13px var(--font);padding:7px 14px;border-radius:99px;color:var(--ink-3);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.stage{max-width:1560px;margin:0 auto;display:flex;gap:24px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.desk{flex:1 1 900px;max-width:1140px;min-width:0;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.18);background:var(--canvas)}
+.phone{width:390px;max-width:100%;border-radius:34px;overflow:hidden;border:10px solid var(--frame);background:var(--canvas);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.hide{display:none!important}
+.app{container-type:inline-size;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.phone .app{padding:12px}
+.ph h2{margin:0;font-size:24px;font-weight:600;letter-spacing:-.01em}.ph p{margin:2px 0 0;color:var(--ink-3);font-size:13.5px}
+.card{background:var(--surface);border-radius:18px;border:1px solid var(--rule);padding:22px;display:flex;flex-direction:column;gap:18px;min-width:0;position:relative}
+.phone .card{padding:16px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top h3{margin:0;font-size:16px;font-weight:600}.top .sp{flex:1}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px;white-space:nowrap}
+.tag.ok{background:var(--pos-tint);color:var(--pos)}.tag.mid{background:var(--mid-tint);color:var(--mid-ink)}.tag.bad{background:var(--warm-tint);color:var(--warm)}.tag.neu{background:var(--surface-3);color:var(--ink-2)}.tag.blue{background:var(--blue-tint);color:var(--blue-ink)}
+.hero{display:grid;grid-template-columns:minmax(0,1fr);gap:18px}
+@container (min-width:760px){.hero{grid-template-columns:minmax(0,5fr) minmax(0,7fr);align-items:center}}
+.fig{display:flex;gap:16px;align-items:center}
+.ring{width:96px;height:96px;flex:none}
+.fig b{display:block;font-size:46px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+.fig p{margin:6px 0 0;color:var(--ink-2);font-size:14px;text-wrap:pretty}
+.fig small{display:block;margin-top:6px;font-size:12px;color:var(--ink-3)}
+.delta{color:var(--pos);font-weight:600}
+.lost{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+@container (min-width:560px){.lost{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.lost div{background:var(--surface-2);border:1px solid var(--rule-2);border-radius:12px;padding:10px 12px;min-width:0}
+.lost span{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.lost b{display:block;font-size:15px;font-weight:600;margin-top:2px}
+.lost em{font-style:normal;font-size:12px;color:var(--warm)}
+.lost .okk em{color:var(--pos)}
+.eye{display:flex;align-items:center;gap:10px;font:500 11.5px var(--font);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.eye i{flex:1;height:1px;background:var(--rule)}.eye em{font-style:normal;letter-spacing:0;text-transform:none;font-size:12px;color:var(--ink-4)}
+.miss{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@container (min-width:760px){.miss{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.m{border:1px solid var(--warm-rule);background:linear-gradient(180deg,var(--warm-tint),var(--surface) 70%);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.m.mid{border-color:var(--rule);background:var(--surface-2)}
+.m h4{margin:0;font-size:15px;font-weight:600;display:flex;gap:8px;align-items:center;justify-content:space-between}
+.m p{margin:0;font-size:13.5px;color:var(--ink-2);text-wrap:pretty}
+.quote{font:500 12.5px var(--mono);background:var(--surface);border:1px dashed var(--warm-rule);border-radius:8px;padding:7px 9px;color:var(--ink);overflow-wrap:anywhere}
+.m .where{font:11.5px var(--mono);color:var(--ink-3);overflow-wrap:anywhere}
+.m a,.lnk{color:var(--blue-ink);font-size:13px;font-weight:600;text-decoration:none}
+.list{display:flex;flex-direction:column;border-top:1px solid var(--rule-2)}
+.row{border-bottom:1px solid var(--rule-2)}
+.rh{display:grid;grid-template-columns:minmax(0,1fr) 150px 92px 16px;gap:12px;align-items:center;padding:12px 0;cursor:pointer;width:100%;background:none;border:0;font:inherit;color:inherit;text-align:left}
+@container (max-width:620px){.rh{grid-template-columns:minmax(0,1fr) auto 16px}.rh .barw{grid-column:1/-1;grid-row:2}}
+.rh .t{min-width:0}.rh .t b{display:block;font:500 13px var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.why{display:flex;gap:5px;flex-wrap:wrap;margin-top:5px}
+.why span{font-size:11.5px;color:var(--ink-2);background:var(--surface-3);border-radius:6px;padding:1px 7px;white-space:nowrap}
+.why span.ai{background:var(--blue-tint);color:var(--blue-ink)}
+.barw{display:flex;align-items:center;gap:8px}
+.bar{flex:1;height:6px;background:var(--surface-3);border-radius:99px;overflow:hidden;position:relative}.bar i{position:absolute;inset:0 auto 0 0;border-radius:99px;background:var(--pos)}.bar i.mid{background:var(--mid)}.bar i.bad{background:var(--warm)}
+.barw small{font:500 12px var(--mono);color:var(--ink-2);width:36px;text-align:right}
+.chev{transition:transform .2s;color:var(--ink-4)}.row.open .chev{transform:rotate(180deg)}
+.det{display:none;padding:2px 0 16px;flex-direction:column;gap:12px}.row.open .det{display:flex}
+.sbs{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@container (min-width:620px){.sbs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pane{border:1px solid var(--rule);border-radius:12px;overflow:hidden;min-width:0}
+.pane header{font-size:12px;font-weight:600;color:var(--ink-2);background:var(--surface-2);padding:8px 12px;border-bottom:1px solid var(--rule);display:flex;justify-content:space-between;gap:8px}
+.pane header span{font-weight:400;color:var(--ink-3)}
+.pane ul{list-style:none;margin:0;padding:6px 0}
+.pane li{display:flex;gap:10px;align-items:baseline;padding:5px 12px;font-size:13px}
+.pane li code{font:11px var(--mono);color:var(--ink-3);flex:none;width:30px}
+.pane li.x{background:var(--warm-tint)}
+.pane li.x b{color:var(--warm);font-weight:500;text-decoration:line-through;text-decoration-color:var(--warm-rule)}
+.pane li.x em{margin-left:auto;font-style:normal;font-size:11.5px;color:var(--warm);white-space:nowrap}
+.bots{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ink-3)}
+.cause{display:flex;gap:12px;align-items:flex-start;background:var(--surface-2);border-radius:12px;padding:12px}
+.cause .ic{width:28px;height:28px;border-radius:8px;background:var(--blue-tint);color:var(--blue-ink);display:grid;place-items:center;font-weight:700;flex:none}
+.cause b{font-weight:600}.cause p{margin:2px 0 0;font-size:13px;color:var(--ink-2)}
+.fix{border:1px solid var(--blue-soft,#c9dbff);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--surface)}
+.fix h4{margin:0;font-size:15px;font-weight:600}
+.fix ol{margin:0;padding-left:20px;font-size:13.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+.fixrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:8px 14px;font:600 13px var(--font);border:1px solid var(--rule);background:var(--surface);color:var(--ink);cursor:pointer;white-space:nowrap}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.n{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--blue);color:#fff;font:700 12px var(--font);display:grid;place-items:center;box-shadow:0 0 0 3px var(--surface);z-index:2}
+.rel{position:relative}
+.key{max-width:1560px;margin:22px auto 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.key div{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:14px;font-size:13px;color:var(--ink-2);display:flex;flex-direction:column;gap:6px}
+.key b{color:var(--ink);font-size:14px}
+.key .need{font-size:11.5px;font-weight:600;align-self:flex-start;white-space:normal}
+.where3{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@container (min-width:700px){.where3{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.g{border:1px solid var(--rule);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.g h4,.acc h4{margin:0;font-size:14px;font-weight:600}
+.gl{display:grid;grid-template-columns:minmax(0,1fr) 90px 38px;gap:10px;align-items:center;font-size:13.5px;color:var(--ink-2)}
+.gl small{font:500 12px var(--mono);text-align:right;color:var(--ink)}
+.ins{margin:2px 0 0;font-size:13px;color:var(--ink);font-weight:500;border-top:1px solid var(--rule-2);padding-top:9px}
+.acc{background:var(--surface-2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.acc p{margin:0;font-size:13px;color:var(--ink-2)}
+</style>
+
+<div class="rv">
+  <div><h1>Lo que lee la IA, versión 2 · propuesta</h1><p>Auditoría técnica, bloque GEO. Los números azules marcan cada mejora; abajo dice qué hace falta para cada una. Datos de la tienda de prueba Café Ventura.</p></div>
+  <div class="seg" role="group" aria-label="Vista"><button data-v="both" aria-pressed="true">Las dos</button><button data-v="desk" aria-pressed="false">Escritorio</button><button data-v="phone" aria-pressed="false">Móvil</button></div>
+</div>
+<div class="stage"><div class="desk" id="desk"></div><div class="phone" id="phone"></div></div>
+
+<div class="key">
+  <div><b>1 · Una cifra que pesa lo importante</b>Porcentaje del contenido que ve un cliente y que llega a la IA, medido con un navegador real y pesado por la importancia de cada página. Sustituye a «7 de 8».<span class="tag neu need">Navegador en el servidor</span></div>
+  <div><b>2 · Lo que la IA no ve de ti</b>Por tipo de contenido (precios, preguntas, opiniones), con la frase literal que se pierde y las preguntas que vigilas a las que afecta.<span class="tag neu need">Navegador en el servidor</span></div>
+  <div><b>3 · Dónde se pierde</b>Lo que llega, agrupado por lo que importa (lo que cita la IA, lo que trae clics de Google, portada y menú) y por tipo de página, con una frase de lectura. Sin lista de URL.<span class="tag ok need">Sin navegador (escaneos y Search Console) + navegador para el %</span></div>
+  <div><b>4 · ¿Pueden entrar los motores?</b>Para toda la web: si cada motor entra o lo frena el servidor, aunque robots.txt le deje pasar.<span class="tag ok need">Sin navegador</span></div>
+  <div><b>Recomendaciones</b>Sin bloque de arreglo aquí. Cuando estemos seguros de la causa (por ejemplo, un dato concreto que debe ir en el HTML), sale como tarjeta en Recomendaciones.<span class="tag neu need">Regla de producto</span></div>
+</div>
+
+<template id="tpl">
+<div class="app">
+  <div class="ph"><h2>Auditoría técnica</h2><p>Bloque GEO · cafeventura.es</p></div>
+  <section class="card">
+    <div class="top"><h3>Lo que lee la IA</h3><span class="sp"></span><span class="tag ok">✓ Comprobado con un navegador real</span></div>
+
+    <div class="hero rel">
+      <span class="n" style="left:-8px;top:-8px">1</span>
+      <div class="fig">
+        <svg class="ring" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" fill="none" stroke="var(--surface-3)" stroke-width="9"/><circle cx="48" cy="48" r="40" fill="none" stroke="var(--mid)" stroke-width="9" stroke-linecap="round" stroke-dasharray="161 252" transform="rotate(-90 48 48)"/></svg>
+        <div><b>64%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity.</p><small>Pesado por lo que importa cada página · <span class="delta">▲ 9 pt</span> desde la auditoría anterior</small></div>
+      </div>
+      <div class="lost">
+        <div><span>Precios</span><b>60%</b><em>no llega</em></div>
+        <div><span>Preguntas</span><b>100%</b><em>no llega</em></div>
+        <div><span>Opiniones</span><b>100%</b><em>no llega</em></div>
+        <div class="okk"><span>Fichas</span><b>100%</b><em>llega</em></div>
+      </div>
+    </div>
+
+    <div class="eye rel"><span class="n" style="left:-30px;top:-4px">2</span>Lo que la IA no ve de ti<i></i></div>
+    <div class="miss">
+      <div class="m"><h4>Tus precios <span class="tag bad">60% no llega</span></h4>
+        <p>Si alguien pregunta cuánto cuesta tu café, la IA no puede dar tu precio y responde con el de otra tienda.</p>
+        <div class="quote">«1 kg · 24,90 €»</div>
+        <div class="where">En tus fichas de producto</div>
+        <a href="#">Afecta a 2 preguntas que vigilas →</a></div>
+      <div class="m"><h4>Preguntas frecuentes <span class="tag bad">No llega</span></h4>
+        <p>Las 6 preguntas de tu suscripción se abren con JavaScript. Es justo el formato que la IA más copia.</p>
+        <div class="quote">«¿Puedo pausar la suscripción un mes?»</div>
+        <div class="where">En tu página de suscripción</div>
+        <a href="#">Afecta a 1 pregunta que vigilas →</a></div>
+      <div class="m mid"><h4>Opiniones <span class="tag mid">No llegan</span></h4>
+        <p>El widget de reseñas llega vacío. La IA no puede decir lo que opinan tus clientes.</p>
+        <div class="quote">«Llega en 24 h y el tueste es de esta semana»</div>
+        <div class="where">En el widget de reseñas</div></div>
+    </div>
+
+    <div class="eye rel"><span class="n" style="left:-30px;top:-4px">3</span>Dónde se pierde<i></i><em>lo que llega</em></div>
+    <div class="where3">
+      <div class="g"><h4>Por lo que importa</h4>
+        <div class="gl"><span>Lo que cita la IA</span><span class="bar"><i class="mid" style="width:58%"></i></span><small>58%</small></div>
+        <div class="gl"><span>Lo que más clics trae de Google</span><span class="bar"><i class="mid" style="width:81%"></i></span><small>81%</small></div>
+        <div class="gl"><span>Portada y menú</span><span class="bar"><i style="width:93%"></i></span><small>93%</small></div>
+        <p class="ins">Lo que más te recomienda la IA es lo que peor le llega.</p></div>
+      <div class="g"><h4>Por tipo de página</h4>
+        <div class="gl"><span>Fichas de producto</span><span class="bar"><i class="mid" style="width:52%"></i></span><small>52%</small></div>
+        <div class="gl"><span>Suscripción y servicios</span><span class="bar"><i class="mid" style="width:71%"></i></span><small>71%</small></div>
+        <div class="gl"><span>Blog y guías</span><span class="bar"><i style="width:99%"></i></span><small>99%</small></div>
+        <p class="ins">El blog llega entero; el problema está en lo que vendes.</p></div>
+    </div>
+    <div class="acc rel"><span class="n" style="left:-30px;top:2px">4</span><h4>¿Pueden entrar los motores?</h4>
+      <div class="bots"><span class="tag ok">ChatGPT entra en toda la web</span><span class="tag ok">Claude entra en toda la web</span><span class="tag bad">Perplexity: tu servidor lo bloquea</span></div>
+      <p>Perplexity recibe un 403 aunque robots.txt le deja pasar. Lo frena el cortafuegos o la CDN, no WordPress.</p></div>
+
+    </section>
+</div>
+</template>
+<script>
+const t=document.getElementById('tpl');
+['desk','phone'].forEach(id=>document.getElementById(id).appendChild(t.content.cloneNode(true)));
+document.querySelectorAll('.rh').forEach(b=>b.addEventListener('click',()=>b.parentElement.classList.toggle('open')));
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));const v=b.dataset.v;document.getElementById('desk').classList.toggle('hide',v==='phone');document.getElementById('phone').classList.toggle('hide',v==='desk')}));
+</script>

@@ -29689,3 +29689,32 @@ siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
 **Premisa.** No retira ningún camino de recuperación.
 
 **Pendiente.** El porcentaje exacto y el `.md` de cada página desde la consola (navegador en el servidor). Ponderar `js_required` en la nota sigue siendo una fase aparte (§131).
+
+## §451 · AI-READ-2: «Lo que lee la IA» medido con un navegador real, con cifras globales (2026-11-02)
+
+**Qué.** El bloque «Lo que lee la IA» de Auditoría GEO (§449) deja de listar páginas y pasa a cifras e ideas globales (Denis, 2026-11-02: «no mostraría el detalle de las páginas porque si no va a parecer que escaneamos muy pocas… es mejor dar datos e insights globales»). Enseña:
+
+- un anillo con el porcentaje de lo que ve una persona que llega a ChatGPT, Claude y Perplexity, pesado por lo que importa cada página (citada por la IA 3, portada 2, páginas de los temas vigilados 1,5, resto 1), con el cambio desde la medición anterior cuando al menos la mitad de las páginas la tienen;
+- cuatro baldosas por tipo de contenido (precios, preguntas frecuentes, opiniones, fichas) con el porcentaje que no llega;
+- «Lo que la IA no ve de ti»: una tarjeta por tipo que se pierde, con la consecuencia, un trozo literal que no llega, dónde pasa («En lo que vendes», «En tus artículos»…) y, en precios, «Afecta a N preguntas que vigilas» (prompts activos que `classifyPurchaseQuestion` clasifica como `price`);
+- «Dónde se pierde», por importancia y por tipo de página, con una frase sólo cuando las cifras dicen algo («Tus páginas más citadas son las que peor lee la IA»).
+
+Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arreglo sólo irá a Recomendaciones cuando su causa sea segura (Denis: «solo si estamos seguros de dar una recomendación… la visualizamos en la sección recomendaciones»). Diseño en `docs/design-reference/ai-read-2/bloque-auditoria-geo.html` (sólo claro, a petición de Denis).
+
+**Cómo se mide.** Cloudflare Browser Run, Quick Action `/content`, en el plan gratuito de Workers (Denis: «busca una opción sin coste», «sí acepto el plan»): 10 minutos de navegador al día y una petición cada 10 s. `lib/web-audit/browser-run.ts` pide el HTML pintado; `lib/web-audit/ai-render.ts` (puro) lo compara con el mismo HTML pedido sin JavaScript, por el método de la extensión (palabras del contenido principal pintado frente a la bolsa de palabras del HTML). Los bloques se comparan por pares de palabras seguidas, para que «24 90» sólo cuente donde está el precio. Se quitan avisos de cookies, consentimiento, modales, menú, cabecera y pie. Una página de reto, de error o casi vacía queda «sin medir» y no cuenta.
+
+**Dónde corre.** Al final del GET del cron `run-audit` (pg_cron cada 10 minutos, §347), nunca en un eslabón de la cadena: `runAiRenderPass` (`lib/web-audit/ai-render-pass.ts`) toma la foto más reciente de cada proyecto no archivado, mide primero la portada, pregunta antes de cada página si su peor caso (30 s) cabe antes de los 55 s, y se para con 429 o credenciales malas. Lo que no alcanza sigue pendiente para la siguiente pasada. Sólo se abren páginas que la auditoría técnica ya eligió, del dominio del proyecto (`isAllowedAuditHost`): no es un rastreador, Cloudflare abre una URL y no sigue enlaces.
+
+**Sin migración.** El resultado va en `web_audit_snapshots.pages` (jsonb) como `PageAuditEntry.render`, opcional: `ok` (porcentaje, recuentos por tipo, hasta seis trozos literales saneados de 80 caracteres) o `unmeasured`. La siguiente auditoría técnica lo arrastra (`carryForwardRenders`) mientras siga fresco: 7 días si se midió, 1 día si quedó sin medir. Se guardan esos trozos literales de páginas públicas del cliente; ningún texto de su cuenta.
+
+**Sin las variables.** Sin `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_BROWSER_TOKEN` no se llama a nada y el bloque enseña el modo HTML: el porcentaje de páginas que llegan completas según §449 (`jsShell`/`jsThin`), sin lista. Con las variables y sin medición todavía, dice que se está midiendo.
+
+**Privacidad.** Cloudflare entra en la lista de encargados de `/privacidad`.
+
+**Superado.** De §449 quedan superados la lista de páginas y el bloque plegado «Cómo arreglarlo» de la consola (el arreglo de la extensión no cambia). `jsShell`/`jsThin`, `platform` y `js_required` siguen igual.
+
+**Premisa.** Retira de la consola «Cómo arreglarlo» de §449, un camino de ayuda, no de recuperación: la pantalla no se queda sin salida. Si Cloudflare falla, el bloque vuelve al modo HTML, que es lo que había antes.
+
+**Visión general.** Tarjeta «Lo que lee la IA» a ancho completo bajo Comercio agéntico y Auditoría SEO (`components/ins/overview/ai-read-card.tsx`, modelo `aiReadCard`), con las piezas de la tarjeta agéntica (Denis: «busca un diseño más bonito, en línea con el diseño global»; «ok implementa así»): anillo de marcas con el porcentaje, frase con el dato, barras finas por tipo de contenido (lo que llega) y la caja «Lo que más se pierde» con el tipo más perdido y su trozo literal, y la lectura de las páginas citadas si aplica. Sale sólo con medición o mientras se mide; en modo HTML no sale. Enlaza a `?bloque=geo#lo-que-lee-la-ia`. Maqueta `docs/design-reference/ai-read-2/tarjeta-vision-general.html`. La frase «Lo que más te recomienda la IA es lo que peor le llega» no se entendía y pasa a «Tus páginas más citadas son las que peor lee la IA».
+
+**Pendiente.** Aprovechar la misma medición en Auditoría agéntica y Visibilidad en agentes (precio, stock, botón y datos estructurados vistos por un navegador; muros de cookies o retos), con maqueta antes. Una tarjeta de Recomendaciones cuando sea seguro que un dato concreto (por ejemplo, los precios) debe ir en el HTML. Un grupo por clics de Google en «Dónde se pierde».

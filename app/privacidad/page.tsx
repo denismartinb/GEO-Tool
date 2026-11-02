@@ -121,6 +121,7 @@ export default function PrivacidadPage() {
       <ul>
         <li><strong>Supabase</strong> (base de datos y autenticación de usuarios), infraestructura ubicada en la Unión Europea.</li>
         <li><strong>Vercel</strong> (alojamiento y ejecución de la aplicación).</li>
+        <li><strong>Cloudflare (Browser Run)</strong>: abre con un navegador las páginas públicas de tu web que ya revisa la auditoría técnica, para comparar lo que ve una persona con lo que recibe la IA. Sólo recibe la dirección de esas páginas; no recibe datos de tu cuenta. Este proveedor puede tratar datos fuera del Espacio Económico Europeo.</li>
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
