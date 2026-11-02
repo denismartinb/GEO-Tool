@@ -123,6 +123,8 @@ function genscore_site_facts() {
 		'permalinkPlain' => '' === (string) get_option( 'permalink_structure' ),
 		'frontPage'     => 'page' === get_option( 'show_on_front' ) ? (int) get_option( 'page_on_front' ) : 0,
 		'shopPage'      => genscore_shop_page_id(),
+		'currency'      => function_exists( 'get_woocommerce_currency' ) ? get_woocommerce_currency() : null,
+		'currencySymbol' => function_exists( 'get_woocommerce_currency_symbol' ) ? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ) : null,
 	);
 }
 

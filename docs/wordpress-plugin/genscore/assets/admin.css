@@ -274,6 +274,15 @@ html.gs-fm-open{overflow:hidden}
 #gs-fixm .gs-fm-ret{display:flex;gap:10px;flex-wrap:wrap}
 #gs-fixm .gs-fm-ret label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--ink-2)}
 #gs-fixm .gs-fm-ret input{width:120px;height:36px;border:1px solid var(--rule);border-radius:10px;padding:0 10px;font:inherit}
+#gs-fixm .gs-fm-ship input{width:96px}
+#gs-fixm .gs-fm-rng{display:flex;align-items:center;gap:6px}
+#gs-fixm .gs-fm-rng input{width:60px}
+#gs-fixm .gs-fm-rng i{font-style:normal;font-weight:500;color:var(--ink-3)}
+#gs-fixm .gs-fm-ship .gs-fm-note{flex-basis:100%;margin:0}
+#gs-fixm .gs-fm-faq{height:auto;max-height:min(720px,calc(100vh - 64px))}
+#gs-fixm .gs-fm-faq .gs-fm-h a{color:var(--blue);text-decoration:underline}
+#gs-fixm .gs-fm-qs{flex:1;min-height:0;overflow:auto;padding:16px 20px;display:flex;flex-direction:column;gap:16px;border-top:1px solid var(--rule)}
+#gs-fixm .gs-fm-q label{font-size:14px;font-weight:600;color:var(--ink)}
 #gs-fixm .gs-fm-list{flex:1;min-height:0;overflow:auto;padding:0 8px 10px}
 #gs-fixm .gs-fm-it{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:10px;align-items:center;padding:6px 8px;border-radius:12px}
 #gs-fixm .gs-fm-it:hover{background:var(--surface-2)}

@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,14 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.4.0 =
+* «Publica tu comparativa con…» creates a draft page with a table: your column is filled from WooCommerce (price from, shipping, returns, rating) and the rival's cells say «[Pendiente: dato, enlace y fecha]». The editor warns while any is left.
+* A recommendation about criticism creates a draft page with one heading per thing the AI repeats about you.
+* «Responde esta pregunta» on a page you already have offers «Añadir preguntas»: you answer the questions and they appear at the end of that page (and as FAQPage data when no SEO plugin prints schema).
+* New one-click fixes, reviewed in the page sheet and undoable: at least two <h2> (from your bold lines or headings you write), a single <h1>, Open Graph tags, hreflang, shipping details (cost from your WooCommerce zones, delivery days you write once), rating from real reviews, and the product barcode (GTIN) with check-digit validation.
+* Open Graph is not offered when an SEO plugin already prints it, nor hreflang with WPML, Polylang or TranslatePress.
+* The page content is never edited: every fix is served through filters and can be undone.
 
 = 1.3.0 =
 * With the account connected, GenScore's recommendations also appear in the GEO, SEO and Agentes tabs, each next to its tab.

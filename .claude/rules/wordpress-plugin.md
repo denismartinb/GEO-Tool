@@ -116,3 +116,17 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   no, «Cómo hacerlo» en la consola. Nunca un «Arreglar» que no arregla.
 - **Lo que ofrece una auditoría del dominio no se repite** en «Recomendaciones
   técnicas» de la misma pestaña.
+
+## Soluciones directas (WP-PLUGIN-4, adenda 1.4.0 de §432)
+
+- **Un dato de un rival nunca lo escribe el plugin**: su celda es
+  «[Pendiente: dato, enlace y fecha]» y la caja del editor cuenta los huecos.
+  La columna propia sale de WooCommerce o queda «[Pendiente: tu dato]».
+- **«Añadir preguntas» sólo publica respuestas a las preguntas del plan
+  guardado en el servidor** (`genscore_ajax_faq_publish`); el navegador manda
+  respuestas, nunca preguntas.
+- **Open Graph cede ante un plugin SEO y hreflang ante uno multilingüe.** La
+  valoración sólo sale de reseñas reales; el GTIN sólo con dígito de control
+  correcto.
+- **«Arreglado aquí» de un tipo que la revisión local no lee** exige un lote
+  que se pueda deshacer y cubra todas las páginas de la auditoría.

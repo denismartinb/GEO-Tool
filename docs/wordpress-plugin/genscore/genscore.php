@@ -3,7 +3,7 @@
  * Plugin Name:       GenScore: visibilidad en IA, llms.txt y bots de IA
  * Plugin URI:        https://www.genscore.es/
  * Description:       Comprueba si ChatGPT, Gemini, Claude y Perplexity pueden leer tu web, publica tu llms.txt, controla los bots de IA en robots.txt y revisa el SEO básico de tus páginas y publica los arreglos con un clic.
- * Version:           1.3.0
+ * Version:           1.4.0
  * Requires at least: 6.2
  * Requires PHP:      7.4
  * Author:            GenScore
@@ -17,7 +17,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'GENSCORE_VERSION', '1.3.0' );
+define( 'GENSCORE_VERSION', '1.4.0' );
 define( 'GENSCORE_FILE', __FILE__ );
 define( 'GENSCORE_DIR', plugin_dir_path( __FILE__ ) );
 define( 'GENSCORE_URL', plugin_dir_url( __FILE__ ) );
@@ -27,6 +27,7 @@ require_once GENSCORE_DIR . 'includes/llms.php';
 require_once GENSCORE_DIR . 'includes/site.php';
 require_once GENSCORE_DIR . 'includes/pages.php';
 require_once GENSCORE_DIR . 'includes/fixes.php';
+require_once GENSCORE_DIR . 'includes/fixes-more.php';
 if ( is_admin() ) {
 	require_once GENSCORE_DIR . 'includes/admin.php';
 	require_once GENSCORE_DIR . 'includes/fixes-admin.php';
