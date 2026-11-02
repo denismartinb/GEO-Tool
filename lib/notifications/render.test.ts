@@ -282,6 +282,21 @@ describe("renderNotification", () => {
     expect(r.icon).toBe("robot");
   });
 
+  it("renders engine-level access changes in the customer's words (GEO-ALERTS-1, log §440)", () => {
+    const blocked = renderNotification(
+      { type: "ai_bot_blocked", severity: "critical", project_id: PROJECT_ID, payload_json: { agent: "ChatGPT", snapshotId: "s", by: "server" } },
+      DOMAINS
+    );
+    expect(blocked.title).toBe("Tu web ha empezado a bloquear a ChatGPT");
+    expect(blocked.body).toContain("tu servidor");
+    const resolved = renderNotification(
+      { type: "ai_bot_unblocked", severity: "success", project_id: PROJECT_ID, payload_json: { agent: "Perplexity", snapshotId: "s" } },
+      DOMAINS
+    );
+    expect(resolved.title).toBe("Resuelto: Perplexity ya puede leer tu web");
+    expect(resolved.tone).toBe("pos");
+  });
+
   it("renders audit_completed, falling back to a dash when readinessScore is null", () => {
     const r = renderNotification(
       { type: "audit_completed", severity: "info", project_id: PROJECT_ID, payload_json: { snapshotId: "s1", readinessScore: null, pagesAnalyzed: 0 } },

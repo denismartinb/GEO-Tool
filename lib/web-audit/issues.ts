@@ -3,6 +3,7 @@ import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { SeoExtraCheckKey } from "@/lib/web-audit/seo-health";
 import { AI_ENGINES, engineReadStates } from "@/lib/web-audit/ai-bots";
+import { PROBED_BOTS, serverStateFor } from "@/lib/web-audit/server-probe";
 
 /**
  * WEB-AUDIT-ISSUES-1 (founder-approved 2026-08-02, design artifact "Auditoría
@@ -43,6 +44,8 @@ export type IssueCheckKey =
   | "content_length"
   | "freshness"
   | "bot_blocked"
+  /** GEO-ALERTS-1 (log §440): robots.txt lets the bot in, the server refuses it (simulation). */
+  | "bot_server_blocked"
   | "llms_txt_missing"
   | "sitemap_missing"
   /** Salud SEO only (log §281): built by `seo-health.ts`, never by `buildTechnicalIssuesReport`. */
@@ -122,7 +125,7 @@ const WEIGHT = {
   freshnessAging: 8
 } as const;
 
-export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing" | SeoExtraCheckKey>;
+export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "bot_server_blocked" | "llms_txt_missing" | "sitemap_missing" | SeoExtraCheckKey>;
 
 type PageCheckDefinition = {
   key: PageLevelCheckKey;
@@ -561,6 +564,32 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     });
   }
 
+  // GEO-ALERTS-1 (log §440): the server refuses a search bot that robots.txt
+  // lets in. Unscored like `bot_blocked`, and only engines our probe actually
+  // asked count; an engine robots.txt already closes is reported there.
+  const serverProbed = PROBED_BOTS.filter((b) => {
+    const st = serverStateFor(bots, b.engine);
+    return st === "allowed" || st === "blocked";
+  }).filter((b) => engineStates[b.engine] !== false);
+  const serverBlocked = serverProbed.filter((b) => serverStateFor(bots, b.engine) === "blocked");
+  if (serverBlocked.length > 0) {
+    issues.push({
+      check: "bot_server_blocked",
+      severity: "critical",
+      affectedCount: serverBlocked.length,
+      applicableCount: serverProbed.length,
+      pointDelta: null,
+      affectedLabels: serverBlocked.map((b) => AI_ENGINES.find((e) => e.engine === b.engine)!.name)
+    });
+  }
+  if (serverProbed.length > serverBlocked.length) {
+    passing.push({
+      check: "bot_server_blocked",
+      passedCount: serverProbed.length - serverBlocked.length,
+      applicableCount: serverProbed.length
+    });
+  }
+
   // llms.txt / sitemap.xml — single project-level facts, always "warning": a
   // real, documented best-practice gap, never blocking, never scored.
   //
@@ -602,4 +631,15 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     actualReadinessScore !== null && projectedReadinessScore !== null ? projectedReadinessScore - actualReadinessScore : 0;
 
   return { issues, passing, analyzedPageCount, actualReadinessScore, projectedReadinessScore, totalPointPotential };
+}
+
+/** Checks failing before and passing now (log §446). Pure. */
+export function fixedSincePrevious(
+  previous: TechnicalIssuesReport | null,
+  current: TechnicalIssuesReport | null
+): IssueCheckKey[] {
+  if (!previous || !current) return [];
+  const now = new Set(current.issues.map((i) => i.check));
+  const passing = new Set(current.passing.map((p) => p.check));
+  return [...new Set(previous.issues.map((i) => i.check))].filter((c) => !now.has(c) && passing.has(c));
 }

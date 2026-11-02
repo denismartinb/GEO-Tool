@@ -79,3 +79,14 @@ histórico (`docs/brand/design-decisions-log.md` §248) o al diseño aprobado
 - **Las palancas se agrupan como en Recomendaciones** (`selectPlanWithLevers`,
   log §432, adenda «mismo plan»): una palanca es una acción con `leverTitle` y
   `leverFirstStep`, nunca sus tarjetas sueltas.
+
+## Fuentes del PDF (REPORT-INSTRUMENTO-1, log §439)
+
+- **Fuentes estáticas, un fichero por grosor, nunca la variable.** Chrome
+  mete una fuente variable en el PDF como Type 3 y el visor de iOS la pinta
+  trazo a trazo: la portada parpadeaba al abrirla. `app/informe/fonts/` lleva
+  instancias de Figtree y JetBrains Mono (subconjunto latino) cargadas con
+  `next/font/local`. Un grosor nuevo se genera como instancia, no se pide a
+  Google Fonts.
+- **La portada no lleva sombras** (el visor de iOS pinta la `box-shadow` como
+  un bloque gris).

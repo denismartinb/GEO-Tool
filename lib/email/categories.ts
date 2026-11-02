@@ -12,7 +12,7 @@
  * same labels the unsubscribe page shows, so a rename happens in one place.
  */
 
-export const OPTIONAL_EMAIL_CATEGORIES = ["score_drop", "weekly_digest", "first_scan", "lifecycle"] as const;
+export const OPTIONAL_EMAIL_CATEGORIES = ["score_drop", "site_alerts", "weekly_digest", "first_scan", "lifecycle"] as const;
 
 export type OptionalEmailCategory = (typeof OPTIONAL_EMAIL_CATEGORIES)[number];
 export type EmailCategory = "service" | OptionalEmailCategory;
@@ -21,10 +21,13 @@ export type EmailPreferenceColumn =
   | "notify_score_drop_alert"
   | "notify_weekly_digest"
   | "notify_first_scan"
-  | "notify_lifecycle";
+  | "notify_lifecycle"
+  /** GEO-ALERTS-1 (log §440, migration 0049). */
+  | "notify_site_alerts";
 
 export const PREFERENCE_COLUMN: Record<OptionalEmailCategory, EmailPreferenceColumn> = {
   score_drop: "notify_score_drop_alert",
+  site_alerts: "notify_site_alerts",
   weekly_digest: "notify_weekly_digest",
   first_scan: "notify_first_scan",
   lifecycle: "notify_lifecycle"
@@ -40,6 +43,11 @@ export const CATEGORY_COPY: Record<OptionalEmailCategory, { title: string; desc:
     title: "Caída de puntuación",
     desc: "Cuando tu puntuación baja 10 puntos o más en dos escaneos",
     noun: "avisos de caída de puntuación"
+  },
+  site_alerts: {
+    title: "Avisos de tu web",
+    desc: "Cuando un motor de IA deja de poder entrar en tu web",
+    noun: "los avisos de tu web"
   },
   weekly_digest: {
     title: "Resumen semanal",

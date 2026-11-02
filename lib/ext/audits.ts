@@ -6,7 +6,8 @@ import { buildTechnicalIssuesReport, pageCheckStates, type IssueCheckKey, type I
 import { ISSUE_CHECK_META, issueScopeLabel } from "@/lib/web-audit/issue-labels";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
-import { engineReadStates } from "@/lib/web-audit/ai-bots";
+import { AI_ENGINES, engineReadStates, type AiEngine } from "@/lib/web-audit/ai-bots";
+import { PROBED_BOTS, type ServerProbeState } from "@/lib/web-audit/server-probe";
 
 /** Every measured engine can read the site (AI-BOTS-CONSOLE-1, log §426). Null when none was measured. */
 function aiEnginesCanRead(bots: BotAccessReport): boolean | null {
@@ -31,7 +32,7 @@ export const EXT_AUDIT_ISSUES = 3;
 export const EXT_AUDIT_URLS = 20;
 
 /** Checks whose affected labels are not page URLs (bot names, or the site as a whole). */
-const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "llms_txt_missing", "sitemap_missing"]);
+const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "bot_server_blocked", "llms_txt_missing", "sitemap_missing"]);
 
 export type ExtAuditIssue = {
   label: string;
@@ -89,7 +90,36 @@ export type ExtAudits = {
   blocks: ExtAuditBlock[];
   /** Only when the panel asked about a page of this domain. */
   page: ExtPageAudit | null;
+  /**
+   * EXT-1.5.0 (log §446): «¿Te deja pasar el servidor?». robots.txt per engine
+   * next to what the server answered our probe as that engine's search bot
+   * (GEO-ALERTS-1, log §440). A simulation: the panel labels it so. Gemini
+   * reads through Googlebot, which is never impersonated, so its server cell
+   * is null. Null when the audit did not probe.
+   */
+  server: ExtServerProbe | null;
 };
+
+export type ExtServerProbe = {
+  measuredAt: string;
+  rows: Array<{ engine: AiEngine; token: string | null; robots: boolean | null; server: ServerProbeState | null; status: number | null }>;
+};
+
+/** Pure: the probe stored in the snapshot, beside robots.txt. */
+export function extServerProbe(bots: BotAccessReport | null | undefined): ExtServerProbe | null {
+  const probe = bots?.serverProbe;
+  if (!bots || !probe) return null;
+  const robots = engineReadStates(bots);
+  return {
+    measuredAt: probe.measuredAt,
+    rows: AI_ENGINES.map(({ engine }) => {
+      const bot = PROBED_BOTS.find((b) => b.engine === engine);
+      if (!bot) return { engine, token: null, robots: robots[engine], server: null, status: null };
+      const e = probe.baseline === "ok" ? probe.engines[bot.engine] : undefined;
+      return { engine, token: bot.token, robots: robots[engine], server: e ? e.state : "unknown", status: e ? e.status : null };
+    })
+  };
+}
 
 export type ExtAuditsInput = {
   snapshot: { pages: PageAuditEntry[]; bots: BotAccessReport; createdAt: string } | null;
@@ -204,6 +234,7 @@ export function buildExtAudits({ snapshot, agentic, ownUrl }: ExtAuditsInput): E
     auditedAt: snapshot?.createdAt ?? null,
     readiness: snapshot ? buildTechnicalIssuesReport(snapshot.pages, snapshot.bots).actualReadinessScore : null,
     blocks,
-    page: ownUrl && snapshot ? pageAudit(ownUrl, snapshot.pages, snapshot.bots) : null
+    page: ownUrl && snapshot ? pageAudit(ownUrl, snapshot.pages, snapshot.bots) : null,
+    server: snapshot ? extServerProbe(snapshot.bots) : null
   };
 }

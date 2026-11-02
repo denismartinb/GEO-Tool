@@ -57,6 +57,7 @@ export const AUDIT_BLOCKS: Record<AuditBlockKey, AuditBlockDefinition> = {
       "content_length",
       "freshness",
       "bot_blocked",
+      "bot_server_blocked",
       "snippet_blocked",
       "js_required",
       "llms_txt_missing"

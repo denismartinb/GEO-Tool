@@ -12,7 +12,21 @@ import { buildAiBotsRobotsBlock } from "@/lib/web-audit/ai-bots";
  * to paste. Every state comes from the audit; the switches only build text.
  */
 
-export type AiBotsEngineTile = { engine: string; name: string; state: boolean | null; hint: string | null };
+export type AiBotsEngineTile = {
+  engine: string;
+  name: string;
+  state: boolean | null;
+  hint: string | null;
+  /** GEO-ALERTS-1 (log §440): robots.txt lets it in, our simulation says the server refuses it. */
+  serverBlocked?: boolean;
+  /**
+   * EXT-1.5.0 (log §446): the extension's «¿Te deja pasar el servidor?» in the
+   * console. robots.txt and what the server answered our probe as this
+   * engine's search bot. `server` null: not probed (Gemini reads through
+   * Googlebot, which we never impersonate, or an audit before the probe).
+   */
+  probe?: { robots: boolean | null; server: "allowed" | "blocked" | "unknown" | null; status: number | null };
+};
 export type AiBotsSwitchRow = {
   id: string;
   engine: string;
@@ -23,12 +37,27 @@ export type AiBotsSwitchRow = {
   state: boolean | null;
 };
 
+const cellTone = (v: "allowed" | "blocked" | "unknown" | null) => (v === "allowed" ? "ok" : v === "blocked" ? "no" : "na");
+function serverCell(p: NonNullable<AiBotsEngineTile["probe"]>): string {
+  if (p.server === null || p.server === "unknown") return "—";
+  if (p.status !== null) return String(p.status);
+  return p.server === "allowed" ? "Pasa" : "Reto";
+}
+function shortDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short", timeZone: "Europe/Madrid" }).replace(".", "");
+  } catch {
+    return "";
+  }
+}
+
 export function AiBotsSection({
   engines,
   switches,
   starRules,
   robotsUrl,
-  note
+  note,
+  probedAt = null
 }: {
   engines: AiBotsEngineTile[];
   switches: AiBotsSwitchRow[];
@@ -37,6 +66,8 @@ export function AiBotsSection({
   robotsUrl: string;
   /** Why the states are not what the file says (unread or missing robots.txt), if so. */
   note: string | null;
+  /** When the server probe ran (GEO-ALERTS-1); null without one. */
+  probedAt?: string | null;
 }) {
   const current = useMemo(() => Object.fromEntries(switches.map((s) => [s.id, s.state === true])), [switches]);
   const [editing, setEditing] = useState(false);
@@ -69,16 +100,41 @@ export function AiBotsSection({
         <div className="card ab-card">
           <div className="ab-head">
             <h2 id="ab-title" className="ab-lab">Quién puede leer tu web</h2>
-            <span className="ab-meta">según tu robots.txt</span>
+            <span className="ab-meta">
+              según tu robots.txt y tu servidor
+              {probedAt && <span className="ab-sim">Simulación · {shortDate(probedAt)}</span>}
+            </span>
           </div>
           {note && <p className="ab-note">{note}</p>}
           <ul className="ab-tiles">
             {engines.map((e) => (
-              <li key={e.engine} className="ab-tile" data-state={e.state === null ? "unknown" : e.state ? "ok" : "no"}>
+              <li
+                key={e.engine}
+                className="ab-tile"
+                data-state={e.serverBlocked ? "no" : e.state === null ? "unknown" : e.state ? "ok" : "no"}
+              >
                 <EngineLogo provider={e.engine} size={26} />
                 <b>{e.name}</b>
-                <span className="ab-st">{e.state === null ? "Sin comprobar" : e.state ? "Puede leerla" : "Bloqueado"}</span>
-                {e.hint && <small>{e.hint}</small>}
+                <span className="ab-st">
+                  {e.serverBlocked
+                    ? "Tu servidor lo bloquea"
+                    : e.state === null
+                      ? "Sin comprobar"
+                      : e.state
+                        ? "Puede leerla"
+                        : "Bloqueado"}
+                </span>
+                {e.serverBlocked ? <small>Simulación · suele ser Cloudflare o el cortafuegos</small> : e.hint && <small>{e.hint}</small>}
+                {probedAt && e.probe && (
+                  <span className="ab-pr">
+                    <span>
+                      robots.txt <em data-v={cellTone(e.probe.robots === null ? null : e.probe.robots ? "allowed" : "blocked")}>{e.probe.robots === null ? "—" : e.probe.robots ? "Permite" : "Bloquea"}</em>
+                    </span>
+                    <span>
+                      Servidor <em data-v={cellTone(e.probe.server)}>{serverCell(e.probe)}</em>
+                    </span>
+                  </span>
+                )}
               </li>
             ))}
           </ul>

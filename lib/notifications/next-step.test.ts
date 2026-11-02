@@ -21,4 +21,15 @@ describe("renderNextStep", () => {
   it("formats sub-point figures with a comma, like the card", () => {
     expect(renderNextStep({ ...base, potentialPoints: 0.4 }).body).toContain("+0,4 pt");
   });
+
+  it("sends an engine block to the audit, not to Recomendaciones (GEO-ALERTS-1, log §440)", () => {
+    const r = renderNextStep({
+      ...base,
+      title: "Deja pasar a ChatGPT en tu servidor",
+      potentialPoints: null,
+      blocker: { body: "Tu robots.txt lo permite, pero el servidor lo bloquea." }
+    });
+    expect(r.href).toBe("/dashboard/projects/p1/web-audit?bloque=geo");
+    expect(r.body).toContain("el servidor lo bloquea");
+  });
 });

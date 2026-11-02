@@ -9,7 +9,8 @@ import { FirstScanTakeover } from "@/components/first-scan-takeover";
 import { triggerWebAuditRun } from "@/lib/web-audit/audit-dispatch";
 import { loadWebAuditPageData } from "@/lib/web-audit/page-data";
 import { loadCoverageSectionData } from "@/lib/web-audit/coverage-section-data";
-import { AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
+import { AUDIT_BLOCKS, AUDIT_BLOCK_ORDER, AUDIT_BLOCK_PARAM, buildAuditBlock, parseAuditBlock } from "@/lib/web-audit/audit-blocks";
+import { ISSUE_CHECK_META } from "@/lib/web-audit/issue-labels";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { Delta } from "@/components/ui/delta";
 import { BotAccessCard, aiBotsSectionProps } from "./_components/bot-access-card";
@@ -77,6 +78,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
     technicalSnapshot,
     currentTechnicalReport,
     technicalScoreDelta,
+    technicalFixedChecks,
     auditIsRunning,
     shouldDispatchAudit,
     llmsTxtFile,
@@ -140,6 +142,10 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const view = views.find((v) => v.key === activeBlock)!;
                 const isGeo = activeBlock === "geo";
                 const pageSpeed = bots?.site?.pageSpeed;
+                // EXT-1.5.0 (log §446): what this block fixed since the previous audit, as the extension says it.
+                const fixedHere = technicalFixedChecks
+                  .filter((c) => AUDIT_BLOCKS[activeBlock].checks.includes(c))
+                  .map((c) => ISSUE_CHECK_META[c].label);
                 return (
                   <div className="sa-screen">
                     <InsBlockHero view={view} />
@@ -152,6 +158,14 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           </span>
                         </p>
                       )}
+                    {fixedHere.length > 0 && (
+                      <p className="sa-fixed">
+                        <Ic n="checkc" sm />
+                        <span>
+                          Arreglado desde la revisión anterior: <b>{fixedHere.join(", ")}</b>
+                        </span>
+                      </p>
+                    )}
 
                     <AuditTabsProvider>
                       <AuditTabBar

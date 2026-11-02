@@ -64,7 +64,7 @@ describe("ReportPages", () => {
   });
 
   it("shows a dash, not a number, when the GEO score is unknown", () => {
-    expect(render({ geoScore: null })).toMatch(/Puntuación GEO<\/div><div>—</);
+    expect(render({ geoScore: null })).toMatch(/class="gr-dv">–</);
   });
 
   it("names engines without versions and never prints an absolute count", () => {

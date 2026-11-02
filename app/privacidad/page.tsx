@@ -74,7 +74,12 @@ export default function PrivacidadPage() {
         icono o su atajo de teclado, o cada página que visitas si activas la revisión automática.
         Esa revisión se hace en tu navegador: el contenido de la página, su robots.txt y su
         llms.txt se leen desde tu equipo y no se envían a GenScore. El último resultado de cada
-        pestaña y tus preferencias del panel se guardan en tu navegador.
+        pestaña y tus preferencias del panel se guardan en tu navegador. Para enseñarte cómo cambia
+        una página entre visitas, la extensión guarda en tu navegador su dirección, la nota y los
+        arreglos pendientes de cada revisión (como mucho las últimas doce de 300 páginas), y nunca
+        los envía a GenScore. Para comparar lo que ves con lo que lee la IA, vuelve a pedir la página
+        abierta sin tu sesión, también desde tu equipo. El informe de una página, con su captura, se
+        prepara en tu navegador y se borra al cerrar Chrome.
       </p>
       <p>
         Si has iniciado sesión en genscore.es, la extensión usa esa misma sesión para mostrarte tu

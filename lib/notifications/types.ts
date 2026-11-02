@@ -65,6 +65,16 @@ export type NotificationPayloadByType = {
     promptCount: number;
   };
   ai_bot_blocked: {
+    /** A robots.txt token («OAI-SearchBot»), or an engine name («ChatGPT») when `by` is set. */
+    agent: string;
+    snapshotId: string;
+    /** GEO-ALERTS-1 (log §440): absent on robots.txt token rows written before it. */
+    by?: "server" | "robots";
+    /** Set once the «Avisos de tu web» email for this transition went out. */
+    emailedAt?: string;
+  };
+  /** GEO-ALERTS-1 (log §440, migration 0049): an engine that could not read the site and now can. */
+  ai_bot_unblocked: {
     agent: string;
     snapshotId: string;
   };

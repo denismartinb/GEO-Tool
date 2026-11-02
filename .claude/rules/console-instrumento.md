@@ -333,3 +333,11 @@ trazable a `docs/brand/design-decisions-log.md` §349.
 - **La forma sigue a la pantalla**: si una pantalla cambia de orden o de
   cabecera, su esqueleto cambia en el mismo PR.
 - **El pulso es ambiente**: ninguna barra del esqueleto representa progreso.
+
+## Franja de tu web (GEO-ALERTS-1, log §440)
+
+- **Una sola franja en Visión general, elegida por `selectGeoStrip`**:
+  servidor, robots.txt, noindex o nosnippet (de `findCitationBlockers`), sólo
+  con JavaScript, «Resuelto». No se calcula otra por su cuenta.
+- **Sólo «Resuelto» se puede cerrar**, por auditoría (`localStorage`), y vale 7
+  días desde la auditoría que lo vio.
