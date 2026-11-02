@@ -12,7 +12,8 @@ import {
   APP_MODE_HOME,
   appLaunchRedirect,
   appModeSignal,
-  isAppModePathAllowed
+  isAppModePathAllowed,
+  isOwnSiteReferer
 } from "@/lib/app-mode";
 import {
   AFFILIATE_REF_COOKIE,
@@ -140,6 +141,14 @@ export async function middleware(request: NextRequest) {
     return redirect;
   }
   if (inApp && !isAppModePathAllowed(request.nextUrl.pathname)) {
+    // APP-LINK-OUT-1 (log §436): un enlace a una página pública que llega de
+    // fuera de nuestra web (un medio, un buscador, otra app, una URL escrita)
+    // se sirve tal cual y sale del modo app. Sólo la navegación desde una
+    // página de genscore.es vuelve a la consola.
+    if (!isOwnSiteReferer(request.headers.get("referer"), request.nextUrl.host)) {
+      response.cookies.delete(APP_MODE_COOKIE);
+      return response;
+    }
     const redirect = NextResponse.redirect(new URL(APP_MODE_HOME, request.url));
     response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
     redirect.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));

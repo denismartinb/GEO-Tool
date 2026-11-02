@@ -29309,3 +29309,31 @@ Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
 afirma nada del cálculo de la puntuación.
 
 **Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
+
+## §436 · APP-LINK-OUT-1: un enlace de fuera al blog ya no abre el inicio de sesión (2026-11-02)
+
+**Qué.** Un medio enlazó `/blog/que-clinicas-dentales-recomienda-la-ia` y, en el
+móvil de Denis, el enlace abría la splash y el inicio de sesión. Para un lector
+normal la página respondía 200; con la cookie `gs_app` (o abriendo el enlace
+dentro de la app, que reclama todos los enlaces de genscore.es con
+`autoVerify`) el middleware mandaba el artículo a `/dashboard`, y de ahí al
+login. La cookie se comparte con Chrome en el mismo móvil (problema conocido
+desde §381), así que cualquiera que haya abierto la app alguna vez lo sufría en
+cualquier página pública, no sólo en el blog.
+
+**Decisión.** En modo app, una página fuera de la lista de permitidos sólo
+vuelve a la consola si la navegación viene de nuestra propia web
+(`isOwnSiteReferer`: referrer http(s) de genscore.es, con o sin `www`). Un
+enlace de fuera (otro sitio, otra app `android-app://`, ningún referrer) se
+sirve tal cual y borra `gs_app`. Dentro de la app, ir de la consola al blog
+sigue llevando a la consola.
+
+**Riesgo aceptado.** Si alguien abre un enlace del blog con la app instalada,
+la app lo enseña con la cabecera pública (precios incluidos) y sin modo app
+hasta la siguiente apertura (`?source=twa` vuelve a entrar). La app aún no está
+en Play. Lo correcto es que la siguiente versión del paquete limite el
+`intent-filter` a `/dashboard`, `/login` y el resto de rutas de la app, para que
+los enlaces públicos se abran en el navegador; queda pendiente para esa versión.
+
+**Regla de premisa.** No retira ningún camino de recuperación: añade una salida
+del modo app.
