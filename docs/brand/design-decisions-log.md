@@ -29343,3 +29343,13 @@ de «Tus dominios»), la revisión de la página va primero y «¿Quieres añadi
 a tus dominios?» cierra el panel. Elegir uno de tus dominios en el selector
 enseña ese dominio, y «Página abierta» vuelve a la revisión. En una web tuya
 no cambia nada: Puntuación GEO primero y el selector con el dominio.
+
+**Cuarta adenda (Denis, 2026-11-02).** «Toda la web» se leía como «todo
+internet»: la pestaña pasa a nombrar el dominio («Todo movistar.es») y, si
+pasa de 22 caracteres, dice «Todo el dominio»; la línea bajo «Sin medir»
+nombra siempre el dominio. En el panel estrecho la pestaña baja bajo el
+rótulo en vez de pisarlo. En una web ajena que ya es competidor del dominio
+elegido, «Añadir como competidor» pasa a «Ya es competidor de …» y abre
+Competidores; para saberlo, `/api/ext/project` gana `competitorDomains` (los
+dominios de los competidores activos, sólo lectura). Sin ese campo (una
+versión del servidor anterior), el panel mira los rivales que ya traía.

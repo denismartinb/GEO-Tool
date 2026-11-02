@@ -22,6 +22,7 @@ const P: ExtProjectPayload = {
     { provider: "openai", label: "ChatGPT", mentionShare: 0.4 },
     { provider: "gemini", label: "Gemini", mentionShare: 0.25 }
   ],
+  competitorDomains: [],
   rivals: [
     { name: "Rival", share: 0.5, isBrand: false, domain: "rival.es" },
     { name: "Marca", share: 0.33, isBrand: true, domain: "marca.es" }

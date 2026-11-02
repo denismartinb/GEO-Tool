@@ -8,7 +8,8 @@
 .sct+.sgeo>.sh2:first-child{margin-top:18px}
 .sgeo+.sct{margin-top:34px}
 .sh2{display:flex;align-items:center;gap:10px;margin-top:18px;min-width:0}
-.sh2 .ey{margin-top:0;flex:1}
+.sh2 .ey{margin-top:0;flex:1 0 auto;white-space:nowrap}
+.sct>.sh2{flex-wrap:wrap;row-gap:10px}
 .seg.sx button{padding:4px 11px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
 .seg.sx .lk2{display:inline-flex;opacity:.7}
 .qq{font-size:15px;font-weight:550;letter-spacing:-.01em;margin-top:10px;color:var(--ink)}

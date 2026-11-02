@@ -104,7 +104,7 @@
     const card = p.agentic && p.agentic.kind === "card" ? p.agentic : null;
     return {
       score: p.geoScore, say: p.lede || "Todavía no hay un escaneo completado de este dominio.",
-      engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand, r.domain || null]), seo: p.seoScore,
+      engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand, r.domain || null]), competitorDomains: p.competitorDomains || [], seo: p.seoScore,
       agent: card ? card.score : null, agentParts: card ? card.components.map((c) => [c.name, c.points ?? 0, c.weight]) : [],
       plan: p.plan.map((x, i) => ({ id: "r" + i, kind: "plan", lane: "ia", pts: null, t: esc(x.title), why: esc(x.firstStep || "") })),
       prompts: (p.citingPrompts || []).map((q) => [q.text, q.engines.map((l) => LABELKEY[l]).filter(Boolean), q.mentioned ? "Te nombran" : "No te nombran"])
@@ -258,8 +258,10 @@
   /* ---------------- CTAs ---------------- */
   const arcSvg = () => { let g = ""; for (let i = 0; i <= 40; i++) { const a = ((200 + i * 3.5) * Math.PI) / 180, r0 = i % 5 ? 140 : 128; g += `<line x1="${(150 + r0 * Math.cos(a)).toFixed(1)}" y1="${(150 + r0 * Math.sin(a)).toFixed(1)}" x2="${(150 + 148 * Math.cos(a)).toFixed(1)}" y2="${(150 + 148 * Math.sin(a)).toFixed(1)}"/>`; } return `<svg class="arc" viewBox="0 0 300 300" aria-hidden="true">${g}</svg>`; };
   const ctaNoAcct = (host) => `<div class="deep">${arcSvg()}<div class="egs">${EK.map((e) => `<span>${lg(e, 15)}</span>`).join("")}</div><p class="q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>${esc(host)}</b> y a sus competidores?</p><button class="btn onink" data-act="open" data-to="/signup" data-c="analizar-dominio">Analizar dominio${ic("arrowr", "sm")}</button><p class="ft">7 días de Pro gratis. Sin tarjeta.</p></div>`;
+  /* a site already tracked as a competitor is not offered again (Denis, 2026-11-02) */
+  const isCompetitor = (host) => { const D = A(), h = String(host || "").toLowerCase().replace(/^www\./, ""); return !!D && [...(D.competitorDomains || []), ...D.rivals.filter((r) => !r[2]).map((r) => r[3])].some((d) => d && covers(h, String(d).toLowerCase().replace(/^www\./, ""))); };
   const ctaOther = (host) => S.real
-    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres añadir <b>${esc(host)}</b> a tus dominios?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Añadir a mis dominios${S.real.domainCap < 100 ? `<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span>` : ""}</button>${projPath("") ? `<button class="btn lnd" data-act="open" data-to="${esc(projPath("competitors") + "?nuevo=" + encodeURIComponent(host) + (S.rec && S.rec.facts && S.rec.facts.siteName ? "&nombre=" + encodeURIComponent(S.rec.facts.siteName) : ""))}" data-c="competidor">Añadir como competidor de ${esc(curDom())}</button>` : ""}</div>`
+    ? `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres añadir <b>${esc(host)}</b> a tus dominios?</p><button class="btn onink" data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio">Añadir a mis dominios${S.real.domainCap < 100 ? `<span class="dim"> · ${S.real.domains.length} de ${S.real.domainCap}</span>` : ""}</button>${!projPath("") ? "" : isCompetitor(host) ? `<button class="btn lnd" data-act="open" data-to="${esc(projPath("competitors"))}" data-c="competidor-ya">${ic("checkc", "sm")}Ya es competidor de ${esc(curDom())}</button>` : `<button class="btn lnd" data-act="open" data-to="${esc(projPath("competitors") + "?nuevo=" + encodeURIComponent(host) + (S.rec && S.rec.facts && S.rec.facts.siteName ? "&nombre=" + encodeURIComponent(S.rec.facts.siteName) : ""))}" data-c="competidor">Añadir como competidor de ${esc(curDom())}</button>`}</div>`
     : `<div class="deep">${arcSvg()}<p class="q" style="margin-top:0">¿Quieres seguir <b>${esc(host)}</b> en GenScore?</p><button class="btn onink" data-act="sample-only" data-what="analizar un dominio nuevo">Analizar como dominio<span class="dim"> · ${1 + SAMPLE.extraDomains.length} de ${SAMPLE.cap}</span></button><button class="btn lnd" data-act="sample-only" data-what="añadir un competidor">Añadir como competidor de ${esc(S.sample.domain)}</button><button class="lnk2" data-act="use-domain">Probar esta web como mi dominio de ejemplo</button></div>`;
 
   /* ---------------- header and foot ---------------- */
@@ -408,9 +410,12 @@
      2 · Puntuación GEO: the only dial. Signed out it is the same dial, «Sin medir», with the dark invitation.
      Signed out the technical block leads; signed in the Puntuación GEO does, because it is what the account adds. */
   const LOCK = `<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><rect x="5" y="11" width="14" height="9.5" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3" fill="none" stroke="currentColor" stroke-width="2"/></svg>`;
-  const scopeSeg = (locked) => `<div class="seg sx" role="tablist"><span class="ind"></span><button role="tab" data-tab="page" aria-pressed="${S.tab !== "dom"}">Esta página</button><button role="tab" data-tab="dom" aria-pressed="${S.tab === "dom"}">Toda la web${locked ? `<span class="lk2" aria-label="Con tu cuenta">${LOCK}</span>` : ""}</button></div>`;
+  /* «Toda la web» read as «all of the internet» (Denis, 2026-11-02): the tab names the domain, or «Todo el dominio» when it does not fit */
+  const scopeHost = () => String((acctOn() ? curDom() : S.scf && S.scf.host) || "").replace(/^www\./, "");
+  const scopeName = () => { const h = scopeHost(); return h && h.length <= 22 ? `Todo ${esc(h)}` : "Todo el dominio"; };
+  const scopeSeg = (locked) => `<div class="seg sx" role="tablist"><span class="ind"></span><button role="tab" data-tab="page" aria-pressed="${S.tab !== "dom"}">Esta página</button><button role="tab" data-tab="dom" aria-pressed="${S.tab === "dom"}" title="Todas las páginas clave de ${esc(scopeHost())}">${scopeName()}${locked ? `<span class="lk2" aria-label="Con tu cuenta">${LOCK}</span>` : ""}</button></div>`;
   function oHero(v, say, locked) {
-    if (locked) return `<div class="oh lockd"><div class="ohn"><span class="big num q">?</span><span class="ohw"><b class="w">Sin medir</b><small>Toda la web, con tu cuenta</small></span></div><div class="osc"><i class="f" style="width:0"></i><i class="bd" style="left:50%"></i><i class="bd" style="left:75%"></i></div><div class="obands"><span>Se frena</span><span>Mejorable</span><span>Optimizada</span></div><p class="say">${say}</p></div>`;
+    if (locked) return `<div class="oh lockd"><div class="ohn"><span class="big num q">?</span><span class="ohw"><b class="w">Sin medir</b><small>${scopeHost() ? `Todo ${esc(scopeHost())}` : "Todo el dominio"}, con tu cuenta</small></span></div><div class="osc"><i class="f" style="width:0"></i><i class="bd" style="left:50%"></i><i class="bd" style="left:75%"></i></div><div class="obands"><span>Se frena</span><span>Mejorable</span><span>Optimizada</span></div><p class="say">${say}</p></div>`;
     const [c, w] = readyBand(v);
     return `<div class="oh"><div class="ohn"><span class="big num"><span id="heroN">${roll(v)}</span><small>%</small></span><span class="ohw"><b class="w ${c}">${w}</b><small>Optimización técnica</small></span></div>
       <div class="osc ${c}" role="img" aria-label="${v}%, ${w}"><i class="f" style="--w:${v}%"></i><i class="bd" style="left:50%"></i><i class="bd" style="left:75%"></i><span class="mk" style="--w:${v}%"></span></div>
@@ -509,7 +514,7 @@
     } else {
       ({ hero, lanes, body, cards } = webBlock(sc, f));
     }
-    const seg = scoped && sc ? scopeSeg(rel === "none") : `<span class="sxl">${dom ? "Toda la web" : "Esta página"}</span>`;
+    const seg = scoped && sc ? scopeSeg(rel === "none") : `<span class="sxl">${dom ? scopeName() : "Esta página"}</span>`;
     return `<section class="sct"><div class="sh2"><div class="ey">Optimización técnica</div>${seg}</div>
       <p class="qq">¿Está tu web optimizada para la IA y Google?</p>
       <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc) + shopLine(sc)}${cards}${tail}</section>`;
