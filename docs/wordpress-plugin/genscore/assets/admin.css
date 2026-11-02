@@ -339,7 +339,8 @@ html.gs-fm-open{overflow:hidden}
 #gs-fixm .gs-fm-h p,#gs-fixm .gs-fm-safe,#gs-fixm .gs-fm-side{display:none}
 #gs-fixm .gs-fm-b{grid-template-columns:minmax(0,1fr)}
 #gs-fixm .gs-fm-all{margin-left:0}
-#gs-fixm .gs-fm-f{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px))}
+#gs-fixm .gs-fm-f{padding:10px 14px calc(12px + env(safe-area-inset-bottom,0px));flex-wrap:wrap}
+#gs-fixm .gs-fm-safe.gs-err{display:flex;flex-basis:100%;order:-1;min-width:0}
 #gs-fixm .gs-fm-f .gs-btn.gs-blue{flex:1}
 #gs-fixm .gs-fm-cf{align-items:flex-end;padding:0}
 #gs-fixm .gs-fm-cfb{width:100%;border-radius:22px 22px 0 0;padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}

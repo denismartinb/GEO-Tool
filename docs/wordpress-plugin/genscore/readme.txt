@@ -153,6 +153,10 @@ Not yet: the screens are in Spanish.
 = 1.4.2 =
 * Open Graph descriptions keep a space between blocks and no longer render blocks inside the page head, so the theme's block styles stay as they were.
 * Text taken from a page ends each heading as a sentence, so a description no longer runs the title into the next paragraph.
+* Alt text never proposes a title WordPress made from the file name, and leaves product images alone (WooCommerce already gives them the product name).
+* On mobile, a form error shows above the publish button.
+* The cancellation policy is offered on products only, and the specifications table only where WooCommerce does not already show one.
+* «Who is behind the site» no longer fills in the store's sender email.
 * The rating fix is not offered without real reviews; the recommendation says «Sin reseñas».
 * Comparison drafts and the copied table use the site's name, and the «[Pendiente…]» cells show in grey in the editor and on the page.
 

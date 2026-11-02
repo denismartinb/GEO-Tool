@@ -159,3 +159,9 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   no, la recomendación dice «Sin reseñas».
 - **Los borradores hablan con el nombre de la web**, no con la marca de la
   cuenta, y cada celda «[Pendiente…]» va en gris con `mark.has-inline-color`.
+- **El texto alternativo nunca toca las imágenes propias de un producto**
+  (WooCommerce ya les pone el nombre) y un título igual al nombre del fichero
+  cuenta como fichero (`genscore_title_is_file`).
+- **Cancelación sólo en productos; la tabla de características no se ofrece
+  si WooCommerce ya la enseña**, y «quién está detrás» no rellena el email con
+  el remitente de la tienda.

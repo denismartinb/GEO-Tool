@@ -34,7 +34,7 @@ function genscore_extra_kinds() {
 		'noindex' => array( 'types' => array( 'page', 'post', 'product' ), 'ids' => array( 'index' ) ),
 		'snippet' => array( 'types' => array( 'page', 'post', 'product' ), 'ids' => array( 'snippet' ) ),
 		'specs'   => array( 'types' => array( 'product' ), 'ids' => array() ),
-		'cancel'  => array( 'types' => array( 'page', 'post', 'product' ), 'ids' => array() ),
+		'cancel'  => array( 'types' => array( 'product' ), 'ids' => array() ),
 	);
 }
 
@@ -101,6 +101,23 @@ function genscore_is_file_name( $t ) {
 }
 
 /**
+ * Whether an attachment's title is just its file name, as WordPress sets it
+ * on upload (also after «-scaled» or a size suffix).
+ *
+ * @param string $title Attachment title.
+ * @param string $file  Attached file path.
+ * @return bool
+ */
+function genscore_title_is_file( $title, $file ) {
+	$key  = function ( $t ) {
+		$t = strtolower( remove_accents( (string) $t ) );
+		return preg_replace( '/[^a-z0-9]+/', '', $t );
+	};
+	$base = preg_replace( '/(-scaled|-rotated|-\d+x\d+|-e\d{10,})+$/i', '', pathinfo( $file, PATHINFO_FILENAME ) );
+	return '' !== $base && $key( $title ) === $key( $base );
+}
+
+/**
  * Alt text WordPress already has words for: the attachment's alt, its title
  * when it is not a file name, or the page's own title. Never invented.
  *
@@ -114,9 +131,9 @@ function genscore_alt_proposal( $att, $id ) {
 		return $alt;
 	}
 	$title = trim( html_entity_decode( (string) get_the_title( $att ), ENT_QUOTES, 'UTF-8' ) );
-	if ( ! genscore_is_file_name( $title ) ) {
-		// «cafe-de-etiopia» is the file name WordPress turned into a title.
-		$title = false === strpos( $title, ' ' ) ? str_replace( array( '-', '_' ), ' ', $title ) : $title;
+	// WordPress names an upload after its file («bolsa-cafe-etiopia-250g»):
+	// that title is the file name, not a description, so the page's title is.
+	if ( ! genscore_is_file_name( $title ) && ! genscore_title_is_file( $title, (string) get_attached_file( $att ) ) ) {
 		return mb_strtoupper( mb_substr( $title, 0, 1 ) ) . mb_substr( $title, 1 );
 	}
 	return genscore_post_title( $id );
@@ -154,13 +171,9 @@ function genscore_page_images( $id ) {
 			}
 		}
 	}
-	$atts = array( (int) get_post_thumbnail_id( $id ) );
-	if ( 'product' === get_post_type( $id ) && function_exists( 'wc_get_product' ) ) {
-		$product = wc_get_product( $id );
-		if ( $product ) {
-			$atts = array_merge( $atts, array_map( 'intval', $product->get_gallery_image_ids() ) );
-		}
-	}
+	// A product's own images already carry the product name as alt when
+	// WooCommerce serves them; writing one in the library would replace it.
+	$atts = 'product' === get_post_type( $id ) ? array() : array( (int) get_post_thumbnail_id( $id ) );
 	foreach ( $atts as $att ) {
 		if ( $att && '' === trim( (string) get_post_meta( $att, '_wp_attachment_image_alt', true ) ) ) {
 			$add( $att );
@@ -606,7 +619,7 @@ function genscore_extra_status( $kind, $id ) {
 			}
 			return 'snippet' === $kind && genscore_fix_review_says( 'snippet', $id ) ? 'ready' : 'has';
 		case 'specs':
-			if ( '' !== $now || preg_match( '#<(table|ul|ol)[\s>]#i', genscore_raw_content( $id ) ) ) {
+			if ( '' !== $now || preg_match( '#<(table|ul|ol)[\s>]#i', genscore_raw_content( $id ) ) || genscore_wc_shows_specs( $id ) ) {
 				return 'has';
 			}
 			return count( genscore_spec_rows( $id ) ) >= 2 ? 'ready' : 'missing';
@@ -614,6 +627,22 @@ function genscore_extra_status( $kind, $id ) {
 			return '' !== $now ? 'has' : 'ready';
 	}
 	return 'ready';
+}
+
+/**
+ * Whether WooCommerce already prints the product's table in «Información
+ * adicional»: a second one from us would repeat it.
+ *
+ * @param int $id Product id.
+ * @return bool
+ */
+function genscore_wc_shows_specs( $id ) {
+	$p = function_exists( 'wc_get_product' ) ? wc_get_product( $id ) : null;
+	if ( ! $p ) {
+		return false;
+	}
+	$dims = apply_filters( 'wc_product_enable_dimensions_display', true ); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- WooCommerce's own filter.
+	return $p->has_attributes() || ( $dims && ( $p->has_weight() || $p->has_dimensions() ) );
 }
 
 /**
@@ -888,7 +917,6 @@ function genscore_identity_defaults() {
 		$out['postal']  = (string) get_option( 'woocommerce_store_postcode', '' );
 		$out['country'] = preg_match( '/^[A-Z]{2}$/', $base[0] ) ? $base[0] : '';
 		$out['region']  = isset( $base[1] ) && function_exists( 'WC' ) && WC()->countries ? (string) ( WC()->countries->get_states( $base[0] )[ $base[1] ] ?? '' ) : '';
-		$out['email']   = (string) get_option( 'woocommerce_email_from_address', '' );
 	}
 	return array_map( 'strval', $out );
 }

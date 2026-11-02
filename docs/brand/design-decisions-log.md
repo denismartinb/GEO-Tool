@@ -29355,6 +29355,21 @@ probando la 1.4.0 entera en la tienda de Wasmer:
   Ventura…»). `genscore_plain_text` cierra cada encabezado con punto si no
   acaba ya en puntuación; lo usan descripción, Open Graph y datos
   estructurados.
+- **Lo que encontró Instinct en la 1.4.1** (tienda de Wasmer, 2026-11-02):
+  el texto alternativo proponía el nombre del fichero cuando WordPress había
+  puesto ese nombre como título («Bolsa cafe etiopia 250g»), y en productos
+  sustituía en la biblioteca el alt que WooCommerce ya servía con el nombre
+  del producto. Ahora un título igual al fichero (`genscore_title_is_file`)
+  cede ante el título de la página, y las imágenes propias de un producto
+  (destacada y galería) no se ofrecen. A 390 px, un error de «Publicar datos»
+  no se veía porque el aviso del pie se oculta en móvil: el aviso de error sí
+  se enseña. La cancelación sólo se ofrece en productos (en una entrada era un
+  `MerchantReturnPolicy` suelto que Google no usa). La tabla de
+  características no se ofrece si WooCommerce ya la enseña en «Información
+  adicional». «Quién está detrás» ya no rellena el email con el remitente de
+  los correos de la tienda, que no siempre es público. «Añadir dato» y
+  «Copiar tabla y abrir» dependen de `page`, que en esa tienda llega vacío por
+  la misma razón que «Añadir preguntas».
 - **Nombre de la ficha de WordPress.org**: «GenScore: AI SEO & GEO Optimizer,
   llms.txt, Schema & AI Bots», igual en el readme y en la cabecera `Plugin
   Name` (Plugin Check pide que coincidan; lo vigila un test).

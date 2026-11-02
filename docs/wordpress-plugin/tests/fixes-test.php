@@ -111,5 +111,11 @@ check( 'a heading ends its sentence', 'Café tostado cada semana. En Café Ventu
 check( 'a heading with its own stop keeps it', '¿Qué café? Este.' === genscore_plain_text( '<h2>¿Qué café?</h2><p>Este.</p>' ) );
 check( 'paragraphs keep a space', 'Uno Dos' === genscore_plain_text( '<p>Uno</p><p>Dos</p>' ) );
 
+if ( ! function_exists( 'remove_accents' ) ) {
+	function remove_accents( $t ) { return iconv( 'UTF-8', 'ASCII//TRANSLIT', $t ); }
+}
+check( 'a title made from the file name is the file name', genscore_title_is_file( 'bolsa-cafe-etiopia-250g', '/u/bolsa-cafe-etiopia-250g-scaled.jpg' ) && genscore_title_is_file( 'Bolsa cafe etiopia 250g', '/u/bolsa-cafe-etiopia-250g-1024x768.jpg' ) );
+check( 'a written title is not the file name', ! genscore_title_is_file( 'Café de Etiopía en grano', '/u/bolsa-cafe-etiopia-250g.jpg' ) );
+
 echo $failures ? "\n$failures failed\n" : "\nall passed\n";
 exit( $failures ? 1 : 0 );
