@@ -374,3 +374,55 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-gau-s .gs-nm{font-size:12.5px;text-align:center}
 #genscore-app .gs-domc .gs-gg3{border-top:0;padding-top:0}
 #genscore-app .gs-domc .gs-say{font-size:15px;max-width:none}
+/* 1.1.2: «Actualizar» next to the account layer's source. */
+#genscore-app .gs-lyr .gs-rf{display:inline-flex;align-items:center;gap:4px;margin-left:10px;padding:0;border:0;background:none;font:inherit;font-size:12px;font-weight:500;color:var(--blue);cursor:pointer}
+#genscore-app .gs-lyr .gs-rf svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#genscore-app .gs-lyr .gs-rf:hover{text-decoration:underline}
+/* Two questions, two instruments: readiness is a bar, the Puntuación GEO is the only dial. */
+@container (min-width:720px){#genscore-app .gs-cols.gs-q2{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+#genscore-app .gs-qq{font-size:17px;font-weight:600;letter-spacing:-.015em;line-height:1.3;text-wrap:balance}
+#genscore-app .gs-qc.gs-hero .gs-qq{text-align:center;width:100%}
+#genscore-app .gs-qs{font-size:14.5px;line-height:1.45;color:var(--ink-2);text-wrap:pretty}
+#genscore-app .gs-qc.gs-hero .gs-qs{text-align:center;max-width:42ch;margin:0 auto}
+#genscore-app .gs-qn{font-size:12.5px;color:var(--ink-3);border-top:1px solid var(--rule-2);padding-top:10px}
+#genscore-app .gs-prh{display:flex;align-items:baseline;gap:12px;margin-top:4px}
+#genscore-app .gs-prw{font-size:40px;font-weight:400;letter-spacing:-.035em;line-height:1}
+#genscore-app .gs-prw.gs-pos{color:var(--pos)}#genscore-app .gs-prw.gs-mid{color:var(--mid)}#genscore-app .gs-prw.gs-low{color:var(--warm)}
+#genscore-app .gs-prp{font-size:15px;font-weight:600;color:var(--ink-2)}
+#genscore-app .gs-pbar{display:block;height:8px;border-radius:99px;background:var(--surface-3);overflow:hidden;width:100%}
+#genscore-app .gs-pbar i{display:block;height:100%;border-radius:99px;background:var(--ink-4)}
+#genscore-app .gs-pbar i.gs-pos{background:var(--pos)}#genscore-app .gs-pbar i.gs-mid{background:var(--mid)}#genscore-app .gs-pbar i.gs-low{background:var(--warm)}
+#genscore-app .gs-plns{display:flex;flex-direction:column;margin-top:6px}
+#genscore-app .gs-pln{display:grid;grid-template-columns:92px minmax(0,1fr) 44px auto;align-items:center;gap:12px;padding:9px 6px;border-top:1px solid var(--rule-2);border-radius:0;text-align:left}
+#genscore-app .gs-pln:hover{background:var(--surface-2)}
+#genscore-app .gs-pln .gs-nm{display:flex;align-items:center;gap:6px;font-weight:600;font-size:14px}
+#genscore-app .gs-pln .gs-pbar{height:6px}
+#genscore-app .gs-pln .gs-pv{font-size:13px;color:var(--ink-2);text-align:right}
+#genscore-app .gs-pln .gs-st{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-3);white-space:nowrap}
+@container (max-width:520px){#genscore-app .gs-pln{grid-template-columns:78px minmax(0,1fr) 40px}#genscore-app .gs-pln .gs-st{display:none}}
+#genscore-app .gs-gg2{grid-template-columns:repeat(2,minmax(0,1fr));border-top:0;padding-top:0}
+#genscore-app .gs-qc .gs-mh{width:100%;text-align:left;border-top:1px solid var(--rule);padding-top:10px}
+#genscore-app .gs-qc.gs-hero .gs-acts{justify-content:center}
+#genscore-app .gs-bridge{display:flex;gap:12px;align-items:flex-start;background:var(--blue-tint);border:1px solid var(--blue-soft);border-radius:14px;padding:12px 16px;font-size:14px;line-height:1.45;color:var(--ink-2)}
+#genscore-app .gs-bridge b{color:var(--ink)}
+#genscore-app .gs-bridge .gs-i{color:var(--blue);margin-top:2px}
+@container (max-width:719px){#genscore-app .gs-cols.gs-q2>.gs-col{display:contents}#genscore-app .gs-cols.gs-q2 .gs-qc{order:-3}#genscore-app .gs-cols.gs-q2 .gs-qc.gs-hero{order:-2}#genscore-app .gs-cols.gs-q2 .gs-bridge,#genscore-app .gs-cols.gs-q2 .gs-recs{order:-1}}
+#genscore-app .gs-recs .gs-mh{border-top:1px solid var(--rule);padding-top:12px;margin-top:4px;align-items:center}
+#genscore-app .gs-recs .gs-lab+.gs-mh{border-top:0;padding-top:0;margin-top:0}
+#genscore-app .gs-recs .gs-mh small{font-weight:500;color:var(--ink-3)}
+#genscore-app .gs-recs .gs-mh .gs-lnk{margin-left:auto}
+#genscore-app .gs-recs .gs-fx .gs-tx small{font-style:normal;margin-top:2px}
+#genscore-app .gs-lnk{display:inline-flex;align-items:center;gap:3px;color:var(--blue);font-size:12.5px;font-weight:600}#genscore-app .gs-lnk .gs-i{width:13px;height:13px}
+/* 1.3.0: actionable GenScore recommendations in every tab */
+#genscore-app .gs-rwa .gs-ra{display:flex;align-items:center;gap:10px;flex:none}
+#genscore-app .gs-rwa .gs-ra .gs-btn,#genscore-app .gs-fxa .gs-btn{white-space:nowrap}
+#genscore-app .gs-fxa{align-items:flex-start}
+#genscore-app .gs-fxa .gs-n{padding-top:2px}
+@media (max-width:600px){
+  #genscore-app .gs-rwa{flex-wrap:wrap}
+  #genscore-app .gs-rwa .gs-tx{flex-basis:calc(100% - 20px)}
+  #genscore-app .gs-rwa .gs-ra{width:100%;justify-content:flex-end}
+  #genscore-app .gs-fxa{flex-wrap:wrap}
+  #genscore-app .gs-fxa .gs-tx{flex-basis:calc(100% - 30px)}
+  #genscore-app .gs-fxa>.gs-btn,#genscore-app .gs-fxa>a{margin-left:28px}
+}

@@ -33,7 +33,12 @@ export function isRetiredRecommendationType(type: string): boolean {
   return (RETIRED_RECOMMENDATION_TYPES as readonly string[]).includes(type);
 }
 
-export type Headline = { title: string; context: string | null };
+/**
+ * `subject` is the full name a short title had to leave out («ese rival»,
+ * «esta marca») because it did not fit the console card. Surfaces with room
+ * for it (report, extension, MCP, WordPress plugin) name it instead.
+ */
+export type Headline = { title: string; context: string | null; subject?: string | null };
 
 /** Only the states that certify an own page we can name. */
 export type HeadlineCoverage = { state: string; pageUrl: string | null } | null | undefined;
@@ -192,7 +197,8 @@ export function recommendationHeadline(rec: HeadlineInput, coverage?: HeadlineCo
         title: name
           ? `${covered ? "Mejora" : "Publica"} tu comparativa con ${name}`
           : `${covered ? "Mejora" : "Publica"} tu comparativa con ese rival`,
-        context: `${competitor} sale en ${questions(Math.max(n, 1))} y tú no`
+        context: `${competitor} sale en ${questions(Math.max(n, 1))} y tú no`,
+        ...(name ? {} : { subject: competitor })
       };
     }
 
@@ -230,7 +236,8 @@ export function recommendationHeadline(rec: HeadlineInput, coverage?: HeadlineCo
       const short = fits(name, 22);
       return {
         title: short ? `Añade ${short} a tus competidores` : "Añade esta marca a tus competidores",
-        context: name && !short ? name : n > 0 ? `La IA la nombra en ${n === 1 ? "1 respuesta" : `${n} respuestas`}` : null
+        context: name && !short ? name : n > 0 ? `La IA la nombra en ${n === 1 ? "1 respuesta" : `${n} respuestas`}` : null,
+        ...(name && !short ? { subject: name } : {})
       };
     }
 

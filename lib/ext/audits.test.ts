@@ -140,6 +140,11 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
       expect(b.issues.map((i) => i.points)).toEqual(view.issues.slice(0, EXT_AUDIT_ISSUES).map((i) => i.blockPoints));
       // «Si arreglas estos tres» only when the three are every scored issue
       expect(b.projected).toBe(view.scoredIssueCount <= EXT_AUDIT_ISSUES && view.projectedScore! > view.score! ? view.projectedScore : null);
+      // The plugin's one-click fix needs the check and the failing pages (WP-PLUGIN-3)
+      expect(b.issues.map((i) => i.check)).toEqual(view.issues.slice(0, EXT_AUDIT_ISSUES).map((i) => i.issue.check));
+      for (const i of b.issues) expect(i.urls.every((u) => /^https?:\/\//.test(u))).toBe(true);
+      // The header's «25 → 100» is the whole block, however many issues it has
+      expect(b.projectedAll).toBe(view.projectedScore! > view.score! ? view.projectedScore : null);
     }
     expect(r.auditedAt).toBe(AT);
     expect(r.page).toBeNull();
@@ -151,7 +156,10 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
     const steps = firstSteps(weak, EXT_AUDIT_ISSUES);
     expect(b.score).toBe(weak.score);
     expect(b.issues.map((i) => i.label)).toEqual(steps.map((s) => s.title));
+    expect(b.issues.map((i) => i.check)).toEqual(steps.map((s) => s.checkId));
     expect(b.projected).toBe(scoreIfChecksPass(weak, new Set(steps.map((s) => s.checkId))));
+    const all = firstSteps(weak, Number.MAX_SAFE_INTEGER);
+    expect(b.projectedAll).toBe(scoreIfChecksPass(weak, new Set(all.map((s) => s.checkId))));
   });
 
   it("crosses the open page with the audit, and says when it was not audited", () => {

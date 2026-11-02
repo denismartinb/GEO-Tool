@@ -31,7 +31,7 @@ const P: ExtProjectPayload = {
   agentic: { kind: "upsell" },
   citingPrompts: null,
   searchConsole: { state: "disconnected" },
-  audits: { auditedAt: "2026-10-30T00:00:00Z", blocks: [{ key: "geo", score: 70, projected: 82, issues: [{ label: "Sin llms.txt", scope: "Todo el sitio", points: 6, severity: "medium" as never }] }], page: null },
+  audits: { auditedAt: "2026-10-30T00:00:00Z", blocks: [{ key: "geo", score: 70, projected: 82, projectedAll: 82, issues: [{ label: "Sin llms.txt", scope: "Todo el sitio", points: 6, severity: "medium" as never, check: "llms_txt_missing", urls: [] }] }], page: null },
   prompts: []
 };
 

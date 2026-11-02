@@ -75,3 +75,7 @@ histórico (`docs/brand/design-decisions-log.md` §248) o al diseño aprobado
 - **El primer paso del plan sale de `overlayCopy` cuando hay veredicto de
   cobertura**, igual que en la tarjeta de Recomendaciones. Una portada sola
   pone «—» en «¿Página tuya?», nunca «Sí».
+
+- **Las palancas se agrupan como en Recomendaciones** (`selectPlanWithLevers`,
+  log §432, adenda «mismo plan»): una palanca es una acción con `leverTitle` y
+  `leverFirstStep`, nunca sus tarjetas sueltas.

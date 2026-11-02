@@ -1129,3 +1129,31 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .gcard.pg{margin:4px 0 10px}
 .mh.sub{margin-top:10px}
 .gsh+.gk3+.gcard,.gk3+.acts,.gcard+.acts{margin-top:10px}
+
+/* Optimización técnica: a bar with a state, never a dial (log §432, adenda «optimización técnica») */
+.hq.prep{display:flex;flex-direction:column;gap:8px}
+.prep .qq{font-size:15px;font-weight:600;letter-spacing:-.01em;line-height:1.3;margin:0}
+.prep .prh{display:flex;align-items:baseline;gap:10px}
+.prep .prw{font-size:34px;font-weight:300;letter-spacing:-.035em;line-height:1}
+.prep .prw.ok{color:var(--pos)}.prep .prw.mid{color:var(--mid)}.prep .prw.bad{color:var(--warm)}
+.prep .prp{font-size:14px;font-weight:600;color:var(--ink-2)}
+.pbar{display:block;height:7px;border-radius:99px;background:var(--surface-3);overflow:hidden;width:100%}
+.pbar i{display:block;height:100%;border-radius:99px;background:var(--tick-off)}
+.pbar i.ok{background:var(--pos)}.pbar i.mid{background:var(--mid)}.pbar i.bad{background:var(--warm)}
+.prep .say{text-align:left;margin:2px 0 0}
+.plns{display:flex;flex-direction:column;border-top:1px solid var(--rule);margin-top:4px}
+.pln{display:grid;grid-template-columns:76px minmax(0,1fr) 38px auto;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--rule-2);text-align:left;border-radius:0}
+.pln:hover{background:var(--surface-2)}
+.pln[aria-expanded="true"]{background:var(--surface-3)}
+.pln .nm{display:flex;align-items:center;gap:5px;font-size:13px;font-weight:600}
+.pln .nm svg{width:12px;height:12px}
+.pln .pbar{height:5px}
+.pln .pv{font-size:12px;color:var(--ink-2);text-align:right}
+.pln .st{font-size:11px;color:var(--ink-3);display:flex;align-items:center;gap:5px;white-space:nowrap}
+.pln .sh.ok{border-radius:50%;background:var(--pos)}.pln .sh.mid{border-radius:50%;background:var(--mid)}.pln .sh.bad{border-radius:50%;background:var(--warm)}
+.pln .i.chev{width:13px;height:13px;color:var(--ink-4);transition:transform var(--d2) var(--std)}
+.pln[aria-expanded="true"] .i.chev{transform:rotate(180deg);color:var(--ink)}
+.gl{display:flex;align-items:center;gap:10px;margin-top:6px;padding:10px 12px;border-radius:12px;background:var(--blue-tint);text-align:left;width:100%}
+.gl .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.gl b{font-size:13px;font-weight:600;color:var(--ink)}
+.gl small{font-size:12px;color:var(--ink-2);line-height:1.4}

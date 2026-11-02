@@ -1,0 +1,79 @@
+<title>Preparación frente a Puntuación GEO</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{--bg:#eceef2;--card:#fff;--ink:#0b1426;--ink2:#3b4759;--ink3:#5f6b7e;--line:#e3e6eb;--blue:#2563eb;--tint:#ecf2ff;--pos:#0f7a54}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#11151c;--card:#1a1f28;--ink:#eef1f6;--ink2:#b9c1cd;--ink3:#8b95a5;--line:#2c333f;--blue:#7aa2ff;--tint:#1d2740;--pos:#4cc39a;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#11151c;--card:#1a1f28;--ink:#eef1f6;--ink2:#b9c1cd;--ink3:#8b95a5;--line:#2c333f;--blue:#7aa2ff;--tint:#1d2740;--pos:#4cc39a;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 Figtree,system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px 60px}
+.wrap{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1{font-size:26px;margin:0;text-wrap:balance}
+h2{font-size:19px;margin:0;text-wrap:balance}
+p{margin:0;max-width:75ch;color:var(--ink2)}
+.tabs{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:99px;padding:4px;align-self:flex-start;flex-wrap:wrap}
+.tabs button{font:600 14px Figtree;border:0;background:none;color:var(--ink3);padding:8px 16px;border-radius:99px;cursor:pointer}
+.tabs button[aria-pressed="true"]{background:var(--ink);color:var(--card)}
+.view{display:flex;flex-direction:column;gap:14px}
+.shots{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+@media (max-width:860px){.shots{grid-template-columns:minmax(0,1fr)}}
+.shot{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;min-width:0}
+.shot b{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:2px 4px 8px}
+.shot img{display:block;width:100%;border-radius:8px;border:1px solid var(--line)}
+.mob img{max-width:300px;margin:0 auto}
+.note{background:var(--tint);border-radius:12px;padding:12px 16px;font-size:14px;color:var(--ink2)}
+.note b{color:var(--ink)}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:860px){.pair{grid-template-columns:minmax(0,1fr)}}
+.lbl{display:inline-block;font:600 12px Figtree;padding:3px 9px;border-radius:99px;background:var(--line);color:var(--ink2);margin-bottom:6px}
+.lbl.new{background:var(--pos);color:#fff}
+</style>
+<div class="wrap">
+  <header style="display:flex;flex-direction:column;gap:8px">
+    <h1>Preparación de la web frente a Puntuación GEO</h1>
+    <p>Capturas del plugin real (versión 1.2.0 en preparación) en mi WordPress de prueba. Los datos de la cuenta son ficticios: Puntuación GEO 12 y la web optimizada al 87%. La web se mide como «Optimización técnica», con una barra y un estado. El único medidor es la Puntuación GEO. Con sesión, se añaden las recomendaciones de la consola: el plan, la Auditoría GEO, la Auditoría SEO y la auditoría agéntica.</p>
+  </header>
+  <div class="tabs" role="tablist">
+    <button data-v="off" aria-pressed="true">Sin sesión</button>
+    <button data-v="on" aria-pressed="false">Con sesión · nueva</button>
+    <button data-v="cur" aria-pressed="false">Con sesión · actual</button>
+  </div>
+
+  <section class="view" id="v-off">
+    <h2>Sin sesión (nueva)</h2>
+    <div class="note"><b>El cambio importante.</b> Hoy solo se ve el 87 en un medidor. Ahora la Puntuación GEO sale como «?, sin medir», con «Conectar con GenScore» y «Analizar dominio». Debajo va tu frase: «Una web técnicamente optimizada no basta…».</div>
+    <div class="shots">
+      <div class="shot"><b>Escritorio · 1280</b><img src="off-1280.jpg" alt="Plugin sin sesión en escritorio"></div>
+      <div class="shot mob"><b>Móvil · 390</b><img src="off-390.jpg" alt="Plugin sin sesión en móvil"></div>
+    </div>
+    <details><summary style="cursor:pointer;color:var(--ink3)">Cómo es hoy sin sesión</summary>
+      <div class="shots" style="margin-top:12px">
+        <div class="shot"><b>Hoy · escritorio</b><img src="cur-off-1280.jpg" alt="Plugin sin sesión hoy"></div>
+        <div class="shot mob"><b>Hoy · móvil</b><img src="cur-off-390.jpg" alt="Plugin sin sesión hoy en móvil"></div>
+      </div></details>
+  </section>
+
+  <section class="view" id="v-on" hidden>
+    <h2>Con sesión (nueva)</h2>
+    <div class="note">Hay dos tarjetas arriba, cada una con su pregunta. A la izquierda, la optimización técnica de la web en barra. A la derecha, la Puntuación GEO es el medidor grande, y la Salud SEO y los Agentes del dominio van debajo como «Auditoría de tu dominio». Después viene <b>«Recomendaciones de GenScore»</b>, con el plan para que la IA te nombre y lo que más resta en las auditorías GEO, SEO y agéntica, cada bloque con su «Ver» a la consola. En móvil el orden es: optimización, Puntuación GEO, frase, recomendaciones y después «Arregla primero».</div>
+    <div class="shots">
+      <div class="shot"><b>Escritorio · 1280</b><img src="on-1280.jpg" alt="Plugin con sesión, nueva versión, escritorio"></div>
+      <div class="shot mob"><b>Móvil · 390</b><img src="on-390.jpg" alt="Plugin con sesión, nueva versión, móvil"></div>
+    </div>
+  </section>
+
+  <section class="view" id="v-cur" hidden>
+    <h2>Con sesión (actual, sin cambios)</h2>
+    <div class="note">Esta es la UX de hoy. El 87 de «Nota SEO + IA» es el número más grande de la pantalla, y el 12 aparece pequeño a la derecha. Con sesión el 12 al menos se ve, así que se puede mantener. Aun así, el 87 sigue leyéndose como la nota principal.</div>
+    <div class="shots">
+      <div class="shot"><b>Escritorio · 1280</b><img src="cur-on-1280.jpg" alt="Plugin con sesión hoy, escritorio"></div>
+      <div class="shot mob"><b>Móvil · 390</b><img src="cur-on-390.jpg" alt="Plugin con sesión hoy, móvil"></div>
+    </div>
+  </section>
+</div>
+<script>
+document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  ['off','on','cur'].forEach(v=>document.getElementById('v-'+v).hidden=v!==b.dataset.v);
+}));
+</script>

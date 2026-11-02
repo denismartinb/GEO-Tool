@@ -55,6 +55,9 @@ describe("recommendationHeadline", () => {
     expect(fromEvidence).toEqual({ title: "Publica tu comparativa con Cuentix", context: "Cuentix sale en 3 preguntas y tú no" });
     const fromTitle = recommendationHeadline(rec("close_competitor_gap", {}, "Disputa a Kontaro 2 consultas donde no apareces"));
     expect(fromTitle.title).toBe("Publica tu comparativa con Kontaro");
+    const long = recommendationHeadline(rec("close_competitor_gap", { dominant_competitor: "Ineffable Coffee Roasters" }));
+    expect(long.title).toBe("Publica tu comparativa con ese rival");
+    expect(long.subject).toBe("Ineffable Coffee Roasters");
   });
 
   it("names whom to write to for third-party sources", () => {

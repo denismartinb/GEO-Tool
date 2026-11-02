@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
-import { buildExtProjectSummary, findCitingPrompts, pageKey, toExtAgentic } from "./summary";
+import { buildExtProjectSummary, findCitingPrompts, isDraftable, pageKey, toExtAgentic } from "./summary";
 
 const label = (p: string) => ({ openai: "ChatGPT", gemini: "Gemini", claude: "Claude", perplexity: "Perplexity" })[p] ?? p;
 
@@ -82,9 +82,10 @@ describe("buildExtProjectSummary", () => {
   const base = { project: { domain: "marca.es", brand: "Marca" }, answers: [], agentic: { kind: "hidden" } as const, engineLabel: label };
 
   it("takes the figures from the report model as they are, as shares", () => {
-    const s = buildExtProjectSummary({ ...base, model: model(), url: null });
+    const s = buildExtProjectSummary({ ...base, model: model(), url: null, seoScore: 84 });
     expect(s.geoScore).toBe(47);
-    expect(s.seoScore).toBe(68);
+    // «Salud SEO» is the audit's SEO block, never the report's technical score (68).
+    expect(s.seoScore).toBe(84);
     expect(s.engines).toEqual([
       { provider: "openai", label: "ChatGPT", mentionShare: 0.38 },
       { provider: "gemini", label: "Gemini", mentionShare: 0.52 }
@@ -140,5 +141,21 @@ describe("toExtAgentic", () => {
         first: null
       })
     ).toEqual({ kind: "card", score: 44, headline: "h", components: [{ name: "Descubrimiento", points: 22, weight: 30 }] });
+  });
+});
+
+describe("isDraftable (WP-PLUGIN-3, log §432)", () => {
+  const q = ["¿Qué café comprar para espresso?"];
+  it("offers a draft only for a new page that answers questions", () => {
+    expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: q })).toBe(true);
+    expect(isDraftable({ title: "Sube esta FAQ a tu web", type: "create_faq_section", questions: q })).toBe(true);
+    expect(isDraftable({ title: "Publica una página que responda esta pregunta", type: "increase_brand_visibility", questions: q })).toBe(true);
+  });
+  it("never for an existing page, a definition, a rival or work outside the site", () => {
+    expect(isDraftable({ title: "Responde esta pregunta en /cafe", type: "increase_brand_visibility", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Añade las definiciones al inicio de tu página", type: "lever_definition", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Publica tu comparativa con Nomad", type: "close_competitor_gap", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Consigue que te mencionen en foros", type: "pursue_community_sources", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: [] })).toBe(false);
   });
 });

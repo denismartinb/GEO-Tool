@@ -555,12 +555,18 @@ function genscore_listing_top_html() {
 }
 
 /**
- * Classic themes: WooCommerce's archive description, or the posts loop.
+ * Classic themes: before the shop's products, or the posts loop.
+ *
+ * Not in woocommerce_archive_description: classic themes (Storefront) print it
+ * inside <header class="woocommerce-products-header">, and the review skips
+ * every paragraph inside a header, so the paragraph was there but never counted.
  */
 function genscore_fix_shop_lead() {
 	echo genscore_listing_top_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped when built.
 }
-add_action( 'woocommerce_archive_description', 'genscore_fix_shop_lead', 5 );
+add_action( 'woocommerce_before_shop_loop', 'genscore_fix_shop_lead', 5 );
+// A shop with no products to list never runs the loop.
+add_action( 'woocommerce_no_products_found', 'genscore_fix_shop_lead', 5 );
 
 /**
  * Classic themes: before the posts of the posts page.

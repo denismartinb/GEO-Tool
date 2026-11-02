@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { leverFirstStep, leverTitle } from "@/lib/recommendations/levers";
 import { loadReportInput, type ReportProject } from "./report-data";
 import { COULD_NOT_VERIFY_NOTE, NOT_COVERED_NOTE } from "@/lib/web-audit/coverage-map";
 
@@ -128,8 +129,10 @@ describe("loadReportInput", () => {
 
   it("maps the plan with its first step, engines and topics", async () => {
     const input = (await loadReportInput({ supabase: fakeSupabase(base()), project: PROJECT }))!;
+    // A page-visibility card is a lever (RECS-ONE-LEVER-1, log §328): same title
+    // and step as on Recomendaciones and Visión general (log §432, adenda «mismo plan»).
     expect(input.plan).toEqual([
-      { title: "Publica una página que responda esta pregunta", description: "D", firstStep: "Empieza por la portada", providers: ["gemini"], topics: ["Local"], questions: ["Pregunta q1"] }
+      { title: leverTitle({ kind: "category", category: "Local" }), description: "D", firstStep: leverFirstStep({ kind: "category", category: "Local" }), providers: ["gemini"], topics: ["Local"], questions: ["Pregunta q1"], type: "lever" }
     ]);
   });
 
@@ -160,7 +163,9 @@ describe("loadReportInput", () => {
 
     it("does not certify the home as coverage", async () => {
       const input = (await loadReportInput({ supabase: fakeSupabase(withPage("https://acme.es/")), project: PROJECT }))!;
-      expect(input.plan[0].firstStep).toMatch(/^Publica una página/);
+      // The home alone is no coverage: the card stays in the plan, as a lever.
+      expect(input.plan).toHaveLength(1);
+      expect(input.plan[0].firstStep).toBe(leverFirstStep({ kind: "category", category: "Local" }));
       expect(input.coverage?.q1).toBe("unknown");
     });
   });

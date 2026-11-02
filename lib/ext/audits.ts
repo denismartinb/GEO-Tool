@@ -28,6 +28,10 @@ function aiEnginesCanRead(bots: BotAccessReport): boolean | null {
  */
 
 export const EXT_AUDIT_ISSUES = 3;
+export const EXT_AUDIT_URLS = 20;
+
+/** Checks whose affected labels are not page URLs (bot names, or the site as a whole). */
+const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "llms_txt_missing", "sitemap_missing"]);
 
 export type ExtAuditIssue = {
   label: string;
@@ -36,6 +40,14 @@ export type ExtAuditIssue = {
   /** Block points (or Agentes points) gained by fixing it alone. Null when it carries none. */
   points: number | null;
   severity: IssueSeverity | "agentic";
+  /**
+   * WP-PLUGIN-3 (log §432): which check fails, so the WordPress plugin can
+   * offer its own one-click fix for it. The technical check key, or the
+   * agentic check id.
+   */
+  check: string;
+  /** Pages where it fails (the audit's own URLs), at most `EXT_AUDIT_URLS`. Empty for site-wide checks. */
+  urls: string[];
 };
 
 export type ExtAuditBlock = {
@@ -43,6 +55,12 @@ export type ExtAuditBlock = {
   score: number;
   /** The score if the listed issues were fixed. Null when nothing would move it. */
   projected: number | null;
+  /**
+   * The block's score if every scored issue were fixed, even when there are
+   * more than the listed ones. For a header («25 → 100»), never for «si
+   * arreglas estos tres». Null when nothing would move it.
+   */
+  projectedAll: number | null;
   issues: ExtAuditIssue[];
 };
 
@@ -75,6 +93,15 @@ export type ExtAuditsInput = {
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
+function isHttpUrl(u: string): boolean {
+  try {
+    const x = new URL(u);
+    return x.protocol === "https:" || x.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 function technicalBlock(key: AuditBlockKey, pages: PageAuditEntry[], bots: BotAccessReport): ExtAuditBlock | null {
   const view = buildAuditBlock(key, pages, buildTechnicalIssuesReport(pages, bots), bots);
   if (view.score === null) return null;
@@ -86,11 +113,14 @@ function technicalBlock(key: AuditBlockKey, pages: PageAuditEntry[], bots: BotAc
     key,
     score: view.score,
     projected: covered && view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
+    projectedAll: view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
     issues: top.map((i) => ({
       label: ISSUE_CHECK_META[i.issue.check].label,
       scope: issueScopeLabel(i.issue),
       points: i.blockPoints,
-      severity: i.issue.severity
+      severity: i.issue.severity,
+      check: i.issue.check,
+      urls: SITE_WIDE_CHECKS.has(i.issue.check) ? [] : i.issue.affectedLabels.filter(isHttpUrl).slice(0, EXT_AUDIT_URLS)
     }))
   };
 }
@@ -100,17 +130,22 @@ function agenticBlock(result: AgenticCheckResult): ExtAuditBlock | null {
   const score = result.score;
   const steps = firstSteps(result, EXT_AUDIT_ISSUES);
   const projected = steps.length ? scoreIfChecksPass(result, new Set(steps.map((s) => s.checkId))) : null;
+  const all = firstSteps(result, Number.MAX_SAFE_INTEGER);
+  const projectedAll = all.length ? scoreIfChecksPass(result, new Set(all.map((s) => s.checkId))) : null;
   return {
     key: "agent",
     score,
     projected: projected !== null && projected > score ? projected : null,
+    projectedAll: projectedAll !== null && projectedAll > score ? projectedAll : null,
     issues: steps.map((s) => {
       const alone = scoreIfChecksPass(result, new Set([s.checkId]));
       return {
         label: s.title,
         scope: result.components.find((c) => c.id === s.component)?.name ?? "",
         points: alone !== null && alone > score ? round1(alone - score) : null,
-        severity: "agentic" as const
+        severity: "agentic" as const,
+        check: s.checkId,
+        urls: isHttpUrl(result.url) ? [result.url] : []
       };
     })
   };
