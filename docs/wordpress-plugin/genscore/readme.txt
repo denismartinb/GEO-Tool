@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.2
+Stable tag: 1.1.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,12 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.1.3 =
+* «Respuesta al principio» on the shop now counts in classic themes such as Storefront: it is printed before the products, not inside the products header.
+* A review that was running when you saved robots.txt or llms.txt no longer stores scores read before the change.
+* After «Guardar robots.txt», the switches stay where you left them while the pages are read again.
+* «Fecha»: the shop says «No aplica» when it does not need a date, and pages that have one show it.
 
 = 1.1.2 =
 * «Salud SEO» in «Tu dominio» is the SEO audit's score, the same as in GenScore's console.

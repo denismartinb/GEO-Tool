@@ -29119,3 +29119,25 @@ orden y el título pueden diferir de Visión general. Los rivales son las marcas
 más nombradas, no sólo las que sigues; esto es a propósito y la extensión hace
 lo mismo. Las bandas de Agentes de la extensión siguen en 75 y 50 hasta su
 próxima versión.
+
+**Adenda 1.1.3 (2026-11-02).** Denis hizo la prueba completa de los
+«Arreglar» con la 1.1.1 en Wasmer, con Storefront y WooCommerce. Todo
+publica y se deshace bien. Quedaban cuatro fallos:
+
+- **El párrafo de la Tienda no contaba en Storefront.** Se pintaba en
+  `woocommerce_archive_description`, que en los temas clásicos va dentro de
+  `<header class="woocommerce-products-header">`, y la revisión (`collect.js`,
+  copia de la extensión) descarta todo `<p>` dentro de un `header`. Ahora se
+  pinta en `woocommerce_before_shop_loop`, o en `woocommerce_no_products_found`
+  si no hay productos. Los temas de bloques siguen igual. `collect.js` no se
+  toca: es la copia exacta de la extensión.
+- **Notas viejas.** Una revisión en marcha guardaba sus notas después de
+  `genscore_forget_all_scores()`. Ahora hay una generación
+  (`genscore_scores_gen`) que sube en cada borrado. La pantalla manda con cada
+  nota la generación en la que leyó la página, y `genscore_ajax_save_page` no
+  guarda una nota de una generación anterior.
+- **El interruptor rebotaba** tras «Guardar robots.txt», porque la pantalla
+  seguía leyendo el robots.txt de antes. Ahora enseña lo guardado
+  (`S.bots`) hasta que la página se vuelve a leer.
+- **«Fecha» en la Tienda.** Si la Tienda no necesita fecha, sale «No aplica»
+  (estado `na`). Si ya tiene una publicada, la hoja enseña cuál es.

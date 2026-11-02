@@ -19,7 +19,7 @@
   var app = document.getElementById("genscore-app");
   if (!app || !SC) return;
 
-  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null, target: D.target || null, home: null, open: {}, web: { pages: (D.web && D.web.pages) || [], scores: (D.web && D.web.scores) || {}, running: false, first: false, left: 0 } };
+  var S = { tab: "res", state: "loading", facts: null, score: null, error: null, bots: Object.assign({}, D.bots.settings), dirty: {}, msg: {}, llms: Object.assign({}, D.llms), llmsText: null, target: D.target || null, home: null, open: {}, web: { pages: (D.web && D.web.pages) || [], scores: (D.web && D.web.scores) || {}, gen: (D.web && D.web.gen) || 0, running: false, first: false, left: 0 } };
   var ENG = [["chatgpt", "ChatGPT"], ["gemini", "Gemini"], ["claude", "Claude"], ["perplexity", "Perplexity"]];
   var SW_LABEL = {
     "chatgpt-search": ["ChatGPT", "Búsqueda y enlaces que abre ChatGPT"],
@@ -101,6 +101,10 @@
   function cap(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
   function switchWanted(id) {
     if (S.dirty[id]) return S.dirty[id] === "allow";
+    /* Just saved: the robots.txt on screen is the one read before the save,
+       so the switch shows what was saved until the page is read again
+       (it bounced back for 3 or 4 seconds). */
+    if (S.botsPending) return S.bots[id] !== "block";
     var now = switchAllowed(id);
     return now == null ? S.bots[id] !== "block" : now;
   }
@@ -544,8 +548,13 @@
       .filter(function (f) { return !(id === 0 && f.lane === "agent" && PRODUCT_FIX[f.id]); });
     return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, via: via, fixes: F.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
   }
-  function keep(id, sc) {
+  /* `gen`: the generation the page was read in. A pass that started before
+     a robots.txt or llms.txt save carries the old one, and the server drops
+     its scores instead of storing them over the fresh ones (1.1.3). */
+  function keep(id, sc, gen) {
     var e = entryOf(id, sc);
+    if (gen !== S.web.gen) return;
+    e.gen = gen;
     S.web.scores[id] = e;
     post("genscore_save_page", { page: JSON.stringify(e) }).catch(function () {});
   }
@@ -555,11 +564,11 @@
      again behind it instead of swapping the screen for the spinner. */
   function review(all, quiet) {
     if (!(quiet && S.score)) { S.state = "loading"; render(); }
-    var target = S.target;
+    var target = S.target, gen = S.web.gen;
     readPage(target ? target.url : D.site.home).then(function (facts) {
-      S.facts = facts;
+      S.facts = facts; S.botsPending = false;
       var raw = SC.scorePage(facts);
-      keep(target ? target.id : 0, raw);
+      keep(target ? target.id : 0, raw, gen);
       // Only the home page borrows a product page for Agentes: a page opened
       // from the list is scored on its own.
       return target ? SC.scorePage(facts) : withProduct(SC.scorePage(facts));
@@ -601,6 +610,7 @@
     var have = S.web.pages.filter(function (p) { return p.id && S.web.scores[p.id]; }).length;
     if (!todo.length) { render(); saveReview(); return; }
     S.web.running = true;
+    var gen = S.web.gen;
     S.web.first = have === 0;
     S.web.left = todo.length;
     render();
@@ -608,7 +618,7 @@
     function next() {
       if (i >= todo.length) return Promise.resolve();
       var p = todo[i++];
-      return readPage(p.url).then(function (facts) { keep(p.id, SC.scorePage(facts)); }, function () { /* a page that will not open is left out */ })
+      return readPage(p.url).then(function (facts) { keep(p.id, SC.scorePage(facts), gen); }, function () { /* a page that will not open is left out */ })
         .then(function () { S.web.left--; if (!S.web.first && !S.target) render(); return next(); });
     }
     Promise.all([next(), next()]).then(function () {
@@ -716,7 +726,7 @@
       M.loading = false; M.err = "";
       /* Every page already has it: the review that flagged it is older than
          the fix. Read those pages again so «Arreglar» stops offering it. */
-      if (reset && !M.q && M.type === "all" && !M.more && M.items.length && M.items.every(function (x) { return x.status === "has"; }) && !S.web.running) {
+      if (reset && !M.q && M.type === "all" && !M.more && M.items.length && M.items.every(function (x) { return x.status === "has" || x.status === "na"; }) && !S.web.running) {
         var front = Number(D.site.frontPage || 0);
         var home = false;
         M.items.forEach(function (x) { delete S.web.scores[x.id]; if (x.id === front || x.id === 0) { delete S.web.scores[0]; home = true; } });
@@ -738,7 +748,8 @@
   function editor(it) {
     if (!it) return '<p class="gs-fm-hint">' + (M.allDone ? "Ya está en todas tus páginas. Las volvemos a revisar para que deje de salir en la lista." : "Toca una página para ver su propuesta.") + "</p>";
     var head = '<div class="gs-fm-ph"><b>' + esc(it.title) + '</b><a href="' + esc(it.url) + '" target="_blank" rel="noopener">Ver la página</a></div>';
-    if (it.status === "has") return head + '<p class="gs-fm-hint">Esta página ya lo tiene y no se toca.</p>' + (it.value && M.kind !== "fresh" && M.kind !== "returns" ? '<pre class="gs-fm-pre">' + esc(it.value) + "</pre>" : "");
+    if (it.status === "has") return head + '<p class="gs-fm-hint">Esta página ya lo tiene y no se toca.</p>' + (it.value && M.kind === "fresh" ? '<pre class="gs-fm-pre">Actualizado el ' + esc(it.value) + "</pre>" : it.value && M.kind !== "returns" ? '<pre class="gs-fm-pre">' + esc(it.value) + "</pre>" : "");
+    if (it.status === "na") return head + '<p class="gs-fm-hint">Esta página no lo necesita y no se toca.</p>';
     if (it.status === "missing") return head + '<p class="gs-fm-hint gs-warm">' + esc(it.note) + ". Esta página no se publica.</p>";
     var v = M.edits[it.id] != null ? M.edits[it.id] : it.value;
     var f = "";
@@ -754,6 +765,7 @@
   }
   function tag(it) {
     if (it.status === "has") return '<span class="gs-fm-st gs-has">Ya lo tiene</span>';
+    if (it.status === "na") return '<span class="gs-fm-st gs-has">No aplica</span>';
     if (it.status === "missing") return '<span class="gs-fm-st gs-miss">' + esc(it.note) + "</span>";
     if (M.bad[it.id]) return '<span class="gs-fm-st gs-miss">Revisar</span>';
     if (M.edits[it.id] != null) return '<span class="gs-fm-st gs-ed">Editada</span>';
@@ -986,6 +998,8 @@
       post("genscore_save_bots", { bots: next2 }).then(function (r) {
         if (!r || !r.success) throw new Error();
         S.bots = r.data.settings; S.dirty = {}; S.msg.bots = "";
+        if (r.data.gen != null) S.web.gen = r.data.gen;
+        S.botsPending = true;
         toast("robots.txt guardado y publicado en tu web.");
         render();
         review(true, true);
@@ -1019,6 +1033,7 @@
     post("genscore_save_llms", data).then(function (r) {
       if (!r || !r.success) throw new Error();
       S.llms.enabled = r.data.enabled; S.llms.serving = r.data.serving; S.llms.custom = r.data.custom;
+      if (r.data.gen != null) S.web.gen = r.data.gen;
       if (r.data.generated != null) S.llms.generated = r.data.generated;
       if ("text" in data) { S.llmsEdited = false; S.llmsText = null; }
       S.msg.llms = "";

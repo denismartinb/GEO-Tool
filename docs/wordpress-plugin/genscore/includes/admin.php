@@ -104,6 +104,7 @@ function genscore_screen_data() {
 		'web'      => array(
 			'pages'  => genscore_key_pages(),
 			'scores' => (object) genscore_page_scores(),
+			'gen'    => genscore_scores_gen(),
 		),
 		'fixes'    => genscore_fix_screen_data(),
 		'last'     => get_option( 'genscore_last_review', null ),
@@ -278,7 +279,12 @@ function genscore_ajax_save_bots() {
 	}
 	update_option( 'genscore_bots', genscore_sanitize_bot_settings( $raw ), false );
 	genscore_forget_all_scores();
-	wp_send_json_success( array( 'settings' => genscore_sanitize_bot_settings( get_option( 'genscore_bots', array() ) ) ) );
+	wp_send_json_success(
+		array(
+			'settings' => genscore_sanitize_bot_settings( get_option( 'genscore_bots', array() ) ),
+			'gen'      => genscore_scores_gen(),
+		)
+	);
 }
 add_action( 'wp_ajax_genscore_save_bots', 'genscore_ajax_save_bots' );
 
@@ -307,6 +313,7 @@ function genscore_ajax_save_llms() {
 			'serving' => genscore_llms_serving(),
 			'custom'    => (string) get_option( 'genscore_llms_custom', '' ),
 			'generated' => genscore_llms_generate(),
+			'gen'       => genscore_scores_gen(),
 		)
 	);
 }
@@ -353,6 +360,10 @@ function genscore_ajax_save_page() {
 	$score = genscore_sanitize_page_score( $raw );
 	if ( ! $score ) {
 		wp_send_json_error( null, 400 );
+	}
+	// Read before robots.txt, llms.txt or visibility changed: stale, not stored.
+	if ( isset( $raw['gen'] ) && (int) $raw['gen'] !== genscore_scores_gen() ) {
+		wp_send_json_success( array( 'stale' => true ) );
 	}
 	genscore_store_page_score( $id, $score );
 	wp_send_json_success();

@@ -91,3 +91,9 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **«Respuesta al principio» nunca se inventa**: sale del extracto o de la descripción (20 palabras o más, sin repetir el arranque del contenido) o la escribe la persona. En fichas va tras el título, no en la pestaña de descripción.
 - **Precio y stock de un producto se leen de WooCommerce al servir la página**, nunca de lo guardado al publicar (`genscore_live_offer`).
 - **Con Yoast, Rank Math o AIOSEO no se imprime JSON-LD de página propio** (`genscore_seo_prints_schema`): serían dos grafos.
+- **En temas clásicos, lo que el plugin pinta en la Tienda va fuera de
+  `<header>`** (`woocommerce_before_shop_loop`), porque la revisión ignora todo
+  párrafo dentro de un `header` (adenda 1.1.3 de §432).
+- **Una nota leída antes de un borrado general no se guarda**: lleva la
+  generación `genscore_scores_gen` con la que se leyó, y el servidor la
+  rechaza si ya no es la actual (adenda 1.1.3 de §432).
