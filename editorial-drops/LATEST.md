@@ -1,8 +1,8 @@
 # Última entrega editorial
 
-**Fecha:** 2026-10-31
-**Carpeta:** editorial-drops/2026-10-31-extension-chrome/
+**Fecha:** 2026-11-02
+**Carpeta:** editorial-drops/2026-11-02-datos-estructurados-y-citas-de-la-ia/
 
-Post de LinkedIn (con dos imágenes 4:5), primer comentario, línea para el perfil de Denis e hilo de X que lanzan la extensión de Chrome de GenScore.
-El gancho: tu web puede estar cerrada a la IA sin que lo sepas, y en un clic ves quién puede leerla y qué arreglar.
-El artículo ya está en producción (200 comprobado el 2026-10-31); publicar sólo con el «sí, publica» de Denis.
+Post de LinkedIn (con imagen 4:5), primer comentario, línea para el perfil de Denis e hilo de X sobre el artículo «¿Los datos estructurados hacen que la IA te cite?».
+El gancho: el schema se asocia a más citas en ChatGPT, pero la prueba con páginas de control de Ahrefs no ve que las aumente; lo que se cita es el contenido.
+El artículo ya está en producción; publicar sólo con el «sí, publica» de Denis.
