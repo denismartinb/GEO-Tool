@@ -29652,3 +29652,5 @@ sustituye a las primeras reseñas.
 **Premisa.** No retira ningún camino de recuperación: quita un botón de comparación visual, no una salida.
 
 **Pendiente.** La consola tendrá su propio bloque «Lo que lee la IA» en Auditoría GEO con la solución para todo el dominio (maqueta en revisión). Allí el `.md` sólo puede salir de la extensión hasta que exista el navegador en el servidor (segunda fase, con su Task Intake).
+
+**Adenda 1.5.2 (Denis, 2026-11-02).** En una página con ruta larga el botón «Descargar <fichero>.md» se salía del panel y la tarjeta quedaba muy cargada. La segunda opción pasa a un desplegable cerrado («Segunda opción · Versión en Markdown de la página») y el botón dice «Descargar el .md»; el nombre completo sigue en el texto. Versión 1.5.2.

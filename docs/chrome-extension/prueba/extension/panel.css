@@ -1212,8 +1212,14 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .repbtn em{font-style:normal;font-size:10px;font-weight:650;letter-spacing:.03em;color:var(--blue-ink);background:var(--blue-tint);padding:3px 8px;border-radius:99px}
 .repbtn>.i:last-child{margin-left:auto;color:var(--ink-3)}
 /* «Lo que lee la IA»: the Markdown copy, second option of its card (log §447) */
-.mdopt{min-width:0;overflow-wrap:anywhere;margin-top:12px;border:1px solid var(--rule);border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:8px}
-.mdopt .mdh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mdopt{min-width:0;overflow-wrap:anywhere;margin-top:12px;border:1px solid var(--rule);border-radius:12px;background:var(--surface-2)}
+.mdopt .mdh{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;border-radius:12px}
+.mdopt .mdh::-webkit-details-marker{display:none}
+.mdopt .mdh>svg{margin-left:auto;flex:none;transition:transform .15s}
+.mdopt[open] .mdh>svg{transform:rotate(180deg)}
+.mdopt .mdb{display:grid;gap:8px;padding:0 12px 12px;min-width:0}
+.mdopt .mdb>*{min-width:0}
+.mdopt .acts .btn{max-width:100%}
 .mdopt .mdh .tagx{background:var(--surface);border:1px solid var(--rule);color:var(--ink-3)}
 .mdopt .mdh b{font-size:13px;font-weight:600}
 .mdopt p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
