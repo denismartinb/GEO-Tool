@@ -7,9 +7,10 @@
  * ADR 0017 §3), never a sum. Nothing is invented: a row without a figure says
  * its impact in words.
  */
-import { collapseLeversForPlan, expandLeverIds, groupLevers, leverTitle, themeForRec, type LeverEvidence, type LeverView } from "@/lib/recommendations/levers";
+import { collapseLeversForPlan, expandLeverIds, groupLevers, leverTitle, themeForRec, type LeverEvidence, type LeverTheme, type LeverView } from "@/lib/recommendations/levers";
 import { recommendationHeadline, type HeadlineCoverage } from "@/lib/recommendations/headline";
-import { MIN_VISIBLE_POINTS, selectPlan } from "@/lib/recommendations/plan";
+import { MIN_VISIBLE_POINTS } from "@/lib/recommendations/plan";
+import { selectPlanWithLevers } from "@/lib/recommendations/plan-with-levers";
 import {
   computeJointPotentialPoints,
   computeRecommendationPotentialPoints,
@@ -56,6 +57,7 @@ function impactWords(impact: string): string {
   return v === "high" ? "Impacto alto" : v === "medium" || v === "med" ? "Impacto medio" : "Impacto bajo";
 }
 
+
 export function buildOverviewPlan(input: {
   recs: readonly PlanRecInput[];
   categoryByResultId: ReadonlyMap<string, string | null>;
@@ -75,30 +77,7 @@ export function buildOverviewPlan(input: {
   }));
 
   const themeOf = (r: (typeof withPoints)[number]) => themeForRec(r.evidence_json as LeverEvidence, categoryByResultId);
-  const levers: LeverView[] = groupLevers(withPoints, themeOf)
-    .map((group) => {
-      const joint =
-        scoreRows.length > 0
-          ? computeJointPotentialPoints(
-              scoreRows,
-              domain,
-              group.members.map((r) => ({
-                recommendationType: r.recommendation_type,
-                affectedPromptIds: affectedPromptIds(r.evidence_json)
-              }))
-            )
-          : null;
-      return {
-        key: group.key,
-        theme: group.theme,
-        representativeId: group.representative.id,
-        memberIds: group.members.map((r) => r.id),
-        points: joint ? joint.deltaPoints : null
-      };
-    })
-    .sort((a, b) => (b.points ?? -1) - (a.points ?? -1));
-
-  const plan = selectPlan(collapseLeversForPlan(withPoints, levers));
+  const { plan, levers } = selectPlanWithLevers({ recs: withPoints, themeOf, scoreRows, domain });
   const leverByRep = new Map(levers.map((l) => [l.representativeId, l]));
   const byId = new Map(withPoints.map((r) => [r.id, r]));
 

@@ -94,3 +94,5 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   (`buildExtAudits`), la «Salud SEO» de la consola, nunca `model.technical.score`
   («Diagnóstico técnico» de la Puntuación GEO). Lo vigila `summary.test.ts`
   (log §432, adenda 1.1.2).
+- **Las próximas acciones son el plan de Visión general** (`selectPlanWithLevers`
+  en `loadReportInput`), sin la tarjeta de Google (log §432, adenda «mismo plan»).

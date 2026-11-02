@@ -29141,3 +29141,16 @@ publica y se deshace bien. Quedaban cuatro fallos:
   (`S.bots`) hasta que la página se vuelve a leer.
 - **«Fecha» en la Tienda.** Si la Tienda no necesita fecha, sale «No aplica»
   (estado `na`). Si ya tiene una publicada, la hoja enseña cuál es.
+
+**Adenda «mismo plan» (2026-11-02).** Denis vio que «Tus próximas acciones»
+del plugin no tenían el mismo orden ni el mismo título que Visión general. El
+plan del informe (`loadReportInput`), del que leen la extensión, el MCP y el
+plugin, hacía `selectPlan` sobre las tarjetas sueltas. Recomendaciones y
+Visión general, en cambio, juntan desde RECS-ONE-LEVER-1 (§328) las tarjetas
+«Aparece en…» en una sola palanca por tema. La agrupación pasa a
+`selectPlanWithLevers` (`lib/recommendations/plan-with-levers.ts`), que usan
+`buildOverviewPlan` y el informe. Una palanca lleva `leverTitle` y
+`leverFirstStep`, como en su tarjeta, y suma las preguntas y los motores de
+todas sus tarjetas. Esto también corrige el informe descargable, que debía
+enseñar las acciones de Recomendaciones y llevaba sin hacerlo desde §328. La
+tarjeta de Google del puesto 2 sigue siendo sólo de la consola.
