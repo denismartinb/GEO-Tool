@@ -22,6 +22,7 @@ const GENSCORE_ACCOUNT_OPTION = 'genscore_account';
 const GENSCORE_CLIENT_OPTION  = 'genscore_oauth_client';
 /** The figures are kept this long, so the screen does not call genscore.es on every load. */
 const GENSCORE_ACCOUNT_TTL = 600;
+const GENSCORE_ACCOUNT_PENDING_TTL = 60;
 
 /**
  * Where GenScore sends the person back after approving. Fixed by the plugin,
@@ -73,11 +74,14 @@ function genscore_oauth_metadata() {
  */
 function genscore_oauth_client_id( $meta ) {
 	$redirect = genscore_oauth_redirect_uri();
-	$client   = get_option( GENSCORE_CLIENT_OPTION );
-	if ( is_array( $client ) && ! empty( $client['id'] ) && isset( $client['redirect'] ) && $client['redirect'] === $redirect ) {
+	$facts    = genscore_site_facts();
+	/* translators: %s: the site's domain. GenScore's consent page reads «Conectar <name> con GenScore», so the name never says GenScore. */
+	$name   = sprintf( __( 'WordPress (%s)', 'genscore' ), $facts['domain'] );
+	$client = get_option( GENSCORE_CLIENT_OPTION );
+	// A client registered under another name (1.1.0 said «GenScore para WordPress») registers again once.
+	if ( is_array( $client ) && ! empty( $client['id'] ) && isset( $client['redirect'], $client['name'] ) && $client['redirect'] === $redirect && $client['name'] === $name ) {
 		return $client['id'];
 	}
-	$facts = genscore_site_facts();
 	$res   = wp_remote_post(
 		$meta['registration_endpoint'],
 		array(
@@ -85,8 +89,7 @@ function genscore_oauth_client_id( $meta ) {
 			'headers' => array( 'Content-Type' => 'application/json' ),
 			'body'    => wp_json_encode(
 				array(
-					/* translators: %s: the site's domain. */
-					'client_name'                => sprintf( __( 'GenScore para WordPress (%s)', 'genscore' ), $facts['domain'] ),
+					'client_name'                => $name,
 					'redirect_uris'              => array( $redirect ),
 					'grant_types'                => array( 'authorization_code', 'refresh_token' ),
 					'response_types'             => array( 'code' ),
@@ -108,6 +111,7 @@ function genscore_oauth_client_id( $meta ) {
 		array(
 			'id'       => sanitize_text_field( $body['client_id'] ),
 			'redirect' => $redirect,
+			'name'     => $name,
 		),
 		false
 	);
@@ -403,7 +407,10 @@ function genscore_account_data( $fresh = false ) {
 	} else {
 		return array( 'state' => 'error' );
 	}
-	set_transient( 'genscore_account_data', $out, GENSCORE_ACCOUNT_TTL );
+	// Right after a scan the technical audit is still on its way (auditedAt null):
+	// keep that answer one minute, not ten, so the figures arrive on their own.
+	$pending = 'connected' === $out['state'] && is_array( $out['project'] ) && empty( $out['project']['audits']['auditedAt'] );
+	set_transient( 'genscore_account_data', $out, $pending ? GENSCORE_ACCOUNT_PENDING_TTL : GENSCORE_ACCOUNT_TTL );
 	return $out;
 }
 

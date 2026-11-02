@@ -104,10 +104,12 @@ function genscore_screen_data() {
 		'web'      => array(
 			'pages'  => genscore_key_pages(),
 			'scores' => (object) genscore_page_scores(),
+			'gen'    => genscore_scores_gen(),
 		),
 		'fixes'    => genscore_fix_screen_data(),
 		'last'     => get_option( 'genscore_last_review', null ),
 		'account'  => genscore_account_screen_data(),
+		'drafts'   => genscore_drafts_screen_data(),
 		'links'    => array(
 			'app'     => GENSCORE_APP,
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),
@@ -191,8 +193,8 @@ function genscore_list_cell( $col, $post_id ) {
 	$band  = $s['nota'] >= 75 ? 'pos' : ( $s['nota'] >= 50 ? 'mid' : 'low' );
 	$first = isset( $s['fixes'][0]['t'] ) ? wp_strip_all_tags( $s['fixes'][0]['t'] ) : __( 'Nada urgente', 'genscore' );
 	/* translators: %d: score from 0 to 100. */
-	$label = sprintf( __( 'Nota SEO + IA %d de 100. Ver en GenScore', 'genscore' ), (int) $s['nota'] );
-	echo '<a class="gs-col" href="' . esc_url( $link ) . '" aria-label="' . esc_attr( $label ) . '"><span class="gs-col-n gs-col-' . esc_attr( $band ) . '">' . esc_html( (string) $s['nota'] ) . '</span><span class="gs-col-t">' . esc_html( $first ) . '</span></a>';
+	$label = sprintf( __( 'Optimización técnica %d%%. Ver en GenScore', 'genscore' ), (int) $s['nota'] );
+	echo '<a class="gs-col" href="' . esc_url( $link ) . '" aria-label="' . esc_attr( $label ) . '"><span class="gs-col-n gs-col-' . esc_attr( $band ) . '">' . esc_html( $s['nota'] . '%' ) . '</span><span class="gs-col-t">' . esc_html( $first ) . '</span></a>';
 }
 
 /**
@@ -278,7 +280,12 @@ function genscore_ajax_save_bots() {
 	}
 	update_option( 'genscore_bots', genscore_sanitize_bot_settings( $raw ), false );
 	genscore_forget_all_scores();
-	wp_send_json_success( array( 'settings' => genscore_sanitize_bot_settings( get_option( 'genscore_bots', array() ) ) ) );
+	wp_send_json_success(
+		array(
+			'settings' => genscore_sanitize_bot_settings( get_option( 'genscore_bots', array() ) ),
+			'gen'      => genscore_scores_gen(),
+		)
+	);
 }
 add_action( 'wp_ajax_genscore_save_bots', 'genscore_ajax_save_bots' );
 
@@ -307,13 +314,14 @@ function genscore_ajax_save_llms() {
 			'serving' => genscore_llms_serving(),
 			'custom'    => (string) get_option( 'genscore_llms_custom', '' ),
 			'generated' => genscore_llms_generate(),
+			'gen'       => genscore_scores_gen(),
 		)
 	);
 }
 add_action( 'wp_ajax_genscore_save_llms', 'genscore_ajax_save_llms' );
 
 /**
- * Keeps the last «Nota SEO + IA» for the dashboard widget. Only numbers the
+ * Keeps the last «Optimización técnica» for the dashboard widget. Only numbers the
  * browser computed on this same site.
  */
 function genscore_ajax_save_review() {
@@ -354,6 +362,10 @@ function genscore_ajax_save_page() {
 	if ( ! $score ) {
 		wp_send_json_error( null, 400 );
 	}
+	// Read before robots.txt, llms.txt or visibility changed: stale, not stored.
+	if ( isset( $raw['gen'] ) && (int) $raw['gen'] !== genscore_scores_gen() ) {
+		wp_send_json_success( array( 'stale' => true ) );
+	}
 	genscore_store_page_score( $id, $score );
 	wp_send_json_success();
 }
@@ -377,7 +389,7 @@ function genscore_render_widget() {
 	$last = get_option( 'genscore_last_review', null );
 	echo '<div class="gs-widget">';
 	if ( is_array( $last ) && isset( $last['nota'] ) && null !== $last['nota'] ) {
-		echo '<p style="display:flex;align-items:baseline;gap:8px;margin:0 0 6px"><strong style="font-size:32px;font-weight:400;line-height:1">' . esc_html( (string) $last['nota'] ) . '</strong><span>' . esc_html__( 'Nota SEO + IA de tu web', 'genscore' ) . '</span></p>';
+		echo '<p style="display:flex;align-items:baseline;gap:8px;margin:0 0 6px"><strong style="font-size:32px;font-weight:400;line-height:1">' . esc_html( (string) $last['nota'] ) . '%</strong><span>' . esc_html__( 'Optimización técnica de tu web para la IA y Google', 'genscore' ) . '</span></p>';
 		/* translators: %s: how long ago, e.g. «2 horas». */
 		echo '<p style="margin:0 0 10px;color:#646970">' . esc_html( sprintf( __( 'Revisada hace %s.', 'genscore' ), human_time_diff( (int) $last['at'] ) ) ) . '</p>';
 	} else {

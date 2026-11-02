@@ -91,3 +91,28 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **«Respuesta al principio» nunca se inventa**: sale del extracto o de la descripción (20 palabras o más, sin repetir el arranque del contenido) o la escribe la persona. En fichas va tras el título, no en la pestaña de descripción.
 - **Precio y stock de un producto se leen de WooCommerce al servir la página**, nunca de lo guardado al publicar (`genscore_live_offer`).
 - **Con Yoast, Rank Math o AIOSEO no se imprime JSON-LD de página propio** (`genscore_seo_prints_schema`): serían dos grafos.
+- **En temas clásicos, lo que el plugin pinta en la Tienda va fuera de
+  `<header>`** (`woocommerce_before_shop_loop`), porque la revisión ignora todo
+  párrafo dentro de un `header` (adenda 1.1.3 de §432).
+- **Una nota leída antes de un borrado general no se guarda**: lleva la
+  generación `genscore_scores_gen` con la que se leyó, y el servidor la
+  rechaza si ya no es la actual (adenda 1.1.3 de §432).
+
+## Optimización técnica frente a Puntuación GEO (adenda de §432, plugin 1.2.0)
+
+- **La revisión de la web es «Optimización técnica»: barra con estado, nunca un
+  medidor.** El único medidor de la pantalla es la Puntuación GEO, y sin
+  cuenta sale «sin medir». Lo mismo en la extensión (vista de página).
+- **«Recomendaciones de GenScore» sólo enseña lo que trae `/api/ext/project`**
+  (plan y `audits.blocks`), sin recalcular.
+
+## Recomendaciones accionables (WP-PLUGIN-3, adenda 1.3.0 de §432)
+
+- **«Crear borrador» nunca publica**: `post_status` draft y sólo la posición
+  del plan como entrada; el texto sale de lo que ya mandó GenScore. Lo vigila
+  `tests/wordpress-plugin.test.ts`.
+- **La acción de una recomendación sale de `check`** (`CHECK_KIND`): arreglo
+  de un clic si WordPress lo sabe hacer, interruptor para bots y llms.txt, y si
+  no, «Cómo hacerlo» en la consola. Nunca un «Arreglar» que no arregla.
+- **Lo que ofrece una auditoría del dominio no se repite** en «Recomendaciones
+  técnicas» de la misma pestaña.

@@ -18,6 +18,7 @@ const GENSCORE_KEY_PAGES = 15;
 
 /** Stored page scores, keyed by post id (0 is the home page). */
 const GENSCORE_SCORES_OPTION = 'genscore_page_scores';
+const GENSCORE_SCORES_GEN_OPTION = 'genscore_scores_gen';
 
 /**
  * A page the screen can review: published, public, of this site. Only the id
@@ -228,6 +229,18 @@ add_action( 'deleted_post', 'genscore_forget_page_score' );
  */
 function genscore_forget_all_scores() {
 	delete_option( GENSCORE_SCORES_OPTION );
+	// A review already running read the pages before this change: its scores
+	// carry the old generation and genscore_ajax_save_page() drops them.
+	update_option( GENSCORE_SCORES_GEN_OPTION, genscore_scores_gen() + 1, false );
+}
+
+/**
+ * Generation of the stored scores: goes up every time they are all forgotten.
+ *
+ * @return int
+ */
+function genscore_scores_gen() {
+	return (int) get_option( GENSCORE_SCORES_GEN_OPTION, 0 );
 }
 add_action( 'update_option_blog_public', 'genscore_forget_all_scores' );
 // Turning an SEO or shop plugin on or off changes what every page prints.

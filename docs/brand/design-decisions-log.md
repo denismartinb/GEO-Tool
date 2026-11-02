@@ -29091,6 +29091,155 @@ retirada desde Apps conectadas. El token de Supabase lleva los permisos RLS de
 la cuenta: el plugin sólo hace GET a las dos rutas de lectura. No retira ningún
 camino de recuperación.
 
+**Adenda 1.1.1 (2026-11-02).** Denis probó la conexión real en su web de
+Wasmer: OAuth, consentimiento y vuelta funcionan sin tocar Supabase. Dos
+arreglos menores: el aviso «Ya ves aquí las cifras de tu cuenta» esperaba a
+las cifras, así que salía también con un dominio que no está en la cuenta;
+ahora el aviso de conexión sale cuando llegan y, sin el dominio, pide añadirlo.
+Y la pantalla de permiso decía «Conectar GenScore para WordPress (…) con
+GenScore»: el cliente se registra como «WordPress (<dominio>)», y un cliente
+guardado con otro nombre se registra otra vez una sola vez.
+
+**Adenda 1.1.2 (2026-11-02).** Prueba de extremo a extremo de Denis con un
+escaneo real. Primero: «Salud SEO» enseñaba 47 en el plugin y 84 en la consola.
+`seoScore` de `/api/ext/project` era `model.technical.score`, el «Diagnóstico
+técnico» del desglose de la Puntuación GEO, no la nota del bloque SEO. Ahora
+`buildExtProjectSummary` recibe la nota del bloque SEO de `buildExtAudits`, la
+misma que pinta la consola. Esto arregla también la extensión (que ya lo llamaba
+«Salud SEO») sin publicar otra versión, y el MCP pasa a decir «Salud SEO de tu
+web». Segundo: la cuenta se leyó con la auditoría aún pendiente y el plugin la
+guardó diez minutos. Ahora, con `auditedAt` vacío, la respuesta se guarda un
+minuto y la pantalla vuelve a pedirla sola cada minuto (como mucho diez veces).
+Además hay un «Actualizar» junto a la fuente. Por último, Agentes y la
+Puntuación GEO usan las bandas de la consola (`agenticBand`: Falla por debajo
+de 50, Bien desde 90; Inicial, Emergente y Competitivo con cortes en 40 y 70).
+Pendiente y conocido: las «próximas acciones» del plugin, la extensión y el MCP
+salen del plan del informe (`model.plan`) y no de `buildOverviewPlan`, así que el
+orden y el título pueden diferir de Visión general. Los rivales son las marcas
+más nombradas, no sólo las que sigues; esto es a propósito y la extensión hace
+lo mismo. Las bandas de Agentes de la extensión siguen en 75 y 50 hasta su
+próxima versión.
+
+**Adenda 1.1.3 (2026-11-02).** Denis hizo la prueba completa de los
+«Arreglar» con la 1.1.1 en Wasmer, con Storefront y WooCommerce. Todo
+publica y se deshace bien. Quedaban cuatro fallos:
+
+- **El párrafo de la Tienda no contaba en Storefront.** Se pintaba en
+  `woocommerce_archive_description`, que en los temas clásicos va dentro de
+  `<header class="woocommerce-products-header">`, y la revisión (`collect.js`,
+  copia de la extensión) descarta todo `<p>` dentro de un `header`. Ahora se
+  pinta en `woocommerce_before_shop_loop`, o en `woocommerce_no_products_found`
+  si no hay productos. Los temas de bloques siguen igual. `collect.js` no se
+  toca: es la copia exacta de la extensión.
+- **Notas viejas.** Una revisión en marcha guardaba sus notas después de
+  `genscore_forget_all_scores()`. Ahora hay una generación
+  (`genscore_scores_gen`) que sube en cada borrado. La pantalla manda con cada
+  nota la generación en la que leyó la página, y `genscore_ajax_save_page` no
+  guarda una nota de una generación anterior.
+- **El interruptor rebotaba** tras «Guardar robots.txt», porque la pantalla
+  seguía leyendo el robots.txt de antes. Ahora enseña lo guardado
+  (`S.bots`) hasta que la página se vuelve a leer.
+- **«Fecha» en la Tienda.** Si la Tienda no necesita fecha, sale «No aplica»
+  (estado `na`). Si ya tiene una publicada, la hoja enseña cuál es.
+
+**Adenda «mismo plan» (2026-11-02).** Denis vio que «Tus próximas acciones»
+del plugin no tenían el mismo orden ni el mismo título que Visión general. El
+plan del informe (`loadReportInput`), del que leen la extensión, el MCP y el
+plugin, hacía `selectPlan` sobre las tarjetas sueltas. Recomendaciones y
+Visión general, en cambio, juntan desde RECS-ONE-LEVER-1 (§328) las tarjetas
+«Aparece en…» en una sola palanca por tema. La agrupación pasa a
+`selectPlanWithLevers` (`lib/recommendations/plan-with-levers.ts`), que usan
+`buildOverviewPlan` y el informe. Una palanca lleva `leverTitle` y
+`leverFirstStep`, como en su tarjeta, y suma las preguntas y los motores de
+todas sus tarjetas. Esto también corrige el informe descargable, que debía
+enseñar las acciones de Recomendaciones y llevaba sin hacerlo desde §328. La
+tarjeta de Google del puesto 2 sigue siendo sólo de la consola.
+
+**Adenda «optimización técnica» (plugin 1.2.0 y extensión 1.3.0, 2026-11-02).**
+Denis vio en una web recién creada un 100 de «Nota SEO + IA» junto a una
+Puntuación GEO de 12, los dos con forma de medidor. Se confundían: el 100 era
+lo más grande de la pantalla, y sin cuenta era lo único que se veía. Denis
+eligió la opción A de la maqueta (capturas en
+`docs/design-reference/wp-plugin-optimizacion-1/`) para la vista con sesión y
+sin ella:
+- La revisión de la página pasa a llamarse **«Optimización técnica»**.
+  Pregunta «¿Está tu web optimizada para la IA y Google?» y se pinta como una
+  barra con estado (Optimizada desde 75, Mejorable desde 50, Se frena), nunca
+  como un medidor. El cálculo (`score.js`) no cambia. Pasa igual en el plugin,
+  en la extensión, en el widget del escritorio y en `revisar_pagina` del MCP,
+  que además dice que no es la Puntuación GEO. La descripción de la
+  herramienta en el MCP no se toca para no cambiar la ficha enviada a
+  ChatGPT.
+- **El único medidor es la Puntuación GEO.** En el plugin va al lado de la
+  tarjeta anterior. Sin cuenta sale «?, sin medir», con Conectar y Analizar.
+  En la extensión, la vista de una página enlaza a la Puntuación GEO del
+  dominio. Debajo va el texto de Denis: «Una web técnicamente optimizada no
+  basta…».
+- **Con sesión, «Recomendaciones de GenScore»** en el plugin reúne el plan de
+  Visión general y los problemas que más restan en las auditorías GEO, SEO y
+  agéntica, con su nota y su «Ver». Todo sale de `/api/ext/project` sin
+  recalcular nada. La extensión ya los tenía en la vista del dominio.
+- **«ese rival» se nombra.** `recommendationHeadline` devuelve `subject`
+  cuando el nombre no cabe en la tarjeta de la consola, y el informe (y con él
+  la extensión, el MCP y el plugin) lo escribe entero. El plugin enseña las
+  preguntas de cada acción.
+- **«Fecha» con fecha.** Si el tema ya pinta la fecha, la hoja enseña la de la
+  última modificación en vez de «Ya lo tiene» a secas.
+- **robots.txt y llms.txt se piden dos veces** antes de darlos por ausentes si
+  la primera respuesta fue un tiempo agotado, un 429 o un 5xx (`collect.js` de
+  la extensión, copiado al plugin y a `lib/page-review`). Un llms.txt que
+  respondía 200 salió como ausente mientras se revisaban muchas páginas a la
+  vez.
+
+**Adenda 1.2.1 (plugin, 2026-11-02).** Prueba de Denis en su Wasmer con la
+1.2.0:
+
+- **El arco del dominio se llama «Auditoría agéntica»**, no «Agentes»: la
+  barra de la página ya tiene una fila «Agentes» y los dos números se leían
+  como lo mismo.
+- **`projectedAll` en cada bloque de `/api/ext/project`**: la nota del bloque
+  si se arreglara todo lo que puntúa, aunque haya más problemas de los tres
+  listados. Es para una cabecera («Auditoría GEO 25 → 100»). `projected` no
+  cambia y sigue siendo sólo «si arreglas estos tres», porque los puntos de
+  bloque no se suman y una suma parcial sería inventada. Sin `projectedAll`,
+  la Auditoría GEO de la cuenta de Denis (25, con más de tres problemas)
+  salía sin destino.
+- **La nota de cada página lleva %** en la lista de «Tus páginas» y en la
+  columna de las listas de WordPress, igual que el widget y la barra.
+- Pendiente sin reproducir: una vez «Cómo conservar…» salió en «Fecha» como
+  «Propuesta lista» con una nota vieja, y al revisarla volvió a «Ya lo tiene».
+  La generación `genscore_scores_gen` ya rechaza notas leídas antes de un
+  borrado general; si se repite, mirar qué guardó esa nota.
+
+**Adenda 1.3.0 (plugin, WP-PLUGIN-3, 2026-11-02).** Denis pidió que las
+recomendaciones de GenScore con la cuenta conectada salgan también en GEO, SEO
+y Agentes, y que se puedan resolver con un clic como las de la web sin cuenta.
+Maqueta aprobada con «Crear borrador» (decisión de Denis, 2026-11-02).
+
+- **Cada pestaña lleva sus «Recomendaciones de GenScore»**: GEO, el plan
+  («Para que la IA te nombre») y la Auditoría GEO; SEO, la Auditoría SEO;
+  Agentes, la Auditoría agéntica. Resumen sigue igual.
+- **`/api/ext/project` manda `check` y `urls` en cada problema de auditoría**
+  (`buildExtAudits`): la clave de la comprobación de la consola y hasta 20
+  páginas que la fallan; vacía en lo que es de todo el sitio (bots, llms.txt,
+  sitemap). El plan manda `draft` (`isDraftable`): la acción pide publicar una
+  página y trae preguntas.
+- **`check` decide la acción** (`CHECK_KIND` en `admin.js`): si WordPress lo
+  arregla, «Arreglar» abre la hoja de arreglos con las páginas de la auditoría
+  ya marcadas; bots y llms.txt llevan a su interruptor; lo demás, «Cómo
+  hacerlo» en la consola. Si la web ya no pide ese arreglo en esas páginas,
+  «Arreglado aquí» y «Lo verá el próximo escaneo de GenScore».
+- **Sin duplicados**: lo que ya ofrece una auditoría del dominio sale de la
+  tarjeta local de la pestaña, que pasa a llamarse **«Recomendaciones
+  técnicas»** (antes «Arregla primero» y «Arreglar»), a petición de Denis para
+  no confundirla con las de GenScore.
+- **«Crear borrador»** crea una entrada en borrador con las preguntas como
+  encabezados y nada más. Nunca publica. La única entrada es la posición del
+  plan; el texto sale de lo que GenScore ya mandó (`genscore_account_data`).
+  Si existe el borrador de esa pregunta, se reutiliza y el botón pasa a
+  «Abrir borrador». Desinstalar borra la lista, no los borradores.
+- La tarjeta de Agentes «Nota para agentes» pasa a «Auditoría agéntica».
+
 ## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
 
 **Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),

@@ -751,6 +751,18 @@ function genscore_fix_row( $kind, $id ) {
 	if ( 'ready' === $status && null === $value && ! in_array( $kind, array( 'lead', 'desc' ), true ) ) {
 		$status = 'missing';
 	}
+	// The shop lists products: a visible update date is not asked of it, so
+	// «Ya lo tiene» with no date would be untrue (1.1.3).
+	if ( 'fresh' === $kind && 'has' === $status && $id && genscore_shop_page_id() === $id && '' === genscore_fix_current( 'fresh', $id ) ) {
+		$status = 'na';
+		$value  = null;
+	}
+	// A published date shows which one the page prints, not the marker «1».
+	// When the theme prints it (nothing of ours stored), show the page's own
+	// last update, so «Ya lo tiene» comes with its date (1.2.0).
+	if ( 'fresh' === $kind && 'has' === $status && ( '1' === $value || null === $value || '' === (string) $value ) ) {
+		$value = genscore_fix_propose( 'fresh', $id );
+	}
 	// A published answer that is too short to count opens with its own text,
 	// so the person can lengthen it instead of starting over.
 	$short = false;

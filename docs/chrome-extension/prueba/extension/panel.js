@@ -259,17 +259,32 @@
   }
 
   /* ---------------- layer 1: hero «Cuadro» ---------------- */
+  /* Two questions, two instruments (log §432, adenda «optimización técnica»): the page review
+     says whether the page is technically optimized, as a bar with a state,
+     never a dial. The only dial is the domain's Puntuación GEO, whether the AI
+     names the brand. A new site can be optimized and still score near zero. */
+  const readyBand = (v) => (v >= 75 ? ["ok", "Optimizada"] : v >= 50 ? ["mid", "Mejorable"] : ["bad", "Se frena"]);
+  const pbar = (v, cls) => `<span class="pbar"><i class="${cls}" style="width:${v == null ? 0 : v}%"></i></span>`;
+  function geoLine(rel) {
+    const D = rel === "none" ? null : A();
+    if (D && D.score != null) {
+      const g = D.score < 40 ? "Inicial" : D.score < 70 ? "Emergente" : "Competitivo";
+      return `<button class="gl" data-tab="dom"><span class="t"><b>Puntuación GEO de ${esc(curDom())}</b><small>Si la IA te nombra: ${D.score} · ${g}</small></span>${ic("arrowr", "sm")}</button>`;
+    }
+    return `<div class="gl na"><span class="t"><b>Una web técnicamente optimizada no basta.</b><small>Que la IA pueda leerte no significa que te recomiende: eso depende también de lo que dicen de ti otras webs y de si respondes a las preguntas de los usuarios.</small></span></div>`;
+  }
   function heroPage(sc, rel) {
     const n = sc.nota;
     const shopOn = !!(sc.shop && sc.shop.state === "found");
     const lanes = ["ia", "google"].concat(sc.commerce || shopOn || relation() !== "own" ? ["agent"] : []);
-    const st = { ia: sc.blockedEngines.length ? `${4 - sc.blockedEngines.length} de 4 la leen` : band(sc.lanes.ia)[1], google: band(sc.lanes.google)[1], agent: band(sc.lanes.agent)[1] };
-    const d = dial(n, { bands: [50, 75] }).replace(/aria-label="[^"]*"/, `aria-label="Nota SEO + IA ${n} de 100"`);
-    return `<div class="hq"><div class="dialbox">${d}<div class="dial-c"><span class="big num" id="heroN">${roll(S.from ?? n)}</span><span class="of">Nota SEO + IA</span></div></div>
-      <div class="bands"><span class="${n < 50 ? "on" : ""}">Se frena</span><span class="${n >= 50 && n < 75 ? "on" : ""}">Mejorable</span><span class="${n >= 75 ? "on" : ""}">Bien</span></div>
+    const st = { ia: sc.blockedEngines.length ? `${4 - sc.blockedEngines.length} de 4 la leen` : readyBand(sc.lanes.ia)[1], google: readyBand(sc.lanes.google)[1], agent: readyBand(sc.lanes.agent)[1] };
+    const b = readyBand(n);
+    const row = (k) => { const v = sc.lanes[k], c = v == null ? "na" : readyBand(v)[0]; return `<button class="pln ${c}" data-lane="${k}" aria-expanded="${S.lane === k}"><span class="nm">${laneIcon(k)}${laneName(k)}</span>${pbar(v, c)}<span class="pv num">${v == null ? "–" : v + "%"}</span><span class="st">${SH(c)}${st[k]}${ic("chevd", "chev")}</span></button>`; };
+    return `<div class="hq prep"><p class="qq">¿Está tu web optimizada para la IA y Google?</p>
+      <div class="prh"><b class="prw ${b[0]}">${b[1]}</b><span class="prp num"><span id="heroN">${roll(S.from ?? n)}</span>%</span></div>${pbar(n, b[0])}
       <p class="say">${sc.say}</p>
-      <div class="gg3" style="grid-template-columns:repeat(${lanes.length},minmax(0,1fr))">${lanes.map((k, i) => gauge({ v: sc.lanes[k], cls: band(sc.lanes[k])[0], nm: laneName(k), icon: laneIcon(k), st: st[k], lane: k, i })).join("")}</div>
-      ${lanes.map((k) => laneBox(k, () => (rel === "own" ? "" : teaser(k, rel, S.scf ? S.scf.host : "") + lyr("live", "Esta página")) + pageLane(k, sc, rel))).join("")}${shopLine(sc)}</div>`;
+      <div class="plns">${lanes.map((k) => row(k) + laneBox(k, () => (rel === "own" ? "" : teaser(k, rel, S.scf ? S.scf.host : "") + lyr("live", "Esta página")) + pageLane(k, sc, rel))).join("")}</div>
+      ${geoLine(rel)}${shopLine(sc)}</div>`;
   }
   /* EXT-SHOP-FIND-1: on a home page that sells nothing and no shop was found, say so.
      A found shop is announced inside Agentes only, without its URL (Denis, 2026-11-01). */

@@ -56,6 +56,21 @@ describe("WordPress plugin", () => {
     expect(src).toMatch(/update_option\(\s*GENSCORE_ACCOUNT_OPTION,[\s\S]*?false\s*\);/);
   });
 
+  // WP-PLUGIN-3 (log §432): «Crear borrador» only creates a draft, from the
+  // plan GenScore already sent, and only for an administrator.
+  it("«Crear borrador» only creates a draft from the cached plan", () => {
+    const src = read(join(PLUGIN, "includes/drafts.php"));
+    const fn = "genscore_ajax_create_draft";
+    const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+    expect(body).toContain("check_ajax_referer( 'genscore', 'nonce' )");
+    expect(body).toContain("current_user_can( 'manage_options' )");
+    expect(body).toContain("'post_status'  => 'draft'");
+    expect(body).not.toMatch(/'publish'|wp_publish_post/);
+    // The only input is the plan position; the text comes from the cached account data.
+    expect([...body.matchAll(/\$_POST\['([a-z_]+)'\]/g)].map((m) => m[1])).toEqual(["plan", "plan"]);
+    expect(src).toContain("genscore_account_data( false )");
+  });
+
   it("the token never reaches the browser", () => {
     const screen = read(join(PLUGIN, "includes/account.php"));
     const data = screen.slice(screen.indexOf("function genscore_account_screen_data"));

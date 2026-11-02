@@ -97,6 +97,13 @@ export async function loadExtProjectData(
   const askedUrl = url && url.length <= 2048 ? url : null;
   const ownUrl = askedUrl && isOwnUrl(askedUrl, project.domain) ? askedUrl : null;
   const snap = snapshotRow as { pages: PageAuditEntry[] | null; bots: BotAccessReport | null; created_at: string } | null;
+  // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
+  const extAudits = buildExtAudits({
+    snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
+    // Same gate as the agentic card: hidden for a plan or a review the console would not show.
+    agentic: agentic.kind === "card" && audits.available ? (audits.latest?.result ?? null) : null,
+    ownUrl
+  });
   return {
     kind: "ok",
     project,
@@ -108,16 +115,12 @@ export async function loadExtProjectData(
         agentic,
         url: askedUrl,
         engineLabel: (provider) => getEngineMeta(provider).label,
-        competitors: input?.competitors ?? []
+        competitors: input?.competitors ?? [],
+        // «Salud SEO» is the audit's SEO block, the figure the console shows under that name.
+        seoScore: extAudits.blocks.find((b) => b.key === "seo")?.score ?? null
       }),
       searchConsole: toExtSearchConsole(gsc, ownUrl),
-      // EXT-AUDITS-1 (log §406): what the console already audited, read-only.
-      audits: buildExtAudits({
-        snapshot: snap?.pages && snap.bots ? { pages: snap.pages, bots: snap.bots, createdAt: snap.created_at } : null,
-        // Same gate as the agentic card: hidden for a plan or a review the console would not show.
-        agentic: agentic.kind === "card" && audits.available ? (audits.latest?.result ?? null) : null,
-        ownUrl
-      }),
+      audits: extAudits,
       prompts: buildExtPrompts({
         active: promptsError
           ? null
