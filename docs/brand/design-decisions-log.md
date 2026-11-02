@@ -29353,3 +29353,34 @@ elegido, «Añadir como competidor» pasa a «Ya es competidor de …» y abre
 Competidores; para saberlo, `/api/ext/project` gana `competitorDomains` (los
 dominios de los competidores activos, sólo lectura). Sin ese campo (una
 versión del servidor anterior), el panel mira los rivales que ya traía.
+
+## §435 · EXT-STORE-NAME-1: el nombre de la extensión, con lo que se busca en la tienda (2026-11-02)
+
+**Qué.** Extensión 1.4.1. Sólo cambian dos textos del `manifest.json`, que son
+los que la Chrome Web Store usa como nombre y resumen de la ficha:
+
+- Nombre: «Auditoría SEO y GEO: visibilidad en IA · GenScore» (antes
+  «GenScore: Auditoría SEO y visibilidad en IA»).
+- Resumen: «Auditoría SEO y GEO gratis: mira si ChatGPT, Gemini, Claude y
+  Perplexity pueden leer tu web, con llms.txt, robots.txt y schema.»
+
+El artículo `extension-de-chrome-de-genscore` dice que se busque por el nombre,
+así que cambia con él. La descripción larga se cambia en el formulario de la
+tienda (no vive en el repo); la propuesta está en
+`/mnt/project-files/chrome-extension/visibilidad-tienda/descripcion-es.txt`.
+
+**Por qué.** Denis buscó «seo», «visibilidad de IA» y «geo» en la tienda y no
+salía. Comprobado el 2026-11-02: la ficha es pública y está indexada, pero no
+está entre las diez primeras de «geo», «seo», «auditoría seo», «visibilidad en
+ia» ni «llms.txt». Las que ganan esas búsquedas empiezan el nombre por esas
+palabras, y el nuestro empezaba por «GenScore» y no decía «GEO». La tienda
+ordena sobre todo por valoraciones recientes e instalaciones que se quedan
+(documentación de Google), así que el nombre nos mete en la búsqueda pero no
+sustituye a las primeras reseñas.
+
+**Pendiente.**
+- Sello del dominio: la cuenta dueña de la extensión verifica genscore.es en
+  Search Console (TXT en IONOS) y lo elige como «URL oficial». Lo hace Denis.
+- «Destacado» no se puede pedir: Google cerró las candidaturas el 2026-08-20.
+- Invitación a valorar dentro del panel: propuesta, sin construir ni aprobar.
+- Ficha en inglés: sólo cuando el panel esté traducido.
