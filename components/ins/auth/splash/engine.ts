@@ -1,6 +1,6 @@
 import { hex } from "../fx";
 import { G_C, G_DOT_ANGLE, G_DOT_R, G_RI, G_RM, G_RO, gMarkInner, gPoint } from "./g-mark";
-import { LANDING_AT, TAIL_MS, ease, lerp, seg, type SplashVariant } from "./timeline";
+import { LANDING_AT, ease, lerp, seg, splashLength, type SplashKind } from "./timeline";
 
 /**
  * The three app splashes (log §382), drawn over the real login: one clock `t`
@@ -11,7 +11,7 @@ import { LANDING_AT, TAIL_MS, ease, lerp, seg, type SplashVariant } from "./time
  */
 interface Opts {
   root: HTMLElement;
-  variant: SplashVariant;
+  variant: SplashKind;
   lockG: SVGElement;
   lockW: HTMLElement;
   onRelease: () => void;
@@ -199,7 +199,17 @@ const bruma: Variant = {
   }
 };
 
-const VARIANTS: Record<SplashVariant, Variant> = { calibre, compas, bruma };
+/** Web login (SPLASH-WEB-1): only the G drawing itself, no mist, then the same flight. */
+const breve: Variant = {
+  decor: () => "",
+  init() {},
+  render(st, t) {
+    st.mistA = 0;
+    drawG(st, ease.o(seg(t, 0, 180)), ease.io(seg(t, 100, 420)), ease.io(seg(t, 330, 600)), ease.back(seg(t, 460, 640)));
+  }
+};
+
+const VARIANTS: Record<SplashKind, Variant> = { calibre, compas, bruma, breve };
 
 const SPLASH_CSS = `
 .sp-root{position:fixed;inset:0;z-index:60;cursor:pointer;overflow:hidden;transition:opacity .35s ease}
@@ -218,7 +228,7 @@ export function runSplash(opts: Opts): () => void {
   const { root, variant, lockG, lockW } = opts;
   const v = VARIANTS[variant];
   const L0 = LANDING_AT[variant];
-  const T = L0 + TAIL_MS;
+  const T = splashLength(variant);
   const W = root.clientWidth || window.innerWidth;
   const H = root.clientHeight || window.innerHeight;
   const phone = W <= 760;

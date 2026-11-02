@@ -29438,3 +29438,18 @@ sustituye a las primeras reseñas.
 **Por qué así.** El anuncio va con baja porque es comunicación comercial a clientes sobre un producto propio (LSSI art. 21.2). La reserva previa al envío (§308) hace que pulsar dos veces o dos operadores a la vez no dupliquen nada. No se envía por cron porque Denis quiere decidir el momento.
 
 **Pendiente.** Subir el zip 1.4.2 a la tienda (Denis), que incluye el nombre de la 1.4.1. Pulsar el envío del anuncio. Requiere la migración 0047 aplicada (si falta, la reserva falla y no sale nada). No retira ningún camino de recuperación.
+
+## §438 · SPLASH-WEB-1: la entrada de la app, corta y una vez, en el login de la web (2026-11-02)
+
+**Qué se decidió.** Denis preguntó si la splash de la app (§382) debía salir en la web al pulsar «Iniciar sesión». Se le enseñaron tres opciones animadas en móvil y escritorio (completa siempre, corta una vez, solo el logo) y aprobó la B el 2-11 («Si»).
+
+- **Primera visita de cada navegador:** entrada `breve` (`splash/engine.ts`): la G geométrica se dibuja en el centro y vuela al logo del login, como las de la app. Dura unos 1,6 s (`splashLength("breve")`) y un toque o Esc la saltan. No entra en la rotación de la app (`pickVariant` no la elige nunca). Marca `gs_splash_web_seen` en `localStorage`.
+- **Siguientes visitas:** el formulario sale al instante y sólo la G del logo se dibuja (`data-gdraw`, CSS en `app/ins/auth.css`). Cero espera.
+- **Nunca anima** con un error (`?error=`), con un enlace que ya lleva a otra pantalla (`?next=`), tras eliminar la cuenta (`?deleted=1`), tras cerrar sesión (`signOut` pasa a `/login?salida=1`) ni con «reducir movimiento». Si el `localStorage` está bloqueado, tampoco: mejor ninguna que una en cada visita.
+- **El login web lleva la G geométrica** en el logo, porque la entrada aterriza en él. Sólo en `/login`; `app/icon.svg` y el resto de marcas no cambian.
+- **La app de Android no cambia**: sigue con su splash completa (§382, §389), decidida por `gs_app`/`?source=twa`. La web no lee esa cookie, así que el cambio de §436 (APP-LINK-OUT-1, PR #750) no la afecta.
+- **Sin destello:** la decisión se toma antes de pintar. En una carga completa, un script en línea dentro de `AuthShell` marca `data-splash="run"` o `data-gdraw`; en una navegación de cliente, un `useLayoutEffect`. El atributo se escribe antes de hidratar, por eso el contenedor lleva `suppressHydrationWarning`.
+
+**Por qué así.** Quien pulsa «Iniciar sesión» en la web casi siempre ya tiene cuenta y quiere entrar. La splash completa son unos 3,2 s en cada entrada. Corta y una vez da la marca sin cobrar espera a quien vuelve.
+
+**Pendiente o conocido.** En una primera visita con un móvil lento, la pantalla queda en blanco hasta que carga el JavaScript (el formulario aparece igualmente a los 6 s si falla). No retira ningún camino de recuperación: un toque siempre lleva al formulario.
