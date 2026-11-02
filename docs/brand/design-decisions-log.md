@@ -29154,3 +29154,39 @@ Visión general, en cambio, juntan desde RECS-ONE-LEVER-1 (§328) las tarjetas
 todas sus tarjetas. Esto también corrige el informe descargable, que debía
 enseñar las acciones de Recomendaciones y llevaba sin hacerlo desde §328. La
 tarjeta de Google del puesto 2 sigue siendo sólo de la consola.
+
+**Adenda «optimización técnica» (plugin 1.2.0 y extensión 1.3.0, 2026-11-02).**
+Denis vio en una web recién creada un 100 de «Nota SEO + IA» junto a una
+Puntuación GEO de 12, los dos con forma de medidor. Se confundían: el 100 era
+lo más grande de la pantalla, y sin cuenta era lo único que se veía. Denis
+eligió la opción A de la maqueta (capturas en
+`docs/design-reference/wp-plugin-optimizacion-1/`) para la vista con sesión y
+sin ella:
+- La revisión de la página pasa a llamarse **«Optimización técnica»**.
+  Pregunta «¿Está tu web optimizada para la IA y Google?» y se pinta como una
+  barra con estado (Optimizada desde 75, Mejorable desde 50, Se frena), nunca
+  como un medidor. El cálculo (`score.js`) no cambia. Pasa igual en el plugin,
+  en la extensión, en el widget del escritorio y en `revisar_pagina` del MCP,
+  que además dice que no es la Puntuación GEO. La descripción de la
+  herramienta en el MCP no se toca para no cambiar la ficha enviada a
+  ChatGPT.
+- **El único medidor es la Puntuación GEO.** En el plugin va al lado de la
+  tarjeta anterior. Sin cuenta sale «?, sin medir», con Conectar y Analizar.
+  En la extensión, la vista de una página enlaza a la Puntuación GEO del
+  dominio. Debajo va el texto de Denis: «Una web técnicamente optimizada no
+  basta…».
+- **Con sesión, «Recomendaciones de GenScore»** en el plugin reúne el plan de
+  Visión general y los problemas que más restan en las auditorías GEO, SEO y
+  agéntica, con su nota y su «Ver». Todo sale de `/api/ext/project` sin
+  recalcular nada. La extensión ya los tenía en la vista del dominio.
+- **«ese rival» se nombra.** `recommendationHeadline` devuelve `subject`
+  cuando el nombre no cabe en la tarjeta de la consola, y el informe (y con él
+  la extensión, el MCP y el plugin) lo escribe entero. El plugin enseña las
+  preguntas de cada acción.
+- **«Fecha» con fecha.** Si el tema ya pinta la fecha, la hoja enseña la de la
+  última modificación en vez de «Ya lo tiene» a secas.
+- **robots.txt y llms.txt se piden dos veces** antes de darlos por ausentes si
+  la primera respuesta fue un tiempo agotado, un 429 o un 5xx (`collect.js` de
+  la extensión, copiado al plugin y a `lib/page-review`). Un llms.txt que
+  respondía 200 salió como ausente mientras se revisaban muchas páginas a la
+  vez.

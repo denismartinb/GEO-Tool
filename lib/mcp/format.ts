@@ -285,7 +285,7 @@ export function formatSearchConsole(p: ExtProjectPayload, l: ConsoleLinks): Tool
 
 const LANE: Record<string, string> = { ia: "IA", google: "Google", agent: "Agentes" };
 
-/** The extension's «Nota SEO + IA» for one page, plus «Esta página» when it is one of the account's domains. */
+/** The extension's «Optimización técnica» for one page (log §432, adenda 1.2.0), plus «Esta página» when it is one of the account's domains. */
 export type PageReviewNext = {
   base: string;
   /** Which connector asked (MCP-ACQUISITION-1, log §425): decides the hook's wording and its UTM. Claude when unset. */
@@ -300,7 +300,12 @@ export function formatPageReview(
   next: PageReviewNext | null = null
 ): ToolText {
   const s = r.score;
-  const lines = [`**Nota SEO + IA de ${r.url}: ${s.nota}/100**`, s.say];
+  const state = s.nota >= 75 ? "Optimizada" : s.nota >= 50 ? "Mejorable" : "Se frena";
+  const lines = [
+    `**Optimización técnica de ${r.url} para la IA y Google: ${s.nota}% (${state})**`,
+    s.say,
+    "No es la Puntuación GEO: una web técnicamente optimizada no basta para que la IA te recomiende. Eso depende también de lo que dicen de ti otras webs y de si respondes a las preguntas de los usuarios."
+  ];
   if (s.alert) lines.push(`Aviso: ${s.alert.t} ${s.alert.s}`);
   lines.push(
     "",

@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.3
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,14 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.2.0 =
+* The page review is now «Optimización técnica»: a bar with a state (Optimizada, Mejorable, Se frena), never a dial, so it is not read as the Puntuación GEO.
+* The Puntuación GEO is the only dial. Without an account it shows as not measured, with a way to measure it.
+* With an account, «Recomendaciones de GenScore» brings the console's plan and the top issues of its GEO, SEO and agentic audits.
+* Actions name the competitor and show the question.
+* «Fecha de actualización visible» shows the page's date when the theme prints it.
+* robots.txt and llms.txt are asked a second time after a timeout or a server error before being reported missing.
 
 = 1.1.3 =
 * «Respuesta al principio» on the shop now counts in classic themes such as Storefront: it is printed before the products, not inside the products header.

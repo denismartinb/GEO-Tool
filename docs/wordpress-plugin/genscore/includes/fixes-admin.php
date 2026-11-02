@@ -758,7 +758,9 @@ function genscore_fix_row( $kind, $id ) {
 		$value  = null;
 	}
 	// A published date shows which one the page prints, not the marker «1».
-	if ( 'fresh' === $kind && 'has' === $status && '1' === $value ) {
+	// When the theme prints it (nothing of ours stored), show the page's own
+	// last update, so «Ya lo tiene» comes with its date (1.2.0).
+	if ( 'fresh' === $kind && 'has' === $status && ( '1' === $value || null === $value || '' === (string) $value ) ) {
 		$value = genscore_fix_propose( 'fresh', $id );
 	}
 	// A published answer that is too short to count opens with its own text,

@@ -97,3 +97,11 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **Una nota leída antes de un borrado general no se guarda**: lleva la
   generación `genscore_scores_gen` con la que se leyó, y el servidor la
   rechaza si ya no es la actual (adenda 1.1.3 de §432).
+
+## Optimización técnica frente a Puntuación GEO (adenda de §432, plugin 1.2.0)
+
+- **La revisión de la web es «Optimización técnica»: barra con estado, nunca un
+  medidor.** El único medidor de la pantalla es la Puntuación GEO, y sin
+  cuenta sale «sin medir». Lo mismo en la extensión (vista de página).
+- **«Recomendaciones de GenScore» sólo enseña lo que trae `/api/ext/project`**
+  (plan y `audits.blocks`), sin recalcular.

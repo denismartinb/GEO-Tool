@@ -249,6 +249,9 @@ export async function loadReportInput({
   });
   const leverByRep = new Map(levers.map((l) => [l.representativeId, l]));
   const recById = new Map(recs.map((r) => [r.id, r]));
+  /* The console card says «ese rival» when the name does not fit; here there is room, so name it. */
+  const namedHeadline = (h: { title: string; subject?: string | null }) =>
+    h.subject ? h.title.replace(/\bese rival\b|\besta marca\b/, h.subject) : h.title;
   const plan: ReportPlanItem[] = planRecs.map((r) => {
     const overlay = overlayByRecId.get(r.id);
     const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
@@ -264,7 +267,7 @@ export async function loadReportInput({
       if (topic) topics.add(topic);
     }
     return {
-      title: lever ? leverTitle(lever.theme) : recommendationHeadline(r, overlayForHeadline(overlay)).title,
+      title: lever ? leverTitle(lever.theme) : namedHeadline(recommendationHeadline(r, overlayForHeadline(overlay))),
       description: r.description,
       firstStep: lever ? leverFirstStep(lever.theme) : (overlayStep ?? r.evidence_json?.first_step ?? null),
       providers: members

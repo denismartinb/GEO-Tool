@@ -1,6 +1,7 @@
 /* GenScore for WordPress: the plugin screen.
  *
- * The «Nota SEO + IA» is the Chrome extension's, computed the same way: each
+ * The «Optimización técnica» (formerly «Nota SEO + IA») is the Chrome
+ * extension's, computed the same way, and never the Puntuación GEO: each
  * page is opened in a hidden same-origin frame, vendor/collect.js reads it
  * there and vendor/score.js scores it. The screen reviews the home page and
  * the site's important pages (genscore_key_pages) by itself, and the note is
@@ -52,17 +53,17 @@
   function verdict(c) { var v = money(c.value); return c.v == null ? na(v) : c.v >= 1 ? ok(v) : ko(v); }
   function ext(href, label, cls) { return '<a class="' + (cls || "gs-btn gs-ink") + '" href="' + esc(href) + '" target="_blank" rel="noopener">' + label + ic("i-arrowr") + "</a>"; }
 
-  function dial(score, bands) {
+  function dial(score, bands, label) {
     var cx = 150, cy = 150, g = "", i, a;
     for (i = 0; i <= 100; i++) {
       a = (135 + i * 2.7) * Math.PI / 180;
       var mj = i % 10 === 0, zone = bands.indexOf(i) >= 0 || i === 0 || i === 100, r1 = 140, r0 = zone ? 118 : mj ? 124 : 129;
-      g += '<line class="gs-t ' + (i <= score ? "gs-on " : "") + (mj ? "gs-mj" : "") + '" x1="' + (cx + r0 * Math.cos(a)).toFixed(2) + '" y1="' + (cy + r0 * Math.sin(a)).toFixed(2) + '" x2="' + (cx + r1 * Math.cos(a)).toFixed(2) + '" y2="' + (cy + r1 * Math.sin(a)).toFixed(2) + '"/>';
+      g += '<line class="gs-t ' + (score != null && i <= score ? "gs-on " : "") + (mj ? "gs-mj" : "") + '" x1="' + (cx + r0 * Math.cos(a)).toFixed(2) + '" y1="' + (cy + r0 * Math.sin(a)).toFixed(2) + '" x2="' + (cx + r1 * Math.cos(a)).toFixed(2) + '" y2="' + (cy + r1 * Math.sin(a)).toFixed(2) + '"/>';
     }
     [0].concat(bands, [100]).forEach(function (v) { var b = (135 + v * 2.7) * Math.PI / 180; g += '<text class="gs-lbl" x="' + (cx + 104 * Math.cos(b)).toFixed(1) + '" y="' + (cy + 104 * Math.sin(b) + 3.5).toFixed(1) + '" text-anchor="middle">' + v + "</text>"; });
-    a = (135 + score * 2.7) * Math.PI / 180;
-    g += '<line class="gs-needle" x1="' + (cx + 112 * Math.cos(a)).toFixed(1) + '" y1="' + (cy + 112 * Math.sin(a)).toFixed(1) + '" x2="' + (cx + 148 * Math.cos(a)).toFixed(1) + '" y2="' + (cy + 148 * Math.sin(a)).toFixed(1) + '"/>';
-    return '<svg class="gs-dial" viewBox="0 0 300 300" role="img" aria-label="Nota SEO + IA ' + score + ' de 100">' + g + "</svg>";
+    a = (135 + (score || 0) * 2.7) * Math.PI / 180;
+    if (score != null) g += '<line class="gs-needle" x1="' + (cx + 112 * Math.cos(a)).toFixed(1) + '" y1="' + (cy + 112 * Math.sin(a)).toFixed(1) + '" x2="' + (cx + 148 * Math.cos(a)).toFixed(1) + '" y2="' + (cy + 148 * Math.sin(a)).toFixed(1) + '"/>';
+    return '<svg class="gs-dial" viewBox="0 0 300 300" role="img" aria-label="' + (label || "Puntuación GEO") + " " + (score == null ? "sin medir" : score + " de 100") + '">' + g + "</svg>";
   }
   var ARC = "M8 50 A30 30 0 1 1 64 50";
   function arc(v, cls) { return '<svg class="gs-arc" viewBox="0 0 72 56" aria-hidden="true"><path class="gs-tr" d="' + ARC + '"/><path class="gs-v gs-' + cls + '" d="' + ARC + '" pathLength="100" stroke-dasharray="' + (v == null ? 0 : v) + ' 100"/></svg>'; }
@@ -305,10 +306,7 @@
     var W = webMode() ? webAgg() : null;
     var nota = W ? W.nota : sc.nota, lanes = W ? W.lanes : sc.lanes;
     var blocked = sc.blockedEngines.length;
-    var hero = '<div class="gs-card gs-hero"><div class="gs-lab" style="width:100%">Revisión gratis<small class="gs-mono">' + esc(S.target ? S.target.path : W ? (W.n === 1 ? "tu portada" : "tu web · " + W.n + " páginas") : "portada") + '</small></div><div class="gs-dialbox">' + dial(nota, [50, 75]) + '<div class="gs-dial-c"><b class="gs-num">' + nota + '</b><span>Nota SEO + IA</span></div></div>'
-      + '<div class="gs-bands"><span class="' + (nota < 50 ? "gs-on" : "") + '">Se frena</span><span class="' + (nota >= 50 && nota < 75 ? "gs-on" : "") + '">Mejorable</span><span class="' + (nota >= 75 ? "gs-on" : "") + '">Bien</span></div>'
-      + '<p class="gs-say">' + esc(sc.say) + "</p>" + (W ? progressLine() : "")
-      + '<div class="gs-gg3">' + gauge("geo", "GEO", ic("i-sparkles"), lanes.ia, blocked ? 4 - blocked + " de 4 la leen" : null) + gauge("seo", "SEO", ic("e-google", "gs-i"), lanes.google) + gauge("ag", "Agentes", ic("i-cart"), lanes.agent, lanes.agent == null ? "Sin tienda" : null) + "</div></div>";
+    var prep = prepCard(nota, lanes, sc, W), geo = geoCard() + bridge(nota);
     var F = sc.fixes.slice(0, 3);
     var tabOf = { ia: "geo", google: "seo", agent: "ag" };
     if (W) {
@@ -316,13 +314,66 @@
       var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
-      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + (acctLinked() ? domCard() : "") + batchesCard() + pagesCard + (acctLinked() ? "" : domCard()) + "</div></div>";
+      return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + mine + pagesCard + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
     }
     var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
-    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + (acctLinked() ? domCard() : "") + batchesCard() + (acctLinked() ? "" : domCard()) + "</div></div>";
+    return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + fixes + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
   }
-  function deepCard() {
-    return '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
+  /* ---------------- two questions, two instruments ----------------
+     The page review measures whether the site is ready for the engines and
+     Google: it is a bar with a state, never a dial. The only dial on screen is
+     the Puntuación GEO, whether the AI names the brand, the same figure as the
+     console. A new site can be ready at 100% and still score near zero. */
+  function readyBand(v) { return v == null ? ["none", "Sin dato"] : v >= 75 ? ["pos", "Optimizada"] : v >= 50 ? ["mid", "Mejorable"] : ["low", "Se frena"]; }
+  function pbar(v, cls) { return '<span class="gs-pbar"><i class="gs-' + cls + '" style="width:' + (v == null ? 0 : v) + '%"></i></span>'; }
+  function prepCard(nota, lanes, sc, W) {
+    var b = readyBand(nota), blocked = sc.blockedEngines.length;
+    var L = [["geo", "ia", "IA", ic("i-sparkles"), blocked ? 4 - blocked + " de 4 la leen" : null], ["seo", "google", "Google", ic("e-google", "gs-i"), null], ["ag", "agent", "Agentes", ic("i-cart"), lanes.agent == null ? "Sin tienda" : null]];
+    var scope = S.target ? S.target.path : W ? (W.n === 1 ? "tu portada" : "tu web · " + W.n + " páginas") : "portada";
+    return '<div class="gs-card gs-qc"><div class="gs-lab">Optimización técnica<small class="gs-mono">' + esc(scope) + '</small></div><p class="gs-qq">¿Está tu web optimizada para la IA y Google?</p>'
+      + '<div class="gs-prh"><b class="gs-prw gs-' + b[0] + '">' + b[1] + '</b><span class="gs-prp gs-num">' + nota + "%</span></div>" + pbar(nota, b[0])
+      + '<div class="gs-plns">' + L.map(function (l) { var v = lanes[l[1]], lb = readyBand(v); return '<button class="gs-pln" data-tab="' + l[0] + '"><span class="gs-nm">' + l[3] + l[2] + "</span>" + pbar(v, lb[0]) + '<span class="gs-pv gs-num">' + (v == null ? "–" : v + "%") + '</span><span class="gs-st"><span class="gs-dot gs-' + lb[0] + '"></span>' + esc(l[4] || lb[1]) + ic("i-chevr") + "</span></button>"; }).join("") + "</div>"
+      + '<p class="gs-qs">' + esc(sc.say) + "</p>" + (W ? progressLine() : "") + '<p class="gs-qn">Depende de tu web y se arregla desde aquí. No mide si la IA te nombra.</p></div>';
+  }
+  function geoDial(v, center) {
+    var b = geoBand(v);
+    return '<div class="gs-dialbox">' + dial(v, [40, 70], "Puntuación GEO") + '<div class="gs-dial-c"><b class="gs-num">' + center + "</b><span>Puntuación GEO</span></div></div>"
+      + '<div class="gs-bands"><span class="' + (v != null && v < 40 ? "gs-on" : "") + '">Inicial</span><span class="' + (v >= 40 && v < 70 ? "gs-on" : "") + '">Emergente</span><span class="' + (v >= 70 ? "gs-on" : "") + '">Competitivo</span></div>';
+  }
+  function geoCard() {
+    var q = '<p class="gs-qq">¿Te nombra la IA cuando preguntan por lo tuyo?</p>';
+    if (!acctLinked()) return '<div class="gs-card gs-qc gs-hero"><div class="gs-lab" style="width:100%">Puntuación GEO<small>sin medir</small></div>' + q + geoDial(null, "?") + '<p class="gs-qs">Para saberlo hay que preguntar a ChatGPT, Gemini, Claude y Perplexity por lo que vendes. Eso es lo que mide GenScore.</p>' + domainCta("puntuacion") + "</div>";
+    if (!acctOn()) return '<div class="gs-card gs-qc">' + acctWait() + "</div>";
+    var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null, sb = auBlock("seo");
+    return '<div class="gs-card gs-qc gs-hero gs-domc">' + domLyr(scanLabel(P)) + q + noScan(P) + geoDial(P.geoScore, P.geoScore == null ? "–" : P.geoScore) + (P.lede ? '<p class="gs-qs">' + esc(P.lede) + "</p>" : "")
+      + '<div class="gs-mh">Auditoría de tu dominio</div><div class="gs-gg3 gs-gg2">' + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), sb ? sb.score : P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null, agBand)) + "</div></div>";
+  }
+  /* The gap explained with the site's own figures, only when there is one. */
+  function bridge(nota) {
+    if (!acctLinked()) return nota >= 75 ? '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Una web técnicamente optimizada no basta.</b> Que la IA pueda leerte no significa que te recomiende: eso depende también de lo que dicen de ti otras webs y de si respondes a las preguntas de los usuarios.</span></div>" : "";
+    if (!acctOn() || S.acct.project.geoScore == null) return "";
+    var g = S.acct.project.geoScore;
+    if (nota >= 75 && g < 40) return '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Lo normal al empezar.</b> Tu web ya está optimizada, pero la IA todavía no te nombra. La Puntuación GEO sube cuando otras webs hablan de ti y cuando respondes a las preguntas de los usuarios. Las recomendaciones de GenScore van por ahí.</span></div>";
+    if (nota < 50) return '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Primero, la optimización técnica.</b> Mientras tu web se frene, a la IA le cuesta citarte aunque hablen de ti. Empieza por «Arregla primero».</span></div>";
+    return "";
+  }
+  /* What GenScore recommends for the domain, as the console has it: the plan
+     of Visión general (to be named by the AI) and the top issues of each audit
+     block (GEO, SEO, agentic). Nothing recomputed here. */
+  function recsCard() {
+    if (!acctOn()) return "";
+    var P = S.acct.project, out = "";
+    var plan = (P.plan || []).map(function (x, i) {
+      var q = (x.questions || []).slice(0, 2).map(function (t) { return "<small>«" + esc(t) + "»</small>"; }).join("");
+      return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + q + "</span></div>";
+    }).join("");
+    if (plan) out += '<div class="gs-mh">Para que la IA te nombre' + goApp("recommendations", "Ver", "plan", "gs-lnk") + "</div>" + plan;
+    [["geo", "Auditoría GEO", "web-audit?bloque=geo", "auditoria-geo"], ["seo", "Auditoría SEO", "web-audit?bloque=seo", "auditoria-seo"], ["agent", "Auditoría agéntica", "agentic-visibility", "agentes"]].forEach(function (k) {
+      var b = auBlock(k[0]);
+      if (!b || !b.issues.length) return;
+      out += '<div class="gs-mh">' + k[1] + "<small>" + b.score + (b.projected ? " → " + b.projected : "") + "</small>" + goApp(k[2], "Ver", k[3], "gs-lnk") + '</div><div class="gs-rows">' + issueRows(b) + "</div>";
+    });
+    return out ? '<div class="gs-card gs-recs"><div class="gs-lab">Recomendaciones de GenScore<small>de tu consola</small></div>' + out + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "";
   }
   function acctCard() {
     return '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
@@ -419,14 +470,6 @@
     }).join("") + "</div>" + (b && b.issues.length ? '<div class="gs-mh">Lo primero</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("agentic-visibility", "Ver visibilidad en agentes", "agentes") + "</div></div>";
   }
   /* Resumen: the account's three figures and its plan, next to the site review. */
-  function domCard() {
-    if (!acctLinked()) return deepCard() + acctCard();
-    if (!acctOn()) return acctWait();
-    var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null, sb = auBlock("seo");
-    var plan = (P.plan || []).map(function (x, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + "</span></div>"; }).join("");
-    return '<div class="gs-card gs-domc">' + domLyr(scanLabel(P)) + noScan(P) + '<div class="gs-gg3">' + gauge("geo", "Puntuación GEO", "", P.geoScore, null, geoBand) + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), sb ? sb.score : P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null, agBand)) + "</div>" + (P.lede ? '<p class="gs-say">' + esc(P.lede) + "</p>" : "") + "</div>"
-      + (plan ? '<div class="gs-card"><div class="gs-lab">Tus próximas acciones<small>de GenScore</small></div>' + plan + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "");
-  }
   var acctTimer = 0, acctPolls = 0;
   function loadAccount(fresh) {
     if (!AC.connected) return;
