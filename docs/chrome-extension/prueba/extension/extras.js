@@ -45,7 +45,7 @@
     const visible = (el) => { if (!el.getClientRects().length) return false; const cs = getComputedStyle(el); return cs.visibility !== "hidden" && cs.display !== "none"; };
     const scope = document.querySelector("main,[role=main],article") || document.body;
     const leaves = [...scope.querySelectorAll(BLOCK)].slice(0, 1500).filter((el) => !el.querySelector(BLOCK) && !el.closest("nav,header,footer,[aria-hidden=true]") && visible(el));
-    const missing = [], blocks = [], dup = new Set();
+    const missing = [], dup = new Set();
     for (const el of leaves) {
       const text = (el.innerText || "").replace(/\s+/g, " ").trim();
       const ws = words(text);
@@ -53,16 +53,50 @@
       const found = ws.filter((w) => raw.has(w)).length / ws.length;
       const gone = found < 0.5;
       const heading = /^H\d$/.test(el.tagName);
-      if (blocks.length < 12) blocks.push({ h: heading ? 1 : 0, w: Math.min(100, 24 + ws.length * 3), gone: gone ? 1 : 0 });
       if (gone && ws.length >= 3 && missing.length < 6) {
         const t = text.length > 80 ? text.slice(0, 79).trim() + "…" : text;
         if (dup.has(t)) continue;
         dup.add(t);
         const kind = heading ? "heading" : /(\d[\d.,]*\s?(€|eur|\$|£))|((€|\$|£)\s?\d)/i.test(text) ? "price" : el.tagName === "BUTTON" ? "button" : "text";
-        missing.push({ t, kind });
+        missing.push({ t, kind, full: text.slice(0, 600), tag: heading ? el.tagName.toLowerCase() : el.tagName === "LI" ? "li" : el.tagName === "BUTTON" ? "button" : "p" });
       }
     }
-    return { state: "ok", pct, words: seen.length, missing, blocks };
+    return { state: "ok", pct, words: seen.length, missing, md: pageMarkdown(scope) };
+
+    /* the page the person sees, as clean Markdown: headings, paragraphs, lists,
+       links and table rows of the main content, never menus or scripts */
+    function pageMarkdown(root) {
+      const out = [], one = (s) => String(s || "").replace(/\s+/g, " ").trim();
+      const inline = (el) => {
+        let t = "";
+        el.childNodes.forEach((n) => {
+          if (n.nodeType === 3) t += n.nodeValue;
+          else if (n.nodeType === 1 && visible(n)) {
+            const tx = one(n.innerText);
+            if (n.tagName === "A" && n.href && /^https?:/.test(n.href) && tx) t += `[${tx}](${n.href})`;
+            else if (/^(B|STRONG)$/.test(n.tagName) && tx) t += `**${tx}**`;
+            else t += n.innerText;
+          }
+        });
+        return one(t);
+      };
+      const walk = (el) => {
+        for (const c of el.children) {
+          if (c.matches("nav,header,footer,script,style,noscript,template,svg,form,[aria-hidden=true]") || !visible(c)) continue;
+          const tg = c.tagName;
+          if (/^H[1-6]$/.test(tg)) { const t = one(c.innerText); if (t) out.push("#".repeat(+tg[1]) + " " + t); }
+          else if (tg === "P" || tg === "BLOCKQUOTE" || tg === "FIGCAPTION") { const t = inline(c); if (t) out.push((tg === "BLOCKQUOTE" ? "> " : "") + t); }
+          else if (tg === "UL" || tg === "OL") { const items = [...c.children].filter((li) => li.tagName === "LI" && visible(li)).map((li, i) => (tg === "OL" ? i + 1 + ". " : "- ") + inline(li)).filter((x) => x.length > 2); if (items.length) out.push(items.join("\n")); }
+          else if (tg === "TABLE") { const rows = [...c.querySelectorAll("tr")].map((tr) => [...tr.children].map((td) => one(td.innerText).replace(/\|/g, "/"))).filter((r) => r.some(Boolean)); if (rows.length) { const n = Math.max(...rows.map((r) => r.length)); const fill = (r) => "| " + Array.from({ length: n }, (_, i) => r[i] || "").join(" | ") + " |"; out.push([fill(rows[0]), "|" + " --- |".repeat(n)].concat(rows.slice(1).map(fill)).join("\n")); } }
+          else if (!c.children.length) { const t = one(c.innerText); if (t && t.split(" ").length >= 4) out.push(t); }
+          else walk(c);
+          if (out.join("\n\n").length > 40000) return;
+        }
+      };
+      walk(root);
+      const seenL = new Set();
+      return out.filter((b) => (seenL.has(b) ? false : seenL.add(b))).join("\n\n").slice(0, 40000);
+    }
   }
 
   /* ---------------- robots.txt evidence ---------------- */
@@ -161,7 +195,42 @@
     return keys.sort((a, b) => index[a] - index[b]).slice(0, keys.length - HISTORY_PAGES);
   }
 
-  const api = { readAiView, robotsEvidence, lineLabel, pageKey, historyPush, entryOf, sinceLast, agoText, historyPrune, plain, SAME_VISIT_MS, HISTORY_MAX, HISTORY_PAGES };
+  /* ---------------- the recommendation behind «Lo que lee la IA» ---------------- */
+  const escH = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  /* The blocks that only appear with JavaScript, written as HTML to paste in
+     the page's template, plus the page as Markdown as a second option.
+     null when nothing important is missing. */
+  function aiFix(v, f) {
+    if (!v || v.state !== "ok" || v.pct >= 95 || !v.missing || !v.missing.length) return null;
+    const miss = v.missing.slice(0, 6);
+    const lines = [];
+    let inList = false;
+    for (const m of miss) {
+      const tx = escH(String(m.full || m.t).replace(/…$/, "").trim());
+      if (m.tag === "li") { if (!inList) { lines.push("<ul>"); inList = true; } lines.push(`  <li>${tx}</li>`); continue; }
+      if (inList) { lines.push("</ul>"); inList = false; }
+      if (/^h[1-6]$/.test(m.tag || "")) lines.push(`<${m.tag === "h1" ? "h1" : "h2"}>${tx}</${m.tag === "h1" ? "h1" : "h2"}>`);
+      else if (m.tag === "button") lines.push(`<p><a href="ENLACE">${tx}</a></p>`);
+      else lines.push(`<p>${tx}</p>`);
+    }
+    if (inList) lines.push("</ul>");
+    let path = "pagina";
+    try { const u = new URL(f.url); path = u.pathname.replace(/^\/+|\/+$/g, "").replace(/\//g, "-") || "index"; } catch (e) {}
+    const mdUrl = (() => { try { const u = new URL(f.url); return u.origin + (u.pathname.replace(/\/+$/, "") || "/index") + ".md"; } catch (e) { return ""; } })();
+    const n = v.missing.length;
+    return {
+      id: "ai-html", lane: "ia", pts: null, kind: "local",
+      t: "Pon en el HTML lo que hoy sólo sale con JavaScript",
+      why: `El ${100 - v.pct}% del texto que ves no llega a ChatGPT, Claude y Perplexity, porque sus bots leen la página sin ejecutar JavaScript. ${n === 1 ? "Este bloque" : `Estos ${Math.min(n, 6)} bloques`} no les llega${n === 1 ? "" : "n"}.`,
+      how: "Escríbelo en la plantilla de la página o en un bloque HTML, no en un script, y quita la versión que pinta el script para no repetirlo. El código lleva el texto que ves hoy: revísalo antes de publicarlo.",
+      snippet: `<!-- En la plantilla de esta página, servido en el HTML -->\n${lines.join("\n")}`,
+      copyWhat: "el HTML",
+      md: v.md || "", mdName: path + ".md",
+      mdUrl
+    };
+  }
+
+  const api = { aiFix, readAiView, robotsEvidence, lineLabel, pageKey, historyPush, entryOf, sinceLast, agoText, historyPrune, plain, SAME_VISIT_MS, HISTORY_MAX, HISTORY_PAGES };
   root.GS_X = api;
   if (typeof module !== "undefined") module.exports = api;
 })(typeof self !== "undefined" ? self : this);

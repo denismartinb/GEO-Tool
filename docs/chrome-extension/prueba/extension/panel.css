@@ -1185,12 +1185,6 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .aim{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:1px solid var(--rule);font-size:13px}
 .aim .i{color:var(--ink-3);flex:none}.aim span{flex:1;min-width:0;overflow-wrap:anywhere}
 .aim em{font-style:normal;font-size:11px;color:var(--warm);font-weight:600;white-space:nowrap}
-.aicmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.aicmp .col{border:1px solid var(--rule);border-radius:12px;padding:10px;background:var(--surface-2);display:flex;flex-direction:column;gap:6px}
-.aicmp .col b{font-size:11px;color:var(--ink-3);font-weight:600;margin-bottom:2px}
-.aicmp .b{display:block;height:8px;border-radius:4px;background:var(--ink-4);opacity:.35}
-.aicmp .b.h{height:12px;opacity:.6}
-.aicmp .b.gone{background:none;border:1.5px dashed var(--warm);opacity:.9}
 .vhist{margin-top:14px;padding:12px 14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--rule);text-align:left}
 .vhist .r1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .vhist .l{font-size:12px;color:var(--ink-3)}
@@ -1217,3 +1211,13 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .repbtn .dl{width:28px;height:28px;border-radius:50%;background:var(--blue);color:#fff;display:grid;place-items:center;flex:none}
 .repbtn em{font-style:normal;font-size:10px;font-weight:650;letter-spacing:.03em;color:var(--blue-ink);background:var(--blue-tint);padding:3px 8px;border-radius:99px}
 .repbtn>.i:last-child{margin-left:auto;color:var(--ink-3)}
+/* «Lo que lee la IA»: the Markdown copy, second option of its card (log §447) */
+.mdopt{min-width:0;overflow-wrap:anywhere;margin-top:12px;border:1px solid var(--rule);border-radius:12px;padding:12px;background:var(--surface-2);display:grid;gap:8px}
+.mdopt .mdh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.mdopt .mdh .tagx{background:var(--surface);border:1px solid var(--rule);color:var(--ink-3)}
+.mdopt .mdh b{font-size:13px;font-weight:600}
+.mdopt p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.mdopt>*{min-width:0}
+.mdopt .acts{margin:0}
+.mdopt ol{margin:0;padding-left:18px;display:grid;gap:4px;font-size:12.5px;color:var(--ink-2)}
+.mdopt code{word-break:break-all;white-space:normal}

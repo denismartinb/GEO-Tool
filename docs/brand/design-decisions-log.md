@@ -29637,3 +29637,18 @@ sustituye a las primeras reseñas.
 **Por qué así.** El operador tiene que ver el mismo número que el cliente; dos puntuaciones distintas para el mismo dominio es justo el fallo que TRUST-METRICS-1 cerró. Sólo lectura, sin migración, sin escrituras nuevas en `/admin`.
 
 **Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
+
+## §447 · EXT-1.5.1: la tarjeta «Lo que lee la IA» de la extensión pasa a recomendación con código y versión en Markdown (2026-11-02)
+
+**Qué se decidió.** Denis, tras probar la 1.5.0: «quita esto» (el botón «Ver lado a lado» y la nota «Haz esto: pide que esos bloques salgan en el HTML…») y «una tarjeta de recomendación debería ser sobre incluir los bloques que faltan en la página en el HTML, sugiriendo en la medida de lo posible un código (aunque sea ejemplo) a copiar». Después pidió, como segunda opción, «que se pueda descargar el .md de la página y las instrucciones de cómo subirlo».
+
+- `readAiView` (`extras.js`) guarda de cada bloque que falta su etiqueta y su texto entero (hasta 600 caracteres) y la página que ve la persona en Markdown (`md`: encabezados, párrafos, listas, enlaces y tablas del contenido principal, sin menú, cabecera ni pie; hasta 40.000 caracteres). Deja de guardar la forma de los bloques, que sólo servía a la comparación retirada.
+- `GS_X.aiFix` construye la tarjeta «Pon en el HTML lo que hoy sólo sale con JavaScript» cuando el porcentaje es menor que 95 y hay bloques que faltan: el HTML con esos textos (h1/h2, p, ul/li, y el botón como enlace con `ENLACE` por rellenar) y, como «Segunda opción», «Descargar <página>.md» con cuatro pasos (revisar, subir a la misma dirección terminada en `.md`, enlazarlo desde `llms.txt` y, opcional, `<link rel="alternate" type="text/markdown">`). Sin puntos: es la primera tarjeta de IA de «Recomendaciones técnicas» y entra también en el informe de la página.
+- La tarjeta «Lo que lee la IA» enlaza a ella con «Cómo arreglarlo».
+- La tarjeta dice que el `.md` lo leen sobre todo agentes y herramientas que siguen llms.txt, y que los bots de búsqueda leen el HTML: no sustituye al arreglo. Ningún motor ha confirmado que su bot de búsqueda pida el `.md` en vez de la página.
+
+**Privacidad.** El `.md` se genera en el navegador y sólo se descarga; no sale nada hacia GenScore.
+
+**Premisa.** No retira ningún camino de recuperación: quita un botón de comparación visual, no una salida.
+
+**Pendiente.** La consola tendrá su propio bloque «Lo que lee la IA» en Auditoría GEO con la solución para todo el dominio (maqueta en revisión). Allí el `.md` sólo puede salir de la extensión hasta que exista el navegador en el servidor (segunda fase, con su Task Intake).

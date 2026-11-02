@@ -288,15 +288,10 @@
     if (!v || v.state !== "ok") return "";
     const pc = v.pct, all = pc >= 95, miss = all ? [] : v.missing.slice(0, 4);
     const list = miss.map((m) => `<div class="aim">${ic(AIKIND[m.kind] || "prompts", "sm")}<span>${esc(m.t)}</span><em>Sólo con JavaScript</em></div>`).join("");
-    const canCmp = !all && v.blocks.length >= 3 && v.blocks.some((b) => b.gone);
-    const col = (title, gone) => `<div class="col"><b>${title}</b>${v.blocks.map((b) => `<i class="b ${b.h ? "h" : ""} ${gone && b.gone ? "gone" : ""}" style="width:${b.h ? Math.min(b.w, 80) : b.w}%"></i>`).join("")}</div>`;
-    const cmp = canCmp && S.cmp ? `<div class="aicmp">${col("Lo que ves", false)}${col("Lo que llega sin JavaScript", true)}</div>` : "";
     return `<div class="aiv"><div class="aih"><span class="ey">Lo que lee la IA</span>${tagx("ok")}</div>
       <div class="aibig"><b class="num">${pc}<small>%</small></b><span>${all ? "del texto que ves llega en el HTML, que es lo que leen los bots de IA." : miss.length ? "del texto que ves llega a los bots de IA. El resto sólo aparece con JavaScript, y ChatGPT, Claude y Perplexity no lo ejecutan." : "del texto que ves llega a los bots de IA. Lo que falta está fuera del contenido principal (menú, cabecera o pie) o son textos cortos."}</span></div>
       <div class="aibar"><i style="width:${pc}%"></i></div><div class="aileg"><span><i class="a"></i>En el HTML</span>${all ? "" : `<span><i class="b"></i>Sólo con JavaScript</span>`}</div>
-      ${list ? `<div class="mh">Lo que no les llega</div>${list}` : ""}${cmp}
-      ${canCmp ? `<div class="acts"><button class="btn line sm" data-act="ai-cmp" aria-expanded="${!!S.cmp}">${ic("eye", "sm")}${S.cmp ? "Ocultar la comparación" : "Ver lado a lado"}</button></div>` : ""}
-      ${list ? `<p class="mini-note">Haz esto: pide que esos bloques salgan en el HTML de la página. Suele venir de un plugin o de un tema que los carga después.</p>` : ""}
+      ${list ? `<div class="mh">Lo que no les llega</div>${list}<div class="acts"><button class="btn line sm" data-act="jump" data-id="ai-html">Cómo arreglarlo${ic("arrowr", "sm")}</button></div>` : ""}
       <p class="mini-note">Comprobado en tu navegador: pedimos la página otra vez sin tu sesión y sin JavaScript, como la reciben los bots.</p></div>`;
   }
   /* «Desde tu última visita»: the note of this page per visit, only in this browser */
@@ -342,6 +337,7 @@
     let body = `<p class="why">${f.why}</p>`;
     if (f.how) body += `<p class="why">${f.how}</p>`;
     if (f.snippet) body += `<pre class="snip" tabindex="0">${esc(f.snippet)}</pre><div class="acts"><button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar ${esc(f.copyWhat || "el código")}</button></div>`;
+    if (f.md) body += `<div class="mdopt"><div class="mdh"><span class="tagx">Segunda opción</span><b>Versión en Markdown de la página</b></div><p>Un fichero <code class="p">${esc(f.mdName)}</code> con el texto que ves, limpio. Lo leen sobre todo los agentes y las herramientas que siguen llms.txt; los bots de búsqueda siguen leyendo el HTML, así que no sustituye a lo de arriba.</p><div class="acts"><button class="btn line sm" data-act="md" data-key="${esc(key)}">${ic("download", "sm")}Descargar ${esc(f.mdName)}</button></div><ol><li>Revisa que diga lo mismo que la página.</li><li>Súbelo para que quede en <code class="p">${esc(f.mdUrl || f.mdName)}</code>.</li><li>Añádelo a tu <code class="p">llms.txt</code> con un enlace.</li><li>Opcional: en el <code class="p">&lt;head&gt;</code>, <code class="p">&lt;link rel="alternate" type="text/markdown" href="${esc(f.mdUrl || f.mdName)}"&gt;</code></li></ol><p class="mini-note">Si cambias la página, actualiza también el fichero.</p></div>`;
     if (kind === "plan") body += `<div class="acts"><button class="btn line sm" data-act="open" data-to="/dashboard" data-c="plan">Abrir en la consola${ic("arrowr", "sm")}</button></div>`;
     if (kind === "web" && f.to) body += `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(f.to)}" data-c="web-fix">Ver en la consola${ic("arrowr", "sm")}</button></div>`;
     /* a real plan item is marked done in the console, where it is saved; the
@@ -700,6 +696,20 @@
 
   /* ---------------- draw ---------------- */
   let SC = null;
+  /* the review plus the «Lo que lee la IA» card (extras.js), first of the IA
+     cards: it is the one that explains the percentage the panel just showed */
+  function scoreOf(f) {
+    const sc = GS_SCORE.scorePage(f), x = GS_X.aiFix(f.aiView, f);
+    if (x) { const i = sc.fixes.findIndex((y) => y.lane !== "ia"); sc.fixes.splice(i < 0 ? sc.fixes.length : i, 0, x); }
+    return sc;
+  }
+  function saveText(name, text) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
   function draw() {
     const pn = $("#panel");
     let html, ctx;
@@ -713,7 +723,7 @@
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
     else {
-      SC = GS_SCORE.scorePage(S.rec.facts);
+      SC = scoreOf(S.rec.facts);
       html = viewReview(S.rec.facts, SC);
       ctx = [S.rec.at, relation(), S.tab].join("|");
       S.shown = true;
@@ -738,7 +748,7 @@
     if (!S.rec || S.rec.state !== "ok" || S.noted === S.rec.at) return;
     S.noted = S.rec.at;
     noteUse();
-    const sc = GS_SCORE.scorePage(S.rec.facts);
+    const sc = scoreOf(S.rec.facts);
     recordVisit(S.rec, sc);
     const k = "last:" + S.rec.facts.url;
     const last = await Env.getS(k);
@@ -769,7 +779,7 @@
   }
   async function openReport() {
     if (!S.rec || S.rec.state !== "ok") return;
-    const f = S.rec.facts, sc = GS_SCORE.scorePage(f);
+    const f = S.rec.facts, sc = scoreOf(f);
     const shot = await Env.shot(S.tabId);
     const h = S.hist && S.hist.key === GS_X.pageKey(f.url) ? S.hist.info : null;
     await Env.report({ v: 1, at: S.rec.at, facts: f, sc, shot, ev: alertEvidence(sc, f), hist: h ? { prev: h.prev.nota, now: h.now.nota, prevAt: h.prev.at, fixed: h.fixed } : null });
@@ -905,7 +915,7 @@
       draw();
       return;
     }
-    if (a === "ai-cmp") { S.cmp = !S.cmp; draw(); return; }
+    if (a === "md") { const f = findFix(t.dataset.key); if (f && f.md) { saveText(f.mdName, f.md); toast("Descargado.", `Súbelo para que quede en ${f.mdUrl || "la misma dirección con .md"}.`, "download"); } return; }
     if (a === "report") { openReport(); return; }
     if (a === "review-now") { S.tab = "page"; S.pickedDom = false; reviewNow(); return; }
     if (a === "auto-on") { autoOn(); return; }
