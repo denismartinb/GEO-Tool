@@ -130,3 +130,38 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   correcto.
 - **«Arreglado aquí» de un tipo que la revisión local no lee** exige un lote
   que se pueda deshacer y cubra todas las páginas de la auditoría.
+
+## Web entera y datos (adenda 1.4.1 de §432)
+
+- **Los arreglos de toda la web son una lista fija** (sitemap, viewport,
+  quién está detrás) en `genscore_ajax_site_publish`, con lote y `site_prev`
+  para deshacer. **El sitemap nunca escribe robots.txt**: WordPress ya lo
+  anuncia (lo vigila `tests/wordpress-plugin.test.ts`).
+- **Con un plugin SEO que publica sitemap o schema, esos arreglos no se
+  ofrecen**: el aviso manda a sus ajustes. Lo mismo la viewport si el tema ya
+  la pone.
+- **El texto alternativo nunca es un nombre de fichero** (`genscore_is_file_name`)
+  y sólo se escribe en la biblioteca si la imagen no tenía; deshacer lo devuelve.
+- **noindex y fragmentos sólo se ofrecen con un plugin SEO que los guarda**, y
+  nunca con la web cerrada en Ajustes > Lectura (eso es «Ir a Ajustes de lectura»).
+- **«Añadir dato» publica sólo en la página del plan guardado en el servidor**
+  y exige dato, fuente http(s) y fecha no futura (`genscore_clean_cite`).
+- **La lista de páginas de cancelación no ofrece el blog ni las páginas de
+  WooCommerce** (carrito, pago, cuenta, tienda).
+
+## Tras la prueba de la 1.4.0 (adenda 1.4.2 de §432)
+
+- **Nunca se renderizan bloques para sacar texto** (`excerpt_remove_blocks`,
+  `do_blocks`, `render_block`): dentro de `wp_head` cambia los estilos del
+  tema. El texto sale de `genscore_plain_text`, que lee el HTML guardado con
+  `parse_blocks` (lo vigila `tests/wordpress-plugin.test.ts`).
+- **La valoración sólo se ofrece si algún producto tiene reseñas reales**; si
+  no, la recomendación dice «Sin reseñas».
+- **Los borradores hablan con el nombre de la web**, no con la marca de la
+  cuenta, y cada celda «[Pendiente…]» va en gris con `mark.has-inline-color`.
+- **El texto alternativo nunca toca las imágenes propias de un producto**
+  (WooCommerce ya les pone el nombre) y un título igual al nombre del fichero
+  cuenta como fichero (`genscore_title_is_file`).
+- **Cancelación sólo en productos; la tabla de características no se ofrece
+  si WooCommerce ya la enseña**, y «quién está detrás» no rellena el email con
+  el remitente de la tienda.

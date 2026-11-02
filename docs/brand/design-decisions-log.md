@@ -29280,6 +29280,111 @@ SPWgjFTQUfxcxhKMxfeqFP) y Denis aprobó dos entregas: ésta y la 1.4.1.
   nosnippet, LocalBusiness, Organization, dato con fuente, cancelación, tabla
   de especificaciones y avisos de «ir a un ajuste».
 
+**Adenda 1.4.1 (plugin, WP-PLUGIN-4, 2026-11-02).** La segunda entrega del plan
+aprobado (artifact SPWgjFTQUfxcxhKMxfeqFP), empezada con el visto bueno de
+Denis («podemos mergear y seguir con la 1.4.1») mientras Instinct probaba la
+1.4.0. Código nuevo en `includes/fixes-site.php`.
+
+- **Arreglos nuevos en la hoja de páginas**, con la misma confirmación y
+  deshacer: texto alternativo (de cada imagen sin texto: el del medio, su
+  título si no es un nombre de fichero o el título de la página; se guarda en
+  la biblioteca sólo si la imagen no tenía y se sirve con
+  `wp_content_img_tag`), noindex y fragmentos bloqueados (limpia los campos de
+  Yoast, Rank Math o SEOPress y filtra `wp_robots`; sin plugin SEO no se
+  ofrece, y con la web cerrada en Ajustes > Lectura tampoco), tabla de
+  características (atributos visibles, peso y medidas de WooCommerce, bajo la
+  descripción) y política de cancelación (página que la explica, días y país,
+  escritos una vez; se añade a los datos de la página o a la oferta si no hay
+  ya una de devoluciones).
+- **Arreglos de toda la web** (ventana propia, lote con `site_prev`): sitemap
+  (enciende el de WordPress y redirige `/sitemap.xml`; robots.txt no se toca
+  porque WordPress ya lo anuncia), viewport (sólo si el tema no la pone) y
+  quién está detrás (Organization o LocalBusiness con dirección, horario en
+  formato schema.org y perfiles; sale de WordPress y WooCommerce y la persona
+  lo revisa). Con un plugin SEO que pinta schema o publica sitemap no se
+  ofrecen: el aviso manda a sus ajustes.
+- **«Añadir dato»** en las acciones de cita con página propia: la persona
+  escribe el dato (4 palabras o más), el enlace a la fuente y la fecha (no
+  futura); sale tras la entradilla. Sin página, `isDraftable` crea un borrador
+  con sus preguntas y un hueco para el dato.
+- **«Copiar tabla y abrir»** en «Refuerza tu comparativa»: copia la tabla (la
+  columna del rival siempre «[Pendiente: dato, enlace y fecha]») y abre la
+  página en el editor.
+- **«Ir a un ajuste»** cuando WordPress lo arregla en otra pantalla: HTTPS
+  (Ajustes generales), pagos rápidos, web cerrada a buscadores (Lectura) y lo
+  que lleve el plugin SEO.
+- **`/api/ext/project`**: las URL de «Imágenes sin texto alternativo» llegaban
+  como «url · N imágenes» y se descartaban; ahora se limpian antes de filtrar.
+- **Probado** en el WordPress de pruebas con WooCommerce: cada arreglo
+  publicado, comprobado en el HTML servido y deshecho; ventanas a 1280 y 390
+  px; Plugin Check sin errores salvo la etiqueta del readme, ya corregida.
+- **Pendiente o sabido**: noindex y fragmentos no se han probado con Yoast o
+  Rank Math instalados (el entorno de pruebas no los tiene); el texto
+  alternativo sólo cubre imágenes con id de la biblioteca. No retira ningún
+  camino de recuperación.
+
+**Adenda 1.4.2 (plugin, WP-PLUGIN-4, 2026-11-02).** Lo que encontró Instinct
+probando la 1.4.0 entera en la tienda de Wasmer:
+
+- **og:description pegaba los bloques** («…en MadridEn Café Ventura…») y, al
+  publicar Open Graph, los estilos de bloque del tema pasaban de `<style>` a
+  `<link>`, porque `excerpt_remove_blocks` renderiza bloques dentro de
+  `wp_head`. Ahora `genscore_plain_text` lee el HTML guardado de cada bloque
+  con `parse_blocks` (`genscore_blocks_html`), sin renderizar nada, y vive en
+  `fixes.php` porque el `<head>` público también la usa.
+- **Valoración sin reseñas**: si ningún producto publicado tiene reseñas
+  (`_wc_review_count`), el arreglo no está disponible y la recomendación dice
+  «Sin reseñas» en lugar de «Arreglar» (antes abría una hoja que decía «Ya está
+  en todas tus páginas»).
+- **La comparativa usa el nombre de la web** (Ajustes > Generales), no la marca
+  de la cuenta («Cafe Ventura Genscore»); la marca sólo se usa si la web no
+  tiene nombre.
+- **Las celdas «[Pendiente…]» van en gris** con el color de texto en línea del
+  propio editor (`mark.has-inline-color`), así que el bloque de tabla sigue
+  siendo válido y el hueco se ve como hueco en el editor y en la página.
+- **«Añadir preguntas» no salía porque `page` llegaba vacío.** `page` sólo se
+  rellena cuando la cobertura confirma una página propia para esas preguntas
+  (`confirmed_surfacing_gap`); en la tienda de pruebas la cobertura no
+  confirma ninguna, así que vacío es lo correcto allí. Sí había un hueco: en
+  una palanca sólo se miraba la tarjeta representante; ahora vale la primera
+  de sus tarjetas con página confirmada (comparten tema). El borrador de
+  críticas sólo sale con una tarjeta `address_negative_narrative` con
+  críticas, y esa cuenta no tenía ninguna.
+- **Un título termina su frase.** La descripción propuesta para el JSON-LD de
+  la portada pegaba el H1 al párrafo siguiente («…tostado cada semana En Café
+  Ventura…»). `genscore_plain_text` cierra cada encabezado con punto si no
+  acaba ya en puntuación; lo usan descripción, Open Graph y datos
+  estructurados.
+- **Lo que encontró Instinct en la 1.4.1** (tienda de Wasmer, 2026-11-02):
+  el texto alternativo proponía el nombre del fichero cuando WordPress había
+  puesto ese nombre como título («Bolsa cafe etiopia 250g»), y en productos
+  sustituía en la biblioteca el alt que WooCommerce ya servía con el nombre
+  del producto. Ahora un título igual al fichero (`genscore_title_is_file`)
+  cede ante el título de la página, y las imágenes propias de un producto
+  (destacada y galería) no se ofrecen. A 390 px, un error de «Publicar datos»
+  no se veía porque el aviso del pie se oculta en móvil: el aviso de error sí
+  se enseña. La cancelación sólo se ofrece en productos (en una entrada era un
+  `MerchantReturnPolicy` suelto que Google no usa). La tabla de
+  características no se ofrece si WooCommerce ya la enseña en «Información
+  adicional». «Quién está detrás» ya no rellena el email con el remitente de
+  los correos de la tienda, que no siempre es público. «Añadir dato» y
+  «Copiar tabla y abrir» dependen de `page`, que en esa tienda llega vacío por
+  la misma razón que «Añadir preguntas».
+- **Segunda prueba de Instinct en la 1.4.2**: una subida duplicada
+  («bolsa-cafe-etiopia-250g-1.jpg») seguía proponiendo el nombre del fichero,
+  porque el título no lleva el «-1». `genscore_title_is_file` compara también
+  sin el número final (y sigue valiendo con el número, para nombres como
+  «cafe-2024»). En la tabla de comparativa se restituye la lectura del plan
+  que daba la marca de la cuenta cuando la web no tiene nombre.
+- **Nombre de la ficha de WordPress.org**: «GenScore: AI SEO & GEO Optimizer,
+  llms.txt, Schema & AI Bots», igual en el readme y en la cabecera `Plugin
+  Name` (Plugin Check pide que coincidan; lo vigila un test).
+- **Probado** en el WordPress de pruebas: og:description con espacios y mismo
+  recuento de `<style>`/`<link>` antes y después de publicar; «Sin reseñas» con
+  las reseñas a cero; borrador de comparativa sin avisos de bloque no válido y
+  con las celdas grises en editor y página. No retira ningún camino de
+  recuperación.
+
 ## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
 
 **Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),

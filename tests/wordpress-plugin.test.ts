@@ -92,6 +92,55 @@ describe("WordPress plugin", () => {
     expect(body).toContain("array_fill( 0, count( $rivals ), GENSCORE_PENDING . ': dato, enlace y fecha]' )");
   });
 
+  // 1.4.1 (log §432 adenda): the comparison table copied to the clipboard
+  // never fills a rival's cell either.
+  it("the copied comparison table never fills a rival's cell", () => {
+    const src = read(join(PLUGIN, "includes/drafts.php"));
+    const fn = "genscore_compare_table_html";
+    const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+    expect(body).toContain("GENSCORE_PENDING . ': dato, enlace y fecha]'");
+  });
+
+  // Plugin Check (mismatched_plugin_name): the header and the readme title match.
+  it("the plugin name matches the readme title", () => {
+    const header = /Plugin Name:\s*(.+)/.exec(read(join(PLUGIN, "genscore.php")))?.[1].trim();
+    const title = /^===\s*(.+?)\s*===/.exec(read(join(PLUGIN, "readme.txt")))?.[1];
+    expect(header).toBe(title);
+  });
+
+  // 1.4.2 (log §432 adenda): rendering blocks inside wp_head turns the theme's
+  // inline block styles into <link> tags, so text is read from parse_blocks.
+  it("never renders blocks to get text", () => {
+    for (const f of ["fixes.php", "fixes-more.php", "fixes-site.php", "fixes-admin.php", "drafts.php"]) {
+      const code = read(join(PLUGIN, "includes", f)).replace(/^\s*(\*|\/\/).*$/gm, "");
+      expect(code).not.toMatch(/excerpt_remove_blocks\s*\(|do_blocks\s*\(|render_block\s*\(/);
+    }
+  });
+
+  // «Añadir dato»: the page comes from the cached plan on the server, the fact
+  // from the person, checked before writing; the post content is never edited.
+  it("«Añadir dato» publishes only on the plan's own page", () => {
+    const src = read(join(PLUGIN, "includes/drafts.php"));
+    const fn = "genscore_ajax_cite_publish";
+    const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+    expect(body).toContain("check_ajax_referer( 'genscore', 'nonce' )");
+    expect(body).toContain("genscore_ajax_guard()");
+    expect(body).toContain("genscore_plan_page_id( $item )");
+    expect(body).toContain("genscore_clean_cite(");
+    expect(body).not.toMatch(/\$_POST\['(page|url|id)'\]|wp_update_post|post_content/);
+  });
+
+  // Site-wide fixes never touch robots.txt: WordPress announces its own sitemap.
+  it("site-wide fixes are a fixed list and never write robots.txt", () => {
+    const src = read(join(PLUGIN, "includes/fixes-admin.php"));
+    const fn = "genscore_ajax_site_publish";
+    const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+    expect(body).toContain("check_ajax_referer( 'genscore', 'nonce' )");
+    expect(body).toContain("array( 'sitemap', 'viewport', 'identity' )");
+    expect(body).toContain("genscore_clean_identity(");
+    expect(read(join(PLUGIN, "includes/fixes-site.php"))).not.toMatch(/robots_txt|genscore_save_bots|file_put_contents/);
+  });
+
   it("the token never reaches the browser", () => {
     const screen = read(join(PLUGIN, "includes/account.php"));
     const data = screen.slice(screen.indexOf("function genscore_account_screen_data"));

@@ -104,3 +104,6 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   plugin** (WP-PLUGIN-4, log §432 adenda 1.4.0): `page` sólo es una URL propia
   http(s) confirmada por la cobertura (`toExtPlanItem`); `rival` y `drivers`
   salen de `recommendationSubjects`, sin recalcular nada.
+- **`draft` de una acción de cita sólo sin página propia** (WP-PLUGIN-4, log
+  §432 adenda 1.4.1): con página, el plugin ofrece «Añadir dato» en ella; sin
+  ella, borrador con sus preguntas (`isDraftable`).

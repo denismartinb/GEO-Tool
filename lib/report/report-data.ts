@@ -278,7 +278,11 @@ export async function loadReportInput({
       questions: [...questions],
       type: lever ? (lever.theme.kind === "definition" ? "lever_definition" : "lever") : r.recommendation_type,
       ...(lever ? {} : recommendationSubjects(r)),
-      page: overlay?.state === "confirmed_surfacing_gap" ? (overlay.verifiedPage?.url ?? null) : null
+      // A lever's page is the first member coverage confirmed: they share one topic.
+      page:
+        members
+          .map((m) => overlayByRecId.get(m.id))
+          .find((o) => o?.state === "confirmed_surfacing_gap" && o.verifiedPage?.url)?.verifiedPage?.url ?? null
     };
   });
 

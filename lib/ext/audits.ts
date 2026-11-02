@@ -128,7 +128,7 @@ function technicalBlock(key: AuditBlockKey, pages: PageAuditEntry[], bots: BotAc
       points: i.blockPoints,
       severity: i.issue.severity,
       check: i.issue.check,
-      urls: SITE_WIDE_CHECKS.has(i.issue.check) ? [] : i.issue.affectedLabels.filter(isHttpUrl).slice(0, EXT_AUDIT_URLS)
+      urls: SITE_WIDE_CHECKS.has(i.issue.check) ? [] : i.issue.affectedLabels.map((l) => l.split(" · ")[0]).filter(isHttpUrl).slice(0, EXT_AUDIT_URLS)
     }))
   };
 }

@@ -36,7 +36,7 @@ function genscore_fix_kinds() {
 		'fresh'   => array( 'types' => array( 'page', 'post' ), 'ids' => array( 'fresh' ) ),
 		'returns' => array( 'types' => array( 'product' ), 'ids' => array( 'returns' ) ),
 		'lead'    => array( 'types' => array( 'page', 'post', 'product' ), 'ids' => array( 'lead' ) ),
-	) + genscore_more_kinds();
+	) + genscore_more_kinds() + genscore_extra_kinds();
 }
 
 /**
@@ -46,6 +46,9 @@ function genscore_fix_kinds() {
  * @return string|true
  */
 function genscore_fix_available( $kind ) {
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return genscore_extra_available( $kind );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_available( $kind );
 	}
@@ -122,21 +125,6 @@ function genscore_fix_write( $kind, $id, $value ) {
 /* ------------------------------------------------------------------ */
 /* Proposals                                                          */
 /* ------------------------------------------------------------------ */
-
-/**
- * Plain text from post content or an excerpt.
- *
- * @param string $html HTML.
- * @return string
- */
-function genscore_plain_text( $html ) {
-	$t = function_exists( 'excerpt_remove_blocks' ) ? excerpt_remove_blocks( (string) $html ) : (string) $html;
-	// Blocks end where a word ends: «Molienda</h3><p>Fina» is two words.
-	$t = preg_replace( '#<br\s*/?>|</(p|h[1-6]|li|div|td|th|blockquote|figcaption)>#i', ' ', $t );
-	$t = wp_strip_all_tags( strip_shortcodes( $t ), true );
-	$t = html_entity_decode( $t, ENT_QUOTES, 'UTF-8' );
-	return trim( preg_replace( '/\s+/u', ' ', $t ) );
-}
 
 /**
  * Cuts text at the last whole sentence that fits, or at a word with «…».
@@ -449,6 +437,9 @@ function genscore_ld_data( $id ) {
  * @return string|null Null when the page lacks the data.
  */
 function genscore_fix_propose( $kind, $id ) {
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return genscore_extra_propose( $kind, $id );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_propose( $kind, $id );
 	}
@@ -495,6 +486,9 @@ function genscore_fix_propose( $kind, $id ) {
  * @return string
  */
 function genscore_fix_missing_note( $kind, $id = 0 ) {
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return genscore_extra_missing_note( $kind );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_missing_note( $kind );
 	}
@@ -522,6 +516,9 @@ function genscore_fix_missing_note( $kind, $id = 0 ) {
  */
 function genscore_fix_clean( $kind, $value, $id = 0 ) {
 	$value = (string) $value;
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return genscore_extra_clean( $kind, $value, $id );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_clean( $kind, $value, $id );
 	}
@@ -603,6 +600,9 @@ function genscore_is_listing_page( $id ) {
  * @return string
  */
 function genscore_fix_status( $kind, $id ) {
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return genscore_extra_status( $kind, $id );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_status( $kind, $id );
 	}
@@ -731,6 +731,9 @@ function genscore_fix_shop_row( $kind, $q ) {
  * @return bool
  */
 function genscore_fix_has_data( $kind, $id ) {
+	if ( genscore_is_extra_kind( $kind ) ) {
+		return null !== genscore_extra_propose( $kind, $id );
+	}
 	if ( genscore_is_more_kind( $kind ) ) {
 		return genscore_more_has_data( $kind, $id );
 	}
@@ -771,6 +774,12 @@ function genscore_fix_row( $kind, $id ) {
 	// The untyped kinds keep a «1» as their mark: show what it means.
 	if ( 'has' === $status && in_array( $kind, array( 'h1', 'hreflang', 'shipping', 'rating' ), true ) ) {
 		$value = genscore_more_propose( $kind, $id );
+	}
+	if ( 'has' === $status && in_array( $kind, array( 'noindex', 'snippet', 'cancel' ), true ) ) {
+		$value = '';
+	}
+	if ( 'has' === $status && 'specs' === $kind ) {
+		$value = genscore_extra_propose( 'specs', $id );
 	}
 	// The answer-first paragraph is the person's to write when the page has
 	// no summary of its own: the row opens empty instead of being shut.
@@ -968,6 +977,17 @@ function genscore_ajax_fix_publish() {
 		update_option( GENSCORE_SHIPPING_OPTION, $ship, false );
 	}
 
+	if ( 'cancel' === $kind ) {
+		$cancel = genscore_clean_cancel( isset( $_POST['cancel'] ) && is_array( $_POST['cancel'] ) ? wp_unslash( $_POST['cancel'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every value is checked in genscore_clean_cancel().
+		if ( ! $cancel ) {
+			wp_send_json_error( array( 'message' => __( 'Elige la página de tu política, los días (1 a 365) y el país en dos letras.', 'genscore' ) ), 400 );
+		}
+		if ( ! array_key_exists( 'cancel_prev', $rec ) ) {
+			$rec['cancel_prev'] = get_option( GENSCORE_CANCEL_OPTION, array() );
+		}
+		update_option( GENSCORE_CANCEL_OPTION, $cancel, false );
+	}
+
 	$done    = array();
 	$skipped = array();
 	foreach ( $ids as $id ) {
@@ -980,7 +1000,10 @@ function genscore_ajax_fix_publish() {
 		if ( in_array( $kind, array( 'ld', 'product' ), true ) && null === $typed && null !== $value ) {
 			$value = genscore_clean_jsonld( $value );
 		}
-		if ( in_array( $kind, array( 'fresh', 'returns', 'h1', 'hreflang', 'shipping', 'rating' ), true ) ) {
+		if ( 'alt' === $kind && null === $typed && null !== $value ) {
+			$value = genscore_clean_alt( $value, $id );
+		}
+		if ( in_array( $kind, array( 'fresh', 'returns', 'h1', 'hreflang', 'shipping', 'rating', 'noindex', 'snippet', 'specs', 'cancel' ), true ) ) {
 			$value = null === genscore_fix_propose( $kind, $id ) ? null : '1';
 		}
 		if ( 'product' === $kind && genscore_shop_page_id() === $id ) {
@@ -995,6 +1018,7 @@ function genscore_ajax_fix_publish() {
 			$rec['prev'][ $id ] = $prev;
 			$rec['ids'][]       = $id;
 		}
+		$rec = genscore_extra_after_write( $kind, $id, $value, $rec );
 		genscore_forget_page_score( 0 === $id ? (int) get_option( 'page_on_front' ) : $id );
 		if ( 0 === $id ) {
 			$scores = genscore_page_scores();
@@ -1048,6 +1072,11 @@ function genscore_ajax_fix_undo() {
 	if ( isset( $rec['shipping_prev'] ) ) {
 		update_option( GENSCORE_SHIPPING_OPTION, $rec['shipping_prev'], false );
 	}
+	genscore_extra_undo( $rec );
+	if ( array_key_exists( 'site_prev', $rec ) ) {
+		update_option( GENSCORE_SITE_OPTION, $rec['site_prev'], false );
+		genscore_forget_all_scores();
+	}
 	if ( isset( $rec['prev'][0] ) ) {
 		$scores = genscore_page_scores();
 		unset( $scores[0] );
@@ -1055,7 +1084,7 @@ function genscore_ajax_fix_undo() {
 	}
 	unset( $all[ $batch ] );
 	update_option( GENSCORE_BATCHES_OPTION, $all, false );
-	wp_send_json_success( array( 'batches' => genscore_fix_batches_summary() ) );
+	wp_send_json_success( array( 'batches' => genscore_fix_batches_summary(), 'site' => genscore_site_screen_data() ) );
 }
 add_action( 'wp_ajax_genscore_fix_undo', 'genscore_ajax_fix_undo' );
 
@@ -1069,6 +1098,10 @@ function genscore_fix_batches_summary() {
 	$all = get_option( GENSCORE_BATCHES_OPTION, array() );
 	$out = array();
 	foreach ( is_array( $all ) ? $all : array() as $id => $b ) {
+		if ( array_key_exists( 'site_prev', $b ) ) {
+			$out[] = array( 'id' => (string) $id, 'kind' => $b['kind'], 'n' => 0, 'at' => (int) $b['at'], 'paths' => array(), 'site' => true );
+			continue;
+		}
 		if ( ! empty( $b['ids'] ) ) {
 			$paths = array();
 			foreach ( $b['ids'] as $pid ) {
@@ -1103,6 +1136,10 @@ function genscore_fix_screen_data() {
 		'returnsSet' => is_array( $r ) && ! empty( $r['days'] ),
 		'shipping'  => class_exists( 'WooCommerce' ) ? genscore_shipping_settings() : null,
 		'multilang' => genscore_multilingual_plugin(),
+		'cancel'    => genscore_cancel_settings(),
+		'cancelPages' => genscore_cancel_pages(),
+		'site'      => genscore_site_screen_data(),
+		'gotos'     => genscore_fix_gotos(),
 		'batches'   => genscore_fix_batches_summary(),
 		'chunk'     => GENSCORE_FIX_CHUNK,
 	);
@@ -1150,6 +1187,12 @@ function genscore_render_fix_meta_box( $post ) {
 		'rating'    => __( 'Valoración en los datos del producto', 'genscore' ),
 		'gtin'      => __( 'Código de producto (GTIN)', 'genscore' ),
 		'faq'       => __( 'Preguntas frecuentes', 'genscore' ),
+		'alt'       => __( 'Texto alternativo de las imágenes', 'genscore' ),
+		'noindex'   => __( 'Sin noindex', 'genscore' ),
+		'snippet'   => __( 'Sin nosnippet', 'genscore' ),
+		'specs'     => __( 'Tabla de características', 'genscore' ),
+		'cancel'    => __( 'Política de cancelación', 'genscore' ),
+		'cite'      => __( 'Dato con fuente', 'genscore' ),
 	);
 	echo '<ul style="margin:0">';
 	foreach ( GENSCORE_META as $field => $key ) {
@@ -1165,3 +1208,110 @@ function genscore_render_fix_meta_box( $post ) {
 	}
 	echo '</ul><p style="margin-bottom:0"><a href="' . esc_url( admin_url( 'admin.php?page=genscore' ) ) . '">' . esc_html__( 'Cambiarlo o deshacerlo en GenScore', 'genscore' ) . '</a></p>';
 }
+
+/* ------------------------------------------------------------------ */
+/* Site-wide switches (1.4.1)                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * What the screen needs to offer the site switches.
+ *
+ * @return array
+ */
+function genscore_site_screen_data() {
+	$s     = genscore_site_fixes();
+	$avail = array();
+	foreach ( array( 'sitemap', 'viewport', 'identity' ) as $k ) {
+		$avail[ $k ] = genscore_site_available( $k );
+	}
+	return array(
+		'on'        => array(
+			'sitemap'  => ! empty( $s['sitemap'] ),
+			'viewport' => ! empty( $s['viewport'] ),
+			'identity' => ! empty( $s['identity'] ),
+		),
+		'available' => $avail,
+		'identity'  => ! empty( $s['identity'] ) && is_array( $s['identity'] ) ? $s['identity'] : genscore_identity_defaults(),
+		'logo'      => genscore_site_logo(),
+		'sitemap'   => function_exists( 'get_sitemap_url' ) ? get_sitemap_url( 'index' ) : '',
+	);
+}
+
+/**
+ * «Ir al ajuste»: the WordPress screen that fixes a console check this plugin
+ * cannot fix by itself. Only when it really is there.
+ *
+ * @return array<string,array{url: string, label: string}>
+ */
+function genscore_fix_gotos() {
+	$out     = array();
+	$closed  = '0' === (string) get_option( 'blog_public' );
+	$reading = array( 'url' => admin_url( 'options-reading.php' ), 'label' => __( 'Ir a Ajustes de lectura', 'genscore' ) );
+	$seo     = genscore_seo_plugin();
+	if ( 0 === strpos( (string) get_option( 'home' ), 'http://' ) || 0 === strpos( (string) get_option( 'siteurl' ), 'http://' ) ) {
+		$out['https_redirect'] = array( 'url' => admin_url( 'options-general.php' ), 'label' => __( 'Ir a Ajustes generales', 'genscore' ) );
+	}
+	if ( class_exists( 'WooCommerce' ) ) {
+		$out['quick_pay'] = array( 'url' => admin_url( 'admin.php?page=wc-settings&tab=checkout' ), 'label' => __( 'Ir a los pagos', 'genscore' ) );
+	}
+	if ( $closed ) {
+		$out['noindex']         = $reading;
+		$out['sitemap_missing'] = $reading;
+		$out['sitemap']         = $reading;
+	} elseif ( $seo && genscore_seo_settings_url( 'sitemap' ) ) {
+		/* translators: %s: SEO plugin name. */
+		$label                  = sprintf( __( 'Ir a %s', 'genscore' ), $seo['name'] );
+		$out['sitemap_missing'] = array( 'url' => genscore_seo_settings_url( 'sitemap' ), 'label' => $label );
+		$out['sitemap']         = $out['sitemap_missing'];
+	}
+	if ( $seo && genscore_seo_settings_url( 'social' ) ) {
+		/* translators: %s: SEO plugin name. */
+		$out['open_graph'] = array( 'url' => genscore_seo_settings_url( 'social' ), 'label' => sprintf( __( 'Ir a %s', 'genscore' ), $seo['name'] ) );
+	}
+	if ( genscore_seo_prints_schema() && genscore_seo_settings_url( 'identity' ) ) {
+		/* translators: %s: SEO plugin name. */
+		$out['local_business_missing'] = array( 'url' => genscore_seo_settings_url( 'identity' ), 'label' => sprintf( __( 'Ir a %s', 'genscore' ), $seo['name'] ) );
+		$out['identity']               = $out['local_business_missing'];
+	}
+	return $out;
+}
+
+/**
+ * AJAX: turns a site switch on, or updates who is behind the site. Undoable
+ * like every fix; every page's score is read again, because it counts on all.
+ */
+function genscore_ajax_site_publish() {
+	check_ajax_referer( 'genscore', 'nonce' );
+	genscore_ajax_guard();
+	$kind  = isset( $_POST['kind'] ) ? sanitize_key( wp_unslash( $_POST['kind'] ) ) : '';
+	$batch = isset( $_POST['batch'] ) ? sanitize_key( wp_unslash( $_POST['batch'] ) ) : '';
+	if ( ! in_array( $kind, array( 'sitemap', 'viewport', 'identity' ), true ) || ! preg_match( '/^[a-z0-9]{12}$/', $batch ) ) {
+		wp_send_json_error( null, 400 );
+	}
+	$ok = genscore_site_available( $kind );
+	if ( true !== $ok ) {
+		wp_send_json_error( array( 'message' => $ok ), 400 );
+	}
+	$s    = genscore_site_fixes();
+	$prev = $s;
+	if ( 'identity' === $kind ) {
+		$i = genscore_clean_identity( isset( $_POST['identity'] ) && is_array( $_POST['identity'] ) ? wp_unslash( $_POST['identity'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every value is checked in genscore_clean_identity().
+		if ( ! $i ) {
+			wp_send_json_error( array( 'message' => __( 'Revisa los datos: nombre, una forma de contacto y, en un negocio local, la dirección completa. El horario va como «Mo-Fr 09:00-18:00».', 'genscore' ) ), 400 );
+		}
+		$s['identity'] = $i;
+	} else {
+		$s[ $kind ] = true;
+	}
+	update_option( GENSCORE_SITE_OPTION, $s, false );
+	$all           = get_option( GENSCORE_BATCHES_OPTION, array() );
+	$all           = is_array( $all ) ? $all : array();
+	$all[ $batch ] = array( 'kind' => $kind, 'at' => time(), 'ids' => array(), 'prev' => array(), 'site_prev' => $prev );
+	if ( count( $all ) > 20 ) {
+		$all = array_slice( $all, -20, null, true );
+	}
+	update_option( GENSCORE_BATCHES_OPTION, $all, false );
+	genscore_forget_all_scores();
+	wp_send_json_success( array( 'batches' => genscore_fix_batches_summary(), 'site' => genscore_site_screen_data(), 'gen' => genscore_scores_gen() ) );
+}
+add_action( 'wp_ajax_genscore_site_publish', 'genscore_ajax_site_publish' );

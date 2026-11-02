@@ -1,37 +1,76 @@
-=== GenScore: visibilidad en IA, llms.txt y bots de IA ===
+=== GenScore: AI SEO & GEO Optimizer, llms.txt, Schema & AI Bots ===
 Contributors: genscore
-Tags: llms.txt, robots.txt, ai, seo, chatgpt
+Tags: ai seo, geo, llms.txt, schema, woocommerce
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Check whether ChatGPT, Gemini, Claude and Perplexity can read your site, publish your llms.txt, control AI bots in robots.txt and review basic SEO.
+One-click AI SEO and GEO fixes: schema, llms.txt, AI bots and WooCommerce data, so ChatGPT, Gemini, Claude and AI shopping agents understand you.
 
 == Description ==
 
-GenScore reviews your site from inside wp-admin (the home page and your most important pages, products and posts) and gives it an SEO + AI score, split into three lanes:
+**People now ask ChatGPT, Gemini, Claude and Perplexity what to buy and who to hire. GenScore checks whether those AI engines, Google and AI shopping agents can read your WordPress site, and fixes what stops them in one click.**
 
-* **GEO**: can ChatGPT, Gemini, Claude and Perplexity read and quote your site? Which AI bots does your robots.txt let in? Do you publish an llms.txt?
-* **SEO**: title, description, canonical, headings, language, structured data, plus WordPress settings (search engine visibility, sitemap, HTTPS, permalinks) and a list of pages, posts and products missing a description or image alt text.
-* **Agents**: can a shopping agent understand what you sell, its price and how to buy it?
+GenScore is a free **AI SEO and GEO (Generative Engine Optimization) plugin**. It reviews your home page and your most important pages, posts and WooCommerce products from inside wp-admin and gives your site a technical optimization score in three lanes:
 
-Each lane lists what to fix first, with the points it adds and, where it applies, the exact snippet to paste.
+* **GEO (AI search):** can ChatGPT, Gemini, Claude and Perplexity read and quote your pages? Which AI crawlers does your robots.txt let in? Do you publish an llms.txt? Do your pages answer the question in the first lines?
+* **SEO:** title, meta description, canonical URL, headings, language, Open Graph, structured data (JSON-LD schema), plus WordPress settings (search engine visibility, XML sitemap, HTTPS, permalinks).
+* **AI agents (agentic commerce):** can a shopping agent understand what you sell, its price, stock, shipping and returns, and how to buy it?
 
-It also lets you:
+= Fix it in one click =
 
-* **Fix it in one click.** For structured data (JSON-LD), descriptions, titles, canonical URLs, a visible update date and, with WooCommerce, product data and your returns policy, GenScore proposes the fix for each page from data WordPress already has (title, excerpt, permalink, last edit, price, stock). You pick the pages, review and edit each proposal, confirm, and it is published on those pages. Descriptions, titles and canonicals go to your SEO plugin's own fields when you use Yoast SEO, Rank Math or SEOPress. Post content is never rewritten, and every publish can be undone.
+Every recommendation comes with the fix. GenScore proposes it for each page from data WordPress and WooCommerce already have (title, excerpt, permalink, last edit, price, stock, shipping zones, reviews). You tick the pages, review and edit each proposal, confirm, and it is published. Every publish can be undone.
 
-* **Allow or block AI bots** (OpenAI, Anthropic, Perplexity and Google-Extended), search bots and training bots separately. GenScore only adds its own group to the robots.txt WordPress serves. It never touches the `*` group, Googlebot or Bingbot, and it never writes a file.
-* **Publish /llms.txt**, generated from your pages, products and posts with their own excerpts. You can edit it. If Yoast SEO, Rank Math or All in One SEO already publish one, or a physical llms.txt exists, GenScore leaves it alone.
+One-click fixes include:
 
-The review runs in your browser, on your own site, and the scores are stored in your own WordPress. Nothing is sent anywhere.
+* **Schema / structured data (JSON-LD)** for pages, posts, products, Organization and LocalBusiness.
+* **Meta descriptions, titles and canonical URLs**, written to Yoast SEO, Rank Math or SEOPress fields when you use them.
+* **Answer-first intro paragraph**, the short answer AI engines like to quote (taken from your excerpt or written by you, never invented).
+* **Visible update date**, headings (H1 and H2), **Open Graph** tags, **hreflang** and image **alt text**.
+* **WooCommerce product data for AI agents:** price and stock always live from WooCommerce, **shipping details**, **returns and cancellation policy**, **rating from real reviews**, **GTIN / barcode** with check-digit validation and a specifications table.
+* **Site-wide fixes:** XML sitemap, mobile viewport and who is behind the site.
 
-= Full analysis with a GenScore account =
+Your post content is never rewritten: fixes are stored as page data and served through WordPress filters.
 
-The plugin works on its own and is free. A GenScore account at genscore.es adds what only repeated questions to the AI engines can measure: how often each engine names your brand, which of your pages they cite, which competitors appear before you, Search Console data, and audits of your whole domain. Accounts start with a 7-day Pro trial, no card required.
+= Control AI bots and publish llms.txt =
+
+* **AI crawler switches in robots.txt** for OpenAI (OAI-SearchBot, GPTBot), Anthropic (ClaudeBot), Perplexity, Google-Extended and Meta, with search bots and training bots set separately. GenScore only adds its own group to the robots.txt WordPress serves. It never touches the `*` group, Googlebot or Bingbot, and never writes a file.
+* **llms.txt generator:** publish /llms.txt from your pages, products and posts with their own excerpts, and edit it. If Yoast SEO, Rank Math or All in One SEO already publish one, GenScore leaves it alone.
+
+= Turn AI recommendations into drafts =
+
+With a GenScore account connected, the plugin brings GenScore's recommendations into WordPress and acts on them:
+
+* **«Crear borrador»** creates a draft page that answers the questions AI engines are asked about your business, or a comparison page with a rival (your column filled from WooCommerce, the rival's cells left for you to source). Drafts are never published by the plugin.
+* **«Añadir preguntas»** adds a FAQ to a page you already have (with FAQPage data when no SEO plugin prints schema).
+* Each GenScore audit issue (GEO, SEO and agentic) offers **«Arreglar»** with the affected pages already ticked.
+
+= Measure whether AI actually names you (GenScore account) =
+
+A technically optimized site is the start, not the result. Whether the AI recommends you also depends on what other sites say about you and on whether you answer people's questions. A GenScore account at genscore.es adds what only asking the AI engines again and again can measure:
+
+* **GEO Score:** how often ChatGPT, Gemini, Claude and Perplexity name your brand.
+* **Competitors** that appear before you, and which of your pages the engines cite.
+* **SEO health and agentic audit** of your whole domain, and Google Search Console data.
+
+Connect it from the plugin with «Conectar con GenScore»: read-only, approved on genscore.es, and «Desconectar» removes the access. New accounts start with a 7-day Pro trial, no card required.
+
+= Who it is for =
+
+* WordPress and WooCommerce store owners who want to appear in AI answers and AI shopping agents.
+* Marketers and SEO agencies working on AI SEO, GEO, AEO (answer engine optimization) or LLM optimization.
+* Anyone who wants llms.txt, AI crawler control and schema without editing code.
+
+= Privacy =
+
+The review runs in your browser, on your own site, and the scores are stored in your own WordPress. Without a connected account, nothing is sent anywhere.
+
+= Language =
+
+The plugin screens are in Spanish.
 
 == External services ==
 
@@ -45,48 +84,88 @@ The plugin also contains links to genscore.es (sign-up, log-in, the free checker
 
 == Installation ==
 
-1. Upload the `genscore` folder to `/wp-content/plugins/`, or install it from Plugins > Add New.
-2. Activate it.
-3. Open **GenScore** in the admin menu. The review starts on its own.
+1. In wp-admin, go to Plugins > Add New, search for **GenScore** and click Install, then Activate. Or upload the `genscore` folder to `/wp-content/plugins/`.
+2. Open **GenScore** in the admin menu. The review of your site starts on its own.
+3. Press **Arreglar** on any recommendation to review and publish the fix.
+4. Optional: press **Conectar con GenScore** to see your GEO Score, competitors and GenScore's recommendations.
 
 == Frequently Asked Questions ==
 
-= Does blocking training bots remove me from AI answers? =
+= What is GEO (Generative Engine Optimization)? =
+
+GEO is the work of making your site easy for AI engines such as ChatGPT, Gemini, Claude and Perplexity to read, understand and cite in their answers. It builds on SEO: clean structured data, clear answers in the first lines, an llms.txt and letting AI search crawlers in.
+
+= Is this an AI SEO plugin? Does it use AI to write the fixes? =
+
+It is an SEO and GEO plugin for AI search, but it does not use AI to write anything. Every proposal is built from your own WordPress and WooCommerce data, with no external service, and you review it before it is published.
+
+= Does blocking AI training bots remove me from ChatGPT answers? =
 
 No. ChatGPT, Claude and Perplexity answer with web search using their search bots. Training bots only decide whether your pages can be used to train future models. GenScore lets you set each one separately.
 
-= My site has a robots.txt file in its root folder. =
+= What is llms.txt and do I need it? =
 
-The web server serves that file before WordPress, so the switches cannot change it. GenScore tells you and shows the lines to copy into it.
+llms.txt is a plain-text summary of your site for large language models: your main pages with a short description. GenScore generates it from your content, lets you edit it and serves it at /llms.txt. If another plugin already publishes one, GenScore leaves it alone.
 
 = Does it work with Yoast SEO, Rank Math, SEOPress or All in One SEO? =
 
-Yes. It reads their meta descriptions and sitemaps, and it does not publish an llms.txt when one of them already does.
+Yes. It reads their meta descriptions and sitemaps, writes descriptions and titles to their own fields, does not add a second schema graph when they print one, and does not publish an llms.txt when one of them already does.
+
+= Does it work with WooCommerce? =
+
+Yes. It reviews your product pages for AI shopping agents and adds product schema, live price and stock, shipping details, returns policy, rating from real reviews and GTIN, all from WooCommerce data.
 
 = Does it write anything in my pages? =
 
 Only what you accept in «Arreglar», after a confirmation. It is stored as page data (post meta), never in the post content: the editor shows a «Publicado por GenScore» box, and «Deshacer» puts back what was there. Uninstalling the plugin removes GenScore's own fields; what it wrote in your SEO plugin's fields stays, as your description or title.
 
-= Does it use AI to write the proposals? =
-
-No. Every proposal is built from your own WordPress data, with no external service.
-
 = Does the review slow down my site? =
 
-No. It runs only when you open the GenScore screen, in your browser, reading your important pages one after another (two at a time). The scores are stored in your site, so the next time only pages that changed are read again.
+No. It runs only when you open the GenScore screen, in your browser, reading your important pages two at a time. The scores are stored in your site, so next time only pages that changed are read again.
 
-= What does connecting my GenScore account add? =
+= My site has a robots.txt file in its root folder. =
 
-The figures of your account for this domain, the same ones the GenScore Chrome extension shows: your Puntuación GEO, how often each engine names you, your competitors, the SEO health of the whole domain, Search Console, the agent score and your next actions. It only reads: nothing in your account changes from WordPress.
+The web server serves that file before WordPress, so the switches cannot change it. GenScore tells you and shows the lines to copy into it.
+
+= Do I need a GenScore account? =
+
+No. The review, the one-click fixes, the AI bot switches and llms.txt are free and work without an account. An account adds what the plugin cannot measure from your site: how often each AI engine names you, your competitors and GenScore's recommendations.
+
+= Is the interface in English? =
+
+Not yet: the screens are in Spanish.
 
 == Screenshots ==
 
-1. Summary: the SEO + AI score and what to fix first.
-2. GEO: which engines can read your home page, AI bot switches and llms.txt.
-3. SEO: home page checks, WordPress settings and pages to review.
-4. Agents: what a shopping agent can read.
+1. Summary with a GenScore account: technical optimization, GEO Score, domain audits and GenScore's recommendations, each with its fix.
+2. One-click structured data (JSON-LD schema): pick the pages, review and edit each proposal before publishing.
+3. Published on the pages you chose, with Undo.
+4. SEO: meta descriptions proposed from each page's excerpt or first paragraph, written to your SEO plugin when you use one.
+5. AI shopping agents: shipping details for every WooCommerce product, from your shipping zones.
+6. A comparison draft with a rival: your column from WooCommerce, the rival's cells left for you to source.
+7. GEO tab: GenScore's plan, how often each AI engine names you and which AI crawlers can read your home page.
+8. AI bot switches for robots.txt: search and training bots set separately for ChatGPT, Claude, Perplexity, Gemini and Meta.
+9. Without an account: the technical review and what to fix first, free.
+10. GenScore column in your pages, posts and products lists.
 
 == Changelog ==
+
+= 1.4.2 =
+* Open Graph descriptions keep a space between blocks and no longer render blocks inside the page head, so the theme's block styles stay as they were.
+* Text taken from a page ends each heading as a sentence, so a description no longer runs the title into the next paragraph.
+* Alt text never proposes a title WordPress made from the file name, and leaves product images alone (WooCommerce already gives them the product name).
+* On mobile, a form error shows above the publish button.
+* The cancellation policy is offered on products only, and the specifications table only where WooCommerce does not already show one.
+* «Who is behind the site» no longer fills in the store's sender email.
+* The rating fix is not offered without real reviews; the recommendation says «Sin reseñas».
+* Comparison drafts and the copied table use the site's name, and the «[Pendiente…]» cells show in grey in the editor and on the page.
+
+= 1.4.1 =
+* New one-click fixes in the page sheet, undoable: alt text for images without it (from the media library or the page title, never a file name), noindex and blocked snippets (with Yoast, Rank Math or SEOPress), a specifications table from WooCommerce attributes, weight and dimensions, and a cancellation policy linked to the page that explains it.
+* Site-wide fixes in their own window, undoable: the WordPress sitemap at /sitemap.xml, the mobile viewport when the theme lacks it, and who is behind the site (Organization or LocalBusiness) from WordPress and WooCommerce data you review.
+* «Añadir dato» publishes a checkable fact with its source and date on the page a recommendation names.
+* «Copiar tabla y abrir» copies the comparison table (the rival's cells always pending) and opens the page in the editor.
+* When WordPress fixes something in another screen (HTTPS, payments, search visibility, your SEO plugin), the recommendation takes you there.
 
 = 1.4.0 =
 * «Publica tu comparativa con…» creates a draft page with a table: your column is filled from WooCommerce (price from, shipping, returns, rating) and the rival's cells say «[Pendiente: dato, enlace y fecha]». The editor warns while any is left.
@@ -180,7 +259,6 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 
 = 1.0.0 =
 * First release.
-
 == Credits ==
 
 Bundled fonts: Figtree (SIL Open Font License 1.1) and JetBrains Mono (SIL Open Font License 1.1).

@@ -81,6 +81,9 @@ function genscore_more_available( $kind ) {
 	if ( in_array( $kind, array( 'shipping', 'rating', 'gtin' ), true ) && ! $woo ) {
 		return __( 'Hace falta WooCommerce.', 'genscore' );
 	}
+	if ( 'rating' === $kind && ! genscore_any_rated_product() ) {
+		return __( 'Sin reseñas: la valoración sólo se publica con reseñas reales de tus clientes.', 'genscore' );
+	}
 	if ( 'og' === $kind && genscore_seo_plugin() ) {
 		$seo = genscore_seo_plugin();
 		/* translators: %s: SEO plugin name. */
@@ -91,6 +94,33 @@ function genscore_more_available( $kind ) {
 		return sprintf( __( '%s ya gestiona los idiomas de tu web: revisa sus ajustes.', 'genscore' ), genscore_multilingual_plugin() );
 	}
 	return true;
+}
+
+/**
+ * Whether any published product has a real rating to declare.
+ *
+ * @return bool
+ */
+function genscore_any_rated_product() {
+	$ids = get_posts(
+		array(
+			'post_type'      => 'product',
+			'post_status'    => 'publish',
+			'posts_per_page' => 1,
+			'fields'         => 'ids',
+			'no_found_rows'  => true,
+			// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- one row, admin screen only.
+			'meta_query'     => array(
+				array(
+					'key'     => '_wc_review_count',
+					'value'   => 0,
+					'compare' => '>',
+					'type'    => 'NUMERIC',
+				),
+			),
+		)
+	);
+	return ! empty( $ids );
 }
 
 /* ------------------------------------------------------------------ */
@@ -426,7 +456,7 @@ function genscore_with_more( $data, $id ) {
 	if ( '' !== $gtin && empty( $data['gtin'] ) ) {
 		$data['gtin'] = $gtin;
 	}
-	return $data;
+	return genscore_with_cancel( $data, $id );
 }
 
 /* ------------------------------------------------------------------ */
@@ -660,7 +690,7 @@ function genscore_og_description( $id ) {
 	$t = genscore_fix_get( $id, 'desc' );
 	if ( '' === $t ) {
 		$post = $id ? get_post( $id ) : null;
-		$t    = $post ? ( '' !== trim( $post->post_excerpt ) ? $post->post_excerpt : wp_trim_words( excerpt_remove_blocks( $post->post_content ), 35, '…' ) ) : get_bloginfo( 'description' );
+		$t    = $post ? ( '' !== trim( $post->post_excerpt ) ? $post->post_excerpt : wp_trim_words( genscore_plain_text( $post->post_content ), 35, '…' ) ) : get_bloginfo( 'description' );
 	}
 	$t = trim( preg_replace( '/\s+/u', ' ', html_entity_decode( wp_strip_all_tags( strip_shortcodes( (string) $t ) ), ENT_QUOTES, 'UTF-8' ) ) );
 	return mb_strlen( $t ) > 200 ? rtrim( mb_substr( $t, 0, 199 ) ) . '…' : $t;
