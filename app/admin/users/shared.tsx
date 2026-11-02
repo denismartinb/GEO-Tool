@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-format";
 import type { AccountAutomation, ProjectAutomation } from "@/lib/admin/automation";
 import { setAutoAuditHalfAsOperator, setRecurringScansAsOperator } from "@/lib/admin/automation-actions";
+import type { AdminGeoScore } from "@/lib/admin/geo-scores";
 import type { AdminUserDetail, AdminUserRow, AdminUserStatus } from "@/lib/admin/users";
 
 /**
@@ -189,6 +190,43 @@ export function HealthCell({ health }: { health: AdminUserRow["health"] }) {
   );
 }
 
+/**
+ * ADMIN-GEO-SCORE-1. La cifra es la de Visión general; «*» marca muestra
+ * pequeña (menos respuestas de las que la consola exige para la franja), y
+ * «sin escanear» / «sin dato» nunca se pintan como un cero.
+ */
+export function GeoScoreValue({ score }: { score: AdminGeoScore }) {
+  if (score.state === "unscored") return <span className="adm-dim">sin escanear</span>;
+  if (score.state === "unavailable") return <span className="adm-dim">sin dato</span>;
+  return (
+    <span
+      className="adm-geo-v"
+      title={
+        score.lowConfidence
+          ? `Muestra pequeña · último escaneo ${formatShortDate(score.scoredAt)}`
+          : `Último escaneo ${formatShortDate(score.scoredAt)}`
+      }
+    >
+      {score.value}
+      {score.lowConfidence ? <span className="adm-geo-low">*</span> : null}
+    </span>
+  );
+}
+
+export function GeoScoresCell({ scores }: { scores: AdminUserRow["domainScores"] }) {
+  if (scores.length === 0) return <span className="adm-dim">—</span>;
+  return (
+    <ul className="adm-geo-list">
+      {scores.map((entry) => (
+        <li key={entry.projectId}>
+          <span className="adm-geo-d">{entry.domain}</span>
+          <GeoScoreValue score={entry.geoScore} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function UserDetailPanel({
   detail,
   q,
@@ -278,6 +316,10 @@ export function UserDetailPanel({
                     {project.isArchived ? " (archivado)" : ""}
                   </span>
                   <span className="adm-proj-s">
+                    <span className="adm-proj-geo">
+                      Puntuación GEO <GeoScoreValue score={project.geoScore} />
+                    </span>
+                    {" · "}
                     {project.latestScan
                       ? `${project.latestScan.status} · ${formatShortDate(project.latestScan.createdAt)}`
                       : "sin escaneos"}

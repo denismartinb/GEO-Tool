@@ -29574,3 +29574,16 @@ sustituye a las primeras reseñas.
 - El alta con Google sigue sin dominio en su aviso: llevarlo por la URL de vuelta de OAuth tocaría la lista de redirecciones de Supabase. Lo cubre el aviso de primer escaneo.
 
 **Pendiente o conocido.** El pilot de escritura (`mozilla.org`) también avisa la primera vez que crea su proyecto; sale marcado como «Cuenta interna de prueba: Sí».
+
+## §445 · ADMIN-GEO-SCORE-1: Puntuación GEO de cada dominio en la consola de operador (2026-11-02)
+
+**Qué se decidió.** Denis pidió ver en `/admin/users` la Puntuación GEO de cada dominio que registran y escanean los usuarios.
+
+- **Columna «Puntuación GEO»** en la tabla de usuarios: una línea por dominio activo de la cuenta, con su cifra. En la ficha, cada dominio (también los archivados) añade «Puntuación GEO N» antes del último escaneo.
+- **La cifra es la de Visión general.** `lib/admin/geo-scores.ts` lee las `GEO_SCORE_LOOKBACK_ROWS` filas más recientes de `run_scores` de cada proyecto y llama a `resolveGeoScore`, igual que la consola, el informe y los correos (TRUST-METRICS-1, §183). No se recalcula ni se usa `visibility_score`.
+- **Nada se pinta como cero.** Sin escaneos puntuados dice «sin escanear»; si la lectura falla, «sin dato». Un asterisco marca muestra pequeña (`lowConfidence`), con la fecha del último escaneo en el `title`.
+- **Una consulta por proyecto**, de ocho en ocho, con `limit` propio: es la única forma de leer las siete últimas de cada uno sin traer el historial entero de `run_scores` con su `details_json`.
+
+**Por qué así.** El operador tiene que ver el mismo número que el cliente; dos puntuaciones distintas para el mismo dominio es justo el fallo que TRUST-METRICS-1 cerró. Sólo lectura, sin migración, sin escrituras nuevas en `/admin`.
+
+**Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
