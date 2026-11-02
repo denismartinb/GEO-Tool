@@ -35,6 +35,20 @@ export function takePendingDomain(): string {
 }
 
 /**
+ * Lee el dominio pendiente SIN borrarlo (OPS-FIRST-SCAN-1, log §441): el
+ * formulario de alta lo manda al servidor sólo para el aviso de alta del
+ * operador, y el asistente tiene que seguir encontrándolo después.
+ */
+export function peekPendingDomain(): string {
+  try {
+    const value = window.localStorage.getItem(PENDING_DOMAIN_KEY) ?? "";
+    return isWellFormedDomain(value) ? cleanDomain(value) : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * El dominio que llega en `/signup?dominio=` desde el plugin de WordPress
  * (WP-PLUGIN-1). Sólo se guarda lo que el asistente aceptaría, con el mismo
  * `isWellFormedDomain` que el hero, nunca una copia. Devuelve lo guardado, o ""
