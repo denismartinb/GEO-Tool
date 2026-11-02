@@ -584,7 +584,12 @@
     const body = bl.map(([k, b]) => laneBox(k, () => (k !== "google" && sc ? whoRow(k, sc, f, "/") : "") + (k === "ia" ? probeCard() : "") + audBody(B(b)) + (k === "google" ? gscBlock() : ""))).join("");
     /* block points are not additive (lib/ext/audits.ts), so these cards never sum into «Hasta +N pt» */
     const top = bl.flatMap(([k, b]) => B(b).issues.map((x) => ({ ...x, lane: k, blk: b }))).filter((x) => x.points != null).sort((a, b) => b.points - a.points).slice(0, 3);
-    const cards = deck(top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) })), "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
+    /* 1.5.2 (Denis, 2026-11-02): the server audit only sees HTML, so content
+       that only JavaScript paints never reaches these cards. When the open page
+       has it, its card goes first here too, labelled «En esta página». */
+    const ai = sc && sc.fixes ? sc.fixes.find((x) => x.id === "ai-html") : null;
+    const webCards = top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) }));
+    const cards = deck(ai ? [ai, ...webCards] : webCards, "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
     return { hero, lanes, body, cards };
   }
   function teaser(k) {
