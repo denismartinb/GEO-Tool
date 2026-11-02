@@ -71,6 +71,27 @@ describe("WordPress plugin", () => {
     expect(src).toContain("genscore_account_data( false )");
   });
 
+  // WP-PLUGIN-4 (1.4.0, log §432): the questions come from GenScore's plan on
+  // the server; the browser only sends the answers the person wrote.
+  it("«Añadir preguntas» only publishes answers to the plan's own questions", () => {
+    const src = read(join(PLUGIN, "includes/drafts.php"));
+    const fn = "genscore_ajax_faq_publish";
+    const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+    expect(body).toContain("check_ajax_referer( 'genscore', 'nonce' )");
+    expect(body).toContain("genscore_ajax_guard()");
+    expect(body).toContain("$item['questions']");
+    expect(body).toContain("genscore_clean_faq(");
+    expect(body).not.toMatch(/wp_update_post|post_content/);
+  });
+
+  // A rival's facts are never written by the plugin: their cells say what is missing.
+  it("comparison drafts never fill a rival's cell", () => {
+    const src = read(join(PLUGIN, "includes/drafts.php"));
+    expect(src).toContain("define( 'GENSCORE_PENDING', '[Pendiente' );");
+    const body = src.slice(src.indexOf("function genscore_draft_content("));
+    expect(body).toContain("array_fill( 0, count( $rivals ), GENSCORE_PENDING . ': dato, enlace y fecha]' )");
+  });
+
   it("the token never reaches the browser", () => {
     const screen = read(join(PLUGIN, "includes/account.php"));
     const data = screen.slice(screen.indexOf("function genscore_account_screen_data"));

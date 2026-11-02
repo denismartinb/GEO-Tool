@@ -29240,6 +29240,46 @@ Maqueta aprobada con «Crear borrador» (decisión de Denis, 2026-11-02).
   «Abrir borrador». Desinstalar borra la lista, no los borradores.
 - La tarjeta de Agentes «Nota para agentes» pasa a «Auditoría agéntica».
 
+**Adenda 1.4.0 (plugin, WP-PLUGIN-4, 2026-11-02).** Denis pidió que cada
+recomendación tenga una solución directa en WordPress y se publique donde se
+pueda (comparativa como borrador, `<h2>`, Open Graph, hreflang y envío desde
+la hoja de páginas). Se repasaron todos los tipos en una propuesta (artifact
+SPWgjFTQUfxcxhKMxfeqFP) y Denis aprobó dos entregas: ésta y la 1.4.1.
+
+- **`/api/ext/project` manda, en cada acción del plan, `type`, `rival`,
+  `page` y `drivers`** (`toExtPlanItem`, `recommendationSubjects`). `page`
+  sólo es una URL propia http(s) y sólo cuando la cobertura confirmó la
+  página. `isDraftable` pasa a decidir por tipo: preguntas, comparativa con un
+  rival, comparativa general y respuesta a críticas.
+- **Borradores nuevos**: «Marca frente a Rival» (página) con una tabla cuya
+  columna propia sale de WooCommerce (precio desde, envío, devoluciones,
+  valoración) o queda «[Pendiente: tu dato]», y la del rival siempre
+  «[Pendiente: dato, enlace y fecha]»; las preguntas como `<h2>` y una sección
+  «Fuentes». La respuesta a críticas lleva un `<h2>` por motivo. Una caja en el
+  editor cuenta los huecos que quedan. Nunca se publica.
+- **«Añadir preguntas»**: si el plan apunta a una página tuya, la persona
+  escribe las respuestas (5 palabras o más) y salen al final de esa página, con
+  `FAQPage` si no hay plugin SEO que pinte schema. Las preguntas salen del plan
+  guardado en el servidor; el navegador sólo manda respuestas. Se deshace.
+- **Arreglos nuevos en la hoja de páginas**: al menos dos `<h2>` (una línea en
+  negrita pasa a `<h2>`, o encabezados que escribe la persona), un solo `<h1>`
+  (los del contenido se sirven como `<h2>`), Open Graph (no con plugin SEO),
+  hreflang (no con WPML, Polylang ni TranslatePress), envío (coste y gratis
+  desde de las zonas de WooCommerce del país de la tienda, plazos escritos una
+  vez), valoración media (sólo reseñas reales) y GTIN (con dígito de control).
+  Todo por filtros y `_genscore_*`, con deshacer; el contenido no se toca.
+- **«Arreglado aquí» de estos tipos** sólo sale si una publicación que aún se
+  puede deshacer cubre todas las páginas de la auditoría (`paths` en el
+  resumen de lotes), porque la revisión local no los lee.
+- **Desvíos de la propuesta**: el GTIN se guarda en `_genscore_gtin`, no en el
+  campo de WooCommerce (para poder deshacer sin tocar el producto); los huecos
+  del borrador son marcadores grises y la caja del editor, no texto amarillo;
+  el borrador de página mejorada lleva el hueco de respuesta corta y los
+  `<h2>`, sin bloque FAQ ni fecha aparte.
+- **Pendiente (1.4.1)**: texto alternativo, sitemap, viewport, noindex,
+  nosnippet, LocalBusiness, Organization, dato con fuente, cancelación, tabla
+  de especificaciones y avisos de «ir a un ajuste».
+
 ## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
 
 **Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),

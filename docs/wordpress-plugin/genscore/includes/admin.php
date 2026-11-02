@@ -110,6 +110,7 @@ function genscore_screen_data() {
 		'last'     => get_option( 'genscore_last_review', null ),
 		'account'  => genscore_account_screen_data(),
 		'drafts'   => genscore_drafts_screen_data(),
+		'planPages' => genscore_plan_pages_screen_data(),
 		'links'    => array(
 			'app'     => GENSCORE_APP,
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),

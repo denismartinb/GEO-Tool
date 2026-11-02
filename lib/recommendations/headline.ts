@@ -145,6 +145,19 @@ function coverageSaysCreate(coverage: HeadlineCoverage): boolean {
   return Boolean(coverage && coverage.state !== "confirmed_surfacing_gap");
 }
 
+/**
+ * What a surface that acts on the recommendation needs to name, beyond the
+ * headline (WP-PLUGIN-4, log §432 adenda 1.4.0): the rival of a comparison
+ * card and the criticisms the AI repeats. Same evidence the headline reads.
+ */
+export function recommendationSubjects(rec: HeadlineInput): { rival: string | null; drivers: string[] } {
+  const ev = asEvidence(rec.evidence_json);
+  const rival =
+    rec.recommendation_type === "close_competitor_gap" ? competitorFrom(ev, rec.title, /^Disputa a (.+?) \d+ consulta/) : null;
+  const drivers = rec.recommendation_type === "address_negative_narrative" ? strings(ev.sentiment_drivers).slice(0, 6) : [];
+  return { rival, drivers };
+}
+
 export function recommendationHeadline(rec: HeadlineInput, coverage?: HeadlineCoverage): Headline {
   const ev = asEvidence(rec.evidence_json);
   const prompts = strings(ev.affected_prompts);

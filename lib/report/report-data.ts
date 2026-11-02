@@ -1,4 +1,4 @@
-import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline, recommendationSubjects } from "@/lib/recommendations/headline";
 import "server-only";
 
 import { parseCoverageMap, COULD_NOT_VERIFY_NOTE } from "@/lib/web-audit/coverage-map";
@@ -276,7 +276,9 @@ export async function loadReportInput({
         .filter((p): p is string => typeof p === "string" && p.length > 0),
       topics: [...topics],
       questions: [...questions],
-      type: lever ? (lever.theme.kind === "definition" ? "lever_definition" : "lever") : r.recommendation_type
+      type: lever ? (lever.theme.kind === "definition" ? "lever_definition" : "lever") : r.recommendation_type,
+      ...(lever ? {} : recommendationSubjects(r)),
+      page: overlay?.state === "confirmed_surfacing_gap" ? (overlay.verifiedPage?.url ?? null) : null
     };
   });
 

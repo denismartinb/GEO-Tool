@@ -69,6 +69,12 @@ export type ReportPlanItem = {
   questions?: string[];
   /** The recommendation type, or «lever» for a page lever (log §432). Absent in older inputs. */
   type?: string;
+  /** The rival a comparison card names (close_competitor_gap). WP-PLUGIN-4, log §432 adenda 1.4.0. */
+  rival?: string | null;
+  /** The own page coverage confirmed for the questions, when there is one. */
+  page?: string | null;
+  /** Criticisms the AI repeats (address_negative_narrative). */
+  drivers?: string[];
 };
 
 export type ReportInput = {

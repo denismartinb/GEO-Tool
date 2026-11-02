@@ -36,7 +36,7 @@ function genscore_fix_kinds() {
 		'fresh'   => array( 'types' => array( 'page', 'post' ), 'ids' => array( 'fresh' ) ),
 		'returns' => array( 'types' => array( 'product' ), 'ids' => array( 'returns' ) ),
 		'lead'    => array( 'types' => array( 'page', 'post', 'product' ), 'ids' => array( 'lead' ) ),
-	);
+	) + genscore_more_kinds();
 }
 
 /**
@@ -46,6 +46,9 @@ function genscore_fix_kinds() {
  * @return string|true
  */
 function genscore_fix_available( $kind ) {
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_available( $kind );
+	}
 	$woo = class_exists( 'WooCommerce' ) && function_exists( 'wc_get_product' );
 	if ( in_array( $kind, array( 'product', 'returns' ), true ) && ! $woo ) {
 		return __( 'Hace falta WooCommerce.', 'genscore' );
@@ -72,7 +75,7 @@ function genscore_fix_store( $kind ) {
 			return array( 'm', $key );
 		}
 	}
-	return array( 'g', $map[ $kind ] );
+	return array( 'g', isset( $map[ $kind ] ) ? $map[ $kind ] : $kind );
 }
 
 /**
@@ -446,6 +449,9 @@ function genscore_ld_data( $id ) {
  * @return string|null Null when the page lacks the data.
  */
 function genscore_fix_propose( $kind, $id ) {
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_propose( $kind, $id );
+	}
 	switch ( $kind ) {
 		case 'product':
 			if ( $id && genscore_shop_page_id() === $id ) {
@@ -489,6 +495,9 @@ function genscore_fix_propose( $kind, $id ) {
  * @return string
  */
 function genscore_fix_missing_note( $kind, $id = 0 ) {
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_missing_note( $kind );
+	}
 	if ( 'returns' === $kind && $id && genscore_shop_page_id() === $id ) {
 		return __( 'Publica antes sus datos de producto', 'genscore' );
 	}
@@ -511,8 +520,11 @@ function genscore_fix_missing_note( $kind, $id = 0 ) {
  * @param string $value Typed value.
  * @return string|null
  */
-function genscore_fix_clean( $kind, $value ) {
+function genscore_fix_clean( $kind, $value, $id = 0 ) {
 	$value = (string) $value;
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_clean( $kind, $value, $id );
+	}
 	switch ( $kind ) {
 		case 'ld':
 		case 'product':
@@ -591,6 +603,9 @@ function genscore_is_listing_page( $id ) {
  * @return string
  */
 function genscore_fix_status( $kind, $id ) {
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_status( $kind, $id );
+	}
 	$now = genscore_fix_current( $kind, $id );
 	$len = mb_strlen( $now );
 	if ( 'desc' === $kind && $len >= 50 && $len <= 160 ) {
@@ -673,8 +688,8 @@ function genscore_fix_query( $type, $q ) {
  * @return bool
  */
 function genscore_fix_has_home_row( $kind, $q ) {
-	if ( 'page' !== get_option( 'show_on_front' ) && in_array( $kind, array( 'ld', 'desc', 'title', 'canon' ), true ) ) {
-		$ok_seo = 'ld' === $kind || ! genscore_seo_plugin();
+	if ( 'page' !== get_option( 'show_on_front' ) && in_array( $kind, array( 'ld', 'desc', 'title', 'canon', 'og', 'hreflang' ), true ) ) {
+		$ok_seo = in_array( $kind, array( 'ld', 'hreflang' ), true ) || ! genscore_seo_plugin();
 		return $ok_seo && ( '' === $q || false !== mb_stripos( __( 'Portada', 'genscore' ), $q ) );
 	}
 	return false;
@@ -716,6 +731,9 @@ function genscore_fix_shop_row( $kind, $q ) {
  * @return bool
  */
 function genscore_fix_has_data( $kind, $id ) {
+	if ( genscore_is_more_kind( $kind ) ) {
+		return genscore_more_has_data( $kind, $id );
+	}
 	switch ( $kind ) {
 		case 'desc':
 			return null !== genscore_propose_desc( $id );
@@ -746,9 +764,17 @@ function genscore_fix_row( $kind, $id ) {
 	$status = genscore_fix_status( $kind, $id );
 	$live   = 'product' === $kind && $id && genscore_shop_page_id() === $id;
 	$value  = 'has' === $status && ! $live ? genscore_fix_current( $kind, $id ) : genscore_fix_propose( $kind, $id );
+	// What WooCommerce already has is shown as it is (its GTIN field).
+	if ( 'gtin' === $kind && 'has' === $status && '' === (string) $value ) {
+		$value = genscore_wc_gtin( $id );
+	}
+	// The untyped kinds keep a «1» as their mark: show what it means.
+	if ( 'has' === $status && in_array( $kind, array( 'h1', 'hreflang', 'shipping', 'rating' ), true ) ) {
+		$value = genscore_more_propose( $kind, $id );
+	}
 	// The answer-first paragraph is the person's to write when the page has
 	// no summary of its own: the row opens empty instead of being shut.
-	if ( 'ready' === $status && null === $value && ! in_array( $kind, array( 'lead', 'desc' ), true ) ) {
+	if ( 'ready' === $status && null === $value && ! in_array( $kind, array( 'lead', 'desc', 'h2', 'gtin', 'faq' ), true ) ) {
 		$status = 'missing';
 	}
 	// The shop lists products: a visible update date is not asked of it, so
@@ -931,6 +957,17 @@ function genscore_ajax_fix_publish() {
 		update_option( GENSCORE_RETURNS_OPTION, array( 'days' => $days, 'country' => $country ), false );
 	}
 
+	if ( 'shipping' === $kind ) {
+		$ship = genscore_clean_shipping( isset( $_POST['ship'] ) && is_array( $_POST['ship'] ) ? wp_unslash( $_POST['ship'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every value is checked in genscore_clean_shipping().
+		if ( ! $ship ) {
+			wp_send_json_error( array( 'message' => __( 'Revisa el envío: coste, país en dos letras y días de 0 a 60.', 'genscore' ) ), 400 );
+		}
+		if ( ! isset( $rec['shipping_prev'] ) ) {
+			$rec['shipping_prev'] = get_option( GENSCORE_SHIPPING_OPTION, array() );
+		}
+		update_option( GENSCORE_SHIPPING_OPTION, $ship, false );
+	}
+
 	$done    = array();
 	$skipped = array();
 	foreach ( $ids as $id ) {
@@ -939,11 +976,11 @@ function genscore_ajax_fix_publish() {
 			continue;
 		}
 		$typed = isset( $edits[ (string) $id ] ) && is_string( $edits[ (string) $id ] ) ? $edits[ (string) $id ] : null;
-		$value = null !== $typed ? genscore_fix_clean( $kind, $typed ) : genscore_fix_propose( $kind, $id );
+		$value = null !== $typed ? genscore_fix_clean( $kind, $typed, $id ) : genscore_fix_propose( $kind, $id );
 		if ( in_array( $kind, array( 'ld', 'product' ), true ) && null === $typed && null !== $value ) {
 			$value = genscore_clean_jsonld( $value );
 		}
-		if ( 'fresh' === $kind || 'returns' === $kind ) {
+		if ( in_array( $kind, array( 'fresh', 'returns', 'h1', 'hreflang', 'shipping', 'rating' ), true ) ) {
 			$value = null === genscore_fix_propose( $kind, $id ) ? null : '1';
 		}
 		if ( 'product' === $kind && genscore_shop_page_id() === $id ) {
@@ -1008,6 +1045,9 @@ function genscore_ajax_fix_undo() {
 	if ( isset( $rec['returns_prev'] ) ) {
 		update_option( GENSCORE_RETURNS_OPTION, $rec['returns_prev'], false );
 	}
+	if ( isset( $rec['shipping_prev'] ) ) {
+		update_option( GENSCORE_SHIPPING_OPTION, $rec['shipping_prev'], false );
+	}
 	if ( isset( $rec['prev'][0] ) ) {
 		$scores = genscore_page_scores();
 		unset( $scores[0] );
@@ -1030,7 +1070,14 @@ function genscore_fix_batches_summary() {
 	$out = array();
 	foreach ( is_array( $all ) ? $all : array() as $id => $b ) {
 		if ( ! empty( $b['ids'] ) ) {
-			$out[] = array( 'id' => (string) $id, 'kind' => $b['kind'], 'n' => count( $b['ids'] ), 'at' => (int) $b['at'] );
+			$paths = array();
+			foreach ( $b['ids'] as $pid ) {
+				$u = 0 === (int) $pid ? home_url( '/' ) : get_permalink( (int) $pid );
+				if ( $u ) {
+					$paths[] = (string) wp_parse_url( $u, PHP_URL_PATH );
+				}
+			}
+			$out[] = array( 'id' => (string) $id, 'kind' => $b['kind'], 'n' => count( $b['ids'] ), 'at' => (int) $b['at'], 'paths' => $paths );
 		}
 	}
 	return array_reverse( $out );
@@ -1054,6 +1101,8 @@ function genscore_fix_screen_data() {
 		'seo'       => $seo ? $seo['name'] : null,
 		'returns'   => is_array( $r ) && ! empty( $r['days'] ) ? $r : array( 'days' => 30, 'country' => 'ES' ),
 		'returnsSet' => is_array( $r ) && ! empty( $r['days'] ),
+		'shipping'  => class_exists( 'WooCommerce' ) ? genscore_shipping_settings() : null,
+		'multilang' => genscore_multilingual_plugin(),
 		'batches'   => genscore_fix_batches_summary(),
 		'chunk'     => GENSCORE_FIX_CHUNK,
 	);
@@ -1093,6 +1142,14 @@ function genscore_render_fix_meta_box( $post ) {
 		'fresh'     => __( 'Fecha de actualización visible', 'genscore' ),
 		'returns'   => __( 'Política de devoluciones', 'genscore' ),
 		'lead'      => __( 'Respuesta al principio', 'genscore' ),
+		'h2'        => __( 'Títulos de sección', 'genscore' ),
+		'h1'        => __( 'Un solo título principal', 'genscore' ),
+		'og'        => __( 'Etiquetas Open Graph', 'genscore' ),
+		'hreflang'  => __( 'Idioma de la página (hreflang)', 'genscore' ),
+		'shipping'  => __( 'Envío en los datos del producto', 'genscore' ),
+		'rating'    => __( 'Valoración en los datos del producto', 'genscore' ),
+		'gtin'      => __( 'Código de producto (GTIN)', 'genscore' ),
+		'faq'       => __( 'Preguntas frecuentes', 'genscore' ),
 	);
 	echo '<ul style="margin:0">';
 	foreach ( GENSCORE_META as $field => $key ) {
@@ -1101,7 +1158,7 @@ function genscore_render_fix_meta_box( $post ) {
 			continue;
 		}
 		echo '<li><strong>' . esc_html( $names[ $field ] ) . '</strong>';
-		if ( in_array( $field, array( 'desc', 'title', 'canonical' ), true ) ) {
+		if ( in_array( $field, array( 'desc', 'title', 'canonical', 'h2', 'og', 'gtin' ), true ) ) {
 			echo '<br><span style="color:#50575e">' . esc_html( $v ) . '</span>';
 		}
 		echo '</li>';

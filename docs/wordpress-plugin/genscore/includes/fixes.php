@@ -31,6 +31,14 @@ const GENSCORE_META = array(
 	'fresh'     => '_genscore_fresh',
 	'returns'   => '_genscore_returns',
 	'lead'      => '_genscore_lead',
+	'h2'        => '_genscore_h2',
+	'h1'        => '_genscore_h1',
+	'og'        => '_genscore_og',
+	'hreflang'  => '_genscore_hreflang',
+	'shipping'  => '_genscore_shipping',
+	'rating'    => '_genscore_rating',
+	'gtin'      => '_genscore_gtin',
+	'faq'       => '_genscore_faq',
 );
 
 /** The same fields for the home page when it is the list of latest posts. */
@@ -346,7 +354,7 @@ function genscore_wc_product_markup( $markup, $product ) {
 	if ( genscore_fix_get( $id, 'returns' ) ) {
 		$markup = genscore_with_returns( $markup );
 	}
-	return $markup;
+	return genscore_with_more( $markup, $id );
 }
 add_filter( 'woocommerce_structured_data_product', 'genscore_wc_product_markup', 20, 2 );
 
@@ -416,7 +424,7 @@ function genscore_fix_footer() {
 	if ( genscore_fix_get( $id, 'returns' ) ) {
 		$data = genscore_with_returns( $data );
 	}
-	genscore_print_jsonld( $data );
+	genscore_print_jsonld( genscore_with_more( $data, $id ) );
 }
 add_action( 'wp_footer', 'genscore_fix_footer', 30 );
 
