@@ -7,7 +7,7 @@ import { aiViewHeadline, type AiView, type AiViewPage } from "@/lib/web-audit/ai
 import type { SitePlatform } from "@/lib/web-audit/page-checks";
 
 /**
- * AI-VIEW-CONSOLE-1 (log §448): «Lo que lee la IA» in Auditoría GEO, the
+ * AI-VIEW-CONSOLE-1 (log §449): «Lo que lee la IA» in Auditoría GEO, the
  * console's version of the extension block. One row per audited page as an AI
  * bot receives it, and one fix for the whole domain, folded (Denis,
  * 2026-11-02: «integrada en el bloque, en desplegable, con menos texto»).

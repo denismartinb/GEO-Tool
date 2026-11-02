@@ -14,7 +14,7 @@ import {
   Figure
 } from "@/components/blog/article";
 import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
-import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
+import { CHROME_WEB_STORE_URL, EDGE_ADDONS_URL } from "@/lib/blog/chrome-extension";
 
 export const post = getBlogPost("extension-de-chrome-de-genscore");
 
@@ -25,6 +25,11 @@ export const faqItems = [
     question: "¿La extensión de GenScore para Chrome es gratis?",
     answer:
       "Sí. La revisión de cualquier página es gratis y no pide cuenta. Si tienes cuenta de GenScore, el mismo panel enseña además la visión general de tu dominio."
+  },
+  {
+    question: "¿La extensión funciona en Microsoft Edge?",
+    answer:
+      "Sí. Es la misma extensión y está publicada también en los complementos de Microsoft Edge, con la misma revisión y el mismo panel."
   },
   {
     question: "¿Qué revisa la extensión en una página?",
@@ -63,6 +68,10 @@ cuenta y sin salir de la página.
 
 <p>
   <a href={CHROME_WEB_STORE_URL} rel="noopener"><strong>Añade GenScore a Chrome</strong></a>: busca «Auditoría SEO y GEO: visibilidad en IA · GenScore» en la Chrome Web Store.
+</p>
+
+<p>
+  ¿Usas Microsoft Edge? También está disponible: <a href={EDGE_ADDONS_URL} rel="noopener"><strong>añade GenScore a Edge</strong></a> desde los complementos de Microsoft Edge.
 </p>
 
 ## Tu web puede estar cerrada a la IA y no saberlo
@@ -156,6 +165,9 @@ consola.
     "En cualquier web, pulsa el icono o Alt + Mayús + G."
   ]}
 />
+
+En Microsoft Edge los pasos son los mismos: abre la extensión en los
+<a href={EDGE_ADDONS_URL} rel="noopener">complementos de Microsoft Edge</a> y añádela.
 
 La revisión se hace en tu navegador: el contenido de la página no se envía a
 GenScore, y la extensión no guarda contraseñas ni usa datos para publicidad.

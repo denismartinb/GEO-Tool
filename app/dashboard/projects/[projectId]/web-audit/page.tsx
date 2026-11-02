@@ -143,7 +143,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport, bots));
                 const view = views.find((v) => v.key === activeBlock)!;
                 const isGeo = activeBlock === "geo";
-                // AI-VIEW-CONSOLE-1 (log §448): every audited page as an AI bot receives it.
+                // AI-VIEW-CONSOLE-1 (log §449): every audited page as an AI bot receives it.
                 const aiView = isGeo ? buildAiView(pages) : null;
                 const pageSpeed = bots?.site?.pageSpeed;
                 // EXT-1.5.0 (log §446): what this block fixed since the previous audit, as the extension says it.

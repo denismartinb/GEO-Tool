@@ -533,7 +533,7 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   fallaron antes y que ahora se miden y pasan** (`fixedSincePrevious`). Una que
   ya no se mide no cuenta como arreglada.
 
-## Lo que lee la IA (AI-VIEW-CONSOLE-1, log §448)
+## Lo que lee la IA (AI-VIEW-CONSOLE-1, log §449)
 
 - **Sólo lo que prueba el HTML.** «Llega vacía» es `jsShell`, «Poco texto» es
   `jsThin` y lo demás «Llega completa». Un hueco parcial en una página larga no

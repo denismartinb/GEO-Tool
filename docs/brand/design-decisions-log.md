@@ -29638,6 +29638,21 @@ sustituye a las primeras reseñas.
 
 **Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
 
+## §448 · EXT-EDGE-1: el artículo de la extensión dice que también está en Microsoft Edge (2026-11-02)
+
+**Qué:** `extension-de-chrome-de-genscore` añade el enlace a la ficha de
+Microsoft Edge Add-ons (debajo del enlace de Chrome y tras los pasos de
+instalación) y una pregunta del FAQ «¿La extensión funciona en Microsoft
+Edge?». El enlace vive en `EDGE_ADDONS_URL` (`lib/blog/chrome-extension.ts`),
+igual que el de Chrome, y `chrome-extension.test.ts` exige que el artículo lo
+lea de la constante. `dateUpdated` del post pasa a 2026-11-02.
+
+**Por qué:** petición de Denis (2026-11-02), con la ficha de Edge ya publicada.
+
+**Pendiente:** título, portada, CTA final y la tarjeta flotante de genscore.es
+siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
+(EXT-PROMO-1, §410).
+
 ## §447 · EXT-1.5.1: la tarjeta «Lo que lee la IA» de la extensión pasa a recomendación con código y versión en Markdown (2026-11-02)
 
 **Qué se decidió.** Denis, tras probar la 1.5.0: «quita esto» (el botón «Ver lado a lado» y la nota «Haz esto: pide que esos bloques salgan en el HTML…») y «una tarjeta de recomendación debería ser sobre incluir los bloques que faltan en la página en el HTML, sugiriendo en la medida de lo posible un código (aunque sea ejemplo) a copiar». Después pidió, como segunda opción, «que se pueda descargar el .md de la página y las instrucciones de cómo subirlo».
@@ -29659,7 +29674,7 @@ sustituye a las primeras reseñas.
 
 **Adenda 1.5.2, la solución dentro del bloque (Denis, 2026-11-02).** «Cómo arreglarlo» deja de saltar a la tarjeta y se despliega dentro de «Lo que lee la IA», con menos texto: una frase, el HTML para copiar, «Descargar el .md» y una nota corta de que el .md es la segunda opción. Usa los mismos datos y botones que la tarjeta (`GS_X.aiFix`), que sigue en las recomendaciones.
 
-## §448 · AI-VIEW-CONSOLE-1: «Lo que lee la IA» en Auditoría GEO, con la solución para todo el dominio (2026-11-02)
+## §449 · AI-VIEW-CONSOLE-1: «Lo que lee la IA» en Auditoría GEO, con la solución para todo el dominio (2026-11-02)
 
 **Qué.** Auditoría GEO gana el bloque «Lo que lee la IA» (`components/ins/audit/ai-view.tsx`, modelo puro `lib/web-audit/ai-view.ts`), debajo de «Quién puede leer tu web». Una cifra («3 de 5 páginas llegan completas…», con la frase de Denis), una barra por página y la lista de páginas auditadas con las palabras que llegan en el HTML y su estado: «Llega completa», «Poco texto» o «Llega vacía». Cada fila se abre y dice si el titular y las secciones están en el HTML y qué datos estructurados trae. Debajo, plegado, «Cómo arreglarlo» para todo el dominio: pasos por plataforma (WordPress, Shopify, React / Next.js, Otra, marcada según lo que detecta la auditoría), un ejemplo para copiar y, en un segundo desplegable, la opción del Markdown con las líneas para llms.txt. Diseño aprobado en `docs/design-reference/ai-view-console-1/`.
 

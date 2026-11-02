@@ -13,7 +13,7 @@ const page = (url: string, citability: Record<string, unknown> | undefined, extr
     htmlBytes: 1
   }) as unknown as PageAuditEntry;
 
-describe("buildAiView (AI-VIEW-CONSOLE-1, log §448)", () => {
+describe("buildAiView (AI-VIEW-CONSOLE-1, log §449)", () => {
   it("classifies each page from what the HTML proves", () => {
     const v = buildAiView([
       page("https://acme.com/", { wordCount: 640, jsShell: false, jsThin: false, platform: "wordpress" }),
@@ -53,7 +53,7 @@ describe("buildAiView (AI-VIEW-CONSOLE-1, log §448)", () => {
   });
 });
 
-describe("isJsThin and detectPlatform (log §448)", () => {
+describe("isJsThin and detectPlatform (log §449)", () => {
   it("flags a short page that a framework hydrates, not a short plain page", () => {
     expect(isJsThin('<div id="__next"><h1>Hola</h1></div><script id="__NEXT_DATA__">{}</script>', 3)).toBe(true);
     expect(isJsThin("<main><h1>Contacto</h1><p>Escríbenos.</p></main>", 3)).toBe(false);

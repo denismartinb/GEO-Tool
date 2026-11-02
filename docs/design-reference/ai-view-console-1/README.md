@@ -16,4 +16,4 @@ Cambios pedidos después de la maqueta, ya en la implementación:
   datos estructurados, sin guardar texto de la página (la maqueta enseñaba el
   texto y el precio).
 
-Registro: `docs/brand/design-decisions-log.md` §448.
+Registro: `docs/brand/design-decisions-log.md` §449.

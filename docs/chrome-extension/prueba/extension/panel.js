@@ -602,7 +602,7 @@
        has it, its card goes first here too, labelled «En esta página». */
     const ai = sc && sc.fixes ? sc.fixes.find((x) => x.id === "ai-html") : null;
     const webCards = top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) }));
-    /* AI-VIEW-CONSOLE-1 (log §448): the domain's own «sin JavaScript» finding has no
+    /* AI-VIEW-CONSOLE-1 (log §449): the domain's own «sin JavaScript» finding has no
        points, so the top-3 above never shows it; it goes right after the page card. */
     const geoB = B("geo"), js = geoB ? geoB.issues.find((x) => x.check === "js_required") : null;
     const jsCard = js ? { id: "wjs:js_required", kind: "web", lane: "ia", pts: null, t: esc(js.label), why: `Según la Auditoría GEO${js.scope ? `: ${esc(js.scope)}` : ""}. Los bots de IA no ejecutan JavaScript, así que esas páginas les llegan vacías o sin su contenido principal.`, to: projPath(`${AUD_META.geo.to}#lo-que-lee-la-ia`) } : null;

@@ -2,7 +2,7 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { SitePlatform } from "@/lib/web-audit/page-checks";
 
 /**
- * «Lo que lee la IA» in the console (AI-VIEW-CONSOLE-1, log §448).
+ * «Lo que lee la IA» in the console (AI-VIEW-CONSOLE-1, log §449).
  *
  * Every audited page as an AI bot receives it: no session, no JavaScript. The
  * console only has the HTML, so a page is «Llega vacía» (an application shell,

@@ -104,7 +104,7 @@ export type CitabilityCheck = {
    */
   jsShell?: boolean;
   /**
-   * «Lo que lee la IA» in the console (AI-VIEW-CONSOLE-1, log §448). The page
+   * «Lo que lee la IA» in the console (AI-VIEW-CONSOLE-1, log §449). The page
    * is not empty, but its main content is still painted by a script: little
    * visible text next to a mount node or a framework's state, or a framework
    * state that carries far more text than the HTML shows. Same tri-state as
@@ -464,7 +464,7 @@ function stateWordCount(html: string): number {
 }
 
 /**
- * AI-VIEW-CONSOLE-1 (log §448): the main content of a non-empty page is still
+ * AI-VIEW-CONSOLE-1 (log §449): the main content of a non-empty page is still
  * painted by JavaScript. Only what the HTML itself proves: a short page that a
  * framework hydrates, or a framework state with much more text than the page
  * shows. A partial gap on a long page needs a rendering browser (the Chrome
