@@ -275,7 +275,8 @@ export async function loadReportInput({
         .map((d) => d?.provider)
         .filter((p): p is string => typeof p === "string" && p.length > 0),
       topics: [...topics],
-      questions: [...questions]
+      questions: [...questions],
+      type: lever ? (lever.theme.kind === "definition" ? "lever_definition" : "lever") : r.recommendation_type
     };
   });
 

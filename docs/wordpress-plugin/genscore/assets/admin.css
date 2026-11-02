@@ -413,3 +413,16 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-recs .gs-mh .gs-lnk{margin-left:auto}
 #genscore-app .gs-recs .gs-fx .gs-tx small{font-style:normal;margin-top:2px}
 #genscore-app .gs-lnk{display:inline-flex;align-items:center;gap:3px;color:var(--blue);font-size:12.5px;font-weight:600}#genscore-app .gs-lnk .gs-i{width:13px;height:13px}
+/* 1.3.0: actionable GenScore recommendations in every tab */
+#genscore-app .gs-rwa .gs-ra{display:flex;align-items:center;gap:10px;flex:none}
+#genscore-app .gs-rwa .gs-ra .gs-btn,#genscore-app .gs-fxa .gs-btn{white-space:nowrap}
+#genscore-app .gs-fxa{align-items:flex-start}
+#genscore-app .gs-fxa .gs-n{padding-top:2px}
+@media (max-width:600px){
+  #genscore-app .gs-rwa{flex-wrap:wrap}
+  #genscore-app .gs-rwa .gs-tx{flex-basis:calc(100% - 20px)}
+  #genscore-app .gs-rwa .gs-ra{width:100%;justify-content:flex-end}
+  #genscore-app .gs-fxa{flex-wrap:wrap}
+  #genscore-app .gs-fxa .gs-tx{flex-basis:calc(100% - 30px)}
+  #genscore-app .gs-fxa>.gs-btn,#genscore-app .gs-fxa>a{margin-left:28px}
+}

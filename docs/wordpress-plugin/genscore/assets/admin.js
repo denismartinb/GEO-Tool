@@ -152,9 +152,10 @@
   function rows(list) { return '<div class="gs-rows">' + list.map(function (c) { return '<div class="gs-rw"><span class="gs-tx">' + esc(c.label) + "</span>" + verdict(c) + "</div>"; }).join("") + "</div>"; }
   function fixCard(lane, title) {
     if (webMode()) {
-      var G = webAgg().fixes.filter(function (g) { return g.lane === lane; });
+      var cov = coveredKinds({ ia: "geo", google: "seo", agent: "agent" }[lane]);
+      var G = webAgg().fixes.filter(function (g) { var id = String(g.id).replace(/^shop-/, ""); return g.lane === lane && !cov[KIND_OF[id]] && !(cov["goto:llms"] && id === "llms") && !(cov["goto:bots"] && id.indexOf("bot-") === 0); });
       if (!G.length) return "";
-      return '<div class="gs-card"><div class="gs-lab">Arreglar<small>en toda la web</small></div>' + G.slice(0, 5).map(function (g, i) { return webFixRow(g, i); }).join("") + "</div>";
+      return '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas<small>en toda la web</small></div>' + G.slice(0, 5).map(function (g, i) { return webFixRow(g, i); }).join("") + "</div>";
     }
     var F = ((S.score && S.score.fixes) || []).filter(function (f) { return f.lane === lane; });
     if (!F.length) return "";
@@ -311,12 +312,12 @@
     var tabOf = { ia: "geo", google: "seo", agent: "ag" };
     if (W) {
       var WF = W.fixes.slice(0, 3);
-      var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+      var mine = '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
       return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + mine + pagesCard + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
     }
-    var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
+    var fixes = '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
     return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + fixes + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
   }
   /* ---------------- two questions, two instruments ----------------
@@ -354,7 +355,7 @@
     if (!acctOn() || S.acct.project.geoScore == null) return "";
     var g = S.acct.project.geoScore;
     if (nota >= 75 && g < 40) return '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Lo normal al empezar.</b> Tu web ya está optimizada, pero la IA todavía no te nombra. La Puntuación GEO sube cuando otras webs hablan de ti y cuando respondes a las preguntas de los usuarios. Las recomendaciones de GenScore van por ahí.</span></div>";
-    if (nota < 50) return '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Primero, la optimización técnica.</b> Mientras tu web se frene, a la IA le cuesta citarte aunque hablen de ti. Empieza por «Arregla primero».</span></div>";
+    if (nota < 50) return '<div class="gs-bridge">' + ic("i-sparkles") + "<span><b>Primero, la optimización técnica.</b> Mientras tu web se frene, a la IA le cuesta citarte aunque hablen de ti. Empieza por las recomendaciones técnicas.</span></div>";
     return "";
   }
   /* What GenScore recommends for the domain, as the console has it: the plan
@@ -363,15 +364,12 @@
   function recsCard() {
     if (!acctOn()) return "";
     var P = S.acct.project, out = "";
-    var plan = (P.plan || []).map(function (x, i) {
-      var q = (x.questions || []).slice(0, 2).map(function (t) { return "<small>«" + esc(t) + "»</small>"; }).join("");
-      return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + q + "</span></div>";
-    }).join("");
+    var plan = planRows(2);
     if (plan) out += '<div class="gs-mh">Para que la IA te nombre' + goApp("recommendations", "Ver", "plan", "gs-lnk") + "</div>" + plan;
     [["geo", "Auditoría GEO", "web-audit?bloque=geo", "auditoria-geo"], ["seo", "Auditoría SEO", "web-audit?bloque=seo", "auditoria-seo"], ["agent", "Auditoría agéntica", "agentic-visibility", "agentes"]].forEach(function (k) {
       var b = auBlock(k[0]);
       if (!b || !b.issues.length) return;
-      out += '<div class="gs-mh">' + k[1] + "<small>" + b.score + (b.projected || b.projectedAll ? " → " + (b.projected || b.projectedAll) : "") + "</small>" + goApp(k[2], "Ver", k[3], "gs-lnk") + '</div><div class="gs-rows">' + issueRows(b) + "</div>";
+      out += '<div class="gs-mh">' + k[1] + "<small>" + b.score + (b.projected || b.projectedAll ? " → " + (b.projected || b.projectedAll) : "") + "</small>" + goApp(k[2], "Ver", k[3], "gs-lnk") + '</div><div class="gs-rows">' + recRows(b) + "</div>";
     });
     return out ? '<div class="gs-card gs-recs"><div class="gs-lab">Recomendaciones de GenScore<small>de tu consola</small></div>' + out + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "";
   }
@@ -432,12 +430,71 @@
       var v = pct(r.share);
       return '<div class="gs-xq' + (r.isBrand ? " gs-me" : "") + '"><span class="gs-ps gs-num">' + (i + 1) + '</span><span class="gs-n">' + esc(r.name) + '</span><span class="gs-tb"><i style="width:' + Math.round((v / max) * 100) + '%"></i></span><span class="gs-v gs-num">' + v + "<small>%</small></span></div>";
     }).join("") + '</div><div class="gs-acts">' + goApp("competitors", "Ver competidores", "competidores") + "</div></div>" : "";
-    return domLyr(scanLabel(P)) + noScan(P) + (P.lede ? '<p class="gs-say gs-say-l">' + esc(P.lede) + "</p>" : "") + engines + rivals;
+    return domLyr(scanLabel(P)) + noScan(P) + (P.lede ? '<p class="gs-say gs-say-l">' + esc(P.lede) + "</p>" : "") + planCard() + auditRecsCard("geo", "Auditoría GEO") + engines + rivals;
   }
   function auBlock(key) { var A = S.acct.project.audits; return A && A.blocks ? A.blocks.filter(function (b) { return b.key === key; })[0] : null; }
   var SEVC = { critical: "low", high: "low", medium: "mid", low: "mid", agentic: "mid" };
   function issueRows(b) {
     return b.issues.map(function (x) { return '<div class="gs-rw"><span class="gs-dot gs-' + (SEVC[x.severity] || "mid") + '"></span><span class="gs-tx">' + esc(x.label) + (x.scope ? "<small>" + esc(x.scope) + "</small>" : "") + "</span>" + (x.points == null ? "" : '<span class="gs-pts">+' + nES(x.points, x.points % 1 ? 1 : 0) + " pt</span>") + "</div>"; }).join("");
+  }
+  /* WP-PLUGIN-3 (log §432): what each console check becomes here. A kind opens
+     the one-click fix sheet with the audit's pages already ticked; «goto»
+     takes to the switch on this screen; anything else is «Cómo hacerlo» in
+     the console, because it means rewriting content or the theme. */
+  var CHECK_KIND = { structured_data: "ld", answer_first_intro: "lead", freshness: "fresh", description_length: "desc", title_length: "title", canonical: "canon", returns: "returns", product_data: "product", price: "product", availability: "product", identifiers: "product", llms_txt_missing: "goto:llms", bot_blocked: "goto:bots", robots_agents: "goto:bots" };
+  var AUDIT_PATH = { geo: ["web-audit?bloque=geo", "auditoria-geo"], seo: ["web-audit?bloque=seo", "auditoria-seo"], agent: ["agentic-visibility", "agentes"] };
+  function pathOf(u) { try { var x = new URL(u, D.site.home); return (decodeURIComponent(x.pathname).replace(/\/+$/, "") || "/"); } catch (e) { return null; } }
+  function issueKind(x) { var k = CHECK_KIND[x.check]; if (!k || k.indexOf("goto:") === 0) return k || null; return FX.available && FX.available[k] === true ? k : null; }
+  /* Fixed here already: the pages the audit named were read again on this site
+     and none of them asks for this fix any more. Without a match, no claim. */
+  function fixedHere(kind, urls) {
+    if (!webMode() || !urls || !urls.length) return false;
+    var want = urls.map(pathOf), E = webAgg().entries.filter(function (x) { return want.indexOf(pathOf(x.page.url || x.page.path || "")) >= 0; });
+    if (!E.length) return false;
+    return E.every(function (x) { return !(x.e.fixes || []).some(function (f) { return KIND_OF[String(f.id).replace(/^shop-/, "")] === kind; }); });
+  }
+  function recAction(x, key) {
+    var k = issueKind(x);
+    if (k === "goto:llms") return '<button class="gs-btn gs-line gs-sm" data-act="goto" data-to="llms">Ir a llms.txt' + ic("i-arrowr") + "</button>";
+    if (k === "goto:bots") return '<button class="gs-btn gs-line gs-sm" data-act="goto" data-to="bots">Ir a los bots' + ic("i-arrowr") + "</button>";
+    if (k && fixedHere(k, x.urls)) return ok("Arreglado aquí");
+    if (k) return '<button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="' + k + '" data-urls="' + esc(JSON.stringify((x.urls || []).map(pathOf).filter(Boolean))) + '">Arreglar</button>';
+    var a = AUDIT_PATH[key] || AUDIT_PATH.geo;
+    return goApp(a[0], "Cómo hacerlo", a[1] + "-como", "gs-btn gs-line gs-sm");
+  }
+  function recRows(b) {
+    return b.issues.map(function (x) {
+      var k = issueKind(x), done = k && k.indexOf("goto:") !== 0 && fixedHere(k, x.urls);
+      return '<div class="gs-rw gs-rwa"><span class="gs-dot gs-' + (SEVC[x.severity] || "mid") + '"></span><span class="gs-tx">' + esc(x.label) + "<small>" + (done ? "Lo verá el próximo escaneo de GenScore" : esc(x.scope || "")) + "</small></span>" + '<span class="gs-ra">' + (x.points == null ? "" : '<span class="gs-pts">+' + nES(x.points, x.points % 1 ? 1 : 0) + " pt</span>") + recAction(x, b.key) + "</span></div>";
+    }).join("");
+  }
+  /* The kinds a domain audit block already offers, so «Arreglar» on the right does not repeat them. */
+  function coveredKinds(key) {
+    if (!acctOn()) return {};
+    var b = auBlock(key), out = {};
+    (b ? b.issues : []).forEach(function (x) { var k = issueKind(x); if (k) out[k] = 1; });
+    return out;
+  }
+  function planRows(withQ) {
+    var P = S.acct.project, DR = D.drafts || {};
+    return (P.plan || []).map(function (x, i) {
+      var Q = x.questions || [];
+      var q = Q.slice(0, withQ).map(function (t) { return "<small>«" + esc(t) + "»</small>"; }).join("");
+      var btn = "";
+      if (x.draft && Q.length) btn = DR[Q[0]] ? '<a class="gs-btn gs-line gs-sm" href="' + esc(DR[Q[0]]) + '" target="_blank" rel="noopener">Abrir borrador' + ic("i-arrowr") + "</a>" : '<button class="gs-btn gs-blue gs-sm" data-act="draft" data-plan="' + i + '">Crear borrador</button>';
+      else btn = goApp("recommendations", "Ver en GenScore", "plan-" + (i + 1), "gs-btn gs-line gs-sm");
+      return '<div class="gs-fx gs-fxa"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + q + "</span>" + btn + "</div>";
+    }).join("");
+  }
+  function planCard() {
+    if (!acctOn() || !(S.acct.project.plan || []).length) return "";
+    return '<div class="gs-card"><div class="gs-lab">Para que la IA te nombre<small>plan de tu consola</small></div>' + planRows(3) + '<div class="gs-acts">' + goApp("recommendations", "Ver Recomendaciones", "plan", "gs-btn gs-line gs-sm") + "</div></div>";
+  }
+  function auditRecsCard(key, title) {
+    var b = auBlock(key);
+    if (!b || !b.issues.length) return "";
+    var a = AUDIT_PATH[key];
+    return '<div class="gs-card gs-recs"><div class="gs-lab">Recomendaciones de GenScore<small>de tu consola</small></div><div class="gs-mh">' + title + "<small>" + b.score + (b.projected || b.projectedAll ? " → " + (b.projected || b.projectedAll) : "") + "</small>" + goApp(a[0], "Ver", a[1], "gs-lnk") + '</div><div class="gs-rows">' + recRows(b) + "</div></div>";
   }
   function dPct(x) { return x == null ? "" : '<span class="d ' + (x >= 0 ? "gs-up" : "gs-down") + '">' + (x >= 0 ? "+" : "") + nES(x) + "%</span>"; }
   function gscCard() {
@@ -456,7 +513,7 @@
   }
   function realSeo() {
     var P = S.acct.project, b = auBlock("seo");
-    var audit = b ? '<div class="gs-card"><div class="gs-lab">Salud SEO<small>' + (b.projected ? b.score + " → " + b.projected + " si lo arreglas" : "todo el dominio") + '</small></div><div class="gs-big gs-num">' + b.score + "<small>/100</small></div>" + (b.issues.length ? '<div class="gs-mh">Lo que más resta en tu dominio</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("web-audit?bloque=seo", "Ver la Auditoría SEO", "auditoria-seo") + "</div></div>" : '<div class="gs-card"><p>Todavía no hay auditoría técnica de este dominio. Se hace sola tras cada escaneo.</p></div>';
+    var audit = b ? '<div class="gs-card"><div class="gs-lab">Salud SEO<small>' + (b.projected ? b.score + " → " + b.projected + " si lo arreglas" : "todo el dominio") + '</small></div><div class="gs-big gs-num">' + b.score + "<small>/100</small></div>" + (b.issues.length ? '<div class="gs-mh">Recomendaciones de GenScore<small>lo que más resta en tu dominio</small></div><div class="gs-rows">' + recRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("web-audit?bloque=seo", "Ver la Auditoría SEO", "auditoria-seo") + "</div></div>" : '<div class="gs-card"><p>Todavía no hay auditoría técnica de este dominio. Se hace sola tras cada escaneo.</p></div>';
     return domLyr(P.audits && P.audits.auditedAt ? "auditoría del " + new Date(P.audits.auditedAt).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "auditoría SEO") + audit + gscCard();
   }
   function realAg() {
@@ -464,10 +521,10 @@
     if (a && a.kind === "upsell") return domLyr("auditoría agéntica") + '<div class="gs-card"><p>La auditoría agéntica de todo tu dominio no está incluida en tu plan.</p><div class="gs-acts">' + ext(appUrl("/precios", "agentes-plan"), "Ver planes", "gs-btn gs-line gs-sm") + "</div></div>";
     if (!a || a.kind !== "card") return domLyr("auditoría agéntica") + '<div class="gs-card"><p>Todavía no hay auditoría agéntica de este dominio. Se hace sola tras cada escaneo cuando GenScore encuentra algo que vendes.</p></div>';
     var b = auBlock("agent");
-    return domLyr("auditoría agéntica") + '<div class="gs-card"><div class="gs-lab">Nota para agentes<small>' + esc(a.headline || "") + '</small></div><div class="gs-gg4">' + a.components.map(function (c) {
+    return domLyr("auditoría agéntica") + '<div class="gs-card"><div class="gs-lab">Auditoría agéntica<small>' + esc(a.headline || "") + '</small></div><div class="gs-gg4">' + a.components.map(function (c) {
       var v = c.points == null ? null : Math.round((c.points / c.weight) * 100), bb = agBand(v);
       return '<div class="gs-gau gs-gau-s"><span class="gs-arcw">' + arc(v, bb[0]) + '<b class="gs-num">' + (v == null ? "–" : v) + '</b></span><span class="gs-nm">' + esc(c.name) + '</span><span class="gs-st"><span class="gs-dot gs-' + bb[0] + '"></span>' + esc(bb[1]) + "</span></div>";
-    }).join("") + "</div>" + (b && b.issues.length ? '<div class="gs-mh">Lo primero</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("agentic-visibility", "Ver visibilidad en agentes", "agentes") + "</div></div>";
+    }).join("") + "</div>" + (b && b.issues.length ? '<div class="gs-mh">Recomendaciones de GenScore<small>lo primero</small></div><div class="gs-rows">' + recRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("agentic-visibility", "Ver visibilidad en agentes", "agentes") + "</div></div>";
   }
   /* Resumen: the account's three figures and its plan, next to the site review. */
   var acctTimer = 0, acctPolls = 0;
@@ -742,8 +799,8 @@
   fm.hidden = true;
   host.appendChild(fm);
   function narrow() { return window.matchMedia("(max-width: 782px)").matches; }
-  function openFix(kind, opener) {
-    M = { kind: kind, type: "all", q: "", items: [], counts: {}, ready: [], more: false, loading: true, sel: {}, first: true, edits: {}, bad: {}, cur: S.target ? S.target.id : null, opener: opener, step: "pick", busy: "", returns: { days: FX.returns.days || 30, country: FX.returns.country || "ES" } };
+  function openFix(kind, opener, urls) {
+    M = { urls: urls && urls.length ? urls : null, kind: kind, type: "all", q: "", items: [], counts: {}, ready: [], more: false, loading: true, sel: {}, first: true, edits: {}, bad: {}, cur: S.target ? S.target.id : null, opener: opener, step: "pick", busy: "", returns: { days: FX.returns.days || 30, country: FX.returns.country || "ES" } };
     fm.hidden = false;
     document.documentElement.classList.add("gs-fm-open");
     drawModal();
@@ -765,7 +822,14 @@
       if (!r || !r.success) throw new Error(r && r.data && r.data.message);
       M.counts = r.data.counts; M.ready = r.data.ready; M.more = r.data.more;
       M.items = reset ? r.data.items : M.items.concat(r.data.items);
-      if (M.first) { M.first = false; M.ready.forEach(function (id) { M.sel[id] = true; }); var firstReady = M.items.filter(function (x) { return x.status === "ready"; })[0]; if (M.cur == null && !narrow() && firstReady) M.cur = firstReady.id; }
+      if (M.first) {
+        M.first = false;
+        /* From a GenScore recommendation: tick the pages its audit named, if any is ready here. */
+        var named = M.urls ? M.items.filter(function (x) { return x.status === "ready" && M.urls.indexOf(pathOf(x.url || x.path || "")) >= 0; }).map(function (x) { return x.id; }) : [];
+        (named.length ? named : M.ready).forEach(function (id) { M.sel[id] = true; });
+        var firstReady = named.length ? named[0] : (M.items.filter(function (x) { return x.status === "ready"; })[0] || {}).id;
+        if (M.cur == null && !narrow() && firstReady) M.cur = firstReady;
+      }
       M.loading = false; M.err = "";
       /* Every page already has it: the review that flagged it is older than
          the fix. Read those pages again so «Arreglar» stops offering it. */
@@ -972,6 +1036,19 @@
     t.hidden = false;
     clearTimeout(tTimer); tTimer = setTimeout(function () { t.hidden = true; }, batch ? 8000 : 4500);
   }
+  /* «Crear borrador»: a draft post with the plan's questions as headings.
+     Never published; the person writes and publishes it in the editor. */
+  function createDraft(a) {
+    if (a.disabled) return;
+    a.disabled = true;
+    post("genscore_create_draft", { plan: a.getAttribute("data-plan") }).then(function (r) {
+      if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
+      D.drafts = D.drafts || {};
+      D.drafts[r.data.key] = r.data.edit;
+      toast(r.data.reused ? "Ya tenías ese borrador. Ábrelo en el editor." : "Borrador creado. Ábrelo en el editor.", null);
+      render();
+    }).catch(function (e) { a.disabled = false; toast((e && e.message) || "No se ha podido crear el borrador.", null); });
+  }
   function undo(batch) {
     post("genscore_fix_undo", { batch: batch }).then(function (r) {
       if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
@@ -1021,7 +1098,8 @@
     if (!a) return;
     var act = a.getAttribute("data-act");
     if (act === "rerun") { review(); return; }
-    if (act === "fix") { openFix(a.getAttribute("data-kind"), a); return; }
+    if (act === "fix") { var U = null; try { U = JSON.parse(a.getAttribute("data-urls") || "null"); } catch (err) { U = null; } openFix(a.getAttribute("data-kind"), a, U); return; }
+    if (act === "draft") { createDraft(a); return; }
     if (act === "goto") { gotoCard(a.getAttribute("data-to"), a.getAttribute("data-sw-id")); return; }
     if (act === "undo") { a.disabled = true; undo(a.getAttribute("data-batch")); return; }
     if (act === "rerun-web") { reviewSite(true); return; }

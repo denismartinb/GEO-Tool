@@ -29210,3 +29210,32 @@ sin ella:
   «Propuesta lista» con una nota vieja, y al revisarla volvió a «Ya lo tiene».
   La generación `genscore_scores_gen` ya rechaza notas leídas antes de un
   borrado general; si se repite, mirar qué guardó esa nota.
+
+**Adenda 1.3.0 (plugin, WP-PLUGIN-3, 2026-11-02).** Denis pidió que las
+recomendaciones de GenScore con la cuenta conectada salgan también en GEO, SEO
+y Agentes, y que se puedan resolver con un clic como las de la web sin cuenta.
+Maqueta aprobada con «Crear borrador» (decisión de Denis, 2026-11-02).
+
+- **Cada pestaña lleva sus «Recomendaciones de GenScore»**: GEO, el plan
+  («Para que la IA te nombre») y la Auditoría GEO; SEO, la Auditoría SEO;
+  Agentes, la Auditoría agéntica. Resumen sigue igual.
+- **`/api/ext/project` manda `check` y `urls` en cada problema de auditoría**
+  (`buildExtAudits`): la clave de la comprobación de la consola y hasta 20
+  páginas que la fallan; vacía en lo que es de todo el sitio (bots, llms.txt,
+  sitemap). El plan manda `draft` (`isDraftable`): la acción pide publicar una
+  página y trae preguntas.
+- **`check` decide la acción** (`CHECK_KIND` en `admin.js`): si WordPress lo
+  arregla, «Arreglar» abre la hoja de arreglos con las páginas de la auditoría
+  ya marcadas; bots y llms.txt llevan a su interruptor; lo demás, «Cómo
+  hacerlo» en la consola. Si la web ya no pide ese arreglo en esas páginas,
+  «Arreglado aquí» y «Lo verá el próximo escaneo de GenScore».
+- **Sin duplicados**: lo que ya ofrece una auditoría del dominio sale de la
+  tarjeta local de la pestaña, que pasa a llamarse **«Recomendaciones
+  técnicas»** (antes «Arregla primero» y «Arreglar»), a petición de Denis para
+  no confundirla con las de GenScore.
+- **«Crear borrador»** crea una entrada en borrador con las preguntas como
+  encabezados y nada más. Nunca publica. La única entrada es la posición del
+  plan; el texto sale de lo que GenScore ya mandó (`genscore_account_data`).
+  Si existe el borrador de esa pregunta, se reutiliza y el botón pasa a
+  «Abrir borrador». Desinstalar borra la lista, no los borradores.
+- La tarjeta de Agentes «Nota para agentes» pasa a «Auditoría agéntica».

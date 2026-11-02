@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
-import { buildExtProjectSummary, findCitingPrompts, pageKey, toExtAgentic } from "./summary";
+import { buildExtProjectSummary, findCitingPrompts, isDraftable, pageKey, toExtAgentic } from "./summary";
 
 const label = (p: string) => ({ openai: "ChatGPT", gemini: "Gemini", claude: "Claude", perplexity: "Perplexity" })[p] ?? p;
 
@@ -141,5 +141,21 @@ describe("toExtAgentic", () => {
         first: null
       })
     ).toEqual({ kind: "card", score: 44, headline: "h", components: [{ name: "Descubrimiento", points: 22, weight: 30 }] });
+  });
+});
+
+describe("isDraftable (WP-PLUGIN-3, log §432)", () => {
+  const q = ["¿Qué café comprar para espresso?"];
+  it("offers a draft only for a new page that answers questions", () => {
+    expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: q })).toBe(true);
+    expect(isDraftable({ title: "Sube esta FAQ a tu web", type: "create_faq_section", questions: q })).toBe(true);
+    expect(isDraftable({ title: "Publica una página que responda esta pregunta", type: "increase_brand_visibility", questions: q })).toBe(true);
+  });
+  it("never for an existing page, a definition, a rival or work outside the site", () => {
+    expect(isDraftable({ title: "Responde esta pregunta en /cafe", type: "increase_brand_visibility", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Añade las definiciones al inicio de tu página", type: "lever_definition", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Publica tu comparativa con Nomad", type: "close_competitor_gap", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Consigue que te mencionen en foros", type: "pursue_community_sources", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: [] })).toBe(false);
   });
 });

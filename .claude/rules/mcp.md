@@ -96,3 +96,7 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   (log §432, adenda 1.1.2).
 - **Las próximas acciones son el plan de Visión general** (`selectPlanWithLevers`
   en `loadReportInput`), sin la tarjeta de Google (log §432, adenda «mismo plan»).
+- **`check` y `urls` de cada problema de auditoría, y `draft` del plan, son
+  para el plugin** (WP-PLUGIN-3, log §432 adenda 1.3.0): `urls` sólo lleva
+  URL http(s), como mucho `EXT_AUDIT_URLS`, y vacía en lo que es de todo el
+  sitio.

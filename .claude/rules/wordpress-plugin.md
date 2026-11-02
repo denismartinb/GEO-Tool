@@ -105,3 +105,14 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   cuenta sale «sin medir». Lo mismo en la extensión (vista de página).
 - **«Recomendaciones de GenScore» sólo enseña lo que trae `/api/ext/project`**
   (plan y `audits.blocks`), sin recalcular.
+
+## Recomendaciones accionables (WP-PLUGIN-3, adenda 1.3.0 de §432)
+
+- **«Crear borrador» nunca publica**: `post_status` draft y sólo la posición
+  del plan como entrada; el texto sale de lo que ya mandó GenScore. Lo vigila
+  `tests/wordpress-plugin.test.ts`.
+- **La acción de una recomendación sale de `check`** (`CHECK_KIND`): arreglo
+  de un clic si WordPress lo sabe hacer, interruptor para bots y llms.txt, y si
+  no, «Cómo hacerlo» en la consola. Nunca un «Arreglar» que no arregla.
+- **Lo que ofrece una auditoría del dominio no se repite** en «Recomendaciones
+  técnicas» de la misma pestaña.

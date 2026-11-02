@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,13 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.3.0 =
+* With the account connected, GenScore's recommendations also appear in the GEO, SEO and Agentes tabs, each next to its tab.
+* A recommendation that WordPress can fix offers «Arreglar», which opens the one-click fix sheet with the audit's pages already ticked. Bots and llms.txt take you to their switch.
+* A plan step that asks for a new page offers «Crear borrador»: a draft post with the questions as headings. It is never published by the plugin.
+* «Arregla primero» is now «Recomendaciones técnicas», so it is not mistaken for GenScore's recommendations.
+* The agentic card in the Agentes tab is called «Auditoría agéntica».
 
 = 1.2.1 =
 * The domain's agentic gauge is called «Auditoría agéntica», so it is not mistaken for the page's Agentes row.
