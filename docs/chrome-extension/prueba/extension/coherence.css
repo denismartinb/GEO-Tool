@@ -1,0 +1,99 @@
+/* EXT-PANEL-COHERENCE-1 (log §433): the two fixed blocks, Optimización técnica and
+   Puntuación GEO, the same signed in and out. Instrumento tokens only. */
+.sct,.sgeo{display:block}
+.sgeo{margin-top:14px;padding-top:0}
+.sgeo>.sh2:first-child{margin-top:4px}
+.sct+.sgeo,.sgeo+.sct{border-top:1px solid var(--rule);padding-top:8px}
+.sct+.sgeo{margin-top:34px}
+.sct+.sgeo>.sh2:first-child{margin-top:18px}
+.sgeo+.sct{margin-top:34px}
+.sh2{display:flex;align-items:center;gap:10px;margin-top:18px;min-width:0}
+.sh2 .ey{margin-top:0;flex:1 0 auto;white-space:nowrap}
+.sct>.sh2{flex-wrap:wrap;row-gap:10px}
+.seg.sx button{padding:4px 11px;font-size:12px;display:inline-flex;align-items:center;gap:5px}
+.seg.sx .lk2{display:inline-flex;opacity:.7}
+.qq{font-size:15px;font-weight:550;letter-spacing:-.01em;margin-top:10px;color:var(--ink)}
+/* the technical number: big and light, like the console's 62 de 100, but a bar, never a dial */
+.oh{margin-top:12px}
+.ohn{display:flex;align-items:flex-end;gap:14px}
+.oh .big{font-size:72px;font-weight:250;letter-spacing:-.055em;line-height:.86;color:var(--ink);display:inline-flex;align-items:baseline}
+.oh .big small{font-size:22px;letter-spacing:0;color:var(--ink-3);margin-left:3px;font-weight:400}
+.oh .big.q{color:var(--ink-4)}
+.ohw{display:flex;flex-direction:column;padding-bottom:6px;min-width:0}
+.ohw .w{font-size:22px;font-weight:550;letter-spacing:-.02em;line-height:1.1}
+.ohw .w.ok{color:var(--pos)}.ohw .w.mid{color:var(--mid)}.ohw .w.bad{color:var(--warm)}
+.oh.lockd .ohw .w{color:var(--ink-3)}
+.ohw small{font-size:12px;color:var(--ink-3);margin-top:2px}
+.osc{position:relative;height:8px;border-radius:99px;background:var(--surface-3);margin-top:18px}
+.osc .f{position:absolute;left:0;top:0;bottom:0;border-radius:99px;width:0;background:linear-gradient(90deg,color-mix(in srgb,var(--pos) 35%,var(--surface)),var(--pos));transition:width 900ms var(--out) 120ms}
+.osc.mid .f{background:linear-gradient(90deg,color-mix(in srgb,var(--mid) 35%,var(--surface)),var(--mid))}
+.osc.bad .f{background:linear-gradient(90deg,color-mix(in srgb,var(--warm) 35%,var(--surface)),var(--warm))}
+.osc .bd{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--surface);border-radius:1px}
+.osc .mk{position:absolute;top:50%;left:0;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--surface);border:3px solid var(--pos);box-shadow:0 0 0 4px color-mix(in srgb,var(--pos) 16%,transparent);transition:left 900ms var(--out) 120ms}
+.osc.mid .mk{border-color:var(--mid);box-shadow:0 0 0 4px color-mix(in srgb,var(--mid) 16%,transparent)}
+.osc.bad .mk{border-color:var(--warm);box-shadow:0 0 0 4px color-mix(in srgb,var(--warm) 16%,transparent)}
+.hq.lit .osc .f,.osc.lit .f{width:var(--w)}
+.hq.lit .osc .mk,.osc.lit .mk{left:var(--w)}
+.obands{display:grid;grid-template-columns:50% 25% 25%;margin-top:8px;font-size:11.5px;color:var(--ink-4)}
+.obands span.on{color:var(--ink);font-weight:600}
+.oh .say{margin-top:12px}
+.hq.prep .gg3{margin-top:16px}
+/* locked gauges */
+.gg.lkg .in{top:34%}
+.gg.lkg .in .i{width:20px;height:20px;color:var(--ink-4)}
+.gg.lkg .st{color:var(--ink-4)}
+.lkcta{margin-top:14px;border:1px dashed var(--rule);border-radius:18px;padding:16px;background:var(--surface-2)}
+.lkcta p{font-size:13.5px;color:var(--ink-2)}
+.lkcta p b{color:var(--ink);font-weight:600}
+.lkcta .btn{margin-top:12px}
+/* who can read / buy: one line of small icons, only inside an open gauge */
+.wrow{display:flex;align-items:center;gap:10px;margin-top:4px}
+.wrow .wl{font-size:12px;color:var(--ink-3);white-space:nowrap}
+.wrow .wis{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.wi{position:relative;width:26px;height:26px;border-radius:8px;background:var(--surface-2);border:1px solid var(--rule-2);display:inline-flex;align-items:center;justify-content:center;opacity:0;transform:scale(.8);animation:wiIn var(--d3) var(--spring) forwards}
+.wi:nth-child(2){animation-delay:40ms}.wi:nth-child(3){animation-delay:80ms}.wi:nth-child(4){animation-delay:120ms}.wi:nth-child(5){animation-delay:160ms}.wi:nth-child(6){animation-delay:200ms}
+@keyframes wiIn{to{opacity:1;transform:none}}
+.wi svg{width:14px;height:14px;color:var(--ink)}
+.wi .mono1{width:14px;height:14px;border-radius:4px;background:var(--ink);color:var(--surface);font:700 9px/14px var(--font);text-align:center}
+.wi>i{position:absolute;right:-3px;bottom:-3px;width:9px;height:9px;border-radius:50%;border:2px solid var(--surface)}
+.wi.y>i{background:var(--pos)}.wi.n>i{background:var(--warm)}.wi.u>i,.wi.h>i{background:var(--ink-4)}
+.wi.h>i{background:transparent;border-color:var(--ink-4)}
+.wi svg.mo{color:var(--ink)}
+.wi.n{background:var(--warm-tint);border-color:var(--warm-rule)}
+.wleg{display:flex;gap:12px;justify-content:flex-end;margin:6px 0 2px;font-size:11px;color:var(--ink-3)}
+.wleg span{display:inline-flex;align-items:center;gap:5px}
+.wleg i{width:7px;height:7px;border-radius:50%}
+.wleg i.y{background:var(--pos)}.wleg i.n{background:var(--warm)}.wleg i.u{background:var(--ink-4)}.wleg i.h{border:1.5px solid var(--ink-4)}
+.wleg{flex-wrap:wrap}
+.sxl{font-size:12px;color:var(--ink-3)}
+/* GEO */
+.hq.off .dialbox{opacity:.55;filter:grayscale(1)}
+.hq.off .dial-c .big.q{color:var(--ink-4)}
+.hq.off .bands span{color:var(--ink-4)}
+.sgeo .deep{margin-top:14px}
+.eng1.sm{margin-top:14px}
+.rv1{display:flex;align-items:center;gap:10px;margin-top:12px;padding:11px 12px;border-radius:12px;background:var(--surface-2);font-size:13px;color:var(--ink-2)}
+.rv1 b{color:var(--ink);font-weight:600}
+.rv1 .fav{flex:none}
+/* login moment */
+.justin{display:flex;align-items:center;gap:8px;margin-top:12px;padding:9px 12px;border-radius:12px;background:var(--pos-tint);color:var(--pos);font-size:12.5px;font-weight:550;animation:jin var(--d4) var(--out) both}
+@keyframes jin{from{opacity:0;transform:translateY(-6px)}}
+.justin>span{flex:1;min-width:0}
+.justin .jx{flex:none;width:24px;height:24px;margin:-4px -6px -4px 0;border:0;border-radius:8px;background:transparent;color:inherit;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.justin .jx:hover{background:color-mix(in srgb,var(--pos) 12%,transparent)}
+.justin.out{overflow:hidden;height:0!important;margin-top:0;padding-top:0;padding-bottom:0;opacity:0;transition:height var(--d3) var(--out),margin var(--d3) var(--out),padding var(--d3) var(--out),opacity 140ms linear}
+[data-tip]{position:relative}
+[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 7px);right:-4px;z-index:30;padding:5px 8px;border-radius:8px;background:var(--ink);color:var(--surface);font:550 11.5px/1.2 var(--font);white-space:nowrap;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity 120ms linear,transform 120ms var(--out)}
+[data-tip]:hover::after,[data-tip]:focus-visible::after{opacity:1;transform:none}
+[data-tip]:hover{z-index:30}
+.eng1 [data-tip]::after{right:auto;left:50%;transform:translate(-50%,-3px)}
+.eng1 [data-tip]:hover::after{transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){.wi,.justin{animation:none;opacity:1;transform:none}.osc .f,.osc .mk{transition:none}}
+.oh .say{text-align:left;font-size:15px;color:var(--ink-2)}
+.sgeo .hq .say{font-size:15px}
+
+/* EXT-REACH-1 (log §436): the one-time ask for a store rating. Instrumento tokens only. */
+.rate{margin:12px 0 4px;padding:14px;border:1px solid var(--rule);border-radius:14px;background:var(--surface)}
+.rate b{display:block;font-size:14.5px;font-weight:600;color:var(--ink)}
+.rate p{margin:4px 0 12px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.rate .ra{display:flex;flex-wrap:wrap;gap:6px}

@@ -4,6 +4,7 @@ import {
   button,
   checklist,
   escapeHtml,
+  extensionPostscript,
   eyebrow,
   FOOTER_LINK_STYLE,
   heading,
@@ -237,6 +238,7 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
     ${versusBars(rows, "Porcentaje de respuestas en las que aparece cada marca")}
     ${comparison}
     ${button(url(`/dashboard/projects/${snap.projectId}`, "first_scan"), "Ver mi informe completo")}
+    ${extensionPostscript("first_scan")}
     `,
     {
       footerHtml: envelope.footerHtml,

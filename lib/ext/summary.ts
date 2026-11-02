@@ -101,6 +101,8 @@ export type ExtProjectSummary = {
   lede: string | null;
   engines: ExtEngine[];
   rivals: ExtRival[];
+  /** Domains of the active tracked competitors, so the panel does not offer to add one twice. */
+  competitorDomains: string[];
   /** «Salud SEO»: the SEO block of the latest technical audit. Null without one. */
   seoScore: number | null;
   plan: ExtPlanItem[];
@@ -198,6 +200,7 @@ export function buildExtProjectSummary({
     lede: model?.summary.lede ?? null,
     engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
     rivals: pickRivals(model, project.domain, competitors),
+    competitorDomains: [...new Set(competitors.flatMap((c) => (c.domain ? [c.domain.trim().toLowerCase().replace(/^www\./, "")] : [])))],
     // Never the report's technical score: that is the GEO Score's «Diagnóstico
     // técnico», a different figure (log §432, adenda 1.1.2).
     seoScore,

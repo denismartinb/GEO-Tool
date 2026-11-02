@@ -133,7 +133,7 @@ describe("GET /api/ext/project", () => {
     const body = await res.json();
     expect(body).toMatchObject({ domain: "blog.marca.es", brand: "Blog", geoScore: null, citingPrompts: [] });
     // EXT-AUDITS-1: no snapshot and no review means no blocks, never a zero
-    expect(body.audits).toEqual({ auditedAt: null, blocks: [], page: null });
+    expect(body.audits).toEqual({ auditedAt: null, readiness: null, blocks: [], page: null });
     expect(fromCalls).toContain("web_audit_snapshots");
   });
 });

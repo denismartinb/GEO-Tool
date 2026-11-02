@@ -29309,3 +29309,132 @@ Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
 afirma nada del cálculo de la puntuación.
 
 **Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
+
+## §434 · EXT-PANEL-COHERENCE-1: el panel de la extensión, igual con y sin sesión (2026-11-02)
+
+**Qué.** Extensión 1.4.0. El panel deja de cambiar de forma al entrar en la
+cuenta. Dos bloques fijos, con el mismo nombre en los dos estados:
+
+- **Optimización técnica**, con «Esta página | Toda la web»: cifra grande con
+  barra y estado (Se frena, Mejorable, Optimizada, nunca un medidor), los tres
+  indicadores IA, Google y Agentes, y «Recomendaciones técnicas». Sin sesión,
+  «Toda la web» sale con candado, «Sin medir» y los indicadores vacíos.
+- **Puntuación GEO** («¿Sabes si la IA recomienda tu marca?»): el único
+  medidor. Sin sesión es el mismo medidor en gris, «Sin medir», con «Analizar
+  dominio». Con sesión, la puntuación, los motores, el rival que sale más y
+  «Recomendaciones de GenScore».
+
+Sin sesión manda la página abierta (técnica arriba); con sesión, la Puntuación
+GEO va arriba porque es lo que añade la cuenta (Denis, 2026-11-02). Al entrar
+con el panel abierto, una línea dice «Has entrado. El panel se ha actualizado
+solo.» y se abre «Toda la web». La página abierta deja de ser una opción del
+selector de dominios: ahora es la pestaña del bloque técnico.
+
+Al abrir IA o Agentes salen los logos oficiales, pequeños: ChatGPT, Gemini,
+Claude, Perplexity y Meta AI («Quién puede leerla»), y los agentes de la
+consola (Muse, Dots, Agente de Gemini, Comet, Grok Bot, Instinct) con las
+reglas de `lib/agentic-audit/shopping-agents.ts`. Meta se lee del mismo
+robots.txt con `meta-webindexer` y queda fuera de la nota; Grok Bot e
+Instinct no publican identidad y salen «No se ve desde fuera». Instinct no
+tiene logo oficial: lleva su inicial.
+
+**Por qué.** Denis: «El diseño actual me gustaba bastante [...] Lo que
+necesitaba era coherencia entre el estado logado y no logado». El medidor
+grande significaba la nota técnica sin sesión y la Puntuación GEO con ella.
+Maqueta aprobada: https://claude.ai/artifact/MdXfobGpcM15FAFk3myQ92 (fuentes
+en la carpeta compartida del proyecto, `extension/maquetas-2026-11-02/v5-coherencia/`).
+Las versiones 1 a 4, con otro aspecto, se descartaron.
+
+**Cifra de «Toda la web».** Es la Salud técnica de las páginas auditadas
+(`actualReadinessScore` de `buildTechnicalIssuesReport`), nueva en
+`/api/ext/project` como `audits.readiness`. Es la misma mezcla 55/45 de IA y
+Google que la nota de la página, así que las dos pestañas miden lo mismo.
+Nunca una media de los tres bloques, que no existe en la consola. Las tarjetas
+de «Recomendaciones técnicas» de toda la web no suman «Hasta +N pt», porque
+los puntos de bloque no se suman (`lib/ext/audits.ts`), y no se marcan como
+hechas en el panel: llevan a la consola.
+
+**Se conserva.** Search Console (dentro de Google), «La citan en tus
+prompts», «En tu auditoría» de una página propia y la alerta de la página.
+**Se retira** la vista «Visión general» con medidor y los adelantos con
+candado por indicador (§408), sustituidos por el bloque con candado.
+
+**Pendiente o sabido.** Ningún camino de recuperación se retira. Denis sube
+el zip a la tienda.
+
+**Adenda (Denis, 2026-11-02, revisión en el navegador).** Sobraba aire
+encima de «Puntuación GEO» cuando es el primer bloque: el margen grande sólo
+queda cuando va tras «Optimización técnica». El aviso «Has entrado» lleva
+una X, se va solo a los 8 s y al irse recoge su altura, así que lo de debajo
+sube en vez de saltar. Los iconos de motores y agentes enseñan su nombre al
+pasar el ratón (y con el foco), con un globo propio en vez del `title` del
+navegador, que tarda en salir.
+
+**Segunda adenda (Denis, 2026-11-02).** Vuelven los adelantos de §408, sólo
+sin sesión y sólo en «Toda la web»: cada indicador con candado (IA, Google,
+Agentes) se abre como los demás y enseña su ilustración sin cifras con su
+llamada («Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu
+dominio», «Conoce tu nota para agentes»). Con ninguno abierto se ve el bloque
+común de antes. En «Esta página» no salen: ahí la extensión ya mide.
+
+**Tercera adenda (Denis, 2026-11-02).** Con sesión y en una web que no es
+tuya, el selector vuelve a nombrar la página abierta («Página abierta» encima
+de «Tus dominios»), la revisión de la página va primero y «¿Quieres añadir…
+a tus dominios?» cierra el panel. Elegir uno de tus dominios en el selector
+enseña ese dominio, y «Página abierta» vuelve a la revisión. En una web tuya
+no cambia nada: Puntuación GEO primero y el selector con el dominio.
+
+**Cuarta adenda (Denis, 2026-11-02).** «Toda la web» se leía como «todo
+internet»: la pestaña pasa a nombrar el dominio («Todo movistar.es») y, si
+pasa de 22 caracteres, dice «Todo el dominio»; la línea bajo «Sin medir»
+nombra siempre el dominio. En el panel estrecho la pestaña baja bajo el
+rótulo en vez de pisarlo. En una web ajena que ya es competidor del dominio
+elegido, «Añadir como competidor» pasa a «Ya es competidor de …» y abre
+Competidores; para saberlo, `/api/ext/project` gana `competitorDomains` (los
+dominios de los competidores activos, sólo lectura). Sin ese campo (una
+versión del servidor anterior), el panel mira los rivales que ya traía.
+
+## §435 · EXT-STORE-NAME-1: el nombre de la extensión, con lo que se busca en la tienda (2026-11-02)
+
+**Qué.** Extensión 1.4.1. Sólo cambian dos textos del `manifest.json`, que son
+los que la Chrome Web Store usa como nombre y resumen de la ficha:
+
+- Nombre: «Auditoría SEO y GEO: visibilidad en IA · GenScore» (antes
+  «GenScore: Auditoría SEO y visibilidad en IA»).
+- Resumen: «Auditoría SEO y GEO gratis: mira si ChatGPT, Gemini, Claude y
+  Perplexity pueden leer tu web, con llms.txt, robots.txt y schema.»
+
+El artículo `extension-de-chrome-de-genscore` dice que se busque por el nombre,
+así que cambia con él. La descripción larga se cambia en el formulario de la
+tienda (no vive en el repo); la propuesta está en
+`/mnt/project-files/chrome-extension/visibilidad-tienda/descripcion-es.txt`.
+
+**Por qué.** Denis buscó «seo», «visibilidad de IA» y «geo» en la tienda y no
+salía. Comprobado el 2026-11-02: la ficha es pública y está indexada, pero no
+está entre las diez primeras de «geo», «seo», «auditoría seo», «visibilidad en
+ia» ni «llms.txt». Las que ganan esas búsquedas empiezan el nombre por esas
+palabras, y el nuestro empezaba por «GenScore» y no decía «GEO». La tienda
+ordena sobre todo por valoraciones recientes e instalaciones que se quedan
+(documentación de Google), así que el nombre nos mete en la búsqueda pero no
+sustituye a las primeras reseñas.
+
+**Pendiente.**
+- Sello del dominio: la cuenta dueña de la extensión verifica genscore.es en
+  Search Console (TXT en IONOS) y lo elige como «URL oficial». Lo hace Denis.
+- «Destacado» no se puede pedir: Google cerró las candidaturas el 2026-08-20.
+- Invitación a valorar dentro del panel: propuesta, sin construir ni aprobar.
+- Ficha en inglés: sólo cuando el panel esté traducido.
+
+## §436 · EXT-REACH-1: más instalaciones y valoraciones para la extensión de Chrome (2026-11-02)
+
+**Qué se decidió.** Denis aprobó el 2-11 la maqueta de las palancas 2 y 3 del documento de visibilidad en la tienda («Sí, apruebo todo») y añadió dos peticiones: un correo de anuncio a toda la base y la tarjeta en la consola solo para quien no la vio en la web.
+
+- **Posdata en dos correos.** `extensionPostscript(campaign)` (`lib/email/transactional.ts`) pone una línea con «Añadir a Chrome» debajo del botón principal del correo de bienvenida y del de «Tu primer escaneo está listo». El enlace lleva `utm_source=email&utm_medium=posdata` y la campaña del correo. La bienvenida sigue siendo de servicio: la posdata habla de una herramienta gratuita del producto, sin precio ni descuento.
+- **Comprobador gratuito.** `CheckerExtensionLine` (`components/free-checker/checker-extension-line.tsx`) añade una línea bajo la invitación a probar Pro, sólo en Chrome de escritorio (`detectDesktopChrome`, la misma regla que la tarjeta flotante). Se pinta tras hidratar, así que en un móvil nunca aparece ni un instante. Enlace con `utm_medium=comprobador`.
+- **Tarjeta en la consola.** La tarjeta flotante de EXT-PROMO-1 (§410) ya salía en la consola. Desde ahora sale allí sólo si ese navegador nunca la vio en la web pública (`gs.chromeExt.seenOnWeb` en `localStorage`, escrita al enseñarla en la web). Límite: quien la vio en la web antes de este cambio no tiene la marca y puede verla una vez en la consola.
+- **Valorar en la tienda (extensión 1.4.2).** `rate.js` decide, puro y con tests: la tarjeta «¿Te está siendo útil?» sale una sola vez, cuando el panel ha revisado páginas en tres días distintos, y cualquiera de sus dos botones la cierra para siempre (`chrome.storage.local`, sin salir del navegador). La pregunta es neutra: no pregunta antes si gusta ni ofrece nada a cambio, porque la tienda lo prohíbe.
+- **Correo de anuncio.** `extensionLaunchEmailParts` (asunto «Nuevo: GenScore en Chrome, gratis»), con imagen del panel actual (`public/email/extension-chrome.jpg`, compuesta con la ilustración del artículo y una captura real del panel 1.4.2), tres ventajas, «Añadir a Chrome» y el enlace al artículo. Lo envía el operador desde `/admin/crm` («Anuncio: extensión de Chrome»): primero una copia a sí mismo, luego lotes de 25 con casilla de confirmación. Quién lo recibe lo decide `selectAnnouncementRecipients` (puro): toda cuenta registrada, de cualquier plan, menos las propias, internas y comped, quien se dio de baja de «consejos, novedades y ofertas», quien no confirmó su email, quien ya lo recibió y quien recibió otro correo de ciclo de vida en las últimas 48 h (espera al siguiente lote). Nunca en lunes. Reserva `feature_extension` en `email_sends`: nadie recibe a la vez este anuncio y el correo automático de la extensión (§417). Etiqueta de Resend propia, `extension_launch`. Cada lote deja constancia por correo a `OPS_ALERT_EMAIL` (`ops_announcement`), como toda escritura de `/admin`.
+
+**Por qué así.** El anuncio va con baja porque es comunicación comercial a clientes sobre un producto propio (LSSI art. 21.2). La reserva previa al envío (§308) hace que pulsar dos veces o dos operadores a la vez no dupliquen nada. No se envía por cron porque Denis quiere decidir el momento.
+
+**Pendiente.** Subir el zip 1.4.2 a la tienda (Denis), que incluye el nombre de la 1.4.1. Pulsar el envío del anuncio. Requiere la migración 0047 aplicada (si falta, la reserva falla y no sale nada). No retira ningún camino de recuperación.

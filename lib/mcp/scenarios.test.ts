@@ -35,6 +35,7 @@ const P: ExtProjectPayload = {
   geoScore: 54,
   lede: "La IA te nombra en algo menos de la mitad de las respuestas.",
   engines: [{ provider: "openai", label: "ChatGPT", mentionShare: 0.4 }],
+  competitorDomains: [],
   rivals: [
     { name: "Rival", share: 0.5, isBrand: false, domain: "rival.es" },
     { name: "Marca", share: 0.33, isBrand: true, domain: "marca.es" }
@@ -51,7 +52,7 @@ const P: ExtProjectPayload = {
   agentic: { kind: "upsell" },
   citingPrompts: null,
   searchConsole: { state: "disconnected" },
-  audits: { auditedAt: null, blocks: [], page: null },
+  audits: { auditedAt: null, readiness: null, blocks: [], page: null },
   prompts: [
     {
       text: "¿Qué herramienta mide la visibilidad en ChatGPT?",
