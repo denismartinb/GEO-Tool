@@ -1,0 +1,265 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  CompareTable,
+  CodeBlock,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { ORGANIZATION_JSONLD } from "@/lib/blog/organization-jsonld";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("datos-estructurados-y-citas-de-la-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Los datos estructurados ayudan a que ChatGPT o Google me citen?",
+    answer:
+      "No hay pruebas de que lo hagan. Ahrefs comparó 1.885 páginas que añadieron JSON-LD con páginas parecidas que no lo hicieron (mayo de 2026): en los 30 días siguientes, sus citas en las Vistas creadas con IA de Google bajaron un 4,6%, y en el Modo IA de Google y en ChatGPT el cambio no se distinguía de cero. Google dice que no hace falta ningún dato estructurado especial para aparecer en sus funciones de IA."
+  },
+  {
+    question: "¿Por qué hay estudios que dicen que las páginas con schema se citan más?",
+    answer:
+      "Porque miden una correlación. AirOps y Kevin Indig, con 50.553 respuestas de ChatGPT, vieron que las páginas con JSON-LD tenían una tasa de cita del 38,5%, frente al 32,0% de las que no lo tenían. Pero las webs que cuidan sus datos estructurados suelen cuidar también el contenido, la velocidad y los enlaces, y eso es lo que pesa."
+  },
+  {
+    question: "Entonces, ¿quito los datos estructurados de mi web?",
+    answer:
+      "No. Siguen sirviendo para que Google muestre resultados enriquecidos, para que los buscadores identifiquen quién eres y, si vendes, para que un agente de compra lea precio y disponibilidad sin adivinarlos. Lo importante es que digan lo mismo que la página: un precio o una fecha que no coincide con lo visible hace más daño que no tenerlos."
+  },
+  {
+    question: "¿Qué tipo de datos estructurados conviene tener?",
+    answer:
+      "Los que describen lo que la página ya enseña: Organization en la web de la empresa, Article en los artículos, con sus fechas, y Product con su oferta en las fichas de producto. No hace falta ningún tipo especial para la IA."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+No hay pruebas de que los datos estructurados hagan que la IA te cite más. El
+estudio más cuidadoso hasta ahora, de Ahrefs (mayo de 2026), comparó páginas
+que añadieron JSON-LD con páginas parecidas que no lo hicieron: en las Vistas
+creadas con IA de Google sus citas bajaron un poco, y en el Modo IA y en
+ChatGPT no cambiaron. Google dice que no hace falta ningún dato estructurado
+especial para aparecer. Las páginas con schema salen más citadas en otros
+estudios porque suelen ser webs más cuidadas, no por el schema. Tenlos, que
+sirven para otras cosas, pero no los pongas los primeros de la lista.
+
+</KeyTakeaway>
+
+## Lo que dicen los estudios
+
+Los datos estructurados son un bloque de código, casi siempre en formato
+JSON-LD, que describe la página para las máquinas: quién es la empresa, qué
+artículo es, qué producto se vende y a qué precio. Se repite mucho que ayudan a
+salir en las respuestas de la IA. Los datos dicen otra cosa:
+
+<StatGrid label="Datos estructurados y citas de la IA">
+  <Stat value="38,5%" label="de tasa de cita en ChatGPT para las páginas con JSON-LD, frente al 32,0% de las que no lo tenían." source="AirOps y Kevin Indig, 16.851 consultas y 50.553 respuestas de ChatGPT (abril de 2026). Correlación, no causa." />
+  <Stat value="4,6%" label="menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron." source="Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)" tone="warm" />
+  <Stat value="2,2%" label="más de citas en ChatGPT en esas mismas páginas: un cambio que no se distingue de cero." source="Ahrefs, mismo estudio (mayo de 2026)" tone="cyan" />
+</StatGrid>
+
+**AirOps**, con Kevin Indig, analizó 16.851 consultas y 50.553 respuestas de
+ChatGPT para ver qué páginas acaban citadas de entre las que el motor encuentra
+al buscar. Las que llevaban JSON-LD tenían una tasa de cita del 38,5%, y las que
+no, del 32,0%. Es una diferencia real, pero es una correlación: el
+estudio no dice que el JSON-LD sea la causa.
+
+<Figure
+  label="Figura 1."
+  caption="Tasa de cita en ChatGPT de las páginas con y sin JSON-LD. Fuente: AirOps y Kevin Indig, The fan-out effect, 16.851 consultas y 50.553 respuestas de ChatGPT (abril de 2026). Es una correlación: no mide qué pasa al añadir JSON-LD a una página."
+>
+
+<BarChart
+  title="Tasa de cita en ChatGPT, en %"
+  max={40}
+  rows={[
+    { label: "Páginas con JSON-LD", value: 38.5, display: "38,5%", highlight: true },
+    { label: "Páginas sin JSON-LD", value: 32, display: "32,0%" }
+  ]}
+/>
+
+</Figure>
+
+**Ahrefs** fue un paso más allá. Tomó 1.885 páginas que añadieron JSON-LD entre
+agosto de 2025 y marzo de 2026 y emparejó cada una con hasta tres páginas
+parecidas, de otras webs, que nunca lo hicieron. Después comparó sus citas en los 30 días anteriores y
+posteriores al cambio. En las Vistas creadas con IA de Google, las páginas con
+JSON-LD nuevo perdieron un 4,6% de citas frente a sus parejas: una diferencia
+pequeña, aunque estadísticamente significativa. En el Modo IA de Google
+ganaron un 2,4%, y en ChatGPT, un 2,2%; en los dos casos el cambio no se
+distingue de cero.
+
+**Google** lo dice en su documentación sobre las funciones de IA de la
+búsqueda (actualizada en diciembre de 2025): no hay requisitos adicionales para
+aparecer en las Vistas creadas con IA ni en el Modo IA, y no hace falta añadir
+ningún dato estructurado especial de schema.org. Lo que sí pide es que los datos
+estructurados coincidan con el texto visible de la página.
+
+## Por qué no coinciden
+
+Los dos estudios no se contradicen tanto como parece. Responden a preguntas
+distintas:
+
+<CompareTable>
+
+| Estudio | Qué pregunta | Datos | Resultado |
+|---|---|---|---|
+| **AirOps y Kevin Indig** | ¿Las páginas con JSON-LD se citan más? | 50.553 respuestas de ChatGPT, abril de 2026 | Sí, 38,5% frente a 32,0% |
+| **Ahrefs** | ¿Añadir JSON-LD hace que una página se cite más? | 1.885 páginas con páginas de control, 30 días | No: −4,6% en Google, sin cambio medible en ChatGPT |
+| **Google** | ¿Hace falta schema para salir en sus funciones de IA? | Documentación oficial, diciembre de 2025 | No hace falta ninguno especial |
+
+</CompareTable>
+
+Que las páginas con datos estructurados salgan más citadas no quiere decir que
+lo estén por los datos estructurados. Una web que se molesta en declarar su
+JSON-LD suele cuidar también el contenido, la velocidad, los títulos y los
+enlaces que recibe. El propio Ahrefs había visto antes que las páginas citadas
+por la IA tenían casi tres veces más probabilidades de llevar JSON-LD que las no
+citadas, y su conclusión ahora es que ese dato reflejaba esas otras fortalezas.
+
+El estudio de Ahrefs también tiene límites que reconoce: mezcla todos los tipos
+de schema en un solo grupo, mira solo 30 días, solo cuenta el JSON-LD que viene
+en el HTML de la página y trabaja con páginas que ya tenían muchas citas antes
+del cambio. Es la mejor prueba disponible, no la última palabra. Pero hoy nadie
+ha medido lo contrario.
+
+## Para qué sí sirven
+
+Que no muevan las citas no quiere decir que no sirvan. Sirven para tres cosas
+que no tienen que ver con la respuesta de la IA:
+
+- **Resultados enriquecidos en Google.** Estrellas, precios, migas de pan o
+  fechas en el resultado de búsqueda dependen de los datos estructurados, y
+  Ahrefs lo recuerda en el mismo estudio.
+- **Saber quién eres.** Un bloque Organization con tu nombre, tu web y tus
+  perfiles ayuda a los buscadores a unir todo lo que se publica sobre ti bajo
+  la misma marca.
+- **Que un agente lea bien lo que vendes.** Cuando un agente de IA mira una
+  ficha de producto para comprar o comparar, el precio, la moneda y la
+  disponibilidad declarados le ahorran adivinarlos del diseño. Lo contamos en
+  <a href="/blog/black-friday-agentes-de-ia">qué revisar antes del Black Friday
+  para que los agentes lean tus ofertas</a>.
+
+## Qué hacer con esto
+
+<NumberedSection n={1} title="Empieza por el contenido, no por el código">
+
+Lo que la IA cita es el texto: una respuesta clara al principio, datos con su
+fuente y una fecha de actualización real. Si tienes una hora, dedícala a eso
+antes que al schema. Lo contamos en
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
+te cite</a> y en <a href="/blog/la-ia-prefiere-contenido-reciente">por qué la
+IA prefiere el contenido reciente</a>.
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Declara quién eres, una vez">
+
+En la web de la empresa basta un bloque Organization con lo que ya se ve en la
+página: nombre, web, logo, dirección y perfiles. Cada campo tiene que repetir
+algo que el visitante también puede leer:
+
+<CodeBlock wrap title="Organization en JSON-LD, con lo que ya se ve en la página">{ORGANIZATION_JSONLD}</CodeBlock>
+
+<QuickAction>Pega el bloque en la cabecera de la portada, cambia los datos por los tuyos y comprueba que cada uno aparece también en el pie o en la página de contacto.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Si vendes, marca el producto y la oferta con los datos reales">
+
+En una ficha de producto, el bloque Product con su oferta (precio, moneda y
+disponibilidad) es lo que más rinde, porque lo leen Google y los agentes de
+compra. Tiene que salir del mismo sitio que el precio visible, para que no se
+quede viejo cuando cambies el precio. Si tu web vende, el comprobador de
+<a href="/comercio-agentico">comercio agéntico</a> te dice en unos segundos si
+un agente puede leer tu oferta.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Revisa que no contradiga a la página">
+
+Un precio, una fecha o un autor que dice una cosa en el JSON-LD y otra en la
+página es peor que no tener nada: Google pide que coincidan, y una IA que lee
+las dos versiones no sabe cuál creer. Revisa sobre todo lo que cambia: precios,
+disponibilidad y fecha de actualización.
+
+<QuickAction>Abre tu ficha de producto más vendida y compara el precio del JSON-LD con el que ve el cliente. Si no coinciden, arregla primero ese.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Mide citas, no etiquetas">
+
+Ninguna herramienta te dirá si un bloque de schema te ha hecho salir en una
+respuesta. Lo que sí puedes medir es si la IA te nombra y te cita antes y
+después de cada cambio, con las mismas preguntas. Así sabes qué ha funcionado
+en tu web, no en la de otro.
+
+</NumberedSection>
+
+## Cómo lo ves en GenScore
+
+La **Auditoría técnica** de GenScore comprueba si las páginas revisadas
+declaran datos estructurados con un tipo estándar (Organization, Article,
+FAQPage, HowTo o Product, entre otros), porque es la forma estándar de decir qué
+es una página. En **Recomendaciones**, el JSON-LD sale como un paso opcional al
+final de un plan, nunca como la palanca principal, y solo para describir lo que
+la página ya enseña. En Pro y Agencia, la **Auditoría agéntica** lee el producto
+y la oferta de la página donde vendes, como lo haría un agente.
+
+Y en cada escaneo, GenScore pregunta por lo que vendes en ChatGPT, Gemini,
+Claude y, en Pro y Agencia, Perplexity, con tus preguntas principales de
+búsqueda, y te dice si te nombran y qué páginas citan. Es la forma de saber si
+un cambio en tu web ha movido algo.
+
+<Verdict title="Tenlos bien, pero no esperes citas de ellos">
+
+Los datos estructurados no hacen que la IA te cite más: la prueba más cuidadosa
+no ve efecto, y Google dice que no hacen falta. Siguen siendo útiles para los
+resultados enriquecidos, para que te identifiquen y para que un agente lea bien
+lo que vendes. Ponlos con los datos reales de la página, revisa que no la
+contradigan y dedica el resto del tiempo al contenido, que es lo que se cita.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre si la IA te nombra cuando preguntan por lo que vendes"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: escaneamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity, revisamos tu web y te decimos qué arreglar primero."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

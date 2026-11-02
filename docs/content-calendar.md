@@ -175,7 +175,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | W3 | GEO para agencias: cómo vender un servicio de visibilidad en IA | `sectores` | ✅ Publicado | #349 |
 | W4 | Cómo medir si tu contenido mejora tu visibilidad en IA (y en cuánto tiempo) | `medicion` | 🔲 Pendiente | — |
 | W5 | Qué hacer cuando la IA te menciona pero recomienda a otro | `playbooks` | ✅ Publicado (2026-10-09) — slug `la-ia-te-menciona-pero-recomienda-a-otro` | #555 |
-| W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | 🔲 Pendiente | — |
+| W6 | Datos estructurados para GEO: qué marcar y qué no sirve de nada | `playbooks` | ✅ Cubierto por A8 (2026-11-02) | — |
 | L1 | Lanzamiento: GenScore ya mide Perplexity (CONTENT-LAUNCH-1, log §288) — slug `genscore-ya-mide-perplexity` | `playbooks` | ✅ Publicado 2026-10-11 (adelantado a petición del fundador) | #601 |
 | L2 | Lanzamiento: tu posición en Google y en la IA, con Search Console (CONTENT-LAUNCH-2, log §296) — slug `auditoria-seo-y-search-console-en-genscore` | `playbooks` | ✅ Publicado 2026-10-11 (PR #606) | — |
 | G1 | Cómo aparecer en Gemini, las Vistas creadas con IA y el Modo IA de Google (GEO-SELF-1 Fase 3, log §259) — slug `como-aparecer-en-gemini-y-vistas-creadas-con-ia` | `playbooks` | ✅ Publicado (2026-10-09) | #578 |
@@ -188,6 +188,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
 | L3 | Lanzamiento: GenScore ya tiene extensión de Chrome (EXT-LAUNCH-1, log §395) — slug `extension-de-chrome-de-genscore` | `playbooks` | ✅ Publicado (2026-10-31) | — |
 | R1 | Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío) (RECS-GUIDES-1, log §416; guía de las tarjetas de comparativa) — slug `como-hacer-una-comparativa-que-la-ia-cite` | `playbooks` | En PR (2026-11-01) | #725 |
+| A8 | ¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios (BLOG-SCHEMA-1, log §433) — slug `datos-estructurados-y-citas-de-la-ia` | `playbooks` | En PR (2026-11-02) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,

@@ -895,6 +895,30 @@ export const BLOG_POSTS: BlogPost[] = [
     // table uses made-up brands and X €/Y € placeholders.
     primaryKeyword: "comparativa con tu competidor",
     cluster: "playbooks"
+  },
+  {
+    slug: "datos-estructurados-y-citas-de-la-ia",
+    title: "¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios",
+    seoTitle: "¿Los datos estructurados ayudan a salir en la IA?",
+    metaDescription:
+      "Ahrefs comparó páginas que añadieron JSON-LD con otras que no: sus citas en la IA no subieron. Qué dicen los estudios, Google y para qué sí sirve el schema.",
+    description:
+      "Se repite que el schema ayuda a salir en las respuestas de la IA. Ahrefs, AirOps y la documentación de Google dicen otra cosa: qué mide cada uno, por qué no coinciden y para qué sí sirven los datos estructurados.",
+    datePublished: "2026-11-02",
+    coverImage: "/blog/datos-estructurados-y-citas-de-la-ia/cover.webp",
+    coverIcon: "fileText",
+    // BLOG-SCHEMA-1 (log §433). Ahrefs, Does schema help AI citations (May
+    // 2026, ahrefs.com/blog/schema-ai-citations); AirOps and Kevin Indig, The
+    // fan-out effect (Apr 2026); Google, AI features and your website
+    // (updated 2025-12-10). The Organization example is tested against
+    // checkStructuredData in lib/blog/organization-jsonld.test.ts.
+    primaryKeyword: "datos estructurados citas ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "4,6%",
+      label: "menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron.",
+      source: "Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)"
+    }
   }
 ];
 
