@@ -29309,3 +29309,37 @@ Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
 afirma nada del cálculo de la puntuación.
 
 **Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
+
+## §434 · WP-LAUNCH-1: GenScore ya está en WordPress (2026-11-02)
+
+**Qué.** Artículo `genscore-para-wordpress` (clúster `playbooks`), lanzamiento
+del plugin de WordPress (WP-PLUGIN-1 a 4, §421 y §432). Lo pidió Denis: un
+post muy de marketing y visual, con imágenes reales de lo que aporta (sin
+cuenta, con cuenta y los arreglos con un clic de SEO, GEO y agentes).
+
+**Cómo.**
+
+- Siete capturas reales del plugin 1.4.2 en un WordPress 7.1 local con
+  WooCommerce y SQLite, a 2x con Playwright, y una tienda inventada (Café
+  Ventura, `cafeventura.example`). Sin cuenta: revisión, arreglo de
+  descripciones, antes y después (Google pasó de «Mejorable» a «Optimizada»
+  tras publicar), pestaña GEO con bots y datos de producto desde WooCommerce.
+  Con cuenta: el plugin hablando con un servidor simulado de genscore.es con
+  cifras inventadas (Puntuación GEO, motores, rivales, plan), y el borrador
+  de comparativa creado de verdad en el editor. Los pies lo dicen.
+- El enlace de instalación vive en `WORDPRESS_PLUGIN_URL`
+  (`lib/blog/wordpress-plugin.ts`) y su test ata al código del plugin lo que
+  el artículo promete: «Crear borrador» crea un borrador, cada arreglo pide
+  «¿Publicar en N páginas?» y tiene «Deshacer», y sin cuenta ningún fichero
+  salvo `account.php` llama fuera.
+- Sin cifras absolutas propias ni versiones de modelo. Las cifras que salen
+  son las de la tienda de ejemplo dentro de las capturas.
+
+**Pendiente o sabido.**
+
+- **No se publica hasta que el plugin esté en WordPress.org.** La URL de la
+  constante es la esperada (`/plugins/genscore/`); hay que comprobarla con la
+  ficha real antes del merge.
+- El texto alternativo y otros arreglos que nombra el artículo llegan con la
+  1.4.1 (PR #748); la versión que se suba a WordPress.org debe incluirlos.
+- No retira ningún camino de recuperación.

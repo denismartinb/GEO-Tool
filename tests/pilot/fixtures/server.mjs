@@ -119,7 +119,9 @@ const BLOG_SLUGS = [
   "extension-de-chrome-de-genscore",
   "como-hacer-una-comparativa-que-la-ia-cite",
   // BLOG-SCHEMA-1 (2026-11-02, log §433).
-  "datos-estructurados-y-citas-de-la-ia"
+  "datos-estructurados-y-citas-de-la-ia",
+  // WP-LAUNCH-1 (2026-11-02, log §434).
+  "genscore-para-wordpress"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

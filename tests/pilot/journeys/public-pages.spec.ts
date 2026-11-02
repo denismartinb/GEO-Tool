@@ -100,7 +100,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "extension-de-chrome-de-genscore": "playbooks",
   "como-hacer-una-comparativa-que-la-ia-cite": "playbooks",
   // BLOG-SCHEMA-1 (2026-11-02, log §433).
-  "datos-estructurados-y-citas-de-la-ia": "playbooks"
+  "datos-estructurados-y-citas-de-la-ia": "playbooks",
+  // WP-LAUNCH-1 (2026-11-02, log §434).
+  "genscore-para-wordpress": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

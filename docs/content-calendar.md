@@ -188,6 +188,7 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
 | L3 | Lanzamiento: GenScore ya tiene extensión de Chrome (EXT-LAUNCH-1, log §395) — slug `extension-de-chrome-de-genscore` | `playbooks` | ✅ Publicado (2026-10-31) | — |
 | R1 | Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío) (RECS-GUIDES-1, log §416; guía de las tarjetas de comparativa) — slug `como-hacer-una-comparativa-que-la-ia-cite` | `playbooks` | En PR (2026-11-01) | #725 |
+| L4 | Lanzamiento: GenScore ya está en WordPress (WP-LAUNCH-1, log §434; se publica cuando el plugin esté en WordPress.org) — slug `genscore-para-wordpress` | `playbooks` | En PR, pendiente de aprobación (2026-11-02) | — |
 | A8 | ¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios (BLOG-SCHEMA-1, log §433) — slug `datos-estructurados-y-citas-de-la-ia` | `playbooks` | En PR (2026-11-02) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo

@@ -919,6 +919,32 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron.",
       source: "Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)"
     }
+  },
+  {
+    slug: "genscore-para-wordpress",
+    title: "GenScore ya está en WordPress: arregla el SEO, la IA y los agentes con un clic",
+    seoTitle: "Plugin de WordPress para SEO e IA: arreglos con un clic",
+    metaDescription:
+      "Plugin gratis de GenScore para WordPress: mira tu web como la leen la IA, Google y los agentes de compra, y arregla descripciones, schema y fichas en un clic.",
+    description:
+      "Revisa tu web como la leen ChatGPT, Gemini, Claude, Perplexity, Google y los agentes de compra, y arregla lo primero con un clic desde el escritorio de WordPress. Gratis y sin cuenta.",
+    datePublished: "2026-11-02",
+    coverImage: "/blog/genscore-para-wordpress/cover.webp",
+    coverIcon: "search",
+    heroImage: {
+      src: "/blog/genscore-para-wordpress/hero.webp",
+      alt: "Escritorio de WordPress con la pantalla de GenScore: optimización técnica «Optimizada», recomendaciones técnicas con «Arreglar» y la Puntuación GEO de la cuenta conectada.",
+      width: 1632,
+      height: 994
+    },
+    // WP-LAUNCH-1 (log §434): launch post for the WordPress plugin (WP-PLUGIN-1
+    // to 4, log §421 and §432). Claims trace to the plugin code and readme in
+    // docs/wordpress-plugin/genscore (1.4.x); lib/blog/wordpress-plugin.test.ts
+    // ties the key ones to the code. Every picture is a real capture of the
+    // plugin on a local WordPress + WooCommerce with a made-up shop; with the
+    // account connected, the account figures are made up too (ADR 0028).
+    primaryKeyword: "plugin wordpress seo ia",
+    cluster: "playbooks"
   }
 ];
 
