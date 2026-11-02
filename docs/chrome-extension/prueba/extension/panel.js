@@ -474,6 +474,14 @@
     const cards = deck(top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) })), "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
     return { hero, lanes, body, cards };
   }
+  function teaser(k) {
+    const T = { ia: ["Conoce cómo te citan los motores", "Cuánto te nombra cada motor y quién sale antes que tú."], google: ["Conoce la Salud SEO de todo tu dominio", "Todas tus páginas clave, no solo esta, y qué arreglar primero."], agent: ["Conoce tu nota para agentes", "Cómo te descubren, te entienden, se fían y te compran."] }[k];
+    let ill;
+    if (k === "ia") ill = `<div class="eng1 ghost">${EK.map((e) => `<div class="c" data-tip="${ENG[e].n}"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="q"></b><span class="n">${ENG[e].n}</span><span class="tb"><i></i></span></div>`).join("")}</div><div class="xk ghost">${[86, 64, 52, 38].map((w, i) => `<div class="xq${i === 1 ? " me" : ""}"><span class="ps num">${i + 1}</span><span class="fav gh"></span><span class="q" style="width:${70 - i * 8}%"></span><span class="tb"><i style="width:${w}%"></i></span><span></span></div>`).join("")}</div>`;
+    else if (k === "google") ill = `<div class="gseo ghost"><span class="aur"><svg viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" class="t"/></svg></span><div>${[92, 74, 84].map((w) => `<span class="q" style="width:${w}%"></span>`).join("")}</div></div>`;
+    else ill = `<div class="ag4 ghost">${["Descubrimiento", "Comprensión", "Confianza", "Compra"].map((n) => gauge({ v: null, cls: "", nm: n, st: "", tag: "div" })).join("")}</div>`;
+    return `<div class="tz"><div class="ill">${ill}<span class="lk">${ic("shield", "sm")}</span></div><b class="h">${T[0]}</b><p>${T[1]}</p><button class="btn ink" data-act="open" data-to="/login" data-c="tz-login">Identifícate gratis${ic("arrowr", "sm")}</button></div>`;
+  }
   function techSection(f, sc, rel) {
     const scoped = rel === "own" || rel === "none";
     const dom = scoped && (S.tab === "dom" || !sc);
@@ -488,8 +496,12 @@
       if (rel === "own" && covers(f.host, curDom())) tail = pageAudit();
     } else if (rel === "none") {
       hero = oHero(null, "Las tres auditorías de toda tu web: ¿te cita la IA, te encuentra Google, puede comprar un agente?", true);
-      lanes = [["ia", "Auditoría GEO"], ["google", "Auditoría SEO"], ["agent", "Auditoría agéntica"]].map(([k, st], i) => `<button class="gg na lkg" data-act="open" data-to="/login" data-c="web-lock" style="--v:0;--gd:${i * 90}ms"><span class="dl"><svg viewBox="0 0 120 104" aria-hidden="true"><path class="trk" d="${garc(60, 44)}"/></svg><span class="in">${ic("shield")}</span></span><span class="nm">${laneIcon(k)}${laneName(k)}</span><span class="st">${st}</span></button>`).join("");
-      body = "";
+      /* each locked gauge opens its own teaser, a figure-free picture of what the account adds (§408, back by Denis 2026-11-02) */
+      const LK = [["ia", "Auditoría GEO"], ["google", "Auditoría SEO"], ["agent", "Auditoría agéntica"]];
+      lanes = LK.map(([k, st], i) => `<button class="gg na lkg" data-lane="${k}" aria-expanded="${S.lane === k}" style="--v:0;--gd:${i * 90}ms"><span class="dl"><svg viewBox="0 0 120 104" aria-hidden="true"><path class="trk" d="${garc(60, 44)}"/></svg><span class="in">${ic("shield")}</span></span><span class="nm">${laneIcon(k)}${laneName(k)}</span><span class="st">${st}${ic("chevd", "chev")}</span></button>`).join("");
+      body = LK.map(([k]) => laneBox(k, () => teaser(k))).join("");
+      if (LK.some(([k]) => S.lane === k)) cards = "";
+      else
       cards = `<div class="lkcta"><p><b>Toda tu web, no solo esta página.</b> Las tres auditorías con cada punto de mejora, gratis con tu cuenta.</p><button class="btn ink" data-act="open" data-to="/login" data-c="web-login">Identifícate en GenScore${ic("arrowr", "sm")}</button></div>`;
     } else {
       ({ hero, lanes, body, cards } = webBlock(sc, f));

@@ -29329,3 +29329,10 @@ una X, se va solo a los 8 s y al irse recoge su altura, así que lo de debajo
 sube en vez de saltar. Los iconos de motores y agentes enseñan su nombre al
 pasar el ratón (y con el foco), con un globo propio en vez del `title` del
 navegador, que tarda en salir.
+
+**Segunda adenda (Denis, 2026-11-02).** Vuelven los adelantos de §408, sólo
+sin sesión y sólo en «Toda la web»: cada indicador con candado (IA, Google,
+Agentes) se abre como los demás y enseña su ilustración sin cifras con su
+llamada («Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu
+dominio», «Conoce tu nota para agentes»). Con ninguno abierto se ve el bloque
+común de antes. En «Esta página» no salen: ahí la extensión ya mide.
