@@ -29269,3 +29269,55 @@ Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
 afirma nada del cálculo de la puntuación.
 
 **Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
+
+## §434 · EXT-PANEL-COHERENCE-1: el panel de la extensión, igual con y sin sesión (2026-11-02)
+
+**Qué.** Extensión 1.4.0. El panel deja de cambiar de forma al entrar en la
+cuenta. Dos bloques fijos, con el mismo nombre en los dos estados:
+
+- **Optimización técnica**, con «Esta página | Toda la web»: cifra grande con
+  barra y estado (Se frena, Mejorable, Optimizada, nunca un medidor), los tres
+  indicadores IA, Google y Agentes, y «Recomendaciones técnicas». Sin sesión,
+  «Toda la web» sale con candado, «Sin medir» y los indicadores vacíos.
+- **Puntuación GEO** («¿Sabes si la IA recomienda tu marca?»): el único
+  medidor. Sin sesión es el mismo medidor en gris, «Sin medir», con «Analizar
+  dominio». Con sesión, la puntuación, los motores, el rival que sale más y
+  «Recomendaciones de GenScore».
+
+Sin sesión manda la página abierta (técnica arriba); con sesión, la Puntuación
+GEO va arriba porque es lo que añade la cuenta (Denis, 2026-11-02). Al entrar
+con el panel abierto, una línea dice «Has entrado. El panel se ha actualizado
+solo.» y se abre «Toda la web». La página abierta deja de ser una opción del
+selector de dominios: ahora es la pestaña del bloque técnico.
+
+Al abrir IA o Agentes salen los logos oficiales, pequeños: ChatGPT, Gemini,
+Claude, Perplexity y Meta AI («Quién puede leerla»), y los agentes de la
+consola (Muse, Dots, Agente de Gemini, Comet, Grok Bot, Instinct) con las
+reglas de `lib/agentic-audit/shopping-agents.ts`. Meta se lee del mismo
+robots.txt con `meta-webindexer` y queda fuera de la nota; Grok Bot e
+Instinct no publican identidad y salen «No se ve desde fuera». Instinct no
+tiene logo oficial: lleva su inicial.
+
+**Por qué.** Denis: «El diseño actual me gustaba bastante [...] Lo que
+necesitaba era coherencia entre el estado logado y no logado». El medidor
+grande significaba la nota técnica sin sesión y la Puntuación GEO con ella.
+Maqueta aprobada: https://claude.ai/artifact/MdXfobGpcM15FAFk3myQ92 (fuentes
+en la carpeta compartida del proyecto, `extension/maquetas-2026-11-02/v5-coherencia/`).
+Las versiones 1 a 4, con otro aspecto, se descartaron.
+
+**Cifra de «Toda la web».** Es la Salud técnica de las páginas auditadas
+(`actualReadinessScore` de `buildTechnicalIssuesReport`), nueva en
+`/api/ext/project` como `audits.readiness`. Es la misma mezcla 55/45 de IA y
+Google que la nota de la página, así que las dos pestañas miden lo mismo.
+Nunca una media de los tres bloques, que no existe en la consola. Las tarjetas
+de «Recomendaciones técnicas» de toda la web no suman «Hasta +N pt», porque
+los puntos de bloque no se suman (`lib/ext/audits.ts`), y no se marcan como
+hechas en el panel: llevan a la consola.
+
+**Se conserva.** Search Console (dentro de Google), «La citan en tus
+prompts», «En tu auditoría» de una página propia y la alerta de la página.
+**Se retira** la vista «Visión general» con medidor y los adelantos con
+candado por indicador (§408), sustituidos por el bloque con candado.
+
+**Pendiente o sabido.** Ningún camino de recuperación se retira. Denis sube
+el zip a la tienda.

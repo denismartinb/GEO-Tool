@@ -148,6 +148,9 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
     }
     expect(r.auditedAt).toBe(AT);
     expect(r.page).toBeNull();
+    // «Toda la web» in the panel is the Salud técnica, read from its owner (log §433)
+    expect(r.readiness).toBe(report.actualReadinessScore);
+    expect(r.readiness).not.toBeNull();
   });
 
   it("takes the agentic block from the review's own steps and score", () => {
@@ -177,6 +180,6 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
   });
 
   it("without an audit there is nothing to show, not a zero", () => {
-    expect(buildExtAudits({ snapshot: null, agentic: null, ownUrl: "https://marca.es/" })).toEqual({ auditedAt: null, blocks: [], page: null });
+    expect(buildExtAudits({ snapshot: null, agentic: null, ownUrl: "https://marca.es/" })).toEqual({ auditedAt: null, readiness: null, blocks: [], page: null });
   });
 });
