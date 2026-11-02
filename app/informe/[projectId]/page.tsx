@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Figtree, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { loadReportInput } from "@/lib/report/report-data";
@@ -20,20 +20,34 @@ import { ReportToolbar } from "@/components/report/report-toolbar";
  * look uses (Figtree from 300 for the big figures, JetBrains Mono for labels;
  * REPORT-INSTRUMENTO-1, log §439): the root layout loads fewer, and widening
  * those would change the weight of text across the whole site.
+ *
+ * STATIC instances, one file per weight (latin subset), never the variable
+ * font: Chrome embeds a variable font in a printed PDF as Type 3 glyphs,
+ * which the iOS PDF viewer paints stroke by stroke, so the cover flickered on
+ * open (founder, 2026-11-02). Static files embed as plain TrueType.
  */
 
-const reportMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
+const reportMono = localFont({
+  src: [
+    { path: "../fonts/jbmono-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/jbmono-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/jbmono-600.woff2", weight: "600", style: "normal" }
+  ],
   variable: "--gr-font-mono",
-  display: "swap"
+  display: "block"
 });
 
-const reportBody = Figtree({
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700", "800"],
+const reportBody = localFont({
+  src: [
+    { path: "../fonts/figtree-300.woff2", weight: "300", style: "normal" },
+    { path: "../fonts/figtree-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/figtree-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/figtree-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/figtree-700.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/figtree-800.woff2", weight: "800", style: "normal" }
+  ],
   variable: "--gr-font-body",
-  display: "swap"
+  display: "block"
 });
 
 type Params = { params: Promise<{ projectId: string }> };
