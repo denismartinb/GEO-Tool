@@ -122,8 +122,8 @@ function groupBy<K extends string>(pages: Measured[], key: (m: Measured) => K, l
 export function importanceInsight(lines: AiGroupLine[], overall: number): string | null {
   const cited = lines.find((l) => l.label === SOURCE_LABEL.cited);
   if (!cited) return null;
-  if (cited.pct <= overall - 8) return "Lo que más te recomienda la IA es lo que peor le llega.";
-  if (cited.pct >= 95) return "Lo que te cita la IA le llega entero.";
+  if (cited.pct <= overall - 8) return "Tus páginas más citadas son las que peor lee la IA.";
+  if (cited.pct >= 95) return "Tus páginas más citadas le llegan enteras a la IA.";
   return null;
 }
 

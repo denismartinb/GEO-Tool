@@ -62,7 +62,7 @@ describe("buildAiView with browser measurements (AI-READ-2, log §451)", () => {
     // weights 2, 3, 1.5: (200 + 120 + 150) / 6.5 = 72
     expect(v.pct).toBe(72);
     expect(v.groups[0].title).toBe("Por lo que importa");
-    expect(v.groups[0].insight).toBe("Lo que más te recomienda la IA es lo que peor le llega.");
+    expect(v.groups[0].insight).toBe("Tus páginas más citadas son las que peor lee la IA.");
     expect(v.groups[1]).toMatchObject({ title: "Por tipo de página", insight: "El blog llega entero; el problema está en lo que vendes." });
   });
 

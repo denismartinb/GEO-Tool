@@ -29697,7 +29697,7 @@ siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
 - un anillo con el porcentaje de lo que ve una persona que llega a ChatGPT, Claude y Perplexity, pesado por lo que importa cada página (citada por la IA 3, portada 2, páginas de los temas vigilados 1,5, resto 1), con el cambio desde la medición anterior cuando al menos la mitad de las páginas la tienen;
 - cuatro baldosas por tipo de contenido (precios, preguntas frecuentes, opiniones, fichas) con el porcentaje que no llega;
 - «Lo que la IA no ve de ti»: una tarjeta por tipo que se pierde, con la consecuencia, un trozo literal que no llega, dónde pasa («En lo que vendes», «En tus artículos»…) y, en precios, «Afecta a N preguntas que vigilas» (prompts activos que `classifyPurchaseQuestion` clasifica como `price`);
-- «Dónde se pierde», por importancia y por tipo de página, con una frase sólo cuando las cifras dicen algo («Lo que más te recomienda la IA es lo que peor le llega»).
+- «Dónde se pierde», por importancia y por tipo de página, con una frase sólo cuando las cifras dicen algo («Tus páginas más citadas son las que peor lee la IA»).
 
 Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arreglo sólo irá a Recomendaciones cuando su causa sea segura (Denis: «solo si estamos seguros de dar una recomendación… la visualizamos en la sección recomendaciones»). Diseño en `docs/design-reference/ai-read-2/bloque-auditoria-geo.html` (sólo claro, a petición de Denis).
 
