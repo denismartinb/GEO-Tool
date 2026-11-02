@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { CHROME_WEB_STORE_URL } from "./chrome-extension";
+import { CHROME_WEB_STORE_URL, EDGE_ADDONS_URL } from "./chrome-extension";
 
 const MDX = readFileSync(
   join(process.cwd(), "app/blog/extension-de-chrome-de-genscore/page.mdx"),
@@ -19,6 +19,12 @@ describe("EXT-LAUNCH-1: el artículo de la extensión dice lo que hace la extens
   it("el artículo enlaza la tienda por la constante, nunca a mano", () => {
     expect(MDX).toContain("CHROME_WEB_STORE_URL");
     expect(MDX).not.toMatch(/chromewebstore\.google\.com/);
+  });
+
+  it("el enlace de Edge es una ficha de Microsoft Edge Add-ons y el artículo la lee de la constante", () => {
+    expect(EDGE_ADDONS_URL).toMatch(/^https:\/\/microsoftedge\.microsoft\.com\/addons\/detail\/[^/]+\/[a-p]{32}$/);
+    expect(MDX).toContain("EDGE_ADDONS_URL");
+    expect(MDX).not.toMatch(/microsoftedge\.microsoft\.com/);
   });
 
   it("el nombre que se busca en la tienda es el del manifiesto", () => {

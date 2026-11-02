@@ -860,6 +860,7 @@ export const BLOG_POSTS: BlogPost[] = [
     description:
       "Un clic en cualquier página: su nota SEO + IA, qué motores de IA pueden leerla y qué cambiar primero. Gratis y sin cuenta.",
     datePublished: "2026-10-31",
+    dateUpdated: "2026-11-02",
     coverImage: "/blog/extension-de-chrome-de-genscore/cover.webp",
     coverIcon: "search",
     heroImage: {
