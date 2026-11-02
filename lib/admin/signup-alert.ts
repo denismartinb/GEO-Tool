@@ -20,7 +20,8 @@ export async function sendNewSignupOpsAlert(
   supabase: Awaited<ReturnType<typeof createClient>>,
   user: { id: string; email: string; created_at?: string },
   method: "password" | "google",
-  status: "active" | "pending" = "active"
+  status: "active" | "pending" = "active",
+  domain: string | null = null
 ): Promise<void> {
   try {
     // A pending signup has no session yet, so RLS would hide its profile:
@@ -33,7 +34,8 @@ export async function sendNewSignupOpsAlert(
         planId: "pro",
         trialEndsAt: null,
         createdAt: user.created_at ? new Date(user.created_at) : new Date(),
-        status
+        status,
+        domain
       });
       return;
     }
@@ -50,7 +52,8 @@ export async function sendNewSignupOpsAlert(
       method,
       planId: profile?.current_plan ?? "free",
       trialEndsAt: profile?.trial_ends_at ?? null,
-      createdAt: user.created_at ? new Date(user.created_at) : new Date()
+      createdAt: user.created_at ? new Date(user.created_at) : new Date(),
+      domain
     });
   } catch (error) {
     console.error("[geo:admin] failed to gather data for the new-signup ops alert", {

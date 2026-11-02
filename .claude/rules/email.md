@@ -168,3 +168,13 @@ log §306).
 - **El anuncio de la extensión es `lifecycle`**: lleva baja y no sale sin
   `EMAIL_UNSUBSCRIBE_SECRET`. Reserva `feature_extension`, así que nadie
   recibe a la vez el anuncio y el correo automático de la extensión.
+
+## Primer escaneo (OPS-FIRST-SCAN-1, log §441)
+
+- **El aviso `ops_first_scan` sale cuando el run creado es el único del
+  proyecto** (`lib/scan/first-scan-alert.ts`), con clave de idempotencia
+  `ops-first-scan/<proyecto>`. Nunca lanza ni retrasa la creación del escaneo
+  más allá del envío, y sin `OPS_ALERT_EMAIL`/`RESEND_API_KEY` no consulta nada.
+- **El dominio del aviso de alta sólo es el que la persona trajo**, validado
+  con `isWellFormedDomain` en el servidor; el formulario lo lee sin consumirlo
+  (`peekPendingDomain`) para que el asistente lo siga encontrando.

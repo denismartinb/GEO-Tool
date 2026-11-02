@@ -992,6 +992,12 @@ export async function sendNewSignupOpsAlertEmail(input: {
   trialEndsAt: string | null;
   createdAt: Date;
   status?: "active" | "pending";
+  /**
+   * OPS-FIRST-SCAN-1: the domain the person brought to signup (hero field,
+   * free checker or `/signup?dominio=`), when the form knew it. It is what
+   * they meant to scan, not a project: the project is created later.
+   */
+  domain?: string | null;
 }): Promise<void> {
   const to = getOpsAlertAddress();
   if (!to) return;
@@ -1012,6 +1018,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
 
   const rowsHtml = [
     dataRow("Email", input.email),
+    ...(input.domain ? [dataRow("Dominio indicado", input.domain)] : []),
     dataRow("user_id", input.userId),
     dataRow("Método", methodLabel),
     dataRow("Plan", planLabel),
@@ -1021,7 +1028,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
   await sendEmail(
     "ops_new_signup",
     to,
-    pending ? `[GenScore] Alta nueva (sin confirmar) · ${input.email}` : `[GenScore] Alta nueva · ${input.email}`,
+    `[GenScore] Alta nueva${pending ? " (sin confirmar)" : ""} · ${input.email}${input.domain ? ` · ${input.domain}` : ""}`,
     wrap(
       `
       ${eyebrow("Alta nueva · sólo equipo GenScore")}
@@ -1040,6 +1047,83 @@ export async function sendNewSignupOpsAlertEmail(input: {
         preheader: pending ? `Alta sin confirmar: ${input.email}` : `Nueva cuenta: ${input.email}`
       }
     )
+  );
+}
+
+/**
+ * OPS-FIRST-SCAN-1: aviso al operador cuando un proyecto lanza su PRIMER
+ * escaneo, que es el momento en que un dominio empieza a costar llamadas a
+ * los motores. Complementa al aviso de alta: ese no siempre sabe el dominio
+ * (Google, o alguien que llega sin escribirlo), y éste lo sabe siempre.
+ *
+ * Va a `OPS_ALERT_EMAIL`, nunca al cliente. Las llamadas previstas son las
+ * del propio run (prompts × muestras × motores), no una estimación.
+ */
+export async function sendFirstScanOpsAlertEmail(
+  input: {
+    domain: string;
+    projectId: string;
+    runId: string;
+    ownerEmail: string | null;
+    ownerUserId: string;
+    planId: string;
+    triggerSource: "user" | "cron";
+    prompts: number;
+    samples: number;
+    engines: string[];
+    internalAccount: boolean;
+    createdAt: Date;
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
+  const to = getOpsAlertAddress();
+  if (!to) return "not_sent";
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const calls = input.prompts * input.samples * input.engines.length;
+  const rowsHtml = [
+    dataRow("Dominio", input.domain),
+    dataRow("Cuenta", input.ownerEmail ?? "(sin email)"),
+    dataRow("user_id", input.ownerUserId),
+    dataRow("Plan", input.planId),
+    dataRow("Cuenta interna de prueba", input.internalAccount ? "Sí" : "No"),
+    dataRow("Lanzado por", input.triggerSource === "cron" ? "Escaneo automático" : "La persona"),
+    dataRow("Motores", input.engines.join(", ")),
+    dataRow(
+      "Llamadas previstas",
+      `${calls} (${input.prompts} prompts × ${input.samples} ${input.samples === 1 ? "muestra" : "muestras"} × ${input.engines.length} motores)`
+    ),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Escaneo", input.runId),
+    dataRow("Fecha", input.createdAt.toISOString())
+  ].join("");
+
+  return sendEmailWithOutcome(
+    {
+      kind: "ops_first_scan",
+      to,
+      subject: `[GenScore] Primer escaneo · ${input.domain}${input.ownerEmail ? ` · ${input.ownerEmail}` : ""}`,
+      html: wrap(
+        `
+      ${eyebrow("Dominio nuevo · sólo equipo GenScore")}
+      ${heading(`Primer escaneo de ${escapeHtml(input.domain)}`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext("Aviso automático la primera vez que un proyecto lanza un escaneo, que es cuando el dominio empieza a gastar llamadas a los motores.")}
+    `,
+        {
+          footerHtml: "Aviso interno, sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+          preheader: `Primer escaneo: ${input.domain}`
+        }
+      )
+    },
+    options
   );
 }
 

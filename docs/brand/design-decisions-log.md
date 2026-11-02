@@ -29559,6 +29559,22 @@ sustituye a las primeras reseñas.
 
 **Pendiente o conocido.** En una primera visita con un móvil lento, la pantalla queda en blanco hasta que carga el JavaScript (el formulario aparece igualmente a los 6 s si falla). No retira ningún camino de recuperación: un toque siempre lleva al formulario.
 
+## §441 · OPS-FIRST-SCAN-1: aviso al operador del primer escaneo de un dominio, y el dominio en el aviso de alta (2026-11-02)
+
+**Qué.** Dos cambios en los correos de operador (`OPS_ALERT_EMAIL`, nunca al cliente):
+
+- **Aviso de alta nueva con dominio.** Si la persona llega al registro con un dominio (campo de la portada, comprobador o `/signup?dominio=`), el formulario lo lee de `localStorage` sin consumirlo (`peekPendingDomain`) y lo manda en un campo oculto `dominio`. La acción `signup` lo limpia con `cleanDomain` + `isWellFormedDomain` y lo pasa al aviso: fila «Dominio indicado» y dominio al final del asunto. El asistente sigue encontrándolo igual (se consume al leerlo allí, como antes).
+- **Aviso nuevo «Primer escaneo» (`ops_first_scan`).** `createPendingScanRunCore` llama a `sendFirstScanOpsAlert` (`lib/scan/first-scan-alert.ts`) tras crear el run y sus jobs. Sólo envía si ese run es el único `scan_runs` del proyecto. Lleva dominio, cuenta, plan, si es cuenta interna de prueba, quién lo lanzó, motores y las llamadas previstas del propio run (prompts × muestras × motores), con clave de idempotencia de Resend `ops-first-scan/<proyecto>`.
+
+**Por qué.** Petición de Denis: el aviso de alta muchas veces llega sin dominio (alta con Google, o sin escribirlo) y lo que cuesta dinero es escanear. El primer run es el momento en que un dominio empieza a gastar llamadas, y ahí el dominio siempre se conoce.
+
+**Decisiones.**
+- «Primero» = único run del proyecto. Un reintento de `reconciliation.ts` de un primer run fallido ya ve dos filas y calla. Un proyecto borrado y creado otra vez avisa de nuevo, porque vuelve a costar.
+- Nunca lanza ni bloquea el escaneo: sin canal de aviso configurado no hace ni una consulta, y cualquier fallo va a `console.error`.
+- El alta con Google sigue sin dominio en su aviso: llevarlo por la URL de vuelta de OAuth tocaría la lista de redirecciones de Supabase. Lo cubre el aviso de primer escaneo.
+
+**Pendiente o conocido.** El pilot de escritura (`mozilla.org`) también avisa la primera vez que crea su proyecto; sale marcado como «Cuenta interna de prueba: Sí».
+
 ## §445 · ADMIN-GEO-SCORE-1: Puntuación GEO de cada dominio en la consola de operador (2026-11-02)
 
 **Qué se decidió.** Denis pidió ver en `/admin/users` la Puntuación GEO de cada dominio que registran y escanean los usuarios.
