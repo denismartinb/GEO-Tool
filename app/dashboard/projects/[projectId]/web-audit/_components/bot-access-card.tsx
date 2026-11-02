@@ -7,6 +7,7 @@ import {
   engineReadStates,
   switchStates
 } from "@/lib/web-audit/ai-bots";
+import { serverStateFor } from "@/lib/web-audit/server-probe";
 import type { AiBotsEngineTile, AiBotsSwitchRow } from "@/components/ins/audit/ai-bots";
 import { formatDate } from "./format";
 
@@ -97,7 +98,9 @@ export function aiBotsSectionProps(bots: BotAccessReport, domain: string): {
       name,
       state: engineStates[engine],
       // Gemini also needs Googlebot, which no switch here touches.
-      hint: engine === "gemini" && token("Googlebot") === false ? "Googlebot cerrado" : null
+      hint: engine === "gemini" && token("Googlebot") === false ? "Googlebot cerrado" : null,
+      // GEO-ALERTS-1 (log §440): robots.txt lets it in, the server does not.
+      serverBlocked: engineStates[engine] !== false && serverStateFor(bots, engine) === "blocked"
     })),
     switches: AI_BOT_SWITCHES.map((sw) => ({
       id: sw.id,

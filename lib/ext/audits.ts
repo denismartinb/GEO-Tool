@@ -31,7 +31,7 @@ export const EXT_AUDIT_ISSUES = 3;
 export const EXT_AUDIT_URLS = 20;
 
 /** Checks whose affected labels are not page URLs (bot names, or the site as a whole). */
-const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "llms_txt_missing", "sitemap_missing"]);
+const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "bot_server_blocked", "llms_txt_missing", "sitemap_missing"]);
 
 export type ExtAuditIssue = {
   label: string;

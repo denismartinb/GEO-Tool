@@ -168,3 +168,15 @@ log §306).
 - **El anuncio de la extensión es `lifecycle`**: lleva baja y no sale sin
   `EMAIL_UNSUBSCRIBE_SECRET`. Reserva `feature_extension`, así que nadie
   recibe a la vez el anuncio y el correo automático de la extensión.
+
+## Avisos de tu web (GEO-ALERTS-1, log §440)
+
+- **Sólo en una transición**: el motor entraba en la auditoría anterior y en
+  ésta no (`engineAccessChanges`). Nunca por un estado que no cambió ni por un
+  bot de entrenamiento.
+- **Como mucho uno por motor y proyecto cada 30 días.** La marca `emailedAt`
+  del aviso se escribe después de un envío aceptado, y Resend recibe la clave
+  `site-alert/<dueño>/<aviso>`.
+- **Categoría `site_alerts` con baja propia** (`notify_site_alerts`,
+  migración 0049). Se lee en su propia consulta y falla cerrado; sale sólo con
+  `isLifecycleEmailEnabled`.

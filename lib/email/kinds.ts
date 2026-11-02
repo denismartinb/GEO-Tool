@@ -23,6 +23,8 @@ export const EMAIL_KINDS = [
   // Monitoring
   "score_drop",
   "weekly_digest",
+  // An AI engine stopped being able to enter the site (GEO-ALERTS-1, log §440)
+  "site_alert",
   // Pro trial sequence and win-back (same names as email_sends)
   "first_scan",
   "trial_d1",

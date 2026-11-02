@@ -53,12 +53,16 @@ describe("Visión general: citation blockers lead the screen", () => {
   const overview = read("app/dashboard/projects/[projectId]/page.tsx");
 
   it("reads blockers from the same module as Recomendaciones", () => {
-    expect(overview).toContain('from "@/lib/recommendations/citation-blockers"');
-    expect(overview).toContain("findCitationBlockers(");
+    // GEO-ALERTS-1 (log §440): the overview picks its strip with
+    // `selectGeoStrip`, which reads `findCitationBlockers`.
+    const strip = read("lib/ins/geo-strip.ts");
+    expect(overview).toContain("selectGeoStrip(");
+    expect(strip).toContain('from "@/lib/recommendations/citation-blockers"');
+    expect(strip).toContain("findCitationBlockers(");
   });
 
   it("renders the priority strip before the score hero", () => {
-    const strip = overview.indexOf("<PriorityAlert");
+    const strip = overview.indexOf("<GeoStripAlert");
     const hero = overview.indexOf("<ScoreHero");
     expect(strip).toBeGreaterThan(-1);
     expect(strip).toBeLessThan(hero);

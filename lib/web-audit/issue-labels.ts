@@ -141,6 +141,14 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
     audience: ["ia"],
     unit: "bot"
   },
+  bot_server_blocked: {
+    label: "Tu servidor deja pasar a los bots de IA",
+    guidance:
+      "Tu robots.txt deja pasar a este bot, pero tu servidor le responde con un bloqueo. Suele ser una regla de Cloudflare o del cortafuegos: busca la que bloquea bots de IA o ese nombre de bot y deja pasar a los de búsqueda.",
+    why: "Lo hemos probado desde nuestro servidor con el nombre del bot (simulación). Si el servidor lo rechaza, ese asistente no puede leer tu web aunque robots.txt lo permita.",
+    audience: ["ia"],
+    unit: "bot"
+  },
   llms_txt_missing: {
     label: "llms.txt",
     guidance: "Publica un fichero llms.txt en la raíz de tu dominio con una guía de lectura para los modelos de IA.",

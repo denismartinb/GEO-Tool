@@ -29558,3 +29558,34 @@ sustituye a las primeras reseñas.
 **Por qué así.** Quien pulsa «Iniciar sesión» en la web casi siempre ya tiene cuenta y quiere entrar. La splash completa son unos 3,2 s en cada entrada. Corta y una vez da la marca sin cobrar espera a quien vuelve.
 
 **Pendiente o conocido.** En una primera visita con un móvil lento, la pantalla queda en blanco hasta que carga el JavaScript (el formulario aparece igualmente a los 6 s si falla). No retira ningún camino de recuperación: un toque siempre lleva al formulario.
+
+## §439 · REPORT-INSTRUMENTO-1: el informe de la consola con el estilo «Instrumento» (2026-11-02)
+
+**Qué se decidió.** Denis pidió el 2-11 aplicar al informe de «Descargar informe» (`/informe/<proyecto>`, GEO-REPORT-1, §248 y §250) el aspecto de la consola nueva. Aprobó el PDF de muestra y, tras dos rondas de portadas, la **D2** («Apruebo esta versión»), y después el informe completo («Vale, aprobado este informe completo»).
+
+- **Tipografía y piezas de la consola:** Figtree 300 para las cifras y los titulares, JetBrains Mono para los rótulos, medidor de rayas (`Dial`) y barras de rayas (`Ticks`) como en Visión general, y bloques oscuros para los apartados que abren capítulo. `app/informe/[projectId]/page.tsx` carga sus dos familias porque el layout raíz carga menos pesos.
+- **Portada D2:** la Puntuación GEO manda, con el medidor grande (130 px la cifra, «de 100») y su explicación al lado. Debajo, un panel con borde: «Te nombran en X%» de las respuestas a tus preguntas principales de búsqueda y una fila por motor. Denis temía que la cifra de menciones dejara en segundo plano a la Puntuación GEO, que es alrededor de lo que gira el producto.
+- **Sin sombras en la portada.** El visor de PDF de iOS pintaba la `box-shadow` del panel como un bloque gris. La portada no lleva ninguna.
+- **Lo que no cambia:** el modelo (`report-model.ts`), las cifras y su dueño, la paginación de la matriz y las reglas de impresión de §217–§219 (portal, `height: 100%`, `border-box`, `.gr-last`). Sólo porcentajes, como siempre.
+
+**Comprobado.** PDF generado con el arnés de siempre (datos de ejemplo de Café Ventura): 8 páginas en el escenario normal y en el `safari-like`, portada en una página en los dos.
+
+**Pendiente.** El informe de página de la extensión (1.5.0) es otro informe, local y de una página; su muestra con datos reales se envió a Denis el 2-11. No retira ningún camino de recuperación.
+
+## §440 · GEO-ALERTS-1: el servidor también puede cerrar la puerta a la IA, y lo avisamos (2026-11-02)
+
+**Qué se decidió.** Denis aprobó el 2-11 la nueva capacidad de la Auditoría GEO y, después, los avisos en Visión general, la campana y el correo de la maqueta (`/mnt/project-files/avisos-geo/maqueta-2026-11-02/`): «Apruebo los mensajes de visión general, campana y correo. Implementalos».
+
+- **Sonda del servidor (`lib/web-audit/bot-probe.ts`, `server-probe.ts`).** Tras leer robots.txt, la auditoría pide la portada una vez como nosotros (`AUDIT_USER_AGENT`) y, en paralelo, como OAI-SearchBot, Claude-SearchBot y PerplexityBot con su user-agent oficial. Bloqueado es 401, 403, 406, 451 o la cabecera `cf-mitigated`; 429 y 5xx son «sin comprobar», y si nuestra propia petición no da 2xx, todo es «sin comprobar». Gemini no se prueba: lee con Googlebot, al que nunca suplantamos. Cuatro peticiones a una URL fija del propio dominio, con la guarda SSRF de `https-check.ts` (cada salto en el dominio y con IP pública, redirecciones a mano, como mucho 3, nunca el cuerpo). Se guarda en `bots.serverProbe` del snapshot, sin migración, y no puntúa.
+- **Es una simulación y se dice.** Un cortafuegos que mira las IP del bot real puede tratarlo distinto. La tarjeta de bots dice «Tu servidor lo bloquea» con «Simulación · suele ser Cloudflare o el cortafuegos», y el correo, «Lo hemos reproducido desde nuestro servidor con el nombre del bot (simulación)».
+- **Hallazgo nuevo `bot_server_blocked`** en el bloque GEO («Tu servidor deja pasar a los bots de IA»), sólo para motores a los que robots.txt sí deja pasar (si robots ya los bloquea, el hallazgo es ese). También en el informe, la extensión y el estudio de prospectos.
+- **Una franja en Visión general (`lib/ins/geo-strip.ts`, `GeoStripAlert`).** Como mucho una, por este orden: servidor, robots.txt, noindex o nosnippet (de `findCitationBlockers`, la misma fuente que Recomendaciones), contenido que sólo aparece con JavaScript (azul), y «Resuelto» (verde, se puede cerrar, vale 7 días tras la auditoría que lo vio). Sustituye a la franja «Prioridad 1 · tu web» de §271.
+- **Campana.** «Tu siguiente paso» pasa a ser el bloqueo de bots (servidor o robots) antes que la primera acción del plan. «Algo ha cambiado» recibe avisos por motor: «Tu web ha empezado a bloquear a X» (`ai_bot_blocked` con `by`) y el tipo nuevo `ai_bot_unblocked`, «Resuelto: X ya puede leer tu web». Un aviso por token se omite si ya hay uno por motor que lo cubre.
+- **Correo «Avisos de tu web» (`lib/email/site-alert.ts`).** Sólo en una transición: el motor entraba en la auditoría anterior y en ésta no. Como mucho uno por motor y proyecto cada 30 días (`emailedAt` en el aviso, escrito después de un envío aceptado), con clave de idempotencia de Resend `site-alert/<dueño>/<aviso>`. Categoría opcional nueva con baja en un clic (`notify_site_alerts`), interruptor en Ajustes > Notificaciones. Sale sólo con `LIFECYCLE_EMAILS_ENABLED`, el mismo interruptor que los demás, y falla cerrado si falta la columna.
+- **Resumen semanal:** bloque «Tu web esta semana», sólo si algo se resolvió en la semana o sigue abierto un bloqueo.
+
+**Migración 0049, a mano** (después de 0048): `ai_bot_unblocked` en `notif_type_chk`, `profiles.notify_site_alerts` (por defecto `true`) y `site_alerts` en `email_pref_category_chk`. Hasta aplicarla, el aviso de «Resuelto» falla al insertarse (se registra), el correo nunca sale y el interruptor de Ajustes no guarda. Todo lo demás funciona sin ella.
+
+**Premisa.** No retira ningún camino de recuperación: la franja de §271 se sustituye por otra que cubre lo mismo y más. Si la sonda fallara siempre, todo quedaría «sin comprobar» y nada avisaría del servidor, pero robots.txt, noindex y nosnippet siguen igual que antes.
+
+**Pendiente.** El «+N Diagnóstico técnico» en el desglose de la puntuación de la maqueta no se construye todavía. El porcentaje de texto que llega sin JavaScript necesita pintar la página y queda para la fase de «Lo que lee la IA» (extensión 1.5.0 y consola).

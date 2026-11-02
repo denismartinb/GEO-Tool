@@ -12,7 +12,14 @@ import { buildAiBotsRobotsBlock } from "@/lib/web-audit/ai-bots";
  * to paste. Every state comes from the audit; the switches only build text.
  */
 
-export type AiBotsEngineTile = { engine: string; name: string; state: boolean | null; hint: string | null };
+export type AiBotsEngineTile = {
+  engine: string;
+  name: string;
+  state: boolean | null;
+  hint: string | null;
+  /** GEO-ALERTS-1 (log §440): robots.txt lets it in, our simulation says the server refuses it. */
+  serverBlocked?: boolean;
+};
 export type AiBotsSwitchRow = {
   id: string;
   engine: string;
@@ -69,16 +76,28 @@ export function AiBotsSection({
         <div className="card ab-card">
           <div className="ab-head">
             <h2 id="ab-title" className="ab-lab">Quién puede leer tu web</h2>
-            <span className="ab-meta">según tu robots.txt</span>
+            <span className="ab-meta">según tu robots.txt y tu servidor</span>
           </div>
           {note && <p className="ab-note">{note}</p>}
           <ul className="ab-tiles">
             {engines.map((e) => (
-              <li key={e.engine} className="ab-tile" data-state={e.state === null ? "unknown" : e.state ? "ok" : "no"}>
+              <li
+                key={e.engine}
+                className="ab-tile"
+                data-state={e.serverBlocked ? "no" : e.state === null ? "unknown" : e.state ? "ok" : "no"}
+              >
                 <EngineLogo provider={e.engine} size={26} />
                 <b>{e.name}</b>
-                <span className="ab-st">{e.state === null ? "Sin comprobar" : e.state ? "Puede leerla" : "Bloqueado"}</span>
-                {e.hint && <small>{e.hint}</small>}
+                <span className="ab-st">
+                  {e.serverBlocked
+                    ? "Tu servidor lo bloquea"
+                    : e.state === null
+                      ? "Sin comprobar"
+                      : e.state
+                        ? "Puede leerla"
+                        : "Bloqueado"}
+                </span>
+                {e.serverBlocked ? <small>Simulación · suele ser Cloudflare o el cortafuegos</small> : e.hint && <small>{e.hint}</small>}
               </li>
             ))}
           </ul>

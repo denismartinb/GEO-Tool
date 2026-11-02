@@ -572,6 +572,10 @@ export async function sendWeeklyDigestEmail(
     promptsCount: number;
     competitorsCount: number;
     scansThisWeek: number;
+    /** GEO-ALERTS-1 (log §440): «Tu web esta semana», only with news. */
+    site?: { resolved: string | null; open: { title: string; detail: string } | null } | null;
+    /** Where the block's button goes. */
+    projectId?: string;
   },
   userId?: string,
   options: { idempotencyKey?: string } = {}
@@ -667,6 +671,27 @@ export async function sendWeeklyDigestEmail(
       ${moreRecommendationsHtml}`
     : "";
 
+  const siteHtml =
+    digest.site && (digest.site.resolved || digest.site.open)
+      ? `
+      ${sectionLabel("Tu web esta semana")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:12px;">
+        <tr><td style="padding:16px 18px;">
+          ${digest.site.resolved ? `<div style="font-size:14.5px;line-height:1.5;color:#0F7A54;font-weight:700;">&#10003; ${escapeHtml(digest.site.resolved)}</div>` : ""}
+          ${
+            digest.site.open
+              ? `<div style="${digest.site.resolved ? "margin-top:10px;" : ""}font-size:14.5px;line-height:1.5;color:#0B1426;font-weight:700;">${escapeHtml(digest.site.open.title)}.</div><div style="margin-top:4px;font-size:13.5px;line-height:1.5;color:#5B6B82;">${escapeHtml(digest.site.open.detail)}</div>`
+              : ""
+          }
+          ${
+            digest.projectId
+              ? `<div style="margin-top:10px;"><a href="https://www.genscore.es/dashboard/projects/${digest.projectId}/web-audit?bloque=geo" style="${FOOTER_LINK_STYLE}">Ver la auditoría</a></div>`
+              : ""
+          }
+        </td></tr>
+      </table>`
+      : "";
+
   return sendEmailWithOutcome(
     {
       kind: "weekly_digest",
@@ -693,6 +718,7 @@ export async function sendWeeklyDigestEmail(
       </table>
       ${subScoreHtml}
       ${activityHtml}
+      ${siteHtml}
       ${moverHtml}
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}

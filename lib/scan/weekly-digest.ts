@@ -4,6 +4,9 @@ import "server-only";
 import type { createServiceClient } from "@/lib/supabase/service";
 import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { sendWeeklyDigestEmail } from "@/lib/email/transactional";
+import { buildSiteWeek, type GeoStripSnapshot } from "@/lib/ins/geo-strip";
+
+const SITE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 import { serverEnv } from "@/lib/env";
 
 const TIME_BUDGET_MS = 45_000;
@@ -213,6 +216,37 @@ export async function runWeeklyDigest({
       ? { title: recommendationHeadline(topRow).title, description: topRow.description }
       : null;
 
+    // GEO-ALERTS-1 (log §440): «Tu web esta semana». Fail-soft: a failed read
+    // leaves the block out, never the digest.
+    let site: ReturnType<typeof buildSiteWeek> = null;
+    try {
+      const weekAgoIso = new Date(Date.now() - SITE_WEEK_MS).toISOString();
+      const [{ data: latestSnap }, { data: weekAgoSnap }] = await Promise.all([
+        service
+          .from("web_audit_snapshots")
+          .select("bots, pages, created_at")
+          .eq("project_id", project.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        service
+          .from("web_audit_snapshots")
+          .select("bots, pages, created_at")
+          .eq("project_id", project.id)
+          .lt("created_at", weekAgoIso)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
+      site = buildSiteWeek({
+        projectId: project.id as string,
+        latest: (latestSnap as GeoStripSnapshot | null) ?? null,
+        weekAgo: (weekAgoSnap as GeoStripSnapshot | null) ?? null
+      });
+    } catch {
+      site = null;
+    }
+
     const email = emailByOwnerId.get(project.owner_user_id as string)!;
     await sendWeeklyDigestEmail(email, project.domain as string, {
       currentScore,
@@ -224,7 +258,9 @@ export async function runWeeklyDigest({
       activeRecommendationsCount: activeRecommendationsCount ?? 0,
       promptsCount: promptsCount ?? 0,
       competitorsCount: competitorsCount ?? 0,
-      scansThisWeek: scansThisWeek ?? 0
+      scansThisWeek: scansThisWeek ?? 0,
+      site,
+      projectId: project.id as string
     }, project.owner_user_id as string, { idempotencyKey: weeklyDigestIdempotencyKey(project.id as string, new Date(startedAt)) });
     sent += 1;
   }

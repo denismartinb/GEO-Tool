@@ -10,7 +10,6 @@ import {
   Breakdown,
   Kpis,
   OvHeader,
-  PriorityAlert,
   QuietCard,
   Ranking,
   ScoreHero,
@@ -20,6 +19,8 @@ import {
   type RankRow
 } from "@/components/ins/overview/blocks";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
+import { GeoStripAlert } from "@/components/ins/overview/geo-strip";
+import { selectGeoStrip, type GeoStripSnapshot } from "@/lib/ins/geo-strip";
 import { PlanBlock } from "@/components/ins/overview/plan-block";
 import { firstNameFromMetadata, greeting, leadParts, scoreHeadline } from "@/lib/ins/overview-copy";
 import { buildOverviewPlan } from "@/lib/ins/overview-plan";
@@ -48,12 +49,9 @@ import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
 import { ENABLE_SYNC_SCAN_EXECUTION } from "@/lib/scan/scan-runner";
 import { engineCoverageNotice } from "@/lib/scan/engine-coverage";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
-import { blockerDetail, blockerTitle, findCitationBlockers } from "@/lib/recommendations/citation-blockers";
 import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
 import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import { readSearchConsoleAvailability } from "@/lib/search-console/load";
-import type { BotAccessReport } from "@/lib/web-audit/robots";
-import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { buildOverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 import { SeoAuditCard } from "./_components/seo-audit-card";
 import { AgenticOverviewCard } from "./_components/agentic-overview-card";
@@ -327,27 +325,29 @@ export default async function ProjectDetailPage({
           // SEARCH-SEO-1 Fase 1 (log §271): the same snapshot Recomendaciones
           // reads for its citation blockers, so both screens name the same
           // blockers from the same data.
+          // GEO-ALERTS-1 (log §440): the previous one too, for «resolved».
           supabase
             .from("web_audit_snapshots")
             .select("bots, pages, created_at")
             .eq("project_id", projectId)
             .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle()
+            .limit(2)
         ])
       : [{ data: null }, { data: null }, { data: null }, { data: null }, { data: null }];
 
   // A blocker makes every citation impossible, so it outranks everything else
   // on this screen. Only blockers, never the softer SEO checks: speed or
   // titles matter for Google but do not decide whether an AI names the brand.
-  const auditSnapshotForBlockers = latestAuditSnapshot as {
-    bots: BotAccessReport | null;
-    pages: PageAuditEntry[] | null;
-    created_at: string | null;
-  } | null;
-  const citationBlockers = findCitationBlockers({
-    bots: auditSnapshotForBlockers?.bots ?? null,
-    pages: auditSnapshotForBlockers?.pages ?? null
+  const auditSnapshots = (Array.isArray(latestAuditSnapshot) ? latestAuditSnapshot : []) as GeoStripSnapshot[];
+  const auditSnapshotForBlockers = auditSnapshots[0] ?? null;
+  // GEO-ALERTS-1 (log §440): one strip about the site, by the approved order
+  // (server, robots.txt, noindex/nosnippet, JavaScript, resolved). The
+  // blockers inside it are `findCitationBlockers`, as in Recomendaciones.
+  const geoStrip = selectGeoStrip({
+    projectId,
+    latest: auditSnapshotForBlockers,
+    previous: auditSnapshots[1] ?? null,
+    now: Date.now()
   });
 
   // Auditoría SEO card (log §271): the same snapshot, through the same
@@ -959,17 +959,7 @@ export default async function ProjectDetailPage({
               {/* SEARCH-SEO-1 Fase 1 (log §271): a citation blocker on the site
                   outranks the summary. Same blockers, titles and copy as
                   Recomendaciones, so the two screens never disagree. */}
-              {citationBlockers.length > 0 ? (
-                <PriorityAlert
-                  title={blockerTitle(citationBlockers[0])}
-                  detail={`${blockerDetail(citationBlockers[0])}${
-                    citationBlockers.length > 1
-                      ? ` Y hay ${citationBlockers.length - 1} ${citationBlockers.length - 1 === 1 ? "freno más" : "frenos más"}.`
-                      : ""
-                  }`}
-                  href={`/dashboard/projects/${projectId}/web-audit`}
-                />
-              ) : null}
+              {geoStrip ? <GeoStripAlert strip={geoStrip} /> : null}
 
               <ScoreHero
                 projectId={projectId}

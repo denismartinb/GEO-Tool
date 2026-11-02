@@ -79,8 +79,16 @@ export default async function SettingsPage({
     .eq("id", user.id)
     .maybeSingle();
 
+  // GEO-ALERTS-1 (log §440, migration 0049): its own query for the same reason.
+  const { data: siteAlertPrefs } = await supabase
+    .from("profiles")
+    .select("notify_site_alerts")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const emailPreferences = {
     score_drop: profile?.notify_score_drop_alert ?? true,
+    site_alerts: (siteAlertPrefs as { notify_site_alerts?: boolean | null } | null)?.notify_site_alerts ?? true,
     weekly_digest: profile?.notify_weekly_digest ?? true,
     first_scan: newerPrefs?.notify_first_scan ?? true,
     lifecycle: newerPrefs?.notify_lifecycle ?? true

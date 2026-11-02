@@ -185,6 +185,20 @@ export function renderNotification(
 
     case "ai_bot_blocked": {
       const agent = str(payload.agent, "Un bot de IA");
+      // GEO-ALERTS-1 (log §440): engine-level transitions carry `by`.
+      if (payload.by === "server" || payload.by === "robots") {
+        return {
+          title: `Tu web ha empezado a bloquear a ${agent}`,
+          body:
+            payload.by === "server"
+              ? "En la auditoría anterior entraba. Hoy tu servidor le responde con un bloqueo."
+              : "En la auditoría anterior entraba. Hoy tu robots.txt lo bloquea.",
+          targetLabel: domain,
+          href: hrefForProject(row.project_id, "/web-audit?bloque=geo"),
+          icon: "robot",
+          tone: "neg"
+        };
+      }
       return {
         title: `${agent} no puede acceder a tu web`,
         body: "Tu robots.txt lo bloquea. Mientras siga así no puedes aparecer en sus respuestas.",
@@ -192,6 +206,18 @@ export function renderNotification(
         href: hrefForProject(row.project_id, "/web-audit"),
         icon: "robot",
         tone: "neg"
+      };
+    }
+
+    case "ai_bot_unblocked": {
+      const agent = str(payload.agent, "Un motor de IA");
+      return {
+        title: `Resuelto: ${agent} ya puede leer tu web`,
+        body: "Lo comprobamos en la auditoría de hoy. Lo verás en tu Puntuación GEO tras el próximo escaneo.",
+        targetLabel: domain,
+        href: hrefForProject(row.project_id, "/web-audit?bloque=geo"),
+        icon: "robot",
+        tone: "pos"
       };
     }
 

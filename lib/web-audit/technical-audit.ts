@@ -13,6 +13,7 @@ import { fetchPageSafely, isAllowedAuditHost, type PageFetchStatus } from "@/lib
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import { buildBotAccessReport, type BotAccessReport } from "@/lib/web-audit/robots";
 import { checkHttpsRedirect } from "@/lib/web-audit/https-check";
+import { probeAiBotsOnServer } from "@/lib/web-audit/bot-probe";
 import { fetchPageSpeed } from "@/lib/web-audit/pagespeed";
 import { reusablePageSpeed } from "@/lib/web-audit/seo-health";
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
@@ -446,6 +447,10 @@ export async function runTechnicalAuditCore({
     const reusedPageSpeed = reusablePageSpeed(latestSnapshot?.bots?.site?.pageSpeed, new Date());
     const pageSpeedPromise = reusedPageSpeed ? Promise.resolve(reusedPageSpeed) : fetchPageSpeed(homepageUrl);
     const httpsPromise = checkHttpsRedirect(projectDomainNormalized);
+    // GEO-ALERTS-1 (log §440): the home page asked as each AI search bot, in
+    // parallel with the page fetches and bounded below their budget. Never
+    // rejects; a failure is simply «unknown».
+    const serverProbePromise = probeAiBotsOnServer(projectDomainNormalized).catch(() => undefined);
 
     const pages: PageAuditEntry[] = [];
     const startedAt = Date.now();
@@ -474,10 +479,11 @@ export async function runTechnicalAuditCore({
     }
 
     const botReport = await buildBotAccessReport(projectDomainNormalized);
-    const [pageSpeed, https] = await Promise.all([pageSpeedPromise, httpsPromise]);
+    const [pageSpeed, https, serverProbe] = await Promise.all([pageSpeedPromise, httpsPromise, serverProbePromise]);
     const bots: BotAccessReport = {
       ...botReport,
-      site: { ...botReport.site, https, ...(pageSpeed !== undefined ? { pageSpeed } : {}) }
+      site: { ...botReport.site, https, ...(pageSpeed !== undefined ? { pageSpeed } : {}) },
+      ...(serverProbe ? { serverProbe } : {})
     };
     const readinessScore = computeReadinessScore(pages);
     const generatedAt = new Date().toISOString();

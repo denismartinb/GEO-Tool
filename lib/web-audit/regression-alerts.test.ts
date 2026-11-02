@@ -131,7 +131,7 @@ describe("emitAuditRegressionNotifications", () => {
     expect(upserts).toEqual([]);
   });
 
-  it("writes a critical ai_bot_blocked keyed on the snapshot and the agent", async () => {
+  it("writes one engine-level ai_bot_blocked (GEO-ALERTS-1) instead of the token one", async () => {
     const { service, upserts } = makeService();
 
     await emitAuditRegressionNotifications({
@@ -147,9 +147,47 @@ describe("emitAuditRegressionNotifications", () => {
       project_id: "project-1",
       type: "ai_bot_blocked",
       severity: "critical",
-      dedupe_key: "ai_bot_blocked:snapshot-2:OAI-SearchBot",
-      payload_json: { agent: "OAI-SearchBot", snapshotId: "snapshot-2" }
+      dedupe_key: "engine_blocked:snapshot-2:chatgpt",
+      payload_json: { agent: "ChatGPT", snapshotId: "snapshot-2", by: "robots" }
     });
+  });
+
+  it("keeps the token notice for a bot that is not an engine's read token", async () => {
+    const { service, upserts } = makeService();
+
+    await emitAuditRegressionNotifications({
+      ...BASE,
+      service,
+      previousSnapshot: { pages: [], bots: bots({ bots: [{ agent: "OAI-SearchBot", allowed: true }, { agent: "Bingbot", allowed: true }] }) },
+      currentSnapshot: { pages: [], bots: bots({ bots: [{ agent: "OAI-SearchBot", allowed: true }, { agent: "Bingbot", allowed: false }] }) }
+    });
+
+    expect(upserts.map((u) => u.dedupe_key)).toEqual(["ai_bot_blocked:snapshot-2:Bingbot"]);
+  });
+
+  it("writes engine-level notices for a server block and for a resolved engine (GEO-ALERTS-1)", async () => {
+    const { service, upserts } = makeService();
+    const open = { tokens: { "OAI-SearchBot": true, "ChatGPT-User": true, "Claude-SearchBot": true, "Claude-User": true }, starRules: [] };
+    const probe = (chatgpt: "allowed" | "blocked", claude: "allowed" | "blocked") => ({
+      measuredAt: "2026-11-02T00:00:00Z",
+      baseline: "ok" as const,
+      engines: {
+        chatgpt: { token: "OAI-SearchBot", state: chatgpt, status: chatgpt === "blocked" ? 403 : 200 },
+        claude: { token: "Claude-SearchBot", state: claude, status: claude === "blocked" ? 403 : 200 }
+      }
+    });
+
+    await emitAuditRegressionNotifications({
+      ...BASE,
+      service,
+      previousSnapshot: { pages: [], bots: { ...bots({ aiBots: open }), serverProbe: probe("allowed", "blocked") } },
+      currentSnapshot: { pages: [], bots: { ...bots({ aiBots: open }), serverProbe: probe("blocked", "allowed") } }
+    });
+
+    expect(upserts.map((u) => [u.type, u.dedupe_key, (u.payload_json as { by?: string }).by])).toEqual([
+      ["ai_bot_blocked", "engine_blocked:snapshot-2:chatgpt", "server"],
+      ["ai_bot_unblocked", "engine_unblocked:snapshot-2:claude", undefined]
+    ]);
   });
 
   it("writes a critical llms_txt_lost and a warning sitemap_lost", async () => {
