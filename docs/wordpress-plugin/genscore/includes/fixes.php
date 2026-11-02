@@ -616,3 +616,49 @@ add_filter( 'render_block_core/query', 'genscore_fix_blog_query_block' );
 function genscore_fix_blog_query_block( $html ) {
 	return is_home() && ! is_front_page() ? genscore_listing_top_html() . $html : $html;
 }
+
+/**
+ * The stored HTML of a post's blocks, without rendering any of them.
+ * Rendering (excerpt_remove_blocks) enqueues block styles, and inside
+ * wp_head that turns the theme's inline <style> into <link> tags.
+ *
+ * @param string $html Post content.
+ * @return string
+ */
+function genscore_blocks_html( $html ) {
+	if ( ! function_exists( 'parse_blocks' ) || false === strpos( $html, '<!-- wp:' ) ) {
+		return $html;
+	}
+	$out  = '';
+	$walk = function ( $blocks ) use ( &$walk, &$out ) {
+		foreach ( $blocks as $b ) {
+			$inner = 0;
+			foreach ( (array) $b['innerContent'] as $chunk ) {
+				if ( is_string( $chunk ) ) {
+					$out .= $chunk;
+				} elseif ( isset( $b['innerBlocks'][ $inner ] ) ) {
+					$walk( array( $b['innerBlocks'][ $inner ] ) );
+					++$inner;
+				}
+			}
+			$out .= ' ';
+		}
+	};
+	$walk( parse_blocks( $html ) );
+	return $out;
+}
+
+/**
+ * Plain text from post content or an excerpt.
+ *
+ * @param string $html HTML.
+ * @return string
+ */
+function genscore_plain_text( $html ) {
+	$t = genscore_blocks_html( (string) $html );
+	// Blocks end where a word ends: «Molienda</h3><p>Fina» is two words.
+	$t = preg_replace( '#<br\s*/?>|</(p|h[1-6]|li|div|td|th|blockquote|figcaption)>#i', ' ', $t );
+	$t = wp_strip_all_tags( strip_shortcodes( $t ), true );
+	$t = html_entity_decode( $t, ENT_QUOTES, 'UTF-8' );
+	return trim( preg_replace( '/\s+/u', ' ', $t ) );
+}

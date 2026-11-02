@@ -98,11 +98,11 @@ function genscore_draft_item( $index ) {
 		'questions' => genscore_clean_list( $item['questions'] ?? array(), GENSCORE_DRAFT_QUESTIONS ),
 		'rival'     => sanitize_text_field( (string) ( $item['rival'] ?? '' ) ),
 		'drivers'   => genscore_clean_list( $item['drivers'] ?? array(), 6 ),
-		'brand'     => sanitize_text_field( (string) ( $d['project']['brand'] ?? '' ) ),
+		'brand'     => genscore_site_name(),
 		'rivals'    => array(),
 	);
 	if ( '' === $out['brand'] ) {
-		$out['brand'] = wp_strip_all_tags( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) );
+		$out['brand'] = sanitize_text_field( (string) ( $d['project']['brand'] ?? '' ) );
 	}
 	foreach ( (array) ( $d['project']['rivals'] ?? array() ) as $r ) {
 		if ( is_array( $r ) && empty( $r['isBrand'] ) && ! empty( $r['name'] ) ) {
@@ -200,6 +200,31 @@ function genscore_block_heading( $text, $level = 2 ) {
 }
 
 /**
+ * The site's own name, as WordPress shows it.
+ *
+ * @return string
+ */
+function genscore_site_name() {
+	return trim( wp_strip_all_tags( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) ) );
+}
+
+/**
+ * One table cell; a «[Pendiente…]» gap is shown in grey.
+ *
+ * @param string $text Cell text.
+ * @return string
+ */
+function genscore_cell_html( $text ) {
+	$h = esc_html( $text );
+	if ( 0 !== strpos( (string) $text, GENSCORE_PENDING ) ) {
+		return $h;
+	}
+	// The editor's own inline text colour, so the block stays valid and the
+	// gap reads as a gap in the editor and on the page.
+	return '<mark style="background-color:rgba(0, 0, 0, 0);color:#7a8494" class="has-inline-color">' . $h . '</mark>';
+}
+
+/**
  * A table block.
  *
  * @param string[] $head Header cells.
@@ -212,7 +237,7 @@ function genscore_block_table( $head, $rows ) {
 	}, $head ) ) . '</tr></thead><tbody>';
 	foreach ( $rows as $r ) {
 		$h .= '<tr>' . implode( '', array_map( function ( $c ) {
-			return '<td>' . esc_html( $c ) . '</td>';
+			return '<td>' . genscore_cell_html( $c ) . '</td>';
 		}, $r ) ) . '</tr>';
 	}
 	return '<!-- wp:table --><figure class="wp-block-table"><table>' . $h . '</tbody></table></figure><!-- /wp:table -->' . "\n\n";
@@ -514,14 +539,13 @@ add_action( 'wp_ajax_genscore_faq_publish', 'genscore_ajax_faq_publish' );
  * @return string HTML.
  */
 function genscore_compare_table_html( $rival ) {
-	$brand = wp_strip_all_tags( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) );
-	$d     = genscore_plan_data();
-	if ( $d && ! empty( $d['project']['brand'] ) ) {
+	$brand = genscore_site_name();
+	if ( '' === $brand && $d && ! empty( $d['project']['brand'] ) ) {
 		$brand = sanitize_text_field( (string) $d['project']['brand'] );
 	}
 	$h = '<table><thead><tr><th>' . esc_html__( 'Dato', 'genscore' ) . '</th><th>' . esc_html( $brand ) . '</th><th>' . esc_html( $rival ) . '</th></tr></thead><tbody>';
 	foreach ( genscore_own_compare_rows() as $r ) {
-		$h .= '<tr><td>' . esc_html( $r[0] ) . '</td><td>' . esc_html( $r[1] ) . '</td><td>' . esc_html( GENSCORE_PENDING . ': dato, enlace y fecha]' ) . '</td></tr>';
+		$h .= '<tr><td>' . esc_html( $r[0] ) . '</td><td>' . genscore_cell_html( $r[1] ) . '</td><td>' . genscore_cell_html( GENSCORE_PENDING . ': dato, enlace y fecha]' ) . '</td></tr>';
 	}
 	return $h . '</tbody></table>';
 }

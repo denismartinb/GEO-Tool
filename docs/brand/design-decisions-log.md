@@ -29323,6 +29323,39 @@ Denis («podemos mergear y seguir con la 1.4.1») mientras Instinct probaba la
   alternativo sólo cubre imágenes con id de la biblioteca. No retira ningún
   camino de recuperación.
 
+**Adenda 1.4.2 (plugin, WP-PLUGIN-4, 2026-11-02).** Lo que encontró Instinct
+probando la 1.4.0 entera en la tienda de Wasmer:
+
+- **og:description pegaba los bloques** («…en MadridEn Café Ventura…») y, al
+  publicar Open Graph, los estilos de bloque del tema pasaban de `<style>` a
+  `<link>`, porque `excerpt_remove_blocks` renderiza bloques dentro de
+  `wp_head`. Ahora `genscore_plain_text` lee el HTML guardado de cada bloque
+  con `parse_blocks` (`genscore_blocks_html`), sin renderizar nada, y vive en
+  `fixes.php` porque el `<head>` público también la usa.
+- **Valoración sin reseñas**: si ningún producto publicado tiene reseñas
+  (`_wc_review_count`), el arreglo no está disponible y la recomendación dice
+  «Sin reseñas» en lugar de «Arreglar» (antes abría una hoja que decía «Ya está
+  en todas tus páginas»).
+- **La comparativa usa el nombre de la web** (Ajustes > Generales), no la marca
+  de la cuenta («Cafe Ventura Genscore»); la marca sólo se usa si la web no
+  tiene nombre.
+- **Las celdas «[Pendiente…]» van en gris** con el color de texto en línea del
+  propio editor (`mark.has-inline-color`), así que el bloque de tabla sigue
+  siendo válido y el hueco se ve como hueco en el editor y en la página.
+- **«Añadir preguntas» no salía porque `page` llegaba vacío.** `page` sólo se
+  rellena cuando la cobertura confirma una página propia para esas preguntas
+  (`confirmed_surfacing_gap`); en la tienda de pruebas la cobertura no
+  confirma ninguna, así que vacío es lo correcto allí. Sí había un hueco: en
+  una palanca sólo se miraba la tarjeta representante; ahora vale la primera
+  de sus tarjetas con página confirmada (comparten tema). El borrador de
+  críticas sólo sale con una tarjeta `address_negative_narrative` con
+  críticas, y esa cuenta no tenía ninguna.
+- **Probado** en el WordPress de pruebas: og:description con espacios y mismo
+  recuento de `<style>`/`<link>` antes y después de publicar; «Sin reseñas» con
+  las reseñas a cero; borrador de comparativa sin avisos de bloque no válido y
+  con las celdas grises en editor y página. No retira ningún camino de
+  recuperación.
+
 ## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
 
 **Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),

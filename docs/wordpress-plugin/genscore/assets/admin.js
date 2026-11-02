@@ -472,6 +472,7 @@
     if (k === "goto:bots") return '<button class="gs-btn gs-line gs-sm" data-act="goto" data-to="bots">Ir a los bots' + ic("i-arrowr") + "</button>";
     if (k && fixedHere(k, x.urls)) return ok("Arreglado aquí");
     if (k && k.indexOf("site:") === 0) return '<button class="gs-btn gs-blue gs-sm" data-act="site" data-kind="' + siteKind(k) + '"' + (k === "site:local" ? ' data-local="1"' : "") + ">Arreglar</button>";
+    if (!k && CHECK_KIND[x.check] === "rating" && FX.available && typeof FX.available.rating === "string" && FX.available.rating.indexOf("Sin reseñas") === 0) return '<span class="gs-muted" title="' + esc(FX.available.rating) + '">Sin reseñas</span>';
     var g = !k && (FX.gotos || {})[x.check];
     if (g) return '<a class="gs-btn gs-line gs-sm" href="' + esc(g.url) + '">' + esc(g.label) + ic("i-arrowr") + "</a>";
     if (k) return '<button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="' + k + '" data-urls="' + esc(JSON.stringify((x.urls || []).map(pathOf).filter(Boolean))) + '">Arreglar</button>';

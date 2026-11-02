@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,11 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.4.2 =
+* Open Graph descriptions keep a space between blocks and no longer render blocks inside the page head, so the theme's block styles stay as they were.
+* The rating fix is not offered without real reviews; the recommendation says «Sin reseñas».
+* Comparison drafts and the copied table use the site's name, and the «[Pendiente…]» cells show in grey in the editor and on the page.
 
 = 1.4.1 =
 * New one-click fixes in the page sheet, undoable: alt text for images without it (from the media library or the page title, never a file name), noindex and blocked snippets (with Yoast, Rank Math or SEOPress), a specifications table from WooCommerce attributes, weight and dimensions, and a cancellation policy linked to the page that explains it.

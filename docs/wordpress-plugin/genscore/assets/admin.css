@@ -450,3 +450,4 @@ html.gs-fm-open{overflow:hidden}
 #gs-fixm .gs-fm-logo{height:40px;width:auto;max-width:200px;object-fit:contain;align-self:flex-start}
 #gs-fixm .gs-fm-field textarea[rows="3"]{min-height:64px}
 @media (max-width:520px){#gs-fixm .gs-fm-pair{grid-template-columns:1fr}}
+#genscore-app .gs-muted{color:var(--ink-3);font-size:13.5px;font-weight:600;white-space:nowrap}

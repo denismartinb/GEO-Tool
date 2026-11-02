@@ -101,6 +101,15 @@ describe("WordPress plugin", () => {
     expect(body).toContain("GENSCORE_PENDING . ': dato, enlace y fecha]'");
   });
 
+  // 1.4.2 (log §432 adenda): rendering blocks inside wp_head turns the theme's
+  // inline block styles into <link> tags, so text is read from parse_blocks.
+  it("never renders blocks to get text", () => {
+    for (const f of ["fixes.php", "fixes-more.php", "fixes-site.php", "fixes-admin.php", "drafts.php"]) {
+      const code = read(join(PLUGIN, "includes", f)).replace(/^\s*(\*|\/\/).*$/gm, "");
+      expect(code).not.toMatch(/excerpt_remove_blocks\s*\(|do_blocks\s*\(|render_block\s*\(/);
+    }
+  });
+
   // «Añadir dato»: the page comes from the cached plan on the server, the fact
   // from the person, checked before writing; the post content is never edited.
   it("«Añadir dato» publishes only on the plan's own page", () => {

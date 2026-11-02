@@ -148,3 +148,14 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   y exige dato, fuente http(s) y fecha no futura (`genscore_clean_cite`).
 - **La lista de páginas de cancelación no ofrece el blog ni las páginas de
   WooCommerce** (carrito, pago, cuenta, tienda).
+
+## Tras la prueba de la 1.4.0 (adenda 1.4.2 de §432)
+
+- **Nunca se renderizan bloques para sacar texto** (`excerpt_remove_blocks`,
+  `do_blocks`, `render_block`): dentro de `wp_head` cambia los estilos del
+  tema. El texto sale de `genscore_plain_text`, que lee el HTML guardado con
+  `parse_blocks` (lo vigila `tests/wordpress-plugin.test.ts`).
+- **La valoración sólo se ofrece si algún producto tiene reseñas reales**; si
+  no, la recomendación dice «Sin reseñas».
+- **Los borradores hablan con el nombre de la web**, no con la marca de la
+  cuenta, y cada celda «[Pendiente…]» va en gris con `mark.has-inline-color`.

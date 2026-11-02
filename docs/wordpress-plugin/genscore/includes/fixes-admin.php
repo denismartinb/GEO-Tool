@@ -127,21 +127,6 @@ function genscore_fix_write( $kind, $id, $value ) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Plain text from post content or an excerpt.
- *
- * @param string $html HTML.
- * @return string
- */
-function genscore_plain_text( $html ) {
-	$t = function_exists( 'excerpt_remove_blocks' ) ? excerpt_remove_blocks( (string) $html ) : (string) $html;
-	// Blocks end where a word ends: «Molienda</h3><p>Fina» is two words.
-	$t = preg_replace( '#<br\s*/?>|</(p|h[1-6]|li|div|td|th|blockquote|figcaption)>#i', ' ', $t );
-	$t = wp_strip_all_tags( strip_shortcodes( $t ), true );
-	$t = html_entity_decode( $t, ENT_QUOTES, 'UTF-8' );
-	return trim( preg_replace( '/\s+/u', ' ', $t ) );
-}
-
-/**
  * Cuts text at the last whole sentence that fits, or at a word with «…».
  *
  * @param string $text Text.
