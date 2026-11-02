@@ -283,7 +283,7 @@
   }
   /* «Lo que lee la IA»: the page without JavaScript (readAiView, in the tab) against what you see */
   const AIKIND = { price: "cart", heading: "notes", button: "cart", text: "prompts" };
-  function aiCard(f) {
+  function aiCard(f, sc) {
     const v = f && f.aiView;
     if (!v || v.state !== "ok") return "";
     const pc = v.pct, all = pc >= 95, miss = all ? [] : v.missing.slice(0, 4);
@@ -291,8 +291,21 @@
     return `<div class="aiv"><div class="aih"><span class="ey">Lo que lee la IA</span>${tagx("ok")}</div>
       <div class="aibig"><b class="num">${pc}<small>%</small></b><span>${all ? "del texto que ves llega en el HTML, que es lo que leen los bots de IA." : miss.length ? "del texto que ves llega a los bots de IA. El resto sólo aparece con JavaScript, y ChatGPT, Claude y Perplexity no lo ejecutan." : "del texto que ves llega a los bots de IA. Lo que falta está fuera del contenido principal (menú, cabecera o pie) o son textos cortos."}</span></div>
       <div class="aibar"><i style="width:${pc}%"></i></div><div class="aileg"><span><i class="a"></i>En el HTML</span>${all ? "" : `<span><i class="b"></i>Sólo con JavaScript</span>`}</div>
-      ${list ? `<div class="mh">Lo que no les llega</div>${list}<div class="acts"><button class="btn line sm" data-act="jump" data-id="ai-html">Cómo arreglarlo${ic("arrowr", "sm")}</button></div>` : ""}
+      ${list ? `<div class="mh">Lo que no les llega</div>${list}${aiFixFold(sc)}` : ""}
       <p class="mini-note">Comprobado en tu navegador: pedimos la página otra vez sin tu sesión y sin JavaScript, como la reciben los bots.</p></div>`;
+  }
+  /* 1.5.2 (Denis, 2026-11-02): the fix lives inside the block, folded and short.
+     Same card data as the recommendation (GS_X.aiFix), so copy and .md use the same handlers. */
+  function aiFixFold(sc) {
+    const fx = sc && sc.fixes ? sc.fixes.find((x) => x.id === "ai-html") : null;
+    if (!fx) return "";
+    const key = "aiv:" + fx.id;
+    return `<details class="aifix"><summary>${ic("recs", "sm")}<b>Cómo arreglarlo</b>${ic("chevd", "sm")}</summary><div class="aifb">
+      <p>Escribe estos bloques en la plantilla de la página, no en un script. Revisa el texto antes de publicarlo.</p>
+      ${fx.snippet ? `<pre class="snip" tabindex="0">${esc(fx.snippet)}</pre>` : ""}
+      <div class="acts">${fx.snippet ? `<button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar el HTML</button>` : ""}${fx.md ? `<button class="btn ghost sm" data-act="md" data-key="${esc(key)}">${ic("download", "sm")}Descargar el .md</button>` : ""}</div>
+      ${fx.md ? `<p class="mini-note">El .md es una segunda opción: súbelo en la misma dirección terminada en .md y enlázalo en tu llms.txt. No sustituye a ponerlo en el HTML.</p>` : ""}
+    </div></details>`;
   }
   /* «Desde tu última visita»: the note of this page per visit, only in this browser */
   function histLine(f) {
@@ -627,7 +640,7 @@
     const seg = scoped && sc ? scopeSeg(rel === "none") : `<span class="sxl">${dom ? scopeName() : "Esta página"}</span>`;
     return `<section class="sct"><div class="sh2"><div class="ey">Optimización técnica</div>${seg}</div>
       <p class="qq">¿Está tu web optimizada para la IA y Google?</p>
-      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc, f) + shopLine(sc) + aiCard(f) + reportCard(f)}${cards}${tail}</section>`;
+      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc, f) + shopLine(sc) + aiCard(f, sc) + reportCard(f)}${cards}${tail}</section>`;
   }
   function geoSection(host, rel) {
     const head = `<div class="sh2"><div class="ey">Puntuación GEO · <span class="mono">${esc(rel === "none" ? host : curDom())}</span>${rel === "none" ? "" : EJx()}</div></div><p class="qq">¿Sabes si la IA recomienda tu marca?</p>`;

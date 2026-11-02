@@ -1227,3 +1227,16 @@ img.fav.fi{width:18px;height:18px;border-radius:4px;display:block}
 .mdopt .acts{margin:0}
 .mdopt ol{margin:0;padding-left:18px;display:grid;gap:4px;font-size:12.5px;color:var(--ink-2)}
 .mdopt code{word-break:break-all;white-space:normal}
+/* 1.5.2: the fix folded inside «Lo que lee la IA» */
+.aifix{margin-top:10px;border:1px solid var(--rule);border-radius:12px;background:var(--surface);min-width:0}
+.aifix>summary{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:pointer;list-style:none;font-size:13px;border-radius:12px}
+.aifix>summary::-webkit-details-marker{display:none}
+.aifix>summary b{font-weight:600}
+.aifix>summary>svg:last-child{margin-left:auto;transition:transform .15s}
+.aifix[open]>summary>svg:last-child{transform:rotate(180deg)}
+.aifb{display:grid;gap:8px;padding:0 12px 12px;min-width:0}
+.aifb>*{min-width:0}
+.aifb p{margin:0;font-size:12.5px;color:var(--ink-2);line-height:1.5}
+.aifb .acts{margin:0;display:flex;flex-wrap:wrap;gap:6px}
+.aifb .snip{margin:0;max-height:180px;overflow:auto}
+.aifb code{word-break:break-all;white-space:normal}
