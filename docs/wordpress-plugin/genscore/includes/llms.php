@@ -212,7 +212,10 @@ function genscore_llms_generate() {
  */
 function genscore_llms_content() {
 	$custom = get_option( 'genscore_llms_custom', '' );
-	return is_string( $custom ) && '' !== trim( $custom ) ? $custom : genscore_llms_generate();
+	$text = is_string( $custom ) && '' !== trim( $custom ) ? $custom : genscore_llms_generate();
+	// 1.5.0: the .md versions are appended when served, never saved into the
+	// person's text, so turning them off leaves llms.txt as it was.
+	return genscore_md_enabled() ? rtrim( $text ) . "\n" . genscore_md_section() : $text;
 }
 
 /**

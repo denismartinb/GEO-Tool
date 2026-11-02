@@ -156,6 +156,7 @@ function genscore_sanitize_page_score( $raw ) {
 	if ( null === $out['nota'] ) {
 		return null;
 	}
+	$out['aiv'] = genscore_sanitize_ai_view( isset( $raw['aiv'] ) ? $raw['aiv'] : null );
 	$allowed = array(
 		'code' => array( 'class' => true ),
 		'b'    => array(),
@@ -173,6 +174,32 @@ function genscore_sanitize_page_score( $raw ) {
 		);
 	}
 	return $out;
+}
+
+/**
+ * «Lo que lee la IA» of one page (plugin 1.5.0): the share of the text that
+ * arrives without JavaScript and a tally per kind of content, as
+ * [seen, delivered] counts. Only numbers; no text of the page.
+ *
+ * @param mixed $raw Decoded JSON.
+ * @return array|null
+ */
+function genscore_sanitize_ai_view( $raw ) {
+	if ( ! is_array( $raw ) || ! isset( $raw['pct'] ) || ! is_numeric( $raw['pct'] ) ) {
+		return null;
+	}
+	$k = array();
+	foreach ( array( 'price', 'heading', 'button', 'text' ) as $kind ) {
+		$pair       = isset( $raw['k'][ $kind ] ) && is_array( $raw['k'][ $kind ] ) ? array_values( $raw['k'][ $kind ] ) : array( 0, 0 );
+		$seen       = isset( $pair[0] ) ? min( 100000, absint( $pair[0] ) ) : 0;
+		$got        = isset( $pair[1] ) ? min( $seen, absint( $pair[1] ) ) : 0;
+		$k[ $kind ] = array( $seen, $got );
+	}
+	return array(
+		'pct' => max( 0, min( 100, (int) round( $raw['pct'] ) ) ),
+		'w'   => isset( $raw['w'] ) ? min( 1000000, absint( $raw['w'] ) ) : 0,
+		'k'   => $k,
+	);
 }
 
 /**

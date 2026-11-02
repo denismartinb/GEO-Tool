@@ -154,8 +154,9 @@
     if (webMode()) {
       var cov = coveredKinds({ ia: "geo", google: "seo", agent: "agent" }[lane]);
       var G = webAgg().fixes.filter(function (g) { var id = String(g.id).replace(/^shop-/, ""); return g.lane === lane && !cov[KIND_OF[id]] && !(cov["goto:llms"] && id === "llms") && !(cov["goto:bots"] && id.indexOf("bot-") === 0); });
-      if (!G.length) return "";
-      return '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas<small>en toda la web</small></div>' + G.slice(0, 5).map(function (g, i) { return webFixRow(g, i); }).join("") + "</div>";
+      var R = lane === "ia" ? aiRecRow() : "";
+      if (!G.length && !R) return "";
+      return '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas<small>en toda la web</small></div>' + R + G.slice(0, R ? 4 : 5).map(function (g, i) { return webFixRow(g, i + (R ? 1 : 0)); }).join("") + "</div>";
     }
     var F = ((S.score && S.score.fixes) || []).filter(function (f) { return f.lane === lane; });
     if (!F.length) return "";
@@ -190,17 +191,51 @@
     return '<div class="gs-card" id="gs-card-llms"><div class="gs-lab">llms.txt<small>' + status + '</small></div><div class="gs-bot" style="border:0;padding-top:0"><span class="gs-tx"><b style="font-size:14px;font-weight:600">Publicar /llms.txt</b><small style="font-family:var(--font);font-size:12.5px">Un resumen de tu web para los motores de IA: tus páginas, productos y artículos con su extracto. Puedes editarlo.</small></span><button class="gs-sw" role="switch" data-act="llms-toggle" aria-checked="' + !!L.enabled + '" aria-label="Publicar llms.txt"></button></div><label class="screen-reader-text" for="gs-llms-text">Contenido de llms.txt</label><textarea id="gs-llms-text" class="gs-code" spellcheck="false">' + esc(text) + '</textarea><div class="gs-acts"><button class="gs-btn gs-blue" data-act="save-llms">Guardar</button>' + (L.custom ? '<button class="gs-btn gs-line" data-act="llms-reset">Volver al generado</button>' : "") + (L.serving ? '<a class="gs-btn gs-line" href="' + esc(L.url) + '" target="_blank" rel="noopener">Ver /llms.txt</a>' : "") + (S.msg.llms || "") + "</div></div>";
   }
 
+  /* 1.5.0: «Versiones en Markdown». Each page's text at its address ending
+     in .md, listed in llms.txt when GenScore publishes it. A switch, so
+     turning it off undoes it; the toast offers the same. */
+  function mdCard() {
+    var M = D.md || {};
+    if (S.target) return "";
+    var sw = '<button class="gs-sw" role="switch" data-act="md-toggle" aria-checked="' + !!M.enabled + '" aria-label="Versiones en Markdown"' + (M.pretty ? "" : " disabled") + "></button>";
+    var note = "";
+    if (!M.pretty) note = '<div class="gs-hint gs-warm">Necesita enlaces permanentes con nombre (Ajustes, Enlaces permanentes): con «Simple» las direcciones .md no existen.</div>';
+    else if (M.enabled && S.llms.other) note = '<div class="gs-hint">' + esc(S.llms.other) + " publica tu llms.txt, así que GenScore no añade allí las direcciones .md. Las versiones se sirven igual.</div>";
+    else if (M.enabled && !S.llms.serving) note = '<div class="gs-hint">Las versiones ya se sirven. Para que aparezcan en tu llms.txt, actívalo arriba.</div>';
+    var sample = M.enabled && M.sample && M.sample.length ? '<pre class="gs-code gs-md">## ' + esc(M.heading || "Páginas en Markdown") + "\n" + M.sample.map(esc).join("\n") + "</pre>" : "";
+    return '<div class="gs-card" id="gs-card-md"><div class="gs-lab">Versiones en Markdown<span class="gs-new">Nuevo</span><small>toda la web</small></div><div class="gs-bot" style="border:0;padding-top:0"><span class="gs-tx"><b style="font-size:14px;font-weight:600">Servir cada página en .md</b><small style="font-family:var(--font);font-size:12.5px">El texto limpio de cada página, producto y entrada en su dirección terminada en .md, y la lista en tu llms.txt. Lo leen sobre todo agentes y herramientas que siguen llms.txt.</small></span>' + sw + "</div>" + note + sample + (M.enabled ? '<p class="gs-more">Sale del contenido que guardas en WordPress (y el precio y el stock de WooCommerce). Lo que pinta otro plugin con JavaScript no está ahí.</p>' : "") + "</div>";
+  }
+  function saveMd(on, quiet) {
+    post("genscore_save_md", { enabled: on ? "1" : "0" }).then(function (r) {
+      if (!r || !r.success) throw new Error();
+      D.md = r.data;
+      render();
+      if (!quiet) toast(on ? "Versiones en Markdown activadas." : "Versiones en Markdown desactivadas.", on ? "md-undo" : null);
+    }).catch(function () { toast("No se ha podido guardar. Vuelve a intentarlo."); render(); });
+  }
   function metaRow() {
     var m = metaAllowed();
     return '<div class="gs-ecx' + (m === false ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-meta", "gs-lg") + '</span><span class="gs-tx"><b>Meta AI y Muse</b><small>No cuenta en la nota</small></span><span class="gs-st">' + (m == null ? "Sin leer" : m ? "Puede leerla" : "Bloqueado") + "</span></div>";
   }
+  /* 1.5.0: the server probe of the account (audits.server, EXT-1.5.0), only
+     for the home page: it is what GenScore asked for, as each search bot. */
+  function serverRows() {
+    var P = acctOn() ? S.acct.project : null, X = P && P.audits && P.audits.server;
+    if (S.target || !X || !X.rows) return {};
+    var out = {};
+    X.rows.forEach(function (r) { if (r && r.engine) out[String(r.engine).replace("openai", "chatgpt")] = r; });
+    return out;
+  }
   function webGeo() {
-    var acc = (S.score && S.score.access) || {};
-    var cards = '<div class="gs-card"><div class="gs-lab">Quién puede leer ' + tu() + '<small>robots.txt</small></div><div class="gs-eng4">' + ENG.map(function (e) {
-      var a = acc[e[0]];
-      return '<div class="gs-ec' + (a === false ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-" + e[0], "gs-lg") + "</span><b>" + e[1] + "</b><small>" + (a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado") + "</small></div>";
-    }).join("") + "</div>" + metaRow() + "</div>";
-    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + cards + fixCard("ia", "Arreglar") + botsCard() + llmsCard() + '<div class="gs-card"><div class="gs-lab">En ' + la() + '</div>' + rows(criteria("ia", true)) + "</div>";
+    var acc = (S.score && S.score.access) || {}, SV = serverRows(), sim = [];
+    var cards = '<div class="gs-card"><div class="gs-lab">Quién puede leer ' + tu() + '</div><div class="gs-eng4">' + ENG.map(function (e) {
+      var a = acc[e[0]], sv = SV[e[0]], srv = a !== false && sv && sv.server === "blocked";
+      if (srv) sim.push({ name: e[1], token: sv.token, status: sv.status });
+      return '<div class="gs-ec' + (a === false || srv ? " gs-no" : "") + '"><span class="gs-lgw">' + ic("e-" + e[0], "gs-lg") + "</span><b>" + e[1] + "</b><small>" + (srv ? "Tu servidor lo bloquea" : a == null ? "Sin leer" : a ? "Puede leerla" : "Bloqueado") + "</small></div>";
+    }).join("") + "</div>" + metaRow()
+      + '<p class="gs-ev">' + tagx("ok", "Comprobado") + " Leído ahora en tu robots.txt.</p>"
+      + sim.map(function (x) { return '<p class="gs-ev">' + tagx("sim", "Simulación") + " Con tu cuenta, GenScore pidió tu portada como " + esc(x.token || x.name) + " desde fuera y tu servidor respondió " + (x.status ? esc(String(x.status)) : "con un bloqueo") + ", aunque robots.txt le deja pasar. Lo frena el cortafuegos o la CDN, no WordPress.</p>"; }).join("") + "</div>";
+    return '<div class="gs-lyr">Esta web<small>se arregla aquí</small></div>' + aiCard() + cards + fixCard("ia", "Arreglar") + botsCard() + llmsCard() + mdCard() + '<div class="gs-card"><div class="gs-lab">En ' + la() + '</div>' + rows(criteria("ia", true)) + "</div>";
   }
 
   var ISSUE = { desc: "Sin meta descripción", duptitle: "Título repetido con otra página", notitle: "Sin título", alt: "Imágenes sin texto alternativo" };
@@ -301,6 +336,99 @@
     return '<p class="gs-bgrev"><span class="gs-spin gs-spin-sm"></span>Revisando tus páginas más importantes para calcular tu nota</p>';
   }
 
+  /* ---------------- «Lo que lee la IA» (plugin 1.5.0, WP-PLUGIN-5) ----------------
+     Global figures only: the share of what a customer sees that reaches the
+     engines, what kind of content is lost and on what kind of page. Never a
+     list of pages (Denis, 2026-11-02: a list makes the review look small).
+     No fix block here: a fix only shows in «Recomendaciones técnicas» when
+     its cause is certain (aiRecRow, inside «Recomendaciones técnicas»). */
+  var AIK = [["price", "Precios", 1], ["heading", "Títulos", 6], ["button", "Botones", 4], ["text", "Texto", 40]];
+  var AIT = { product: "Productos", page: "Páginas", post: "Entradas del blog" };
+  function aiAgg() {
+    var E = S.target ? (S.score && S.score.aiv ? [{ page: S.target, e: { aiv: S.score.aiv } }] : []) : webEntries().filter(function (x) { return x.e.aiv; });
+    if (!E.length) return null;
+    var share = function (L) { var w = 0, v = 0; L.forEach(function (x) { var n = Math.max(1, x.e.aiv.w || 0); w += n; v += x.e.aiv.pct * n; }); return w ? Math.round(v / w) : null; };
+    var kinds = AIK.map(function (k) {
+      var seen = 0, got = 0;
+      E.forEach(function (x) { var t = (x.e.aiv.k || {})[k[0]]; if (t) { seen += t[0] || 0; got += t[1] || 0; } });
+      return seen >= k[2] ? { id: k[0], label: k[1], lost: Math.round(100 * (1 - got / seen)) } : null;
+    }).filter(Boolean);
+    var types = [];
+    if (!S.target) Object.keys(AIT).forEach(function (t) {
+      var L = E.filter(function (x) { return kindOf(x.page) === t; });
+      if (L.length) types.push({ id: t, label: AIT[t], pct: share(L) });
+    });
+    var prod = E.filter(function (x) { return x.page.type === "product"; });
+    var pp = { seen: 0, got: 0 };
+    prod.forEach(function (x) { var t = (x.e.aiv.k || {}).price; if (t) { pp.seen += t[0] || 0; pp.got += t[1] || 0; } });
+    return { pct: share(E), kinds: kinds, types: types, productPriceLost: pp.seen ? Math.round(100 * (1 - pp.got / pp.seen)) : null };
+  }
+  function aiSay(v) { return v >= 95 ? "Tu contenido está en el HTML, que es lo que leen sus bots." : "El resto sólo aparece con JavaScript, y estos motores no lo ejecutan."; }
+  function aiBand(v) { return v >= 90 ? "pos" : v >= 60 ? "mid" : "low"; }
+  function aiInsight(T) {
+    if (T.length < 2) return "";
+    if (T.every(function (t) { return t.pct >= 95; })) return "Todas tus páginas llegan completas a la IA.";
+    var O = T.slice().sort(function (a, b) { return a.pct - b.pct; }), worst = O[0];
+    if (O[O.length - 1].pct - worst.pct < 10) return "Se pierde lo mismo en todos tus tipos de página: viene de partes comunes, como el menú, el pie o los bloques de la plantilla.";
+    var blog = T.filter(function (t) { return t.id === "post"; })[0];
+    if (worst.id === "product" && blog && blog.pct >= 95) return "El blog llega entero; lo que se pierde está en lo que vendes.";
+    return "Lo que más se pierde está en " + (worst.id === "product" ? "tus productos" : worst.id === "post" ? "tus entradas del blog" : "tus páginas") + ".";
+  }
+  function aiRing(v) {
+    var c = 2 * Math.PI * 40, d = Math.round((v / 100) * c);
+    return '<svg class="gs-air" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" class="gs-tr"/><circle cx="48" cy="48" r="40" class="gs-v gs-' + aiBand(v) + '" stroke-dasharray="' + d + " " + Math.ceil(c) + '" transform="rotate(-90 48 48)"/></svg>';
+  }
+  function tagx(k, t) { return '<span class="gs-tagx gs-tx-' + k + '">' + (k === "ok" ? ic("i-check") : "") + esc(t) + "</span>"; }
+  function aiCard() {
+    var A = aiAgg();
+    if (!A) return S.web.running ? '<div class="gs-card"><div class="gs-lab">Lo que lee la IA</div><p class="gs-more">Leyendo tus páginas como las reciben los bots de IA…</p></div>' : "";
+    var kinds = A.kinds.length ? '<div class="gs-mh">Qué no llega</div><div class="gs-aik">' + A.kinds.map(function (k) {
+      var lost = k.lost >= 5;
+      return '<div class="' + (lost ? "" : "gs-okk") + '"><span>' + esc(k.label) + '</span><b class="gs-num">' + (lost ? k.lost : 100 - k.lost) + '%</b><em>' + (lost ? "no llega" : "llega") + "</em></div>";
+    }).join("") + "</div>" : "";
+    var types = A.types.length >= 2 ? '<div class="gs-mh">Dónde se pierde<small>lo que llega</small></div><div class="gs-ait">' + A.types.map(function (t) {
+      return '<div class="gs-aitr"><span>' + esc(t.label) + "</span>" + pbar(t.pct, aiBand(t.pct)) + '<b class="gs-num">' + t.pct + "%</b></div>";
+    }).join("") + '</div><p class="gs-ains">' + esc(aiInsight(A.types)) + "</p>" : "";
+    return '<div class="gs-card" id="gs-card-ai"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span>' + (S.target ? "<small>esta página</small>" : "") + '</div><div class="gs-aif">' + aiRing(A.pct) + '<div><b class="gs-num">' + A.pct + '%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity. ' + aiSay(A.pct) + "</p><small>" + tagx("ok", "Comprobado") + " en tu navegador: la misma página sin JavaScript frente a como se ve.</small></div></div>" + kinds + types + "</div>";
+  }
+  /* The small block of the Resumen: the figure, one line and the way to GEO. */
+  function aiMini() {
+    var A = aiAgg();
+    if (!A) return "";
+    var b = aiBand(A.pct);
+    return '<div class="gs-card gs-aim"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span></div><div class="gs-prh"><span class="gs-aim-t">de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity</span><span class="gs-prp gs-num">' + A.pct + "%</span></div>" + pbar(A.pct, b) + '<div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-tab="geo">Ver qué no llega' + ic("i-arrowr") + "</button></div></div>";
+  }
+  /* A recommendation only when the cause is certain: prices that a product
+     page shows only with JavaScript, on a shop where WooCommerce has them and
+     the product fix can publish them in the HTML (structured data, read
+     from WooCommerce when the page is served). Once published, the next
+     review finds the price in the HTML and the card goes away by itself. */
+  function aiRecRow() {
+    var A = aiAgg();
+    if (!A || S.target || !D.site.woocommerce || !fixable("product") || A.productPriceLost == null || A.productPriceLost < 20) return "";
+    return '<div class="gs-fx gs-fxw"><span class="gs-n">1</span><span class="gs-tx">Pon tus precios en el HTML<span class="gs-why">En tus fichas, el ' + A.productPriceLost + "% de los precios sólo aparece con JavaScript, así que la IA no puede dar tu precio. WooCommerce sí los tiene: GenScore los publica en los datos de producto de cada ficha, leídos de WooCommerce al servir la página.</span>" + '<span class="gs-chip">Lo que lee la IA</span></span><button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="product">Arreglar</button></div>';
+  }
+  /* «Desde la última revisión»: three global figures against the last stored
+     review at least six hours older (genscore_ajax_save_review). Live values
+     on the left, so the figure matches the rest of the screen. */
+  function enginesOpen() {
+    var acc = (S.home && S.home.score && S.home.score.access) || (S.score && S.score.access) || {};
+    var known = ENG.filter(function (e) { return acc[e[0]] != null; });
+    if (!known.length) return null;
+    return { n: known.filter(function (e) { return acc[e[0]]; }).length, of: known.length };
+  }
+  function histCard() {
+    var P = D.last && D.last.prev;
+    if (S.target || !P || !P.at) return "";
+    var W = webAgg(), A = aiAgg(), G = enginesOpen(), T = [];
+    var d = function (now, was, unit) { var x = now - was; return '<em class="' + (x > 0 ? "gs-up" : x < 0 ? "gs-down" : "") + '">' + (x > 0 ? "▲ " + x : x < 0 ? "▼ " + -x : "=") + (x ? unit : "") + "</em>"; };
+    if (W && P.nota != null) T.push('<div class="gs-hs"><b class="gs-num">' + W.nota + "%" + d(W.nota, P.nota, "") + "</b><span>Optimización técnica</span></div>");
+    if (A && P.ai != null) T.push('<div class="gs-hs"><b class="gs-num">' + A.pct + "%" + d(A.pct, P.ai, "") + "</b><span>Lo que lee la IA</span></div>");
+    if (G && P.eng != null) T.push('<div class="gs-hs"><b class="gs-num">' + G.n + " de " + G.of + d(G.n, P.eng, "") + "</b><span>motores pueden entrar</span></div>");
+    if (!T.length) return "";
+    return '<div class="gs-card gs-hist"><div class="gs-lab">Desde la última revisión<small>' + esc(ago(P.at)) + '</small></div><div class="gs-hss">' + T.join("") + "</div></div>";
+  }
+
   /* ---------------- Resumen ---------------- */
   function resumen() {
     var sc = S.score;
@@ -315,10 +443,10 @@
       var mine = '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
-      return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + mine + pagesCard + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
+      return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + aiMini() + mine + pagesCard + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
     }
     var fixes = '<div class="gs-card"><div class="gs-lab">Recomendaciones técnicas</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
-    return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + fixes + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
+    return '<div class="gs-cols gs-q2"><div class="gs-col">' + prep + aiMini() + fixes + '</div><div class="gs-col">' + geo + recsCard() + batchesCard() + (acctLinked() ? "" : acctCard()) + "</div></div>";
   }
   /* ---------------- two questions, two instruments ----------------
      The page review measures whether the site is ready for the engines and
@@ -392,6 +520,13 @@
     var d = P && C && C.domains ? C.domains.filter(function (x) { return x.domain === P.domain; })[0] : null;
     return d ? "/dashboard/projects/" + encodeURIComponent(d.id) + (sub ? "/" + sub : "") : "/dashboard";
   }
+  /* 1.5.0: «Descargar informe» opens the console's report (/informe/<id>),
+     the same PDF as Visión general. Only connected, with a completed scan. */
+  function reportBtn() {
+    var P = S.acct.project, C = S.acct.context;
+    var d = acctOn() && P && P.scanDate && C && C.domains ? C.domains.filter(function (x) { return x.domain === P.domain; })[0] : null;
+    return d ? '<a class="gs-btn gs-line gs-sm gs-rep" href="' + esc(appUrl("/informe/" + encodeURIComponent(d.id), "informe")) + '" target="_blank" rel="noopener">' + ic("i-download") + "Descargar informe</a>" : "";
+  }
   function goApp(sub, label, content, cls) { return ext(appUrl(projPath(sub), content), label, cls || "gs-btn gs-line gs-sm"); }
   function pct(s) { return s == null ? null : Math.round(s * 100); }
   function nES(n, d) { return Number(n).toLocaleString("es-ES", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
@@ -400,7 +535,7 @@
     if (!acctLinked()) return '<span class="gs-lgin">Conecta tu cuenta de <b>GenScore</b> para ver tus cifras</span>' + connectBtn("gs-btn gs-blue gs-sm");
     var C = S.acct.context;
     var who = C ? esc(C.email || "") + (C.plan && C.plan.name ? " · " + esc(C.plan.name) : "") : "Conectado";
-    return '<span class="gs-acct"><span class="gs-acav">' + ic("i-check") + '</span><span class="gs-acct-t">' + who + '</span></span><button class="gs-btn gs-line gs-sm" data-act="disconnect">Desconectar</button>';
+    return reportBtn() + '<span class="gs-acct"><span class="gs-acav">' + ic("i-check") + '</span><span class="gs-acct-t">' + who + '</span></span><button class="gs-btn gs-line gs-sm" data-act="disconnect">Desconectar</button>';
   }
   /* «Actualizar» skips the plugin's cache: right after a scan the audit may still be on its way. */
   function domLyr(src) { return '<div class="gs-lyr gs-gs">Tu dominio<small>' + esc(src) + "</small>" + (acctOn() ? '<button type="button" class="gs-lnk gs-rf" data-act="acct-reload">' + ic("i-refresh") + "Actualizar</button>" : "") + "</div>"; }
@@ -591,7 +726,7 @@
     if (S.tab === "res") return resumen();
     var d = S.tab === "geo" ? domGeo() : S.tab === "seo" ? domSeo() : domAg();
     var w = S.tab === "geo" ? webGeo() : S.tab === "seo" ? webSeo() : webAg();
-    return '<div class="gs-cols gs-dom"><div class="gs-col">' + d + '</div><div class="gs-col">' + w + "</div></div>";
+    return (S.tab === "geo" ? histCard() : "") + '<div class="gs-cols gs-dom"><div class="gs-col">' + d + '</div><div class="gs-col">' + w + "</div></div>";
   }
   /* Re-rendering swaps the screen's HTML: keep the scroll where it was and
      the focus on the same control, or every refresh while pages are read
@@ -643,13 +778,29 @@
         var s = doc.createElement("script");
         s.src = D.assets + "vendor/collect.js?ver=" + encodeURIComponent(D.version);
         s.onload = function () {
-          frame.contentWindow.collectPageFacts().then(function (facts) { end(null, facts); }, function () { end("No hemos podido leer " + la() + "."); });
+          frame.contentWindow.collectPageFacts().then(function (facts) {
+            /* 1.5.0: «Lo que lee la IA» is read alongside and never fails the review */
+            aiViewIn(doc, frame).then(function (v) { if (v) facts.aiView = v; end(null, facts); });
+          }, function () { end("No hemos podido leer " + la() + "."); });
         };
         s.onerror = function () { end("No se ha podido cargar el lector de la página."); };
         doc.head.appendChild(s);
       };
       frame.src = url;
       document.body.appendChild(frame);
+    });
+  }
+
+  /* Loads aiview.js in the same frame and reads the page as a bot gets it.
+     Any failure is «no data», never a figure. */
+  function aiViewIn(doc, frame) {
+    return new Promise(function (resolve) {
+      var t = setTimeout(function () { resolve(null); }, 10000);
+      var s = doc.createElement("script");
+      s.src = D.assets + "aiview.js?ver=" + encodeURIComponent(D.version);
+      s.onload = function () { frame.contentWindow.genscoreAiView().then(function (v) { clearTimeout(t); resolve(v && v.state === "ok" ? v : null); }, function () { clearTimeout(t); resolve(null); }); };
+      s.onerror = function () { clearTimeout(t); resolve(null); };
+      doc.head.appendChild(s);
     });
   }
 
@@ -682,11 +833,18 @@
      page is never where a product's JSON-LD goes, so it never carries the
      price, stock or product fixes. */
   var PRODUCT_FIX = { prod: 1, price: 1, avail: 1 };
+  /* What is stored of «Lo que lee la IA»: the page's share and the tally per
+     kind of content. No text of the page. */
+  function withAi(sc, facts) {
+    var v = facts && facts.aiView;
+    if (v && v.state === "ok") sc.aiv = { pct: v.pct, w: v.words, k: v.k };
+    return sc;
+  }
   function entryOf(id, sc) {
     var via = !!(sc.shop && sc.shop.state === "found" && !sc.commerce);
     var F = sc.fixes.map(function (f) { return Object.assign({}, f, { id: String(f.id).replace(/^shop-/, "") }); })
       .filter(function (f) { return !(id === 0 && f.lane === "agent" && PRODUCT_FIX[f.id]); });
-    return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, via: via, fixes: F.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
+    return { id: id, nota: sc.nota, ia: sc.lanes.ia, google: sc.lanes.google, agent: sc.lanes.agent, via: via, aiv: sc.aiv || null, fixes: F.slice(0, 12).map(function (f) { return { id: f.id, lane: f.lane, pts: f.pts, unit: f.unit === "pt" ? "pt" : "en Agentes", t: f.t }; }) };
   }
   /* `gen`: the generation the page was read in. A pass that started before
      a robots.txt or llms.txt save carries the old one, and the server drops
@@ -707,7 +865,7 @@
     var target = S.target, gen = S.web.gen;
     readPage(target ? target.url : D.site.home).then(function (facts) {
       S.facts = facts; S.botsPending = false;
-      var raw = SC.scorePage(facts);
+      var raw = withAi(SC.scorePage(facts), facts);
       keep(target ? target.id : 0, raw, gen);
       // Only the home page borrows a product page for Agentes: a page opened
       // from the list is scored on its own.
@@ -737,7 +895,10 @@
   function saveReview() {
     var W = webAgg();
     if (!W) return;
-    post("genscore_save_review", { nota: W.nota, ia: W.lanes.ia, google: W.lanes.google, agent: W.lanes.agent == null ? "" : W.lanes.agent }).catch(function () {});
+    var A = aiAgg(), G = enginesOpen();
+    post("genscore_save_review", { nota: W.nota, ia: W.lanes.ia, google: W.lanes.google, agent: W.lanes.agent == null ? "" : W.lanes.agent, ai: A ? A.pct : "", eng: G ? G.n : "" }).then(function (r) {
+      if (r && r.success && r.data && r.data.last) { D.last = r.data.last; if (S.tab === "geo") render(); }
+    }).catch(function () {});
   }
   /* Reads the important pages that have no stored score yet (or all of them),
      two at a time. The first time, the screen waits with the spinner; after
@@ -758,7 +919,7 @@
     function next() {
       if (i >= todo.length) return Promise.resolve();
       var p = todo[i++];
-      return readPage(p.url).then(function (facts) { keep(p.id, SC.scorePage(facts), gen); }, function () { /* a page that will not open is left out */ })
+      return readPage(p.url).then(function (facts) { keep(p.id, withAi(SC.scorePage(facts), facts), gen); }, function () { /* a page that will not open is left out */ })
         .then(function () { S.web.left--; if (!S.web.first && !S.target) render(); return next(); });
     }
     Promise.all([next(), next()]).then(function () {
@@ -1358,7 +1519,7 @@
   }
   host.addEventListener("click", function (e) {
     var b = e.target.closest("#gs-toast [data-batch]");
-    if (b) { b.closest("#gs-toast").hidden = true; undo(b.getAttribute("data-batch")); }
+    if (b) { b.closest("#gs-toast").hidden = true; if (b.getAttribute("data-batch") === "md-undo") { saveMd(false, true); toast("Versiones en Markdown desactivadas."); } else undo(b.getAttribute("data-batch")); }
   });
   var wasNarrow = narrow();
   window.addEventListener("resize", function () { var n = narrow(); if (n === wasNarrow) return; wasNarrow = n; if (M && M.step === "pick") { drawList(); drawSide(); } });
@@ -1436,6 +1597,7 @@
       saveLlms("toggle");
       return;
     }
+    if (act === "md-toggle") { var mon = a.getAttribute("aria-checked") !== "true"; D.md = Object.assign({}, D.md, { enabled: mon }); render(); saveMd(mon); return; }
     if (act === "save-llms") { saveLlms("edit"); return; }
     if (act === "llms-reset") { saveLlms("reset"); return; }
     if (act === "acct-reload") { S.acct = { state: "loading" }; render(); loadAccount(true); return; }

@@ -8,7 +8,7 @@
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
-foreach ( array( 'genscore_bots', 'genscore_llms_enabled', 'genscore_llms_custom', 'genscore_last_review', 'genscore_page_scores', 'genscore_scores_version', 'genscore_scores_gen', 'genscore_home_fixes', 'genscore_returns', 'genscore_shipping', 'genscore_fix_batches', 'genscore_account', 'genscore_oauth_client', 'genscore_drafts', 'genscore_site_fixes', 'genscore_cancel' ) as $genscore_option ) {
+foreach ( array( 'genscore_bots', 'genscore_llms_enabled', 'genscore_llms_custom', 'genscore_last_review', 'genscore_page_scores', 'genscore_scores_version', 'genscore_scores_gen', 'genscore_home_fixes', 'genscore_returns', 'genscore_shipping', 'genscore_fix_batches', 'genscore_account', 'genscore_oauth_client', 'genscore_drafts', 'genscore_site_fixes', 'genscore_cancel', 'genscore_md_enabled' ) as $genscore_option ) {
 	delete_option( $genscore_option );
 }
 
