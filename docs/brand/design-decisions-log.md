@@ -29099,3 +29099,23 @@ ahora el aviso de conexión sale cuando llegan y, sin el dominio, pide añadirlo
 Y la pantalla de permiso decía «Conectar GenScore para WordPress (…) con
 GenScore»: el cliente se registra como «WordPress (<dominio>)», y un cliente
 guardado con otro nombre se registra otra vez una sola vez.
+
+**Adenda 1.1.2 (2026-11-02).** Prueba de extremo a extremo de Denis con un
+escaneo real. Primero: «Salud SEO» enseñaba 47 en el plugin y 84 en la consola.
+`seoScore` de `/api/ext/project` era `model.technical.score`, el «Diagnóstico
+técnico» del desglose de la Puntuación GEO, no la nota del bloque SEO. Ahora
+`buildExtProjectSummary` recibe la nota del bloque SEO de `buildExtAudits`, la
+misma que pinta la consola. Esto arregla también la extensión (que ya lo llamaba
+«Salud SEO») sin publicar otra versión, y el MCP pasa a decir «Salud SEO de tu
+web». Segundo: la cuenta se leyó con la auditoría aún pendiente y el plugin la
+guardó diez minutos. Ahora, con `auditedAt` vacío, la respuesta se guarda un
+minuto y la pantalla vuelve a pedirla sola cada minuto (como mucho diez veces).
+Además hay un «Actualizar» junto a la fuente. Por último, Agentes y la
+Puntuación GEO usan las bandas de la consola (`agenticBand`: Falla por debajo
+de 50, Bien desde 90; Inicial, Emergente y Competitivo con cortes en 40 y 70).
+Pendiente y conocido: las «próximas acciones» del plugin, la extensión y el MCP
+salen del plan del informe (`model.plan`) y no de `buildOverviewPlan`, así que el
+orden y el título pueden diferir de Visión general. Los rivales son las marcas
+más nombradas, no sólo las que sigues; esto es a propósito y la extensión hace
+lo mismo. Las bandas de Agentes de la extensión siguen en 75 y 50 hasta su
+próxima versión.

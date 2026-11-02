@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,11 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.1.2 =
+* «Salud SEO» in «Tu dominio» is the SEO audit's score, the same as in GenScore's console.
+* The agent score and the GEO Score use the console's bands (Bien, Mejorable, Falla; Inicial, Emergente, Competitivo).
+* Right after a scan, while its audit is still running, the figures refresh on their own every minute, and «Actualizar» reads them again at any time.
 
 = 1.1.1 =
 * After connecting, the message only says you can see your figures when this domain is in your GenScore account; otherwise it asks you to add it.

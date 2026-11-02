@@ -119,7 +119,7 @@ export function formatDomainSummary(p: ExtProjectPayload, l: ConsoleLinks): Tool
     lines.push("", "Marcas más nombradas en tus preguntas principales de búsqueda:");
     for (const r of p.rivals) lines.push(`- ${r.name}${r.isBrand ? " (tú)" : ""}: ${formatShare(r.share)}`);
   }
-  if (p.seoScore != null) lines.push("", `Salud técnica de tu web: ${p.seoScore}/100`);
+  if (p.seoScore != null) lines.push("", `Salud SEO de tu web: ${p.seoScore}/100`);
   if (p.agentic?.kind === "card") lines.push(`Comercio agéntico: ${p.agentic.score}/100. ${p.agentic.headline}`);
   lines.push("", `Ver en GenScore: ${screen(l)}`);
   return {

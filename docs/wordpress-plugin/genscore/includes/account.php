@@ -22,6 +22,7 @@ const GENSCORE_ACCOUNT_OPTION = 'genscore_account';
 const GENSCORE_CLIENT_OPTION  = 'genscore_oauth_client';
 /** The figures are kept this long, so the screen does not call genscore.es on every load. */
 const GENSCORE_ACCOUNT_TTL = 600;
+const GENSCORE_ACCOUNT_PENDING_TTL = 60;
 
 /**
  * Where GenScore sends the person back after approving. Fixed by the plugin,
@@ -406,7 +407,10 @@ function genscore_account_data( $fresh = false ) {
 	} else {
 		return array( 'state' => 'error' );
 	}
-	set_transient( 'genscore_account_data', $out, GENSCORE_ACCOUNT_TTL );
+	// Right after a scan the technical audit is still on its way (auditedAt null):
+	// keep that answer one minute, not ten, so the figures arrive on their own.
+	$pending = 'connected' === $out['state'] && is_array( $out['project'] ) && empty( $out['project']['audits']['auditedAt'] );
+	set_transient( 'genscore_account_data', $out, $pending ? GENSCORE_ACCOUNT_PENDING_TTL : GENSCORE_ACCOUNT_TTL );
 	return $out;
 }
 

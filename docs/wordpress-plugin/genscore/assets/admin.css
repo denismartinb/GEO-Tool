@@ -374,3 +374,7 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-gau-s .gs-nm{font-size:12.5px;text-align:center}
 #genscore-app .gs-domc .gs-gg3{border-top:0;padding-top:0}
 #genscore-app .gs-domc .gs-say{font-size:15px;max-width:none}
+/* 1.1.2: «Actualizar» next to the account layer's source. */
+#genscore-app .gs-lyr .gs-rf{display:inline-flex;align-items:center;gap:4px;margin-left:10px;padding:0;border:0;background:none;font:inherit;font-size:12px;font-weight:500;color:var(--blue);cursor:pointer}
+#genscore-app .gs-lyr .gs-rf svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#genscore-app .gs-lyr .gs-rf:hover{text-decoration:underline}

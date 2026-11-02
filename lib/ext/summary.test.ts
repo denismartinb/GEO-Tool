@@ -82,9 +82,10 @@ describe("buildExtProjectSummary", () => {
   const base = { project: { domain: "marca.es", brand: "Marca" }, answers: [], agentic: { kind: "hidden" } as const, engineLabel: label };
 
   it("takes the figures from the report model as they are, as shares", () => {
-    const s = buildExtProjectSummary({ ...base, model: model(), url: null });
+    const s = buildExtProjectSummary({ ...base, model: model(), url: null, seoScore: 84 });
     expect(s.geoScore).toBe(47);
-    expect(s.seoScore).toBe(68);
+    // «Salud SEO» is the audit's SEO block, never the report's technical score (68).
+    expect(s.seoScore).toBe(84);
     expect(s.engines).toEqual([
       { provider: "openai", label: "ChatGPT", mentionShare: 0.38 },
       { provider: "gemini", label: "Gemini", mentionShare: 0.52 }

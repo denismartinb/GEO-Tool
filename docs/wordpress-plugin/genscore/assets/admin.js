@@ -35,6 +35,10 @@
   /* ---------------- helpers ---------------- */
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function ic(id, c) { return '<svg class="' + (c || "gs-i") + '" aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+  /* The console's agent bands (agenticBand: below 50 fails, from 90 passes). */
+  /* The console's GEO Score bands (Inicial below 40, Competitivo from 70). */
+  function geoBand(v) { return v == null ? ["none", "Sin dato"] : v >= 70 ? ["pos", "Competitivo"] : v >= 40 ? ["mid", "Emergente"] : ["low", "Inicial"]; }
+  function agBand(v) { return v == null ? ["none", "Sin dato"] : v >= 90 ? ["pos", "Bien"] : v >= 50 ? ["mid", "Mejorable"] : ["low", "Falla"]; }
   function band(v) { return v == null ? ["none", "Sin dato"] : v >= 75 ? ["pos", "Bien"] : v >= 50 ? ["mid", "Mejorable"] : ["low", "Se frena"]; }
   function ok(t) { return '<span class="gs-ok">' + ic("i-check") + esc(t) + "</span>"; }
   function ko(t) { return '<span class="gs-ko">' + ic("i-x") + esc(t) + "</span>"; }
@@ -62,8 +66,8 @@
   }
   var ARC = "M8 50 A30 30 0 1 1 64 50";
   function arc(v, cls) { return '<svg class="gs-arc" viewBox="0 0 72 56" aria-hidden="true"><path class="gs-tr" d="' + ARC + '"/><path class="gs-v gs-' + cls + '" d="' + ARC + '" pathLength="100" stroke-dasharray="' + (v == null ? 0 : v) + ' 100"/></svg>'; }
-  function gauge(tab, nm, icon, v, st) {
-    var b = band(v);
+  function gauge(tab, nm, icon, v, st, bandFn) {
+    var b = (bandFn || band)(v);
     return '<button class="gs-gau" data-tab="' + tab + '"><span class="gs-arcw">' + arc(v, b[0]) + '<b class="gs-num">' + (v == null ? "–" : v) + '</b></span><span class="gs-nm">' + icon + nm + '</span><span class="gs-st"><span class="gs-dot gs-' + b[0] + '"></span>' + esc(st || b[1]) + ic("i-chevr") + "</span></button>";
   }
   function lock() { return '<span class="gs-lock">' + ic("i-shield") + "</span>"; }
@@ -345,7 +349,8 @@
     var who = C ? esc(C.email || "") + (C.plan && C.plan.name ? " · " + esc(C.plan.name) : "") : "Conectado";
     return '<span class="gs-acct"><span class="gs-acav">' + ic("i-check") + '</span><span class="gs-acct-t">' + who + '</span></span><button class="gs-btn gs-line gs-sm" data-act="disconnect">Desconectar</button>';
   }
-  function domLyr(src) { return '<div class="gs-lyr gs-gs">Tu dominio<small>' + esc(src) + "</small></div>"; }
+  /* «Actualizar» skips the plugin's cache: right after a scan the audit may still be on its way. */
+  function domLyr(src) { return '<div class="gs-lyr gs-gs">Tu dominio<small>' + esc(src) + "</small>" + (acctOn() ? '<button type="button" class="gs-lnk gs-rf" data-act="acct-reload">' + ic("i-refresh") + "Actualizar</button>" : "") + "</div>"; }
   function scanLabel(P) {
     if (!P.scanDate) return "sin escaneo completado";
     var d = new Date(P.scanDate);
@@ -405,7 +410,7 @@
     if (!a || a.kind !== "card") return domLyr("auditoría agéntica") + '<div class="gs-card"><p>Todavía no hay auditoría agéntica de este dominio. Se hace sola tras cada escaneo cuando GenScore encuentra algo que vendes.</p></div>';
     var b = auBlock("agent");
     return domLyr("auditoría agéntica") + '<div class="gs-card"><div class="gs-lab">Nota para agentes<small>' + esc(a.headline || "") + '</small></div><div class="gs-gg4">' + a.components.map(function (c) {
-      var v = c.points == null ? null : Math.round((c.points / c.weight) * 100), bb = band(v);
+      var v = c.points == null ? null : Math.round((c.points / c.weight) * 100), bb = agBand(v);
       return '<div class="gs-gau gs-gau-s"><span class="gs-arcw">' + arc(v, bb[0]) + '<b class="gs-num">' + (v == null ? "–" : v) + '</b></span><span class="gs-nm">' + esc(c.name) + '</span><span class="gs-st"><span class="gs-dot gs-' + bb[0] + '"></span>' + esc(bb[1]) + "</span></div>";
     }).join("") + "</div>" + (b && b.issues.length ? '<div class="gs-mh">Lo primero</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("agentic-visibility", "Ver visibilidad en agentes", "agentes") + "</div></div>";
   }
@@ -413,16 +418,22 @@
   function domCard() {
     if (!acctLinked()) return deepCard() + acctCard();
     if (!acctOn()) return acctWait();
-    var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null;
+    var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null, sb = auBlock("seo");
     var plan = (P.plan || []).map(function (x, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + "</span></div>"; }).join("");
-    return '<div class="gs-card gs-domc">' + domLyr(scanLabel(P)) + noScan(P) + '<div class="gs-gg3">' + gauge("geo", "Puntuación GEO", "", P.geoScore, null) + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null)) + "</div>" + (P.lede ? '<p class="gs-say">' + esc(P.lede) + "</p>" : "") + "</div>"
+    return '<div class="gs-card gs-domc">' + domLyr(scanLabel(P)) + noScan(P) + '<div class="gs-gg3">' + gauge("geo", "Puntuación GEO", "", P.geoScore, null, geoBand) + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), sb ? sb.score : P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null, agBand)) + "</div>" + (P.lede ? '<p class="gs-say">' + esc(P.lede) + "</p>" : "") + "</div>"
       + (plan ? '<div class="gs-card"><div class="gs-lab">Tus próximas acciones<small>de GenScore</small></div>' + plan + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "");
   }
+  var acctTimer = 0, acctPolls = 0;
   function loadAccount(fresh) {
     if (!AC.connected) return;
     if (!S.acct.state || S.acct.state === "off" || S.acct.state === "error") S.acct = { state: "loading" };
     post("genscore_account", fresh ? { fresh: "1" } : {}).then(function (r) {
       S.acct = r && r.success && r.data ? r.data : { state: "error" };
+      /* A scan just finished and its audit is still on its way: ask again in a
+         minute (the server keeps that answer only a minute), a few times. */
+      clearTimeout(acctTimer);
+      var Pj = S.acct.state === "connected" && S.acct.project;
+      if (Pj && Pj.scanDate && !(Pj.audits && Pj.audits.auditedAt) && acctPolls < 10) { acctPolls++; acctTimer = setTimeout(function () { loadAccount(true); }, 60000); }
       if (AC.result === "connected") { AC.result = ""; toast(S.acct.state === "connected" ? "Conectada con GenScore. Ya ves aquí las cifras de tu cuenta." : S.acct.state === "not_found" ? "Conectada con GenScore. Añade este dominio a tu cuenta para ver aquí sus cifras." : "Conectada con GenScore."); }
       if (S.acct.state === "expired" || S.acct.state === "off") { AC.connected = false; if (S.acct.state === "expired") toast("Tu conexión con GenScore ha caducado. Vuelve a conectar para ver tus cifras."); S.acct = { state: "off" }; }
       render();

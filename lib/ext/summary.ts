@@ -34,6 +34,7 @@ export type ExtProjectSummary = {
   lede: string | null;
   engines: ExtEngine[];
   rivals: ExtRival[];
+  /** «Salud SEO»: the SEO block of the latest technical audit. Null without one. */
   seoScore: number | null;
   plan: ExtPlanItem[];
   agentic: ExtAgentic;
@@ -107,7 +108,8 @@ export function buildExtProjectSummary({
   agentic,
   url,
   engineLabel,
-  competitors = []
+  competitors = [],
+  seoScore = null
 }: {
   project: { domain: string; brand: string };
   model: ReportModel | null;
@@ -117,6 +119,8 @@ export function buildExtProjectSummary({
   engineLabel: (provider: string) => string;
   /** Active tracked competitors, only to find each rival's domain. */
   competitors?: ReadonlyArray<{ name: string; domain: string | null }>;
+  /** The SEO block of the technical audit (`buildExtAudits`), the console's «Salud SEO». */
+  seoScore?: number | null;
 }): ExtProjectSummary {
   const ownUrl = url && isOwnUrl(url, project.domain) ? url : null;
   return {
@@ -127,7 +131,9 @@ export function buildExtProjectSummary({
     lede: model?.summary.lede ?? null,
     engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
     rivals: pickRivals(model, project.domain, competitors),
-    seoScore: model?.technical?.score ?? null,
+    // Never the report's technical score: that is the GEO Score's «Diagnóstico
+    // técnico», a different figure (log §432, adenda 1.1.2).
+    seoScore,
     plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => ({ title: p.title, firstStep: p.firstStep, engines: p.engineLabels, questions: p.questions ?? [] })),
     agentic: toExtAgentic(agentic),
     citingPrompts: ownUrl ? findCitingPrompts(answers, ownUrl, engineLabel) : null

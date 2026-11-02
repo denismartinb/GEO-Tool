@@ -90,3 +90,7 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   (`lib/ext/request-account.ts`), con `accountFromBearer`. Con cabecera
   `Authorization` decide sólo la cabecera, nunca la cookie. Sigue siendo sólo
   lectura y RLS del usuario.
+- **`seoScore` de `/api/ext/project` es la nota del bloque SEO de la auditoría**
+  (`buildExtAudits`), la «Salud SEO» de la consola, nunca `model.technical.score`
+  («Diagnóstico técnico» de la Puntuación GEO). Lo vigila `summary.test.ts`
+  (log §432, adenda 1.1.2).
