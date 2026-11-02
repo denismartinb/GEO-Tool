@@ -29090,3 +29090,33 @@ como con cualquier plugin conectado; se mitiga con tokens cortos y la
 retirada desde Apps conectadas. El token de Supabase lleva los permisos RLS de
 la cuenta: el plugin sólo hace GET a las dos rutas de lectura. No retira ningún
 camino de recuperación.
+
+## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
+
+**Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),
+pasada de la rutina «Post del blog cada 2 días» que no corrió el 31 ni el 1.
+Cubre la pieza W6 del calendario.
+
+**Por qué.** Se repite que el schema ayuda a salir en las respuestas de la IA.
+Las fuentes verificadas en origen dicen que no hay efecto medido:
+
+- Ahrefs (mayo de 2026): 1.885 páginas que añadieron JSON-LD frente a hasta
+  tres controles parecidos cada una, 30 días antes y después. Vistas creadas
+  con IA −4,6% (significativo), Modo IA +2,4% y ChatGPT +2,2% (indistinguibles
+  de cero). Límites que el propio estudio declara: tipos mezclados, 30 días,
+  sólo JSON-LD en el HTML, páginas ya muy citadas. El resumen dice 4.000
+  controles y la metodología implica unos 5.655: el artículo no da la cifra.
+- AirOps y Kevin Indig (abril de 2026): tasa de cita 38,5% con JSON-LD frente a
+  32,0% sin él, sobre 50.553 respuestas de ChatGPT. Correlación; el estudio no
+  define el denominador, así que el artículo habla de «tasa de cita».
+- Google, «AI features and your website» (actualizada 2025-12-10): ningún
+  requisito ni schema especial; los datos estructurados deben coincidir con el
+  texto visible.
+
+**Cómo.** El ejemplo de Organization vive en `lib/blog/organization-jsonld.ts` y
+su test comprueba que cada campo se ve en la página y que `checkStructuredData`
+(el lector de la Auditoría técnica) lo reconoce. El artículo dice que
+Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
+afirma nada del cálculo de la puntuación.
+
+**Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
