@@ -426,7 +426,7 @@ function genscore_with_more( $data, $id ) {
 	if ( '' !== $gtin && empty( $data['gtin'] ) ) {
 		$data['gtin'] = $gtin;
 	}
-	return $data;
+	return genscore_with_cancel( $data, $id );
 }
 
 /* ------------------------------------------------------------------ */

@@ -155,6 +155,9 @@ describe("isDraftable (WP-PLUGIN-3, log §432)", () => {
     expect(isDraftable({ title: "Responde esta pregunta en /cafe", type: "increase_brand_visibility", questions: q })).toBe(false);
     expect(isDraftable({ title: "Añade las definiciones al inicio de tu página", type: "lever_definition", questions: q })).toBe(false);
     expect(isDraftable({ title: "Publica tu comparativa con Nomad", type: "close_competitor_gap", questions: q })).toBe(false);
+    expect(isDraftable({ title: "Añade un dato con fuente", type: "add_citation_block", questions: q })).toBe(true);
+    expect(isDraftable({ title: "Añade un dato con fuente", type: "add_citation_block", questions: q, page: "https://acme.com/a" })).toBe(false);
+    expect(isDraftable({ title: "Añade un dato con fuente", type: "improve_citation_readiness", questions: [] })).toBe(false);
     expect(isDraftable({ title: "Consigue que te mencionen en foros", type: "pursue_community_sources", questions: q })).toBe(false);
     expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: [] })).toBe(false);
   });

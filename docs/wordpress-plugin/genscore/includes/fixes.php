@@ -39,6 +39,12 @@ const GENSCORE_META = array(
 	'rating'    => '_genscore_rating',
 	'gtin'      => '_genscore_gtin',
 	'faq'       => '_genscore_faq',
+	'alt'       => '_genscore_alt',
+	'noindex'   => '_genscore_noindex',
+	'snippet'   => '_genscore_snippet',
+	'specs'     => '_genscore_specs',
+	'cancel'    => '_genscore_cancel',
+	'cite'      => '_genscore_cite',
 );
 
 /** The same fields for the home page when it is the list of latest posts. */

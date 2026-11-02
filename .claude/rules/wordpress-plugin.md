@@ -130,3 +130,21 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
   correcto.
 - **«Arreglado aquí» de un tipo que la revisión local no lee** exige un lote
   que se pueda deshacer y cubra todas las páginas de la auditoría.
+
+## Web entera y datos (adenda 1.4.1 de §432)
+
+- **Los arreglos de toda la web son una lista fija** (sitemap, viewport,
+  quién está detrás) en `genscore_ajax_site_publish`, con lote y `site_prev`
+  para deshacer. **El sitemap nunca escribe robots.txt**: WordPress ya lo
+  anuncia (lo vigila `tests/wordpress-plugin.test.ts`).
+- **Con un plugin SEO que publica sitemap o schema, esos arreglos no se
+  ofrecen**: el aviso manda a sus ajustes. Lo mismo la viewport si el tema ya
+  la pone.
+- **El texto alternativo nunca es un nombre de fichero** (`genscore_is_file_name`)
+  y sólo se escribe en la biblioteca si la imagen no tenía; deshacer lo devuelve.
+- **noindex y fragmentos sólo se ofrecen con un plugin SEO que los guarda**, y
+  nunca con la web cerrada en Ajustes > Lectura (eso es «Ir a Ajustes de lectura»).
+- **«Añadir dato» publica sólo en la página del plan guardado en el servidor**
+  y exige dato, fuente http(s) y fecha no futura (`genscore_clean_cite`).
+- **La lista de páginas de cancelación no ofrece el blog ni las páginas de
+  WooCommerce** (carrito, pago, cuenta, tienda).

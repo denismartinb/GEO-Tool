@@ -29280,6 +29280,49 @@ SPWgjFTQUfxcxhKMxfeqFP) y Denis aprobó dos entregas: ésta y la 1.4.1.
   nosnippet, LocalBusiness, Organization, dato con fuente, cancelación, tabla
   de especificaciones y avisos de «ir a un ajuste».
 
+**Adenda 1.4.1 (plugin, WP-PLUGIN-4, 2026-11-02).** La segunda entrega del plan
+aprobado (artifact SPWgjFTQUfxcxhKMxfeqFP), empezada con el visto bueno de
+Denis («podemos mergear y seguir con la 1.4.1») mientras Instinct probaba la
+1.4.0. Código nuevo en `includes/fixes-site.php`.
+
+- **Arreglos nuevos en la hoja de páginas**, con la misma confirmación y
+  deshacer: texto alternativo (de cada imagen sin texto: el del medio, su
+  título si no es un nombre de fichero o el título de la página; se guarda en
+  la biblioteca sólo si la imagen no tenía y se sirve con
+  `wp_content_img_tag`), noindex y fragmentos bloqueados (limpia los campos de
+  Yoast, Rank Math o SEOPress y filtra `wp_robots`; sin plugin SEO no se
+  ofrece, y con la web cerrada en Ajustes > Lectura tampoco), tabla de
+  características (atributos visibles, peso y medidas de WooCommerce, bajo la
+  descripción) y política de cancelación (página que la explica, días y país,
+  escritos una vez; se añade a los datos de la página o a la oferta si no hay
+  ya una de devoluciones).
+- **Arreglos de toda la web** (ventana propia, lote con `site_prev`): sitemap
+  (enciende el de WordPress y redirige `/sitemap.xml`; robots.txt no se toca
+  porque WordPress ya lo anuncia), viewport (sólo si el tema no la pone) y
+  quién está detrás (Organization o LocalBusiness con dirección, horario en
+  formato schema.org y perfiles; sale de WordPress y WooCommerce y la persona
+  lo revisa). Con un plugin SEO que pinta schema o publica sitemap no se
+  ofrecen: el aviso manda a sus ajustes.
+- **«Añadir dato»** en las acciones de cita con página propia: la persona
+  escribe el dato (4 palabras o más), el enlace a la fuente y la fecha (no
+  futura); sale tras la entradilla. Sin página, `isDraftable` crea un borrador
+  con sus preguntas y un hueco para el dato.
+- **«Copiar tabla y abrir»** en «Refuerza tu comparativa»: copia la tabla (la
+  columna del rival siempre «[Pendiente: dato, enlace y fecha]») y abre la
+  página en el editor.
+- **«Ir a un ajuste»** cuando WordPress lo arregla en otra pantalla: HTTPS
+  (Ajustes generales), pagos rápidos, web cerrada a buscadores (Lectura) y lo
+  que lleve el plugin SEO.
+- **`/api/ext/project`**: las URL de «Imágenes sin texto alternativo» llegaban
+  como «url · N imágenes» y se descartaban; ahora se limpian antes de filtrar.
+- **Probado** en el WordPress de pruebas con WooCommerce: cada arreglo
+  publicado, comprobado en el HTML servido y deshecho; ventanas a 1280 y 390
+  px; Plugin Check sin errores salvo la etiqueta del readme, ya corregida.
+- **Pendiente o sabido**: noindex y fragmentos no se han probado con Yoast o
+  Rank Math instalados (el entorno de pruebas no los tiene); el texto
+  alternativo sólo cubre imágenes con id de la biblioteca. No retira ningún
+  camino de recuperación.
+
 ## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
 
 **Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),

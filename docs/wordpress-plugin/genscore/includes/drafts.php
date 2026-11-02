@@ -93,6 +93,7 @@ function genscore_draft_item( $index ) {
 	$kind = genscore_draft_kind( $item );
 	$out  = array(
 		'kind'      => $kind,
+		'type'      => sanitize_key( (string) ( $item['type'] ?? '' ) ),
 		'title'     => sanitize_text_field( (string) ( $item['title'] ?? '' ) ),
 		'questions' => genscore_clean_list( $item['questions'] ?? array(), GENSCORE_DRAFT_QUESTIONS ),
 		'rival'     => sanitize_text_field( (string) ( $item['rival'] ?? '' ) ),
@@ -293,6 +294,9 @@ function genscore_draft_content( $item ) {
 		return $out;
 	}
 	$out .= genscore_block_hole( __( 'La respuesta corta, en dos o tres frases, antes de todo lo demás.', 'genscore' ) );
+	if ( in_array( $item['type'], array( 'add_citation_block', 'improve_citation_readiness' ), true ) ) {
+		$out .= genscore_block_hole( __( 'Un dato que se pueda comprobar, con el enlace a su fuente y su fecha.', 'genscore' ) );
+	}
 	foreach ( $item['questions'] as $q ) {
 		$out .= genscore_block_heading( $q ) . genscore_block_hole( __( 'Tu respuesta.', 'genscore' ) );
 	}
@@ -446,6 +450,8 @@ function genscore_plan_pages_screen_data() {
 				'url'   => get_permalink( $id ),
 				'edit'  => get_edit_post_link( $id, 'raw' ),
 				'faq'   => genscore_faq_pairs( $id ),
+				'cite'  => genscore_cite_data( $id ),
+				'table' => 'close_competitor_gap' === ( $item['type'] ?? '' ) && ! empty( $item['rival'] ) ? genscore_compare_table_html( sanitize_text_field( (string) $item['rival'] ) ) : '',
 			);
 		}
 	}
@@ -498,3 +504,57 @@ function genscore_ajax_faq_publish() {
 	wp_send_json_success( array( 'done' => array( $id ), 'skipped' => array(), 'batches' => genscore_fix_batches_summary() ) );
 }
 add_action( 'wp_ajax_genscore_faq_publish', 'genscore_ajax_faq_publish' );
+
+/**
+ * The comparison table with the shop's own column filled, for «Mejora tu
+ * comparativa»: the person pastes it in the comparison that already exists.
+ * The rival's column is always «[Pendiente…]».
+ *
+ * @param string $rival Rival.
+ * @return string HTML.
+ */
+function genscore_compare_table_html( $rival ) {
+	$brand = wp_strip_all_tags( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) );
+	$d     = genscore_plan_data();
+	if ( $d && ! empty( $d['project']['brand'] ) ) {
+		$brand = sanitize_text_field( (string) $d['project']['brand'] );
+	}
+	$h = '<table><thead><tr><th>' . esc_html__( 'Dato', 'genscore' ) . '</th><th>' . esc_html( $brand ) . '</th><th>' . esc_html( $rival ) . '</th></tr></thead><tbody>';
+	foreach ( genscore_own_compare_rows() as $r ) {
+		$h .= '<tr><td>' . esc_html( $r[0] ) . '</td><td>' . esc_html( $r[1] ) . '</td><td>' . esc_html( GENSCORE_PENDING . ': dato, enlace y fecha]' ) . '</td></tr>';
+	}
+	return $h . '</tbody></table>';
+}
+
+/**
+ * AJAX: «Añadir dato con fuente» on the page a plan item names. The page
+ * comes from GenScore's answer; the fact, its link and its date from the
+ * person. Undoable like every fix.
+ */
+function genscore_ajax_cite_publish() {
+	check_ajax_referer( 'genscore', 'nonce' );
+	genscore_ajax_guard();
+	$index = isset( $_POST['plan'] ) ? absint( wp_unslash( $_POST['plan'] ) ) : -1;
+	$batch = isset( $_POST['batch'] ) ? sanitize_key( wp_unslash( $_POST['batch'] ) ) : '';
+	$d     = genscore_plan_data();
+	$item  = $d && 0 <= $index && isset( $d['plan'][ $index ] ) && is_array( $d['plan'][ $index ] ) ? $d['plan'][ $index ] : null;
+	$id    = $item && in_array( $item['type'] ?? '', array( 'add_citation_block', 'improve_citation_readiness' ), true ) ? genscore_plan_page_id( $item ) : 0;
+	if ( ! $id || ! preg_match( '/^[a-z0-9]{12}$/', $batch ) ) {
+		wp_send_json_error( array( 'message' => __( 'Esta recomendación ya no apunta a una página de tu web. Actualiza la pantalla.', 'genscore' ) ), 400 );
+	}
+	$value = genscore_clean_cite( isset( $_POST['cite'] ) && is_array( $_POST['cite'] ) ? wp_unslash( $_POST['cite'] ) : array() ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every value is checked in genscore_clean_cite().
+	if ( null === $value ) {
+		wp_send_json_error( array( 'message' => __( 'Escribe el dato (cuatro palabras o más), el enlace a su fuente y su fecha, que no puede ser futura.', 'genscore' ) ), 400 );
+	}
+	$all           = get_option( GENSCORE_BATCHES_OPTION, array() );
+	$all           = is_array( $all ) ? $all : array();
+	$prev          = genscore_fix_write( 'cite', $id, $value );
+	$all[ $batch ] = array( 'kind' => 'cite', 'at' => time(), 'ids' => array( $id ), 'prev' => array( $id => $prev ) );
+	if ( count( $all ) > 20 ) {
+		$all = array_slice( $all, -20, null, true );
+	}
+	update_option( GENSCORE_BATCHES_OPTION, $all, false );
+	genscore_forget_page_score( $id );
+	wp_send_json_success( array( 'batches' => genscore_fix_batches_summary(), 'cite' => genscore_cite_data( $id ) ) );
+}
+add_action( 'wp_ajax_genscore_cite_publish', 'genscore_ajax_cite_publish' );

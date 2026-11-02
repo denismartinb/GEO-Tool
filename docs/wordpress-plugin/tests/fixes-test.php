@@ -21,6 +21,13 @@ function absint( $v ) { return abs( (int) $v ); }
 function esc_html( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES, 'UTF-8' ); }
 function wp_list_pluck( $list, $field ) { return array_map( function ( $x ) use ( $field ) { return $x[ $field ]; }, $list ); }
 require __DIR__ . '/../genscore/includes/fixes-more.php';
+function sanitize_text_field( $t ) { return trim( preg_replace( '/\s+/', ' ', strip_tags( (string) $t ) ) ); }
+function sanitize_email( $e ) { return filter_var( $e, FILTER_VALIDATE_EMAIL ) ? $e : ''; }
+function esc_url_raw( $u, $p = null ) { return preg_match( '#^https?://#i', $u ) ? $u : ''; }
+function wp_parse_url( $u, $c = -1 ) { return parse_url( $u, $c ); }
+function get_post_type( $id ) { return 7 === (int) $id ? 'page' : 'post'; }
+function get_post_status( $id ) { return 'publish'; }
+require __DIR__ . '/../genscore/includes/fixes-site.php';
 
 $failures = 0;
 function check( $name, $cond ) {
@@ -67,6 +74,31 @@ $h = genscore_apply_h2( '<p><strong>Horario</strong></p><p>Abrimos de 9 a 14.</p
 check( 'a bold line becomes the h2', false !== strpos( $h, '<h2 class="wp-block-heading genscore-h2">Horario</h2>' ) && false === strpos( $h, '<strong>Horario' ) );
 $h = genscore_apply_h2( '<p>Uno.</p><p>Dos.</p><p>Tres.</p>', "Primero\nSegundo" );
 check( 'other headings go before paragraphs', 2 === substr_count( $h, 'genscore-h2' ) && false !== strpos( $h, 'Uno.' ) && false !== strpos( $h, 'Tres.' ) );
+
+// 1.4.1: a fact needs words, a source and a date that is not in the future.
+check( 'cite accepts a fact with source and month', null !== genscore_clean_cite( array( 'text' => 'El 92% de clientes repite compra', 'url' => 'https://acme.com/estudio', 'date' => '2026-10' ) ) );
+check( 'cite rejects a short fact', null === genscore_clean_cite( array( 'text' => 'Muy bueno', 'url' => 'https://acme.com/e', 'date' => '2026-10' ) ) );
+check( 'cite rejects a missing source', null === genscore_clean_cite( array( 'text' => 'El 92% de clientes repite compra', 'url' => 'acme', 'date' => '2026-10' ) ) );
+check( 'cite rejects a future date', null === genscore_clean_cite( array( 'text' => 'El 92% de clientes repite compra', 'url' => 'https://acme.com/e', 'date' => '2999-01-01' ) ) );
+check( 'cite rejects a bad date', null === genscore_clean_cite( array( 'text' => 'El 92% de clientes repite compra', 'url' => 'https://acme.com/e', 'date' => '2026-13' ) ) );
+
+// Identity: a name and a contact; a local business needs its address; hours in schema.org form.
+$org = genscore_clean_identity( array( 'name' => 'Café Ventura', 'email' => 'hola@acme.com', 'country' => 'es' ) );
+check( 'identity keeps an organization', is_array( $org ) && 'Organization' === $org['type'] && 'ES' === $org['country'] );
+check( 'identity needs a contact', null === genscore_clean_identity( array( 'name' => 'Café Ventura' ) ) );
+check( 'local business needs an address', null === genscore_clean_identity( array( 'type' => 'LocalBusiness', 'name' => 'Café', 'telephone' => '910000000' ) ) );
+$loc = genscore_clean_identity( array( 'type' => 'LocalBusiness', 'name' => 'Café', 'street' => 'Calle Mayor 1', 'city' => 'Madrid', 'country' => 'ES', 'hours' => "Mo-Fr 09:00-18:00\nSa 10:00-14:00", 'sameAs' => "https://x.com/acme notaurl" ) );
+check( 'local business keeps hours and links', is_array( $loc ) && 2 === count( explode( "\n", $loc['hours'] ) ) && 'https://x.com/acme' === $loc['sameAs'] );
+check( 'identity rejects free-form hours', null === genscore_clean_identity( array( 'type' => 'LocalBusiness', 'name' => 'Café', 'street' => 'C/ 1', 'city' => 'Madrid', 'country' => 'ES', 'hours' => 'de 9 a 6' ) ) );
+
+// Cancellation: a published page, 1 to 365 days, a country in two letters.
+check( 'cancel keeps clean values', array( 'page' => 7, 'days' => 14, 'country' => 'ES' ) === genscore_clean_cancel( array( 'page' => '7', 'days' => '14', 'country' => 'es' ) ) );
+check( 'cancel needs a page', null === genscore_clean_cancel( array( 'page' => 8, 'days' => 14, 'country' => 'ES' ) ) );
+check( 'cancel rejects days out of range', null === genscore_clean_cancel( array( 'page' => 7, 'days' => 400, 'country' => 'ES' ) ) );
+
+// Alt text: a file name is never proposed as the description of an image.
+check( 'a camera file name is a file name', genscore_is_file_name( 'IMG_20240101_1234' ) && genscore_is_file_name( 'cafe-ventura-1.jpg' ) );
+check( 'a real title is not a file name', ! genscore_is_file_name( 'Café de Etiopía en grano' ) );
 
 echo $failures ? "\n$failures failed\n" : "\nall passed\n";
 exit( $failures ? 1 : 0 );

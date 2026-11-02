@@ -50,7 +50,7 @@ export type ExtPlanItem = {
  * criticisms the AI repeats (WP-PLUGIN-4, log §432 adenda 1.4.0). Never for a
  * page that already exists or for work outside the site.
  */
-export function isDraftable(p: { title: string; type?: string; questions?: string[]; rival?: string | null; drivers?: string[] }): boolean {
+export function isDraftable(p: { title: string; type?: string; questions?: string[]; rival?: string | null; drivers?: string[]; page?: string | null }): boolean {
   const hasQuestions = Boolean(p.questions && p.questions.length > 0);
   switch (p.type) {
     case "lever":
@@ -64,6 +64,11 @@ export function isDraftable(p: { title: string; type?: string; questions?: strin
       return p.title.startsWith("Publica");
     case "address_negative_narrative":
       return Boolean(p.drivers && p.drivers.length > 0);
+    // A fact with its source: on the page if the plan names one (the plugin
+    // adds it there), otherwise a new page for its questions (log §432 adenda 1.4.1).
+    case "add_citation_block":
+    case "improve_citation_readiness":
+      return hasQuestions && !p.page;
     default:
       return false;
   }
@@ -79,7 +84,7 @@ export function toExtPlanItem(
     firstStep: p.firstStep,
     engines: p.engineLabels,
     questions: p.questions ?? [],
-    draft: isDraftable(p),
+    draft: isDraftable({ ...p, page }),
     type: p.type ?? null,
     rival: p.rival ?? null,
     page,

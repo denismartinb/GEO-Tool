@@ -435,3 +435,18 @@ html.gs-fm-open{overflow:hidden}
   #genscore-app .gs-fxa .gs-tx{flex-basis:calc(100% - 30px)}
   #genscore-app .gs-fxa>.gs-btn,#genscore-app .gs-fxa>a{margin-left:28px}
 }
+/* 1.4.1: alt texts, cancellation, site-wide and fact modals */
+#gs-fixm .gs-fm-alts{display:flex;flex-direction:column;gap:8px}
+#gs-fixm .gs-fm-alt{display:flex;gap:10px;align-items:center}
+#gs-fixm .gs-fm-alt img,#gs-fixm .gs-fm-noimg{width:56px;height:56px;flex:none;border-radius:8px;object-fit:cover;background:var(--surface);border:1px solid var(--rule)}
+#gs-fixm .gs-fm-alt input{flex:1;min-width:0;height:36px;border:1px solid var(--rule);border-radius:10px;padding:0 10px;font:inherit}
+#gs-fixm .gs-fm-canc select,#gs-fixm .gs-fm-field select{height:36px;border:1px solid var(--rule);border-radius:10px;padding:0 8px;font:inherit;max-width:100%;background:var(--surface);color:var(--ink)}
+#gs-fixm .gs-fm-canc .gs-fm-note{flex-basis:100%;margin:0}
+#gs-fixm .gs-fm-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#gs-fixm .gs-fm-pair>*{min-width:0}
+#gs-fixm .gs-fm-txt{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink-2)}
+#gs-fixm .gs-fm-txt a,#gs-fixm .gs-fm-txt code{overflow-wrap:anywhere}
+#gs-fixm .gs-fm-txt a{color:var(--blue);text-decoration:underline}
+#gs-fixm .gs-fm-logo{height:40px;width:auto;max-width:200px;object-fit:contain;align-self:flex-start}
+#gs-fixm .gs-fm-field textarea[rows="3"]{min-height:64px}
+@media (max-width:520px){#gs-fixm .gs-fm-pair{grid-template-columns:1fr}}

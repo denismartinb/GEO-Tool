@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -87,6 +87,13 @@ The figures of your account for this domain, the same ones the GenScore Chrome e
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.4.1 =
+* New one-click fixes in the page sheet, undoable: alt text for images without it (from the media library or the page title, never a file name), noindex and blocked snippets (with Yoast, Rank Math or SEOPress), a specifications table from WooCommerce attributes, weight and dimensions, and a cancellation policy linked to the page that explains it.
+* Site-wide fixes in their own window, undoable: the WordPress sitemap at /sitemap.xml, the mobile viewport when the theme lacks it, and who is behind the site (Organization or LocalBusiness) from WordPress and WooCommerce data you review.
+* «Añadir dato» publishes a checkable fact with its source and date on the page a recommendation names.
+* «Copiar tabla y abrir» copies the comparison table (the rival's cells always pending) and opens the page in the editor.
+* When WordPress fixes something in another screen (HTTPS, payments, search visibility, your SEO plugin), the recommendation takes you there.
 
 = 1.4.0 =
 * «Publica tu comparativa con…» creates a draft page with a table: your column is filled from WooCommerce (price from, shipping, returns, rating) and the rival's cells say «[Pendiente: dato, enlace y fecha]». The editor warns while any is left.
