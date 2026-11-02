@@ -320,7 +320,8 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
      */
     key: "js_required",
     isMeasured: (c) => c.citability?.jsShell !== undefined,
-    fails: (c) => c.citability!.jsShell === true,
+    // AI-VIEW-CONSOLE-1 (log §449): also a page whose main content a script still paints.
+    fails: (c) => c.citability!.jsShell === true || c.citability!.jsThin === true,
     gain: () => null,
     weight: null,
     hardBlock: true

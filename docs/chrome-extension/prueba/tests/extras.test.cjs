@@ -77,3 +77,29 @@ test("report: parts from a stored reading, with no long dash and every fix once"
   assert.equal((all.match(/class="fx"/g) || []).length, ids.size);
   assert.ok(/^Informe GenScore · /.test(p.title));
 });
+
+test("aiFix writes the missing blocks as HTML and offers the page as Markdown", () => {
+  const v = { state: "ok", pct: 34, words: 300, md: "# Tienda\n\nTexto", missing: [
+    { t: "Aspiradora Dyson V12", kind: "heading", tag: "h3", full: "Aspiradora Dyson V12" },
+    { t: "Durante 48 meses, luego 0€", kind: "price", tag: "p", full: "Durante 48 meses, luego 0€" },
+    { t: "HBO <Max>", kind: "text", tag: "li", full: "HBO <Max>" },
+    { t: "Comprar", kind: "button", tag: "button", full: "Comprar" }
+  ] };
+  const f = X.aiFix(v, { url: "https://tienda.es/ofertas/tv/?utm_source=x", host: "tienda.es" });
+  assert.equal(f.id, "ai-html");
+  assert.equal(f.lane, "ia");
+  assert.equal(f.pts, null);
+  assert.match(f.snippet, /<h2>Aspiradora Dyson V12<\/h2>/);
+  assert.match(f.snippet, /<p>Durante 48 meses, luego 0€<\/p>/);
+  assert.match(f.snippet, /<ul>\n  <li>HBO &lt;Max&gt;<\/li>\n<\/ul>/);
+  assert.match(f.snippet, /<a href="ENLACE">Comprar<\/a>/);
+  assert.equal(f.mdName, "ofertas-tv.md");
+  assert.equal(f.mdUrl, "https://tienda.es/ofertas/tv.md");
+  assert.equal(f.md, "# Tienda\n\nTexto");
+  assert.ok(!/—/.test(f.t + f.why + f.how));
+  assert.equal(X.aiFix(Object.assign({}, v, { pct: 96 }), { url: "https://a.es/" }), null);
+  assert.equal(X.aiFix(Object.assign({}, v, { missing: [] }), { url: "https://a.es/" }), null);
+  assert.equal(X.aiFix({ state: "error" }, { url: "https://a.es/" }), null);
+  assert.equal(X.aiFix(v, { url: "https://a.es/", host: "a.es" }).mdName, "index.md");
+  assert.equal(X.aiFix(v, { url: "http://localhost:8765/a/", host: "localhost" }).mdUrl, "http://localhost:8765/a.md");
+});

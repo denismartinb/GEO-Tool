@@ -15,6 +15,8 @@ import { projectScreenMetadata } from "@/lib/seo/console-metadata";
 import { Delta } from "@/components/ui/delta";
 import { BotAccessCard, aiBotsSectionProps } from "./_components/bot-access-card";
 import { AiBotsSection } from "@/components/ins/audit/ai-bots";
+import { AiViewSection } from "@/components/ins/audit/ai-view";
+import { aiViewLlmsLines, buildAiView } from "@/lib/web-audit/ai-view";
 import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
 import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
@@ -141,6 +143,8 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport, bots));
                 const view = views.find((v) => v.key === activeBlock)!;
                 const isGeo = activeBlock === "geo";
+                // AI-VIEW-CONSOLE-1 (log §449): every audited page as an AI bot receives it.
+                const aiView = isGeo ? buildAiView(pages) : null;
                 const pageSpeed = bots?.site?.pageSpeed;
                 // EXT-1.5.0 (log §446): what this block fixed since the previous audit, as the extension says it.
                 const fixedHere = technicalFixedChecks
@@ -222,6 +226,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                         )}
                       </div>
                       {isGeo && <AiBotsSection {...aiBotsSectionProps(technicalSnapshot.bots, project.domain)} />}
+                      {isGeo && aiView && <AiViewSection view={aiView} domain={project.domain} llms={aiViewLlmsLines(aiView)} />}
                       {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
                   </div>

@@ -283,21 +283,29 @@
   }
   /* «Lo que lee la IA»: the page without JavaScript (readAiView, in the tab) against what you see */
   const AIKIND = { price: "cart", heading: "notes", button: "cart", text: "prompts" };
-  function aiCard(f) {
+  function aiCard(f, sc) {
     const v = f && f.aiView;
     if (!v || v.state !== "ok") return "";
     const pc = v.pct, all = pc >= 95, miss = all ? [] : v.missing.slice(0, 4);
     const list = miss.map((m) => `<div class="aim">${ic(AIKIND[m.kind] || "prompts", "sm")}<span>${esc(m.t)}</span><em>Sólo con JavaScript</em></div>`).join("");
-    const canCmp = !all && v.blocks.length >= 3 && v.blocks.some((b) => b.gone);
-    const col = (title, gone) => `<div class="col"><b>${title}</b>${v.blocks.map((b) => `<i class="b ${b.h ? "h" : ""} ${gone && b.gone ? "gone" : ""}" style="width:${b.h ? Math.min(b.w, 80) : b.w}%"></i>`).join("")}</div>`;
-    const cmp = canCmp && S.cmp ? `<div class="aicmp">${col("Lo que ves", false)}${col("Lo que llega sin JavaScript", true)}</div>` : "";
     return `<div class="aiv"><div class="aih"><span class="ey">Lo que lee la IA</span>${tagx("ok")}</div>
       <div class="aibig"><b class="num">${pc}<small>%</small></b><span>${all ? "del texto que ves llega en el HTML, que es lo que leen los bots de IA." : miss.length ? "del texto que ves llega a los bots de IA. El resto sólo aparece con JavaScript, y ChatGPT, Claude y Perplexity no lo ejecutan." : "del texto que ves llega a los bots de IA. Lo que falta está fuera del contenido principal (menú, cabecera o pie) o son textos cortos."}</span></div>
       <div class="aibar"><i style="width:${pc}%"></i></div><div class="aileg"><span><i class="a"></i>En el HTML</span>${all ? "" : `<span><i class="b"></i>Sólo con JavaScript</span>`}</div>
-      ${list ? `<div class="mh">Lo que no les llega</div>${list}` : ""}${cmp}
-      ${canCmp ? `<div class="acts"><button class="btn line sm" data-act="ai-cmp" aria-expanded="${!!S.cmp}">${ic("eye", "sm")}${S.cmp ? "Ocultar la comparación" : "Ver lado a lado"}</button></div>` : ""}
-      ${list ? `<p class="mini-note">Haz esto: pide que esos bloques salgan en el HTML de la página. Suele venir de un plugin o de un tema que los carga después.</p>` : ""}
+      ${list ? `<div class="mh">Lo que no les llega</div>${list}${aiFixFold(sc)}` : ""}
       <p class="mini-note">Comprobado en tu navegador: pedimos la página otra vez sin tu sesión y sin JavaScript, como la reciben los bots.</p></div>`;
+  }
+  /* 1.5.2 (Denis, 2026-11-02): the fix lives inside the block, folded and short.
+     Same card data as the recommendation (GS_X.aiFix), so copy and .md use the same handlers. */
+  function aiFixFold(sc) {
+    const fx = sc && sc.fixes ? sc.fixes.find((x) => x.id === "ai-html") : null;
+    if (!fx) return "";
+    const key = "aiv:" + fx.id;
+    return `<details class="aifix"><summary>${ic("recs", "sm")}<b>Cómo arreglarlo</b>${ic("chevd", "sm")}</summary><div class="aifb">
+      <p>Escribe estos bloques en la plantilla de la página, no en un script. Revisa el texto antes de publicarlo.</p>
+      ${fx.snippet ? `<pre class="snip" tabindex="0">${esc(fx.snippet)}</pre>` : ""}
+      <div class="acts">${fx.snippet ? `<button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar el HTML</button>` : ""}${fx.md ? `<button class="btn ghost sm" data-act="md" data-key="${esc(key)}">${ic("download", "sm")}Descargar el .md</button>` : ""}</div>
+      ${fx.md ? `<p class="mini-note">El .md es una segunda opción: súbelo en la misma dirección terminada en .md y enlázalo en tu llms.txt. No sustituye a ponerlo en el HTML.</p>` : ""}
+    </div></details>`;
   }
   /* «Desde tu última visita»: the note of this page per visit, only in this browser */
   function histLine(f) {
@@ -342,6 +350,7 @@
     let body = `<p class="why">${f.why}</p>`;
     if (f.how) body += `<p class="why">${f.how}</p>`;
     if (f.snippet) body += `<pre class="snip" tabindex="0">${esc(f.snippet)}</pre><div class="acts"><button class="btn line sm" data-act="copy" data-key="${esc(key)}">${ic("copy", "sm")}Copiar ${esc(f.copyWhat || "el código")}</button></div>`;
+    if (f.md) body += `<details class="mdopt"><summary class="mdh"><span class="tagx">Segunda opción</span><b>Versión en Markdown de la página</b>${ic("chevd", "sm")}</summary><div class="mdb"><p>Un fichero <code class="p">${esc(f.mdName)}</code> con el texto que ves, limpio. Lo leen sobre todo los agentes y las herramientas que siguen llms.txt; los bots de búsqueda siguen leyendo el HTML, así que no sustituye a lo de arriba.</p><div class="acts"><button class="btn line sm" data-act="md" data-key="${esc(key)}">${ic("download", "sm")}Descargar el .md</button></div><ol><li>Revisa que diga lo mismo que la página.</li><li>Súbelo para que quede en <code class="p">${esc(f.mdUrl || f.mdName)}</code>.</li><li>Añádelo a tu <code class="p">llms.txt</code> con un enlace.</li><li>Opcional: en el <code class="p">&lt;head&gt;</code>, <code class="p">&lt;link rel="alternate" type="text/markdown" href="${esc(f.mdUrl || f.mdName)}"&gt;</code></li></ol><p class="mini-note">Si cambias la página, actualiza también el fichero.</p></div></details>`;
     if (kind === "plan") body += `<div class="acts"><button class="btn line sm" data-act="open" data-to="/dashboard" data-c="plan">Abrir en la consola${ic("arrowr", "sm")}</button></div>`;
     if (kind === "web" && f.to) body += `<div class="acts"><button class="btn line sm" data-act="open" data-to="${esc(f.to)}" data-c="web-fix">Ver en la consola${ic("arrowr", "sm")}</button></div>`;
     /* a real plan item is marked done in the console, where it is saved; the
@@ -588,7 +597,17 @@
     const body = bl.map(([k, b]) => laneBox(k, () => (k !== "google" && sc ? whoRow(k, sc, f, "/") : "") + (k === "ia" ? probeCard() : "") + audBody(B(b)) + (k === "google" ? gscBlock() : ""))).join("");
     /* block points are not additive (lib/ext/audits.ts), so these cards never sum into «Hasta +N pt» */
     const top = bl.flatMap(([k, b]) => B(b).issues.map((x) => ({ ...x, lane: k, blk: b }))).filter((x) => x.points != null).sort((a, b) => b.points - a.points).slice(0, 3);
-    const cards = deck(top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) })), "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
+    /* 1.5.2 (Denis, 2026-11-02): the server audit only sees HTML, so content
+       that only JavaScript paints never reaches these cards. When the open page
+       has it, its card goes first here too, labelled «En esta página». */
+    const ai = sc && sc.fixes ? sc.fixes.find((x) => x.id === "ai-html") : null;
+    const webCards = top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) }));
+    /* AI-VIEW-CONSOLE-1 (log §449): the domain's own «sin JavaScript» finding has no
+       points, so the top-3 above never shows it; it goes right after the page card. */
+    const geoB = B("geo"), js = geoB ? geoB.issues.find((x) => x.check === "js_required") : null;
+    const jsCard = js ? { id: "wjs:js_required", kind: "web", lane: "ia", pts: null, t: esc(js.label), why: `Según la Auditoría GEO${js.scope ? `: ${esc(js.scope)}` : ""}. Los bots de IA no ejecutan JavaScript, así que esas páginas les llegan vacías o sin su contenido principal.`, to: projPath(`${AUD_META.geo.to}#lo-que-lee-la-ia`) } : null;
+    const lead = [ai, jsCard].filter(Boolean);
+    const cards = deck([...lead, ...webCards], "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
     return { hero, lanes, body, cards };
   }
   function teaser(k) {
@@ -626,7 +645,7 @@
     const seg = scoped && sc ? scopeSeg(rel === "none") : `<span class="sxl">${dom ? scopeName() : "Esta página"}</span>`;
     return `<section class="sct"><div class="sh2"><div class="ey">Optimización técnica</div>${seg}</div>
       <p class="qq">¿Está tu web optimizada para la IA y Google?</p>
-      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc, f) + shopLine(sc) + aiCard(f) + reportCard(f)}${cards}${tail}</section>`;
+      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc, f) + shopLine(sc) + aiCard(f, sc) + reportCard(f)}${cards}${tail}</section>`;
   }
   function geoSection(host, rel) {
     const head = `<div class="sh2"><div class="ey">Puntuación GEO · <span class="mono">${esc(rel === "none" ? host : curDom())}</span>${rel === "none" ? "" : EJx()}</div></div><p class="qq">¿Sabes si la IA recomienda tu marca?</p>`;
@@ -700,6 +719,20 @@
 
   /* ---------------- draw ---------------- */
   let SC = null;
+  /* the review plus the «Lo que lee la IA» card (extras.js), first of the IA
+     cards: it is the one that explains the percentage the panel just showed */
+  function scoreOf(f) {
+    const sc = GS_SCORE.scorePage(f), x = GS_X.aiFix(f.aiView, f);
+    if (x) { const i = sc.fixes.findIndex((y) => y.lane !== "ia"); sc.fixes.splice(i < 0 ? sc.fixes.length : i, 0, x); }
+    return sc;
+  }
+  function saveText(name, text) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown;charset=utf-8" }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  }
   function draw() {
     const pn = $("#panel");
     let html, ctx;
@@ -713,7 +746,7 @@
     else if (S.rec.state === "reading") { html = viewReading(); ctx = "reading"; }
     else if (S.rec.state === "error") { html = viewError(S.rec.reason); ctx = "error"; }
     else {
-      SC = GS_SCORE.scorePage(S.rec.facts);
+      SC = scoreOf(S.rec.facts);
       html = viewReview(S.rec.facts, SC);
       ctx = [S.rec.at, relation(), S.tab].join("|");
       S.shown = true;
@@ -738,7 +771,7 @@
     if (!S.rec || S.rec.state !== "ok" || S.noted === S.rec.at) return;
     S.noted = S.rec.at;
     noteUse();
-    const sc = GS_SCORE.scorePage(S.rec.facts);
+    const sc = scoreOf(S.rec.facts);
     recordVisit(S.rec, sc);
     const k = "last:" + S.rec.facts.url;
     const last = await Env.getS(k);
@@ -769,7 +802,7 @@
   }
   async function openReport() {
     if (!S.rec || S.rec.state !== "ok") return;
-    const f = S.rec.facts, sc = GS_SCORE.scorePage(f);
+    const f = S.rec.facts, sc = scoreOf(f);
     const shot = await Env.shot(S.tabId);
     const h = S.hist && S.hist.key === GS_X.pageKey(f.url) ? S.hist.info : null;
     await Env.report({ v: 1, at: S.rec.at, facts: f, sc, shot, ev: alertEvidence(sc, f), hist: h ? { prev: h.prev.nota, now: h.now.nota, prevAt: h.prev.at, fixed: h.fixed } : null });
@@ -905,7 +938,7 @@
       draw();
       return;
     }
-    if (a === "ai-cmp") { S.cmp = !S.cmp; draw(); return; }
+    if (a === "md") { const f = findFix(t.dataset.key); if (f && f.md) { saveText(f.mdName, f.md); toast("Descargado.", `Súbelo para que quede en ${f.mdUrl || "la misma dirección con .md"}.`, "download"); } return; }
     if (a === "report") { openReport(); return; }
     if (a === "review-now") { S.tab = "page"; S.pickedDom = false; reviewNow(); return; }
     if (a === "auto-on") { autoOn(); return; }

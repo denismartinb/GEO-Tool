@@ -103,7 +103,19 @@ export type CitabilityCheck = {
    * Never adds or removes points, so `points` above does not change.
    */
   jsShell?: boolean;
+  /**
+   * «Lo que lee la IA» in the console (AI-VIEW-CONSOLE-1, log §449). The page
+   * is not empty, but its main content is still painted by a script: little
+   * visible text next to a mount node or a framework's state, or a framework
+   * state that carries far more text than the HTML shows. Same tri-state as
+   * `jsShell`; never adds or removes points.
+   */
+  jsThin?: boolean;
+  /** The platform the HTML gives away, for the fix steps. Null when nothing does. */
+  platform?: SitePlatform | null;
 };
+
+export type SitePlatform = "wordpress" | "shopify" | "next" | "react";
 
 /**
  * Salud SEO page signals (SEARCH-SEO-1 Fase 2, log §281). Scored only by
@@ -425,7 +437,51 @@ export function checkCitability(html: string): CitabilityCheck {
 
   // R3 weight: 10 + 10 = 20 — see module header.
   const points = (hasListOrTable ? 10 : 0) + (contentOk ? 10 : 0);
-  return { points, hasListOrTable, wordCount, contentOk, jsShell: isJsShell(html, wordCount) };
+  const jsShell = isJsShell(html, wordCount);
+  return { points, hasListOrTable, wordCount, contentOk, jsShell, jsThin: !jsShell && isJsThin(html, wordCount), platform: detectPlatform(html) };
+}
+
+/** Below this many visible words, a page that a framework fills in is «poco texto». */
+const JS_THIN_MAX_WORDS = 150;
+/** A framework state with at least this many words, and more than twice the visible ones, holds content the HTML lacks. */
+const STATE_MIN_WORDS = 200;
+
+const STATE_SCRIPT_RE =
+  /<script\b[^>]*(?:id\s*=\s*["'](?:__NEXT_DATA__|__NUXT_DATA__)["']|type\s*=\s*["']application\/json["'])[^>]*>([\s\S]*?)<\/script\s*>/gi;
+const HYDRATION_RE = /__NEXT_DATA__|self\.__next_f|__NUXT__|__NUXT_DATA__|data-reactroot|ng-version=|data-server-rendered|window\.__INITIAL_STATE__/i;
+
+/** Words inside the string values of a framework's state scripts (text the page will paint with JavaScript). */
+function stateWordCount(html: string): number {
+  let n = 0;
+  for (const m of html.matchAll(STATE_SCRIPT_RE)) {
+    for (const str of m[1].matchAll(/"((?:[^"\\]|\\.){12,})"/g)) {
+      const t = str[1];
+      if (!/\s/.test(t) || /^(https?:|\/|[\w-]+\.[\w]+$)/.test(t)) continue;
+      n += t.split(/\s+/).filter((w) => /\p{L}{2,}/u.test(w)).length;
+    }
+  }
+  return n;
+}
+
+/**
+ * AI-VIEW-CONSOLE-1 (log §449): the main content of a non-empty page is still
+ * painted by JavaScript. Only what the HTML itself proves: a short page that a
+ * framework hydrates, or a framework state with much more text than the page
+ * shows. A partial gap on a long page needs a rendering browser (the Chrome
+ * extension today), so it is never guessed here.
+ */
+export function isJsThin(html: string, visibleWordCount: number): boolean {
+  if (visibleWordCount < JS_THIN_MAX_WORDS && (EMPTY_MOUNT_RE.test(html) || HYDRATION_RE.test(html))) return true;
+  const state = stateWordCount(html);
+  return state >= STATE_MIN_WORDS && state > 2 * visibleWordCount;
+}
+
+export function detectPlatform(html: string): SitePlatform | null {
+  if (/\/wp-content\/|\/wp-includes\/|<meta[^>]+name=["']generator["'][^>]+WordPress/i.test(html)) return "wordpress";
+  if (/cdn\.shopify\.com|Shopify\.theme/i.test(html)) return "shopify";
+  if (/__NEXT_DATA__|\/_next\/static\/|self\.__next_f/i.test(html)) return "next";
+  if (/data-reactroot|<div[^>]+id=["']root["'][^>]*>\s*<\/div>/i.test(html)) return "react";
+  return null;
 }
 
 /**

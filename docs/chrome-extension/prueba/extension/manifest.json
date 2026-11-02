@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Auditoría SEO y GEO: visibilidad en IA · GenScore",
   "short_name": "GenScore",
-  "version": "1.5.0",
+  "version": "1.5.2",
   "description": "Auditoría SEO y GEO gratis: mira si ChatGPT, Gemini, Claude y Perplexity pueden leer tu web, con llms.txt, robots.txt y schema.",
   "minimum_chrome_version": "116",
   "permissions": [
