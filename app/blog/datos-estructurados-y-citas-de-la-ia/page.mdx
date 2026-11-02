@@ -14,7 +14,9 @@ import {
   CompareTable,
   CodeBlock,
   AuthorBio,
-  ArticleCta
+  ArticleCta,
+  Figure,
+  BarChart
 } from "@/components/blog/article";
 import { ORGANIZATION_JSONLD } from "@/lib/blog/organization-jsonld";
 import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
@@ -87,6 +89,22 @@ ChatGPT para ver qué páginas acaban citadas de entre las que el motor encuentr
 al buscar. Las que llevaban JSON-LD tenían una tasa de cita del 38,5%, y las que
 no, del 32,0%. Es una diferencia real, pero es una correlación: el
 estudio no dice que el JSON-LD sea la causa.
+
+<Figure
+  label="Figura 1."
+  caption="Tasa de cita en ChatGPT de las páginas con y sin JSON-LD. Fuente: AirOps y Kevin Indig, The fan-out effect, 16.851 consultas y 50.553 respuestas de ChatGPT (abril de 2026). Es una correlación: no mide qué pasa al añadir JSON-LD a una página."
+>
+
+<BarChart
+  title="Tasa de cita en ChatGPT, en %"
+  max={40}
+  rows={[
+    { label: "Páginas con JSON-LD", value: 38.5, display: "38,5%", highlight: true },
+    { label: "Páginas sin JSON-LD", value: 32, display: "32,0%" }
+  ]}
+/>
+
+</Figure>
 
 **Ahrefs** fue un paso más allá. Tomó 1.885 páginas que añadieron JSON-LD entre
 agosto de 2025 y marzo de 2026 y emparejó cada una con hasta tres páginas

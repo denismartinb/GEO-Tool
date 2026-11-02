@@ -919,6 +919,7 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron.",
       source: "Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)"
     }
+  }
 ];
 
 export function getBlogPost(slug: string): BlogPost | undefined {
