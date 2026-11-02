@@ -29336,3 +29336,10 @@ Agentes) se abre como los demás y enseña su ilustración sin cifras con su
 llamada («Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu
 dominio», «Conoce tu nota para agentes»). Con ninguno abierto se ve el bloque
 común de antes. En «Esta página» no salen: ahí la extensión ya mide.
+
+**Tercera adenda (Denis, 2026-11-02).** Con sesión y en una web que no es
+tuya, el selector vuelve a nombrar la página abierta («Página abierta» encima
+de «Tus dominios»), la revisión de la página va primero y «¿Quieres añadir…
+a tus dominios?» cierra el panel. Elegir uno de tus dominios en el selector
+enseña ese dominio, y «Página abierta» vuelve a la revisión. En una web tuya
+no cambia nada: Puntuación GEO primero y el selector con el dominio.

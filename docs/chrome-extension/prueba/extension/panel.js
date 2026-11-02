@@ -273,14 +273,17 @@
     const d = curDom(), f = S.rec && S.rec.state === "ok" ? S.rec.facts : null;
     const doms = acctDomains(), cap = S.real ? S.real.domainCap : SAMPLE.cap;
     const brandFor = (x) => (S.real ? (S.real.domains.find((y) => y.domain === x) || {}).brand || brandOf(x) : brandOf(x));
-    /* EXT-PANEL-COHERENCE-1 (log §433): the open page is no longer an option of the selector; «Esta página | Toda la web» lives in the Optimización técnica block */
-    const onPage = false;
+    /* On one of your own sites «Esta página | Toda la web» lives in the Optimización técnica block.
+       On someone else's site the selector names the open page, and lists it above your domains (Denis, 2026-11-02). */
+    const other = !!f && !idle && relation() === "other";
+    const onPage = other && S.tab !== "dom";
     const own = !!f && relation() === "own";
+    const pageItem = other ? `<div class="mh" style="margin:6px 10px 4px">Página abierta</div><button class="dd-i ${onPage ? "on" : ""}" role="menuitem" data-tab="page">${tile(f.host)}<span class="t">${esc(f.host)}<span>${esc(pathLabel(f))}</span></span>${onPage ? ic("check", "sm ck") : ""}</button><div class="dd-sep"></div>` : "";
     const days = S.real && S.real.trialEndsAt ? Math.max(0, Math.ceil((new Date(S.real.trialEndsAt) - Date.now()) / 864e5)) : null;
     const planLine = S.real ? (days != null ? `Prueba de ${esc(S.real.plan.name)} · ${days} ${days === 1 ? "día" : "días"}` : `Plan ${esc(S.real.plan.name)}`) : "Prueba de Pro · 7 días";
     const domItem = (x) => { const on = x === d && !onPage && !idle; const act = S.real || x === d ? `data-pick="${esc(x)}"` : `data-act="sample-only" data-what="cambiar de dominio"`; return `<button class="dd-i ${on ? "on" : ""}" role="menuitem" ${act}>${tile(x)}<span class="t">${esc(brandFor(x))}<span>${esc(x)}</span></span>${on ? ic("check", "sm ck") : ""}</button>`; };
     const newDom = S.real ? `data-act="open" data-to="/dashboard/projects/new" data-c="nuevo-dominio"` : `data-act="sample-only" data-what="añadir un dominio"`;
-    const menu = S.dd ? `<div class="dd-m" role="menu"><div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${cap}</span></div>${doms.map(domItem).join("")}<div class="dd-sep"></div>${isSample() && f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" ${newDom}><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${cap}</span></button><div class="mh" style="margin:8px 10px 4px">${planLine}</div></div>` : "";
+    const menu = S.dd ? `<div class="dd-m" role="menu">${pageItem}<div class="mh" style="margin:6px 10px 4px">Tus dominios<span class="r num">${doms.length} de ${cap}</span></div>${doms.map(domItem).join("")}<div class="dd-sep"></div>${isSample() && f && !own ? `<button class="dd-i" role="menuitem" data-act="use-domain">${tile(f.host)}<span class="t">Probar ${esc(f.host)}<span>como mi dominio de ejemplo</span></span></button>` : ""}<button class="dd-i add" role="menuitem" ${newDom}><span class="ico">${ic("plus", "sm")}</span><span class="t">Nuevo dominio</span><span class="cap num">${doms.length} de ${cap}</span></button><div class="mh" style="margin:8px 10px 4px">${planLine}</div></div>` : "";
     const btn = idle
       ? `<span class="fav pgi">${ic("scan", "sm")}</span><span class="t"><b>Analiza la página actual</b><span class="d sans">o elige uno de tus dominios</span></span>`
       : onPage
@@ -551,10 +554,13 @@
     S.sc = sc; S.scf = f;
     /* a new page starts on itself */
     if (S.tabUrl !== f.url) { S.tabUrl = f.url; if (!S.justIn) S.tab = "page"; }
+    /* on someone else's site, picking one of your domains in the selector shows that domain */
+    if (rel === "other" && S.tab === "dom") return viewDom();
     const head = rel === "none" ? headNo(f.host) : headAcct();
     const t = techSection(f, sc, rel), g = geoSection(f.host, rel);
-    /* signed in, the Puntuación GEO leads: it is what the account adds (Denis, 2026-11-02) */
-    return `<div class="px">${head}${justIn()}${rel === "none" ? t + g : g + t}${foot(f)}</div>`;
+    /* signed in, the Puntuación GEO leads on your own site: it is what the account adds.
+       On someone else's site the page review leads and «¿Quieres añadir…?» closes it (Denis, 2026-11-02) */
+    return `<div class="px">${head}${justIn()}${rel === "own" ? g + t : t + g}${foot(f)}</div>`;
   }
 
   /* ---------------- toolbar badge ---------------- */
@@ -741,7 +747,7 @@
     if (t.dataset.dk && hz) { S.dk[hz.dataset.ctx] = (S.dk[hz.dataset.ctx] || 0) + +t.dataset.dk; draw(); return; }
     if (t.dataset.dkgo && hz) { S.dk[hz.dataset.ctx] = +t.dataset.dkgo; draw(); return; }
     const a = t.dataset.act;
-    if (a === "review-now") { reviewNow(); return; }
+    if (a === "review-now") { S.tab = "page"; S.pickedDom = false; reviewNow(); return; }
     if (a === "auto-on") { autoOn(); return; }
     if (a === "auto") {
       if (S.autoOn && S.read) { S.autoOn = false; await Env.setL("autoOn", false); draw(); toast("Revisión automática quitada.", "«Revisar esta página» sigue funcionando.", "checkc"); }
