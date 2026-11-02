@@ -91,3 +91,9 @@
 @media (prefers-reduced-motion:reduce){.wi,.justin{animation:none;opacity:1;transform:none}.osc .f,.osc .mk{transition:none}}
 .oh .say{text-align:left;font-size:15px;color:var(--ink-2)}
 .sgeo .hq .say{font-size:15px}
+
+/* EXT-REACH-1 (log §436): the one-time ask for a store rating. Instrumento tokens only. */
+.rate{margin:12px 0 4px;padding:14px;border:1px solid var(--rule);border-radius:14px;background:var(--surface)}
+.rate b{display:block;font-size:14.5px;font-weight:600;color:var(--ink)}
+.rate p{margin:4px 0 12px;font-size:13px;line-height:1.5;color:var(--ink-2)}
+.rate .ra{display:flex;flex-wrap:wrap;gap:6px}

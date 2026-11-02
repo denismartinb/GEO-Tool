@@ -63,7 +63,7 @@
   })();
 
   /* ---------------- state ---------------- */
-  const S = { read: false, autoOn: false, tabId: null, rec: null, real: null, proj: {}, sample: { on: false, domain: null }, tab: null, lane: null, dk: {}, done: {}, shown: false, noted: null, seen: {}, from: null };
+  const S = { read: false, autoOn: false, tabId: null, rec: null, real: null, proj: {}, sample: { on: false, domain: null }, tab: null, lane: null, dk: {}, done: {}, shown: false, noted: null, seen: {}, from: null, rateAsk: false };
   /* The account is the real one when GenScore answers /api/ext/context with
      a session (paso 02); otherwise «Cuenta de ejemplo» still works as before. */
   const acctOn = () => !!S.real || S.sample.on;
@@ -538,6 +538,8 @@
       ${top && me && top[1] > me[1] ? `<div class="rv1">${favImg(top[3], top[0])}<span><b>${esc(top[0])}</b> sale más que tú: en el ${top[1]}% de las respuestas.</span></div>` : ""}</div>
       ${deck(D.plan, "dom", "Tu plan está al día.", "Recomendaciones de GenScore")}</section>`;
   }
+  /* EXT-REACH-1 (log §436): the one-time ask for a store rating (rules in rate.js) */
+  const rateCard = () => (S.rateAsk ? `<div class="rate" role="region" aria-label="Valorar la extensión"><b>¿Te está siendo útil?</b><p>Una valoración en Chrome Web Store ayuda a que otras personas encuentren la extensión. Tarda un minuto.</p><div class="ra"><button class="btn blue sm" data-act="rate-go">Valorar en Chrome Web Store</button><button class="btn ghost sm" data-act="rate-later">Ahora no</button></div></div>` : "");
   const justIn = () => (S.justIn ? `<div class="justin" role="status">${ic("checkc", "sm")}<span>Has entrado. El panel se ha actualizado solo.</span><button class="jx" data-act="justin-x" aria-label="Cerrar aviso">${ic("x", "sm")}</button></div>` : "");
   /* Closing the notice collapses its own height, so what sits below slides up
      instead of jumping (Denis, 2026-11-02). It also leaves on its own. */
@@ -565,7 +567,7 @@
     const t = techSection(f, sc, rel), g = geoSection(f.host, rel);
     /* signed in, the Puntuación GEO leads on your own site: it is what the account adds.
        On someone else's site the page review leads and «¿Quieres añadir…?» closes it (Denis, 2026-11-02) */
-    return `<div class="px">${head}${justIn()}${rel === "own" ? g + t : t + g}${foot(f)}</div>`;
+    return `<div class="px">${head}${justIn()}${rateCard()}${rel === "own" ? g + t : t + g}${foot(f)}</div>`;
   }
 
   /* ---------------- toolbar badge ---------------- */
@@ -626,6 +628,7 @@
   async function noteDelta() {
     if (!S.rec || S.rec.state !== "ok" || S.noted === S.rec.at) return;
     S.noted = S.rec.at;
+    noteUse();
     const sc = GS_SCORE.scorePage(S.rec.facts);
     const k = "last:" + S.rec.facts.url;
     const last = await Env.getS(k);
@@ -635,6 +638,14 @@
       draw();
       toast(`La nota pasa de ${last.nota} a ${sc.nota}.`, "Revisada otra vez en tu navegador. No es un escaneo.", sc.nota > last.nota ? "arrowup" : "arrowdown");
     }
+  }
+
+  /* a page reviewed in the panel is a day of real use; the third day asks once */
+  async function noteUse() {
+    if (S.rateAsk) return;
+    const days = GS_RATE.noteUseDay(await Env.getL("useDays"), Date.now());
+    await Env.setL("useDays", days);
+    if (GS_RATE.shouldAskRating(days, await Env.getL("rateDone"))) { S.rateAsk = true; draw(); }
   }
 
   /* ---------------- the account (paso 02) ---------------- */
@@ -752,6 +763,13 @@
     if (t.dataset.dk && hz) { S.dk[hz.dataset.ctx] = (S.dk[hz.dataset.ctx] || 0) + +t.dataset.dk; draw(); return; }
     if (t.dataset.dkgo && hz) { S.dk[hz.dataset.ctx] = +t.dataset.dkgo; draw(); return; }
     const a = t.dataset.act;
+    if (a === "rate-go" || a === "rate-later") {
+      S.rateAsk = false;
+      await Env.setL("rateDone", a === "rate-go" ? "rated" : "later");
+      if (a === "rate-go") Env.open(`${GS_RATE.STORE_REVIEWS_URL}?utm_source=chrome-extension&utm_medium=extension&utm_campaign=valorar`);
+      draw();
+      return;
+    }
     if (a === "review-now") { S.tab = "page"; S.pickedDom = false; reviewNow(); return; }
     if (a === "auto-on") { autoOn(); return; }
     if (a === "auto") {

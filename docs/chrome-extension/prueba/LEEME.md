@@ -67,7 +67,10 @@ analizarla.
 | `sample.js` | La cuenta de ejemplo. Todo inventado. |
 | `panel.*`, `core.js` | El panel, con los tokens, componentes y ayudantes de la consola «Instrumento». `panel.css` y `core.js` se generaron desde ese prototipo. |
 
-Tests: `node --test docs/chrome-extension/prueba/tests/score.test.cjs`.
+Tests: `node --test docs/chrome-extension/prueba/tests/*.cjs`.
+
+Desde la 1.4.2 (log §436), `rate.js` decide cuándo el panel invita a valorar la
+extensión en la tienda: una vez, tras revisar páginas en tres días distintos.
 
 ## Versión de tienda (1.0.0, paso 03)
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { AnswerMarkdown } from "@/components/free-checker/answer-markdown";
+import { CheckerExtensionLine } from "@/components/free-checker/checker-extension-line";
 import { PUBLIC_CHECK_MESSAGES, type PublicCheckResponse } from "@/lib/free-checker/api-contract";
 import { variabilityNotice } from "@/lib/free-checker/result-copy";
 
@@ -199,6 +200,8 @@ export function FreeCheckerResult({
           </button>
         </div>
       </div>
+
+      <CheckerExtensionLine />
     </div>
   );
 }

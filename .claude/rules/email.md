@@ -158,3 +158,13 @@ log §306).
 - **La firma se comprueba antes de leer el cuerpo**, y sin
   `RESEND_WEBHOOK_SECRET` o sin la tabla (migración 0048) se responde 5xx para
   que Resend reintente; nunca 200 sin guardar.
+
+## Extensión de Chrome (EXT-REACH-1, log §436)
+
+- **La posdata de la extensión (`extensionPostscript`) va debajo del botón
+  principal, nunca encima**, y sólo habla de una herramienta gratuita del
+  propio producto. Por eso cabe en la bienvenida, que es de servicio; con un
+  precio o un descuento dejaría de caber (regla de la oferta, arriba).
+- **El anuncio de la extensión es `lifecycle`**: lleva baja y no sale sin
+  `EMAIL_UNSUBSCRIBE_SECRET`. Reserva `feature_extension`, así que nadie
+  recibe a la vez el anuncio y el correo automático de la extensión.
