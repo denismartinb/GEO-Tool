@@ -11,6 +11,14 @@ import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 import { withCronMonitor } from "@/lib/observability/cron-monitor";
 import { reportError } from "@/lib/observability/report-error";
+import { runAiRenderPass } from "@/lib/web-audit/ai-render-pass";
+
+/**
+ * AI-READ-2 (log §451): the browser measurement of «Lo que lee la IA» rides on
+ * the cron entry only, never on a chain link, and only with the time the
+ * audit queue left. It ends before maxDuration with margin.
+ */
+const RENDER_PASS_END_MS = 55_000;
 
 /**
  * `chainIndex` counts self-dispatches within one chain. Absent (or 0) on the
@@ -72,7 +80,16 @@ async function handleGet(request: Request) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
 
-  return runWorker(0);
+  const startedAt = Date.now();
+  const response = await runWorker(0);
+  try {
+    const render = await runAiRenderPass({ service: createServiceClient(), deadlineAt: startedAt + RENDER_PASS_END_MS });
+    if (render.measured > 0 || render.stopped) console.info("[geo:ai-render] pass", render);
+  } catch (error) {
+    // Never fails the audit worker: the next cron firing tries again.
+    await reportError(error, "cron:run-audit:ai-render");
+  }
+  return response;
 }
 
 function rejectUnauthorized(request: Request): NextResponse | null {

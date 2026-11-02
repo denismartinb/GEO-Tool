@@ -1,0 +1,145 @@
+<title>Resumen lo que lee la IA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--canvas:#eceef2;--surface:#fff;--surface-2:#f6f7f9;--surface-3:#eff1f4;--ink:#0b1426;--ink-2:#3b4759;--ink-3:#5f6b7e;--ink-4:#9aa4b3;--rule:#e3e6eb;--rule-2:#eef0f3;--blue:#2563eb;--blue-ink:#1b4fd6;--blue-tint:#ecf2ff;--warm:#c2410c;--warm-tint:#fff3eb;--warm-rule:#fbd3bb;--mid:#b7791f;--mid-tint:#fdf4e3;--mid-ink:#8a5a12;--pos:#0f7a54;--pos-tint:#e8f6ef;--page:#dfe3ea;--frame:#0b1426;color-scheme:light;--font:'Figtree',system-ui,-apple-system,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font:400 15px/1.5 var(--font);color:var(--ink);padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.rv{max-width:1560px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.rv h1{font-size:18px;font-weight:600;margin:0}.rv p{margin:2px 0 0;font-size:13px;color:var(--ink-3);max-width:80ch}
+.seg{display:flex;flex-wrap:wrap;background:var(--surface);border-radius:99px;padding:3px;gap:2px;border:1px solid var(--rule)}
+.seg button{border:0;background:none;font:600 13px var(--font);padding:7px 14px;border-radius:99px;color:var(--ink-3);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.stage{max-width:1560px;margin:0 auto;display:flex;gap:24px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.desk{flex:1 1 900px;max-width:1140px;min-width:0;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.18);background:var(--canvas)}
+.phone{width:390px;max-width:100%;border-radius:34px;overflow:hidden;border:10px solid var(--frame);background:var(--canvas);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.app{container-type:inline-size;padding:22px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.phone .app{padding:12px}
+.card{background:var(--surface);border-radius:18px;border:1px solid var(--rule);padding:20px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.phone .card{padding:16px}
+.ghost{background:var(--surface);border:1px dashed var(--rule);border-radius:18px;padding:18px;color:var(--ink-4);font-size:13px;min-height:120px}
+.pair{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@container (min-width:760px){.pair{grid-template-columns:1fr 1fr}}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.top h3{margin:0;font-size:16px;font-weight:600}.top .sp{flex:1}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px;white-space:nowrap}
+.tag.ok{background:var(--pos-tint);color:var(--pos)}.tag.neu{background:var(--surface-3);color:var(--ink-2)}
+.new{box-shadow:0 0 0 2px var(--blue)}
+.body{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+@container (min-width:760px){.body{grid-template-columns:minmax(0,4fr) minmax(0,5fr) minmax(0,4fr);align-items:center}}
+.fig{display:flex;gap:14px;align-items:center}
+.ring{width:72px;height:72px;flex:none}
+.fig b{display:block;font-size:38px;font-weight:300;line-height:1;font-variant-numeric:tabular-nums}
+.fig p{margin:4px 0 0;color:var(--ink-2);font-size:13.5px;text-wrap:pretty}
+.fig small{display:block;margin-top:4px;font-size:12px;color:var(--ink-3)}
+.delta{color:var(--pos);font-weight:600}
+.kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.kinds div{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 8px;background:var(--surface-2);border:1px solid var(--rule-2);border-radius:10px;padding:8px 10px;font-size:13px;min-width:0}
+.kinds b{font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.kinds .bad b{color:var(--warm)}.kinds .ok b{color:var(--pos)}
+.side{display:flex;flex-direction:column;gap:8px}
+.ins{margin:0;font-size:14px;font-weight:550;text-wrap:pretty}
+.lnk{display:inline-flex;align-items:center;gap:6px;color:var(--blue-ink);font-size:13.5px;font-weight:600;text-decoration:none}
+.q{font:500 12px var(--mono);border:1px dashed var(--warm-rule);background:var(--warm-tint);border-radius:8px;padding:6px 8px;overflow-wrap:anywhere}
+.wait{display:flex;gap:14px;align-items:center}
+.wait .ring{opacity:.5}
+.wait p{margin:0;color:var(--ink-2);font-size:14px;max-width:60ch}
+.notes{max-width:1140px;margin:18px auto 0;background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:16px 18px;font-size:13.5px;color:var(--ink-2)}
+.notes h2{margin:0 0 6px;font-size:14px;color:var(--ink)}.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+[hidden]{display:none!important}
+</style>
+
+<div class="rv">
+  <div>
+    <h1>«Lo que lee la IA» en Visión general</h1>
+    <p>Tarjeta resumen, a ancho completo justo debajo de Comercio agéntico y Auditoría SEO. Las mismas cifras que el bloque de Auditoría GEO, sin lista de páginas. Marco azul: lo nuevo.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Estado">
+    <button aria-pressed="true" data-s="gap">Con huecos</button>
+    <button aria-pressed="false" data-s="ok">Todo llega</button>
+    <button aria-pressed="false" data-s="wait">Midiendo</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="desk"><div class="app" data-slot></div></div>
+  <div class="phone"><div class="app" data-slot></div></div>
+</div>
+
+<div class="notes">
+  <h2>Qué decide esta tarjeta</h2>
+  <ul>
+    <li>Sólo sale cuando hay medición o se está midiendo. Sin Cloudflare configurado, no aparece (el bloque de Auditoría GEO sigue con su modo HTML).</li>
+    <li>La frase de la derecha es la misma regla que en Auditoría GEO: si lo que te cita la IA llega peor que el resto, lo dice; si no, nombra lo que más se pierde.</li>
+    <li>La cita (por ejemplo un precio) es un trozo literal de tu web que no llega; si no hay, no sale.</li>
+    <li>El enlace lleva al bloque «Lo que lee la IA» de Auditoría técnica. Ningún arreglo aquí: eso irá a Recomendaciones sólo cuando la causa sea segura.</li>
+  </ul>
+</div>
+
+<template id="t-pair">
+  <div class="pair"><div class="ghost">Comercio agéntico (sin cambios)</div><div class="ghost">Auditoría SEO (sin cambios)</div></div>
+</template>
+
+<template id="t-gap">
+  <section class="card new">
+    <div class="top"><h3>Lo que lee la IA</h3><span class="sp"></span><span class="tag ok">✓ Comprobado con un navegador real</span></div>
+    <div class="body">
+      <div class="fig">
+        <svg class="ring" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" fill="none" stroke="#eef0f3" stroke-width="9"/><circle cx="48" cy="48" r="40" fill="none" stroke="#b7791f" stroke-width="9" stroke-linecap="round" stroke-dasharray="180 251.3" transform="rotate(-90 48 48)"/></svg>
+        <div><b>72%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity.</p><small><span class="delta">▲ 6 pt</span> desde la medición anterior</small></div>
+      </div>
+      <div class="kinds">
+        <div class="bad"><span>Precios</span><b>80% no llega</b></div>
+        <div class="bad"><span>Preguntas</span><b>40% no llega</b></div>
+        <div class="ok"><span>Opiniones</span><b>Llega</b></div>
+        <div class="ok"><span>Fichas</span><b>Llega</b></div>
+      </div>
+      <div class="side">
+        <p class="ins">Lo que más te recomienda la IA es lo que peor le llega.</p>
+        <div class="q">«Café de especialidad 1 kg · 24,90 €»</div>
+        <a class="lnk" href="#">Ver qué no le llega →</a>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="t-ok">
+  <section class="card new">
+    <div class="top"><h3>Lo que lee la IA</h3><span class="sp"></span><span class="tag ok">✓ Comprobado con un navegador real</span></div>
+    <div class="body">
+      <div class="fig">
+        <svg class="ring" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" fill="none" stroke="#eef0f3" stroke-width="9"/><circle cx="48" cy="48" r="40" fill="none" stroke="#0f7a54" stroke-width="9" stroke-linecap="round" stroke-dasharray="246 251.3" transform="rotate(-90 48 48)"/></svg>
+        <div><b>98%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity.</p></div>
+      </div>
+      <div class="kinds">
+        <div class="ok"><span>Precios</span><b>Llega</b></div>
+        <div class="ok"><span>Preguntas</span><b>Llega</b></div>
+        <div class="ok"><span>Opiniones</span><b>Llega</b></div>
+        <div class="ok"><span>Fichas</span><b>Llega</b></div>
+      </div>
+      <div class="side">
+        <p class="ins">Lo que te cita la IA le llega entero.</p>
+        <a class="lnk" href="#">Ver el detalle →</a>
+      </div>
+    </div>
+  </section>
+</template>
+
+<template id="t-wait">
+  <section class="card new">
+    <div class="top"><h3>Lo que lee la IA</h3><span class="sp"></span><span class="tag neu">Midiendo</span></div>
+    <div class="wait">
+      <svg class="ring" viewBox="0 0 96 96" aria-hidden="true"><circle cx="48" cy="48" r="40" fill="none" stroke="#e3e6eb" stroke-width="9" stroke-dasharray="6 10"/></svg>
+      <p>Estamos abriendo tu web con un navegador real para compararla con lo que recibe la IA. En cuanto termine, verás aquí qué parte de tu contenido no le llega.</p>
+    </div>
+  </section>
+</template>
+
+<script>
+const slots=[...document.querySelectorAll('[data-slot]')];
+function show(s){
+  for(const el of slots){el.innerHTML='';el.append(document.getElementById('t-pair').content.cloneNode(true),document.getElementById('t-'+s).content.cloneNode(true));}
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.s===s)));
+}
+document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>show(b.dataset.s)));
+show('gap');
+</script>

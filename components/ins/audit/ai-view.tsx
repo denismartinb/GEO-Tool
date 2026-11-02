@@ -1,104 +1,64 @@
-"use client";
-
-import { useState, type CSSProperties } from "react";
+import Link from "next/link";
 import { Ic } from "@/components/ins/ic";
-import { Seg } from "@/components/ins/kit/seg";
-import { aiViewHeadline, type AiView, type AiViewPage } from "@/lib/web-audit/ai-view";
-import type { SitePlatform } from "@/lib/web-audit/page-checks";
+import { aiViewHeadline, type AiView } from "@/lib/web-audit/ai-view";
 
 /**
- * AI-VIEW-CONSOLE-1 (log §449): «Lo que lee la IA» in Auditoría GEO, the
- * console's version of the extension block. One row per audited page as an AI
- * bot receives it, and one fix for the whole domain, folded (Denis,
- * 2026-11-02: «integrada en el bloque, en desplegable, con menos texto»).
- * Every figure comes from `buildAiView`; the examples are examples.
+ * «Lo que lee la IA» in Auditoría GEO (AI-READ-2, log §451, replaces the page
+ * list of AI-VIEW-CONSOLE-1, log §449). Global figures only: no page count,
+ * no URL list and no fix block (Denis, 2026-11-02). Every figure comes from
+ * `buildAiView`. Server component: nothing here is interactive.
  */
 
-type Plat = "wordpress" | "shopify" | "next" | "other";
+export function aiTone(pct: number): "ok" | "mid" | "low" {
+  return pct >= 90 ? "ok" : pct >= 60 ? "mid" : "low";
+}
 
-const PLATS: Record<Plat, { label: string; steps: string[]; file: string; code: string }> = {
-  wordpress: {
-    label: "WordPress",
-    steps: [
-      "Busca el plugin o bloque que pinta esas secciones (tablas de precios, pestañas, carruseles).",
-      "Desactiva su carga diferida o «Ajax», o cámbialo por un bloque nativo (Columnas, Tabla, Lista).",
-      "Si un plugin de caché «retrasa JavaScript», excluye esas secciones."
-    ],
-    file: "Bloque «HTML personalizado»",
-    code: `<h2>Título de la sección</h2>\n<p>El texto que hoy carga el plugin, escrito aquí.</p>`
-  },
-  shopify: {
-    label: "Shopify",
-    steps: [
-      "Lo que cargan las apps (reseñas, tablas, recomendaciones) suele ir por JavaScript.",
-      "Pon el texto importante en la descripción del producto o en una sección del tema.",
-      "Deja las apps para lo accesorio."
-    ],
-    file: "sections/contenido.liquid",
-    code: `<section>\n  <h2>{{ section.settings.titulo }}</h2>\n  <p>{{ section.settings.texto }}</p>\n</section>`
-  },
-  next: {
-    label: "React / Next.js",
-    steps: [
-      "Esas páginas se pintan en el navegador: genera su HTML en el servidor.",
-      "En Next.js, quita \"use client\" de la página y carga los datos en el servidor, o genérala estática.",
-      "En React sin Next, añade un prerender que guarde el HTML de cada ruta."
-    ],
-    file: "app/pagina/page.tsx",
-    code: `// Sin "use client": la página se genera en el servidor\nexport default async function Pagina() {\n  const datos = await getDatos();\n  return (\n    <main>\n      <h1>{datos.titulo}</h1>\n      <p>{datos.texto}</p>\n    </main>\n  );\n}`
-  },
-  other: {
-    label: "Otra",
-    steps: [
-      "Pide que esas secciones se sirvan en el HTML de la página, no desde un script.",
-      "Para comprobarlo, desactiva JavaScript en el navegador y recarga: lo que no se vea, no lo lee la IA."
-    ],
-    file: "HTML",
-    code: `<main>\n  <h1>Titular de la página</h1>\n  <p>El texto principal, escrito en la plantilla.</p>\n</main>`
-  }
-};
-
-const toPlat = (p: SitePlatform | null): Plat => (p === "wordpress" || p === "shopify" ? p : p === "next" || p === "react" ? "next" : "other");
-
-const STATE: Record<AiViewPage["state"], [string, string]> = {
-  ok: ["Llega completa", "b-pos"],
-  thin: ["Poco texto", "b-warm"],
-  empty: ["Llega vacía", "b-warm"]
-};
-
-function CopyBlock({ file, code }: { file: string; code: string }) {
-  const [copied, setCopied] = useState(false);
-  async function copy() {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1600);
-    } catch {
-      // Clipboard unavailable: the code is on screen and selectable.
-    }
-  }
+export function AiRing({ pct, className = "aiv-ring" }: { pct: number; className?: string }) {
+  const c = 2 * Math.PI * 40;
+  const tone = aiTone(pct);
   return (
-    <div className="aiv-code">
-      <div className="aiv-code-h">
-        <span>{file}</span>
-        <button type="button" className="btn ghost sm" onClick={copy}>
-          <Ic n={copied ? "check" : "copy"} sm />
-          {copied ? "Copiado" : "Copiar"}
-        </button>
-      </div>
-      <pre tabIndex={0}>{code}</pre>
-    </div>
+    <svg className={`${className} ${tone}`} viewBox="0 0 96 96" aria-hidden="true">
+      <circle className="t" cx="48" cy="48" r="40" fill="none" strokeWidth="9" />
+      <circle
+        className="v"
+        cx="48"
+        cy="48"
+        r="40"
+        fill="none"
+        strokeWidth="9"
+        strokeLinecap="round"
+        strokeDasharray={`${(Math.max(0, Math.min(100, pct)) / 100) * c} ${c}`}
+        transform="rotate(-90 48 48)"
+      />
+    </svg>
   );
 }
 
-export function AiViewSection({ view, domain, llms }: { view: AiView; domain: string; llms: string }) {
-  const [open, setOpen] = useState<string | null>(view.bad[0]?.path ?? null);
-  const [plat, setPlat] = useState<Plat>(toPlat(view.platform));
-  const { ok, total, bad, pages } = view;
-  const maxW = Math.max(1, ...pages.map((p) => p.words));
-  const headline = aiViewHeadline(view);
-  const P = PLATS[plat];
-  const no = <span className="nx">No está en el HTML</span>;
+function Bar({ pct }: { pct: number }) {
+  const tone = aiTone(pct);
+  return (
+    <span className={`aiv-bar${tone === "ok" ? "" : ` ${tone}`}`} aria-hidden="true">
+      <i style={{ width: `${Math.max(3, pct)}%` }} />
+    </span>
+  );
+}
+
+export function AiViewSection({
+  view,
+  measuring,
+  pricePrompts,
+  promptsHref
+}: {
+  view: AiView;
+  /** The browser measurement is configured but has not reached this project yet. */
+  measuring: boolean;
+  /** Active prompts that ask for a price (`classifyPurchaseQuestion`). */
+  pricePrompts: number;
+  promptsHref: string;
+}) {
+  const measured = view.mode === "measured";
+  const pct = measured ? view.pct : view.okPct;
+  const lost = measured ? view.kinds.filter((k) => k.missingPct > 0) : [];
 
   return (
     <section className="card aiv" id="lo-que-lee-la-ia" aria-labelledby="aiv-title">
@@ -106,139 +66,95 @@ export function AiViewSection({ view, domain, llms }: { view: AiView; domain: st
         <h3 id="aiv-title">Lo que lee la IA</h3>
         <span className="badge b-pos">
           <Ic n="check" sm />
-          Comprobado
+          {measured ? "Comprobado con un navegador real" : "Comprobado"}
         </span>
       </div>
       <div className="card-b">
-        <div className="aiv-top">
-          <div className="aiv-big">
-            <b className="num">
-              {ok}
-              <small> de {total}</small>
-            </b>
-            <p>{headline}</p>
-          </div>
-          <div className="aiv-seg" role="img" aria-label={`${ok} de ${total} páginas llegan completas`}>
-            {pages.map((p, i) => (
-              <i key={p.path} className={p.state} style={{ "--d": `${i * 70}ms` } as CSSProperties} />
-            ))}
-          </div>
-          <div className="aiv-leg">
-            <span>
-              <i className="ok" />
-              Llega completa
-            </span>
-            <span>
-              <i className="thin" />
-              Poco texto
-            </span>
-            <span>
-              <i className="empty" />
-              Llega vacía
-            </span>
-          </div>
-        </div>
-
-        <div className="aiv-lbl">Páginas revisadas · palabras que llegan en el HTML</div>
-        <div className="aiv-list">
-          {pages.map((p) => {
-            const isOpen = open === p.path;
-            const [label, tone] = STATE[p.state];
-            return (
-              <div key={p.path} className={`aiv-r ${p.state}${isOpen ? " open" : ""}`}>
-                <button type="button" className="h" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : p.path)}>
-                  <code className="p">{p.path}</code>
-                  <span className="wb">
-                    <span className="aiv-bar" aria-hidden="true">
-                      <i style={{ width: `${Math.max(4, (p.words / maxW) * 100)}%` }} />
-                    </span>
-                    <span className="num">{p.words.toLocaleString("es-ES")} palabras</span>
-                  </span>
-                  <span className={`badge ${tone}`}>{label}</span>
-                  <Ic n="chevd" sm />
-                </button>
-                {isOpen && (
-                  <div className="b">
-                    <div className="aiv-get">
-                      <div>
-                        <span>Titular</span>
-                        {p.hasH1 ? <b>Está en el HTML</b> : no}
-                      </div>
-                      <div>
-                        <span>Secciones</span>
-                        {p.h2Count > 0 ? <b>{p.h2Count === 1 ? "1 sección" : `${p.h2Count} secciones`}</b> : no}
-                      </div>
-                      <div>
-                        <span>Datos estructurados</span>
-                        {p.ldTypes.length ? <b>{p.ldTypes.join(", ")}</b> : <em>Ninguno</em>}
-                      </div>
-                    </div>
-                    <p>
-                      {p.state === "ok"
-                        ? "La IA recibe el contenido de esta página sin ejecutar JavaScript."
-                        : p.state === "empty"
-                          ? "Llega vacía: su contenido sólo aparece después de ejecutar JavaScript."
-                          : "Llega poco texto: el contenido principal lo pinta un script después."}
-                    </p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {bad.length > 0 && (
-          <details className="aiv-fix">
-            <summary>
-              <span className="badge b-blue">Para todo el dominio</span>
-              <b>Cómo arreglarlo</b>
-              <Ic n="chevd" sm />
-            </summary>
-            <div className="aiv-fix-b">
-              <p>Casi siempre es la misma causa en toda la web (el tema, un plugin o el framework), así que se arregla una vez.</p>
-              <Seg
-                label="Tu web está hecha con"
-                options={(Object.keys(PLATS) as Plat[]).map((k) => [k, PLATS[k].label] as const)}
-                value={plat}
-                onChange={setPlat}
-              />
-              <ol className="aiv-steps">
-                {P.steps.map((s) => (
-                  <li key={s}>{s}</li>
-                ))}
-              </ol>
-              <CopyBlock file={P.file} code={P.code} />
-              <p className="aiv-hint">
-                Es un ejemplo: cambia el texto por el de tu página.
-                {view.platform ? " La plataforma sale marcada según lo que detecta la auditoría." : ""}
-              </p>
-              <details className="aiv-md">
-                <summary>
-                  <span className="badge b-line">Segunda opción</span>
-                  <b>Versiones en Markdown</b>
-                  <Ic n="chevd" sm />
-                </summary>
-                <div className="aiv-md-b">
-                  <p>
-                    Un fichero <code className="p">.md</code> por página con el texto limpio. Lo leen sobre todo agentes y herramientas
-                    que siguen llms.txt; no sustituye al arreglo de arriba.
-                  </p>
-                  <ol className="aiv-steps">
-                    <li>Abre cada página con la extensión de Chrome y pulsa «Descargar el .md».</li>
-                    <li>Súbelo en la misma dirección terminada en .md.</li>
-                    <li>Añade esto a tu llms.txt:</li>
-                  </ol>
-                  <CopyBlock file="llms.txt" code={llms} />
-                </div>
-              </details>
+        <div className="aiv-hero">
+          <div className="aiv-fig">
+            <AiRing pct={pct} />
+            <div>
+              <b className="num">{pct}%</b>
+              <p>{aiViewHeadline(view)}</p>
+              {measured && (
+                <small>
+                  Pesado por lo que importa cada página
+                  {view.delta !== null && (
+                    <>
+                      {" · "}
+                      <span className={view.delta > 0 ? "up" : "down"}>
+                        {view.delta > 0 ? "▲" : "▼"} {Math.abs(view.delta)} pt
+                      </span>{" "}
+                      desde la medición anterior
+                    </>
+                  )}
+                </small>
+              )}
             </div>
-          </details>
+          </div>
+          {measured && view.kinds.length > 0 && (
+            <div className="aiv-tiles">
+              {view.kinds.map((k) => (
+                <div key={k.kind} className={k.missingPct === 0 ? "ok" : undefined}>
+                  <span>{k.label.replace(/^Tus /, "")}</span>
+                  <b className="num">{k.missingPct === 0 ? "100%" : `${k.missingPct}%`}</b>
+                  <em>{k.missingPct === 0 ? "llega" : "no llega"}</em>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {lost.length > 0 && (
+          <>
+            <div className="aiv-lbl">Lo que la IA no ve de ti</div>
+            <div className="aiv-miss">
+              {lost.map((k) => (
+                <div key={k.kind} className="aiv-m">
+                  <h4>
+                    {k.label}
+                    <span className="badge b-warm">{k.missingPct === 100 ? "No llega" : `${k.missingPct}% no llega`}</span>
+                  </h4>
+                  <p>{k.consequence}</p>
+                  {k.sample && <div className="aiv-q">«{k.sample}»</div>}
+                  {k.where && <div className="aiv-w">{k.where}</div>}
+                  {k.kind === "price" && pricePrompts > 0 && (
+                    <Link href={promptsHref}>
+                      Afecta a {pricePrompts === 1 ? "1 pregunta que vigilas" : `${pricePrompts} preguntas que vigilas`} →
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
         )}
 
-        <p className="aiv-hint">
-          Pedimos cada página de {domain} como un bot de IA: sin sesión y sin ejecutar JavaScript. Para ver frase a frase qué no
-          les llega, abre la página con la extensión de Chrome.
-        </p>
+        {measured && view.groups.length > 0 && (
+          <>
+            <div className="aiv-lbl">Dónde se pierde</div>
+            <div className="aiv-where">
+              {view.groups.map((g) => (
+                <div key={g.title} className="aiv-g">
+                  <h4>{g.title}</h4>
+                  {g.lines.map((l) => (
+                    <div key={l.label} className="aiv-gl">
+                      <span>{l.label}</span>
+                      <Bar pct={l.pct} />
+                      <span className="num">{l.pct}%</span>
+                    </div>
+                  ))}
+                  {g.insight && <p className="aiv-ins">{g.insight}</p>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {!measured && measuring && (
+          <p className="aiv-hint">
+            Estamos midiendo tu web con un navegador real. Cuando termine, verás aquí qué contenido no le llega a la IA.
+          </p>
+        )}
       </div>
     </section>
   );

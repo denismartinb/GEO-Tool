@@ -545,3 +545,23 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
 - **La solución es para todo el dominio y va plegada dentro del bloque**
   (Denis, 2026-11-02); el Markdown es la segunda opción, en su propio
   desplegable. Los ejemplos de código son ejemplos y lo dicen.
+
+## Lo que lee la IA con navegador (AI-READ-2, log §451)
+
+- **Cifras globales, nunca una lista ni un recuento de páginas** (Denis,
+  2026-11-02), y sin bloque de arreglo: un arreglo sólo va a Recomendaciones
+  cuando su causa es segura. Sustituye la lista y «Cómo arreglarlo» de §449.
+- **`PageAuditEntry.render` es opcional y tri-estado:** ausente (no medido),
+  `unmeasured` (no se pudo comparar, no cuenta) u `ok`. Una página sin medir
+  nunca es «llega entera».
+- **El navegador sólo abre páginas que la auditoría ya eligió y del dominio
+  del proyecto** (`isAllowedAuditHost`). No es un rastreador: nunca se siguen
+  enlaces ni se añaden páginas para medir.
+- **La medición corre al final del GET de `run-audit`**, con plazo absoluto
+  y preguntando antes de cada página si cabe; nunca en un eslabón POST de la
+  cadena. 429 o credenciales malas paran la pasada; lo no alcanzado sigue
+  pendiente.
+- **Sin variables de Cloudflare, modo HTML** (porcentaje de páginas completas
+  según `jsShell`/`jsThin`). Nunca un error ni una cifra inventada.
+- **Sólo se guardan trozos literales cortos y saneados** (`MAX_SAMPLES`, 80
+  caracteres) de páginas públicas.
