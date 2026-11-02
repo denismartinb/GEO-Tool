@@ -10,8 +10,8 @@ defined( 'ABSPATH' ) || exit;
 const GENSCORE_APP = 'https://www.genscore.es';
 
 /**
- * A genscore.es address with the plugin's UTM tags. Only links: the plugin
- * never calls genscore.es.
+ * A genscore.es address with the plugin's UTM tags. The plugin only calls
+ * genscore.es once an administrator connects the account (account.php).
  *
  * @param string $path    Path on genscore.es.
  * @param string $content utm_content (where the link was).
@@ -107,7 +107,9 @@ function genscore_screen_data() {
 		),
 		'fixes'    => genscore_fix_screen_data(),
 		'last'     => get_option( 'genscore_last_review', null ),
+		'account'  => genscore_account_screen_data(),
 		'links'    => array(
+			'app'     => GENSCORE_APP,
 			'analyze' => genscore_app_url( '/signup', 'analizar', array( 'dominio' => $domain ) ),
 			'login'   => genscore_app_url( '/login', 'identificate' ),
 			'checker' => genscore_app_url( '/gratis/aparece-mi-marca-en-chatgpt', 'comprobador', array( 'd' => $domain ) ),

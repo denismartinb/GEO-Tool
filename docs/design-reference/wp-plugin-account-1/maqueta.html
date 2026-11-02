@@ -1,0 +1,193 @@
+<title>Plugin con tu cuenta</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--bg:#eceef2;--surface:#fff;--s2:#f6f7f9;--s3:#eff1f4;--ink:#0b1426;--ink2:#3b4759;--ink3:#5f6b7e;--ink4:#9aa4b3;--rule:#e3e6eb;--blue:#2563eb;--blue-t:#ecf2ff;--pos:#0f7a54;--pos-t:#e8f6ef;--warm:#c2410c;--warm-t:#fff3eb;--mid:#b7791f;--wp:#1d2327;--wp2:#2c3338}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1118;--surface:#161b24;--s2:#1b212c;--s3:#222a36;--ink:#e8ecf2;--ink2:#c3cad6;--ink3:#97a1b1;--ink4:#6b7587;--rule:#2a3240;--blue:#6b9bff;--blue-t:#1a2540;--pos:#4cc79a;--pos-t:#12302a;--warm:#f08a52;--warm-t:#3a2114;--mid:#e0b04f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0d1118;--surface:#161b24;--s2:#1b212c;--s3:#222a36;--ink:#e8ecf2;--ink2:#c3cad6;--ink3:#97a1b1;--ink4:#6b7587;--rule:#2a3240;--blue:#6b9bff;--blue-t:#1a2540;--pos:#4cc79a;--pos-t:#12302a;--warm:#f08a52;--warm-t:#3a2114;--mid:#e0b04f;color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.55 Figtree,system-ui,sans-serif;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 60px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:34px}
+h1{font-size:30px;line-height:1.15;margin:0;text-wrap:balance}
+h2{font-size:20px;margin:0 0 10px;text-wrap:balance}
+h3{font-size:15px;margin:0}
+p{margin:0;max-width:70ch}
+.lede{color:var(--ink2);margin-top:8px}
+.mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:.86em}
+.tag{display:inline-block;font:500 11px/1 'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) 390px;gap:24px;align-items:start}
+@media (max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.frame{background:var(--wp);border-radius:12px;overflow:hidden;box-shadow:0 1px 0 var(--rule)}
+.frame .bar{display:flex;gap:6px;align-items:center;padding:8px 12px;color:#c3c4c7;font:500 12px/1 'JetBrains Mono',monospace}
+.frame .bar i{width:9px;height:9px;border-radius:50%;background:#50575e;display:block}
+.frame .in{display:flex;min-height:100%}
+.wpside{width:150px;background:var(--wp2);color:#c3c4c7;font-size:13px;padding:10px 0;flex:none}
+.wpside div{padding:6px 14px}.wpside .on{background:#2271b1;color:#fff}
+.app{flex:1;min-width:0;background:var(--bg);padding:16px;display:flex;flex-direction:column;gap:12px}
+.phone .wpside{display:none}.phone{max-width:390px;width:100%;margin:0 auto}
+.ph{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.logo{width:28px;height:28px;border-radius:8px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:700}
+.who{display:flex;flex-direction:column;line-height:1.2;min-width:0}.who b{font-size:15px}.who span{font:12px 'JetBrains Mono',monospace;color:var(--ink3)}
+.sp{flex:1}
+.acct{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:4px 10px 4px 4px;font-size:12.5px}
+.acct .av{width:22px;height:22px;border-radius:50%;background:var(--pos-t);color:var(--pos);display:grid;place-items:center;font-weight:700;font-size:11px}
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:9px;padding:8px 13px;font-weight:600;font-size:13.5px;border:1px solid var(--rule);background:var(--surface);color:var(--ink)}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--rule);border-radius:10px;padding:3px;font-size:13px;overflow-x:auto}
+.tabs span{padding:5px 11px;border-radius:7px;color:var(--ink3);white-space:nowrap}.tabs .on{background:var(--s3);color:var(--ink);font-weight:600}
+.card{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.lyr{font:600 12px/1.2 'JetBrains Mono',monospace;letter-spacing:.04em;text-transform:uppercase;color:var(--ink3);display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.lyr small{text-transform:none;letter-spacing:0;font-family:Figtree;color:var(--ink4);font-weight:500}
+.gauges{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.gauge{background:var(--s2);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.gauge b{font:600 26px/1.1 Figtree;font-variant-numeric:tabular-nums}.gauge b small{font-size:13px;color:var(--ink4);font-weight:500}
+.gauge span{font-size:12px;color:var(--ink3)}
+.d{font-size:12px;font-weight:600}.d.up{color:var(--pos)}.d.dn{color:var(--warm)}
+.eng{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.eng div{background:var(--s2);border-radius:9px;padding:8px;font-size:12px;color:var(--ink3);display:flex;flex-direction:column;gap:3px}
+.eng b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
+.meter{height:5px;border-radius:3px;background:var(--s3);overflow:hidden}.meter i{display:block;height:100%;background:var(--blue)}
+.riv{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.riv div{display:grid;grid-template-columns:18px 1fr 42px;gap:8px;align-items:center}
+.riv .n{font:12px 'JetBrains Mono',monospace;color:var(--ink4)}
+.riv .me{font-weight:700;color:var(--blue)}
+.riv em{font-style:normal;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink2)}
+.rec{display:flex;gap:10px;align-items:flex-start;font-size:13.5px}
+.rec .k{flex:none;font:600 11px/1 'JetBrains Mono',monospace;background:var(--blue-t);color:var(--blue);padding:4px 6px;border-radius:6px;margin-top:2px}
+.foot{font-size:12px;color:var(--ink3);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.foot a{color:var(--blue);font-weight:600}
+.row2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.phone .row2,.phone .gauges{grid-template-columns:minmax(0,1fr)}
+.phone .eng{grid-template-columns:repeat(2,minmax(0,1fr))}
+.phone .gauges{grid-template-columns:repeat(3,minmax(0,1fr))}.phone .gauge b{font-size:20px}
+.connect{border:1px dashed var(--blue);background:var(--blue-t)}
+.connect h3{font-size:16px}
+.list{margin:0;padding-left:18px;color:var(--ink2);font-size:13.5px;display:flex;flex-direction:column;gap:3px}
+.state{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+@media (max-width:860px){.state{grid-template-columns:minmax(0,1fr)}}
+.plan{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px}
+.plan ol,.plan ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px;color:var(--ink2)}
+.plan li b{color:var(--ink)}
+.note{font-size:13px;color:var(--ink3)}
+.consent{background:var(--surface);border-radius:14px;border:1px solid var(--rule);padding:22px;max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.consent .scope{background:var(--s2);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--ink2)}
+.ask{background:var(--warm-t);border-radius:12px;padding:16px;color:var(--ink)}
+</style>
+
+<div class="wrap">
+<header>
+  <span class="tag">WP-PLUGIN-2 · propuesta para aprobar</span>
+  <h1>El plugin de WordPress, conectado a tu cuenta de GenScore</h1>
+  <p class="lede">Hoy el plugin revisa la web desde WordPress y, en «Tu dominio», solo enseña maquetas sin cifras. Con la cuenta conectada, esos bloques pasan a enseñar lo mismo que la extensión de Chrome: Puntuación GEO, motores, rivales, Salud SEO, nota para agentes, Search Console y el plan de recomendaciones. Mismo lector, mismas cifras, solo lectura.</p>
+</header>
+
+<section>
+  <h2>1 · Conectar (antes y durante)</h2>
+  <div class="grid2">
+    <div class="frame"><div class="bar"><i></i><i></i><i></i>&nbsp;cafeventura.es/wp-admin · GenScore</div>
+      <div class="in"><div class="wpside"><div>Escritorio</div><div>Entradas</div><div>Páginas</div><div>Productos</div><div class="on">GenScore</div><div>Ajustes</div></div>
+      <div class="app">
+        <div class="ph"><span class="logo">G</span><div class="who"><b>Café Ventura</b><span>cafeventura.es</span></div><span class="sp"></span><a class="btn pri">Conectar con GenScore</a></div>
+        <div class="tabs"><span class="on">Resumen</span><span>GEO</span><span>SEO</span><span>Agentes</span><span>Bots de IA</span><span>llms.txt</span></div>
+        <div class="card connect">
+          <div class="lyr">Tu dominio<small>con tu cuenta de GenScore</small></div>
+          <h3>Ve aquí lo que ve tu consola de GenScore</h3>
+          <ul class="list"><li>Tu Puntuación GEO y cómo te nombra cada motor</li><li>Quién sale antes que tú</li><li>Salud SEO de todo el dominio y tus búsquedas de Google</li><li>Tus tres próximas acciones</li></ul>
+          <div class="foot"><a class="btn pri">Conectar con GenScore</a><span>¿Sin cuenta? <a>Analizar cafeventura.es</a> (7 días de Pro gratis)</span></div>
+        </div>
+        <p class="note">La revisión de esta web (Nota SEO + IA, arreglos con un clic) sigue igual, con o sin cuenta.</p>
+      </div></div>
+    </div>
+    <div>
+      <div class="consent">
+        <span class="tag">genscore.es/oauth/consentir</span>
+        <h3 style="font-size:18px">GenScore para WordPress (cafeventura.es) quiere acceder a tu cuenta</h3>
+        <div class="scope">Podrá <b>leer</b> las cifras de tus dominios: puntuación, motores, rivales, auditorías, Search Console y recomendaciones. No podrá cambiar nada ni ver tu facturación.</div>
+        <div style="display:flex;gap:8px"><a class="btn pri">Permitir</a><a class="btn">Cancelar</a></div>
+        <p class="note">Puedes quitarle el acceso cuando quieras en Ajustes &gt; Apps conectadas.</p>
+      </div>
+      <p class="note" style="margin-top:10px">Es la misma pantalla de permiso que ya usa el conector de Claude y ChatGPT. Al permitir, vuelves al plugin ya conectado.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2 · Conectado: «Tu dominio» con cifras reales</h2>
+  <div class="grid2">
+    <div class="frame"><div class="bar"><i></i><i></i><i></i>&nbsp;Escritorio · 1280 px</div>
+      <div class="in"><div class="wpside"><div>Escritorio</div><div>Entradas</div><div>Páginas</div><div>Productos</div><div class="on">GenScore</div><div>Ajustes</div></div>
+      <div class="app" id="desk"></div></div>
+    </div>
+    <div class="frame phone"><div class="bar"><i></i><i></i><i></i>&nbsp;Móvil · 390 px</div><div class="app" id="mob"></div></div>
+  </div>
+  <p class="note" style="margin-top:10px">Cifras de la maqueta inventadas para enseñar la forma. En el plugin salen del mismo lector que la extensión (<span class="mono">loadExtProjectData</span>) y lo que no existe no se pinta: sin Search Console, su bloque invita a conectar Google; sin escaneo, «tu primer escaneo está en marcha».</p>
+</section>
+
+<section>
+  <h2>3 · Los otros estados</h2>
+  <div class="state">
+    <div class="card"><div class="lyr">Dominio fuera de tu cuenta</div><p style="font-size:14px">Tu cuenta no tiene <b>cafeventura.es</b>. Añádelo para ver aquí sus cifras.</p><div class="foot"><a class="btn pri">Añadir cafeventura.es</a></div><p class="note">Abre el alta de dominio con el campo relleno. Si el plan no tiene hueco, enlace a Ajustes &gt; Plan, nunca a pagar desde WordPress.</p></div>
+    <div class="card"><div class="lyr">Prueba terminada</div><p style="font-size:14px">Tu cuenta está en solo lectura: ves el último escaneo, pero no se hacen nuevos.</p><div class="foot"><a>Ver planes en genscore.es</a></div><p class="note">Mismo aviso que el conector MCP: enlace informativo, sin precios en WordPress.</p></div>
+    <div class="card"><div class="lyr">Conexión caducada o retirada</div><p style="font-size:14px">GenScore ya no acepta esta conexión. Vuelve a conectar para ver tus cifras.</p><div class="foot"><a class="btn pri">Volver a conectar</a></div><p class="note">El plugin borra el token guardado y vuelve a las maquetas sin cifras.</p></div>
+  </div>
+</section>
+
+<section class="plan">
+  <h2>4 · Cómo se hace</h2>
+  <ol>
+    <li><b>La misma puerta que el conector de Claude.</b> OAuth 2.1 con PKCE contra el servidor OAuth de Supabase que ya está encendido. Cada WordPress se registra solo (registro dinámico) con el nombre «GenScore para WordPress (dominio)» y su propia dirección de vuelta en <span class="mono">wp-admin</span>. Sin claves que copiar y pegar.</li>
+    <li><b>Un cambio pequeño en GenScore.</b> <span class="mono">/api/ext/project</span> acepta, además de la cookie de la extensión, un <span class="mono">Authorization: Bearer</span>, validado como ya hace el MCP (<span class="mono">accountFromBearer</span> + RLS del propio usuario, nunca service role). Las cifras son las mismas que ven la extensión, el MCP y la consola. <b>Sin migración.</b></li>
+    <li><b>El plugin guarda el token en la base de datos de WordPress</b>, sin autocarga, y lo renueva él solo. Solo lo lee el servidor de WordPress; el navegador nunca lo ve. Las cifras se guardan 10 minutos como caché temporal para no llamar a GenScore en cada carga del escritorio.</li>
+    <li><b>Desconectar</b> desde el plugin borra el token; retirarlo en Ajustes &gt; Apps conectadas de GenScore lo invalida desde nuestro lado.</li>
+    <li><b>Sin ventas dentro de WordPress</b>: ni precios ni pago, solo enlaces informativos, como en el MCP. Solo admins (<span class="mono">manage_options</span>) conectan y ven las cifras.</li>
+    <li><b>WordPress.org</b>: el readme declara el servicio externo (genscore.es y la autenticación de Supabase), con enlaces a términos y privacidad. Nada se llama sin que la persona pulse «Conectar».</li>
+  </ol>
+  <h3>Lo que hay que saber</h3>
+  <ul>
+    <li>Quien tenga acceso a la base de datos de esa web puede leer las cifras de la cuenta conectada mientras el token siga vivo. Es el mismo modelo que cualquier plugin conectado a un servicio; se mitiga con tokens cortos que se renuevan y el botón de retirar en GenScore.</li>
+    <li>El token de Supabase lleva los permisos de la propia cuenta (RLS), igual que el del conector MCP; el plugin solo lo usa para leer.</li>
+    <li>Toca autenticación, así que va en su propio PR con revisión de data-guardian y prueba en mi WordPress local con Plugin Check, y en tu web de Wasmer con tu cuenta.</li>
+  </ul>
+  <h3>Fases</h3>
+  <ol>
+    <li><b>2a · GenScore</b>: Bearer en <span class="mono">/api/ext/project</span> y lista de dominios de la cuenta, con tests. PR propio.</li>
+    <li><b>2b · Plugin 1.1.0</b>: Conectar, consentimiento, renovación, desconectar y los bloques de «Tu dominio» con cifras en Resumen, GEO, SEO y Agentes.</li>
+    <li><b>2c · Prueba</b>: WordPress local, Plugin Check, y zip nuevo en la página de descarga.</li>
+  </ol>
+  <div class="ask"><b>¿Apruebas este plan y esta maqueta?</b> No implemento hasta que lo confirmes.</div>
+</section>
+</div>
+
+<script>
+function dom(mob){
+  return `
+  <div class="ph"><span class="logo">G</span><div class="who"><b>Café Ventura</b><span>cafeventura.es</span></div><span class="sp"></span><span class="acct"><span class="av">D</span>${mob?'':'Conectado · '}Pro</span></div>
+  <div class="tabs"><span class="on">Resumen</span><span>GEO</span><span>SEO</span><span>Agentes</span>${mob?'':'<span>Bots de IA</span><span>llms.txt</span>'}</div>
+  <div class="card">
+    <div class="lyr">Tu dominio<small>último escaneo hace 2 días</small></div>
+    <div class="gauges">
+      <div class="gauge"><span>Puntuación GEO</span><b>58<small>/100</small></b><span class="d up">+6</span></div>
+      <div class="gauge"><span>Salud SEO</span><b>81<small>/100</small></b><span class="d up">+3</span></div>
+      <div class="gauge"><span>Agentes</span><b>64<small>/100</small></b><span class="d dn">−2</span></div>
+    </div>
+    <div class="eng">
+      <div>ChatGPT<b>42%</b><span class="meter"><i style="width:42%"></i></span></div>
+      <div>Gemini<b>61%</b><span class="meter"><i style="width:61%"></i></span></div>
+      <div>Claude<b>35%</b><span class="meter"><i style="width:35%"></i></span></div>
+      <div>Perplexity<b>50%</b><span class="meter"><i style="width:50%"></i></span></div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="card"><div class="lyr">Quién sale antes</div>
+      <div class="riv"><div><span class="n">1</span><span>Tostadores del Sur</span><em>64%</em></div><div><span class="n">2</span><span class="me">Café Ventura</span><em>47%</em></div><div><span class="n">3</span><span>La Molienda</span><em>31%</em></div></div></div>
+    <div class="card"><div class="lyr">Google · 28 días</div>
+      <div class="gauges" style="grid-template-columns:repeat(3,minmax(0,1fr))"><div class="gauge"><span>Clics</span><b style="font-size:20px">1.240</b><span class="d up">+12%</span></div><div class="gauge"><span>Puesto</span><b style="font-size:20px">8,4</b><span class="d up">↑1,1</span></div><div class="gauge"><span>Página 2</span><b style="font-size:20px">9</b><span>búsquedas</span></div></div></div>
+  </div>
+  <div class="card"><div class="lyr">Tus próximas acciones</div>
+    <div class="rec"><span class="k">IA</span><span>Publica una página que responda «mejor café de especialidad en Madrid»</span></div>
+    <div class="rec"><span class="k">Google</span><span>Sube a la página 1 «café en grano online»</span></div>
+    ${mob?'':'<div class="rec"><span class="k">IA</span><span>Escribe a dos webs que la IA cita y no te nombran</span></div>'}
+    <div class="foot"><a>Abrir en GenScore →</a></div></div>`;
+}
+document.getElementById('desk').innerHTML=dom(false);
+document.getElementById('mob').innerHTML=dom(true);
+</script>

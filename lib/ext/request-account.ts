@@ -3,7 +3,7 @@ import { accountFromBearer } from "@/lib/mcp/auth";
 import { readExtAccount, type ExtAccount } from "./account";
 
 /**
- * WP-PLUGIN-2 (log §431): who is calling `/api/ext/*`.
+ * WP-PLUGIN-2 (log §432): who is calling `/api/ext/*`.
  *
  * The Chrome extension sends the console's session cookie. The WordPress
  * plugin calls from its own server, so it has no cookie: it sends the OAuth

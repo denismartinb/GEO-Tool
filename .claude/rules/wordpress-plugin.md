@@ -6,9 +6,17 @@ Se inyectan solos al tocar `docs/wordpress-plugin/**`. Cada regla es trazable a
 - **La nota es la de la extensión.** `assets/vendor/collect.js` y `score.js`
   son copia exacta de `docs/chrome-extension/prueba/extension/`. Si cambia la
   extensión, se copian en el mismo PR (lo vigila `tests/wordpress-plugin.test.ts`).
-- **El plugin no llama a genscore.es.** Sólo enlaces con UTM. Una llamada
-  (token, datos de la cuenta) es la Fase 2 y necesita aprobación: toca auth y
-  esquema, y WordPress.org exige declararla en el readme.
+- **El plugin sólo llama a genscore.es tras «Conectar con GenScore»** (WP-PLUGIN-2,
+  log §432, sustituye a «no llama» de §421). Todas las llamadas viven en
+  `includes/account.php`, desde el servidor: descubrimiento OAuth, registro,
+  token y GET a `/api/ext/context` y `/api/ext/project`. Nada más, y nada desde
+  el navegador (lo vigila `tests/wordpress-plugin.test.ts`). Una llamada nueva
+  necesita aprobación y su línea en «External services» del readme.
+- **El token nunca llega al navegador**: opción `genscore_account` sin
+  autocarga, leída sólo por el servidor. La pantalla recibe las cifras ya
+  pedidas. Un 401 que no se arregla renovando desconecta la web.
+- **Sin ventas dentro de WordPress** con la cuenta conectada: sin precios ni
+  pago, sólo un enlace informativo a `/precios` (misma regla que el MCP).
 - **Nunca toca el grupo `*`, Googlebot ni Bingbot**, y nunca escribe ficheros:
   sólo el filtro `robots_txt` con su bloque `# BEGIN GenScore`. Con robots.txt
   físico, web no pública o WordPress en subcarpeta, los interruptores se

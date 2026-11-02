@@ -28,13 +28,39 @@ describe("WordPress plugin", () => {
     expect(read(join(PLUGIN, "assets/vendor", file))).toBe(read(join(EXTENSION, file)));
   });
 
-  it("never calls genscore.es from PHP or its own script: links only", () => {
-    const code = filesUnder(PLUGIN)
-      .filter((f) => /\.(php|js)$/.test(f) && !f.includes("/vendor/"))
-      .map(read)
-      .join("\n");
-    expect(code).not.toMatch(/wp_remote_(get|post|request)|wp_safe_remote|curl_init|file_get_contents\(\s*['"]https?:/);
-    expect(code).not.toMatch(/fetch\(\s*["'`]https?:\/\/(www\.)?genscore\.es/);
+  // WP-PLUGIN-2 (log §432): the only outbound calls live in account.php, run
+  // on the server after «Conectar con GenScore», and only read.
+  it("calls out only from account.php, and the browser never calls genscore.es", () => {
+    const files = filesUnder(PLUGIN).filter((f) => /\.(php|js)$/.test(f) && !f.includes("/vendor/"));
+    for (const f of files.filter((x) => !x.endsWith("includes/account.php"))) {
+      const code = read(f);
+      expect(code, f).not.toMatch(/wp_remote_(get|post|request)|wp_safe_remote|curl_init|file_get_contents\(\s*['"]https?:/);
+      expect(code, f).not.toMatch(/fetch\(\s*["'`]https?:/);
+    }
+  });
+
+  it("account.php only reads GenScore's API and only for an administrator", () => {
+    const src = read(join(PLUGIN, "includes/account.php"));
+    // The only GenScore API paths it calls are the two read-only ones.
+    const paths = [...src.matchAll(/genscore_api_get\(\s*'([^']+)'/g)].map((m) => m[1]);
+    expect(new Set(paths)).toEqual(new Set(["/api/ext/context", "/api/ext/project"]));
+    // Every entry point checks the capability; AJAX ones check the nonce too.
+    for (const fn of ["genscore_oauth_start", "genscore_oauth_return", "genscore_ajax_account", "genscore_ajax_disconnect"]) {
+      const body = src.slice(src.indexOf(`function ${fn}(`), src.indexOf("\n}\n", src.indexOf(`function ${fn}(`)));
+      expect(body, fn).toContain("current_user_can( 'manage_options' )");
+      if (fn.startsWith("genscore_ajax")) expect(body, fn).toContain("check_ajax_referer( 'genscore', 'nonce' )");
+    }
+    // PKCE with S256 and a state compared in constant time; tokens never autoloaded.
+    expect(src).toContain("'code_challenge_method' => 'S256'");
+    expect(src).toContain("hash_equals( $pending['state'], $state )");
+    expect(src).toMatch(/update_option\(\s*GENSCORE_ACCOUNT_OPTION,[\s\S]*?false\s*\);/);
+  });
+
+  it("the token never reaches the browser", () => {
+    const screen = read(join(PLUGIN, "includes/account.php"));
+    const data = screen.slice(screen.indexOf("function genscore_account_screen_data"));
+    expect(data).not.toMatch(/access|refresh/);
+    expect(read(join(PLUGIN, "assets/admin.js"))).not.toMatch(/Bearer|access_token|refresh_token/);
   });
 
   it("every PHP file refuses to run outside WordPress", () => {

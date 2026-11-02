@@ -29035,3 +29035,58 @@ en `/precios`, LCP móvil de 2,7 s) quedan para otra fase: la primera toca
 texto visible congelado y la segunda hay que investigarla. Fricciones del
 conector anotadas en `/mnt/project-files/conector-mcp/`. No retira ningún
 camino de recuperación.
+
+## §432 · WP-PLUGIN-2: el plugin de WordPress, conectado a la cuenta de GenScore (2026-11-01)
+
+**Por qué.** Denis pidió una versión del plugin que se autentique en GenScore y
+saque las cifras de la consola igual que la extensión de Chrome. Aprobó el plan
+y la maqueta (`docs/design-reference/wp-plugin-account-1/maqueta.html`) el
+2026-11-01. Esto es la Fase 2 que §421 dejaba sin aprobar.
+
+**Qué se decidió.**
+
+- **La misma puerta que el conector MCP.** OAuth 2.1 con PKCE (S256) contra el
+  servidor OAuth de Supabase que ya publica `/.well-known/oauth-authorization-server`.
+  Cada WordPress se registra solo (registro dinámico, cliente público, nombre
+  «GenScore para WordPress (dominio)») con su vuelta fija en
+  `wp-admin/admin-post.php?action=genscore_oauth`. El permiso se da en
+  `/oauth/consentir`, la misma pantalla del conector, y se retira en Ajustes >
+  Apps conectadas. Sin migración ni tablas nuevas.
+- **GenScore sólo cambia en un sitio.** `/api/ext/context` y `/api/ext/project`
+  aceptan, además de la cookie de la extensión, `Authorization: Bearer`, que se
+  valida con `accountFromBearer` (RLS del propio usuario, nunca service role)
+  en `lib/ext/request-account.ts`. Una petición con cabecera se juzga sólo por
+  ella: un token malo es 401 aunque venga una cookie válida. `Vary` añade
+  `Authorization`.
+- **El token vive en la base de datos de WordPress, nunca en el navegador.**
+  Opción `genscore_account` sin autocarga; el plugin lo renueva con el refresh
+  token y, si GenScore lo rechaza, se desconecta solo y vuelve a las maquetas
+  sin cifras. Las cifras se guardan 10 minutos (transient) para no llamar a
+  GenScore en cada carga. «Desconectar» borra el token y pide la revocación si
+  el servidor la publica. Desinstalar borra todo.
+- **Las cifras son las de la extensión**, del mismo payload: Puntuación GEO,
+  menciones por motor, rivales, Salud SEO con lo que más resta, Search Console
+  (clics, impresiones, puesto, búsquedas y «Casi en la página 1»), nota para
+  agentes por componente y las tres próximas acciones. Porcentajes, nunca
+  recuentos de respuestas. Lo que no llega no se pinta.
+- **Sin ventas dentro de WordPress**: sin precios ni pago. En Agentes, si el
+  plan no la incluye, un enlace informativo a `/precios`, como en el MCP. Un
+  dominio que no está en la cuenta ofrece «Añadir» con
+  `/dashboard/projects/new?dominio=`, o «Ver tu plan» si ya no tiene hueco.
+- **Readme**: «External services» declara la conexión (qué se envía, cuándo,
+  qué se guarda, términos y privacidad de GenScore y Supabase). Nada sale de la
+  web hasta que un administrador pulsa «Conectar con GenScore».
+- Versión 1.1.0. Validado en el WordPress local (7.1 + WooCommerce) con un
+  servidor GenScore simulado: conectar, volver con el código, repetir el mismo
+  `state` (rechazado), token caducado que se renueva, token revocado que
+  desconecta, dominio fuera de la cuenta y «Desconectar», en 1280 y 390 px.
+  Plugin Check sin errores.
+
+**Pendiente o sabido.** No se ha probado contra el Supabase real: lo hace Denis
+en su web de Wasmer con su cuenta. Si el servidor OAuth de Supabase rechazara
+una dirección de vuelta con `?action=`, habría que mover la vuelta a otra
+ruta. Quien lea la base de datos de esa web puede usar el token mientras viva,
+como con cualquier plugin conectado; se mitiga con tokens cortos y la
+retirada desde Apps conectadas. El token de Supabase lleva los permisos RLS de
+la cuenta: el plugin sólo hace GET a las dos rutas de lectura. No retira ningún
+camino de recuperación.

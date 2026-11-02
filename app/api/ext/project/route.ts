@@ -17,7 +17,7 @@ export const maxDuration = 30;
  * A domain that is not one of the account's projects is a 404, never another
  * account's data.
  *
- * WP-PLUGIN-2 (log §431): the WordPress plugin reads the same payload with
+ * WP-PLUGIN-2 (log §432): the WordPress plugin reads the same payload with
  * the OAuth bearer token it got through `/oauth/consentir`.
  */
 export async function GET(request: Request) {

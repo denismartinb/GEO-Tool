@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * the panel opens on the same project (Denis, 2026-10-30). A stale or foreign
  * id falls through to the newest project, never to another account's.
  *
- * WP-PLUGIN-2 (log §431): also answers the WordPress plugin, with its OAuth
+ * WP-PLUGIN-2 (log §432): also answers the WordPress plugin, with its OAuth
  * bearer token instead of the cookie.
  */
 export async function GET(request: Request) {
