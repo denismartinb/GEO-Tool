@@ -87,6 +87,7 @@ export function aiBotsSectionProps(bots: BotAccessReport, domain: string): {
   starRules: string[] | null;
   robotsUrl: string;
   note: string | null;
+  probedAt: string | null;
 } {
   const engineStates = engineReadStates(bots);
   const states = switchStates(bots);
@@ -100,8 +101,15 @@ export function aiBotsSectionProps(bots: BotAccessReport, domain: string): {
       // Gemini also needs Googlebot, which no switch here touches.
       hint: engine === "gemini" && token("Googlebot") === false ? "Googlebot cerrado" : null,
       // GEO-ALERTS-1 (log §440): robots.txt lets it in, the server does not.
-      serverBlocked: engineStates[engine] !== false && serverStateFor(bots, engine) === "blocked"
+      serverBlocked: engineStates[engine] !== false && serverStateFor(bots, engine) === "blocked",
+      // EXT-1.5.0 (log §446): the extension's robots.txt / server columns.
+      probe: {
+        robots: engineStates[engine],
+        server: serverStateFor(bots, engine),
+        status: engine === "gemini" || bots.serverProbe?.baseline !== "ok" ? null : (bots.serverProbe.engines[engine]?.status ?? null)
+      }
     })),
+    probedAt: bots.serverProbe?.measuredAt ?? null,
     switches: AI_BOT_SWITCHES.map((sw) => ({
       id: sw.id,
       engine: sw.engine,

@@ -10,7 +10,7 @@ import { ISSUE_CHECK_META } from "@/lib/web-audit/issue-labels";
 import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { TRACKED_BOT_AGENTS, type BotAccessReport } from "@/lib/web-audit/robots";
-import { EXT_AUDIT_ISSUES, buildExtAudits } from "@/lib/ext/audits";
+import { EXT_AUDIT_ISSUES, buildExtAudits, extServerProbe } from "@/lib/ext/audits";
 
 type Overrides = {
   structured?: boolean;
@@ -180,6 +180,37 @@ describe("buildExtAudits (EXT-AUDITS-1, log §406)", () => {
   });
 
   it("without an audit there is nothing to show, not a zero", () => {
-    expect(buildExtAudits({ snapshot: null, agentic: null, ownUrl: "https://marca.es/" })).toEqual({ auditedAt: null, readiness: null, blocks: [], page: null });
+    expect(buildExtAudits({ snapshot: null, agentic: null, ownUrl: "https://marca.es/" })).toEqual({ auditedAt: null, readiness: null, blocks: [], page: null, server: null });
+  });
+});
+
+describe("extServerProbe (log §446)", () => {
+  it("is null when the audit did not probe", () => {
+    expect(extServerProbe(bots())).toBeNull();
+    expect(extServerProbe(null)).toBeNull();
+  });
+  it("puts robots.txt and the server side by side, Gemini without a server cell", () => {
+    const report = bots({
+      bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })),
+      serverProbe: {
+        measuredAt: AT,
+        baseline: "ok",
+        engines: {
+          chatgpt: { token: "OAI-SearchBot", state: "blocked", status: 403 },
+          claude: { token: "Claude-SearchBot", state: "allowed", status: 200 }
+        }
+      }
+    });
+    const p = extServerProbe(report)!;
+    expect(p.measuredAt).toBe(AT);
+    const row = (e: string) => p.rows.find((r) => r.engine === e)!;
+    expect(row("chatgpt")).toMatchObject({ token: "OAI-SearchBot", robots: true, server: "blocked", status: 403 });
+    expect(row("claude")).toMatchObject({ server: "allowed" });
+    expect(row("perplexity")).toMatchObject({ robots: false, server: "unknown", status: null });
+    expect(row("gemini")).toMatchObject({ token: null, server: null });
+  });
+  it("without a baseline every probed engine is unknown, never blocked", () => {
+    const p = extServerProbe(bots({ serverProbe: { measuredAt: AT, baseline: "unknown", engines: {} } }))!;
+    expect(p.rows.filter((r) => r.token).every((r) => r.server === "unknown")).toBe(true);
   });
 });

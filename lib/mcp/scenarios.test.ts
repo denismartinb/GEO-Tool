@@ -52,7 +52,7 @@ const P: ExtProjectPayload = {
   agentic: { kind: "upsell" },
   citingPrompts: null,
   searchConsole: { state: "disconnected" },
-  audits: { auditedAt: null, readiness: null, blocks: [], page: null },
+  audits: { auditedAt: null, readiness: null, blocks: [], page: null, server: null },
   prompts: [
     {
       text: "¿Qué herramienta mide la visibilidad en ChatGPT?",

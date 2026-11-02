@@ -632,3 +632,14 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
 
   return { issues, passing, analyzedPageCount, actualReadinessScore, projectedReadinessScore, totalPointPotential };
 }
+
+/** Checks failing before and passing now (log §446). Pure. */
+export function fixedSincePrevious(
+  previous: TechnicalIssuesReport | null,
+  current: TechnicalIssuesReport | null
+): IssueCheckKey[] {
+  if (!previous || !current) return [];
+  const now = new Set(current.issues.map((i) => i.check));
+  const passing = new Set(current.passing.map((p) => p.check));
+  return [...new Set(previous.issues.map((i) => i.check))].filter((c) => !now.has(c) && passing.has(c));
+}

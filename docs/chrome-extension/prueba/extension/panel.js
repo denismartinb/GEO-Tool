@@ -9,6 +9,15 @@
   "use strict";
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const SITE = GS_API;
+  /* the screenshot travels to the report page at a width that prints sharp on A4 */
+  async function shrinkShot(dataUrl) {
+    const bmp = await createImageBitmap(await (await fetch(dataUrl)).blob());
+    const w = Math.min(1200, bmp.width), h = Math.round((bmp.height * w) / bmp.width);
+    const cv = new OffscreenCanvas(w, h);
+    cv.getContext("2d").drawImage(bmp, 0, 0, w, h);
+    const blob = await cv.convertToBlob({ type: "image/jpeg", quality: 0.8 });
+    return await new Promise((ok) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = () => ok(null); r.readAsDataURL(blob); });
+  }
   const utm = (content) => `utm_source=chrome-extension&utm_medium=extension&utm_campaign=extension&utm_content=${content}`;
 
   /* ---------------- environment: Chrome, or a stand-in for screenshots ---------------- */
@@ -35,6 +44,24 @@
     },
     badge: (tabId, on) => { try { chrome.action.setBadgeBackgroundColor({ tabId, color: "#2563eb" }); chrome.action.setBadgeText({ tabId, text: on ? " " : "" }); } catch (e) {} },
     open: (url) => chrome.tabs.create({ url }),
+    delL: (k) => chrome.storage.local.remove(k),
+    /* 1.5.0 (log §446): the page report. The screenshot is of the reviewed tab only, and
+       only while Chrome lets us (activeTab grant or the optional permission). */
+    shot: async (tabId) => {
+      try {
+        const tab = (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
+        if (!tab || tab.id !== tabId) return null;
+        return await shrinkShot(await chrome.tabs.captureVisibleTab(tab.windowId, { format: "jpeg", quality: 80 }));
+      } catch (e) { return null; }
+    },
+    report: async (data) => {
+      const all = await chrome.storage.session.get(null);
+      const old = Object.keys(all).filter((k) => k.startsWith("rep:")).sort().slice(0, -2);
+      if (old.length) await chrome.storage.session.remove(old);
+      const id = String(Date.now());
+      await chrome.storage.session.set({ ["rep:" + id]: data });
+      chrome.tabs.create({ url: chrome.runtime.getURL("report.html#" + id) });
+    },
     copy: (t) => navigator.clipboard.writeText(t),
     listen(fn) {
       chrome.storage.onChanged.addListener((ch, area) => { if (area === "session" && S.tabId != null && ch["r:" + S.tabId]) fn("result"); });
@@ -57,6 +84,8 @@
       badge: () => {},
       api: async (path) => { const a = demo.api || {}; const k = Object.keys(a).find((x) => path.startsWith(x)); return k ? { status: 200, body: a[k] } : { status: 401, body: null }; },
       open: (u) => toast("Se abriría " + esc(u.split("?")[0]), "", "arrowr"),
+      delL: async () => {}, shot: async () => null,
+      report: async () => toast("Se abriría el informe de esta página.", "", "download"),
       copy: async () => {},
       listen() {}
     };
@@ -103,7 +132,7 @@
     for (const e of p.engines) if (ENGKEY[e.provider]) engines[ENGKEY[e.provider]] = pct(e.mentionShare);
     const card = p.agentic && p.agentic.kind === "card" ? p.agentic : null;
     return {
-      score: p.geoScore, say: p.lede || "Todavía no hay un escaneo completado de este dominio.",
+      score: p.geoScore, scanDate: p.scanDate || null, say: p.lede || "Todavía no hay un escaneo completado de este dominio.",
       engines, rivals: p.rivals.map((r) => [r.name, pct(r.share), r.isBrand, r.domain || null]), competitorDomains: p.competitorDomains || [], seo: p.seoScore,
       agent: card ? card.score : null, agentParts: card ? card.components.map((c) => [c.name, c.points ?? 0, c.weight]) : [],
       plan: p.plan.map((x, i) => ({ id: "r" + i, kind: "plan", lane: "ia", pts: null, t: esc(x.title), why: esc(x.firstStep || "") })),
@@ -223,7 +252,87 @@
   }
 
   /* ---------------- layer 2: the one warm alert ---------------- */
-  const alertHtml = (sc) => (sc.alert ? `<div class="alert" role="status">${ic("warn")}<div class="tx"><b>${sc.alert.t}</b> ${sc.alert.s}</div><button class="btn warm" data-act="jump" data-id="${sc.alert.id}">Arreglarlo</button></div>` : "");
+  const alertHtml = (sc, f) => {
+    if (!sc.alert) return "";
+    const ev = alertEvidence(sc, f);
+    const evh = ev ? `<span class="ev">${tagx("ok")}<span class="evw">${esc(ev.where)}</span></span>${ev.lines.length ? `<code class="evc">${ev.lines.map(esc).join("<br>")}</code>` : ""}` : "";
+    return `<div class="alert ${ev ? "alx" : ""}" role="status">${ic("warn")}<div class="tx"><b>${sc.alert.t}</b> ${sc.alert.s}${evh}</div><button class="btn warm" data-act="jump" data-id="${sc.alert.id}">Arreglarlo</button></div>`;
+  };
+
+  /* ================= 1.5.0 (log §446) =================
+     Evidence tags: Comprobado (read in the page or its files now), Estimado,
+     Simulación (our server asking as a bot). One tag per claim that has a source. */
+  const TAGX = { ok: ["check", "Comprobado"], est: [null, "Estimado"], sim: [null, "Simulación"] };
+  const tagx = (k, extra) => `<span class="tagx ${k}">${TAGX[k][0] ? ic(TAGX[k][0], "sm") : ""}${TAGX[k][1]}${extra ? ` ${extra}` : ""}</span>`;
+  /* Where the alert comes from: the robots.txt lines (with their numbers) or the robots meta / header. */
+  function alertEvidence(sc, f) {
+    const id = sc.alert && sc.alert.id;
+    if (!id || !f) return null;
+    const robotsAlert = id.startsWith("bot-") || (id === "index" && /robots\.txt/.test(sc.alert.s));
+    if (robotsAlert) {
+      const toks = id.startsWith("bot-") ? GS_SCORE.ENGINE_TOKENS[id.slice(4)] || [] : ["Googlebot"];
+      const ev = f.robots && f.robots.status === 200 && f.robots.text ? GS_X.robotsEvidence(f.robots.text, toks, f.path) : null;
+      return ev ? { where: GS_X.lineLabel(ev), lines: ev.lines } : { where: "robots.txt", lines: [] };
+    }
+    if (id === "index" || id === "snippet") {
+      const word = id === "index" ? /noindex|\bnone\b/ : /nosnippet|max-snippet/;
+      if (word.test(f.xRobots || "")) return { where: "Cabecera X-Robots-Tag", lines: [`X-Robots-Tag: ${f.xRobots}`] };
+      if (word.test(f.robotsMeta || "")) return { where: "Etiqueta meta robots", lines: [`<meta name="robots" content="${f.robotsMeta}">`] };
+    }
+    return null;
+  }
+  /* «Lo que lee la IA»: the page without JavaScript (readAiView, in the tab) against what you see */
+  const AIKIND = { price: "cart", heading: "notes", button: "cart", text: "prompts" };
+  function aiCard(f) {
+    const v = f && f.aiView;
+    if (!v || v.state !== "ok") return "";
+    const pc = v.pct, all = pc >= 95, miss = all ? [] : v.missing.slice(0, 4);
+    const list = miss.map((m) => `<div class="aim">${ic(AIKIND[m.kind] || "prompts", "sm")}<span>${esc(m.t)}</span><em>Sólo con JavaScript</em></div>`).join("");
+    const canCmp = !all && v.blocks.length >= 3 && v.blocks.some((b) => b.gone);
+    const col = (title, gone) => `<div class="col"><b>${title}</b>${v.blocks.map((b) => `<i class="b ${b.h ? "h" : ""} ${gone && b.gone ? "gone" : ""}" style="width:${b.h ? Math.min(b.w, 80) : b.w}%"></i>`).join("")}</div>`;
+    const cmp = canCmp && S.cmp ? `<div class="aicmp">${col("Lo que ves", false)}${col("Lo que llega sin JavaScript", true)}</div>` : "";
+    return `<div class="aiv"><div class="aih"><span class="ey">Lo que lee la IA</span>${tagx("ok")}</div>
+      <div class="aibig"><b class="num">${pc}<small>%</small></b><span>${all ? "del texto que ves llega en el HTML, que es lo que leen los bots de IA." : miss.length ? "del texto que ves llega a los bots de IA. El resto sólo aparece con JavaScript, y ChatGPT, Claude y Perplexity no lo ejecutan." : "del texto que ves llega a los bots de IA. Lo que falta está fuera del contenido principal (menú, cabecera o pie) o son textos cortos."}</span></div>
+      <div class="aibar"><i style="width:${pc}%"></i></div><div class="aileg"><span><i class="a"></i>En el HTML</span>${all ? "" : `<span><i class="b"></i>Sólo con JavaScript</span>`}</div>
+      ${list ? `<div class="mh">Lo que no les llega</div>${list}` : ""}${cmp}
+      ${canCmp ? `<div class="acts"><button class="btn line sm" data-act="ai-cmp" aria-expanded="${!!S.cmp}">${ic("eye", "sm")}${S.cmp ? "Ocultar la comparación" : "Ver lado a lado"}</button></div>` : ""}
+      ${list ? `<p class="mini-note">Haz esto: pide que esos bloques salgan en el HTML de la página. Suele venir de un plugin o de un tema que los carga después.</p>` : ""}
+      <p class="mini-note">Comprobado en tu navegador: pedimos la página otra vez sin tu sesión y sin JavaScript, como la reciben los bots.</p></div>`;
+  }
+  /* «Desde tu última visita»: the note of this page per visit, only in this browser */
+  function histLine(f) {
+    const h = S.hist;
+    if (!h || !f || h.key !== GS_X.pageKey(f.url) || !h.info) return "";
+    const { prev, now, visits, notes, fixed } = h.info, d = now.nota - prev.nota;
+    let svg = "";
+    if (notes.length >= 3) {
+      const mn = Math.min(...notes), mx = Math.max(...notes);
+      svg = `<svg viewBox="0 0 100 24" preserveAspectRatio="none" aria-hidden="true"><path d="${notes.map((v, i) => `${i ? "L" : "M"}${((i / (notes.length - 1)) * 100).toFixed(1)},${(22 - ((v - mn) / (mx - mn || 1)) * 20).toFixed(1)}`).join("")}"/></svg>`;
+    }
+    const fx = fixed.slice(0, 3);
+    const r2 = fx.length ? `<div class="r2">${ic("checkc", "sm")}<span>Arreglado: ${fx.map((t) => `<b>${esc(t)}</b>`).join(fx.length > 2 ? ", " : " y ").replace(/, (?=<b>[^<]*<\/b>$)/, " y ")}</span></div>` : "";
+    return `<div class="vhist ${d > 0 ? "up" : d < 0 ? "down" : "eq"}"><div class="r1"><span class="l">Desde tu última visita · ${GS_X.agoText(now.at - prev.at)}</span><b class="num">${d === 0 ? "Sin cambios" : `${prev.nota} → ${now.nota}`}</b></div>${svg}${r2}<small>${visits} revisiones de esta página. Se guarda sólo en este navegador.</small></div>`;
+  }
+  /* «¿Te deja pasar el servidor?»: robots.txt next to our probe as each bot (GEO-ALERTS-1) */
+  const PROBE_NAME = { chatgpt: "Búsqueda de ChatGPT", claude: "Búsqueda de Claude", perplexity: "Búsqueda de Perplexity", gemini: "Gemini" };
+  function probeCard() {
+    const au = audOf(), pr = au && au.server;
+    if (!pr || !pr.rows || !pr.rows.length) return "";
+    const rb = (v) => (v == null ? `<span class="w">—</span>` : `<span class="w ${v ? "yes" : "no"}">${ic(v ? "check" : "x")}${v ? "Permite" : "Bloquea"}</span>`);
+    const sv = (r) => (r.server == null || r.server === "unknown" ? `<span class="w">—</span>` : `<span class="w ${r.server === "allowed" ? "yes" : "no"}">${ic(r.server === "allowed" ? "check" : "x")}${r.status != null ? r.status : r.server === "allowed" ? "Pasa" : "Reto"}</span>`);
+    const clash = pr.rows.filter((r) => r.robots === true && r.server === "blocked");
+    const names = clash.map((r) => ENG[r.engine] ? ENG[r.engine].n : r.engine);
+    const note = clash.length
+      ? `robots.txt deja pasar a ${names.length > 1 ? names.slice(0, -1).join(", ") + " y " + names.at(-1) : names[0]}, pero tu servidor ${clash.length > 1 ? "les" : "le"} responde con un bloqueo. Casi siempre es el cortafuegos (en Cloudflare, «Bloquear bots de IA»). `
+      : "";
+    return `<div class="probe"><div class="aih"><span class="mh" style="margin:0">¿Te deja pasar el servidor?</span>${tagx("sim", "· " + esc(shortDate(pr.measuredAt)))}</div>
+      <div class="pt hd"><span></span><span>robots.txt</span><span>Servidor</span></div>
+      ${pr.rows.map((r) => `<div class="pt"><span class="n">${lg(r.engine, 13)}<span>${esc(r.token || "Google-Extended")}<small>${PROBE_NAME[r.engine] || ""}</small></span></span>${rb(r.robots)}${sv(r)}</div>`).join("")}
+      <p class="mini-note">${note}Pedimos tu portada desde el servidor de GenScore con el nombre de cada bot; el bot real puede recibir otra respuesta. Gemini lee con Googlebot, que no imitamos.</p></div>`;
+  }
+  /* 1.5.0 (Denis, 2026-11-02): full width, right above the technical
+     recommendations: you read the review, then download it if you want. */
+  const reportCard = (f) => (f ? `<button class="repbtn" data-act="report">${`<span class="dl">${ic("download", "sm")}</span>`}<span>Descarga el informe de esta página</span><em>Nuevo</em>${ic("arrowr", "sm")}</button>` : "");
 
   /* ---------------- layer 3: «Haz esto», one card at a time ---------------- */
   const whereOf = (f) => (f.kind === "web" ? "En toda la web" : f.where ? (f.id.startsWith("shop-") ? "En tu tienda" : `En ${esc(f.where)}`) : f.id.startsWith("bot-") ? "En tu robots.txt" : f.id === "llms" ? "En la raíz de tu web" : f.kind === "plan" ? "Tu plan de esta semana" : f.kind === "goal" ? "Tu plan de esta semana" : "En esta página");
@@ -476,7 +585,7 @@
       ? `<div class="oh"><p class="say">${au.auditedAt ? `Auditada el ${esc(shortDate(au.auditedAt))}.` : ""} Las tres auditorías de toda tu web, una por indicador.</p></div>`
       : oHero(v, `${v >= 75 ? "Tus páginas clave están listas para la IA y para Google." : v >= 50 ? "Tus páginas clave se pueden mejorar para la IA y para Google." : "Tus páginas clave frenan a la IA y a Google."}${au.auditedAt ? ` Auditada el ${esc(shortDate(au.auditedAt))}.` : ""}`);
     const lanes = bl.map(([k, b], i) => { const s = B(b).score, c = readyBand(s)[0]; return gauge({ v: s, unit: "%", cls: c, nm: laneName(k), icon: laneIcon(k), st: readyBand(s)[1], lane: k, i }); }).join("");
-    const body = bl.map(([k, b]) => laneBox(k, () => (k !== "google" && sc ? whoRow(k, sc, f, "/") : "") + audBody(B(b)) + (k === "google" ? gscBlock() : ""))).join("");
+    const body = bl.map(([k, b]) => laneBox(k, () => (k !== "google" && sc ? whoRow(k, sc, f, "/") : "") + (k === "ia" ? probeCard() : "") + audBody(B(b)) + (k === "google" ? gscBlock() : ""))).join("");
     /* block points are not additive (lib/ext/audits.ts), so these cards never sum into «Hasta +N pt» */
     const top = bl.flatMap(([k, b]) => B(b).issues.map((x) => ({ ...x, lane: k, blk: b }))).filter((x) => x.points != null).sort((a, b) => b.points - a.points).slice(0, 3);
     const cards = deck(top.map((x, i) => ({ id: "w" + i + ":" + x.check, kind: "web", lane: x.lane, pts: Math.max(1, Math.round(x.points)), unit: x.blk === "agent" ? "en Agentes" : "bloque", t: esc(x.label), why: `Según la ${AUD_META[x.blk].name}${x.scope ? `: ${esc(x.scope)}` : ""}.`, to: projPath(AUD_META[x.blk].to) })), "web", "Nada que arreglar en toda tu web.", "Recomendaciones técnicas");
@@ -497,7 +606,7 @@
     if (!dom) {
       const shopOn = !!(sc.shop && sc.shop.state === "found");
       const ks = ["ia", "google"].concat(sc.commerce || shopOn || rel !== "own" ? ["agent"] : []);
-      hero = oHero(sc.nota, sc.say);
+      hero = oHero(sc.nota, sc.say) + histLine(f);
       lanes = ks.map((k, i) => { const v = sc.lanes[k], c = v == null ? "na" : readyBand(v)[0]; return gauge({ v, unit: "%", cls: c, nm: laneName(k), icon: laneIcon(k), st: k === "ia" && sc.blockedEngines.length ? `${4 - sc.blockedEngines.length} de 4 la leen` : v == null ? "No aplica" : readyBand(v)[1], lane: k, i }); }).join("");
       body = ks.map((k) => laneBox(k, () => (k !== "google" ? whoRow(k, sc, f, f.path) : "") + pageLaneBody(k, sc, rel))).join("");
       cards = deck(sc.fixes, "page:" + f.url, "Nada que arreglar en esta página. La pueden leer los cuatro motores y Google.", "Recomendaciones técnicas");
@@ -517,7 +626,7 @@
     const seg = scoped && sc ? scopeSeg(rel === "none") : `<span class="sxl">${dom ? scopeName() : "Esta página"}</span>`;
     return `<section class="sct"><div class="sh2"><div class="ey">Optimización técnica</div>${seg}</div>
       <p class="qq">¿Está tu web optimizada para la IA y Google?</p>
-      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc) + shopLine(sc)}${cards}${tail}</section>`;
+      <div class="hq prep">${hero}${lanes ? `<div class="gg3">${lanes}</div>` : ""}${body}</div>${dom ? "" : alertHtml(sc, f) + shopLine(sc) + aiCard(f) + reportCard(f)}${cards}${tail}</section>`;
   }
   function geoSection(host, rel) {
     const head = `<div class="sh2"><div class="ey">Puntuación GEO · <span class="mono">${esc(rel === "none" ? host : curDom())}</span>${rel === "none" ? "" : EJx()}</div></div><p class="qq">¿Sabes si la IA recomienda tu marca?</p>`;
@@ -533,7 +642,7 @@
     const say = s != null && me ? `Te nombran en el ${me[1]}% de las preguntas principales de búsqueda.` : esc(D.say);
     return `<section class="sgeo">${head}<div class="hq"><div class="dialbox">${dial(s ?? 0)}<div class="dial-c"><span class="big num">${s == null ? "–" : roll(s)}</span><span class="of">Puntuación GEO</span></div></div>
       <div class="bands"><span class="${s != null && s < 40 ? "on" : ""}">Inicial</span><span class="${s != null && s >= 40 && s < 70 ? "on" : ""}">Emergente</span><span class="${s != null && s >= 70 ? "on" : ""}">Competitivo</span></div>
-      <p class="say">${say}</p>
+      <p class="say">${say}</p>${D.scanDate && engs.length ? `<div class="prov">${ic("notes", "sm")}<span>Escaneo del ${esc(shortDate(D.scanDate))} · ${engNames(engs)} · preguntas principales de búsqueda</span></div>` : ""}
       ${engs.length ? `<div class="eng1 sm">${engs.map((e) => `<div class="c" data-tip="${ENG[e].n}"><svg class="l" aria-hidden="true"><use href="#e-${e}"/></svg><b class="num">${D.engines[e]}<small>%</small></b><span class="n">${ENG[e].n}</span><span class="tb"><i style="width:${D.engines[e]}%"></i></span></div>`).join("")}</div>` : ""}
       ${top && me && top[1] > me[1] ? `<div class="rv1">${favImg(top[3], top[0])}<span><b>${esc(top[0])}</b> sale más que tú: en el ${top[1]}% de las respuestas.</span></div>` : ""}</div>
       ${deck(D.plan, "dom", "Tu plan está al día.", "Recomendaciones de GenScore")}</section>`;
@@ -630,6 +739,7 @@
     S.noted = S.rec.at;
     noteUse();
     const sc = GS_SCORE.scorePage(S.rec.facts);
+    recordVisit(S.rec, sc);
     const k = "last:" + S.rec.facts.url;
     const last = await Env.getS(k);
     await Env.setS(k, { nota: sc.nota, at: Date.now() });
@@ -638,6 +748,31 @@
       draw();
       toast(`La nota pasa de ${last.nota} a ${sc.nota}.`, "Revisada otra vez en tu navegador. No es un escaneo.", sc.nota > last.nota ? "arrowup" : "arrowdown");
     }
+  }
+
+  /* 1.5.0 (log §446): one entry per visit and page, only in chrome.storage.local;
+     coming back to a tab with the same reading does not count as a visit */
+  async function recordVisit(rec, sc) {
+    const key = GS_X.pageKey(rec.facts.url);
+    let list = (await Env.getL(key)) || [];
+    if (!list.length || list[list.length - 1].rev !== rec.at) {
+      list = GS_X.historyPush(list, Object.assign(GS_X.entryOf(sc, Date.now()), { rev: rec.at }));
+      await Env.setL(key, list);
+      const idx = (await Env.getL("hidx")) || {};
+      idx[key] = Date.now();
+      const drop = GS_X.historyPrune(idx);
+      drop.forEach((k) => { delete idx[k]; Env.delL(k); });
+      await Env.setL("hidx", idx);
+    }
+    S.hist = { key, info: GS_X.sinceLast(list) };
+    if (S.hist.info && S.rec === rec) draw();
+  }
+  async function openReport() {
+    if (!S.rec || S.rec.state !== "ok") return;
+    const f = S.rec.facts, sc = GS_SCORE.scorePage(f);
+    const shot = await Env.shot(S.tabId);
+    const h = S.hist && S.hist.key === GS_X.pageKey(f.url) ? S.hist.info : null;
+    await Env.report({ v: 1, at: S.rec.at, facts: f, sc, shot, ev: alertEvidence(sc, f), hist: h ? { prev: h.prev.nota, now: h.now.nota, prevAt: h.prev.at, fixed: h.fixed } : null });
   }
 
   /* a page reviewed in the panel is a day of real use; the third day asks once */
@@ -770,6 +905,8 @@
       draw();
       return;
     }
+    if (a === "ai-cmp") { S.cmp = !S.cmp; draw(); return; }
+    if (a === "report") { openReport(); return; }
     if (a === "review-now") { S.tab = "page"; S.pickedDom = false; reviewNow(); return; }
     if (a === "auto-on") { autoOn(); return; }
     if (a === "auto") {

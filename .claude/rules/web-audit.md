@@ -524,3 +524,11 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
 - **Es una simulación y se dice** en toda pantalla y correo que la enseñe.
 - **`bot_server_blocked` sólo sale para motores que robots.txt deja pasar**, y
   no puntúa: vive en `bots.serverProbe` del snapshot, sin migración.
+
+## Robots.txt y servidor por motor, y lo arreglado (EXT-1.5.0, log §446)
+
+- **Cada motor de «Quién puede leer tu web» enseña robots.txt y Servidor**, con
+  «Simulación · fecha» si hubo sonda. Gemini no tiene celda de servidor.
+- **«Arreglado desde la revisión anterior» sólo nombra comprobaciones que
+  fallaron antes y que ahora se miden y pasan** (`fixedSincePrevious`). Una que
+  ya no se mide no cuenta como arreglada.
