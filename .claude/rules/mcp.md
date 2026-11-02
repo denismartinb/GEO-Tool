@@ -83,3 +83,10 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
 - **El paquete de `docs/chatgpt-plugin/package/` no lleva credenciales**: la
   cuenta de revisión se escribe en el portal. Una herramienta nueva entra en su
   descripción y, si cambia la ficha, se sube un ZIP nuevo.
+
+## Plugin de WordPress (WP-PLUGIN-2, log §432)
+
+- **`/api/ext/*` acepta el token OAuth del plugin** por `readExtRequestAccount`
+  (`lib/ext/request-account.ts`), con `accountFromBearer`. Con cabecera
+  `Authorization` decide sólo la cabecera, nunca la cookie. Sigue siendo sólo
+  lectura y RLS del usuario.

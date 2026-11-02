@@ -4,7 +4,7 @@ Tags: llms.txt, robots.txt, ai, seo, chatgpt
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.7
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -35,7 +35,13 @@ The plugin works on its own and is free. A GenScore account at genscore.es adds 
 
 == External services ==
 
-This plugin does not connect to any external service. It contains links to genscore.es (sign-up, log-in, the free checker and pricing) that open only when you click them. Those links carry UTM parameters (`utm_source=wordpress`) and, on sign-up, your site's domain, so the new account starts with it. GenScore terms: https://www.genscore.es/terminos. Privacy policy: https://www.genscore.es/privacidad.
+The plugin works without any external service. Only if an administrator presses «Conectar con GenScore» does it connect to GenScore (https://www.genscore.es), to show the figures of that GenScore account for this domain:
+
+* What is sent and when: when you connect, the site registers itself with GenScore's sign-in server (Supabase Auth, operated for GenScore) with the site's name and return address, and you approve the access on genscore.es. After that, while the site stays connected and an administrator opens the GenScore screen, the site's server asks GenScore for this domain's figures (at most once every 10 minutes) sending the access token and the site's domain. Nothing about your visitors is ever sent.
+* What is stored: the access and refresh tokens, in your site's database, read only by the server. «Desconectar» deletes them, and you can also remove the access from GenScore (Ajustes, Apps conectadas).
+* GenScore terms: https://www.genscore.es/terminos. Privacy policy: https://www.genscore.es/privacidad. Supabase privacy policy: https://supabase.com/privacy.
+
+The plugin also contains links to genscore.es (sign-up, log-in, the free checker and pricing) that open only when you click them. Those links carry UTM parameters (`utm_source=wordpress`) and, on sign-up, your site's domain, so the new account starts with it.
 
 == Installation ==
 
@@ -69,6 +75,10 @@ No. Every proposal is built from your own WordPress data, with no external servi
 
 No. It runs only when you open the GenScore screen, in your browser, reading your important pages one after another (two at a time). The scores are stored in your site, so the next time only pages that changed are read again.
 
+= What does connecting my GenScore account add? =
+
+The figures of your account for this domain, the same ones the GenScore Chrome extension shows: your Puntuación GEO, how often each engine names you, your competitors, the SEO health of the whole domain, Search Console, the agent score and your next actions. It only reads: nothing in your account changes from WordPress.
+
 == Screenshots ==
 
 1. Summary: the SEO + AI score and what to fix first.
@@ -77,6 +87,9 @@ No. It runs only when you open the GenScore screen, in your browser, reading you
 4. Agents: what a shopping agent can read.
 
 == Changelog ==
+
+= 1.1.0 =
+* «Conectar con GenScore»: with a GenScore account, «Tu dominio» shows your account's figures for this domain (Puntuación GEO, engines, competitors, SEO health, Search Console, agent score and next actions), the same ones as the Chrome extension. Read-only, approved on genscore.es, and «Desconectar» removes the access.
 
 = 1.0.7 =
 * «Arreglar» in one click: structured data, description, title, canonical URL, visible update date, product data and returns policy. GenScore proposes the fix for each page, you review and edit it, confirm, and it is published on the pages you chose. Every publish can be undone.

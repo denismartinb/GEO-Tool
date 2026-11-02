@@ -39,6 +39,9 @@ vi.mock("@/lib/agentic-audit/console-audit", () => ({
   readAgenticAudits: async () => ({ available: true, latest: null })
 }));
 
+const accountFromBearer = vi.fn();
+vi.mock("@/lib/mcp/auth", () => ({ accountFromBearer: (...a: unknown[]) => accountFromBearer(...a) }));
+
 import { GET as context } from "./context/route";
 import { GET as project } from "./project/route";
 
@@ -59,7 +62,7 @@ beforeEach(() => {
 describe("GET /api/ext/context", () => {
   it("answers 401 without a session and never caches", async () => {
     getUser.mockResolvedValue({ data: { user: null } });
-    const res = await context();
+    const res = await context(new Request("https://www.genscore.es/api/ext/context"));
     expect(res.status).toBe(401);
     expect(res.headers.get("cache-control")).toContain("no-store");
     expect(fromCalls).toEqual([]);
@@ -67,7 +70,7 @@ describe("GET /api/ext/context", () => {
 
   it("lists the account's domains with the effective plan", async () => {
     getUser.mockResolvedValue({ data: { user: USER } });
-    const res = await context();
+    const res = await context(new Request("https://www.genscore.es/api/ext/context"));
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toContain("no-store");
     const body = await res.json();
@@ -80,17 +83,17 @@ describe("GET /api/ext/context", () => {
 
   it("opens on the project the console is pointed at, and ignores a foreign id", async () => {
     getUser.mockResolvedValue({ data: { user: USER } });
-    expect((await (await context()).json()).activeDomain).toBe("marca.es");
+    expect((await (await context(new Request("https://www.genscore.es/api/ext/context"))).json()).activeDomain).toBe("marca.es");
     activeCookie.mockReturnValue("p2");
-    expect((await (await context()).json()).activeDomain).toBe("blog.marca.es");
+    expect((await (await context(new Request("https://www.genscore.es/api/ext/context"))).json()).activeDomain).toBe("blog.marca.es");
     activeCookie.mockReturnValue("someone-elses-project");
-    expect((await (await context()).json()).activeDomain).toBe("marca.es");
+    expect((await (await context(new Request("https://www.genscore.es/api/ext/context"))).json()).activeDomain).toBe("marca.es");
   });
 
   it("reads an elapsed trial as free, without writing anything", async () => {
     getUser.mockResolvedValue({ data: { user: USER } });
     profileRow.mockReturnValue({ current_plan: "pro", trial_ends_at: "2020-01-01T00:00:00Z", stripe_subscription_id: null, email: USER.email });
-    const body = await (await context()).json();
+    const body = await (await context(new Request("https://www.genscore.es/api/ext/context"))).json();
     expect(body.plan.id).toBe("free");
     expect(body.trialEndsAt).toBeNull();
   });
@@ -132,5 +135,42 @@ describe("GET /api/ext/project", () => {
     // EXT-AUDITS-1: no snapshot and no review means no blocks, never a zero
     expect(body.audits).toEqual({ auditedAt: null, blocks: [], page: null });
     expect(fromCalls).toContain("web_audit_snapshots");
+  });
+});
+
+describe("WP-PLUGIN-2: the WordPress plugin's bearer token", () => {
+  const withAuth = (path: string, auth: string) =>
+    new Request(`https://www.genscore.es/api/ext/${path}`, { headers: { Authorization: auth } });
+
+  it("is judged by the header alone: a bad token is a 401 even with a valid cookie", async () => {
+    getUser.mockResolvedValue({ data: { user: USER } });
+    accountFromBearer.mockResolvedValue({ kind: "invalid" });
+    const res = await context(withAuth("context", "Bearer abcdefghijklmnopqrstuvwxyz.123"));
+    expect(res.status).toBe(401);
+    expect(getUser).not.toHaveBeenCalled();
+    expect(res.headers.get("vary")).toContain("Authorization");
+  });
+
+  it("reads the account the token belongs to, never the cookie", async () => {
+    getUser.mockResolvedValue({ data: { user: { id: "someone-else", email: "x@y.es" } } });
+    const supabase = {
+      auth: { getUser },
+      from: (table: string) => {
+        fromCalls.push(table);
+        return chain(table === "profiles" ? profileRow : projectRows);
+      }
+    };
+    accountFromBearer.mockResolvedValue({
+      kind: "ok",
+      account: { supabase, user: USER, profile: null, planId: "pro", planName: "Pro", domainCap: 3, trialEndsAt: null }
+    });
+    const res = await context(withAuth("context", "Bearer abcdefghijklmnopqrstuvwxyz.123"));
+    expect(res.status).toBe(200);
+    expect((await res.json()).email).toBe(USER.email);
+    expect(accountFromBearer).toHaveBeenCalledWith("Bearer abcdefghijklmnopqrstuvwxyz.123");
+    expect(getUser).not.toHaveBeenCalled();
+
+    const proj = await project(withAuth("project?domain=otra.es", "Bearer abcdefghijklmnopqrstuvwxyz.123"));
+    expect(proj.status).toBe(404);
   });
 });

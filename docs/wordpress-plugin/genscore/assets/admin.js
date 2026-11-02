@@ -67,7 +67,8 @@
     return '<button class="gs-gau" data-tab="' + tab + '"><span class="gs-arcw">' + arc(v, b[0]) + '<b class="gs-num">' + (v == null ? "–" : v) + '</b></span><span class="gs-nm">' + icon + nm + '</span><span class="gs-st"><span class="gs-dot gs-' + b[0] + '"></span>' + esc(st || b[1]) + ic("i-chevr") + "</span></button>";
   }
   function lock() { return '<span class="gs-lock">' + ic("i-shield") + "</span>"; }
-  function domainCta(where) { return ext(D.links.analyze.replace("utm_content=analizar", "utm_content=" + where), "Analizar <b>&nbsp;" + esc(D.site.domain) + "</b>"); }
+  /* Already a GenScore customer: connect. Not yet: analyse the domain (7-day Pro trial). */
+  function domainCta(where) { return '<div class="gs-acts">' + connectBtn("gs-btn gs-ink") + ext(D.links.analyze.replace("utm_content=analizar", "utm_content=" + where), "Analizar <b>&nbsp;" + esc(D.site.domain) + "</b>", "gs-btn gs-line") + '</div><p class="gs-more">¿Aún sin cuenta? «Analizar» empieza 7 días de Pro gratis.</p>'; }
 
   /* ---------------- robots.txt, read the same way as the extension ---------------- */
   function switchAllowed(id) {
@@ -109,7 +110,7 @@
     return '<span class="gs-site gs-ini" aria-hidden="true">' + esc((name.trim()[0] || "?").toUpperCase()) + "</span>";
   }
   function head() {
-    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span>' + (S.target ? '<button class="gs-btn gs-line gs-sm gs-back" data-act="back">' + ic("i-arrowl") + 'Tu web</button><span class="gs-who gs-pg-t"><b>' + esc(S.target.title || "") + "</b><span>" + esc(S.target.path) + "</span></span>" : "") + '<span class="gs-sp"></span><span class="gs-lgin">Identifícate en <b>GenScore</b> para el análisis completo</span>' + ext(D.links.login, "Entrar", "gs-btn gs-line gs-sm") + "</div>";
+    return '<div class="gs-ph">' + siteMark() + '<span class="gs-who"><b>' + esc(D.site.name || "GenScore") + "</b><span>" + esc(D.site.domain) + '</span></span>' + (S.target ? '<button class="gs-btn gs-line gs-sm gs-back" data-act="back">' + ic("i-arrowl") + 'Tu web</button><span class="gs-who gs-pg-t"><b>' + esc(S.target.title || "") + "</b><span>" + esc(S.target.path) + "</span></span>" : "") + '<span class="gs-sp"></span>' + acctHead() + "</div>";
   }
   function tabs() {
     var T = [["res", "Resumen"], ["geo", "GEO"], ["seo", "SEO"], ["ag", "Agentes"]];
@@ -118,12 +119,18 @@
 
   /* ---------------- «Tu dominio»: what an account adds, never a figure ---------------- */
   function domGeo() {
+    if (acctOn()) return realGeo();
+    if (acctLinked()) return acctWait();
     return '<div class="gs-lyr gs-gs">Tu dominio<small>con tu cuenta de GenScore</small></div><div class="gs-tz"><div class="gs-ill">' + lock() + '<div class="gs-gh4">' + ENG.map(function (e) { return "<div>" + ic("e-" + e[0], "gs-lg") + '<span class="gs-q"></span>' + e[1] + '<span class="gs-bar"></span></div>'; }).join("") + '</div><div class="gs-ghr">' + [1, 2, 3, 4].map(function (n) { return '<div class="' + (n === 2 ? "gs-me" : "") + '"><span>' + n + '</span><i></i><em style="width:' + (80 - n * 10) + '%"></em><u></u></div>'; }).join("") + '</div></div><h3>Conoce cómo te citan los motores</h3><p>Cuánto te nombra cada motor, qué páginas tuyas citan y quién sale antes que tú.</p>' + domainCta("geo") + "</div>";
   }
   function domSeo() {
+    if (acctOn()) return realSeo();
+    if (acctLinked()) return acctWait();
     return '<div class="gs-lyr gs-gs">Tu dominio<small>con tu cuenta de GenScore</small></div><div class="gs-tz"><div class="gs-ill">' + lock() + '<div class="gs-ghs"><span class="gs-ring"></span><div class="gs-ln"><i style="width:92%"></i><i style="width:70%"></i><i style="width:84%"></i></div></div><div class="gs-ghc"><svg viewBox="0 0 200 46" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,36 25,32 50,34 75,26 100,28 125,20 150,22 175,14 200,12" fill="none" stroke="#d3d9e2" stroke-width="2"/></svg></div></div><h3>Conoce la Salud SEO de todo tu dominio</h3><p>Todas tus páginas clave, no solo esta, y con Search Console tus búsquedas de Google, tu puesto y tus clics.</p>' + domainCta("seo") + "</div>";
   }
   function domAg() {
+    if (acctOn()) return realAg();
+    if (acctLinked()) return acctWait();
     var N = ["Descubrimiento", "Comprensión", "Confianza", "Compra"];
     return '<div class="gs-lyr gs-gs">Tu dominio<small>con tu cuenta de GenScore</small></div><div class="gs-tz"><div class="gs-ill">' + lock() + '<div class="gs-ghg">' + N.map(function (n) { return '<div><svg viewBox="0 0 72 56" aria-hidden="true"><path d="' + ARC + '" fill="none" stroke="#e3e6eb" stroke-width="6" stroke-linecap="round"/></svg>' + n + "</div>"; }).join("") + '</div></div><h3>Conoce tu nota para agentes</h3><p>Cómo te descubren, te entienden, se fían y te compran los agentes de ChatGPT, Gemini y Perplexity.</p>' + domainCta("agentes") + "</div>";
   }
@@ -301,16 +308,124 @@
       var mine = '<div class="gs-card"><div class="gs-lab">Arregla primero<small>en toda la web</small></div>' + (WF.length ? WF.map(function (g, i) { return webFixRow(g, i); }).join("") : '<div class="gs-rw"><span class="gs-tx">Tu web está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
       var list = W.entries.slice().sort(function (a, b) { return a.e.nota - b.e.nota; });
       var pagesCard = '<div class="gs-card"><div class="gs-lab">Tus páginas<small>peor nota primero</small></div><div class="gs-prs">' + list.map(function (x) { return pageRow(x); }).join("") + '</div><p class="gs-more">Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas. Al publicar o actualizar algo, revisamos sólo esa página. ' + (S.web.running ? "" : '<button class="gs-link" data-act="rerun-web">Revisar todo ahora</button>') + "</p></div>";
-      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + batchesCard() + pagesCard + deepCard() + acctCard() + "</div></div>";
+      return '<div class="gs-cols"><div class="gs-col">' + hero + mine + '</div><div class="gs-col">' + (acctLinked() ? domCard() : "") + batchesCard() + pagesCard + (acctLinked() ? "" : domCard()) + "</div></div>";
     }
     var fixes = '<div class="gs-card"><div class="gs-lab">Arregla primero</div>' + (F.length ? F.map(function (f, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + f.t + '<span class="gs-why">' + ptsLabel(f.pts, f.unit) + '</span></span>' + (fixBtn(f.id, S.target ? [S.target] : [{ type: "home" }]) || '<button class="gs-btn gs-line gs-sm" data-tab="' + tabOf[f.lane] + '">Ver</button>') + '</div>'; }).join("") : '<div class="gs-rw"><span class="gs-tx">' + cap(tu()) + ' está bien. No hay nada urgente.</span>' + ok("Bien") + "</div>") + "</div>";
-    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + batchesCard() + deepCard() + acctCard() + "</div></div>";
+    return '<div class="gs-cols"><div class="gs-col">' + hero + fixes + '</div><div class="gs-col">' + (acctLinked() ? domCard() : "") + batchesCard() + (acctLinked() ? "" : domCard()) + "</div></div>";
   }
   function deepCard() {
     return '<div class="gs-deep"><div class="gs-egs">' + ENG.map(function (e) { return "<span>" + ic("e-" + e[0], "gs-lg") + "</span>"; }).join("") + '</div><p class="gs-q">¿Quieres saber si ChatGPT, Gemini, Claude y Perplexity recomiendan <b>' + esc(D.site.domain) + "</b> y a sus competidores?</p>" + ext(D.links.analyze, "Analizar dominio", "gs-btn gs-onink") + '<p class="gs-ft">7 días de Pro gratis. Sin tarjeta.</p></div>';
   }
   function acctCard() {
     return '<div class="gs-card"><div class="gs-lab">Con tu cuenta</div>' + [["Auditoría GEO", "¿Te puede citar la IA?"], ["Auditoría SEO", "¿Te encuentra Google?"], ["Auditoría agéntica", "¿Puede un agente comprar en tu web?"]].map(function (a) { return '<div class="gs-aul"><span class="gs-sh">' + ic("i-shield") + '</span><span class="gs-t"><b>' + a[0] + "</b><small>" + a[1] + '</small></span><span class="gs-gh"></span></div>'; }).join("") + '<p style="font-size:13.5px;color:var(--ink-2)">Auditoría técnica completa de todo tu dominio: cómo está y qué mejorar primero.</p>' + ext(D.links.login.replace("utm_content=identificate", "utm_content=auditorias"), "Identifícate en GenScore", "gs-btn gs-line") + "</div>";
+  }
+
+  /* ---------------- «Tu dominio» with the GenScore account (WP-PLUGIN-2, log §432) ----------------
+     The figures come from GenScore's read-only API, through this site's server
+     (the token never reaches the browser), and are the same the Chrome
+     extension shows. Shares are printed as percentages, never counts. What
+     GenScore did not return is not drawn. No prices and no payment here. */
+  var AC = D.account || {};
+  S.acct = AC.data || { state: AC.connected ? "loading" : "off" };
+  function acctOn() { return S.acct.state === "connected"; }
+  function acctLinked() { return ["connected", "not_found", "loading", "error"].indexOf(S.acct.state) >= 0; }
+  function appUrl(path, content) { return D.links.app + path + (path.indexOf("?") >= 0 ? "&" : "?") + "utm_source=wordpress&utm_medium=plugin&utm_campaign=wp-plugin&utm_content=" + content; }
+  function projPath(sub) {
+    var P = S.acct.project, C = S.acct.context;
+    var d = P && C && C.domains ? C.domains.filter(function (x) { return x.domain === P.domain; })[0] : null;
+    return d ? "/dashboard/projects/" + encodeURIComponent(d.id) + (sub ? "/" + sub : "") : "/dashboard";
+  }
+  function goApp(sub, label, content, cls) { return ext(appUrl(projPath(sub), content), label, cls || "gs-btn gs-line gs-sm"); }
+  function pct(s) { return s == null ? null : Math.round(s * 100); }
+  function nES(n, d) { return Number(n).toLocaleString("es-ES", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
+  function connectBtn(cls) { return '<a class="' + (cls || "gs-btn gs-blue") + '" href="' + esc(AC.connect) + '">Conectar con GenScore' + ic("i-arrowr") + "</a>"; }
+  function acctHead() {
+    if (!acctLinked()) return '<span class="gs-lgin">Conecta tu cuenta de <b>GenScore</b> para ver tus cifras</span>' + connectBtn("gs-btn gs-blue gs-sm");
+    var C = S.acct.context;
+    var who = C ? esc(C.email || "") + (C.plan && C.plan.name ? " · " + esc(C.plan.name) : "") : "Conectado";
+    return '<span class="gs-acct"><span class="gs-acav">' + ic("i-check") + '</span><span class="gs-acct-t">' + who + '</span></span><button class="gs-btn gs-line gs-sm" data-act="disconnect">Desconectar</button>';
+  }
+  function domLyr(src) { return '<div class="gs-lyr gs-gs">Tu dominio<small>' + esc(src) + "</small></div>"; }
+  function scanLabel(P) {
+    if (!P.scanDate) return "sin escaneo completado";
+    var d = new Date(P.scanDate);
+    return isNaN(d) ? "último escaneo" : "escaneo del " + d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+  }
+  /* Signed in but the figures are not here (yet): loading, not in the account, or GenScore failed. */
+  function acctWait() {
+    var st = S.acct.state;
+    if (st === "loading") return domLyr("leyendo tu cuenta") + '<div class="gs-card gs-pending"><span class="gs-spin"></span><p>Leyendo las cifras de ' + esc(D.site.domain) + " en GenScore…</p></div>";
+    if (st === "error") return domLyr("tu cuenta de GenScore") + '<div class="gs-card"><p>No hemos podido leer tu cuenta de GenScore ahora mismo.</p><div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-act="acct-reload">Volver a intentarlo</button></div></div>';
+    var C = S.acct.context || {}, n = (C.domains || []).length, full = C.domainCap != null && n >= C.domainCap;
+    var btn = full ? ext(appUrl("/dashboard/settings#plan", "plan-lleno"), "Ver tu plan", "gs-btn gs-line") : ext(appUrl("/dashboard/projects/new?dominio=" + encodeURIComponent(D.site.domain), "anadir-dominio"), "Añadir <b>&nbsp;" + esc(D.site.domain) + "</b>");
+    return domLyr("tu cuenta de GenScore") + '<div class="gs-card"><p>Tu cuenta no tiene <b>' + esc(D.site.domain) + "</b>. Añádelo para ver aquí sus cifras.</p>" + (full ? '<p class="gs-more">Tu plan ya tiene todos sus dominios ocupados.</p>' : "") + '<div class="gs-acts">' + btn + "</div></div>";
+  }
+  function noScan(P) { return P.scanDate ? "" : '<div class="gs-hint">Todavía no hay un escaneo completado de este dominio. En cuanto termine, verás aquí sus cifras.</div>'; }
+  function realGeo() {
+    var P = S.acct.project, E = P.engines || [], R = P.rivals || [];
+    var max = Math.max.apply(null, [1].concat(R.map(function (r) { return pct(r.share) || 0; })));
+    var engines = E.length ? '<div class="gs-card"><div class="gs-lab">Te nombran por motor</div><div class="gs-eng4">' + E.map(function (e) {
+      var v = pct(e.mentionShare), k = String(e.provider || "").toLowerCase().replace("openai", "chatgpt");
+      return '<div class="gs-ec gs-ecv"><span class="gs-lgw">' + ic("e-" + k, "gs-lg") + '</span><span class="gs-pc gs-num">' + v + "<small>%</small></span><b>" + esc(e.label) + '</b><span class="gs-tb"><i style="width:' + v + '%"></i></span></div>';
+    }).join("") + "</div></div>" : "";
+    var rivals = R.length ? '<div class="gs-card"><div class="gs-lab">Frente a tus rivales<small>te nombran</small></div><div class="gs-xk">' + R.map(function (r, i) {
+      var v = pct(r.share);
+      return '<div class="gs-xq' + (r.isBrand ? " gs-me" : "") + '"><span class="gs-ps gs-num">' + (i + 1) + '</span><span class="gs-n">' + esc(r.name) + '</span><span class="gs-tb"><i style="width:' + Math.round((v / max) * 100) + '%"></i></span><span class="gs-v gs-num">' + v + "<small>%</small></span></div>";
+    }).join("") + '</div><div class="gs-acts">' + goApp("competitors", "Ver competidores", "competidores") + "</div></div>" : "";
+    return domLyr(scanLabel(P)) + noScan(P) + (P.lede ? '<p class="gs-say gs-say-l">' + esc(P.lede) + "</p>" : "") + engines + rivals;
+  }
+  function auBlock(key) { var A = S.acct.project.audits; return A && A.blocks ? A.blocks.filter(function (b) { return b.key === key; })[0] : null; }
+  var SEVC = { critical: "low", high: "low", medium: "mid", low: "mid", agentic: "mid" };
+  function issueRows(b) {
+    return b.issues.map(function (x) { return '<div class="gs-rw"><span class="gs-dot gs-' + (SEVC[x.severity] || "mid") + '"></span><span class="gs-tx">' + esc(x.label) + (x.scope ? "<small>" + esc(x.scope) + "</small>" : "") + "</span>" + (x.points == null ? "" : '<span class="gs-pts">+' + nES(x.points, x.points % 1 ? 1 : 0) + " pt</span>") + "</div>"; }).join("");
+  }
+  function dPct(x) { return x == null ? "" : '<span class="d ' + (x >= 0 ? "gs-up" : "gs-down") + '">' + (x >= 0 ? "+" : "") + nES(x) + "%</span>"; }
+  function gscCard() {
+    var g = S.acct.project.searchConsole;
+    if (!g || g.state === "off" || g.state === "error") return "";
+    var head = '<div class="gs-lab">' + ic("e-google", "gs-i") + "Google<small>últimos 28 días</small></div>";
+    if (g.state === "disconnected" || g.state === "reconnect") return '<div class="gs-card">' + head + "<p>" + (g.state === "reconnect" ? "Google ha retirado el permiso de Search Console. Vuelve a conectarlo en GenScore." : "Conecta Search Console en GenScore para ver aquí tus búsquedas, tu puesto y tus clics.") + '</p><div class="gs-acts">' + goApp("search-console", g.state === "reconnect" ? "Volver a conectar" : "Conectar con Google", "search-console") + "</div></div>";
+    if (g.state === "pick_property") return '<div class="gs-card">' + head + "<p>Search Console está conectado. Elige en GenScore qué propiedad corresponde a " + esc(S.acct.project.domain) + '.</p><div class="gs-acts">' + goApp("search-console", "Elegir propiedad", "search-console") + "</div></div>";
+    var t = g.trend || {};
+    var pos = g.position == null || g.position === 0 ? "–" : nES(g.position, 1);
+    var dp = t.positionDelta == null || Math.abs(t.positionDelta) < 0.05 ? "" : '<span class="d ' + (t.positionDelta > 0 ? "gs-up" : "gs-down") + '">' + (t.positionDelta > 0 ? "▲" : "▼") + " " + nES(Math.abs(t.positionDelta), 1) + "</span>";
+    var k3 = '<div class="gs-k3"><div><span>Clics</span><b class="gs-num">' + nES(g.clicks) + "</b>" + dPct(t.clicksDeltaPct) + '</div><div><span>Impresiones</span><b class="gs-num">' + nES(t.impressions || 0) + "</b>" + dPct(t.impressionsDeltaPct) + '</div><div><span>Puesto medio</span><b class="gs-num">' + pos + "</b>" + dp + "</div></div>";
+    var q = (t.queries || []).map(function (r) { return '<div class="gs-rw"><span class="gs-pp gs-num">' + nES(r.position, 1) + '</span><span class="gs-tx">' + esc(r.query) + '</span><span class="gs-pts">' + nES(r.clicks) + (r.clicks === 1 ? " clic" : " clics") + "</span></div>"; }).join("");
+    var near = (t.near || []).map(function (r) { return '<div class="gs-rw"><span class="gs-pp gs-num">' + nES(r.position, 1) + '</span><span class="gs-tx">' + esc(r.query) + '</span><span class="gs-pts">' + nES(r.impressions) + " impr.</span></div>"; }).join("");
+    return '<div class="gs-card">' + head + k3 + (q ? '<div class="gs-mh">Tus búsquedas con más clics</div><div class="gs-rows">' + q + "</div>" : "") + (near ? '<div class="gs-mh">Casi en la página 1<small>puestos 11 a 20</small></div><div class="gs-rows">' + near + "</div>" : "") + '<div class="gs-acts">' + goApp("search-console", "Ver Posición en Google", "search-console") + "</div></div>";
+  }
+  function realSeo() {
+    var P = S.acct.project, b = auBlock("seo");
+    var audit = b ? '<div class="gs-card"><div class="gs-lab">Salud SEO<small>' + (b.projected ? b.score + " → " + b.projected + " si lo arreglas" : "todo el dominio") + '</small></div><div class="gs-big gs-num">' + b.score + "<small>/100</small></div>" + (b.issues.length ? '<div class="gs-mh">Lo que más resta en tu dominio</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("web-audit?bloque=seo", "Ver la Auditoría SEO", "auditoria-seo") + "</div></div>" : '<div class="gs-card"><p>Todavía no hay auditoría técnica de este dominio. Se hace sola tras cada escaneo.</p></div>';
+    return domLyr(P.audits && P.audits.auditedAt ? "auditoría del " + new Date(P.audits.auditedAt).toLocaleDateString("es-ES", { day: "numeric", month: "short" }) : "auditoría SEO") + audit + gscCard();
+  }
+  function realAg() {
+    var P = S.acct.project, a = P.agentic;
+    if (a && a.kind === "upsell") return domLyr("auditoría agéntica") + '<div class="gs-card"><p>La auditoría agéntica de todo tu dominio no está incluida en tu plan.</p><div class="gs-acts">' + ext(appUrl("/precios", "agentes-plan"), "Ver planes", "gs-btn gs-line gs-sm") + "</div></div>";
+    if (!a || a.kind !== "card") return domLyr("auditoría agéntica") + '<div class="gs-card"><p>Todavía no hay auditoría agéntica de este dominio. Se hace sola tras cada escaneo cuando GenScore encuentra algo que vendes.</p></div>';
+    var b = auBlock("agent");
+    return domLyr("auditoría agéntica") + '<div class="gs-card"><div class="gs-lab">Nota para agentes<small>' + esc(a.headline || "") + '</small></div><div class="gs-gg4">' + a.components.map(function (c) {
+      var v = c.points == null ? null : Math.round((c.points / c.weight) * 100), bb = band(v);
+      return '<div class="gs-gau gs-gau-s"><span class="gs-arcw">' + arc(v, bb[0]) + '<b class="gs-num">' + (v == null ? "–" : v) + '</b></span><span class="gs-nm">' + esc(c.name) + '</span><span class="gs-st"><span class="gs-dot gs-' + bb[0] + '"></span>' + esc(bb[1]) + "</span></div>";
+    }).join("") + "</div>" + (b && b.issues.length ? '<div class="gs-mh">Lo primero</div><div class="gs-rows">' + issueRows(b) + "</div>" : "") + '<div class="gs-acts">' + goApp("agentic-visibility", "Ver visibilidad en agentes", "agentes") + "</div></div>";
+  }
+  /* Resumen: the account's three figures and its plan, next to the site review. */
+  function domCard() {
+    if (!acctLinked()) return deepCard() + acctCard();
+    if (!acctOn()) return acctWait();
+    var P = S.acct.project, ag = P.agentic && P.agentic.kind === "card" ? P.agentic.score : null;
+    var plan = (P.plan || []).map(function (x, i) { return '<div class="gs-fx"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + "</span></div>"; }).join("");
+    return '<div class="gs-card gs-domc">' + domLyr(scanLabel(P)) + noScan(P) + '<div class="gs-gg3">' + gauge("geo", "Puntuación GEO", "", P.geoScore, null) + gauge("seo", "Salud SEO", ic("e-google", "gs-i"), P.seoScore, null) + (ag == null ? "" : gauge("ag", "Agentes", ic("i-cart"), ag, null)) + "</div>" + (P.lede ? '<p class="gs-say">' + esc(P.lede) + "</p>" : "") + "</div>"
+      + (plan ? '<div class="gs-card"><div class="gs-lab">Tus próximas acciones<small>de GenScore</small></div>' + plan + '<div class="gs-acts">' + goApp("recommendations", "Abrir en GenScore", "plan", "gs-btn gs-blue gs-sm") + "</div></div>" : "");
+  }
+  function loadAccount(fresh) {
+    if (!AC.connected) return;
+    if (!S.acct.state || S.acct.state === "off" || S.acct.state === "error") S.acct = { state: "loading" };
+    post("genscore_account", fresh ? { fresh: "1" } : {}).then(function (r) {
+      S.acct = r && r.success && r.data ? r.data : { state: "error" };
+      if (S.acct.state === "expired" || S.acct.state === "off") { AC.connected = false; if (S.acct.state === "expired") toast("Tu conexión con GenScore ha caducado. Vuelve a conectar para ver tus cifras."); S.acct = { state: "off" }; }
+      render();
+    }, function () { S.acct = { state: "error" }; render(); });
   }
 
   /* ---------------- render ---------------- */
@@ -872,7 +987,12 @@
       return;
     }
     if (act === "save-llms") { saveLlms("edit"); return; }
-    if (act === "llms-reset") { saveLlms("reset"); }
+    if (act === "llms-reset") { saveLlms("reset"); return; }
+    if (act === "acct-reload") { S.acct = { state: "loading" }; render(); loadAccount(true); return; }
+    if (act === "disconnect") {
+      a.disabled = true;
+      post("genscore_disconnect", {}).then(function () { AC.connected = false; S.acct = { state: "off" }; toast("Tu web ya no está conectada a GenScore."); render(); }, function () { a.disabled = false; });
+    }
   });
   /* The text only travels when the person typed in the box: saving the
      generated text untouched must never store a copy of it (a post published
@@ -898,6 +1018,11 @@
     }).catch(function () { S.msg.llms = '<span class="gs-err">No se ha podido guardar. Vuelve a intentarlo.</span>'; render(); });
   }
 
+  if (AC.result) {
+    var RES = { connected: "Conectada con GenScore. Ya ves aquí las cifras de tu cuenta.", denied: "No se ha conectado: has cancelado el permiso en GenScore.", expired: "El permiso ha tardado demasiado. Vuelve a pulsar «Conectar con GenScore».", unreachable: "No hemos podido hablar con GenScore. Vuelve a intentarlo en un momento." };
+    if (RES[AC.result]) toast(RES[AC.result]);
+  }
   review();
   checkSitemap();
+  loadAccount(false);
 })();
