@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
-import { buildExtProjectSummary, findCitingPrompts, isDraftable, pageKey, toExtAgentic } from "./summary";
+import { buildExtProjectSummary, findCitingPrompts, isDraftable, pageKey, toExtAgentic, toExtPlanItem } from "./summary";
 
 const label = (p: string) => ({ openai: "ChatGPT", gemini: "Gemini", claude: "Claude", perplexity: "Perplexity" })[p] ?? p;
 
@@ -157,5 +157,23 @@ describe("isDraftable (WP-PLUGIN-3, log §432)", () => {
     expect(isDraftable({ title: "Publica tu comparativa con Nomad", type: "close_competitor_gap", questions: q })).toBe(false);
     expect(isDraftable({ title: "Consigue que te mencionen en foros", type: "pursue_community_sources", questions: q })).toBe(false);
     expect(isDraftable({ title: "Publica una página sobre «Cafeteras»", type: "lever", questions: [] })).toBe(false);
+  });
+  it("offers comparison and criticism drafts when there is something to name (adenda 1.4.0)", () => {
+    expect(isDraftable({ title: "Publica tu comparativa con Nomad", type: "close_competitor_gap", rival: "Nomad" })).toBe(true);
+    expect(isDraftable({ title: "Mejora tu comparativa con Nomad", type: "close_competitor_gap", rival: "Nomad" })).toBe(false);
+    expect(isDraftable({ title: "Publica una comparativa con tabla y tus rivales", type: "add_comparison_content" })).toBe(true);
+    expect(isDraftable({ title: "Añade una tabla a tu comparativa", type: "add_comparison_content" })).toBe(false);
+    expect(isDraftable({ title: "Publica una página que responda a las críticas", type: "address_negative_narrative", drivers: ["caro"] })).toBe(true);
+    expect(isDraftable({ title: "Publica una página que responda a las críticas", type: "address_negative_narrative", drivers: [] })).toBe(false);
+  });
+});
+
+describe("toExtPlanItem (WP-PLUGIN-4, adenda 1.4.0)", () => {
+  const base = { title: "Responde esta pregunta en /cafe", firstStep: null, engineLabels: ["Gemini"], questions: ["¿Qué café?"], type: "increase_brand_visibility" };
+  it("passes type, rival and drivers, and only an own http(s) page", () => {
+    const item = toExtPlanItem({ ...base, page: "https://www.marca.es/cafe", rival: null, drivers: [] }, "marca.es");
+    expect(item).toMatchObject({ type: "increase_brand_visibility", page: "https://www.marca.es/cafe", rival: null, drivers: [] });
+    expect(toExtPlanItem({ ...base, page: "https://otra.es/cafe" }, "marca.es").page).toBeNull();
+    expect(toExtPlanItem({ ...base, page: "javascript:alert(1)" }, "marca.es").page).toBeNull();
   });
 });

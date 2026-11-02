@@ -1,60 +1,159 @@
 <?php
 /**
- * «Crear borrador» (WP-PLUGIN-3, log §432): a draft post for a recommendation
- * of the GenScore plan that asks to publish a page answering some questions.
- * The draft holds the questions as headings and nothing else: GenScore never
- * writes the answer, and the post stays a draft until the person publishes it.
+ * What the plugin does with the GenScore plan (WP-PLUGIN-3 and 4, log §432):
+ *
+ *  - «Crear borrador» for an item that asks for a new page: a page for some
+ *    questions, a comparison with a rival (or with every tracked rival), or an
+ *    answer to the criticisms the AI repeats. The draft holds the structure
+ *    and only data WordPress or WooCommerce already has; every answer and
+ *    every fact about a rival is left for the person, as an empty paragraph
+ *    with a hint or a cell marked «[Pendiente…]». It is never published.
+ *  - «Añadir preguntas a la página» for an item whose questions belong on a
+ *    page that already exists: the person writes the answers and they are
+ *    served at the end of that page (includes/fixes-more.php), never written
+ *    into its content.
  *
  * @package GenScore
  */
 
 defined( 'ABSPATH' ) || exit;
 
-/** Drafts created here: [ first question => post id ], so a second click opens the same one. */
+/** Drafts created here: [ key => post id ], so a second click opens the same one. */
 define( 'GENSCORE_DRAFTS_OPTION', 'genscore_drafts' );
 /** Headings in one draft, at most. */
 define( 'GENSCORE_DRAFT_QUESTIONS', 8 );
+/** Rivals in a comparison with the tracked rivals, at most. */
+define( 'GENSCORE_DRAFT_RIVALS', 3 );
+/** What a cell left for the person says. The editor box counts them. */
+define( 'GENSCORE_PENDING', '[Pendiente' );
 
 /**
- * The plan item as GenScore sent it, only when it asks for a new page.
+ * The plan as GenScore sent it.
  *
- * @param int $index Position in the plan.
- * @return array|null { title, questions }
+ * @return array{plan: array[], project: array}|null
  */
-function genscore_draft_item( $index ) {
+function genscore_plan_data() {
 	$data = genscore_account_data( false );
 	if ( ! is_array( $data ) || 'connected' !== $data['state'] || empty( $data['project']['plan'] ) || ! is_array( $data['project']['plan'] ) ) {
 		return null;
 	}
-	$plan = array_values( $data['project']['plan'] );
-	if ( ! isset( $plan[ $index ] ) || ! is_array( $plan[ $index ] ) || empty( $plan[ $index ]['draft'] ) ) {
-		return null;
-	}
-	$questions = array();
-	foreach ( (array) ( $plan[ $index ]['questions'] ?? array() ) as $q ) {
-		$q = sanitize_text_field( (string) $q );
-		if ( '' !== $q && ! in_array( $q, $questions, true ) ) {
-			$questions[] = $q;
-		}
-	}
-	if ( ! $questions ) {
-		return null;
-	}
-	return array(
-		'title'     => sanitize_text_field( (string) ( $plan[ $index ]['title'] ?? '' ) ),
-		'questions' => array_slice( $questions, 0, GENSCORE_DRAFT_QUESTIONS ),
-	);
+	return array( 'plan' => array_values( $data['project']['plan'] ), 'project' => $data['project'] );
 }
 
 /**
- * The draft's title: the question when there is one, the topic of a page
- * lever («Publica una página sobre «Cafeteras»» → «Cafeteras»), or the first
- * question. Never a title GenScore made up.
+ * Distinct clean strings of a list.
+ *
+ * @param mixed $list List.
+ * @param int   $max  At most.
+ * @return string[]
+ */
+function genscore_clean_list( $list, $max ) {
+	$out = array();
+	foreach ( (array) $list as $q ) {
+		$q = sanitize_text_field( (string) $q );
+		if ( '' !== $q && ! in_array( $q, $out, true ) ) {
+			$out[] = $q;
+		}
+	}
+	return array_slice( $out, 0, $max );
+}
+
+/**
+ * The draft kind of a plan item: questions, compare, rivals or critics.
+ *
+ * @param array $item Plan item.
+ * @return string|null
+ */
+function genscore_draft_kind( $item ) {
+	$type = (string) ( $item['type'] ?? '' );
+	if ( 'close_competitor_gap' === $type ) {
+		return 'compare';
+	}
+	if ( 'add_comparison_content' === $type ) {
+		return 'rivals';
+	}
+	if ( 'address_negative_narrative' === $type ) {
+		return 'critics';
+	}
+	return 'questions';
+}
+
+/**
+ * The plan item, only when it asks for a new page.
+ *
+ * @param int $index Position in the plan.
+ * @return array|null { kind, key, title, questions, rival, rivals, drivers, brand }
+ */
+function genscore_draft_item( $index ) {
+	$d = genscore_plan_data();
+	if ( ! $d || ! isset( $d['plan'][ $index ] ) || ! is_array( $d['plan'][ $index ] ) || empty( $d['plan'][ $index ]['draft'] ) ) {
+		return null;
+	}
+	$item = $d['plan'][ $index ];
+	$kind = genscore_draft_kind( $item );
+	$out  = array(
+		'kind'      => $kind,
+		'title'     => sanitize_text_field( (string) ( $item['title'] ?? '' ) ),
+		'questions' => genscore_clean_list( $item['questions'] ?? array(), GENSCORE_DRAFT_QUESTIONS ),
+		'rival'     => sanitize_text_field( (string) ( $item['rival'] ?? '' ) ),
+		'drivers'   => genscore_clean_list( $item['drivers'] ?? array(), 6 ),
+		'brand'     => sanitize_text_field( (string) ( $d['project']['brand'] ?? '' ) ),
+		'rivals'    => array(),
+	);
+	if ( '' === $out['brand'] ) {
+		$out['brand'] = wp_strip_all_tags( html_entity_decode( get_bloginfo( 'name' ), ENT_QUOTES, 'UTF-8' ) );
+	}
+	foreach ( (array) ( $d['project']['rivals'] ?? array() ) as $r ) {
+		if ( is_array( $r ) && empty( $r['isBrand'] ) && ! empty( $r['name'] ) ) {
+			$out['rivals'][] = sanitize_text_field( (string) $r['name'] );
+		}
+	}
+	$out['rivals'] = array_slice( array_values( array_unique( $out['rivals'] ) ), 0, GENSCORE_DRAFT_RIVALS );
+	if ( ( 'questions' === $kind && ! $out['questions'] ) || ( 'compare' === $kind && '' === $out['rival'] ) || ( 'rivals' === $kind && ! $out['rivals'] ) || ( 'critics' === $kind && ! $out['drivers'] ) ) {
+		return null;
+	}
+	$out['key'] = genscore_draft_key( $out );
+	return $out;
+}
+
+/**
+ * The key a draft is remembered by. The screen builds the same one
+ * (draftKey in admin.js).
+ *
+ * @param array $item From genscore_draft_item().
+ * @return string
+ */
+function genscore_draft_key( $item ) {
+	switch ( $item['kind'] ) {
+		case 'compare':
+			return 'compare:' . $item['rival'];
+		case 'rivals':
+			return 'rivals:' . $item['title'];
+		case 'critics':
+			return 'critics:' . $item['title'];
+	}
+	return $item['questions'][0];
+}
+
+/**
+ * The draft's title: the question or the topic for a page of questions;
+ * «Marca frente a Rival» for a comparison. Never a claim GenScore made up.
  *
  * @param array $item From genscore_draft_item().
  * @return string
  */
 function genscore_draft_title( $item ) {
+	switch ( $item['kind'] ) {
+		case 'compare':
+			/* translators: 1: brand, 2: rival. */
+			return sprintf( __( '%1$s frente a %2$s', 'genscore' ), $item['brand'], $item['rival'] );
+		case 'rivals':
+			/* translators: 1: brand, 2: rivals. */
+			return sprintf( __( '%1$s frente a %2$s', 'genscore' ), $item['brand'], genscore_join_names( $item['rivals'] ) );
+		case 'critics':
+			/* translators: %s: brand. */
+			return sprintf( __( 'Lo que debes saber de %s', 'genscore' ), $item['brand'] );
+	}
 	if ( 1 < count( $item['questions'] ) && preg_match( '/«([^»]+)»/u', $item['title'], $m ) ) {
 		return $m[1];
 	}
@@ -62,24 +161,148 @@ function genscore_draft_title( $item ) {
 }
 
 /**
- * Block markup: one heading per question, each followed by an empty paragraph.
+ * «A, B y C».
  *
- * @param string[] $questions The questions.
+ * @param string[] $names Names.
  * @return string
  */
-function genscore_draft_content( $questions ) {
+function genscore_join_names( $names ) {
+	if ( count( $names ) < 2 ) {
+		return implode( '', $names );
+	}
+	$last = array_pop( $names );
+	/* translators: 1: names, 2: last name. */
+	return sprintf( __( '%1$s y %2$s', 'genscore' ), implode( ', ', $names ), $last );
+}
+
+/**
+ * An empty paragraph with a hint the editor shows in grey. It prints nothing
+ * until the person writes in it.
+ *
+ * @param string $hint Hint.
+ * @return string
+ */
+function genscore_block_hole( $hint ) {
+	return '<!-- wp:paragraph ' . wp_json_encode( array( 'placeholder' => $hint ), JSON_UNESCAPED_UNICODE ) . ' --><p></p><!-- /wp:paragraph -->' . "\n\n";
+}
+
+/**
+ * A heading block.
+ *
+ * @param string $text  Text.
+ * @param int    $level Level.
+ * @return string
+ */
+function genscore_block_heading( $text, $level = 2 ) {
+	$attr = 2 === $level ? '' : ' ' . wp_json_encode( array( 'level' => $level ) );
+	return '<!-- wp:heading' . $attr . ' --><h' . $level . ' class="wp-block-heading">' . esc_html( $text ) . '</h' . $level . '><!-- /wp:heading -->' . "\n\n";
+}
+
+/**
+ * A table block.
+ *
+ * @param string[] $head Header cells.
+ * @param array[]  $rows Rows of cells.
+ * @return string
+ */
+function genscore_block_table( $head, $rows ) {
+	$h = '<thead><tr>' . implode( '', array_map( function ( $c ) {
+		return '<th>' . esc_html( $c ) . '</th>';
+	}, $head ) ) . '</tr></thead><tbody>';
+	foreach ( $rows as $r ) {
+		$h .= '<tr>' . implode( '', array_map( function ( $c ) {
+			return '<td>' . esc_html( $c ) . '</td>';
+		}, $r ) ) . '</tr>';
+	}
+	return '<!-- wp:table --><figure class="wp-block-table"><table>' . $h . '</tbody></table></figure><!-- /wp:table -->' . "\n\n";
+}
+
+/**
+ * What the shop itself can say in a comparison, from WooCommerce. A row with
+ * nothing to say keeps a «[Pendiente…]» cell for the person.
+ *
+ * @return array[] [ label, own value ]
+ */
+function genscore_own_compare_rows() {
+	$pending = GENSCORE_PENDING . ': tu dato]';
+	$rows    = array();
+	if ( function_exists( 'wc_get_products' ) ) {
+		$prices = array();
+		$count  = 0;
+		$sum    = 0.0;
+		foreach ( wc_get_products( array( 'status' => 'publish', 'limit' => 200, 'visibility' => 'catalog' ) ) as $p ) {
+			if ( '' !== (string) $p->get_price() ) {
+				$prices[] = (float) $p->get_price();
+			}
+			if ( (int) $p->get_review_count() > 0 ) {
+				$count += (int) $p->get_review_count();
+				$sum   += (float) $p->get_average_rating() * (int) $p->get_review_count();
+			}
+		}
+		$price  = $prices ? html_entity_decode( wp_strip_all_tags( wc_price( min( $prices ) ) ), ENT_QUOTES, 'UTF-8' ) : $pending;
+		$ship   = genscore_shipping_settings();
+		$money  = static function ( $v ) {
+			return html_entity_decode( wp_strip_all_tags( wc_price( (float) $v ) ), ENT_QUOTES, 'UTF-8' );
+		};
+		$ship_t = '' !== (string) $ship['cost'] ? ( 0.0 === (float) $ship['cost'] ? __( 'Gratis', 'genscore' ) : $money( $ship['cost'] ) ) . ( '' !== (string) $ship['free'] && (float) $ship['free'] > 0 ? ', ' . sprintf( /* translators: %s: amount. */ __( 'gratis desde %s', 'genscore' ), $money( $ship['free'] ) ) : '' ) : $pending;
+		$ret    = get_option( GENSCORE_RETURNS_OPTION, array() );
+		$ret_t  = is_array( $ret ) && ! empty( $ret['days'] ) ? sprintf( /* translators: %d: days. */ _n( '%d día', '%d días', (int) $ret['days'], 'genscore' ), (int) $ret['days'] ) : $pending;
+		$rate_t = $count ? sprintf( /* translators: 1: rating, 2: reviews. */ __( '%1$s de 5 (%2$d reseñas)', 'genscore' ), str_replace( '.', ',', (string) round( $sum / $count, 1 ) ), $count ) : $pending;
+		$rows[] = array( __( 'Precio desde', 'genscore' ), $price );
+		$rows[] = array( __( 'Envío', 'genscore' ), $ship_t );
+		$rows[] = array( __( 'Devoluciones', 'genscore' ), $ret_t );
+		$rows[] = array( __( 'Valoración', 'genscore' ), $rate_t );
+		return $rows;
+	}
+	foreach ( array( __( 'Qué ofrece', 'genscore' ), __( 'Precio', 'genscore' ), __( 'Para quién es', 'genscore' ) ) as $l ) {
+		$rows[] = array( $l, $pending );
+	}
+	return $rows;
+}
+
+/**
+ * Block markup of the draft.
+ *
+ * @param array $item From genscore_draft_item().
+ * @return string
+ */
+function genscore_draft_content( $item ) {
 	$out = '';
-	foreach ( $questions as $q ) {
-		$out .= '<!-- wp:heading --><h2 class="wp-block-heading">' . esc_html( $q ) . '</h2><!-- /wp:heading -->' . "\n\n";
-		$out .= '<!-- wp:paragraph --><p></p><!-- /wp:paragraph -->' . "\n\n";
+	if ( in_array( $item['kind'], array( 'compare', 'rivals' ), true ) ) {
+		$rivals = 'compare' === $item['kind'] ? array( $item['rival'] ) : $item['rivals'];
+		$out   .= genscore_block_hole( __( 'Resumen en dos frases: para quién es mejor cada opción.', 'genscore' ) );
+		$out   .= genscore_block_heading( __( 'Comparativa rápida', 'genscore' ) );
+		$rows   = array();
+		foreach ( genscore_own_compare_rows() as $r ) {
+			$rows[] = array_merge( $r, array_fill( 0, count( $rivals ), GENSCORE_PENDING . ': dato, enlace y fecha]' ) );
+		}
+		$out .= genscore_block_table( array_merge( array( __( 'Dato', 'genscore' ), $item['brand'] ), $rivals ), $rows );
+		foreach ( $item['questions'] as $q ) {
+			$out .= genscore_block_heading( $q ) . genscore_block_hole( __( 'Tu respuesta.', 'genscore' ) );
+		}
+		$out .= genscore_block_heading( __( 'Fuentes', 'genscore' ) );
+		$out .= genscore_block_hole( __( 'Enlace y fecha de cada dato de otra marca. Sin fuente, no lo publiques.', 'genscore' ) );
+		return $out;
+	}
+	if ( 'critics' === $item['kind'] ) {
+		$out .= genscore_block_hole( __( 'Una frase que diga qué haces y para quién, con tus palabras.', 'genscore' ) );
+		foreach ( $item['drivers'] as $d ) {
+			$out .= genscore_block_heading( mb_strtoupper( mb_substr( $d, 0, 1 ) ) . mb_substr( $d, 1 ) );
+			$out .= genscore_block_hole( __( 'Cómo es de verdad, con un dato que se pueda comprobar.', 'genscore' ) );
+		}
+		return $out;
+	}
+	$out .= genscore_block_hole( __( 'La respuesta corta, en dos o tres frases, antes de todo lo demás.', 'genscore' ) );
+	foreach ( $item['questions'] as $q ) {
+		$out .= genscore_block_heading( $q ) . genscore_block_hole( __( 'Tu respuesta.', 'genscore' ) );
 	}
 	return $out;
 }
 
 /**
- * A draft this plugin already made for that question, if it still exists.
+ * A draft this plugin already made for that key, if it still exists.
  *
- * @param string $key First question.
+ * @param string $key Key.
  * @return int Post id or 0.
  */
 function genscore_existing_draft( $key ) {
@@ -93,9 +316,9 @@ function genscore_existing_draft( $key ) {
 }
 
 /**
- * What the screen needs: for each plan question that already has a draft, its editor link.
+ * What the screen needs: for each draft that still exists, its editor link.
  *
- * @return array [ first question => edit url ]
+ * @return array [ key => edit url ]
  */
 function genscore_drafts_screen_data() {
 	$all = get_option( GENSCORE_DRAFTS_OPTION, array() );
@@ -121,16 +344,16 @@ function genscore_ajax_create_draft() {
 	if ( ! $item ) {
 		wp_send_json_error( array( 'message' => __( 'Esta recomendación ya no pide una página nueva. Actualiza la pantalla.', 'genscore' ) ) );
 	}
-	$key = $item['questions'][0];
+	$key    = $item['key'];
 	$id     = genscore_existing_draft( $key );
 	$reused = (bool) $id;
 	if ( ! $id ) {
 		$id = wp_insert_post(
 			array(
-				'post_type'    => 'post',
+				'post_type'    => 'questions' === $item['kind'] ? 'post' : 'page',
 				'post_status'  => 'draft',
 				'post_title'   => genscore_draft_title( $item ),
-				'post_content' => genscore_draft_content( $item['questions'] ),
+				'post_content' => genscore_draft_content( $item ),
 				'post_author'  => get_current_user_id(),
 			),
 			true
@@ -152,3 +375,126 @@ function genscore_ajax_create_draft() {
 	);
 }
 add_action( 'wp_ajax_genscore_create_draft', 'genscore_ajax_create_draft' );
+
+/**
+ * A draft with cells still «[Pendiente…]» says so in the editor, so nothing
+ * about a rival goes live without its source.
+ *
+ * @param string  $post_type Post type.
+ * @param WP_Post $post      Post.
+ */
+function genscore_pending_meta_box( $post_type, $post ) {
+	if ( ! $post instanceof WP_Post || false === strpos( (string) $post->post_content, GENSCORE_PENDING ) ) {
+		return;
+	}
+	add_meta_box( 'genscore-pending', __( 'GenScore: huecos por rellenar', 'genscore' ), 'genscore_render_pending_meta_box', $post_type, 'side', 'high' );
+}
+add_action( 'add_meta_boxes', 'genscore_pending_meta_box', 10, 2 );
+
+/**
+ * The pending box.
+ *
+ * @param WP_Post $post Post.
+ */
+function genscore_render_pending_meta_box( $post ) {
+	$n = substr_count( (string) $post->post_content, GENSCORE_PENDING );
+	/* translators: %d: number of cells. */
+	echo '<p style="margin:0;color:#b32d2e">' . esc_html( sprintf( _n( 'Queda %d hueco «[Pendiente…]» por rellenar.', 'Quedan %d huecos «[Pendiente…]» por rellenar.', $n, 'genscore' ), $n ) ) . '</p>';
+	echo '<p style="margin-bottom:0">' . esc_html__( 'Cada dato de otra marca necesita su enlace y su fecha. Si no lo tienes, borra esa fila antes de publicar.', 'genscore' ) . '</p>';
+}
+
+/* ------------------------------------------------------------------ */
+/* Plan items about a page that already exists                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * The page of this site a plan item names, if WordPress knows it.
+ *
+ * @param array $item Plan item.
+ * @return int Post id or 0.
+ */
+function genscore_plan_page_id( $item ) {
+	$url = isset( $item['page'] ) && is_string( $item['page'] ) ? esc_url_raw( $item['page'], array( 'http', 'https' ) ) : '';
+	if ( '' === $url ) {
+		return 0;
+	}
+	$id = url_to_postid( $url );
+	if ( ! $id ) {
+		$path = (string) wp_parse_url( $url, PHP_URL_PATH );
+		if ( '' === trim( $path, '/' ) ) {
+			$id = (int) get_option( 'page_on_front' );
+		}
+	}
+	return $id && 'publish' === get_post_status( $id ) && current_user_can( 'edit_post', $id ) ? (int) $id : 0;
+}
+
+/**
+ * For each plan item with a page here: its id, title, path and editor link.
+ *
+ * @return array [ index => { id, title, path, edit } ]
+ */
+function genscore_plan_pages_screen_data() {
+	$d   = genscore_plan_data();
+	$out = array();
+	foreach ( $d ? $d['plan'] : array() as $i => $item ) {
+		$id = is_array( $item ) ? genscore_plan_page_id( $item ) : 0;
+		if ( $id ) {
+			$out[ $i ] = array(
+				'id'    => $id,
+				'title' => genscore_post_title( $id ),
+				'path'  => rawurldecode( (string) wp_parse_url( get_permalink( $id ), PHP_URL_PATH ) ),
+				'url'   => get_permalink( $id ),
+				'edit'  => get_edit_post_link( $id, 'raw' ),
+				'faq'   => genscore_faq_pairs( $id ),
+			);
+		}
+	}
+	return $out;
+}
+
+/**
+ * AJAX: «Añadir preguntas a la página». The page and the questions come from
+ * GenScore's answer; only the answers come from the screen. Undoable like
+ * every fix.
+ */
+function genscore_ajax_faq_publish() {
+	check_ajax_referer( 'genscore', 'nonce' );
+	genscore_ajax_guard();
+	$index = isset( $_POST['plan'] ) ? absint( wp_unslash( $_POST['plan'] ) ) : -1;
+	$batch = isset( $_POST['batch'] ) ? sanitize_key( wp_unslash( $_POST['batch'] ) ) : '';
+	$typed = isset( $_POST['answers'] ) ? json_decode( wp_unslash( $_POST['answers'] ), true ) : array(); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- every answer goes through genscore_clean_faq().
+	$d     = genscore_plan_data();
+	$item  = $d && 0 <= $index && isset( $d['plan'][ $index ] ) && is_array( $d['plan'][ $index ] ) ? $d['plan'][ $index ] : null;
+	$id    = $item ? genscore_plan_page_id( $item ) : 0;
+	if ( ! $id || ! preg_match( '/^[a-z0-9]{12}$/', $batch ) || ! is_array( $typed ) ) {
+		wp_send_json_error( array( 'message' => __( 'Esta recomendación ya no apunta a una página de tu web. Actualiza la pantalla.', 'genscore' ) ), 400 );
+	}
+	$pairs = array();
+	foreach ( genscore_faq_pairs( $id ) as $p ) {
+		$pairs[ $p['q'] ] = $p['a'];
+	}
+	foreach ( genscore_clean_list( $item['questions'] ?? array(), GENSCORE_FAQ_MAX ) as $i => $q ) {
+		if ( isset( $typed[ $i ] ) && is_string( $typed[ $i ] ) && '' !== trim( $typed[ $i ] ) ) {
+			$pairs[ $q ] = $typed[ $i ];
+		}
+	}
+	$rows = array();
+	foreach ( $pairs as $q => $a ) {
+		$rows[] = array( 'q' => $q, 'a' => $a );
+	}
+	$value = genscore_clean_faq( wp_json_encode( $rows ) );
+	if ( null === $value ) {
+		wp_send_json_error( array( 'message' => __( 'Escribe al menos una respuesta de cinco palabras o más.', 'genscore' ) ), 400 );
+	}
+	$all = get_option( GENSCORE_BATCHES_OPTION, array() );
+	$all = is_array( $all ) ? $all : array();
+	$prev           = genscore_fix_write( 'faq', $id, $value );
+	$all[ $batch ] = array( 'kind' => 'faq', 'at' => time(), 'ids' => array( $id ), 'prev' => array( $id => $prev ) );
+	if ( count( $all ) > 20 ) {
+		$all = array_slice( $all, -20, null, true );
+	}
+	update_option( GENSCORE_BATCHES_OPTION, $all, false );
+	genscore_forget_page_score( $id );
+	wp_send_json_success( array( 'done' => array( $id ), 'skipped' => array(), 'batches' => genscore_fix_batches_summary() ) );
+}
+add_action( 'wp_ajax_genscore_faq_publish', 'genscore_ajax_faq_publish' );

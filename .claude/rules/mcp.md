@@ -100,3 +100,7 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   para el plugin** (WP-PLUGIN-3, log §432 adenda 1.3.0): `urls` sólo lleva
   URL http(s), como mucho `EXT_AUDIT_URLS`, y vacía en lo que es de todo el
   sitio.
+- **`type`, `rival`, `page` y `drivers` de cada acción del plan son para el
+  plugin** (WP-PLUGIN-4, log §432 adenda 1.4.0): `page` sólo es una URL propia
+  http(s) confirmada por la cobertura (`toExtPlanItem`); `rival` y `drivers`
+  salen de `recommendationSubjects`, sin recalcular nada.

@@ -441,14 +441,22 @@
      the one-click fix sheet with the audit's pages already ticked; «goto»
      takes to the switch on this screen; anything else is «Cómo hacerlo» in
      the console, because it means rewriting content or the theme. */
-  var CHECK_KIND = { structured_data: "ld", answer_first_intro: "lead", freshness: "fresh", description_length: "desc", title_length: "title", canonical: "canon", returns: "returns", product_data: "product", price: "product", availability: "product", identifiers: "product", llms_txt_missing: "goto:llms", bot_blocked: "goto:bots", robots_agents: "goto:bots" };
+  var CHECK_KIND = { structured_data: "ld", answer_first_intro: "lead", freshness: "fresh", description_length: "desc", title_length: "title", canonical: "canon", returns: "returns", product_data: "product", price: "product", availability: "product", identifiers: "gtin", shipping: "shipping", reviews: "rating", two_h2: "h2", single_h1: "h1", open_graph: "og", hreflang: "hreflang", llms_txt_missing: "goto:llms", bot_blocked: "goto:bots", robots_agents: "goto:bots" };
   var AUDIT_PATH = { geo: ["web-audit?bloque=geo", "auditoria-geo"], seo: ["web-audit?bloque=seo", "auditoria-seo"], agent: ["agentic-visibility", "agentes"] };
   function pathOf(u) { try { var x = new URL(u, D.site.home); return (decodeURIComponent(x.pathname).replace(/\/+$/, "") || "/"); } catch (e) { return null; } }
   function issueKind(x) { var k = CHECK_KIND[x.check]; if (!k || k.indexOf("goto:") === 0) return k || null; return FX.available && FX.available[k] === true ? k : null; }
   /* Fixed here already: the pages the audit named were read again on this site
      and none of them asks for this fix any more. Without a match, no claim. */
   function fixedHere(kind, urls) {
-    if (!webMode() || !urls || !urls.length) return false;
+    if (!urls || !urls.length) return false;
+    /* Kinds the page revision does not read: fixed here only if a publish
+       that can still be undone covers every page the audit named. */
+    if (!LOCAL_KINDS[kind]) {
+      var pub = {};
+      (FX.batches || []).forEach(function (b) { if (b.kind === kind) (b.paths || []).forEach(function (q) { pub[pathOf(q)] = 1; }); });
+      return urls.map(pathOf).every(function (q) { return q && pub[q]; });
+    }
+    if (!webMode()) return false;
     var want = urls.map(pathOf), E = webAgg().entries.filter(function (x) { return want.indexOf(pathOf(x.page.url || x.page.path || "")) >= 0; });
     if (!E.length) return false;
     return E.every(function (x) { return !(x.e.fixes || []).some(function (f) { return KIND_OF[String(f.id).replace(/^shop-/, "")] === kind; }); });
@@ -475,14 +483,35 @@
     (b ? b.issues : []).forEach(function (x) { var k = issueKind(x); if (k) out[k] = 1; });
     return out;
   }
+  /* The key a draft is remembered by: same rule as genscore_draft_key(). */
+  function draftKey(x) {
+    var Q = x.questions || [];
+    if (x.type === "close_competitor_gap") return x.rival ? "compare:" + x.rival : null;
+    if (x.type === "add_comparison_content") return "rivals:" + x.title;
+    if (x.type === "address_negative_narrative") return "critics:" + x.title;
+    return Q.length ? Q[0] : null;
+  }
+  function fixable(kind) { return FX.available && FX.available[kind] === true; }
+  /* What WordPress can do with each item of the plan (WP-PLUGIN-4): a draft
+     for a new page, the fix sheet on the page it names, the questions added
+     to that page, or the editor. Everything else is done in GenScore. */
+  function planAction(x, i) {
+    var DR = D.drafts || {}, pg = (D.planPages || {})[i], Q = x.questions || [], key = draftKey(x);
+    if (x.draft && key) return DR[key] ? '<a class="gs-btn gs-line gs-sm" href="' + esc(DR[key]) + '" target="_blank" rel="noopener">Abrir borrador' + ic("i-arrowr") + "</a>" : '<button class="gs-btn gs-blue gs-sm" data-act="draft" data-plan="' + i + '">Crear borrador</button>';
+    var urls = pg ? esc(JSON.stringify([pg.path])) : "";
+    if (pg && x.type === "lever_definition" && fixable("lead")) return '<button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="lead" data-urls="' + urls + '">Arreglar</button>';
+    if (pg && x.type === "update_stale_content" && fixable("fresh")) return '<button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="fresh" data-urls="' + urls + '">Arreglar</button>';
+    if (x.type === "strengthen_brand_entity_clarity" && fixable("lead") && Number(D.site.frontPage)) return '<button class="gs-btn gs-blue gs-sm" data-act="fix" data-kind="lead" data-urls="' + esc(JSON.stringify(["/"])) + '">Arreglar</button>';
+    if (pg && Q.length && (x.type === "increase_brand_visibility" || x.type === "create_faq_section") && fixable("faq")) return '<button class="gs-btn gs-blue gs-sm" data-act="faq" data-plan="' + i + '">' + (pg.faq && pg.faq.length ? "Editar preguntas" : "Añadir preguntas") + "</button>";
+    if (pg && pg.edit) return '<a class="gs-btn gs-line gs-sm" href="' + esc(pg.edit) + '" target="_blank" rel="noopener">Abrir en el editor' + ic("i-arrowr") + "</a>";
+    return goApp("recommendations", "Ver en GenScore", "plan-" + (i + 1), "gs-btn gs-line gs-sm");
+  }
   function planRows(withQ) {
-    var P = S.acct.project, DR = D.drafts || {};
+    var P = S.acct.project;
     return (P.plan || []).map(function (x, i) {
       var Q = x.questions || [];
       var q = Q.slice(0, withQ).map(function (t) { return "<small>«" + esc(t) + "»</small>"; }).join("");
-      var btn = "";
-      if (x.draft && Q.length) btn = DR[Q[0]] ? '<a class="gs-btn gs-line gs-sm" href="' + esc(DR[Q[0]]) + '" target="_blank" rel="noopener">Abrir borrador' + ic("i-arrowr") + "</a>" : '<button class="gs-btn gs-blue gs-sm" data-act="draft" data-plan="' + i + '">Crear borrador</button>';
-      else btn = goApp("recommendations", "Ver en GenScore", "plan-" + (i + 1), "gs-btn gs-line gs-sm");
+      var btn = planAction(x, i);
       return '<div class="gs-fx gs-fxa"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + q + "</span>" + btn + "</div>";
     }).join("");
   }
@@ -741,6 +770,7 @@
      live, then writes it in chunks. Each publish can be undone. */
   var FX = D.fixes || { available: {}, batches: [], returns: { days: 30, country: "ES" }, chunk: 50 };
   var KIND_OF = { ld: "ld", prod: "product", price: "product", avail: "product", desc: "desc", title: "title", canon: "canon", fresh: "fresh", returns: "returns", lead: "lead" };
+  var LOCAL_KINDS = {}; Object.keys(KIND_OF).forEach(function (k) { LOCAL_KINDS[KIND_OF[k]] = 1; });
   var KIND = {
     ld: ["Datos estructurados", "Le dicen a Google y a la IA qué es cada página: un artículo, un producto o una página de tu empresa."],
     product: ["Datos de producto", "Nombre, precio y stock de cada producto, sacados de WooCommerce, para que un agente lo entienda."],
@@ -749,13 +779,21 @@
     canon: ["URL canónica", "Le dice a Google cuál es la dirección buena de cada página: su enlace permanente."],
     fresh: ["Fecha de actualización", "«Actualizado el…» bajo el título, siempre con la fecha real de tu última edición."],
     returns: ["Política de devoluciones", "Tus días de devolución y el país, en los datos de cada producto, para que un agente los lea."],
-    lead: ["Respuesta al principio", "Un párrafo corto justo bajo el título que responde a qué es la página. Lo proponemos desde su extracto o su descripción; edítalo si quieres."]
+    lead: ["Respuesta al principio", "Un párrafo corto justo bajo el título que responde a qué es la página. Lo proponemos desde su extracto o su descripción; edítalo si quieres."],
+    h2: ["Títulos de sección (<h2>)", "La IA y Google entienden mejor una página dividida en secciones. Proponemos como títulos las líneas cortas en negrita que ya tiene; si no tiene, escríbelos tú."],
+    h1: ["Un solo título principal (<h1>)", "Tu tema ya pone el título de la página como <h1>. Los <h1> que hay dentro del texto se sirven como <h2>."],
+    og: ["Etiquetas Open Graph", "Título, descripción e imagen de la página para cuando alguien la comparte o un asistente la enlaza."],
+    hreflang: ["Idioma de la página (hreflang)", "Le dice a Google en qué idioma está cada página. Tu web está en un idioma: se declara ese y x-default."],
+    shipping: ["Envío en tus productos", "Un agente de compra necesita saber cuánto cuesta el envío y cuándo llega antes de recomendar tu producto."],
+    rating: ["Valoración de tus productos", "La valoración media y el número de reseñas reales de WooCommerce, en los datos de cada producto. Sin reseñas no se publica nada."],
+    gtin: ["Código de producto (GTIN)", "El código de barras de cada producto (EAN o UPC), para que un agente sepa que es el mismo producto en otras tiendas."],
+    faq: ["Preguntas frecuentes", "Respuestas que escribiste a las preguntas de GenScore, al final de la página."]
   };
   var BOT_SW = { "bot-chatgpt": "chatgpt-search", "bot-claude": "claude-search", "bot-perplexity": "perplexity-search", "bot-gemini": "gemini" };
   /* Which pages each fix can be published on: a fix found only on pages it
      cannot reach (product data on the shop listing, a date on a product)
      keeps its «Cómo hacerlo» instead of an «Arreglar» that would open empty. */
-  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product", "shop"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post", "shop"], returns: ["product", "shop"], lead: ["page", "post", "product", "shop"] };
+  var KIND_TYPES = { ld: ["home", "page", "post", "product"], product: ["product", "shop"], desc: ["home", "page", "post", "product"], title: ["home", "page", "post", "product"], canon: ["home", "page", "post", "product"], fresh: ["page", "post", "shop"], returns: ["product", "shop"], lead: ["page", "post", "product", "shop"], h2: ["page", "post", "product"], h1: ["page", "post", "product"], og: ["home", "page", "post", "product"], hreflang: ["home", "page", "post", "product"], shipping: ["product"], rating: ["product"], gtin: ["product"] };
   function pageType(p) { if (p.type === "home") return Number(D.site.frontPage) ? "page" : "home"; return p.id && Number(p.id) === Number(D.site.shopPage) ? "shop" : p.type; }
   function fixKind(id, pages) {
     var k = KIND_OF[String(id).replace(/^shop-/, "")];
@@ -800,11 +838,53 @@
   host.appendChild(fm);
   function narrow() { return window.matchMedia("(max-width: 782px)").matches; }
   function openFix(kind, opener, urls) {
-    M = { urls: urls && urls.length ? urls : null, kind: kind, type: "all", q: "", items: [], counts: {}, ready: [], more: false, loading: true, sel: {}, first: true, edits: {}, bad: {}, cur: S.target ? S.target.id : null, opener: opener, step: "pick", busy: "", returns: { days: FX.returns.days || 30, country: FX.returns.country || "ES" } };
+    M = { urls: urls && urls.length ? urls : null, kind: kind, type: "all", q: "", items: [], counts: {}, ready: [], more: false, loading: true, sel: {}, first: true, edits: {}, bad: {}, cur: S.target ? S.target.id : null, opener: opener, step: "pick", busy: "", returns: { days: FX.returns.days || 30, country: FX.returns.country || "ES" }, ship: shipState() };
     fm.hidden = false;
     document.documentElement.classList.add("gs-fm-open");
     drawModal();
     loadList(true);
+  }
+  function shipState() {
+    var x = FX.shipping || {};
+    return { cost: x.cost == null ? "" : String(x.cost), free: x.free == null ? "" : String(x.free), country: x.country || "ES", hmin: x.hmin == null ? 0 : x.hmin, hmax: x.hmax == null ? 1 : x.hmax, tmin: x.tmin == null ? 1 : x.tmin, tmax: x.tmax == null ? 3 : x.tmax };
+  }
+  function shipOk(x) {
+    var n = function (v) { return v !== "" && !isNaN(Number(String(v).replace(",", "."))) && Number(String(v).replace(",", ".")) >= 0; };
+    var d = function (v) { return /^\d+$/.test(String(v)) && Number(v) <= 60; };
+    return n(x.cost) && (x.free === "" || n(x.free)) && /^[A-Z]{2}$/.test(x.country) && d(x.hmin) && d(x.hmax) && d(x.tmin) && d(x.tmax) && Number(x.hmin) <= Number(x.hmax) && Number(x.tmin) <= Number(x.tmax);
+  }
+  /* «Añadir preguntas a la página»: the plan's questions on the page it
+     names; the person writes each answer. Same confirm and undo as a fix. */
+  function openFaq(i, opener) {
+    var x = (S.acct.project.plan || [])[i], pg = (D.planPages || {})[i];
+    if (!x || !pg) return;
+    var old = {}; (pg.faq || []).forEach(function (p) { old[p.q] = p.a; });
+    M = { mode: "faq", kind: "faq", plan: i, page: pg, questions: (x.questions || []).slice(0, 8), answers: (x.questions || []).slice(0, 8).map(function (q) { return old[q] || ""; }), step: "pick", busy: "", opener: opener, sel: {}, edits: {}, bad: {}, items: [] };
+    fm.hidden = false;
+    document.documentElement.classList.add("gs-fm-open");
+    drawModal();
+  }
+  function faqCount() { return M.answers.filter(function (a) { return a.trim().split(/\s+/).filter(Boolean).length >= 5; }).length; }
+  function drawFaq() {
+    var n = faqCount();
+    var rows = M.questions.map(function (q, k) { var w = M.answers[k].trim() ? M.answers[k].trim().split(/\s+/).length : 0; return '<div class="gs-fm-field gs-fm-q"><label for="gs-faq-' + k + '">' + esc(q) + '</label><textarea id="gs-faq-' + k + '" data-faq="' + k + '" placeholder="Tu respuesta, con tus palabras">' + esc(M.answers[k]) + '</textarea><span class="gs-fm-cnt' + (w && w < 5 ? " gs-over" : "") + '">' + (w ? w + " palabras" + (w < 5 ? " (mínimo 5)" : "") : "Sin responder: no se publica") + "</span></div>"; }).join("");
+    var confirm = M.step === "confirm" ? '<div class="gs-fm-cf" role="alertdialog" aria-modal="true" aria-labelledby="gs-fm-cft"><div class="gs-fm-cfb"><span class="gs-fm-cfi">!</span><h3 id="gs-fm-cft">¿Publicar ' + n + " " + (n === 1 ? "respuesta" : "respuestas") + ' en «' + esc(M.page.title) + '»?</h3><p>Se publica ya en tu web en producción, al final de la página. Podrás deshacerlo desde GenScore.</p><div class="gs-fm-cfa"><button type="button" class="gs-btn gs-line" data-fm="no">No, volver</button><button type="button" class="gs-btn gs-blue" data-fm="yes">Sí, publicar</button></div></div></div>' : "";
+    fm.innerHTML = '<div class="gs-fm-scrim" data-fm="scrim"></div><div class="gs-fm gs-fm-faq" role="dialog" aria-modal="true" aria-labelledby="gs-fm-t"><div class="gs-fm-h"><div><h2 id="gs-fm-t">Añadir preguntas a la página</h2><p>Son las preguntas en las que la IA no te nombra. Respóndelas tú: salen al final de <a href="' + esc(M.page.url) + '" target="_blank" rel="noopener">' + esc(M.page.title) + "</a>" + (D.site.seoPlugin && /Yoast|Rank Math|All in One/.test(D.site.seoPlugin) ? "." : " y en sus datos estructurados (FAQPage).") + '</p></div><button type="button" class="gs-fm-x" data-fm="close" aria-label="Cerrar">' + ic("i-x") + '</button></div><div class="gs-fm-qs">' + rows + '</div><div class="gs-fm-f"><span class="gs-fm-safe">' + ic("i-check") + 'Sólo se publica lo que escribes aquí. El texto de la página no cambia y se puede deshacer.</span><button type="button" class="gs-btn gs-line" data-fm="close">Cancelar</button><button type="button" class="gs-btn gs-blue" data-fm="publish"' + (n && !M.busy ? "" : " disabled") + ">" + esc(M.busy || (n ? "Publicar " + n + " " + (n === 1 ? "respuesta" : "respuestas") : "Responde alguna pregunta")) + "</button></div>" + confirm + "</div>";
+    var focus = M.step === "confirm" ? fm.querySelector('[data-fm="no"]') : (fm.contains(document.activeElement) ? null : fm.querySelector("textarea"));
+    if (focus) focus.focus({ preventScroll: true });
+  }
+  function publishFaq() {
+    var batch = rid();
+    M.step = "pick"; M.busy = "Publicando…"; drawFaq();
+    post("genscore_faq_publish", { plan: M.plan, batch: batch, answers: JSON.stringify(M.answers) }).then(function (r) {
+      if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
+      FX.batches = r.data.batches;
+      var pg = (D.planPages || {})[M.plan];
+      if (pg) pg.faq = M.questions.map(function (q, k) { return { q: q, a: M.answers[k] }; }).filter(function (p) { return p.a.trim(); });
+      M.busy = ""; closeFix();
+      toast("Preguntas publicadas en la página.", batch);
+      render();
+    }).catch(function (e) { M.busy = ""; drawFaq(); alertIn((e && e.message) || "No se ha podido publicar. Vuelve a intentarlo."); });
   }
   function closeFix() {
     if (!M || M.busy) return;
@@ -849,7 +929,10 @@
     var seo = FX.seo;
     if (M.kind === "desc" || M.kind === "title" || M.kind === "canon") return seo ? "Se guarda en el campo de " + esc(seo) + " de esta página." : "Se guarda en la página y sale en su código.";
     if (M.kind === "fresh") return "Es la fecha de tu última edición y no se edita a mano. También va en los datos de la página.";
-    if (M.kind === "returns") return "Se añade a los datos de cada producto que marques.";
+    if (M.kind === "returns" || M.kind === "shipping" || M.kind === "rating" || M.kind === "gtin") return "Se añade a los datos de cada producto que marques.";
+    if (M.kind === "h2" || M.kind === "h1") return "Se sirve así al mostrar la página. El texto guardado de la página no cambia.";
+    if (M.kind === "og") return "La descripción es la de la página y la imagen, la destacada (o el logo). Salen en su código.";
+    if (M.kind === "hreflang") return "Sale en el código de la página, con su dirección canónica.";
     return "Hecho con los datos de WordPress" + (D.site.woocommerce ? " y WooCommerce" : "") + ". Se guarda en la página y sale en su código.";
   }
   function editor(it) {
@@ -867,6 +950,13 @@
     else if (M.kind === "title") f = '<label for="gs-fm-in">Título que se publicará</label><input id="gs-fm-in" type="text" value="' + esc(v) + '"><span class="gs-fm-cnt" data-max="65"></span>';
     else if (M.kind === "canon") f = '<label for="gs-fm-in">URL canónica que se publicará</label><input id="gs-fm-in" type="url" value="' + esc(v) + '">';
     else if (M.kind === "fresh") f = '<label>Se publicará bajo el título</label><pre class="gs-fm-pre">Actualizado el ' + esc(v) + "</pre>";
+    else if (M.kind === "h2") f = '<label for="gs-fm-in">Títulos que se publicarán, uno por línea</label><textarea id="gs-fm-in">' + esc(v) + '</textarea><span class="gs-fm-note">Una línea en negrita con el mismo texto pasa a ser título; los demás se reparten entre los párrafos.</span>';
+    else if (M.kind === "h1") f = '<label>Pasarán a ser &lt;h2&gt;</label><pre class="gs-fm-pre">' + esc(v) + "</pre>";
+    else if (M.kind === "og") f = '<label for="gs-fm-in">og:title que se publicará</label><input id="gs-fm-in" type="text" value="' + esc(v) + '"><span class="gs-fm-cnt" data-max="95"></span>';
+    else if (M.kind === "hreflang") f = '<label>Se publicará</label><pre class="gs-fm-pre">' + esc(v) + "</pre>";
+    else if (M.kind === "rating") f = '<label>Valoración real de WooCommerce</label><pre class="gs-fm-pre">' + esc(v) + "</pre>";
+    else if (M.kind === "gtin") f = '<label for="gs-fm-in">Código de barras (EAN o UPC)</label><input id="gs-fm-in" type="text" inputmode="numeric" value="' + esc(v) + '"><span class="gs-fm-note">El que viene en el envase, de 8, 12, 13 o 14 cifras. Si no tiene, déjalo sin marcar.</span>';
+    else if (M.kind === "shipping") { var sx = M.ship, rate = sx.cost === "" ? null : Number(String(sx.cost).replace(",", ".")); f = '<label>Se añadirá a sus datos</label><pre class="gs-fm-pre gs-fm-code">' + esc(JSON.stringify({ shippingDetails: { shippingRate: { value: rate, currency: D.site.currency || "EUR" }, shippingDestination: { addressCountry: sx.country }, deliveryTime: { handlingTime: sx.hmin + "-" + sx.hmax + " días", transitTime: sx.tmin + "-" + sx.tmax + " días" } } }, null, 2)) + '</pre><span class="gs-fm-note">' + (sx.free !== "" ? "Si el precio llega a " + esc(sx.free) + ", el envío sale gratis. " : "") + "El precio se lee de WooCommerce al servir la página.</span>"; }
     else if (M.kind === "returns") f = '<label>Se añadirá a sus datos</label><pre class="gs-fm-pre">' + esc(JSON.stringify({ "@type": "MerchantReturnPolicy", applicableCountry: M.returns.country, merchantReturnDays: Number(M.returns.days), returnMethod: "https://schema.org/ReturnByMail" }, null, 2)) + "</pre>";
     return head + '<div class="gs-fm-field">' + f + (M.bad[it.id] ? '<span class="gs-fm-bad">' + esc(M.bad[it.id]) + "</span>" : "") + '</div><p class="gs-fm-hint">' + where() + "</p>";
   }
@@ -916,6 +1006,8 @@
       else if (!inp.value.trim()) M.bad[id] = "No puede quedar vacío.";
       else if (M.kind === "desc" && (inp.value.trim().length < 50 || inp.value.trim().length > 160)) M.bad[id] = "Déjala entre 50 y 160 caracteres para que cuente.";
       else if (M.kind === "lead" && inp.value.trim().split(/\s+/).length < 20) M.bad[id] = "Escribe al menos 20 palabras: con menos, la revisión lo sigue marcando.";
+      else if (M.kind === "gtin" && !gtinOk(inp.value)) M.bad[id] = "No es un código válido: revisa las cifras.";
+      else if (M.kind === "h2" && inp.value.split(/\n/).filter(function (l) { return l.trim().length >= 2; }).length < 1) M.bad[id] = "Escribe al menos un título.";
       else { delete M.bad[id]; if (!M.sel[id]) { M.sel[id] = true; var cb = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-cb'); if (cb) cb.setAttribute("aria-checked", "true"); drawFoot(); } }
       var row = fm.querySelector('.gs-fm-it[data-id="' + id + '"] .gs-fm-st');
       var it = itemOf(id);
@@ -928,6 +1020,13 @@
     inp.addEventListener("input", function () { upd(false); });
     upd(true);
   }
+  function gtinOk(v) {
+    var d = String(v).replace(/[\s-]/g, "");
+    if (!/^(\d{8}|\d{12,14})$/.test(d)) return false;
+    var sum = 0, body = d.slice(0, -1).split("").reverse();
+    body.forEach(function (c, i) { sum += Number(c) * (i % 2 === 0 ? 3 : 1); });
+    return (10 - sum % 10) % 10 === Number(d.slice(-1));
+  }
   function drawFoot() {
     var b = fm.querySelector('[data-fm="publish"]');
     if (!b || !M) return;
@@ -937,12 +1036,14 @@
   }
   function drawModal() {
     if (!M) return;
+    if (M.mode === "faq") { drawFaq(); return; }
     var K = KIND[M.kind];
     var chips = TYPES.filter(function (t) { return t[0] === "all" || M.counts[t[0]] != null; }).map(function (t) { return '<button type="button" class="gs-fm-chip" data-type="' + t[0] + '" aria-pressed="' + (M.type === t[0]) + '">' + t[1] + (M.counts[t[0]] != null ? "<em>" + M.counts[t[0]] + "</em>" : "") + "</button>"; }).join("");
+    var ship = M.kind === "shipping" ? '<div class="gs-fm-ret gs-fm-ship"><label>Coste (' + esc(D.site.currencySymbol || "€") + ')<input type="text" inputmode="decimal" data-ship="cost" value="' + esc(M.ship.cost) + '"></label><label>Gratis desde<input type="text" inputmode="decimal" placeholder="Opcional" data-ship="free" value="' + esc(M.ship.free) + '"></label><label>País<input type="text" maxlength="2" data-ship="country" value="' + esc(M.ship.country) + '"></label><label>Preparación (días)<span class="gs-fm-rng"><input type="number" min="0" max="60" data-ship="hmin" value="' + esc(M.ship.hmin) + '"><i>a</i><input type="number" min="0" max="60" data-ship="hmax" value="' + esc(M.ship.hmax) + '"></span></label><label>Transporte (días)<span class="gs-fm-rng"><input type="number" min="0" max="60" data-ship="tmin" value="' + esc(M.ship.tmin) + '"><i>a</i><input type="number" min="0" max="60" data-ship="tmax" value="' + esc(M.ship.tmax) + '"></span></label><p class="gs-fm-note">Coste y envío gratis salen de tus zonas de envío de WooCommerce. WooCommerce no guarda plazos: escríbelos una vez.</p></div>' : "";
     var ret = M.kind === "returns" ? '<div class="gs-fm-ret"><label>Días para devolver<input type="number" min="1" max="365" data-ret="days" value="' + esc(M.returns.days) + '"></label><label>País<input type="text" maxlength="2" data-ret="country" value="' + esc(M.returns.country) + '"></label></div>' : "";
     var n = selCount();
     var confirm = M.step === "confirm" ? '<div class="gs-fm-cf" role="alertdialog" aria-modal="true" aria-labelledby="gs-fm-cft"><div class="gs-fm-cfb"><span class="gs-fm-cfi">!</span><h3 id="gs-fm-cft">¿Publicar en ' + n + " " + (n === 1 ? "página" : "páginas") + '?</h3><p>Se publica ya en tu web en producción: lo verán tus visitantes, Google y los asistentes de IA. Podrás deshacerlo desde GenScore.</p><ul><li><b>' + esc(K[0]) + "</b></li><li>" + n + " " + (n === 1 ? "página" : "páginas") + (function () { var e = Object.keys(M.edits).filter(function (k) { return M.sel[k]; }).length; return e ? " · " + e + " " + (e === 1 ? "editada" : "editadas") + " por ti" : ""; })() + '</li></ul><div class="gs-fm-cfa"><button type="button" class="gs-btn gs-line" data-fm="no">No, volver</button><button type="button" class="gs-btn gs-blue" data-fm="yes">Sí, publicar</button></div></div></div>' : "";
-    fm.innerHTML = '<div class="gs-fm-scrim" data-fm="scrim"></div><div class="gs-fm" role="dialog" aria-modal="true" aria-labelledby="gs-fm-t"><div class="gs-fm-h"><div><h2 id="gs-fm-t">' + esc(K[0]) + "</h2><p>" + esc(K[1]) + '</p></div><button type="button" class="gs-fm-x" data-fm="close" aria-label="Cerrar">' + ic("i-x") + '</button></div><div class="gs-fm-b"><div class="gs-fm-pick"><div class="gs-fm-tools">' + ret + '<div class="gs-fm-search">' + ic("i-search") + '<input type="search" placeholder="Buscar por título" aria-label="Buscar páginas" value="' + esc(M.q) + '"></div><div class="gs-fm-row"><div class="gs-fm-chips">' + chips + '</div><div class="gs-fm-all"><button type="button" data-fm="all">Seleccionar todas</button><button type="button" data-fm="none">Deseleccionar todas</button></div></div></div><div class="gs-fm-list" role="list"></div></div><div class="gs-fm-side"></div></div><div class="gs-fm-f"><span class="gs-fm-safe">' + ic("i-check") + 'Solo se publica lo que revisas aquí. Se puede deshacer.</span><button type="button" class="gs-btn gs-line" data-fm="close">Cancelar</button><button type="button" class="gs-btn gs-blue" data-fm="publish"></button></div>' + confirm + "</div>";
+    fm.innerHTML = '<div class="gs-fm-scrim" data-fm="scrim"></div><div class="gs-fm" role="dialog" aria-modal="true" aria-labelledby="gs-fm-t"><div class="gs-fm-h"><div><h2 id="gs-fm-t">' + esc(K[0]) + "</h2><p>" + esc(K[1]) + '</p></div><button type="button" class="gs-fm-x" data-fm="close" aria-label="Cerrar">' + ic("i-x") + '</button></div><div class="gs-fm-b"><div class="gs-fm-pick"><div class="gs-fm-tools">' + ret + ship + '<div class="gs-fm-search">' + ic("i-search") + '<input type="search" placeholder="Buscar por título" aria-label="Buscar páginas" value="' + esc(M.q) + '"></div><div class="gs-fm-row"><div class="gs-fm-chips">' + chips + '</div><div class="gs-fm-all"><button type="button" data-fm="all">Seleccionar todas</button><button type="button" data-fm="none">Deseleccionar todas</button></div></div></div><div class="gs-fm-list" role="list"></div></div><div class="gs-fm-side"></div></div><div class="gs-fm-f"><span class="gs-fm-safe">' + ic("i-check") + 'Solo se publica lo que revisas aquí. Se puede deshacer.</span><button type="button" class="gs-btn gs-line" data-fm="close">Cancelar</button><button type="button" class="gs-btn gs-blue" data-fm="publish"></button></div>' + confirm + "</div>";
     drawList(); drawSide(); drawFoot();
     var focus = M.step === "confirm" ? fm.querySelector('[data-fm="no"]') : null;
     if (focus) focus.focus();
@@ -954,6 +1055,16 @@
     if (e.target.matches(".gs-fm-search input")) { clearTimeout(qTimer); var v = e.target.value; qTimer = setTimeout(function () { M.q = v; loadList(true); }, 250); }
     var r = e.target.getAttribute && e.target.getAttribute("data-ret");
     if (r) { M.returns[r] = r === "country" ? e.target.value.toUpperCase() : e.target.value; drawSide(); }
+    var fq = e.target.getAttribute && e.target.getAttribute("data-faq");
+    if (fq != null && M.mode === "faq") {
+      M.answers[Number(fq)] = e.target.value;
+      var w = e.target.value.trim() ? e.target.value.trim().split(/\s+/).length : 0, c = e.target.parentNode.querySelector(".gs-fm-cnt");
+      if (c) { c.textContent = w ? w + " palabras" + (w < 5 ? " (mínimo 5)" : "") : "Sin responder: no se publica"; c.classList.toggle("gs-over", w > 0 && w < 5); }
+      var pb = fm.querySelector('[data-fm="publish"]'), n = faqCount();
+      if (pb) { pb.disabled = !n; pb.textContent = n ? "Publicar " + n + " " + (n === 1 ? "respuesta" : "respuestas") : "Responde alguna pregunta"; }
+    }
+    var sh = e.target.getAttribute && e.target.getAttribute("data-ship");
+    if (sh) { M.ship[sh] = sh === "country" ? e.target.value.toUpperCase() : e.target.value; drawSide(); }
   });
   fm.addEventListener("click", function (e) {
     if (!M) return;
@@ -963,7 +1074,14 @@
     if (act === "close" || act === "scrim") { if (M.step === "confirm") { M.step = "pick"; drawModal(); } else closeFix(); return; }
     if (act === "more") { loadList(false); return; }
     if (act === "all" || act === "none") { M.ready.forEach(function (id) { M.sel[id] = act === "all"; }); drawList(); drawFoot(); return; }
+    if (M.mode === "faq") {
+      if (act === "publish") { if (faqCount()) { M.step = "confirm"; drawFaq(); } return; }
+      if (act === "no") { M.step = "pick"; drawFaq(); return; }
+      if (act === "yes") { publishFaq(); return; }
+      return;
+    }
     if (act === "publish") {
+      if (M.kind === "shipping" && !shipOk(M.ship)) { alertIn("Revisa el envío: coste, país en dos letras y días de 0 a 60."); return; }
       if (M.kind === "returns" && !(Number(M.returns.days) >= 1 && Number(M.returns.days) <= 365 && /^[A-Z]{2}$/.test(M.returns.country))) { M.err = ""; alertIn("Pon los días (1 a 365) y el país en dos letras, como ES."); return; }
       M.step = "confirm"; drawModal(); return;
     }
@@ -974,7 +1092,7 @@
       var id = Number(b.closest(".gs-fm-it").getAttribute("data-id")); M.sel[id] = !M.sel[id]; b.setAttribute("aria-checked", String(!!M.sel[id]));
       var it0 = itemOf(id);
       /* an empty answer-first row: open it so the person can write it */
-      if (M.sel[id] && it0 && (!it0.value || it0.short) && M.edits[id] == null) { M.bad[id] = it0.short ? "Amplíalo a 20 palabras o más antes de publicar." : M.kind === "desc" ? "Escribe la descripción antes de publicar." : "Escribe el párrafo antes de publicar."; M.cur = id; drawList(); drawSide(); }
+      if (M.sel[id] && it0 && (!it0.value || it0.short) && M.edits[id] == null) { M.bad[id] = it0.short ? "Amplíalo a 20 palabras o más antes de publicar." : M.kind === "desc" ? "Escribe la descripción antes de publicar." : M.kind === "h2" ? "Escribe los títulos antes de publicar." : M.kind === "gtin" ? "Escribe el código antes de publicar." : "Escribe el párrafo antes de publicar."; M.cur = id; drawList(); drawSide(); }
       drawFoot(); return;
     }
     if (b.hasAttribute("data-open")) { var oid = Number(b.getAttribute("data-open")); M.cur = narrow() && M.cur === oid ? null : oid; drawList(); drawSide(); }
@@ -1002,6 +1120,7 @@
       var edits = {}; part.forEach(function (id) { if (M.edits[id] != null) edits[id] = M.edits[id]; });
       var data = { kind: kind, ids: part, edits: JSON.stringify(edits), batch: batch };
       if (kind === "returns") { data.days = M.returns.days; data.country = M.returns.country; }
+      if (kind === "shipping") data.ship = M.ship;
       return post("genscore_fix_publish", data).then(function (r) {
         if (!r || !r.success) throw new Error((r && r.data && r.data.message) || "");
         done = done.concat(r.data.done); skipped = skipped.concat(r.data.skipped); FX.batches = r.data.batches;
@@ -1010,6 +1129,7 @@
     }
     next().then(function () {
       if (kind === "returns") FX.returns = { days: Number(M.returns.days), country: M.returns.country };
+      if (kind === "shipping") FX.shipping = M.ship;
       M.busy = ""; closeFix();
       afterPublish(done, skipped, batch);
     }).catch(function (e) {
@@ -1100,6 +1220,7 @@
     if (act === "rerun") { review(); return; }
     if (act === "fix") { var U = null; try { U = JSON.parse(a.getAttribute("data-urls") || "null"); } catch (err) { U = null; } openFix(a.getAttribute("data-kind"), a, U); return; }
     if (act === "draft") { createDraft(a); return; }
+    if (act === "faq") { openFaq(Number(a.getAttribute("data-plan")), a); return; }
     if (act === "goto") { gotoCard(a.getAttribute("data-to"), a.getAttribute("data-sw-id")); return; }
     if (act === "undo") { a.disabled = true; undo(a.getAttribute("data-batch")); return; }
     if (act === "rerun-web") { reviewSite(true); return; }
