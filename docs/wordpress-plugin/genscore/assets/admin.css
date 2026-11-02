@@ -479,8 +479,9 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-aitr .gs-pbar{height:6px}
 #genscore-app .gs-aitr b{font-size:12.5px;font-weight:500;text-align:right;color:var(--ink)}
 #genscore-app .gs-ains{margin:0;font-size:13.5px;font-weight:500;color:var(--ink);border-top:1px solid var(--rule);padding-top:11px}
-#genscore-app .gs-aim .gs-prh{justify-content:space-between}
-#genscore-app .gs-aim-t{font-size:14px;color:var(--ink-2)}
+#genscore-app .gs-aim-t{margin:0 0 10px;font-size:15px;font-weight:600;line-height:1.35;color:var(--ink)}
+#genscore-app .gs-aim-t span{white-space:nowrap}
+#genscore-app .gs-aim-t b{font-size:26px;font-weight:700;letter-spacing:-.01em;vertical-align:-2px;margin-left:2px}
 
 
 
@@ -493,3 +494,5 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-hs span{font-size:12px;color:var(--ink-3)}
 #genscore-app .gs-md{max-height:140px}
 #genscore-app .gs-rep .gs-i{width:14px;height:14px}
+#genscore-app .gs-say-in{margin:0 0 16px;color:var(--ink)}
+#genscore-app .gs-card>.gs-say-in:only-child{margin:0}

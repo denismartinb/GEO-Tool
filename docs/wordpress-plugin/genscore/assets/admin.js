@@ -396,7 +396,7 @@
     var A = aiAgg();
     if (!A) return "";
     var b = aiBand(A.pct);
-    return '<div class="gs-card gs-aim"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span></div><div class="gs-prh"><span class="gs-aim-t">de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity</span><span class="gs-prp gs-num">' + A.pct + "%</span></div>" + pbar(A.pct, b) + '<div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-tab="geo">Ver qué no llega' + ic("i-arrowr") + "</button></div></div>";
+    return '<div class="gs-card gs-aim"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span></div><p class="gs-aim-t">De lo que ven tus clientes, llega a ChatGPT, Claude y <span>Perplexity el <b class="gs-num">' + A.pct + "%</b></span></p>" + pbar(A.pct, b) + '<div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-tab="geo">Ver qué no llega' + ic("i-arrowr") + "</button></div></div>";
   }
   /* A recommendation only when the cause is certain: prices that a product
      page shows only with JavaScript, on a shop where WooCommerce has them and
@@ -565,7 +565,7 @@
       var v = pct(r.share);
       return '<div class="gs-xq' + (r.isBrand ? " gs-me" : "") + '"><span class="gs-ps gs-num">' + (i + 1) + '</span><span class="gs-n">' + esc(r.name) + '</span><span class="gs-tb"><i style="width:' + Math.round((v / max) * 100) + '%"></i></span><span class="gs-v gs-num">' + v + "<small>%</small></span></div>";
     }).join("") + '</div><div class="gs-acts">' + goApp("competitors", "Ver competidores", "competidores") + "</div></div>" : "";
-    return domLyr(scanLabel(P)) + noScan(P) + (P.lede ? '<p class="gs-say gs-say-l">' + esc(P.lede) + "</p>" : "") + planCard() + auditRecsCard("geo", "Auditoría GEO") + engines + rivals;
+    return domLyr(scanLabel(P)) + noScan(P) + planCard(P.lede) + auditRecsCard("geo", "Auditoría GEO") + engines + rivals;
   }
   function auBlock(key) { var A = S.acct.project.audits; return A && A.blocks ? A.blocks.filter(function (b) { return b.key === key; })[0] : null; }
   var SEVC = { critical: "low", high: "low", medium: "mid", low: "mid", agentic: "mid" };
@@ -661,9 +661,12 @@
       return '<div class="gs-fx gs-fxa"><span class="gs-n">' + (i + 1) + '</span><span class="gs-tx">' + esc(x.title) + (x.firstStep ? '<span class="gs-why">' + esc(x.firstStep) + "</span>" : "") + q + "</span>" + btn + "</div>";
     }).join("");
   }
-  function planCard() {
-    if (!acctOn() || !(S.acct.project.plan || []).length) return "";
-    return '<div class="gs-card"><div class="gs-lab">Para que la IA te nombre<small>plan de tu consola</small></div>' + planRows(3) + '<div class="gs-acts">' + goApp("recommendations", "Ver Recomendaciones", "plan", "gs-btn gs-line gs-sm") + "</div></div>";
+  /* The lede lives inside the first card, so «Tu dominio» and «Esta web»
+     start their cards at the same height. */
+  function planCard(lede) {
+    var say = lede ? '<p class="gs-say gs-say-l gs-say-in">' + esc(lede) + "</p>" : "";
+    if (!acctOn() || !(S.acct.project.plan || []).length) return say ? '<div class="gs-card">' + say + "</div>" : "";
+    return '<div class="gs-card">' + say + '<div class="gs-lab">Para que la IA te nombre<small>plan de tu consola</small></div>' + planRows(3) + '<div class="gs-acts">' + goApp("recommendations", "Ver Recomendaciones", "plan", "gs-btn gs-line gs-sm") + "</div></div>";
   }
   function auditRecsCard(key, title) {
     var b = auBlock(key);
