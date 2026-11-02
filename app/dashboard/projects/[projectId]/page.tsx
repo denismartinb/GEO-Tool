@@ -20,6 +20,9 @@ import {
 } from "@/components/ins/overview/blocks";
 import { LiveScanCard } from "@/components/ins/overview/live-scan-card";
 import { GeoStripAlert } from "@/components/ins/overview/geo-strip";
+import { AiReadOverviewCard } from "@/components/ins/overview/ai-read-card";
+import { aiReadCard, buildAiView } from "@/lib/web-audit/ai-view";
+import { browserRunConfigured } from "@/lib/web-audit/browser-run";
 import { selectGeoStrip, type GeoStripSnapshot } from "@/lib/ins/geo-strip";
 import { PlanBlock } from "@/components/ins/overview/plan-block";
 import { firstNameFromMetadata, greeting, leadParts, scoreHeadline } from "@/lib/ins/overview-copy";
@@ -349,6 +352,15 @@ export default async function ProjectDetailPage({
     previous: auditSnapshots[1] ?? null,
     now: Date.now()
   });
+
+  // AI-READ-2 (log §451): «Lo que lee la IA» summary, the same model as the
+  // Auditoría GEO block, from the same snapshot.
+  const aiCard = auditSnapshotForBlockers
+    ? aiReadCard(
+        buildAiView(auditSnapshotForBlockers.pages),
+        browserRunConfigured()
+      )
+    : ({ kind: "hidden" } as const);
 
   // Auditoría SEO card (log §271): the same snapshot, through the same
   // aggregation as the Auditoría SEO screen.
@@ -1038,6 +1050,8 @@ export default async function ProjectDetailPage({
                   </SeoAuditCard>
                 ) : null}
               </section>
+
+              <AiReadOverviewCard card={aiCard} href={`/dashboard/projects/${projectId}/web-audit?bloque=geo#lo-que-lee-la-ia`} />
             </>
           ) : !activeRun ? (
             prompts?.length ? (

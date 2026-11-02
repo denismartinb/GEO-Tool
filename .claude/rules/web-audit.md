@@ -565,3 +565,5 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   según `jsShell`/`jsThin`). Nunca un error ni una cifra inventada.
 - **Sólo se guardan trozos literales cortos y saneados** (`MAX_SAMPLES`, 80
   caracteres) de páginas públicas.
+- **La tarjeta de Visión general lee `aiReadCard`**, el mismo modelo que el
+  bloque; no calcula cifras propias y no sale en modo HTML.

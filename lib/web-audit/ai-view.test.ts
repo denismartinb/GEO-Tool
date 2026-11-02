@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aiViewHeadline, buildAiView, importanceInsight, typeInsight } from "./ai-view";
+import { aiReadCard, aiViewHeadline, buildAiView, importanceInsight, typeInsight, type AiView } from "./ai-view";
 import { checkCitability, detectPlatform, isJsThin } from "./page-checks";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { PageRender } from "./ai-render";
@@ -137,5 +137,50 @@ describe("isJsThin and detectPlatform (log §449)", () => {
     expect(detectPlatform('<script src="https://cdn.shopify.com/s/x.js">')).toBe("shopify");
     expect(detectPlatform('<script src="/_next/static/chunks/main.js">')).toBe("next");
     expect(detectPlatform("<p>Hola</p>")).toBeNull();
+  });
+});
+
+describe("aiReadCard", () => {
+  const measured = (over: Partial<Extract<AiView, { mode: "measured" }>> = {}): AiView => ({
+    mode: "measured",
+    pct: 72,
+    delta: null,
+    kinds: [
+      { kind: "price", label: "Tus precios", missingPct: 80, consequence: "", sample: "Café 1 kg · 24,90 €", where: null },
+      { kind: "faq", label: "Preguntas frecuentes", missingPct: 40, consequence: "", sample: null, where: null },
+      { kind: "review", label: "Opiniones", missingPct: 0, consequence: "", sample: null, where: null }
+    ],
+    groups: [],
+    ...over
+  });
+
+  it("hides without a measurement and says it is measuring when configured", () => {
+    expect(aiReadCard(null, false)).toEqual({ kind: "hidden" });
+    expect(aiReadCard({ mode: "html", okPct: 80, allOk: false }, false)).toEqual({ kind: "hidden" });
+    expect(aiReadCard({ mode: "html", okPct: 80, allOk: false }, true)).toEqual({ kind: "measuring" });
+  });
+
+  it("leads with the most lost kind and its literal sample", () => {
+    const c = aiReadCard(measured(), true);
+    if (c.kind !== "card") throw new Error("card");
+    expect(c.headline).toBe("Le llega el 72% de lo que ven tus clientes.");
+    expect(c.sub).toContain("Tus precios son lo que más se pierde.");
+    expect(c.rows.map((r) => r.reachPct)).toEqual([20, 60, 100]);
+    expect(c.items[0].text).toBe("La IA no ve tus precios: «Café 1 kg · 24,90 €»");
+    expect(c.items).toHaveLength(2);
+  });
+
+  it("puts the cited-pages reading second when it applies", () => {
+    const c = aiReadCard(measured({ groups: [{ title: "Por lo que importa", lines: [], insight: "Tus páginas más citadas son las que peor lee la IA." }] }), true);
+    if (c.kind !== "card") throw new Error("card");
+    expect(c.items.map((i) => i.text)).toEqual(["La IA no ve tus precios: «Café 1 kg · 24,90 €»", "Tus páginas más citadas son las que peor lee la IA"]);
+  });
+
+  it("reads as complete when nothing is lost", () => {
+    const c = aiReadCard(measured({ pct: 98, kinds: [{ kind: "price", label: "Tus precios", missingPct: 0, consequence: "", sample: null, where: null }] }), true);
+    if (c.kind !== "card") throw new Error("card");
+    expect(c.headline).toBe("Le llega casi todo lo que ven tus clientes.");
+    expect(c.title).toBe("Estado");
+    expect(c.items).toEqual([]);
   });
 });

@@ -118,11 +118,13 @@ function groupBy<K extends string>(pages: Measured[], key: (m: Measured) => K, l
   return order.filter((k) => map.has(k)).map((k) => ({ label: labels[k], pct: weighted(map.get(k)!) }));
 }
 
+const IMPORTANCE_WORSE = "Tus páginas más citadas son las que peor lee la IA.";
+
 /** One reading of each group, only when the figures say something. */
 export function importanceInsight(lines: AiGroupLine[], overall: number): string | null {
   const cited = lines.find((l) => l.label === SOURCE_LABEL.cited);
   if (!cited) return null;
-  if (cited.pct <= overall - 8) return "Tus páginas más citadas son las que peor lee la IA.";
+  if (cited.pct <= overall - 8) return IMPORTANCE_WORSE;
   if (cited.pct >= 95) return "Tus páginas más citadas le llegan enteras a la IA.";
   return null;
 }
@@ -227,4 +229,73 @@ export function aiViewHeadline(v: AiView): string {
   if (v.mode === "measured") return "de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity.";
   if (v.allOk) return "de tus páginas llegan completas a la IA. ChatGPT, Claude y Perplexity reciben su contenido sin ejecutar JavaScript.";
   return "de tus páginas llegan completas a la IA. En el resto, parte del contenido sólo aparece con JavaScript, y ChatGPT, Claude y Perplexity no lo ejecutan.";
+}
+
+/**
+ * The summary card on Visión general (AI-READ-2, log §451): the same figures
+ * as the block, in the shape of the Comercio agéntico card. Only with a
+ * browser measurement, or while one is pending; never the HTML mode, which
+ * the block already explains.
+ */
+export type AiReadCard =
+  | { kind: "hidden" }
+  | { kind: "measuring" }
+  | {
+      kind: "card";
+      pct: number;
+      headline: string;
+      sub: string;
+      rows: Array<{ kind: RenderKind; label: string; reachPct: number }>;
+      title: "Lo que más se pierde" | "Estado";
+      items: Array<{ text: string; tone: "warm" | "ok" }>;
+    };
+
+const SHORT_LABEL: Record<RenderKind, string> = { price: "Precios", faq: "Preguntas", review: "Opiniones", spec: "Fichas" };
+const LOST_LINE: Record<RenderKind, string> = {
+  price: "La IA no ve tus precios",
+  faq: "La IA no ve tus preguntas frecuentes",
+  review: "La IA no ve las opiniones de tus clientes",
+  spec: "La IA no ve tus fichas y características"
+};
+const MOST_LOST: Record<RenderKind, string> = {
+  price: "Tus precios son lo que más se pierde.",
+  faq: "Tus preguntas frecuentes son lo que más se pierde.",
+  review: "Las opiniones de tus clientes son lo que más se pierde.",
+  spec: "Tus fichas y características son lo que más se pierde."
+};
+
+export function aiReadCard(view: AiView | null, measuring: boolean): AiReadCard {
+  if (!view || view.mode !== "measured") return measuring ? { kind: "measuring" } : { kind: "hidden" };
+  const rows = view.kinds.map((k) => ({ kind: k.kind, label: SHORT_LABEL[k.kind], reachPct: 100 - k.missingPct }));
+  const lost = view.kinds.filter((k) => k.missingPct > 0).sort((a, b) => b.missingPct - a.missingPct);
+  const insight = view.groups.find((g) => g.title === "Por lo que importa")?.insight ?? null;
+  const allIn = view.pct >= 95 && lost.length === 0;
+  const headline = allIn ? "Le llega casi todo lo que ven tus clientes." : `Le llega el ${view.pct}% de lo que ven tus clientes.`;
+  if (lost.length === 0) {
+    return {
+      kind: "card",
+      pct: view.pct,
+      headline,
+      sub: allIn
+        ? "ChatGPT, Claude y Perplexity reciben tu contenido sin ejecutar JavaScript."
+        : "Lo que la IA no ve, no lo puede contar.",
+      rows,
+      title: "Estado",
+      items: insight ? [{ text: insight.replace(/\.$/, ""), tone: insight === IMPORTANCE_WORSE ? "warm" : "ok" }] : []
+    };
+  }
+  const worst = lost[0];
+  const items: Array<{ text: string; tone: "warm" | "ok" }> = lost
+    .slice(0, 2)
+    .map((k) => ({ text: k.sample ? `${LOST_LINE[k.kind]}: «${k.sample}»` : LOST_LINE[k.kind], tone: "warm" as const }));
+  if (insight === IMPORTANCE_WORSE) items.splice(1, items.length - 1, { text: insight.replace(/\.$/, ""), tone: "warm" });
+  return {
+    kind: "card",
+    pct: view.pct,
+    headline,
+    sub: `Lo que la IA no ve, no lo puede contar. ${MOST_LOST[worst.kind]}`,
+    rows,
+    title: "Lo que más se pierde",
+    items
+  };
 }
