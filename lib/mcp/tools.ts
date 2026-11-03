@@ -82,12 +82,16 @@ function domainTool(
     async run(args, ctx) {
       const account = ctx.account;
       if (!account) throw new Error("unreachable: access=account");
-      if (account.planId === "free") return answer(formatPlanNotice());
+      if (account.planId === "free") return answer(formatPlanNotice(ctx.profile));
       const domain = normalizeHost(String(args.dominio));
       if (!domain) return { ...answer(formatNotFound(String(args.dominio).slice(0, 100), ctx.origin)), isError: true };
       const data = await loadExtProjectData(account, { domain, url: null });
-      if (data.kind === "not_found") return answer(formatNotFound(domain, ctx.origin));
-      return answer(format(data.payload, { base: ctx.origin, projectId: data.project.id }));
+      if (data.kind === "not_found") {
+        // MCP-FIX-1 (log §465, H5): same capacity rule as listar_dominios.
+        const projects = await listExtProjects(account);
+        return answer(formatNotFound(domain, ctx.origin, projects.length < account.domainCap));
+      }
+      return answer(format(data.payload, { base: ctx.origin, projectId: data.project.id, profile: ctx.profile }));
     }
   };
 }
@@ -128,7 +132,8 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
           trialEndsAt: account.trialEndsAt,
           domainCap: account.domainCap,
           domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name, projectId: p.id })),
-          asked: askedDomain ? { domain: askedDomain, found: !!pickProject(projects, askedDomain) } : null
+          asked: askedDomain ? { domain: askedDomain, found: !!pickProject(projects, askedDomain) } : null,
+          profile: ctx.profile
         })
       );
     }
@@ -173,7 +178,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
     name: "revisar_pagina",
     title: "Revisar una página",
     description:
-      "Úsala sólo cuando la persona pida revisar o auditar una página o una URL. Revisa una URL pública concreta, como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google. No sustituye al último escaneo de un dominio de la cuenta (para eso, ver_dominio), y no la uses por tu cuenta cuando otra herramienta diga que un dominio no está en la cuenta: ofrécela y espera a que la persona la pida.",
+      "Úsala sólo cuando la persona pida revisar o auditar una página o una URL. Revisa una URL pública concreta, como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google. No sustituye al último escaneo de un dominio de la cuenta (para eso, ver_dominio), y no la uses por tu cuenta cuando otra herramienta diga que un dominio no está en la cuenta: ofrécela y espera a que la persona la pida. Un «vale» o «sí» tras una oferta con varias opciones no es esa petición: pregunta primero cuál quiere. Si la persona dice que no la quiere («no la audites»), no la ejecutes.",
     inputSchema: {
       type: "object",
       properties: { url: { type: "string", description: "La dirección de la página, por ejemplo https://www.tuweb.es/precios" } },

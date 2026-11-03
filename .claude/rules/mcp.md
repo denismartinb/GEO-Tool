@@ -143,3 +143,11 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   el campo del esquema, nunca un valor enviado.
 - **Todo texto de rechazo dice qué hacer a continuación** (`CALL_TEXT`), y un
   estado nuevo entra con su fixture en `app/api/mcp/route.test.ts`.
+
+## Consentimiento, fecha y estados (MCP-RELIABILITY-FIX-1, log §466)
+
+- **Una oferta de revisión nunca va mezclada con otra acción** en una pregunta de sí/no: el enlace de alta y `revisar_pagina` son opciones distintas, y un «vale» ambiguo se aclara. Es guía al modelo, no garantía del servidor (`revisar_pagina` no tiene estado); no vendas un parámetro `confirmado` como consentimiento.
+- **Toda respuesta con datos de un escaneo lleva su fecha y su edad** (`scanAge`, `scanDate`/`scanAgeDays` en `structuredContent`). Sin escaneo se dice «sin escaneo», nunca «sin acciones pendientes» (`hasNoScan`).
+- **Un dato que falta no es un cero**: respuestas parciales llevan `incomplete`/`missing`.
+- **Dominio ajeno con la cuenta llena: sin enlace de alta** (mismo criterio que `listar_dominios`).
+- **ChatGPT no recibe `planName`, `trialEndsAt` ni texto de plan/prueba** en ninguna herramienta de cuenta; el enlace informativo a `/precios` sí. `tests/mcp-qa` lo vigila.

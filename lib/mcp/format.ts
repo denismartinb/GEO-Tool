@@ -22,7 +22,29 @@ import { signupUrl, type McpProfile } from "./links";
 
 export type ToolText = { text: string; structured?: Record<string, unknown> };
 
-export type ConsoleLinks = { base: string; projectId: string };
+export type ConsoleLinks = {
+  base: string;
+  projectId: string;
+  /** Which connector asked (MCP-FIX-1, log §465): ChatGPT's answers never name plans or trials (`.claude/rules/mcp.md`). Claude when unset. */
+  profile?: McpProfile;
+  /** Clock for the age of a scan; tests pass a fixed one. */
+  now?: Date;
+};
+
+/**
+ * MCP-FIX-1 (log §465, H7): how old the scan an answer comes from is, in
+ * words. Fact only, no business threshold: the date is always shown, and an
+ * answer older than today says it is not a measurement of today.
+ */
+export function scanAge(scanDate: string | null | undefined, now: Date = new Date()): { days: number; label: string } | null {
+  if (!scanDate) return null;
+  const t = Date.parse(scanDate);
+  if (Number.isNaN(t)) return null;
+  const days = Math.max(0, Math.floor((now.getTime() - t) / 86_400_000));
+  const day = scanDate.slice(0, 10);
+  if (days === 0) return { days, label: `escaneo del ${day} (de hoy)` };
+  return { days, label: `escaneo del ${day} (hace ${days} ${days === 1 ? "día" : "días"}; no es una medición de hoy)` };
+}
 
 const screen = (l: ConsoleLinks, path = "") => `${l.base}/dashboard/projects/${l.projectId}${path}`;
 
@@ -51,10 +73,21 @@ export function htmlToText(s: string | undefined | null): string {
     .replace(/&amp;/g, "&");
 }
 
-export function formatPlanNotice(): ToolText {
+export function formatPlanNotice(profile: McpProfile = "claude"): ToolText {
+  // MCP-FIX-1 (log §465): ChatGPT's contract names no plan or trial (`.claude/rules/mcp.md` §425).
+  // The state stays distinct from «no data»: access is blocked, the data may exist.
+  if (profile === "chatgpt") {
+    return {
+      text:
+        "Esta cuenta de GenScore está en solo lectura, así que GenScore no comparte sus datos desde el chat. " +
+        "Esto no significa que no existan datos: el acceso está limitado. Más información en https://www.genscore.es/precios.",
+      structured: { state: "plan_required" }
+    };
+  }
   return {
     text:
       "Tu prueba de Pro ha terminado y la cuenta está en solo lectura, así que GenScore no comparte sus datos desde el chat. " +
+      "Esto no significa que no existan datos: el acceso está limitado. " +
       "Puedes ver qué incluye cada plan en https://www.genscore.es/precios.",
     structured: { state: "plan_required" }
   };
@@ -68,16 +101,26 @@ export function formatPlanNotice(): ToolText {
  */
 export const PUBLIC_REVIEW_OFFER = (domain: string) =>
   `GenScore no tiene datos guardados de ${domain}, así que no hay recomendaciones suyas. ` +
-  `Si quieres, puedo revisar ahora su página pública con revisar_pagina; todavía no se ha revisado y solo se hace si lo pides.`;
-const publicReviewOffer = (domain: string) => ({ tool: "revisar_pagina", url: `https://${domain}`, run: "only_if_asked" });
+  `Revisar su página pública con revisar_pagina es una acción distinta de añadirlo a la cuenta: todavía no se ha revisado y solo se hace si lo pides con claridad. ` +
+  `Si la persona responde con algo ambiguo («vale», «sí», «ok»), pregúntale cuál de las acciones quiere antes de ejecutar nada; si dice que no quiere una revisión («no la audites»), no la hagas.`;
+const publicReviewOffer = (domain: string) => ({ tool: "revisar_pagina", url: `https://${domain}`, run: "only_if_asked", ifAmbiguous: "ask_which_action" });
 
-export function formatNotFound(domain: string, base: string): ToolText {
+export function formatNotFound(domain: string, base: string, canAdd = true): ToolText {
+  // MCP-FIX-1 (log §465, H5): same capacity rule as listar_dominios — a full account gets no add link.
+  const add = canAdd
+    ? `Opción A, medirlo de forma continua: añádelo aquí, ya viene relleno: ${addDomainUrl(base, domain)}`
+    : "La cuenta ya tiene todos los dominios que caben, así que ahora no se puede añadir otro sin liberar uno.";
   return {
     text:
       `${domain} no es uno de los dominios de tu cuenta de GenScore (usa listar_dominios para ver cuáles tienes). ` +
-      `Para empezar a medirlo, añádelo aquí, ya viene relleno: ${addDomainUrl(base, domain)}\n\n` +
+      `No hay cifras ni recomendaciones suyas.\n\n${add}\n\n` +
       PUBLIC_REVIEW_OFFER(domain),
-    structured: { state: "not_found", domain, addDomainUrl: addDomainUrl(base, domain), publicReview: publicReviewOffer(domain) }
+    structured: {
+      state: "not_found",
+      domain,
+      ...(canAdd ? { addDomainUrl: addDomainUrl(base, domain) } : { accountFull: true }),
+      publicReview: publicReviewOffer(domain)
+    }
   };
 }
 
@@ -90,17 +133,22 @@ export function formatDomains(input: {
   domains: Array<{ domain: string; brand: string; projectId: string }>;
   /** The domain the person asked about, when the model passed it (log §463). */
   asked?: { domain: string; found: boolean } | null;
+  /** MCP-FIX-1 (log §465): ChatGPT's answer names neither plan nor trial. */
+  profile?: McpProfile;
 }): ToolText {
+  const chatgpt = input.profile === "chatgpt";
   const canAdd = input.domains.length < input.domainCap;
   const lines: string[] = [
-    `Cuenta de GenScore${input.email ? ` de ${input.email}` : ""}, plan ${input.planName}${input.trialEndsAt ? ` (prueba hasta el ${input.trialEndsAt.slice(0, 10)})` : ""}.`,
+    chatgpt
+      ? `Cuenta de GenScore${input.email ? ` de ${input.email}` : ""}.`
+      : `Cuenta de GenScore${input.email ? ` de ${input.email}` : ""}, plan ${input.planName}${input.trialEndsAt ? ` (prueba hasta el ${input.trialEndsAt.slice(0, 10)})` : ""}.`,
     ""
   ];
   if (!input.domains.length) lines.push(`Todavía no hay ningún dominio. Añade el primero aquí: ${addDomainUrl(input.base)}`);
   else {
     for (const d of input.domains) lines.push(`- ${d.domain} (${d.brand}): ${input.base}/dashboard/projects/${d.projectId}`);
     if (input.domains.length < input.domainCap) lines.push("", `Para añadir otro dominio: ${addDomainUrl(input.base)}`);
-    else lines.push("", "La cuenta ya tiene todos los dominios que incluye su plan.");
+    else lines.push("", chatgpt ? "La cuenta ya tiene todos los dominios que caben." : "La cuenta ya tiene todos los dominios que incluye su plan.");
   }
   const asked = input.asked ?? null;
   if (asked && asked.found) lines.push("", `${asked.domain} está en la cuenta: sus datos salen con ver_dominio, ver_recomendaciones y el resto de herramientas del dominio.`);
@@ -121,8 +169,7 @@ export function formatDomains(input: {
     text: lines.join("\n"),
     structured: {
       email: input.email,
-      planName: input.planName,
-      trialEndsAt: input.trialEndsAt,
+      ...(chatgpt ? {} : { planName: input.planName, trialEndsAt: input.trialEndsAt }),
       domains: input.domains.map((d) => ({ domain: d.domain, brand: d.brand, url: `${input.base}/dashboard/projects/${d.projectId}` })),
       ...(canAdd ? { addDomainUrl: addDomainUrl(input.base) } : {}),
       ...(asked
@@ -148,9 +195,19 @@ function noScan(domain: string, l: ConsoleLinks): ToolText {
   };
 }
 
+/** No finished scan behind the payload: nothing to measure yet. One predicate for every tool (MCP-FIX-1, log §465, H4). */
+const hasNoScan = (p: ExtProjectPayload) => p.geoScore == null && !p.engines.length && !p.scanDate;
+
 export function formatDomainSummary(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
   if (p.geoScore == null && !p.engines.length) return noScan(p.domain, l);
-  const lines = [`**${p.domain}** (${p.brand})${p.scanDate ? ` · último escaneo del ${p.scanDate.slice(0, 10)}` : ""}`, ""];
+  const age = scanAge(p.scanDate, l.now);
+  const lines = [`**${p.domain}** (${p.brand})${age ? ` · último ${age.label}` : p.scanDate ? ` · último escaneo del ${p.scanDate.slice(0, 10)}` : ""}`, ""];
+  // MCP-FIX-1 (log §465, H6): a missing figure is not a zero. Say what could not be read.
+  const incomplete: string[] = [];
+  if (p.geoScore == null) incomplete.push("la Puntuación GEO");
+  if (incomplete.length) {
+    lines.push(`Datos incompletos: no se ha podido obtener ${incomplete.join(" ni ")} de este escaneo. Lo que falta no es un cero ni un resultado negativo; se muestra solo lo disponible.`, "");
+  }
   if (p.geoScore != null) lines.push(`Puntuación GEO: ${p.geoScore}/100`);
   if (p.lede) lines.push(p.lede);
   if (p.engines.length) {
@@ -170,6 +227,8 @@ export function formatDomainSummary(p: ExtProjectPayload, l: ConsoleLinks): Tool
       domain: p.domain,
       brand: p.brand,
       scanDate: p.scanDate,
+      scanAgeDays: age?.days ?? null,
+      ...(incomplete.length ? { incomplete: true, missing: incomplete } : {}),
       geoScore: p.geoScore,
       engines: p.engines,
       rivals: p.rivals,
@@ -182,26 +241,36 @@ export function formatDomainSummary(p: ExtProjectPayload, l: ConsoleLinks): Tool
 
 export function formatCompetitors(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
   if (!p.rivals.length) return noScan(p.domain, l);
-  const lines = [`Marcas que más nombra la IA en las preguntas principales de búsqueda de ${p.domain}:`, ""];
+  const age = scanAge(p.scanDate, l.now);
+  const lines = [`Marcas que más nombra la IA en las preguntas principales de búsqueda de ${p.domain}${age ? ` (${age.label})` : ""}:`, ""];
   p.rivals.forEach((r, i) => lines.push(`${i + 1}. ${r.name}${r.isBrand ? " (tú)" : ""}: aparece en el ${formatShare(r.share)} de las respuestas${r.domain && !r.isBrand ? ` · ${r.domain}` : ""}`));
   lines.push(
     "",
     `Ranking completo y evolución: ${screen(l, "/competitors")}`,
     "Para seguir a otra marca, pídeme que revise su web y te doy el enlace para añadirla, o hazlo en esa misma pantalla."
   );
-  return { text: lines.join("\n"), structured: { domain: p.domain, rivals: p.rivals, url: screen(l, "/competitors") } };
+  return { text: lines.join("\n"), structured: { domain: p.domain, scanDate: p.scanDate, scanAgeDays: age?.days ?? null, rivals: p.rivals, url: screen(l, "/competitors") } };
 }
 
 const MAX_PLAN_QUESTIONS = 6;
 
 export function formatRecommendations(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
-  if (!p.plan.length) {
+  // MCP-FIX-1 (log §465, H4): no scan is not «no pending actions». The plan comes from the same run as `scanDate`.
+  if (hasNoScan(p)) {
     return {
-      text: `${p.domain} no tiene acciones pendientes en su plan ahora mismo. El plan se recalcula con cada escaneo: ${screen(l, "/recommendations")}`,
-      structured: { domain: p.domain, plan: [], url: screen(l, "/recommendations") }
+      text: `${p.domain} todavía no tiene un escaneo completado, así que no hay un escaneo del que sacar recomendaciones. Aparecerán aquí en cuanto termine: ${screen(l, "/recommendations")}`,
+      structured: { state: "no_scan", domain: p.domain, plan: [], url: screen(l, "/recommendations") }
     };
   }
-  const lines = [`Lo primero que haría en ${p.domain}, en este orden:`, ""];
+  const age = scanAge(p.scanDate, l.now);
+  const from = age ? ` (acciones calculadas con el ${age.label})` : "";
+  if (!p.plan.length) {
+    return {
+      text: `${p.domain} no tiene acciones pendientes en su plan de acciones según su último escaneo${age ? `, el ${age.label}` : ""}. Eso solo dice que el escaneo no encontró nada que hacer; el plan se recalcula con cada escaneo: ${screen(l, "/recommendations")}`,
+      structured: { domain: p.domain, scanDate: p.scanDate, scanAgeDays: age?.days ?? null, plan: [], url: screen(l, "/recommendations") }
+    };
+  }
+  const lines = [`Lo primero que haría en ${p.domain}, en este orden${from}:`, ""];
   p.plan.forEach((r, i) => {
     lines.push(`${i + 1}. **${r.title}**${r.engines.length ? ` (${r.engines.join(", ")})` : ""}`);
     if (r.firstStep) lines.push(`   Primer paso: ${r.firstStep}`);
@@ -214,7 +283,7 @@ export function formatRecommendations(p: ExtProjectPayload, l: ConsoleLinks): To
     }
   });
   lines.push("", `El plan completo, con cómo hacerlo y «Marcar como hecho»: ${screen(l, "/recommendations")}`);
-  return { text: lines.join("\n"), structured: { domain: p.domain, plan: p.plan, url: screen(l, "/recommendations") } };
+  return { text: lines.join("\n"), structured: { domain: p.domain, scanDate: p.scanDate, scanAgeDays: age?.days ?? null, plan: p.plan, url: screen(l, "/recommendations") } };
 }
 
 export function formatAudits(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
@@ -227,7 +296,7 @@ export function formatAudits(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
     if (!b.issues.length) lines.push("- Nada que arreglar.");
     for (const i of b.issues) lines.push(`- ${i.label} · ${i.scope}${i.points ? ` · +${i.points} pt` : ""}`);
   }
-  if (p.agentic?.kind === "upsell") lines.push("", "La auditoría agéntica no está incluida en tu plan.");
+  if (p.agentic?.kind === "upsell") lines.push("", l.profile === "chatgpt" ? "La auditoría agéntica no está disponible para esta cuenta." : "La auditoría agéntica no está incluida en tu plan.");
   lines.push("", `Detalle por página: ${screen(l, "/web-audit")}`);
   return { text: lines.join("\n"), structured: { domain: p.domain, audits: a, url: screen(l, "/web-audit") } };
 }
@@ -260,7 +329,7 @@ export function formatPrompts(p: ExtProjectPayload, l: ConsoleLinks): ToolText {
     };
   }
   const shown = p.prompts.slice(0, MAX_PROMPTS);
-  const lines = [`Prompts que GenScore pregunta por ${p.domain}${p.scanDate ? ` (resultado del escaneo del ${p.scanDate.slice(0, 10)})` : ""}:`];
+  const lines = [`Prompts que GenScore pregunta por ${p.domain}${p.scanDate ? ` (resultado del ${scanAge(p.scanDate, l.now)?.label ?? `escaneo del ${p.scanDate.slice(0, 10)}`})` : ""}:`];
   let topic: string | null | undefined;
   for (const x of [...shown].sort((a, b) => (a.topic ?? "").localeCompare(b.topic ?? "", "es"))) {
     if (x.topic !== topic) {
