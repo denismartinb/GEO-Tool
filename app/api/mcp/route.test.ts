@@ -18,6 +18,8 @@ const getFounderOffer = vi.fn();
 vi.mock("@/lib/stripe", () => ({ getFounderOffer: () => getFounderOffer() }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: vi.fn() }));
 
+import { loadExtProjectData, pickProject } from "@/lib/ext/project-data";
+import { reviewPage } from "@/lib/page-review/review";
 import { POST as POST_CHATGPT } from "./chatgpt/route";
 import { GET, POST } from "./route";
 
@@ -161,9 +163,54 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
       const d = (n: string) => tools.find((t) => t.name === n)!.description;
       expect(d("ver_dominio")).toContain("ya sigue en su cuenta");
       expect(d("ver_recomendaciones")).toMatch(/recomendaciones GEO[\s\S]*nunca recomendaciones de productos/);
+      expect(d("revisar_pagina")).toMatch(/^Úsala sólo cuando la persona pida revisar o auditar una página/);
+      expect(d("ver_recomendaciones")).toContain("«dame las recomendaciones de <dominio>»");
+      expect(d("listar_dominios")).toMatch(/sin revisarla hasta que la persona lo pida/);
+      expect(instructions).toMatch(/«dame las recomendaciones de <dominio>» se resuelve con ver_recomendaciones aunque no nombre a GenScore/);
       expect(d("revisar_pagina")).toMatch(/URL pública concreta[\s\S]*ver_dominio[\s\S]*espera a que la persona la pida/);
       for (const t of tools) expect(t.description).not.toContain("—");
     }
+  });
+
+  it("N2: a domain outside the account is said, linked and only offered a review, on both endpoints (log §463)", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    listExtProjects.mockResolvedValue([{ id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" }]);
+    vi.mocked(loadExtProjectData).mockResolvedValue({ kind: "not_found" } as never);
+    for (const [handler, path] of [
+      [POST, "/api/mcp"],
+      [POST_CHATGPT, "/api/mcp/chatgpt"]
+    ] as const) {
+      const auth = "Bearer tokentokentokentokentoken";
+      const list = (await (await post(call("listar_dominios", { dominio: "amazon.es" }), auth, handler, path)).json()).result;
+      expect(list.content[0].text).toContain("amazon.es no está en la cuenta.");
+      expect(list.content[0].text).toContain("/dashboard/projects/new?dominio=amazon.es");
+      expect(list.content[0].text).toContain("solo se hace si lo pides");
+      expect(list.structuredContent?.asked ?? { state: "not_found" }).toMatchObject({ state: "not_found" });
+
+      const recs = (await (await post(call("ver_recomendaciones", { dominio: "amazon.es" }), auth, handler, path)).json()).result;
+      expect(recs.isError).toBeFalsy();
+      expect(recs.content[0].text).toContain("no tiene datos guardados de amazon.es");
+      expect(recs.content[0].text).toContain("solo se hace si lo pides");
+    }
+    // The public review is offered, never run by the server on its own.
+    expect(reviewPage).not.toHaveBeenCalled();
+  });
+
+  it("a domain in the account is confirmed, without any review offer (log §463)", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    const row = { id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" };
+    listExtProjects.mockResolvedValue([row]);
+    vi.mocked(pickProject).mockReturnValue(row as never);
+    const text = await textOf(await post(call("listar_dominios", { dominio: "marca.es" }), "Bearer tokentokentokentokentoken"));
+    expect(text).toContain("marca.es está en la cuenta");
+    expect(text).not.toContain("revisar_pagina");
+  });
+
+  it("the general list still tells the model to offer, not run, a review (log §463)", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    listExtProjects.mockResolvedValue([{ id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" }]);
+    const text = await textOf(await post(call("listar_dominios"), "Bearer tokentokentokentokentoken"));
+    expect(text).toMatch(/no está en esta lista[^.]*sin revisarla hasta que lo pida/);
   });
 
   it("describes que_es_genscore without prices on ChatGPT", async () => {

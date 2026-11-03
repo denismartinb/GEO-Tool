@@ -29863,3 +29863,26 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Premisa.** La cifra de una web ya medida no cambia hasta su próxima pasada con navegador (semanal, `RENDER_REFRESH_MS`); hasta entonces puede incluir bloques del aviso de cookies. La cita sí deja de salir desde ya.
 
 **Pendiente.** Nada conocido.
+
+## §463 MCP-CONNECTOR-TUNING-2: el caso «recomendaciones de un dominio ajeno» se decide en la respuesta de la herramienta (2026-11-03)
+
+**Origen.** Tras §452, Instinct repitió los 8 casos oficiales en chats nuevos con producción ya desplegada. 14 de 16 pasan; falla N2 («Dame las recomendaciones de amazon.es», dominio fuera de la cuenta) en los dos clientes, de dos formas distintas.
+
+**Causa, comprobada con PostHog (`mcp_tool_called`, sólo herramienta, cliente y si había cuenta).**
+
+- **ChatGPT** llamó a `listar_dominios` (10:41:24 UTC) y siete segundos después a `revisar_pagina`. **Nunca llamó a `ver_recomendaciones`**, así que nunca leyó la respuesta «no está en tu cuenta» de `formatNotFound` ni la regla de §452 dentro de ella. La regla vivía en las instrucciones del servidor y en descripciones, y ChatGPT decidió con la lista de dominios delante: amazon.es no estaba, y la única herramienta que aceptaba ese dominio era la revisión pública.
+- **Claude** no llamó a ninguna herramienta de GenScore en ese caso (ninguna llamada de Claude entre los casos oficiales encaja con N2). Eligió el navegador: leyó «recomendaciones de amazon.es» como recomendaciones de compra de Amazon. Es enrutado del cliente antes de que el servidor intervenga; desde el servidor sólo se puede influir con el texto que Claude ve al elegir (título, descripción, instrucciones).
+
+**Decisión.**
+
+- La oferta viaja **en la respuesta que el modelo lee justo antes de decidir**, no sólo en instrucciones:
+  - `listar_dominios` acepta `dominio` opcional. Si se pasa y no está en la cuenta, la respuesta lo dice, da el alta rellena (si cabe en el plan) y ofrece `revisar_pagina` «solo si lo pides», con `structuredContent.asked.publicReview.run = "only_if_asked"`. Si está, lo confirma sin oferta.
+  - Sin `dominio`, la lista lleva una línea con la misma regla en general.
+  - `formatNotFound` (todas las herramientas de dominio) añade la misma oferta y `publicReview` en `structuredContent`. Esto deja sin efecto el «`formatNotFound` no cambia» de §452.
+- Descripciones: `revisar_pagina` empieza por «Úsala sólo cuando la persona pida revisar o auditar una página o una URL»; `ver_recomendaciones` pasa a titularse «Ver recomendaciones GEO de un dominio» y abre con «Para «dame las recomendaciones de <dominio>», lo mencione o no a GenScore»; las instrucciones del servidor dicen que esa petición se resuelve con `ver_recomendaciones` y que no se abre el navegador para eso.
+- El servidor nunca ejecuta la revisión por su cuenta: ninguna herramienta de cuenta llama a `reviewPage` (lo vigila `app/api/mcp/route.test.ts`).
+- amazon.es sigue fuera de la cuenta de pruebas: es el caso negativo.
+
+**Lo que esto no garantiza.** Que ChatGPT pase `dominio` o que no llame a `revisar_pagina` igualmente: el texto es una instrucción, no un candado. Un candado (que `revisar_pagina` exija una confirmación) rompería P1, donde la persona sí pide revisar. Y en Claude, si el modelo elige el navegador antes de mirar los conectores, ningún texto del servidor llega a leerse. Ambos casos se validan sólo en los clientes reales.
+
+**Pendiente.** Repetir N2 en chats nuevos en los dos clientes tras desplegar, mirando en PostHog qué herramientas se llamaron, y los otros siete casos para confirmar que no se rompen (sobre todo P1 y P3). Si Claude sigue yendo al navegador, el siguiente paso es probar con el conector como único activo para separar el enrutado del cliente del texto del servidor.

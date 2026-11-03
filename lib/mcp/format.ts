@@ -60,12 +60,24 @@ export function formatPlanNotice(): ToolText {
   };
 }
 
+/**
+ * MCP-CONNECTOR-TUNING-2 (log §463): what a domain outside the account gets,
+ * in the tool answer itself. ChatGPT ignored the same rule in the server
+ * instructions and ran `revisar_pagina` unasked, so the offer travels in the
+ * result the model reads right before it decides what to do next.
+ */
+export const PUBLIC_REVIEW_OFFER = (domain: string) =>
+  `GenScore no tiene datos guardados de ${domain}, así que no hay recomendaciones suyas. ` +
+  `Si quieres, puedo revisar ahora su página pública con revisar_pagina; todavía no se ha revisado y solo se hace si lo pides.`;
+const publicReviewOffer = (domain: string) => ({ tool: "revisar_pagina", url: `https://${domain}`, run: "only_if_asked" });
+
 export function formatNotFound(domain: string, base: string): ToolText {
   return {
     text:
       `${domain} no es uno de los dominios de tu cuenta de GenScore (usa listar_dominios para ver cuáles tienes). ` +
-      `Para empezar a medirlo, añádelo aquí, ya viene relleno: ${addDomainUrl(base, domain)}`,
-    structured: { state: "not_found", domain, addDomainUrl: addDomainUrl(base, domain) }
+      `Para empezar a medirlo, añádelo aquí, ya viene relleno: ${addDomainUrl(base, domain)}\n\n` +
+      PUBLIC_REVIEW_OFFER(domain),
+    structured: { state: "not_found", domain, addDomainUrl: addDomainUrl(base, domain), publicReview: publicReviewOffer(domain) }
   };
 }
 
@@ -76,8 +88,11 @@ export function formatDomains(input: {
   trialEndsAt: string | null;
   domainCap: number;
   domains: Array<{ domain: string; brand: string; projectId: string }>;
+  /** The domain the person asked about, when the model passed it (log §463). */
+  asked?: { domain: string; found: boolean } | null;
 }): ToolText {
-  const lines = [
+  const canAdd = input.domains.length < input.domainCap;
+  const lines: string[] = [
     `Cuenta de GenScore${input.email ? ` de ${input.email}` : ""}, plan ${input.planName}${input.trialEndsAt ? ` (prueba hasta el ${input.trialEndsAt.slice(0, 10)})` : ""}.`,
     ""
   ];
@@ -87,6 +102,21 @@ export function formatDomains(input: {
     if (input.domains.length < input.domainCap) lines.push("", `Para añadir otro dominio: ${addDomainUrl(input.base)}`);
     else lines.push("", "La cuenta ya tiene todos los dominios que incluye su plan.");
   }
+  const asked = input.asked ?? null;
+  if (asked && asked.found) lines.push("", `${asked.domain} está en la cuenta: sus datos salen con ver_dominio, ver_recomendaciones y el resto de herramientas del dominio.`);
+  else if (asked) {
+    lines.push("", `${asked.domain} no está en la cuenta.`);
+    if (canAdd) lines.push(`Para empezar a medirlo, añádelo aquí, ya viene relleno: ${addDomainUrl(input.base, asked.domain)}`);
+    lines.push(PUBLIC_REVIEW_OFFER(asked.domain));
+  } else {
+    // Without the asked domain, the same rule in general terms: the model
+    // reads this list and then decides (ChatGPT went from here straight to
+    // revisar_pagina on «Dame las recomendaciones de amazon.es», log §463).
+    lines.push(
+      "",
+      "Si la persona pregunta por un dominio que no está en esta lista, GenScore no tiene datos suyos: díselo, da el enlace para añadirlo y ofrécele revisar su página con revisar_pagina, sin revisarla hasta que lo pida."
+    );
+  }
   return {
     text: lines.join("\n"),
     structured: {
@@ -94,7 +124,19 @@ export function formatDomains(input: {
       planName: input.planName,
       trialEndsAt: input.trialEndsAt,
       domains: input.domains.map((d) => ({ domain: d.domain, brand: d.brand, url: `${input.base}/dashboard/projects/${d.projectId}` })),
-      ...(input.domains.length < input.domainCap ? { addDomainUrl: addDomainUrl(input.base) } : {})
+      ...(canAdd ? { addDomainUrl: addDomainUrl(input.base) } : {}),
+      ...(asked
+        ? {
+            asked: asked.found
+              ? { domain: asked.domain, state: "in_account" }
+              : {
+                  domain: asked.domain,
+                  state: "not_found",
+                  ...(canAdd ? { addDomainUrl: addDomainUrl(input.base, asked.domain) } : {}),
+                  publicReview: publicReviewOffer(asked.domain)
+                }
+          }
+        : {})
     }
   };
 }

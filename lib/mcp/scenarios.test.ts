@@ -107,7 +107,21 @@ const SCENARIOS: Row[] = [
   {
     name: "dominio ajeno → enlace al alta ya relleno",
     answer: () => formatNotFound("nueva.es", BASE),
-    must: [`${BASE}/dashboard/projects/new?dominio=nueva.es`]
+    must: [`${BASE}/dashboard/projects/new?dominio=nueva.es`, "no tiene datos guardados de nueva.es", "solo se hace si lo pides"]
+  },
+  {
+    name: "listar con el dominio pedido fuera de la cuenta → lo dice, alta rellena y revisión sólo ofrecida (log §463)",
+    answer: () =>
+      formatDomains({
+        base: BASE,
+        email: null,
+        planName: "Pro",
+        trialEndsAt: null,
+        domainCap: 3,
+        domains: [{ domain: "marca.es", brand: "Marca", projectId: "p1" }],
+        asked: { domain: "nueva.es", found: false }
+      }),
+    must: ["nueva.es no está en la cuenta.", `${BASE}/dashboard/projects/new?dominio=nueva.es`, "solo se hace si lo pides"]
   },
   // prueba terminada
   { name: "solo lectura → aviso con enlace informativo", answer: () => formatPlanNotice(), must: ["https://www.genscore.es/precios"] },
@@ -221,6 +235,21 @@ describe("MCP scenario battery: every answer has a next step (log §418)", () =>
   it("an anonymous review never links into a console it cannot open", () => {
     const t = formatPageReview(REVIEW, null, { base: BASE, account: null }).text;
     expect(t).not.toContain("/dashboard/");
+  });
+
+  it("a full account asked about another domain gets the offer but no add link (log §463)", () => {
+    const t = formatDomains({
+      base: BASE,
+      email: null,
+      planName: "Starter",
+      trialEndsAt: null,
+      domainCap: 1,
+      domains: [{ domain: "marca.es", brand: "Marca", projectId: "p1" }],
+      asked: { domain: "nueva.es", found: false }
+    });
+    expect(t.text).not.toContain("/projects/new");
+    expect(t.text).toContain("solo se hace si lo pides");
+    expect(t.structured?.asked).toMatchObject({ state: "not_found", publicReview: { tool: "revisar_pagina", run: "only_if_asked" } });
   });
 
   it("encodes the prefilled domain", () => {
