@@ -21,6 +21,12 @@ describe("isChallengeResponse", () => {
     ).toBe(true);
   });
 
+  it("an empty 200 to our bot is a block, not a page (violettea.es, log §464)", () => {
+    expect(isChallengeResponse({ status: 200, headers: { vary: "User-Agent" }, body: "" })).toBe(true);
+    expect(isChallengeResponse({ status: 200, headers: {}, body: "  \n " })).toBe(true);
+    expect(isChallengeResponse({ status: 404, headers: {}, body: "" })).toBe(false);
+  });
+
   it("a 404 is not a challenge", () => {
     expect(isChallengeResponse({ status: 404, headers: {}, body: "Not found" })).toBe(false);
   });

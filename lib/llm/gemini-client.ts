@@ -66,6 +66,21 @@ export class GeminiTimeoutError extends Error {
  */
 export class GeminiConfigError extends Error {}
 
+/**
+ * A non-OK answer to the visibility generation call. Same message as before
+ * (`getGeminiApiError`), plus the status as a number so a caller can say
+ * which failure it was without passing provider text along (STUDY-ERRORS-1).
+ */
+export class GeminiHttpError extends Error {
+  readonly status: number;
+
+  constructor(status: number) {
+    super(getGeminiApiError(status));
+    this.name = "GeminiHttpError";
+    this.status = status;
+  }
+}
+
 export function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";

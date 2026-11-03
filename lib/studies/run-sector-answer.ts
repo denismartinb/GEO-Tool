@@ -5,6 +5,7 @@ import { extractOpenAIStructuredData, generateOpenAIVisibilityAnswer } from "@/l
 import { generatePerplexityVisibilityAnswer } from "@/lib/llm/perplexity";
 import { verifyExtractedMentions } from "@/lib/scan/extraction";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
+import { resolveExtractionRoute } from "@/lib/scan/extraction-routing";
 import { isGenericEntityName } from "@/lib/entity-hygiene/generic-entities";
 import { STUDY_SENTINEL_BRAND, type AnswerRecord, type Engine, type SectorConfig } from "@/lib/studies/sector-study";
 
@@ -40,14 +41,19 @@ export async function runSectorAnswer(input: {
             : generateClaudeVisibilityAnswer;
     const answer = await generate({ prompt, country: sector.country, language: sector.language });
 
-    // Perplexity has no extractor of its own; Gemini reads it, as the scan's
-    // routing does for any provider without one (resolveExtractionRoute).
+    // Same extractor as the scan (resolveExtractionRoute): with
+    // SCAN_EXTRACTION_CLAUDE_MODEL set, every answer is read by that Claude
+    // model; without it, each engine reads its own and Perplexity, which has
+    // no extractor, is read by Gemini. Hard-coding Gemini here made a Gemini
+    // outage take Perplexity down too, in studies only (STUDY-ERRORS-1).
+    const route = resolveExtractionRoute(engine);
     const extract =
-      engine === "gemini" || engine === "perplexity"
-        ? extractGeminiStructuredData
-        : engine === "openai"
+      route.provider === "claude"
+        ? (args: Parameters<typeof extractClaudeStructuredData>[0]) =>
+            extractClaudeStructuredData({ ...args, model: route.model })
+        : route.provider === "openai"
           ? extractOpenAIStructuredData
-          : extractClaudeStructuredData;
+          : extractGeminiStructuredData;
     // Same rule as the scan (lib/scan/extraction.ts): Gemini's grounding URIs
     // are Google redirect wrappers and get resolved through the SSRF-guarded
     // resolver; OpenAI's and Perplexity's are already final. Runs alongside the extraction.
@@ -82,11 +88,25 @@ export async function runSectorAnswer(input: {
       citations
     };
   } catch (error) {
-    const kind = error instanceof Error ? error.name : "UnknownError";
-    const detail = (error as { category?: unknown })?.category;
-    const category = typeof detail === "string" ? `${kind}:${detail}` : kind;
-    return { ...base, model: null, error: category, rawText: null, seedMentions: [], otherBrands: [] };
+    return { ...base, model: null, error: studyErrorCode(error), rawText: null, seedMentions: [], otherBrands: [] };
   }
+}
+
+/**
+ * `Name[:category][:status]`, e.g. `ExtractionError:http:404` or
+ * `GeminiHttpError:503`. Only the error's class name, our own category and a
+ * numeric status: never a provider message (.claude/rules/gemini.md). The
+ * status is what tells a retired model (404) from a provider outage (5xx)
+ * without spending another call (STUDY-ERRORS-1).
+ */
+export function studyErrorCode(error: unknown): string {
+  const kind = error instanceof Error ? error.name : "UnknownError";
+  const category = (error as { category?: unknown } | null)?.category;
+  const status = (error as { status?: unknown } | null)?.status;
+  const parts = [kind];
+  if (typeof category === "string" && /^[a-z_]+$/.test(category)) parts.push(category);
+  if (typeof status === "number" && Number.isInteger(status) && status >= 100 && status <= 599) parts.push(String(status));
+  return parts.join(":");
 }
 
 function domainOf(url: string): string | null {

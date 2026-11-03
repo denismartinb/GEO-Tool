@@ -27,6 +27,13 @@ export function isChallengeResponse(input: ChallengeInput): boolean {
   const blockedStatus = input.status === 401 || input.status === 403 || input.status === 429 || input.status === 503;
   if (blockedStatus) return true;
 
+  // A 200 with nothing in it: the site answers our bot with an empty page
+  // while a browser gets the real one (violettea.es, PrestaShop, 2026-11-03:
+  // `vary: User-Agent`, 0 bytes). Reading it as a page made a real product
+  // sheet come out as «no vende nada» and every trust check fail; it is a
+  // block to our request, so `unknown`, never the shop's fault (log §319, §464).
+  if (input.status >= 200 && input.status < 300 && input.body.trim() === "") return true;
+
   // A 200 that is really an interstitial: small page, challenge markup.
   return input.status >= 200 && input.status < 300 && input.body.length < 40_000 && CHALLENGE_BODY.test(input.body);
 }

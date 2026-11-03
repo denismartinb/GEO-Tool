@@ -56,6 +56,12 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   los dos lados. Un bloqueo a nuestra petición nunca puede leerse como fallo
   de la tienda: un reto anti-bots a nuestro robot es `unknown`, no `fail`
   (log §319), porque un agente verificado o con navegador puede pasarlo.
+- **Una respuesta 2xx vacía es un bloqueo, no una página** (log §464). Una
+  tienda que sirve 0 bytes a nuestro bot y la ficha entera a un navegador
+  (`vary: User-Agent`, violettea.es) salía como «no vende nada» con todas las
+  de Confianza suspendidas. `isChallengeResponse` la cuenta como bloqueo:
+  `pageRead: false`, `unknown`, nunca fallo de la tienda. No se cambia el
+  user-agent para conseguir la página (primera regla de arriba).
 - **Siempre salen los cinco componentes** (fundador, log §319). El que no se
   puede medir lleva el círculo vacío y dice por qué; nunca desaparece.
 - **Sin página de venta no hay nota total.** Comprensión y Compra se miden

@@ -92,6 +92,23 @@ describe("runAgenticAudit", () => {
     expect(out.result.score).toBeNull();
   });
 
+  it("an empty 200 product page is read as a block: unknown, never «no vende nada» with failed trust checks (log §464)", async () => {
+    const out = await runAgenticAudit("tienda.es/destacado/50-earl-grey.html", {
+      fetch: fakeFetch({
+        "/destacado/50-earl-grey.html": { status: 200, body: "", headers: { vary: "User-Agent" } },
+        "/robots.txt": { status: 200, body: "User-agent: *\nAllow: /", type: "text/plain" }
+      }),
+      tokenAllowed: allowAll
+    });
+    expect(out.status).toBe("completed");
+    if (out.status !== "completed") return;
+    expect(out.result.pageRead).toBe(false);
+    expect(out.result.challenge).toBe(true);
+    expect(out.result.score).toBeNull();
+    const failed = out.result.components.flatMap((c) => c.checks).filter((c) => c.state === "fail" && c.id !== "sitemap");
+    expect(failed).toEqual([]);
+  });
+
   it("an unreachable page fails, and an invalid input never fetches", async () => {
     const unreachable = await runAgenticAudit("tienda.es", {
       fetch: async () => ({ kind: "error", reason: "timeout" }),

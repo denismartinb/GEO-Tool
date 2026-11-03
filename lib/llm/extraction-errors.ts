@@ -38,11 +38,19 @@ export type ExtractionErrorCategory =
 
 export class ExtractionError extends Error {
   readonly category: ExtractionErrorCategory;
+  /**
+   * The provider's HTTP status, when the failure was a non-OK response. A
+   * number, never provider text, so it is safe to surface: without it an
+   * `http` failure cannot be told apart between a 404 (model gone) and a
+   * 5xx (provider down) (STUDY-ERRORS-1).
+   */
+  readonly status?: number;
 
-  constructor(category: ExtractionErrorCategory, message: string) {
+  constructor(category: ExtractionErrorCategory, message: string, status?: number) {
     super(message);
     this.name = "ExtractionError";
     this.category = category;
+    if (status !== undefined) this.status = status;
   }
 }
 
