@@ -152,7 +152,7 @@ export async function fetchExtractionWithRetry(
       if (response.ok) return response;
 
       const category: ExtractionErrorCategory = categorizeHttpStatus(response.status);
-      lastError = new ExtractionError(category, options.describeStatus(response.status));
+      lastError = new ExtractionError(category, options.describeStatus(response.status), response.status);
       if (!isRetryableExtractionCategory(category) || attempt === options.maxAttempts) throw lastError;
 
       const delayMs = computeRetryDelayMs({

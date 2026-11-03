@@ -119,6 +119,7 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   STUDY_API_DAILY_CAP: "la API interna de estudios usa el techo diario por defecto de 600 llamadas fijado en código",
   LLM_SCAN_PROVIDERS: "el escaneo cae a Gemini en solitario",
   LLM_SCAN_PROVIDER: "legacy: sólo se lee si LLM_SCAN_PROVIDERS no está",
+  SCAN_EXTRACTION_CLAUDE_MODEL: "cada respuesta se extrae con su propio motor (y en los estudios Perplexity lo lee Gemini), en vez de un único Claude barato",
   ENABLE_SYNC_SCAN_EXECUTION: "el escaneo síncrono no se ejecuta",
   SCAN_CONTINUE_SECRET: "una campaña con más prompts que el tope por invocación no puede continuarse: se queda a medias",
   MAX_SWEEP_CHAIN_INVOCATIONS: "acota cuántas veces encadena el barrido recurrente; un valor no numérico lo dejaba en uno solo, en silencio",
@@ -211,6 +212,7 @@ export const envSchema = z.object({
   STUDY_API_DAILY_CAP: optionalText,
   LLM_SCAN_PROVIDERS: optionalText,
   LLM_SCAN_PROVIDER: optionalText,
+  SCAN_EXTRACTION_CLAUDE_MODEL: optionalText,
 
   ENABLE_SYNC_SCAN_EXECUTION: optionalText,
   SCAN_CONTINUE_SECRET: optionalText,

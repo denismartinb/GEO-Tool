@@ -13,6 +13,7 @@ import {
 import {
   GEMINI_API_URL,
   GeminiConfigError,
+  GeminiHttpError,
   GeminiTimeoutError,
   getGeminiApiError,
   geminiGenerationTuning,
@@ -52,7 +53,7 @@ import {
 // eran exports publicos de ESTE modulo. Se reexportan para que el slice no
 // cambie ni un solo sitio de llamada; migrar los imports es trabajo del
 // siguiente, cuando las nueve funciones de producto salgan de aqui.
-export { GeminiConfigError, GeminiTimeoutError };
+export { GeminiConfigError, GeminiHttpError, GeminiTimeoutError };
 
 // Fase R5 (2/2): los tipos que comparten los tres motores viven ahora en
 // `lib/llm/contracts.ts`. Se reexportan por la misma razón que las dos clases
@@ -167,7 +168,7 @@ export async function generateGeminiVisibilityAnswer(input: {
   }
 
   if (!response.ok) {
-    throw new Error(getGeminiApiError(response.status));
+    throw new GeminiHttpError(response.status);
   }
 
   const data = (await response.json()) as {

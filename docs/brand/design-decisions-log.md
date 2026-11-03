@@ -29863,3 +29863,22 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Premisa.** La cifra de una web ya medida no cambia hasta su próxima pasada con navegador (semanal, `RENDER_REFRESH_MS`); hasta entonces puede incluir bloques del aviso de cookies. La cita sí deja de salir desde ya.
 
 **Pendiente.** Nada conocido.
+
+## §464 STUDY-ERRORS-1 + AGENTS-EMPTY-PAGE-1: Perplexity deja de depender de Gemini en los estudios, el error dice su estado HTTP y una página vacía es un bloqueo (2026-11-03)
+
+**Qué pasó.** El 3/11 la API de estudios devolvió error en las 23 llamadas para Gemini (`Error`) y para Perplexity (`ExtractionError:http`), por la mañana y a las 14:49. ChatGPT y Claude respondieron. El 2/11 a las 08:49 los cuatro funcionaban con `gemini-3.6-flash`. Entre una cosa y otra no cambió el código del camino (`lib/llm`, `lib/studies`, `app/api/internal/study`) ni `GEMINI_API_KEY` (sin editar desde junio), y `GEMINI_MODEL` no está puesto, así que se usa el modelo fijado. La página de retiradas de Google no da fecha de cierre para `gemini-3.6-flash`.
+
+**Diagnóstico.**
+
+- **Perplexity no fallaba por Perplexity.** Su generación funcionaba; lo que fallaba era su extracción, que `run-sector-answer.ts` hacía siempre con Gemini. El escaneo, en cambio, extrae con `resolveExtractionRoute`, y producción tiene `SCAN_EXTRACTION_CLAUDE_MODEL` puesto: en los escaneos Perplexity se lee con Claude y no dependía de Gemini. Era una divergencia sólo de los estudios.
+- **Gemini sí falla en el proveedor.** La generación devolvió una respuesta no OK (si fuera de red, el nombre sería `TypeError`), y la extracción, la categoría `http`, que excluye 400, 401, 403 y 429. Queda un 404 (modelo no disponible para esta clave) o un 5xx sostenido. Con lo que devolvía la API no se podía saber cuál sin otra llamada de pago, y Vercel Hobby no guarda los logs más de una hora.
+
+**Qué cambia.**
+
+- Los estudios extraen con `resolveExtractionRoute`, igual que el escaneo. Con la variable de producción, Perplexity y los demás se leen con el mismo Claude que en los escaneos.
+- La generación de Gemini lanza `GeminiHttpError` (mismo mensaje, más el estado) y `ExtractionError` guarda `status` cuando la causa es una respuesta HTTP. `studyErrorCode` devuelve `GeminiHttpError:404` o `ExtractionError:http:503`: clase, categoría y número, nunca texto del proveedor.
+- En el comprobador agéntico, un 2xx con el cuerpo vacío cuenta como bloqueo (`isChallengeResponse`). violettea.es (PrestaShop) responde 200 con 0 bytes y `vary: User-Agent` a `GEOStudioAudit/1.0`, mientras un navegador recibe la ficha con su JSON-LD `Product`. Antes salía `pageKind: "other"` con devoluciones, envío, reseñas e identidad suspendidas sobre una página vacía; ahora sale `pageRead: false` y esas comprobaciones quedan sin medir. No se cambia el user-agent para obtener la página: nos identificamos siempre como GenScore (ADR 0043).
+
+**Premisa.** Que el estado HTTP basta para decidir entre esperar (5xx) y cambiar de modelo (404, `GEMINI_MODEL` en Vercel y redeploy, con su ADR). Si Gemini falla también en los escaneos, el mensaje persistido en `scan_prompt_results` ya llevaba el estado («Gemini API request failed with status N.»), visible en `/debug`.
+
+**Pendiente.** Saber el estado real de Gemini: o lo lee el fundador en `/debug` en un escaneo del 3/11, o una llamada de un solo motor a la API de estudios tras desplegar (1 unidad, con su visto bueno). Si es un 404, cambiar el modelo fijado necesita su ADR (sustituye a ADR 0042).

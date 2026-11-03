@@ -90,3 +90,15 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   se cambia un modelo de verdad, con su ADR si es Gemini (log §269).
   Lo mismo vale para `singleSearch` (pedir una sola búsqueda a Gemini): es una
   prueba del comparador, no un ajuste del escaneo.
+- **Un fallo HTTP lleva su estado como número, nunca el texto del proveedor**
+  (STUDY-ERRORS-1, log §464). La generación lanza `GeminiHttpError` (mismo
+  mensaje que antes, más `status`) y `fetchExtractionWithRetry` rellena
+  `ExtractionError.status`. Sin el número, `http` no distingue un modelo
+  retirado (404) de una caída (5xx) sin gastar otra llamada. La API de estudios
+  lo devuelve como `GeminiHttpError:404` o `ExtractionError:http:503`
+  (`studyErrorCode`).
+- **Los estudios extraen como el escaneo** (`resolveExtractionRoute` en
+  `lib/studies/run-sector-answer.ts`, log §464). Con
+  `SCAN_EXTRACTION_CLAUDE_MODEL` puesto, todas las respuestas las lee ese
+  Claude; fijar Gemini a mano hacía que una caída de Gemini tumbara también a
+  Perplexity, sólo en los estudios.
