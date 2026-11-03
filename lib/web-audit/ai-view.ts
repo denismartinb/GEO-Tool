@@ -1,5 +1,5 @@
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
-import { isPageRender, RENDER_KINDS, type RenderKind } from "@/lib/web-audit/ai-render";
+import { isConsentText, isPageRender, RENDER_KINDS, type RenderKind } from "@/lib/web-audit/ai-render";
 
 /**
  * «Lo que lee la IA» in Auditoría GEO.
@@ -202,7 +202,7 @@ export function buildAiView(pages: PageAuditEntry[] | null | undefined): AiView 
         if (k.missing > 0) {
           types.add(m.type);
           sources.add(m.source);
-          sample ??= m.samples.find((x) => x.kind === kind)?.text ?? null;
+          sample ??= m.samples.find((x) => x.kind === kind && !isConsentText(x.text))?.text ?? null;
         }
       }
       if (s === 0) continue;
@@ -243,11 +243,19 @@ export type AiReadCard =
   | {
       kind: "card";
       pct: number;
+      /** Points against the previous measurement, only when `buildAiView` has one. */
+      delta: number | null;
       headline: string;
       sub: string;
-      rows: Array<{ kind: RenderKind; label: string; reachPct: number }>;
+      /** `lost` marks a kind that loses half or more on the way (warm tile). */
+      rows: Array<{ kind: RenderKind; label: string; reachPct: number; lost: boolean }>;
       title: "Lo que más se pierde" | "Estado";
-      items: Array<{ text: string; tone: "warm" | "ok" }>;
+      /** `quote` is the literal sentence that does not arrive, never paraphrased. */
+      items: Array<{ text: string; quote: string | null; tone: "warm" | "ok" }>;
+      /** Where the biggest gap is, by page type (`typeInsight`), only when it says something. */
+      where: string | null;
+      /** How much arrives per kind of page (or by importance), only with two or more groups. */
+      split: { title: string; lines: AiGroupLine[] } | null;
     };
 
 const SHORT_LABEL: Record<RenderKind, string> = { price: "Precios", faq: "Preguntas", review: "Opiniones", spec: "Fichas" };
@@ -266,36 +274,47 @@ const MOST_LOST: Record<RenderKind, string> = {
 
 export function aiReadCard(view: AiView | null, measuring: boolean): AiReadCard {
   if (!view || view.mode !== "measured") return measuring ? { kind: "measuring" } : { kind: "hidden" };
-  const rows = view.kinds.map((k) => ({ kind: k.kind, label: SHORT_LABEL[k.kind], reachPct: 100 - k.missingPct }));
+  const rows = view.kinds.map((k) => ({ kind: k.kind, label: SHORT_LABEL[k.kind], reachPct: 100 - k.missingPct, lost: k.missingPct >= 50 }));
   const lost = view.kinds.filter((k) => k.missingPct > 0).sort((a, b) => b.missingPct - a.missingPct);
   const insight = view.groups.find((g) => g.title === "Por lo que importa")?.insight ?? null;
+  const byType = view.groups.find((g) => g.title === "Por tipo de página") ?? null;
+  const where = byType?.insight ?? null;
+  const splitGroup = byType ?? view.groups.find((g) => g.title === "Por lo que importa") ?? null;
+  const split = splitGroup ? { title: splitGroup.title, lines: splitGroup.lines } : null;
+  const delta = view.delta;
   const allIn = view.pct >= 95 && lost.length === 0;
   const headline = allIn ? "Le llega casi todo lo que ven tus clientes." : `Le llega el ${view.pct}% de lo que ven tus clientes.`;
   if (lost.length === 0) {
     return {
       kind: "card",
       pct: view.pct,
+      delta,
       headline,
       sub: allIn
         ? "ChatGPT, Claude y Perplexity reciben tu contenido sin ejecutar JavaScript."
         : "Lo que la IA no ve, no lo puede contar.",
       rows,
       title: "Estado",
-      items: insight ? [{ text: insight.replace(/\.$/, ""), tone: insight === IMPORTANCE_WORSE ? "warm" : "ok" }] : []
+      items: insight ? [{ text: insight.replace(/\.$/, ""), quote: null, tone: insight === IMPORTANCE_WORSE ? "warm" : "ok" }] : [],
+      where,
+      split
     };
   }
   const worst = lost[0];
-  const items: Array<{ text: string; tone: "warm" | "ok" }> = lost
+  const items: Array<{ text: string; quote: string | null; tone: "warm" | "ok" }> = lost
     .slice(0, 2)
-    .map((k) => ({ text: k.sample ? `${LOST_LINE[k.kind]}: «${k.sample}»` : LOST_LINE[k.kind], tone: "warm" as const }));
-  if (insight === IMPORTANCE_WORSE) items.splice(1, items.length - 1, { text: insight.replace(/\.$/, ""), tone: "warm" });
+    .map((k) => ({ text: LOST_LINE[k.kind], quote: k.sample, tone: "warm" as const }));
+  if (insight === IMPORTANCE_WORSE) items.splice(1, items.length - 1, { text: insight.replace(/\.$/, ""), quote: null, tone: "warm" });
   return {
     kind: "card",
     pct: view.pct,
+    delta,
     headline,
     sub: `Lo que la IA no ve, no lo puede contar. ${MOST_LOST[worst.kind]}`,
     rows,
     title: "Lo que más se pierde",
-    items
+    items,
+    where,
+    split
   };
 }

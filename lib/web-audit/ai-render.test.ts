@@ -38,6 +38,17 @@ describe("compareRender (AI-READ-2, log §451)", () => {
     expect(JSON.stringify(r.samples)).not.toMatch(/cookies|Tienda|oculto/);
   });
 
+  it("skips consent text even inside an accordion with no telling class (log §462)", () => {
+    const withBanner = rendered.replace(
+      "</main>",
+      `<div class="pd-panel"><details><summary>Cookies estrictamente necesarias</summary><p>4 proveedores pueden usar este propósito</p></details></div></main>`
+    );
+    const r = compareRender(raw, withBanner, AT);
+    if (r.state !== "ok") throw new Error("ok");
+    expect(r.kinds.faq).toEqual({ seen: 2, missing: 2 });
+    expect(JSON.stringify(r.samples)).not.toMatch(/proveedores|Cookies/);
+  });
+
   it("is 100 when everything arrives", () => {
     const r = compareRender(rendered, rendered, AT);
     expect(r.state === "ok" && r.pct).toBe(100);
