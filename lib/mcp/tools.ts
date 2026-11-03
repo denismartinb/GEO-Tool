@@ -127,13 +127,13 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
   domainTool(
     "ver_dominio",
     "Ver resumen del dominio",
-    "Resumen del último escaneo de un dominio: Puntuación GEO, en qué parte de las respuestas lo nombran ChatGPT, Gemini, Claude y Perplexity, las marcas más nombradas, la salud técnica y el comercio agéntico.",
+    "Resumen del último escaneo de un dominio que la persona ya sigue en su cuenta de GenScore: Puntuación GEO, en qué parte de las respuestas lo nombran ChatGPT, Gemini, Claude y Perplexity, las marcas más nombradas, la salud técnica y el comercio agéntico. Es la herramienta para «¿cómo está mi dominio en la IA?». Si el dominio no está en la cuenta, lo dice y da el enlace para añadirlo.",
     formatDomainSummary
   ),
   domainTool(
     "ver_recomendaciones",
     "Ver recomendaciones",
-    "Las acciones que GenScore recomienda hacer primero en un dominio para aparecer más en las respuestas de la IA y en Google, en orden, con su primer paso.",
+    "Las recomendaciones GEO de un dominio de la cuenta: las acciones que GenScore recomienda hacer primero para que aparezca más en las respuestas de la IA y en Google, en orden, con su primer paso. Es lo que significa «recomendaciones» aquí, con o sin dominio explícito; nunca recomendaciones de productos ni de compra. Si el dominio no está en la cuenta, lo dice y da el enlace para añadirlo.",
     formatRecommendations
   ),
   domainTool(
@@ -164,7 +164,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
     name: "revisar_pagina",
     title: "Revisar una página",
     description:
-      "Revisa cualquier página web pública como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google.",
+      "Revisa una URL pública concreta, como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google. No sustituye al último escaneo de un dominio de la cuenta (para eso, ver_dominio), y no la uses por tu cuenta cuando otra herramienta diga que un dominio no está en la cuenta: ofrécela y espera a que la persona la pida.",
     inputSchema: {
       type: "object",
       properties: { url: { type: "string", description: "La dirección de la página, por ejemplo https://www.tuweb.es/precios" } },

@@ -139,6 +139,33 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
     expect((await res.json()).result._meta["mcp/www_authenticate"][0]).toContain("/.well-known/oauth-protected-resource/api/mcp/chatgpt");
   });
 
+  it("steers ambiguous asks to the right tool on both endpoints (log §452)", async () => {
+    for (const [handler, path] of [
+      [POST, "/api/mcp"],
+      [POST_CHATGPT, "/api/mcp/chatgpt"]
+    ] as const) {
+      const init = await (await post({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18" } }, undefined, handler, path)).json();
+      const instructions = init.result.instructions as string;
+      // H1: «cómo está un dominio» goes to the account tools, not to revisar_pagina.
+      expect(instructions).toMatch(/cómo está un dominio[^.]*herramientas de cuenta/);
+      // H3: «recomendaciones» means GEO actions, never shopping.
+      expect(instructions).toMatch(/«recomendaciones» son siempre[^.]*ver_recomendaciones[^.]*nunca recomendaciones de productos/);
+      // H2: after «not in the account», offer the public review, never run it unasked.
+      expect(instructions).toMatch(/no está en la cuenta[^.]*ofrecer revisar su página con revisar_pagina, pero no la ejecutes/);
+      expect(instructions).not.toContain("—");
+
+      const tools = (await (await post({ jsonrpc: "2.0", id: 2, method: "tools/list" }, undefined, handler, path)).json()).result.tools as Array<{
+        name: string;
+        description: string;
+      }>;
+      const d = (n: string) => tools.find((t) => t.name === n)!.description;
+      expect(d("ver_dominio")).toContain("ya sigue en su cuenta");
+      expect(d("ver_recomendaciones")).toMatch(/recomendaciones GEO[\s\S]*nunca recomendaciones de productos/);
+      expect(d("revisar_pagina")).toMatch(/URL pública concreta[\s\S]*ver_dominio[\s\S]*espera a que la persona la pida/);
+      for (const t of tools) expect(t.description).not.toContain("—");
+    }
+  });
+
   it("describes que_es_genscore without prices on ChatGPT", async () => {
     const res = await post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, undefined, POST_CHATGPT, "/api/mcp/chatgpt");
     const tool = (await res.json()).result.tools.find((t: { name: string }) => t.name === "que_es_genscore");
