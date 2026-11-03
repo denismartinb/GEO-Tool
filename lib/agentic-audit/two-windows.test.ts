@@ -61,7 +61,7 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "5:challenge:Ninguno|Ninguno",
       "6:cover:No aplica|Aviso de cookies encima"
     ]);
-    // Log §458: what «Punto por punto» prints is a sentence, never «Están» or «Nada» alone.
+    // Log §458: what each field under the windows prints is a sentence, never «Están» or «Nada» alone.
     expect(w.rows.map((r) => `${r.raw.say ?? r.raw.text}|${r.nav.say ?? r.nav.text}`)).toEqual([
       "Cafetera Nubaria Duo|Cafetera Nubaria Duo",
       "No ve el precio|Ve 149,00 €",

@@ -233,7 +233,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   ventana con fondo, `aria-modal`, clase de ventana o centro de su
   herramienta, o el scroll bloqueado. Una franja, o una lectura guardada sin
   `cookieCover`, no cuenta en contra. La línea dice el motivo en una frase.
-- **Cada celda de «Punto por punto» lleva su frase (`say`)** con lo que vio
+- **Cada campo bajo las ventanas lleva su frase (`say`)** con lo que vio
   ese agente (log §458); nunca «Están», «Nada» o «No aplica» solos. La
   lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
   que se vende con la misma regla.
@@ -255,6 +255,10 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **Un cambio en las reglas del navegador sube `BROWSER_READ_RULES`** cuando
   haría falsa una lectura guardada: sólo se guarda la lectura, no el HTML, y
   una lectura con reglas anteriores se vuelve a abrir una vez (log §464 adenda).
-- **Las dos columnas de «Punto por punto» se nombran por el agente**
-  («Agente que lee (HTML)», «Agente que navega»), igual que las dos ventanas de
-  arriba; nunca «sin navegador / con navegador» (Denis, log §464 adenda).
+- **Una columna por agente, sin «Punto por punto»** (Denis, log §464 adenda
+  «una columna por agente»): cada columna es la ficha dibujada de ese agente
+  y, justo debajo, sus campos compactos en el mismo orden que la otra. Un
+  problema se tiñe y lo que sólo llega con JavaScript lleva «JS» en la columna
+  del que navega. Se nombran por el agente («Agentes que leen», «Agentes que
+  navegan»); nunca «sin navegador / con navegador». Las dos columnas van de
+  lado a lado también en el móvil.

@@ -16,7 +16,7 @@ export type Cell = {
   tone: CellTone;
   text: string;
   code?: boolean;
-  /** What «Punto por punto» prints: the fact as a short sentence (log §458). */
+  /** What each agent's field list prints: the fact as a short sentence (log §458). */
   say?: string;
 };
 export type RowId = "name" | "price" | "stock" | "buy" | "data" | "challenge" | "cover";
@@ -49,7 +49,7 @@ function checkOf(result: AgenticCheckResult, ...ids: string[]): AgenticCheck | u
 }
 
 /*
- * Log §458: every cell of «Punto por punto» says what that agent saw in a
+ * Log §458: every field under each window says what that agent saw in a
  * short sentence (`say`), so «Están», «Nada» or «No aplica» never stand alone.
  * `text` stays the short value the mock windows print.
  */

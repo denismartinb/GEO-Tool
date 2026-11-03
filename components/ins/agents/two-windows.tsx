@@ -1,7 +1,7 @@
 import { Ic } from "@/components/ins/ic";
 import { AgentKindIcon } from "@/components/ins/agents/agent-kind-icon";
 import { NAV_AGENTS, READ_AGENTS } from "@/lib/agentic-audit/agent-lanes";
-import type { Cell, Slot, TwoWindows } from "@/lib/agentic-audit/two-windows";
+import type { Cell, Row, Slot, TwoWindows } from "@/lib/agentic-audit/two-windows";
 
 /**
  * AGENTS-BROWSER-1 PR 2 (log §454): «Con navegador y sin él» on «Auditoría
@@ -20,23 +20,17 @@ function shortUrl(url: string): string {
   }
 }
 
-function Pin({ n }: { n: number | null }) {
-  return n === null ? null : <span className="agw-pin">{n}</span>;
-}
-
 function ReadSlot({ slot }: { slot: Slot }) {
   if (slot.tone === "na") return null;
   if (slot.tone !== "ok")
     return (
       <span className="agw-slot agw-miss">
         {slot.text}
-        <Pin n={slot.pin} />
       </span>
     );
   return (
     <span className={`agw-slot agw-s-${slot.id}`}>
       {slot.text}
-      <Pin n={slot.pin} />
     </span>
   );
 }
@@ -47,23 +41,43 @@ function NavSlot({ slot }: { slot: Slot }) {
     return (
       <span className="agw-slot agw-miss">
         {slot.text}
-        <Pin n={slot.pin} />
       </span>
     );
   return (
     <span className={`agw-slot agw-s-${slot.id}${slot.tone === "mid" ? " agw-soft" : ""}`}>
       {slot.text}
-      <Pin n={slot.pin} />
     </span>
   );
 }
 
-function CellView({ cell }: { cell: Cell }) {
+/**
+ * Each agent's fields, right under its window (Denis, 2026-11-03: one column
+ * per agent, no separate «Punto por punto»). Same rows, same order in both
+ * columns; a problem is tinted, and what only arrives with JavaScript carries
+ * a «JS» tag on the browsing side. Prints `say` (log §458): «Están» or
+ * «Nada» never stand alone.
+ */
+function Points({ rows, side }: { rows: Row[]; side: "raw" | "nav" }) {
   return (
-    <span className={`agw-${cell.tone}`}>
-      <i className="agw-d" />
-      {cell.say ? <b>{cell.say}</b> : cell.code ? <code>{cell.text}</code> : <b>{cell.text}</b>}
-    </span>
+    <ul className="agw-pts">
+      {rows.map((r) => {
+        const cell: Cell = r[side];
+        return (
+          <li key={r.id} className={`agw-pt agw-${cell.tone}`}>
+            <span className="agw-pt-k">{r.title}</span>
+            <span className="agw-pt-v">
+              <i className="agw-d" />
+              {cell.say ? <b>{cell.say}</b> : cell.code ? <code>{cell.text}</code> : <b>{cell.text}</b>}
+              {side === "nav" && r.gap ? (
+                <span className="agw-jst" title="Sólo con JavaScript">
+                  JS
+                </span>
+              ) : null}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -107,7 +121,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
               <AgentKindIcon kind="read" />
             </span>
             <div>
-              <b>Un agente que lee</b>
+              <b>Agentes que leen</b>
               <span>{READ_AGENTS}</span>
             </div>
           </div>
@@ -128,6 +142,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
               </div>
             </div>
           </div>
+          <Points rows={windows.rows} side="raw" />
           <div className={`agw-foot agw-f-${windows.read.footTone}`}>
             <Ic n={windows.read.footTone === "ok" ? "check" : "x"} sm />
             {windows.read.foot}
@@ -140,7 +155,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
               <AgentKindIcon kind="nav" />
             </span>
             <div>
-              <b>Un agente que navega</b>
+              <b>Agentes que navegan</b>
               <span>{NAV_AGENTS}</span>
             </div>
           </div>
@@ -164,10 +179,10 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
               <div className="agw-ck">
                 <span>Aviso de cookies</span>
                 <em>Aceptar</em>
-                <Pin n={windows.nav.cookiesPin} />
               </div>
             ) : null}
           </div>
+          <Points rows={windows.rows} side="nav" />
           <div className={`agw-foot agw-f-${windows.nav.footTone === "ok" ? "nav" : "no"}`}>
             <Ic n={windows.nav.footTone === "ok" ? "check" : "x"} sm />
             {windows.nav.foot}
@@ -175,35 +190,11 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
         </div>
       </div>
 
-      <div className="agw-top">
-        <span className="agw-k">Punto por punto</span>
-        <span className="agw-sp" />
-        <div className="agw-legend">
-          <span className="agw-l">
-            <i />
-            Agente que lee (HTML)
-          </span>
-          <span className="agw-r">
-            <i />
-            Agente que navega
-          </span>
-        </div>
-      </div>
-      <div className="agw-mx">
-        {windows.rows.map((r) => (
-          <div key={r.id} className={`agw-cell${r.gap ? " agw-gap" : ""}`}>
-            <span className="agw-cell-k">
-              {r.pin !== null ? <span className="agw-pn">{r.pin}</span> : null}
-              {r.title}
-              {r.note ? <small>{r.note}</small> : null}
-            </span>
-            <div className="agw-split">
-              <CellView cell={r.raw} />
-              <CellView cell={r.nav} />
-            </div>
-          </div>
-        ))}
-      </div>
+      {windows.rows.some((r) => r.gap) ? (
+        <p className="agw-jsl">
+          <span className="agw-jst">JS</span>Sólo llega con JavaScript: un agente que lee no lo ve.
+        </p>
+      ) : null}
 
       {windows.verdict ? (
         <div className="agw-verdict">
