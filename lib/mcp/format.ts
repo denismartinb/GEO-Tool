@@ -353,9 +353,12 @@ export function formatPageReview(
     "",
     `IA ${s.lanes.ia ?? "sin medir"} · Google ${s.lanes.google ?? "sin medir"}${s.lanes.agent != null ? ` · Agentes ${s.lanes.agent} (fuera de la nota)` : ""}`
   );
+  if (r.redirectedFrom) lines.push(`Te llevó a otra página: pediste ${r.redirectedFrom} y la web respondió con ${r.url}.`);
+  // AGENTS-READ-FIX-1 (log §465): a borrowed agents score names its page and shows its checks; no score says why.
   if (s.shop?.state === "found") lines.push(`Agentes se mide en la página que vende: ${s.shop.url}`);
+  else if (s.lanes.agent == null && s.agentWhy) lines.push(`Agentes: ${s.agentWhy}`);
   for (const lane of ["ia", "google", "agent"] as const) {
-    const cs = s.criteria.filter((c) => c.lane === lane);
+    const cs = lane === "agent" && s.shop?.state === "found" ? s.shop.criteria : s.criteria.filter((c) => c.lane === lane);
     if (!cs.length || (lane === "agent" && s.lanes.agent == null)) continue;
     lines.push("", `${LANE[lane]}:`);
     for (const c of cs) lines.push(`- ${c.label}: ${c.value}`);
@@ -371,7 +374,11 @@ export function formatPageReview(
   }
   lines.push("", "Se ha leído el HTML que entrega el servidor, como lo leen la mayoría de bots de IA. La extensión de Chrome de GenScore revisa la página ya cargada en tu navegador.");
 
-  const structured: Record<string, unknown> = { url: r.url, nota: s.nota, lanes: s.lanes, criteria: s.criteria, fixes: s.fixes.map((f) => ({ ...f, t: htmlToText(f.t), why: htmlToText(f.why) })) };
+  const structured: Record<string, unknown> = {
+    url: r.url,
+    ...(r.redirectedFrom ? { redirectedFrom: r.redirectedFrom } : {}),
+    ...(s.shop?.state === "found" ? { agentPage: s.shop.url, agentCriteria: s.shop.criteria } : s.agentWhy ? { agentWhy: s.agentWhy } : {}),
+    nota: s.nota, lanes: s.lanes, criteria: s.criteria, fixes: s.fixes.map((f) => ({ ...f, t: htmlToText(f.t), why: htmlToText(f.why) })) };
   if (own) {
     const { payload: p, links } = own;
     lines.push("", `**Esta página en tu dominio ${p.domain}:**`);
@@ -421,10 +428,14 @@ export function formatPageReview(
   return { text: lines.join("\n"), structured };
 }
 
-export const PAGE_REVIEW_FAILURE: Record<"invalid_url" | "unreachable" | "blocked" | "not_html" | "limit", string> = {
+export const PAGE_REVIEW_FAILURE: Record<"invalid_url" | "unreachable" | "blocked" | "timeout" | "not_found" | "not_html" | "limit", string> = {
   invalid_url: "Esa dirección no es una web pública que se pueda revisar. Prueba con la URL completa, por ejemplo https://www.tuweb.es/pagina.",
-  unreachable: "No se ha podido leer esa página desde GenScore (no responde, tarda demasiado o devuelve un error).",
-  blocked: "La web ha respondido con un control anti-bots, así que no se ha podido medir. La extensión de Chrome de GenScore sí la revisa desde tu navegador.",
+  unreachable: "No se ha podido leer esa página desde GenScore: devuelve un error.",
+  // AGENTS-READ-FIX-1 (log §465): the bot wall is the finding, not an error.
+  blocked:
+    "Los agentes que leen no pueden entrar: la web pone un control anti-bots a las visitas automáticas, y un asistente que lee la página tampoco pasaría. Los agentes que navegan con un navegador sí pueden llegar; la extensión de Chrome de GenScore la revisa desde tu navegador, como ellos.",
+  timeout: "Esa página tarda demasiado en responder y no se ha podido leer. Un agente que lee también se cansaría de esperar: vuelve a intentarlo en un rato.",
+  not_found: "Esa página no existe: la web responde que no la encuentra (error 404). Revisa la dirección.",
   not_html: "Esa dirección no devuelve una página web (HTML), así que no hay nada que revisar.",
   limit: "Se ha alcanzado el máximo de revisiones de hoy para esta web o desde este cliente. Vuelve a intentarlo mañana."
 };

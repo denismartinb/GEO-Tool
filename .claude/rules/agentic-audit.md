@@ -233,7 +233,32 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   ventana con fondo, `aria-modal`, clase de ventana o centro de su
   herramienta, o el scroll bloqueado. Una franja, o una lectura guardada sin
   `cookieCover`, no cuenta en contra. La línea dice el motivo en una frase.
-- **Cada celda de «Punto por punto» lleva su frase (`say`)** con lo que vio
+- **Cada campo bajo las ventanas lleva su frase (`say`)** con lo que vio
   ese agente (log §458); nunca «Están», «Nada» o «No aplica» solos. La
   lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
   que se vende con la misma regla.
+
+## Datos verdaderos (AGENTS-TRUTH-1, log §465)
+
+- **El precio sale de `price-read.ts` en la auditoría y en el navegador**, con
+  su unidad; el lector de la extensión aplica las mismas reglas. Un cambio en
+  una se copia en la otra en el mismo PR.
+- **Una contradicción entre los datos y la página nunca aprueba** (precio o
+  stock): baja a «a medias» y se dice.
+- **Una tarifa o póliza es un servicio aunque use `Product`** (`looksLikeTariff`):
+  sin stock y con permanencia y desistimiento.
+- **Un botón de FAQ, diálogo, acordeón, menú, recomendador o pregunta nunca es
+  el de compra**; pedir contacto es su propio estado (`lead`).
+- **Portadas y listados no puntúan precio ni botón.**
+- **Una página de error o un reto en castellano no es la ficha**, y un error
+  espera la semana antes de volver a abrirse (coste de Cloudflare).
+- **Un cambio en las reglas del navegador sube `BROWSER_READ_RULES`** cuando
+  haría falsa una lectura guardada: sólo se guarda la lectura, no el HTML, y
+  una lectura con reglas anteriores se vuelve a abrir una vez (log §465 adenda).
+- **Una columna por agente, sin «Punto por punto»** (Denis, log §465 adenda
+  «una columna por agente»): cada columna es la ficha dibujada de ese agente
+  y, justo debajo, sus campos compactos en el mismo orden que la otra. Un
+  problema se tiñe y lo que sólo llega con JavaScript lleva «JS» en la columna
+  del que navega. Se nombran por el agente («Agentes que leen», «Agentes que
+  navegan»); nunca «sin navegador / con navegador». Las dos columnas van de
+  lado a lado también en el móvil.

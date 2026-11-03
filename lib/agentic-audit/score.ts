@@ -199,15 +199,19 @@ function understandingChecks(s: PageSignals, kind: AgenticOfferKind): AgenticChe
     check(
       "price",
       20,
-      s.structuredPrice ? "pass" : s.textPrice ? "avg" : "fail",
-      s.structuredPrice
-        ? "El precio y la moneda se leen como datos"
-        : s.textPrice
-          ? "El precio sólo aparece como texto"
-          : "No se ve el precio sin ejecutar JavaScript",
-      kind === "subscription" || s.recurringPrice
-        ? "Declara price y priceCurrency en la Offer, con el periodo (al mes o al año) en su priceSpecification."
-        : "Declara price y priceCurrency en la Offer, con el precio final que paga el cliente."
+      s.structuredPrice && s.priceConflict ? "avg" : s.structuredPrice ? "pass" : s.textPrice ? "avg" : "fail",
+      s.structuredPrice && s.priceConflict
+        ? "El precio de los datos no es el que enseña la página"
+        : s.structuredPrice
+          ? "El precio y la moneda se leen como datos"
+          : s.textPrice
+            ? "El precio sólo aparece como texto"
+            : "No se ve el precio sin ejecutar JavaScript",
+      s.structuredPrice && s.priceConflict
+        ? "Pon en la Offer el mismo precio que ve el cliente: un agente repetirá el de los datos."
+        : kind === "subscription" || s.recurringPrice
+          ? "Declara price y priceCurrency en la Offer, con el periodo (al mes o al año, o por kWh) en su priceSpecification."
+          : "Declara price y priceCurrency en la Offer, con el precio final que paga el cliente."
     )
   ];
   if (physical || kind === "event") {
@@ -215,16 +219,20 @@ function understandingChecks(s: PageSignals, kind: AgenticOfferKind): AgenticChe
       check(
         "availability",
         15,
-        s.availability ? "pass" : "fail",
+        s.availability && s.stockConflict ? "avg" : s.availability ? "pass" : "fail",
         physical
-          ? s.availability
-            ? "La ficha declara el stock"
-            : "La ficha no declara si hay stock"
+          ? s.availability && s.stockConflict
+            ? "Los datos dicen «en stock» y la página dice que no está disponible"
+            : s.availability
+              ? "La ficha declara el stock"
+              : "La ficha no declara si hay stock"
           : s.availability
             ? "La página declara si quedan entradas"
             : "La página no declara si quedan entradas",
         physical
-          ? "Declara availability (InStock, OutOfStock…) en la Offer, por variante si las tienes."
+          ? s.stockConflict
+            ? "Haz que availability diga lo mismo que la página: un agente repetirá «en stock»."
+            : "Declara availability (InStock, OutOfStock…) en la Offer, por variante si las tienes."
           : "Declara availability (InStock, SoldOut…) en la Offer de las entradas."
       )
     );
@@ -271,19 +279,25 @@ function trustChecks(s: PageSignals, kind: AgenticOfferKind | null): AgenticChec
   const who = physical ? "la tienda" : "la web";
   const checks: AgenticCheck[] = [];
   if (refund) {
+    // AGENTS-TRUTH-1 (log §465): a tariff or policy is left with permanence and withdrawal, not returns.
+    const terms = s.tariff ? "permanencia y desistimiento" : "cancelación o reembolso";
     checks.push(
       check(
         "cancellation",
         30,
         s.returnPolicyData ? "pass" : s.links.cancellation || s.links.returns || s.cancelAnytimeText ? "avg" : "fail",
         s.returnPolicyData
-          ? "La política de cancelación o reembolso se lee como datos"
+          ? `Tus condiciones de ${terms} se leen como datos`
           : s.links.cancellation || s.links.returns
-            ? "Enlazas tu política de cancelación o reembolso, pero sin datos estructurados"
+            ? `Enlazas tus condiciones de ${terms}, pero sin datos estructurados`
             : s.cancelAnytimeText
-              ? "Dices que se puede cancelar, pero no enlazas tus condiciones"
-              : "No vemos tu política de cancelación o reembolso",
-        "Enlaza tus condiciones de cancelación y reembolso desde la página, y decláralas con hasMerchantReturnPolicy si aplican."
+              ? s.tariff
+                ? "Dices que no hay permanencia, pero no enlazas tus condiciones"
+                : "Dices que se puede cancelar, pero no enlazas tus condiciones"
+              : `No vemos tus condiciones de ${terms}`,
+        s.tariff
+          ? "Enlaza desde la página la permanencia y el derecho de desistimiento (14 días), con lo que cuesta darse de baja."
+          : "Enlaza tus condiciones de cancelación y reembolso desde la página, y decláralas con hasMerchantReturnPolicy si aplican."
       )
     );
   } else {
@@ -362,13 +376,25 @@ function purchaseChecks(s: PageSignals, kind: AgenticOfferKind): AgenticCheck[] 
     );
   } else {
     const ok = s.buyCta || s.addToCart || (kind === "booking" && s.bookingWidget !== null);
+    // AGENTS-TRUTH-1 (log §465): a quote or «te llamamos» is the normal way to hire a service,
+    // but not to buy a tariff, a plan or software, where it leaves the agent half way.
+    const leadIsTheWay = kind === "service" && !s.tariff;
+    const lead = !ok && s.leadCta === true;
     checks.push(
       check(
         "buy_button",
         40,
-        ok ? "pass" : "fail",
-        ok ? `El botón para ${action} está en el HTML` : `No vemos un botón para ${action} sin JavaScript`,
-        `Sirve en el HTML de la página un botón o enlace con texto claro para ${action}.`
+        ok || (lead && leadIsTheWay) ? "pass" : lead ? "avg" : "fail",
+        ok
+          ? `El botón para ${action} está en el HTML`
+          : lead && leadIsTheWay
+            ? "El botón para pedir presupuesto está en el HTML"
+            : lead
+              ? "Sólo vemos un botón para pedir que te llamen o un presupuesto"
+              : `No vemos un botón para ${action} sin JavaScript`,
+        lead
+          ? `Añade un botón para ${action} directamente, además del de pedir información.`
+          : `Sirve en el HTML de la página un botón o enlace con texto claro para ${action}.`
       )
     );
   }

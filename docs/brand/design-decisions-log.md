@@ -29907,3 +29907,40 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 - Probar en ChatGPT con una sesión caducada (o revocando la conexión en Ajustes > Apps conectadas) y mirar en PostHog `mcp_auth_rejected` y `outcome`.
 - Si el «error interno» se repite sin `mcp_auth_rejected` ni `mcp_tool_called`, la petición no llegó a la herramienta: mirar los logs de Vercel en la misma hora y los de Supabase Auth.
 - Claude N2 (enrutado al navegador) sigue siendo del cliente; sin cambios aquí.
+
+## §465 AGENTS-TRUTH-1: lo que ven los agentes deja de enseñar datos falsos (2026-11-03)
+
+**Origen.** Prueba con 33 páginas que venden, de 30 webs de sectores distintos (libros, retail, eléctricas, telecos, seguros, formación, software, farmacia), leídas como un agente sin navegador (el lector de la extensión, el conector y el plugin) y como uno que navega (`readBrowserObstacles` sobre Chrome real). Resultado y tabla de 13 mejoras en el artifact de la prueba. Denis: «Arregla todo de manera automática en la misma pr».
+
+**Decisión, en las dos lecturas a la vez** (navegador y auditoría agéntica en `lib/agentic-audit/`, lector de la extensión en `collect.js`/`score.js`, regenerado en `lib/page-review/` y copiado al plugin):
+
+- **Precio con su unidad o ninguno** (`price-read.ts`): «0,1499 €/kWh», «33,90 €/mes», «Desde 160 €/año». Con precio de energía no se enseña el de potencia; con tres precios o más, «Varios precios, desde X»; un 0 no es el precio si hay otro; 100.000 o más no es un precio; un ahorro o un descuento no es un precio.
+- **Contradicciones**: si el precio de los datos no está entre los que se ven, o los datos dicen «en stock» y la página «no está disponible», es un problema (la comprobación baja a «a medias» y el navegador lo lista como arreglo), nunca un aprobado.
+- **Tarifas y pólizas son servicios** aunque usen `Product` (`looksLikeTariff`: precio por kWh o kW, o precio recurrente con «tarifa», «luz», «fibra», «seguro», «póliza», «suscripción»… en el título o el h1). Sin stock, sin identificadores ni envío; «permanencia y desistimiento» en vez de devoluciones.
+- **Tres botones**: comprar o contratar, pedir contacto («Pide presupuesto», «Te llamamos», «Me interesa», «Calcula tu seguro») y ninguno. Pedir presupuesto aprueba un servicio profesional; en una tarifa, un plan o software se queda a medias. Nunca cuenta un botón de un FAQ, un diálogo, un acordeón, el menú, un recomendador o una pregunta; se quitan los nombres de icono de la etiqueta; «La quiero» cuenta. Con navegador, primero el botón del bloque del producto.
+- **Portadas y listados no son fichas**: ni precio ni botón se puntúan ahí, y el lector no propone `Product` (propone `Organization` o `ItemList`). En la auditoría, un listado sin producto declarado no es página que vende y se busca otra.
+- **El nombre es el h1**, no el título de marketing.
+- **Navegador**: la verificación de Cloudflare en castellano («Verificación de seguridad en curso») es un bloqueo; una página de error (404, 403, 5xx, leída en el título y el h1 porque el render no trae el código HTTP) es «No se pudo medir» con su motivo, nunca una ficha sin precio ni botón. Un error se vuelve a abrir a la semana, no al día, para no gastar los minutos gratis de Cloudflare.
+- **Lector**: dice por qué no sale el bloque de Agentes, trata un reto anti-bots como hallazgo («Los agentes que leen no pueden entrar»), separa bloqueado, tarda y no existe, dice «Te llevó a otra página» y de qué página sale la nota, y el arreglo de robots.txt nombra la línea que hay que quitar. Extensión 1.5.3.
+
+**Coste.** Nada de esto añade llamadas a Cloudflare Browser Run: la misma página como mucho una vez por semana, y la pasada se para con la cuota.
+
+**Premisa.** Las lecturas guardadas antes de esta fase no tienen `listing`, `tariff`, `conflicts` ni `reason` y se leen como antes hasta la siguiente pasada semanal.
+
+**Pendiente.** Una página con precio, sin botón y sin ruta de precios sigue sin nota de Agentes en el lector (ahora lo explica).
+
+**Adenda: segunda pasada de la prueba (2026-11-03).** Se repitió la prueba con las dos lecturas. Lo arreglado arriba se vio funcionar (conflicto de stock, 404 como «No se pudo medir», portadas como listado, tarifas con unidad, «La quiero», «Me interesa» y «Te llamamos» como contacto, bloqueos leídos como bloqueo). Salieron cinco fallos nuevos, corregidos en el mismo PR:
+
+- **Precio con seis decimales** (lector): «0,078055 €/kWh» se leía «078.055 €». La cifra exige no ir pegada a otra cifra y admite hasta seis decimales.
+- **Un premio no es un precio** (lector y navegador): «50 € en puntos», «Llévate hasta 1.000 €», «Gana…», «… de regalo», «… de saldo» se descartan (`NOT_A_PRICE_AFTER`).
+- **404 sin código ni título de error** (navegador): un texto corto con «no encontramos lo que buscas», «página no encontrada» o «page not found» es `not_found` (`isRenderedNotFoundText`, como mucho 1.500 caracteres de texto para no confundir una ficha que lo menciona).
+- **«Access Denied» a secas** es un bloqueo.
+- **Un enlace que es una pregunta** («qué potencia de luz contratar») no es el botón de comprar (`QUESTION_LABEL`).
+- **Decimales tras un apóstrofo** («30'00 €/mes», con los decimales en su propia etiqueta): se leen como «30,00 €/mes» en las dos lecturas, y una cifra nunca empieza tras un apóstrofo («00 €/mes»). Lo encontró la tercera pasada sobre las páginas corregidas.
+
+**Adenda: lecturas guardadas y nombres de columna (2026-11-03).** Denis vio Dia todavía con «No ve ningún botón» en el agente que navega. La pasada del navegador sólo guarda la lectura, no el HTML, y se repite una vez por semana, así que una lectura hecha antes de los arreglos seguía diciendo lo de antes. Cada lectura lleva ahora la versión de las reglas (`rules`, `BROWSER_READ_RULES = 2`); una sin versión o con una anterior se vuelve a abrir una vez en la siguiente pasada, sin esperar la semana. Coste: una apertura más por página que vende, dentro del presupuesto y la cuota de la pasada, y sólo cuando se sube la versión. En «Punto por punto», «Sin navegador / Con navegador» pasa a «Agente que lee (HTML) / Agente que navega», como las dos ventanas de arriba, y el título a «El agente que lee y el que navega»; las notas de cada comprobación dicen «el agente que navega» (Denis: «sería más lógico y sencillo»).
+
+Siguen abiertos, sin arreglo en esta fase porque no se pudieron confirmar como fallo del lector: un «desde» pequeño que puede ser una línea real de la página, una página de teleco cuyo lector ve 0 € y ningún botón mientras el navegador sí lo encuentra (contenido sólo con JavaScript, que es justo lo que enseña la vista «Con navegador y sin él»), y una tienda grande donde ninguna de las dos lecturas encuentra el precio.
+
+
+**Adenda: una columna por agente (2026-11-03).** Denis: «parece info duplicada». La tarjeta enseñaba la ficha dibujada de cada agente y, debajo, «Punto por punto» con cada dato partido en dos, así que el precio, el stock y el botón salían tres veces. Con su maqueta aprobada (`docs/design-reference/agents-browser-1/maqueta-columnas.html`), la ficha dibujada se queda y debajo de cada una van sus campos en una línea cada uno (la frase `say` de §458), en el mismo orden en las dos columnas. Un fallo va en naranja con borde, un «a medias» en ámbar, y lo que sólo llega con JavaScript lleva la etiqueta «JS» en la columna del que navega, con una línea que la explica. «Punto por punto» y los números que lo enlazaban con las ventanas desaparecen. Las dos columnas van de lado a lado también en el móvil, sin la imagen dibujada y con cada campo en dos líneas. Mismo modelo (`twoWindows`), sin cambio de datos ni de nota. Tras verlo en el móvil, Denis pidió la franja del diagnóstico «menos cantosa»: deja el fondo oscuro con resplandor y pasa a una caja clara con borde naranja a la izquierda y la etiqueta «JS» pequeña.

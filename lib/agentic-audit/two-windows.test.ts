@@ -61,7 +61,7 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "5:challenge:Ninguno|Ninguno",
       "6:cover:No aplica|Aviso de cookies encima"
     ]);
-    // Log §458: what «Punto por punto» prints is a sentence, never «Están» or «Nada» alone.
+    // Log §458: what each field under the windows prints is a sentence, never «Están» or «Nada» alone.
     expect(w.rows.map((r) => `${r.raw.say ?? r.raw.text}|${r.nav.say ?? r.nav.text}`)).toEqual([
       "Cafetera Nubaria Duo|Cafetera Nubaria Duo",
       "No ve el precio|Ve 149,00 €",
@@ -69,7 +69,7 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "No ve ningún botón|Ve el botón «Añadir a la cesta»",
       "La página no los declara|Los añade un script al cargar",
       "Entra sin reto|Entra sin reto",
-      "Sin navegador no salen avisos|Un aviso de cookies la tapa hasta aceptarlo"
+      "Lee el HTML: no le salen avisos|Un aviso de cookies la tapa hasta aceptarlo"
     ]);
     expect(w.rows.filter((r) => r.gap).map((r) => r.id)).toEqual(["price", "stock", "buy", "data"]);
     expect(w.read.foot).toBe("No sabe cuánto cuesta ni si queda ni ve el botón");
@@ -126,10 +126,29 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
 describe("browserCheckNotes", () => {
   it("tells a value that arrives late from one that is missing", () => {
     expect(browserCheckNotes(result({ browser: ok() }))).toMatchObject({
-      price: "Con navegador sí se ve (149,00 €): sólo llega con JavaScript. Sírvelo en el HTML.",
-      add_to_cart: "Con navegador sí se ve («Añadir a la cesta»): sólo llega con JavaScript."
+      price: "El agente que navega sí lo ve (149,00 €): sólo llega con JavaScript. Sírvelo en el HTML.",
+      add_to_cart: "El agente que navega sí lo ve («Añadir a la cesta»): sólo llega con JavaScript."
     });
     expect(browserCheckNotes(result({ browser: ok({ price: { state: "missing", text: null } }) })).price).toMatch(/^Tampoco/);
     expect(browserCheckNotes(result())).toEqual({});
+  });
+});
+
+describe("twoWindows: what the 33-page test found (log §465)", () => {
+  it("says a 404 and a listing in one line instead of judging the page", () => {
+    expect(twoWindows(result({ browser: { state: "unmeasured", measuredAt: AT, reason: "not_found" } }))).toEqual({
+      state: "unmeasured",
+      line: "El navegador abrió una página que no existe (error 404). Elige otra ficha para medirla."
+    });
+    expect(twoWindows(result({ browser: ok({ listing: true }) })).state).toBe("unmeasured");
+    expect(browserCheckNotes(result({ browser: ok({ listing: true }) }))).toEqual({});
+  });
+
+  it("tells a lead button from a buy button, and puts data conflicts first", () => {
+    const w = twoWindows(result({ browser: ok({ buy: { state: "lead", text: "Te llamamos" }, conflicts: ["stock"] }) }));
+    if (w.state !== "measured") throw new Error("measured");
+    expect(w.rows.find((r) => r.id === "buy")?.nav).toMatchObject({ tone: "mid", text: "«Te llamamos»" });
+    expect(w.nav.foot).toBe("Sólo puede pedir que le llamen");
+    expect(w.fixes.map((f) => f.title)).toContain("Que tus datos digan lo mismo que la página sobre el stock");
   });
 });
