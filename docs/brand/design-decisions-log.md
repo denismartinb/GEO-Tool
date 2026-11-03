@@ -29718,3 +29718,23 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Visión general.** Tarjeta «Lo que lee la IA» a ancho completo bajo Comercio agéntico y Auditoría SEO (`components/ins/overview/ai-read-card.tsx`, modelo `aiReadCard`), con las piezas de la tarjeta agéntica (Denis: «busca un diseño más bonito, en línea con el diseño global»; «ok implementa así»): anillo de marcas con el porcentaje, frase con el dato, barras finas por tipo de contenido (lo que llega) y la caja «Lo que más se pierde» con el tipo más perdido y su trozo literal, y la lectura de las páginas citadas si aplica. Sale sólo con medición o mientras se mide; en modo HTML no sale. Enlaza a `?bloque=geo#lo-que-lee-la-ia`. Maqueta `docs/design-reference/ai-read-2/tarjeta-vision-general.html`. La frase «Lo que más te recomienda la IA es lo que peor le llega» no se entendía y pasa a «Tus páginas más citadas son las que peor lee la IA».
 
 **Pendiente.** Aprovechar la misma medición en Auditoría agéntica y Visibilidad en agentes (precio, stock, botón y datos estructurados vistos por un navegador; muros de cookies o retos), con maqueta antes. Una tarjeta de Recomendaciones cuando sea seguro que un dato concreto (por ejemplo, los precios) debe ir en el HTML. Un grupo por clics de Google en «Dónde se pierde».
+
+## §452 MCP-CONNECTOR-TUNING-1: el conector elige bien la herramienta y el paquete de ChatGPT usa el formato de OpenAI (2026-11-03)
+
+**Origen.** Batería de 15 escenarios de Instinct (2 de noviembre) contra `/api/mcp` (Claude) y `/api/mcp/chatgpt` (ChatGPT) con la cuenta revisora. Tres desviaciones y un bloqueo de envío:
+
+- **H1.** «¿Cómo está genscore.es en la IA?» en ChatGPT acabó en `revisar_pagina` y búsqueda web en vez de las herramientas de cuenta.
+- **H2.** «Dame las recomendaciones de amazon.es» en ChatGPT: el servidor dijo bien que el dominio no estaba en la cuenta, pero el modelo lanzó por su cuenta una revisión pública de la portada que nadie pidió.
+- **H3.** La misma petición en Claude no llamó a GenScore: abrió amazon.es en el navegador y leyó «recomendaciones» como productos.
+- **H5.** `plugin.json` declaraba `tools_triggered` como arrays; la especificación de OpenAI (`developers.openai.com/plugins/deploy/submission.md`, releída el 3 de noviembre) lo define como texto separado por comas.
+
+**Decisión.** Sólo texto para el modelo y metadatos; ninguna respuesta de herramienta cambia y no hay migración.
+
+- `SERVER_INSTRUCTIONS` (`lib/mcp/protocol.ts`, las dos direcciones): «cómo está un dominio» va a las herramientas de cuenta y `revisar_pagina` es para una URL concreta; «recomendaciones» son siempre las acciones de visibilidad de `ver_recomendaciones`, nunca productos, y una petición claramente de compras no usa GenScore; tras «el dominio no está en la cuenta» se dice, se da el enlace y se puede **ofrecer** `revisar_pagina`, sin ejecutarla ni completar con otros datos salvo que la persona lo pida.
+- Descripciones (`lib/mcp/tools.ts`): `ver_dominio` es para un dominio que ya está en la cuenta; `ver_recomendaciones` fija el significado de «recomendaciones»; `revisar_pagina` dice que no sustituye al escaneo y que no se lanza sola tras un «no está en la cuenta».
+- `formatNotFound` no cambia: su texto ya era correcto, el fallo era del modelo.
+- `docs/chatgpt-plugin/package/plugin.json`: los cinco `tools_triggered` pasan a texto (`"listar_dominios, ver_dominio"`). `mcp.json` no se regenera. Lo vigila `lib/mcp/chatgpt-package.test.ts`; las instrucciones y descripciones, `app/api/mcp/route.test.ts`.
+
+**Descartado.** H4 (cómo acreditar qué herramienta se llamó) es método de prueba, no código. H6 (precios sólo en Claude) es una decisión de diseño de §425 y se mantiene.
+
+**Pendiente.** Repetir los 8 casos oficiales en chats limpios en los dos clientes tras desplegar (sección 8 del informe), más X3 en Claude y X5 sin el conector de Vercel. Si ChatGPT sigue lanzando la revisión sin pedirla, el siguiente paso es poner la oferta en la propia respuesta de `formatNotFound` (texto y `structuredContent`). La subida del ZIP («Plugin ZIP cannot be empty») sigue abierta y no forma parte de esta fase.

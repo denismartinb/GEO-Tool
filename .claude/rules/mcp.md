@@ -107,3 +107,14 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
 - **`draft` de una acción de cita sólo sin página propia** (WP-PLUGIN-4, log
   §432 adenda 1.4.1): con página, el plugin ofrece «Añadir dato» en ella; sin
   ella, borrador con sus preguntas (`isDraftable`).
+
+## Elección de herramienta (MCP-CONNECTOR-TUNING-1, log §452)
+
+- **Las instrucciones del servidor y las descripciones dirigen la elección**:
+  «cómo está un dominio» va a las herramientas de cuenta, «recomendaciones»
+  son siempre las de `ver_recomendaciones` (nunca productos ni compras), y
+  tras un «no está en la cuenta» `revisar_pagina` sólo se ofrece. Lo vigila
+  `app/api/mcp/route.test.ts` en las dos direcciones.
+- **`tools_triggered` del paquete de ChatGPT es texto separado por comas**,
+  como dice la especificación de OpenAI, y cada nombre es una herramienta real
+  (`lib/mcp/chatgpt-package.test.ts`).
