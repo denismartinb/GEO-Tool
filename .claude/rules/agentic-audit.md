@@ -252,3 +252,9 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 - **Portadas y listados no puntúan precio ni botón.**
 - **Una página de error o un reto en castellano no es la ficha**, y un error
   espera la semana antes de volver a abrirse (coste de Cloudflare).
+- **Un cambio en las reglas del navegador sube `BROWSER_READ_RULES`** cuando
+  haría falsa una lectura guardada: sólo se guarda la lectura, no el HTML, y
+  una lectura con reglas anteriores se vuelve a abrir una vez (log §464 adenda).
+- **Las dos columnas de «Punto por punto» se nombran por el agente**
+  («Agente que lee (HTML)», «Agente que navega»), igual que las dos ventanas de
+  arriba; nunca «sin navegador / con navegador» (Denis, log §464 adenda).

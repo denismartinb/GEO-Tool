@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 import { pickAgenticTargets } from "./browser-pass";
+import { BROWSER_READ_RULES } from "./browser-obstacles";
 
 const NOW = Date.parse("2026-11-03T10:00:00.000Z");
 const res = (more: Record<string, unknown> = {}) => ({ found: "catalog", pageRead: true, ...more }) as never;
@@ -23,7 +24,7 @@ describe("pickAgenticTargets (AGENTS-BROWSER-1, log §453)", () => {
   });
 
   it("skips fresh reads, pages that sell nothing, unread pages, other domains and archived projects", () => {
-    const fresh = { state: "ok", measuredAt: "2026-11-01T00:00:00Z", cookies: false, price: { state: "exact", text: null }, options: "none", buy: { state: "named", text: null } };
+    const fresh = { state: "ok", measuredAt: "2026-11-01T00:00:00Z", cookies: false, price: { state: "exact", text: null }, options: "none", buy: { state: "named", text: null }, rules: BROWSER_READ_RULES };
     expect(pickAgenticTargets([row("a", "p1", "https://acme.com/p", res({ browser: fresh }))], domains, NOW)).toEqual([]);
     expect(pickAgenticTargets([row("a", "p1", "https://acme.com/p", res({ found: "none" }))], domains, NOW)).toEqual([]);
     expect(pickAgenticTargets([row("a", "p1", "https://acme.com/p", res({ pageRead: false }))], domains, NOW)).toEqual([]);
@@ -32,7 +33,7 @@ describe("pickAgenticTargets (AGENTS-BROWSER-1, log §453)", () => {
   });
 
   it("carries forward a fresh read of the same page from an earlier review", () => {
-    const earlier = { state: "blocked", measuredAt: "2026-11-01T00:00:00Z" };
+    const earlier = { state: "blocked", measuredAt: "2026-11-01T00:00:00Z", rules: BROWSER_READ_RULES };
     const out = pickAgenticTargets([row("n", "p1", "https://acme.com/p", res()), row("o", "p1", "https://acme.com/p", res({ browser: earlier }))], domains, NOW);
     expect(out).toEqual([expect.objectContaining({ id: "n", carry: earlier })]);
     const otherPage = pickAgenticTargets([row("n", "p1", "https://acme.com/p", res()), row("o", "p1", "https://acme.com/x", res({ browser: earlier }))], domains, NOW);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { browserReadIsFresh, isAgenticBrowserRead, readBrowserObstacles } from "./browser-obstacles";
+import { BROWSER_READ_RULES, browserReadIsFresh, isAgenticBrowserRead, readBrowserObstacles } from "./browser-obstacles";
 
 const AT = "2026-11-03T09:00:00.000Z";
 const filler = "<p>" + "Chaqueta impermeable ligera con capucha ajustable y bolsillos con cremallera. ".repeat(6) + "</p>";
@@ -21,7 +21,8 @@ describe("readBrowserObstacles", () => {
       buy: { state: "named", text: "Añadir a la cesta" },
       name: "Chaqueta Brisa",
       stock: null,
-      productData: false
+      productData: false,
+      rules: BROWSER_READ_RULES
     });
   });
 
@@ -99,23 +100,23 @@ describe("readBrowserObstacles", () => {
   });
 
   it("calls a challenge blocked and an empty render unmeasured", () => {
-    expect(readBrowserObstacles("<html><head><title>Just a moment...</title></head><body>cf-chl-</body></html>", AT)).toEqual({ state: "blocked", measuredAt: AT });
-    expect(readBrowserObstacles("<html><body><main>Hola</main></body></html>", AT)).toEqual({ state: "unmeasured", measuredAt: AT });
+    expect(readBrowserObstacles("<html><head><title>Just a moment...</title></head><body>cf-chl-</body></html>", AT)).toEqual({ state: "blocked", measuredAt: AT, rules: BROWSER_READ_RULES });
+    expect(readBrowserObstacles("<html><body><main>Hola</main></body></html>", AT)).toEqual({ state: "unmeasured", measuredAt: AT, rules: BROWSER_READ_RULES });
   });
 });
 
 describe("isAgenticBrowserRead / browserReadIsFresh", () => {
   it("checks the stored shape", () => {
     expect(isAgenticBrowserRead(readBrowserObstacles(page(`<p>9 €</p>`), AT))).toBe(true);
-    expect(isAgenticBrowserRead({ state: "ok", measuredAt: AT })).toBe(false);
+    expect(isAgenticBrowserRead({ state: "ok", measuredAt: AT, rules: BROWSER_READ_RULES })).toBe(false);
     expect(isAgenticBrowserRead(null)).toBe(false);
   });
 
   it("keeps a read a week and retries a failed one after a day", () => {
     const t = Date.parse(AT);
-    expect(browserReadIsFresh({ state: "blocked", measuredAt: AT }, t + 6 * 86_400_000)).toBe(true);
-    expect(browserReadIsFresh({ state: "blocked", measuredAt: AT }, t + 8 * 86_400_000)).toBe(false);
-    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT }, t + 25 * 3_600_000)).toBe(false);
+    expect(browserReadIsFresh({ state: "blocked", measuredAt: AT, rules: BROWSER_READ_RULES }, t + 6 * 86_400_000)).toBe(true);
+    expect(browserReadIsFresh({ state: "blocked", measuredAt: AT, rules: BROWSER_READ_RULES }, t + 8 * 86_400_000)).toBe(false);
+    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, rules: BROWSER_READ_RULES }, t + 25 * 3_600_000)).toBe(false);
     expect(browserReadIsFresh(undefined, t)).toBe(false);
   });
 });
@@ -130,7 +131,7 @@ describe("readBrowserObstacles: what the 33-page test found (log §464)", () => 
 
   it("reads an error page as unmeasured, never as the product", () => {
     const html = page("<p>49 €</p>", "<title>Página no encontrada | Tienda</title>");
-    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found" });
+    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found", rules: BROWSER_READ_RULES });
   });
 
   it("never takes a FAQ question, a dialog or a recommender for the buy button", () => {
@@ -184,7 +185,7 @@ describe("readBrowserObstacles: what the 33-page test found (log §464)", () => 
 describe("readBrowserObstacles: what the second test pass found (log §464)", () => {
   it("reads a 404 from its short text when the title and h1 do not say it (factorial.es)", () => {
     const html = `<html><head><title>Software de RRHH todo en uno</title></head><body><p>Iniciar sesión</p><p>Lo sentimos, pero no podemos encontrar lo que estás buscando. El enlace a esta página puede ser incorrecto, estar desactualizado o la página se ha movido a otro lugar. Busquemos un lugar mejor para ti.</p><a href="/">Volver al inicio</a></body></html>`;
-    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found" });
+    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found", rules: BROWSER_READ_RULES });
   });
 
   it("calls an «Access Denied» page blocked", () => {
@@ -201,7 +202,17 @@ describe("readBrowserObstacles: what the second test pass found (log §464)", ()
 describe("browserReadIsFresh and error pages (log §464)", () => {
   it("waits a week, not a day, before opening an error page again", () => {
     const twoDays = Date.parse(AT) + 2 * 24 * 60 * 60 * 1000;
-    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, reason: "not_found" }, twoDays)).toBe(true);
-    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT }, twoDays)).toBe(false);
+    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, reason: "not_found", rules: BROWSER_READ_RULES }, twoDays)).toBe(true);
+    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, rules: BROWSER_READ_RULES }, twoDays)).toBe(false);
+  });
+});
+
+describe("reads made with older rules (log §464 adenda)", () => {
+  it("renders the page again once, whatever its age, and then keeps the week", () => {
+    const t = Date.parse(AT);
+    const old = { state: "ok", measuredAt: AT, cookies: false, price: { state: "exact", text: "6,99 €" }, options: "none", buy: { state: "missing", text: null } } as const;
+    expect(browserReadIsFresh(old, t + 60_000)).toBe(false);
+    expect(browserReadIsFresh({ ...old, rules: BROWSER_READ_RULES - 1 }, t + 60_000)).toBe(false);
+    expect(browserReadIsFresh({ ...old, rules: BROWSER_READ_RULES }, t + 60_000)).toBe(true);
   });
 });

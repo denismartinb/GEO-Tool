@@ -70,7 +70,7 @@ function CellView({ cell }: { cell: Cell }) {
 const HEAD = (
   <>
     <div className="agw-top">
-      <h3>Con navegador y sin él</h3>
+      <h3>El agente que lee y el que navega</h3>
       <span className="agw-tag agw-tag-new">Nuevo</span>
     </div>
     <p className="agw-lead">Abrimos tu ficha de las dos formas en que llega un agente. Así la ve cada uno.</p>
@@ -90,7 +90,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
   return (
     <div className="card agw">
       <div className="agw-top">
-        <h3>Con navegador y sin él</h3>
+        <h3>El agente que lee y el que navega</h3>
         <span className="agw-tag agw-tag-new">Nuevo</span>
         <span className="agw-sp" />
         <span className="agw-tag agw-tag-ok">
@@ -181,11 +181,11 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
         <div className="agw-legend">
           <span className="agw-l">
             <i />
-            Sin navegador
+            Agente que lee (HTML)
           </span>
           <span className="agw-r">
             <i />
-            Con navegador
+            Agente que navega
           </span>
         </div>
       </div>

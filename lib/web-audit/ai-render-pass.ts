@@ -5,7 +5,7 @@ import { fetchPageSafely, isAllowedAuditHost } from "@/lib/web-audit/fetch-page"
 import { compareRender, renderIsFresh, isPageRender, type PageRender } from "@/lib/web-audit/ai-render";
 import { BROWSER_RUN_MIN_GAP_MS, browserRunConfigured, renderWithBrowserRun, type BrowserRunOutcome } from "@/lib/web-audit/browser-run";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
-import { readBrowserObstacles } from "@/lib/agentic-audit/browser-obstacles";
+import { readBrowserObstacles, BROWSER_READ_RULES } from "@/lib/agentic-audit/browser-obstacles";
 import { loadAgenticTargets, saveAgenticBrowserRead, type AgenticRenderTarget } from "@/lib/agentic-audit/browser-pass";
 
 /**
@@ -113,7 +113,7 @@ export async function runAiRenderPass(input: {
           return { measured: 0, agentic, stopped: rendered.kind };
         }
         const measuredAt = new Date(now()).toISOString();
-        read = rendered.kind === "ok" ? readBrowserObstacles(rendered.html, measuredAt, target.url) : { state: "unmeasured", measuredAt };
+        read = rendered.kind === "ok" ? readBrowserObstacles(rendered.html, measuredAt, target.url) : { state: "unmeasured", measuredAt, rules: BROWSER_READ_RULES };
       }
       if (await agenticDeps.save(target, read)) agentic++;
       else console.error(`${LOG_PREFIX} agentic_write_failed`, { project_id: target.projectId });

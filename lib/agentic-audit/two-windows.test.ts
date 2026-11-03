@@ -69,7 +69,7 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "No ve ningún botón|Ve el botón «Añadir a la cesta»",
       "La página no los declara|Los añade un script al cargar",
       "Entra sin reto|Entra sin reto",
-      "Sin navegador no salen avisos|Un aviso de cookies la tapa hasta aceptarlo"
+      "Lee el HTML: no le salen avisos|Un aviso de cookies la tapa hasta aceptarlo"
     ]);
     expect(w.rows.filter((r) => r.gap).map((r) => r.id)).toEqual(["price", "stock", "buy", "data"]);
     expect(w.read.foot).toBe("No sabe cuánto cuesta ni si queda ni ve el botón");
@@ -126,8 +126,8 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
 describe("browserCheckNotes", () => {
   it("tells a value that arrives late from one that is missing", () => {
     expect(browserCheckNotes(result({ browser: ok() }))).toMatchObject({
-      price: "Con navegador sí se ve (149,00 €): sólo llega con JavaScript. Sírvelo en el HTML.",
-      add_to_cart: "Con navegador sí se ve («Añadir a la cesta»): sólo llega con JavaScript."
+      price: "El agente que navega sí lo ve (149,00 €): sólo llega con JavaScript. Sírvelo en el HTML.",
+      add_to_cart: "El agente que navega sí lo ve («Añadir a la cesta»): sólo llega con JavaScript."
     });
     expect(browserCheckNotes(result({ browser: ok({ price: { state: "missing", text: null } }) })).price).toMatch(/^Tampoco/);
     expect(browserCheckNotes(result())).toEqual({});

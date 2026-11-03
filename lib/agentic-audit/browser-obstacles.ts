@@ -57,14 +57,25 @@ export type AgenticBrowserRead =
       tariff?: boolean;
       /** What the page's data says differently from what it shows. */
       conflicts?: BrowserConflict[];
+      rules?: number;
     }
   /** The browser got a challenge instead of the page. Never counts against the site. */
-  | { state: "blocked"; measuredAt: string }
+  | { state: "blocked"; measuredAt: string; rules?: number }
   /**
    * The render failed or the page was empty. `not_found` and `error`
    * (log §464): the browser opened an error page, never the product.
    */
-  | { state: "unmeasured"; measuredAt: string; reason?: "not_found" | "error" };
+  | { state: "unmeasured"; measuredAt: string; reason?: "not_found" | "error"; rules?: number };
+
+/**
+ * AGENTS-TRUTH-1 (log §464 adenda): the version of the rules that read a
+ * render. Only the reading is stored, never the HTML, so a fix to these rules
+ * reaches a stored read only when the page is rendered again. A read made
+ * with older rules (or none) is due once, whatever its age. Bump this when a
+ * change here would make a stored read say something false; each bump costs
+ * one render per agentic page, inside the pass's own budget and quota.
+ */
+export const BROWSER_READ_RULES = 2;
 
 type El = {
   tagName: string;
@@ -304,6 +315,10 @@ function pathOf(url: string | undefined): string | null {
 const MIN_TEXT_CHARS = 200;
 
 export function readBrowserObstacles(renderedHtml: string, measuredAt: string, url?: string): AgenticBrowserRead {
+  return { ...readRender(renderedHtml, measuredAt, url), rules: BROWSER_READ_RULES };
+}
+
+function readRender(renderedHtml: string, measuredAt: string, url?: string): AgenticBrowserRead {
   if (isChallengeResponse({ status: 200, headers: {}, body: renderedHtml })) return { state: "blocked", measuredAt };
   const doc = docOf(renderedHtml);
   if (!doc.body) return { state: "unmeasured", measuredAt };
@@ -377,6 +392,7 @@ export function isAgenticBrowserRead(v: unknown): v is AgenticBrowserRead {
 
 export function browserReadIsFresh(read: AgenticBrowserRead | undefined, now: number): boolean {
   if (!read) return false;
+  if ((read.rules ?? 1) < BROWSER_READ_RULES) return false;
   const age = now - Date.parse(read.measuredAt);
   if (!Number.isFinite(age)) return false;
   // A render that failed is retried after a day; an error page (log §464) waits the

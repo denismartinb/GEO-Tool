@@ -217,7 +217,7 @@ export function twoWindows(result: AgenticCheckResult): TwoWindows {
     {
       id: "cover",
       title: "Lo que tapa la ficha",
-      raw: { tone: "na", text: "No aplica", say: "Sin navegador no salen avisos" },
+      raw: { tone: "na", text: "No aplica", say: "Lee el HTML: no le salen avisos" },
       nav: cookiesCover(read)
         ? { tone: "mid", text: "Aviso de cookies encima", say: "Un aviso de cookies la tapa hasta aceptarlo" }
         : read.cookies
@@ -313,29 +313,29 @@ export function browserCheckNotes(result: AgenticCheckResult): Record<string, st
   if (price) {
     notes[price] =
       read.price.state === "missing"
-        ? "Tampoco lo vemos con navegador: tu página no enseña precio. Ponlo a la vista y en los datos."
-        : `Con navegador sí se ve (${read.price.text ?? "el precio"}): sólo llega con JavaScript. Sírvelo en el HTML.`;
+        ? "Tampoco lo ve el agente que navega: tu página no enseña precio. Ponlo a la vista y en los datos."
+        : `El agente que navega sí lo ve (${read.price.text ?? "el precio"}): sólo llega con JavaScript. Sírvelo en el HTML.`;
   }
   const stock = failed("availability");
   if (stock && read.stock !== undefined) {
     notes[stock] = read.stock
-      ? `Con navegador sí se ve («${read.stock}»): sólo llega con JavaScript.`
-      : "Tampoco lo vemos con navegador.";
+      ? `El agente que navega sí lo ve («${read.stock}»): sólo llega con JavaScript.`
+      : "Tampoco lo ve el agente que navega.";
   }
   const buy = failed("add_to_cart") ?? failed("buy_button");
   if (buy) {
     notes[buy] =
       read.buy.state === "named"
-        ? `Con navegador sí se ve («${read.buy.text ?? "el botón"}»): sólo llega con JavaScript.`
+        ? `El agente que navega sí lo ve («${read.buy.text ?? "el botón"}»): sólo llega con JavaScript.`
         : read.buy.state === "unnamed"
-          ? "Con navegador se ve un botón, pero sin texto."
+          ? "El agente que navega ve un botón, pero sin texto."
           : read.buy.state === "lead"
-            ? `Con navegador sólo se ve «${read.buy.text ?? "Pide presupuesto"}», no un botón para contratar.`
-          : "Tampoco lo vemos con navegador.";
+            ? `El agente que navega sólo ve «${read.buy.text ?? "Pide presupuesto"}», no un botón para contratar.`
+          : "Tampoco lo ve el agente que navega.";
   }
   const data = failed("product_data");
   if (data && read.productData !== undefined) {
-    notes[data] = read.productData ? "Con navegador sí están: los añade un script. Escríbelos en el HTML." : "Tampoco están con navegador.";
+    notes[data] = read.productData ? "El agente que navega sí los ve: los añade un script. Escríbelos en el HTML." : "Tampoco los ve el agente que navega.";
   }
   return notes;
 }
