@@ -344,7 +344,10 @@
  .ins .aio-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'h l' 'k k'}
  .ins .aio-grid>.aio-hero{grid-area:h}
  .ins .aio-grid>.aio-lost,.ins .aio-grid>.aio-scan{grid-area:l}
- .ins .aio-grid>.aio-kinds{grid-area:k;grid-template-columns:repeat(4,minmax(0,1fr))}
+ .ins .aio-grid>.aio-kinds{grid-area:k;grid-template-columns:repeat(var(--n,4),minmax(0,1fr))}
+ /* Nothing to say on the right (log §462): the tiles take that column. */
+ .ins .aio-grid.solo{grid-template-areas:'h k';align-items:center}
+ .ins .aio-grid.solo>.aio-kinds{grid-template-columns:repeat(min(var(--n,4),2),minmax(0,1fr))}
 }
 .ins .aio-hero{display:flex;flex-direction:column;gap:14px;min-width:0}
 .ins .aio-gauge{display:flex;gap:16px;align-items:center}
@@ -384,6 +387,14 @@
 .ins .aio-li .r svg{color:var(--ink-4);margin-top:2px;flex:none}
 .ins .aio-quote{margin:4px 0 0 17px;font:500 12px var(--mono);color:var(--ink-2);background:var(--surface);border:1px dashed var(--warm-rule);border-radius:8px;padding:6px 9px;overflow-wrap:anywhere;position:relative}
 .ins .aio-quote::before{content:"no llega";position:absolute;top:-8px;right:8px;background:var(--warm);color:var(--surface);font:700 9px var(--font);letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+.ins .aio-split{display:flex;flex-direction:column;gap:9px;border-radius:13px;border:1px solid var(--rule-2);padding:12px;margin-top:2px}
+.ins .aio-sl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 10px;align-items:baseline;font-size:13px;color:var(--ink-2)}
+.ins .aio-sl .l{min-width:0}
+.ins .aio-sl b{font-weight:600;color:var(--ink)}
+.ins .aio-sl.warm b{color:var(--warm)}
+.ins .aio-sl .bar{grid-column:1/-1;height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.ins .aio-sl .bar i{display:block;height:100%;border-radius:inherit;background:var(--blue)}
+.ins .aio-sl.warm .bar i{background:var(--warm)}
 .ins .aio-where{display:flex;gap:10px;align-items:center;border-radius:13px;padding:10px 12px;background:var(--blue-tint);color:var(--blue-ink);font-size:13px;font-weight:600}
 .ins .aio-where svg{flex:none}
 .ins .aio-scan{position:relative;border-radius:14px;border:1px solid var(--rule);background:var(--surface-2);height:150px;overflow:hidden}

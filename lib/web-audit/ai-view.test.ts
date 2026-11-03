@@ -196,4 +196,32 @@ describe("aiReadCard", () => {
     expect(c.title).toBe("Estado");
     expect(c.items).toEqual([]);
   });
+
+  it("passes the page-type split, or the importance one, only when it exists (log §462)", () => {
+    const lines = [
+      { label: "Lo que vendes", pct: 40 },
+      { label: "Blog y guías", pct: 100 }
+    ];
+    const typed = aiReadCard(measured({ groups: [{ title: "Por tipo de página", lines, insight: null }] }), true);
+    if (typed.kind !== "card") throw new Error("card");
+    expect(typed.split).toEqual({ title: "Por tipo de página", lines });
+    const none = aiReadCard(measured(), true);
+    if (none.kind !== "card") throw new Error("card");
+    expect(none.split).toBeNull();
+  });
+
+  it("never quotes a consent banner as what does not arrive (log §462)", () => {
+    const v = buildAiView([
+      page("https://x.es/", undefined, {}, {
+        render: ok(30, { faq: { seen: 4, missing: 4 } }, {
+          samples: [
+            { kind: "faq", text: "Cookies estrictamente necesarias 4 proveedores pueden usar este propósito" },
+            { kind: "faq", text: "¿Hacéis envíos a Canarias?" }
+          ]
+        })
+      })
+    ]);
+    if (!v || v.mode !== "measured") throw new Error("measured");
+    expect(v.kinds[0].sample).toBe("¿Hacéis envíos a Canarias?");
+  });
 });

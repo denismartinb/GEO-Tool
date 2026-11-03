@@ -70,6 +70,31 @@ function Engines() {
   );
 }
 
+type Filled = Extract<AiReadCard, { kind: "card" }>;
+
+/** The right column only exists when it has something to say; otherwise the tiles take its place. */
+function hasSide(card: Filled): boolean {
+  return card.items.length > 0 || Boolean(card.where) || Boolean(card.split);
+}
+
+/** How much arrives per kind of page: label, figure and a thin bar, warm below 86%. */
+function Split({ title, lines }: { title: string; lines: Array<{ label: string; pct: number }> }) {
+  return (
+    <div className="aio-split">
+      <span className="aio-lab">{title}</span>
+      {lines.map((l) => (
+        <div key={l.label} className={`aio-sl${l.pct <= 85 ? " warm" : ""}`}>
+          <span className="l">{l.label}</span>
+          <b className="num">{l.pct}%</b>
+          <span className="bar" aria-hidden="true">
+            <i style={{ width: `${Math.max(0, Math.min(100, l.pct))}%` }} />
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AiReadOverviewCard({ card, href }: { card: AiReadCard; href: string }) {
   if (card.kind === "hidden") return null;
   return (
@@ -109,7 +134,10 @@ export function AiReadOverviewCard({ card, href }: { card: AiReadCard; href: str
               </div>
             </div>
           ) : (
-            <div className="aio-grid">
+            <div
+              className={`aio-grid${hasSide(card) ? "" : " solo"}`}
+              style={{ "--n": Math.max(1, card.rows.length) } as CSSProperties}
+            >
               <div className="aio-hero">
                 <div className="aio-gauge">
                   <PctRing value={card.pct} big={`${card.pct}%`} sub="llega" />
@@ -143,7 +171,7 @@ export function AiReadOverviewCard({ card, href }: { card: AiReadCard; href: str
                   ))}
                 </div>
               ) : null}
-              {card.items.length > 0 || card.where ? (
+              {hasSide(card) ? (
                 <div className="aio-lost">
                   {card.items.length > 0 ? <span className="aio-lab">{card.title}</span> : null}
                   {card.items.map((it) => (
@@ -156,6 +184,7 @@ export function AiReadOverviewCard({ card, href }: { card: AiReadCard; href: str
                       {it.quote ? <span className="aio-quote">{it.quote}</span> : null}
                     </Link>
                   ))}
+                  {card.split ? <Split title={card.split.title} lines={card.split.lines} /> : null}
                   {card.where ? (
                     <div className="aio-where">
                       <Ic n="c-target" sm />

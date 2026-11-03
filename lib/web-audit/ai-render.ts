@@ -39,9 +39,30 @@ export type PageRender =
 
 const BLOCK = "h1,h2,h3,h4,h5,h6,p,li,dt,dd,blockquote,figcaption,td,th,summary,label";
 const DROP = "script,style,template,svg,noscript,iframe";
-const CHROME = "nav,header,footer,[aria-hidden=true],dialog";
+const CHROME = "nav,header,footer,[aria-hidden=true],dialog,[role=dialog],[role=alertdialog],[aria-modal=true]";
 /** Cookie banners, consent tools and modals are painted by scripts on every site: never «content». */
 const NOISE_RE = /cookie|consent|gdpr|onetrust|didomi|cookiebot|cmp|modal|popup|newsletter/i;
+/**
+ * The same banners when their container has no telling class: dia.es paints
+ * its consent purposes inside an accordion, and «Cookies estrictamente
+ * necesarias» was counted as a FAQ that does not arrive (log §462).
+ */
+const CONSENT_TEXT_RE = /\bcookies?\b|consentimiento|inter[eé]s leg[ií]timo|pol[ií]tica de privacidad|aceptar todas|rechazar todas|proveedores pueden usar/i;
+export function isConsentText(text: string): boolean {
+  return CONSENT_TEXT_RE.test(text);
+}
+
+/** The block, or a short container around it (an accordion item), reads as consent. */
+function inConsent(el: El, text: string): boolean {
+  if (words(text).length <= 40 && isConsentText(text)) return true;
+  let cur = el.parentElement;
+  for (let i = 0; cur && i < 3; i++, cur = cur.parentElement) {
+    const t = one(cur.textContent);
+    if (words(t).length > 60) return false;
+    if (isConsentText(t)) return true;
+  }
+  return false;
+}
 const MONEY_RE = /(\d[\d.,]*\s?(€|eur\b|\$|£))|((€|\$|£)\s?\d)/i;
 const FAQ_RE = /faq|preguntas|question|accordion|acordeon/i;
 const REVIEW_RE = /review|rese[nñ]a|opinion|rating|valoraci|testimon|trustpilot|stars?\b|estrellas/i;
@@ -142,7 +163,7 @@ export function compareRender(rawHtml: string, renderedHtml: string, measuredAt:
     const text = one(el.textContent);
     const ws = words(text);
     const ts = tokens(text);
-    if (ts.length === 0) continue;
+    if (ts.length === 0 || inConsent(el, text)) continue;
     seen.push(...ws);
     const kind = classifyBlock(el, text);
     const pairs = ts.slice(1).map((t, i) => `${ts[i]} ${t}`);

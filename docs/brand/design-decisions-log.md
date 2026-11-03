@@ -29849,3 +29849,17 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **También.** La frase de Confianza de «Visibilidad en agentes» y de la tarjeta de Comercio agéntico pasa de «Lo que más frena a un agente es fiarse de tu web.» a «Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.» (venía del PR #762, que se cierra sin mergear porque chocaba con main).
 
 **Pendiente.** Nada conocido.
+
+## §462 AI-READ-OVERVIEW-3: la tarjeta «Lo que lee la IA» se adapta a lo que hay de cada dominio (2026-11-03)
+
+**Qué.** Denis vio la tarjeta de §461 en el preview con dos dominios reales y la encontró vacía: con dos tipos de contenido, las casillas ocupaban la mitad de una fila de cuatro, y con todo llegando entero la columna derecha quedaba en blanco.
+
+- Las casillas reparten el ancho entre las que hay (`--n`, de una a cuatro), no cuatro columnas fijas.
+- La columna derecha suma «Por tipo de página» (o, si no hay, «Por lo que importa»): cuánto llega de lo que vendes, del blog y del resto, con una barra que va en cálido por debajo del 86%. Son las líneas que `buildAiView` ya calculaba para el bloque de Auditoría GEO.
+- Si la columna derecha no tiene nada que decir (sin pérdidas, sin hueco y con un solo tipo de página), desaparece y las casillas se ponen junto al anillo (`.aio-grid.solo`).
+
+**Corrección de medida.** En una web, la cita «no llega» de Preguntas era el texto del aviso de cookies («Cookies estrictamente necesarias, 4 proveedores pueden usar este propósito»): su gestor pinta las finalidades dentro de un acordeón sin clase reconocible, así que contaba como pregunta frecuente. `compareRender` salta ahora todo bloque que, él o un contenedor corto (hasta 60 palabras, tres niveles), habla de cookies, consentimiento, interés legítimo o «proveedores pueden usar» (`isConsentText`). Los diálogos (`role=dialog`, `aria-modal`) cuentan como marco, igual que `dialog`. `buildAiView` tampoco cita un texto así, para no esperar a la medida siguiente.
+
+**Premisa.** La cifra de una web ya medida no cambia hasta su próxima pasada con navegador (semanal, `RENDER_REFRESH_MS`); hasta entonces puede incluir bloques del aviso de cookies. La cita sí deja de salir desde ya.
+
+**Pendiente.** Nada conocido.
