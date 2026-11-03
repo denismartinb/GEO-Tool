@@ -1,4 +1,5 @@
 import { Ic } from "@/components/ins/ic";
+import { AgentKindIcon } from "@/components/ins/agents/agent-kind-icon";
 import {
   NAV_AGENTS,
   NAV_STATE_LINE,
@@ -35,7 +36,7 @@ function LaneRow({ kind, title, who, lane, gate }: { kind: "read" | "nav"; title
     <div className={`agl-lane agl-${kind}`}>
       <div className="agl-lane-h">
         <span className="agl-av">
-          <Ic n={kind === "read" ? "notes" : "agent"} />
+          <AgentKindIcon kind={kind} />
         </span>
         <span className="agl-who">
           <b>{title}</b>
@@ -66,7 +67,7 @@ function BrakeCard({ kind, brake }: { kind: "read" | "nav"; brake: Brake }) {
   return (
     <div className={`agl-brake agl-${kind}`}>
       <span className="agl-brake-ic">
-        <Ic n={kind === "read" ? "notes" : "agent"} />
+        <AgentKindIcon kind={kind} />
       </span>
       <div>
         <span className="agl-k">{kind === "read" ? "Frena a los que leen" : "Frena a los que navegan"}</span>
@@ -87,7 +88,7 @@ export function AgentLanesCard({ lanes }: { lanes: AgentLanes }) {
       <div className="card-b">
         <p className="agl-lead">
           Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan
-          como una persona ven tu web entera, pero se paran ante lo que también pararía a una persona con prisa.
+          como una persona ven tu web entera.
         </p>
         <div className="agl-lanes">
           <LaneRow kind="read" title="Agentes que leen" who={READ_AGENTS} lane={lanes.read} gate={false} />

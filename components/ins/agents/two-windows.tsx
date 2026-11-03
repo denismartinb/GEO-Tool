@@ -1,4 +1,5 @@
 import { Ic } from "@/components/ins/ic";
+import { AgentKindIcon } from "@/components/ins/agents/agent-kind-icon";
 import { NAV_AGENTS, READ_AGENTS } from "@/lib/agentic-audit/agent-lanes";
 import type { Cell, Slot, TwoWindows } from "@/lib/agentic-audit/two-windows";
 
@@ -103,7 +104,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
         <div className="agw-lens agw-read">
           <div className="agw-lens-h">
             <span className="agw-av">
-              <Ic n="notes" />
+              <AgentKindIcon kind="read" />
             </span>
             <div>
               <b>Un agente que lee</b>
@@ -136,7 +137,7 @@ export function TwoWindowsCard({ windows }: { windows: TwoWindows }) {
         <div className="agw-lens agw-browse">
           <div className="agw-lens-h">
             <span className="agw-av">
-              <Ic n="agent" />
+              <AgentKindIcon kind="nav" />
             </span>
             <div>
               <b>Un agente que navega</b>

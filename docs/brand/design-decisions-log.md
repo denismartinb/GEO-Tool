@@ -29768,3 +29768,11 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **No se hace.** Los enlaces «Ver cómo» de la maqueta: no hay todavía una guía propia de servir en el HTML lo que pinta el JavaScript; los arreglos van sin enlace.
 
 **Pendiente.** PR 3: tarjeta «Lo que lee la IA» de Visión general.
+
+## §455 · AGENTS-BROWSER-1: las dos vías con el mismo aspecto, el icono las distingue (2026-11-03)
+
+**Qué.** Denis, viendo la preview de §453–§454: «el diseño del bloque nuevo parece de la consola antigua. Prefiero que sean homogéneos y si quieres mete la diferenciación en los iconos de los agentes, mira algo más curioso». Las tarjetas de «Agentes que leen» y «Agentes que navegan» (Visibilidad en agentes), sus frenos y las dos lentes de «Con navegador y sin él» (Auditoría agéntica) pasan a la misma tarjeta neutra: sin degradado azul, sin icono azul relleno y con el mismo punto oscuro en las dos vías.
+
+**El icono.** `components/ins/agents/agent-kind-icon.tsx`: el agente que lee es una página de HTML (`</>`) con una línea que la recorre; el que navega, una ventana de navegador con un cursor que hace clic. El movimiento es ambiente, no codifica nada y se queda quieto con movimiento reducido.
+
+**Texto.** La entrada de la tarjeta queda como la escribió Denis: «Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera.»
