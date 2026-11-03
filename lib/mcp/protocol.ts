@@ -49,10 +49,16 @@ const RequestSchema = z.object({
   params: z.record(z.unknown()).optional()
 });
 
+/**
+ * MCP-RELIABILITY-1 (log §464): how a tools/call ended, for analytics. A
+ * category, never the arguments or the answer.
+ */
+export type CallOutcome = "ok" | "tool_error" | "invalid_args" | "exception" | "sign_in_required" | "unknown_tool";
+
 export type RpcOutcome =
-  | { kind: "reply"; body: Record<string, unknown> }
+  | { kind: "reply"; body: Record<string, unknown>; call?: { tool: string; outcome: CallOutcome } }
   | { kind: "accepted" }
-  | { kind: "needs_auth" };
+  | { kind: "needs_auth"; call: { tool: string; outcome: "sign_in_required" } };
 
 const error = (id: JsonRpcId | null, code: number, message: string): RpcOutcome => ({
   kind: "reply",
@@ -84,7 +90,44 @@ export type ProtocolOptions = {
   oauthScopes?: readonly string[];
   outputSchema?: boolean;
   authChallenge?: string;
+  /**
+   * MCP-RELIABILITY-1 (log §464): the token came but was invalid or expired,
+   * and this endpoint answers that per tool (ChatGPT) instead of with an
+   * HTTP 401. The account tools then say the session expired.
+   */
+  tokenRejected?: boolean;
+  /** Called when a tool throws, so the route can report it (Sentry). Never gets the arguments. */
+  onToolException?: (tool: string, error: unknown) => void;
 };
+
+/** The texts a client shows when a call cannot be answered. Each one says what to do next. */
+export const CALL_TEXT = {
+  signIn: "Para ver estos datos, conecta tu cuenta de GenScore.",
+  sessionExpired: "Tu sesión de GenScore ha caducado. Vuelve a conectar tu cuenta para ver estos datos.",
+  invalidArgs: (fields: string[]) =>
+    fields.length
+      ? `Faltan datos o no son válidos para esta herramienta (${fields.join(", ")}). Vuelve a llamarla con esos datos.`
+      : "Faltan datos o no son válidos para esta herramienta. Vuelve a llamarla con los datos que pide.",
+  exception:
+    "GenScore no ha podido responder ahora por un fallo puntual. Vuelve a intentarlo en un minuto; si se repite, prueba más tarde."
+} as const;
+
+/**
+ * MCP-RELIABILITY-1 (log §464): some clients send `null` for an optional
+ * field they did not fill. Null counts as absent: an optional field then
+ * passes and a required one fails with its name.
+ */
+function withoutNulls(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  return Object.fromEntries(Object.entries(raw as Record<string, unknown>).filter(([, v]) => v !== null));
+}
+
+/** The schema's own field names, never a value the client sent. */
+function invalidFields(issues: ReadonlyArray<{ path: ReadonlyArray<string | number> }>, schema: Record<string, unknown>): string[] {
+  const known = Object.keys((schema.properties as Record<string, unknown> | undefined) ?? {});
+  const names = issues.map((i) => String(i.path[0] ?? "")).filter((n) => known.includes(n));
+  return [...new Set(names)];
+}
 
 /** Loose on purpose: each tool's object differs, and an exact schema that drifts would fail validation. */
 export const OPEN_OUTPUT_SCHEMA = { type: "object", additionalProperties: true } as const;
@@ -143,30 +186,64 @@ export async function handleRpc<C>(
     case "tools/call": {
       const name = typeof params?.name === "string" ? params.name : "";
       const tool = tools.find((t) => t.name === name);
-      if (!tool) return error(id, -32602, `Unknown tool: ${name.slice(0, 64)}`);
-      if (tool.access === "account" && !ctx.signedIn) {
-        if (!opts.authChallenge) return { kind: "needs_auth" };
-        return result(id, {
-          content: [{ type: "text", text: "Para ver estos datos, conecta tu cuenta de GenScore." }],
-          ...(opts.outputSchema ? { structuredContent: { state: "sign_in_required" } } : {}),
-          isError: true,
-          _meta: { "mcp/www_authenticate": [opts.authChallenge] }
-        });
+      if (!tool) {
+        return {
+          kind: "reply",
+          body: { jsonrpc: "2.0", id, error: { code: -32602, message: `Unknown tool: ${name.slice(0, 64)}` } },
+          call: { tool: "unknown", outcome: "unknown_tool" }
+        };
       }
-      const args = tool.args.safeParse(params?.arguments ?? {});
+      const call = (outcome: CallOutcome) => ({ tool: tool.name, outcome });
+      const reply = (value: Record<string, unknown>, outcome: CallOutcome): RpcOutcome => ({
+        kind: "reply",
+        body: { jsonrpc: "2.0", id, result: value },
+        call: call(outcome)
+      });
+      if (tool.access === "account" && !ctx.signedIn) {
+        if (!opts.authChallenge) return { kind: "needs_auth", call: { tool: tool.name, outcome: "sign_in_required" } };
+        return reply(
+          {
+            content: [{ type: "text", text: opts.tokenRejected ? CALL_TEXT.sessionExpired : CALL_TEXT.signIn }],
+            ...(opts.outputSchema ? { structuredContent: { state: opts.tokenRejected ? "session_expired" : "sign_in_required" } } : {}),
+            isError: true,
+            _meta: { "mcp/www_authenticate": [opts.authChallenge] }
+          },
+          "sign_in_required"
+        );
+      }
+      const args = tool.args.safeParse(withoutNulls(params?.arguments));
       const empty = opts.outputSchema ? { structuredContent: {} } : {};
       if (!args.success) {
-        return result(id, { content: [{ type: "text", text: "Faltan datos o no son válidos para esta herramienta." }], ...empty, isError: true });
+        const fields = invalidFields(args.error.issues, tool.inputSchema);
+        return reply(
+          {
+            content: [{ type: "text", text: CALL_TEXT.invalidArgs(fields) }],
+            ...(opts.outputSchema ? { structuredContent: { state: "invalid_args", fields } } : {}),
+            isError: true
+          },
+          "invalid_args"
+        );
       }
       try {
         const answer = await tool.run(args.data, ctx);
-        return result(id, {
-          content: [{ type: "text", text: answer.text }],
-          ...(answer.structured ? { structuredContent: answer.structured } : empty),
-          ...(answer.isError ? { isError: true } : {})
-        });
-      } catch {
-        return result(id, { content: [{ type: "text", text: "GenScore no ha podido responder ahora. Inténtalo de nuevo en un momento." }], ...empty, isError: true });
+        return reply(
+          {
+            content: [{ type: "text", text: answer.text }],
+            ...(answer.structured ? { structuredContent: answer.structured } : empty),
+            ...(answer.isError ? { isError: true } : {})
+          },
+          answer.isError ? "tool_error" : "ok"
+        );
+      } catch (err) {
+        opts.onToolException?.(tool.name, err);
+        return reply(
+          {
+            content: [{ type: "text", text: CALL_TEXT.exception }],
+            ...(opts.outputSchema ? { structuredContent: { state: "temporary_error" } } : {}),
+            isError: true
+          },
+          "exception"
+        );
       }
     }
     case "resources/list":

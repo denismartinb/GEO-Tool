@@ -14,11 +14,16 @@ vi.mock("@/lib/ext/project-data", () => ({ loadExtProjectData: vi.fn(), normaliz
 vi.mock("@/lib/page-review/review", () => ({ reviewPage: vi.fn() }));
 vi.mock("@/lib/supabase/service", () => ({ createServiceClient: vi.fn() }));
 vi.mock("@/lib/analytics/funnel-events", () => ({ captureFunnelEvent: vi.fn() }));
+vi.mock("@/lib/observability/report-error", () => ({ reportError: vi.fn() }));
 const getFounderOffer = vi.fn();
 vi.mock("@/lib/stripe", () => ({ getFounderOffer: () => getFounderOffer() }));
 vi.mock("next/server", async (orig) => ({ ...(await orig<typeof import("next/server")>()), after: vi.fn() }));
 
+import { after } from "next/server";
+import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { loadExtProjectData, pickProject } from "@/lib/ext/project-data";
+import { reportError } from "@/lib/observability/report-error";
+import { CALL_TEXT } from "@/lib/mcp/protocol";
 import { reviewPage } from "@/lib/page-review/review";
 import { POST as POST_CHATGPT } from "./chatgpt/route";
 import { GET, POST } from "./route";
@@ -86,7 +91,7 @@ describe("POST /api/mcp", () => {
     }
   });
 
-  it("answers an invalid or expired token with 401 invalid_token, before reading anything", async () => {
+  it("answers Claude's invalid or expired token with 401 invalid_token, before reading anything", async () => {
     accountFromBearer.mockResolvedValue({ kind: "invalid" });
     const res = await post({ jsonrpc: "2.0", id: 3, method: "tools/list" }, "Bearer xxxxxxxxxxxxxxxxxxxxxxxx");
     expect(res.status).toBe(401);
@@ -217,6 +222,144 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
     const res = await post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, undefined, POST_CHATGPT, "/api/mcp/chatgpt");
     const tool = (await res.json()).result.tools.find((t: { name: string }) => t.name === "que_es_genscore");
     expect(tool.description).not.toMatch(/precio|plan/i);
+  });
+});
+
+/**
+ * MCP-RELIABILITY-1 (log §464): the states Instinct's 2026-11-03 battery
+ * could not tell apart from «error interno». Each one has a fixture, on both
+ * endpoints where they differ, and every refusal says what to do next.
+ */
+describe("connector reliability fixtures (MCP-RELIABILITY-1, log §464)", () => {
+  const AUTH = "Bearer tokentokentokentokentoken";
+  const ENDPOINTS = [
+    [POST, "/api/mcp"],
+    [POST_CHATGPT, "/api/mcp/chatgpt"]
+  ] as const;
+  const runAfter = () => vi.mocked(after).mockImplementation(((cb: () => unknown) => void cb()) as never);
+  const events = () =>
+    vi.mocked(captureFunnelEvent).mock.calls.map(([event, , props]) => ({ event, ...props }) as Record<string, unknown>);
+
+  it("an expired token on a ChatGPT tool call gets the per-tool sign-in, not a bare 401", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "invalid" });
+    const res = await post(call("listar_dominios"), AUTH, POST_CHATGPT, "/api/mcp/chatgpt");
+    expect(res.status).toBe(200);
+    const body = (await res.json()).result;
+    expect(body.isError).toBe(true);
+    expect(body.content[0].text).toBe(CALL_TEXT.sessionExpired);
+    expect(body.structuredContent).toEqual({ state: "session_expired" });
+    expect(body._meta["mcp/www_authenticate"][0]).toContain('error="invalid_token"');
+    expect(listExtProjects).not.toHaveBeenCalled();
+  });
+
+  it("an expired token on ChatGPT's handshake still gets the 401 that makes it refresh", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "invalid" });
+    for (const method of ["initialize", "tools/list"]) {
+      const res = await post({ jsonrpc: "2.0", id: 1, method }, AUTH, POST_CHATGPT, "/api/mcp/chatgpt");
+      expect(res.status).toBe(401);
+      expect(res.headers.get("www-authenticate")).toContain('error="invalid_token"');
+    }
+  });
+
+  it("an expired token does not block a public tool on ChatGPT, which runs without the account", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "invalid" });
+    const text = await textOf(await post(call("buscar_guias", { consulta: "qué fuentes cita la IA" }), AUTH, POST_CHATGPT, "/api/mcp/chatgpt"));
+    expect(text).toContain("/blog/que-fuentes-cita-la-ia");
+  });
+
+  it("logs a rejected token and a missing one by reason, never the token", async () => {
+    runAfter();
+    accountFromBearer.mockResolvedValue({ kind: "invalid" });
+    await post(call("listar_dominios"), AUTH, POST_CHATGPT, "/api/mcp/chatgpt");
+    await post({ jsonrpc: "2.0", id: 1, method: "tools/list" }, AUTH);
+    accountFromBearer.mockResolvedValue({ kind: "none" });
+    await post(call("listar_dominios"));
+    await post(call("listar_dominios"), undefined, POST_CHATGPT, "/api/mcp/chatgpt");
+    const rejected = events().filter((e) => e.event === "mcp_auth_rejected");
+    expect(rejected).toEqual([
+      { event: "mcp_auth_rejected", connector: "chatgpt", reason: "invalid_token" },
+      { event: "mcp_auth_rejected", connector: "claude", reason: "invalid_token" },
+      { event: "mcp_auth_rejected", connector: "claude", reason: "no_token" },
+      { event: "mcp_auth_rejected", connector: "chatgpt", reason: "no_token" }
+    ]);
+    expect(JSON.stringify(vi.mocked(captureFunnelEvent).mock.calls)).not.toContain("tokentoken");
+  });
+
+  it("an empty account is told how to add its first domain, on both endpoints", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    listExtProjects.mockResolvedValue([]);
+    for (const [handler, path] of ENDPOINTS) {
+      const body = (await (await post(call("listar_dominios"), AUTH, handler, path)).json()).result;
+      expect(body.isError).toBeFalsy();
+      expect(body.content[0].text).toContain("Todavía no hay ningún dominio");
+      expect(body.content[0].text).toContain("/dashboard/projects/new");
+    }
+  });
+
+  it("an internal failure says to retry, is reported to Sentry and logged as exception", async () => {
+    runAfter();
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    listExtProjects.mockRejectedValue(new Error("db down"));
+    for (const [handler, path] of ENDPOINTS) {
+      const body = (await (await post(call("listar_dominios", { dominio: "marca.es" }), AUTH, handler, path)).json()).result;
+      expect(body.isError).toBe(true);
+      expect(body.content[0].text).toBe(CALL_TEXT.exception);
+      if (path.endsWith("chatgpt")) expect(body.structuredContent).toEqual({ state: "temporary_error" });
+    }
+    expect(reportError).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(reportError).mock.calls[0][1]).toBe("mcp.listar_dominios");
+    const calls = events().filter((e) => e.event === "mcp_tool_called");
+    expect(calls.map((c) => [c.connector, c.outcome])).toEqual([
+      ["claude", "exception"],
+      ["chatgpt", "exception"]
+    ]);
+    // Analytics carries categories, never the arguments.
+    expect(JSON.stringify(vi.mocked(captureFunnelEvent).mock.calls)).not.toContain("marca.es");
+  });
+
+  it("Search Console disconnected answers with the connect link, not an error", async () => {
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    vi.mocked(loadExtProjectData).mockResolvedValue({
+      kind: "ok",
+      project: { id: "p1" },
+      payload: { domain: "marca.es", brand: "Marca", searchConsole: { state: "disconnected" } }
+    } as never);
+    for (const [handler, path] of ENDPOINTS) {
+      const body = (await (await post(call("ver_posicion_google", { dominio: "marca.es" }), AUTH, handler, path)).json()).result;
+      expect(body.isError).toBeFalsy();
+      expect(body.content[0].text).toContain("no tiene Search Console conectado");
+      expect(body.content[0].text).toContain("/api/search-console/connect");
+      expect(body.structuredContent).toMatchObject({ state: "disconnected" });
+    }
+  });
+
+  it("null in an optional field counts as absent; in a required one it names the field", async () => {
+    runAfter();
+    accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
+    listExtProjects.mockResolvedValue([{ id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" }]);
+    for (const [handler, path] of ENDPOINTS) {
+      const list = (await (await post(call("listar_dominios", { dominio: null }), AUTH, handler, path)).json()).result;
+      expect(list.isError).toBeFalsy();
+      expect(list.content[0].text).toContain("- marca.es (Marca)");
+
+      const bad = (await (await post(call("ver_dominio", { dominio: null }), AUTH, handler, path)).json()).result;
+      expect(bad.isError).toBe(true);
+      expect(bad.content[0].text).toBe(CALL_TEXT.invalidArgs(["dominio"]));
+      if (path.endsWith("chatgpt")) expect(bad.structuredContent).toEqual({ state: "invalid_args", fields: ["dominio"] });
+    }
+    expect(events().filter((e) => e.event === "mcp_tool_called").map((c) => c.outcome)).toEqual(["ok", "invalid_args", "ok", "invalid_args"]);
+  });
+
+  it("a null arguments object is read as no arguments", async () => {
+    const res = await post({ jsonrpc: "2.0", id: 9, method: "tools/call", params: { name: "que_es_genscore", arguments: null } });
+    expect((await res.json()).result.isError).toBeFalsy();
+  });
+
+  it("every refusal text says what to do next and has no long dash", () => {
+    for (const t of [CALL_TEXT.signIn, CALL_TEXT.sessionExpired, CALL_TEXT.exception, CALL_TEXT.invalidArgs([]), CALL_TEXT.invalidArgs(["url"])]) {
+      expect(t).toMatch(/conecta|Vuelve|Inténtalo|intentarlo/i);
+      expect(t).not.toContain("—");
+    }
   });
 });
 
