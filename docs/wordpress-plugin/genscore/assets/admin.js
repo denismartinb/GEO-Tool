@@ -363,6 +363,14 @@
     prod.forEach(function (x) { var t = (x.e.aiv.k || {}).price; if (t) { pp.seen += t[0] || 0; pp.got += t[1] || 0; } });
     return { pct: share(E), kinds: kinds, types: types, productPriceLost: pp.seen ? Math.round(100 * (1 - pp.got / pp.seen)) : null };
   }
+  /* The global figure weighs words, like the extension and the console, so a
+     price weighs one or two words in it. When prices are what is lost, the
+     card says so first (Denis, 2026-11-03), without touching the figure. */
+  function aiPriceLead(A) {
+    var p = A.kinds.filter(function (k) { return k.id === "price"; })[0];
+    if (!p || p.lost < 20) return "";
+    return p.lost >= 95 ? "No llega ningún precio." : "No llega el " + p.lost + "% de tus precios.";
+  }
   function aiSay(v) { return v >= 95 ? "Tu contenido está en el HTML, que es lo que leen sus bots." : "El resto sólo aparece con JavaScript, y estos motores no lo ejecutan."; }
   function aiBand(v) { return v >= 90 ? "pos" : v >= 60 ? "mid" : "low"; }
   function aiInsight(T) {
@@ -389,14 +397,14 @@
     var types = A.types.length >= 2 ? '<div class="gs-mh">Dónde se pierde<small>lo que llega</small></div><div class="gs-ait">' + A.types.map(function (t) {
       return '<div class="gs-aitr"><span>' + esc(t.label) + "</span>" + pbar(t.pct, aiBand(t.pct)) + '<b class="gs-num">' + t.pct + "%</b></div>";
     }).join("") + '</div><p class="gs-ains">' + esc(aiInsight(A.types)) + "</p>" : "";
-    return '<div class="gs-card" id="gs-card-ai"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span>' + (S.target ? "<small>esta página</small>" : "") + '</div><div class="gs-aif">' + aiRing(A.pct) + '<div><b class="gs-num">' + A.pct + '%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity. ' + aiSay(A.pct) + "</p><small>" + tagx("ok", "Comprobado") + " en tu navegador: la misma página sin JavaScript frente a como se ve.</small></div></div>" + kinds + types + "</div>";
+    return '<div class="gs-card" id="gs-card-ai"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span>' + (S.target ? "<small>esta página</small>" : "") + '</div><div class="gs-aif">' + aiRing(A.pct) + '<div><b class="gs-num">' + A.pct + '%</b><p>de lo que ven tus clientes llega a ChatGPT, Claude y Perplexity. ' + (aiPriceLead(A) ? '<strong class="gs-aipl">' + esc(aiPriceLead(A)) + "</strong> Sólo aparecen con JavaScript, y estos motores no lo ejecutan." : aiSay(A.pct)) + "</p><small>" + tagx("ok", "Comprobado") + " en tu navegador: la misma página sin JavaScript frente a como se ve.</small></div></div>" + kinds + types + "</div>";
   }
   /* The small block of the Resumen: the figure, one line and the way to GEO. */
   function aiMini() {
     var A = aiAgg();
     if (!A) return "";
     var b = aiBand(A.pct);
-    return '<div class="gs-card gs-aim"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span></div><p class="gs-aim-t">De lo que ven tus clientes, llega a ChatGPT, Claude y <span>Perplexity el <b class="gs-num">' + A.pct + "%</b></span></p>" + pbar(A.pct, b) + '<div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-tab="geo">Ver qué no llega' + ic("i-arrowr") + "</button></div></div>";
+    return '<div class="gs-card gs-aim"><div class="gs-lab">Lo que lee la IA<span class="gs-new">Nuevo</span></div><p class="gs-aim-t">De lo que ven tus clientes, llega a ChatGPT, Claude y <span>Perplexity el <b class="gs-num">' + A.pct + "%</b></span></p>" + (aiPriceLead(A) ? '<p class="gs-aim-pl">' + esc(aiPriceLead(A)) + "</p>" : "") + pbar(A.pct, b) + '<div class="gs-acts"><button class="gs-btn gs-line gs-sm" data-tab="geo">Ver qué no llega' + ic("i-arrowr") + "</button></div></div>";
   }
   /* A recommendation only when the cause is certain: prices that a product
      page shows only with JavaScript, on a shop where WooCommerce has them and

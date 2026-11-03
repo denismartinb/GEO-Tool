@@ -496,3 +496,5 @@ html.gs-fm-open{overflow:hidden}
 #genscore-app .gs-rep .gs-i{width:14px;height:14px}
 #genscore-app .gs-say-in{margin:0 0 16px;color:var(--ink)}
 #genscore-app .gs-card>.gs-say-in:only-child{margin:0}
+#genscore-app .gs-aim-pl{margin:-4px 0 10px;font-size:14px;font-weight:600;color:var(--warm)}
+#genscore-app .gs-aif .gs-aipl{font-weight:600;color:var(--warm)}
