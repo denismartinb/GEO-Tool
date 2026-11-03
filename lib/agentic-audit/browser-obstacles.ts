@@ -95,7 +95,7 @@ const COOKIE_WORD = /cookie|consent|gdpr|rgpd|privacy-banner/i;
 const ACCEPT_TEXT = /\b(?:aceptar|acepto|aceptar todo|aceptar todas|permitir|de acuerdo|entendido|accept|allow|agree|got it)\b/i;
 
 const BUY_TEXT =
-  /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|prueba gratis|probar gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
+  /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
 /** A button whose whole label is «Añadir» (dia.es, many grocers): next to a price it is the cart, never «Añadir a mi lista». */
 const BARE_ADD = /^[+\s]*(?:a[ñn]adir|agregar|add)[+\s]*$/i;
 const BUY_HINT = /add[-_ ]?to[-_ ]?cart|addtocart|add-to-bag|buy[-_ ]?now|product-form__submit|single_add_to_cart_button|btn-cart|button--add-to-cart/i;

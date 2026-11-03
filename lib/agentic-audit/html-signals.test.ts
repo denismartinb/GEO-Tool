@@ -168,6 +168,11 @@ describe("classifyOffer (log §325)", () => {
   it("a blog link called «Entradas» is not a buy button", () => {
     expect(extractPageSignals(page("<a href='/blog'>Entradas</a>")).buyCta).toBe(false);
   });
+
+  it("«Probar Pro gratis» is a buy button, with the plan name in the middle (log §460)", () => {
+    expect(extractPageSignals(page("<a href='/signup'>Probar Pro gratis</a>")).buyCta).toBe(true);
+    expect(extractPageSignals(page("<a href='/signup'>Empezar con Starter</a>")).buyCta).toBe(true);
+  });
 });
 
 describe("SHOP-DETECT-2 (log §407)", () => {

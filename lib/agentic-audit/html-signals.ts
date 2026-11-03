@@ -319,7 +319,7 @@ function ctaTexts(html: string): string[] {
 }
 
 const BUY_CTA =
-  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|prueba gratis|probar gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
+  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
 
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;

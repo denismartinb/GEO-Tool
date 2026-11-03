@@ -213,7 +213,7 @@ export async function PricingPage() {
           <div className="lp-hero-note" style={{ marginTop: 22 }}>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />7 días de Pro gratis</span>
             <span><Icon name="check" size={14} className="text-[var(--pos)]" />Sin tarjeta</span>
-            <span><Icon name="check" size={14} className="text-[var(--pos)]" />Cancela cuando quieras</span>
+            <span><Icon name="check" size={14} className="text-[var(--pos)]" /><Link href="/terminos#cancelacion" className="underline underline-offset-2">Cancela cuando quieras</Link></span>
           </div>
         </div>
       </header>

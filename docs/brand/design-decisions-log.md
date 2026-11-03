@@ -29821,3 +29821,13 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Lo que sigue siendo cierto en /precios.** No enlaza sus condiciones de cancelación ni declara reseñas (no las hay y no se inventan), y el cobro va por Stripe tras entrar, así que no se reconoce en la página. Cambiar la página es copy, congelado por Denis desde el 2026-10-10.
 
 **Sin cambio de nota fuera de esto.** Las auditorías guardadas se corrigen en la siguiente.
+
+## §460 AGENTS-BUY-WORDING-1: el botón de compra no presupone un carrito, y /precios enlaza su cancelación (2026-11-03)
+
+**Qué.** En una ficha de producto físico el texto decía «Sirve el formulario de añadir al carrito», también en webs que venden con «Comprar» o «Añadir a tu pack» y no tienen carrito. Ahora dice «botón de compra» y nombra las dos formas: «Sirve en el HTML de la ficha el botón de compra («Comprar» o «Añadir al carrito»), con texto claro.» El resto de tipos ya usaba su propia acción (contratar, reservar, suscribirse).
+
+**Botones con el plan en medio.** «Probar Pro gratis» no contaba como botón para contratar porque sólo se aceptaba «probar gratis» seguido. Ahora vale una palabra entre medias, en la revisión HTML y en la lectura del navegador. «Empezar con Starter» ya contaba.
+
+**/precios.** «Cancela cuando quieras» enlaza a la sección «Cancelación» de los Términos (`/terminos#cancelacion`), a petición del fundador (excepción expresa a la congelación de textos: el texto no cambia, sólo pasa a ser enlace). Con eso la comprobación de cancelación pasa de «a medias» a correcta en la siguiente auditoría.
+
+**Pendiente.** /precios sigue sin reseñas declaradas (no las hay y no se inventan) y el pago va por Stripe tras entrar.
