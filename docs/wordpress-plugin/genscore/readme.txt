@@ -20,6 +20,14 @@ GenScore is a free **AI SEO and GEO (Generative Engine Optimization) plugin**. I
 * **SEO:** title, meta description, canonical URL, headings, language, Open Graph, structured data (JSON-LD schema), plus WordPress settings (search engine visibility, XML sitemap, HTTPS, permalinks).
 * **AI agents (agentic commerce):** can a shopping agent understand what you sell, its price, stock, shipping and returns, and how to buy it?
 
+= See what the AI actually reads =
+
+* **«Lo que lee la IA»:** ChatGPT, Claude and Perplexity read your pages without running JavaScript. GenScore loads each important page in your browser twice, as your customers see it and as those engines receive it, and tells you how much reaches them, what kind of content is lost (prices, headings, buttons, text) and on what kind of page. Only site-wide figures, no page lists.
+* **Prices first:** if your product prices only appear with JavaScript and WooCommerce has them, one click publishes them in each product's structured data.
+* **Markdown versions:** each page, post and product also answers at its address ending in .md, clean text for agents and llms.txt tools, listed in your llms.txt. One switch turns it off.
+* **Since your last review:** technical optimization, what the AI reads and how many engines can enter, against your previous review.
+* **Evidence you can trust:** every bot claim says where it comes from. «Comprobado» is your robots.txt read now; «Simulación» is GenScore asking for your home page as each AI search bot from outside, with your account, to catch a firewall or CDN that blocks it even when robots.txt lets it in.
+
 = Fix it in one click =
 
 Every recommendation comes with the fix. GenScore proposes it for each page from data WordPress and WooCommerce already have (title, excerpt, permalink, last edit, price, stock, shipping zones, reviews). You tick the pages, review and edit each proposal, confirm, and it is published. Every publish can be undone.
@@ -55,6 +63,7 @@ A technically optimized site is the start, not the result. Whether the AI recomm
 * **GEO Score:** how often ChatGPT, Gemini, Claude and Perplexity name your brand.
 * **Competitors** that appear before you, and which of your pages the engines cite.
 * **SEO health and agentic audit** of your whole domain, and Google Search Console data.
+* **«Descargar informe»:** the GenScore report of your latest scan as a PDF: GEO Score, each engine, a question-by-question map, the brands that appear instead of you, your technical base and the plan.
 
 Connect it from the plugin with «Conectar con GenScore»: read-only, approved on genscore.es, and «Desconectar» removes the access. New accounts start with a 7-day Pro trial, no card required.
 
@@ -131,22 +140,33 @@ The web server serves that file before WordPress, so the switches cannot change 
 
 No. The review, the one-click fixes, the AI bot switches and llms.txt are free and work without an account. An account adds what the plugin cannot measure from your site: how often each AI engine names you, your competitors and GenScore's recommendations.
 
+= Why do ChatGPT, Claude and Perplexity miss part of my page? =
+
+Their bots read the HTML your server sends and do not run JavaScript. Anything a theme or plugin paints with JavaScript afterwards (often prices, tabs or sliders) never reaches them. «Lo que lee la IA» measures it in your browser, compares both versions of each important page and only recommends a fix when the cause is clear.
+
+= What are the Markdown versions? =
+
+With the switch on, every page, post and product also answers at its address ending in .md (for example /about-us.md) with its clean text, marked noindex with a canonical link to the page, so it never competes with it in Google. Your llms.txt lists them.
+
 = Is the interface in English? =
 
 Not yet: the screens are in Spanish.
 
 == Screenshots ==
 
-1. Summary with a GenScore account: technical optimization, GEO Score, domain audits and GenScore's recommendations, each with its fix.
-2. One-click structured data (JSON-LD schema): pick the pages, review and edit each proposal before publishing.
-3. Published on the pages you chose, with Undo.
-4. SEO: meta descriptions proposed from each page's excerpt or first paragraph, written to your SEO plugin when you use one.
-5. AI shopping agents: shipping details for every WooCommerce product, from your shipping zones.
-6. A comparison draft with a rival: your column from WooCommerce, the rival's cells left for you to source.
-7. GEO tab: GenScore's plan, how often each AI engine names you and which AI crawlers can read your home page.
-8. AI bot switches for robots.txt: search and training bots set separately for ChatGPT, Claude, Perplexity, Gemini and Meta.
-9. Without an account: the technical review and what to fix first, free.
-10. GenScore column in your pages, posts and products lists.
+1. Summary with a GenScore account: technical optimization, what the AI reads, GEO Score, domain audits and GenScore's recommendations, each with its fix.
+2. What the AI reads: how much of what your customers see reaches ChatGPT, Claude and Perplexity, what is lost and where, and the change since your last review.
+3. Who can read your home page, checked in your robots.txt and simulated from outside, and the one-click fix for prices that only appear with JavaScript.
+4. «Descargar informe»: the GenScore report of your latest scan as a PDF.
+5. Markdown versions of every page, post and product, listed in your llms.txt.
+6. One-click structured data (JSON-LD schema): pick the pages, review and edit each proposal before publishing.
+7. Published on the pages you chose, with Undo.
+8. SEO: meta descriptions proposed from each page's excerpt or first paragraph, written to your SEO plugin when you use one.
+9. AI shopping agents: shipping details for every WooCommerce product, from your shipping zones.
+10. A comparison draft with a rival: your column from WooCommerce, the rival's cells left for you to source.
+11. AI bot switches for robots.txt: search and training bots set separately for ChatGPT, Claude, Perplexity, Gemini and Meta.
+12. Without an account: the technical review and what to fix first, free.
+13. GenScore column in your pages, posts and products lists.
 
 == Changelog ==
 
