@@ -16,7 +16,9 @@ import { Delta } from "@/components/ui/delta";
 import { BotAccessCard, aiBotsSectionProps } from "./_components/bot-access-card";
 import { AiBotsSection } from "@/components/ins/audit/ai-bots";
 import { AiViewSection } from "@/components/ins/audit/ai-view";
-import { aiViewLlmsLines, buildAiView } from "@/lib/web-audit/ai-view";
+import { buildAiView } from "@/lib/web-audit/ai-view";
+import { browserRunConfigured } from "@/lib/web-audit/browser-run";
+import { classifyPurchaseQuestion } from "@/lib/agentic-audit/purchase-questions";
 import { BLOCK_NOTES, InsBlockHero } from "@/components/ins/audit/block-cards";
 import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
@@ -89,6 +91,14 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
     fixContext
   } = await loadWebAuditPageData({ supabase, project });
   const coverage = await coveragePromise;
+  // AI-READ-2 (log §451): «Afecta a N preguntas que vigilas» on the price card.
+  const { data: promptRows } =
+    activeBlock === "geo"
+      ? await supabase.from("project_prompts").select("prompt_text, category").eq("project_id", project.id).eq("is_active", true)
+      : { data: null };
+  const pricePrompts = ((promptRows ?? []) as Array<{ prompt_text: string | null; category: string | null }>).filter(
+    (p) => classifyPurchaseQuestion(p.prompt_text ?? "", p.category) === "price"
+  ).length;
 
   // El loader DECIDE si hay una auditoría vencida a la que despertar; actuar es
   // de esta pantalla (PRELAUNCH-HARDENING-1 Fase R7-b, log §106).
@@ -143,7 +153,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                 const views = AUDIT_BLOCK_ORDER.map((key) => buildAuditBlock(key, pages, currentTechnicalReport, bots));
                 const view = views.find((v) => v.key === activeBlock)!;
                 const isGeo = activeBlock === "geo";
-                // AI-VIEW-CONSOLE-1 (log §449): every audited page as an AI bot receives it.
+                // AI-READ-2 (log §451): global figures of what reaches the AI (§449 page list retired).
                 const aiView = isGeo ? buildAiView(pages) : null;
                 const pageSpeed = bots?.site?.pageSpeed;
                 // EXT-1.5.0 (log §446): what this block fixed since the previous audit, as the extension says it.
@@ -226,7 +236,14 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                         )}
                       </div>
                       {isGeo && <AiBotsSection {...aiBotsSectionProps(technicalSnapshot.bots, project.domain)} />}
-                      {isGeo && aiView && <AiViewSection view={aiView} domain={project.domain} llms={aiViewLlmsLines(aiView)} />}
+                      {isGeo && aiView && (
+                        <AiViewSection
+                          view={aiView}
+                          measuring={browserRunConfigured()}
+                          pricePrompts={pricePrompts}
+                          promptsHref={`/dashboard/projects/${projectId}/prompts`}
+                        />
+                      )}
                       {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
                   </div>

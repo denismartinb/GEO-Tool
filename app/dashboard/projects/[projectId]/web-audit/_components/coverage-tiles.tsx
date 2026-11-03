@@ -1,7 +1,7 @@
 /**
  * The history bars of «Historial de comprobaciones». The Contenido /
  * Implementado tiles that also lived here were removed with their card
- * (log §450).
+ * (log §452).
  */
 
 /** 4px progress bar under a hero tile / history row (WEB-AUDIT-R4). */

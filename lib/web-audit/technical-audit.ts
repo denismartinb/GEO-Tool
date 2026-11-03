@@ -18,6 +18,7 @@ import { fetchPageSpeed } from "@/lib/web-audit/pagespeed";
 import { reusablePageSpeed } from "@/lib/web-audit/seo-health";
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
 import { sanitizeField } from "@/lib/text/sanitize";
+import { isPageRender, renderIsFresh, type PageRender } from "@/lib/web-audit/ai-render";
 
 /**
  * "Auditar salud técnica GEO" (WEB-AUDIT-2): a deterministic
@@ -66,6 +67,12 @@ export type PageAuditEntry = {
   /** WEB-AUDIT-R3: informational fetch metadata, never fed into pageScore — see fetch-page.ts's PageFetchResult. Null for any non-"analyzed" status. */
   fetchMs: number | null;
   htmlBytes: number | null;
+  /**
+   * AI-READ-2 (log §451): the page measured with a real browser, written by
+   * `ai-render-pass.ts` after the audit and carried forward by the next audit
+   * while fresh. Optional: `undefined` is «never measured».
+   */
+  render?: PageRender;
 };
 
 export type TechnicalAuditSnapshot = {
@@ -124,6 +131,24 @@ function withTimeout<T>(promise: PromiseLike<T>, stage: string): Promise<T> {
         reject(error);
       }
     );
+  });
+}
+
+/**
+ * AI-READ-2 (log §451): a browser measurement of the same URL from the
+ * previous audit is kept while it is fresh (`renderIsFresh`), so a daily scan
+ * does not spend the free browser quota measuring again what changes only
+ * when the site changes. Pure.
+ */
+export function carryForwardRenders(pages: PageAuditEntry[], previous: PageAuditEntry[] | null | undefined, now: Date): PageAuditEntry[] {
+  if (!Array.isArray(previous) || previous.length === 0) return pages;
+  const byUrl = new Map<string, PageRender>();
+  for (const p of previous) {
+    if (p && isPageRender(p.render) && renderIsFresh(p.render, now)) byUrl.set(stripUrlForDedupe(p.url), p.render);
+  }
+  return pages.map((p) => {
+    const render = p.status === "analyzed" ? byUrl.get(stripUrlForDedupe(p.url)) : undefined;
+    return render ? { ...p, render } : p;
   });
 }
 
@@ -488,11 +513,15 @@ export async function runTechnicalAuditCore({
     const readinessScore = computeReadinessScore(pages);
     const generatedAt = new Date().toISOString();
 
-    const sanitizedPages = pages.map((p) => ({
-      ...p,
-      url: sanitizeField(p.url, 2000),
-      contextLabel: sanitizeField(p.contextLabel, 120)
-    }));
+    const sanitizedPages = carryForwardRenders(
+      pages.map((p) => ({
+        ...p,
+        url: sanitizeField(p.url, 2000),
+        contextLabel: sanitizeField(p.contextLabel, 120)
+      })),
+      latestSnapshot?.pages,
+      new Date()
+    );
 
     // Persist unconditionally (invariant 4): every consumed rate-limit unit
     // leaves a row, even a run where every candidate was skipped.

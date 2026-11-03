@@ -10,7 +10,7 @@ const { CoverageNotices } = await import("./coverage-section");
 
 /**
  * The founder removed the «Cobertura de tu contenido» card (2026-11-02, log
- * §450). Only its recovery messages remain, and they must stay silent in the
+ * §452). Only its recovery messages remain, and they must stay silent in the
  * normal case so the screen does not grow an empty block.
  */
 
