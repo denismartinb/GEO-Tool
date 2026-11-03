@@ -166,14 +166,27 @@ describe("aiReadCard", () => {
     expect(c.headline).toBe("Le llega el 72% de lo que ven tus clientes.");
     expect(c.sub).toContain("Tus precios son lo que más se pierde.");
     expect(c.rows.map((r) => r.reachPct)).toEqual([20, 60, 100]);
-    expect(c.items[0].text).toBe("La IA no ve tus precios: «Café 1 kg · 24,90 €»");
+    expect(c.rows.map((r) => r.lost)).toEqual([true, false, false]);
+    expect(c.items[0]).toEqual({ text: "La IA no ve tus precios", quote: "Café 1 kg · 24,90 €", tone: "warm" });
+    expect(c.delta).toBeNull();
+    expect(c.where).toBeNull();
     expect(c.items).toHaveLength(2);
   });
 
   it("puts the cited-pages reading second when it applies", () => {
     const c = aiReadCard(measured({ groups: [{ title: "Por lo que importa", lines: [], insight: "Tus páginas más citadas son las que peor lee la IA." }] }), true);
     if (c.kind !== "card") throw new Error("card");
-    expect(c.items.map((i) => i.text)).toEqual(["La IA no ve tus precios: «Café 1 kg · 24,90 €»", "Tus páginas más citadas son las que peor lee la IA"]);
+    expect(c.items.map((i) => i.text)).toEqual(["La IA no ve tus precios", "Tus páginas más citadas son las que peor lee la IA"]);
+  });
+
+  it("passes on the delta and the page-type sentence, never inventing them", () => {
+    const c = aiReadCard(
+      measured({ delta: 6, groups: [{ title: "Por tipo de página", lines: [], insight: "El mayor hueco está en lo que vendes." }] }),
+      true
+    );
+    if (c.kind !== "card") throw new Error("card");
+    expect(c.delta).toBe(6);
+    expect(c.where).toBe("El mayor hueco está en lo que vendes.");
   });
 
   it("reads as complete when nothing is lost", () => {

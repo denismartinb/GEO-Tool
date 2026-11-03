@@ -29831,3 +29831,21 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **/precios.** «Cancela cuando quieras» enlaza a la sección «Cancelación» de los Términos (`/terminos#cancelacion`), a petición del fundador (excepción expresa a la congelación de textos: el texto no cambia, sólo pasa a ser enlace). Con eso la comprobación de cancelación pasa de «a medias» a correcta en la siguiente auditoría.
 
 **Pendiente.** /precios sigue sin reseñas declaradas (no las hay y no se inventan) y el pago va por Stripe tras entrar.
+
+## §461 AI-READ-OVERVIEW-2: la tarjeta «Lo que lee la IA» de Visión general pasa a la maqueta v3 (2026-11-03)
+
+**Qué.** La tarjeta de Visión general (AI-READ-2, §451) se rehace sobre `docs/design-reference/agents-browser-1/maqueta-v3.html` (plantilla `v-ov`), aprobada por Denis el 2026-11-03:
+
+- El anillo pinta en cálido lo que no llega, no sólo en azul lo que llega.
+- Bajo la frase, una pastilla «+N desde la última medida» (o «−N», en cálido) sólo si `buildAiView` tiene medida anterior.
+- Las tres pastillas de motor (ChatGPT, Claude, Perplexity), los que no ejecutan JavaScript.
+- Cada tipo de contenido es una casilla con su porcentaje y diez bloques (los que no llegan, rayados en cálido); la casilla va en cálido cuando se pierde la mitad o más.
+- «Lo que más se pierde» separa la frase («La IA no ve tus precios») de la cita literal que no llega, que va debajo con la etiqueta «no llega».
+- Debajo, «dónde está el mayor hueco» (`typeInsight` del grupo «Por tipo de página») sólo si dice algo.
+- Midiendo: anillo vacío y una caja que se recorre con un haz; quieta con movimiento reducido.
+
+**Cómo.** `aiReadCard` expone `delta`, `where`, `lost` por fila y `quote` por línea. Son datos que el modelo ya calculaba; ninguna cifra nueva ni inventada. Sin migración.
+
+**También.** La frase de Confianza de «Visibilidad en agentes» y de la tarjeta de Comercio agéntico pasa de «Lo que más frena a un agente es fiarse de tu web.» a «Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.» (venía del PR #762, que se cierra sin mergear porque chocaba con main).
+
+**Pendiente.** Nada conocido.
