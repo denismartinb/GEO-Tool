@@ -25,7 +25,7 @@ import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import { BlockIssuesCard, BlockPassingCard } from "./_components/block-panels";
 import { SeoIssuesWithGoogle } from "./_components/seo-issues-google";
-import { CoverageHistory, CoverageNotices } from "./_components/coverage-section";
+import { CoverageNotices } from "./_components/coverage-section";
 import { SpeedCard } from "./_components/speed-card";
 import { AuditTabBar, AuditTabPanel, AuditTabsProvider } from "./audit-tabs";
 import { WebAuditProvider } from "./web-audit-context";
@@ -244,7 +244,6 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
                           promptsHref={`/dashboard/projects/${projectId}/prompts`}
                         />
                       )}
-                      {isGeo && <CoverageHistory data={coverage} />}
                     </AuditTabsProvider>
                   </div>
                 );

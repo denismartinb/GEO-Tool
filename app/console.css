@@ -1468,18 +1468,9 @@
 .sa-scope p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
 .sa-scope b { color: var(--ink); }
 
-/* Historial de comprobaciones (GEO block); the «Cobertura de tu contenido» card was removed (log §452) */
-.cov-blk { margin-top: 12px; }
-.cov-blk-t { font-size: 13px; font-weight: 750; color: var(--ink); margin-bottom: 10px; }
-.cov-note { font-size: 12px; color: var(--ink-3); margin: -4px 0 10px; }
+/* Coverage topic list (Correcto tab); the «Cobertura de tu contenido» card and «Historial de comprobaciones» were removed (log §453) */
 .cov-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .cov-list li { padding: 8px 10px; background: var(--surface-sunk); border-radius: 8px; font-size: 12.5px; color: var(--ink-2); }
-.cov-history { display: flex; flex-direction: column; gap: 6px; }
-.cov-hrow { padding: 8px 10px; border-radius: 8px; background: var(--surface-sunk); }
-.cov-hdate { font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 6px; }
-.cov-hgrid { display: grid; grid-template-columns: 90px minmax(0, 1fr) 92px; gap: 8px; align-items: center; }
-.cov-hgrid > span:not(.cov-hv) { font-size: 10.5px; color: var(--ink-2); }
-.cov-hv { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
 
 @media (max-width: 420px) {
   .tech-potential { padding: 16px; }

@@ -29719,11 +29719,11 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 
 **Pendiente.** Aprovechar la misma medición en Auditoría agéntica y Visibilidad en agentes (precio, stock, botón y datos estructurados vistos por un navegador; muros de cookies o retos), con maqueta antes. Una tarjeta de Recomendaciones cuando sea seguro que un dato concreto (por ejemplo, los precios) debe ir en el HTML. Un grupo por clics de Google en «Dónde se pierde».
 
-## §452 · COVERAGE-CARD-REMOVE-1: Auditoría GEO deja de enseñar «Cobertura de tu contenido» (2026-11-02)
+## §453 · COVERAGE-CARD-REMOVE-1: Auditoría GEO deja de enseñar «Cobertura de tu contenido» e «Historial de comprobaciones» (2026-11-02/03)
 
-**Qué.** A petición de Denis («elimina este bloque», con captura), la tarjeta «Cobertura de tu contenido» sale de Auditoría GEO: las tarjetas Contenido e Implementado, la frase «Tema a tema…», la píldora «Auditando…» / «Comprobación pendiente» de esa tarjeta y la gráfica «Evolución entre comprobaciones». Se borran `TrendChart`, `SubScoreTile` y `LockedSubScoreTile`, que sólo usaba esa tarjeta, y su CSS.
+**Qué.** A petición de Denis («elimina este bloque», con captura), la tarjeta «Cobertura de tu contenido» sale de Auditoría GEO: las tarjetas Contenido e Implementado, la frase «Tema a tema…», la píldora «Auditando…» / «Comprobación pendiente» de esa tarjeta y la gráfica «Evolución entre comprobaciones». Al día siguiente (Denis, 2026-11-03: «Quitamos los dos bloques») sale también «Historial de comprobaciones», el pie plegado del bloque GEO. Se borran `TrendChart`, `SubScoreTile`, `LockedSubScoreTile`, `CoverageHistory` y `MiniBar`, que sólo usaban esos dos bloques, y su CSS.
 
-**Qué se queda.** No se borra ningún dato ni se toca la comprobación de cobertura: sigue corriendo, guardándose y alimentando lo que la lee (temas citados en «Correcto», «Historial de comprobaciones», recomendaciones, informe). `loadCoverageSectionData` no cambia.
+**Qué se queda.** No se borra ningún dato ni se toca la comprobación de cobertura: sigue corriendo, guardándose y alimentando lo que la lee (temas citados en «Correcto», recomendaciones, informe). `loadCoverageSectionData` no cambia.
 
 **Premisa (regla de recuperación).** La tarjeta llevaba dentro los dos únicos avisos que explican por qué se paró la comprobación: el error del conductor (`WebAuditDriveNotice`) y «Comprobación pausada por cambio de plan». No se retiran: pasan a `CoverageNotices`, sin tarjeta, en el mismo sitio, y no pintan nada en el caso normal. Lo que sí desaparece es la píldora de estado «Auditando…» de la tarjeta; si una comprobación se alarga, la pantalla ya no lo dice hasta que acaba o falla (y si falla, lo dice el aviso).
 

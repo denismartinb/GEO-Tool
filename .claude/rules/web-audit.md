@@ -46,11 +46,11 @@ paths:
 > La cobertura se carga en el bloque GEO con su propio cargador
 > (`loadCoverageSectionData`), pero ya no tiene tarjeta: Denis retiró
 > «Cobertura de tu contenido» (tarjetas Contenido e Implementado y
-> «Evolución entre comprobaciones», log §452). Siguen sus datos en «Correcto»
-> y en «Historial de comprobaciones», y sus dos avisos de recuperación
+> «Evolución entre comprobaciones») y «Historial de comprobaciones» (log
+> §453). Siguen sus datos en «Correcto», recomendaciones e informe, y sus dos avisos de recuperación
 > (`CoverageNotices`: `WebAuditDriveNotice` y la comprobación pausada por
 > cambio de plan), que no pintan nada en el caso normal. No vuelvas a montar
-> la tarjeta sin que él lo pida.
+> ninguno de los dos sin que él lo pida.
 
 Fuente canónica: `docs/specs/web-audit/README.md` ("Shared invariants") y
 `docs/specs/web-audit/ROADMAP.md` (**única fuente del orden de fases** — los
@@ -204,7 +204,7 @@ Consecuencias, y son reglas:
 ### Los componentes de presentación viven en `_components/`, no en `page.tsx`
 
 `page.tsx` orquesta datos; los componentes que pintan bloques, filas,
-pestañas y el historial de la cobertura viven en
+pestañas y los avisos de la cobertura viven en
 `app/dashboard/projects/[projectId]/web-audit/_components/` (log §83, §275).
 Componente nuevo de esta pantalla → ahí.
 
@@ -221,7 +221,7 @@ antes de WEB-AUDIT-R3 no tiene `indexability` ni `citability`**, y leerlas sin
 comprobar tumbó la pantalla entera en producción el 2026-07-12 — el aviso vivía
 sólo en un comentario de `page-checks.ts`, que es donde una advertencia no se
 ejecuta. (`TrendChart`, que sólo miraban sus tests, se borró con la tarjeta de
-cobertura, log §452.)
+cobertura, log §453.)
 
 Aun así, para una **mudanza** de marcado la comparación línea a línea sigue
 haciendo falta además de los tests: éstos aseguran afirmaciones concretas, no
