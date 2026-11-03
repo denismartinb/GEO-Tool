@@ -38,6 +38,7 @@ const ok = (more: Partial<Extract<AgenticBrowserRead, { state: "ok" }>> = {}): A
   state: "ok",
   measuredAt: AT,
   cookies: true,
+  cookieCover: true,
   price: { state: "exact", text: "149,00 €" },
   options: "none",
   buy: { state: "named", text: "Añadir a la cesta" },
@@ -58,7 +59,7 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "3:buy:No aparece|«Añadir a la cesta»",
       "4:data:No están|Los añade un script",
       "5:challenge:Ninguno|Ninguno",
-      "6:cover:No aplica|Aviso de cookies hasta aceptarlo"
+      "6:cover:No aplica|Aviso de cookies encima hasta aceptarlo"
     ]);
     expect(w.rows.filter((r) => r.gap).map((r) => r.id)).toEqual(["price", "stock", "buy", "data"]);
     expect(w.read.foot).toBe("No sabe cuánto cuesta ni si queda ni ve el botón");

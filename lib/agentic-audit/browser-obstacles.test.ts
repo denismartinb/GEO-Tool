@@ -15,6 +15,7 @@ describe("readBrowserObstacles", () => {
       state: "ok",
       measuredAt: AT,
       cookies: false,
+      cookieCover: false,
       price: { state: "exact", text: "149,00 €" },
       options: "none",
       buy: { state: "named", text: "Añadir a la cesta" },
@@ -36,6 +37,19 @@ describe("readBrowserObstacles", () => {
     expect(readBrowserObstacles(shown, AT)).toMatchObject({ cookies: true });
     const hidden = page(`<p>149 €</p>`) + `<div id="onetrust-banner-sdk" style="display: none"><button>Aceptar</button></div>`;
     expect(readBrowserObstacles(hidden, AT)).toMatchObject({ cookies: false });
+  });
+
+  it("tells a banner that covers the page from a strip (log §457)", () => {
+    const strip = page(`<p>149 €</p>`) + `<div id="onetrust-banner-sdk" class="otFlat"><p>Usamos cookies</p><button>Aceptar</button></div>`;
+    expect(readBrowserObstacles(strip, AT)).toMatchObject({ cookies: true, cookieCover: false });
+    const centered = page(`<p>149 €</p>`) + `<div id="onetrust-banner-sdk" class="otCenterRounded"><p>Usamos cookies</p><button>Aceptar</button></div>`;
+    expect(readBrowserObstacles(centered, AT)).toMatchObject({ cookies: true, cookieCover: true });
+    const modal = page(`<p>149 €</p>`) + `<div class="cookie-box" role="dialog" aria-modal="true"><p>Usamos cookies</p><button>Aceptar</button></div>`;
+    expect(readBrowserObstacles(modal, AT)).toMatchObject({ cookieCover: true });
+    const backdrop = page(`<p>149 €</p>`) + `<div class="cookie-overlay"></div><div class="cookie-bar"><button>Aceptar</button></div>`;
+    expect(readBrowserObstacles(backdrop, AT)).toMatchObject({ cookieCover: true });
+    const popup = page(`<p>149 €</p>`) + `<div id="didomi-popup"><button>Aceptar</button></div>`;
+    expect(readBrowserObstacles(popup, AT)).toMatchObject({ cookieCover: true });
   });
 
   it("sees a hand-made cookie box only with an accept button", () => {
@@ -68,6 +82,11 @@ describe("readBrowserObstacles", () => {
     expect(readBrowserObstacles(page(`<button class="add-to-cart"><svg></svg></button>`), AT)).toMatchObject({ buy: { state: "unnamed" } });
     expect(readBrowserObstacles(page(`<a href="/contacto">Contacto</a>`), AT)).toMatchObject({ buy: { state: "missing" } });
     expect(readBrowserObstacles(page(`<button aria-label="Añadir al carrito"><svg></svg></button>`), AT)).toMatchObject({ buy: { state: "named" } });
+  });
+
+  it("counts a button that only says «Añadir» and not «Añadir a mi lista» (log §456)", () => {
+    expect(readBrowserObstacles(page(`<button>Añadir a mi lista</button><button>Añadir</button>`), AT)).toMatchObject({ buy: { state: "named", text: "Añadir" } });
+    expect(readBrowserObstacles(page(`<button>Añadir a mi lista</button>`), AT)).toMatchObject({ buy: { state: "missing" } });
   });
 
   it("never takes the header's cart link for a buy button", () => {

@@ -223,3 +223,13 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   de la lectura que falte (`name`, `stock`, `productData`) es «Sin medir»,
   nunca «No aparece». «Sólo con JavaScript» exige que el HTML no lo traiga y
   el navegador sí lo vea.
+
+## Botón y cookies (log §456, §457)
+
+- **Un botón cuenta por su etiqueta entera si es «Añadir» o «Comprar» a
+  secas**, y sólo fuera de menú, cabecera y pie. «Añadir a mi lista» nunca.
+  Las tres lecturas (navegador, HTML y extensión) dicen lo mismo.
+- **Un aviso de cookies sólo resta si tapa la página** (`cookiesCover`):
+  ventana con fondo, `aria-modal`, clase de ventana o centro de su
+  herramienta, o el scroll bloqueado. Una franja, o una lectura guardada sin
+  `cookieCover`, no cuenta en contra. La línea dice el motivo en una frase.

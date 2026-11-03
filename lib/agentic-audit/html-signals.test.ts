@@ -84,6 +84,17 @@ describe("extractPageSignals", () => {
     expect(s.captcha).toBe("reCAPTCHA");
   });
 
+  it("a button that only says «Añadir» is the cart; «Añadir a mi lista» is not (log §456)", () => {
+    expect(extractPageSignals(page(`<button>Añadir</button>`)).addToCart).toBe(true);
+    expect(extractPageSignals(page(`<button>Añadir a mi lista</button><button>Añadir a favoritos</button>`)).addToCart).toBe(false);
+    expect(extractPageSignals(page(`<main><h3>Cómpralo libre</h3><button>Comprar</button></main>`)).addToCart).toBe(true);
+    expect(extractPageSignals(page(`<header><a href="/tienda">Comprar</a></header><p>Ficha</p>`)).addToCart).toBe(false);
+  });
+
+  it("reads «Atención al cliente» as contact", () => {
+    expect(extractPageSignals(page(`<a href="/l/atencion-al-cliente">Atención al cliente</a>`)).links.contact).toBe(true);
+  });
+
   it("a home page with add-to-cart buttons is not a product page", () => {
     const s = extractPageSignals(page(`<button class="add-to-cart">Añadir al carrito</button>`));
     expect(s.addToCart).toBe(true);

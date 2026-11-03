@@ -249,7 +249,7 @@ function linkFlags(html: string): LinkFlags {
     if (/env[ií]os?\b|envio|shipping|gastos de env|plazos de entrega|delivery/.test(haystack)) flags.shipping = true;
     if (/aviso[- ]legal|legal[- ]notice|imprint|impressum|condiciones[- ]generales|terminos|términos|terms/.test(haystack))
       flags.legal = true;
-    if (/contact/.test(haystack)) flags.contact = true;
+    if (/contact|atenci[oó]n[- ]al[- ]cliente|customer[- ]service/.test(haystack)) flags.contact = true;
     if (/cancelaci|cancela|cancel|reembolso|refund|darse de baja|garant[ií]a de devoluci/.test(haystack)) flags.cancellation = true;
   }
   return flags;
@@ -322,6 +322,18 @@ const BUY_CTA =
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;
 
+/**
+ * A product's own buy button, by its whole label: «Añadir» (dia.es) or a bare
+ * «Comprar». Only outside the menu, header and footer, so a «Comprar» in the
+ * site's navigation is not the product's button, and never «Añadir a mi lista»
+ * (log §456).
+ */
+const PRODUCT_BUY = /^[+\s]*(?:a[ñn]adir|agregar|add|comprar(?: ahora| ya)?|c[oó]mpralo|buy(?: now)?)[+\s]*$/i;
+
+function withoutChrome(html: string): string {
+  return html.replace(/<(nav|header|footer)\b[\s\S]*?<\/\1>/gi, " ");
+}
+
 const QUICK_PAY: Array<[string, RegExp]> = [
   ["Apple Pay", /apple[-_ ]?pay/i],
   ["Google Pay", /google[-_ ]?pay|pay\.google\.com|\bgpay\b/i],
@@ -375,7 +387,7 @@ export function extractPageSignals(html: string): PageSignals {
     visibleTextChars: text.length,
     links: linkFlags(html),
     platform: detectPlatform(html),
-    addToCart: ADD_TO_CART.test(html),
+    addToCart: ADD_TO_CART.test(html) || ctaTexts(withoutChrome(html)).some((t) => PRODUCT_BUY.test(t)),
     quickPay: QUICK_PAY.filter(([, re]) => re.test(html)).map(([name]) => name),
     captcha: CAPTCHAS.find(([, re]) => re.test(html))?.[0] ?? null,
     offerTypes: [...new Set([...offered.kinds, ...microTypes])],

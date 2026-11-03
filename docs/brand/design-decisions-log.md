@@ -29776,3 +29776,29 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **El icono.** `components/ins/agents/agent-kind-icon.tsx`: el agente que lee es una página de HTML (`</>`) con una línea que la recorre; el que navega, una ventana de navegador con un cursor que hace clic. El movimiento es ambiente, no codifica nada y se queda quieto con movimiento reducido.
 
 **Texto.** La entrada de la tarjeta queda como la escribió Denis: «Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera.»
+
+## §456 · AGENTS-BUY-ADD-1: un botón que sólo dice «Añadir» cuenta como botón de compra (2026-11-03)
+
+**Qué.** Denis, mirando la ficha de dia.es (`/p/310743`): «se penaliza que no hay un botón comprar, el añadir no cuenta?». La ficha tiene un botón «Añadir» junto al precio y GenScore decía «Sin botón» en las tres lecturas: la del navegador (`readBuy`, `browser-obstacles.ts`), la del HTML (`addToCart`, `html-signals.ts`) y la de la extensión (`collect.js`, y con ella el plugin de WordPress y `revisar_pagina`). Las tres pedían «añadir al carrito» o «a la cesta».
+
+- **Un botón cuya etiqueta entera es «Añadir», «Agregar» o «Add»** (con un «+» opcional) cuenta como añadir al carrito. Sólo la etiqueta entera: «Añadir a mi lista» o «Añadir a favoritos» siguen sin contar.
+- **En la revisión del HTML, un «Comprar» a secas también cuenta** en una ficha de producto físico (antes sólo «añadir al carrito»), siempre fuera de menú, cabecera y pie.
+- **La extensión ya no toma un botón del menú** («Contratar…» en la cabecera de una ficha) por el botón de compra del producto.
+- **«Atención al cliente» cuenta como contacto** en «Quién está detrás» (dia.es enlaza `/l/atencion-al-cliente`, no «contacto»).
+- La extensión, el plugin (`assets/vendor/collect.js`) y `lib/page-review/collect.cjs` llevan la misma línea (`sync-page-review.mjs`). La tienda de Chrome recibe el cambio con la próxima versión.
+
+**Lo que sigue siendo cierto en dia.es.** La ficha no declara GTIN, política de devoluciones, envío ni reseñas en sus datos, así que «Se fía» sigue en rojo. Eso es de la tienda, no un fallo de la lectura.
+
+**Lo que sigue siendo cierto cuando el botón sólo llega con JavaScript.** Si la caja de compra la pinta un script, el agente que lee el HTML no la ve y la tarjeta lo marca como hueco; eso es de la web, no de la lectura.
+
+**Sin migración.** La lectura del navegador guardada se corrige en su siguiente pasada semanal; la revisión del HTML, en la siguiente auditoría.
+
+## §457 · AGENTS-COOKIES-1: el aviso de cookies sólo cuenta si tapa la página, y dice por qué (2026-11-03)
+
+**Qué.** Denis: «entiendo que cuestan las cookies, pero tampoco hay otro remedio que no tener cookies, no?». No lo hay: el aviso es obligatorio. Hasta ahora cualquier aviso salía «Cuesta», aunque fuera una franja que deja la ficha a la vista. Ahora sólo cuenta si se pone delante; Denis lo aprobó («Ok. Y que informe en una frase del motivo»).
+
+- **La lectura del navegador gana `cookieCover`** (opcional, sin migración). Se marca cuando hay señales de que el aviso tapa la página: `aria-modal`, una clase de ventana o centro de su herramienta (`otCenterRounded`, `didomi-popup`, `…-center`, `modal`, `popup`, `overlay`), un fondo propio del aviso (`cookie-overlay`, `…-underlay`) o el scroll de la página bloqueado. El render no trae geometría, así que se leen esas marcas, no el tamaño.
+- **Una frase con el motivo.** Tapa: «Sale como una ventana encima de la ficha y hay que cerrarlo antes de seguir.» No tapa: «Hay aviso, pero no vemos que tape la ficha: se puede seguir sin cerrarlo.» Sin aviso: «No sale ninguno al entrar.»
+- **Sólo el que tapa** pone «Cuesta» en el obstáculo, frena el carril de los que navegan, entra en «Qué arreglar» y se pinta en la ventana de ejemplo. Una lectura guardada antes de este campo cuenta como que no tapa.
+
+**Sin cambio de nota.** Igual que §453.
