@@ -181,6 +181,23 @@ describe("readBrowserObstacles: what the 33-page test found (log §464)", () => 
   });
 });
 
+describe("readBrowserObstacles: what the second test pass found (log §464)", () => {
+  it("reads a 404 from its short text when the title and h1 do not say it (factorial.es)", () => {
+    const html = `<html><head><title>Software de RRHH todo en uno</title></head><body><p>Iniciar sesión</p><p>Lo sentimos, pero no podemos encontrar lo que estás buscando. El enlace a esta página puede ser incorrecto, estar desactualizado o la página se ha movido a otro lugar. Busquemos un lugar mejor para ti.</p><a href="/">Volver al inicio</a></body></html>`;
+    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found" });
+  });
+
+  it("calls an «Access Denied» page blocked", () => {
+    const html = `<html><head><title>Access Denied</title></head><body><h1>Access Denied</h1><p>${"x ".repeat(150)}</p></body></html>`;
+    expect(readBrowserObstacles(html, AT)).toMatchObject({ state: "blocked" });
+  });
+
+  it("does not take a question that links to a guide for the buy button (holaluz.com)", () => {
+    const r = readBrowserObstacles(page(`<p>Cuota de 45 €/mes</p><a href="/luz/calcular-potencia-electrica/">qué potencia de luz contratar</a>`), AT);
+    expect(r).toMatchObject({ buy: { state: "missing" } });
+  });
+});
+
 describe("browserReadIsFresh and error pages (log §464)", () => {
   it("waits a week, not a day, before opening an error page again", () => {
     const twoDays = Date.parse(AT) + 2 * 24 * 60 * 60 * 1000;

@@ -91,6 +91,42 @@ describe("price: amount with its unit, never a loose number", () => {
     expect(crit(r, "cancel")?.label).toBe("Permanencia o desistimiento");
   });
 
+  it("a price with six decimals is read whole, never its tail as an amount", async () => {
+    const r = await review(
+      "/luz/tarifas/plan-online",
+      page({
+        title: "Plan Online · Luz",
+        h1: "Plan Online",
+        body: "<p>Potencia 0,078055 €/kW día. Energía 0,098902 €/kWh.</p><button>Contratar</button>",
+      }),
+    );
+    expect(crit(r, "price")?.value).toBe("Sólo en el texto: 0,098902 €/kWh");
+  });
+
+  it("a reward or a saving is not the price", async () => {
+    const r = await review(
+      "/luz/tarifa-24h",
+      page({
+        title: "Tarifa 24h · Luz",
+        h1: "Tarifa 24h",
+        body: "<p>100 € en puntos. Ahorra hasta 120 € al año. Energía 0,148435 €/kWh.</p><button>Contratar</button>",
+      }),
+    );
+    expect(crit(r, "price")?.value).toBe("Sólo en el texto: 0,148435 €/kWh");
+  });
+
+  it("decimals after an apostrophe in their own tag stay with the price (lowi.es)", async () => {
+    const r = await review(
+      "/tarifas/fibra",
+      page({
+        title: "Fibra y móvil",
+        h1: "Fibra y móvil",
+        body: '<p><span>30</span><sup>\'00</sup><sub>€/mes</sub></p><button>Contratar</button>',
+      }),
+    );
+    expect(crit(r, "price")?.value).toBe("Sólo en el texto: 30,00 €/mes");
+  });
+
   it("«desde» stays with the price, with its period", async () => {
     const r = await review(
       "/seguros/coche",

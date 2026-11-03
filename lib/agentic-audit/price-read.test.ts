@@ -21,6 +21,15 @@ describe("readVisiblePrice (AGENTS-TRUTH-1, log §464)", () => {
     expect(readVisiblePrice("Ahorra hasta 120 € al año. Precio 45 €").text).toBe("45 €");
   });
 
+  it("does not take a reward for the price (Endesa)", () => {
+    expect(readVisiblePrice("100 € en puntos. ¡Llévate hasta 1.000€ por traer a tu amigo! Energía 0,148435 €/kWh").text).toBe("0,1484 €/kWh");
+  });
+
+  it("reads decimals after an apostrophe, also split by a tag (lowi.es)", () => {
+    expect(readVisiblePrice("Fibra 30 '00 €/mes").text).toBe("30,00 €/mes");
+    expect(readVisiblePrice("Fibra 30'00 €/mes").text).toBe("30,00 €/mes");
+  });
+
   it("says «Varios precios, desde» with three or more prices", () => {
     expect(readVisiblePrice("Plan A 129,50 €. Plan B 149,50 €. Plan C 164,50 €").text).toBe("Varios precios, desde 129,50 €");
   });

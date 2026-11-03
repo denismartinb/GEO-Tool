@@ -42,15 +42,28 @@ export function isRenderedChallenge(title: string, visibleText: string): boolean
  * 404 came out as a page without price or button).
  */
 const ERROR_PAGE =
-  /^\s*(?:error\s*)?404\b|\b404\b[^.]{0,40}(?:no encontrad|not found|no existe)|p[aá]gina no encontrada|page not found|no (?:hemos podido |podemos )?encontra(?:r|mos) (?:la|esta) p[aá]gina|esta p[aá]gina no existe|la p[aá]gina que buscas no|^\s*not found\s*$|^\s*(?:error\s*)?(?:500|502|503)\b|^\s*403\b|forbidden|too many requests/i;
+  /^\s*(?:error\s*)?404\b|\b404\b[^.]{0,40}(?:no encontrad|not found|no existe)|p[aá]gina no encontrada|page not found|no (?:hemos podido |podemos )?encontra(?:r|mos) (?:la|esta) p[aá]gina|esta p[aá]gina no existe|la p[aá]gina que buscas no|^\s*not found\s*$|^\s*(?:error\s*)?(?:500|502|503)\b|^\s*403\b|forbidden|too many requests|^\s*access denied\s*$/i;
 
 export function isRenderedErrorPage(title: string, h1: string): "not_found" | "blocked" | "error" | null {
   for (const text of [title, h1]) {
     if (!ERROR_PAGE.test(text)) continue;
-    if (/^\s*403\b|forbidden|too many requests/i.test(text)) return "blocked";
+    if (/^\s*403\b|forbidden|too many requests|access denied/i.test(text)) return "blocked";
     return /404|no encontrad|not found|no existe|no (?:hemos podido |podemos )?encontra|que buscas/i.test(text) ? "not_found" : "error";
   }
   return null;
+}
+
+/**
+ * An error page whose title is the site's usual one and has no h1: only its
+ * short text says it is a 404 (log §464, factorial.es after the 33-page test).
+ * Only on a short page, so a product that mentions «no encontramos» is safe.
+ */
+const NOT_FOUND_TEXT =
+  /no (?:hemos podido |podemos )?encontra(?:r|mos) lo que (?:est[aá]s )?buscando|la p[aá]gina (?:que buscas )?(?:no existe|se ha movido)|p[aá]gina no encontrada|page not found|we can'?t find (?:that|the) page/i;
+export const NOT_FOUND_MAX_CHARS = 1500;
+
+export function isRenderedNotFoundText(text: string): boolean {
+  return text.length <= NOT_FOUND_MAX_CHARS && NOT_FOUND_TEXT.test(text);
 }
 
 export function isChallengeResponse(input: ChallengeInput): boolean {

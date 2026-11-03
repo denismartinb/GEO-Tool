@@ -32,7 +32,7 @@ export type PriceReading = {
   prices: VisiblePrice[];
 };
 
-const AMOUNT = String.raw`(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:[.,]\d{1,6})?`;
+const AMOUNT = String.raw`(?<![\d.,'’])(?:\d{1,3}(?:[.\s]\d{3})+|\d+)(?:\s?[.,'’]\d{1,6})?`;
 const MONEY = new RegExp(
   String.raw`(${AMOUNT})\s?(€|eur\b|euros?\b)|(€|\$|£)\s?(\d+(?:[.,]\d{1,6})?)`,
   "gi"
@@ -43,12 +43,15 @@ const UNIT_AFTER =
 const UNIT_SUFFIX = /^\s*(?:al|\/)\s*(mes|año)|^\s*(mensuales?|anuales?)\b/i;
 const FROM_BEFORE = /(?:\bdesde|\ba partir de|\bfrom|\bstarting at|\bstarts at)\s*$/i;
 /** Savings and discounts are amounts, not prices. */
-const NOT_A_PRICE_BEFORE = /(?:ahorr\w*(?: hasta| de)?|descuento(?: de)?|dto\.?|regalo de|bono de|-)\s*$/i;
+const NOT_A_PRICE_BEFORE = /(?:ahorr\w*(?: hasta| de)?|descuento(?: de)?|dto\.?|regalo de|bono de|ll[eé]vate(?: hasta)?|gana(?: hasta)?|-)\s*$/i;
+/** «50 € en puntos», «20 € de regalo»: a reward, not what it costs (endesa.com, log §464). */
+const NOT_A_PRICE_AFTER = /^\s*(?:en puntos|de regalo|de descuento|de ahorro|en saldo|de saldo)\b/i;
 
 export const MAX_PLAUSIBLE_PRICE = 100_000;
 
 export function parseAmount(raw: string): number {
-  const s = raw.replace(/\s/g, "");
+  // «30'00 €/mes»: some shops write the decimals after an apostrophe.
+  const s = raw.replace(/\s/g, "").replace(/['’]/g, ",");
   const lastComma = s.lastIndexOf(",");
   const lastDot = s.lastIndexOf(".");
   let normalized: string;
@@ -93,7 +96,8 @@ export function visiblePrices(text: string): VisiblePrice[] {
     const value = parseAmount(raw);
     if (!Number.isFinite(value) || value >= MAX_PLAUSIBLE_PRICE) continue;
     const after = text.slice(at + m[0].length, at + m[0].length + 20);
-    const decimals = raw.match(/[.,](\d{1,6})$/)?.[1]?.length ?? 0;
+    if (NOT_A_PRICE_AFTER.test(after)) continue;
+    const decimals = raw.match(/[.,'’](\d{1,6})$/)?.[1]?.length ?? 0;
     out.push({ value, symbol, unit: unitOf(after), from: FROM_BEFORE.test(before), decimals: /[.,]\d{3}$/.test(raw) && value >= 1000 ? 0 : decimals, at });
   }
   return keepMeaningful(out);

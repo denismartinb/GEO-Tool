@@ -29906,4 +29906,15 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 
 **Premisa.** Las lecturas guardadas antes de esta fase no tienen `listing`, `tariff`, `conflicts` ni `reason` y se leen como antes hasta la siguiente pasada semanal.
 
-**Pendiente.** Repetir la prueba de 33 páginas con las dos lecturas y comparar. Una página con precio, sin botón y sin ruta de precios sigue sin nota de Agentes en el lector (ahora lo explica).
+**Pendiente.** Una página con precio, sin botón y sin ruta de precios sigue sin nota de Agentes en el lector (ahora lo explica).
+
+**Adenda: segunda pasada de la prueba (2026-11-03).** Se repitió la prueba con las dos lecturas. Lo arreglado arriba se vio funcionar (conflicto de stock, 404 como «No se pudo medir», portadas como listado, tarifas con unidad, «La quiero», «Me interesa» y «Te llamamos» como contacto, bloqueos leídos como bloqueo). Salieron cinco fallos nuevos, corregidos en el mismo PR:
+
+- **Precio con seis decimales** (lector): «0,078055 €/kWh» se leía «078.055 €». La cifra exige no ir pegada a otra cifra y admite hasta seis decimales.
+- **Un premio no es un precio** (lector y navegador): «50 € en puntos», «Llévate hasta 1.000 €», «Gana…», «… de regalo», «… de saldo» se descartan (`NOT_A_PRICE_AFTER`).
+- **404 sin código ni título de error** (navegador): un texto corto con «no encontramos lo que buscas», «página no encontrada» o «page not found» es `not_found` (`isRenderedNotFoundText`, como mucho 1.500 caracteres de texto para no confundir una ficha que lo menciona).
+- **«Access Denied» a secas** es un bloqueo.
+- **Un enlace que es una pregunta** («qué potencia de luz contratar») no es el botón de comprar (`QUESTION_LABEL`).
+- **Decimales tras un apóstrofo** («30'00 €/mes», con los decimales en su propia etiqueta): se leen como «30,00 €/mes» en las dos lecturas, y una cifra nunca empieza tras un apóstrofo («00 €/mes»). Lo encontró la tercera pasada sobre las páginas corregidas.
+
+Siguen abiertos, sin arreglo en esta fase porque no se pudieron confirmar como fallo del lector: un «desde» pequeño que puede ser una línea real de la página, una página de teleco cuyo lector ve 0 € y ningún botón mientras el navegador sí lo encuentra (contenido sólo con JavaScript, que es justo lo que enseña la vista «Con navegador y sin él»), y una tienda grande donde ninguna de las dos lecturas encuentra el precio.

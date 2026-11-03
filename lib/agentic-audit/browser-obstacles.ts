@@ -1,5 +1,5 @@
 import { parseHTML } from "linkedom";
-import { isChallengeResponse, isRenderedChallenge, isRenderedErrorPage } from "@/lib/agentic-audit/challenge";
+import { isChallengeResponse, isRenderedChallenge, isRenderedErrorPage, isRenderedNotFoundText } from "@/lib/agentic-audit/challenge";
 import { extractPageSignals, LEAD_CTA, NOT_BUY, PRICING_PATH } from "@/lib/agentic-audit/html-signals";
 import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { amountOfDeclared, declaredPriceConflicts, readVisiblePrice, stockConflicts } from "@/lib/agentic-audit/price-read";
@@ -111,6 +111,8 @@ const ACCEPT_TEXT = /\b(?:aceptar|acepto|aceptar todo|aceptar todas|permitir|de 
 
 const BUY_TEXT =
   /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|contrata(?: ahora| ya)?|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|l[oa] quiero|hazte cliente|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
+/** «¿Qué potencia de luz contratar?» is a link to a guide, not a buy button (holaluz.com, log §464). */
+const QUESTION_LABEL = /^[¿\s]*(?:qu[eé]|c[oó]mo|cu[aá]l(?:es)?|cu[aá]nt[oa]s?|por qu[eé]|d[oó]nde|cu[aá]ndo)(?=\s|$)|\?/i;
 /** A button whose whole label is «Añadir» (dia.es, many grocers): next to a price it is the cart, never «Añadir a mi lista». */
 const BARE_ADD = /^[+\s]*(?:a[ñn]adir|agregar|add)[+\s]*$/i;
 /** FAQ answers, dialogs, accordions and menus: never where the product is bought (log §464). */
@@ -255,7 +257,7 @@ function readBuy(doc: Doc): { state: BrowserBuyState; text: string | null } {
         lead ??= name;
         continue;
       }
-      if (BUY_TEXT.test(name) || BARE_ADD.test(name)) {
+      if ((BUY_TEXT.test(name) && !QUESTION_LABEL.test(name)) || BARE_ADD.test(name)) {
         (el.closest(PURCHASE_ZONE) ? inZone : elsewhere).push(name);
         continue;
       }
@@ -322,6 +324,7 @@ export function readBrowserObstacles(renderedHtml: string, measuredAt: string, u
   const productData = (signals.hasProductData && signals.hasOffer) || (signals.offerTypes.length > 0 && signals.anyOffer);
   const text = mainText(doc);
   if (isRenderedChallenge(title, text)) return { state: "blocked", measuredAt };
+  if (isRenderedNotFoundText(text)) return { state: "unmeasured", measuredAt, reason: "not_found" };
   if (text.length < MIN_TEXT_CHARS) return { state: "unmeasured", measuredAt };
   const tariff = signals.tariff === true;
   const path = pathOf(url);
