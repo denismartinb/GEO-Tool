@@ -123,11 +123,12 @@ async function collectPageFacts() {
   /* ---------- buy and returns ---------- */
   const actionable = qa('button, a[href], input[type="submit"], [role="button"]').filter(visible);
   const label = (el) => clean(el.innerText || el.value || el.getAttribute("aria-label") || "");
-  const BUY = /(añadir al carrito|añadir a la cesta|agregar al carrito|comprar( ahora| ya)?$|^comprar|add to (cart|bag|basket)|buy( it)? now|reservar|suscríbete|suscribirme|contrat(a|ar|alo|ar ahora)\b|lo quiero|me interesa|pide (tu )?cita|pedir cita|solicitar? cita|elige (tu )?plan|elegir plan|choose (a |your )?plan|select plan|calcula (tu|el) (seguro|precio)|pru[eé]ba(lo)? gratis|empieza gratis|empezar (la )?prueba|get started|start (a |your )?free trial|try (it )?(for )?free)/i;
-  const buyEl = actionable.find((el) => BUY.test(label(el)) && label(el).length < 40);
+  const BUY = /(^\+?\s*(añadir|agregar|add)\s*\+?$|añadir al carrito|añadir a la cesta|agregar al carrito|comprar( ahora| ya)?$|^comprar|add to (cart|bag|basket)|buy( it)? now|reservar|suscríbete|suscribirme|contrat(a|ar|alo|ar ahora)\b|lo quiero|me interesa|pide (tu )?cita|pedir cita|solicitar? cita|elige (tu )?plan|elegir plan|choose (a |your )?plan|select plan|calcula (tu|el) (seguro|precio)|pru[eé]ba(lo)? gratis|empieza gratis|empezar (la )?prueba|get started|start (a |your )?free trial|try (it )?(for )?free)/i;
   /* a buy button in the page body, not the site's header or footer: a «Prueba
-     gratis» in the menu of a blog post does not make the post a sales page */
+     gratis» in the menu of a blog post does not make the post a sales page, and
+     a «Contratar…» in the menu is not the product's button (log §456) */
   const CHROME = "header,nav,footer,[role=navigation],[role=banner],[role=contentinfo]";
+  const buyEl = actionable.find((el) => !el.closest(CHROME) && BUY.test(label(el)) && label(el).length < 40);
   const sellCta = actionable.some((el) => !el.closest(CHROME) && BUY.test(label(el)) && label(el).length < 40);
   const RET = /(devoluci|devolver|cambios y devol|returns?\b|refund)/i;
   const retEl = qa("a[href]").find((a) => RET.test(label(a)) || /devoluc|returns|refund/i.test(a.getAttribute("href") || ""));

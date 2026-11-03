@@ -58,6 +58,8 @@ export type PageSignals = ProductSignals & {
   recurringPrice: boolean;
   /** A buy, hire, start, book or quote button or link in the HTML. */
   buyCta: boolean;
+  /** The page says in its text that it can be cancelled anytime (log §459). */
+  cancelAnytimeText: boolean;
   /** A booking widget or link (Calendly, Doctoralia, TheFork…). */
   bookingWidget: string | null;
   /** A checkout or selling platform that is not a store (Stripe, Paddle, Eventbrite…). */
@@ -249,7 +251,7 @@ function linkFlags(html: string): LinkFlags {
     if (/env[ií]os?\b|envio|shipping|gastos de env|plazos de entrega|delivery/.test(haystack)) flags.shipping = true;
     if (/aviso[- ]legal|legal[- ]notice|imprint|impressum|condiciones[- ]generales|terminos|términos|terms/.test(haystack))
       flags.legal = true;
-    if (/contact/.test(haystack)) flags.contact = true;
+    if (/contact|atenci[oó]n[- ]al[- ]cliente|customer[- ]service/.test(haystack)) flags.contact = true;
     if (/cancelaci|cancela|cancel|reembolso|refund|darse de baja|garant[ií]a de devoluci/.test(haystack)) flags.cancellation = true;
   }
   return flags;
@@ -317,10 +319,26 @@ function ctaTexts(html: string): string[] {
 }
 
 const BUY_CTA =
-  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|prueba gratis|probar gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
+  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
 
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;
+
+/**
+ * A product's own buy button, by its whole label: «Añadir» (dia.es) or a bare
+ * «Comprar». Only outside the menu, header and footer, so a «Comprar» in the
+ * site's navigation is not the product's button, and never «Añadir a mi lista»
+ * (log §456).
+ */
+const PRODUCT_BUY = /^[+\s]*(?:a[ñn]adir|agregar|add|comprar(?: ahora| ya)?|c[oó]mpralo|buy(?: now)?)[+\s]*$/i;
+
+function withoutChrome(html: string): string {
+  return html.replace(/<(nav|header|footer)\b[\s\S]*?<\/\1>/gi, " ");
+}
+
+/** «Cancela cuando quieras», «sin permanencia»: a cancellation promise in the visible text. */
+const CANCEL_ANYTIME =
+  /cancela(?:r|lo)? (?:cuando quieras|en cualquier momento)|sin permanencia|sin compromiso de permanencia|cancel (?:anytime|at any time)|no long-term contract/i;
 
 const QUICK_PAY: Array<[string, RegExp]> = [
   ["Apple Pay", /apple[-_ ]?pay/i],
@@ -375,13 +393,14 @@ export function extractPageSignals(html: string): PageSignals {
     visibleTextChars: text.length,
     links: linkFlags(html),
     platform: detectPlatform(html),
-    addToCart: ADD_TO_CART.test(html),
+    addToCart: ADD_TO_CART.test(html) || ctaTexts(withoutChrome(html)).some((t) => PRODUCT_BUY.test(t)),
     quickPay: QUICK_PAY.filter(([, re]) => re.test(html)).map(([name]) => name),
     captcha: CAPTCHAS.find(([, re]) => re.test(html))?.[0] ?? null,
     offerTypes: [...new Set([...offered.kinds, ...microTypes])],
     anyOffer: ld.hasOffer || offered.anyOffer || microOffer,
     recurringPrice: offered.recurring || RECURRING_IN_TEXT.test(text),
     buyCta: ctaTexts(html).some((t) => BUY_CTA.test(t)),
+    cancelAnytimeText: CANCEL_ANYTIME.test(text),
     bookingWidget,
     paymentPlatform: PAYMENT_PLATFORMS.find(([, re]) => re.test(html))?.[0] ?? null
   };

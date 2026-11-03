@@ -25,6 +25,13 @@ export type AgenticBrowserRead =
       measuredAt: string;
       /** A consent tool's banner is in the page as it opens. */
       cookies: boolean;
+      /**
+       * AGENTS-COOKIES-1 (log §457): the banner sits on top of the page (a
+       * window with a backdrop, or the page's scroll locked) instead of a
+       * strip that leaves the product in view. Only this counts against the
+       * site. Missing in reads stored before it: read as not covering.
+       */
+      cookieCover?: boolean;
       price: { state: BrowserPriceState; text: string | null };
       /** Choices on the page (size, colour, plan) and whether each says what it chooses. */
       options: BrowserOptionsState;
@@ -88,7 +95,9 @@ const COOKIE_WORD = /cookie|consent|gdpr|rgpd|privacy-banner/i;
 const ACCEPT_TEXT = /\b(?:aceptar|acepto|aceptar todo|aceptar todas|permitir|de acuerdo|entendido|accept|allow|agree|got it)\b/i;
 
 const BUY_TEXT =
-  /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|prueba gratis|probar gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
+  /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
+/** A button whose whole label is «Añadir» (dia.es, many grocers): next to a price it is the cart, never «Añadir a mi lista». */
+const BARE_ADD = /^[+\s]*(?:a[ñn]adir|agregar|add)[+\s]*$/i;
 const BUY_HINT = /add[-_ ]?to[-_ ]?cart|addtocart|add-to-bag|buy[-_ ]?now|product-form__submit|single_add_to_cart_button|btn-cart|button--add-to-cart/i;
 
 const FROM_BEFORE = /(?:\bdesde|\ba partir de|\bfrom|\bstarting at|\bstarts at)\s*$/i;
@@ -121,16 +130,53 @@ function hiddenInline(el: El): boolean {
   return false;
 }
 
-function hasCookieBanner(doc: Doc): boolean {
-  for (const el of doc.querySelectorAll(CMP_ROOTS)) if (!hiddenInline(el)) return true;
+/**
+ * Signs that a consent banner covers the page rather than sitting in a strip.
+ * The render brings no geometry, so this reads what the tools write in the
+ * DOM: their layout classes, `aria-modal`, a backdrop element, or a scroll
+ * lock on the page. Without any of them the banner is not counted as covering.
+ */
+const COVER_CLASS = /(?:^|[\s_-])(?:modal|popup|pop-up|overlay|lightbox|interstitial|center|centered|middle|wall)(?:$|[\s_-])|otCenterRounded|didomi-popup/i;
+const BACKDROP = /(?:cookie|consent|cmp|gdpr|rgpd|cky|cmplz|cybot)[\w-]{0,30}(?:overlay|backdrop|underlay)|(?:overlay|backdrop|underlay)[\w-]{0,30}(?:cookie|consent|cmp|gdpr|rgpd)/i;
+const SCROLL_LOCK_CLASS = /modal-open|no-?scroll|overflow-hidden|scroll-?lock|didomi-popup-open|cookie[\w-]*open/i;
+
+function coversPage(doc: Doc, banner: El): boolean {
+  for (let cur: El | null = banner, i = 0; cur && i < 4; cur = cur.parentElement, i++) {
+    if (cur.getAttribute("aria-modal") === "true") return true;
+    if (COVER_CLASS.test(classOf(cur))) return true;
+    const template = cur.getAttribute("data-template");
+    if (template && /popup|overlay|center/i.test(template)) return true;
+  }
+  if (banner.querySelector("[aria-modal=true]")) return true;
+  for (const el of doc.querySelectorAll("div,span,section")) {
+    if (BACKDROP.test(classOf(el)) && !hiddenInline(el)) return true;
+  }
+  for (const el of [doc.querySelector("html"), doc.body]) {
+    if (!el) continue;
+    const style = (el.getAttribute("style") ?? "").replace(/\s+/g, "").toLowerCase();
+    if (style.includes("overflow:hidden") || SCROLL_LOCK_CLASS.test(classOf(el))) return true;
+  }
+  return false;
+}
+
+function readCookies(doc: Doc): { present: boolean; cover: boolean } {
+  for (const el of doc.querySelectorAll(CMP_ROOTS)) if (!hiddenInline(el)) return { present: true, cover: coversPage(doc, el) };
   // Hand-made banners: a box named «cookie…» with an accept button inside.
   for (const el of doc.querySelectorAll("div,section,aside,dialog,form")) {
     if (!COOKIE_WORD.test(classOf(el)) || hiddenInline(el)) continue;
     for (const b of el.querySelectorAll("button,a,input[type=button],input[type=submit]")) {
-      if (ACCEPT_TEXT.test(one(b.textContent) || b.getAttribute("value") || "")) return true;
+      if (ACCEPT_TEXT.test(one(b.textContent) || b.getAttribute("value") || "")) {
+        const modalDialog = el.tagName.toLowerCase() === "dialog" && el.hasAttribute("open") && el.getAttribute("aria-modal") === "true";
+        return { present: true, cover: modalDialog || coversPage(doc, el) };
+      }
     }
   }
-  return false;
+  return { present: false, cover: false };
+}
+
+/** The consent banner stands in front of the product (log §457). Old reads without the field: no. */
+export function cookiesCover(read: { cookies: boolean; cookieCover?: boolean }): boolean {
+  return read.cookies && read.cookieCover === true;
 }
 
 /** Visible text outside navigation, footers and consent banners. */
@@ -181,7 +227,7 @@ function readBuy(doc: Doc): { state: BrowserBuyState; text: string | null } {
     if (hiddenInline(el) || el.closest("nav,footer,header")) continue;
     const text = one(el.textContent) || one(el.getAttribute("value"));
     const name = text || one(el.getAttribute("aria-label")) || one(el.getAttribute("title"));
-    if (name && name.length <= 60 && BUY_TEXT.test(name)) return { state: "named", text: sanitizeField(name, 40) };
+    if (name && name.length <= 60 && (BUY_TEXT.test(name) || BARE_ADD.test(name))) return { state: "named", text: sanitizeField(name, 40) };
     const hint = `${classOf(el)} ${el.getAttribute("name") ?? ""} ${el.getAttribute("data-action") ?? ""}`;
     if (!name && BUY_HINT.test(hint)) unnamed = true;
   }
@@ -214,18 +260,21 @@ export function readBrowserObstacles(renderedHtml: string, measuredAt: string): 
   if (isChallengeResponse({ status: 200, headers: {}, body: renderedHtml })) return { state: "blocked", measuredAt };
   const doc = docOf(renderedHtml);
   if (!doc.body) return { state: "unmeasured", measuredAt };
-  const cookies = hasCookieBanner(doc);
+  const cookie = readCookies(doc);
   const options = readOptions(doc);
   const buy = readBuy(doc);
   const name = readName(renderedHtml, doc);
   const signals = extractPageSignals(renderedHtml);
-  const productData = signals.hasProductData && signals.hasOffer;
+  // Same reading as the review without JavaScript (log §458): a Product, or
+  // what else is sold (SoftwareApplication, Service…), with its offer.
+  const productData = (signals.hasProductData && signals.hasOffer) || (signals.offerTypes.length > 0 && signals.anyOffer);
   const text = mainText(doc);
   if (text.length < MIN_TEXT_CHARS) return { state: "unmeasured", measuredAt };
   return {
     state: "ok",
     measuredAt,
-    cookies,
+    cookies: cookie.present,
+    cookieCover: cookie.cover,
     price: readPrice(renderedHtml, text),
     options,
     buy,
