@@ -32,7 +32,7 @@ function LaneRow({ kind, title, who, lane, gate }: { kind: "read" | "nav"; title
   const to = runTo(lane.stations);
   const run = to < 0 ? 0 : to * 25;
   return (
-    <div className={`agl-lane ${kind}`}>
+    <div className={`agl-lane agl-${kind}`}>
       <div className="agl-lane-h">
         <span className="agl-av">
           <Ic n={kind === "read" ? "notes" : "agent"} />
@@ -64,7 +64,7 @@ function LaneRow({ kind, title, who, lane, gate }: { kind: "read" | "nav"; title
 
 function BrakeCard({ kind, brake }: { kind: "read" | "nav"; brake: Brake }) {
   return (
-    <div className={`agl-brake ${kind}`}>
+    <div className={`agl-brake agl-${kind}`}>
       <span className="agl-brake-ic">
         <Ic n={kind === "read" ? "notes" : "agent"} />
       </span>
