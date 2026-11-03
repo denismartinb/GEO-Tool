@@ -1,0 +1,650 @@
+<title>Agentes con navegador v3</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{--page:#dfe3ea;--canvas:#eceef2;--surface:#fff;--surface-2:#f6f7f9;--surface-3:#eff1f4;--ink:#0b1426;--ink-2:#3b4759;--ink-3:#5f6b7e;--ink-4:#9aa4b3;--rule:#e3e6eb;--rule-2:#eef0f3;--tick-off:#d3d9e2;--blue:#2563eb;--blue-ink:#1b4fd6;--blue-tint:#ecf2ff;--blue-soft:#c9dbff;--warm:#c2410c;--warm-tint:#fff3eb;--warm-rule:#fbd3bb;--pos:#0f7a54;--pos-tint:#e8f6ef;--pos-rule:#bfe5d2;--mid:#b7791f;--mid-tint:#fdf6e7;--mid-ink:#8a5a12;--frame:#0b1426;--font:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace;--out:cubic-bezier(.2,.8,.2,1);color-scheme:light}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);font:400 15px/1.5 var(--font);color:var(--ink);padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+svg.i.sm{width:14px;height:14px}
+.rv{max-width:1560px;margin:0 auto 14px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.rv h1{font-size:18px;font-weight:600;margin:0}
+.rv p{margin:2px 0 0;font-size:13px;color:var(--ink-3);max-width:86ch}
+.seg{display:flex;flex-wrap:wrap;background:var(--surface);border-radius:99px;padding:3px;gap:2px;border:1px solid var(--rule)}
+.seg button{border:0;background:none;font:600 13px var(--font);padding:7px 14px;border-radius:99px;color:var(--ink-3);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+.stage{max-width:1560px;margin:0 auto;display:flex;gap:24px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+.desk{flex:1 1 900px;max-width:1140px;min-width:0;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.18);background:var(--canvas)}
+.phone{width:390px;max-width:100%;border-radius:34px;overflow:hidden;border:10px solid var(--frame);background:var(--canvas);box-shadow:0 10px 40px rgba(0,0,0,.25)}
+.app{container-type:inline-size;padding:26px;display:flex;flex-direction:column;gap:16px;min-width:0}
+.phone .app{padding:14px 12px 22px}
+.ph h2{margin:0;font-size:30px;font-weight:300;letter-spacing:-.03em;line-height:1.1}
+.phone .ph h2{font-size:26px}
+.ph p{margin:6px 0 0;color:var(--ink-2);font-size:14.5px;max-width:62ch}
+.card{background:var(--surface);border-radius:20px;border:1px solid var(--rule);padding:24px;display:flex;flex-direction:column;gap:20px;min-width:0;position:relative;overflow:hidden}
+.phone .card{padding:16px;gap:16px}
+.card.ghost{opacity:.55;padding:16px 22px}
+.top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.top h3{margin:0;font-size:16px;font-weight:600}
+.top .sp{flex:1}
+.lead{margin:0;font-size:14px;color:var(--ink-2);max-width:72ch;text-wrap:pretty}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px;white-space:nowrap}
+.tag.ok{background:var(--pos-tint);color:var(--pos)}
+.tag.neu{background:var(--surface-3);color:var(--ink-2)}
+.tag.new{background:var(--blue-tint);color:var(--blue-ink)}
+.k-lab{font:600 11px var(--font);letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.num{font-variant-numeric:tabular-nums}
+
+/* ===== Hero band (new): soft aurora behind the new card ===== */
+.card.hero::before{content:"";position:absolute;inset:0 0 auto 0;height:220px;background:radial-gradient(600px 180px at 12% -30%,var(--blue-tint),transparent 70%),radial-gradient(500px 160px at 95% -40%,var(--warm-tint),transparent 70%);pointer-events:none}
+.card.hero>*{position:relative}
+
+/* ===== Two lenses ===== */
+.lenses{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@container (min-width:720px){.lenses{grid-template-columns:1fr 1fr}}
+.lens{border-radius:16px;border:1px solid var(--rule);background:var(--surface-2);display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.lens.nav{border-color:var(--blue-soft);background:linear-gradient(180deg,var(--blue-tint),var(--surface-2) 45%)}
+.lens-h{display:flex;gap:10px;align-items:center;padding:12px 14px}
+.lens-h .av{width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--rule);color:var(--ink-2)}
+.lens.nav .lens-h .av{background:var(--blue);border-color:var(--blue);color:#fff}
+.lens-h b{display:block;font-size:14px;font-weight:600;line-height:1.25}
+.lens-h span{display:block;font-size:12px;color:var(--ink-3)}
+.win{margin:0 12px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--rule);box-shadow:0 1px 2px rgba(11,20,38,.04),0 10px 26px -14px rgba(11,20,38,.18);overflow:hidden;position:relative}
+.win-bar{display:flex;align-items:center;gap:6px;padding:7px 10px;border-bottom:1px solid var(--rule-2);background:var(--surface-2)}
+.win-bar i{width:7px;height:7px;border-radius:50%;background:var(--tick-off)}
+.win-bar code{flex:1;min-width:0;margin-left:6px;font:500 11px var(--mono);color:var(--ink-3);background:var(--surface);border:1px solid var(--rule-2);border-radius:6px;padding:2px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lens.read .win-bar code{color:var(--ink-4)}
+.pg{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;padding:14px;min-height:178px}
+.phone .pg{grid-template-columns:76px minmax(0,1fr);gap:12px}
+.ph-img{border-radius:10px;background:radial-gradient(circle at 50% 38%,#fff 0 18%,transparent 19%),linear-gradient(160deg,#e7dccd,#cdb9a0);aspect-ratio:1/1.15;max-width:100%;position:relative}
+.ph-img::after{content:"";position:absolute;left:30%;right:30%;bottom:16%;height:34%;border-radius:6px 6px 10px 10px;background:#3b2a1d;opacity:.82}
+.pg-b{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pg-b .nm{font-size:14.5px;font-weight:600;line-height:1.25}
+.slot{display:inline-flex;align-items:center;gap:6px;font-size:13px;align-self:flex-start;border-radius:8px;padding:3px 8px;position:relative;transition:box-shadow .2s var(--out),background .2s}
+.slot.price{font:600 17px var(--font);padding:2px 0;gap:4px}
+.slot.stock{color:var(--pos);font-weight:600;font-size:12.5px;padding:0}
+.slot.stock::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--pos)}
+.slot.btn{background:var(--blue);color:#fff;font-weight:600;font-size:13px;padding:7px 14px;border-radius:9px}
+.slot.miss{border:1.5px dashed var(--warm-rule);background:repeating-linear-gradient(-45deg,var(--warm-tint) 0 6px,#fff 6px 12px);color:var(--warm);font:600 11.5px var(--font);padding:4px 9px;border-radius:8px}
+.slot.miss::before{display:none}
+.pin{position:static;margin-left:4px;width:16px;height:16px;flex:none;border-radius:50%;display:grid;place-items:center;font:700 10px var(--font);background:var(--ink);color:#fff;box-shadow:0 0 0 2px #fff}
+.slot.miss .pin{background:var(--warm)}
+.slot.hot{box-shadow:0 0 0 3px var(--blue-soft)}
+.slot.miss.hot{box-shadow:0 0 0 3px var(--warm-rule)}
+.cookie{position:absolute;left:10px;right:10px;bottom:10px;border-radius:10px;background:var(--ink);color:#fff;padding:9px 11px;display:flex;align-items:center;gap:10px;font-size:12px;box-shadow:0 8px 20px -8px rgba(11,20,38,.5);animation:ins-rise .5s var(--out) .4s both;transition:box-shadow .2s}
+.cookie>span:first-child{flex:1;min-width:0}
+.cookie em{font-style:normal;background:#fff;color:var(--ink);font-weight:600;border-radius:7px;padding:4px 9px;flex:none}
+.cookie.hot{box-shadow:0 0 0 3px var(--mid)}
+.cookie .pin{background:var(--mid)}
+@keyframes ins-rise{from{opacity:0;transform:translateY(10px)}}
+.lens.nav .pg{padding-bottom:58px}
+.lens-f{display:flex;align-items:center;gap:8px;padding:0 14px 13px;font-size:12.5px;font-weight:600}
+.lens.read .lens.nav .pg{padding-bottom:58px}
+.lens-f{color:var(--warm)}
+.lens.nav .lens.nav .pg{padding-bottom:58px}
+.lens-f{color:var(--blue-ink)}
+
+/* ===== Check matrix (split pills) ===== */
+.mx{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+@container (min-width:720px){.mx{grid-template-columns:1fr 1fr}}
+.mx-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-3)}
+.mx-legend span{display:inline-flex;align-items:center;gap:6px}
+.mx-legend i{width:16px;height:10px;border-radius:3px;border:1px solid var(--rule)}
+.mx-legend .l i{background:var(--surface-3)}.mx-legend .r i{background:var(--blue-tint);border-color:var(--blue-soft)}
+.cell{display:flex;flex-direction:column;gap:7px;padding:11px 12px;border-radius:13px;border:1px solid var(--rule);background:var(--surface);cursor:default;transition:border-color .2s,transform .2s var(--out),box-shadow .2s;min-width:0}
+.cell:hover,.cell.hot{border-color:var(--blue-soft);box-shadow:0 6px 18px -12px rgba(37,99,235,.5);transform:translateY(-1px)}
+.cell.gap{background:linear-gradient(90deg,var(--warm-tint),var(--surface) 60%);border-color:var(--warm-rule)}
+.cell-k{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600}
+.cell-k .pn{width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font:700 10px var(--font);background:var(--ink);color:#fff;flex:none}
+.cell.gap .pn{background:var(--warm)}
+.cell-k small{font-weight:400;color:var(--ink-3);font-size:11.5px}
+.split{display:grid;grid-template-columns:1fr 1fr;border-radius:9px;overflow:hidden;border:1px solid var(--rule-2);font-size:12.5px}
+.split>span{display:flex;gap:6px;align-items:baseline;padding:6px 9px;min-width:0}
+.split>span:first-child{background:var(--surface-3)}
+.split>span:last-child{background:var(--blue-tint)}
+.split .d{width:7px;height:7px;border-radius:50%;flex:none;transform:translateY(-1px)}
+.split b{font-weight:500;overflow-wrap:anywhere}
+.split .ok .d{background:var(--pos)}.split .no .d{background:var(--warm)}.split .mid .d{background:var(--mid)}.split .na .d{background:var(--tick-off)}
+.split .no b{color:var(--warm);font-weight:600}
+.split .na b{color:var(--ink-3)}
+.split code{font:500 12px var(--mono)}
+
+/* ===== Verdict ===== */
+.verdict{display:flex;gap:16px;align-items:center;border-radius:16px;padding:16px 18px;background:var(--ink);color:#fff;position:relative;overflow:hidden}
+.verdict::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(37,99,235,.55),transparent 65%)}
+.verdict>*{position:relative}
+.verdict .js{flex:none;width:52px;height:52px;border-radius:14px;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);font:600 16px var(--mono);color:#ffd9c2}
+.verdict b{display:block;font-size:15.5px;font-weight:600;text-wrap:balance}
+.verdict p{margin:3px 0 0;font-size:13.5px;color:#c7cfdb;text-wrap:pretty}
+@container (max-width:520px){.verdict{align-items:flex-start}.verdict .js{width:40px;height:40px;font-size:13px;border-radius:11px}}
+
+/* ===== Fixes ===== */
+.fixes{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@container (min-width:720px){.fixes{grid-template-columns:1fr 1fr}}
+.fix{display:flex;flex-direction:column;gap:8px;border:1px solid var(--rule);border-radius:15px;padding:14px 15px;background:var(--surface);transition:border-color .2s,box-shadow .2s,transform .2s var(--out);min-width:0}
+.fix:hover{border-color:var(--blue-soft);box-shadow:0 10px 24px -16px rgba(37,99,235,.55);transform:translateY(-2px)}
+.fix .n{font:500 12px var(--mono);color:var(--blue-ink)}
+.fix b{font-size:14.5px;font-weight:600;line-height:1.3;text-wrap:balance}
+.fix p{margin:0;font-size:13px;color:var(--ink-3)}
+.fix .gain{display:flex;flex-wrap:wrap;gap:6px;margin-top:2px}
+.fix .gain span{font-size:11.5px;font-weight:600;border-radius:99px;padding:3px 9px;background:var(--pos-tint);color:var(--pos)}
+.fix .go{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600;color:var(--blue-ink);margin-top:auto}
+.foot{font-size:12.5px;color:var(--ink-3);margin:0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.foot i{width:6px;height:6px;border-radius:50%;background:var(--pos);box-shadow:0 0 0 3px var(--pos-tint)}
+
+/* ===== Before / after check ===== */
+.ba{display:grid;grid-template-columns:minmax(0,1fr);gap:10px;align-items:stretch}
+@container (min-width:720px){.ba{grid-template-columns:1fr auto 1fr}}
+.ba>div{border-radius:15px;padding:14px 15px;display:flex;flex-direction:column;gap:6px;min-width:0;border:1px solid var(--rule);background:var(--surface)}
+.ba .old{background:var(--surface-2)}
+.ba .old b{color:var(--ink-3);font-weight:500}
+.ba .new{border-color:var(--blue-soft);box-shadow:0 10px 24px -18px rgba(37,99,235,.6)}
+.ba .arr{border:0;background:none;display:grid;place-items:center;color:var(--ink-4);padding:0}
+@container (max-width:719px){.ba .arr{transform:rotate(90deg);height:18px}}
+.ba b{font-size:14px;font-weight:600}
+.ba p{margin:0;font-size:13px;color:var(--ink-2)}
+
+/* ===== Lanes (route map) ===== */
+.route{display:flex;flex-direction:column;gap:12px}
+.lane{border:1px solid var(--rule);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;background:var(--surface);min-width:0}
+.lane.nav{border-color:var(--blue-soft);background:linear-gradient(180deg,var(--blue-tint),var(--surface) 55%)}
+.lane-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.lane-h .av{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--surface-3);color:var(--ink-2);flex:none}
+.lane.nav .lane-h .av{background:var(--blue);color:#fff}
+.lane-h .who{flex:1 1 200px;min-width:0}
+.lane-h b{display:block;font-size:14.5px;font-weight:600}
+.lane-h span{display:block;font-size:12.5px;color:var(--ink-3)}
+.reach{font-size:12px;font-weight:600;border-radius:99px;padding:4px 10px;white-space:nowrap}
+.reach.no{background:var(--warm-tint);color:var(--warm)}
+.reach.mid{background:var(--mid-tint);color:var(--mid-ink)}
+.track{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-top:4px}
+.track .rail{position:absolute;top:15px;left:12.5%;right:12.5%;height:4px;border-radius:4px;background:var(--rule)}
+.track .run{position:absolute;top:15px;left:12.5%;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--pos),var(--pos) 60%,var(--mid));width:0;transition:width 1.6s var(--out)}
+.lane.read .track .run{background:var(--pos)}
+.track .run.go{width:var(--w)}
+.track .bot{position:absolute;top:8px;left:calc(12.5% - 9px);width:18px;height:18px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 4px rgba(11,20,38,.12);transition:left 1.6s var(--out);z-index:2}
+.lane.nav .track .bot{background:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+.track .bot.go{left:calc(var(--l) - 9px)}
+.stn{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;min-width:0;position:relative;z-index:1}
+.stn .dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--tick-off);color:var(--ink-4)}
+.stn.ok .dot{border-color:var(--pos);color:var(--pos);background:var(--pos-tint)}
+.stn.mid .dot{border-color:var(--mid);color:var(--mid-ink);background:var(--mid-tint)}
+.stn.no .dot{border-color:var(--warm);color:var(--warm);background:var(--warm-tint)}
+.stn.dim{opacity:.5}
+.stn b{font-size:13px;font-weight:600}
+.stn small{font-size:11.5px;color:var(--ink-3);line-height:1.3;max-width:15ch}
+.stn.no small{color:var(--warm)}
+.phone .stn small{font-size:10.5px}
+.wall{position:absolute;top:2px;height:30px;width:4px;border-radius:2px;background:repeating-linear-gradient(180deg,var(--warm) 0 5px,transparent 5px 8px);left:calc(37.5% - 2px - 12.5%/2 + 2px)}
+.gate{position:absolute;top:0;font:600 10px var(--font);color:var(--mid-ink);background:var(--mid-tint);border:1px solid #f1dfb8;border-radius:6px;padding:1px 6px;transform:translate(-50%,-14px);left:75%;white-space:nowrap}
+.brake{display:flex;gap:14px;align-items:center;border-radius:15px;padding:14px 16px;background:var(--warm-tint);border:1px solid var(--warm-rule)}
+.brake .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--surface);color:var(--warm);flex:none}
+.brake div{flex:1;min-width:0}
+.brake .k-lab{color:var(--warm)}
+.brake b{display:block;font-size:14.5px;font-weight:600;margin-top:2px}
+.brake p{margin:1px 0 0;font-size:13px;color:var(--ink-2)}
+.brake .go{color:var(--warm);flex:none}
+.duo{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@container (min-width:760px){.duo{grid-template-columns:1fr 1.2fr}}
+.light{display:flex;gap:14px;align-items:flex-start}
+.lamp{width:44px;height:44px;border-radius:50%;flex:none;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#ffe7b0,var(--mid) 70%);box-shadow:0 0 0 6px var(--mid-tint),0 0 24px rgba(183,121,31,.45)}
+.lamp i{width:10px;height:10px;border-radius:50%;background:#fff;opacity:.8;transform:translate(-6px,-6px)}
+.light b{display:block;font-size:15px;font-weight:600}
+.light p{margin:2px 0 0;font-size:13.5px;color:var(--ink-2)}
+.light .was{margin-top:8px;font-size:12px;color:var(--ink-4);text-decoration:line-through}
+.steps1{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;counter-reset:s}
+.steps1 li{display:flex;gap:12px;align-items:flex-start;border:1px solid var(--rule);border-radius:13px;padding:11px 13px;font-size:13.5px;font-weight:500;counter-increment:s}
+.steps1 li::before{content:"0" counter(s);font:500 12px var(--mono);color:var(--blue-ink);padding-top:2px}
+
+/* ===== Overview card ===== */
+.ov-wrap{display:flex;flex-direction:column;gap:14px}
+.ov-ghosts{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@container (min-width:760px){.ov-ghosts{grid-template-columns:1fr 1fr}}
+.ov-ghosts div{border:1.5px dashed var(--tick-off);border-radius:20px;height:96px;display:grid;place-items:center;color:var(--ink-4);font-size:13px}
+.aio{gap:18px}
+.aio .card-h{display:flex;align-items:center;gap:10px}
+.aio .card-h h3{margin:0;font-size:15px;font-weight:600}
+.aio .see{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-size:13px;color:var(--ink-3)}
+.aio-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:22px;align-items:start}
+@container (min-width:760px){.aio-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'h l' 'k k'}.aio-grid .aio-hero{grid-area:h}.aio-grid .lost-l{grid-area:l}.aio-grid .kinds{grid-area:k;grid-template-columns:repeat(4,minmax(0,1fr))}.aio-grid .scan{grid-area:l}}
+.aio-hero{display:flex;flex-direction:column;gap:14px}
+.gauge{display:flex;gap:16px;align-items:center}
+.tring{width:118px;height:118px;flex:none}
+.tring .t{stroke:var(--tick-off);stroke-width:2.4;stroke-linecap:round}
+.tring .t.on{stroke:var(--blue);animation:ins-tick .4s var(--out) both;animation-delay:var(--d)}
+.tring .t.lost{stroke:var(--warm-rule)}
+@keyframes ins-tick{from{stroke:var(--tick-off)}}
+.aio-hl{margin:0;font-size:16px;font-weight:600;line-height:1.3;text-wrap:balance}
+.aio-sub{margin:4px 0 0;font-size:13px;color:var(--ink-3);text-wrap:pretty}
+.delta{white-space:nowrap;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:99px;padding:3px 9px;background:var(--pos-tint);color:var(--pos);margin-top:8px}
+.who2{display:flex;gap:8px;flex-wrap:wrap}
+.who2 span{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-2);background:var(--surface-2);border:1px solid var(--rule-2);border-radius:99px;padding:4px 10px}
+.who2 i{width:6px;height:6px;border-radius:50%;background:var(--ink-4)}
+/* kind tiles */
+.kinds{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.kind{border-radius:14px;border:1px solid var(--rule);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0;background:var(--surface)}
+.kind.lost{border-color:var(--warm-rule);background:linear-gradient(180deg,var(--warm-tint),var(--surface) 70%)}
+.kind-t{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.kind-t .ic{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:var(--blue-tint);color:var(--blue-ink);flex:none}
+.kind.lost .kind-t .ic{background:#fff;color:var(--warm)}
+.kind-t b{font-size:13.5px;font-weight:600;flex:1;min-width:0}
+.kind-t em{flex-basis:100%;font:300 26px var(--font);line-height:1;font-style:normal;letter-spacing:-.02em}
+.kind.lost .kind-t em{color:var(--warm)}
+.blocks{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.blocks i{height:12px;border-radius:3px;background:var(--blue);opacity:0;animation:ins-pop .35s var(--out) both;animation-delay:var(--d)}
+.blocks i.x{background:repeating-linear-gradient(-45deg,var(--warm-rule) 0 3px,var(--warm-tint) 3px 6px)}
+@keyframes ins-pop{from{opacity:0;transform:scaleY(.3)}to{opacity:1}}
+.kind small{font-size:11.5px;color:var(--ink-3)}
+.kind.lost small{color:var(--warm)}
+/* lost list */
+.lost-l{display:flex;flex-direction:column;gap:8px}
+.lost-i{display:flex;flex-direction:column;gap:7px;border-radius:13px;background:var(--surface-2);border:1px solid var(--rule-2);padding:11px 12px;transition:background .2s,border-color .2s}
+.lost-i:hover{background:var(--surface);border-color:var(--rule)}
+.lost-i .r{display:flex;gap:9px;align-items:flex-start;font-size:13.5px;font-weight:500}
+.lost-i .r .sd{width:8px;height:8px;border-radius:50%;background:var(--warm);margin-top:6px;flex:none}
+.lost-i .r .sd.ok{background:var(--pos)}
+.lost-i .r span{flex:1;min-width:0}
+.lost-i .r svg{color:var(--ink-4);margin-top:2px}
+.quote{margin-left:17px;font:500 12px var(--mono);color:var(--ink-2);background:var(--surface);border:1px dashed var(--warm-rule);border-radius:8px;padding:6px 9px;overflow-wrap:anywhere;position:relative}
+.quote::before{content:"no llega";position:absolute;top:-8px;right:8px;background:var(--warm);color:#fff;font:700 9px var(--font);letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:1px 5px}
+.where{display:flex;gap:10px;align-items:center;border-radius:13px;padding:10px 12px;background:var(--blue-tint);color:var(--blue-ink);font-size:13px;font-weight:600}
+/* measuring */
+.scan{position:relative;border-radius:14px;border:1px solid var(--rule);background:var(--surface-2);height:150px;overflow:hidden}
+.scan .lines{position:absolute;inset:16px;display:flex;flex-direction:column;gap:9px}
+.scan .lines i{height:10px;border-radius:4px;background:var(--rule)}
+.scan .lines i:nth-child(2){width:72%}.scan .lines i:nth-child(3){width:86%}.scan .lines i:nth-child(4){width:54%}.scan .lines i:nth-child(5){width:78%}
+.scan .beam{position:absolute;left:0;right:0;height:46px;top:-46px;background:linear-gradient(180deg,transparent,rgba(37,99,235,.18),transparent);animation:ins-beam 2.6s linear infinite}
+@keyframes ins-beam{to{top:150px}}
+.hide{display:none!important}
+.notes{max-width:1140px;margin:22px auto 0;background:var(--surface);border-radius:16px;border:1px solid var(--rule);padding:18px 22px;font-size:14px;color:var(--ink-2)}
+.notes h2{font-size:15px;margin:0 0 8px;color:var(--ink)}
+.notes ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.notes b{color:var(--ink)}
+.sub-seg{display:flex;justify-content:center;max-width:1560px;margin:0 auto 14px}
+
+/* ===== Carril de los agentes que navegan (v3) ===== */
+.nbx{display:grid;grid-template-columns:minmax(0,1fr);gap:18px;align-items:start}
+@container (min-width:760px){.nbx{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr)}}
+.bw{border-radius:14px;border:1px solid var(--rule);overflow:hidden;background:var(--surface-2);box-shadow:0 8px 28px rgba(11,20,38,.08)}
+.bw-bar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--surface-3);border-bottom:1px solid var(--rule)}
+.bw-bar i{width:8px;height:8px;border-radius:50%;background:var(--tick-off)}
+.bw-bar span{flex:1;min-width:0;margin-left:6px;font:500 11px var(--mono);color:var(--ink-3);background:var(--surface);border-radius:6px;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bw-body{position:relative;padding:14px;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;min-height:212px}
+.bw-img{border-radius:10px;background:linear-gradient(160deg,#cfd9ea,#9fb2d1);aspect-ratio:3/4;max-width:100%}
+.bw-tx{display:flex;flex-direction:column;gap:7px;min-width:0}
+.bw-tx b{font-size:13.5px;font-weight:600}
+.bw-tx .pr{font-size:15px;font-weight:600}
+.bw-tx .sel{font-size:11.5px;border:1px dashed var(--ink-4);border-radius:7px;padding:4px 8px;color:var(--ink-3)}
+.bw-tx .buy{align-self:flex-start;font-size:12px;font-weight:600;background:var(--ink);color:#fff;border-radius:8px;padding:6px 12px}
+.bw-tx .ln{height:6px;border-radius:3px;background:var(--rule)}
+.bw-ck{position:absolute;left:10px;right:10px;bottom:10px;border-radius:12px;background:rgba(11,20,38,.9);color:#fff;padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;animation:ck-in .7s var(--out) .4s both}
+.bw-ck p{margin:0;flex:1 1 150px;font-size:12px;line-height:1.35;color:#dfe5ef}
+.bw-ck span{font-size:11.5px;font-weight:600;background:#fff;color:var(--ink);border-radius:7px;padding:5px 10px}
+@keyframes ck-in{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.pn{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font:700 11px var(--font);background:var(--warm);color:#fff;flex:none;vertical-align:middle}
+.pn.mid{background:var(--mid)}
+.pn.ok{background:var(--pos)}
+.obs{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;margin:0;padding:0;list-style:none}
+@container (min-width:520px){.obs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.obs li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:13px;padding:11px 12px;background:var(--surface);transition:transform .2s var(--out),box-shadow .2s var(--out)}
+.obs li:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(11,20,38,.07)}
+.obs li.no{background:var(--warm-tint);border-color:var(--warm-rule)}
+.obs li.mid{background:var(--mid-tint);border-color:#f1dfb6}
+.obs li div{min-width:0}
+.obs b{display:block;font-size:13.5px;font-weight:600}
+.obs small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.4;margin-top:1px}
+.obs .st{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px}
+.obs li.no .st{color:var(--warm)} .obs li.mid .st{color:var(--mid-ink)} .obs li.ok .st{color:var(--pos)}
+.honest{margin:0;font-size:12.5px;color:var(--ink-3)}
+.brake.mid{background:var(--mid-tint);border-color:#f1dfb6}
+.brake.mid .ic,.brake.mid .k-lab,.brake.mid .go{color:var(--mid-ink)}
+.brakes{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@container (min-width:760px){.brakes{grid-template-columns:1fr 1fr}}
+.steps1 .who2{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:1px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}.blocks i{opacity:1}}
+</style>
+
+<div class="rv">
+  <div>
+    <h1>Agentes con navegador · maqueta v3</h1>
+    <p>Misma información que la v1, con otra forma: lo que ve cada agente se enseña como una página, el recorrido como un mapa y la tarjeta de Visión general por tipo de contenido. Datos de ejemplo de la marca ficticia Nubaria. La nota agéntica no cambia.</p>
+  </div>
+  <div class="seg" role="group" aria-label="Pantalla" id="seg-main">
+    <button type="button" aria-pressed="true" data-v="audit">Auditoría agéntica</button>
+    <button type="button" aria-pressed="false" data-v="vis">Visibilidad en agentes</button>
+    <button type="button" aria-pressed="false" data-v="ov">Visión general</button>
+  </div>
+</div>
+<div class="sub-seg hide" id="ov-states">
+  <div class="seg" role="group" aria-label="Estado de la tarjeta">
+    <button type="button" aria-pressed="true" data-s="gaps">Con huecos</button>
+    <button type="button" aria-pressed="false" data-s="all">Todo llega</button>
+    <button type="button" aria-pressed="false" data-s="wait">Midiendo</button>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="desk"><div class="app" data-slot></div></div>
+  <div class="phone"><div class="app" data-slot></div></div>
+</div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M5 3l14 7-6 2-2 6z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17"/></symbol>
+  <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></symbol>
+  <symbol id="i-arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></symbol>
+  <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.3"/></symbol>
+  <symbol id="i-q" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 0 1 4.6 1.3c0 1.7-2.1 2-2.1 3.4M12 17.2v.01"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.8z"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/></symbol>
+  <symbol id="i-brake" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M7 14l5-5 5 5"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.6-6-11a6 6 0 0 1 12 0c0 5.4-6 11-6 11z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+</svg>
+
+<!-- ================= AUDITORÍA AGÉNTICA ================= -->
+<template id="v-audit">
+  <div class="ph">
+    <h2>Auditoría agéntica</h2>
+    <p>Revisada sobre <b>nubaria.es/cafeteras/duo</b>, la ficha que encontró GenScore en tu catálogo.</p>
+  </div>
+  <div class="card ghost"><div class="top"><h3>Nota y componentes</h3><span class="sp"></span><span class="tag neu">Como hoy</span></div></div>
+
+  <div class="card hero">
+    <div class="top"><h3>Con navegador y sin él</h3><span class="tag new">Nuevo</span><span class="sp"></span><span class="tag ok"><svg class="i sm"><use href="#i-check"/></svg>Comprobado</span></div>
+    <p class="lead">Abrimos tu ficha de las dos formas en que llega un agente. Así la ve cada uno.</p>
+
+    <div class="lenses">
+      <div class="lens read">
+        <div class="lens-h"><span class="av"><svg class="i"><use href="#i-doc"/></svg></span><div><b>Un agente que lee</b><span>Búsquedas de ChatGPT, Claude y Perplexity</span></div></div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><code>HTML · nubaria.es/cafeteras/duo</code></div>
+          <div class="pg">
+            <div class="ph-img"></div>
+            <div class="pg-b">
+              <span class="nm">Cafetera Nubaria Duo</span>
+              <span class="slot miss" data-p="1">Precio · no llega<span class="pin">1</span></span>
+              <span class="slot miss" data-p="2">Stock · no llega<span class="pin">2</span></span>
+              <span class="slot miss" data-p="3">Botón · no llega<span class="pin">3</span></span>
+            </div>
+          </div>
+        </div>
+        <div class="lens-f"><svg class="i sm"><use href="#i-x"/></svg>No sabe cuánto cuesta ni si queda</div>
+      </div>
+      <div class="lens nav">
+        <div class="lens-h"><span class="av"><svg class="i"><use href="#i-cursor"/></svg></span><div><b>Un agente que navega</b><span>El agente de ChatGPT, el de Gemini</span></div></div>
+        <div class="win">
+          <div class="win-bar"><i></i><i></i><i></i><code>nubaria.es/cafeteras/duo</code></div>
+          <div class="pg">
+            <div class="ph-img"></div>
+            <div class="pg-b">
+              <span class="nm">Cafetera Nubaria Duo</span>
+              <span class="slot price num" data-p="1">149,00 €<span class="pin">1</span></span>
+              <span class="slot stock" data-p="2">En stock<span class="pin">2</span></span>
+              <span class="slot btn" data-p="3">Añadir a la cesta<span class="pin">3</span></span>
+            </div>
+          </div>
+          <div class="cookie" data-p="6"><span>Aviso de cookies</span><em>Aceptar</em><span class="pin">6</span></div>
+        </div>
+        <div class="lens-f"><svg class="i sm"><use href="#i-check"/></svg>Llega a comprar, tras aceptar las cookies</div>
+      </div>
+    </div>
+
+    <div class="top"><span class="k-lab">Punto por punto</span><span class="sp"></span>
+      <div class="mx-legend"><span class="l"><i></i>Sin navegador</span><span class="r"><i></i>Con navegador</span></div></div>
+    <div class="mx">
+      <div class="cell"><span class="cell-k">Qué vendes</span><div class="split"><span class="ok"><i class="d"></i><b>Cafetera Nubaria Duo</b></span><span class="ok"><i class="d"></i><b>Cafetera Nubaria Duo</b></span></div></div>
+      <div class="cell gap" data-p="1"><span class="cell-k"><span class="pn">1</span>Precio</span><div class="split"><span class="no"><i class="d"></i><b>No aparece</b></span><span class="ok"><i class="d"></i><code>149,00 €</code></span></div></div>
+      <div class="cell gap" data-p="2"><span class="cell-k"><span class="pn">2</span>Stock</span><div class="split"><span class="no"><i class="d"></i><b>No aparece</b></span><span class="ok"><i class="d"></i><b>En stock</b></span></div></div>
+      <div class="cell gap" data-p="3"><span class="cell-k"><span class="pn">3</span>Botón de compra</span><div class="split"><span class="no"><i class="d"></i><b>No aparece</b></span><span class="ok"><i class="d"></i><b>«Añadir a la cesta»</b></span></div></div>
+      <div class="cell gap"><span class="cell-k"><span class="pn">4</span>Datos del producto <small>schema.org Product y Offer</small></span><div class="split"><span class="no"><i class="d"></i><b>No están</b></span><span class="mid"><i class="d"></i><b>Los añade un script</b></span></div></div>
+      <div class="cell"><span class="cell-k"><span class="pn">5</span>Reto anti-bots</span><div class="split"><span class="ok"><i class="d"></i><b>Ninguno</b></span><span class="ok"><i class="d"></i><b>Ninguno</b></span></div></div>
+      <div class="cell" data-p="6"><span class="cell-k"><span class="pn" style="background:var(--mid)">6</span>Lo que tapa la ficha</span><div class="split"><span class="na"><i class="d"></i><b>No aplica</b></span><span class="mid"><i class="d"></i><b>Aviso de cookies hasta aceptarlo</b></span></div></div>
+    </div>
+
+    <div class="verdict">
+      <span class="js">JS</span>
+      <div>
+        <b>Tu precio, tu stock y tu botón existen, pero sólo con JavaScript.</b>
+        <p>Un agente que no abre navegador no sabe cuánto cuesta la Duo ni si queda. Uno que sí lo abre llega a comprar, después de aceptar las cookies.</p>
+      </div>
+    </div>
+
+    <div class="k-lab">Qué arreglar</div>
+    <div class="fixes">
+      <a class="fix" href="#"><span class="n">01</span><b>Pon el precio, el stock y el botón en el HTML que sirve el servidor</b><p>Ya están en tu ficha: sólo hay que servirlos sin esperar a JavaScript.</p><span class="gain"><span>Precio</span><span>Stock</span><span>Botón</span></span><span class="go">Ver cómo<svg class="i sm"><use href="#i-arr"/></svg></span></a>
+      <a class="fix" href="#"><span class="n">02</span><b>Escribe los datos del producto en el HTML, no con un script</b><p>Hoy los añade una etiqueta que se ejecuta en el navegador.</p><span class="gain"><span>Datos del producto</span></span><span class="go">Ver cómo<svg class="i sm"><use href="#i-arr"/></svg></span></a>
+    </div>
+    <p class="foot"><i></i>Se revisa una vez por semana, junto a «Lo que lee la IA». No cambia tu nota agéntica.</p>
+  </div>
+
+  <div class="card">
+    <div class="top"><h3>Y lo que cambia en las comprobaciones</h3></div>
+    <div class="ba">
+      <div class="old"><span class="k-lab">Hoy</span><b>No se ve el precio sin ejecutar JavaScript</b><p>No sabemos si tu precio falta o sólo llega tarde, así que el arreglo es genérico.</p></div>
+      <div class="arr"><svg class="i"><use href="#i-arr"/></svg></div>
+      <div class="new"><span class="k-lab" style="color:var(--blue-ink)">Con navegador</span><b>El precio (149,00 €) sólo aparece con JavaScript</b><p>Arreglo concreto: servirlo en el HTML. Si tampoco lo vemos con navegador, decimos «Tu ficha no enseña precio» y pedimos ponerlo.</p></div>
+    </div>
+  </div>
+</template>
+
+<!-- ================= VISIBILIDAD EN AGENTES ================= -->
+<template id="v-vis">
+  <div class="ph">
+    <h2>Visibilidad en agentes</h2>
+    <p>Si un agente de IA puede encontrarte, entrar, entender lo que vendes, fiarse y llegar a comprar.</p>
+  </div>
+  <div class="card ghost"><div class="top"><h3>Cuadro de diales y testigos</h3><span class="sp"></span><span class="tag neu">Como hoy, salvo el testigo de Compra</span></div></div>
+  <div class="card ghost"><div class="top"><h3>Agentes que compran</h3><span class="sp"></span><span class="tag neu">Como hoy</span></div></div>
+
+  <div class="card hero">
+    <div class="top"><h3>Hasta dónde llega cada agente</h3><span class="tag new">Nuevo</span><span class="sp"></span><span class="tag ok"><svg class="i sm"><use href="#i-check"/></svg>Comprobado</span></div>
+    <p class="lead">Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera, pero se paran ante lo que también pararía a una persona con prisa.</p>
+
+    <div class="route">
+      <div class="lane read">
+        <div class="lane-h"><span class="av"><svg class="i"><use href="#i-doc"/></svg></span><div class="who"><b>Agentes que leen</b><span>Búsquedas de ChatGPT, Claude y Perplexity</span></div><span class="reach no">Se quedan en Entra</span></div>
+        <div class="track">
+          <span class="rail"></span><span class="run" style="--w:0%"></span><span class="bot" style="--l:12.5%"></span>
+          <div class="stn ok"><span class="dot"><svg class="i sm"><use href="#i-check"/></svg></span><b>Entra</b><small>robots.txt abierto</small></div>
+          <div class="stn no"><span class="dot"><svg class="i sm"><use href="#i-x"/></svg></span><b>Entiende</b><small>sin precio ni stock</small></div>
+          <div class="stn mid dim"><span class="dot"><svg class="i sm"><use href="#i-half"/></svg></span><b>Se fía</b><small>devoluciones enlazadas</small></div>
+          <div class="stn no dim"><span class="dot"><svg class="i sm"><use href="#i-x"/></svg></span><b>Compra</b><small>no ve el botón</small></div>
+        </div>
+      </div>
+      <div class="lane nav">
+        <div class="lane-h"><span class="av"><svg class="i"><use href="#i-cursor"/></svg></span><div class="who"><b>Agentes que navegan</b><span>Grok Bot, Instinct, el agente de ChatGPT</span></div><span class="reach mid">Llegan a Compra</span></div>
+        <div class="track">
+          <span class="rail"></span><span class="run" style="--w:75%"></span><span class="bot" style="--l:87.5%"></span>
+          <span class="gate">cookies</span>
+          <div class="stn ok"><span class="dot"><svg class="i sm"><use href="#i-check"/></svg></span><b>Entra</b><small>sin reto anti-bots</small></div>
+          <div class="stn mid"><span class="dot"><svg class="i sm"><use href="#i-half"/></svg></span><b>Entiende</b><small>precio según talla</small></div>
+          <div class="stn mid"><span class="dot"><svg class="i sm"><use href="#i-half"/></svg></span><b>Se fía</b><small>devoluciones enlazadas</small></div>
+          <div class="stn mid"><span class="dot"><svg class="i sm"><use href="#i-half"/></svg></span><b>Compra</b><small>tras aceptar cookies</small></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="brakes">
+      <a class="brake" href="#">
+        <span class="ic"><svg class="i"><use href="#i-doc"/></svg></span>
+        <div><span class="k-lab">Frena a los que leen</span><b>No les llega tu precio</b><p>Está en la ficha, pero sólo con JavaScript.</p></div>
+        <svg class="i go"><use href="#i-arr"/></svg>
+      </a>
+      <a class="brake mid" href="#">
+        <span class="ic"><svg class="i"><use href="#i-cursor"/></svg></span>
+        <div><span class="k-lab">Frena a los que navegan</span><b>El aviso de cookies tapa la ficha</b><p>Tienen que cerrarlo antes de ver nada.</p></div>
+        <svg class="i go"><use href="#i-arr"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="top"><h3>Lo que se encuentra un agente que navega</h3><span class="tag new">Nuevo</span><span class="sp"></span><span class="tag ok"><svg class="i sm"><use href="#i-check"/></svg>Comprobado</span></div>
+    <p class="lead">Abrimos tu ficha con un navegador real, como Grok Bot o Instinct. Para ellos el JavaScript no es problema: lo que cuenta es lo que hay delante del producto.</p>
+    <div class="nbx">
+      <div class="bw" aria-label="Tu ficha al abrirla con nuestro navegador">
+        <div class="bw-bar"><i></i><i></i><i></i><span>nubaria.es/chaqueta-brisa</span></div>
+        <div class="bw-body">
+          <div class="bw-img"></div>
+          <div class="bw-tx">
+            <b>Chaqueta Brisa</b>
+            <span class="pr">Desde 129,00 € <span class="pn">2</span></span>
+            <span class="sel">Elige talla <span class="pn mid">3</span></span>
+            <span class="buy">Añadir a la cesta</span>
+            <span class="ln" style="width:92%"></span><span class="ln" style="width:70%"></span>
+          </div>
+          <div class="bw-ck"><span class="pn">1</span><p>Usamos cookies para mejorar tu experiencia.</p><span>Aceptar</span></div>
+        </div>
+      </div>
+      <ul class="obs">
+        <li class="no"><span class="pn">1</span><div><span class="st">Frena</span><b>Aviso de cookies</b><small>Tapa más de la mitad de la ficha al entrar.</small></div></li>
+        <li class="no"><span class="pn">2</span><div><span class="st">Frena</span><b>Precio exacto</b><small>Sale «Desde 129,00 €»; el precio final depende de la talla.</small></div></li>
+        <li class="mid"><span class="pn mid">3</span><div><span class="st">Cuesta</span><b>Opciones del producto</b><small>La talla es obligatoria y el selector no dice qué elige.</small></div></li>
+        <li class="ok"><span class="pn ok"><svg class="i sm" style="width:12px;height:12px"><use href="#i-check"/></svg></span><div><span class="st">Bien</span><b>Botón de compra</b><small>«Añadir a la cesta», con nombre claro y a la vista.</small></div></li>
+        <li class="ok"><span class="pn ok"><svg class="i sm" style="width:12px;height:12px"><use href="#i-check"/></svg></span><div><span class="st">Bien</span><b>Reto anti-bots</b><small>Nuestro navegador entró sin que le pararan.</small></div></li>
+        <li class="ok"><span class="pn ok"><svg class="i sm" style="width:12px;height:12px"><use href="#i-check"/></svg></span><div><span class="st">Bien</span><b>Ventanas emergentes</b><small>Ninguna al cargar, aparte del aviso de cookies.</small></div></li>
+      </ul>
+    </div>
+    <p class="honest">Lo vimos al abrir la ficha, sin pulsar nada. Si un reto anti-bots nos para, sale «No se pudo medir» y no resta.</p>
+  </div>
+
+  <div class="duo">
+    <div class="card">
+      <div class="light"><span class="lamp"><i></i></span><div><span class="k-lab">Testigo</span><b>Compra</b><p>Con navegador llega al botón; sin él, no lo ve.</p><div class="was">Hoy: «No vemos un botón de compra claro»</div></div></div>
+    </div>
+    <div class="card">
+      <div class="top"><h3>Qué hacer primero</h3></div>
+      <ol class="steps1">
+        <li><span><span class="who2">Para los que leen</span>Pon el precio, el stock y el botón en el HTML que sirve el servidor</span></li>
+        <li><span><span class="who2">Para los que navegan</span>Que el aviso de cookies ocupe una franja abajo y no tape el producto</span></li>
+        <li><span><span class="who2">Para los que navegan</span>Enseña el precio de la talla más vendida y pon nombre al selector</span></li>
+      </ol>
+    </div>
+  </div>
+</template>
+
+<!-- ================= VISIÓN GENERAL (tarjeta) ================= -->
+<template id="v-ov">
+  <div class="ov-wrap">
+    <div class="ov-ghosts"><div>Comercio agéntico (sin cambios)</div><div>Auditoría SEO (sin cambios)</div></div>
+    <section class="card aio" aria-label="Lo que lee la IA">
+      <div class="card-h"><h3>Lo que lee la IA</h3><span class="tag new">Nuevo</span><a class="see" href="#" data-hide-wait>Ver todo<svg class="i sm"><use href="#i-chev"/></svg></a></div>
+
+      <div data-state="gaps" class="aio-grid">
+        <div class="aio-hero">
+          <div class="gauge"><svg class="tring" viewBox="0 0 120 120" data-ring="72" data-big="72%" data-sub="llega"></svg>
+            <div><p class="aio-hl">Le llega el 72% de lo que ven tus clientes.</p><span class="delta"><svg class="i sm"><use href="#i-up"/></svg>+6 desde la última medida</span></div></div>
+          <p class="aio-sub">Lo que la IA no ve, no lo puede contar. Tus precios son lo que más se pierde.</p>
+          <div class="who2"><span><i></i>ChatGPT</span><span><i></i>Claude</span><span><i></i>Perplexity</span></div>
+        </div>
+        <div class="kinds">
+          <div class="kind lost"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-tag"/></svg></span><b>Precios</b><em class="num">20%</em></div><div class="blocks" data-v="20"></div><small>Se pierde el 80%</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-q"/></svg></span><b>Preguntas</b><em class="num">60%</em></div><div class="blocks" data-v="60"></div><small>Se pierde el 40%</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-star"/></svg></span><b>Opiniones</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-list"/></svg></span><b>Fichas</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+        </div>
+        <div class="lost-l">
+          <span class="k-lab">Lo que más se pierde</span>
+          <a class="lost-i" href="#"><span class="r"><i class="sd"></i><span>La IA no ve tus precios</span><svg class="i sm"><use href="#i-chev"/></svg></span><span class="quote">Cafetera Nubaria Duo · 149,00 €</span></a>
+          <a class="lost-i" href="#"><span class="r"><i class="sd"></i><span>Tus páginas más citadas son las que peor lee la IA</span><svg class="i sm"><use href="#i-chev"/></svg></span></a>
+          <div class="where"><svg class="i sm"><use href="#i-pin"/></svg>El mayor hueco está en lo que vendes.</div>
+        </div>
+      </div>
+
+      <div data-state="all" class="aio-grid hide">
+        <div class="aio-hero">
+          <div class="gauge"><svg class="tring" viewBox="0 0 120 120" data-ring="97" data-big="97%" data-sub="llega"></svg>
+            <div><p class="aio-hl">Le llega casi todo lo que ven tus clientes.</p></div></div>
+          <p class="aio-sub">ChatGPT, Claude y Perplexity reciben tu contenido sin ejecutar JavaScript.</p>
+          <div class="who2"><span><i></i>ChatGPT</span><span><i></i>Claude</span><span><i></i>Perplexity</span></div>
+        </div>
+        <div class="kinds">
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-tag"/></svg></span><b>Precios</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-q"/></svg></span><b>Preguntas</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-star"/></svg></span><b>Opiniones</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+          <div class="kind"><div class="kind-t"><span class="ic"><svg class="i sm"><use href="#i-list"/></svg></span><b>Fichas</b><em class="num">100%</em></div><div class="blocks" data-v="100"></div><small>Llega entero</small></div>
+        </div>
+        <div class="lost-l">
+          <span class="k-lab">Estado</span>
+          <a class="lost-i" href="#"><span class="r"><i class="sd ok"></i><span>Tus páginas más citadas le llegan enteras a la IA</span><svg class="i sm"><use href="#i-chev"/></svg></span></a>
+        </div>
+      </div>
+
+      <div data-state="wait" class="aio-grid hide">
+        <div class="aio-hero">
+          <div class="gauge"><svg class="tring" viewBox="0 0 120 120" data-ring="0" data-big="–" data-sub="midiendo"></svg>
+            <div><p class="aio-hl">Estamos abriendo tu web con un navegador, como una persona.</p></div></div>
+          <p class="aio-sub">En cuanto termine verás qué parte de tu contenido no le llega a ChatGPT, Claude y Perplexity.</p>
+        </div>
+        <div class="scan" aria-hidden="true"><div class="lines"><i></i><i></i><i></i><i></i><i></i></div><div class="beam"></div></div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<div class="notes">
+  <h2>Qué cambia respecto a la v1</h2>
+  <ul>
+    <li><b>Auditoría agéntica:</b> la tabla pasa a dos «ventanas» con tu ficha tal como la ve cada agente (huecos rayados donde algo no llega) y a casillas numeradas que se iluminan sobre la ventana al pasar por encima. El diagnóstico va en una franja oscura y los arreglos en tarjetas con lo que recuperan.</li>
+    <li><b>Visibilidad en agentes (v3):</b> los dos tipos de agente tienen su propio freno. Nueva tarjeta «Lo que se encuentra un agente que navega»: la ficha tal como la abrió nuestro navegador, con lo que tapa el producto (aviso de cookies, ventanas, reto anti-bots) y si llegan al precio exacto, a las opciones y al botón de compra. Para estos agentes el JavaScript no cuenta, así que no sale aquí. «Qué hacer primero» dice para quién es cada paso.</li>
+    <li><b>Visibilidad en agentes:</b> «Hasta dónde llega cada agente» es un mapa de recorrido. Un punto avanza por las cuatro estaciones y se para donde se para el agente; el aviso de cookies sale como peaje antes de Compra. Con movimiento reducido el punto ya está en su sitio.</li>
+    <li><b>Tarjeta de Visión general:</b> cada tipo de contenido es una casilla con diez bloques (lo que llega y lo que se pierde, rayado), y la frase literal que no llega va citada con su etiqueta. Mismo anillo del kit.</li>
+    <li><b>Dos datos nuevos en la tarjeta que ya calcula el modelo</b> (`buildAiView`), pero que `aiReadCard` hoy no expone: la diferencia con la medida anterior (`delta`, sólo si existe) y la frase de dónde está el mayor hueco (`typeInsight`, sólo si dice algo). Sin cifras nuevas ni inventadas.</li>
+    <li><b>Sin cambio de nota, sin migración</b>, y lo mismo que en la v1 sobre el reto anti-bots: si nos para, sale «No se pudo medir».</li>
+  </ul>
+</div>
+
+<script>
+(function(){
+  var slots=document.querySelectorAll('[data-slot]');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var state='gaps';
+  function ring(svg){
+    var v=+svg.dataset.ring,on=Math.round(v*0.6),ns='http://www.w3.org/2000/svg',h='';
+    for(var i=0;i<60;i++){var a=(-90+i*6)*Math.PI/180;var cls='t'+(i<on?' on':(v>0?' lost':''));
+      h+='<line class="'+cls+'" style="--d:'+(i*12)+'ms" x1="'+(60+44*Math.cos(a)).toFixed(1)+'" y1="'+(60+44*Math.sin(a)).toFixed(1)+'" x2="'+(60+54*Math.cos(a)).toFixed(1)+'" y2="'+(60+54*Math.sin(a)).toFixed(1)+'"/>';}
+    h+='<text x="60" y="64" text-anchor="middle" style="font:300 30px Figtree,sans-serif;fill:#0b1426;letter-spacing:-.04em">'+svg.dataset.big+'</text>';
+    h+='<text x="60" y="80" text-anchor="middle" style="font:500 10px Figtree,sans-serif;fill:#5f6b7e">'+svg.dataset.sub+'</text>';
+    svg.innerHTML=h;svg.setAttribute('role','img');svg.setAttribute('aria-label',svg.dataset.big+' '+svg.dataset.sub);
+  }
+  function blocks(el){var v=Math.round(+el.dataset.v/10),h='';for(var i=0;i<10;i++)h+='<i class="'+(i<v?'':'x')+'" style="--d:'+(i*40)+'ms"></i>';el.innerHTML=h;}
+  function wire(root){
+    root.querySelectorAll('[data-ring]').forEach(ring);
+    root.querySelectorAll('.blocks').forEach(blocks);
+    // hover links between point list and windows
+    root.querySelectorAll('.cell[data-p]').forEach(function(c){
+      var p=c.dataset.p;
+      function set(on){root.querySelectorAll('.slot[data-p="'+p+'"],.cookie[data-p="'+p+'"]').forEach(function(s){s.classList.toggle('hot',on)});}
+      c.addEventListener('mouseenter',function(){set(true)});c.addEventListener('mouseleave',function(){set(false)});
+      c.addEventListener('click',function(){var on=!c.classList.contains('hot');root.querySelectorAll('.cell.hot').forEach(function(x){x.classList.remove('hot')});root.querySelectorAll('.slot.hot,.cookie.hot').forEach(function(x){x.classList.remove('hot')});c.classList.toggle('hot',on);set(on);});
+    });
+    root.querySelectorAll('.slot[data-p],.cookie[data-p]').forEach(function(s){
+      var p=s.dataset.p;s.addEventListener('mouseenter',function(){root.querySelectorAll('.cell[data-p="'+p+'"]').forEach(function(c){c.classList.add('hot')})});
+      s.addEventListener('mouseleave',function(){root.querySelectorAll('.cell[data-p="'+p+'"]').forEach(function(c){c.classList.remove('hot')})});
+    });
+    // route animation
+    var go=function(){root.querySelectorAll('.run,.bot').forEach(function(e){e.classList.add('go')});};
+    if(reduce)go();else setTimeout(function(){requestAnimationFrame(go)},350);
+    // ov state
+    root.querySelectorAll('[data-state]').forEach(function(s){s.classList.toggle('hide',s.dataset.state!==state)});
+    root.querySelectorAll('[data-hide-wait]').forEach(function(a){a.classList.toggle('hide',state==='wait')});
+  }
+  var cur='audit';
+  function show(v){
+    cur=v;var t=document.getElementById('v-'+v);
+    slots.forEach(function(s){s.innerHTML='';s.appendChild(t.content.cloneNode(true));wire(s);});
+    document.querySelectorAll('#seg-main button').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.v===v))});
+    document.getElementById('ov-states').classList.toggle('hide',v!=='ov');
+    try{location.hash=v}catch(e){}
+  }
+  document.querySelectorAll('#seg-main button').forEach(function(b){b.addEventListener('click',function(){show(b.dataset.v)})});
+  document.querySelectorAll('#ov-states button').forEach(function(b){b.addEventListener('click',function(){state=b.dataset.s;document.querySelectorAll('#ov-states button').forEach(function(x){x.setAttribute('aria-pressed',String(x===b))});show('ov')})});
+  var h=(location.hash||'').slice(1);show(['audit','vis','ov'].indexOf(h)>=0?h:'audit');
+})();
+</script>

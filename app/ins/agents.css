@@ -269,3 +269,84 @@
 .ins .agx-shop-advice li{display:flex;flex-direction:column;gap:3px;padding-left:12px;border-left:2px solid var(--blue-soft);font-size:13px;color:var(--ink-2)}
 .ins .agx-shop-advice b{font-size:14px;font-weight:550;color:var(--ink)}
 @media (max-width:760px){.ins .agx-shop-list{grid-template-columns:minmax(0,1fr)}}
+
+/* AGENTS-BROWSER-1 (log §453): «Hasta dónde llega cada agente» and «Lo que se
+   encuentra un agente que navega», from docs/design-reference/agents-browser-1/. */
+.ins .agl-lead{margin:0 0 16px;font-size:14px;color:var(--ink-2);max-width:72ch}
+.ins .agl-lanes{display:flex;flex-direction:column;gap:12px}
+.ins .agl-lane{border:1px solid var(--rule);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:14px;background:var(--surface);min-width:0}
+.ins .agl-lane.nav{border-color:var(--blue-soft);background:linear-gradient(180deg,var(--blue-tint),var(--surface) 55%)}
+.ins .agl-lane-h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.ins .agl-av{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--surface-2);color:var(--ink-2);flex:none}
+.ins .agl-lane.nav .agl-av{background:var(--blue);color:#fff}
+.ins .agl-who{flex:1 1 200px;min-width:0}
+.ins .agl-who b{display:block;font-size:14.5px;font-weight:600}
+.ins .agl-who small{display:block;font-size:12.5px;color:var(--ink-3)}
+.ins .agx-pill.na{color:var(--ink-3)}
+.ins .agl-track{position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));padding-top:4px}
+.ins .agl-rail{position:absolute;top:15px;left:12.5%;right:12.5%;height:4px;border-radius:4px;background:var(--rule)}
+.ins .agl-run{position:absolute;top:15px;left:12.5%;height:4px;border-radius:4px;background:var(--pos);width:var(--w);animation:agl-run 1.6s var(--out) .2s both}
+.ins .agl-bot{position:absolute;top:8px;left:calc(var(--l) - 9px);width:18px;height:18px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 4px var(--rule);z-index:2;animation:agl-bot 1.6s var(--out) .2s both}
+.ins .agl-lane.nav .agl-bot{background:var(--blue);box-shadow:0 0 0 4px var(--blue-soft)}
+@keyframes agl-run{from{width:0}}
+@keyframes agl-bot{from{left:calc(12.5% - 9px)}}
+.ins .agl-gate{position:absolute;top:0;left:75%;transform:translate(-50%,-14px);font-size:10px;font-weight:600;color:var(--warm);background:var(--warm-tint);border:1px solid var(--warm-rule);border-radius:6px;padding:1px 6px;white-space:nowrap}
+.ins .agl-stn{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;min-width:0;position:relative;z-index:1}
+.ins .agl-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--surface);border:2px solid var(--tick-off);color:var(--ink-4)}
+.ins .agl-stn.ok .agl-dot{border-color:var(--pos);color:var(--pos);background:var(--pos-tint)}
+.ins .agl-stn.warn .agl-dot{border-color:var(--warm-rule);color:var(--warm);background:var(--surface)}
+.ins .agl-stn.bad .agl-dot{border-color:var(--warm);color:var(--warm);background:var(--warm-tint)}
+.ins .agl-stn.dim{opacity:.5}
+.ins .agl-stn b{font-size:13px;font-weight:600}
+.ins .agl-stn small{font-size:11.5px;color:var(--ink-3);line-height:1.3;max-width:16ch;overflow-wrap:anywhere}
+.ins .agl-stn.bad small{color:var(--warm)}
+.ins .agl-note{margin:12px 0 0;font-size:13px;color:var(--ink-3)}
+.ins .agl-brakes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:10px;margin-top:14px}
+.ins .agl-brake{display:flex;gap:14px;align-items:center;border-radius:15px;padding:14px 16px;background:var(--warm-tint);border:1px solid var(--warm-rule)}
+.ins .agl-brake.nav{background:var(--surface);border-color:var(--warm-rule)}
+.ins .agl-brake-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--surface);color:var(--warm);flex:none;border:1px solid var(--warm-rule)}
+.ins .agl-brake div{flex:1;min-width:0}
+.ins .agl-k{display:block;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--warm)}
+.ins .agl-brake b{display:block;font-size:14.5px;font-weight:600;margin-top:2px}
+.ins .agl-brake p{margin:1px 0 0;font-size:13px;color:var(--ink-2)}
+.ins .agl-fx{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:18px;align-items:start}
+.ins .agl-bw{border-radius:14px;border:1px solid var(--rule);overflow:hidden;background:var(--surface-2);box-shadow:var(--card-shadow)}
+.ins .agl-bw-bar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--surface-2);border-bottom:1px solid var(--rule)}
+.ins .agl-bw-bar i{width:8px;height:8px;border-radius:50%;background:var(--tick-off)}
+.ins .agl-bw-bar span{flex:1;min-width:0;margin-left:6px;font:500 11px var(--mono);color:var(--ink-3);background:var(--surface);border-radius:6px;padding:3px 8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins .agl-bw-body{position:relative;padding:14px;display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px;min-height:212px;background:var(--surface)}
+.ins .agl-bw-img{border-radius:10px;background:linear-gradient(160deg,var(--blue-tint),var(--blue-soft));aspect-ratio:3/4;max-width:100%}
+.ins .agl-bw-tx{display:flex;flex-direction:column;gap:7px;min-width:0}
+.ins .agl-bw-tx b{font-size:13.5px;font-weight:600;overflow-wrap:anywhere}
+.ins .agl-pr{font-size:15px;font-weight:600}
+.ins .agl-pr.miss,.ins .agl-buy.miss{color:var(--ink-3);font-weight:500;font-size:12.5px}
+.ins .agl-sel{font-size:11.5px;border:1px dashed var(--ink-4);border-radius:7px;padding:4px 8px;color:var(--ink-3)}
+.ins .agl-buy{align-self:flex-start;font-size:12px;font-weight:600;background:var(--ink);color:var(--surface);border-radius:8px;padding:6px 12px}
+.ins .agl-buy.miss{background:none;border:1px dashed var(--ink-4);padding:5px 10px}
+.ins .agl-ln{height:6px;border-radius:3px;background:var(--rule);display:block}
+.ins .agl-ck{position:absolute;left:10px;right:10px;bottom:10px;border-radius:12px;background:var(--ink);color:var(--surface);padding:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;animation:agl-ck .7s var(--out) .4s both}
+.ins .agl-ck p{margin:0;flex:1 1 120px;font-size:12px}
+.ins .agl-ck span:last-child{font-size:11.5px;font-weight:600;background:var(--surface);color:var(--ink);border-radius:7px;padding:5px 10px}
+@keyframes agl-ck{from{transform:translateY(24px);opacity:0}}
+.ins .agl-pn{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;background:var(--warm);color:#fff;flex:none;vertical-align:middle}
+.ins .agl-pn.warn{background:var(--surface);color:var(--warm);border:1.5px solid var(--warm)}
+.ins .agl-pn.ok{background:var(--pos);color:#fff}
+.ins .agl-pn .i{width:12px;height:12px}
+.ins .agl-obs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0;padding:0;list-style:none}
+.ins .agl-obs li{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:13px;padding:11px 12px;background:var(--surface)}
+.ins .agl-obs li.bad{background:var(--warm-tint);border-color:var(--warm-rule)}
+.ins .agl-obs li.warn{border-color:var(--warm-rule)}
+.ins .agl-obs li div{min-width:0}
+.ins .agl-obs b{display:block;font-size:13.5px;font-weight:600}
+.ins .agl-obs small{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.4;margin-top:1px}
+.ins .agl-st{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-bottom:2px;color:var(--pos)}
+.ins .agl-obs li.bad .agl-st,.ins .agl-obs li.warn .agl-st{color:var(--warm)}
+.ins .agl-honest{margin:14px 0 0;font-size:12.5px;color:var(--ink-3)}
+.ins .agx-first .who2{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+@media (max-width:760px){
+  .ins .agl-fx{grid-template-columns:minmax(0,1fr)}
+  .ins .agl-obs{grid-template-columns:minmax(0,1fr)}
+  .ins .agl-stn small{font-size:10.5px}
+  .ins .agl-lane{padding:14px 10px}
+}
+@media (prefers-reduced-motion:reduce){.ins .agl-run,.ins .agl-bot,.ins .agl-ck{animation:none}}

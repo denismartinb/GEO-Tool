@@ -92,7 +92,7 @@ describe("runAiRenderPass (AI-READ-2, log §451)", () => {
       [{ id: "p1", domain: "acme.com" }]
     );
     const r = await runAiRenderPass({ service, deadlineAt: NOW + 50_000, now: () => NOW, fetchRaw: async () => body(), render: async () => ({ kind: "quota" }) });
-    expect(r).toEqual({ measured: 0, stopped: "quota" });
+    expect(r).toEqual({ measured: 0, agentic: 0, stopped: "quota" });
     expect(writes).toEqual([]);
   });
 
@@ -102,7 +102,7 @@ describe("runAiRenderPass (AI-READ-2, log §451)", () => {
       [{ id: "p1", domain: "acme.com" }]
     );
     const render = vi.fn();
-    expect(await runAiRenderPass({ service, deadlineAt: NOW + 5_000, now: () => NOW, render, fetchRaw: async () => body() })).toEqual({ measured: 0, stopped: "budget" });
+    expect(await runAiRenderPass({ service, deadlineAt: NOW + 5_000, now: () => NOW, render, fetchRaw: async () => body() })).toEqual({ measured: 0, agentic: 0, stopped: "budget" });
     await runAiRenderPass({ service, deadlineAt: NOW + 50_000, now: () => NOW, render, fetchRaw: async () => body() });
     expect(render).not.toHaveBeenCalled();
     expect(writes[0].pages[0].render).toMatchObject({ state: "unmeasured" });
@@ -131,5 +131,63 @@ describe("runAiRenderPass (AI-READ-2, log §451)", () => {
     });
     expect(calls.length).toBe(2);
     expect(calls[1] - calls[0]).toBeGreaterThanOrEqual(10_000);
+  });
+});
+
+describe("agentic product pages (AGENTS-BROWSER-1, log §453)", () => {
+  const result = { url: "https://acme.com/p/brisa", found: "catalog", pageRead: true } as never;
+  const page = `<html><body><main><h1>Brisa</h1><p>${"Chaqueta ligera impermeable. ".repeat(12)}</p><p>149,00 €</p><button>Añadir a la cesta</button></main></body></html>`;
+
+  it("renders the chosen product page before the audit pages and stores what it found", async () => {
+    const { service } = fakeService([], []);
+    const saved: unknown[] = [];
+    const calls: string[] = [];
+    let t = NOW;
+    const r = await runAiRenderPass({
+      service,
+      deadlineAt: NOW + 50_000,
+      now: () => t,
+      sleep: async (ms) => {
+        t += ms;
+      },
+      render: async (url) => {
+        calls.push(url);
+        return { kind: "ok", html: page };
+      },
+      agentic: {
+        load: async () => [{ id: "a1", projectId: "p1", url: "https://acme.com/p/brisa", result }],
+        save: async (_t, read) => {
+          saved.push(read);
+          return true;
+        }
+      }
+    });
+    expect(calls).toEqual(["https://acme.com/p/brisa"]);
+    expect(r).toMatchObject({ agentic: 1 });
+    expect(saved[0]).toMatchObject({ state: "ok", price: { state: "exact" }, buy: { state: "named" } });
+  });
+
+  it("carries a fresh read forward without rendering, and stops on quota", async () => {
+    const { service } = fakeService([], []);
+    const carry = { state: "blocked" as const, measuredAt: new Date(NOW).toISOString() };
+    const saved: unknown[] = [];
+    const r = await runAiRenderPass({
+      service,
+      deadlineAt: NOW + 50_000,
+      now: () => NOW,
+      render: async () => ({ kind: "quota" }),
+      agentic: {
+        load: async () => [
+          { id: "a1", projectId: "p1", url: "https://acme.com/p", result, carry },
+          { id: "a2", projectId: "p2", url: "https://b.com/p", result }
+        ],
+        save: async (_t, read) => {
+          saved.push(read);
+          return true;
+        }
+      }
+    });
+    expect(saved).toEqual([carry]);
+    expect(r).toEqual({ measured: 0, agentic: 1, stopped: "quota" });
   });
 });

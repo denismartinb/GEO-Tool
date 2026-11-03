@@ -202,3 +202,19 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   Meta dice que ese puede saltarse robots.txt.
 - **Los consejos de esa tarjeta no tienen puntos** y salen de un dato medido
   (reto anti-bots, plataforma Shopify).
+
+## Agentes que leen y que navegan (AGENTS-BROWSER-1, log §453)
+
+- **Lo que ve un navegador vive en `result.browser`**, escrito sólo por la
+  pasada de AI-READ-2 (`lib/agentic-audit/browser-pass.ts`) sobre la página
+  que ya eligió la auditoría. Un render por proyecto y semana; una lectura
+  fresca de la misma URL se copia, no se vuelve a pedir. Nunca otra página.
+- **Nunca entra en la nota.** Ni en la Visibilidad agéntica ni en la
+  Puntuación GEO.
+- **Sólo lo que se ve al abrir, sin pulsar nada**, y sin afirmar lo que el
+  render no trae: ni geometría («tapa la mitad») ni ventanas que salen tarde.
+- **Un reto anti-bots al navegador es `blocked` y no resta**, como en §319.
+- **Gemini no va en «los que leen sin navegador»**: responde desde el índice
+  de Google, que ejecuta el JavaScript.
+- **Todo el texto de los carriles sale de `agentLanes`** (pura, con test).
+  Sin lectura, el carril de los que navegan no inventa estaciones.

@@ -5,6 +5,8 @@ import { fetchPageSafely, isAllowedAuditHost } from "@/lib/web-audit/fetch-page"
 import { compareRender, renderIsFresh, isPageRender, type PageRender } from "@/lib/web-audit/ai-render";
 import { BROWSER_RUN_MIN_GAP_MS, browserRunConfigured, renderWithBrowserRun, type BrowserRunOutcome } from "@/lib/web-audit/browser-run";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import { readBrowserObstacles } from "@/lib/agentic-audit/browser-obstacles";
+import { loadAgenticTargets, saveAgenticBrowserRead, type AgenticRenderTarget } from "@/lib/agentic-audit/browser-pass";
 
 /**
  * AI-READ-2 (log §451): measures, with a real browser, the pages the latest
@@ -17,6 +19,11 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
  * allows one request every 10 seconds and 10 browser minutes a day, so a pass
  * measures a few pages and the next pass carries on: anything not reached
  * stays eligible. A quota or config answer stops the pass.
+ *
+ * AGENTS-BROWSER-1 (log §453): before the audit pages, the product page each
+ * project's agentic audit chose is rendered once a week too, and what stands
+ * in front of the product goes into that review (`result.browser`). It goes
+ * first because it is one render per project, and it shares this pacing.
  */
 
 type Service = ReturnType<typeof createServiceClient>;
@@ -34,7 +41,14 @@ type SnapshotRow = { id: string; project_id: string; pages: PageAuditEntry[]; cr
 export type AiRenderPassResult = {
   skipped?: "not_configured";
   measured: number;
+  /** Agentic product pages read (rendered or carried forward). */
+  agentic?: number;
   stopped?: "quota" | "config" | "budget";
+};
+
+type AgenticDeps = {
+  load: () => Promise<AgenticRenderTarget[]>;
+  save: (target: AgenticRenderTarget, read: ReturnType<typeof readBrowserObstacles>) => Promise<boolean>;
 };
 
 function domainOf(url: string): string | null {
@@ -65,6 +79,7 @@ export async function runAiRenderPass(input: {
   render?: (url: string, timeoutMs: number) => Promise<BrowserRunOutcome>;
   fetchRaw?: (url: string, domain: string) => Promise<string | null>;
   sleep?: (ms: number) => Promise<void>;
+  agentic?: AgenticDeps | false;
 }): Promise<AiRenderPassResult> {
   const now = input.now ?? Date.now;
   if (!input.render && !browserRunConfigured()) return { skipped: "not_configured", measured: 0 };
@@ -76,6 +91,34 @@ export async function runAiRenderPass(input: {
       return r.status === "analyzed" ? r.html : null;
     });
   const sleep = input.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  let lastCallAt = 0;
+
+  let agentic = 0;
+  const agenticDeps: AgenticDeps | false =
+    input.agentic ?? {
+      load: () => loadAgenticTargets(input.service, now()),
+      save: (target, read) => saveAgenticBrowserRead(input.service, target, read)
+    };
+  if (agenticDeps) {
+    for (const target of await agenticDeps.load().catch(() => [] as AgenticRenderTarget[])) {
+      let read = target.carry;
+      if (!read) {
+        const wait = lastCallAt ? Math.max(0, lastCallAt + BROWSER_RUN_MIN_GAP_MS - now()) : 0;
+        if (now() + wait + PAGE_WORST_MS > input.deadlineAt) return { measured: 0, agentic, stopped: "budget" };
+        if (wait) await sleep(wait);
+        lastCallAt = now();
+        const rendered = await render(target.url, RENDER_TIMEOUT_MS);
+        if (rendered.kind === "quota" || rendered.kind === "config") {
+          console.info(`${LOG_PREFIX} stopped`, { reason: rendered.kind, agentic });
+          return { measured: 0, agentic, stopped: rendered.kind };
+        }
+        const measuredAt = new Date(now()).toISOString();
+        read = rendered.kind === "ok" ? readBrowserObstacles(rendered.html, measuredAt) : { state: "unmeasured", measuredAt };
+      }
+      if (await agenticDeps.save(target, read)) agentic++;
+      else console.error(`${LOG_PREFIX} agentic_write_failed`, { project_id: target.projectId });
+    }
+  }
 
   const since = new Date(now() - SNAPSHOT_WINDOW_MS).toISOString();
   const { data, error } = await input.service
@@ -84,7 +127,7 @@ export async function runAiRenderPass(input: {
     .gte("created_at", since)
     .order("created_at", { ascending: false })
     .limit(SNAPSHOT_SCAN_LIMIT);
-  if (error || !data) return { measured: 0 };
+  if (error || !data) return { measured: 0, agentic };
 
   // Only each project's newest audit: the next audit carries the measurement forward.
   const latest = new Map<string, SnapshotRow>();
@@ -101,14 +144,13 @@ export async function runAiRenderPass(input: {
   const queue = [...latest.values()].filter((s) => domains.has(s.project_id) && Array.isArray(s.pages)).sort((a, b) => a.created_at.localeCompare(b.created_at));
 
   let measured = 0;
-  let lastCallAt = 0;
   for (const snap of queue) {
     const domain = String(domains.get(snap.project_id) ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
     for (;;) {
       const i = nextPageToMeasure(snap.pages, new Date(now()));
       if (i === null) break;
       const wait = lastCallAt ? Math.max(0, lastCallAt + BROWSER_RUN_MIN_GAP_MS - now()) : 0;
-      if (now() + wait + PAGE_WORST_MS > input.deadlineAt) return { measured, stopped: "budget" };
+      if (now() + wait + PAGE_WORST_MS > input.deadlineAt) return { measured, agentic, stopped: "budget" };
       if (wait) await sleep(wait);
 
       const page = snap.pages[i];
@@ -122,7 +164,7 @@ export async function runAiRenderPass(input: {
         const [raw, rendered] = await Promise.all([fetchRaw(page.url, domain), render(page.url, RENDER_TIMEOUT_MS)]);
         if (rendered.kind === "quota" || rendered.kind === "config") {
           console.info(`${LOG_PREFIX} stopped`, { reason: rendered.kind, measured });
-          return { measured, stopped: rendered.kind };
+          return { measured, agentic, stopped: rendered.kind };
         }
         result = rendered.kind === "ok" && raw ? compareRender(raw, rendered.html, measuredAt) : { state: "unmeasured", measuredAt };
       }
@@ -142,5 +184,5 @@ export async function runAiRenderPass(input: {
       measured++;
     }
   }
-  return { measured };
+  return { measured, agentic };
 }
