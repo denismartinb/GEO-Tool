@@ -29713,3 +29713,7 @@ siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
 - Un modo «próximamente» o de mantenimiento sirve otra página a quien no tiene sesión y falsea la cifra; no se detecta.
 - La página de la tienda de WooCommerce en `.md` sale sin cuerpo (su contenido es la lista de productos).
 - Plugin Check sin pasar en esta versión.
+
+**Adenda 1.5.0, precios tras la prueba de Denis (2026-11-03).** Denis montó un plugin temporal que pintaba con JavaScript precios, JSON-LD de producto, botones y dos párrafos. GenScore lo detectó y la recomendación de precios salió la primera. Su arreglo publicó el precio de cada ficha y Deshacer lo dejó todo igual. Pero tras el arreglo la fila no desaparecía: `aiview.js` contaba también los precios de «Productos relacionados» (que no van en el JSON-LD de esa ficha) y un precio de oferta pasaba de 60 caracteres y contaba como texto. Ahora no cuentan los precios de relacionados, ventas cruzadas y sugeridos, y en una ficha tampoco los de listas de productos. De una oferta se toma el `<ins>` o, si no lo hay, el último importe. Se probó en local con el precio principal en JSON-LD y los relacionados sólo con JavaScript: cada ficha queda en 1 de 1 precio que llega. Sin él, 1 de 0.
+
+**Queda abierto.** La cifra global pesa por palabras, como en la extensión y la consola, así que un precio pesa lo que una o dos palabras. Sin precios, la tienda de prueba bajó sólo de 91 a 85.

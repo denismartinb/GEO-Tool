@@ -67,9 +67,29 @@
          blocks), not in a text block: the innermost element whose class says
          price is one unit. */
       var PRICED = '[class*="price"]';
+      /* Other products shown on a page (related, upsells, cross-sells) carry
+         their own prices, which no page puts in its own structured data: on a
+         product page only the product's own price counts, and nowhere do
+         those side lists count. */
+      var SIDE = ".related,.upsells,.up-sells,.cross-sells,.wp-block-woocommerce-related-products";
+      var single = !!document.querySelector("body.single-product,.single-product .summary,.wp-block-woocommerce-single-product");
+      var LISTS = "ul.products,.wc-block-grid,.wc-block-product-template,.wp-block-woocommerce-product-collection,.wp-block-woocommerce-product-template";
+      function sidePrice(el) { return !!(el.closest(SIDE) || (single && el.closest(LISTS))); }
+      /* A sale shows the old price struck through and the new one in <ins>,
+         plus screen-reader text: the price is the <ins>. */
+      function priceText(el) {
+        var ins = el.querySelector("ins");
+        var t = ((ins || el).innerText || "").replace(/\s+/g, " ").trim();
+        if (t.length < 60) return t;
+        /* Painted sale text with no <ins> («El precio original era: 22,90 €.
+           19,90 € El precio actual es: 19,90 €.»): the current price is the
+           last amount. */
+        var all = t.match(/\d[\d.,]*\s?(€|eur|\$|£)|(€|\$|£)\s?\d[\d.,]*/gi);
+        return all ? all[all.length - 1] : t;
+      }
       Array.prototype.slice.call(scope.querySelectorAll(PRICED), 0, 300).forEach(function (el) {
-        if (el.querySelector(PRICED) || el.closest("nav,header,footer,[aria-hidden=true]") || !visible(el)) return;
-        var text = (el.innerText || "").replace(/\s+/g, " ").trim();
+        if (el.querySelector(PRICED) || el.closest("nav,header,footer,[aria-hidden=true]") || sidePrice(el) || !visible(el)) return;
+        var text = priceText(el);
         if (text && text.length < 60 && PRICE.test(text)) priceUnit(text);
       });
       leaves.forEach(function (el) {
@@ -77,8 +97,8 @@
         if (!text) return;
         var heading = /^H\d$/.test(el.tagName);
         var button = el.tagName === "BUTTON" || el.tagName === "A";
-        if (!heading && !button && PRICE.test(text) && text.length < 60) {
-          if (!el.querySelector(PRICED) && !el.closest(PRICED)) priceUnit(text);
+        if (!heading && !button && (el.closest(PRICED) || (PRICE.test(text) && text.length < 60))) {
+          if (!el.querySelector(PRICED) && !el.closest(PRICED) && !sidePrice(el)) priceUnit(text);
           return;
         }
         var ws = words(text);
