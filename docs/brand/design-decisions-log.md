@@ -29887,7 +29887,28 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 
 **Pendiente.** Repetir N2 en chats nuevos en los dos clientes tras desplegar, mirando en PostHog qué herramientas se llamaron, y los otros siete casos para confirmar que no se rompen (sobre todo P1 y P3). Si Claude sigue yendo al navegador, el siguiente paso es probar con el conector como único activo para separar el enrutado del cliente del texto del servidor.
 
-## §464 AGENTS-TRUTH-1: lo que ven los agentes deja de enseñar datos falsos (2026-11-03)
+## §464 MCP-RELIABILITY-1: el conector distingue sesión caducada, fallo interno y datos que faltan (2026-11-03)
+
+**Origen.** La batería de Instinct del 2026-11-03 vio un «error interno» en ChatGPT a las 16:33 CET (15:33 UTC). PostHog no tiene ningún `mcp_tool_called` después de las 10:42 UTC, así que no se ejecutó ninguna herramienta. Los logs de Vercel (Hobby) sólo guardan una hora y ya no estaban. La causa no se pudo confirmar. La más probable: un token caducado recibió el 401 HTTP de todas las peticiones y ChatGPT no pudo renovarlo, y lo enseñó como error interno. Denis eligió «PR con A+B+C+D» del diagnóstico.
+
+**Decisión.**
+
+- **A. Registro sin datos.**
+  - `mcp_tool_called` gana `outcome`: `ok`, `tool_error`, `invalid_args`, `exception`, `sign_in_required` o `unknown_tool`. Lo calcula `handleRpc` (`RpcOutcome.call`) y lo emite `http.ts`.
+  - Evento nuevo `mcp_auth_rejected` con `connector` y `reason` (`no_token`, `invalid_token`). Nunca el token, los argumentos ni la respuesta.
+  - Una excepción dentro de una herramienta va a Sentry con `reportError(error, "mcp.<herramienta>")` (`onToolException`).
+- **B. Sesión caducada en ChatGPT.** Con un token inválido, un lote que sólo trae `tools/call` ya no recibe el 401. Las herramientas de cuenta responden con el desafío por herramienta (`_meta["mcp/www_authenticate"]`, `error="invalid_token"`) y el texto «Tu sesión de GenScore ha caducado. Vuelve a conectar tu cuenta…», con `structuredContent.state = "session_expired"`. Las públicas funcionan sin cuenta. `initialize` y `tools/list` con un token inválido siguen recibiendo el 401, que es lo que hace que el cliente renueve. Claude no cambia: 401 en todo.
+- **C. Argumentos.** Un `null` cuenta como campo ausente (`withoutNulls`): en `listar_dominios` el `dominio` vacío pasa (`nullish`), y en un campo obligatorio la respuesta nombra el campo («Faltan datos… (dominio). Vuelve a llamarla con esos datos.»), sólo con nombres del esquema, nunca un valor. El fallo interno dice qué hacer (volver a intentarlo en un minuto). Los textos viven en `CALL_TEXT`.
+- **D. Fixtures** en `app/api/mcp/route.test.ts`, en los dos perfiles donde difieren: cuenta vacía, token caducado (llamada, handshake y herramienta pública), fallo interno, Search Console desconectado, `null` en campos opcional y obligatorio, `arguments: null` y los eventos de rechazo.
+
+**Premisa del cambio B.** Retira el 401 de `tools/call` en ChatGPT, que era una salida de recuperación (renovar el token). Lo sostiene la documentación de OpenAI Apps: el desafío por herramienta abre la conexión de la cuenta, y ya funcionaba sin token desde §430. Si ChatGPT no renovara con el desafío y pidiera iniciar sesión otra vez, la persona tiene un botón de conectar en lugar de un error interno: no queda sin salida. Lo verifica sólo una prueba real con un token caducado.
+
+**Pendiente.**
+- Probar en ChatGPT con una sesión caducada (o revocando la conexión en Ajustes > Apps conectadas) y mirar en PostHog `mcp_auth_rejected` y `outcome`.
+- Si el «error interno» se repite sin `mcp_auth_rejected` ni `mcp_tool_called`, la petición no llegó a la herramienta: mirar los logs de Vercel en la misma hora y los de Supabase Auth.
+- Claude N2 (enrutado al navegador) sigue siendo del cliente; sin cambios aquí.
+
+## §465 AGENTS-TRUTH-1: lo que ven los agentes deja de enseñar datos falsos (2026-11-03)
 
 **Origen.** Prueba con 33 páginas que venden, de 30 webs de sectores distintos (libros, retail, eléctricas, telecos, seguros, formación, software, farmacia), leídas como un agente sin navegador (el lector de la extensión, el conector y el plugin) y como uno que navega (`readBrowserObstacles` sobre Chrome real). Resultado y tabla de 13 mejoras en el artifact de la prueba. Denis: «Arregla todo de manera automática en la misma pr».
 

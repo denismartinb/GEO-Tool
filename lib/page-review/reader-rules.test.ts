@@ -3,7 +3,7 @@ import { reviewPage } from "./review";
 import type { AgenticFetchResult } from "@/lib/agentic-audit/fetch";
 
 /**
- * AGENTS-READ-FIX-1 (log §464): the reader rules that the 33-page test across
+ * AGENTS-READ-FIX-1 (log §465): the reader rules that the 33-page test across
  * sectors showed wrong, each with the shape of the page that showed it
  * (tariffs, insurance, a bookshop, a perfumery, telcos). Read on the server,
  * the same code as the extension.

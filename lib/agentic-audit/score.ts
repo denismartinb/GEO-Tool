@@ -279,7 +279,7 @@ function trustChecks(s: PageSignals, kind: AgenticOfferKind | null): AgenticChec
   const who = physical ? "la tienda" : "la web";
   const checks: AgenticCheck[] = [];
   if (refund) {
-    // AGENTS-TRUTH-1 (log §464): a tariff or policy is left with permanence and withdrawal, not returns.
+    // AGENTS-TRUTH-1 (log §465): a tariff or policy is left with permanence and withdrawal, not returns.
     const terms = s.tariff ? "permanencia y desistimiento" : "cancelación o reembolso";
     checks.push(
       check(
@@ -376,7 +376,7 @@ function purchaseChecks(s: PageSignals, kind: AgenticOfferKind): AgenticCheck[] 
     );
   } else {
     const ok = s.buyCta || s.addToCart || (kind === "booking" && s.bookingWidget !== null);
-    // AGENTS-TRUTH-1 (log §464): a quote or «te llamamos» is the normal way to hire a service,
+    // AGENTS-TRUTH-1 (log §465): a quote or «te llamamos» is the normal way to hire a service,
     // but not to buy a tariff, a plan or software, where it leaves the agent half way.
     const leadIsTheWay = kind === "service" && !s.tariff;
     const lead = !ok && s.leadCta === true;

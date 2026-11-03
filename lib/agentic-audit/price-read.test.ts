@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { declaredPriceConflicts, parseAmount, readVisiblePrice, stockConflicts, visiblePrices } from "./price-read";
 
-describe("readVisiblePrice (AGENTS-TRUTH-1, log §464)", () => {
+describe("readVisiblePrice (AGENTS-TRUTH-1, log §465)", () => {
   it("keeps the unit: energy, month and year", () => {
     expect(readVisiblePrice("Energía 0,1499 €/kWh").text).toBe("0,1499 €/kWh");
     expect(readVisiblePrice("Suscripción 33,90 € al mes").text).toBe("33,90 €/mes");

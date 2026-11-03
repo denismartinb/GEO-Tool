@@ -112,7 +112,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
       },
       additionalProperties: false
     },
-    args: z.object({ dominio: z.string().max(300).optional() }).passthrough(),
+    args: z.object({ dominio: z.string().max(300).nullish() }).passthrough(),
     access: "account",
     openWorld: false,
     async run(args, ctx) {

@@ -68,7 +68,7 @@ export type PageSignals = ProductSignals & {
   /** A checkout or selling platform that is not a store (Stripe, Paddle, Eventbrite…). */
   paymentPlatform: string | null;
   /**
-   * AGENTS-TRUTH-1 (log §464): a tariff, plan or policy (electricity, gas,
+   * AGENTS-TRUTH-1 (log §465): a tariff, plan or policy (electricity, gas,
    * telecoms, insurance, subscriptions), even when it is declared as Product.
    * It has no stock, identifiers or shipping, and its returns are permanence
    * and withdrawal. Optional for older fixtures.
@@ -355,7 +355,7 @@ function ctaTexts(html: string): string[] {
 }
 
 /**
- * AGENTS-TRUTH-1 (log §464): three kinds of button, not two. A buy or hire
+ * AGENTS-TRUTH-1 (log §465): three kinds of button, not two. A buy or hire
  * button (`BUY_CTA`), a lead one that only asks to be called or quoted
  * (`LEAD_CTA`), and none. A recommender, a simulator or a «start again» is
  * neither, and a label that is a question is a FAQ, never a button.
@@ -551,10 +551,10 @@ export function classifyOffer(signals: PageSignals, url: string): OfferReading |
   const declared = (kind: AgenticOfferKind): OfferReading => ({ kind, pricingPage });
 
   if (signals.offerTypes.includes("software") && (signals.anyOffer || pricingPage)) return declared("software");
-  // AGENTS-TRUTH-1 (log §464): a tariff or policy is sold as a service even when it uses Product.
+  // AGENTS-TRUTH-1 (log §465): a tariff or policy is sold as a service even when it uses Product.
   if (signals.tariff) return declared(signals.offerTypes.includes("software") ? "software" : "service");
   if (isProductPage(signals)) return declared("physical");
-  // A home or a category with several products is not the page to judge (log §464).
+  // A home or a category with several products is not the page to judge (log §465).
   if (signals.listing && signals.offerTypes.length === 0 && !pricingPage) return null;
   for (const kind of ["event", "course", "booking", "service", "software"] as const) {
     if (signals.offerTypes.includes(kind)) return declared(kind);

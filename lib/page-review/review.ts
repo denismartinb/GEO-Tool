@@ -30,7 +30,7 @@ export type PageReview = {
   url: string;
   host: string;
   title: string;
-  /** The address asked for, when the site sent the review to another page (log §464). */
+  /** The address asked for, when the site sent the review to another page (log §465). */
   redirectedFrom?: string;
   score: ReturnType<typeof scoreApi.scorePage>;
 };
@@ -38,7 +38,7 @@ export type PageReview = {
 export type PageReviewOutcome =
   | { kind: "ok"; review: PageReview }
   /**
-   * AGENTS-READ-FIX-1 (log §464): «blocked» (a bot wall), «timeout» (it did
+   * AGENTS-READ-FIX-1 (log §465): «blocked» (a bot wall), «timeout» (it did
    * not answer in time) and «not_found» (404 or 410) are told apart; the rest
    * stays «unreachable».
    */

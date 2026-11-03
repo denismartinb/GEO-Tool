@@ -21,7 +21,7 @@ const CHALLENGE_BODY =
   /just a moment\.\.\.|cf-chl-|challenge-platform|cf_chl_opt|attention required! \| cloudflare|_incapsula_resource|incapsula incident|px-captcha|perimeterx|captcha-delivery\.com|datadome|access denied<\/title>|errors\.edgesuite\.net|verify you are human|verifica que eres (?:una persona|humano)|verificaci[oó]n de seguridad en curso|comprobando si la conexi[oó]n es segura|checking (?:if the site connection is secure|your browser)|performing security verification/i;
 
 /**
- * AGENTS-TRUTH-1 (log §464): what a challenge says on screen, in Spanish and
+ * AGENTS-TRUTH-1 (log §465): what a challenge says on screen, in Spanish and
  * English, read from the visible text of a page a browser rendered. The
  * rendered page keeps every script, so it can be larger than the 40 KB the
  * raw check allows; a short visible text with one of these lines is the
@@ -55,7 +55,7 @@ export function isRenderedErrorPage(title: string, h1: string): "not_found" | "b
 
 /**
  * An error page whose title is the site's usual one and has no h1: only its
- * short text says it is a 404 (log §464, factorial.es after the 33-page test).
+ * short text says it is a 404 (log §465, factorial.es after the 33-page test).
  * Only on a short page, so a product that mentions «no encontramos» is safe.
  */
 const NOT_FOUND_TEXT =

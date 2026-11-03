@@ -61,7 +61,7 @@ async function collectPageFacts() {
     Array.from(root.querySelectorAll('script[type="application/ld+json" i]')).forEach((s) => {
       try { walk(JSON.parse(s.textContent)); } catch (e) { ldErrors++; }
     });
-    /* a Book with its offer is the product of a bookshop (log §464) */
+    /* a Book with its offer is the product of a bookshop (log §465) */
     const prodNode = nodes.find((n) => isT(n, "Product", "ProductGroup") || (isT(n, "Book") && n.offers));
     let product = null;
     if (prodNode) {
@@ -122,7 +122,7 @@ async function collectPageFacts() {
   const lead = { text: leadText.slice(0, 400), words: words(leadText), wordsBefore: before };
 
   /* ---------- buy and returns ---------- *
-     AGENTS-READ-FIX-1 (log §464): three kinds of button, not two. «buy»
+     AGENTS-READ-FIX-1 (log §465): three kinds of button, not two. «buy»
      sells now (Comprar, Añadir, Contratar, Reservar, La quiero…), «lead» asks
      to be called or to price (Pide presupuesto, Te llamamos, Me interesa,
      Calcula tu seguro), and none. The label must START with the action: a FAQ
@@ -159,7 +159,7 @@ async function collectPageFacts() {
   const sellCta = !!(buyEl || leadEl);
   const CHROME = "header,nav,footer,[role=navigation],[role=banner],[role=contentinfo]";
   /* ---------- prices, stock and cancellation, as the page prints them ----------
-     AGENTS-READ-FIX-1 (log §464): every amount of the page body (no menu,
+     AGENTS-READ-FIX-1 (log §465): every amount of the page body (no menu,
      footer, FAQ or dialog) with what follows it (€/kWh, al mes, /año, por
      noche) and whether «desde» comes before. score.js picks what to show. */
   function bodyText(scope) {
@@ -401,7 +401,7 @@ async function collectPageFacts() {
     }
     return { state: "none" };
   }
-  /* AGENTS-READ-FIX-1 (log §464): the root page and a shop window are never
+  /* AGENTS-READ-FIX-1 (log §465): the root page and a shop window are never
      the page to judge, even with prices and «Añadir» buttons on them: the
      agents score comes from one product or pricing page found from here. */
   const rootPage = segs.length === 0;

@@ -354,7 +354,7 @@ export function formatPageReview(
     `IA ${s.lanes.ia ?? "sin medir"} · Google ${s.lanes.google ?? "sin medir"}${s.lanes.agent != null ? ` · Agentes ${s.lanes.agent} (fuera de la nota)` : ""}`
   );
   if (r.redirectedFrom) lines.push(`Te llevó a otra página: pediste ${r.redirectedFrom} y la web respondió con ${r.url}.`);
-  // AGENTS-READ-FIX-1 (log §464): a borrowed agents score names its page and shows its checks; no score says why.
+  // AGENTS-READ-FIX-1 (log §465): a borrowed agents score names its page and shows its checks; no score says why.
   if (s.shop?.state === "found") lines.push(`Agentes se mide en la página que vende: ${s.shop.url}`);
   else if (s.lanes.agent == null && s.agentWhy) lines.push(`Agentes: ${s.agentWhy}`);
   for (const lane of ["ia", "google", "agent"] as const) {
@@ -431,7 +431,7 @@ export function formatPageReview(
 export const PAGE_REVIEW_FAILURE: Record<"invalid_url" | "unreachable" | "blocked" | "timeout" | "not_found" | "not_html" | "limit", string> = {
   invalid_url: "Esa dirección no es una web pública que se pueda revisar. Prueba con la URL completa, por ejemplo https://www.tuweb.es/pagina.",
   unreachable: "No se ha podido leer esa página desde GenScore: devuelve un error.",
-  // AGENTS-READ-FIX-1 (log §464): the bot wall is the finding, not an error.
+  // AGENTS-READ-FIX-1 (log §465): the bot wall is the finding, not an error.
   blocked:
     "Los agentes que leen no pueden entrar: la web pone un control anti-bots a las visitas automáticas, y un asistente que lee la página tampoco pasaría. Los agentes que navegan con un navegador sí pueden llegar; la extensión de Chrome de GenScore la revisa desde tu navegador, como ellos.",
   timeout: "Esa página tarda demasiado en responder y no se ha podido leer. Un agente que lee también se cansaría de esperar: vuelve a intentarlo en un rato.",

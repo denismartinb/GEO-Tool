@@ -238,7 +238,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
   que se vende con la misma regla.
 
-## Datos verdaderos (AGENTS-TRUTH-1, log §464)
+## Datos verdaderos (AGENTS-TRUTH-1, log §465)
 
 - **El precio sale de `price-read.ts` en la auditoría y en el navegador**, con
   su unidad; el lector de la extensión aplica las mismas reglas. Un cambio en
@@ -254,8 +254,8 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   espera la semana antes de volver a abrirse (coste de Cloudflare).
 - **Un cambio en las reglas del navegador sube `BROWSER_READ_RULES`** cuando
   haría falsa una lectura guardada: sólo se guarda la lectura, no el HTML, y
-  una lectura con reglas anteriores se vuelve a abrir una vez (log §464 adenda).
-- **Una columna por agente, sin «Punto por punto»** (Denis, log §464 adenda
+  una lectura con reglas anteriores se vuelve a abrir una vez (log §465 adenda).
+- **Una columna por agente, sin «Punto por punto»** (Denis, log §465 adenda
   «una columna por agente»): cada columna es la ficha dibujada de ese agente
   y, justo debajo, sus campos compactos en el mismo orden que la otra. Un
   problema se tiñe y lo que sólo llega con JavaScript lleva «JS» en la columna

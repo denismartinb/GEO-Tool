@@ -24,7 +24,7 @@ declare namespace PageScore {
     commerce: boolean;
     service: boolean;
     shop: { state: "found"; path: string; url: string; service?: boolean; criteria: Criterion[]; fixes: Fix[] } | { state: "none" } | null;
-    /** Why Agentes has no score on this page (log §464); null when it has one. */
+    /** Why Agentes has no score on this page (log §465); null when it has one. */
     agentWhy: string | null;
     readers: string[];
     blockedEngines: string[];

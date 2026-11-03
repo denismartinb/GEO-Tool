@@ -85,7 +85,7 @@ test("software or a service: no stock or returns, no «producto» copy (Instinct
   const r = S.scorePage(saas, NOW);
   assert.equal(r.service, true);
   assert.equal(r.lanes.agent, 100);
-  /* log §464: a service has no stock row, and «Permanencia o desistimiento» instead of returns */
+  /* log §465: a service has no stock row, and «Permanencia o desistimiento» instead of returns */
   assert.equal(r.criteria.find((c) => c.id === "avail"), undefined);
   assert.equal(r.criteria.find((c) => c.id === "returns"), undefined);
   assert.equal(r.criteria.find((c) => c.id === "cancel").value, "Enlazado");

@@ -35,7 +35,7 @@ export type AgentLanes = {
   read: Lane;
   nav: Lane;
   navState: NavState;
-  /** Why the browser has no reading, when it has none (log §464). */
+  /** Why the browser has no reading, when it has none (log §465). */
   navLine: string | null;
   readBrake: Brake | null;
   navBrake: Brake | null;
@@ -205,7 +205,7 @@ function navStepsOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): NavStep
 
 export function agentLanes(result: AgenticCheckResult): AgentLanes {
   const read = isAgenticBrowserRead(result.browser) ? result.browser : undefined;
-  // Log §464: a home or listing is not the page to judge, as if unmeasured.
+  // Log §465: a home or listing is not the page to judge, as if unmeasured.
   const listing = read?.state === "ok" && read.listing === true;
   const navState: NavState = !read ? "measuring" : listing ? "unmeasured" : read.state === "ok" ? "measured" : read.state;
   const ok = read?.state === "ok" && !listing ? read : null;
@@ -244,7 +244,7 @@ export const NAV_STATE_LINE: Record<Exclude<NavState, "measured">, string> = {
   unmeasured: "No pudimos abrir tu página con un navegador. Lo volvemos a intentar mañana."
 };
 
-/** Log §464: why the browser has no reading, said once. */
+/** Log §465: why the browser has no reading, said once. */
 export function navStateLine(read: AgenticBrowserRead | undefined): string {
   if (read?.state === "unmeasured" && read.reason === "not_found")
     return "El navegador abrió una página que no existe (error 404). Elige otra ficha para medirla.";

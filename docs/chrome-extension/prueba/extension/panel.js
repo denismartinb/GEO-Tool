@@ -572,7 +572,7 @@
       return (pr.length ? `<div class="mh">La citan en tus prompts${EJx()}</div>${promptRows(pr.slice(0, 3))}` : "") + `<div class="mh">En la página</div>${kv(C)}`;
     }
     if (k === "google") return (rel === "own" ? gscOwnPage() : "") + `<div class="mh">En la página</div>${kv(C)}`;
-    /* 1.5.3 (log §464): name the page a borrowed score comes from, and say why
+    /* 1.5.3 (log §465): name the page a borrowed score comes from, and say why
        there is no Agents block instead of a generic note. */
     if (sc.shop && sc.shop.state === "found") return `<div class="mh">Lo que lee un agente en ${esc(sc.shop.path || "otra página")}</div>${kv(sc.shop.criteria)}`;
     return `<div class="mh">Lo que lee un agente</div>${kv(C)}<p class="mini-note">${esc(sc.agentWhy || "Se mira sólo cuando la página vende algo.")}</p>`;

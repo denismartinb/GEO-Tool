@@ -1,5 +1,5 @@
 /**
- * AGENTS-TRUTH-1 (log §464): one reading of the prices a page shows, for the
+ * AGENTS-TRUTH-1 (log §465): one reading of the prices a page shows, for the
  * review without JavaScript and for the browser read, so both say the same
  * thing about the same page. Pure.
  *
@@ -44,7 +44,7 @@ const UNIT_SUFFIX = /^\s*(?:al|\/)\s*(mes|año)|^\s*(mensuales?|anuales?)\b/i;
 const FROM_BEFORE = /(?:\bdesde|\ba partir de|\bfrom|\bstarting at|\bstarts at)\s*$/i;
 /** Savings and discounts are amounts, not prices. */
 const NOT_A_PRICE_BEFORE = /(?:ahorr\w*(?: hasta| de)?|descuento(?: de)?|dto\.?|regalo de|bono de|ll[eé]vate(?: hasta)?|gana(?: hasta)?|-)\s*$/i;
-/** «50 € en puntos», «20 € de regalo»: a reward, not what it costs (endesa.com, log §464). */
+/** «50 € en puntos», «20 € de regalo»: a reward, not what it costs (endesa.com, log §465). */
 const NOT_A_PRICE_AFTER = /^\s*(?:en puntos|de regalo|de descuento|de ahorro|en saldo|de saldo)\b/i;
 
 export const MAX_PLAUSIBLE_PRICE = 100_000;

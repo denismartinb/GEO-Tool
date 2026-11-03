@@ -121,7 +121,7 @@ describe("isAgenticBrowserRead / browserReadIsFresh", () => {
   });
 });
 
-describe("readBrowserObstacles: what the 33-page test found (log §464)", () => {
+describe("readBrowserObstacles: what the 33-page test found (log §465)", () => {
   const product = `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Perfume","offers":{"@type":"Offer","price":"49","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>`;
 
   it("reads the Spanish Cloudflare page as a block, not as a page without price", () => {
@@ -182,7 +182,7 @@ describe("readBrowserObstacles: what the 33-page test found (log §464)", () => 
   });
 });
 
-describe("readBrowserObstacles: what the second test pass found (log §464)", () => {
+describe("readBrowserObstacles: what the second test pass found (log §465)", () => {
   it("reads a 404 from its short text when the title and h1 do not say it (factorial.es)", () => {
     const html = `<html><head><title>Software de RRHH todo en uno</title></head><body><p>Iniciar sesión</p><p>Lo sentimos, pero no podemos encontrar lo que estás buscando. El enlace a esta página puede ser incorrecto, estar desactualizado o la página se ha movido a otro lugar. Busquemos un lugar mejor para ti.</p><a href="/">Volver al inicio</a></body></html>`;
     expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found", rules: BROWSER_READ_RULES });
@@ -199,7 +199,7 @@ describe("readBrowserObstacles: what the second test pass found (log §464)", ()
   });
 });
 
-describe("browserReadIsFresh and error pages (log §464)", () => {
+describe("browserReadIsFresh and error pages (log §465)", () => {
   it("waits a week, not a day, before opening an error page again", () => {
     const twoDays = Date.parse(AT) + 2 * 24 * 60 * 60 * 1000;
     expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, reason: "not_found", rules: BROWSER_READ_RULES }, twoDays)).toBe(true);
@@ -207,7 +207,7 @@ describe("browserReadIsFresh and error pages (log §464)", () => {
   });
 });
 
-describe("reads made with older rules (log §464 adenda)", () => {
+describe("reads made with older rules (log §465 adenda)", () => {
   it("renders the page again once, whatever its age, and then keeps the week", () => {
     const t = Date.parse(AT);
     const old = { state: "ok", measuredAt: AT, cookies: false, price: { state: "exact", text: "6,99 €" }, options: "none", buy: { state: "missing", text: null } } as const;

@@ -134,7 +134,7 @@ describe("browserCheckNotes", () => {
   });
 });
 
-describe("twoWindows: what the 33-page test found (log §464)", () => {
+describe("twoWindows: what the 33-page test found (log §465)", () => {
   it("says a 404 and a listing in one line instead of judging the page", () => {
     expect(twoWindows(result({ browser: { state: "unmeasured", measuredAt: AT, reason: "not_found" } }))).toEqual({
       state: "unmeasured",

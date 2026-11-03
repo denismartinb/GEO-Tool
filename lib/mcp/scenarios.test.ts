@@ -210,8 +210,8 @@ const SCENARIOS: Row[] = [
     must: ["/signup?dominio=otra.es&utm_source=chatgpt", /^(?![\s\S]*(gratis|prueba|tarjeta))/]
   },
   { name: "web con anti-bots → es el hallazgo, con la alternativa (la extensión)", answer: () => ({ text: PAGE_REVIEW_FAILURE.blocked }), must: ["Los agentes que leen no pueden entrar", "extensión de Chrome"] },
-  { name: "página que tarda → se dice que tarda, no que no existe (log §464)", answer: () => ({ text: PAGE_REVIEW_FAILURE.timeout }), must: ["tarda", "vuelve a intentarlo"] },
-  { name: "página que no existe → se dice, con qué revisar (log §464)", answer: () => ({ text: PAGE_REVIEW_FAILURE.not_found }), must: ["no existe", "Revisa la dirección"] }
+  { name: "página que tarda → se dice que tarda, no que no existe (log §465)", answer: () => ({ text: PAGE_REVIEW_FAILURE.timeout }), must: ["tarda", "vuelve a intentarlo"] },
+  { name: "página que no existe → se dice, con qué revisar (log §465)", answer: () => ({ text: PAGE_REVIEW_FAILURE.not_found }), must: ["no existe", "Revisa la dirección"] }
 ];
 
 describe("MCP scenario battery: every answer has a next step (log §418)", () => {

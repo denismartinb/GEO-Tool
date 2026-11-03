@@ -192,7 +192,7 @@ describe("sold-out product (SHOP-DETECT-2, log §407)", () => {
   });
 });
 
-describe("tariffs, leads and conflicts (AGENTS-TRUTH-1, log §464)", () => {
+describe("tariffs, leads and conflicts (AGENTS-TRUTH-1, log §465)", () => {
   const checkOf = (r: ReturnType<typeof scoreAgenticAudit>, id: string) => r.components.flatMap((c) => c.checks).find((k) => k.id === id);
 
   it("gives a tariff permanence and withdrawal, and no stock", () => {

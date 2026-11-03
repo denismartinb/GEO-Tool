@@ -395,7 +395,7 @@
 .ins .agw-f-no{color:var(--warm)}
 .ins .agw-f-ok,.ins .agw-f-nav{color:var(--blue-ink)}
 .ins .agw-d{width:7px;height:7px;border-radius:50%;flex:none;transform:translateY(-1px)}
-/* Each agent's fields under its window (log §464 adenda «una columna por agente»). */
+/* Each agent's fields under its window (log §465 adenda «una columna por agente»). */
 .ins .agw-pts{list-style:none;margin:0 12px 12px;padding:0;border-radius:12px;border:1px solid var(--rule);background:var(--surface);overflow:hidden}
 .ins .agw-pt{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:7px 11px;border-top:1px solid var(--rule-2);font-size:12.5px;min-width:0}
 .ins .agw-pt:first-child{border-top:0}

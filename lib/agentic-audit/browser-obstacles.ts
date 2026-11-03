@@ -18,7 +18,7 @@ import { sanitizeField } from "@/lib/text/sanitize";
 
 export type BrowserPriceState = "exact" | "from" | "missing";
 export type BrowserOptionsState = "none" | "labeled" | "unlabeled";
-/** AGENTS-TRUTH-1 (log §464): `lead` is a «Pide presupuesto» or «Te llamamos», not a way to buy. */
+/** AGENTS-TRUTH-1 (log §465): `lead` is a «Pide presupuesto» or «Te llamamos», not a way to buy. */
 export type BrowserBuyState = "named" | "lead" | "unnamed" | "missing";
 export type BrowserConflict = "price" | "stock";
 
@@ -49,7 +49,7 @@ export type AgenticBrowserRead =
       /** The page declares the product and its offer as data once JavaScript ran. */
       productData?: boolean;
       /**
-       * AGENTS-TRUTH-1 (log §464): a home or listing, not one product. Price
+       * AGENTS-TRUTH-1 (log §465): a home or listing, not one product. Price
        * and button are not judged there. Missing in older reads: no.
        */
       listing?: boolean;
@@ -63,12 +63,12 @@ export type AgenticBrowserRead =
   | { state: "blocked"; measuredAt: string; rules?: number }
   /**
    * The render failed or the page was empty. `not_found` and `error`
-   * (log §464): the browser opened an error page, never the product.
+   * (log §465): the browser opened an error page, never the product.
    */
   | { state: "unmeasured"; measuredAt: string; reason?: "not_found" | "error"; rules?: number };
 
 /**
- * AGENTS-TRUTH-1 (log §464 adenda): the version of the rules that read a
+ * AGENTS-TRUTH-1 (log §465 adenda): the version of the rules that read a
  * render. Only the reading is stored, never the HTML, so a fix to these rules
  * reaches a stored read only when the page is rendered again. A read made
  * with older rules (or none) is due once, whatever its age. Bump this when a
@@ -122,11 +122,11 @@ const ACCEPT_TEXT = /\b(?:aceptar|acepto|aceptar todo|aceptar todas|permitir|de 
 
 const BUY_TEXT =
   /\b(?:a[ñn]adir (?:al carrito|a la cesta|a la bolsa|a mi cesta)|agregar al carrito|comprar(?: ahora| ya)?|c[oó]mpralo|reservar(?: ahora)?|contratar|contrata(?: ahora| ya)?|suscr[ií]b(?:ete|irse|irme)|empezar|empieza|l[oa] quiero|hazte cliente|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|pedir cita|pide cita|add to (?:cart|bag|basket)|buy(?: now| it now)?|book now|subscribe|get started|start free|order now)\b/i;
-/** «¿Qué potencia de luz contratar?» is a link to a guide, not a buy button (holaluz.com, log §464). */
+/** «¿Qué potencia de luz contratar?» is a link to a guide, not a buy button (holaluz.com, log §465). */
 const QUESTION_LABEL = /^[¿\s]*(?:qu[eé]|c[oó]mo|cu[aá]l(?:es)?|cu[aá]nt[oa]s?|por qu[eé]|d[oó]nde|cu[aá]ndo)(?=\s|$)|\?/i;
 /** A button whose whole label is «Añadir» (dia.es, many grocers): next to a price it is the cart, never «Añadir a mi lista». */
 const BARE_ADD = /^[+\s]*(?:a[ñn]adir|agregar|add)[+\s]*$/i;
-/** FAQ answers, dialogs, accordions and menus: never where the product is bought (log §464). */
+/** FAQ answers, dialogs, accordions and menus: never where the product is bought (log §465). */
 const OUTSIDE_PURCHASE =
   "nav,footer,header,details,dialog,[role=dialog],[role=alertdialog],[aria-modal=true],[class*=faq],[class*=Faq],[class*=FAQ],[id*=faq],[class*=accordion],[class*=Accordion],[class*=modal],[class*=Modal],[class*=popup],[class*=Popup]";
 /** Where the product is bought: its form, its card, a block named for buying. */
@@ -283,7 +283,7 @@ function readBuy(doc: Doc): { state: BrowserBuyState; text: string | null } {
   return { state: "missing", text: null };
 }
 
-/** «Disponible» alone says nothing (it is in every menu); only stock words count (log §464). */
+/** «Disponible» alone says nothing (it is in every menu); only stock words count (log §465). */
 const STOCK_TEXT: Array<[RegExp, string]> = [
   [/\b(?:agotado|sin stock|sin existencias|no est[aá] disponible|no disponible|out of stock|sold out)\b/i, "Agotado"],
   [/\b(?:[uú]ltimas unidades|pocas unidades|quedan \d+)\b/i, "Pocas unidades"],
@@ -296,7 +296,7 @@ function readStock(declared: string | null, text: string): string | null {
   return declared;
 }
 
-/** The main heading names the product; the marketing title is the fallback (log §464). */
+/** The main heading names the product; the marketing title is the fallback (log §465). */
 function readName(doc: Doc, facts: ReturnType<typeof extractPageFacts>): string | null {
   const h1 = one(doc.querySelector("main h1, h1")?.textContent);
   const name = (h1 && h1.length <= 90 ? h1 : null) ?? facts.productName ?? facts.title;
@@ -325,7 +325,7 @@ function readRender(renderedHtml: string, measuredAt: string, url?: string): Age
   const facts = extractPageFacts(renderedHtml);
   const title = facts.title ?? "";
   const h1 = one(doc.querySelector("h1")?.textContent);
-  // Log §464: a challenge in Spanish, or an error page, is not the store.
+  // Log §465: a challenge in Spanish, or an error page, is not the store.
   const error = isRenderedErrorPage(title, h1);
   if (error === "blocked") return { state: "blocked", measuredAt };
   if (error) return { state: "unmeasured", measuredAt, reason: error };
@@ -395,7 +395,7 @@ export function browserReadIsFresh(read: AgenticBrowserRead | undefined, now: nu
   if ((read.rules ?? 1) < BROWSER_READ_RULES) return false;
   const age = now - Date.parse(read.measuredAt);
   if (!Number.isFinite(age)) return false;
-  // A render that failed is retried after a day; an error page (log §464) waits the
+  // A render that failed is retried after a day; an error page (log §465) waits the
   // week like a reading, so a dead link does not spend Cloudflare's free minutes daily.
   const retry = read.state === "unmeasured" && !read.reason;
   return age < (retry ? BROWSER_READ_RETRY_MS : BROWSER_READ_REFRESH_MS);

@@ -194,7 +194,7 @@ describe("SHOP-DETECT-2 (log §407)", () => {
   });
 });
 
-describe("tariffs, listings, buttons and conflicts (AGENTS-TRUTH-1, log §464)", () => {
+describe("tariffs, listings, buttons and conflicts (AGENTS-TRUTH-1, log §465)", () => {
   const product = (offer: string) =>
     `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Tarifa","offers":${offer}}</script>`;
 
