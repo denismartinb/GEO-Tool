@@ -29718,3 +29718,11 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Visión general.** Tarjeta «Lo que lee la IA» a ancho completo bajo Comercio agéntico y Auditoría SEO (`components/ins/overview/ai-read-card.tsx`, modelo `aiReadCard`), con las piezas de la tarjeta agéntica (Denis: «busca un diseño más bonito, en línea con el diseño global»; «ok implementa así»): anillo de marcas con el porcentaje, frase con el dato, barras finas por tipo de contenido (lo que llega) y la caja «Lo que más se pierde» con el tipo más perdido y su trozo literal, y la lectura de las páginas citadas si aplica. Sale sólo con medición o mientras se mide; en modo HTML no sale. Enlaza a `?bloque=geo#lo-que-lee-la-ia`. Maqueta `docs/design-reference/ai-read-2/tarjeta-vision-general.html`. La frase «Lo que más te recomienda la IA es lo que peor le llega» no se entendía y pasa a «Tus páginas más citadas son las que peor lee la IA».
 
 **Pendiente.** Aprovechar la misma medición en Auditoría agéntica y Visibilidad en agentes (precio, stock, botón y datos estructurados vistos por un navegador; muros de cookies o retos), con maqueta antes. Una tarjeta de Recomendaciones cuando sea seguro que un dato concreto (por ejemplo, los precios) debe ir en el HTML. Un grupo por clics de Google en «Dónde se pierde».
+
+## §452 · AGENTIC-TRUST-COPY-1: la frase de Confianza habla de elementos de confianza (2026-11-03)
+
+**Qué.** Cuando el componente que más frena es Confianza, la frase de «Visibilidad en agentes» y de la tarjeta «Comercio agéntico» de Visión general pasa de «Lo que más frena a un agente es fiarse de tu web.» a «Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.» (`HOLDS_BACK.trust`, `lib/agentic-audit/visibility-model.ts`).
+
+**Por qué.** Petición de Denis: «fiarse de tu web» suena a que la web no es de fiar; lo que mide el componente es si el agente encuentra devoluciones, contacto, opiniones y datos de empresa.
+
+**Sin cambio** de nota, pesos ni de cuándo sale la frase. Nada pendiente.
