@@ -29738,3 +29738,41 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Descartado.** H4 (cómo acreditar qué herramienta se llamó) es método de prueba, no código. H6 (precios sólo en Claude) es una decisión de diseño de §425 y se mantiene.
 
 **Pendiente.** Repetir los 8 casos oficiales en chats limpios en los dos clientes tras desplegar (sección 8 del informe), más X3 en Claude y X5 sin el conector de Vercel. Si ChatGPT sigue lanzando la revisión sin pedirla, el siguiente paso es poner la oferta en la propia respuesta de `formatNotFound` (texto y `structuredContent`). La subida del ZIP («Plugin ZIP cannot be empty») sigue abierta y no forma parte de esta fase.
+
+## §453 · AGENTS-BROWSER-1: «Visibilidad en agentes» separa a los agentes que leen de los que navegan (2026-11-03)
+
+**Qué.** Denis: «a un agente tipo Grok Bot o Instinct les da igual el JavaScript. ¿La página de visibilidad agéntica no merece la pena enriquecer?». Aprobó la maqueta v3 («si», «Desarrollalo»), guardada en `docs/design-reference/agents-browser-1/maqueta-v3.html`. Este es el primero de tres PRs; Auditoría agéntica (dos ventanas) y la tarjeta de Visión general van aparte.
+
+- **Medida.** La pasada del navegador de AI-READ-2 (§451) abre también, antes que las páginas de la auditoría, la página que ya eligió la auditoría agéntica de cada proyecto: un render por proyecto y semana (un fallo se reintenta a las 24 h). `readBrowserObstacles` (`lib/agentic-audit/browser-obstacles.ts`, pura) lee de la página pintada, sin pulsar nada: si hay un aviso de cookies de una herramienta de consentimiento (o una caja «cookie» con botón de aceptar), si el precio se ve exacto, sólo «desde» o no se ve, si hay selectores del producto y si dicen qué eligen, y si el botón de compra tiene nombre, es un icono sin texto o no está. Un reto anti-bots es `blocked` y nunca cuenta en contra. Se guarda en `agentic_audits.result.browser` (jsonb, sin migración). Como cada revisión es una fila nueva, una lectura fresca de la misma URL en una fila anterior se copia sin renderizar (`pickAgenticTargets`).
+- **Pantalla.** Bajo «Agentes que compran», «Hasta dónde llega cada agente» con dos carriles: los que leen sin navegador (búsquedas de ChatGPT, Claude y Perplexity: las cuatro estaciones de la revisión de siempre) y los que navegan (Grok Bot, Instinct, el agente de ChatGPT: estaciones del navegador; «Se fía» es la de la revisión, que no depende del JavaScript). Un punto corre hasta donde llega cada uno, y cada carril tiene su freno. Debajo, «Lo que se encuentra un agente que navega»: una ventana con lo que mostró la página (nombre, precio, opciones, botón y aviso de cookies, todo leído) y marcas numeradas que remiten a las casillas Frena, Cuesta y Bien. «Qué hacer primero» añade hasta dos pasos «Para los que navegan». Todo el texto sale de `agentLanes` (`lib/agentic-audit/agent-lanes.ts`).
+- **Gemini no está en «los que leen»**: responde desde el índice de Google, y Google ejecuta el JavaScript al indexar (Denis lo preguntó; se le explicó y siguió adelante).
+- **«No les llega tu precio · Está en la ficha, pero sólo con JavaScript»** sólo sale cuando el HTML sin JavaScript no trae precio (`facts.price`) y el navegador sí lo ve.
+
+**Sin cambio de nota.** Nada de esto entra en la Visibilidad agéntica ni en la Puntuación GEO. Sin `CLOUDFLARE_*` (y sin lectura guardada) la pantalla queda como antes. Mientras no hay lectura, el carril de los que navegan dice que se está midiendo, sin cifras.
+
+**No se hace.** Ventanas emergentes (salen tarde y con CSS que no cargamos: no se puede afirmar «ninguna»), ni el «tapa más de la mitad» de la maqueta (el render no trae geometría): el texto dice «sale al entrar y hay que cerrarlo». El testigo de Compra no cambia.
+
+**Pendiente.** PR 2: Auditoría agéntica con las dos ventanas. PR 3: tarjeta «Lo que lee la IA» de Visión general (con `delta` y `typeInsight`). Las vistas previas no miden: el cron sólo llama a producción.
+
+## §454 · AGENTS-BROWSER-1 PR 2: «Con navegador y sin él» en Auditoría agéntica (2026-11-03)
+
+**Qué.** Segunda parte de §453, sobre la misma maqueta v3 (`docs/design-reference/agents-browser-1/maqueta-v3.html`). Denis la pidió al ver el preview de la primera («no veo la nueva ux»), así que va en el mismo PR (#763).
+
+- **Tarjeta «Con navegador y sin él»** entre el detalle de componentes y «Asistentes según tu robots.txt»: dos ventanas de la misma ficha, la de un agente que lee el HTML (la revisión de siempre) y la de uno que navega (`result.browser`), con marcas numeradas que remiten a «Punto por punto» (qué vendes, precio, stock, botón, datos del producto, reto anti-bots y lo que tapa la ficha, cada fila con su mitad sin navegador y con navegador). Una fila es «hueco» cuando el navegador ve más que el HTML. Si hay precio, stock o botón que sólo llegan con JavaScript, un veredicto lo dice y «Qué arreglar» pide servirlos en el HTML; los datos del producto que añade un script tienen su propio arreglo, y lo que tampoco ve el navegador (precio, botón) o el aviso de cookies cierran la lista (tres como mucho). Todo sale de `twoWindows` (`lib/agentic-audit/two-windows.ts`, pura, con test).
+- **Las comprobaciones dicen lo que vio el navegador.** Bajo un fallo de precio, stock, botón o datos del producto, `browserCheckNotes` añade «Con navegador sí se ve (…): sólo llega con JavaScript» o «Tampoco lo vemos con navegador». Es la tarjeta «Y lo que cambia en las comprobaciones» de la maqueta, puesta donde ya están las comprobaciones.
+- **La lectura del navegador gana tres campos opcionales**: `name`, `stock` (de los datos o del texto: «Agotado», «Pocas unidades», «En stock») y `productData` (Product con Offer tras el JavaScript). Una lectura guardada sin ellos deja esas filas «Sin medir».
+- **El carril de los que navegan nombra a los mismos agentes que Visibilidad en agentes** (Grok Bot, Instinct, el agente de ChatGPT), no a los de la maqueta («el agente de ChatGPT, el de Gemini»), para que las dos pantallas digan lo mismo.
+
+**Sin cambio de nota.** Igual que §453. Sin `CLOUDFLARE_*` y sin lectura guardada, la tarjeta no sale; mientras se mide, dice que se está midiendo.
+
+**No se hace.** Los enlaces «Ver cómo» de la maqueta: no hay todavía una guía propia de servir en el HTML lo que pinta el JavaScript; los arreglos van sin enlace.
+
+**Pendiente.** PR 3: tarjeta «Lo que lee la IA» de Visión general.
+
+## §455 · AGENTS-BROWSER-1: las dos vías con el mismo aspecto, el icono las distingue (2026-11-03)
+
+**Qué.** Denis, viendo la preview de §453–§454: «el diseño del bloque nuevo parece de la consola antigua. Prefiero que sean homogéneos y si quieres mete la diferenciación en los iconos de los agentes, mira algo más curioso». Las tarjetas de «Agentes que leen» y «Agentes que navegan» (Visibilidad en agentes), sus frenos y las dos lentes de «Con navegador y sin él» (Auditoría agéntica) pasan a la misma tarjeta neutra: sin degradado azul, sin icono azul relleno y con el mismo punto oscuro en las dos vías.
+
+**El icono.** `components/ins/agents/agent-kind-icon.tsx`: el agente que lee es una página de HTML (`</>`) con una línea que la recorre; el que navega, una ventana de navegador con un cursor que hace clic. El movimiento es ambiente, no codifica nada y se queda quieto con movimiento reducido.
+
+**Texto.** La entrada de la tarjeta queda como la escribió Denis: «Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera.»

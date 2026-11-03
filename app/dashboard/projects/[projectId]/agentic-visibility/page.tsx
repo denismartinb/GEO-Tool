@@ -2,10 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { VisibilityCluster, type ClusterBand, type ClusterDial, type ClusterLight } from "@/components/ins/agents/visibility-cluster";
 import { ShoppingAgentsCard } from "@/components/ins/agents/shopping-agents";
+import { AgentLanesCard, BrowserFindsCard } from "@/components/ins/agents/agent-lanes";
 import { PageHead } from "@/components/ins/page-head";
 import { Ic } from "@/components/ins/ic";
 import { Motion } from "@/components/ins/kit/motion";
 import type { AgenticCheckResult, AgenticComponentId } from "@/lib/agentic-audit/api-contract";
+import { agentLanes } from "@/lib/agentic-audit/agent-lanes";
 import { readAgenticAudits } from "@/lib/agentic-audit/console-audit";
 import { componentLine, componentStatus, firstSteps, type Tone } from "@/lib/agentic-audit/console-model";
 import { loadPurchaseQuestions } from "@/lib/agentic-audit/purchase-data";
@@ -16,6 +18,7 @@ import { requireUser } from "@/lib/auth";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
+import { browserRunConfigured } from "@/lib/web-audit/browser-run";
 import { PurchaseQuestionsCard } from "./_components/purchase-questions-card";
 
 /**
@@ -24,6 +27,10 @@ import { PurchaseQuestionsCard } from "./_components/purchase-questions-card";
  * cluster of dials and warning lights, «Preguntas de compra» and «Qué hacer
  * primero». «Auditoría agéntica» is the technical screen, with its own menu
  * entry. Reads only; no LLM, no migration of its own.
+ *
+ * AGENTS-BROWSER-1 (log §453) adds the two kinds of agent: the lanes card and
+ * what our browser found in front of the product, shown only where the
+ * browser measurement runs (or already left a reading).
  */
 
 export const dynamic = "force-dynamic";
@@ -96,6 +103,8 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
   );
 
   const parts = result && result.score !== null ? clusterParts(result) : null;
+  const lanes = result && result.found !== "none" && (browserRunConfigured() || result.browser) ? agentLanes(result) : null;
+  const navSteps = lanes ? lanes.navSteps : [];
 
   return (
     <div className="ins">
@@ -179,6 +188,17 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
                 </section>
               ) : null}
 
+              {lanes ? (
+                <section className="sec">
+                  <AgentLanesCard lanes={lanes} />
+                </section>
+              ) : null}
+              {lanes && lanes.navState === "measured" ? (
+                <section className="sec">
+                  <BrowserFindsCard lanes={lanes} />
+                </section>
+              ) : null}
+
               <section className="sec agx-g75">
                 <PurchaseQuestionsCard projectId={projectId} report={report} />
                 <div className="card agx-first">
@@ -186,7 +206,7 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
                     <h3>Qué hacer primero</h3>
                   </div>
                   <div className="card-b">
-                    {steps.length > 0 && result ? (
+                    {(steps.length > 0 || navSteps.length > 0) && result ? (
                       <ol>
                         {steps.map((step, i) => (
                           <li key={step.key}>
@@ -196,6 +216,15 @@ export default async function AgenticVisibilityPage({ params }: { params: Promis
                                 <span className={`dot ${stepTone(result, step) === "warn" ? "warn" : ""}`} aria-hidden="true" />
                                 <span>{result.components.find((c) => c.id === step.component)?.name}</span>
                               </div>
+                              <b>{step.title}</b>
+                            </div>
+                          </li>
+                        ))}
+                        {navSteps.map((step, i) => (
+                          <li key={step.key}>
+                            <span className="n num">{steps.length + i + 1}</span>
+                            <div>
+                              <span className="who2">Para los que navegan</span>
                               <b>{step.title}</b>
                             </div>
                           </li>

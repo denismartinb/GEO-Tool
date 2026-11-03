@@ -84,7 +84,7 @@ async function handleGet(request: Request) {
   const response = await runWorker(0);
   try {
     const render = await runAiRenderPass({ service: createServiceClient(), deadlineAt: startedAt + RENDER_PASS_END_MS });
-    if (render.measured > 0 || render.stopped) console.info("[geo:ai-render] pass", render);
+    if (render.measured > 0 || render.agentic || render.stopped) console.info("[geo:ai-render] pass", render);
   } catch (error) {
     // Never fails the audit worker: the next cron firing tries again.
     await reportError(error, "cron:run-audit:ai-render");

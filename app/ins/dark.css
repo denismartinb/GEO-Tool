@@ -103,3 +103,6 @@
 :root[data-theme="dark"] .ins .cp-flag.cur,
 :root[data-theme="dark"] .ins .dbg-band{color:var(--canvas)}
 :root[data-theme="dark"] .ins .skw-act.is-done .skw-ah .skw-n{color:var(--canvas)}
+
+/* AGENTS-BROWSER-1 PR 2 (log §454): amber of «Con navegador y sin él». */
+:root[data-theme="dark"] .ins .agw{--agw-mid:#e0a64a;--agw-mid-ink:#f0c27a}
