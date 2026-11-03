@@ -38,6 +38,7 @@ const ok = (more: Partial<Extract<AgenticBrowserRead, { state: "ok" }>> = {}): A
   state: "ok",
   measuredAt: AT,
   cookies: true,
+  cookieCover: true,
   price: { state: "from", text: "Desde 129,00 €" },
   options: "unlabeled",
   buy: { state: "named", text: "Añadir a la cesta" },
@@ -87,6 +88,17 @@ describe("agentLanes (AGENTS-BROWSER-1, log §453)", () => {
       expect(lanes.obstacles).toEqual([]);
       expect(lanes.window).toBeNull();
     }
+  });
+
+  it("only counts a cookie banner that covers the page, and says why in one sentence (log §457)", () => {
+    const strip = agentLanes(result({ browser: ok({ cookieCover: false }) }));
+    expect(strip.obstacles.find((o) => o.id === "cookies")).toMatchObject({ tone: "ok", line: "Hay aviso, pero no vemos que tape la ficha: se puede seguir sin cerrarlo." });
+    expect(strip.window?.cookies).toBe(false);
+    const cover = agentLanes(result({ browser: ok({ cookieCover: true }) }));
+    expect(cover.obstacles.find((o) => o.id === "cookies")).toMatchObject({ tone: "warn", line: "Sale como una ventana encima de la ficha y hay que cerrarlo antes de seguir." });
+    // A read stored before the field existed is not counted against the site.
+    const old = agentLanes(result({ browser: ok({ cookieCover: undefined }) }));
+    expect(old.obstacles.find((o) => o.id === "cookies")?.tone).toBe("ok");
   });
 
   it("fills the window only with what the page showed", () => {

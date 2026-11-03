@@ -29777,7 +29777,94 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 
 **Texto.** La entrada de la tarjeta queda como la escribió Denis: «Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera.»
 
-## §456 MCP-CONNECTOR-TUNING-2: el caso «recomendaciones de un dominio ajeno» se decide en la respuesta de la herramienta (2026-11-03)
+## §456 · AGENTS-BUY-ADD-1: un botón que sólo dice «Añadir» cuenta como botón de compra (2026-11-03)
+
+**Qué.** Denis, mirando la ficha de dia.es (`/p/310743`): «se penaliza que no hay un botón comprar, el añadir no cuenta?». La ficha tiene un botón «Añadir» junto al precio y GenScore decía «Sin botón» en las tres lecturas: la del navegador (`readBuy`, `browser-obstacles.ts`), la del HTML (`addToCart`, `html-signals.ts`) y la de la extensión (`collect.js`, y con ella el plugin de WordPress y `revisar_pagina`). Las tres pedían «añadir al carrito» o «a la cesta».
+
+- **Un botón cuya etiqueta entera es «Añadir», «Agregar» o «Add»** (con un «+» opcional) cuenta como añadir al carrito. Sólo la etiqueta entera: «Añadir a mi lista» o «Añadir a favoritos» siguen sin contar.
+- **En la revisión del HTML, un «Comprar» a secas también cuenta** en una ficha de producto físico (antes sólo «añadir al carrito»), siempre fuera de menú, cabecera y pie.
+- **La extensión ya no toma un botón del menú** («Contratar…» en la cabecera de una ficha) por el botón de compra del producto.
+- **«Atención al cliente» cuenta como contacto** en «Quién está detrás» (dia.es enlaza `/l/atencion-al-cliente`, no «contacto»).
+- La extensión, el plugin (`assets/vendor/collect.js`) y `lib/page-review/collect.cjs` llevan la misma línea (`sync-page-review.mjs`). La tienda de Chrome recibe el cambio con la próxima versión.
+
+**Lo que sigue siendo cierto en dia.es.** La ficha no declara GTIN, política de devoluciones, envío ni reseñas en sus datos, así que «Se fía» sigue en rojo. Eso es de la tienda, no un fallo de la lectura.
+
+**Lo que sigue siendo cierto cuando el botón sólo llega con JavaScript.** Si la caja de compra la pinta un script, el agente que lee el HTML no la ve y la tarjeta lo marca como hueco; eso es de la web, no de la lectura.
+
+**Sin migración.** La lectura del navegador guardada se corrige en su siguiente pasada semanal; la revisión del HTML, en la siguiente auditoría.
+
+## §457 · AGENTS-COOKIES-1: el aviso de cookies sólo cuenta si tapa la página, y dice por qué (2026-11-03)
+
+**Qué.** Denis: «entiendo que cuestan las cookies, pero tampoco hay otro remedio que no tener cookies, no?». No lo hay: el aviso es obligatorio. Hasta ahora cualquier aviso salía «Cuesta», aunque fuera una franja que deja la ficha a la vista. Ahora sólo cuenta si se pone delante; Denis lo aprobó («Ok. Y que informe en una frase del motivo»).
+
+- **La lectura del navegador gana `cookieCover`** (opcional, sin migración). Se marca cuando hay señales de que el aviso tapa la página: `aria-modal`, una clase de ventana o centro de su herramienta (`otCenterRounded`, `didomi-popup`, `…-center`, `modal`, `popup`, `overlay`), un fondo propio del aviso (`cookie-overlay`, `…-underlay`) o el scroll de la página bloqueado. El render no trae geometría, así que se leen esas marcas, no el tamaño.
+- **Una frase con el motivo.** Tapa: «Sale como una ventana encima de la ficha y hay que cerrarlo antes de seguir.» No tapa: «Hay aviso, pero no vemos que tape la ficha: se puede seguir sin cerrarlo.» Sin aviso: «No sale ninguno al entrar.»
+- **Sólo el que tapa** pone «Cuesta» en el obstáculo, frena el carril de los que navegan, entra en «Qué arreglar» y se pinta en la ventana de ejemplo. Una lectura guardada antes de este campo cuenta como que no tapa.
+
+**Sin cambio de nota.** Igual que §453.
+
+## §458 · AGENTS-WINDOWS-COPY-1: «Punto por punto» dice lo que vio cada agente, en una frase (2026-11-03)
+
+**Qué.** Denis, mirando «Con navegador y sin él» en genscore.es/precios: «No se entiende muy bien el están, no están, no aplica, nada». Cada celda de «Punto por punto» pasa a una frase corta con el hecho (`Cell.say`, `two-windows.ts`): «Ve 29 €», «Ve el botón «Empezar con Starter»», «No sabe si queda», «La página no los declara», «Entra sin reto», «Sin navegador no salen avisos», «Nada la tapa». Las ventanas de ejemplo siguen con el valor corto (`text`).
+
+**Fallo corregido.** En la misma captura, «Datos del producto» decía «Están» sin navegador y «No están» con navegador sobre la misma página. La revisión sin JavaScript cuenta también lo que se vende sin ser un Product (SoftwareApplication, Service…) con su oferta; la lectura del navegador sólo contaba Product. Ahora `productData` lee igual que la revisión. La nota de la fila pasa de «schema.org Product y Offer» a «schema.org con su oferta».
+
+**Sin cambio de nota.** Igual que §453; las lecturas guardadas se corrigen en su siguiente pasada semanal.
+
+## §459 · AGENTS-PRICING-PAGE-1: una página de precios de software ya no sale con fallos que no tiene (2026-11-03)
+
+**Qué.** Denis, mirando «Visibilidad en agentes» de genscore.es/precios: «me parece raro que /precios tenga todas estas fallas». Dos eran nuestras:
+
+- **«No les llega tu precio · Está en la ficha, pero sólo con JavaScript» era falso.** `extractPageFacts` sólo leía el precio de un `Product`; los datos de /precios declaran un `SoftwareApplication` con sus ofertas. Ahora el precio se lee también de lo que se vende sin ser un Product (software, servicio, curso, evento) con su oferta, igual que ya lo contaba la revisión.
+- **«Cancela cuando quieras» no contaba.** La comprobación de cancelación sólo miraba enlaces y datos. Ahora una promesa de cancelación en el texto («cancela cuando quieras», «sin permanencia», `cancelAnytimeText`) cuenta a medias, con su propia frase: «Dices que se puede cancelar, pero no enlazas tus condiciones».
+
+**Lo que sigue siendo cierto en /precios.** No enlaza sus condiciones de cancelación ni declara reseñas (no las hay y no se inventan), y el cobro va por Stripe tras entrar, así que no se reconoce en la página. Cambiar la página es copy, congelado por Denis desde el 2026-10-10.
+
+**Sin cambio de nota fuera de esto.** Las auditorías guardadas se corrigen en la siguiente.
+
+## §460 AGENTS-BUY-WORDING-1: el botón de compra no presupone un carrito, y /precios enlaza su cancelación (2026-11-03)
+
+**Qué.** En una ficha de producto físico el texto decía «Sirve el formulario de añadir al carrito», también en webs que venden con «Comprar» o «Añadir a tu pack» y no tienen carrito. Ahora dice «botón de compra» y nombra las dos formas: «Sirve en el HTML de la ficha el botón de compra («Comprar» o «Añadir al carrito»), con texto claro.» El resto de tipos ya usaba su propia acción (contratar, reservar, suscribirse).
+
+**Botones con el plan en medio.** «Probar Pro gratis» no contaba como botón para contratar porque sólo se aceptaba «probar gratis» seguido. Ahora vale una palabra entre medias, en la revisión HTML y en la lectura del navegador. «Empezar con Starter» ya contaba.
+
+**/precios.** «Cancela cuando quieras» enlaza a la sección «Cancelación» de los Términos (`/terminos#cancelacion`), a petición del fundador (excepción expresa a la congelación de textos: el texto no cambia, sólo pasa a ser enlace). Con eso la comprobación de cancelación pasa de «a medias» a correcta en la siguiente auditoría.
+
+**Pendiente.** /precios sigue sin reseñas declaradas (no las hay y no se inventan) y el pago va por Stripe tras entrar.
+
+## §461 AI-READ-OVERVIEW-2: la tarjeta «Lo que lee la IA» de Visión general pasa a la maqueta v3 (2026-11-03)
+
+**Qué.** La tarjeta de Visión general (AI-READ-2, §451) se rehace sobre `docs/design-reference/agents-browser-1/maqueta-v3.html` (plantilla `v-ov`), aprobada por Denis el 2026-11-03:
+
+- El anillo pinta en cálido lo que no llega, no sólo en azul lo que llega.
+- Bajo la frase, una pastilla «+N desde la última medida» (o «−N», en cálido) sólo si `buildAiView` tiene medida anterior.
+- Las tres pastillas de motor (ChatGPT, Claude, Perplexity), los que no ejecutan JavaScript.
+- Cada tipo de contenido es una casilla con su porcentaje y diez bloques (los que no llegan, rayados en cálido); la casilla va en cálido cuando se pierde la mitad o más.
+- «Lo que más se pierde» separa la frase («La IA no ve tus precios») de la cita literal que no llega, que va debajo con la etiqueta «no llega».
+- Debajo, «dónde está el mayor hueco» (`typeInsight` del grupo «Por tipo de página») sólo si dice algo.
+- Midiendo: anillo vacío y una caja que se recorre con un haz; quieta con movimiento reducido.
+
+**Cómo.** `aiReadCard` expone `delta`, `where`, `lost` por fila y `quote` por línea. Son datos que el modelo ya calculaba; ninguna cifra nueva ni inventada. Sin migración.
+
+**También.** La frase de Confianza de «Visibilidad en agentes» y de la tarjeta de Comercio agéntico pasa de «Lo que más frena a un agente es fiarse de tu web.» a «Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.» (venía del PR #762, que se cierra sin mergear porque chocaba con main).
+
+**Pendiente.** Nada conocido.
+
+## §462 AI-READ-OVERVIEW-3: la tarjeta «Lo que lee la IA» se adapta a lo que hay de cada dominio (2026-11-03)
+
+**Qué.** Denis vio la tarjeta de §461 en el preview con dos dominios reales y la encontró vacía: con dos tipos de contenido, las casillas ocupaban la mitad de una fila de cuatro, y con todo llegando entero la columna derecha quedaba en blanco.
+
+- Las casillas reparten el ancho entre las que hay (`--n`, de una a cuatro), no cuatro columnas fijas.
+- La columna derecha suma «Por tipo de página» (o, si no hay, «Por lo que importa»): cuánto llega de lo que vendes, del blog y del resto, con una barra que va en cálido por debajo del 86%. Son las líneas que `buildAiView` ya calculaba para el bloque de Auditoría GEO.
+- Si la columna derecha no tiene nada que decir (sin pérdidas, sin hueco y con un solo tipo de página), desaparece y las casillas se ponen junto al anillo (`.aio-grid.solo`).
+
+**Corrección de medida.** En una web, la cita «no llega» de Preguntas era el texto del aviso de cookies («Cookies estrictamente necesarias, 4 proveedores pueden usar este propósito»): su gestor pinta las finalidades dentro de un acordeón sin clase reconocible, así que contaba como pregunta frecuente. `compareRender` salta ahora todo bloque que, él o un contenedor corto (hasta 60 palabras, tres niveles), habla de cookies, consentimiento, interés legítimo o «proveedores pueden usar» (`isConsentText`). Los diálogos (`role=dialog`, `aria-modal`) cuentan como marco, igual que `dialog`. `buildAiView` tampoco cita un texto así, para no esperar a la medida siguiente.
+
+**Premisa.** La cifra de una web ya medida no cambia hasta su próxima pasada con navegador (semanal, `RENDER_REFRESH_MS`); hasta entonces puede incluir bloques del aviso de cookies. La cita sí deja de salir desde ya.
+
+**Pendiente.** Nada conocido.
+
+## §463 MCP-CONNECTOR-TUNING-2: el caso «recomendaciones de un dominio ajeno» se decide en la respuesta de la herramienta (2026-11-03)
 
 **Origen.** Tras §452, Instinct repitió los 8 casos oficiales en chats nuevos con producción ya desplegada. 14 de 16 pasan; falla N2 («Dame las recomendaciones de amazon.es», dominio fuera de la cuenta) en los dos clientes, de dos formas distintas.
 

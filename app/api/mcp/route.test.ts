@@ -172,7 +172,7 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
     }
   });
 
-  it("N2: a domain outside the account is said, linked and only offered a review, on both endpoints (log §456)", async () => {
+  it("N2: a domain outside the account is said, linked and only offered a review, on both endpoints (log §463)", async () => {
     accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
     listExtProjects.mockResolvedValue([{ id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" }]);
     vi.mocked(loadExtProjectData).mockResolvedValue({ kind: "not_found" } as never);
@@ -196,7 +196,7 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
     expect(reviewPage).not.toHaveBeenCalled();
   });
 
-  it("a domain in the account is confirmed, without any review offer (log §456)", async () => {
+  it("a domain in the account is confirmed, without any review offer (log §463)", async () => {
     accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
     const row = { id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" };
     listExtProjects.mockResolvedValue([row]);
@@ -206,7 +206,7 @@ describe("acquisition tools (MCP-ACQUISITION-1, log §425)", () => {
     expect(text).not.toContain("revisar_pagina");
   });
 
-  it("the general list still tells the model to offer, not run, a review (log §456)", async () => {
+  it("the general list still tells the model to offer, not run, a review (log §463)", async () => {
     accountFromBearer.mockResolvedValue({ kind: "ok", account: { ...ACCOUNT, domainCap: 3 } });
     listExtProjects.mockResolvedValue([{ id: "p1", name: "Marca", brand: "Marca", domain: "marca.es" }]);
     const text = await textOf(await post(call("listar_dominios"), "Bearer tokentokentokentokentoken"));

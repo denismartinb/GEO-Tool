@@ -93,7 +93,7 @@ export default async function TerminosPage() {
         usado libremente por ti en tu propio dominio o negocio.
       </p>
 
-      <h2>Cancelación</h2>
+      <h2 id="cancelacion">Cancelación</h2>
       <p>
         Puedes eliminar tu cuenta y tus proyectos en cualquier momento desde la propia aplicación.
         La eliminación de un proyecto es permanente. Ni durante la prueba gratuita ni en los planes

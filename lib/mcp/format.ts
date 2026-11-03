@@ -61,7 +61,7 @@ export function formatPlanNotice(): ToolText {
 }
 
 /**
- * MCP-CONNECTOR-TUNING-2 (log §456): what a domain outside the account gets,
+ * MCP-CONNECTOR-TUNING-2 (log §463): what a domain outside the account gets,
  * in the tool answer itself. ChatGPT ignored the same rule in the server
  * instructions and ran `revisar_pagina` unasked, so the offer travels in the
  * result the model reads right before it decides what to do next.
@@ -88,7 +88,7 @@ export function formatDomains(input: {
   trialEndsAt: string | null;
   domainCap: number;
   domains: Array<{ domain: string; brand: string; projectId: string }>;
-  /** The domain the person asked about, when the model passed it (log §456). */
+  /** The domain the person asked about, when the model passed it (log §463). */
   asked?: { domain: string; found: boolean } | null;
 }): ToolText {
   const canAdd = input.domains.length < input.domainCap;
@@ -111,7 +111,7 @@ export function formatDomains(input: {
   } else {
     // Without the asked domain, the same rule in general terms: the model
     // reads this list and then decides (ChatGPT went from here straight to
-    // revisar_pagina on «Dame las recomendaciones de amazon.es», log §456).
+    // revisar_pagina on «Dame las recomendaciones de amazon.es», log §463).
     lines.push(
       "",
       "Si la persona pregunta por un dominio que no está en esta lista, GenScore no tiene datos suyos: díselo, da el enlace para añadirlo y ofrécele revisar su página con revisar_pagina, sin revisarla hasta que lo pida."

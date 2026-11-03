@@ -119,11 +119,11 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   como dice la especificación de OpenAI, y cada nombre es una herramienta real
   (`lib/mcp/chatgpt-package.test.ts`).
 
-## Dominio fuera de la cuenta (MCP-CONNECTOR-TUNING-2, log §456)
+## Dominio fuera de la cuenta (MCP-CONNECTOR-TUNING-2, log §463)
 
 - **La oferta de revisión va en la respuesta de la herramienta**, no sólo en
   instrucciones: `formatNotFound` y `listar_dominios` (con o sin `dominio`)
   dicen que no hay datos, dan el alta si cabe y ofrecen `revisar_pagina`
   «solo si lo pides», con `publicReview.run = "only_if_asked"`. ChatGPT no
-  siguió la regla cuando sólo estaba en las instrucciones (§456).
+  siguió la regla cuando sólo estaba en las instrucciones (§463).
 - **Ninguna herramienta de cuenta ejecuta la revisión pública por su cuenta.**

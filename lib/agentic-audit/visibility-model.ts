@@ -75,7 +75,7 @@ export function interopLine(result: AgenticCheckResult): { tone: Tone; line: str
 const HOLDS_BACK: Record<AgenticComponentId, string> = {
   discovery: "Lo que más frena a un agente es entrar en tu web.",
   understanding: "Lo que más frena a un agente es entender lo que vendes.",
-  trust: "Lo que más frena a un agente es fiarse de tu web.",
+  trust: "Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.",
   purchase: "Lo que más frena a un agente es llegar a comprar."
 };
 

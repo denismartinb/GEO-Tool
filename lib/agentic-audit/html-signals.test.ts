@@ -84,6 +84,22 @@ describe("extractPageSignals", () => {
     expect(s.captcha).toBe("reCAPTCHA");
   });
 
+  it("a button that only says «Añadir» is the cart; «Añadir a mi lista» is not (log §456)", () => {
+    expect(extractPageSignals(page(`<button>Añadir</button>`)).addToCart).toBe(true);
+    expect(extractPageSignals(page(`<button>Añadir a mi lista</button><button>Añadir a favoritos</button>`)).addToCart).toBe(false);
+    expect(extractPageSignals(page(`<main><h3>Cómpralo libre</h3><button>Comprar</button></main>`)).addToCart).toBe(true);
+    expect(extractPageSignals(page(`<header><a href="/tienda">Comprar</a></header><p>Ficha</p>`)).addToCart).toBe(false);
+  });
+
+  it("reads «Cancela cuando quieras» in the text as a cancellation promise (log §459)", () => {
+    expect(extractPageSignals(page(`<p>Cancela cuando quieras, sin permanencia.</p>`)).cancelAnytimeText).toBe(true);
+    expect(extractPageSignals(page(`<p>Política de cookies</p>`)).cancelAnytimeText).toBe(false);
+  });
+
+  it("reads «Atención al cliente» as contact", () => {
+    expect(extractPageSignals(page(`<a href="/l/atencion-al-cliente">Atención al cliente</a>`)).links.contact).toBe(true);
+  });
+
   it("a home page with add-to-cart buttons is not a product page", () => {
     const s = extractPageSignals(page(`<button class="add-to-cart">Añadir al carrito</button>`));
     expect(s.addToCart).toBe(true);
@@ -151,6 +167,11 @@ describe("classifyOffer (log §325)", () => {
 
   it("a blog link called «Entradas» is not a buy button", () => {
     expect(extractPageSignals(page("<a href='/blog'>Entradas</a>")).buyCta).toBe(false);
+  });
+
+  it("«Probar Pro gratis» is a buy button, with the plan name in the middle (log §460)", () => {
+    expect(extractPageSignals(page("<a href='/signup'>Probar Pro gratis</a>")).buyCta).toBe(true);
+    expect(extractPageSignals(page("<a href='/signup'>Empezar con Starter</a>")).buyCta).toBe(true);
   });
 });
 

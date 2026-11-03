@@ -110,7 +110,7 @@ const SCENARIOS: Row[] = [
     must: [`${BASE}/dashboard/projects/new?dominio=nueva.es`, "no tiene datos guardados de nueva.es", "solo se hace si lo pides"]
   },
   {
-    name: "listar con el dominio pedido fuera de la cuenta → lo dice, alta rellena y revisión sólo ofrecida (log §456)",
+    name: "listar con el dominio pedido fuera de la cuenta → lo dice, alta rellena y revisión sólo ofrecida (log §463)",
     answer: () =>
       formatDomains({
         base: BASE,
@@ -237,7 +237,7 @@ describe("MCP scenario battery: every answer has a next step (log §418)", () =>
     expect(t).not.toContain("/dashboard/");
   });
 
-  it("a full account asked about another domain gets the offer but no add link (log §456)", () => {
+  it("a full account asked about another domain gets the offer but no add link (log §463)", () => {
     const t = formatDomains({
       base: BASE,
       email: null,

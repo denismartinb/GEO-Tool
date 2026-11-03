@@ -45,4 +45,10 @@ describe("extractPageFacts", () => {
     const html = jsonLd({ "@type": "Product", name: "A", offers: { price: "10", priceCurrency: "euros" } });
     expect(extractPageFacts(html).price).toBeNull();
   });
+
+  it("reads the price of software sold with its offer (log §459)", () => {
+    const ld = { "@context": "https://schema.org", "@type": "SoftwareApplication", name: "GenScore", offers: [{ "@type": "Offer", price: "29", priceCurrency: "EUR" }] };
+    const html = `<html><head><script type="application/ld+json">${JSON.stringify(ld)}</script></head><body></body></html>`;
+    expect(extractPageFacts(html).price).toBe("29 EUR");
+  });
 });

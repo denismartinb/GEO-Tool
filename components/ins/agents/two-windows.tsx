@@ -62,7 +62,7 @@ function CellView({ cell }: { cell: Cell }) {
   return (
     <span className={`agw-${cell.tone}`}>
       <i className="agw-d" />
-      {cell.code ? <code>{cell.text}</code> : <b>{cell.text}</b>}
+      {cell.say ? <b>{cell.say}</b> : cell.code ? <code>{cell.text}</code> : <b>{cell.text}</b>}
     </span>
   );
 }

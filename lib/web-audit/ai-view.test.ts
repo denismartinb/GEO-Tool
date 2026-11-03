@@ -166,14 +166,27 @@ describe("aiReadCard", () => {
     expect(c.headline).toBe("Le llega el 72% de lo que ven tus clientes.");
     expect(c.sub).toContain("Tus precios son lo que más se pierde.");
     expect(c.rows.map((r) => r.reachPct)).toEqual([20, 60, 100]);
-    expect(c.items[0].text).toBe("La IA no ve tus precios: «Café 1 kg · 24,90 €»");
+    expect(c.rows.map((r) => r.lost)).toEqual([true, false, false]);
+    expect(c.items[0]).toEqual({ text: "La IA no ve tus precios", quote: "Café 1 kg · 24,90 €", tone: "warm" });
+    expect(c.delta).toBeNull();
+    expect(c.where).toBeNull();
     expect(c.items).toHaveLength(2);
   });
 
   it("puts the cited-pages reading second when it applies", () => {
     const c = aiReadCard(measured({ groups: [{ title: "Por lo que importa", lines: [], insight: "Tus páginas más citadas son las que peor lee la IA." }] }), true);
     if (c.kind !== "card") throw new Error("card");
-    expect(c.items.map((i) => i.text)).toEqual(["La IA no ve tus precios: «Café 1 kg · 24,90 €»", "Tus páginas más citadas son las que peor lee la IA"]);
+    expect(c.items.map((i) => i.text)).toEqual(["La IA no ve tus precios", "Tus páginas más citadas son las que peor lee la IA"]);
+  });
+
+  it("passes on the delta and the page-type sentence, never inventing them", () => {
+    const c = aiReadCard(
+      measured({ delta: 6, groups: [{ title: "Por tipo de página", lines: [], insight: "El mayor hueco está en lo que vendes." }] }),
+      true
+    );
+    if (c.kind !== "card") throw new Error("card");
+    expect(c.delta).toBe(6);
+    expect(c.where).toBe("El mayor hueco está en lo que vendes.");
   });
 
   it("reads as complete when nothing is lost", () => {
@@ -182,5 +195,33 @@ describe("aiReadCard", () => {
     expect(c.headline).toBe("Le llega casi todo lo que ven tus clientes.");
     expect(c.title).toBe("Estado");
     expect(c.items).toEqual([]);
+  });
+
+  it("passes the page-type split, or the importance one, only when it exists (log §462)", () => {
+    const lines = [
+      { label: "Lo que vendes", pct: 40 },
+      { label: "Blog y guías", pct: 100 }
+    ];
+    const typed = aiReadCard(measured({ groups: [{ title: "Por tipo de página", lines, insight: null }] }), true);
+    if (typed.kind !== "card") throw new Error("card");
+    expect(typed.split).toEqual({ title: "Por tipo de página", lines });
+    const none = aiReadCard(measured(), true);
+    if (none.kind !== "card") throw new Error("card");
+    expect(none.split).toBeNull();
+  });
+
+  it("never quotes a consent banner as what does not arrive (log §462)", () => {
+    const v = buildAiView([
+      page("https://x.es/", undefined, {}, {
+        render: ok(30, { faq: { seen: 4, missing: 4 } }, {
+          samples: [
+            { kind: "faq", text: "Cookies estrictamente necesarias 4 proveedores pueden usar este propósito" },
+            { kind: "faq", text: "¿Hacéis envíos a Canarias?" }
+          ]
+        })
+      })
+    ]);
+    if (!v || v.mode !== "measured") throw new Error("measured");
+    expect(v.kinds[0].sample).toBe("¿Hacéis envíos a Canarias?");
   });
 });

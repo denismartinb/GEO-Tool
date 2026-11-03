@@ -1,5 +1,5 @@
 import type { AgenticCheckResult, AgenticComponentId } from "@/lib/agentic-audit/api-contract";
-import { isAgenticBrowserRead, type AgenticBrowserRead } from "@/lib/agentic-audit/browser-obstacles";
+import { cookiesCover, isAgenticBrowserRead, type AgenticBrowserRead } from "@/lib/agentic-audit/browser-obstacles";
 import { componentLine, componentStatus, firstSteps, type Tone } from "@/lib/agentic-audit/console-model";
 
 /**
@@ -101,7 +101,7 @@ function navLane(result: AgenticCheckResult, read: AgenticBrowserRead | undefine
       ? { id: "purchase", title: TITLES.purchase, tone: "bad", line: "No ven un botón de compra" }
       : read.buy.state === "unnamed"
         ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: "El botón no tiene nombre" }
-        : read.cookies
+        : cookiesCover(read)
           ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: "Tras cerrar el aviso de cookies" }
           : read.options === "unlabeled"
             ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: "Tras adivinar una opción" }
@@ -129,11 +129,16 @@ function readBrakeOf(result: AgenticCheckResult, read: AgenticBrowserRead | unde
 function obstaclesOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): Obstacle[] {
   const out: Obstacle[] = [];
   const add = (id: ObstacleId, tone: Obstacle["tone"], title: string, line: string) => out.push({ id, tone, word: WORD[tone], title, line });
+  // Log §457: a banner only counts when it covers the page; the line says why in one sentence.
   add(
     "cookies",
-    read.cookies ? "warn" : "ok",
+    cookiesCover(read) ? "warn" : "ok",
     "Aviso de cookies",
-    read.cookies ? "Sale al entrar y hay que cerrarlo antes de seguir." : "No vemos uno que se ponga delante al entrar."
+    cookiesCover(read)
+      ? "Sale como una ventana encima de la ficha y hay que cerrarlo antes de seguir."
+      : read.cookies
+        ? "Hay aviso, pero no vemos que tape la ficha: se puede seguir sin cerrarlo."
+        : "No sale ninguno al entrar."
   );
   if (read.price.state === "exact") add("price", "ok", "Precio", read.price.text ? `Se ve el precio: ${read.price.text}.` : "Se ve el precio.");
   else if (read.price.state === "from")
@@ -151,7 +156,7 @@ function obstaclesOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): Obstac
 }
 
 const NAV_BRAKE: Partial<Record<ObstacleId, Brake>> = {
-  cookies: { title: "El aviso de cookies se pone delante", line: "Tienen que cerrarlo antes de seguir." },
+  cookies: { title: "El aviso de cookies se pone delante", line: "Sale como una ventana encima de la ficha y tienen que cerrarlo antes de seguir." },
   options: { title: "Una opción no dice qué elige", line: "Les cuesta saber qué talla, color o plan marcan." }
 };
 
@@ -176,7 +181,7 @@ function navStepsOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): NavStep
   const keys: string[] = [];
   if (read.buy.state !== "named") keys.push(`buy-${read.buy.state}`);
   if (read.price.state !== "exact") keys.push(`price-${read.price.state}`);
-  if (read.cookies) keys.push("cookies");
+  if (cookiesCover(read)) keys.push("cookies");
   if (read.options === "unlabeled") keys.push("options");
   return keys.slice(0, 2).map((key) => ({ key, title: NAV_STEP[key] }));
 }
@@ -201,7 +206,7 @@ export function agentLanes(result: AgenticCheckResult): AgentLanes {
           price: ok.price.state === "missing" ? null : ok.price.text,
           options: ok.options !== "none",
           buy: ok.buy.state === "named" ? ok.buy.text : null,
-          cookies: ok.cookies
+          cookies: cookiesCover(ok)
         }
       : null
   };

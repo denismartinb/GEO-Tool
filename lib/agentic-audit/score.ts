@@ -31,7 +31,7 @@ import { classifyOffer, type OfferReading, type PageSignals } from "@/lib/agenti
  * Log §325: what is sold decides which checks apply. Stock, identifiers and
  * shipping are for physical products (stock also for tickets); software,
  * services and subscriptions get «cancelación o reembolso» instead of
- * returns, and a buy, hire or book button instead of «añadir al carrito». A
+ * returns, and a buy, hire or book button named for what is sold. A
  * check that does not apply is left out, like `unknown`: it never subtracts.
  */
 
@@ -80,7 +80,7 @@ const KIND_NOUN: Record<AgenticOfferKind, string> = {
 
 /** The action of the buy button, by what is sold. */
 const KIND_ACTION: Record<AgenticOfferKind, string> = {
-  physical: "añadir al carrito",
+  physical: "comprar",
   software: "comprar o contratar",
   service: "contratar o pedir presupuesto",
   course: "inscribirse o comprar",
@@ -275,12 +275,14 @@ function trustChecks(s: PageSignals, kind: AgenticOfferKind | null): AgenticChec
       check(
         "cancellation",
         30,
-        s.returnPolicyData ? "pass" : s.links.cancellation || s.links.returns ? "avg" : "fail",
+        s.returnPolicyData ? "pass" : s.links.cancellation || s.links.returns || s.cancelAnytimeText ? "avg" : "fail",
         s.returnPolicyData
           ? "La política de cancelación o reembolso se lee como datos"
           : s.links.cancellation || s.links.returns
             ? "Enlazas tu política de cancelación o reembolso, pero sin datos estructurados"
-            : "No vemos tu política de cancelación o reembolso",
+            : s.cancelAnytimeText
+              ? "Dices que se puede cancelar, pero no enlazas tus condiciones"
+              : "No vemos tu política de cancelación o reembolso",
         "Enlaza tus condiciones de cancelación y reembolso desde la página, y decláralas con hasMerchantReturnPolicy si aplican."
       )
     );
@@ -351,11 +353,11 @@ function purchaseChecks(s: PageSignals, kind: AgenticOfferKind): AgenticCheck[] 
         // An out-of-stock product shows «Avísame», not a cart: nothing to measure (log §407).
         s.addToCart ? "pass" : s.soldOut ? "unknown" : "fail",
         s.addToCart
-          ? "El botón de añadir al carrito está en el HTML"
+          ? "El botón de compra está en el HTML"
           : s.soldOut
             ? "Agotado: la ficha no puede tener botón de compra ahora"
-            : "No vemos el botón de añadir al carrito sin JavaScript",
-        "Sirve el formulario de añadir al carrito en el HTML de la ficha, con un botón con texto claro."
+            : "No vemos el botón de compra sin JavaScript",
+        "Sirve en el HTML de la ficha el botón de compra («Comprar» o «Añadir al carrito»), con texto claro."
       )
     );
   } else {
