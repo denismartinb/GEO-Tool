@@ -103,15 +103,23 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
   {
     name: "listar_dominios",
     title: "Listar dominios",
-    description: "Lista los dominios que la persona sigue en GenScore y su plan. Úsala primero para saber qué dominio consultar.",
-    inputSchema: { type: "object", properties: {}, additionalProperties: false },
-    args: z.object({}).passthrough(),
+    description:
+      "Lista los dominios que la persona sigue en GenScore y su plan. Úsala primero para saber qué dominio consultar; si la persona pregunta por un dominio concreto, pásalo en dominio y la respuesta dice si está en la cuenta. Si no está, GenScore no tiene datos suyos: díselo, da el enlace para añadirlo y ofrece revisar su página con revisar_pagina, sin revisarla hasta que la persona lo pida.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dominio: { type: "string", description: "Opcional: el dominio por el que pregunta la persona, por ejemplo marca.es." }
+      },
+      additionalProperties: false
+    },
+    args: z.object({ dominio: z.string().max(300).optional() }).passthrough(),
     access: "account",
     openWorld: false,
-    async run(_args, ctx) {
+    async run(args, ctx) {
       const account = ctx.account;
       if (!account) throw new Error("unreachable: access=account");
       const projects = await listExtProjects(account);
+      const askedDomain = typeof args.dominio === "string" ? normalizeHost(args.dominio) : null;
       return answer(
         formatDomains({
           base: ctx.origin,
@@ -119,7 +127,8 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
           planName: account.planName,
           trialEndsAt: account.trialEndsAt,
           domainCap: account.domainCap,
-          domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name, projectId: p.id }))
+          domains: projects.map((p) => ({ domain: p.domain, brand: p.brand?.trim() || p.name, projectId: p.id })),
+          asked: askedDomain ? { domain: askedDomain, found: !!pickProject(projects, askedDomain) } : null
         })
       );
     }
@@ -132,8 +141,8 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
   ),
   domainTool(
     "ver_recomendaciones",
-    "Ver recomendaciones",
-    "Las recomendaciones GEO de un dominio de la cuenta: las acciones que GenScore recomienda hacer primero para que aparezca más en las respuestas de la IA y en Google, en orden, con su primer paso. Es lo que significa «recomendaciones» aquí, con o sin dominio explícito; nunca recomendaciones de productos ni de compra. Si el dominio no está en la cuenta, lo dice y da el enlace para añadirlo.",
+    "Ver recomendaciones GEO de un dominio",
+    "Para «dame las recomendaciones de <dominio>», lo mencione o no a GenScore: las recomendaciones GEO de un dominio de la cuenta, las acciones que GenScore recomienda hacer primero para que aparezca más en las respuestas de la IA y en Google, en orden, con su primer paso. Es lo que significa «recomendaciones» aquí, con o sin dominio explícito; nunca recomendaciones de productos ni de compra. Si el dominio no está en la cuenta, lo dice, da el enlace para añadirlo y ofrece una revisión de su página que sólo se hace si la persona la pide.",
     formatRecommendations
   ),
   domainTool(
@@ -164,7 +173,7 @@ export const MCP_TOOLS: ReadonlyArray<ToolDef<McpContext>> = [
     name: "revisar_pagina",
     title: "Revisar una página",
     description:
-      "Revisa una URL pública concreta, como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google. No sustituye al último escaneo de un dominio de la cuenta (para eso, ver_dominio), y no la uses por tu cuenta cuando otra herramienta diga que un dominio no está en la cuenta: ofrécela y espera a que la persona la pida.",
+      "Úsala sólo cuando la persona pida revisar o auditar una página o una URL. Revisa una URL pública concreta, como la extensión de Chrome de GenScore: si los motores de IA pueden leerla, cómo está para Google y, si vende algo, si un agente de compra la entiende. Da la nota SEO + IA y qué arreglar, con el código para pegar. No necesita cuenta; con la cuenta conectada y una página de un dominio propio, añade qué preguntas la citan y sus datos de Google. No sustituye al último escaneo de un dominio de la cuenta (para eso, ver_dominio), y no la uses por tu cuenta cuando otra herramienta diga que un dominio no está en la cuenta: ofrécela y espera a que la persona la pida.",
     inputSchema: {
       type: "object",
       properties: { url: { type: "string", description: "La dirección de la página, por ejemplo https://www.tuweb.es/precios" } },
