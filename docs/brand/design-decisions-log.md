@@ -29733,3 +29733,18 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **No se hace.** Ventanas emergentes (salen tarde y con CSS que no cargamos: no se puede afirmar «ninguna»), ni el «tapa más de la mitad» de la maqueta (el render no trae geometría): el texto dice «sale al entrar y hay que cerrarlo». El testigo de Compra no cambia.
 
 **Pendiente.** PR 2: Auditoría agéntica con las dos ventanas. PR 3: tarjeta «Lo que lee la IA» de Visión general (con `delta` y `typeInsight`). Las vistas previas no miden: el cron sólo llama a producción.
+
+## §454 · AGENTS-BROWSER-1 PR 2: «Con navegador y sin él» en Auditoría agéntica (2026-11-03)
+
+**Qué.** Segunda parte de §453, sobre la misma maqueta v3 (`docs/design-reference/agents-browser-1/maqueta-v3.html`). Denis la pidió al ver el preview de la primera («no veo la nueva ux»), así que va en el mismo PR (#763).
+
+- **Tarjeta «Con navegador y sin él»** entre el detalle de componentes y «Asistentes según tu robots.txt»: dos ventanas de la misma ficha, la de un agente que lee el HTML (la revisión de siempre) y la de uno que navega (`result.browser`), con marcas numeradas que remiten a «Punto por punto» (qué vendes, precio, stock, botón, datos del producto, reto anti-bots y lo que tapa la ficha, cada fila con su mitad sin navegador y con navegador). Una fila es «hueco» cuando el navegador ve más que el HTML. Si hay precio, stock o botón que sólo llegan con JavaScript, un veredicto lo dice y «Qué arreglar» pide servirlos en el HTML; los datos del producto que añade un script tienen su propio arreglo, y lo que tampoco ve el navegador (precio, botón) o el aviso de cookies cierran la lista (tres como mucho). Todo sale de `twoWindows` (`lib/agentic-audit/two-windows.ts`, pura, con test).
+- **Las comprobaciones dicen lo que vio el navegador.** Bajo un fallo de precio, stock, botón o datos del producto, `browserCheckNotes` añade «Con navegador sí se ve (…): sólo llega con JavaScript» o «Tampoco lo vemos con navegador». Es la tarjeta «Y lo que cambia en las comprobaciones» de la maqueta, puesta donde ya están las comprobaciones.
+- **La lectura del navegador gana tres campos opcionales**: `name`, `stock` (de los datos o del texto: «Agotado», «Pocas unidades», «En stock») y `productData` (Product con Offer tras el JavaScript). Una lectura guardada sin ellos deja esas filas «Sin medir».
+- **El carril de los que navegan nombra a los mismos agentes que Visibilidad en agentes** (Grok Bot, Instinct, el agente de ChatGPT), no a los de la maqueta («el agente de ChatGPT, el de Gemini»), para que las dos pantallas digan lo mismo.
+
+**Sin cambio de nota.** Igual que §453. Sin `CLOUDFLARE_*` y sin lectura guardada, la tarjeta no sale; mientras se mide, dice que se está midiendo.
+
+**No se hace.** Los enlaces «Ver cómo» de la maqueta: no hay todavía una guía propia de servir en el HTML lo que pinta el JavaScript; los arreglos van sin enlace.
+
+**Pendiente.** PR 3: tarjeta «Lo que lee la IA» de Visión general.

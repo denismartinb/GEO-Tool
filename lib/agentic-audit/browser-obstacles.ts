@@ -1,5 +1,6 @@
 import { parseHTML } from "linkedom";
 import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
+import { extractPageSignals } from "@/lib/agentic-audit/html-signals";
 import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { sanitizeField } from "@/lib/text/sanitize";
 
@@ -28,6 +29,15 @@ export type AgenticBrowserRead =
       /** Choices on the page (size, colour, plan) and whether each says what it chooses. */
       options: BrowserOptionsState;
       buy: { state: BrowserBuyState; text: string | null };
+      /**
+       * AGENTS-BROWSER-1 PR 2: what «Auditoría agéntica» compares with the
+       * review without JavaScript. Optional: reads stored before it have none.
+       */
+      name?: string | null;
+      /** Stock as the page shows it («En stock», «Agotado»), or null. */
+      stock?: string | null;
+      /** The page declares the product and its offer as data once JavaScript ran. */
+      productData?: boolean;
     }
   /** The browser got a challenge instead of the page. Never counts against the site. */
   | { state: "blocked"; measuredAt: string }
@@ -178,6 +188,26 @@ function readBuy(doc: Doc): { state: BrowserBuyState; text: string | null } {
   return unnamed ? { state: "unnamed", text: null } : { state: "missing", text: null };
 }
 
+const STOCK_TEXT: Array<[RegExp, string]> = [
+  [/\b(?:agotado|sin stock|sin existencias|no disponible|out of stock|sold out)\b/i, "Agotado"],
+  [/\b(?:[uú]ltimas unidades|pocas unidades|quedan \d+)\b/i, "Pocas unidades"],
+  [/\b(?:en stock|disponible|in stock|entrega en|env[ií]o en \d|recíbelo)\b/i, "En stock"]
+];
+
+function readStock(renderedHtml: string, text: string): string | null {
+  const declared = extractPageFacts(renderedHtml).availability;
+  if (declared) return declared;
+  for (const [re, label] of STOCK_TEXT) if (re.test(text)) return label;
+  return null;
+}
+
+function readName(renderedHtml: string, doc: Doc): string | null {
+  const facts = extractPageFacts(renderedHtml);
+  const h1 = one(doc.querySelector("main h1, h1")?.textContent);
+  const name = facts.productName ?? (h1 || null) ?? facts.title;
+  return name ? sanitizeField(name, 80) : null;
+}
+
 const MIN_TEXT_CHARS = 200;
 
 export function readBrowserObstacles(renderedHtml: string, measuredAt: string): AgenticBrowserRead {
@@ -187,9 +217,22 @@ export function readBrowserObstacles(renderedHtml: string, measuredAt: string): 
   const cookies = hasCookieBanner(doc);
   const options = readOptions(doc);
   const buy = readBuy(doc);
+  const name = readName(renderedHtml, doc);
+  const signals = extractPageSignals(renderedHtml);
+  const productData = signals.hasProductData && signals.hasOffer;
   const text = mainText(doc);
   if (text.length < MIN_TEXT_CHARS) return { state: "unmeasured", measuredAt };
-  return { state: "ok", measuredAt, cookies, price: readPrice(renderedHtml, text), options, buy };
+  return {
+    state: "ok",
+    measuredAt,
+    cookies,
+    price: readPrice(renderedHtml, text),
+    options,
+    buy,
+    name,
+    stock: readStock(renderedHtml, text),
+    productData
+  };
 }
 
 /** One week, like the rest of the browser measurements. */

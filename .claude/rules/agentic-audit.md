@@ -218,3 +218,8 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   de Google, que ejecuta el JavaScript.
 - **Todo el texto de los carriles sale de `agentLanes`** (pura, con test).
   Sin lectura, el carril de los que navegan no inventa estaciones.
+- **«Con navegador y sin él» sale de `twoWindows` y las notas de las
+  comprobaciones de `browserCheckNotes`** (log §454), las dos puras. Un campo
+  de la lectura que falte (`name`, `stock`, `productData`) es «Sin medir»,
+  nunca «No aparece». «Sólo con JavaScript» exige que el HTML no lo traiga y
+  el navegador sí lo vea.

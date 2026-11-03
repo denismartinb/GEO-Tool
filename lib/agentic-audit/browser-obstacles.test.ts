@@ -17,8 +17,18 @@ describe("readBrowserObstacles", () => {
       cookies: false,
       price: { state: "exact", text: "149,00 €" },
       options: "none",
-      buy: { state: "named", text: "Añadir a la cesta" }
+      buy: { state: "named", text: "Añadir a la cesta" },
+      name: "Chaqueta Brisa",
+      stock: null,
+      productData: false
     });
+  });
+
+  it("reads the product name, stock and data a script added", () => {
+    const ld = `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Cafetera Duo","offers":{"@type":"Offer","price":"149","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>`;
+    expect(readBrowserObstacles(page(`<p>149 €</p>`, ld), AT)).toMatchObject({ name: "Cafetera Duo", stock: "En stock", productData: true });
+    expect(readBrowserObstacles(page(`<p>149 €</p><p>Agotado</p>`), AT)).toMatchObject({ stock: "Agotado" });
+    expect(readBrowserObstacles(page(`<p>149 €</p><p>No disponible</p>`), AT)).toMatchObject({ stock: "Agotado" });
   });
 
   it("sees a consent tool's banner and ignores it once it is hidden inline", () => {
