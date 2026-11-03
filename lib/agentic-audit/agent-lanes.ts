@@ -35,6 +35,8 @@ export type AgentLanes = {
   read: Lane;
   nav: Lane;
   navState: NavState;
+  /** Why the browser has no reading, when it has none (log §464). */
+  navLine: string | null;
   readBrake: Brake | null;
   navBrake: Brake | null;
   obstacles: Obstacle[];
@@ -101,6 +103,8 @@ function navLane(result: AgenticCheckResult, read: AgenticBrowserRead | undefine
       ? { id: "purchase", title: TITLES.purchase, tone: "bad", line: "No ven un botón de compra" }
       : read.buy.state === "unnamed"
         ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: "El botón no tiene nombre" }
+        : read.buy.state === "lead"
+          ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: `Sólo «${read.buy.text ?? "Pide presupuesto"}»` }
         : cookiesCover(read)
           ? { id: "purchase", title: TITLES.purchase, tone: "warn", line: "Tras cerrar el aviso de cookies" }
           : read.options === "unlabeled"
@@ -148,6 +152,8 @@ function obstaclesOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): Obstac
   if (read.options === "unlabeled") add("options", "warn", "Opciones del producto", "Hay un selector que no dice qué elige.");
   if (read.buy.state === "named") add("buy", "ok", "Botón de compra", read.buy.text ? `«${read.buy.text}», con nombre claro.` : "Con nombre claro.");
   else if (read.buy.state === "unnamed") add("buy", "warn", "Botón de compra", "Es un icono sin texto: un agente no sabe qué hace.");
+  else if (read.buy.state === "lead")
+    add("buy", "warn", "Botón de compra", `Sólo hay «${read.buy.text ?? "Pide presupuesto"}»: un agente no puede contratar sin que le llamen.`);
   else add("buy", "bad", "Botón de compra", "No vemos un botón para comprar o contratar.");
   add("challenge", "ok", "Reto anti-bots", "Nuestro navegador entró sin que le pararan.");
   // What frena first, then what cuesta, then what is fine.
@@ -164,7 +170,12 @@ function navBrakeOf(obstacles: Obstacle[]): Brake | null {
   const first = obstacles.find((o) => o.tone !== "ok");
   if (!first) return null;
   if (first.id === "price") return first.tone === "bad" ? { title: "No ven tu precio", line: "Tampoco con un navegador." } : { title: "No ven el precio exacto", line: first.line };
-  if (first.id === "buy") return first.tone === "bad" ? { title: "No encuentran el botón de compra", line: first.line } : { title: "El botón de compra no tiene nombre", line: first.line };
+  if (first.id === "buy")
+    return first.tone === "bad"
+      ? { title: "No encuentran el botón de compra", line: first.line }
+      : first.line.startsWith("Sólo hay")
+        ? { title: "No pueden contratar directamente", line: first.line }
+        : { title: "El botón de compra no tiene nombre", line: first.line };
   return NAV_BRAKE[first.id] ?? null;
 }
 
@@ -174,27 +185,41 @@ const NAV_STEP: Record<string, string> = {
   "price-missing": "Pon el precio a la vista en la ficha",
   options: "Pon nombre a cada selector (talla, color, plan)",
   "buy-unnamed": "Pon texto al botón de compra",
-  "buy-missing": "Pon un botón de compra a la vista"
+  "buy-missing": "Pon un botón de compra a la vista",
+  "buy-lead": "Añade un botón para contratar directamente",
+  "conflict-price": "Que tus datos digan el mismo precio que la página",
+  "conflict-stock": "Que tus datos digan lo mismo que la página sobre el stock"
 };
 
 function navStepsOf(read: Extract<AgenticBrowserRead, { state: "ok" }>): NavStep[] {
-  const keys: string[] = [];
+  const keys: string[] = (read.conflicts ?? []).map((c) => `conflict-${c}`);
   if (read.buy.state !== "named") keys.push(`buy-${read.buy.state}`);
   if (read.price.state !== "exact") keys.push(`price-${read.price.state}`);
   if (cookiesCover(read)) keys.push("cookies");
   if (read.options === "unlabeled") keys.push("options");
-  return keys.slice(0, 2).map((key) => ({ key, title: NAV_STEP[key] }));
+  return keys
+    .filter((key) => NAV_STEP[key])
+    .slice(0, 2)
+    .map((key) => ({ key, title: NAV_STEP[key] }));
 }
 
 export function agentLanes(result: AgenticCheckResult): AgentLanes {
   const read = isAgenticBrowserRead(result.browser) ? result.browser : undefined;
-  const navState: NavState = !read ? "measuring" : read.state === "ok" ? "measured" : read.state;
-  const ok = read?.state === "ok" ? read : null;
+  // Log §464: a home or listing is not the page to judge, as if unmeasured.
+  const listing = read?.state === "ok" && read.listing === true;
+  const navState: NavState = !read ? "measuring" : listing ? "unmeasured" : read.state === "ok" ? "measured" : read.state;
+  const ok = read?.state === "ok" && !listing ? read : null;
   const obstacles = ok ? obstaclesOf(ok) : [];
   return {
     read: readLane(result),
-    nav: navLane(result, read),
+    nav: navLane(result, listing ? undefined : read),
     navState,
+    navLine:
+      navState === "measured"
+        ? null
+        : listing
+          ? "El navegador abrió una portada o un listado, no una ficha: ahí no medimos precio ni botón."
+          : navStateLine(read),
     readBrake: readBrakeOf(result, read),
     navBrake: ok ? navBrakeOf(obstacles) : null,
     obstacles,
@@ -218,3 +243,12 @@ export const NAV_STATE_LINE: Record<Exclude<NavState, "measured">, string> = {
   blocked: "Un reto anti-bots paró a nuestro navegador. No lo contamos en contra.",
   unmeasured: "No pudimos abrir tu página con un navegador. Lo volvemos a intentar mañana."
 };
+
+/** Log §464: why the browser has no reading, said once. */
+export function navStateLine(read: AgenticBrowserRead | undefined): string {
+  if (read?.state === "unmeasured" && read.reason === "not_found")
+    return "El navegador abrió una página que no existe (error 404). Elige otra ficha para medirla.";
+  if (read?.state === "unmeasured" && read.reason === "error")
+    return "La página respondió con un error al abrirla con un navegador. Lo volvemos a intentar mañana.";
+  return NAV_STATE_LINE[read ? (read.state === "ok" ? "measuring" : read.state) : "measuring"];
+}

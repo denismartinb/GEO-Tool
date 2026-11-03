@@ -133,3 +133,22 @@ describe("browserCheckNotes", () => {
     expect(browserCheckNotes(result())).toEqual({});
   });
 });
+
+describe("twoWindows: what the 33-page test found (log §464)", () => {
+  it("says a 404 and a listing in one line instead of judging the page", () => {
+    expect(twoWindows(result({ browser: { state: "unmeasured", measuredAt: AT, reason: "not_found" } }))).toEqual({
+      state: "unmeasured",
+      line: "El navegador abrió una página que no existe (error 404). Elige otra ficha para medirla."
+    });
+    expect(twoWindows(result({ browser: ok({ listing: true }) })).state).toBe("unmeasured");
+    expect(browserCheckNotes(result({ browser: ok({ listing: true }) }))).toEqual({});
+  });
+
+  it("tells a lead button from a buy button, and puts data conflicts first", () => {
+    const w = twoWindows(result({ browser: ok({ buy: { state: "lead", text: "Te llamamos" }, conflicts: ["stock"] }) }));
+    if (w.state !== "measured") throw new Error("measured");
+    expect(w.rows.find((r) => r.id === "buy")?.nav).toMatchObject({ tone: "mid", text: "«Te llamamos»" });
+    expect(w.nav.foot).toBe("Sólo puede pedir que le llamen");
+    expect(w.fixes.map((f) => f.title)).toContain("Que tus datos digan lo mismo que la página sobre el stock");
+  });
+});

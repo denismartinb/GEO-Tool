@@ -237,3 +237,18 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   ese agente (log §458); nunca «Están», «Nada» o «No aplica» solos. La
   lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
   que se vende con la misma regla.
+
+## Datos verdaderos (AGENTS-TRUTH-1, log §464)
+
+- **El precio sale de `price-read.ts` en la auditoría y en el navegador**, con
+  su unidad; el lector de la extensión aplica las mismas reglas. Un cambio en
+  una se copia en la otra en el mismo PR.
+- **Una contradicción entre los datos y la página nunca aprueba** (precio o
+  stock): baja a «a medias» y se dice.
+- **Una tarifa o póliza es un servicio aunque use `Product`** (`looksLikeTariff`):
+  sin stock y con permanencia y desistimiento.
+- **Un botón de FAQ, diálogo, acordeón, menú, recomendador o pregunta nunca es
+  el de compra**; pedir contacto es su propio estado (`lead`).
+- **Portadas y listados no puntúan precio ni botón.**
+- **Una página de error o un reto en castellano no es la ficha**, y un error
+  espera la semana antes de volver a abrirse (coste de Cloudflare).

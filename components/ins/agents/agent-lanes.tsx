@@ -94,7 +94,7 @@ export function AgentLanesCard({ lanes }: { lanes: AgentLanes }) {
           <LaneRow kind="read" title="Agentes que leen" who={READ_AGENTS} lane={lanes.read} gate={false} />
           <LaneRow kind="nav" title="Agentes que navegan" who={NAV_AGENTS} lane={lanes.nav} gate={gate} />
         </div>
-        {lanes.navState !== "measured" ? <p className="agl-note">{NAV_STATE_LINE[lanes.navState]}</p> : null}
+        {lanes.navState !== "measured" ? <p className="agl-note">{lanes.navLine ?? NAV_STATE_LINE[lanes.navState]}</p> : null}
         {lanes.readBrake || lanes.navBrake ? (
           <div className="agl-brakes">
             {lanes.readBrake ? <BrakeCard kind="read" brake={lanes.readBrake} /> : null}

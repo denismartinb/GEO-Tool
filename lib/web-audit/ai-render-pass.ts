@@ -113,7 +113,7 @@ export async function runAiRenderPass(input: {
           return { measured: 0, agentic, stopped: rendered.kind };
         }
         const measuredAt = new Date(now()).toISOString();
-        read = rendered.kind === "ok" ? readBrowserObstacles(rendered.html, measuredAt) : { state: "unmeasured", measuredAt };
+        read = rendered.kind === "ok" ? readBrowserObstacles(rendered.html, measuredAt, target.url) : { state: "unmeasured", measuredAt };
       }
       if (await agenticDeps.save(target, read)) agentic++;
       else console.error(`${LOG_PREFIX} agentic_write_failed`, { project_id: target.projectId });

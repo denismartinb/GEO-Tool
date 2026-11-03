@@ -61,9 +61,10 @@ test("every card's points are positive and its title has no em dash", () => {
 });
 
 test("a «Reservar» button alone does not make a shop (no Agentes on a clinic)", () => {
-  const clinic = Object.assign({}, F.b, { buy: "Reservar cita" });
+  const page = Object.assign({}, F.b, { path: "/zapatillas/trail", url: "http://localhost:8302/zapatillas/trail" });
+  const clinic = Object.assign({}, page, { buy: "Reservar cita" });
   assert.equal(S.scorePage(clinic, NOW).commerce, false);
-  assert.equal(S.scorePage(Object.assign({}, F.b, { buy: "Añadir al carrito" }), NOW).commerce, true);
+  assert.equal(S.scorePage(Object.assign({}, page, { buy: "Añadir al carrito" }), NOW).commerce, true);
 });
 
 test("the title card explains the real problem: too long or too short", () => {
@@ -76,17 +77,21 @@ test("the title card explains the real problem: too long or too short", () => {
 
 test("software or a service: no stock or returns, no «producto» copy (Instinct report, 1.0.1)", () => {
   const saas = Object.assign({}, F.b, {
+    path: "/precios",
     buy: "Prueba gratis",
+    cancelInfo: "link",
     ld: { types: ["Organization", "SoftwareApplication", "Offer", "FAQPage"], errors: 0, product: null, offering: { type: "SoftwareApplication", name: "GenScore", price: "29", currency: "EUR" }, article: null, faq: true, org: true, offerCount: 1 }
   });
   const r = S.scorePage(saas, NOW);
   assert.equal(r.service, true);
   assert.equal(r.lanes.agent, 100);
-  assert.equal(r.criteria.find((c) => c.id === "avail").v, null);
-  assert.equal(r.criteria.find((c) => c.id === "returns").v, null);
+  /* log §464: a service has no stock row, and «Permanencia o desistimiento» instead of returns */
+  assert.equal(r.criteria.find((c) => c.id === "avail"), undefined);
+  assert.equal(r.criteria.find((c) => c.id === "returns"), undefined);
+  assert.equal(r.criteria.find((c) => c.id === "cancel").value, "Enlazado");
   assert.equal(r.fixes.filter((x) => x.lane === "agent").length, 0);
 
-  const noPrice = Object.assign({}, saas, { buy: null, ld: Object.assign({}, saas.ld, { offering: Object.assign({}, saas.ld.offering, { price: null }) }) });
+  const noPrice = Object.assign({}, saas, { buy: null, cancelInfo: null, ld: Object.assign({}, saas.ld, { offering: Object.assign({}, saas.ld.offering, { price: null }) }) });
   const fx = S.scorePage(noPrice, NOW).fixes.filter((x) => x.lane === "agent");
   const text = fx.map((x) => x.t + " " + x.why + " " + (x.snippet || "")).join(" ");
   assert.match(text, /datos de tu plan/);
@@ -156,7 +161,7 @@ test("a pricing page or a price beside a buy button sells, even with no data; an
   assert.equal(pricing.commerce, true);
   assert.equal(pricing.service, true);
   assert.equal(pricing.criteria.find((c) => c.id === "price").value, "Sólo en el texto");
-  assert.equal(pricing.criteria.find((c) => c.id === "avail").v, null);
+  assert.equal(pricing.criteria.find((c) => c.id === "avail"), undefined);
   const post = S.scorePage(Object.assign({}, F.b, { priceSeen: true, sellCta: true }), NOW);
   if ((F.b.ld.types || []).some((t) => /Article|BlogPosting/.test(t))) assert.equal(post.commerce, false);
   const listing = S.scorePage(Object.assign({}, F.b, { ld: { types: [], errors: 0 }, path: "/portatiles", listing: true, shop: { state: "none" } }), NOW);

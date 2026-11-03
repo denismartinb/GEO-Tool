@@ -191,3 +191,25 @@ describe("sold-out product (SHOP-DETECT-2, log §407)", () => {
     expect(inStock.components.flatMap((c) => c.checks).find((k) => k.id === "add_to_cart")?.state).toBe("fail");
   });
 });
+
+describe("tariffs, leads and conflicts (AGENTS-TRUTH-1, log §464)", () => {
+  const checkOf = (r: ReturnType<typeof scoreAgenticAudit>, id: string) => r.components.flatMap((c) => c.checks).find((k) => k.id === id);
+
+  it("gives a tariff permanence and withdrawal, and no stock", () => {
+    const r = scoreAgenticAudit(input({ signals: { ...FULL, tariff: true, returnPolicyData: false }, offer: { kind: "service", pricingPage: false } }));
+    expect(checkOf(r, "cancellation")?.label).toContain("permanencia y desistimiento");
+    expect(checkOf(r, "availability")).toBeUndefined();
+  });
+
+  it("passes a quote button for a service and leaves a tariff half way", () => {
+    const lead = { ...FULL, buyCta: false, addToCart: false, leadCta: true };
+    expect(checkOf(scoreAgenticAudit(input({ signals: lead, offer: { kind: "service", pricingPage: false } })), "buy_button")?.state).toBe("pass");
+    expect(checkOf(scoreAgenticAudit(input({ signals: { ...lead, tariff: true }, offer: { kind: "service", pricingPage: false } })), "buy_button")?.state).toBe("avg");
+  });
+
+  it("does not certify a price or stock the page contradicts", () => {
+    const r = scoreAgenticAudit(input({ signals: { ...FULL, priceConflict: true, stockConflict: true }, offer: { kind: "physical", pricingPage: false } }));
+    expect(checkOf(r, "price")).toMatchObject({ state: "avg", label: "El precio de los datos no es el que enseña la página" });
+    expect(checkOf(r, "availability")?.state).toBe("avg");
+  });
+});

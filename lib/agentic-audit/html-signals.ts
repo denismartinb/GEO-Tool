@@ -13,6 +13,7 @@
  */
 
 import type { AgenticOfferKind } from "@/lib/agentic-audit/api-contract";
+import { amountOfDeclared, declaredPriceConflicts, stockConflicts, visiblePrices } from "@/lib/agentic-audit/price-read";
 
 type JsonNode = Record<string, unknown>;
 
@@ -58,12 +59,27 @@ export type PageSignals = ProductSignals & {
   recurringPrice: boolean;
   /** A buy, hire, start, book or quote button or link in the HTML. */
   buyCta: boolean;
+  /** AGENTS-TRUTH-1: only a «Pide presupuesto», «Te llamamos» or «Me interesa». Optional for older fixtures. */
+  leadCta?: boolean;
   /** The page says in its text that it can be cancelled anytime (log §459). */
   cancelAnytimeText: boolean;
   /** A booking widget or link (Calendly, Doctoralia, TheFork…). */
   bookingWidget: string | null;
   /** A checkout or selling platform that is not a store (Stripe, Paddle, Eventbrite…). */
   paymentPlatform: string | null;
+  /**
+   * AGENTS-TRUTH-1 (log §464): a tariff, plan or policy (electricity, gas,
+   * telecoms, insurance, subscriptions), even when it is declared as Product.
+   * It has no stock, identifiers or shipping, and its returns are permanence
+   * and withdrawal. Optional for older fixtures.
+   */
+  tariff?: boolean;
+  /** A home page, category or listing: several products, none of them declared alone. */
+  listing?: boolean;
+  /** The declared price is not one of the prices the page shows. */
+  priceConflict?: boolean;
+  /** The data says «en stock» while the text says it is not available. */
+  stockConflict?: boolean;
   addToCart: boolean;
   quickPay: string[];
   captcha: string | null;
@@ -167,6 +183,26 @@ function offerTypesFromJsonLd(nodes: JsonNode[]): { kinds: AgenticOfferKind[]; a
     specs.some((n) => hasValue(n.billingDuration) || /^(?:mon|ann|month|year)/i.test(String(n.unitCode ?? n.unitText ?? ""))) ||
     offers.some((n) => /^(?:mon|ann)$/i.test(String(n.unitCode ?? "")));
   return { kinds: [...kinds], anyOffer: offers.length > 0, anyPrice: offers.some(offerHasPrice), recurring };
+}
+
+/** The first declared offer price as «149,5 EUR», for the conflict check. */
+function declaredPriceText(nodes: JsonNode[]): string | null {
+  for (const n of nodes) {
+    if (!typesOf(n).some((t) => OFFER_TYPES.has(t))) continue;
+    const spec = isObject(n.priceSpecification) ? n.priceSpecification : undefined;
+    const price = n.price ?? n.lowPrice ?? spec?.price;
+    if (typeof price === "number" || (typeof price === "string" && price.trim())) return `${String(price).replace(".", ",")} EUR`;
+  }
+  return null;
+}
+
+function declaredAvailabilityText(nodes: JsonNode[]): string | null {
+  for (const n of nodes) {
+    const a = typeof n.availability === "string" ? n.availability.replace(/^https?:\/\/schema\.org\//i, "").toLowerCase() : "";
+    if (a === "instock") return "En stock";
+    if (a) return null;
+  }
+  return null;
 }
 
 const SOLD_OUT = /(?:^|\/)(?:outofstock|soldout|discontinued)$/i;
@@ -318,8 +354,20 @@ function ctaTexts(html: string): string[] {
   return out.map((t) => t.replace(/\s+/g, " ").trim().toLowerCase()).filter((t) => t.length > 0 && t.length <= 60);
 }
 
+/**
+ * AGENTS-TRUTH-1 (log §464): three kinds of button, not two. A buy or hire
+ * button (`BUY_CTA`), a lead one that only asks to be called or quoted
+ * (`LEAD_CTA`), and none. A recommender, a simulator or a «start again» is
+ * neither, and a label that is a question is a FAQ, never a button.
+ */
 const BUY_CTA =
-  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|inscr[ií]b|matric[uú]la|hazte socio|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|lo quiero|me interesa|calcula(?:r)? (?:tu|el) (?:seguro|precio)|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
+  /\b(?:comprar?|c[oó]mpralo|contratar?|contrata|empezar|empieza|comenzar|comienza|suscr[ií]b|reservar?|pide cita|pedir cita|solicitar? cita|inscr[ií]b|matric[uú]la|hazte (?:socio|cliente)|(?:prueba|probar)(?: [\wáéíóú]+)? gratis|empieza gratis|elegir plan|elige tu plan|apuntarme|ap[uú]ntate|l[oa] quiero|buy|get started|start free|try (?:it )?free|subscribe|book now|book a|sign up|order now|get tickets)\b/i;
+
+export const LEAD_CTA =
+  /\b(?:pide presupuesto|pedir presupuesto|solicitar? presupuesto|presupuesto sin compromiso|te llamamos|ll[aá]mame|me interesa|calcula(?:r)? (?:tu|el|mi) (?:seguro|precio|cuota|tarifa)|solicita(?:r)? informaci[oó]n|p[ií]de(?:nos)? informaci[oó]n|infórmate|request a quote|get a quote|contact sales)\b/i;
+
+/** Labels that look like a button but are not one to buy with. */
+export const NOT_BUY = /^\s*¿|\?\s*$|\b(?:recomendador|simulador|calculadora|comparador|test|quiz|volver a empezar|empezar de nuevo|s[ií],? volver)\b/i;
 
 const ADD_TO_CART =
   /add[-_ ]?to[-_ ]?cart|\/cart\/add|addtocart|a[ñn]adir al carrito|a[ñn]adir a la cesta|agregar al carrito|a[ñn]adir a mi cesta|name\s*=\s*["']add["']/i;
@@ -332,8 +380,13 @@ const ADD_TO_CART =
  */
 const PRODUCT_BUY = /^[+\s]*(?:a[ñn]adir|agregar|add|comprar(?: ahora| ya)?|c[oó]mpralo|buy(?: now)?)[+\s]*$/i;
 
+/** Menus, header, footer, FAQ answers and dialogs: never where the product is bought. */
 function withoutChrome(html: string): string {
-  return html.replace(/<(nav|header|footer)\b[\s\S]*?<\/\1>/gi, " ");
+  return html.replace(/<(nav|header|footer|details|dialog)\b[\s\S]*?<\/\1>/gi, " ");
+}
+
+function withoutChromeText(html: string): string {
+  return visibleText(withoutChrome(html));
 }
 
 /** «Cancela cuando quieras», «sin permanencia»: a cancellation promise in the visible text. */
@@ -357,6 +410,29 @@ const CAPTCHAS: Array<[string, RegExp]> = [
   ["Friendly Captcha", /friendlycaptcha|frc-captcha/i]
 ];
 
+/** A price per kWh or kW: an electricity or gas tariff. */
+const ENERGY_PRICE = /(?:€|eur\b|euros?\b)\s*(?:\/|al|por)\s*kwh?\b|\bc[ée]nt(?:imos)?\s*(?:\/|por)\s*kwh\b|€\/kw\b/i;
+/** Words that name a tariff, plan or policy in the title or the main heading. */
+const TARIFF_WORD =
+  /\b(?:tarifas?|planes? de (?:luz|gas|precios|m[oó]vil|fibra)|luz|gas natural|fibra|m[oó]vil(?:es)? y fibra|fibra y m[oó]vil|internet en casa|seguros?|p[oó]lizas?|suscripci[oó]n|cuota|plan (?:mensual|anual)|electricidad|energ[ií]a)\b/i;
+
+/** <title> and every <h1>, as plain text. */
+function headings(html: string): string {
+  const title = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1] ?? "";
+  const h1s = [...html.matchAll(/<h1\b[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) => m[1]);
+  return [title, ...h1s].join(" ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+}
+
+/** AGENTS-TRUTH-1: a tariff, plan or policy, whatever schema it uses. */
+export function looksLikeTariff(html: string, text: string, recurring: boolean): boolean {
+  if (ENERGY_PRICE.test(text)) return true;
+  return recurring && TARIFF_WORD.test(headings(html));
+}
+
+const LISTING_TYPES = new Set(["itemlist", "collectionpage", "offercatalog", "searchresultspage"]);
+/** «Añadir al carrito» or a bare «Comprar» on a card. Three or more is a grid, not a product. */
+const CART_LABEL = /^[+\s]*(?:a[ñn]adir(?: al carrito| a la cesta| a la bolsa)?|agregar(?: al carrito)?|add(?: to cart)?|comprar)[+\s]*$/i;
+
 export function extractPageSignals(html: string): PageSignals {
   const nodes = flattenNodes(parseJsonLd(html));
   const ld = productSignalsFromJsonLd(nodes);
@@ -373,6 +449,15 @@ export function extractPageSignals(html: string): PageSignals {
   if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/Course["']/i.test(html)) microTypes.push("course");
   if (/itemtype\s*=\s*["']https?:\/\/schema\.org\/\w*Event["']/i.test(html)) microTypes.push("event");
   const bookingWidget = BOOKING_WIDGETS.find(([, re]) => re.test(html))?.[0] ?? null;
+  const recurringPrice = offered.recurring || RECURRING_IN_TEXT.test(text);
+  const declaredProduct = ld.hasProductData || microProduct;
+  const cartButtons = ctaTexts(withoutChrome(html)).filter((t) => CART_LABEL.test(t)).length;
+  const listing =
+    !declaredProduct &&
+    (nodes.some((n) => typesOf(n).some((t) => LISTING_TYPES.has(t))) || cartButtons >= 3);
+  const shown = visiblePrices(text);
+  const declaredAmount = amountOfDeclared(declaredPriceText(nodes));
+  const declaredAvailability = declaredAvailabilityText(nodes);
 
   return {
     hasProductData: ld.hasProductData || microProduct,
@@ -398,8 +483,13 @@ export function extractPageSignals(html: string): PageSignals {
     captcha: CAPTCHAS.find(([, re]) => re.test(html))?.[0] ?? null,
     offerTypes: [...new Set([...offered.kinds, ...microTypes])],
     anyOffer: ld.hasOffer || offered.anyOffer || microOffer,
-    recurringPrice: offered.recurring || RECURRING_IN_TEXT.test(text),
-    buyCta: ctaTexts(html).some((t) => BUY_CTA.test(t)),
+    recurringPrice,
+    tariff: looksLikeTariff(html, text, recurringPrice),
+    listing,
+    priceConflict: declaredPriceConflicts(declaredAmount, shown),
+    stockConflict: stockConflicts(declaredAvailability, withoutChromeText(html)),
+    buyCta: ctaTexts(withoutChrome(html)).some((t) => BUY_CTA.test(t) && !LEAD_CTA.test(t) && !NOT_BUY.test(t)),
+    leadCta: ctaTexts(withoutChrome(html)).some((t) => LEAD_CTA.test(t) && !NOT_BUY.test(t)),
     cancelAnytimeText: CANCEL_ANYTIME.test(text),
     bookingWidget,
     paymentPlatform: PAYMENT_PLATFORMS.find(([, re]) => re.test(html))?.[0] ?? null
@@ -461,7 +551,11 @@ export function classifyOffer(signals: PageSignals, url: string): OfferReading |
   const declared = (kind: AgenticOfferKind): OfferReading => ({ kind, pricingPage });
 
   if (signals.offerTypes.includes("software") && (signals.anyOffer || pricingPage)) return declared("software");
+  // AGENTS-TRUTH-1 (log §464): a tariff or policy is sold as a service even when it uses Product.
+  if (signals.tariff) return declared(signals.offerTypes.includes("software") ? "software" : "service");
   if (isProductPage(signals)) return declared("physical");
+  // A home or a category with several products is not the page to judge (log §464).
+  if (signals.listing && signals.offerTypes.length === 0 && !pricingPage) return null;
   for (const kind of ["event", "course", "booking", "service", "software"] as const) {
     if (signals.offerTypes.includes(kind)) return declared(kind);
   }
@@ -471,7 +565,9 @@ export function classifyOffer(signals: PageSignals, url: string): OfferReading |
   if (pricingPage) return declared(signals.recurringPrice ? "subscription" : signals.offerTypes.includes("software") ? "software" : "offer");
   for (const [kind, re] of PATH_KINDS) if (re.test(path)) return declared(kind);
   if (signals.bookingWidget) return declared("booking");
-  if (priced && signals.recurringPrice && signals.buyCta) return declared("subscription");
-  if (priced && signals.buyCta) return declared("offer");
+  // Detection stays generous (log §325): a quote button also says the page sells.
+  const anyCta = signals.buyCta || signals.leadCta === true;
+  if (priced && signals.recurringPrice && anyCta) return declared("subscription");
+  if (priced && anyCta) return declared("offer");
   return null;
 }

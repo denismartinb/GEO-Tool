@@ -117,3 +117,24 @@ describe("agentLanes (AGENTS-BROWSER-1, log §453)", () => {
     expect(text).not.toMatch(/—/);
   });
 });
+
+describe("agentLanes: listings, leads and error pages (log §464)", () => {
+  it("does not judge a listing and says why", () => {
+    const lanes = agentLanes(result({ browser: ok({ listing: true }) }));
+    expect(lanes.navState).toBe("unmeasured");
+    expect(lanes.navLine).toContain("portada o un listado");
+    expect(lanes.obstacles).toEqual([]);
+  });
+
+  it("says a 404 apart from a failed render", () => {
+    expect(agentLanes(result({ browser: { state: "unmeasured", measuredAt: AT, reason: "not_found" } })).navLine).toContain("no existe");
+    expect(agentLanes(result({ browser: { state: "unmeasured", measuredAt: AT } })).navLine).toContain("No pudimos abrir");
+  });
+
+  it("reads a lead button as a brake, not as a way to buy", () => {
+    const lanes = agentLanes(result({ browser: ok({ price: { state: "exact", text: "30 €/mes" }, options: "none", cookieCover: false, buy: { state: "lead", text: "Te llamamos" } }) }));
+    expect(lanes.nav.stations.find((s) => s.id === "purchase")).toMatchObject({ tone: "warn", line: "Sólo «Te llamamos»" });
+    expect(lanes.navBrake?.title).toBe("No pueden contratar directamente");
+    expect(lanes.navSteps.map((s) => s.key)).toContain("buy-lead");
+  });
+});

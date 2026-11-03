@@ -27,7 +27,7 @@ describe("readBrowserObstacles", () => {
 
   it("reads the product name, stock and data a script added", () => {
     const ld = `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Cafetera Duo","offers":{"@type":"Offer","price":"149","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>`;
-    expect(readBrowserObstacles(page(`<p>149 €</p>`, ld), AT)).toMatchObject({ name: "Cafetera Duo", stock: "En stock", productData: true });
+    expect(readBrowserObstacles(page(`<p>149 €</p>`, ld), AT)).toMatchObject({ name: "Chaqueta Brisa", stock: "En stock", productData: true });
     expect(readBrowserObstacles(page(`<p>149 €</p><p>Agotado</p>`), AT)).toMatchObject({ stock: "Agotado" });
     expect(readBrowserObstacles(page(`<p>149 €</p><p>No disponible</p>`), AT)).toMatchObject({ stock: "Agotado" });
   });
@@ -117,5 +117,74 @@ describe("isAgenticBrowserRead / browserReadIsFresh", () => {
     expect(browserReadIsFresh({ state: "blocked", measuredAt: AT }, t + 8 * 86_400_000)).toBe(false);
     expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT }, t + 25 * 3_600_000)).toBe(false);
     expect(browserReadIsFresh(undefined, t)).toBe(false);
+  });
+});
+
+describe("readBrowserObstacles: what the 33-page test found (log §464)", () => {
+  const product = `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Perfume","offers":{"@type":"Offer","price":"49","priceCurrency":"EUR","availability":"https://schema.org/InStock"}}</script>`;
+
+  it("reads the Spanish Cloudflare page as a block, not as a page without price", () => {
+    const html = `<html><head><title>Un momento…</title></head><body><main><h1>www.tienda.es</h1><p>Verificación de seguridad en curso</p></main></body></html>`;
+    expect(readBrowserObstacles(html, AT).state).toBe("blocked");
+  });
+
+  it("reads an error page as unmeasured, never as the product", () => {
+    const html = page("<p>49 €</p>", "<title>Página no encontrada | Tienda</title>");
+    expect(readBrowserObstacles(html, AT)).toEqual({ state: "unmeasured", measuredAt: AT, reason: "not_found" });
+  });
+
+  it("never takes a FAQ question, a dialog or a recommender for the buy button", () => {
+    const faq = page(`<p>30 € al mes</p><div class="faq"><button>¿Puedo contratar Fibra y Móvil?</button></div>`);
+    expect(readBrowserObstacles(faq, AT)).toMatchObject({ buy: { state: "missing" } });
+    const modal = page(`<p>30 € al mes</p><div role="dialog"><button>SI, VOLVER A EMPEZAR</button></div>`);
+    expect(readBrowserObstacles(modal, AT)).toMatchObject({ buy: { state: "missing" } });
+    const quiz = page(`<p>30 € al mes</p><a href="/r">Empezar recomendador</a>`);
+    expect(readBrowserObstacles(quiz, AT)).toMatchObject({ buy: { state: "missing" } });
+  });
+
+  it("accepts «La quiero», strips icon names and tells a lead from a buy button", () => {
+    expect(readBrowserObstacles(page(`<p>30 € al mes</p><button>LA QUIERO</button>`), AT)).toMatchObject({ buy: { state: "named", text: "LA QUIERO" } });
+    expect(readBrowserObstacles(page(`<p>49 €</p><button>tote-simple Añadir al carrito</button>`), AT)).toMatchObject({
+      buy: { state: "named", text: "Añadir al carrito" }
+    });
+    expect(readBrowserObstacles(page(`<p>Desde 160 €/año</p><a href="/c">Calcula tu seguro</a>`), AT)).toMatchObject({
+      buy: { state: "lead", text: "Calcula tu seguro" }
+    });
+  });
+
+  it("prefers the button in the product's own block", () => {
+    const html = page(`<a href="/x">Comprar ahora otros</a><form class="product-form"><p>49 €</p><button>Añadir al carrito</button></form>`);
+    expect(readBrowserObstacles(html, AT)).toMatchObject({ buy: { text: "Añadir al carrito" } });
+  });
+
+  it("gives a tariff no stock and its energy price", () => {
+    const html = page(`<p>Potencia 0,12 €/kW día</p><p>Energía 0,1499 €/kWh</p><p>Contratación disponible online</p><button>Contratar</button>`);
+    const r = readBrowserObstacles(html, AT);
+    expect(r).toMatchObject({ tariff: true, stock: null, price: { state: "exact", text: "0,1499 €/kWh" } });
+  });
+
+  it("flags data that says «en stock» on a page that says it is not available (Druni)", () => {
+    const r = readBrowserObstacles(page(`<p>49 €</p><p>No está disponible</p>`, product), AT);
+    expect(r).toMatchObject({ stock: "Agotado", conflicts: ["stock"] });
+  });
+
+  it("flags a declared price the page does not show", () => {
+    const r = readBrowserObstacles(page(`<p>59 €</p><button>Comprar</button>`, product), AT);
+    expect(r).toMatchObject({ conflicts: ["price"] });
+  });
+
+  it("does not judge price or button on a home page or a listing", () => {
+    const home = page(`<p>19 €</p><button>Añadir</button><p>29 €</p><button>Añadir</button>`);
+    expect(readBrowserObstacles(home, AT, "https://tienda.es/")).toMatchObject({ listing: true, price: { state: "missing" }, buy: { state: "missing" } });
+    const grid = page(`<p>19 €</p><button>Añadir al carrito</button><p>29 €</p><button>Añadir al carrito</button><p>39 €</p><button>Añadir al carrito</button>`);
+    expect(readBrowserObstacles(grid, AT, "https://tienda.es/libros")).toMatchObject({ listing: true });
+  });
+});
+
+describe("browserReadIsFresh and error pages (log §464)", () => {
+  it("waits a week, not a day, before opening an error page again", () => {
+    const twoDays = Date.parse(AT) + 2 * 24 * 60 * 60 * 1000;
+    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT, reason: "not_found" }, twoDays)).toBe(true);
+    expect(browserReadIsFresh({ state: "unmeasured", measuredAt: AT }, twoDays)).toBe(false);
   });
 });

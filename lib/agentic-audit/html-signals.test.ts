@@ -193,3 +193,38 @@ describe("SHOP-DETECT-2 (log §407)", () => {
     expect(extractPageSignals(ld("https://schema.org/InStock")).soldOut).toBe(false);
   });
 });
+
+describe("tariffs, listings, buttons and conflicts (AGENTS-TRUTH-1, log §464)", () => {
+  const product = (offer: string) =>
+    `<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Tarifa","offers":${offer}}</script>`;
+
+  it("reads a tariff declared as Product as a service", () => {
+    const html = `<title>Tarifa de luz Plan Estable</title>${product('{"@type":"Offer","price":"0.1499","priceCurrency":"EUR"}')}<p>Energía 0,1499 €/kWh</p><a href="/c">Contratar</a>`;
+    const s = extractPageSignals(html);
+    expect(s.tariff).toBe(true);
+    expect(classifyOffer(s, "https://luz.es/tarifas/estable")?.kind).toBe("service");
+  });
+
+  it("keeps a phone sold in instalments as a physical product", () => {
+    const html = `<title>Smartphone X 128 GB</title>${product('{"@type":"Offer","price":"699","priceCurrency":"EUR"}')}<p>699 € o 29 € al mes</p><button>Añadir al carrito</button>`;
+    expect(classifyOffer(extractPageSignals(html), "https://tienda.es/smartphone-x")?.kind).toBe("physical");
+  });
+
+  it("reads a grid of cart buttons as a listing that sells nothing alone", () => {
+    const html = `<p>19 €</p><button>Añadir al carrito</button><p>29 €</p><button>Añadir al carrito</button><p>39 €</p><button>Añadir al carrito</button>`;
+    const s = extractPageSignals(html);
+    expect(s.listing).toBe(true);
+    expect(classifyOffer(s, "https://tienda.es/libros")).toBeNull();
+  });
+
+  it("tells a lead button and a FAQ question from a buy button", () => {
+    expect(extractPageSignals("<a>Me interesa</a>")).toMatchObject({ buyCta: false, leadCta: true });
+    expect(extractPageSignals("<button>¿Puedo contratar fibra?</button>")).toMatchObject({ buyCta: false });
+    expect(extractPageSignals("<button>LA QUIERO</button>")).toMatchObject({ buyCta: true });
+  });
+
+  it("flags a declared price or stock the page contradicts", () => {
+    const s = extractPageSignals(`${product('{"@type":"Offer","price":"149.50","priceCurrency":"EUR","availability":"https://schema.org/InStock"}')}<p>164,50 € al año</p><p>No está disponible</p>`);
+    expect(s).toMatchObject({ priceConflict: true, stockConflict: true });
+  });
+});

@@ -61,7 +61,8 @@ async function collectPageFacts() {
     Array.from(root.querySelectorAll('script[type="application/ld+json" i]')).forEach((s) => {
       try { walk(JSON.parse(s.textContent)); } catch (e) { ldErrors++; }
     });
-    const prodNode = nodes.find((n) => isT(n, "Product", "ProductGroup"));
+    /* a Book with its offer is the product of a bookshop (log §464) */
+    const prodNode = nodes.find((n) => isT(n, "Product", "ProductGroup") || (isT(n, "Book") && n.offers));
     let product = null;
     if (prodNode) {
       const offers = [].concat(prodNode.offers || []).flatMap((o) => (o && o.offers ? [].concat(o.offers) : [o])).filter(Boolean);
@@ -120,16 +121,82 @@ async function collectPageFacts() {
   const before = firstP ? (after.length ? after : paras).slice(0, (after.length ? after : paras).indexOf(firstP)).reduce((a, p) => a + words(p.textContent), 0) : null;
   const lead = { text: leadText.slice(0, 400), words: words(leadText), wordsBefore: before };
 
-  /* ---------- buy and returns ---------- */
+  /* ---------- buy and returns ---------- *
+     AGENTS-READ-FIX-1 (log §464): three kinds of button, not two. «buy»
+     sells now (Comprar, Añadir, Contratar, Reservar, La quiero…), «lead» asks
+     to be called or to price (Pide presupuesto, Te llamamos, Me interesa,
+     Calcula tu seguro), and none. The label must START with the action: a FAQ
+     question («¿Puedo contratar…?») or a sentence with the verb inside is not
+     a button. Buttons inside a FAQ, an accordion, a dialog, a recommender or
+     the site's chrome are never the product's. Icon names that leak into the
+     text («tote-simple», «shopping_cart») are dropped. Same rules as the
+     browser read (lib/agentic-audit/browser-obstacles.ts). */
   const actionable = qa('button, a[href], input[type="submit"], [role="button"]').filter(visible);
-  const label = (el) => clean(el.innerText || el.value || el.getAttribute("aria-label") || "");
-  const BUY = /(^\+?\s*(añadir|agregar|add)\s*\+?$|añadir al carrito|añadir a la cesta|agregar al carrito|comprar( ahora| ya)?$|^comprar|add to (cart|bag|basket)|buy( it)? now|reservar|suscríbete|suscribirme|contrat(a|ar|alo|ar ahora)\b|lo quiero|me interesa|pide (tu )?cita|pedir cita|solicitar? cita|elige (tu )?plan|elegir plan|choose (a |your )?plan|select plan|calcula (tu|el) (seguro|precio)|pru[eé]ba(lo)? gratis|empieza gratis|empezar (la )?prueba|get started|start (a |your )?free trial|try (it )?(for )?free)/i;
-  /* a buy button in the page body, not the site's header or footer: a «Prueba
-     gratis» in the menu of a blog post does not make the post a sales page, and
-     a «Contratar…» in the menu is not the product's button (log §456) */
+  const ICON_WORD = /^(?:[a-z0-9]+(?:[-_][a-z0-9]+)+|icon|icono|chevron|arrow)$/;
+  const cleanLabel = (s) => clean(s).split(" ").filter((w) => !ICON_WORD.test(w)).join(" ");
+  const label = (el) => cleanLabel(el.innerText || el.value || el.getAttribute("aria-label") || "");
+  const BUY = /^(?:\+\s*)?(?:a[ñn]adir(?! a (?:mi )?(?:lista|favoritos|deseos|comparar))|agregar(?! a (?:mi )?(?:lista|favoritos))|add\b(?! to (?:wishlist|list))|comprar\b|c[oó]mpra(?:lo|la)?\b|buy\b|reserv(?:ar|a ya|a ahora)\b|suscr[ií]b(?:ete|irme|irse)|contr[aá]t(?:a|ar|alo|ala)\b|la quiero|lo quiero|las quiero|los quiero|hazte cliente|pru[eé]ba(?:lo|la)? gratis|empieza gratis|empezar (?:la )?prueba|elige (?:tu |este )?plan|elegir (?:este )?plan|choose (?:a |your |this )?plan|select plan|pide (?:tu )?cita|pedir cita|solicitar? cita|get started|start (?:a |your )?free trial|try (?:it )?(?:for )?free|order now|book now|subscribe)|a[ñn]adir al carrito|a[ñn]adir a la (?:cesta|bolsa)|agregar al carrito|add to (?:cart|bag|basket)/i;
+  const LEAD = /^(?:pide|pedir|solicita|solicitar)\s+(?:tu\s+|un\s+|el\s+)?presupuesto|^presupuesto|te llamamos|ll[aá]mame|que te llamemos|que me llamen|^me interesa|^calcula(?:r)?\s+(?:tu|el|mi)\s+(?:precio|seguro|tarifa|cuota|prima)|^(?:solicita|solicitar|pide|pedir|quiero)\s+informaci[oó]n/i;
+  const NOT_BUY = /recomendador|simulador|calculadora|volver a empezar|empezar de nuevo|test\b|quiz|comparador/i;
+  const AWAY = "header,nav,footer,[role=navigation],[role=banner],[role=contentinfo],details,summary,dialog,[role=dialog],[role=alertdialog],[aria-modal=true]";
+  const AWAY_CLASS = /faq|accordion|acordeon|preguntas|modal|popup|pop-up|lightbox|overlay|recomendador|recommender|quiz|simulador|calculadora|cookie|consent/i;
+  const awayFrom = (el) => {
+    if (el.closest(AWAY)) return true;
+    for (let n = el, i = 0; n && i < 8; n = n.parentElement, i++) {
+      const c = typeof n.className === "string" ? n.className : (n.className && n.className.baseVal) || "";
+      if (AWAY_CLASS.test(c + " " + (n.id || ""))) return true;
+    }
+    return false;
+  };
+  /* "buy", "lead" or null for one element */
+  const ctaKind = (el, lab) => {
+    const t = lab(el);
+    if (!t || t.length >= 40 || /[¿?]/.test(t) || NOT_BUY.test(t) || awayFrom(el)) return null;
+    return BUY.test(t) ? "buy" : LEAD.test(t) ? "lead" : null;
+  };
+  const buyEl = actionable.find((el) => ctaKind(el, label) === "buy");
+  const leadEl = buyEl ? null : actionable.find((el) => ctaKind(el, label) === "lead");
+  const sellCta = !!(buyEl || leadEl);
   const CHROME = "header,nav,footer,[role=navigation],[role=banner],[role=contentinfo]";
-  const buyEl = actionable.find((el) => !el.closest(CHROME) && BUY.test(label(el)) && label(el).length < 40);
-  const sellCta = actionable.some((el) => !el.closest(CHROME) && BUY.test(label(el)) && label(el).length < 40);
+  /* ---------- prices, stock and cancellation, as the page prints them ----------
+     AGENTS-READ-FIX-1 (log §464): every amount of the page body (no menu,
+     footer, FAQ or dialog) with what follows it (€/kWh, al mes, /año, por
+     noche) and whether «desde» comes before. score.js picks what to show. */
+  function bodyText(scope) {
+    if (!scope) return "";
+    const c = scope.cloneNode(true);
+    for (const n of Array.from(c.querySelectorAll("script,style,noscript,template,svg,iframe," + AWAY))) n.remove();
+    for (const n of Array.from(c.querySelectorAll("*"))) {
+      const k = typeof n.className === "string" ? n.className : "";
+      if (/faq|accordion|acordeon|modal|popup|cookie|consent/i.test(k + " " + (n.id || ""))) n.remove();
+    }
+    // textContent glues blocks («No disponible» + «Añadir» = «disponibleAñadir»):
+    // a space after every element keeps words apart. It is a clone.
+    const doc = c.ownerDocument || document;
+    for (const n of Array.from(c.querySelectorAll("*"))) n.appendChild(doc.createTextNode(" "));
+    return clean(c.textContent);
+  }
+  const AMOUNT = /(?:(desde|a partir de|from|starting at)\s+)?(?:(\d{1,3}(?:\.\d{3})+|\d+)(?:([.,])(\d{1,4}))?\s?(?:€|eur\b|euros?\b)(?:\s*(?:\/|al|a la|por|per|cada)\s*(kwh|kw(?:\s*(?:y\s*|al\s*|por\s*|\/\s*)?(?:d[ií]a|mes|a[ñn]o))?|mes|a[ñn]o|d[ií]a|noche|semana|month|year))?|€\s?(\d+)(?:[.,](\d{1,2}))?)/gi;
+  function pricesOf(text) {
+    const out = [];
+    for (const m of String(text).matchAll(AMOUNT)) {
+      if (out.length >= 40) break;
+      let int = m[2] || m[6], sep = m[3], dec = m[4] || m[7] || "";
+      if (!m[6] && sep === "." && dec.length === 3) { int += dec; dec = ""; }
+      const a = Number(int.replace(/\./g, "") + (dec ? "." + dec : ""));
+      if (!Number.isFinite(a)) continue;
+      const u = m[5] ? m[5].toLowerCase().replace(/\s+/g, " ").replace(/^kw\b.*(d[ií]a)/, "kw/día").replace(/^kw\b.*mes/, "kw/mes").replace(/^kw\b.*a[ñn]o/, "kw/año").replace("ano", "año").replace("dia", "día").replace("month", "mes").replace("year", "año") : null;
+      out.push({ a, s: (int.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")) + (dec ? "," + dec : ""), u, from: !!m[1] });
+    }
+    return out;
+  }
+  const STOCK_OUT = /\b(?:no (?:est[aá] |se encuentra )?disponible|agotad[oa]s?|sin stock|sin existencias|fuera de stock|out of stock|sold out)\b/i;
+  const STOCK_IN = /\b(?:en stock|in stock|disponible para (?:env[ií]o|entrega|recoger)|[uú]ltimas unidades|quedan \d+)\b/i;
+  const CANCEL = /sin permanencia|permanencia|desistimiento|cancela(?:r|lo|la)? (?:cuando quieras|en cualquier momento)|cancel (?:anytime|at any time)|darte de baja|darse de baja/i;
+  const factsText = bodyText(root);
+  const pagePrices = pricesOf(factsText);
+  const stockText = STOCK_OUT.test(factsText) && !STOCK_IN.test(factsText) ? "out" : STOCK_IN.test(factsText) ? "in" : null;
+  const cancelInfo = CANCEL.test(factsText) ? "text" : qa("a[href]").some((a) => CANCEL.test(label(a)) || /permanencia|desistimiento|cancelaci/i.test(a.getAttribute("href") || "")) ? "link" : null;
   const RET = /(devoluci|devolver|cambios y devol|returns?\b|refund)/i;
   const retEl = qa("a[href]").find((a) => RET.test(label(a)) || /devoluc|returns|refund/i.test(a.getAttribute("href") || ""));
 
@@ -293,8 +360,10 @@ async function collectPageFacts() {
       const ld = readLd(doc);
       const lab = (el) => clean(el.textContent || el.value || el.getAttribute("aria-label") || "");
       const acts = Array.from(doc.querySelectorAll('button, a[href], input[type="submit"], [role="button"]'));
-      const b = acts.find((el) => BUY.test(lab(el)) && lab(el).length < 40);
-      const cta = acts.some((el) => !el.closest(CHROME) && BUY.test(lab(el)) && lab(el).length < 40);
+      const lab2 = (el) => cleanLabel(lab(el));
+      const b = acts.find((el) => ctaKind(el, lab2) === "buy");
+      const l = b ? null : acts.find((el) => ctaKind(el, lab2) === "lead");
+      const cta = !!(b || l);
       const body = doc.querySelector("main") || doc.querySelector("article") || doc.body;
       const priceCount = pricesIn(body ? body.textContent : "");
       const m = (n) => { const el = doc.querySelector(`meta[property="${n}" i], meta[name="${n}" i]`); return el ? el.getAttribute("content") : null; };
@@ -311,7 +380,13 @@ async function collectPageFacts() {
           url: new URL(path, location.href).href, path, ld,
           og: { type: ogT, price: m("product:price:amount") || m("og:price:amount") },
           microPrice: micro,
-          buy: b ? lab(b).slice(0, 40) : null,
+          buy: b ? lab2(b).slice(0, 40) : null,
+          ask: l ? lab2(l).slice(0, 40) : null,
+          h1: Array.from(doc.querySelectorAll("h1")).map((h) => clean(h.textContent)).filter(Boolean),
+          title: clean((doc.querySelector("title") || {}).textContent || ""),
+          prices: pricesOf(bodyText(body)),
+          stockText: (() => { const t = bodyText(body); return STOCK_OUT.test(t) && !STOCK_IN.test(t) ? "out" : STOCK_IN.test(t) ? "in" : null; })(),
+          cancelInfo: CANCEL.test(bodyText(body)) ? "text" : null,
           priceSeen: priceCount > 0,
           sellCta: cta,
           pricingPath: PRICING_PATH.test(pathname),
@@ -321,7 +396,12 @@ async function collectPageFacts() {
     }
     return { state: "none" };
   }
-  const shop = !sellsHere && (isHome || listing) ? await findShop() : null;
+  /* AGENTS-READ-FIX-1 (log §464): the root page and a shop window are never
+     the page to judge, even with prices and «Añadir» buttons on them: the
+     agents score comes from one product or pricing page found from here. */
+  const rootPage = segs.length === 0;
+  const notProduct = !product && !LD.offering && (rootPage || window_);
+  const shop = (!sellsHere && (isHome || listing)) || notProduct ? await findShop() : null;
 
   return {
     v: 1,
@@ -349,6 +429,12 @@ async function collectPageFacts() {
     siteName,
     words: words(mainText),
     buy: buyEl ? label(buyEl).slice(0, 40) : null,
+    ask: leadEl ? label(leadEl).slice(0, 40) : null,
+    prices: pagePrices,
+    stockText,
+    cancelInfo,
+    rootPage,
+    notProduct,
     returnsLink: !!retEl,
     robots: { status: robots.status, text: robots.status === 200 && !looksHtml(robots) ? robots.text : null },
     llms: { status: llms.status, ok: llms.status === 200 && !looksHtml(llms) && llms.text.trim().length > 20 },

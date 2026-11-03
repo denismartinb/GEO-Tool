@@ -29886,3 +29886,24 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Lo que esto no garantiza.** Que ChatGPT pase `dominio` o que no llame a `revisar_pagina` igualmente: el texto es una instrucción, no un candado. Un candado (que `revisar_pagina` exija una confirmación) rompería P1, donde la persona sí pide revisar. Y en Claude, si el modelo elige el navegador antes de mirar los conectores, ningún texto del servidor llega a leerse. Ambos casos se validan sólo en los clientes reales.
 
 **Pendiente.** Repetir N2 en chats nuevos en los dos clientes tras desplegar, mirando en PostHog qué herramientas se llamaron, y los otros siete casos para confirmar que no se rompen (sobre todo P1 y P3). Si Claude sigue yendo al navegador, el siguiente paso es probar con el conector como único activo para separar el enrutado del cliente del texto del servidor.
+
+## §464 AGENTS-TRUTH-1: lo que ven los agentes deja de enseñar datos falsos (2026-11-03)
+
+**Origen.** Prueba con 33 páginas que venden, de 30 webs de sectores distintos (libros, retail, eléctricas, telecos, seguros, formación, software, farmacia), leídas como un agente sin navegador (el lector de la extensión, el conector y el plugin) y como uno que navega (`readBrowserObstacles` sobre Chrome real). Resultado y tabla de 13 mejoras en el artifact de la prueba. Denis: «Arregla todo de manera automática en la misma pr».
+
+**Decisión, en las dos lecturas a la vez** (navegador y auditoría agéntica en `lib/agentic-audit/`, lector de la extensión en `collect.js`/`score.js`, regenerado en `lib/page-review/` y copiado al plugin):
+
+- **Precio con su unidad o ninguno** (`price-read.ts`): «0,1499 €/kWh», «33,90 €/mes», «Desde 160 €/año». Con precio de energía no se enseña el de potencia; con tres precios o más, «Varios precios, desde X»; un 0 no es el precio si hay otro; 100.000 o más no es un precio; un ahorro o un descuento no es un precio.
+- **Contradicciones**: si el precio de los datos no está entre los que se ven, o los datos dicen «en stock» y la página «no está disponible», es un problema (la comprobación baja a «a medias» y el navegador lo lista como arreglo), nunca un aprobado.
+- **Tarifas y pólizas son servicios** aunque usen `Product` (`looksLikeTariff`: precio por kWh o kW, o precio recurrente con «tarifa», «luz», «fibra», «seguro», «póliza», «suscripción»… en el título o el h1). Sin stock, sin identificadores ni envío; «permanencia y desistimiento» en vez de devoluciones.
+- **Tres botones**: comprar o contratar, pedir contacto («Pide presupuesto», «Te llamamos», «Me interesa», «Calcula tu seguro») y ninguno. Pedir presupuesto aprueba un servicio profesional; en una tarifa, un plan o software se queda a medias. Nunca cuenta un botón de un FAQ, un diálogo, un acordeón, el menú, un recomendador o una pregunta; se quitan los nombres de icono de la etiqueta; «La quiero» cuenta. Con navegador, primero el botón del bloque del producto.
+- **Portadas y listados no son fichas**: ni precio ni botón se puntúan ahí, y el lector no propone `Product` (propone `Organization` o `ItemList`). En la auditoría, un listado sin producto declarado no es página que vende y se busca otra.
+- **El nombre es el h1**, no el título de marketing.
+- **Navegador**: la verificación de Cloudflare en castellano («Verificación de seguridad en curso») es un bloqueo; una página de error (404, 403, 5xx, leída en el título y el h1 porque el render no trae el código HTTP) es «No se pudo medir» con su motivo, nunca una ficha sin precio ni botón. Un error se vuelve a abrir a la semana, no al día, para no gastar los minutos gratis de Cloudflare.
+- **Lector**: dice por qué no sale el bloque de Agentes, trata un reto anti-bots como hallazgo («Los agentes que leen no pueden entrar»), separa bloqueado, tarda y no existe, dice «Te llevó a otra página» y de qué página sale la nota, y el arreglo de robots.txt nombra la línea que hay que quitar. Extensión 1.5.3.
+
+**Coste.** Nada de esto añade llamadas a Cloudflare Browser Run: la misma página como mucho una vez por semana, y la pasada se para con la cuota.
+
+**Premisa.** Las lecturas guardadas antes de esta fase no tienen `listing`, `tariff`, `conflicts` ni `reason` y se leen como antes hasta la siguiente pasada semanal.
+
+**Pendiente.** Repetir la prueba de 33 páginas con las dos lecturas y comparar. Una página con precio, sin botón y sin ruta de precios sigue sin nota de Agentes en el lector (ahora lo explica).
