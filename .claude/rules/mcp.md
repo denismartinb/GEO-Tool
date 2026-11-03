@@ -127,3 +127,19 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   «solo si lo pides», con `publicReview.run = "only_if_asked"`. ChatGPT no
   siguió la regla cuando sólo estaba en las instrucciones (§463).
 - **Ninguna herramienta de cuenta ejecuta la revisión pública por su cuenta.**
+
+## Fiabilidad del conector (MCP-RELIABILITY-1, log §464)
+
+- **Cada `tools/call` registra cómo acabó** (`outcome` de `mcp_tool_called`) y
+  cada rechazo de autenticación su motivo (`mcp_auth_rejected`). Sólo
+  categorías; nunca token, argumentos ni respuesta.
+- **Una excepción de una herramienta va a Sentry** por `onToolException` →
+  `reportError(error, "mcp.<herramienta>")`, y el cliente recibe
+  `CALL_TEXT.exception`, nunca el mensaje del error.
+- **En ChatGPT, un token caducado en `tools/call` recibe el desafío por
+  herramienta**, con «Tu sesión de GenScore ha caducado»; `initialize` y
+  `tools/list` siguen con el 401. Claude recibe el 401 siempre.
+- **`null` es un campo ausente** (`withoutNulls`). Un argumento inválido nombra
+  el campo del esquema, nunca un valor enviado.
+- **Todo texto de rechazo dice qué hacer a continuación** (`CALL_TEXT`), y un
+  estado nuevo entra con su fixture en `app/api/mcp/route.test.ts`.
