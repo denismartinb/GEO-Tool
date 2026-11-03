@@ -233,3 +233,7 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   ventana con fondo, `aria-modal`, clase de ventana o centro de su
   herramienta, o el scroll bloqueado. Una franja, o una lectura guardada sin
   `cookieCover`, no cuenta en contra. La línea dice el motivo en una frase.
+- **Cada celda de «Punto por punto» lleva su frase (`say`)** con lo que vio
+  ese agente (log §458); nunca «Están», «Nada» o «No aplica» solos. La
+  lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
+  que se vende con la misma regla.

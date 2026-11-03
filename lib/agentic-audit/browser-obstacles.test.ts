@@ -39,6 +39,11 @@ describe("readBrowserObstacles", () => {
     expect(readBrowserObstacles(hidden, AT)).toMatchObject({ cookies: false });
   });
 
+  it("reads what else is sold with its offer as product data, like the review without JavaScript (log §458)", () => {
+    const ld = `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", name: "Starter", offers: { "@type": "Offer", price: "29", priceCurrency: "EUR" } })}</script>`;
+    expect(readBrowserObstacles(page(`<p>29 €</p>`) + ld, AT)).toMatchObject({ productData: true });
+  });
+
   it("tells a banner that covers the page from a strip (log §457)", () => {
     const strip = page(`<p>149 €</p>`) + `<div id="onetrust-banner-sdk" class="otFlat"><p>Usamos cookies</p><button>Aceptar</button></div>`;
     expect(readBrowserObstacles(strip, AT)).toMatchObject({ cookies: true, cookieCover: false });

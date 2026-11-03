@@ -265,7 +265,9 @@ export function readBrowserObstacles(renderedHtml: string, measuredAt: string): 
   const buy = readBuy(doc);
   const name = readName(renderedHtml, doc);
   const signals = extractPageSignals(renderedHtml);
-  const productData = signals.hasProductData && signals.hasOffer;
+  // Same reading as the review without JavaScript (log §458): a Product, or
+  // what else is sold (SoftwareApplication, Service…), with its offer.
+  const productData = (signals.hasProductData && signals.hasOffer) || (signals.offerTypes.length > 0 && signals.anyOffer);
   const text = mainText(doc);
   if (text.length < MIN_TEXT_CHARS) return { state: "unmeasured", measuredAt };
   return {

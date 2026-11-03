@@ -29802,3 +29802,11 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 - **Sólo el que tapa** pone «Cuesta» en el obstáculo, frena el carril de los que navegan, entra en «Qué arreglar» y se pinta en la ventana de ejemplo. Una lectura guardada antes de este campo cuenta como que no tapa.
 
 **Sin cambio de nota.** Igual que §453.
+
+## §458 · AGENTS-WINDOWS-COPY-1: «Punto por punto» dice lo que vio cada agente, en una frase (2026-11-03)
+
+**Qué.** Denis, mirando «Con navegador y sin él» en genscore.es/precios: «No se entiende muy bien el están, no están, no aplica, nada». Cada celda de «Punto por punto» pasa a una frase corta con el hecho (`Cell.say`, `two-windows.ts`): «Ve 29 €», «Ve el botón «Empezar con Starter»», «No sabe si queda», «La página no los declara», «Entra sin reto», «Sin navegador no salen avisos», «Nada la tapa». Las ventanas de ejemplo siguen con el valor corto (`text`).
+
+**Fallo corregido.** En la misma captura, «Datos del producto» decía «Están» sin navegador y «No están» con navegador sobre la misma página. La revisión sin JavaScript cuenta también lo que se vende sin ser un Product (SoftwareApplication, Service…) con su oferta; la lectura del navegador sólo contaba Product. Ahora `productData` lee igual que la revisión. La nota de la fila pasa de «schema.org Product y Offer» a «schema.org con su oferta».
+
+**Sin cambio de nota.** Igual que §453; las lecturas guardadas se corrigen en su siguiente pasada semanal.

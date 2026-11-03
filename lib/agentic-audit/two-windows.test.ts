@@ -59,7 +59,17 @@ describe("twoWindows (AGENTS-BROWSER-1 PR 2)", () => {
       "3:buy:No aparece|«Añadir a la cesta»",
       "4:data:No están|Los añade un script",
       "5:challenge:Ninguno|Ninguno",
-      "6:cover:No aplica|Aviso de cookies encima hasta aceptarlo"
+      "6:cover:No aplica|Aviso de cookies encima"
+    ]);
+    // Log §458: what «Punto por punto» prints is a sentence, never «Están» or «Nada» alone.
+    expect(w.rows.map((r) => `${r.raw.say ?? r.raw.text}|${r.nav.say ?? r.nav.text}`)).toEqual([
+      "Cafetera Nubaria Duo|Cafetera Nubaria Duo",
+      "No ve el precio|Ve 149,00 €",
+      "No sabe si queda|Ve «En stock»",
+      "No ve ningún botón|Ve el botón «Añadir a la cesta»",
+      "La página no los declara|Los añade un script al cargar",
+      "Entra sin reto|Entra sin reto",
+      "Sin navegador no salen avisos|Un aviso de cookies la tapa hasta aceptarlo"
     ]);
     expect(w.rows.filter((r) => r.gap).map((r) => r.id)).toEqual(["price", "stock", "buy", "data"]);
     expect(w.read.foot).toBe("No sabe cuánto cuesta ni si queda ni ve el botón");
