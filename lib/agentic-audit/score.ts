@@ -275,12 +275,14 @@ function trustChecks(s: PageSignals, kind: AgenticOfferKind | null): AgenticChec
       check(
         "cancellation",
         30,
-        s.returnPolicyData ? "pass" : s.links.cancellation || s.links.returns ? "avg" : "fail",
+        s.returnPolicyData ? "pass" : s.links.cancellation || s.links.returns || s.cancelAnytimeText ? "avg" : "fail",
         s.returnPolicyData
           ? "La política de cancelación o reembolso se lee como datos"
           : s.links.cancellation || s.links.returns
             ? "Enlazas tu política de cancelación o reembolso, pero sin datos estructurados"
-            : "No vemos tu política de cancelación o reembolso",
+            : s.cancelAnytimeText
+              ? "Dices que se puede cancelar, pero no enlazas tus condiciones"
+              : "No vemos tu política de cancelación o reembolso",
         "Enlaza tus condiciones de cancelación y reembolso desde la página, y decláralas con hasMerchantReturnPolicy si aplican."
       )
     );

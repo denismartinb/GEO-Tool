@@ -29810,3 +29810,14 @@ Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arre
 **Fallo corregido.** En la misma captura, «Datos del producto» decía «Están» sin navegador y «No están» con navegador sobre la misma página. La revisión sin JavaScript cuenta también lo que se vende sin ser un Product (SoftwareApplication, Service…) con su oferta; la lectura del navegador sólo contaba Product. Ahora `productData` lee igual que la revisión. La nota de la fila pasa de «schema.org Product y Offer» a «schema.org con su oferta».
 
 **Sin cambio de nota.** Igual que §453; las lecturas guardadas se corrigen en su siguiente pasada semanal.
+
+## §459 · AGENTS-PRICING-PAGE-1: una página de precios de software ya no sale con fallos que no tiene (2026-11-03)
+
+**Qué.** Denis, mirando «Visibilidad en agentes» de genscore.es/precios: «me parece raro que /precios tenga todas estas fallas». Dos eran nuestras:
+
+- **«No les llega tu precio · Está en la ficha, pero sólo con JavaScript» era falso.** `extractPageFacts` sólo leía el precio de un `Product`; los datos de /precios declaran un `SoftwareApplication` con sus ofertas. Ahora el precio se lee también de lo que se vende sin ser un Product (software, servicio, curso, evento) con su oferta, igual que ya lo contaba la revisión.
+- **«Cancela cuando quieras» no contaba.** La comprobación de cancelación sólo miraba enlaces y datos. Ahora una promesa de cancelación en el texto («cancela cuando quieras», «sin permanencia», `cancelAnytimeText`) cuenta a medias, con su propia frase: «Dices que se puede cancelar, pero no enlazas tus condiciones».
+
+**Lo que sigue siendo cierto en /precios.** No enlaza sus condiciones de cancelación ni declara reseñas (no las hay y no se inventan), y el cobro va por Stripe tras entrar, así que no se reconoce en la página. Cambiar la página es copy, congelado por Denis desde el 2026-10-10.
+
+**Sin cambio de nota fuera de esto.** Las auditorías guardadas se corrigen en la siguiente.

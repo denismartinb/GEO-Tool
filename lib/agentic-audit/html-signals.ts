@@ -58,6 +58,8 @@ export type PageSignals = ProductSignals & {
   recurringPrice: boolean;
   /** A buy, hire, start, book or quote button or link in the HTML. */
   buyCta: boolean;
+  /** The page says in its text that it can be cancelled anytime (log §459). */
+  cancelAnytimeText: boolean;
   /** A booking widget or link (Calendly, Doctoralia, TheFork…). */
   bookingWidget: string | null;
   /** A checkout or selling platform that is not a store (Stripe, Paddle, Eventbrite…). */
@@ -334,6 +336,10 @@ function withoutChrome(html: string): string {
   return html.replace(/<(nav|header|footer)\b[\s\S]*?<\/\1>/gi, " ");
 }
 
+/** «Cancela cuando quieras», «sin permanencia»: a cancellation promise in the visible text. */
+const CANCEL_ANYTIME =
+  /cancela(?:r|lo)? (?:cuando quieras|en cualquier momento)|sin permanencia|sin compromiso de permanencia|cancel (?:anytime|at any time)|no long-term contract/i;
+
 const QUICK_PAY: Array<[string, RegExp]> = [
   ["Apple Pay", /apple[-_ ]?pay/i],
   ["Google Pay", /google[-_ ]?pay|pay\.google\.com|\bgpay\b/i],
@@ -394,6 +400,7 @@ export function extractPageSignals(html: string): PageSignals {
     anyOffer: ld.hasOffer || offered.anyOffer || microOffer,
     recurringPrice: offered.recurring || RECURRING_IN_TEXT.test(text),
     buyCta: ctaTexts(html).some((t) => BUY_CTA.test(t)),
+    cancelAnytimeText: CANCEL_ANYTIME.test(text),
     bookingWidget,
     paymentPlatform: PAYMENT_PLATFORMS.find(([, re]) => re.test(html))?.[0] ?? null
   };

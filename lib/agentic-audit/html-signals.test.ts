@@ -91,6 +91,11 @@ describe("extractPageSignals", () => {
     expect(extractPageSignals(page(`<header><a href="/tienda">Comprar</a></header><p>Ficha</p>`)).addToCart).toBe(false);
   });
 
+  it("reads «Cancela cuando quieras» in the text as a cancellation promise (log §459)", () => {
+    expect(extractPageSignals(page(`<p>Cancela cuando quieras, sin permanencia.</p>`)).cancelAnytimeText).toBe(true);
+    expect(extractPageSignals(page(`<p>Política de cookies</p>`)).cancelAnytimeText).toBe(false);
+  });
+
   it("reads «Atención al cliente» as contact", () => {
     expect(extractPageSignals(page(`<a href="/l/atencion-al-cliente">Atención al cliente</a>`)).links.contact).toBe(true);
   });
