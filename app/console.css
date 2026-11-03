@@ -1468,37 +1468,9 @@
 .sa-scope p { font-size: 13.5px; color: var(--ink-2); margin: 0; line-height: 1.5; }
 .sa-scope b { color: var(--ink); }
 
-/* Cobertura de tu contenido (GEO block) */
-.cov-head { display: flex; justify-content: space-between; align-items: baseline; gap: 4px 12px; flex-wrap: wrap; }
-.cov-head h3 {
-  font-family: var(--font-display), "Bricolage Grotesque", sans-serif;
-  font-size: 15px;
-  font-weight: 800;
-  letter-spacing: -.01em;
-  color: var(--ink);
-  margin: 0;
-}
-.cov-head-r { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.cov-date { font-size: 11.5px; color: var(--ink-4); }
-.cov-desc { font-size: 12.5px; color: var(--ink-3); margin: 4px 0 0; }
-.cov-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 10px; }
-.cov-empty { font-size: 12.5px; color: var(--ink-3); margin: 10px 0 0; }
-.cov-more.wa-details { margin-top: 10px; border: 0; background: none; }
-.cov-more.wa-details > summary { padding: 8px 0 0; font-size: 12.5px; font-weight: 650; color: var(--ink-2); gap: 6px; justify-content: flex-start; }
-.cov-more .wa-details-body { border-top: 0; padding: 4px 0 0; }
-.cov-blk { margin-top: 12px; }
-.cov-blk-t { font-size: 13px; font-weight: 750; color: var(--ink); margin-bottom: 10px; }
-.cov-legend { display: flex; gap: 14px; font-size: 11px; color: var(--ink-3); font-weight: 600; margin: -4px 0 10px; }
-.cov-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
-.cov-note { font-size: 12px; color: var(--ink-3); margin: -4px 0 10px; }
+/* Coverage topic list (Correcto tab); the «Cobertura de tu contenido» card and «Historial de comprobaciones» were removed (log §453) */
 .cov-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .cov-list li { padding: 8px 10px; background: var(--surface-sunk); border-radius: 8px; font-size: 12.5px; color: var(--ink-2); }
-.cov-history { display: flex; flex-direction: column; gap: 6px; }
-.cov-hrow { padding: 8px 10px; border-radius: 8px; background: var(--surface-sunk); }
-.cov-hdate { font-size: 12px; font-weight: 650; color: var(--ink); margin-bottom: 6px; }
-.cov-hgrid { display: grid; grid-template-columns: 90px minmax(0, 1fr) 92px; gap: 8px; align-items: center; }
-.cov-hgrid > span:not(.cov-hv) { font-size: 10.5px; color: var(--ink-2); }
-.cov-hv { font-size: 11px; color: var(--ink-2); font-variant-numeric: tabular-nums; text-align: right; }
 
 @media (max-width: 420px) {
   .tech-potential { padding: 16px; }

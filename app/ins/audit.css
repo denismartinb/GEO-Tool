@@ -163,12 +163,6 @@
 .ins .sc-au-hero .gain>span{max-width:none}
 }
 
-/* Historial de comprobaciones: plegado hasta que se pide */
-.ins .cov-hist-d>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:0}
-.ins .cov-hist-d>summary::-webkit-details-marker{display:none}
-.ins .cov-hist-d>summary::after{content:"";width:8px;height:8px;border-right:1.5px solid var(--ink-3);border-bottom:1.5px solid var(--ink-3);transform:rotate(45deg);transition:transform var(--d2) var(--std);margin-right:4px}
-.ins .cov-hist-d[open]>summary{margin-bottom:10px}
-.ins .cov-hist-d[open]>summary::after{transform:rotate(-135deg)}
 
 /* Móvil / Escritorio de la velocidad: `.ins button{padding:0}` ganaba a `.sa-seg button` */
 .ins .sa-seg{gap:4px;padding:4px;border-radius:12px}
