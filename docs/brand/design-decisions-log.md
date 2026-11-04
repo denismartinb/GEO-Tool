@@ -29976,3 +29976,10 @@ Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó).
 - Figura: barras 56% frente a 27%. Portada webp generada desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda: bases y matices (2026-11-04).** Revisión de Denis en el PR #772, contrastada con la fuente primaria de McKinsey (metodología y notas de los gráficos):
+- El 53% es sobre adultos (usaron la IA para al menos una tarea de compra; Exhibit 1) y el 14% sobre personas que usan la IA (equivale al 9% de la población general). Ya no se comparan ni se dice que el 53% sea «para elegir, no para pagar»; el pago se describe como minoritario por separado.
+- El 15% frente al 14% del pago compara dos preguntas con distinta redacción («completó la compra» frente a «ayudó a completarla», nota del Exhibit 4), y el texto lo dice.
+- El 3,2 y el 2,6 se escriben como en la fuente (probabilidad de considerar la búsqueda con IA más influyente); el «casi un tercio» y las razones, sobre quienes compran con IA.
+- España: «a 4 de noviembre de 2026, la documentación pública sitúa Instant Checkout de ChatGPT y Universal Cart de Google en Gemini en Estados Unidos; esas fuentes no anuncian disponibilidad en España», sin afirmar una imposibilidad. Fuentes: centro de ayuda de OpenAI (Instant Checkout) y blog de Google (Universal Cart, 15 de octubre de 2026; novedades de compras de septiembre).
+- Mismos cambios en FAQ, cifras destacadas, metadescripción, imagen para redes y textos de LinkedIn y X.
