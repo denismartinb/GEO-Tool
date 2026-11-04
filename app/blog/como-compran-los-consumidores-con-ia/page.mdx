@@ -1,0 +1,232 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-compran-los-consumidores-con-ia");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cuántos consumidores usan ya la IA para comprar?",
+    answer:
+      "Según la encuesta de McKinsey a unos 21.000 consumidores de 11 países (junio de 2026), el 53% usó la IA para alguna parte de una compra en los tres meses anteriores. En Estados Unidos, el 48%."
+  },
+  {
+    question: "¿Cuánta gente termina la compra con la IA?",
+    answer:
+      "Menos de los que la usan para elegir. El 14% de quienes usan la IA ya ha completado una compra con ella, y en Estados Unidos ese porcentaje pasó del 10% al 17% en un año. En las seis categorías donde más se usa, entre el 21% y el 30% dejaría que la IA cerrara la compra."
+  },
+  {
+    question: "¿Qué asistente usan más los consumidores para comprar?",
+    answer:
+      "Los asistentes generales de chat o búsqueda, como ChatGPT o Gemini: el 56% de quienes usan la IA los usó en una compra, frente al 27% que usó el asistente de la propia tienda. La diferencia solo se cierra en el pago, donde están casi igualados."
+  },
+  {
+    question: "¿La encuesta de McKinsey incluye España?",
+    answer:
+      "No. Los 11 países son Alemania, Arabia Saudí, Australia, Brasil, China, Estados Unidos, Francia, India, Japón, México y Reino Unido. Los europeos son Alemania, Francia y Reino Unido, y McKinsey publica las cifras de conjunto, no país por país salvo Estados Unidos."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Más de la mitad de los consumidores ya usa la IA para comprar, pero sobre todo
+para decidir qué comprar, no para pagar. Según McKinsey (unos 21.000
+consumidores de 11 países, junio de 2026), el 53% usó la IA en alguna compra
+de los últimos tres meses y el 14% de quienes la usan ya terminó una compra
+con ella. Lo usan sobre todo en ChatGPT, Gemini y asistentes parecidos, no en
+el asistente de la tienda. Para una marca, la pregunta deja de ser si la
+encuentran en Google y pasa a ser si la IA la incluye en la lista corta.
+
+</KeyTakeaway>
+
+## Qué ha medido McKinsey
+
+McKinsey publicó el 28 de octubre de 2026 *Who wins when AI does the
+shopping? New evidence on agentic commerce*, firmado por Elizabeth Silliman,
+Jack Trotter y Kelsey Robinson. Se basa en su encuesta de comercio agéntico
+a unos 21.000 consumidores de 11 países, hecha en junio de 2026: Alemania,
+Arabia Saudí, Australia, Brasil, China, Estados Unidos, Francia, India, Japón,
+México y Reino Unido. España no está en la muestra.
+
+<StatGrid label="La IA en las compras, según McKinsey">
+  <Stat value="53%" label="de los consumidores usó la IA en alguna parte de una compra en los tres meses anteriores." source="McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)" />
+  <Stat value="14%" label="de quienes usan la IA ya completó una compra con ella. En EE. UU., del 10% al 17% en un año." source="McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)" tone="cyan" />
+  <Stat value="3,2 veces" label="más probable que quien usa IA la ponga por delante de los buscadores tradicionales para decidir una compra." source="McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)" tone="warm" />
+</StatGrid>
+
+## La IA ya decide la lista corta
+
+El dato que más importa a una marca no es cuántos pagan con la IA, sino
+cuántos eligen con ella. Quien usa la IA para comprar la pone 3,2 veces más
+por delante de los buscadores tradicionales y 2,6 veces más por delante de la
+opinión de amigos y familia. Casi un tercio dice que un asistente de chat o
+búsqueda con IA fue lo que más influyó en su última compra.
+
+Las razones que dan son las de siempre en una compra, resueltas más rápido: el
+81% dice que la IA le ayuda a reducir opciones, el 80% que tiene que
+desplazarse menos por páginas y el 79% que ahorra tiempo. Casi una cuarta
+parte usa una herramienta de IA cada día.
+
+Eso cambia dónde se gana una venta. Si la IA reduce las opciones a tres o
+cuatro antes de que la persona abra una web, la marca que no entra en esa lista
+no compite en la comparación, por buena que sea su ficha de producto.
+
+## Ganan los asistentes generales, no el de la tienda
+
+Muchas tiendas han puesto su propio asistente de IA en la web. Los
+consumidores, de momento, preguntan en otro sitio:
+
+<Figure
+  label="Figura 1."
+  caption="Porcentaje de quienes usan la IA que usó cada tipo de asistente en una compra. Fuente: McKinsey, Who wins when AI does the shopping?, encuesta a unos 21.000 consumidores de 11 países (junio de 2026), base: personas que usan la IA."
+>
+
+<BarChart
+  title="Qué asistente usaron en una compra"
+  max={60}
+  rows={[
+    { label: "Asistente general de chat o búsqueda (ChatGPT, Gemini y similares)", value: 56, display: "56%", highlight: true },
+    { label: "Asistente de IA de la propia tienda", value: 27, display: "27%" }
+  ]}
+/>
+
+</Figure>
+
+Según McKinsey, el asistente de la tienda va por detrás hasta en el doble en
+casi todo el recorrido: descubrir, comparar y elegir. Solo se iguala en el
+pago (15% frente a 14%), que es justo el momento en que la persona ya está en
+la web de la tienda. El propio informe lo resume así: los compradores usan
+varias herramientas de IA, no una, así que las marcas tienen que ser visibles
+en varias plataformas y en cada mercado.
+
+## Comprar con la IA: todavía pocos, pero crece
+
+Que el 14% de quienes usan la IA haya terminado una compra con ella es poco al
+lado del 53% que la usa para elegir. Pero crece rápido: en Estados Unidos
+pasó del 10% al 17% en un año, un 70% más. Y la disposición va por delante del
+uso: en las seis categorías donde más se usa, entre el 21% y el 30% de quienes
+usan la IA dejaría que cerrara la compra, alrededor de una vez y media más de
+los que ya lo han hecho.
+
+En España todavía no se puede pagar dentro de ChatGPT ni de Gemini: los pagos
+dentro de un asistente funcionan hoy en Estados Unidos. Lo que sí pasa en
+cualquier país es lo anterior al pago, elegir con la IA, y es lo que decide a
+qué web llega el comprador. Lo contamos en
+<a href="/blog/la-ia-descubre-tu-web-vende">la IA descubre, tu web vende</a>.
+
+## Qué hacer con esto
+
+McKinsey propone seis prioridades a los responsables de marketing. Estas son
+las cuatro que una marca puede empezar a trabajar esta semana:
+
+<NumberedSection n={1} title="Entra en la lista corta de la IA">
+
+Si la IA reduce las opciones antes de que nadie abra tu web, la primera
+métrica es si te nombra cuando preguntan por lo que vendes, y a quién nombra a
+tu lado. Hay que mirarlo en varios asistentes, porque cada uno responde
+distinto.
+
+<QuickAction>Escribe las cinco preguntas que haría un cliente antes de comprarte y hazlas en ChatGPT, Gemini, Claude y Perplexity. Anota quién aparece en cada respuesta.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Mídelo siempre, no una vez">
+
+McKinsey insiste en medir de forma continua: las respuestas cambian de un día
+a otro y de un asistente a otro, así que una sola pregunta es una foto, no
+una tendencia.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Pon tu información fácil de leer para la IA">
+
+Precio, disponibilidad, condiciones y características, en texto claro y con
+datos estructurados que un agente pueda leer sin abrir un navegador. Las diez
+comprobaciones están en
+<a href="/blog/web-preparada-para-el-comercio-agentico">cómo preparar tu web
+para el comercio agéntico</a>, y cómo recorre una tienda un agente, en
+<a href="/blog/como-compra-un-agente-de-ia">cómo compra un agente de IA</a>.
+
+<QuickAction>Abre la ficha de tu producto más vendido sin JavaScript y comprueba que el precio y la disponibilidad se leen en el texto de la página.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Ponle un responsable">
+
+La última prioridad de McKinsey es organizativa: que alguien con autoridad sea
+dueño de la visibilidad en la IA. Sin dueño, la ficha la toca un equipo, los
+datos estructurados otro y nadie mira qué responde la IA.
+
+</NumberedSection>
+
+Las otras dos, proteger los datos críticos e invertir en el asistente de la
+propia web, dependen más de cada empresa. Si quieres el contexto completo,
+empieza por <a href="/blog/que-es-el-comercio-agentico">qué es el comercio
+agéntico</a>.
+
+## Cómo lo ves en GenScore
+
+**GenScore** mide la lista corta: en cada escaneo hace tus preguntas
+principales de búsqueda en ChatGPT, Gemini, Claude y, en Pro y Agencia,
+Perplexity, múltiples veces en cada motor y en distintos momentos del tiempo,
+y te dice si te nombran, en qué lugar y a qué competidores nombran a tu lado.
+
+Para la otra mitad, la web que el agente tiene que leer, Pro y Agencia
+incluyen la **Auditoría agéntica**, que se hace sola después de cada escaneo
+sobre la página donde vendes. Y si solo quieres una primera idea, el
+<a href="/comercio-agentico">comprobador gratuito de comercio agéntico</a>
+revisa cualquier tienda en unos segundos, sin cuenta.
+
+<Verdict title="La venta se decide antes de la visita">
+
+La mayoría todavía paga en la web de la tienda, pero ya elige con la IA, y lo
+hace sobre todo en asistentes generales como ChatGPT o Gemini. Para una marca,
+la pregunta urgente no es si un agente puede pagar en su web, sino si la IA la
+incluye en las tres o cuatro opciones que enseña antes del clic.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre si la IA te incluye en la lista corta"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: escaneamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te decimos si te nombran, en qué lugar y a quién nombran a tu lado."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>
