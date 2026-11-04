@@ -29963,3 +29963,23 @@ Nace de MCP-CONVERSATIONAL-QA-1 (evaluación independiente sobre 64da5ff, nivel 
 **Resultados (`tests/mcp-qa`, reproducible con `pnpm test`, 153 comprobaciones)**: sobre el código anterior 114/153 (39 fallos: 16 de contrato ChatGPT, 17 de regresiones nuevas, 6 de las originales); con los arreglos 153/153. No sustituye a nivel C: el enrutado de Claude.ai y el error real de ChatGPT no se prueban con servidor ni con simulación, y el descubrimiento automático frente al conector elegido sigue sin validar.
 
 **Pendiente / conocido**: D3 se detectó en un chat simulado (n=1, Claude simulado); hace falta repetirlo en clientes reales. Decisión de Denis: confirmación de dos pasos para `revisar_pagina` y umbral de antigüedad.
+
+## §467 BLOG-MCKINSEY-1: artículo sobre la encuesta de McKinsey de compras con IA (2026-11-04)
+
+Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó). Artículo `como-compran-los-consumidores-con-ia` (cluster `fundamentos`) sobre *Who wins when AI does the shopping? New evidence on agentic commerce* (McKinsey, 28 de octubre de 2026): encuesta de comercio agéntico a unos 21.000 consumidores de 11 países, hecha en junio de 2026.
+
+**Qué se decidió**
+- Cada cifra lleva fuente y muestra: 53% usó la IA en una compra en tres meses; 14% de quienes usan la IA completó una compra con ella (EE. UU., del 10% al 17%); 56% frente a 27% entre asistente general y asistente de la tienda (base: personas que usan la IA); 3,2 y 2,6 veces; 81/80/79% de razones; 21–30% dispuesto a dejar que la IA cierre la compra.
+- España no está en la muestra y el artículo lo dice, sin extrapolar. Sólo se dice que el pago dentro de un asistente funciona hoy en EE. UU., nunca que en España se compre dentro de ChatGPT o Gemini.
+- De las seis prioridades de McKinsey se desarrollan las cuatro que una marca puede empezar ya; las otras dos se nombran.
+- GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), Auditoría agéntica en Pro y Agencia tras cada escaneo (§333) y el comprobador gratuito de `/comercio-agentico`.
+- Figura: barras 56% frente a 27%. Portada webp generada desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda: bases y matices (2026-11-04).** Revisión de Denis en el PR #772, contrastada con la fuente primaria de McKinsey (metodología y notas de los gráficos):
+- El 53% es sobre adultos (usaron la IA para al menos una tarea de compra; Exhibit 1) y el 14% sobre personas que usan la IA (equivale al 9% de la población general). Ya no se comparan ni se dice que el 53% sea «para elegir, no para pagar»; el pago se describe como minoritario por separado.
+- El 15% frente al 14% del pago compara dos preguntas con distinta redacción («completó la compra» frente a «ayudó a completarla», nota del Exhibit 4), y el texto lo dice.
+- El 3,2 y el 2,6 se escriben como en la fuente (probabilidad de considerar la búsqueda con IA más influyente); el «casi un tercio» y las razones, sobre quienes compran con IA.
+- España: «a 4 de noviembre de 2026, la documentación pública sitúa Instant Checkout de ChatGPT y Universal Cart de Google en Gemini en Estados Unidos; esas fuentes no anuncian disponibilidad en España», sin afirmar una imposibilidad. Fuentes: centro de ayuda de OpenAI (Instant Checkout) y blog de Google (Universal Cart, 15 de octubre de 2026; novedades de compras de septiembre).
+- Mismos cambios en FAQ, cifras destacadas, metadescripción, imagen para redes y textos de LinkedIn y X.

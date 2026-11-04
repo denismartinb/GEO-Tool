@@ -920,6 +920,29 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron.",
       source: "Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)"
     }
+  },
+  {
+    slug: "como-compran-los-consumidores-con-ia",
+    title: "¿Cuántos consumidores compran ya con la IA? Lo que dice la nueva encuesta de McKinsey",
+    seoTitle: "Compras con IA: lo que dice la encuesta de McKinsey",
+    metaDescription:
+      "El 53% de los consumidores ya usa la IA para comprar, sobre todo ChatGPT o Gemini y no el asistente de la tienda, según McKinsey. Qué significa para tu marca.",
+    description:
+      "McKinsey ha preguntado a unos 21.000 consumidores de 11 países cómo usan la IA para comprar: más de la mitad ya la usa en sus compras, pagar con ella sigue siendo minoritario y los asistentes generales le sacan ventaja al de la tienda. Qué dice la encuesta y qué hacer para entrar en la lista corta de la IA.",
+    datePublished: "2026-11-04",
+    coverImage: "/blog/como-compran-los-consumidores-con-ia/cover.webp",
+    coverIcon: "users",
+    // BLOG-MCKINSEY-1 (log §467). McKinsey, Who wins when AI does the
+    // shopping? New evidence on agentic commerce (28 Oct 2026), Agentic
+    // Commerce Consumer Survey, ~21,000 consumers in 11 markets, June 2026.
+    // Spain is not in the sample; the post says so.
+    primaryKeyword: "compras con ia",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "53%",
+      label: "de los adultos usó la IA para al menos una tarea de compra en los tres meses anteriores.",
+      source: "McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)"
+    }
   }
 ];
 
