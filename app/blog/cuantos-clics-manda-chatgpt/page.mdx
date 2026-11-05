@@ -31,12 +31,12 @@ export const faqItems = [
   {
     question: "¿En qué temas manda más clics ChatGPT?",
     answer:
-      "Según el mismo estudio, cuando la navegación de alrededor es técnica (13,4% de conversaciones con clic), académica (12,1%) o de marcas de comercio electrónico (9,4%). En temas de consulta general, donde la respuesta basta, manda menos."
+      "Según el mismo estudio, cuando la navegación de alrededor es técnica (13,4% de conversaciones con clic), académica (12,1%) o de marcas de comercio electrónico (9,4%). En temas de consulta general se observan menos clics. El estudio no ve las preguntas ni qué decidió cada persona."
   },
   {
     question: "¿Puedo medir la visibilidad en ChatGPT con Google Analytics?",
     answer:
-      "Solo en parte. La analítica ve las visitas que llegan, y la mayoría de las conversaciones no acaba en ninguna. Para saber si la IA te tiene en cuenta hay que mirar las respuestas: si te nombra, en qué lugar, a quién nombra a tu lado y si cita tu web."
+      "Solo en parte. La analítica ve las visitas que llegan, y en la mayoría de las conversaciones no se observa un clic de salida atribuible. Para saber si la IA te tiene en cuenta hay que mirar las respuestas: si te nombra, en qué lugar, a quién nombra a tu lado y si cita tu web."
   },
   {
     question: "¿El estudio incluye España?",
@@ -61,7 +61,7 @@ ChatGPT responde y casi no manda visitas. Un estudio de la Universidad Bocconi
 con datos de navegación reales mide que solo el 5,2% de las conversaciones con
 ChatGPT acaba en un clic hacia otra web, frente al 31,1% de las búsquedas en
 Google. Si mides la IA solo por las visitas que ves en tu analítica, ves una
-parte pequeña de lo que pasa. Lo que decide si cuentas con ella está en la
+parte pequeña de lo que pasa. Para saber si cuentas en ella hay que mirar la
 respuesta: si te nombra, en qué lugar y a quién pone a tu lado.
 
 </KeyTakeaway>
@@ -75,18 +75,18 @@ escritorio de Comscore en Estados Unidos, página a página, de octubre de 2024 
 julio de 2025, y reconstruyen qué pasa después de cada conversación con
 ChatGPT y de cada búsqueda en Google.
 
-Cuentan como clic solo la salida a otra web. Quitan la navegación dentro de la
-propia plataforma, las páginas de resultados y el tráfico que vuelve a la
-misma web. Así comparan una conversación con una búsqueda y miran cuál de
-las dos acaba mandando a alguien fuera.
+Cuentan como clic solo un clic de salida observable y atribuible a otra web.
+Quitan la navegación dentro de la propia plataforma, las páginas de resultados
+y el tráfico que vuelve a la misma web. Así comparan una conversación con una
+búsqueda y miran cuál de las dos acaba mandando a alguien fuera. Es tráfico
+observado, no si la persona resolvió lo que buscaba: el estudio no lo mide.
 
 <StatGrid label="ChatGPT y los clics, según la Universidad Bocconi">
   <Stat value="5,2%" label="de las conversaciones con ChatGPT acabó en un clic hacia otra web. En Google, el 31,1% de las búsquedas." source="Shi, Zhu y Gu, Universidad Bocconi, datos de Comscore en EE. UU. (octubre de 2024 a julio de 2025)" />
   <Stat value="74,4%" label="de los hogares que usaron ChatGPT no hizo ni un clic hacia otra web desde él en diez meses. En Google, el 9,6%." source="Shi, Zhu y Gu, Universidad Bocconi, 56.578 hogares con ChatGPT y 291.747 con Google" tone="cyan" />
-  <Stat value="17%" label="menos búsquedas en buscadores tradicionales hacían los hogares a las veinte semanas de abrirse ChatGPT a más usuarios." source="Shi, Zhu y Gu, Universidad Bocconi, especificación principal del estudio" tone="warm" />
 </StatGrid>
 
-## ChatGPT responde, y la mayoría se queda en la respuesta
+## ChatGPT responde, y casi nunca se ve un clic de salida
 
 La diferencia es de seis veces. En Google, casi una de cada tres búsquedas
 termina en otra web. En ChatGPT, una de cada veinte conversaciones:
@@ -115,11 +115,14 @@ y vio que, con un resumen de IA en la página, se hacía clic en un resultado en
 el 8% de las visitas, frente al 15% sin resumen. En el enlace que aparece
 dentro del propio resumen se hacía clic en el 1% de las visitas.
 
-El estudio también mide qué pasa con la búsqueda. Cuando OpenAI abrió ChatGPT
-a más usuarios, los hogares afectados hicieron un 9,4% menos de búsquedas en
-buscadores tradicionales, y a las veinte semanas un 17% menos. La caída se
-concentra en las búsquedas de consulta, las que buscan una respuesta y no una
-web concreta.
+El estudio también mide qué pasa con la búsqueda. Aprovecha que OpenAI abrió
+ChatGPT Search por fases entre octubre de 2024 y febrero de 2025, y compara los
+hogares que pasaron a tenerlo con hogares parecidos que no usaban ChatGPT ni
+Claude. De media, los primeros hicieron un 9,4% menos de búsquedas en Google,
+Bing y Yahoo. Los autores avisan de que comparar con quien no usa la IA puede
+arrastrar algo de selección, y la caída se concentra en las búsquedas
+informativas. Son datos de escritorio en Estados Unidos, de octubre de 2024 a
+julio de 2025.
 
 ## Dónde sí hay clics: temas técnicos, académicos y de compra
 
@@ -144,13 +147,11 @@ conversación. Con esa aproximación, los clics suben en tres contextos:
 
 </Figure>
 
-Donde menos clics hay es en las consultas de referencia y de información
-general: ahí la respuesta basta.
-Para una tienda o una marca que vende, la lectura es doble. Hay más clics que
-en la media, porque quien compara productos acaba queriendo ver la ficha. Pero
-incluso ahí más de nueve de cada diez conversaciones se cierran sin visitar
-ninguna web, así que la elección de qué marcas entran en la respuesta ya se ha
-hecho antes del clic.
+Donde menos clics se observan es en las consultas de referencia y de
+información general. Los clics son más frecuentes en contextos de comercio
+electrónico, pero el estudio no observa las preguntas ni demuestra qué decisión
+tomó cada persona. Lo que sí mide es que incluso ahí, en más de nueve de cada
+diez conversaciones, no se observó un clic de salida atribuible.
 
 ## Por qué las visitas no bastan para medir la IA
 
@@ -163,8 +164,8 @@ consecuencia, no la causa.
 
 Por eso las visitas que llegan desde la IA convierten de forma tan distinta
 según el estudio que leas (<a href="/blog/convierte-mejor-el-trafico-de-la-ia">lo
-repasamos aquí</a>): quien hace clic ya ha comparado dentro de la respuesta. La
-métrica que falta está antes del clic, en la propia respuesta.
+repasamos aquí</a>): la visita es solo la parte que se ve. La métrica que
+falta está antes del clic, en la propia respuesta.
 
 ## Qué medir en su lugar
 
@@ -182,7 +183,8 @@ respuestas hacen falta para fiarte de un número, están en
 <NumberedSection n={2} title="En qué lugar y a quién nombra a tu lado">
 
 Salir el quinto en una lista de cinco no es lo mismo que salir el primero, y
-en una respuesta de la que casi nadie sale esa diferencia pesa más que en Google.
+con tan pocos clics de salida observables, el lugar que ocupas en la respuesta
+es de lo poco que puedes medir de ella.
 Mira también qué competidores aparecen contigo: son los que de verdad te
 disputan la venta en la IA, que no siempre son los de Google.
 
@@ -221,12 +223,13 @@ Si quieres una primera idea sin cuenta, el
 <a href="/gratis/aparece-mi-marca-en-chatgpt">comprobador gratuito</a> te dice
 si ChatGPT nombra tu marca para una pregunta.
 
-<Verdict title="La IA decide antes del clic">
+<Verdict title="Las visitas son la parte pequeña">
 
 Una de cada veinte conversaciones con ChatGPT acaba en otra web, según datos
-de navegación de Estados Unidos. El resto se resuelve dentro de la respuesta.
-Medir la IA solo por las visitas es mirar la parte pequeña: lo que decide si
-una marca cuenta es si la respuesta la nombra.
+de navegación de escritorio de Estados Unidos (octubre de 2024 a julio de
+2025). En el resto no se observó un clic de salida atribuible. Medir la IA solo
+por las visitas es mirar la parte pequeña: hay que mirar también si la
+respuesta nombra a la marca.
 
 </Verdict>
 

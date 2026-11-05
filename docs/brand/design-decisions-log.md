@@ -29996,3 +29996,8 @@ Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `m
 - Figuras: barras 31,1% frente a 5,2% y clics por tema. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda (2026-11-05, revisión de Denis en el PR #773).** Tres afirmaciones iban más allá del estudio y se corrigen:
+- Que no se observe un clic no quiere decir que la tarea se resolviera (§4.1 del estudio: miden tráfico observable, no tareas). El veredicto pasa a «En el resto no se observó un clic de salida atribuible» y se retiran «ahí la respuesta basta» y «se resuelve dentro de la respuesta» del cuerpo, el FAQ y el veredicto.
+- El estudio no ve las preguntas (§4.3: el tema sale de la navegación de ±15 minutos), así que no puede afirmar que quien hace clic ya comparó dentro de la respuesta, ni que quien compara productos quiere ver la ficha, ni que la posición pese más que en Google. Se dice que los clics son más frecuentes en contextos de comercio electrónico y que el estudio no observa qué decidió cada persona.
+- El 17,0% es una media desde la semana veinte en la especificación principal, y la comparación de diciembre entre usuarios de ChatGPT da un 8,2%, con selección residual reconocida por los autores. Se retira la tarjeta del 17% y se queda el 9,4% medio con su diseño: apertura por fases de ChatGPT Search (octubre de 2024 a febrero de 2025) frente a hogares parecidos sin ChatGPT ni Claude, con el aviso de selección y los límites al lado.
