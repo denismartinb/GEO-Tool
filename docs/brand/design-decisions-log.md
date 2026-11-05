@@ -29983,3 +29983,22 @@ Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó).
 - El 3,2 y el 2,6 se escriben como en la fuente (probabilidad de considerar la búsqueda con IA más influyente); el «casi un tercio» y las razones, sobre quienes compran con IA.
 - España: «a 4 de noviembre de 2026, la documentación pública sitúa Instant Checkout de ChatGPT y Universal Cart de Google en Gemini en Estados Unidos; esas fuentes no anuncian disponibilidad en España», sin afirmar una imposibilidad. Fuentes: centro de ayuda de OpenAI (Instant Checkout) y blog de Google (Universal Cart, 15 de octubre de 2026; novedades de compras de septiembre).
 - Mismos cambios en FAQ, cifras destacadas, metadescripción, imagen para redes y textos de LinkedIn y X.
+
+## §468 BLOG-CLICS-1: artículo sobre cuántos clics manda ChatGPT (2026-11-05)
+
+Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `medicion`) sobre *Answering Without Referring: How AI Search Rewrites the Web's Economic Bargain* (Shi, Zhu y Gu, Universidad Bocconi, arXiv:2607.07652, julio de 2026): navegación de escritorio de Comscore en EE. UU., de octubre de 2024 a julio de 2025.
+
+**Qué se decidió**
+- Cada cifra sale del texto del estudio, con su base: 5,2% de conversaciones con ChatGPT con un clic «limpio» hacia otra web frente al 31,1% de búsquedas en Google; 74,4% de 56.578 hogares con ChatGPT sin ningún clic de salida atribuible en la medición de escritorio de diez meses frente al 9,6% de 291.747 con Google; 9,4% menos búsquedas tradicionales tras abrirse el acceso y 17,0% a las veinte semanas (especificación principal); clics por contexto 13,4% técnico, 12,1% académico y 9,4% marcas de comercio electrónico. Que esos contextos se deducen de la navegación de alrededor, no de la pregunta, se dice en el texto y en la figura.
+- Se suma Pew Research Center (julio de 2025, 900 adultos de EE. UU., navegación de marzo de 2025): 8% frente a 15% de clics con y sin resumen de IA, 1% en el enlace del resumen.
+- El estudio es de EE. UU. y escritorio, y el artículo lo dice (también en el FAQ). No se usa la cifra de robots.txt del anexo, que no se pudo leer.
+- GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), menciones, posición, competidores y páginas citadas; «Posición en Google» con Search Console; comprobador gratuito de `/gratis/aparece-mi-marca-en-chatgpt`.
+- Figuras: barras 31,1% frente a 5,2% y clics por tema. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda (2026-11-05, revisión de Denis en el PR #773).** Tres afirmaciones iban más allá del estudio y se corrigen:
+- Que no se observe un clic no quiere decir que la tarea se resolviera (§4.1 del estudio: miden tráfico observable, no tareas). El veredicto pasa a «En el resto no se observó un clic de salida atribuible» y se retiran «ahí la respuesta basta» y «se resuelve dentro de la respuesta» del cuerpo, el FAQ y el veredicto.
+- El estudio no ve las preguntas (§4.3: el tema sale de la navegación de ±15 minutos), así que no puede afirmar que quien hace clic ya comparó dentro de la respuesta, ni que quien compara productos quiere ver la ficha, ni que la posición pese más que en Google. Se dice que los clics son más frecuentes en contextos de comercio electrónico y que el estudio no observa qué decidió cada persona.
+- El 17,0% es una media desde la semana veinte en la especificación principal, y la comparación de diciembre entre usuarios de ChatGPT da un 8,2%, con selección residual reconocida por los autores. Se retira la tarjeta del 17% y se queda el 9,4% medio con su diseño: apertura por fases de ChatGPT Search (octubre de 2024 a febrero de 2025) frente a hogares parecidos sin ChatGPT ni Claude, con el aviso de selección y los límites al lado.
+- Segunda revisión (a4c14a8b): la tarjeta del 74,4% dice «no registró ningún clic de salida atribuible en la medición de escritorio durante esos diez meses», no «no hizo ni un clic». «Cómo lo ves en GenScore» deja de atribuir «distintos momentos del tiempo» a cada escaneo: GenScore hace las preguntas en los motores del plan y guarda las respuestas, y la evolución se sigue repitiendo escaneos comparables.
