@@ -9689,8 +9689,9 @@ select.set-field {
 .art-hero-shot { margin-top: 32px; }
 /* EXT-LAUNCH-1 (log §395): a 2x capture of a narrow panel, never stretched past its own width. */
 .art-shot { display: block; width: 100%; max-width: 400px; height: auto; margin: 0 auto; border-radius: 12px; box-shadow: 0 12px 32px -14px rgba(15, 28, 51, .35); }
-/* WP-LAUNCH-1 (log §469): a landscape wp-admin screenshot needs more than the extension panel's 400px. */
-.art-shot.art-shot-wide { max-width: 640px; }
+/* WP-LAUNCH-1 (log §469): full-screen wp-admin captures read at the column width, not the extension panel's 400px. */
+.art-shot.art-shot-wide { max-width: none; border-radius: 8px; }
+.art-shot.art-shot-tall { max-width: 460px; }
 .art-hero-shot img { display: block; width: 100%; height: auto; }
 .art-hero-logos { margin-top: 36px; display: flex; align-items: flex-start; flex-wrap: wrap; gap: 18px 16px; }
 .art-hero-logo-pair { display: flex; align-items: flex-start; gap: 16px; }

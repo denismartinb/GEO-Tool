@@ -97,11 +97,12 @@ const MAX_FILE_BYTES = 320 * 1024;
  */
 /**
  * WP-LAUNCH-1 (2026-11-05, log §469): el margen estaba en ~93 KB y el artículo
- * del plugin de WordPress suma portada, cabecera y tres capturas de la ficha
- * de WordPress.org en WebP (~232 KB). Se suben 256 KiB: sitio para este
- * artículo y unas seis portadas más de la rutina.
+ * del plugin de WordPress suma portada, cabecera y siete capturas reales del
+ * plugin a 2x, WebP a calidad 80-82 (~570 KB entre todas). El fundador pidió
+ * las mejores ilustraciones de los dos borradores (PR #751 y #774). Se suben
+ * 640 KiB: sitio para este artículo y unas cinco portadas más de la rutina.
  */
-const MAX_TOTAL_BYTES = 3152 * 1024;
+const MAX_TOTAL_BYTES = 3536 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).

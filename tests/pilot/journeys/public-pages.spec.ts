@@ -104,7 +104,7 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // BLOG-MCKINSEY-1 (2026-11-04, log §467).
   "como-compran-los-consumidores-con-ia": "fundamentos",
   // WP-LAUNCH-1 (2026-11-05, log §469).
-  "plugin-de-wordpress-de-genscore": "playbooks"
+  "genscore-para-wordpress": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
