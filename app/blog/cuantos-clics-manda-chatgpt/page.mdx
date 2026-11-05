@@ -1,0 +1,248 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("cuantos-clics-manda-chatgpt");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cuántos clics manda ChatGPT a otras webs?",
+    answer:
+      "Pocos. Un estudio de la Universidad Bocconi con datos de navegación de escritorio de Comscore en Estados Unidos (octubre de 2024 a julio de 2025) mide que solo el 5,2% de las conversaciones con ChatGPT acaba en un clic hacia otra web, frente al 31,1% de las búsquedas en Google."
+  },
+  {
+    question: "¿En qué temas manda más clics ChatGPT?",
+    answer:
+      "Según el mismo estudio, cuando la navegación de alrededor es técnica (13,4% de conversaciones con clic), académica (12,1%) o de marcas de comercio electrónico (9,4%). En temas de consulta general, donde la respuesta basta, manda menos."
+  },
+  {
+    question: "¿Puedo medir la visibilidad en ChatGPT con Google Analytics?",
+    answer:
+      "Solo en parte. La analítica ve las visitas que llegan, y la mayoría de las conversaciones no acaba en ninguna. Para saber si la IA te tiene en cuenta hay que mirar las respuestas: si te nombra, en qué lugar, a quién nombra a tu lado y si cita tu web."
+  },
+  {
+    question: "¿El estudio incluye España?",
+    answer:
+      "No. Mide la navegación de escritorio en Estados Unidos, sin el móvil. Los propios autores avisan de que sus resultados no se extienden a otros países ni al móvil."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+ChatGPT responde y casi no manda visitas. Un estudio de la Universidad Bocconi
+con datos de navegación reales mide que solo el 5,2% de las conversaciones con
+ChatGPT acaba en un clic hacia otra web, frente al 31,1% de las búsquedas en
+Google. Si mides la IA solo por las visitas que ves en tu analítica, ves una
+parte pequeña de lo que pasa. Lo que decide si cuentas con ella está en la
+respuesta: si te nombra, en qué lugar y a quién pone a tu lado.
+
+</KeyTakeaway>
+
+## Qué ha medido el estudio
+
+Qiaoni Shi, Kai Zhu y Kai Gu, de la Universidad Bocconi (Milán), publicaron en
+julio de 2026 *Answering Without Referring: How AI Search Rewrites the Web's
+Economic Bargain*. No es una encuesta: usan el registro de navegación de
+escritorio de Comscore en Estados Unidos, página a página, de octubre de 2024 a
+julio de 2025, y reconstruyen qué pasa después de cada conversación con
+ChatGPT y de cada búsqueda en Google.
+
+Cuentan como clic solo la salida a otra web. Quitan la navegación dentro de la
+propia plataforma, las páginas de resultados y el tráfico que vuelve a la
+misma web. Así comparan una conversación con una búsqueda y miran cuál de
+las dos acaba mandando a alguien fuera.
+
+<StatGrid label="ChatGPT y los clics, según la Universidad Bocconi">
+  <Stat value="5,2%" label="de las conversaciones con ChatGPT acabó en un clic hacia otra web. En Google, el 31,1% de las búsquedas." source="Shi, Zhu y Gu, Universidad Bocconi, datos de Comscore en EE. UU. (octubre de 2024 a julio de 2025)" />
+  <Stat value="74,4%" label="de los hogares que usaron ChatGPT no hizo ni un clic hacia otra web desde él en diez meses. En Google, el 9,6%." source="Shi, Zhu y Gu, Universidad Bocconi, 56.578 hogares con ChatGPT y 291.747 con Google" tone="cyan" />
+  <Stat value="17%" label="menos búsquedas en buscadores tradicionales hacían los hogares a las veinte semanas de abrirse ChatGPT a más usuarios." source="Shi, Zhu y Gu, Universidad Bocconi, especificación principal del estudio" tone="warm" />
+</StatGrid>
+
+## ChatGPT responde, y la mayoría se queda en la respuesta
+
+La diferencia es de seis veces. En Google, casi una de cada tres búsquedas
+termina en otra web. En ChatGPT, una de cada veinte conversaciones:
+
+<Figure
+  label="Figura 1."
+  caption="Porcentaje de conversaciones con ChatGPT y de búsquedas en Google que acaban en al menos un clic hacia otra web. Fuente: Shi, Zhu y Gu, Universidad Bocconi, Answering Without Referring (julio de 2026), navegación de escritorio de Comscore en Estados Unidos, de octubre de 2024 a julio de 2025."
+>
+
+<BarChart
+  title="Cuántas sesiones acaban en otra web"
+  max={35}
+  rows={[
+    { label: "Búsquedas en Google", value: 31.1, display: "31,1%" },
+    { label: "Conversaciones con ChatGPT", value: 5.2, display: "5,2%", highlight: true }
+  ]}
+/>
+
+</Figure>
+
+No es un dato aislado. Los autores recogen que las estimaciones públicas
+anteriores situaban los clics de salida de ChatGPT entre el 3% y el 7%
+aproximadamente. Y en Google pasa algo parecido cuando responde la IA: el Pew
+Research Center analizó en 2025 la navegación de 900 adultos de Estados Unidos
+y vio que, con un resumen de IA en la página, se hacía clic en un resultado en
+el 8% de las visitas, frente al 15% sin resumen. En el enlace que aparece
+dentro del propio resumen se hacía clic en el 1% de las visitas.
+
+El estudio también mide qué pasa con la búsqueda. Cuando OpenAI abrió ChatGPT
+a más usuarios, los hogares afectados hicieron un 9,4% menos de búsquedas en
+buscadores tradicionales, y a las veinte semanas un 17% menos. La caída se
+concentra en las búsquedas de consulta, las que buscan una respuesta y no una
+web concreta.
+
+## Dónde sí hay clics: temas técnicos, académicos y de compra
+
+ChatGPT no manda igual de poco en todo. Los autores no leen las preguntas:
+deducen el tema por lo que la persona navega justo antes y justo después de la
+conversación. Con esa aproximación, los clics suben en tres contextos:
+
+<Figure
+  label="Figura 2."
+  caption="Porcentaje de conversaciones con ChatGPT que acaban en un clic hacia otra web, según el tema de la navegación de alrededor. Fuente: Shi, Zhu y Gu, Universidad Bocconi, Answering Without Referring (julio de 2026). El tema se deduce de la navegación en los 15 minutos anteriores y posteriores, no del texto de la pregunta."
+>
+
+<BarChart
+  title="Conversaciones con clic, por tema"
+  max={15}
+  rows={[
+    { label: "Temas técnicos y de desarrollo", value: 13.4, display: "13,4%" },
+    { label: "Investigación académica", value: 12.1, display: "12,1%" },
+    { label: "Marcas de comercio electrónico", value: 9.4, display: "9,4%", highlight: true }
+  ]}
+/>
+
+</Figure>
+
+Donde menos clics hay es en las consultas de referencia y de información
+general: ahí la respuesta basta.
+Para una tienda o una marca que vende, la lectura es doble. Hay más clics que
+en la media, porque quien compara productos acaba queriendo ver la ficha. Pero
+incluso ahí más de nueve de cada diez conversaciones se cierran sin visitar
+ninguna web, así que la elección de qué marcas entran en la respuesta ya se ha
+hecho antes del clic.
+
+## Por qué las visitas no bastan para medir la IA
+
+Tu analítica solo ve lo que llega. Si ChatGPT te nombra en muchas respuestas
+y solo una pequeña parte acaba en clic, ves esas visitas y nada del resto de
+respuestas. Si te deja fuera, no ves nada, y tampoco sabes por qué. Lo
+contamos con más detalle en <a href="/blog/como-medir-trafico-chatgpt-ga4">cómo
+medir el tráfico de ChatGPT en GA4</a>: el canal de IA ayuda, pero mide la
+consecuencia, no la causa.
+
+Por eso las visitas que llegan desde la IA convierten de forma tan distinta
+según el estudio que leas (<a href="/blog/convierte-mejor-el-trafico-de-la-ia">lo
+repasamos aquí</a>): quien hace clic ya ha comparado dentro de la respuesta. La
+métrica que falta está antes del clic, en la propia respuesta.
+
+## Qué medir en su lugar
+
+<NumberedSection n={1} title="Si te nombra cuando preguntan por lo que vendes">
+
+Es la primera métrica: de las preguntas que haría un cliente antes de
+comprarte, en cuántas respuestas apareces. Las métricas útiles, y cuántas
+respuestas hacen falta para fiarte de un número, están en
+<a href="/blog/metricas-geo-que-medir">qué métricas GEO medir</a>.
+
+<QuickAction>Escribe las cinco preguntas que haría un cliente antes de comprarte y hazlas en ChatGPT, Gemini, Claude y Perplexity. Anota si apareces y en qué lugar.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="En qué lugar y a quién nombra a tu lado">
+
+Salir el quinto en una lista de cinco no es lo mismo que salir el primero, y
+en una respuesta de la que casi nadie sale esa diferencia pesa más que en Google.
+Mira también qué competidores aparecen contigo: son los que de verdad te
+disputan la venta en la IA, que no siempre son los de Google.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Si cita tu web, y qué dice de ti">
+
+Cuando la respuesta enlaza una fuente, que sea tu página es lo que puede traer
+el clic. Y si te nombra con datos equivocados, lo que lee el cliente es eso,
+sin pasar por tu web. Cómo detectarlo y corregirlo, en
+<a href="/blog/chatgpt-informacion-incorrecta-de-tu-empresa">qué hacer si ChatGPT
+da información incorrecta de tu empresa</a>.
+
+<QuickAction>Abre la página que más quieres que reciba el clic y comprueba que responde en sus primeras líneas a la pregunta que la trae.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Y las visitas, como señal de lo que llega">
+
+La analítica sigue sirviendo: dice qué páginas reciben a quien sí hace clic y
+si esa visita compra. Úsala para cuidar esas páginas, no como la medida de
+cuánto pesa la IA en tu negocio.
+
+</NumberedSection>
+
+## Cómo lo ves en GenScore
+
+**GenScore** mide la parte que tu analítica no ve: en cada escaneo hace tus
+preguntas principales de búsqueda en ChatGPT, Gemini, Claude y, en Pro y
+Agencia, Perplexity, múltiples veces en cada motor y en distintos momentos del
+tiempo, y te dice si te nombran, en qué lugar, a qué competidores nombran a tu
+lado y qué páginas citan. Si conectas Search Console, **Posición en Google**
+pone al lado tus clics e impresiones de Google.
+
+Si quieres una primera idea sin cuenta, el
+<a href="/gratis/aparece-mi-marca-en-chatgpt">comprobador gratuito</a> te dice
+si ChatGPT nombra tu marca para una pregunta.
+
+<Verdict title="La IA decide antes del clic">
+
+Una de cada veinte conversaciones con ChatGPT acaba en otra web, según datos
+de navegación de Estados Unidos. El resto se resuelve dentro de la respuesta.
+Medir la IA solo por las visitas es mirar la parte pequeña: lo que decide si
+una marca cuenta es si la respuesta la nombra.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mide si la IA te nombra, no solo si te visitan"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: escaneamos tus preguntas principales de búsqueda en ChatGPT, Gemini, Claude y Perplexity y te decimos si te nombran, en qué lugar y a quién nombran a tu lado."
+/>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>

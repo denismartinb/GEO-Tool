@@ -29983,3 +29983,16 @@ Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó).
 - El 3,2 y el 2,6 se escriben como en la fuente (probabilidad de considerar la búsqueda con IA más influyente); el «casi un tercio» y las razones, sobre quienes compran con IA.
 - España: «a 4 de noviembre de 2026, la documentación pública sitúa Instant Checkout de ChatGPT y Universal Cart de Google en Gemini en Estados Unidos; esas fuentes no anuncian disponibilidad en España», sin afirmar una imposibilidad. Fuentes: centro de ayuda de OpenAI (Instant Checkout) y blog de Google (Universal Cart, 15 de octubre de 2026; novedades de compras de septiembre).
 - Mismos cambios en FAQ, cifras destacadas, metadescripción, imagen para redes y textos de LinkedIn y X.
+
+## §468 BLOG-CLICS-1: artículo sobre cuántos clics manda ChatGPT (2026-11-05)
+
+Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `medicion`) sobre *Answering Without Referring: How AI Search Rewrites the Web's Economic Bargain* (Shi, Zhu y Gu, Universidad Bocconi, arXiv:2607.07652, julio de 2026): navegación de escritorio de Comscore en EE. UU., de octubre de 2024 a julio de 2025.
+
+**Qué se decidió**
+- Cada cifra sale del texto del estudio, con su base: 5,2% de conversaciones con ChatGPT con un clic «limpio» hacia otra web frente al 31,1% de búsquedas en Google; 74,4% de 56.578 hogares con ChatGPT sin ningún clic en diez meses frente al 9,6% de 291.747 con Google; 9,4% menos búsquedas tradicionales tras abrirse el acceso y 17,0% a las veinte semanas (especificación principal); clics por contexto 13,4% técnico, 12,1% académico y 9,4% marcas de comercio electrónico. Que esos contextos se deducen de la navegación de alrededor, no de la pregunta, se dice en el texto y en la figura.
+- Se suma Pew Research Center (julio de 2025, 900 adultos de EE. UU., navegación de marzo de 2025): 8% frente a 15% de clics con y sin resumen de IA, 1% en el enlace del resumen.
+- El estudio es de EE. UU. y escritorio, y el artículo lo dice (también en el FAQ). No se usa la cifra de robots.txt del anexo, que no se pudo leer.
+- GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), menciones, posición, competidores y páginas citadas; «Posición en Google» con Search Console; comprobador gratuito de `/gratis/aparece-mi-marca-en-chatgpt`.
+- Figuras: barras 31,1% frente a 5,2% y clics por tema. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.

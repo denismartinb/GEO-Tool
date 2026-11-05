@@ -943,6 +943,31 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de los adultos usó la IA para al menos una tarea de compra en los tres meses anteriores.",
       source: "McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)"
     }
+  },
+  {
+    slug: "cuantos-clics-manda-chatgpt",
+    title: "¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales",
+    seoTitle: "¿Cuántos clics manda ChatGPT? Lo que mide un estudio",
+    metaDescription:
+      "Solo el 5,2% de las conversaciones con ChatGPT acaba en un clic a otra web, frente al 31,1% de las búsquedas en Google. Qué significa y qué medir en su lugar.",
+    description:
+      "Un estudio de la Universidad Bocconi con datos de navegación de escritorio de Comscore en EE. UU. mide que solo el 5,2% de las conversaciones con ChatGPT acaba en un clic hacia otra web, frente al 31,1% de las búsquedas en Google. Qué significa para tu marca, en qué temas sí hay clics y por qué hay que medir si la IA te nombra, no solo las visitas.",
+    datePublished: "2026-11-05",
+    coverImage: "/blog/cuantos-clics-manda-chatgpt/cover.webp",
+    coverIcon: "trendUp",
+    // BLOG-CLICS-1 (log §468). Shi, Zhu y Gu (Universidad Bocconi), Answering
+    // Without Referring: How AI Search Rewrites the Web's Economic Bargain,
+    // arXiv:2607.07652 (julio de 2026), Comscore U.S. desktop clickstream
+    // (octubre de 2024 a julio de 2025); Pew Research Center, Google users are
+    // less likely to click on links when an AI summary appears (22-07-2025),
+    // 900 adultos de EE. UU., navegación de marzo de 2025.
+    primaryKeyword: "clics de chatgpt",
+    cluster: "medicion",
+    heroStat: {
+      value: "5,2%",
+      label: "de las conversaciones con ChatGPT acabó en un clic hacia otra web. En Google, el 31,1% de las búsquedas.",
+      source: "Universidad Bocconi, navegación de escritorio de Comscore en EE. UU. (octubre de 2024 a julio de 2025)"
+    }
   }
 ];
 

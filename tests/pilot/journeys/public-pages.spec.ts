@@ -102,7 +102,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // BLOG-SCHEMA-1 (2026-11-02, log §433).
   "datos-estructurados-y-citas-de-la-ia": "playbooks",
   // BLOG-MCKINSEY-1 (2026-11-04, log §467).
-  "como-compran-los-consumidores-con-ia": "fundamentos"
+  "como-compran-los-consumidores-con-ia": "fundamentos",
+  // BLOG-CLICS-1 (2026-11-05, log §468).
+  "cuantos-clics-manda-chatgpt": "medicion"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
