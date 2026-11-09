@@ -122,6 +122,8 @@ const BLOG_SLUGS = [
   "datos-estructurados-y-citas-de-la-ia",
   // BLOG-MCKINSEY-1 (2026-11-04, log §467).
   "como-compran-los-consumidores-con-ia",
+  // WP-LAUNCH-1 (2026-11-05, log §469).
+  "genscore-para-wordpress",
   // BLOG-CLICS-1 (2026-11-05, log §468).
   "cuantos-clics-manda-chatgpt"
 ];
