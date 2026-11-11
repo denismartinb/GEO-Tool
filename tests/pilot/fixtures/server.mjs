@@ -125,7 +125,9 @@ const BLOG_SLUGS = [
   // WP-LAUNCH-1 (2026-11-05, log §469).
   "genscore-para-wordpress",
   // BLOG-CLICS-1 (2026-11-05, log §468).
-  "cuantos-clics-manda-chatgpt"
+  "cuantos-clics-manda-chatgpt",
+  // BLOG-MENCIONES-1 (2026-11-11, log §470).
+  "menciones-de-marca-o-enlaces-para-la-ia"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render

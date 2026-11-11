@@ -106,7 +106,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // WP-LAUNCH-1 (2026-11-05, log §469).
   "genscore-para-wordpress": "playbooks",
   // BLOG-CLICS-1 (2026-11-05, log §468).
-  "cuantos-clics-manda-chatgpt": "medicion"
+  "cuantos-clics-manda-chatgpt": "medicion",
+  // BLOG-MENCIONES-1 (2026-11-11, log §470).
+  "menciones-de-marca-o-enlaces-para-la-ia": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
