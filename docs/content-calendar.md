@@ -191,7 +191,8 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | R1 | Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío) (RECS-GUIDES-1, log §416; guía de las tarjetas de comparativa) — slug `como-hacer-una-comparativa-que-la-ia-cite` | `playbooks` | En PR (2026-11-01) | #725 |
 | A8 | ¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios (BLOG-SCHEMA-1, log §433) — slug `datos-estructurados-y-citas-de-la-ia` | `playbooks` | ✅ Publicado (2026-11-02) | #744 |
 | A9 | ¿Cuántos consumidores compran ya con la IA? Lo que dice la nueva encuesta de McKinsey (BLOG-MCKINSEY-1, log §467; pasada de recuperación del 03) — slug `como-compran-los-consumidores-con-ia` | `fundamentos` | ✅ Publicado (2026-11-04) | #772 |
-| A10 | ¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales (BLOG-CLICS-1, log §468) — slug `cuantos-clics-manda-chatgpt` | `medicion` | En PR (2026-11-05) | — |
+| A10 | ¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales (BLOG-CLICS-1, log §468) — slug `cuantos-clics-manda-chatgpt` | `medicion` | ✅ Publicado (2026-11-05) | #773 |
+| A11 | ¿Qué pesa más para que la IA te nombre: los enlaces o las menciones de tu marca? (BLOG-MENCIONES-1, log §470) — slug `menciones-de-marca-o-enlaces-para-la-ia` | `playbooks` | En PR (2026-11-11) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,

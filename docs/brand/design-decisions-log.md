@@ -30012,3 +30012,16 @@ Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `m
 - `/privacidad` no tiene apartado del plugin: el artículo dice que con la cuenta conectada se aplica la política de GenScore, sin prometer más detalle.
 
 **Pendiente.** Cerrar el PR #751 sin merge cuando Denis lo confirme (su §434 chocaba además con EXT-PANEL-COHERENCE-1). La línea «¿Tu web es WordPress?» de la maqueta de §426 quedaba a la espera de la ficha pública: ya se puede publicar, en un PR aparte. `/privacidad` podría ganar un apartado del plugin como el de la extensión. Textos para redes en la carpeta del proyecto (`genscore/contenido/plugin-wordpress-redes.md`), sólo se publican con el sí de Denis. No retira ningún camino de recuperación.
+
+## §470 BLOG-MENCIONES-1: artículo sobre menciones de marca frente a enlaces en la IA (2026-11-11)
+
+Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia` (cluster `playbooks`) sobre qué señales van de la mano de que la IA nombre a una marca.
+
+**Qué se decidió**
+- Fuentes, cada una con su muestra en el texto: Ahrefs, *An Analysis of AI Overview Brand Visibility Factors* (Louise Linehan, mayo de 2025) y *Top Brand Visibility Factors in ChatGPT, AI Mode, and AI Overviews* (diciembre de 2025), 75.000 marcas con Domain Rating superior a 40 y búsqueda principal de al menos 800 al mes, correlaciones de Spearman con Brand Radar; Seer Interactive, *What Drives Brand Mentions in AI Answers?* (enero de 2025), 10.000 preguntas de finanzas y software por la API de OpenAI.
+- Cifras usadas: menciones en la web 0,664, enlaces con el nombre de la marca 0,527, búsquedas de marca 0,392, autoridad 0,326, dominios que enlazan 0,295 y enlaces 0,218 (AI Overviews); YouTube ~0,737 en los tres; menciones en la web 0,709 en el Modo IA; en ChatGPT búsquedas de marca 0,352 y autoridad 0,266; coincidencia ChatGPT y AI Overviews 0,749; Seer, primera página de Google ~0,65 y enlaces débiles o neutros. No se usan las cifras por motor de las menciones en la web de ChatGPT, porque el texto de Ahrefs no dice cuál de 0,664 y 0,656 es cuál.
+- Se dice en el texto que es correlación y no causa, que la muestra y la herramienta son de Ahrefs y que sirve el orden de las señales, no el decimal. AI Overviews y Modo IA sólo en el cuerpo; título, descripción y CTA nombran ChatGPT o «la IA».
+- GenScore sólo afirma lo que hace: preguntas en los motores del plan, mención, lugar y competidores, y «Páginas citadas» con las webs de terceros que la IA cita donde la marca no aparece (`.claude/rules/citations.md`); comprobador gratuito.
+- Figura: barras de correlación por señal. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.

@@ -995,6 +995,31 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de las conversaciones con ChatGPT acabó en un clic hacia otra web. En Google, el 31,1% de las búsquedas.",
       source: "Universidad Bocconi, navegación de escritorio de Comscore en EE. UU. (octubre de 2024 a julio de 2025)"
     }
+  },
+  {
+    slug: "menciones-de-marca-o-enlaces-para-la-ia",
+    title: "¿Qué pesa más para que la IA te nombre: los enlaces o las menciones de tu marca?",
+    seoTitle: "Menciones de marca o enlaces: qué pesa más en la IA",
+    metaDescription:
+      "En 75.000 marcas, las menciones en otras webs y en YouTube van de la mano de salir en ChatGPT mucho más que los enlaces. Qué dicen los datos y qué hacer.",
+    description:
+      "Dos estudios de Ahrefs sobre 75.000 marcas y uno de Seer Interactive comparan qué señales van de la mano de que la IA nombre a una marca. Las menciones en otras webs y en YouTube pesan mucho más que los enlaces. Qué significa, qué no demuestra y qué hacer para que hablen de ti donde la IA lee.",
+    datePublished: "2026-11-11",
+    coverImage: "/blog/menciones-de-marca-o-enlaces-para-la-ia/cover.webp",
+    coverIcon: "trendUp",
+    // BLOG-MENCIONES-1 (log §470). Ahrefs, An Analysis of AI Overview Brand
+    // Visibility Factors (Louise Linehan, 26-05-2025) and Top Brand Visibility
+    // Factors in ChatGPT, AI Mode, and AI Overviews (12-12-2025), 75.000 brands
+    // with DR > 40, Spearman correlations from Brand Radar; Seer Interactive,
+    // What Drives Brand Mentions in AI Answers? (07-01-2025), 10.000 finance
+    // and SaaS questions through the OpenAI API.
+    primaryKeyword: "menciones de marca ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "0,737",
+      label: "de correlación entre las menciones de una marca en YouTube y las veces que la nombra la IA. Los enlaces, una correlación muy débil.",
+      source: "Ahrefs, 75.000 marcas en ChatGPT y la IA de Google (diciembre de 2025)"
+    }
   }
 ];
 
