@@ -31,7 +31,7 @@ En el artículo, los dos estudios con sus límites 👇
 El artículo completo: https://www.genscore.es/blog/menciones-de-marca-o-enlaces-para-la-ia?utm_source=linkedin&utm_medium=social&utm_campaign=menciones-de-marca-o-enlaces-para-la-ia
 
 ### Línea de Denis para compartir
-Para la IA, que hablen de ti pesa más en los datos que acumular enlaces.
+En los datos, que hablen de ti se asocia más con salir en la IA que acumular enlaces.
 
 ## X (hilo)
 
