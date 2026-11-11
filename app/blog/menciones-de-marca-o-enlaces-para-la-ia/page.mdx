@@ -24,14 +24,14 @@ export const metadata = blogPostMetadata(post);
 
 export const faqItems = [
   {
-    question: "¿Qué pesa más para salir en la IA, los enlaces o las menciones de marca?",
+    question: "¿Qué se asocia más con aparecer en la IA, los enlaces o las menciones de marca?",
     answer:
-      "Según dos estudios de Ahrefs sobre 75.000 marcas, las menciones de una marca en otras webs y en YouTube van mucho más de la mano de las veces que la IA la nombra que el número de enlaces. En las respuestas de IA de Google, las menciones en la web tienen una correlación de 0,664 y los enlaces, de 0,218. Es una correlación, no una prueba de causa."
+      "En los estudios de Ahrefs sobre 75.000 marcas, las menciones de marca en otras webs y en YouTube están más asociadas a aparecer en respuestas de IA que el número de enlaces. En las respuestas de IA de Google, las menciones en la web tienen una correlación de 0,664 y los enlaces, de 0,218. Es una correlación, no una prueba de causa: no demuestra que conseguir más menciones haga que la IA te nombre más."
   },
   {
     question: "¿Sirven de algo los enlaces para aparecer en ChatGPT?",
     answer:
-      "Poco por sí solos, según los datos publicados. Ahrefs mide correlaciones muy débiles entre los enlaces y las menciones en ChatGPT, y Seer Interactive las describe como débiles o neutras. Lo que más acompaña a las menciones son la presencia de la marca en otras webs y estar en la primera página de Google para esas preguntas."
+      "Los datos publicados no lo muestran con claridad. Ahrefs mide correlaciones muy débiles entre los enlaces y las menciones en ChatGPT, y Seer Interactive las describe como débiles o neutras en su muestra. Las señales más asociadas a las menciones son la presencia de la marca en otras webs y estar en la primera página de Google para esas preguntas. Son asociaciones, no efectos medidos."
   },
   {
     question: "¿Qué es una mención de marca para la IA?",
@@ -57,12 +57,13 @@ export const faqItems = [
 
 <KeyTakeaway>
 
-Para que la IA te nombre pesan más las menciones de tu marca que los enlaces.
-Ahrefs comparó 75.000 marcas y encontró que lo que más va de la mano de las
-veces que ChatGPT y la IA de Google nombran a una marca es cuánto se habla de
-ella en otras webs y en YouTube. El número de enlaces apenas se relaciona. Es
-una correlación, no una receta, pero dice dónde está el trabajo: que otros
-hablen de ti en los sitios que la IA lee.
+En los estudios de Ahrefs, las menciones de marca están más asociadas a
+aparecer en respuestas de IA que el número de enlaces. Ahrefs comparó 75.000
+marcas y encontró que lo que más va de la mano de las veces que ChatGPT y la IA
+de Google nombran a una marca es cuánto se habla de ella en otras webs y en
+YouTube; el número de enlaces apenas se relaciona. Es una correlación, no una
+prueba de causa: sugiere qué probar (que otros hablen de ti en los sitios que la
+IA lee) y conviene medir el resultado antes y después.
 
 </KeyTakeaway>
 
@@ -80,9 +81,10 @@ menciones en otras webs.
 - **Diciembre de 2025** (misma autora): amplía a ChatGPT y al Modo IA de
   Google, y añade las menciones en YouTube.
 
-La medida es la correlación de Spearman, que va de 0 a 1: cuanto más cerca de
-1, más se ordenan juntas las marcas por las dos cosas. No dice qué causa qué, y
-la propia Ahrefs lo avisa. Que una señal vaya de la mano de la visibilidad
+La medida es la correlación de Spearman, que va de -1 a 1. Aquí se muestran
+asociaciones positivas: cuanto más cerca de 1, más coinciden los órdenes de las
+marcas en ambas medidas. No prueba causa, y la propia Ahrefs lo avisa: mejorar
+estas señales no implica que la visibilidad en la IA mejore sola. Que una señal vaya de la mano de la visibilidad
 puede deberse a que ambas crecen con el tamaño de la marca. Y como las cifras
 salen de la herramienta y la muestra de Ahrefs, lo que sirve es el orden de
 las señales, no el tercer decimal.
@@ -129,7 +131,7 @@ los AI Overviews, las menciones en YouTube son la señal más fuerte (alrededor
 de 0,737), y las menciones en otras webs siguen muy arriba: 0,709 en el Modo IA.
 Los enlaces vuelven a tener una relación muy débil en los tres.
 
-## ChatGPT se fija menos en el tamaño de la marca
+## ChatGPT se relaciona menos con el tamaño de la marca
 
 Hay un matiz útil para una marca pequeña. ChatGPT es, de los tres, el que menos
 se relaciona con las señales clásicas de autoridad: las búsquedas de la marca
@@ -138,30 +140,31 @@ puerta de entrada para marcas que no son las más grandes de su sector.
 
 Aun así, las grandes ganan en todas partes. Las marcas que más salen en un
 motor tienden a ser las que más salen en los otros: la coincidencia entre
-ChatGPT y la IA de Google es de 0,749. Por eso compensa trabajar en las
+ChatGPT y la IA de Google es de 0,749. Por eso tiene sentido probar primero en las
 fuentes que comparten, no en trucos para un solo motor.
 
 ## Y Google sigue contando
 
 Seer Interactive llegó por otro camino a una conclusión parecida sobre los
-enlaces. Hizo 10.000 preguntas de finanzas y software a la API de ChatGPT de
-OpenAI, sacó las marcas de las respuestas y las cruzó con los resultados de
+enlaces. Hizo 10.000 preguntas de finanzas y software (SaaS) a un modelo de
+OpenAI por su API, sacó las marcas de las respuestas y las cruzó con los resultados de
 búsqueda. La señal que más acompañaba a que nombraran a una marca era salir en
 la primera página de Google para esas preguntas (correlación de alrededor de
 0,65). Los enlaces y la variedad de formatos tenían una relación débil o
 neutra.
 
-Es un estudio de dos sectores y de enero de 2025, y sus autores lo presentan
-como una primera fase sin pruebas de causa. Lo que suma a los de Ahrefs es esto:
-el SEO no sobra, pero un enlace más no es lo que mueve la aguja. Lo que la
-mueve es que tu marca esté en lo que la IA lee cuando busca.
+Es un estudio de dos sectores, de un solo modelo y de enero de 2025; no probó
+cambios para ver su efecto ni midió todos los asistentes, y sus autores lo
+presentan como una primera fase sin pruebas de causa. En esta muestra, aparecer
+en la primera página de Google se asocia más con las menciones que los enlaces.
+No demuestra que aumentar unas u otros cambie las respuestas de la IA.
 
 ## Qué hacer con esto
 
 <NumberedSection n={1} title="Averigua qué webs lee la IA en tus preguntas">
 
-Las menciones que cuentan son las que están en las fuentes que la IA consulta
-para lo que vendes, no cualquier mención. Qué tipo de fuentes cita y por qué lo
+Si vas a probar a conseguir menciones, empieza por las fuentes que la IA
+consulta para lo que vendes, no por cualquier web. Qué tipo de fuentes cita y por qué lo
 contamos en <a href="/blog/que-fuentes-cita-la-ia">qué fuentes cita la IA</a>.
 
 <QuickAction>Haz a ChatGPT, Gemini, Claude y Perplexity la pregunta que más te importa y apunta las webs que enlazan en la respuesta.</QuickAction>
@@ -172,7 +175,9 @@ contamos en <a href="/blog/que-fuentes-cita-la-ia">qué fuentes cita la IA</a>.
 
 Un medio del sector, un comparador, una lista de «los mejores», un foro donde
 se recomiendan opciones: escríbeles con algo que puedan usar, un dato propio,
-una comparativa honesta o una novedad. Una mención sin enlace también cuenta.
+una comparativa honesta o una novedad. En los estudios, la mención se mide con
+enlace o sin él. Trátalo como una prueba: anota cuándo sale cada mención para
+comparar después.
 Cómo preparar una comparativa que la IA pueda citar, en
 <a href="/blog/como-hacer-una-comparativa-que-la-ia-cite">esta guía</a>.
 
@@ -182,23 +187,27 @@ Cómo preparar una comparativa que la IA pueda citar, en
 
 <NumberedSection n={3} title="Ten presencia en YouTube">
 
-Es la señal más fuerte del segundo estudio. No hace falta un canal de miles de
-vídeos: aparecer por tu nombre en vídeos de tu sector (reseñas, comparativas,
-tutoriales de otros) y tener los tuyos con el nombre de la marca en el título.
+Es la señal más asociada a la visibilidad en el segundo estudio, lo que la
+convierte en una hipótesis razonable que probar, no en una garantía. No hace
+falta un canal de miles de vídeos: aparecer por tu nombre en vídeos de tu sector
+(reseñas, comparativas, tutoriales de otros) y tener los tuyos con el nombre de
+la marca en el título.
 
 </NumberedSection>
 
 <NumberedSection n={4} title="Cuida tu primera página de Google">
 
-Salir arriba en Google para las preguntas de tus clientes sigue yendo de la
-mano de que la IA te nombre. No dejes el SEO; deja de medirlo solo en enlaces.
+En la muestra de Seer, salir arriba en Google para las preguntas de tus
+clientes iba de la mano de que la IA nombrara a la marca. No dejes el SEO; deja
+de medirlo solo en enlaces.
 
 </NumberedSection>
 
 <NumberedSection n={5} title="Mide si te nombran, no cuántos enlaces tienes">
 
-La métrica que siguen estos estudios son las menciones en las respuestas. Mide
-la tuya antes y después de cada acción. Qué mirar y cuántas respuestas hacen
+La métrica que siguen estos estudios son las menciones en las respuestas. Como
+los estudios no prueban qué acción la mueve, mide la tuya antes y después de
+cada una. Qué mirar y cuántas respuestas hacen
 falta para fiarte de un número, en
 <a href="/blog/metricas-geo-que-medir">qué métricas GEO medir</a>.
 
@@ -221,10 +230,11 @@ si ChatGPT nombra tu marca para una pregunta.
 <Verdict title="Que hablen de ti donde la IA lee">
 
 En los datos de Ahrefs sobre 75.000 marcas, las menciones de la marca en otras
-webs y en YouTube van mucho más de la mano de salir en la IA que el número de
-enlaces. No es una prueba de causa, pero apunta al mismo sitio que Seer: lo que
-cuenta es que tu marca aparezca, con su nombre, en las páginas que la IA
-consulta cuando alguien pregunta por lo que vendes.
+webs y en YouTube están mucho más asociadas a salir en la IA que el número de
+enlaces, y Seer apunta en la misma dirección. No es una prueba de causa. Lo
+sensato es tratarlo como una hipótesis: buscar que tu marca aparezca, con su
+nombre, en las páginas que la IA consulta para lo que vendes, y medir antes y
+después si te nombra más.
 
 </Verdict>
 

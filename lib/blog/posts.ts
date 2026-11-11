@@ -998,12 +998,12 @@ export const BLOG_POSTS: BlogPost[] = [
   },
   {
     slug: "menciones-de-marca-o-enlaces-para-la-ia",
-    title: "¿Qué pesa más para que la IA te nombre: los enlaces o las menciones de tu marca?",
-    seoTitle: "Menciones de marca o enlaces: qué pesa más en la IA",
+    title: "¿Qué se asocia más con que la IA te nombre: los enlaces o las menciones de tu marca?",
+    seoTitle: "Menciones de marca o enlaces: qué se asocia más con la IA",
     metaDescription:
-      "En 75.000 marcas, las menciones en otras webs y en YouTube van de la mano de salir en ChatGPT mucho más que los enlaces. Qué dicen los datos y qué hacer.",
+      "En 75.000 marcas, las menciones en otras webs y en YouTube se asocian con salir en ChatGPT mucho más que los enlaces. Qué dicen los datos y qué no.",
     description:
-      "Dos estudios de Ahrefs sobre 75.000 marcas y uno de Seer Interactive comparan qué señales van de la mano de que la IA nombre a una marca. Las menciones en otras webs y en YouTube pesan mucho más que los enlaces. Qué significa, qué no demuestra y qué hacer para que hablen de ti donde la IA lee.",
+      "Dos estudios de Ahrefs sobre 75.000 marcas y uno de Seer Interactive comparan qué señales van de la mano de que la IA nombre a una marca. Las menciones en otras webs y en YouTube se asocian mucho más con aparecer que los enlaces. Qué significa, qué no demuestra y qué probar para que hablen de ti donde la IA lee.",
     datePublished: "2026-11-11",
     coverImage: "/blog/menciones-de-marca-o-enlaces-para-la-ia/cover.webp",
     coverIcon: "trendUp",

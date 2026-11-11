@@ -30024,4 +30024,6 @@ Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia`
 - GenScore sólo afirma lo que hace: preguntas en los motores del plan, mención, lugar y competidores, y «Páginas citadas» con las webs de terceros que la IA cita donde la marca no aparece (`.claude/rules/citations.md`); comprobador gratuito.
 - Figura: barras de correlación por señal. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
 
+- Revisión del Director en el PR (2026-11-11): todo el texto habla de asociación, no de efecto. Fuera «pesa más», «lo que cuenta» y «mueve la aguja» en título, FAQ, apertura, Seer, acciones y veredicto; Spearman va de -1 a 1; se cita el aviso de Ahrefs de que mejorar estas señales no mejora sola la visibilidad; Seer se describe como un solo modelo de OpenAI por API, finanzas y SaaS, sin intervenciones; YouTube y las menciones se presentan como hipótesis que medir antes y después.
+
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
