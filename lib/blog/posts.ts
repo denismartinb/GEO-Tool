@@ -1020,6 +1020,30 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de correlación entre las menciones de una marca en YouTube y las veces que la nombra la IA. Los enlaces, una correlación muy débil.",
       source: "Ahrefs, 75.000 marcas en ChatGPT y la IA de Google (diciembre de 2025)"
     }
+  },
+  {
+    slug: "agentes-de-ia-que-visitan-tu-web",
+    title: "¿Cuántos agentes de IA entran ya en tu web y qué hacen allí?",
+    seoTitle: "Agentes de IA en tu web: cuántos entran y qué hacen",
+    metaDescription:
+      "Las peticiones de agentes de IA crecieron más de un 1.700% en un año, y casi todo lo que miran son fichas de producto. Qué dicen los datos y qué revisar.",
+    description:
+      "Cloudflare, HUMAN Security y DataDome miden el tráfico de agentes de IA en las webs: crece deprisa, va sobre todo a fichas de producto y muchos agentes no salen en tu analítica. Quién entra, qué hace, por qué no lo ves en GA4 y qué revisar para que pueda pasar y encuentre el precio, el stock y el botón.",
+    datePublished: "2026-11-13",
+    coverImage: "/blog/agentes-de-ia-que-visitan-tu-web/cover.webp",
+    coverIcon: "trendUp",
+    // BLOG-AGENTES-1 (log §471). Cloudflare, The Internet has a second
+    // audience (Matthew Conroy, 30-09-2026); HUMAN Security, Examining AI Agent
+    // Traffic (06-10-2025), HUMAN-verified interactions Jan-Aug 2025; DataDome,
+    // AI Bot & Agent Traffic Trends 2026 (H1 2026, ~29B AI bot requests on
+    // customer sites); OpenAI bots documentation (ChatGPT-User).
+    primaryKeyword: "agentes de ia en tu web",
+    cluster: "medicion",
+    heroStat: {
+      value: "+1.700%",
+      label: "de peticiones diarias de agentes de IA en un año. Casi todo lo que miran son fichas de producto.",
+      source: "Cloudflare, red por la que pasa más del 20% de la web (septiembre de 2026)"
+    }
   }
 ];
 

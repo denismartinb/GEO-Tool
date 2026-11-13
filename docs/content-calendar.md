@@ -187,12 +187,13 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A6 | ¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas (BLOG-FRESH-1, log §348; pasada de recuperación del 25) — slug `la-ia-prefiere-contenido-reciente` | `medicion` | ✅ Publicado (2026-10-26) | #674 |
 | A7 | ¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden (BLOG-CONVERT-1, log §360) — slug `convierte-mejor-el-trafico-de-la-ia` | `fundamentos` | ✅ Publicado (2026-10-30) | #676 |
 | L3 | Lanzamiento: GenScore ya tiene extensión de Chrome (EXT-LAUNCH-1, log §395) — slug `extension-de-chrome-de-genscore` | `playbooks` | ✅ Publicado (2026-10-31) | — |
-| L4 | Lanzamiento: GenScore ya está en WordPress (WP-LAUNCH-1, log §469) — slug `genscore-para-wordpress` | `playbooks` | En PR (2026-11-05) | — |
+| L4 | Lanzamiento: GenScore ya está en WordPress (WP-LAUNCH-1, log §469) — slug `genscore-para-wordpress` | `playbooks` | ✅ Publicado (2026-11-05) | #774 |
 | R1 | Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío) (RECS-GUIDES-1, log §416; guía de las tarjetas de comparativa) — slug `como-hacer-una-comparativa-que-la-ia-cite` | `playbooks` | En PR (2026-11-01) | #725 |
 | A8 | ¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios (BLOG-SCHEMA-1, log §433) — slug `datos-estructurados-y-citas-de-la-ia` | `playbooks` | ✅ Publicado (2026-11-02) | #744 |
 | A9 | ¿Cuántos consumidores compran ya con la IA? Lo que dice la nueva encuesta de McKinsey (BLOG-MCKINSEY-1, log §467; pasada de recuperación del 03) — slug `como-compran-los-consumidores-con-ia` | `fundamentos` | ✅ Publicado (2026-11-04) | #772 |
 | A10 | ¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales (BLOG-CLICS-1, log §468) — slug `cuantos-clics-manda-chatgpt` | `medicion` | ✅ Publicado (2026-11-05) | #773 |
-| A11 | ¿Qué se asocia más con que la IA te nombre: los enlaces o las menciones de tu marca? (BLOG-MENCIONES-1, log §470) — slug `menciones-de-marca-o-enlaces-para-la-ia` | `playbooks` | En PR (2026-11-11) | — |
+| A11 | ¿Qué se asocia más con que la IA te nombre: los enlaces o las menciones de tu marca? (BLOG-MENCIONES-1, log §470) — slug `menciones-de-marca-o-enlaces-para-la-ia` | `playbooks` | ✅ Publicado (2026-11-11) | #775 |
+| A12 | ¿Cuántos agentes de IA entran ya en tu web y qué hacen allí? (BLOG-AGENTES-1, log §471) — slug `agentes-de-ia-que-visitan-tu-web` | `medicion` | En PR (2026-11-13) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
