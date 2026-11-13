@@ -1042,7 +1042,7 @@ export const BLOG_POSTS: BlogPost[] = [
     heroStat: {
       value: "+1.700%",
       label: "de peticiones diarias de agentes de IA en un año. Casi todo lo que miran son fichas de producto.",
-      source: "Cloudflare, red por la que pasa más del 20% de la web (septiembre de 2026)"
+      source: "Cloudflare, The Internet has a second audience (30 de septiembre de 2026), datos de su red, por la que pasa más del 20% de la web"
     }
   }
 ];

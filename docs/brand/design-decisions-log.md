@@ -29975,6 +29975,14 @@ Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó).
 - GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), Auditoría agéntica en Pro y Agencia tras cada escaneo (§333) y el comprobador gratuito de `/comercio-agentico`.
 - Figura: barras 56% frente a 27%. Portada webp generada desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
 
+**Revisión del Director (2026-11-13), aplicada en el mismo PR**
+- La frase de España se retira: no hace falta para el argumento y no hay documentación actual de OpenAI enlazada que la sostenga. Supersede el punto de arriba.
+- La frase de GenScore describe la medición, no un recorrido: revisa señales del HTML y, con lectura de navegador, si precio, opciones y botón están visibles o si un aviso de cookies se superpone. Sirve para encontrar obstáculos, no certifica que cada agente complete la compra. Se retiran «hasta dónde llega cada uno» y «se queda». El comprobador gratuito pasa a «tiene las señales que un agente necesita». Supersede el punto de GenScore de arriba.
+- El 2,2% de HUMAN se dice como interacciones con carrito o pago, no compras terminadas; la barra pasa a «Carrito y pago (interacciones)».
+- Los registros ya no se usan para afirmar por qué una IA no cita una página.
+- DataDome verificado en el informe primario (*AI Traffic Trends*): 29.020 millones de peticiones de bots de IA de enero a junio de 2026, 97,9% a contenido y 605,6 millones (2,1%, calculado de sus cifras) a acceso a cuenta, formularios, comercio o pago; Meta 46,3% y OpenAI 34,6% salen del gráfico de tráfico por empresa del primer semestre de 2026 del mismo informe. El total de 52.700 millones (julio de 2025 a junio de 2026) no se usa.
+- Enlaces a las fuentes primarias (Cloudflare, HUMAN, DataDome, OpenAI) en el texto, y fecha y muestra en las tarjetas y en la cifra de portada.
+
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
 
 **Adenda: bases y matices (2026-11-04).** Revisión de Denis en el PR #772, contrastada con la fuente primaria de McKinsey (metodología y notas de los gráficos):
@@ -29994,6 +30002,14 @@ Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `m
 - El estudio es de EE. UU. y escritorio, y el artículo lo dice (también en el FAQ). No se usa la cifra de robots.txt del anexo, que no se pudo leer.
 - GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), menciones, posición, competidores y páginas citadas; «Posición en Google» con Search Console; comprobador gratuito de `/gratis/aparece-mi-marca-en-chatgpt`.
 - Figuras: barras 31,1% frente a 5,2% y clics por tema. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Revisión del Director (2026-11-13), aplicada en el mismo PR**
+- La frase de España se retira: no hace falta para el argumento y no hay documentación actual de OpenAI enlazada que la sostenga. Supersede el punto de arriba.
+- La frase de GenScore describe la medición, no un recorrido: revisa señales del HTML y, con lectura de navegador, si precio, opciones y botón están visibles o si un aviso de cookies se superpone. Sirve para encontrar obstáculos, no certifica que cada agente complete la compra. Se retiran «hasta dónde llega cada uno» y «se queda». El comprobador gratuito pasa a «tiene las señales que un agente necesita». Supersede el punto de GenScore de arriba.
+- El 2,2% de HUMAN se dice como interacciones con carrito o pago, no compras terminadas; la barra pasa a «Carrito y pago (interacciones)».
+- Los registros ya no se usan para afirmar por qué una IA no cita una página.
+- DataDome verificado en el informe primario (*AI Traffic Trends*): 29.020 millones de peticiones de bots de IA de enero a junio de 2026, 97,9% a contenido y 605,6 millones (2,1%, calculado de sus cifras) a acceso a cuenta, formularios, comercio o pago; Meta 46,3% y OpenAI 34,6% salen del gráfico de tráfico por empresa del primer semestre de 2026 del mismo informe. El total de 52.700 millones (julio de 2025 a junio de 2026) no se usa.
+- Enlaces a las fuentes primarias (Cloudflare, HUMAN, DataDome, OpenAI) en el texto, y fecha y muestra en las tarjetas y en la cifra de portada.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
 
@@ -30026,6 +30042,14 @@ Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia`
 
 - Revisión del Director en el PR (2026-11-11): todo el texto habla de asociación, no de efecto. Fuera «pesa más», «lo que cuenta» y «mueve la aguja» en título, FAQ, apertura, Seer, acciones y veredicto; Spearman va de -1 a 1; se cita el aviso de Ahrefs de que mejorar estas señales no mejora sola la visibilidad; Seer se describe como un solo modelo de OpenAI por API, finanzas y SaaS, sin intervenciones; YouTube y las menciones se presentan como hipótesis que medir antes y después.
 
+**Revisión del Director (2026-11-13), aplicada en el mismo PR**
+- La frase de España se retira: no hace falta para el argumento y no hay documentación actual de OpenAI enlazada que la sostenga. Supersede el punto de arriba.
+- La frase de GenScore describe la medición, no un recorrido: revisa señales del HTML y, con lectura de navegador, si precio, opciones y botón están visibles o si un aviso de cookies se superpone. Sirve para encontrar obstáculos, no certifica que cada agente complete la compra. Se retiran «hasta dónde llega cada uno» y «se queda». El comprobador gratuito pasa a «tiene las señales que un agente necesita». Supersede el punto de GenScore de arriba.
+- El 2,2% de HUMAN se dice como interacciones con carrito o pago, no compras terminadas; la barra pasa a «Carrito y pago (interacciones)».
+- Los registros ya no se usan para afirmar por qué una IA no cita una página.
+- DataDome verificado en el informe primario (*AI Traffic Trends*): 29.020 millones de peticiones de bots de IA de enero a junio de 2026, 97,9% a contenido y 605,6 millones (2,1%, calculado de sus cifras) a acceso a cuenta, formularios, comercio o pago; Meta 46,3% y OpenAI 34,6% salen del gráfico de tráfico por empresa del primer semestre de 2026 del mismo informe. El total de 52.700 millones (julio de 2025 a junio de 2026) no se usa.
+- Enlaces a las fuentes primarias (Cloudflare, HUMAN, DataDome, OpenAI) en el texto, y fecha y muestra en las tarjetas y en la cifra de portada.
+
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
 
 ## §471 BLOG-AGENTES-1: artículo sobre cuántos agentes de IA entran en una web y qué hacen (2026-11-13)
@@ -30039,5 +30063,13 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - Se dice que en España ni ChatGPT ni Gemini cobran dentro del chat. Que GA4 no ve a un agente que no ejecuta JavaScript es un razonamiento sobre cómo funciona la etiqueta, escrito como tal.
 - GenScore sólo afirma lo que hace: la Auditoría técnica pide la portada con el nombre de los bots de búsqueda de ChatGPT, Claude y Perplexity y avisa si el servidor los bloquea (§440); en Pro y Agencia, Visibilidad en agentes separa a los agentes que leen de los que navegan y enseña hasta dónde llega cada uno (§453); la Auditoría agéntica se hace sola tras cada escaneo (§333); comprobador gratuito en `/comercio-agentico`. No se dice que GenScore cuente el tráfico de agentes.
 - Figura: barras de páginas visitadas por tipo (HUMAN). Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Revisión del Director (2026-11-13), aplicada en el mismo PR**
+- La frase de España se retira: no hace falta para el argumento y no hay documentación actual de OpenAI enlazada que la sostenga. Supersede el punto de arriba.
+- La frase de GenScore describe la medición, no un recorrido: revisa señales del HTML y, con lectura de navegador, si precio, opciones y botón están visibles o si un aviso de cookies se superpone. Sirve para encontrar obstáculos, no certifica que cada agente complete la compra. Se retiran «hasta dónde llega cada uno» y «se queda». El comprobador gratuito pasa a «tiene las señales que un agente necesita». Supersede el punto de GenScore de arriba.
+- El 2,2% de HUMAN se dice como interacciones con carrito o pago, no compras terminadas; la barra pasa a «Carrito y pago (interacciones)».
+- Los registros ya no se usan para afirmar por qué una IA no cita una página.
+- DataDome verificado en el informe primario (*AI Traffic Trends*): 29.020 millones de peticiones de bots de IA de enero a junio de 2026, 97,9% a contenido y 605,6 millones (2,1%, calculado de sus cifras) a acceso a cuenta, formularios, comercio o pago; Meta 46,3% y OpenAI 34,6% salen del gráfico de tráfico por empresa del primer semestre de 2026 del mismo informe. El total de 52.700 millones (julio de 2025 a junio de 2026) no se usa.
+- Enlaces a las fuentes primarias (Cloudflare, HUMAN, DataDome, OpenAI) en el texto, y fecha y muestra en las tarjetas y en la cifra de portada.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
