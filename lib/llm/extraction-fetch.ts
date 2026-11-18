@@ -41,6 +41,18 @@ export type ExtractionFetchOptions = {
   deadlineAt?: number;
   /** Maps a non-OK status to one of the provider's own sanitized messages. */
   describeStatus: (status: number) => string;
+  /**
+   * Optional second look at a rejected response's body, for a provider that
+   * reports two different problems under one status. Anthropic answers an
+   * exhausted credit balance with 400, the same status as a bad model id, so
+   * without this an empty account went out as `config` (log §471). The body
+   * is only inspected here, never persisted: the return value carries one of
+   * the provider's own constant messages.
+   */
+  classifyRejection?: (
+    status: number,
+    body: string
+  ) => { category: ExtractionErrorCategory; message: string; retryable?: boolean } | null;
   /** Message for the timeout/abort case. */
   timeoutMessage: string;
   /**
@@ -151,9 +163,20 @@ export async function fetchExtractionWithRetry(
     if (response) {
       if (response.ok) return response;
 
-      const category: ExtractionErrorCategory = categorizeHttpStatus(response.status);
-      lastError = new ExtractionError(category, options.describeStatus(response.status));
-      if (!isRetryableExtractionCategory(category) || attempt === options.maxAttempts) throw lastError;
+      let category: ExtractionErrorCategory = categorizeHttpStatus(response.status);
+      let message = options.describeStatus(response.status);
+      let retryable = isRetryableExtractionCategory(category);
+      if (options.classifyRejection) {
+        const body = typeof response.text === "function" ? await response.text().catch(() => "") : "";
+        const refined = options.classifyRejection(response.status, body);
+        if (refined) {
+          category = refined.category;
+          message = refined.message;
+          retryable = refined.retryable ?? isRetryableExtractionCategory(category);
+        }
+      }
+      lastError = new ExtractionError(category, message);
+      if (!retryable || attempt === options.maxAttempts) throw lastError;
 
       const delayMs = computeRetryDelayMs({
         attempt,

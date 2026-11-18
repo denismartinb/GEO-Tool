@@ -42,6 +42,27 @@ function getClaudeApiError(status: number): string {
   return `Claude API request failed with status ${status}.`;
 }
 
+export const CLAUDE_CREDIT_EXHAUSTED_MESSAGE =
+  "Claude API credit balance is too low. Top up the Anthropic account.";
+
+/**
+ * Anthropic answers an exhausted credit balance with HTTP 400 and
+ * `invalid_request_error`, the same status as a wrong model id. Read as
+ * `config`, the 2026-11-18 incident told the operator to check environment
+ * variables that were fine (log §471). The body is inspected, never kept.
+ */
+export function classifyClaudeRejection(
+  status: number,
+  body: string
+): { category: "quota"; message: string; retryable: false } | null {
+  // Not retried: an empty account stays empty, and backing off would only
+  // spend the extraction budget the remaining rows need.
+  if (status === 400 && /credit balance/i.test(body)) {
+    return { category: "quota", message: CLAUDE_CREDIT_EXHAUSTED_MESSAGE, retryable: false };
+  }
+  return null;
+}
+
 function buildHeaders(apiKey: string): Record<string, string> {
   return {
     "Content-Type": "application/json",
@@ -138,7 +159,8 @@ export async function generateClaudeVisibilityAnswer(input: {
   }
 
   if (!response.ok) {
-    throw new Error(getClaudeApiError(response.status));
+    const body = response.status === 400 ? await response.text().catch(() => "") : "";
+    throw new Error(classifyClaudeRejection(response.status, body)?.message ?? getClaudeApiError(response.status));
   }
 
   const data = (await response.json()) as AnthropicResponse;
@@ -241,6 +263,7 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
       maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
       deadlineAt: input.deadlineAt,
       describeStatus: getClaudeApiError,
+      classifyRejection: classifyClaudeRejection,
       timeoutMessage: "Claude extraction request timed out."
     }
   );

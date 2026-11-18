@@ -466,6 +466,23 @@ export const SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE = "scan_health_alert_un
  */
 export const SCAN_HEALTH_ALERT_DEDUPE_HOURS = 24;
 
+/**
+ * `job_logs.message` of the claim a run writes BEFORE sending a scan-health
+ * alert (SCAN-ALERT-ATTRIBUTION-1, log §471). The 06:00 sweep finalizes
+ * several runs within the same second; each one checked the "sent" marker,
+ * found nothing (no one had sent yet) and sent its own copy. The claim lets
+ * concurrent runs agree on one sender: everyone inserts, then only the oldest
+ * claim sends.
+ */
+export const SCAN_HEALTH_ALERT_CLAIM_LOG_MESSAGE = "scan_health_alert_claimed";
+
+/**
+ * How long a claim blocks others without a matching "sent" marker. Short on
+ * purpose: if the claimer died or its send failed, the next run has to be
+ * able to try again (a duplicate email beats a swallowed incident).
+ */
+export const SCAN_HEALTH_ALERT_CLAIM_MINUTES = 10;
+
 
 /**
  * Longest the scan may spend staggering one batch's prompt jobs, and the gap
