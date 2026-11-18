@@ -356,3 +356,11 @@ worse than no rule, because a future session will obey it anyway.
   espacios, y nada más: nunca contención sin espacios, que confundiría marcas
   homónimas o más largas (`docs/brand/design-decisions-log.md` §310). La
   comprobación de que el nombre está en el texto sigue intacta.
+- **Un aviso de extracción nombra al motor que EXTRAJO, no al que generó.**
+  `analyzeRunHealth` agrupa `quota`, `config` y `engine_down` por
+  `resolveExtractionRoute`; con `SCAN_EXTRACTION_CLAUDE_MODEL` todo es Claude.
+  Agrupado por `row.provider`, un 400 de Claude salió como «perplexity:
+  config» y «openai: config», una vez por motor y por ejecución
+  (`docs/brand/design-decisions-log.md` §471). Y antes de enviar, el aviso se
+  reclama en `job_logs`: sólo el reclamo más antiguo envía, y un envío fallido
+  borra el suyo.

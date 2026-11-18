@@ -183,4 +183,19 @@ describe("computeRetryDelayMs", () => {
     expect(low).toBe(0);
     expect(high).toBe(400);
   });
+
+  it("lets a provider re-read a rejection's body, without retrying when told not to (log §471)", async () => {
+    const rejected = { ...response(400), text: async () => "Your credit balance is too low" };
+    const fetchMock = vi.fn().mockResolvedValue(rejected);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchExtractionWithRetry("https://provider.test", {}, {
+        ...OPTIONS,
+        classifyRejection: (status, body) =>
+          status === 400 && body.includes("credit") ? { category: "quota", message: "No credit.", retryable: false } : null
+      })
+    ).rejects.toMatchObject({ category: "quota", message: "No credit." });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });

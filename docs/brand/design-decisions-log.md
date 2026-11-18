@@ -30027,3 +30027,26 @@ Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia`
 - Revisión del Director en el PR (2026-11-11): todo el texto habla de asociación, no de efecto. Fuera «pesa más», «lo que cuenta» y «mueve la aguja» en título, FAQ, apertura, Seer, acciones y veredicto; Spearman va de -1 a 1; se cita el aviso de Ahrefs de que mejorar estas señales no mejora sola la visibilidad; Seer se describe como un solo modelo de OpenAI por API, finanzas y SaaS, sin intervenciones; YouTube y las menciones se presentan como hipótesis que medir antes y después.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+## §471 SCAN-ALERT-ATTRIBUTION-1: avisos de escaneo con el motor real, uno por incidente, y saldo agotado de Anthropic como «quota» (2026-11-18)
+
+**Qué pasó.** El 2026-11-18 a las 06:04:09 UTC la API de Anthropic empezó a rechazar con HTTP 400 todas las llamadas. Con `SCAN_EXTRACTION_CLAUDE_MODEL` puesto (log §253), Claude extrae las respuestas de los cuatro motores, así que la extracción de todos los escaneos del barrido de las 06:00 falló a la vez. Ninguna variable de entorno había cambiado (las de Anthropic, OpenAI y Perplexity seguían como en octubre) y la extracción funcionaba un minuto antes: la causa más probable es el saldo agotado, que Anthropic devuelve como 400 `invalid_request_error`, el mismo estado que un modelo mal escrito.
+
+El operador recibió muchos correos «Escaneo incompleto · perplexity: config» y «openai: config». Tres fallos del aviso:
+
+1. **Motor equivocado.** `analyzeRunHealth` agrupaba por `row.provider` (quién generó la respuesta), no por quién la extrajo. Mandaba a revisar las claves de Perplexity y OpenAI, que estaban bien. Incluso sin el extractor único, las filas de Perplexity las extrae Gemini.
+2. **Un correo por motor generador**: un solo fallo de Claude salió como cuatro incidentes distintos (uno por motor).
+3. **Carrera en el deduplicado**: varias ejecuciones terminaron en el mismo segundo, todas miraron la marca de «enviado», ninguna la encontró y todas enviaron.
+
+**Qué se decidió.**
+
+- La mitad de extracción del análisis (`quota`, `config`, `engine_down`) se agrupa por el proveedor de `resolveExtractionRoute`. `engine_no_response` sigue siendo del motor que generó, porque ahí el fallo está en la generación.
+- Antes de enviar, cada ejecución escribe un reclamo (`scan_health_alert_claimed` en `job_logs`) y sólo envía el reclamo más antiguo de los últimos 10 minutos. Si el envío falla, borra su reclamo, así que un fallo de envío nunca silencia al siguiente (misma regla de siempre: un duplicado es mejor que un incidente tragado). Sin `finalizeJobId` no hay reclamo y se envía como antes.
+- `classifyClaudeRejection` lee el cuerpo de un 400 de Anthropic sólo para distinguir «credit balance» y lo marca como `quota` con un mensaje propio, sin reintentos (una cuenta vacía sigue vacía). El cuerpo nunca se guarda. `fetchExtractionWithRetry` gana la opción `classifyRejection` para esto.
+- El texto del aviso `config` dice que el motor indicado es el que extrae.
+
+**Queda pendiente.**
+
+- Recargar el saldo de Anthropic (lo hace Denis) y, si se quiere, activar la recarga automática.
+- Las filas de hoy con `config:` no se reextraen solas (`config` no es reintentable) y no hay herramienta de reextracción; esos escaneos se recuperan con el siguiente escaneo del cron o relanzándolos a mano.
+- `job_logs` sigue sin restricción única, así que dos reclamos insertados con el mismo `created_at` exacto se desempatan por id, no por orden real. Suficiente para correos de operador.

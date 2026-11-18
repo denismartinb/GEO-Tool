@@ -242,3 +242,22 @@ describe("extractClaudeStructuredData — MENTION-VERIFY-1 (docs/adr/0021)", () 
     expect(promptText).toContain("sector: software");
   });
 });
+
+describe("classifyClaudeRejection (log §471)", () => {
+  it("reads an exhausted credit balance as quota, with our own message", async () => {
+    const { classifyClaudeRejection, CLAUDE_CREDIT_EXHAUSTED_MESSAGE } = await import("./claude");
+    const body = JSON.stringify({
+      type: "error",
+      error: { type: "invalid_request_error", message: "Your credit balance is too low to access the Anthropic API." }
+    });
+
+    expect(classifyClaudeRejection(400, body)).toEqual({ category: "quota", message: CLAUDE_CREDIT_EXHAUSTED_MESSAGE, retryable: false });
+  });
+
+  it("leaves any other 400 as it was", async () => {
+    const { classifyClaudeRejection } = await import("./claude");
+
+    expect(classifyClaudeRejection(400, '{"error":{"message":"model: not found"}}')).toBeNull();
+    expect(classifyClaudeRejection(401, "credit balance")).toBeNull();
+  });
+});

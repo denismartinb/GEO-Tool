@@ -143,4 +143,43 @@ describe("analyzeRunHealth — an engine that produced no rows at all", () => {
     // inventing engine-down findings out of missing data.
     expect(analyzeRunHealth([row({ provider: "gemini" })])).toEqual([]);
   });
+
+  // SCAN-ALERT-ATTRIBUTION-1 (log §471): on 2026-11-18 one Claude 400 in the
+  // extraction step went out as «perplexity: config» and «openai: config».
+  describe("names the engine that extracted, not the one that answered", () => {
+    const configError = { extraction_version: "phase4-basic-v1", extraction_error: "config: Claude API rejected the request." };
+    const single = { SCAN_EXTRACTION_CLAUDE_MODEL: "claude-haiku-x" };
+
+    it("collapses every engine into one claude finding when a single extractor is set", () => {
+      const findings = analyzeRunHealth(
+        [
+          row({ provider: "perplexity", ...configError }),
+          row({ provider: "openai", ...configError }),
+          row({ provider: "gemini" }),
+          row({ provider: "claude" })
+        ],
+        ["gemini", "claude", "openai", "perplexity"],
+        single
+      );
+
+      expect(findings).toEqual([{ engine: "claude", reason: "config", affectedRows: 2, totalRows: 4 }]);
+    });
+
+    it("attributes perplexity rows to gemini, which extracts them by default", () => {
+      const findings = analyzeRunHealth(
+        [row({ provider: "perplexity", extraction_version: "phase4-basic-v1", extraction_error: "quota: Gemini API quota or rate limit reached." })],
+        [],
+        {}
+      );
+
+      expect(findings).toContainEqual(expect.objectContaining({ engine: "gemini", reason: "quota" }));
+      expect(findings.some((f) => f.engine === "perplexity")).toBe(false);
+    });
+
+    it("still names the generating engine when it produced nothing at all", () => {
+      const findings = analyzeRunHealth([row({ provider: "gemini" })], ["gemini", "openai"], single);
+
+      expect(findings).toEqual([{ engine: "openai", reason: "engine_no_response", affectedRows: 0, totalRows: 0 }]);
+    });
+  });
 });

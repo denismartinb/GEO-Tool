@@ -4,10 +4,13 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import { isOpsAlertConfigured, sendScanHealthAlertEmail } from "@/lib/email/transactional";
 import {
   EXTRACTION_VERSION,
+  SCAN_HEALTH_ALERT_CLAIM_LOG_MESSAGE,
+  SCAN_HEALTH_ALERT_CLAIM_MINUTES,
   SCAN_HEALTH_ALERT_DEDUPE_HOURS,
   SCAN_HEALTH_ALERT_LOG_MESSAGE,
   SCAN_HEALTH_ALERT_UNDELIVERABLE_LOG_MESSAGE
 } from "@/lib/scan/constants";
+import { resolveExtractionRoute } from "@/lib/scan/extraction-routing";
 
 /**
  * EXTRACTION-RELIABILITY-1 Fase B (docs/adr/0029).
@@ -56,12 +59,12 @@ const REASON_COPY: Record<ScanHealthReason, { headline: string; detail: string }
   quota: {
     headline: "Un motor se ha quedado sin cuota",
     detail:
-      "El proveedor devuelve 429 y la extracción no puede completarse. Los reintentos con backoff ya se han agotado. Revisa el saldo o los límites de esa cuenta: no se arregla solo, y hasta que lo hagas cada escaneo perderá la parte de datos de ese motor."
+      "El proveedor devuelve 429 o dice que no queda saldo, y la extracción no puede completarse. Los reintentos con backoff ya se han agotado. Revisa el saldo o los límites de esa cuenta: no se arregla solo, y hasta que lo hagas cada escaneo perderá la parte de datos de ese motor."
   },
   config: {
     headline: "Un motor está mal configurado",
     detail:
-      "El proveedor rechaza la petición por clave o modelo inválidos. No se reintenta a propósito, porque reintentarlo daría el mismo resultado. Revisa las variables de entorno de ese motor."
+      "El proveedor rechaza la petición por clave o modelo inválidos. No se reintenta a propósito, porque reintentarlo daría el mismo resultado. Revisa las variables de entorno de ese motor. El motor indicado es el que extrae los datos de la respuesta, que puede no ser el que la generó (con SCAN_EXTRACTION_CLAUDE_MODEL, siempre Claude)."
   },
   engine_down: {
     headline: "Un motor respondió pero no se pudo extraer nada",
@@ -101,7 +104,11 @@ const REASON_COPY: Record<ScanHealthReason, { headline: string; detail: string }
  *   `engine_down` when they take out a whole engine, which is the point at
  *   which they stop being noise.
  */
-export function analyzeRunHealth(rows: readonly HealthRow[], expectedEngines: readonly string[] = []): ScanHealthFinding[] {
+export function analyzeRunHealth(
+  rows: readonly HealthRow[],
+  expectedEngines: readonly string[] = [],
+  env: Record<string, string | undefined> = process.env
+): ScanHealthFinding[] {
   const byEngine = new Map<string, HealthRow[]>();
   for (const engine of expectedEngines) byEngine.set(engine, []);
   for (const row of rows) {
@@ -113,39 +120,50 @@ export function analyzeRunHealth(rows: readonly HealthRow[], expectedEngines: re
 
   const findings: ScanHealthFinding[] = [];
 
+  // Generation half: an engine that produced no rows AT ALL failed at
+  // generation, not at extraction — a dead API, a rejected model id, an
+  // outage. Seeding the map with the run's expected engines is what makes
+  // that visible: keyed only on the rows that exist, such an engine simply is
+  // not in the data, and the check that is supposed to catch "ChatGPT
+  // contributed nothing" would silently skip the very case it exists for.
+  // Distinguished from `engine_down` on purpose: the operator has to look at
+  // that engine's key, model id and API status — not at the extraction path
+  // (first real alert, 2026-08-05, mozilla.org).
   for (const [engine, engineRows] of byEngine) {
     const answered = engineRows.filter((row) => row.status === "completed" && row.raw_response_text);
-
-    // An engine that produced no rows AT ALL failed at generation, not at
-    // extraction — a dead API, a rejected model id, an outage. Seeding the
-    // map with the run's expected engines is what makes that visible: keyed
-    // only on the rows that exist, such an engine simply is not in the data,
-    // and the check that is supposed to catch "ChatGPT contributed nothing"
-    // would silently skip the very case it exists for. The run still
-    // completes, because a prompt job succeeds if any engine answers.
-    if (answered.length === 0) {
-      // Distinguished from `engine_down` on purpose: this engine never got
-      // past generation, so the operator has to look at its key, its model id
-      // and that API's status — not at the extraction path. Reporting both
-      // under one label sent the first real alert (2026-08-05, mozilla.org)
-      // with a body that described the wrong half of the pipeline.
-      if (expectedEngines.includes(engine)) {
-        findings.push({ engine, reason: "engine_no_response", affectedRows: engineRows.length, totalRows: engineRows.length });
-      }
-      continue;
+    if (answered.length === 0 && expectedEngines.includes(engine)) {
+      findings.push({ engine, reason: "engine_no_response", affectedRows: engineRows.length, totalRows: engineRows.length });
     }
+  }
 
+  // Extraction half, grouped by the provider that EXTRACTED the row, not the
+  // one that generated it (SCAN-ALERT-ATTRIBUTION-1, log §471). With
+  // `SCAN_EXTRACTION_CLAUDE_MODEL` set every row is extracted by Claude, and
+  // even without it Perplexity rows are extracted by Gemini. Keyed on
+  // `row.provider`, one Claude 400 on 2026-11-18 went out as «perplexity:
+  // config» and «openai: config» — the wrong engine to go and fix — and once
+  // per generating engine instead of once.
+  const byExtractor = new Map<string, HealthRow[]>();
+  for (const row of rows) {
+    if (row.status !== "completed" || !row.raw_response_text) continue;
+    const extractor = resolveExtractionRoute(row.provider ?? "gemini", env).provider;
+    const bucket = byExtractor.get(extractor);
+    if (bucket) bucket.push(row);
+    else byExtractor.set(extractor, [row]);
+  }
+
+  for (const [extractor, answered] of byExtractor) {
     const countByCategory = (category: string) =>
       answered.filter((row) => row.extraction_error?.startsWith(`${category}:`)).length;
 
     for (const reason of ["quota", "config"] as const) {
       const affected = countByCategory(reason);
-      if (affected > 0) findings.push({ engine, reason, affectedRows: affected, totalRows: answered.length });
+      if (affected > 0) findings.push({ engine: extractor, reason, affectedRows: affected, totalRows: answered.length });
     }
 
     const extracted = answered.filter((row) => row.extraction_version === EXTRACTION_VERSION).length;
     if (extracted === 0) {
-      findings.push({ engine, reason: "engine_down", affectedRows: answered.length, totalRows: answered.length });
+      findings.push({ engine: extractor, reason: "engine_down", affectedRows: answered.length, totalRows: answered.length });
     }
   }
 
@@ -188,6 +206,72 @@ async function alreadyAlerted(input: {
   // whole phase exists to remove, while a duplicate one is merely annoying.
   if (error) return false;
   return (data?.length ?? 0) > 0;
+}
+
+/**
+ * Claims the right to send one (engine, reason) alert, so concurrent runs
+ * send it once instead of once each (SCAN-ALERT-ATTRIBUTION-1, log §471).
+ *
+ * `job_logs` has no unique constraint to lean on, so every contender inserts
+ * its claim and then reads the live claims back: only the oldest one sends.
+ * A claim older than `SCAN_HEALTH_ALERT_CLAIM_MINUTES` no longer counts, and a
+ * failed send deletes its own claim, so a lost claimer never silences the
+ * next run. Without a job to anchor the row (`finalizeJobId` missing), nothing
+ * can be claimed and the run sends, as it always did.
+ *
+ * Returns the claim id to release on failure, `null` to send without a claim,
+ * or `false` when someone else holds it.
+ */
+async function claimAlert(input: {
+  service: ReturnType<typeof createServiceClient>;
+  projectId: string;
+  runId: string;
+  finalizeJobId?: string | null;
+  engine: string;
+  reason: ScanHealthReason;
+}): Promise<string | null | false> {
+  if (!input.finalizeJobId) return null;
+  try {
+    const { data: inserted, error: insertError } = await input.service
+      .from("job_logs")
+      .insert({
+        job_id: input.finalizeJobId,
+        project_id: input.projectId,
+        run_id: input.runId,
+        level: "info",
+        message: SCAN_HEALTH_ALERT_CLAIM_LOG_MESSAGE,
+        context_json: { engine: input.engine, reason: input.reason }
+      })
+      .select("id")
+      .single();
+    // Fail OPEN: a claim we could not write must not swallow the alert.
+    if (insertError || !inserted) return null;
+
+    const since = new Date(Date.now() - SCAN_HEALTH_ALERT_CLAIM_MINUTES * 60 * 1000).toISOString();
+    const { data: claims, error: readError } = await input.service
+      .from("job_logs")
+      .select("id, created_at")
+      .eq("message", SCAN_HEALTH_ALERT_CLAIM_LOG_MESSAGE)
+      .eq("context_json->>engine", input.engine)
+      .eq("context_json->>reason", input.reason)
+      .gte("created_at", since)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .limit(1);
+    if (readError || !claims || claims.length === 0) return String(inserted.id);
+    return String(claims[0].id) === String(inserted.id) ? String(inserted.id) : false;
+  } catch {
+    return null;
+  }
+}
+
+async function releaseClaim(service: ReturnType<typeof createServiceClient>, claimId: string | null): Promise<void> {
+  if (!claimId) return;
+  try {
+    await service.from("job_logs").delete().eq("id", claimId);
+  } catch {
+    // Best-effort: an unreleased claim only delays the retry by the claim window.
+  }
 }
 
 /**
@@ -303,6 +387,16 @@ export async function checkAndSendScanHealthAlert(input: {
     for (const finding of findings) {
       if (await alreadyAlerted({ service: input.service, engine: finding.engine, reason: finding.reason })) continue;
 
+      const claim = await claimAlert({
+        service: input.service,
+        projectId: input.projectId,
+        runId: input.runId,
+        finalizeJobId: input.finalizeJobId,
+        engine: finding.engine,
+        reason: finding.reason
+      });
+      if (claim === false) continue;
+
       const copy = REASON_COPY[finding.reason];
       try {
         await sendScanHealthAlertEmail({
@@ -323,6 +417,7 @@ export async function checkAndSendScanHealthAlert(input: {
           runId: input.runId,
           message: sendError instanceof Error ? sendError.message : String(sendError)
         });
+        await releaseClaim(input.service, claim);
         await recordUndeliverable(input, [finding], "send_threw");
         continue;
       }
