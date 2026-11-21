@@ -30027,3 +30027,15 @@ Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia`
 - Revisión del Director en el PR (2026-11-11): todo el texto habla de asociación, no de efecto. Fuera «pesa más», «lo que cuenta» y «mueve la aguja» en título, FAQ, apertura, Seer, acciones y veredicto; Spearman va de -1 a 1; se cita el aviso de Ahrefs de que mejorar estas señales no mejora sola la visibilidad; Seer se describe como un solo modelo de OpenAI por API, finanzas y SaaS, sin intervenciones; YouTube y las menciones se presentan como hipótesis que medir antes y después.
 
 **Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+## §472 GEMINI-QUOTA-STOP-1 + GEMINI-QUOTA-KIND-1: la auditoría de contenido propio deja de quemar cuota de Gemini y el aviso dice qué límite saltó (2026-11-21)
+
+**Qué pasó.** Desde el 2026-11-13 (09:31 UTC) la llamada de cobertura de la auditoría web (`auditDomainContent`, Gemini con búsqueda de Google) recibe 429 de Google: 400 temas fallidos en 11 proyectos hasta el 2026-11-21, y desde el 2026-11-20 el aviso «Un motor se ha quedado sin cuota fuera del escaneo». No hubo cambio de código en `lib/llm`, `lib/scan`, `lib/web-audit` ni `lib/recommendations` desde el 2026-11-05, y el ritmo de la llamada es bajo (4 temas por tanda, en serie, 700 ms entre llamadas), así que el límite es de la cuenta de Google, no una ráfaga nuestra. Qué límite exacto (diario, por minuto o tope de gasto) no se podía saber: el código sólo guardaba «429».
+
+**Qué se decidió (código).**
+- `classifyGeminiQuotaBody` (`lib/llm/gemini-client.ts`) lee el cuerpo del 429 y devuelve una etiqueta fija (`per_minute`, `per_day`, `spend_cap`); el texto de Google nunca sale de la función. La frase genérica «check your plan and billing details» no cuenta como tope de gasto.
+- `fetchExtractionWithRetry` acepta `classifyQuotaBody` y no reintenta un 429 diario o de tope de gasto: los dos reintentos sólo gastaban más del mismo límite.
+- El aviso al operador gana la fila «Límite» con qué hacer, y la fila «Proyecto» deja de salir vacía en la auditoría.
+- `auditDomainCoverageCore`: un 429 corta la tanda y ese tema **no** se guarda como «No hemos podido verificar» (antes cerraba todos los temas del escaneo sin respuesta, gastando tres llamadas por tema). Queda pendiente; sin temas nuevos, el ejecutor aparca el trabajo y `MAX_AUDIT_CONTINUATIONS` acota cuánto lo reintenta.
+
+**Pendiente.** Denis revisa en Google AI Studio qué límite está agotado (uso, límites de su nivel y tope de gasto del proyecto de la clave de Vercel) y lo sube si hace falta. El siguiente aviso dirá ya qué límite es. No retira ningún camino de recuperación.
