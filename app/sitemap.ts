@@ -1,3 +1,4 @@
+import { allClinicSlugs, CITY_IDS } from "@/lib/observatorio/clinicas-dentales";
 import { studiesLastModified } from "@/lib/estudios/studies";
 import type { MetadataRoute } from "next";
 import { BLOG_CLUSTERS, BLOG_POSTS } from "@/lib/blog/posts";
@@ -74,6 +75,27 @@ const STATIC_ROUTES: { path: string; lastModified: string }[] = [
   { path: "/terminos", lastModified: "2026-07-19" }
 ];
 
+/**
+ * OBSERVATORIO-DENTAL-1 (28-10-2026): observatorio de visibilidad en IA con
+ * los datos del estudio de clínicas dentales ya publicado. Ciudades y fichas
+ * salen del módulo de datos, no de una lista a mano: si entra una ciudad o
+ * una clínica nueva, entra también aquí. Fecha = día de publicación.
+ */
+const OBSERVATORIO_LAST_MODIFIED = "2026-10-28";
+const OBSERVATORIO_ROUTES: { path: string; lastModified: string }[] = [
+  { path: "/observatorio", lastModified: OBSERVATORIO_LAST_MODIFIED },
+  { path: "/observatorio/clinicas-dentales", lastModified: OBSERVATORIO_LAST_MODIFIED },
+  { path: "/observatorio/clinicas-dentales/metodologia", lastModified: OBSERVATORIO_LAST_MODIFIED },
+  ...CITY_IDS.map((ciudad) => ({
+    path: `/observatorio/clinicas-dentales/${ciudad}`,
+    lastModified: OBSERVATORIO_LAST_MODIFIED
+  })),
+  ...allClinicSlugs().map((slug) => ({
+    path: `/observatorio/clinicas-dentales/clinica/${slug}`,
+    lastModified: OBSERVATORIO_LAST_MODIFIED
+  }))
+];
+
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticRoutes = STATIC_ROUTES.map(({ path, lastModified }) => ({
     url: `${SITE_URL}${path}`,
@@ -110,5 +132,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     )
   }));
 
-  return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes, ...pillarRoutes];
+  const observatorioRoutes = OBSERVATORIO_ROUTES.map(({ path, lastModified }) => ({
+    url: `${SITE_URL}${path}`,
+    lastModified: new Date(lastModified)
+  }));
+
+  return [...staticRoutes, ...blogRoutes, ...docsRoutes, ...glossaryRoutes, ...pillarRoutes, ...observatorioRoutes];
 }
