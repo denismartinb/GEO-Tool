@@ -1,0 +1,253 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("agentes-de-ia-que-visitan-tu-web");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cuánto ha crecido el tráfico de agentes de IA?",
+    answer:
+      "Mucho y deprisa. Cloudflare, por cuya red pasa más del 20% de la web, dice que las peticiones diarias de agentes de IA crecieron más de un 1.700% en el último año (septiembre de 2026). HUMAN Security midió un crecimiento de más del 1.300% del tráfico de agentes entre enero y agosto de 2025 en las interacciones que verifica."
+  },
+  {
+    question: "¿Qué hacen los agentes de IA cuando entran en una web?",
+    answer:
+      "Sobre todo, mirar productos. En los datos de HUMAN Security de enero a agosto de 2025, el 87% de las páginas que visitaron los agentes eran fichas de producto y el 2,2% de sus interacciones tocó el carrito, el pago o el proceso de compra. Eso mide actividad en esas páginas, no compras terminadas."
+  },
+  {
+    question: "¿Por qué no veo a los agentes de IA en Google Analytics?",
+    answer:
+      "Porque muchos no ejecutan tu etiqueta de analítica. GA4 cuenta una visita cuando la página ejecuta su JavaScript, y un agente que solo lee el HTML no lo hace, así que no cuenta como visita. Su rastro está en los registros del servidor. Los que navegan con un navegador completo sí pueden ejecutarla y mezclarse con las visitas de personas."
+  },
+  {
+    question: "¿Debo bloquear a los agentes de IA?",
+    answer:
+      "Depende de para qué entran. Un agente que abre tu página porque una persona le ha preguntado por lo que vendes es un posible cliente al otro lado; bloquearlo es cerrar la tienda a esa persona. Los rastreadores de entrenamiento son otra decisión, y se puede tomar por separado en robots.txt."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Los agentes de IA ya son un público de tu web, y crece deprisa: Cloudflare dice
+que, en su red, sus peticiones diarias se multiplicaron por más de dieciocho en un año. Casi
+todo lo que miran son fichas de producto, y muchos no aparecen en tu analítica
+porque no ejecutan su etiqueta. Lo que conviene medir es si pueden entrar y si,
+cuando entran, encuentran el precio, el stock y el botón de compra.
+
+</KeyTakeaway>
+
+## Un segundo público que crece deprisa
+
+El 30 de septiembre de 2026, Cloudflare publicó
+<a href="https://blog.cloudflare.com/agentic-web/" target="_blank" rel="noopener noreferrer">*The Internet has a second audience*</a>. Por su red pasa más del 20% de la web, y lo que ve es esto: las
+peticiones diarias de agentes de IA crecieron más de un 1.700% en el último año,
+y este año, por primera vez, más de la mitad del tráfico de internet no fue
+humano. En algunas de las categorías más visitadas por los bots (comercio,
+software, servicios informáticos y financieros), el tráfico de personas cayó
+hasta un 40% en menos de un año.
+
+Cloudflare distingue a los agentes de los rastreadores por lo que hacen. Un
+rastreador de entrenamiento recoge páginas para construir un modelo. Un agente
+abre tu página en nombre de una persona, muchas veces porque esa persona le ha
+preguntado algo a un asistente. Por eso su tráfico crece con las preguntas que
+la gente hace sobre lo que vendes, no con lo que tú publicas.
+
+<StatGrid label="Los agentes de IA en las webs, según tres medidores de tráfico">
+  <Stat value="+1.700%" label="de peticiones diarias de agentes de IA en un año en la red de Cloudflare, por la que pasa más del 20% de la web." source="Cloudflare, The Internet has a second audience (30 de septiembre de 2026), datos de su red" />
+  <Stat value="87%" label="de las páginas que visitaron los agentes de IA eran fichas de producto. Solo el 2,2% de sus interacciones tocó el carrito o el pago." source="HUMAN Security, interacciones verificadas por HUMAN, enero a agosto de 2025" tone="cyan" />
+  <Stat value="2,1%" label="de las peticiones de bots de IA llegó a acceso a cuenta, formularios, comercio o pago. El 97,9% fue a contenido general." source="DataDome, AI Traffic Trends: 605,6 millones de 29.020 millones de peticiones de bots de IA en las webs de sus clientes, enero a junio de 2026" />
+</StatGrid>
+
+Los tres miden cosas distintas en redes distintas, así que sus cifras no se
+suman ni se comparan entre sí. Lo que coincide es la dirección: hay muchos más
+agentes que hace un año, y casi todo lo que hacen es leer.
+
+## Qué hacen cuando entran
+
+HUMAN Security, una empresa de detección de bots que dice verificar más de
+20 billones de interacciones a la semana, clasificó qué páginas visitaban los
+agentes de IA entre enero y agosto de 2025 y lo publicó en
+<a href="https://www.humansecurity.com/learn/blog/ai-agent-statistics-agentic-commerce/" target="_blank" rel="noopener noreferrer">*Examining AI Agent Traffic*</a>
+(octubre de 2025). La respuesta es casi una sola:
+
+<Figure
+  label="Figura 1."
+  caption="Páginas que visitaron los agentes de IA, por tipo. Fuente: HUMAN Security, Examining AI Agent Traffic (octubre de 2025), interacciones verificadas por HUMAN de enero a agosto de 2025. HUMAN avisa de que son tendencias de su muestra, no de todo el tráfico de agentes."
+>
+
+<BarChart
+  title="A qué páginas van los agentes de IA"
+  rows={[
+    { label: "Fichas de producto", value: 86.6, display: "86,6%", highlight: true },
+    { label: "Navegación y otras", value: 6.4, display: "6,4%" },
+    { label: "Cuenta e inicio de sesión", value: 3.9, display: "3,9%" },
+    { label: "Carrito y pago (interacciones)", value: 2.2, display: "2,2%" },
+    { label: "Contenido informativo", value: 1.0, display: "1,0%" }
+  ]}
+/>
+
+</Figure>
+
+Es decir, hoy un agente de IA es sobre todo alguien que compara: abre la ficha,
+lee el precio, mira si hay stock y vuelve con eso a la persona que le preguntó.
+Ese 2,2% cuenta interacciones con el carrito o el pago, no compras
+terminadas.
+
+DataDome, otro proveedor de protección contra bots, ve lo mismo en las webs de
+sus clientes. En su informe
+<a href="https://datadome.co/resources/bot-and-agent-security-report/ai-traffic-trends/" target="_blank" rel="noopener noreferrer">*AI Traffic Trends*</a>,
+de 29.020 millones de peticiones de bots de IA entre enero y junio de 2026, el
+97,9% fue a contenido general y 605,6 millones (un 2,1%) llegaron a páginas de
+acceso a cuenta, formularios, comercio o pago.
+
+## Quién entra
+
+Hay dos formas de visitar una web, y conviene separarlas:
+
+- **Los agentes que leen.** Piden la página y leen el HTML que les llega, sin
+  ejecutar JavaScript. Un ejemplo es ChatGPT-User, el agente con el que ChatGPT
+  abre una web cuando alguien se lo pide. En su
+  <a href="https://developers.openai.com/api/docs/bots" target="_blank" rel="noopener noreferrer">documentación de bots</a>, OpenAI avisa de que, como lo lanza una
+  persona, las reglas de robots.txt pueden no aplicarse.
+- **Los agentes que navegan.** Usan un navegador completo y pueden hacer lo que
+  haría una persona: cierran el aviso de cookies, eligen talla, pulsan botones. El
+  agente de ChatGPT y Comet, el navegador de Perplexity, son los más conocidos.
+  En septiembre de 2025, según HUMAN, Comet ya generaba el 52,5% del tráfico de
+  agentes que medía y el agente de ChatGPT, el 42%.
+
+Por empresa, el gráfico de tráfico de IA del primer semestre de 2026 del mismo
+informe de DataDome atribuye a Meta el 46,3% y a OpenAI el 34,6% del tráfico de
+IA que detecta en las webs que protege.
+
+## Por qué no los ves en tu analítica
+
+Google Analytics cuenta una visita cuando la página ejecuta su etiqueta, que es
+JavaScript. Un agente que lee el HTML no la ejecuta, así que para GA4 no ha
+pasado. Un agente que navega con un navegador completo sí puede ejecutarla, y
+entonces se mezcla con las visitas de personas, a veces con un comportamiento
+raro: muchas fichas en pocos segundos y ninguna compra.
+
+Por eso el tráfico de agentes se mira en otro sitio: en los registros del
+servidor o en el panel de tu proveedor de seguridad, buscando sus nombres. Y
+aun así es una cuenta por lo bajo, porque no todos se identifican, y DataDome
+detecta además bots que se hacen pasar por agentes conocidos.
+
+## Qué hacer con tu web
+
+<NumberedSection n={1} title="Comprueba que tu servidor deja pasar a los agentes">
+
+Que robots.txt les deje pasar no basta. Muchos cortafuegos y servicios
+anti-bots bloquean por defecto todo lo que no parece una persona, y el agente se
+encuentra un 403 o un reto que no puede resolver. Según Cloudflare, menos del 1%
+de las webs de su red bloquea a los rastreadores de búsqueda, pero el bloqueo
+accidental no aparece en esa cuenta. Qué bots dejar entrar, y cuáles son de
+entrenamiento, lo contamos en
+<a href="/blog/bots-de-ia-robots-txt-cuales-dejar-entrar">esta guía de robots.txt</a>.
+
+<QuickAction>Pide a quien gestione tu web o tu cortafuegos que revise si las reglas anti-bots tratan igual a un agente de búsqueda de IA que a un ataque.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Pon en el HTML lo que el agente viene a buscar">
+
+Si el 87% de lo que miran son fichas, la ficha es tu escaparate para ellos. El
+nombre del producto, el precio, el stock y las condiciones de envío y
+devolución tienen que llegar en el HTML y en los datos estructurados, no solo
+después de que se ejecute JavaScript. Las diez comprobaciones de una ficha
+preparada están en
+<a href="/blog/web-preparada-para-el-comercio-agentico">esta otra guía</a>.
+
+<QuickAction>Abre una de tus fichas con el JavaScript desactivado y comprueba si se ven el precio y el stock.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Que el aviso de cookies no tape la página">
+
+Un agente que navega tiene que cerrar el aviso de cookies antes de ver nada. Si
+el aviso ocupa la pantalla o no tiene un botón claro de rechazar o aceptar, el
+agente puede quedarse ahí. Cómo recorre un agente una tienda, paso a paso, en
+<a href="/blog/como-compra-un-agente-de-ia">cómo compra un agente de IA</a>.
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Mira tus registros, no solo GA4">
+
+Pide un informe del servidor o de tu proveedor de seguridad con las visitas por
+agente: cuántas, a qué páginas y con qué respuesta. Si ves visitas a fichas
+que no aparecen en las respuestas que has medido, revisa qué contenido reciben.
+Los registros, por sí solos, no explican por qué una IA cita o recomienda una
+página.
+
+</NumberedSection>
+
+## Cómo lo ves en GenScore
+
+La **Auditoría técnica** de GenScore pide tu portada con el nombre de los bots de
+búsqueda de ChatGPT, Claude y Perplexity y te avisa si tu servidor los bloquea
+aunque robots.txt los deje pasar. En Pro y Agencia, **Visibilidad en agentes**
+separa a los agentes que leen el HTML de los que navegan con un navegador. En la
+página donde vendes revisa las señales del HTML y, cuando hay una lectura con
+navegador, enseña si el precio, las opciones y el botón están visibles o si un
+aviso de cookies se superpone. Sirve para encontrar obstáculos antes de que los
+encuentre un agente; no certifica que cada agente complete la compra. La
+**Auditoría agéntica** se hace sola después de cada escaneo.
+
+Sin cuenta, el
+<a href="/comercio-agentico">comprobador de comercio agéntico</a> revisa
+gratis si una página de tu tienda tiene las señales que un agente necesita para
+encontrarla, entenderla y comprar en ella.
+
+<Verdict title="Tu web ya tiene un segundo público">
+
+Los agentes de IA entran cada vez más, sobre todo a fichas de producto, y muchos
+no salen en tu analítica. Antes de preguntarte cuántos son, asegúrate de que
+pueden pasar y de que, cuando llegan, encuentran lo que han venido a leer: el
+precio, el stock y el botón.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira qué ve un agente cuando entra en tu web"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: revisamos si los bots de la IA pueden entrar en tu web y qué encuentran los agentes en la página donde vendes."
+/>
+
+</div>
+
+<RelatedPosts cluster="medicion" currentSlug={post.slug} />
+
+</BlogPageShell>
