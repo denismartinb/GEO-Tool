@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import Link from "next/link";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
@@ -148,10 +147,6 @@ export default function FreeCheckerPage() {
       hero={
         <>
         {schemas}
-        {/* `Suspense` no es ceremonia: `FreeCheckerForm` lee `?d=` con
-            `useSearchParams` (el dominio que el visitante escribió en la
-            portada), y sin este límite Next no puede prerenderizar la página. */}
-        <Suspense fallback={null}>
           <FreeCheckerForm
             heading={
               <>
@@ -312,7 +307,6 @@ export default function FreeCheckerPage() {
               </nav>
             </div>
           </FreeCheckerForm>
-        </Suspense>
         </>
       }
     />
