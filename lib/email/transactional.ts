@@ -948,6 +948,8 @@ export async function sendLlmIncidentAlertEmail(input: {
   detail: string;
   domain: string;
   projectId: string;
+  /** GEMINI-QUOTA-KIND-1: which limit a 429 hit, as a fixed sentence. */
+  quotaLimit?: string;
   dedupeMinutes: number;
   detectedAt: Date;
 }): Promise<void> {
@@ -964,6 +966,7 @@ export async function sendLlmIncidentAlertEmail(input: {
     dataRow("Proceso", input.surfaceLabel),
     dataRow("Motor", input.provider),
     dataRow("Causa", input.category),
+    ...(input.quotaLimit ? [dataRow("Límite", input.quotaLimit)] : []),
     dataRow("Dominio", input.domain),
     dataRow("Proyecto", input.projectId),
     dataRow("Detectado", input.detectedAt.toISOString())

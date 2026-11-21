@@ -2,6 +2,7 @@ import "server-only";
 
 import { z } from "zod";
 import { auditDomainContent } from "@/lib/llm/gemini";
+import { ExtractionError } from "@/lib/llm/extraction-errors";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { checkGenerationRateLimit, type GenerationRateLimitConfig } from "@/lib/recommendations/generation-rate-limit";
 import { isProOrAbove, resolveEffectivePlanId } from "@/lib/billing";
@@ -650,7 +651,8 @@ export async function auditDomainCoverageCore({
           brand: project.brand,
           domain: project.domain,
           language: project.language,
-          topic
+          topic,
+          projectId
         });
         rawByPrompt.push({ promptId: prompt.id, text: raw.text, groundingChunks: raw.groundingChunks });
 
@@ -685,8 +687,16 @@ export async function auditDomainCoverageCore({
         console.error(`${LOG_PREFIX} topic_failed`, {
           project_id: projectId,
           error_name: error instanceof Error ? error.name : "unknown",
-          error_message: error instanceof Error ? error.message : "unknown"
+          error_message: error instanceof Error ? error.message : "unknown",
+          quota_kind: error instanceof ExtractionError ? (error.quotaKind ?? null) : null
         });
+        // GEMINI-QUOTA-STOP-1 (log §472): a quota error says nothing about
+        // this topic, so it is not recorded as «could not verify» (that would
+        // close the topic for this scan with no answer). It stays eligible and
+        // the batch stops: every following topic would hit the same limit and
+        // spend three more calls each. With no new topic, the runner parks the
+        // job and its continuation cap bounds how long it keeps trying.
+        if (error instanceof ExtractionError && error.category === "quota") break;
         topics.push({ promptId: prompt.id, topic, found: false, pages: [], note: COULD_NOT_VERIFY_NOTE });
       }
     }

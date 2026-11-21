@@ -4,7 +4,8 @@ import {
   ExtractionError,
   categorizeHttpStatus,
   isRetryableExtractionCategory,
-  type ExtractionErrorCategory
+  type ExtractionErrorCategory,
+  type QuotaKind
 } from "@/lib/llm/extraction-errors";
 
 /**
@@ -53,6 +54,12 @@ export type ExtractionFetchOptions = {
    * "Sanitize all errors").
    */
   transportMessage?: string;
+  /**
+   * GEMINI-QUOTA-KIND-1: reads a 429 body and says which limit it hit. The
+   * body is only classified, never kept. A `per_day` or `spend_cap` answer is
+   * not retried: the next attempt would hit the same wall.
+   */
+  classifyQuotaBody?: (body: string) => QuotaKind | undefined;
 };
 
 function sleep(ms: number): Promise<void> {
@@ -152,8 +159,17 @@ export async function fetchExtractionWithRetry(
       if (response.ok) return response;
 
       const category: ExtractionErrorCategory = categorizeHttpStatus(response.status);
-      lastError = new ExtractionError(category, options.describeStatus(response.status));
-      if (!isRetryableExtractionCategory(category) || attempt === options.maxAttempts) throw lastError;
+      let quotaKind: QuotaKind | undefined;
+      if (category === "quota" && options.classifyQuotaBody) {
+        try {
+          quotaKind = options.classifyQuotaBody(await response.text());
+        } catch {
+          quotaKind = undefined;
+        }
+      }
+      lastError = new ExtractionError(category, options.describeStatus(response.status), quotaKind);
+      const longLived = quotaKind === "per_day" || quotaKind === "spend_cap";
+      if (!isRetryableExtractionCategory(category) || longLived || attempt === options.maxAttempts) throw lastError;
 
       const delayMs = computeRetryDelayMs({
         attempt,
