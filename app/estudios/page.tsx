@@ -19,7 +19,8 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
  */
 export const metadata: Metadata = contentMetadata({
   title: "Estudios sobre búsqueda con IA en España · GenScore",
-  description: STUDIES_LEAD,
+  // MCP-SITE-FIXES-1 (log §431): STUDIES_LEAD runs past 160 characters.
+  description: "Estudios de GenScore sobre qué marcas recomiendan ChatGPT, Gemini, Claude y Perplexity en España, con método, fuentes y cómo citarlos.",
   path: PAGE_PATH
 });
 

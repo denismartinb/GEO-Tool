@@ -4,6 +4,7 @@ import type { createServiceClient } from "@/lib/supabase/service";
 import { PLANS } from "@/app/pricing/plans-data";
 import { loadAutomationSnapshot, type AccountAutomation, type ProjectAutomation } from "@/lib/admin/automation";
 import { deriveAccountHealth, type AccountHealth, type HealthRun } from "@/lib/admin/account-health";
+import { loadGeoScoresByProject, type AdminGeoScore } from "@/lib/admin/geo-scores";
 import { resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { resolveCadencePlanId } from "@/lib/scan/cron";
 
@@ -31,6 +32,17 @@ export type AdminUserRow = {
   automation: AccountAutomation | null;
   /** ADMIN-HEALTH-1 (§230): is any domain of this account not getting the data it should, right now? */
   health: AccountHealth;
+  /**
+   * ADMIN-GEO-SCORE-1. La Puntuación GEO de cada dominio activo de la cuenta,
+   * la misma que ve su dueño en Visión general. Vacío si no tiene dominios.
+   */
+  domainScores: AdminDomainScore[];
+};
+
+export type AdminDomainScore = {
+  projectId: string;
+  domain: string;
+  geoScore: AdminGeoScore;
 };
 
 export type AdminUsersPage = {
@@ -59,6 +71,8 @@ export type AdminUserProject = {
   latestScan: { status: string; createdAt: string } | null;
   /** ADMIN-CONSOLE-2a. `null` si no se pudo leer, o si el proyecto está archivado (el barrido no lo toca). */
   automation: ProjectAutomation | null;
+  /** ADMIN-GEO-SCORE-1. Misma puntuación que Visión general. */
+  geoScore: AdminGeoScore;
 };
 
 export type AdminUserDetail = AdminUserRow & {
@@ -117,7 +131,8 @@ function toRow(
   projectCount: number,
   scanCount30d: number,
   automation: AccountAutomation | null = null,
-  health: AccountHealth = { hasError: false, reasons: [] }
+  health: AccountHealth = { hasError: false, reasons: [] },
+  domainScores: AdminDomainScore[] = []
 ): AdminUserRow {
   const planId = profile.current_plan ?? "free";
   return {
@@ -133,7 +148,8 @@ function toRow(
     projectCount,
     scanCount30d,
     automation,
-    health
+    health,
+    domainScores
   };
 }
 
@@ -270,6 +286,16 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
   const recurringEnabledByProject = (projectId: string) =>
     automation.availability === "ok" ? automation.byProject.get(projectId)?.recurringScansEnabled === true : false;
 
+  // ADMIN-GEO-SCORE-1: sólo dominios activos, igual que la columna «Dominios».
+  const activeProjectIds = [...activeProjectsByOwner.values()].flat().map((project) => project.id);
+  const geoScoreByProject = await loadGeoScoresByProject(service, activeProjectIds);
+  const domainScoresFor = (ownerId: string): AdminDomainScore[] =>
+    (activeProjectsByOwner.get(ownerId) ?? []).map((project) => ({
+      projectId: project.id,
+      domain: project.domain,
+      geoScore: geoScoreByProject.get(project.id) ?? { state: "unavailable" }
+    }));
+
   const users = (profilesResult.data ?? []).map((profile) =>
     toRow(
       profile,
@@ -295,7 +321,8 @@ export async function listOperatorUsers(service: ServiceClient): Promise<AdminUs
         projects: activeProjectsByOwner.get(profile.id) ?? [],
         runs: runsByOwner.get(profile.id) ?? [],
         recurringEnabledByProject
-      })
+      }),
+      domainScoresFor(profile.id)
     )
   );
 
@@ -363,6 +390,13 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
     userId
   );
 
+  const geoScoreByProject = await loadGeoScoresByProject(
+    service,
+    projects.map((project) => project.id)
+  );
+  const geoScoreOf = (projectId: string): AdminGeoScore =>
+    geoScoreByProject.get(projectId) ?? { state: "unavailable" };
+
   const row = toRow(
     profile,
     authResult.data?.user?.last_sign_in_at ?? null,
@@ -375,7 +409,10 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
       runs: detailRuns,
       recurringEnabledByProject: (projectId) =>
         automation.availability === "ok" ? automation.byProject.get(projectId)?.recurringScansEnabled === true : false
-    })
+    }),
+    projects
+      .filter((project) => !project.is_archived)
+      .map((project) => ({ projectId: project.id, domain: project.domain, geoScore: geoScoreOf(project.id) }))
   );
 
   return {
@@ -389,7 +426,8 @@ export async function getOperatorUserDetail(service: ServiceClient, userId: stri
       createdAt: project.created_at,
       isArchived: project.is_archived,
       latestScan: latestScanByProject.get(project.id) ?? null,
-      automation: automation.byProject.get(project.id) ?? null
+      automation: automation.byProject.get(project.id) ?? null,
+      geoScore: geoScoreOf(project.id)
     }))
   };
 }

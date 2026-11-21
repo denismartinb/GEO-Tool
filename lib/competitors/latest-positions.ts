@@ -15,20 +15,24 @@
  * 1..N ranking are exactly what the Competidores list already did (log §15);
  * they moved here so a second caller cannot drift from them.
  *
- * The rules it encodes, each traceable to that section of the log:
+ * The rules it encodes, each traceable to the log:
  *
- * - **A rank is a 1..N order, never the raw mean.** The number behind it is a
- *   mean rank over the prompts where the entity was named, and a mean is almost
- *   never 1,00 — printing it made the list look like nobody was in first place.
- * - **Ties break by mention rate**, because at the same mean rank the brand the
- *   AI names in more answers is genuinely ahead, and that percentage is already
- *   on screen beside the name, so the tiebreak is visible rather than arbitrary.
- *   Name last, purely so the order is stable between renders instead of
- *   depending on the caller's array order.
+ * - **Visibility first** (COMPETITOR-RANK-VISIBILITY-1, 2026-10-28, log §353,
+ *   superseding the mean-rank order of §15/§175/§177). The list is ordered by
+ *   mention rate: the share of the scan's answers that named the entity. The
+ *   mean rank only averages the answers where the entity appears, so a brand
+ *   named in 19% of answers but always first (Verisure) led a brand named in
+ *   95% (the project's own brand), which no reader accepts as "who is ahead".
+ * - **The mean rank breaks ties and is shown as itself.** `position` is the
+ *   real mean (e.g. 1,4), printed with `formatMeanPosition`; `rank` is the
+ *   1..N order of this list and is never labelled "puesto medio" again —
+ *   doing so printed "Puesto medio 1º, 2º, 3º…" as row numbers.
+ *   Name last, purely so the order is stable between renders.
  * - **No rank means no row.** Under geo-score-v3 an entity the AI never named
  *   has no position at all (docs/adr/0026), and giving it one would invent data.
- * - **A mean over too few answers does not outrank a mean over many**
- *   (SAMPLE-FLOOR-1, see `MIN_MENTION_RATE_FOR_RANK` below).
+ * - **A mean over too few answers is flagged, not hidden** (SAMPLE-FLOOR-1,
+ *   `qualified`). With the order by mention rate such a row already sorts low;
+ *   the flag only says its mean rank rests on little evidence.
  */
 
 import { readPosition, type PersistedRankingEntry } from "@/lib/scoring/brand-position-ranking";
@@ -48,7 +52,10 @@ export type LatestPositionRow<T> = T & {
   position: number;
   /** Percentage of the scan's answers that named this entity, 0-100. */
   mentionRate: number | null;
-  /** 1..N standing among the entities the AI actually named in this scan. */
+  /**
+   * 1..N place in this list, ordered by mention rate (log §353). NOT the mean
+   * rank: print `position` with `formatMeanPosition` for that.
+   */
   rank: number;
   /**
    * Whether this row's mean rank rests on enough answers to be compared with
@@ -139,11 +146,9 @@ export function rankLatestPositions<T extends LatestPositionEntity>({
     .filter((row): row is typeof row & { position: number } => row.position !== null)
     .sort(
       (a, b) =>
-        // The floor outranks the mean itself: a 1,00 over one answer sits
-        // behind a 1,50 over twenty-six, which is the whole of SAMPLE-FLOOR-1.
-        Number(b.qualified) - Number(a.qualified) ||
-        a.position - b.position ||
+        // Mention rate decides; the mean rank only breaks ties (log §353).
         (b.mentionRate ?? -1) - (a.mentionRate ?? -1) ||
+        a.position - b.position ||
         a.label.localeCompare(b.label, "es")
     )
     .map((row, index) => ({ ...row, rank: index + 1 }));

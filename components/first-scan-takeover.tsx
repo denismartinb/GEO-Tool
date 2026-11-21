@@ -2,9 +2,8 @@ import "server-only";
 
 import { getPlanForUser } from "@/lib/billing";
 import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
-import { getEngineMeta } from "@/lib/scan/engine-meta";
 import { createClient } from "@/lib/supabase/server";
-import { ScanMissionRocket } from "@/components/scan-mission-rocket";
+import { FirstScanMission } from "@/components/ins/mission/first-scan-mission";
 import type { ActiveScanRun } from "@/components/scan-in-progress";
 
 type LiveRun = ActiveScanRun & { id: string };
@@ -40,65 +39,19 @@ export async function FirstScanTakeover({
     data: { user }
   } = await supabase.auth.getUser();
 
-  /**
-   * The engine count is a REAL number or it is absent — never a guess.
-   *
-   * The founder's first instinct here was that a "momento guau" justified an
-   * approximate figure ("no me importa que no sean datos reales", 2026-08-10).
-   * What settled it was not the rule but the arithmetic: the órbita beat, two
-   * scenes later on this same screen, prints the true count straight from
-   * `scan_prompt_results` rows. An invented total in the rail would be
-   * contradicted by the product itself, in the same session, in front of the
-   * user it was meant to impress.
-   *
-   * `getPlanForUser` is wrapped in React's `cache()`, so several sections
-   * asking for it inside one request resolve a single query.
-   */
-  const [plan, { count: promptCount }] = await Promise.all([
-    user ? getPlanForUser(supabase, user.id) : Promise.resolve(null),
-    supabase
-      .from("project_prompts")
-      .select("id", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("is_active", true)
-  ]);
+  // The engine set is the plan's real one or it is absent, never a guess; the
+  // counters and per-engine rows read rows the run holds (log §355).
+  // `getPlanForUser` is wrapped in `cache()`, so six sections share one query.
+  const plan = user ? await getPlanForUser(supabase, user.id) : null;
 
   const engineProviders = plan ? resolveScanProvidersForPlan(plan) : null;
-  const engines = engineProviders ? engineProviders.length : null;
-  // Named in the ignition copy, so a Pro/Agencia mission says Perplexity and a
-  // Starter one doesn't (log §285).
-  const engineNames = engineProviders ? engineProviders.map((p) => getEngineMeta(p).label) : null;
-
-  /**
-   * `total_prompts` counts LANZAMIENTOS, not prompts, and the difference is
-   * not pedantry — it is the bug the founder caught on 2026-08-10.
-   *
-   * A 12-prompt project on 3 engines yields 36 responses, under SAMPLING-1's
-   * floor of `MIN_RESPONSES_PER_RUN` (50), so the run repeats the whole prompt
-   * set twice (ADR 0030). `total_prompts` then reads 24. Labelling that "24
-   * prompts" is incomprehensible to someone who typed 12 on the previous
-   * screen — his words: "si son doce, son doce".
-   *
-   * So the rail reports the three real quantities separately and lets the
-   * arithmetic be visible: 12 prompts x 2 pasadas x 3 motores = 72 respuestas.
-   * Every one of those is read, never assumed; any that cannot be resolved
-   * drops its own segment rather than being filled in.
-   */
-  const launches = activeRun.total_prompts ?? null;
-  const prompts = promptCount ?? null;
-  const samples = prompts !== null && prompts > 0 && launches !== null ? Math.round(launches / prompts) : null;
-  const expectedResponses = launches !== null && engines !== null ? launches * engines : null;
 
   return (
-    <ScanMissionRocket
+    <FirstScanMission
       projectId={projectId}
       initial={activeRun}
       domain={domain}
-      prompts={prompts}
-      samples={samples}
-      engines={engines}
-      engineNames={engineNames}
-      expectedResponses={expectedResponses}
+      providers={engineProviders ?? []}
     />
   );
 }

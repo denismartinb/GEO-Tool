@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { BlogPageShell } from "@/components/blog/blog-page-shell";
 import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
 import { DefinedTermSchema } from "@/components/seo/defined-term-schema";
-import { GLOSSARY_TERMS } from "@/lib/glosario/terms";
+import { GLOSSARY_TERMS, glossaryTermTitle } from "@/lib/glosario/terms";
 import { contentMetadata } from "@/lib/seo/metadata";
 
 const SITE_URL = "https://www.genscore.es";
@@ -32,8 +32,8 @@ export async function generateMetadata({
   if (!entry) return {};
   return {
     ...contentMetadata({
-      title: `¿Qué es ${entry.term}? · Glosario GEO · GenScore`,
-      description: entry.definition,
+      title: glossaryTermTitle(entry.term),
+      description: entry.metaDescription,
       path: `/glosario/${entry.slug}`
     })
   };

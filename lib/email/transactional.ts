@@ -1,10 +1,12 @@
 import "server-only";
 
 import { getResendClient, getEmailFromAddress } from "@/lib/email/resend";
+import { emailKindTags, type EmailKind } from "@/lib/email/kinds";
 import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categories";
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -23,13 +25,14 @@ import { SUPPORT_EMAIL } from "@/lib/support";
  * `headers` did not survive the send (REPLY-TO-SUPPORT-1, log §272).
  */
 export async function sendEmail(
+  kind: EmailKind,
   to: string,
   subject: string,
   html: string,
   headers?: Record<string, string>,
   replyTo: string = SUPPORT_EMAIL
 ): Promise<boolean> {
-  return (await sendEmailWithOutcome({ to, subject, html, headers, replyTo })) === "sent";
+  return (await sendEmailWithOutcome({ kind, to, subject, html, headers, replyTo })) === "sent";
 }
 
 /**
@@ -54,6 +57,8 @@ export function classifyResendError(error: { statusCode?: number | null; name?: 
 }
 
 export type EmailMessage = {
+  /** MAIL-METRICS-1 (log §419): sent to Resend as the `kind` tag. */
+  kind: EmailKind;
   to: string;
   subject: string;
   html: string;
@@ -74,7 +79,7 @@ export async function sendEmailWithOutcome(
   const resend = getResendClient();
   if (!resend) return "not_sent";
 
-  const { to, subject, html, headers, replyTo = SUPPORT_EMAIL } = message;
+  const { kind, to, subject, html, headers, replyTo = SUPPORT_EMAIL } = message;
   try {
     const payload = {
       from: getEmailFromAddress(),
@@ -82,6 +87,7 @@ export async function sendEmailWithOutcome(
       replyTo,
       subject,
       html,
+      tags: emailKindTags(kind),
       ...(headers ? { headers } : {})
     };
     const { error } = options.idempotencyKey
@@ -268,6 +274,16 @@ export const subtext = (html: string) =>
   `<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">${html}</p>`;
 
 /**
+ * EXT-REACH-1 (log §436): the one-line postscript that offers the Chrome
+ * extension under an email's main button, never above it. The store link is
+ * tagged with the email it came from.
+ */
+export function extensionPostscript(campaign: string): string {
+  const href = `${CHROME_WEB_STORE_URL}?utm_source=email&utm_medium=posdata&utm_campaign=${encodeURIComponent(campaign)}`;
+  return `<p style="margin:22px 0 0;padding-top:16px;border-top:1px solid #E7EAF0;font-size:14px;line-height:1.55;color:#3B4759;"><b style="color:#0B1426;">P. D.</b> Revisa cualquier página sin salir de Chrome. La extensión gratuita te dice si la IA puede leerla. <a href="${href}" style="${FOOTER_LINK_STYLE}">Añadir a Chrome</a></p>`;
+}
+
+/**
  * Numbered steps with done / current / next states — the progress block of
  * the lifecycle design (docs/design-reference/lifecycle-emails-1/). Lives here
  * rather than with the lifecycle templates because the welcome email uses it
@@ -314,6 +330,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
     ? `Tu prueba termina el ${endLabel}. Te avisaremos el día antes y no se te cobra nada de forma automática.`
     : `Tu prueba termina el ${endLabel}. No se te cobra nada de forma automática.`;
   await sendEmail(
+    "welcome",
     to,
     "Bienvenido a GenScore — tu prueba de Pro ya está activa",
     wrap(
@@ -330,6 +347,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
       ])}
       ${button("https://www.genscore.es/dashboard/projects/new", "Añadir mi dominio")}
       ${subtext(closing)}
+      ${extensionPostscript("welcome")}
     `,
       { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini, Claude y Perplexity te recomiendan." }
     )
@@ -338,6 +356,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
 
 export async function sendPlanConfirmedEmail(to: string, planName: string): Promise<void> {
   await sendEmail(
+    "plan_confirmed",
     to,
     `Tu plan ${planName} ya está activo`,
     wrap(
@@ -359,6 +378,7 @@ export async function sendPlanConfirmedEmail(to: string, planName: string): Prom
 
 export async function sendPaymentFailedEmail(to: string): Promise<void> {
   await sendEmail(
+    "payment_failed",
     to,
     "No hemos podido cobrar tu suscripción de GenScore",
     wrap(
@@ -386,6 +406,7 @@ export async function sendPaymentFailedEmail(to: string): Promise<void> {
 export async function sendTrialEndedEmail(to: string, options: { idempotencyKey?: string } = {}): Promise<SendOutcome> {
   return sendEmailWithOutcome(
     {
+      kind: "trial_ended_plain",
       to,
       subject: "Tu prueba de Pro ha terminado",
       html: wrap(
@@ -409,6 +430,7 @@ const dateFormatter = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: 
 
 export async function sendCancellationScheduledEmail(to: string, activeUntil: Date): Promise<void> {
   await sendEmail(
+    "cancellation_scheduled",
     to,
     "Tu suscripción de GenScore se cancelará al final de tu periodo",
     wrap(
@@ -450,6 +472,7 @@ export async function sendScoreDropAlertEmail(
 ): Promise<void> {
   const envelope = optionalEmailEnvelope(userId, "score_drop");
   await sendEmail(
+    "score_drop",
     to,
     `${projectDomain}: tu puntuación ha bajado`,
     wrap(
@@ -549,6 +572,10 @@ export async function sendWeeklyDigestEmail(
     promptsCount: number;
     competitorsCount: number;
     scansThisWeek: number;
+    /** GEO-ALERTS-1 (log §440): «Tu web esta semana», only with news. */
+    site?: { resolved: string | null; open: { title: string; detail: string } | null } | null;
+    /** Where the block's button goes. */
+    projectId?: string;
   },
   userId?: string,
   options: { idempotencyKey?: string } = {}
@@ -644,8 +671,30 @@ export async function sendWeeklyDigestEmail(
       ${moreRecommendationsHtml}`
     : "";
 
+  const siteHtml =
+    digest.site && (digest.site.resolved || digest.site.open)
+      ? `
+      ${sectionLabel("Tu web esta semana")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:12px;">
+        <tr><td style="padding:16px 18px;">
+          ${digest.site.resolved ? `<div style="font-size:14.5px;line-height:1.5;color:#0F7A54;font-weight:700;">&#10003; ${escapeHtml(digest.site.resolved)}</div>` : ""}
+          ${
+            digest.site.open
+              ? `<div style="${digest.site.resolved ? "margin-top:10px;" : ""}font-size:14.5px;line-height:1.5;color:#0B1426;font-weight:700;">${escapeHtml(digest.site.open.title)}.</div><div style="margin-top:4px;font-size:13.5px;line-height:1.5;color:#5B6B82;">${escapeHtml(digest.site.open.detail)}</div>`
+              : ""
+          }
+          ${
+            digest.projectId
+              ? `<div style="margin-top:10px;"><a href="https://www.genscore.es/dashboard/projects/${digest.projectId}/web-audit?bloque=geo" style="${FOOTER_LINK_STYLE}">Ver la auditoría</a></div>`
+              : ""
+          }
+        </td></tr>
+      </table>`
+      : "";
+
   return sendEmailWithOutcome(
     {
+      kind: "weekly_digest",
       to,
       subject: `Tu resumen semanal de ${projectDomain}`,
       html: wrap(
@@ -669,6 +718,7 @@ export async function sendWeeklyDigestEmail(
       </table>
       ${subScoreHtml}
       ${activityHtml}
+      ${siteHtml}
       ${moverHtml}
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
@@ -683,6 +733,7 @@ export async function sendWeeklyDigestEmail(
 
 export async function sendAccountDeletedEmail(to: string): Promise<void> {
   await sendEmail(
+    "account_deleted",
     to,
     "Tu cuenta de GenScore se ha eliminado correctamente",
     wrap(
@@ -770,6 +821,7 @@ export async function sendWebAuditFailedAlertEmail(input: {
     `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
 
   await sendEmail(
+    "ops_web_audit_failed",
     to,
     `[GenScore] Auditoría web automática fallida — ${input.domain}`,
     `<!doctype html><html><head><meta charset="utf-8"></head>
@@ -850,6 +902,7 @@ export async function sendScanHealthAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_scan_health",
     to,
     `[GenScore] Escaneo incompleto — ${input.engine}: ${input.reason}`,
     wrap(
@@ -895,6 +948,8 @@ export async function sendLlmIncidentAlertEmail(input: {
   detail: string;
   domain: string;
   projectId: string;
+  /** GEMINI-QUOTA-KIND-1: which limit a 429 hit, as a fixed sentence. */
+  quotaLimit?: string;
   dedupeMinutes: number;
   detectedAt: Date;
 }): Promise<void> {
@@ -911,12 +966,14 @@ export async function sendLlmIncidentAlertEmail(input: {
     dataRow("Proceso", input.surfaceLabel),
     dataRow("Motor", input.provider),
     dataRow("Causa", input.category),
+    ...(input.quotaLimit ? [dataRow("Límite", input.quotaLimit)] : []),
     dataRow("Dominio", input.domain),
     dataRow("Proyecto", input.projectId),
     dataRow("Detectado", input.detectedAt.toISOString())
   ].join("");
 
   await sendEmail(
+    "ops_llm_incident",
     to,
     `[GenScore] Fallo de ${input.provider} fuera del escaneo — ${input.category}`,
     wrap(
@@ -950,11 +1007,11 @@ export async function sendLlmIncidentAlertEmail(input: {
  * Goes to the OPERATOR (`OPS_ALERT_EMAIL`), never re-uses a customer-facing
  * template: this is about the account, not for the account.
  *
- * Known gap, stated rather than hidden: a signup that requires email
- * confirmation and never confirms never reaches either call site, so it
- * never generates this alert either — seeing those would need a Supabase
- * database webhook on `auth.users`, which is infrastructure outside this
- * repo and its own Task Intake.
+ * SIGNUP-ALERT-PENDING-1 (log §359): a password signup that needs email
+ * confirmation now alerts at submission too (`status: "pending"`), from
+ * `app/signup/actions.ts`. Before, it only alerted once the confirmation
+ * link produced a session, and a link opened in another browser or app
+ * fails PKCE there, so real signups reached the operator never.
  */
 export async function sendNewSignupOpsAlertEmail(input: {
   email: string;
@@ -963,6 +1020,13 @@ export async function sendNewSignupOpsAlertEmail(input: {
   planId: string;
   trialEndsAt: string | null;
   createdAt: Date;
+  status?: "active" | "pending";
+  /**
+   * OPS-FIRST-SCAN-1: the domain the person brought to signup (hero field,
+   * free checker or `/signup?dominio=`), when the form knew it. It is what
+   * they meant to scan, not a project: the project is created later.
+   */
+  domain?: string | null;
 }): Promise<void> {
   const to = getOpsAlertAddress();
   if (!to) return;
@@ -974,12 +1038,16 @@ export async function sendNewSignupOpsAlertEmail(input: {
     </tr>`;
 
   const methodLabel = input.method === "google" ? "Google OAuth" : "Email y contraseña";
-  const planLabel = input.trialEndsAt
-    ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
-    : input.planId;
+  const pending = input.status === "pending";
+  const planLabel = pending
+    ? "Prueba de Pro al confirmar el email"
+    : input.trialEndsAt
+      ? `${input.planId} · prueba hasta ${new Date(input.trialEndsAt).toISOString().slice(0, 10)}`
+      : input.planId;
 
   const rowsHtml = [
     dataRow("Email", input.email),
+    ...(input.domain ? [dataRow("Dominio indicado", input.domain)] : []),
     dataRow("user_id", input.userId),
     dataRow("Método", methodLabel),
     dataRow("Plan", planLabel),
@@ -987,22 +1055,104 @@ export async function sendNewSignupOpsAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_new_signup",
     to,
-    `[GenScore] Alta nueva — ${input.email}`,
+    `[GenScore] Alta nueva${pending ? " (sin confirmar)" : ""} · ${input.email}${input.domain ? ` · ${input.domain}` : ""}`,
     wrap(
       `
       ${eyebrow("Alta nueva · sólo equipo GenScore")}
-      ${heading("Nueva cuenta activa")}
+      ${heading(pending ? "Alta pendiente de confirmar el email" : "Nueva cuenta activa")}
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
         ${rowsHtml}
       </table>
-      ${subtext("Aviso automático por cada cuenta que llega a tener una sesión real — no cubre altas que nunca confirman el email.")}
+      ${subtext(
+        pending
+          ? "La persona se ha registrado con email y contraseña y todavía tiene que pulsar el enlace de confirmación. Si lo pulsa, llegará otro aviso de cuenta activa."
+          : "Aviso automático por cada cuenta que llega a tener una sesión real."
+      )}
     `,
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
-        preheader: `Nueva cuenta: ${input.email}`
+        preheader: pending ? `Alta sin confirmar: ${input.email}` : `Nueva cuenta: ${input.email}`
       }
     )
+  );
+}
+
+/**
+ * OPS-FIRST-SCAN-1: aviso al operador cuando un proyecto lanza su PRIMER
+ * escaneo, que es el momento en que un dominio empieza a costar llamadas a
+ * los motores. Complementa al aviso de alta: ese no siempre sabe el dominio
+ * (Google, o alguien que llega sin escribirlo), y éste lo sabe siempre.
+ *
+ * Va a `OPS_ALERT_EMAIL`, nunca al cliente. Las llamadas previstas son las
+ * del propio run (prompts × muestras × motores), no una estimación.
+ */
+export async function sendFirstScanOpsAlertEmail(
+  input: {
+    domain: string;
+    projectId: string;
+    runId: string;
+    ownerEmail: string | null;
+    ownerUserId: string;
+    planId: string;
+    triggerSource: "user" | "cron";
+    prompts: number;
+    samples: number;
+    engines: string[];
+    internalAccount: boolean;
+    createdAt: Date;
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
+  const to = getOpsAlertAddress();
+  if (!to) return "not_sent";
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const calls = input.prompts * input.samples * input.engines.length;
+  const rowsHtml = [
+    dataRow("Dominio", input.domain),
+    dataRow("Cuenta", input.ownerEmail ?? "(sin email)"),
+    dataRow("user_id", input.ownerUserId),
+    dataRow("Plan", input.planId),
+    dataRow("Cuenta interna de prueba", input.internalAccount ? "Sí" : "No"),
+    dataRow("Lanzado por", input.triggerSource === "cron" ? "Escaneo automático" : "La persona"),
+    dataRow("Motores", input.engines.join(", ")),
+    dataRow(
+      "Llamadas previstas",
+      `${calls} (${input.prompts} prompts × ${input.samples} ${input.samples === 1 ? "muestra" : "muestras"} × ${input.engines.length} motores)`
+    ),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Escaneo", input.runId),
+    dataRow("Fecha", input.createdAt.toISOString())
+  ].join("");
+
+  return sendEmailWithOutcome(
+    {
+      kind: "ops_first_scan",
+      to,
+      subject: `[GenScore] Primer escaneo · ${input.domain}${input.ownerEmail ? ` · ${input.ownerEmail}` : ""}`,
+      html: wrap(
+        `
+      ${eyebrow("Dominio nuevo · sólo equipo GenScore")}
+      ${heading(`Primer escaneo de ${escapeHtml(input.domain)}`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext("Aviso automático la primera vez que un proyecto lanza un escaneo, que es cuando el dominio empieza a gastar llamadas a los motores.")}
+    `,
+        {
+          footerHtml: "Aviso interno, sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+          preheader: `Primer escaneo: ${input.domain}`
+        }
+      )
+    },
+    options
   );
 }
 
@@ -1048,6 +1198,7 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
   ].join("");
 
   await sendEmail(
+    "ops_automation_change",
     to,
     `[GenScore] /admin cambió un automatismo — ${input.domain}`,
     wrap(
@@ -1061,6 +1212,51 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
         preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
+    )
+  );
+}
+
+/**
+ * EXT-REACH-1 (log §436): the record of an announcement batch sent from
+ * /admin/crm. /admin has no audit table, so this email is the record
+ * (`.claude/rules/admin.md`). Counts only, never a recipient's address.
+ */
+export async function sendAnnouncementOpsAlertEmail(input: {
+  operatorEmail: string;
+  announcement: string;
+  sent: number;
+  failed: number;
+  remaining: number;
+  at: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;">${escapeHtml(value)}</td>
+    </tr>`;
+  await sendEmail(
+    "ops_announcement",
+    to,
+    `[GenScore] /admin envió un anuncio: ${input.announcement}`,
+    wrap(
+      `
+      ${eyebrow("Acción de operador · sólo equipo GenScore")}
+      ${heading("Se ha enviado un lote del anuncio")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${row("Operador", input.operatorEmail)}
+        ${row("Anuncio", input.announcement)}
+        ${row("Enviados", String(input.sent))}
+        ${row("Fallidos", String(input.failed))}
+        ${row("Pendientes", String(input.remaining))}
+        ${row("Fecha", input.at.toISOString())}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno. Sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `${input.sent} enviados, ${input.remaining} pendientes`
       }
     )
   );
@@ -1114,6 +1310,7 @@ export async function sendSweepHealthAlertEmail(input: {
       : `[GenScore] Escaneo recurrente: ${count} dominios sin escanear`;
 
   await sendEmail(
+    "ops_sweep_health",
     to,
     subject,
     wrap(
@@ -1165,6 +1362,7 @@ export async function sendChainRejectedAlertEmail(input: {
     </tr>`;
 
   await sendEmail(
+    "ops_chain_rejected",
     to,
     `[GenScore] La cadena del barrido se ha cortado — HTTP ${input.status}`,
     wrap(
@@ -1287,6 +1485,7 @@ export async function sendWatchdogAlertEmail(input: {
       : `[GenScore] ${parts.join(" · ")}`;
 
   await sendEmail(
+    "ops_watchdog",
     to,
     subject,
     wrap(
@@ -1346,6 +1545,7 @@ export async function sendSeoTrackingAlertEmail(input: {
     `<td style="padding:4px 0;color:#0B1426;font-size:13px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;">${escapeHtml(value)}</td></tr>`;
 
   return sendEmail(
+    "ops_seo_tracking",
     to,
     `[GenScore] Seguimiento de palabras parado: ${input.category === "balance" ? "sin saldo" : "credenciales"}`,
     `<!doctype html><html><head><meta charset="utf-8"></head>

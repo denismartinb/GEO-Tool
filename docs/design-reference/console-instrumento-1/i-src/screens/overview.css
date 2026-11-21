@@ -1,0 +1,141 @@
+/* agentic + seo */
+.ag:not(.src){display:grid;grid-template-columns:120px 1fr;gap:20px;align-items:center}
+.ag:not(.src)>*,.ag:not(.src) .rows>div>*{min-width:0}
+.ag:not(.src) svg.ring{width:120px;height:120px;display:block}
+.ag:not(.src) .rows>div{display:grid;grid-template-columns:110px 1fr 46px;gap:10px;align-items:center;font-size:13px;padding:5px 0}
+.ag:not(.src) .rows .tk{height:9px;gap:2px}
+.ag:not(.src) .rows b{font-weight:600;text-align:right;font-size:13px}
+.ag:not(.src) .rows b small{color:var(--ink-3);font-weight:400}
+.note{font-size:12px;color:var(--ink-3);margin-top:14px;display:flex;gap:6px;align-items:center}
+.fixln{display:flex;align-items:center;gap:10px;margin-top:14px;padding:11px 12px;border-radius:12px;background:var(--surface-2);font-size:13px}
+.fixln .sd{width:7px;height:7px;border-radius:50%;background:var(--warm);flex:none}
+.fixln .i{margin-left:auto;color:var(--ink-3)}
+.seo3{display:grid;grid-template-columns:repeat(3,1fr)}
+.seo3.two{grid-template-columns:1fr 1fr}
+.seo3>div{padding:4px 22px 6px;border-right:1px solid var(--rule)}
+.seo3>div:first-child{padding-left:0}
+.seo3>div:last-child{border-right:0;padding-right:0}
+.seo3 .k{font-size:12.5px;color:var(--ink-3);display:flex;align-items:center;gap:6px}
+.seo3 .k svg{width:13px;height:13px}
+.seo3 .bv{font-size:34px;font-weight:300;letter-spacing:-.04em;line-height:1;margin-top:8px}
+.seo3 .bv small{font-size:13px;color:var(--ink-3);letter-spacing:0}
+.trio{display:flex;gap:16px;margin-top:12px;font-size:12px;color:var(--ink-3)}
+.trio b{display:block;font-size:18px;font-weight:500;color:var(--ink)}
+
+.ag:not(.src) .rows .tb{margin:0 2px}
+
+/* plan of the week: deep block */
+.planx{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:24px;padding:34px 30px 30px 36px}
+.planx .l{position:relative;z-index:1;display:flex;flex-direction:column}
+.planx .ey{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--d-ink-3);font-weight:650;display:flex;align-items:center;gap:8px}
+.planx .ey .i{width:14px;height:14px;color:#8fb2ff}
+.planx .upto{font-size:15px;color:var(--d-ink-2);margin-top:22px}
+.planx .big{font-size:96px;font-weight:300;letter-spacing:-.055em;line-height:.95;color:#fff;margin-top:4px;display:flex;align-items:baseline}
+.planx .big small{font-size:24px;letter-spacing:0;color:var(--d-ink-2);margin-left:6px}
+.planx .s{font-size:14.5px;color:var(--d-ink-2);margin-top:12px;max-width:280px}
+.planx .btn{margin-top:auto;align-self:flex-start}
+.planx .l .meta{display:flex;gap:18px;margin:26px 0 28px;font-size:12.5px;color:var(--d-ink-3)}
+.planx .l .meta b{display:block;font-size:20px;font-weight:400;color:#fff;letter-spacing:-.02em}
+.planx .r{position:relative;z-index:1;border-left:1px solid var(--d-rule);padding-left:18px}
+@media (max-width:760px){
+ .ag:not(.src){grid-template-columns:minmax(0,1fr)}
+ .ag:not(.src) svg.ring{margin:0 auto}
+ .ag:not(.src) .rows>div{grid-template-columns:100px 1fr 40px}
+ .seo3,.seo3.two{grid-template-columns:minmax(0,1fr)}
+ .seo3>div{padding:14px 0;border-right:0;border-bottom:1px solid var(--rule-2)}
+ .seo3>div:last-child{border-bottom:0}
+ .planx{grid-template-columns:1fr;padding:24px 18px 18px;gap:8px}
+ .planx .big{font-size:72px}
+ .planx .r{border-left:0;border-top:1px solid var(--d-rule);padding:10px 0 0}
+ .planx .btn{margin-top:0}
+ .planx .l .meta{margin:20px 0}
+ .deep .arc{width:300px;height:300px;left:auto;right:-170px;bottom:auto;top:-150px;opacity:.22}
+}
+
+/* ===== plan of the week: three sober options ===== */
+.pv-ey{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:650}
+.pv-src{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--ink-3);font-weight:550}
+.pv-src::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.pv-src.google::before{background:var(--pos)}
+.pv-src.agent::before{background:var(--warm)}
+.pv-pt{font-size:15px;font-weight:600;color:var(--blue-ink);white-space:nowrap}
+.pv-pt.q{font-size:12.5px;font-weight:500;color:var(--ink-3)}
+.pv-t{font-size:15px;line-height:1.45;color:var(--ink);display:block}
+.pv-t code.p{font-size:.92em}
+.pv-m{display:block;margin-top:5px}
+.pv-prog{display:flex;align-items:center;gap:4px}
+.pv-prog i{width:22px;height:4px;border-radius:2px;background:var(--tick-off)}
+.pv-prog i.on{background:var(--pos)}
+.pv-prog span{margin-left:8px;font-size:12.5px;color:var(--ink-3)}
+.pv a{color:inherit;text-decoration:none}
+
+/* 1 · Hoja: a paper card with an ink top rule; the big number is the break */
+.pv1{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);background:linear-gradient(160deg,var(--blue-tint) 0%,color-mix(in srgb,var(--blue-tint) 55%,var(--surface)) 100%);border:1px solid var(--rule);border-top:3px solid var(--ink);border-radius:6px 6px 22px 22px;box-shadow:var(--shadow)}
+.pv1 .pv-l{padding:30px 30px 28px;display:flex;flex-direction:column;gap:14px;border-right:1px solid var(--rule)}
+.pv1 .pv-big{font-size:88px;font-weight:250;letter-spacing:-.055em;line-height:.9;color:var(--ink);margin-top:6px;display:flex;align-items:baseline}
+.pv1 .pv-big small{font-size:22px;letter-spacing:0;color:var(--ink-3);margin-left:6px;font-weight:400}
+.pv1 .pv-s{font-size:14px;color:var(--ink-2);max-width:260px}
+.pv1 .btn{align-self:flex-start;margin-top:auto}
+.pv1 .pv-list{list-style:none;padding:10px 26px}
+.pv1 .pv-list li+li{border-top:1px solid var(--rule-2)}
+.pv1 .pv-list a{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:14px;padding:18px 4px;align-items:baseline;transition:background var(--d1)}
+.pv1 .pv-list a:hover .pv-t{color:var(--blue-ink)}
+.pv1 .pv-n{font-size:13px;color:var(--ink-4);font-weight:600}
+
+/* 2 · Tinte azul: the only tinted surface on the page; rows are white sheets */
+
+/* 3 · Columnas: no card, ink rules above and below, four actions across */
+
+@media (max-width:760px){
+ .pv1{grid-template-columns:minmax(0,1fr)}
+ .pv1 .pv-l{border-right:0;border-bottom:1px solid var(--rule);padding:22px 18px}
+ .pv1 .pv-big{font-size:68px}
+ .pv1 .pv-list{padding:4px 14px}
+ .pv1 .pv-list a{grid-template-columns:26px minmax(0,1fr);row-gap:4px}
+ .pv1 .pv-list .pv-pt{grid-column:2}
+}
+
+.pv1 .pv-l{border-right-color:color-mix(in srgb,var(--blue-soft) 60%,transparent)}
+.pv1 .pv-list li+li{border-top-color:color-mix(in srgb,var(--blue-soft) 45%,transparent)}
+.pv1 .pv-list a{border-radius:10px}
+.pv1 .btn.line{background:var(--surface)}
+.pv1 .pv-prog i:not(.on){background:color-mix(in srgb,var(--blue-soft) 70%,transparent)}
+:root[data-theme=dark] .pv1{background:linear-gradient(160deg,color-mix(in srgb,var(--blue-tint) 55%,var(--surface)) 0%,var(--surface) 100%)}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .pv1{background:linear-gradient(160deg,color-mix(in srgb,var(--blue-tint) 55%,var(--surface)) 0%,var(--surface) 100%)}}
+
+/* ---- Overview hero, same treatment as Visibilidad en agentes option A (Denis 2026-10-27) ---- */
+.ov-h .agh-sc .bd{position:absolute;top:-3px;bottom:-3px;width:2px;margin-left:-1px;background:var(--surface);z-index:1}
+.ov-h .agh-sc .mk{z-index:2}
+.ov-bands{display:flex;margin-top:10px;font-size:11px;color:var(--ink-4);letter-spacing:.02em}
+.ov-bands span{padding-left:2px}
+.ov-bands .on{color:var(--blue-ink);font-weight:650}
+.ov-h .gn{margin-top:22px}
+.ov-h .gn .up{display:inline-flex;align-items:center;gap:3px;color:var(--pos);font-weight:600}
+.ov-h .r{display:flex;flex-direction:column}
+.ov-h .evo{margin-top:12px;min-height:0;flex:none}
+.ov-h .rh.sub{margin-top:18px}
+.ov-h .er{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 64px 14px;gap:14px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--rule-2)}
+.ov-h .er .t{display:flex;align-items:center;gap:9px;min-width:0}
+.ov-h .er .t b{font-size:14.5px;font-weight:550}
+.ov-h .bb{height:6px;border-radius:3px;background:var(--rule-2);overflow:hidden}
+.ov-h .bb i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,var(--blue-soft),var(--blue))}
+.agh-a.ov-h .er .m{font-size:22px;font-weight:300;letter-spacing:-.03em;text-align:right;color:var(--ink)}
+.ov-h .er .m small{font-size:12px;color:var(--ink-3);letter-spacing:0}
+.ov-h .er>.i{color:var(--ink-4)}
+.ov-h .er:hover .t b{color:var(--blue-ink)}
+@media(max-width:760px){.ov-h .er{grid-template-columns:minmax(0,1fr) 64px 56px 14px;gap:10px}.agh-a.ov-h .bb,.agh-a.ov-h .er .m,.agh-a.ov-h .er>.i{grid-column:auto;grid-row:auto}.ov-h .er .t b{font-size:14px}}
+.ov-h h2{margin-top:30px}
+.agh .rh.ev{border-bottom:0;padding-bottom:0}
+/* Plan list on white (Denis 2026-10-27): the tinted half stays on the left */
+.pv1 .pv-list{background:var(--surface);border-radius:0 5px 21px 0}
+.pv1 .pv-list li+li{border-top-color:var(--rule-2)}
+@media(max-width:1000px){.pv1 .pv-list{border-radius:0 0 21px 21px}}
+/* Agentic + SEO pair: the recommendation row sits at the foot of both cards (Denis 2026-10-27) */
+.ov-pair>.card{display:flex;flex-direction:column}
+.ov-pair>.card>.card-b{flex:1;display:flex;flex-direction:column}
+.ov-pair .fx-w{margin-top:auto;padding-top:18px}
+.ov-pair .fx-w .fixln{margin-top:0}
+.ov-pair .fx-k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:650;color:var(--ink-3);margin-bottom:8px}
+/* "Descargar informe": on the greeting line on desktop, its own row on mobile (Denis 2026-10-27) */
+.ov-rep-m{display:none}
+@media(max-width:760px){.ov-rep-d{display:none}.ov-rep-m{display:flex}}

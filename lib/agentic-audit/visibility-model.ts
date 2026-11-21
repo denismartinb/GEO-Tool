@@ -43,10 +43,10 @@ export function agentPath(result: AgenticCheckResult | null, purchase: PurchaseQ
   ];
 }
 
-/** «6 de tus 17 preguntas». Inside the customer's own console, never in public copy. */
+/** «6 de tus 17 prompts». Inside the customer's own console, never in public copy. */
 export function purchaseCountLine(purchase: PurchaseQuestionsReport): string {
   const n = purchase.questions.length;
-  return `${n} de tus ${purchase.totalQuestions} preguntas`;
+  return `${n} de tus ${purchase.totalQuestions} prompts`;
 }
 
 /** What each component card says it measures, as in the prototype. */
@@ -75,7 +75,7 @@ export function interopLine(result: AgenticCheckResult): { tone: Tone; line: str
 const HOLDS_BACK: Record<AgenticComponentId, string> = {
   discovery: "Lo que más frena a un agente es entrar en tu web.",
   understanding: "Lo que más frena a un agente es entender lo que vendes.",
-  trust: "Lo que más frena a un agente es fiarse de tu web.",
+  trust: "Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.",
   purchase: "Lo que más frena a un agente es llegar a comprar."
 };
 

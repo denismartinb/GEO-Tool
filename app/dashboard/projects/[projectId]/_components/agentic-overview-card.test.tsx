@@ -44,7 +44,7 @@ describe("AgenticOverviewCardView", () => {
     for (const name of ["Descubrimiento", "Comprensión", "Confianza", "Compra"]) expect(html).toContain(name);
     expect(html).toContain("14<small>/30</small>");
     expect(html).toContain("–<small>/20</small>");
-    expect(html).toContain("Lo primero");
+    expect(html).toContain("Recomendaciones");
     expect(html).toContain(CARD.first.title);
     expect(html).not.toMatch(/\+\d/);
     expect(html).not.toContain("Interoperabilidad");

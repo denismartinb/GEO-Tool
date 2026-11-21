@@ -1,3 +1,4 @@
+import { GEO_SCORE_META_DESCRIPTION } from "@/lib/brand/geo-score-definition";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { DocsPageShell } from "@/components/docs/docs-page-shell";
@@ -18,7 +19,8 @@ const page = getDocPage(SLUG)!;
 
 export const metadata: Metadata = contentMetadata({
   title: `${page.title} · GenScore`,
-  description: page.description,
+  // MCP-SITE-FIXES-1 (log §431): the definition runs past 160 characters.
+  description: GEO_SCORE_META_DESCRIPTION,
   path: `/docs/${SLUG}`
 });
 

@@ -374,6 +374,8 @@ toggle at `/dashboard/settings/notifications`).
 |---|---|---|---|
 | `SCAN_CONTINUE_SECRET` | **Yes** for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` — including every manual "Lanzar escaneo" | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
 | `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
+| `OPENAI_APPS_CHALLENGE_TOKEN` | No (sin ella `/.well-known/openai-apps-challenge` da 404) | Vercel | Token de verificación de dominio que da el portal de plugins de OpenAI para publicar el conector en ChatGPT. MCP-CHATGPT-SUBMIT-1, log §430, `docs/chatgpt-plugin/README.md` |
+| `ANDROID_SHA256_CERT_FINGERPRINTS` | No (sin ella `/.well-known/assetlinks.json` devuelve `[]` y la app de Android no verifica el dominio) | Vercel | Huellas SHA-256 del certificado de firma de la app (subida y Play App Signing), separadas por comas — ANDROID-TWA-1, `twa/README.md` |
 
 A project whose plan allows more active prompts than fit in one execution
 batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple
@@ -490,6 +492,8 @@ nothing. A kind with no label simply is not sent to that platform.
 | `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §256). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
 | `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §256). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
 | `PAGESPEED_API_KEY` | No | Vercel | SEARCH-SEO-1 Fase 2 (log §281). Clave de Google Cloud con la «PageSpeed Insights API» activada (gratis). La auditoría técnica mide con ella la velocidad de la portada (Core Web Vitals, móvil y escritorio) y la reutiliza 7 días. Sin ella no se llama a nada: no sale la tarjeta «Optimización de tu página Home» y la Salud SEO se calcula sin velocidad. Nunca se registra en logs |
+| `CLOUDFLARE_ACCOUNT_ID` | No | Vercel | AI-READ-2 (log §451). Id de la cuenta de Cloudflare (plan gratuito de Workers) que abre las páginas con Browser Run para «Lo que lee la IA». Sin esta variable o sin `CLOUDFLARE_BROWSER_TOKEN` no se llama a nada y el bloque se queda en su modo HTML |
+| `CLOUDFLARE_BROWSER_TOKEN` | No | Vercel (Sensitive) | AI-READ-2 (log §451). Token de API de Cloudflare con un único permiso: Account › Browser Rendering › Edit. Lo usa la cola del cron `run-audit` (como mucho una petición cada 10 s y 10 minutos de navegador al día en el plan gratuito; un 429 corta la pasada y se sigue en la siguiente). Nunca se registra en logs |
 | `DATAFORSEO_LOGIN` | No | Vercel | SEO-DIAG-0 (log §338). «API login» de DataForSEO (panel → API Access), no el email. Sólo lo usa `/admin/seo-diagnostico`. Sin él (o sin la contraseña) la página lo dice y no llama a nada |
 | `DATAFORSEO_PASSWORD` | No | Vercel | SEO-DIAG-0 (log §338). «API password» de DataForSEO, no la contraseña de la web. Nunca se registra en logs |
 | `GOOGLE_OAUTH_CLIENT_ID` | No | Vercel | SEARCH-SEO-1 Fase 3 (log §284). Id del cliente OAuth «GenScore» (aplicación web) del proyecto de Google Cloud `geo-tool`. Sirve para conectar Search Console en modo sólo lectura (`webmasters.readonly`). Es el mismo cliente que el login con Google de Supabase. La URI de redirección `https://www.genscore.es/api/search-console/callback` tiene que estar dada de alta en ese cliente; los previews de Vercel no pueden, así que la conexión sólo se prueba en producción. Sin ella no se ofrece la conexión |
@@ -652,8 +656,10 @@ actions.
 |---|---|---|---|
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
+| `RESEND_WEBHOOK_SECRET` | No (without it `/api/webhooks/resend` answers 503) | Vercel (Production) | Signing secret (`whsec_…`) of the Resend webhook pointed at `https://www.genscore.es/api/webhooks/resend` with the `email.*` delivery, open, click, bounce and complaint events. Apply migration 0048 first. MAIL-METRICS-1 (log §419) |
 | `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
 | `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5) and the post-trial one (end of trial, late version, D+3, D+10 — LIFECYCLE-WINBACK-1, log §238). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. Apply migrations 0036–0038 first. LIFECYCLE-TRIAL-1 (log §233) |
+| `FEATURE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the three feature emails (Search Console, agentic audit, Chrome extension). Needs `LIFECYCLE_EMAILS_ENABLED` too. Apply migration 0047 first. FEATURE-EMAILS-1 (log §417) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`

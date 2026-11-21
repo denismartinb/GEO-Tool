@@ -2,6 +2,7 @@ import "server-only";
 
 import { SYSTEM_PLAN_COLUMNS, resolvePlan, resolveSystemPlanId } from "@/lib/billing";
 import { enginesFromFlags } from "@/lib/scan/engine-flags";
+import { sendFirstScanOpsAlert } from "@/lib/scan/first-scan-alert";
 import { resolveScanProvidersForPlan } from "@/lib/scan/providers";
 import { reconcileStuckScanRuns } from "@/lib/scan/reconciliation";
 import { computeSampleCount } from "@/lib/scan/sampling";
@@ -442,6 +443,22 @@ export async function createPendingScanRunCore({
       carryForwardPromptIds
     });
   }
+
+  // OPS-FIRST-SCAN-1 (log §441): the operator hears when a project's first
+  // scan is created, the moment the domain starts costing engine calls.
+  // Never throws, and no-ops without an alert channel.
+  await sendFirstScanOpsAlert({
+    service,
+    projectId,
+    runId: run.id,
+    domain: (project.domain as string | null) ?? null,
+    ownerUserId: project.owner_user_id as string,
+    planId: plan.id,
+    triggerSource,
+    prompts: promptCount,
+    samples: sampling.samples,
+    engines: resolvedProviders
+  });
 
   return run.id;
 }

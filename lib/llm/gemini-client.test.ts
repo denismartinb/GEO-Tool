@@ -121,3 +121,14 @@ describe("generateGroundedGeminiJson", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body).tools).toEqual([{ google_search: {} }]);
   });
 });
+
+describe("classifyGeminiQuotaBody (GEMINI-QUOTA-KIND-1)", () => {
+  it("reads the limit from Google's 429 body and never mistakes the generic billing hint for a spend cap", async () => {
+    const { classifyGeminiQuotaBody } = await import("./gemini-client");
+    const generic = "You exceeded your current quota, please check your plan and billing details.";
+    expect(classifyGeminiQuotaBody(`${generic} quotaId: GenerateRequestsPerDayPerProjectPerModel`)).toBe("per_day");
+    expect(classifyGeminiQuotaBody(`${generic} quotaId: GenerateRequestsPerMinutePerProjectPerModel`)).toBe("per_minute");
+    expect(classifyGeminiQuotaBody("Your project has exceeded its monthly spending cap.")).toBe("spend_cap");
+    expect(classifyGeminiQuotaBody(generic)).toBeUndefined();
+  });
+});

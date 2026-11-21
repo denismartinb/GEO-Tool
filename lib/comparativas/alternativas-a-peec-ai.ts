@@ -320,7 +320,7 @@ export const PAGE = {
   slug: "alternativas-a-peec-ai",
   metaTitle: "Alternativas a Peec AI en 2026: cuál elegir según tu caso · GenScore",
   metaDescription:
-    "Siete alternativas a Peec AI comparadas por el motivo que te hace buscarlas: tres modelos a elegir, precio que no está en la web, recomendaciones que no se redactan, pocos países o producto en inglés. GenScore se prueba 7 días sin tarjeta.",
+    "Siete alternativas a Peec AI según el motivo que te hace buscarlas: modelos a elegir, precio sin publicar, recomendaciones sin redactar o producto en inglés.",
   h1: "Alternativas a Peec AI en 2026",
   dateLine: `Datos consultados el ${RESEARCH_DATE}. Los importes de Peec AI no están en su web: proceden de un tercero y son orientativos.`,
   keyTakeaway:

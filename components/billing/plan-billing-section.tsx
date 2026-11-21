@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Ic } from "@/components/ins/ic";
+import { Bar } from "@/components/ins/kit/bar";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/ui/icon";
 import {
@@ -19,45 +20,24 @@ import {
 } from "@/app/dashboard/settings/billing/actions";
 import type { ActiveProjectSummary, UsageSummary } from "@/lib/billing";
 
-function UsageRow({
-  icon,
-  label,
-  value,
-  cap
-}: {
-  icon: string;
-  label: string;
-  value: number;
-  cap: number;
-}) {
-  const pct = cap > 0 ? Math.min(100, Math.round((value / cap) * 100)) : 0;
-  const atCap = cap > 0 && value >= cap;
-
+function UsageRow({ label, value, cap }: { label: string; value: number; cap: number }) {
+  // A cap this high is "no cap" in practice (Agencia); a bar against 999 would
+  // read as an empty gauge and the figure as a limit that does not exist.
+  const unlimited = cap >= 999;
+  const atCap = !unlimited && cap > 0 && value >= cap;
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex items-center gap-2 text-sm font-medium text-[var(--ink-2)]">
-          <Icon name={icon} size={15} />
-          {label}
-        </span>
-        <span className="text-sm font-semibold tabular-nums text-[var(--ink)]">
-          {value}/{cap}
-        </span>
+    <div className="pf-use">
+      <div className="h">
+        <span>{label}</span>
+        <b className="num">
+          {value}
+          <small>{unlimited ? " · sin tope" : `/${cap}`}</small>
+        </b>
       </div>
-      <div className="run-bar-wrap">
-        <div className="run-bar">
-          <div
-            className="run-bar-fill"
-            style={{ width: `${pct}%`, background: atCap ? "var(--warn)" : "var(--accent)" }}
-          />
-        </div>
-      </div>
-      {atCap && (
-        <p className="flex items-center gap-1.5 text-xs font-medium text-[var(--warn-ink)]">
-          <Icon name="alertCircle" size={13} />
-          Cerca del límite del plan
-        </p>
+      {unlimited ? null : (
+        <Bar value={value} max={cap} cls={`thin lit${atCap ? " ink" : ""}`} label={`${label}: ${value} de ${cap}`} />
       )}
+      {atCap ? <span className="full">Completo</span> : null}
     </div>
   );
 }
@@ -194,25 +174,6 @@ export function PlanBillingSection({
           a regression of BRAND-4 finding 2 in the very file BRAND-4 fixed.
           Now on --warn/--warn-soft/--warn-ink. The brand amber (--brand-warm,
           #FFB020) stays banned from UI: it belongs to the logo dot only. */}
-      {trialDaysLeft !== null && (
-        <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
-          <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--warn-ink)]">
-            <Icon name="clock" size={18} />
-          </div>
-          <p className="order-2 flex-1 text-sm font-medium text-[var(--warn-ink)]">
-            Estás probando <b>Pro</b> gratis — te quedan <b>{trialDaysLeft} día{trialDaysLeft === 1 ? "" : "s"}</b>.
-            Cuando termine, tu cuenta pasará a solo lectura si no contratas antes.
-          </p>
-          <Button
-            type="button"
-            className="order-3 shrink-0"
-            onClick={() => setModal({ initialTargetId: "pro" })}
-          >
-            Contratar ahora
-          </Button>
-        </div>
-      )}
-
       {isOverCapacity && (
         <div className="flex flex-col gap-3 rounded-[14px] border border-[var(--warn)] bg-[var(--warn-soft)] p-4 sm:flex-row sm:items-center sm:gap-4">
           <div className="order-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-white text-[var(--warn-ink)]">
@@ -233,176 +194,176 @@ export function PlanBillingSection({
         </div>
       )}
 
-      <section className="space-y-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-lg font-semibold text-[var(--ink)]">Tu plan</h2>
-          <p className="sub">Facturación mensual</p>
-        </div>
-        {planId === "free" ? (
-          <span className="badge badge-warn">
-            <Icon name="alertCircle" size={11} />
-            Solo lectura: sin escaneos nuevos
-          </span>
-        ) : cancelAtDate ? (
-          <span className="badge badge-warn">
-            <Icon name="alertCircle" size={11} />
-            Cancelada — activa hasta el {cancelAtDate}
-          </span>
-        ) : (
-          <span className="badge badge-pos">
-            <Icon name="check" size={11} />
-            Activo
-          </span>
-        )}
-        {portalError && <p className="feedback error">{portalError}</p>}
-        <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <p className="text-base font-semibold text-[var(--ink)]">{current.name}</p>
-                <span className="badge badge-accent">Plan actual</span>
-              </div>
-              <p className="text-lg font-bold text-[var(--ink)]">
-                {current.priceLabel ? (
-                  current.priceLabel
-                ) : activePromo || offeredPromoPrice !== null ? (
-                  <span className="pb-current-promo">
-                    <span className="was">
-                      {current.price}&nbsp;€/{current.period}
-                    </span>
-                    <span className="now">
-                      {shownPromo?.price}&nbsp;€/{current.period}
-                    </span>
-                  </span>
-                ) : (
-                  <>
-                    {current.price}&nbsp;€/{current.period}
-                  </>
-                )}
-              </p>
+      <section className={`pf-plan${planId === "free" ? " ro" : ""}`} aria-label="Tu plan">
+        <div className="pf-pl">
+          <div className="pf-ey">
+            <span>Tu plan · facturación mensual</span>
+            {planId === "free" ? (
+              <span className="badge b-warm">Solo lectura: sin escaneos nuevos</span>
+            ) : cancelAtDate ? (
+              <span className="badge b-warm">Cancelada: activa hasta el {cancelAtDate}</span>
+            ) : trialDaysLeft !== null ? (
+              <span className="badge b-blue">En prueba</span>
+            ) : null}
+          </div>
+          <div className="pf-name">{current.name}</div>
+          <p className="pf-tag">{current.tagline}</p>
+          {current.priceLabel ? (
+            <div className="pf-price">
+              <b className="pf-pt">{current.priceLabel}</b>
             </div>
-            <p className="sub mt-1">{current.tagline}</p>
-            {activePromo && (
-              <p className="sub mt-1">
-                <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio fundador <b>para siempre</b>, mientras mantengas tu suscripción.
-              </p>
-            )}
-            {offeredPromoPrice !== null && (
-              /* Futuro, no presente: quien lee esto todavía no paga nada. El
-                 descuento es el cupón `forever` de Stripe (FOUNDER-PRICE-1),
-                 y sólo se ofrece mientras queden plazas. */
-              <p className="sub mt-1">
-                <Icon name="spark" size={12} className="mr-1 inline text-[var(--accent)]" />
-                Precio fundador si contratas ahora: {offeredPromoPrice}&nbsp;€/{current.period}{" "}
-                <b>para siempre</b>, mientras queden plazas. Precio normal: {current.price}&nbsp;€/{current.period}.
-              </p>
-            )}
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-2 text-sm text-[var(--ink-2)]">
-              {current.highlights.map((highlight) => (
-                <li key={highlight} className="flex items-start gap-2">
-                  <Icon name="check" size={15} className="mt-0.5 shrink-0 text-[var(--pos)]" />
-                  {highlight}
-                </li>
-              ))}
-            </ul>
+          ) : (
+            <div className="pf-price">
+              <b className="num">
+                {shownPromo?.price ?? current.price}
+                <small>€</small>
+              </b>
+              <span className="per">/{current.period}</span>
+              {shownPromo ? (
+                <s className="num">
+                  {current.price} €
+                </s>
+              ) : null}
+            </div>
+          )}
+          {activePromo && (
+            <p className="pf-fp">
+              Precio fundador <b>para siempre</b>, mientras mantengas tu suscripción.
+            </p>
+          )}
+          {offeredPromoPrice !== null && (
+            /* Futuro, no presente: quien lee esto todavía no paga nada. El
+               descuento es el cupón `forever` de Stripe (FOUNDER-PRICE-1),
+               y sólo se ofrece mientras queden plazas. */
+            <p className="pf-fp">
+              Precio fundador si contratas ahora, <b>para siempre</b>, mientras queden plazas.
+            </p>
+          )}
+          {trialDaysLeft !== null && (
+            <div className="pf-trial">
+              <div className="h">
+                <span>
+                  Te quedan <b className="num">{trialDaysLeft} {trialDaysLeft === 1 ? "día" : "días"}</b> de tu prueba de 7.
+                  Después, tu cuenta pasa a solo lectura si no contratas antes.
+                </span>
+              </div>
+              <div
+                className="pf-days"
+                role="img"
+                aria-label={`Día ${Math.min(7, Math.max(0, 7 - trialDaysLeft))} de 7`}
+              >
+                {Array.from({ length: 7 }, (_, i) => (
+                  <i key={i} className={i < 7 - trialDaysLeft ? "on" : ""}>
+                    <span className="num">{i + 1}</span>
+                  </i>
+                ))}
+              </div>
+            </div>
+          )}
+          {portalError && <p className="feedback error">{portalError}</p>}
+          <div className="pf-acts">
             {cancelAtDate ? (
-              <div className="space-y-3 border-t border-[var(--line-soft)] pt-4">
-                <p className="sub">
-                  Tu suscripción está cancelada. Mantienes acceso a {current.name} hasta el{" "}
-                  <b>{cancelAtDate}</b>; después tu cuenta pasará a solo lectura. ¿Cambiaste de idea? Puedes reactivarla en el
-                  portal de Stripe.
-                </p>
-                <Button type="button" disabled={isPortalPending} onClick={handleManageBilling}>
-                  {isPortalPending ? "Abriendo…" : "Reactivar suscripción"}
-                </Button>
-              </div>
+              <button type="button" className="btn blue" disabled={isPortalPending} onClick={handleManageBilling}>
+                {isPortalPending ? "Abriendo…" : "Reactivar suscripción"}
+              </button>
             ) : (
-              <div className="flex flex-col gap-2 border-t border-[var(--line-soft)] pt-4 sm:flex-row sm:flex-wrap">
-                <Button type="button" className="w-full sm:w-auto" onClick={() => setModal({})}>
-                  <Icon name="arrUp" size={14} />
+              <>
+                {trialDaysLeft !== null ? (
+                  <button type="button" className="btn blue" onClick={() => setModal({ initialTargetId: "pro" })}>
+                    Contratar ahora
+                  </button>
+                ) : null}
+                <button
+                  type="button"
+                  className={`btn ${trialDaysLeft !== null ? "line" : "blue"}`}
+                  onClick={() => setModal({})}
+                >
                   {planId === "free" ? "Elegir plan" : "Cambiar de plan"}
-                </Button>
-                {/* Moved here from the block at the foot of the section, which
-                    became generic support (founder, 2026-08-06). Without this
-                    an account with a Stripe customer would have lost its only
-                    route to invoices and payment method. */}
+                </button>
+                {/* The route to invoices and payment method (founder, 2026-08-06):
+                    shown to any account with a Stripe customer. */}
                 {usage.hasStripeCustomer && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    disabled={isPortalPending}
-                    onClick={handleManageBilling}
-                  >
-                    <Icon name="card" size={14} />
+                  <button type="button" className="btn ghost" disabled={isPortalPending} onClick={handleManageBilling}>
+                    <Ic n="c-card" sm />
                     {isPortalPending ? "Abriendo…" : "Facturas y pago"}
-                  </Button>
+                  </button>
                 )}
-                {usage.hasStripeSubscription && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full sm:w-auto"
-                    disabled={isPortalPending}
-                    onClick={handleCancelSubscription}
-                  >
-                    {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
-                  </Button>
-                )}
-              </div>
+              </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+          {cancelAtDate && (
+            <p className="pf-fp pf-cancel">
+              Mantienes acceso a {current.name} hasta el <b>{cancelAtDate}</b>; después tu cuenta pasará a solo lectura.
+              ¿Cambiaste de idea? Puedes reactivarla en el portal de Stripe.
+            </p>
+          )}
+        </div>
+        <div className="pf-pr">
+          <div className="eyebrow bare">{planId === "free" ? "Lo que tenías" : "Incluido"}</div>
+          <ul>
+            {current.highlights.map((highlight) => (
+              <li key={highlight}>
+                <Ic n="check" sm />
+                {highlight}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--ink)]">Uso de este ciclo</h2>
-        <Card>
-          <CardContent className="space-y-4">
-            {/* "Motores de IA" removed (founder, 2026-08-06). Every plan above
-                Free carries all three engines that exist, so the row sat at
-                3/3 and raised "Cerca del límite del plan" for a limit with
-                nothing above it to move to. */}
-            <UsageRow icon="prompts" label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
-            <UsageRow icon="globe" label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
-          </CardContent>
-        </Card>
+      <section className="sec">
+        <div className="eyebrow">Uso de este ciclo</div>
+        <div className="pf-uses">
+          <UsageRow label="Prompts monitorizados" value={usage.promptCount} cap={usage.promptCap} />
+          <UsageRow label="Dominios" value={usage.projectCount} cap={usage.projectCap} />
+        </div>
+      </section>
 
-        {/* Not shown to an account already on Agencia — it was pitching the
-            plan they are already paying for ("El plan Agencia es para ti"),
-            the same defect the founder caught in the payment block below
-            (2026-08-06): a block that does not check the current plan before
-            telling the customer something about it. */}
-        {planId !== agencyPlanId && (
-        <Card className="bg-[var(--surface-2)]">
-          <CardContent className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Icon name="fileText" size={16} className="text-[var(--accent)]" />
-              <p className="font-semibold text-[var(--ink)]">
-                ¿Gestionas varios clientes? El plan {agencyPlan.name} es para ti
-              </p>
+      <section className="sec">
+        <div className="eyebrow">Más opciones</div>
+        <div className="pf-list">
+          {/* Not shown to an account already on Agencia: it would pitch the plan
+              they already have (founder, 2026-08-06). The comparison lives on
+              the public pricing page, so it navigates there (2026-08-25). */}
+          {planId !== agencyPlanId && (
+            <div className="pf-row">
+              <div className="l">
+                <b>¿Gestionas varios clientes?</b>
+                <span>El plan {agencyPlan.name}, a medida: dominios y prompts ajustados a tu cartera.</span>
+              </div>
+              <div className="c">
+                <Link className="btn sm line" href="/precios">
+                  Comparar planes
+                  <Ic n="arrowr" sm />
+                </Link>
+              </div>
             </div>
-            <p className="sub">
-              Dominios y prompts a medida (~300 de referencia), los mismos motores de IA que Pro, onboarding
-              acompañado. Precio a medida — hablamos contigo y lo ajustamos a tu cartera.
-            </p>
-            {/* The comparison this button promises lives on the public
-                pricing page (full plan matrix, not just this modal's four
-                cards), so it navigates there instead of opening the modal —
-                fundador, 2026-08-25. */}
-            <Link
-              href="/precios"
-              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[8px] px-3 text-sm font-semibold bg-[var(--accent)] text-white hover:opacity-95"
-            >
-              Comparar planes
-              <Icon name="arrRight" size={14} />
-            </Link>
-          </CardContent>
-        </Card>
-        )}
+          )}
+          <div className="pf-row">
+            <div className="l">
+              <b>Programa de afiliados</b>
+              <span>Gana el 30 % de cada Pro que traigas, durante 12 meses.</span>
+            </div>
+            <div className="c">
+              <Link className="btn sm line" href="/afiliados">
+                Ver cómo funciona
+              </Link>
+            </div>
+          </div>
+          {usage.hasStripeSubscription && !cancelAtDate && (
+            <div className="pf-row">
+              <div className="l">
+                <b>Cancelar suscripción</b>
+                <span>Se gestiona en el portal seguro de pago.</span>
+              </div>
+              <div className="c">
+                <button type="button" className="btn sm ghost" disabled={isPortalPending} onClick={handleCancelSubscription}>
+                  {isPortalPending ? "Abriendo…" : "Cancelar suscripción"}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </section>
 
       {modal && (

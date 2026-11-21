@@ -4,6 +4,18 @@ import { useState, type CSSProperties, type ReactNode } from "react";
 import { faviconImgProps } from "@/lib/domains/favicon";
 
 /**
+ * What this tab already knows about each icon (FAVICON-NO-FLICKER-1, log §397).
+ * Menus and lists mount their icons again every time they open, and each fresh
+ * `<img>` used to start blank: lazy loading, async decoding, and for a domain
+ * with no icon a 204 that only fell back to the letter after `onError`. The
+ * HTTP cache already holds the bytes for a week; these two sets let a remount
+ * paint straight away: the letter at once for a known miss, and a synchronous
+ * decode from cache for an icon already shown. Session memory only, no storage.
+ */
+const missing = new Set<string>();
+const shown = new Set<string>();
+
+/**
  * A domain's brand icon, falling back to whatever you pass when there is none.
  *
  * It exists for one specific reason (FAVICON-QUALITY-1, §36): the fallback used
@@ -33,10 +45,12 @@ export function FaviconImg({
   style?: CSSProperties;
   fallback: ReactNode;
 }) {
-  const [failed, setFailed] = useState(false);
   const img = faviconImgProps(domain, cssSize);
+  const key = img?.src ?? "";
+  const [failed, setFailed] = useState(() => missing.has(key));
 
-  if (!img || failed) return <>{fallback}</>;
+  if (!img || failed || missing.has(key)) return <>{fallback}</>;
+  const seen = shown.has(key);
 
   return (
     // eslint-disable-next-line @next/next/no-img-element -- icon service via our own route, not a static asset
@@ -47,8 +61,13 @@ export function FaviconImg({
       style={style}
       width={cssSize}
       height={cssSize}
-      loading="lazy"
-      onError={() => setFailed(true)}
+      loading={seen ? "eager" : "lazy"}
+      decoding={seen ? "sync" : "async"}
+      onLoad={() => shown.add(key)}
+      onError={() => {
+        missing.add(key);
+        setFailed(true);
+      }}
     />
   );
 }

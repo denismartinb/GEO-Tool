@@ -171,7 +171,9 @@ describe("blogPostMetadata dateUpdated (SEO-POS-1, T9)", () => {
     "web-preparada-para-el-comercio-agentico": AGENTIC_POSTS_2,
     "la-ia-descubre-tu-web-vende": AGENTIC_POSTS_2,
     "protocolos-comercio-agentico-acp-ucp-ap2": AGENTIC_POSTS_2,
-    "agentes-personales-de-ia-que-compran": AGENTIC_POSTS_2
+    "agentes-personales-de-ia-que-compran": AGENTIC_POSTS_2,
+    "extension-de-chrome-de-genscore":
+      "EXT-EDGE-1: el artículo enlaza la ficha de Microsoft Edge en la instalación y gana la pregunta «¿La extensión funciona en Microsoft Edge?». Log §448."
   };
 
   it("todo dateUpdated corresponde a un refresco documentado", () => {

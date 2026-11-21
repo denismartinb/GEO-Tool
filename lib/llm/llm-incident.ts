@@ -1,7 +1,7 @@
 import "server-only";
 
 import { isOpsAlertConfigured, sendLlmIncidentAlertEmail } from "@/lib/email/transactional";
-import { categorizeExtractionError, type ExtractionErrorCategory } from "@/lib/llm/extraction-errors";
+import { ExtractionError, categorizeExtractionError, type ExtractionErrorCategory, type QuotaKind } from "@/lib/llm/extraction-errors";
 import { LLM_INCIDENT_DEDUPE_MINUTES } from "@/lib/llm/constants";
 
 /**
@@ -54,6 +54,13 @@ const SURFACE_LABEL: Record<LlmSurface, string> = {
   prompt_generation: "Generación de prompts adicionales",
   web_audit: "Auditoría web — contenido propio",
   recommendations: "Recomendaciones — reescritura con IA"
+};
+
+/** GEMINI-QUOTA-KIND-1: what the operator should do about each kind of 429. */
+const QUOTA_KIND_COPY: Record<QuotaKind, string> = {
+  per_minute: "Por minuto: se recupera sola en unos minutos.",
+  per_day: "Diario: se recupera con el reinicio diario del proveedor (medianoche del Pacífico).",
+  spend_cap: "Tope de gasto del proyecto: hay que subirlo en la consola del proveedor."
 };
 
 const CATEGORY_COPY: Record<"quota" | "config", { headline: string; detail: string }> = {
@@ -152,6 +159,12 @@ export async function reportLlmIncident(input: {
       detail: copy.detail,
       domain: input.domain ?? "—",
       projectId: input.projectId ?? "—",
+      quotaLimit:
+        input.error instanceof ExtractionError && input.error.quotaKind
+          ? QUOTA_KIND_COPY[input.error.quotaKind]
+          : category === "quota"
+            ? "Sin identificar en la respuesta del proveedor."
+            : undefined,
       dedupeMinutes: LLM_INCIDENT_DEDUPE_MINUTES,
       detectedAt: new Date(now)
     });

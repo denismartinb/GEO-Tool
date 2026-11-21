@@ -1,8 +1,12 @@
+import { isRetiredRecommendationType, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import type { createServiceClient } from "@/lib/supabase/service";
 import { getEffectiveGeoScore } from "@/lib/scoring/run-scoring";
 import { sendWeeklyDigestEmail } from "@/lib/email/transactional";
+import { buildSiteWeek, type GeoStripSnapshot } from "@/lib/ins/geo-strip";
+
+const SITE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 import { serverEnv } from "@/lib/env";
 
 const TIME_BUDGET_MS = 45_000;
@@ -172,16 +176,15 @@ export async function runWeeklyDigest({
 
     const scansSinceIso = new Date(Date.now() - SCANS_THIS_WEEK_WINDOW_MS).toISOString();
 
-    const [{ data: topRecommendation }, { count: activeRecommendationsCount }, { count: promptsCount }, { count: competitorsCount }, { count: scansThisWeek }] =
+    const [{ data: topRecommendationRows }, { count: activeRecommendationsCount }, { count: promptsCount }, { count: competitorsCount }, { count: scansThisWeek }] =
       await Promise.all([
         service
           .from("recommendations")
-          .select("title, description")
+          .select("title, description, recommendation_type, evidence_json")
           .eq("run_id", currentRow.run_id)
           .eq("status", "active")
           .order("priority_rank", { ascending: true })
-          .limit(1)
-          .maybeSingle(),
+          .limit(5),
         service
           .from("recommendations")
           .select("id", { count: "exact", head: true })
@@ -201,6 +204,49 @@ export async function runWeeklyDigest({
           .gte("created_at", scansSinceIso)
       ]);
 
+    // RECS-HEADLINES-1 (log §354): the email names the task, not the stored
+    // title, and skips retired types still stored on this run.
+    const topRow = ((topRecommendationRows ?? []) as Array<{
+      title: string;
+      description: string;
+      recommendation_type: string;
+      evidence_json: unknown;
+    }>).find((r) => !isRetiredRecommendationType(r.recommendation_type));
+    const topRecommendation = topRow
+      ? { title: recommendationHeadline(topRow).title, description: topRow.description }
+      : null;
+
+    // GEO-ALERTS-1 (log §440): «Tu web esta semana». Fail-soft: a failed read
+    // leaves the block out, never the digest.
+    let site: ReturnType<typeof buildSiteWeek> = null;
+    try {
+      const weekAgoIso = new Date(Date.now() - SITE_WEEK_MS).toISOString();
+      const [{ data: latestSnap }, { data: weekAgoSnap }] = await Promise.all([
+        service
+          .from("web_audit_snapshots")
+          .select("bots, pages, created_at")
+          .eq("project_id", project.id)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        service
+          .from("web_audit_snapshots")
+          .select("bots, pages, created_at")
+          .eq("project_id", project.id)
+          .lt("created_at", weekAgoIso)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+      ]);
+      site = buildSiteWeek({
+        projectId: project.id as string,
+        latest: (latestSnap as GeoStripSnapshot | null) ?? null,
+        weekAgo: (weekAgoSnap as GeoStripSnapshot | null) ?? null
+      });
+    } catch {
+      site = null;
+    }
+
     const email = emailByOwnerId.get(project.owner_user_id as string)!;
     await sendWeeklyDigestEmail(email, project.domain as string, {
       currentScore,
@@ -208,11 +254,13 @@ export async function runWeeklyDigest({
       subScores,
       previousSubScores,
       topMover,
-      recommendation: topRecommendation ?? null,
+      recommendation: topRecommendation,
       activeRecommendationsCount: activeRecommendationsCount ?? 0,
       promptsCount: promptsCount ?? 0,
       competitorsCount: competitorsCount ?? 0,
-      scansThisWeek: scansThisWeek ?? 0
+      scansThisWeek: scansThisWeek ?? 0,
+      site,
+      projectId: project.id as string
     }, project.owner_user_id as string, { idempotencyKey: weeklyDigestIdempotencyKey(project.id as string, new Date(startedAt)) });
     sent += 1;
   }

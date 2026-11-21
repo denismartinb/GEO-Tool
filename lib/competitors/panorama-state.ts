@@ -82,8 +82,10 @@ export type PanoramaState =
       topRows: PanoramaRow[];
       /** `topRows`, plus the brand's own row appended when it fell outside the top 5. */
       listRows: PanoramaRow[];
-      /** The brand's 1..N standing, or null when the brand itself was never named. */
+      /** The brand's 1..N standing by mention rate, or null when the brand itself was never named. */
       brandRank: number | null;
+      /** The brand's real mean rank when mentioned, or null when it was never named. */
+      brandPosition: number | null;
       /** Entities the AI actually named this scan — the honest denominator for "X / N". */
       totalRanked: number;
       /** True when `listRows` ends with the brand's row appended past the top 5. */
@@ -140,6 +142,7 @@ export function computePanoramaState({
     topRows,
     listRows,
     brandRank: rankedPanorama.find((r) => r.isBrand)?.rank ?? null,
+    brandPosition: rankedPanorama.find((r) => r.isBrand)?.position ?? null,
     totalRanked: rankedPanorama.length,
     brandAppended: listRows.length > topRows.length
   };

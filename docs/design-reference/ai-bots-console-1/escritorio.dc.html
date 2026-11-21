@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Bots de IA · Auditoría técnica · escritorio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#1b4fd6}a:hover{color:#2563eb}
+.sw{width:40px;height:24px;border-radius:12px;border:0;padding:0;position:relative;cursor:pointer;flex-shrink:0;transition:background .2s}
+.sw span{position:absolute;top:3px;width:18px;height:18px;border-radius:9px;background:#fff;box-shadow:0 1px 2px rgba(11,20,38,.25);transition:left .2s}
+.btn{display:inline-flex;align-items:center;gap:8px;height:40px;padding:0 16px;border-radius:10px;font:600 14px/1 Figtree,system-ui,sans-serif;cursor:pointer}
+</style>
+</helmet>
+<div style="width:1280px;min-height:1240px;box-sizing:border-box;background:#eceef2;font-family:Figtree,system-ui,sans-serif;color:#0b1426;padding:36px 48px 48px;display:flex;flex-direction:column;gap:20px">
+
+  <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <h1 style="margin:0;font-size:30px;font-weight:700;letter-spacing:-.02em">Auditoría técnica</h1>
+      <p style="margin:0;font-size:15px;color:#3b4759">Tres de los cuatro motores pueden leer nubaria.es. Perplexity tiene la puerta cerrada en tu robots.txt.</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#fff;border:2px solid #2563eb;color:#0b1426;text-decoration:none"><b style="font-size:20px">72</b><span style="font-size:13px;color:#3b4759">Bloque GEO</span></a>
+      <a href="#" style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:12px;background:#fff;border:1px solid #e3e6eb;color:#0b1426;text-decoration:none"><b style="font-size:20px">81</b><span style="font-size:13px;color:#3b4759">Bloque SEO</span></a>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:20px;align-items:flex-start">
+
+    <div style="flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:20px">
+
+      <section style="background:#fff;border:1px solid #e3e6eb;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5f6b7e">Quién puede leer tu web</h2>
+          <span style="font-size:12px;color:#5f6b7e">según tu robots.txt · revisado hoy</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px">
+          <sc-for list="{{tiles}}" as="t" hint-placeholder-count="4">
+            <div style="{{t.box}}">
+              <img src="{{t.logo}}" alt="" style="width:28px;height:28px">
+              <b style="font-size:15px;font-weight:600">{{t.name}}</b>
+              <span style="{{t.stStyle}}">{{t.status}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <section style="background:#fff;border:1px solid #e3e6eb;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5f6b7e">Bots de IA</h2>
+          <sc-if value="{{notEditing}}" hint-placeholder-val="{{true}}">
+            <button class="btn" onClick="{{startEdit}}" style="height:34px;padding:0 14px;font-size:13px;background:#fff;border:1px solid #e3e6eb;color:#0b1426">Cambiar acceso</button>
+          </sc-if>
+          <sc-if value="{{editing}}" hint-placeholder-val="{{false}}">
+            <button class="btn" onClick="{{stopEdit}}" style="height:34px;padding:0 14px;font-size:13px;background:#fff;border:1px solid #e3e6eb;color:#0b1426">Dejarlo como está</button>
+          </sc-if>
+        </div>
+        <sc-for list="{{rows}}" as="r" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:14px;padding:12px 0;border-top:1px solid #eef0f3">
+            <img src="{{r.logo}}" alt="" style="width:20px;height:20px;flex-shrink:0">
+            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:15px"><b style="font-weight:600">{{r.eng}}</b> · {{r.what}}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#5f6b7e">{{r.tokens}}</span>
+            </div>
+            <sc-if value="{{r.changed}}" hint-placeholder-val="{{false}}">
+              <span style="font-size:12px;font-weight:600;color:#1b4fd6;background:#ecf2ff;border-radius:6px;padding:3px 8px">Cambio</span>
+            </sc-if>
+            <sc-if value="{{r.showPill}}" hint-placeholder-val="{{true}}">
+              <span style="{{r.pillStyle}}">{{r.pill}}</span>
+            </sc-if>
+            <sc-if value="{{r.showSwitch}}" hint-placeholder-val="{{false}}">
+              <button class="sw" role="switch" aria-checked="{{r.ariaOn}}" aria-label="{{r.label}}" onClick="{{r.flip}}" style="{{r.swBg}}"><span style="{{r.knob}}"></span></button>
+            </sc-if>
+          </div>
+        </sc-for>
+        <p style="margin:8px 0 0;padding:12px 14px;border-radius:10px;background:#ecf2ff;color:#1b4fd6;font-size:14px;line-height:1.5">Los bots de búsqueda deciden si los motores pueden leerte y citarte. Cerrar los de entrenamiento es decisión tuya y no te quita de las respuestas con búsqueda.</p>
+      </section>
+
+      <section style="background:#fff;border:1px solid #e3e6eb;border-radius:16px;padding:6px 22px">
+        <div style="display:flex;align-items:center;gap:14px;padding:14px 0">
+          <span style="font-size:12px;font-weight:700;color:#c2410c;background:#fff3eb;border-radius:6px;padding:3px 8px">Crítico</span>
+          <span style="flex:1;font-size:15px"><b style="font-weight:600">Un motor no puede leer tu web</b> <span style="color:#5f6b7e">· Perplexity</span></span>
+          <span style="font-size:13px;color:#5f6b7e">en Problemas</span>
+        </div>
+      </section>
+    </div>
+
+    <div style="flex:0 0 420px;display:flex;flex-direction:column;gap:20px">
+
+      <sc-if value="{{editing}}" hint-placeholder-val="{{false}}">
+        <section style="background:#fff;border:1px solid #c9dbff;border-radius:16px;padding:20px 22px;display:flex;flex-direction:column;gap:12px">
+          <h2 style="margin:0;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5f6b7e">Tu robots.txt con estos cambios</h2>
+          <sc-if value="{{noChanges}}" hint-placeholder-val="{{true}}">
+            <p style="margin:0;font-size:14px;color:#3b4759;line-height:1.5">Mueve un interruptor y aquí aparecen las líneas para tu robots.txt.</p>
+          </sc-if>
+          <sc-if value="{{hasChanges}}" hint-placeholder-val="{{false}}">
+            <p style="margin:0;font-size:14px;color:#3b4759;line-height:1.5">{{changeLine}}</p>
+            <pre style="margin:0;padding:14px;border-radius:10px;background:#f6f7f9;border:1px solid #e3e6eb;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.6;color:#0b1426;white-space:pre;overflow:auto;max-height:330px">{{snippet}}</pre>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="btn" onClick="{{copy}}" style="background:#2563eb;color:#fff;border:0">{{copyLabel}}</button>
+              <a class="btn" href="#" style="background:#fff;border:1px solid #e3e6eb;color:#0b1426;text-decoration:none">Ver tu robots.txt</a>
+            </div>
+            <ol style="margin:0;padding-left:18px;font-size:13px;color:#3b4759;line-height:1.55">
+              <li>Abre el robots.txt de la raíz de tu web (o pásaselo a quien la gestiona).</li>
+              <li>Borra los grupos que ya tengas para estos bots y pega el bloque.</li>
+              <li>Lo demás se queda como está. Lo comprobamos en el próximo escaneo.</li>
+            </ol>
+          </sc-if>
+        </section>
+      </sc-if>
+
+      <section style="background:#fff;border:1px solid #e3e6eb;border-radius:16px;padding:18px 22px;display:flex;flex-direction:column;gap:4px">
+        <h2 style="margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#5f6b7e">Ficheros para la IA</h2>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid #eef0f3">
+          <span style="display:flex;flex-direction:column;gap:2px"><b style="font-weight:600;font-size:15px">llms.txt</b><span style="font-size:13px;color:#5f6b7e">Un resumen de tu web para los motores</span></span>
+          <a href="#" style="font-size:14px;font-weight:600">Generarlo</a>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid #eef0f3">
+          <span style="display:flex;flex-direction:column;gap:2px"><b style="font-weight:600;font-size:15px">sitemap.xml</b><span style="font-size:13px;color:#5f6b7e">128 URLs</span></span>
+          <span style="font-size:13px;font-weight:600;color:#0f7a54">Encontrado</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-top:1px solid #eef0f3">
+          <span style="display:flex;flex-direction:column;gap:2px"><b style="font-weight:600;font-size:15px">Bing y Copilot</b><span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:#5f6b7e">Bingbot</span></span>
+          <span style="font-size:13px;font-weight:600;color:#0f7a54">Abierto</span>
+        </div>
+      </section>
+
+      <section style="background:#fff;border:1px solid #e3e6eb;border-radius:16px;padding:18px 22px;display:flex;gap:14px;align-items:flex-start">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b4759" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"></circle><path d="M3.5 9h17M3.5 15h17M12 2c2.8 3 2.8 17 0 20M12 2c-2.8 3-2.8 17 0 20"></path></svg>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <b style="font-size:15px;font-weight:600">¿Tu web es WordPress?</b>
+          <span style="font-size:14px;color:#3b4759;line-height:1.5">El plugin gratuito de GenScore cambia estos permisos con un interruptor, sin tocar ficheros.</span>
+          <a href="#" style="font-size:14px;font-weight:600">Ver el plugin</a>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1240}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.current = { 'chatgpt-search': true, 'chatgpt-training': false, 'claude-search': true, 'claude-training': false, 'perplexity-search': false, 'gemini': true };
+    this.state = { editing: false, want: Object.assign({}, this.current), copied: false };
+  }
+  renderVals() {
+    var L = { chatgpt: '/_blob/eadd726fcff66e13671ce803dfec766e', gemini: '/_blob/a3e8d98499caeebb0206f25af5d5df03', claude: '/_blob/22b43e71a457a1a4c126d0be15a0df0a', perplexity: '/_blob/e7e4fc8f845f89127527459125cc2cbe' };
+    var SW = [
+      { id: 'chatgpt-search', e: 'chatgpt', eng: 'ChatGPT', what: 'Búsqueda y enlaces que abre ChatGPT', tokens: ['OAI-SearchBot', 'ChatGPT-User'], training: false },
+      { id: 'chatgpt-training', e: 'chatgpt', eng: 'ChatGPT', what: 'Entrenamiento de modelos', tokens: ['GPTBot'], training: true },
+      { id: 'claude-search', e: 'claude', eng: 'Claude', what: 'Búsqueda y enlaces que abre Claude', tokens: ['Claude-SearchBot', 'Claude-User'], training: false },
+      { id: 'claude-training', e: 'claude', eng: 'Claude', what: 'Entrenamiento de modelos', tokens: ['ClaudeBot'], training: true },
+      { id: 'perplexity-search', e: 'perplexity', eng: 'Perplexity', what: 'Búsqueda y enlaces que abre Perplexity', tokens: ['PerplexityBot', 'Perplexity-User'], training: false },
+      { id: 'gemini', e: 'gemini', eng: 'Gemini', what: 'Respuestas y entrenamiento de Gemini', tokens: ['Google-Extended'], training: false }
+    ];
+    var cur = this.current, st = this.state, self = this, editing = st.editing;
+    var rows = SW.map(function (s) {
+      var now = cur[s.id], on = st.want[s.id];
+      var pill = now ? 'Abierto' : (s.training ? 'Cerrado, decisión tuya' : 'Cerrado');
+      var col = now ? '#0f7a54;background:#e8f6ef' : (s.training ? '#3b4759;background:#eff1f4' : '#c2410c;background:#fff3eb');
+      return {
+        eng: s.eng, what: s.what, tokens: s.tokens.join(', '), logo: L[s.e], label: s.eng + ', ' + s.what,
+        pill: pill, pillStyle: 'font-size:13px;font-weight:600;border-radius:999px;padding:4px 10px;white-space:nowrap;color:' + col,
+        showPill: !editing, showSwitch: editing, changed: editing && on !== now,
+        ariaOn: on ? 'true' : 'false',
+        swBg: 'background:' + (on ? '#0f7a54' : '#d3d9e2'),
+        knob: 'left:' + (on ? '19px' : '3px'),
+        flip: function () { var w = Object.assign({}, self.state.want); w[s.id] = !w[s.id]; self.setState({ want: w, copied: false }); }
+      };
+    });
+    function engineOk(e) { return SW.filter(function (s) { return s.e === e && !s.training; }).every(function (s) { return cur[s.id]; }); }
+    var tiles = [['chatgpt', 'ChatGPT'], ['gemini', 'Gemini'], ['claude', 'Claude'], ['perplexity', 'Perplexity']].map(function (p) {
+      var ok = engineOk(p[0]);
+      return {
+        name: p[1], logo: L[p[0]], status: ok ? 'Puede leerla' : 'Bloqueado',
+        box: 'display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 10px;border-radius:12px;border:1px solid ' + (ok ? '#e3e6eb;background:#fff' : '#fbd3bb;background:#fff3eb'),
+        stStyle: 'font-size:13px;font-weight:600;color:' + (ok ? '#0f7a54' : '#c2410c')
+      };
+    });
+    var star = ['Disallow: /carrito/', 'Disallow: /mi-cuenta/'];
+    var lines = ['# Bots de IA (GenScore)'];
+    SW.forEach(function (s) {
+      s.tokens.forEach(function (t) { lines.push('User-agent: ' + t); });
+      if (st.want[s.id]) { lines.push('Allow: /'); star.forEach(function (r) { lines.push(r); }); }
+      else lines.push('Disallow: /');
+      lines.push('');
+    });
+    lines.pop();
+    var changes = SW.filter(function (s) { return st.want[s.id] !== cur[s.id]; });
+    var changeLine = changes.length ? changes.map(function (s) { return (st.want[s.id] ? 'Abrir ' : 'Cerrar ') + s.eng + (s.training ? ' (entrenamiento)' : ' (búsqueda)'); }).join(' · ') + '. Copia el bloque entero: repite tus reglas generales para que ningún bot entre donde no debe.' : '';
+    var snippet = lines.join('\n');
+    return {
+      rows: rows, tiles: tiles, editing: editing, notEditing: !editing,
+      hasChanges: changes.length > 0, noChanges: changes.length === 0,
+      changeLine: changeLine, snippet: snippet,
+      copyLabel: st.copied ? 'Copiado' : 'Copiar',
+      startEdit: function () { self.setState({ editing: true }); },
+      stopEdit: function () { self.setState({ editing: false, want: Object.assign({}, cur), copied: false }); },
+      copy: function () { try { navigator.clipboard.writeText(snippet); } catch (e) {} self.setState({ copied: true }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

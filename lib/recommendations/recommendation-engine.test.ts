@@ -594,6 +594,47 @@ describe("generateRecommendationsForRun", () => {
     expect(rec!.evidence_json.sentiment_drivers as string[]).toEqual(["atención al cliente", "plazos de entrega"]);
   });
 
+  it("quotes real complaint sentences from the answers, never the repeated brand mention (log §358)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        raw_response_text:
+          "Acme es una empresa conocida. Muchos usuarios señalan quejas sobre la atención al cliente de Acme, con esperas largas. Ofrece varios planes.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"], sentimentDrivers: ["atención al cliente"] })
+      }),
+      prompt({
+        id: "p2",
+        prompt_text_snapshot: "experiencias con Acme",
+        sentiment: "mixed",
+        raw_response_text: "Acme destaca por su cobertura. Aun así, hay críticas recurrentes a Acme por problemas de facturación.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"] })
+      })
+    ]);
+
+    const snippets = recs.find((r) => r.recommendation_type === "address_negative_narrative")!.evidence_json
+      .evidence_snippets as string[];
+    expect(snippets).toHaveLength(2);
+    expect(snippets.every((s) => s.length > 40)).toBe(true);
+    expect(snippets.some((s) => s.includes("quejas sobre la atención al cliente"))).toBe(true);
+    expect(snippets.some((s) => s.includes("problemas de facturación"))).toBe(true);
+  });
+
+  it("shows no quotes for the negative narrative when no sentence carries the complaint (log §358)", () => {
+    const recs = run([
+      prompt({
+        id: "p1",
+        prompt_text_snapshot: "opiniones sobre Acme",
+        sentiment: "negative",
+        raw_response_text: "Acme.",
+        extracted_json: extractedWith({ brandEvidence: ["Acme"] })
+      })
+    ]);
+    const rec = recs.find((r) => r.recommendation_type === "address_negative_narrative")!;
+    expect(rec.evidence_json.evidence_snippets).toEqual([]);
+  });
+
   it("falls back to a generic negative-narrative title when no sentiment_drivers were extracted", () => {
     const recs = run([
       prompt({
@@ -914,7 +955,7 @@ describe("generateRecommendationsForRun", () => {
 
   // --- RECS-2B ---
 
-  it("surfaces a prominence gap when a named competitor consistently ranks ahead of the brand (N1)", () => {
+  it("no longer emits a prominence card even when a named competitor ranks ahead (RECS-HEADLINES-1, log §354)", () => {
     const recs = run(
       [
         prompt({
@@ -934,11 +975,8 @@ describe("generateRecommendationsForRun", () => {
       ["Ikea"]
     );
 
-    const rec = recs.find((r) => r.recommendation_type === "increase_brand_prominence");
-    expect(rec).toBeDefined();
-    expect(rec!.title).toContain("Ikea");
-    expect(rec!.evidence_json.dominant_competitor).toBe("Ikea");
-    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+    // The order of names is the engine's call: no deliverable, no card.
+    expect(recs.some((r) => r.recommendation_type === "increase_brand_prominence")).toBe(false);
   });
 
   it("does not surface a prominence gap when the brand ranks ahead of or level with the competitor (N1)", () => {
@@ -1018,16 +1056,15 @@ describe("generateRecommendationsForRun", () => {
     expect(rec!.evidence_json.first_step).toContain("Best furniture brands 2026");
   });
 
-  it("surfaces amplify_positive_pattern when the brand has winning prompts and an open gap elsewhere (N4)", () => {
+  it("no longer emits amplify_positive_pattern even with winning prompts and an open gap (RECS-HEADLINES-1, log §354)", () => {
     const recs = run([
       prompt({ id: "p1", prompt_text_snapshot: "reseña de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p2", prompt_text_snapshot: "opiniones de Acme", brand_mentioned: true, citation_found: true, sentiment: "positive", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
       prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
     ]);
 
-    const rec = recs.find((r) => r.recommendation_type === "amplify_positive_pattern");
-    expect(rec).toBeDefined();
-    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
+    // «Look at what your good pages share» is an analysis, not a task.
+    expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
   });
 
   it("does not surface amplify_positive_pattern when there is no open gap elsewhere (N4)", () => {
@@ -1047,18 +1084,6 @@ describe("generateRecommendationsForRun", () => {
     ]);
 
     expect(recs.some((r) => r.recommendation_type === "amplify_positive_pattern")).toBe(false);
-  });
-
-  it("counts neutral (not just positive) sentiment as a winning prompt, since most factual citations land neutral (N4)", () => {
-    const recs = run([
-      prompt({ id: "p1", prompt_text_snapshot: "horarios de vuelos de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
-      prompt({ id: "p2", prompt_text_snapshot: "tarifas de Acme", brand_mentioned: true, citation_found: true, sentiment: "neutral", extracted_json: extractedWith({ citations: [{ domain: "acme.com", source: "grounding" }] }), }),
-      prompt({ id: "p3", prompt_text_snapshot: "mejores tiendas de muebles", brand_mentioned: false })
-    ]);
-
-    const rec = recs.find((r) => r.recommendation_type === "amplify_positive_pattern");
-    expect(rec).toBeDefined();
-    expect((rec!.evidence_json.affected_prompt_ids as string[]).sort()).toEqual(["p1", "p2"]);
   });
 
   it("still excludes negative/mixed sentiment prompts from the winning pattern (N4)", () => {

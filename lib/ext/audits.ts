@@ -1,0 +1,240 @@
+import type { AgenticCheckResult } from "@/lib/agentic-audit/api-contract";
+import { scoreIfChecksPass } from "@/lib/agentic-audit/score";
+import { firstSteps } from "@/lib/agentic-audit/console-model";
+import { AUDIT_BLOCKS, buildAuditBlock, type AuditBlockKey } from "@/lib/web-audit/audit-blocks";
+import { buildTechnicalIssuesReport, pageCheckStates, type IssueCheckKey, type IssueSeverity } from "@/lib/web-audit/issues";
+import { ISSUE_CHECK_META, issueScopeLabel } from "@/lib/web-audit/issue-labels";
+import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
+import { AI_ENGINES, engineReadStates, type AiEngine } from "@/lib/web-audit/ai-bots";
+import { PROBED_BOTS, type ServerProbeState } from "@/lib/web-audit/server-probe";
+
+/** Every measured engine can read the site (AI-BOTS-CONSOLE-1, log §426). Null when none was measured. */
+function aiEnginesCanRead(bots: BotAccessReport): boolean | null {
+  const measured = Object.values(engineReadStates(bots)).filter((v): v is boolean => v !== null);
+  return measured.length ? measured.every(Boolean) : null;
+}
+
+/**
+ * EXT-AUDITS-1 (log §406): the three audits of the selected domain, as the
+ * extension shows them. Pure: the route reads the latest technical snapshot
+ * and the latest agentic review, this module only picks fields.
+ *
+ * Every figure comes from its owner in the console, never recomputed:
+ *  - GEO and SEO blocks: `buildAuditBlock` over `buildTechnicalIssuesReport`,
+ *    the same pair «Tu web para la IA» and «Tu web para Google» use;
+ *  - agentic: the review's own score, `firstSteps` and `scoreIfChecksPass`,
+ *    the same as «Visibilidad en agentes».
+ * Read-only: nothing here launches an audit or calls an LLM.
+ */
+
+export const EXT_AUDIT_ISSUES = 3;
+export const EXT_AUDIT_URLS = 20;
+
+/** Checks whose affected labels are not page URLs (bot names, or the site as a whole). */
+const SITE_WIDE_CHECKS = new Set<IssueCheckKey>(["bot_blocked", "bot_server_blocked", "llms_txt_missing", "sitemap_missing"]);
+
+export type ExtAuditIssue = {
+  label: string;
+  /** Where it fails («3 de 12 páginas») or, in the agentic block, the component. */
+  scope: string;
+  /** Block points (or Agentes points) gained by fixing it alone. Null when it carries none. */
+  points: number | null;
+  severity: IssueSeverity | "agentic";
+  /**
+   * WP-PLUGIN-3 (log §432): which check fails, so the WordPress plugin can
+   * offer its own one-click fix for it. The technical check key, or the
+   * agentic check id.
+   */
+  check: string;
+  /** Pages where it fails (the audit's own URLs), at most `EXT_AUDIT_URLS`. Empty for site-wide checks. */
+  urls: string[];
+};
+
+export type ExtAuditBlock = {
+  key: AuditBlockKey | "agent";
+  score: number;
+  /** The score if the listed issues were fixed. Null when nothing would move it. */
+  projected: number | null;
+  /**
+   * The block's score if every scored issue were fixed, even when there are
+   * more than the listed ones. For a header («25 → 100»), never for «si
+   * arreglas estos tres». Null when nothing would move it.
+   */
+  projectedAll: number | null;
+  issues: ExtAuditIssue[];
+};
+
+export type ExtPageAudit =
+  | { state: "not_audited" }
+  | {
+      state: "audited";
+      /** robots.txt as the server read it: every engine's search bots may enter. Null when unknown. */
+      aiBotsAllowed: boolean | null;
+      /** false when the page carries noindex. Null on snapshots that never measured it. */
+      indexable: boolean | null;
+      issues: Array<{ label: string; block: AuditBlockKey }>;
+    };
+
+export type ExtAudits = {
+  /** When the technical audit was taken (ISO). Null without one. */
+  auditedAt: string | null;
+  /**
+   * EXT-PANEL-COHERENCE-1 (log §433): the Salud técnica of the audited pages,
+   * `actualReadinessScore` of `buildTechnicalIssuesReport` (mean of their
+   * pageScore, the same 55/45 mix of IA and Google the panel's page note uses).
+   * The panel shows it as «Optimización técnica · Toda la web». Null without
+   * an analysed page.
+   */
+  readiness: number | null;
+  blocks: ExtAuditBlock[];
+  /** Only when the panel asked about a page of this domain. */
+  page: ExtPageAudit | null;
+  /**
+   * EXT-1.5.0 (log §446): «¿Te deja pasar el servidor?». robots.txt per engine
+   * next to what the server answered our probe as that engine's search bot
+   * (GEO-ALERTS-1, log §440). A simulation: the panel labels it so. Gemini
+   * reads through Googlebot, which is never impersonated, so its server cell
+   * is null. Null when the audit did not probe.
+   */
+  server: ExtServerProbe | null;
+};
+
+export type ExtServerProbe = {
+  measuredAt: string;
+  rows: Array<{ engine: AiEngine; token: string | null; robots: boolean | null; server: ServerProbeState | null; status: number | null }>;
+};
+
+/** Pure: the probe stored in the snapshot, beside robots.txt. */
+export function extServerProbe(bots: BotAccessReport | null | undefined): ExtServerProbe | null {
+  const probe = bots?.serverProbe;
+  if (!bots || !probe) return null;
+  const robots = engineReadStates(bots);
+  return {
+    measuredAt: probe.measuredAt,
+    rows: AI_ENGINES.map(({ engine }) => {
+      const bot = PROBED_BOTS.find((b) => b.engine === engine);
+      if (!bot) return { engine, token: null, robots: robots[engine], server: null, status: null };
+      const e = probe.baseline === "ok" ? probe.engines[bot.engine] : undefined;
+      return { engine, token: bot.token, robots: robots[engine], server: e ? e.state : "unknown", status: e ? e.status : null };
+    })
+  };
+}
+
+export type ExtAuditsInput = {
+  snapshot: { pages: PageAuditEntry[]; bots: BotAccessReport; createdAt: string } | null;
+  /** The latest agentic review, already gated by plan (null when the console would not show it). */
+  agentic: AgenticCheckResult | null;
+  /** An URL of this project's domain, or null. */
+  ownUrl: string | null;
+};
+
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+function isHttpUrl(u: string): boolean {
+  try {
+    const x = new URL(u);
+    return x.protocol === "https:" || x.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function technicalBlock(key: AuditBlockKey, pages: PageAuditEntry[], bots: BotAccessReport): ExtAuditBlock | null {
+  const view = buildAuditBlock(key, pages, buildTechnicalIssuesReport(pages, bots), bots);
+  if (view.score === null) return null;
+  const top = view.issues.slice(0, EXT_AUDIT_ISSUES);
+  // «Si arreglas estos tres» only when they are all the block's scored
+  // issues: block points are not additive, so a partial sum would be invented.
+  const covered = view.scoredIssueCount > 0 && view.scoredIssueCount <= EXT_AUDIT_ISSUES;
+  return {
+    key,
+    score: view.score,
+    projected: covered && view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
+    projectedAll: view.projectedScore !== null && view.projectedScore > view.score ? view.projectedScore : null,
+    issues: top.map((i) => ({
+      label: ISSUE_CHECK_META[i.issue.check].label,
+      scope: issueScopeLabel(i.issue),
+      points: i.blockPoints,
+      severity: i.issue.severity,
+      check: i.issue.check,
+      urls: SITE_WIDE_CHECKS.has(i.issue.check) ? [] : i.issue.affectedLabels.map((l) => l.split(" · ")[0]).filter(isHttpUrl).slice(0, EXT_AUDIT_URLS)
+    }))
+  };
+}
+
+function agenticBlock(result: AgenticCheckResult): ExtAuditBlock | null {
+  if (result.score === null) return null;
+  const score = result.score;
+  const steps = firstSteps(result, EXT_AUDIT_ISSUES);
+  const projected = steps.length ? scoreIfChecksPass(result, new Set(steps.map((s) => s.checkId))) : null;
+  const all = firstSteps(result, Number.MAX_SAFE_INTEGER);
+  const projectedAll = all.length ? scoreIfChecksPass(result, new Set(all.map((s) => s.checkId))) : null;
+  return {
+    key: "agent",
+    score,
+    projected: projected !== null && projected > score ? projected : null,
+    projectedAll: projectedAll !== null && projectedAll > score ? projectedAll : null,
+    issues: steps.map((s) => {
+      const alone = scoreIfChecksPass(result, new Set([s.checkId]));
+      return {
+        label: s.title,
+        scope: result.components.find((c) => c.id === s.component)?.name ?? "",
+        points: alone !== null && alone > score ? round1(alone - score) : null,
+        severity: "agentic" as const,
+        check: s.checkId,
+        urls: isHttpUrl(result.url) ? [result.url] : []
+      };
+    })
+  };
+}
+
+function samePage(a: string, b: string): boolean {
+  try {
+    const x = new URL(a), y = new URL(b);
+    const path = (u: URL) => u.pathname.replace(/\/+$/, "") || "/";
+    return x.hostname.replace(/^www\./, "") === y.hostname.replace(/^www\./, "") && path(x) === path(y);
+  } catch {
+    return false;
+  }
+}
+
+function pageAudit(url: string, pages: PageAuditEntry[], bots: BotAccessReport): ExtPageAudit {
+  const entry = pages.find((p) => p.status === "analyzed" && p.check && samePage(p.url, url));
+  if (!entry?.check) return { state: "not_audited" };
+  const blockOf = (check: IssueCheckKey): AuditBlockKey | null =>
+    AUDIT_BLOCKS.geo.checks.includes(check) ? "geo" : AUDIT_BLOCKS.seo.checks.includes(check) ? "seo" : null;
+  const issues = pageCheckStates(entry.check)
+    .filter((s) => s.fails)
+    .flatMap((s) => {
+      const block = blockOf(s.check);
+      return block ? [{ label: ISSUE_CHECK_META[s.check].label, block }] : [];
+    });
+  return {
+    state: "audited",
+    aiBotsAllowed: aiEnginesCanRead(bots),
+    indexable: entry.check.indexability ? !entry.check.indexability.noindex : null,
+    issues
+  };
+}
+
+export function buildExtAudits({ snapshot, agentic, ownUrl }: ExtAuditsInput): ExtAudits {
+  const blocks: ExtAuditBlock[] = [];
+  if (snapshot) {
+    for (const key of ["geo", "seo"] as const) {
+      const b = technicalBlock(key, snapshot.pages, snapshot.bots);
+      if (b) blocks.push(b);
+    }
+  }
+  if (agentic) {
+    const b = agenticBlock(agentic);
+    if (b) blocks.push(b);
+  }
+  return {
+    auditedAt: snapshot?.createdAt ?? null,
+    readiness: snapshot ? buildTechnicalIssuesReport(snapshot.pages, snapshot.bots).actualReadinessScore : null,
+    blocks,
+    page: ownUrl && snapshot ? pageAudit(ownUrl, snapshot.pages, snapshot.bots) : null,
+    server: snapshot ? extServerProbe(snapshot.bots) : null
+  };
+}

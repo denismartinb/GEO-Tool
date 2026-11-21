@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { Seg } from "@/components/ins/kit/seg";
 
 /**
  * Tab state for each block of the audit screen: Problemas, Correcto and
@@ -33,33 +34,33 @@ function useAuditTabs(): AuditTabsState {
 export function AuditTabsProvider({ children }: { children: ReactNode }) {
   const [tab, setTab] = useState<AuditTabId>("problemas");
 
+  // The «+N pt si arreglas…» line of a block card links to `#problemas`.
+  useEffect(() => {
+    const sync = () => {
+      if (window.location.hash === "#problemas") {
+        setTab("problemas");
+        document.getElementById("problemas")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+
   return <AuditTabsContext.Provider value={{ tab, setTab }}>{children}</AuditTabsContext.Provider>;
 }
 
-const TAB_LABELS: Array<{ id: AuditTabId; label: string }> = [
-  { id: "problemas", label: "Problemas" },
-  { id: "correcto", label: "Correcto" },
-  { id: "paginas", label: "Páginas" }
-];
+export type AuditTabCounts = Record<Exclude<AuditTabId, "paginas">, number>;
 
-export function AuditTabBar() {
+export function AuditTabBar({ counts }: { counts: AuditTabCounts }) {
   const { tab, setTab } = useAuditTabs();
+  const options: ReadonlyArray<readonly [AuditTabId, string]> = [
+    ["problemas", `Problemas · ${counts.problemas}`],
+    ["correcto", `Correcto · ${counts.correcto}`]
+  ];
   return (
-    <div style={{ overflowX: "auto" }}>
-      <div className="seg" role="tablist" aria-label="Secciones del bloque">
-        {TAB_LABELS.map(({ id, label }) => (
-          <button
-            key={id}
-            type="button"
-            role="tab"
-            aria-selected={tab === id}
-            className={tab === id ? "on" : undefined}
-            onClick={() => setTab(id)}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="sc-au-tabs">
+      <Seg label="Secciones del bloque" options={options} value={tab} onChange={setTab} />
     </div>
   );
 }
@@ -69,7 +70,7 @@ export function AuditTabPanel({ id, children }: { id: AuditTabId; children: Reac
   // hidden (not unmounted): keeps server-rendered content alive so <details>
   // expand/collapse state and scroll position survive tab switches.
   return (
-    <div role="tabpanel" hidden={tab !== id}>
+    <div role="tabpanel" id={id} hidden={tab !== id}>
       {children}
     </div>
   );

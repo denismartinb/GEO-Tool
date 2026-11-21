@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { BrandLogo } from "@/components/ui/brand-logo";
+import "@/app/ins/tokens.css";
+import "@/app/ins/components.css";
+import "@/app/ins/auth.css";
+import { AuthHead, AuthPage } from "@/components/ins/auth/page";
 import type { Metadata } from "next";
 import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
 
@@ -25,36 +28,25 @@ export default async function SignupConfirmPage({
   const email = params.email;
 
   return (
-    <main className="auth-bg">
+    <AuthPage lit={1}>
       {/* PAID-ADS-1: the account exists from here on (unconfirmed); this is
           the sign-up conversion. No-op without ad tags and consent. */}
       <ConversionOnMount kind="sign_up" dedupeKey="sign_up" />
-      <div className="auth-card">
-        <div className="auth-logo">
-          <BrandLogo size={24} />
-        </div>
-
-        <h1 className="auth-title">Confirma tu email</h1>
-        <p className="sub" style={{ marginTop: 4 }}>
-          {email ? (
-            <>
-              Te hemos enviado un enlace de confirmación a <b>{email}</b>. Ábrelo para activar tu cuenta y
-              empezar tu prueba de Pro.
-            </>
-          ) : (
-            <>Te hemos enviado un enlace de confirmación por email. Ábrelo para activar tu cuenta.</>
-          )}
-        </p>
-
-        <p style={{ marginTop: 16, fontSize: 13, color: "#6b7280" }}>
-          ¿No te ha llegado? Revisa la carpeta de spam. Si el email es incorrecto,{" "}
-          <Link className="underline" href="/signup">vuelve a registrarte</Link>.
-        </p>
-
-        <p style={{ marginTop: 16, textAlign: "center", fontSize: 13 }}>
-          ¿Ya confirmaste? <Link className="underline" href="/login">Inicia sesión</Link>
-        </p>
-      </div>
-    </main>
+      <AuthHead title="Confirma tu email">
+        {email ? (
+          <>
+            Te hemos enviado un enlace a <b>{email}</b>. Ábrelo para activar tu cuenta y empezar tu prueba de Pro.
+          </>
+        ) : (
+          <>Te hemos enviado un enlace por email. Ábrelo para activar tu cuenta.</>
+        )}
+      </AuthHead>
+      <Link className="au-btn au-p" href="/login">
+        <span className="lbl">Ya lo he confirmado</span>
+      </Link>
+      <p className="au-alt">
+        ¿No te ha llegado? Revisa el spam o <Link href="/signup">vuelve a registrarte</Link>.
+      </p>
+    </AuthPage>
   );
 }
