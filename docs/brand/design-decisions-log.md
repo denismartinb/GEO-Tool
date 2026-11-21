@@ -27525,9 +27525,16 @@ deben ser reales, útiles y listas para aplicar.
   sin esperar a un nuevo escaneo.
 - Sin migración ni cambio de extracción.
 
-**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
-pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
-esquema de extracción.
+**Segunda pasada (misma fase).** Revisión del resto de tipos en el motor:
+`aggregateEvidence` descarta para todos los tipos las citas de menos de cuatro
+palabras (un nombre no es evidencia), y `update_stale_content` deja de caer a
+citas de mención de marca cuando no hay frase de caducidad (`snippetSource:
+"none"`; su prueba es `stale_signals`). Las reglas de ausencia (visibilidad,
+bloque citable, fuentes) ya no citaban nada.
+
+**Pendiente.** Contrastar la redacción de cada tipo con respuestas reales de un
+proyecto de cliente: no se ha podido hacer desde el entorno de desarrollo (sin
+acceso a datos de producción). Sin tocar el esquema de extracción.
 
 ## 359. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
 
