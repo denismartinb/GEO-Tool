@@ -9,7 +9,8 @@ export function AuthPage({
   lit = 0,
   splash = false,
   launch = false,
-  continueTo
+  continueTo,
+  web
 }: {
   children: ReactNode;
   lit?: 0 | 1 | 2;
@@ -18,12 +19,14 @@ export function AuthPage({
   launch?: boolean;
   /** Session already open: after the splash, go here instead of showing a form. */
   continueTo?: string;
+  /** Web login only (SPLASH-WEB-1): "intro" may play the short entrance, "still" never animates. */
+  web?: "intro" | "still";
 }) {
   return (
     <main className="ins ins-auth">
       <InsSprite />
       <ServiceWorkerRegister />
-      <AuthShell lit={lit} splash={splash} launch={launch} continueTo={continueTo}>
+      <AuthShell lit={lit} splash={splash} launch={launch} continueTo={continueTo} web={web}>
         {children}
       </AuthShell>
     </main>

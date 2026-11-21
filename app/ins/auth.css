@@ -108,3 +108,13 @@
 .ins .sc-auth[data-splash="run"] .au-lock>*{opacity:0;animation:ins-aufail 1ms 6s both}
 .ins .sc-auth[data-splash="run"] .au-col>*:not(.au-lock){opacity:0;animation:ins-aufail 1ms 6s both}
 @keyframes ins-aufail{from{opacity:0}to{opacity:1}}
+
+/* Web login (SPLASH-WEB-1): a returning visit shows the form at once and only the lockup G draws itself. */
+.ins .sc-auth[data-gdraw] .au-lock :is(.g-x,.g-n,.g-b){animation:ins-gdraw .42s cubic-bezier(.65,0,.35,1) both}
+.ins .sc-auth[data-gdraw] .au-lock .g-x{animation-duration:.2s}
+.ins .sc-auth[data-gdraw] .au-lock .g-n{animation-delay:.1s}
+.ins .sc-auth[data-gdraw] .au-lock .g-b{animation-delay:.33s}
+.ins .sc-auth[data-gdraw] .au-lock .g-d{transform-box:fill-box;transform-origin:center;animation:ins-gdot .26s .5s var(--spring) both}
+@keyframes ins-gdraw{from{stroke-dashoffset:100}to{stroke-dashoffset:0}}
+@keyframes ins-gdot{from{transform:scale(0)}to{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.ins .sc-auth[data-gdraw] .au-lock :is(.g-x,.g-n,.g-b,.g-d){animation:none}}

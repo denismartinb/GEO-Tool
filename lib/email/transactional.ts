@@ -6,6 +6,7 @@ import { CATEGORY_COPY, type OptionalEmailCategory } from "@/lib/email/categorie
 import { buildUnsubscribeLinks } from "@/lib/email/unsubscribe";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
 import { SUPPORT_EMAIL } from "@/lib/support";
+import { CHROME_WEB_STORE_URL } from "@/lib/blog/chrome-extension";
 
 /**
  * Every send* function here is fire-and-forget from the caller's point of
@@ -273,6 +274,16 @@ export const subtext = (html: string) =>
   `<p style="margin:10px 0 0;font-size:13px;line-height:1.5;color:#5B6B82;">${html}</p>`;
 
 /**
+ * EXT-REACH-1 (log §436): the one-line postscript that offers the Chrome
+ * extension under an email's main button, never above it. The store link is
+ * tagged with the email it came from.
+ */
+export function extensionPostscript(campaign: string): string {
+  const href = `${CHROME_WEB_STORE_URL}?utm_source=email&utm_medium=posdata&utm_campaign=${encodeURIComponent(campaign)}`;
+  return `<p style="margin:22px 0 0;padding-top:16px;border-top:1px solid #E7EAF0;font-size:14px;line-height:1.55;color:#3B4759;"><b style="color:#0B1426;">P. D.</b> Revisa cualquier página sin salir de Chrome. La extensión gratuita te dice si la IA puede leerla. <a href="${href}" style="${FOOTER_LINK_STYLE}">Añadir a Chrome</a></p>`;
+}
+
+/**
  * Numbered steps with done / current / next states — the progress block of
  * the lifecycle design (docs/design-reference/lifecycle-emails-1/). Lives here
  * rather than with the lifecycle templates because the welcome email uses it
@@ -336,6 +347,7 @@ export async function sendWelcomeEmail(to: string, now: Date = new Date()): Prom
       ])}
       ${button("https://www.genscore.es/dashboard/projects/new", "Añadir mi dominio")}
       ${subtext(closing)}
+      ${extensionPostscript("welcome")}
     `,
       { preheader: "3 pasos y 5 minutos para ver si ChatGPT, Gemini, Claude y Perplexity te recomiendan." }
     )
@@ -560,6 +572,10 @@ export async function sendWeeklyDigestEmail(
     promptsCount: number;
     competitorsCount: number;
     scansThisWeek: number;
+    /** GEO-ALERTS-1 (log §440): «Tu web esta semana», only with news. */
+    site?: { resolved: string | null; open: { title: string; detail: string } | null } | null;
+    /** Where the block's button goes. */
+    projectId?: string;
   },
   userId?: string,
   options: { idempotencyKey?: string } = {}
@@ -655,6 +671,27 @@ export async function sendWeeklyDigestEmail(
       ${moreRecommendationsHtml}`
     : "";
 
+  const siteHtml =
+    digest.site && (digest.site.resolved || digest.site.open)
+      ? `
+      ${sectionLabel("Tu web esta semana")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F7F8FB;border:1px solid #E7EAF0;border-radius:12px;">
+        <tr><td style="padding:16px 18px;">
+          ${digest.site.resolved ? `<div style="font-size:14.5px;line-height:1.5;color:#0F7A54;font-weight:700;">&#10003; ${escapeHtml(digest.site.resolved)}</div>` : ""}
+          ${
+            digest.site.open
+              ? `<div style="${digest.site.resolved ? "margin-top:10px;" : ""}font-size:14.5px;line-height:1.5;color:#0B1426;font-weight:700;">${escapeHtml(digest.site.open.title)}.</div><div style="margin-top:4px;font-size:13.5px;line-height:1.5;color:#5B6B82;">${escapeHtml(digest.site.open.detail)}</div>`
+              : ""
+          }
+          ${
+            digest.projectId
+              ? `<div style="margin-top:10px;"><a href="https://www.genscore.es/dashboard/projects/${digest.projectId}/web-audit?bloque=geo" style="${FOOTER_LINK_STYLE}">Ver la auditoría</a></div>`
+              : ""
+          }
+        </td></tr>
+      </table>`
+      : "";
+
   return sendEmailWithOutcome(
     {
       kind: "weekly_digest",
@@ -681,6 +718,7 @@ export async function sendWeeklyDigestEmail(
       </table>
       ${subScoreHtml}
       ${activityHtml}
+      ${siteHtml}
       ${moverHtml}
       ${recommendationHtml}
       ${button("https://www.genscore.es/dashboard", "Ver el detalle completo")}
@@ -910,6 +948,8 @@ export async function sendLlmIncidentAlertEmail(input: {
   detail: string;
   domain: string;
   projectId: string;
+  /** GEMINI-QUOTA-KIND-1: which limit a 429 hit, as a fixed sentence. */
+  quotaLimit?: string;
   dedupeMinutes: number;
   detectedAt: Date;
 }): Promise<void> {
@@ -926,6 +966,7 @@ export async function sendLlmIncidentAlertEmail(input: {
     dataRow("Proceso", input.surfaceLabel),
     dataRow("Motor", input.provider),
     dataRow("Causa", input.category),
+    ...(input.quotaLimit ? [dataRow("Límite", input.quotaLimit)] : []),
     dataRow("Dominio", input.domain),
     dataRow("Proyecto", input.projectId),
     dataRow("Detectado", input.detectedAt.toISOString())
@@ -980,6 +1021,12 @@ export async function sendNewSignupOpsAlertEmail(input: {
   trialEndsAt: string | null;
   createdAt: Date;
   status?: "active" | "pending";
+  /**
+   * OPS-FIRST-SCAN-1: the domain the person brought to signup (hero field,
+   * free checker or `/signup?dominio=`), when the form knew it. It is what
+   * they meant to scan, not a project: the project is created later.
+   */
+  domain?: string | null;
 }): Promise<void> {
   const to = getOpsAlertAddress();
   if (!to) return;
@@ -1000,6 +1047,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
 
   const rowsHtml = [
     dataRow("Email", input.email),
+    ...(input.domain ? [dataRow("Dominio indicado", input.domain)] : []),
     dataRow("user_id", input.userId),
     dataRow("Método", methodLabel),
     dataRow("Plan", planLabel),
@@ -1009,7 +1057,7 @@ export async function sendNewSignupOpsAlertEmail(input: {
   await sendEmail(
     "ops_new_signup",
     to,
-    pending ? `[GenScore] Alta nueva (sin confirmar) · ${input.email}` : `[GenScore] Alta nueva · ${input.email}`,
+    `[GenScore] Alta nueva${pending ? " (sin confirmar)" : ""} · ${input.email}${input.domain ? ` · ${input.domain}` : ""}`,
     wrap(
       `
       ${eyebrow("Alta nueva · sólo equipo GenScore")}
@@ -1028,6 +1076,83 @@ export async function sendNewSignupOpsAlertEmail(input: {
         preheader: pending ? `Alta sin confirmar: ${input.email}` : `Nueva cuenta: ${input.email}`
       }
     )
+  );
+}
+
+/**
+ * OPS-FIRST-SCAN-1: aviso al operador cuando un proyecto lanza su PRIMER
+ * escaneo, que es el momento en que un dominio empieza a costar llamadas a
+ * los motores. Complementa al aviso de alta: ese no siempre sabe el dominio
+ * (Google, o alguien que llega sin escribirlo), y éste lo sabe siempre.
+ *
+ * Va a `OPS_ALERT_EMAIL`, nunca al cliente. Las llamadas previstas son las
+ * del propio run (prompts × muestras × motores), no una estimación.
+ */
+export async function sendFirstScanOpsAlertEmail(
+  input: {
+    domain: string;
+    projectId: string;
+    runId: string;
+    ownerEmail: string | null;
+    ownerUserId: string;
+    planId: string;
+    triggerSource: "user" | "cron";
+    prompts: number;
+    samples: number;
+    engines: string[];
+    internalAccount: boolean;
+    createdAt: Date;
+  },
+  options: { idempotencyKey?: string } = {}
+): Promise<SendOutcome> {
+  const to = getOpsAlertAddress();
+  if (!to) return "not_sent";
+
+  const dataRow = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;vertical-align:top;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;font-family:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all;">${escapeHtml(value)}</td>
+    </tr>`;
+
+  const calls = input.prompts * input.samples * input.engines.length;
+  const rowsHtml = [
+    dataRow("Dominio", input.domain),
+    dataRow("Cuenta", input.ownerEmail ?? "(sin email)"),
+    dataRow("user_id", input.ownerUserId),
+    dataRow("Plan", input.planId),
+    dataRow("Cuenta interna de prueba", input.internalAccount ? "Sí" : "No"),
+    dataRow("Lanzado por", input.triggerSource === "cron" ? "Escaneo automático" : "La persona"),
+    dataRow("Motores", input.engines.join(", ")),
+    dataRow(
+      "Llamadas previstas",
+      `${calls} (${input.prompts} prompts × ${input.samples} ${input.samples === 1 ? "muestra" : "muestras"} × ${input.engines.length} motores)`
+    ),
+    dataRow("Proyecto", input.projectId),
+    dataRow("Escaneo", input.runId),
+    dataRow("Fecha", input.createdAt.toISOString())
+  ].join("");
+
+  return sendEmailWithOutcome(
+    {
+      kind: "ops_first_scan",
+      to,
+      subject: `[GenScore] Primer escaneo · ${input.domain}${input.ownerEmail ? ` · ${input.ownerEmail}` : ""}`,
+      html: wrap(
+        `
+      ${eyebrow("Dominio nuevo · sólo equipo GenScore")}
+      ${heading(`Primer escaneo de ${escapeHtml(input.domain)}`)}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${rowsHtml}
+      </table>
+      ${subtext("Aviso automático la primera vez que un proyecto lanza un escaneo, que es cuando el dominio empieza a gastar llamadas a los motores.")}
+    `,
+        {
+          footerHtml: "Aviso interno, sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+          preheader: `Primer escaneo: ${input.domain}`
+        }
+      )
+    },
+    options
   );
 }
 
@@ -1087,6 +1212,51 @@ export async function sendAdminAutomationChangeAlertEmail(input: {
       {
         footerHtml: "Aviso interno — sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
         preheader: `${input.operatorEmail} cambió ${input.change} en ${input.domain}`
+      }
+    )
+  );
+}
+
+/**
+ * EXT-REACH-1 (log §436): the record of an announcement batch sent from
+ * /admin/crm. /admin has no audit table, so this email is the record
+ * (`.claude/rules/admin.md`). Counts only, never a recipient's address.
+ */
+export async function sendAnnouncementOpsAlertEmail(input: {
+  operatorEmail: string;
+  announcement: string;
+  sent: number;
+  failed: number;
+  remaining: number;
+  at: Date;
+}): Promise<void> {
+  const to = getOpsAlertAddress();
+  if (!to) return;
+  const row = (label: string, value: string) => `
+    <tr>
+      <td style="padding:9px 0;border-top:1px solid #EEF1F6;font-size:12.5px;color:#5B6B82;white-space:nowrap;">${label}</td>
+      <td style="padding:9px 0 9px 14px;border-top:1px solid #EEF1F6;font-size:13px;color:#0B1426;">${escapeHtml(value)}</td>
+    </tr>`;
+  await sendEmail(
+    "ops_announcement",
+    to,
+    `[GenScore] /admin envió un anuncio: ${input.announcement}`,
+    wrap(
+      `
+      ${eyebrow("Acción de operador · sólo equipo GenScore")}
+      ${heading("Se ha enviado un lote del anuncio")}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:20px 0 0;">
+        ${row("Operador", input.operatorEmail)}
+        ${row("Anuncio", input.announcement)}
+        ${row("Enviados", String(input.sent))}
+        ${row("Fallidos", String(input.failed))}
+        ${row("Pendientes", String(input.remaining))}
+        ${row("Fecha", input.at.toISOString())}
+      </table>
+    `,
+      {
+        footerHtml: "Aviso interno. Sólo lo recibe el equipo operador de GenScore.<br>GenScore · genscore.es",
+        preheader: `${input.sent} enviados, ${input.remaining} pendientes`
       }
     )
   );

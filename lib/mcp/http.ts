@@ -1,6 +1,7 @@
 import "server-only";
 import { after, NextResponse } from "next/server";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
+import { reportError } from "@/lib/observability/report-error";
 import { clientIpFromHeaders } from "@/lib/free-checker/rate-limit";
 import { accountFromBearer } from "./auth";
 import { MCP_ENDPOINT, type McpProfile } from "./links";
@@ -56,11 +57,27 @@ function unauthorized(origin: string, profile: McpProfile, invalid: boolean) {
   );
 }
 
+/**
+ * MCP-RELIABILITY-1 (log §464): a batch the per-tool challenge can answer.
+ * Only tools/call carries `_meta["mcp/www_authenticate"]`; the handshake and
+ * tools/list with a bad token still get the HTTP 401 so the client refreshes.
+ */
+function onlyToolCalls(messages: unknown[]): boolean {
+  return messages.length > 0 && messages.every((m) => (m as { method?: unknown } | null)?.method === "tools/call");
+}
+
 export async function handleMcpPost(request: Request, profile: McpProfile) {
   const origin = new URL(request.url).origin;
   const auth = await accountFromBearer(request.headers.get("authorization"));
-  // An expired or revoked token: 401 so the client refreshes or signs in again.
-  if (auth.kind === "invalid") return unauthorized(origin, profile, true);
+  const rejected = (reason: "no_token" | "invalid_token") =>
+    after(() => captureFunnelEvent("mcp_auth_rejected", "mcp-anonymous", { connector: profile, reason }));
+
+  // An expired or revoked token: 401 so the client refreshes or signs in
+  // again. ChatGPT is the exception for tool calls, handled below.
+  if (auth.kind === "invalid" && profile !== "chatgpt") {
+    rejected("invalid_token");
+    return unauthorized(origin, profile, true);
+  }
   const account = auth.kind === "ok" ? auth.account : null;
 
   let body: unknown;
@@ -72,25 +89,45 @@ export async function handleMcpPost(request: Request, profile: McpProfile) {
       { status: 400, headers: { ...MCP_CORS, ...NO_STORE } }
     );
   }
+  const messages = Array.isArray(body) ? body.slice(0, 20) : [body];
+
+  // MCP-RELIABILITY-1 (log §464): ChatGPT showed «error interno» when a call
+  // with an expired token got a bare HTTP 401. A tool call now answers the
+  // per-tool sign-in challenge instead, saying the session expired; public
+  // tools run without the account.
+  const tokenRejected = auth.kind === "invalid";
+  if (tokenRejected) {
+    rejected("invalid_token");
+    if (!onlyToolCalls(messages)) return unauthorized(origin, profile, true);
+  }
 
   const ctx = { account, signedIn: !!account, origin, ip: clientIpFromHeaders(request.headers), profile };
   const tools = mcpToolsFor(profile);
-  const messages = Array.isArray(body) ? body.slice(0, 20) : [body];
-  const options = protocolOptionsFor(origin, profile);
+  const options: ProtocolOptions = {
+    ...protocolOptionsFor(origin, profile),
+    ...(tokenRejected ? { tokenRejected: true } : {}),
+    onToolException: (tool, error) => after(() => reportError(error, `mcp.${tool}`))
+  };
   const outcomes: RpcOutcome[] = [];
   for (const m of messages) outcomes.push(await handleRpc(m, ctx, tools, options));
-  if (outcomes.some((o) => o.kind === "needs_auth")) return unauthorized(origin, profile, false);
 
-  // One event per tool call, after the answer is sent: analytics never slows a tool.
-  for (const m of messages) {
-    const call = m as { method?: string; params?: { name?: unknown } };
-    if (call?.method === "tools/call" && typeof call.params?.name === "string") {
-      const tool = call.params.name.slice(0, 40);
-      after(() =>
-        captureFunnelEvent("mcp_tool_called", account?.user.id ?? "mcp-anonymous", { tool, signed_in: !!account, connector: profile })
-      );
-    }
+  // One event per tool call, after the answer is sent: analytics never slows
+  // a tool. Tool name, connector, account linked and how it ended; never the
+  // arguments or the answer.
+  for (const o of outcomes) {
+    const call = o.kind === "accepted" ? undefined : o.call;
+    if (!call) continue;
+    if (call.outcome === "sign_in_required" && !tokenRejected) rejected("no_token");
+    after(() =>
+      captureFunnelEvent("mcp_tool_called", account?.user.id ?? "mcp-anonymous", {
+        tool: call.tool.slice(0, 40),
+        signed_in: !!account,
+        connector: profile,
+        outcome: call.outcome
+      })
+    );
   }
+  if (outcomes.some((o) => o.kind === "needs_auth")) return unauthorized(origin, profile, false);
 
   const replies = outcomes.flatMap((o) => (o.kind === "reply" ? [o.body] : []));
   if (!replies.length) return new NextResponse(null, { status: 202, headers: { ...MCP_CORS, ...NO_STORE } });

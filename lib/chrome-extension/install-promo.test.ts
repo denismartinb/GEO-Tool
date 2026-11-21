@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   EXT_PROMO_DISMISS_COOLDOWN_MS,
+  checkerStoreHref,
   extPromoStoreHref,
   isDesktopChrome,
   isExtPromoEligible,
@@ -103,5 +104,22 @@ describe("extPromoStoreHref", () => {
     expect(url.searchParams.get("utm_medium")).toBe("aviso");
     expect(url.searchParams.get("utm_campaign")).toBe("extension-chrome");
     expect(url.searchParams.get("utm_content")).toBe("consola");
+  });
+});
+
+describe("EXT-REACH-1 (log §436)", () => {
+  it("offers the card in the console only to someone who never saw it on the public web", () => {
+    expect(isExtPromoEligible({ ...base, pathname: "/dashboard/projects/abc" })).toBe(true);
+    expect(isExtPromoEligible({ ...base, pathname: "/dashboard/projects/abc", seenOnWeb: "1" })).toBe(false);
+  });
+
+  it("keeps showing it on the public web after it was seen there", () => {
+    expect(isExtPromoEligible({ ...base, pathname: "/precios", seenOnWeb: "1" })).toBe(true);
+  });
+
+  it("tags the checker's store link apart from the floating card", () => {
+    const url = new URL(checkerStoreHref());
+    expect(url.searchParams.get("utm_medium")).toBe("comprobador");
+    expect(url.searchParams.get("utm_campaign")).toBe("extension-chrome");
   });
 });

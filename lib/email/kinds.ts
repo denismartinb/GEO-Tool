@@ -23,6 +23,8 @@ export const EMAIL_KINDS = [
   // Monitoring
   "score_drop",
   "weekly_digest",
+  // An AI engine stopped being able to enter the site (GEO-ALERTS-1, log §440)
+  "site_alert",
   // Pro trial sequence and win-back (same names as email_sends)
   "first_scan",
   "trial_d1",
@@ -36,6 +38,8 @@ export const EMAIL_KINDS = [
   "feature_gsc",
   "feature_extension",
   "feature_agentic",
+  // One-off announcements sent by the operator (EXT-REACH-1, log §436)
+  "extension_launch",
   // Replies to people who asked for something on the public site
   "free_report_confirmation",
   "demo_confirmation",
@@ -50,7 +54,9 @@ export const EMAIL_KINDS = [
   "ops_scan_health",
   "ops_llm_incident",
   "ops_new_signup",
+  "ops_first_scan",
   "ops_automation_change",
+  "ops_announcement",
   "ops_sweep_health",
   "ops_chain_rejected",
   "ops_watchdog",

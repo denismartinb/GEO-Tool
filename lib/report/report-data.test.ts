@@ -132,7 +132,7 @@ describe("loadReportInput", () => {
     // A page-visibility card is a lever (RECS-ONE-LEVER-1, log §328): same title
     // and step as on Recomendaciones and Visión general (log §432, adenda «mismo plan»).
     expect(input.plan).toEqual([
-      { title: leverTitle({ kind: "category", category: "Local" }), description: "D", firstStep: leverFirstStep({ kind: "category", category: "Local" }), providers: ["gemini"], topics: ["Local"], questions: ["Pregunta q1"], type: "lever" }
+      { title: leverTitle({ kind: "category", category: "Local" }), description: "D", firstStep: leverFirstStep({ kind: "category", category: "Local" }), providers: ["gemini"], topics: ["Local"], questions: ["Pregunta q1"], type: "lever", page: null }
     ]);
   });
 

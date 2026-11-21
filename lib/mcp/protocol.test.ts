@@ -46,7 +46,7 @@ describe("MCP protocol (MCP-SERVER-1, log §418)", () => {
 
   it("asks for sign-in before running an account tool, and never runs it", async () => {
     run.mockClear();
-    expect(await handleRpc(call("cuenta"), anon, TOOLS)).toEqual({ kind: "needs_auth" });
+    expect(await handleRpc(call("cuenta"), anon, TOOLS)).toMatchObject({ kind: "needs_auth", call: { tool: "cuenta", outcome: "sign_in_required" } });
     expect(run).not.toHaveBeenCalled();
   });
 

@@ -13,6 +13,8 @@
  *    pages belong to the free-report card (Denis, 2026-11-01). While this card
  *    is on screen the free-report card waits (`FreeReportPromoCard` checks for
  *    `.ext-promo`), so the two never show at once;
+ *  - in the console, only for someone who never saw it on the public web in
+ *    this browser (EXT-REACH-1, log §436);
  *  - closed with the X, it stays away 30 days; «Ya la tengo» hides it for good
  *    in that browser. The site cannot tell whether the extension is installed:
  *    the 1.0.1 manifest exposes nothing to the page.
@@ -29,6 +31,12 @@ export const EXT_PROMO_DISMISSED_AT_KEY = "gs.chromeExt.dismissedAt";
 export const EXT_PROMO_INSTALLED_KEY = "gs.chromeExt.installed";
 /** localStorage: the card already appeared once on a content page. */
 export const EXT_PROMO_SEEN_ON_CONTENT_KEY = "gs.chromeExt.seenOnContent";
+/**
+ * localStorage: the card already appeared on the public web in this browser.
+ * EXT-REACH-1 (log §436): the console only offers it to someone who never saw
+ * it there (Denis, 2026-11-02).
+ */
+export const EXT_PROMO_SEEN_ON_WEB_KEY = "gs.chromeExt.seenOnWeb";
 /** sessionStorage: the card already appeared during this visit. */
 export const EXT_PROMO_SHOWN_THIS_VISIT_KEY = "gs.chromeExt.shown";
 
@@ -84,6 +92,8 @@ export type ExtPromoEligibility = {
   installed: string | null;
   shownThisVisit: string | null;
   seenOnContent: string | null;
+  /** Absent on old callers: treated as never seen. */
+  seenOnWeb?: string | null;
 };
 
 export function isExtPromoEligible(input: ExtPromoEligibility): boolean {
@@ -92,6 +102,7 @@ export function isExtPromoEligible(input: ExtPromoEligibility): boolean {
   if (input.installed) return false;
   if (input.shownThisVisit) return false;
   if (input.seenOnContent && isPromoPath(input.pathname)) return false;
+  if (input.seenOnWeb && input.pathname && placementFor(input.pathname) === "consola") return false;
   const dismissedAt = Number(input.dismissedAt);
   if (input.dismissedAt && Number.isFinite(dismissedAt) && input.now - dismissedAt < EXT_PROMO_DISMISS_COOLDOWN_MS) {
     return false;
@@ -108,4 +119,28 @@ export function extPromoStoreHref(placement: ExtPromoPlacement): string {
     utm_content: placement
   });
   return `${CHROME_WEB_STORE_URL}?${params.toString()}`;
+}
+
+/**
+ * EXT-REACH-1 (log §436): the store link from the free checker's result. Same
+ * tags as the floating card, its own `utm_medium`, so the two read apart.
+ */
+export function checkerStoreHref(): string {
+  const params = new URLSearchParams({
+    utm_source: "genscore.es",
+    utm_medium: "comprobador",
+    utm_campaign: "extension-chrome"
+  });
+  return `${CHROME_WEB_STORE_URL}?${params.toString()}`;
+}
+
+/** Reads the browser's own signals; `false` outside a browser. */
+export function detectDesktopChrome(): boolean {
+  if (typeof navigator === "undefined") return false;
+  const nav = navigator as Navigator & { userAgentData?: { brands?: { brand: string }[]; mobile?: boolean } };
+  return isDesktopChrome({
+    userAgent: nav.userAgent,
+    brands: nav.userAgentData?.brands ?? null,
+    mobile: nav.userAgentData?.mobile ?? null
+  });
 }

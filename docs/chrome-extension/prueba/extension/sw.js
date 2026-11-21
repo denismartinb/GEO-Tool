@@ -4,7 +4,7 @@
    which is also why the panel shows «Has cambiado de página» afterwards.
    Results live in chrome.storage.session, per tab, and are dropped when the
    tab navigates or closes. */
-importScripts("collect.js");
+importScripts("collect.js", "extras.js");
 
 const key = (tabId) => "r:" + tabId;
 
@@ -25,8 +25,13 @@ async function review(tab) {
   const prev = (await chrome.storage.session.get(key(tabId)))[key(tabId)];
   await chrome.storage.session.set({ [key(tabId)]: { state: "reading", at: Date.now(), prev: prev && prev.facts ? prev.facts : null } });
   try {
-    const [res] = await chrome.scripting.executeScript({ target: { tabId }, func: collectPageFacts });
+    /* 1.5.0 (log §446): «Lo que lee la IA» is read alongside, and never fails the review */
+    const [[res], aiView] = await Promise.all([
+      chrome.scripting.executeScript({ target: { tabId }, func: collectPageFacts }),
+      chrome.scripting.executeScript({ target: { tabId }, func: GS_X.readAiView }).then((r) => (r && r[0] && r[0].result) || null, () => null)
+    ]);
     if (!res || !res.result) throw new Error("empty");
+    if (aiView) res.result.aiView = aiView;
     await chrome.storage.session.set({ [key(tabId)]: { state: "ok", at: Date.now(), facts: res.result } });
     return { ok: true };
   } catch (e) {

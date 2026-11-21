@@ -41,31 +41,31 @@
             {
               "description": "Page review without an account: the public tool fetches the page and returns its SEO + AI score and fixes.",
               "prompt": "Revisa https://www.genscore.es para la IA y para Google",
-              "tools_triggered": ["revisar_pagina"],
+              "tools_triggered": "revisar_pagina",
               "expected_behavior": "Returns the SEO + AI score of the page, whether AI bots can read it, the Google checks and the top fixes with code to paste, in Spanish, with a link to GenScore. No sign-in is requested."
             },
             {
               "description": "Guide search without an account: answers only with what GenScore's own guides say, with links.",
               "prompt": "¿Qué dicen las guías de GenScore sobre llms.txt?",
-              "tools_triggered": ["buscar_guias"],
+              "tools_triggered": "buscar_guias",
               "expected_behavior": "Returns short excerpts from GenScore guides about llms.txt, each with the title and link of its guide. No sign-in is requested."
             },
             {
               "description": "Signed-in overview of a domain: lists the account's domains, then summarizes the latest scan of the demo domain.",
               "prompt": "¿Cómo está genscore.es en la IA?",
-              "tools_triggered": ["listar_dominios", "ver_dominio"],
+              "tools_triggered": "listar_dominios, ver_dominio",
               "expected_behavior": "The first time, ChatGPT asks to connect the GenScore account (test account below). Then it shows the GEO score of genscore.es, how often ChatGPT, Gemini, Claude and Perplexity name it, the most named brands and technical health, with a link to the GenScore console."
             },
             {
               "description": "Signed-in recommendations for the demo domain.",
               "prompt": "Dame las recomendaciones de genscore.es",
-              "tools_triggered": ["ver_recomendaciones"],
+              "tools_triggered": "ver_recomendaciones",
               "expected_behavior": "Lists the recommended actions for genscore.es in order, each with its first step, and links to the Recommendations screen."
             },
             {
               "description": "Signed-in prompts for the demo domain, with each engine's result.",
               "prompt": "¿Qué prompts tengo en genscore.es y qué hizo cada motor con ellos?",
-              "tools_triggered": ["ver_prompts"],
+              "tools_triggered": "ver_prompts",
               "expected_behavior": "Lists the active prompts of genscore.es by topic and, for each one, whether each engine named the brand (and its position), named only other brands or named none in the latest scan. Prompts not yet scanned are shown as pending."
             }
           ],

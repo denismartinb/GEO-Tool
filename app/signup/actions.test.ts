@@ -66,7 +66,9 @@ describe("signup", () => {
     expect(sendNewSignupOpsAlert).toHaveBeenCalledWith(
       expect.anything(),
       { id: "user-1", email: "new@example.com", created_at: "2026-08-11T09:00:00.000Z" },
-      "password"
+      "password",
+      "active",
+      null
     );
     expect(signUp).toHaveBeenCalledWith({
       email: "new@example.com",
@@ -104,8 +106,43 @@ describe("signup", () => {
       expect.anything(),
       { id: "user-9", email: "new@example.com", created_at: "2026-10-28T10:00:00.000Z" },
       "password",
-      "pending"
+      "pending",
+      null
     );
+  });
+
+  it("passes the domain the person brought to the ops alert, cleaned, and drops a malformed one (log §441)", async () => {
+    signUp.mockResolvedValue({
+      data: {
+        session: null,
+        user: { id: "user-9", created_at: "2026-10-28T10:00:00.000Z", identities: [{ id: "i1" }] }
+      },
+      error: null
+    });
+    const { signup } = await import("./actions");
+
+    await expect(
+      signup(
+        formData({
+          email: "new@example.com",
+          password: "supersecret",
+          confirmPassword: "supersecret",
+          dominio: "https://www.Ejemplo.es/precios"
+        })
+      )
+    ).rejects.toThrow("REDIRECT:/signup/confirm");
+    expect(sendNewSignupOpsAlert).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      "password",
+      "pending",
+      expect.stringMatching(/^(www\.)?ejemplo\.es$/)
+    );
+
+    await expect(
+      signup(formData({ email: "new@example.com", password: "supersecret", confirmPassword: "supersecret", dominio: "<script>" }))
+    ).rejects.toThrow("REDIRECT:/signup/confirm");
+    expect(sendNewSignupOpsAlert).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), "password", "pending", null);
   });
 
   it("does not alert for an email that already has an account (user with no identities)", async () => {

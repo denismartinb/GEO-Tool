@@ -75,17 +75,78 @@ function Cell({ cell }: { cell: ReportCell }) {
   return <span className={`gr-dot ${cell.kind === "others" ? "gr-ag" : "gr-no"}`} />;
 }
 
-function Glow() {
+/** The console's 101-tick, 270° dial (`dial()` in the Instrumento prototype), static for print. */
+function Dial({ score }: { score: number | null }) {
+  const cx = 150;
+  const cy = 150;
+  const at = (v: number) => ((135 + v * 2.7) * Math.PI) / 180;
+  const ticks = [];
+  for (let i = 0; i <= 100; i++) {
+    const a = at(i);
+    const mj = i % 10 === 0;
+    const zone = i === 0 || i === 40 || i === 70 || i === 100;
+    const r0 = zone ? 118 : mj ? 124 : 129;
+    ticks.push(
+      <line
+        key={i}
+        className={`gr-t${score !== null && i <= score ? " gr-on" : ""}${mj ? " gr-mj" : ""}`}
+        x1={(cx + r0 * Math.cos(a)).toFixed(2)}
+        y1={(cy + r0 * Math.sin(a)).toFixed(2)}
+        x2={(cx + 140 * Math.cos(a)).toFixed(2)}
+        y2={(cy + 140 * Math.sin(a)).toFixed(2)}
+      />
+    );
+  }
+  const n = score === null ? null : at(score);
   return (
-    <svg className="gr-glow" width="100%" height="100%" viewBox="0 0 794 1123" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <radialGradient id="gr-glow" cx="640" cy="140" r="520" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#09c5d6" stopOpacity=".30" />
-          <stop offset=".55" stopColor="#2563eb" stopOpacity=".10" />
-          <stop offset="1" stopColor="#081223" stopOpacity="0" />
-        </radialGradient>
-      </defs>
-      <rect width="794" height="1123" fill="url(#gr-glow)" />
+    <svg className="gr-dial" viewBox="0 0 300 300" aria-hidden="true">
+      {ticks}
+      {[0, 40, 70, 100].map((v) => (
+        <text key={v} className="gr-lbl" x={(cx + 104 * Math.cos(at(v))).toFixed(1)} y={(cy + 104 * Math.sin(at(v)) + 3.5).toFixed(1)} textAnchor="middle">
+          {v}
+        </text>
+      ))}
+      {n !== null ? (
+        <line
+          className="gr-needle"
+          x1={(cx + 112 * Math.cos(n)).toFixed(1)}
+          y1={(cy + 112 * Math.sin(n)).toFixed(1)}
+          x2={(cx + 148 * Math.cos(n)).toFixed(1)}
+          y2={(cy + 148 * Math.sin(n)).toFixed(1)}
+        />
+      ) : null}
+    </svg>
+  );
+}
+
+/** A row of ticks lit up to `share` (0–1): the engine rows, as in the console. */
+function Ticks({ share, n = 40 }: { share: number; n?: number }) {
+  const on = Math.round(Math.max(0, Math.min(1, share)) * n);
+  return (
+    <div className="gr-tk" aria-hidden="true">
+      {Array.from({ length: n }, (_, i) => (
+        <i key={i} className={`${i < on ? "gr-on" : ""}${i % 10 === 0 ? " gr-mj" : ""}`.trim() || undefined} />
+      ))}
+    </div>
+  );
+}
+
+/** Decorative arc of the deep block (`.deep .arc` in the console). */
+function Arc() {
+  return (
+    <svg className="gr-arc" viewBox="0 0 300 300" aria-hidden="true">
+      {Array.from({ length: 60 }, (_, i) => {
+        const a = ((-90 + i * 6) * Math.PI) / 180;
+        return (
+          <line
+            key={i}
+            x1={(150 + 110 * Math.cos(a)).toFixed(1)}
+            y1={(150 + 110 * Math.sin(a)).toFixed(1)}
+            x2={(150 + 140 * Math.cos(a)).toFixed(1)}
+            y2={(150 + 140 * Math.sin(a)).toFixed(1)}
+          />
+        );
+      })}
     </svg>
   );
 }
@@ -145,54 +206,65 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
   const pages: ReactNode[] = [];
 
   // ---- 1 cover ----
+  const geo = model.geoScore !== null ? Math.round(model.geoScore) : null;
   pages.push(
     <section className={`gr-page gr-cover ${fontClassName}`} key="p1">
-      <Glow />
       <div className="gr-top">
-        <img src="/brand/genscore-logo-white.svg" alt="GenScore" />
+        <img src="/brand/genscore-logo.svg" alt="GenScore" />
         <span>Informe de {brand}</span>
-      </div>
-      <div className="gr-cgrid">
-        {engines.map((e) => (
-          <div className="gr-cgr" key={e.provider}>
-            <span>{e.label}</span>
-            <div className="gr-cbar">
-              <i style={{ width: `${Math.round(e.mentionShare * 100)}%` }} />
-            </div>
-            <b>{formatShare(e.mentionShare)}</b>
-          </div>
-        ))}
-        <div className="gr-cgl">
-          <span>Respuestas que te nombran, por motor</span>
-        </div>
       </div>
       <div className="gr-mid">
         <div className="gr-eyebrow">Visibilidad en respuestas de IA · {formatMonth(model.scanDate)}</div>
         <h1>Cuando tus clientes preguntan a la IA, ¿te nombra?</h1>
-        <div className="gr-sub">
-          GenScore hace a {engineNames} las {QUESTION_SET_LABEL} de quien busca lo que ofreces. Este informe resume sus respuestas, las
-          webs que citaron y tu propia web.
+      </div>
+      {/* Cover D2 (log §439): the GEO Score leads, as on every console screen. */}
+      <div className="gr-geo">
+        <div className="gr-dialbox">
+          <Dial score={geo} />
+          <div className="gr-dial-c">
+            <div className="gr-dv">{geo !== null ? geo : "–"}</div>
+            <div className="gr-of">de 100</div>
+          </div>
+        </div>
+        <div className="gr-geo-t">
+          <div className="gr-ey">Puntuación GEO</div>
+          <p>Tu visibilidad en las respuestas de la IA, de 0 a 100: si te nombran, en qué lugar y con qué fuentes.</p>
         </div>
       </div>
-      <div className="gr-hero">
-        <div className="gr-big">
-          {num(model.cover.mentionShare)}
-          <small>%</small>
+      <div className="gr-plate">
+        <div className="gr-hero">
+          <div className="gr-ey">Te nombran en</div>
+          <div className="gr-big">
+            {num(model.cover.mentionShare)}
+            <small>%</small>
+          </div>
+          <p>de las respuestas a tus {QUESTION_SET_LABEL}</p>
         </div>
-        <p>de las respuestas te nombran. Aquí verás en cuáles, quién sale en tu lugar y qué cambiar primero.</p>
+        <div className="gr-erows">
+          <div className="gr-ey">Te nombran por motor</div>
+          {engines.map((e) => (
+            <div className="gr-erow" key={e.provider}>
+              <span>
+                <EngineLogo provider={e.provider} size={14} /> {e.label}
+              </span>
+              <Ticks share={e.mentionShare} />
+              <b>{formatShare(e.mentionShare)}</b>
+            </div>
+          ))}
+        </div>
       </div>
       <div className="gr-meta">
         <div>
           <div>Dominio</div>
-          <div>{model.domain}</div>
+          <div className="gr-mono">{model.domain}</div>
         </div>
         <div>
           <div>Escaneo</div>
           <div>{date}</div>
         </div>
         <div>
-          <div>Puntuación GEO</div>
-          <div>{model.geoScore !== null ? Math.round(model.geoScore) : "—"}</div>
+          <div>Motores</div>
+          <div>{engineNames}</div>
         </div>
       </div>
     </section>
@@ -240,6 +312,7 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
                 {num(e.mentionShare)}
                 <small>%</small>
               </div>
+              <Ticks share={e.mentionShare} n={30} />
               <div className="gr-el">
                 {e.bestPosition ? `Mejor puesto: ${e.bestPosition}.º.` : "No te nombra en ninguna respuesta."}
                 {e.citesOwnSite ? " Cita tu web." : ""}
@@ -549,7 +622,8 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
           ) : null}
           {tech.reading ? (
             <div className="gr-read">
-              <b>Lectura:</b> {tech.reading.charAt(0).toLowerCase() + tech.reading.slice(1)}
+              <b>Lectura</b>
+              {tech.reading}
             </div>
           ) : null}
         </>
@@ -573,8 +647,8 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
           </p>
           <div className="gr-acts">
             {model.plan.map((a, i) => (
-              <div className="gr-act" key={`${a.title}-${i}`}>
-                <div className="gr-k">{i + 1}</div>
+              <div className={`gr-act${i === 0 ? " gr-first" : ""}`} key={`${a.title}-${i}`}>
+                <div className="gr-k">{String(i + 1).padStart(2, "0")}</div>
                 <div>
                   <h3>{a.title}</h3>
                   <p>{a.description}</p>
@@ -606,12 +680,12 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
   pageNo += 1;
   pages.push(
     <section className={`gr-page gr-back gr-last ${fontClassName}`} key="back">
-      <Glow />
-      <div className="gr-hd" style={{ position: "relative" }}>
-        <img src="/brand/genscore-logo-white.svg" className="gr-lg" alt="GenScore" />
+      <div className="gr-hd">
+        <img src="/brand/genscore-logo.svg" className="gr-lg" alt="GenScore" />
         <span>{brand} · Siguientes pasos</span>
       </div>
-      <div className="gr-bigq">
+      <div className="gr-deep">
+        <Arc />
         <div className="gr-eyebrow">{nextSec()} · ¿Y ahora qué?</div>
         <h2>La misma foto, en tu próximo escaneo</h2>
         <p>
@@ -619,9 +693,7 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
           motor.
         </p>
         <p>El detalle de cada respuesta, tu plan completo y la evolución de tu Puntuación GEO están en tu consola.</p>
-        <div className="gr-sig">
-          <span>genscore.es</span>
-        </div>
+        <div className="gr-sig">genscore.es</div>
       </div>
       <div className="gr-meth">
         <div>
@@ -643,7 +715,7 @@ export function ReportPages({ model, fontClassName }: { model: ReportModel; font
           <p>La IA no responde siempre igual: los porcentajes son la foto de este escaneo. Por eso GenScore repite la medición.</p>
         </div>
       </div>
-      <div className="gr-ft" style={{ position: "relative" }}>
+      <div className="gr-ft">
         <span>GenScore · genscore.es · Escaneo del {date}</span>
         <span>
           {pageNo} / {totalPages}

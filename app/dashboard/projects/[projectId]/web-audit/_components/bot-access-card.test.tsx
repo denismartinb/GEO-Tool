@@ -115,4 +115,21 @@ describe("aiBotsSectionProps", () => {
     expect(props.starRules).toEqual([]);
     expect(props.note).toBeNull();
   });
+
+  it("pone robots.txt y el servidor de cada motor, como la extensión (log §446)", () => {
+    const props = aiBotsSectionProps(
+      report({
+        serverProbe: {
+          measuredAt: "2026-11-01T06:00:00Z",
+          baseline: "ok",
+          engines: { chatgpt: { token: "OAI-SearchBot", state: "blocked", status: 403 } }
+        }
+      } as Partial<BotAccessReport>),
+      "acme.es"
+    );
+    expect(props.probedAt).toBe("2026-11-01T06:00:00Z");
+    expect(props.engines.find((e) => e.engine === "chatgpt")?.probe).toMatchObject({ server: "blocked", status: 403 });
+    expect(props.engines.find((e) => e.engine === "gemini")?.probe).toMatchObject({ server: null, status: null });
+    expect(aiBotsSectionProps(report(), "acme.es").probedAt).toBeNull();
+  });
 });

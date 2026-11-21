@@ -74,7 +74,12 @@ export default function PrivacidadPage() {
         icono o su atajo de teclado, o cada página que visitas si activas la revisión automática.
         Esa revisión se hace en tu navegador: el contenido de la página, su robots.txt y su
         llms.txt se leen desde tu equipo y no se envían a GenScore. El último resultado de cada
-        pestaña y tus preferencias del panel se guardan en tu navegador.
+        pestaña y tus preferencias del panel se guardan en tu navegador. Para enseñarte cómo cambia
+        una página entre visitas, la extensión guarda en tu navegador su dirección, la nota y los
+        arreglos pendientes de cada revisión (como mucho las últimas doce de 300 páginas), y nunca
+        los envía a GenScore. Para comparar lo que ves con lo que lee la IA, vuelve a pedir la página
+        abierta sin tu sesión, también desde tu equipo. El informe de una página, con su captura, se
+        prepara en tu navegador y se borra al cerrar Chrome.
       </p>
       <p>
         Si has iniciado sesión en genscore.es, la extensión usa esa misma sesión para mostrarte tu
@@ -116,6 +121,7 @@ export default function PrivacidadPage() {
       <ul>
         <li><strong>Supabase</strong> (base de datos y autenticación de usuarios), infraestructura ubicada en la Unión Europea.</li>
         <li><strong>Vercel</strong> (alojamiento y ejecución de la aplicación).</li>
+        <li><strong>Cloudflare (Browser Run)</strong>: abre con un navegador las páginas públicas de tu web que ya revisa la auditoría técnica, para comparar lo que ve una persona con lo que recibe la IA. Sólo recibe la dirección de esas páginas; no recibe datos de tu cuenta. Este proveedor puede tratar datos fuera del Espacio Económico Europeo.</li>
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>

@@ -202,3 +202,63 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
   Meta dice que ese puede saltarse robots.txt.
 - **Los consejos de esa tarjeta no tienen puntos** y salen de un dato medido
   (reto anti-bots, plataforma Shopify).
+
+## Agentes que leen y que navegan (AGENTS-BROWSER-1, log §453)
+
+- **Lo que ve un navegador vive en `result.browser`**, escrito sólo por la
+  pasada de AI-READ-2 (`lib/agentic-audit/browser-pass.ts`) sobre la página
+  que ya eligió la auditoría. Un render por proyecto y semana; una lectura
+  fresca de la misma URL se copia, no se vuelve a pedir. Nunca otra página.
+- **Nunca entra en la nota.** Ni en la Visibilidad agéntica ni en la
+  Puntuación GEO.
+- **Sólo lo que se ve al abrir, sin pulsar nada**, y sin afirmar lo que el
+  render no trae: ni geometría («tapa la mitad») ni ventanas que salen tarde.
+- **Un reto anti-bots al navegador es `blocked` y no resta**, como en §319.
+- **Gemini no va en «los que leen sin navegador»**: responde desde el índice
+  de Google, que ejecuta el JavaScript.
+- **Todo el texto de los carriles sale de `agentLanes`** (pura, con test).
+  Sin lectura, el carril de los que navegan no inventa estaciones.
+- **«Con navegador y sin él» sale de `twoWindows` y las notas de las
+  comprobaciones de `browserCheckNotes`** (log §454), las dos puras. Un campo
+  de la lectura que falte (`name`, `stock`, `productData`) es «Sin medir»,
+  nunca «No aparece». «Sólo con JavaScript» exige que el HTML no lo traiga y
+  el navegador sí lo vea.
+
+## Botón y cookies (log §456, §457)
+
+- **Un botón cuenta por su etiqueta entera si es «Añadir» o «Comprar» a
+  secas**, y sólo fuera de menú, cabecera y pie. «Añadir a mi lista» nunca.
+  Las tres lecturas (navegador, HTML y extensión) dicen lo mismo.
+- **Un aviso de cookies sólo resta si tapa la página** (`cookiesCover`):
+  ventana con fondo, `aria-modal`, clase de ventana o centro de su
+  herramienta, o el scroll bloqueado. Una franja, o una lectura guardada sin
+  `cookieCover`, no cuenta en contra. La línea dice el motivo en una frase.
+- **Cada campo bajo las ventanas lleva su frase (`say`)** con lo que vio
+  ese agente (log §458); nunca «Están», «Nada» o «No aplica» solos. La
+  lectura del navegador y la revisión sin JavaScript cuentan los datos de lo
+  que se vende con la misma regla.
+
+## Datos verdaderos (AGENTS-TRUTH-1, log §465)
+
+- **El precio sale de `price-read.ts` en la auditoría y en el navegador**, con
+  su unidad; el lector de la extensión aplica las mismas reglas. Un cambio en
+  una se copia en la otra en el mismo PR.
+- **Una contradicción entre los datos y la página nunca aprueba** (precio o
+  stock): baja a «a medias» y se dice.
+- **Una tarifa o póliza es un servicio aunque use `Product`** (`looksLikeTariff`):
+  sin stock y con permanencia y desistimiento.
+- **Un botón de FAQ, diálogo, acordeón, menú, recomendador o pregunta nunca es
+  el de compra**; pedir contacto es su propio estado (`lead`).
+- **Portadas y listados no puntúan precio ni botón.**
+- **Una página de error o un reto en castellano no es la ficha**, y un error
+  espera la semana antes de volver a abrirse (coste de Cloudflare).
+- **Un cambio en las reglas del navegador sube `BROWSER_READ_RULES`** cuando
+  haría falsa una lectura guardada: sólo se guarda la lectura, no el HTML, y
+  una lectura con reglas anteriores se vuelve a abrir una vez (log §465 adenda).
+- **Una columna por agente, sin «Punto por punto»** (Denis, log §465 adenda
+  «una columna por agente»): cada columna es la ficha dibujada de ese agente
+  y, justo debajo, sus campos compactos en el mismo orden que la otra. Un
+  problema se tiñe y lo que sólo llega con JavaScript lleva «JS» en la columna
+  del que navega. Se nombran por el agente («Agentes que leen», «Agentes que
+  navegan»); nunca «sin navegador / con navegador». Las dos columnas van de
+  lado a lado también en el móvil.

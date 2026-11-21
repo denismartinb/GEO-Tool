@@ -7,6 +7,7 @@ import {
   EXT_PROMO_DISMISSED_AT_KEY,
   EXT_PROMO_INSTALLED_KEY,
   EXT_PROMO_SEEN_ON_CONTENT_KEY,
+  EXT_PROMO_SEEN_ON_WEB_KEY,
   EXT_PROMO_SHOWN_THIS_VISIT_KEY,
   extPromoStoreHref,
   isDesktopChrome,
@@ -63,7 +64,8 @@ export function ChromeExtensionPromo() {
       dismissedAt: readStorage("local", EXT_PROMO_DISMISSED_AT_KEY),
       installed: readStorage("local", EXT_PROMO_INSTALLED_KEY),
       shownThisVisit: readStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY),
-      seenOnContent: readStorage("local", EXT_PROMO_SEEN_ON_CONTENT_KEY)
+      seenOnContent: readStorage("local", EXT_PROMO_SEEN_ON_CONTENT_KEY),
+      seenOnWeb: readStorage("local", EXT_PROMO_SEEN_ON_WEB_KEY)
     });
     if (!eligible || !pathname) return;
     const where = placementFor(pathname);
@@ -71,6 +73,7 @@ export function ChromeExtensionPromo() {
       shown.current = true;
       writeStorage("session", EXT_PROMO_SHOWN_THIS_VISIT_KEY, "1");
       if (isPromoPath(pathname)) writeStorage("local", EXT_PROMO_SEEN_ON_CONTENT_KEY, "1");
+      if (where === "web") writeStorage("local", EXT_PROMO_SEEN_ON_WEB_KEY, "1");
       setPlacement(where);
     }, EXT_PROMO_DELAY_MS);
     return () => window.clearTimeout(timer);

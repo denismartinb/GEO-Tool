@@ -158,3 +158,35 @@ log §306).
 - **La firma se comprueba antes de leer el cuerpo**, y sin
   `RESEND_WEBHOOK_SECRET` o sin la tabla (migración 0048) se responde 5xx para
   que Resend reintente; nunca 200 sin guardar.
+
+## Extensión de Chrome (EXT-REACH-1, log §436)
+
+- **La posdata de la extensión (`extensionPostscript`) va debajo del botón
+  principal, nunca encima**, y sólo habla de una herramienta gratuita del
+  propio producto. Por eso cabe en la bienvenida, que es de servicio; con un
+  precio o un descuento dejaría de caber (regla de la oferta, arriba).
+- **El anuncio de la extensión es `lifecycle`**: lleva baja y no sale sin
+  `EMAIL_UNSUBSCRIBE_SECRET`. Reserva `feature_extension`, así que nadie
+  recibe a la vez el anuncio y el correo automático de la extensión.
+
+## Avisos de tu web (GEO-ALERTS-1, log §440)
+
+- **Sólo en una transición**: el motor entraba en la auditoría anterior y en
+  ésta no (`engineAccessChanges`). Nunca por un estado que no cambió ni por un
+  bot de entrenamiento.
+- **Como mucho uno por motor y proyecto cada 30 días.** La marca `emailedAt`
+  del aviso se escribe después de un envío aceptado, y Resend recibe la clave
+  `site-alert/<dueño>/<aviso>`.
+- **Categoría `site_alerts` con baja propia** (`notify_site_alerts`,
+  migración 0049). Se lee en su propia consulta y falla cerrado; sale sólo con
+  `isLifecycleEmailEnabled`.
+
+## Primer escaneo (OPS-FIRST-SCAN-1, log §441)
+
+- **El aviso `ops_first_scan` sale cuando el run creado es el único del
+  proyecto** (`lib/scan/first-scan-alert.ts`), con clave de idempotencia
+  `ops-first-scan/<proyecto>`. Nunca lanza ni retrasa la creación del escaneo
+  más allá del envío, y sin `OPS_ALERT_EMAIL`/`RESEND_API_KEY` no consulta nada.
+- **El dominio del aviso de alta sólo es el que la persona trajo**, validado
+  con `isWellFormedDomain` en el servidor; el formulario lo lee sin consumirlo
+  (`peekPendingDomain`) para que el asistente lo siga encontrando.

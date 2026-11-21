@@ -100,3 +100,54 @@ regla es trazable a `docs/brand/design-decisions-log.md` §418.
   para el plugin** (WP-PLUGIN-3, log §432 adenda 1.3.0): `urls` sólo lleva
   URL http(s), como mucho `EXT_AUDIT_URLS`, y vacía en lo que es de todo el
   sitio.
+- **`type`, `rival`, `page` y `drivers` de cada acción del plan son para el
+  plugin** (WP-PLUGIN-4, log §432 adenda 1.4.0): `page` sólo es una URL propia
+  http(s) confirmada por la cobertura (`toExtPlanItem`); `rival` y `drivers`
+  salen de `recommendationSubjects`, sin recalcular nada.
+- **`draft` de una acción de cita sólo sin página propia** (WP-PLUGIN-4, log
+  §432 adenda 1.4.1): con página, el plugin ofrece «Añadir dato» en ella; sin
+  ella, borrador con sus preguntas (`isDraftable`).
+
+## Elección de herramienta (MCP-CONNECTOR-TUNING-1, log §452)
+
+- **Las instrucciones del servidor y las descripciones dirigen la elección**:
+  «cómo está un dominio» va a las herramientas de cuenta, «recomendaciones»
+  son siempre las de `ver_recomendaciones` (nunca productos ni compras), y
+  tras un «no está en la cuenta» `revisar_pagina` sólo se ofrece. Lo vigila
+  `app/api/mcp/route.test.ts` en las dos direcciones.
+- **`tools_triggered` del paquete de ChatGPT es texto separado por comas**,
+  como dice la especificación de OpenAI, y cada nombre es una herramienta real
+  (`lib/mcp/chatgpt-package.test.ts`).
+
+## Dominio fuera de la cuenta (MCP-CONNECTOR-TUNING-2, log §463)
+
+- **La oferta de revisión va en la respuesta de la herramienta**, no sólo en
+  instrucciones: `formatNotFound` y `listar_dominios` (con o sin `dominio`)
+  dicen que no hay datos, dan el alta si cabe y ofrecen `revisar_pagina`
+  «solo si lo pides», con `publicReview.run = "only_if_asked"`. ChatGPT no
+  siguió la regla cuando sólo estaba en las instrucciones (§463).
+- **Ninguna herramienta de cuenta ejecuta la revisión pública por su cuenta.**
+
+## Fiabilidad del conector (MCP-RELIABILITY-1, log §464)
+
+- **Cada `tools/call` registra cómo acabó** (`outcome` de `mcp_tool_called`) y
+  cada rechazo de autenticación su motivo (`mcp_auth_rejected`). Sólo
+  categorías; nunca token, argumentos ni respuesta.
+- **Una excepción de una herramienta va a Sentry** por `onToolException` →
+  `reportError(error, "mcp.<herramienta>")`, y el cliente recibe
+  `CALL_TEXT.exception`, nunca el mensaje del error.
+- **En ChatGPT, un token caducado en `tools/call` recibe el desafío por
+  herramienta**, con «Tu sesión de GenScore ha caducado»; `initialize` y
+  `tools/list` siguen con el 401. Claude recibe el 401 siempre.
+- **`null` es un campo ausente** (`withoutNulls`). Un argumento inválido nombra
+  el campo del esquema, nunca un valor enviado.
+- **Todo texto de rechazo dice qué hacer a continuación** (`CALL_TEXT`), y un
+  estado nuevo entra con su fixture en `app/api/mcp/route.test.ts`.
+
+## Consentimiento, fecha y estados (MCP-RELIABILITY-FIX-1, log §466)
+
+- **Una oferta de revisión nunca va mezclada con otra acción** en una pregunta de sí/no: el enlace de alta y `revisar_pagina` son opciones distintas, y un «vale» ambiguo se aclara. Es guía al modelo, no garantía del servidor (`revisar_pagina` no tiene estado); no vendas un parámetro `confirmado` como consentimiento.
+- **Toda respuesta con datos de un escaneo lleva su fecha y su edad** (`scanAge`, `scanDate`/`scanAgeDays` en `structuredContent`). Sin escaneo se dice «sin escaneo», nunca «sin acciones pendientes» (`hasNoScan`).
+- **Un dato que falta no es un cero**: respuestas parciales llevan `incomplete`/`missing`.
+- **Dominio ajeno con la cuenta llena: sin enlace de alta** (mismo criterio que `listar_dominios`).
+- **ChatGPT no recibe `planName`, `trialEndsAt` ni texto de plan/prueba** en ninguna herramienta de cuenta; el enlace informativo a `/precios` sí. `tests/mcp-qa` lo vigila.

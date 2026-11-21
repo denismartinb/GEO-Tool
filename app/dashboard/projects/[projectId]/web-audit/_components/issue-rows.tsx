@@ -64,7 +64,7 @@ export function IssueRow({
   // abrirla. El distintivo lo dice en la fila cerrada.
   const hasFix = Boolean(llmsTxt || sitemap);
   const scopeLabel = issueScopeLabel(issue);
-  const withGoogle = google && google.length > 0 && issue.check !== "bot_blocked" ? google : null;
+  const withGoogle = google && google.length > 0 && issue.check !== "bot_blocked" && issue.check !== "bot_server_blocked" ? google : null;
   const googleClicks = withGoogle ? withGoogle.reduce((n, p) => n + (p.kind === "seen" ? p.clicks : 0), 0) : 0;
 
   return (
@@ -148,7 +148,7 @@ export function IssueRow({
           </div>
         ) : issue.affectedLabels.length > 0 && (
           <div>
-            <h4>{issue.check === "bot_blocked" ? "Bots bloqueados" : "Páginas afectadas"}</h4>
+            <h4>{issue.check === "bot_blocked" || issue.check === "bot_server_blocked" ? "Bots bloqueados" : "Páginas afectadas"}</h4>
             <ul className="sa-urls">
               {issue.affectedLabels.slice(0, 12).map((label) => (
                 <li key={label}>{label}</li>

@@ -6,6 +6,7 @@ import type { FormEvent } from "react";
 import { AU_N, bumpAuthEnergy, setAuthState } from "./fx";
 import { EyeButton, FieldError, GoogleLogo, SubmitButton } from "./parts";
 import { Ic } from "@/components/ins/ic";
+import { peekPendingDomain } from "@/lib/onboarding/pending-domain";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -37,6 +38,13 @@ export function EntryForm({
   const [pwErr, setPwErr] = useState("");
   const emailRef = useRef<HTMLInputElement | null>(null);
   const pwRef = useRef<HTMLInputElement | null>(null);
+  // OPS-FIRST-SCAN-1 (log §441): the domain the person brought, read without
+  // consuming it, so the operator's signup alert can name it.
+  const [pendingDomain, setPendingDomain] = useState("");
+
+  useEffect(() => {
+    if (signup) setPendingDomain(peekPendingDomain());
+  }, [signup]);
 
   useEffect(() => {
     const t = setTimeout(() => emailRef.current?.focus({ preventScroll: true }), 120);
@@ -98,6 +106,7 @@ export function EntryForm({
       <form action={action} onSubmit={onSubmit} className="au-f" data-step={step} noValidate>
         {next ? <input type="hidden" name="next" value={next} /> : null}
         {signup ? <input type="hidden" name="confirmPassword" value={pw} /> : null}
+        {signup && pendingDomain ? <input type="hidden" name="dominio" value={pendingDomain} /> : null}
         <div className={`au-fld${emailErr ? " bad" : ""}`}>
           <div className="au-fh">
             <label htmlFor={`${mode}-em`}>Email</label>

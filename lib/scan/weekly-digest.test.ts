@@ -150,7 +150,10 @@ describe("runWeeklyDigest", () => {
       activeRecommendationsCount: 3,
       promptsCount: 8,
       competitorsCount: 4,
-      scansThisWeek: 2
+      scansThisWeek: 2,
+      // GEO-ALERTS-1 (log §440): no audit snapshot in this fake, so no «Tu web esta semana».
+      site: null,
+      projectId: "p1"
     }, expect.any(String), expect.anything());
     expect(result).toEqual({ processed: 1, sent: 1, skipped: 0 });
   });

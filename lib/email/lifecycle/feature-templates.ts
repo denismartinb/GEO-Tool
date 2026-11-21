@@ -46,7 +46,7 @@ const bullets = (items: string[]): string =>
 
 export type EmailParts = {
   /** MAIL-METRICS-1 (log §419): the Resend tag, same name as `email_sends.kind`. */
-  kind: "feature_gsc" | "feature_extension" | "feature_agentic";
+  kind: "feature_gsc" | "feature_extension" | "feature_agentic" | "extension_launch";
   subject: string;
   preheader: string;
   body: string;
@@ -93,6 +93,43 @@ export function extensionEmailParts(input: { domain: string }): EmailParts {
       ${paragraph("Es gratis y se instala en un clic.")}
       ${button(storeUrl(), "Añadir a Chrome")}
       ${subtext(`¿Quieres verla antes? <a href="${url("/blog/extension-de-chrome-de-genscore", "feature_extension")}" style="${FOOTER_LINK_STYLE}">Te la enseñamos aquí</a>.`)}
+    `
+  };
+}
+
+/**
+ * EXT-REACH-1 (log §436): the one-off announcement of the Chrome extension to
+ * every account that ever signed up, sent by the operator from /admin/crm.
+ * Same category and footer as the feature emails («consejos, novedades y
+ * ofertas»), so it needs the signed unsubscribe link or it is not sent. It
+ * claims `feature_extension` in `email_sends`: whoever gets this one never
+ * gets the automatic extension email, and the other way round. No figures:
+ * nothing here depends on the account's data.
+ */
+export const EXTENSION_LAUNCH_IMAGE = `${SITE_URL}/email/extension-chrome.jpg`;
+
+export function extensionLaunchEmailParts(): EmailParts {
+  const campaign = "extension_launch";
+  const store = `${CHROME_WEB_STORE_URL}?utm_source=email&utm_medium=anuncio&utm_campaign=${campaign}`;
+  const article = url("/blog/extension-de-chrome-de-genscore", campaign);
+  const feature = (title: string, text: string) =>
+    `<tr><td valign="top" style="padding:10px 12px 10px 0;width:30px;"><div style="width:26px;height:26px;border-radius:8px;background:#EEF3FF;text-align:center;line-height:26px;font-size:14px;color:#2563EB;font-weight:700;">&#10003;</div></td><td style="padding:8px 0;"><div style="font-size:15px;font-weight:700;color:#0B1426;">${title}</div><div style="font-size:14.5px;line-height:1.55;color:#3B4759;margin-top:2px;">${text}</div></td></tr>`;
+  return {
+    kind: "extension_launch",
+    subject: "Nuevo: GenScore en Chrome, gratis",
+    preheader: "Abre cualquier web y mira al momento si la IA y Google pueden leerla.",
+    body: `
+      ${eyebrow("Nuevo · Extensión de Chrome")}
+      ${heading("Mira cualquier web como la ve la IA, sin salir de Chrome")}
+      ${paragraph("Hemos publicado la extensión de GenScore para Chrome. Abres una página, pulsas el icono y en unos segundos sabes si ChatGPT, Gemini, Claude y Perplexity pueden leerla, cómo la ve Google y qué cambiar primero.")}
+      <a href="${store}" style="display:block;margin:22px 0 6px;text-decoration:none;"><img src="${EXTENSION_LAUNCH_IMAGE}" width="560" alt="Chrome con una página abierta y, al lado, el panel de GenScore con la revisión de esa página." style="display:block;width:100%;max-width:560px;height:auto;border:1px solid #E7EAF0;border-radius:14px;"></a>
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0 0;">
+        ${feature("Gratis y sin cuenta", "La revisión se hace en tu navegador, en cualquier web: la tuya, la de un cliente o la de un competidor.")}
+        ${feature("Lo que frena a la IA y a Google", "Bots bloqueados, llms.txt, datos estructurados, títulos e indexación, con el arreglo listo para copiar.")}
+        ${feature("Con tu cuenta, tu dominio a mano", "Tu Puntuación GEO, tus competidores y tus recomendaciones sin abrir la consola.")}
+      </table>
+      ${button(store, "Añadir a Chrome")}
+      ${subtext(`¿Quieres verla antes? <a href="${article}" style="${FOOTER_LINK_STYLE}">Te la enseñamos en el blog</a>. Funciona en Chrome de ordenador.`)}
     `
   };
 }

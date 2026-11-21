@@ -25,14 +25,73 @@ export type ExtRival = { name: string; share: number; isBrand: boolean; domain: 
  * them as headings. Never for a page that already exists, a comparison with a
  * rival or work outside the site.
  */
-export type ExtPlanItem = { title: string; firstStep: string | null; engines: string[]; questions?: string[]; draft?: boolean };
+export type ExtPlanItem = {
+  title: string;
+  firstStep: string | null;
+  engines: string[];
+  questions?: string[];
+  draft?: boolean;
+  /**
+   * WP-PLUGIN-4 (log §432 adenda 1.4.0): what the plugin needs to act on the
+   * item. `type` is the recommendation type (or «lever» / «lever_definition»),
+   * `rival` the rival a comparison names, `page` the own page coverage
+   * confirmed (http(s) only), `drivers` the criticisms the AI repeats.
+   */
+  type?: string | null;
+  rival?: string | null;
+  page?: string | null;
+  drivers?: string[];
+};
 
-/** A new page for questions: page levers and FAQ cards, and the cards that ask to publish one. */
-export function isDraftable(p: { title: string; type?: string; questions?: string[] }): boolean {
-  if (!p.questions || p.questions.length === 0) return false;
-  if (p.type === "lever" || p.type === "create_faq_section") return true;
-  return p.type === "increase_brand_visibility" && p.title.startsWith("Publica una página");
+/**
+ * The item asks for a new page the plugin can start as a draft: a page for
+ * questions (page levers, FAQ cards, «Publica una página…»), a comparison
+ * with a named rival or with the tracked rivals, or an answer to the
+ * criticisms the AI repeats (WP-PLUGIN-4, log §432 adenda 1.4.0). Never for a
+ * page that already exists or for work outside the site.
+ */
+export function isDraftable(p: { title: string; type?: string; questions?: string[]; rival?: string | null; drivers?: string[]; page?: string | null }): boolean {
+  const hasQuestions = Boolean(p.questions && p.questions.length > 0);
+  switch (p.type) {
+    case "lever":
+    case "create_faq_section":
+      return hasQuestions;
+    case "increase_brand_visibility":
+      return hasQuestions && p.title.startsWith("Publica una página");
+    case "close_competitor_gap":
+      return Boolean(p.rival) && p.title.startsWith("Publica");
+    case "add_comparison_content":
+      return p.title.startsWith("Publica");
+    case "address_negative_narrative":
+      return Boolean(p.drivers && p.drivers.length > 0);
+    // A fact with its source: on the page if the plan names one (the plugin
+    // adds it there), otherwise a new page for its questions (log §432 adenda 1.4.1).
+    case "add_citation_block":
+    case "improve_citation_readiness":
+      return hasQuestions && !p.page;
+    default:
+      return false;
+  }
 }
+/** One plan item as the panel, the MCP and the plugin receive it. */
+export function toExtPlanItem(
+  p: { title: string; firstStep: string | null; engineLabels: string[]; questions?: string[]; type?: string; rival?: string | null; page?: string | null; drivers?: string[] },
+  domain: string
+): ExtPlanItem {
+  const page = p.page && isOwnUrl(p.page, domain) && /^https?:\/\//i.test(p.page) ? p.page : null;
+  return {
+    title: p.title,
+    firstStep: p.firstStep,
+    engines: p.engineLabels,
+    questions: p.questions ?? [],
+    draft: isDraftable({ ...p, page }),
+    type: p.type ?? null,
+    rival: p.rival ?? null,
+    page,
+    drivers: p.drivers ?? []
+  };
+}
+
 export type ExtCitingPrompt = { text: string; engines: string[]; mentioned: boolean };
 export type ExtAgentic =
   | { kind: "card"; score: number; headline: string; components: Array<{ name: string; points: number | null; weight: number }> }
@@ -47,6 +106,8 @@ export type ExtProjectSummary = {
   lede: string | null;
   engines: ExtEngine[];
   rivals: ExtRival[];
+  /** Domains of the active tracked competitors, so the panel does not offer to add one twice. */
+  competitorDomains: string[];
   /** «Salud SEO»: the SEO block of the latest technical audit. Null without one. */
   seoScore: number | null;
   plan: ExtPlanItem[];
@@ -144,10 +205,11 @@ export function buildExtProjectSummary({
     lede: model?.summary.lede ?? null,
     engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
     rivals: pickRivals(model, project.domain, competitors),
+    competitorDomains: [...new Set(competitors.flatMap((c) => (c.domain ? [c.domain.trim().toLowerCase().replace(/^www\./, "")] : [])))],
     // Never the report's technical score: that is the GEO Score's «Diagnóstico
     // técnico», a different figure (log §432, adenda 1.1.2).
     seoScore,
-    plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => ({ title: p.title, firstStep: p.firstStep, engines: p.engineLabels, questions: p.questions ?? [], draft: isDraftable(p) })),
+    plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => toExtPlanItem(p, project.domain)),
     agentic: toExtAgentic(agentic),
     citingPrompts: ownUrl ? findCitingPrompts(answers, ownUrl, engineLabel) : null
   };

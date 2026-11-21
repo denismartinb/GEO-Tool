@@ -36,13 +36,23 @@ export type ExtractionErrorCategory =
   /** Anything unclassified — network errors, bugs. Never carries a provider message (see `formatExtractionError`). */
   | "unknown";
 
+/**
+ * GEMINI-QUOTA-KIND-1 (log §472): which limit a 429 hit, when the provider
+ * says so. `per_minute` heals by itself; `per_day` waits until the provider's
+ * daily reset; `spend_cap` needs the operator to raise the cap. Only these
+ * fixed labels travel — never the provider's own text.
+ */
+export type QuotaKind = "per_minute" | "per_day" | "spend_cap";
+
 export class ExtractionError extends Error {
   readonly category: ExtractionErrorCategory;
+  readonly quotaKind?: QuotaKind;
 
-  constructor(category: ExtractionErrorCategory, message: string) {
+  constructor(category: ExtractionErrorCategory, message: string, quotaKind?: QuotaKind) {
     super(message);
     this.name = "ExtractionError";
     this.category = category;
+    if (quotaKind) this.quotaKind = quotaKind;
   }
 }
 

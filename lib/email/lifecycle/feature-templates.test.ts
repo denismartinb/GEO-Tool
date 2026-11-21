@@ -6,7 +6,13 @@ vi.mock("@/lib/email/resend", () => ({
   getEmailFromAddress: () => "GenScore <soporte@genscore.es>"
 }));
 
-import { agenticEmailParts, extensionEmailParts, gscEmailParts, sendFeatureEmail } from "./feature-templates";
+import {
+  agenticEmailParts,
+  extensionEmailParts,
+  extensionLaunchEmailParts,
+  gscEmailParts,
+  sendFeatureEmail
+} from "./feature-templates";
 
 /**
  * FEATURE-EMAILS-1 (log §417). The approved texts reach the inbox with the
@@ -29,7 +35,8 @@ const ALL = [
   gscEmailParts({ projectId: "p1", domain: "tuweb.es" }),
   extensionEmailParts({ domain: "tuweb.es" }),
   agenticEmailParts({ variant: "result", projectId: "p1", domain: "tuweb.es", score: 58, firstFix: "Publicar el precio" }),
-  agenticEmailParts({ variant: "upgrade", domain: "tuweb.es" })
+  agenticEmailParts({ variant: "upgrade", domain: "tuweb.es" }),
+  extensionLaunchEmailParts()
 ];
 
 describe("feature emails", () => {
@@ -78,5 +85,18 @@ describe("feature emails", () => {
     for (const parts of ALL) {
       expect(`${parts.subject}${parts.preheader}${parts.body}`).not.toContain("—");
     }
+  });
+});
+
+describe("EXT-REACH-1 (log §436): the extension announcement", () => {
+  it("links the store and the article, tagged, and carries its own Resend kind", async () => {
+    const parts = extensionLaunchEmailParts();
+    expect(parts.kind).toBe("extension_launch");
+    expect(await sendFeatureEmail("cliente@ejemplo.com", USER, parts)).toBe("sent");
+    const { html } = last();
+    expect(html).toContain("chromewebstore.google.com/detail/");
+    expect(html).toContain("utm_campaign=extension_launch");
+    expect(html).toContain("/blog/extension-de-chrome-de-genscore?utm_source=email");
+    expect(html).toContain("/email/extension-chrome.jpg");
   });
 });

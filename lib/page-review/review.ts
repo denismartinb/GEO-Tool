@@ -1,5 +1,6 @@
 import "server-only";
 import { parseHTML } from "linkedom";
+import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
 import { fetchOnDomain } from "@/lib/agentic-audit/fetch";
 import { normalizeTarget } from "@/lib/agentic-audit/run-audit";
 import makeCollectPageFacts from "./collect.cjs";
@@ -29,12 +30,19 @@ export type PageReview = {
   url: string;
   host: string;
   title: string;
+  /** The address asked for, when the site sent the review to another page (log §465). */
+  redirectedFrom?: string;
   score: ReturnType<typeof scoreApi.scorePage>;
 };
 
 export type PageReviewOutcome =
   | { kind: "ok"; review: PageReview }
-  | { kind: "failed"; reason: "invalid_url" | "unreachable" | "blocked" | "not_html" };
+  /**
+   * AGENTS-READ-FIX-1 (log §465): «blocked» (a bot wall), «timeout» (it did
+   * not answer in time) and «not_found» (404 or 410) are told apart; the rest
+   * stays «unreachable».
+   */
+  | { kind: "failed"; reason: "invalid_url" | "unreachable" | "blocked" | "timeout" | "not_found" | "not_html" };
 
 type ReviewDeps = {
   fetch: typeof fetchOnDomain;
@@ -67,9 +75,12 @@ export async function reviewPage(input: string, deps: Partial<ReviewDeps> = {}):
 
   const deadlineAt = now() + REVIEW_BUDGET_MS;
   const page = await doFetch(target.url, target.baseDomain, { timeoutMs: 8_000, maxBytes: PAGE_MAX_BYTES, deadlineAt });
-  if (page.kind === "error") return { kind: "failed", reason: "unreachable" };
+  if (page.kind === "error") return { kind: "failed", reason: page.reason === "timeout" ? "timeout" : "unreachable" };
   if (BLOCKED_STATUS.has(page.status) || page.headers["cf-mitigated"]) return { kind: "failed", reason: "blocked" };
+  if (page.status === 404 || page.status === 410) return { kind: "failed", reason: "not_found" };
   if (page.status < 200 || page.status >= 300) return { kind: "failed", reason: "unreachable" };
+  // A 200 that is really a challenge page («Just a moment…», «Verificación de seguridad»).
+  if (isChallengeResponse({ status: page.status, headers: page.headers, body: page.body })) return { kind: "failed", reason: "blocked" };
   if (!/html/i.test(page.headers["content-type"] ?? "") && !/^\s*<(!doctype|html)/i.test(page.body)) {
     return { kind: "failed", reason: "not_html" };
   }
@@ -102,10 +113,26 @@ export async function reviewPage(input: string, deps: Partial<ReviewDeps> = {}):
 
   try {
     const collect = makeCollectPageFacts(document, location, sameOriginFetch, { now: () => now() }, DOMParser, Node);
-    const facts = await collect();
+    // `served`: read from the HTML the server sends, without JavaScript (the
+    // Agentes sentence says so when there is no price or button to see).
+    const facts = { ...(await collect()), served: true };
+    const sameAddress = (a: string, b: string) => {
+      const n = (u: URL) => `${u.hostname.replace(/^www\./, "")}${u.pathname.replace(/\/+$/, "")}`.toLowerCase();
+      try {
+        return n(new URL(a)) === n(new URL(b));
+      } catch {
+        return true;
+      }
+    };
     return {
       kind: "ok",
-      review: { url: facts.url, host: facts.host, title: facts.title, score: scoreApi.scorePage(facts, now()) }
+      review: {
+        url: facts.url,
+        host: facts.host,
+        title: facts.title,
+        ...(sameAddress(target.url, page.finalUrl) ? {} : { redirectedFrom: target.url }),
+        score: scoreApi.scorePage(facts, now())
+      }
     };
   } catch {
     return { kind: "failed", reason: "unreachable" };

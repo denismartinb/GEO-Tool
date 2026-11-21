@@ -208,7 +208,9 @@ export function AgenticAuditScreen({
   result,
   remaining,
   refresh,
-  openOn
+  openOn,
+  windows,
+  checkNotes
 }: {
   projectId: string;
   /** «Revisada hoy a las 10:42.», formatted on the server in Europe/Madrid. */
@@ -220,6 +222,10 @@ export function AgenticAuditScreen({
   refresh: boolean;
   /** The component to open first, from a card on «Visibilidad en agentes». */
   openOn?: AgenticComponentId | "interop";
+  /** «Con navegador y sin él» (AGENTS-BROWSER-1 PR 2, log §454), rendered on the server. */
+  windows?: React.ReactNode;
+  /** What the browser saw for a failed check, by check id (`browserCheckNotes`). */
+  checkNotes?: Record<string, string>;
 }) {
   const [editing, setEditing] = useState(false);
   const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? "discovery");
@@ -392,6 +398,7 @@ export function AgenticAuditScreen({
                     <span>
                       {check.label}
                       {check.state === "unknown" ? <small>No se pudo medir.</small> : check.fix ? <small>{check.fix}</small> : null}
+                      {checkNotes?.[check.id] ? <small className="agw-check">{checkNotes[check.id]}</small> : null}
                     </span>
                   </li>
                 ))}
@@ -400,6 +407,8 @@ export function AgenticAuditScreen({
           </>
         ) : null}
       </div>
+
+      {windows}
 
       <div className="ag-grid">
         <div className="card">

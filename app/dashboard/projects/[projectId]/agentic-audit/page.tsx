@@ -11,6 +11,9 @@ import {
   shouldAutoReview
 } from "@/lib/agentic-audit/console-audit";
 import type { AgenticComponentId } from "@/lib/agentic-audit/api-contract";
+import { browserCheckNotes, twoWindows } from "@/lib/agentic-audit/two-windows";
+import { browserRunConfigured } from "@/lib/web-audit/browser-run";
+import { TwoWindowsCard } from "@/components/ins/agents/two-windows";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -86,6 +89,10 @@ export default async function AgenticAuditPage({
     audits.lastAttempt?.status === "pending" &&
     now - Date.parse(audits.lastAttempt.createdAt) < AGENTIC_SCREEN_MIN_GAP_MS;
   const remaining = audits.available ? Math.max(0, AGENTIC_REVIEW_DAILY_LIMIT - audits.usedToday) : 0;
+  // AGENTS-BROWSER-1 PR 2 (log §454): only where a browser reading exists or can exist.
+  const latest = audits.available ? audits.latest?.result : undefined;
+  const withWindows =
+    latest && latest.found !== "none" && latest.pageRead && (browserRunConfigured() || latest.browser) ? latest : null;
 
   return (
     <div className="ins">
@@ -126,6 +133,8 @@ export default async function AgenticAuditPage({
               remaining={remaining}
               refresh={autoReview}
               openOn={openOn}
+              windows={withWindows ? <TwoWindowsCard windows={twoWindows(withWindows)} /> : null}
+              checkNotes={withWindows ? browserCheckNotes(withWindows) : undefined}
             />
           ) : autoReview || inFlight ? (
             <AgenticAuditSearching projectId={projectId} />

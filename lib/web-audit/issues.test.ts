@@ -252,6 +252,35 @@ describe("buildTechnicalIssuesReport — bots, llms.txt, sitemap", () => {
     expect(report.passing.find((p) => p.check === "bot_blocked")!.passedCount).toBe(2);
   });
 
+  it("flags a search bot the server refuses as critical, unscored, only when robots.txt lets it in (GEO-ALERTS-1, log §440)", () => {
+    const bots = botsReport({
+      bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })),
+      serverProbe: {
+        measuredAt: "2026-11-02T00:00:00Z",
+        baseline: "ok",
+        engines: {
+          chatgpt: { token: "OAI-SearchBot", state: "blocked", status: 403 },
+          claude: { token: "Claude-SearchBot", state: "allowed", status: 200 },
+          perplexity: { token: "PerplexityBot", state: "blocked", status: 403 }
+        }
+      }
+    });
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
+    const issue = findIssue(report.issues, "bot_server_blocked")!;
+    expect(issue.severity).toBe("critical");
+    expect(issue.pointDelta).toBeNull();
+    // Perplexity is closed by robots.txt: reported there, not twice.
+    expect(issue.affectedLabels).toEqual(["ChatGPT"]);
+    expect(issue.applicableCount).toBe(2);
+    expect(report.passing.find((p) => p.check === "bot_server_blocked")!.passedCount).toBe(1);
+  });
+
+  it("has no server row on a snapshot taken before the probe existed", () => {
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
+    expect(findIssue(report.issues, "bot_server_blocked")).toBeUndefined();
+    expect(report.passing.find((p) => p.check === "bot_server_blocked")).toBeUndefined();
+  });
+
   it("never counts a closed training bot as a problem (GPTBot, ClaudeBot)", () => {
     const bots = botsReport({
       bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "GPTBot" && agent !== "ClaudeBot" }))

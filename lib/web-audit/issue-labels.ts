@@ -129,7 +129,7 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
   js_required: {
     label: "Contenido visible sin JavaScript",
     guidance:
-      "Estas páginas llegan casi vacías y solo muestran su contenido después de ejecutar JavaScript. Activa el renderizado en el servidor o el prerenderizado de tu plataforma, para que el texto principal venga ya en el HTML.",
+      "Estas páginas llegan vacías o sin su contenido principal, que solo aparece después de ejecutar JavaScript. Activa el renderizado en el servidor o el prerenderizado de tu plataforma, para que el texto principal venga ya en el HTML.",
     why: "Los bots de los asistentes de IA no ejecutan JavaScript: leen el HTML tal como llega, y si viene vacío no tienen nada que citar.",
     audience: ["google", "ia"],
     unit: "página"
@@ -138,6 +138,14 @@ export const ISSUE_CHECK_META: Record<IssueCheckKey, IssueCheckMeta> = {
     label: "Acceso de bots de IA",
     guidance: "Revisa tu robots.txt y quita la regla que bloquea a este motor.",
     why: "Si robots.txt bloquea al bot de un asistente, ese asistente no puede leer ninguna página de tu web.",
+    audience: ["ia"],
+    unit: "bot"
+  },
+  bot_server_blocked: {
+    label: "Tu servidor deja pasar a los bots de IA",
+    guidance:
+      "Tu robots.txt deja pasar a este bot, pero tu servidor le responde con un bloqueo. Suele ser una regla de Cloudflare o del cortafuegos: busca la que bloquea bots de IA o ese nombre de bot y deja pasar a los de búsqueda.",
+    why: "Lo hemos probado desde nuestro servidor con el nombre del bot (simulación). Si el servidor lo rechaza, ese asistente no puede leer tu web aunque robots.txt lo permita.",
     audience: ["ia"],
     unit: "bot"
   },

@@ -16,6 +16,7 @@ type RowDef = { check: IssueCheckKey; label: string; detail: string | null; ok: 
 
 const ROWS: RowDef[] = [
   { check: "bot_blocked", label: "Bots de IA con acceso", detail: "Bots de búsqueda de ChatGPT, Gemini, Claude y Perplexity", ok: "Todos" },
+  { check: "bot_server_blocked", label: "Tu servidor deja pasar a la IA", detail: "Simulación con el nombre de cada bot de búsqueda", ok: "Sí" },
   { check: "llms_txt_missing", label: "llms.txt", detail: "Guía de la web pensada para modelos de IA", ok: "Lo tienes", missing: "No lo tienes" },
   { check: "sitemap_missing", label: "Mapa del sitio", detail: "Comprobado en /sitemap.xml", ok: "Responde", missing: "No responde" },
   { check: "answer_first_intro", label: "La primera frase responde", detail: "Un párrafo inicial que dice qué haces", ok: "Bien" },
@@ -36,6 +37,8 @@ export function buildReportTechChecks(report: TechnicalIssuesReport): ReportTech
     if (issue) {
       if (row.check === "bot_blocked") {
         out.push({ ...base, state: "bad", text: `No pueden leerte: ${issue.affectedLabels.join(", ")}` });
+      } else if (row.check === "bot_server_blocked") {
+        out.push({ ...base, state: "bad", text: `Bloquea a: ${issue.affectedLabels.join(", ")}` });
       } else if (row.missing) {
         out.push({ ...base, state: "warn", text: row.missing });
       } else {

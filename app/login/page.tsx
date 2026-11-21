@@ -29,7 +29,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams
 }: {
-  searchParams: Promise<{ error?: string; deleted?: string; next?: string; source?: string }>;
+  searchParams: Promise<{ error?: string; deleted?: string; next?: string; source?: string; salida?: string }>;
 }) {
   const params = await searchParams;
   const next = safeNextPath(params.next);
@@ -59,8 +59,14 @@ export default async function LoginPage({
     );
   }
 
+  // SPLASH-WEB-1: on the web, the short entrance only when someone simply
+  // comes to sign in. An error, a link that already points somewhere, or a
+  // goodbye (signed out, account deleted) gets the form at once.
+  const quiet = Boolean(params.error || params.next || params.deleted || params.salida);
+  const web = inApp ? undefined : quiet ? "still" : "intro";
+
   return (
-    <AuthPage splash={inApp} launch={launch}>
+    <AuthPage splash={inApp} launch={launch} web={web}>
       <AuthHead title="Hola de nuevo.">Tu visibilidad en la IA, donde la dejaste.</AuthHead>
       {params.deleted === "1" ? (
         <div className="au-note">

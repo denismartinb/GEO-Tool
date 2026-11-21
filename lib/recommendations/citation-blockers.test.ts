@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { blockerDetail, blockerTitle, blockerUrls, findCitationBlockers } from "./citation-blockers";
+import { blockerDetail, blockerStrip, blockerTitle, blockerUrls, engineAccessChanges, findCitationBlockers } from "./citation-blockers";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 
@@ -107,5 +107,73 @@ describe("copy del bloqueo", () => {
   it("sólo los bloqueos por página traen URLs", () => {
     expect(blockerUrls({ kind: "bots", agents: ["ChatGPT"] })).toEqual([]);
     expect(blockerUrls({ kind: "noindex", urls: ["https://acme.com/a"] })).toEqual(["https://acme.com/a"]);
+  });
+});
+
+describe("server blocker (GEO-ALERTS-1, log §440)", () => {
+  const probe = (engines: Record<string, "allowed" | "blocked">) => ({
+    measuredAt: "2026-11-02T00:00:00Z",
+    baseline: "ok" as const,
+    engines: Object.fromEntries(Object.entries(engines).map(([e, state]) => [e, { token: "x", state, status: 200 }]))
+  });
+  const withProbe = (blocked: string[], engines: Record<string, "allowed" | "blocked">) =>
+    ({ ...bots(blocked), serverProbe: probe(engines) }) as BotAccessReport;
+
+  it("goes first, and never repeats an engine robots.txt already closes", () => {
+    const found = findCitationBlockers({ bots: withProbe(["PerplexityBot"], { chatgpt: "blocked", perplexity: "blocked" }), pages: [] });
+    expect(found).toEqual([
+      { kind: "server", agents: ["ChatGPT"] },
+      { kind: "bots", agents: ["Perplexity"] }
+    ]);
+  });
+
+  it("titles the action for Recomendaciones and the state for Visión general", () => {
+    const b = { kind: "server" as const, agents: ["ChatGPT"] };
+    expect(blockerTitle(b)).toBe("Deja pasar a ChatGPT en tu servidor");
+    expect(blockerStrip(b)).toMatchObject({ title: "ChatGPT no puede entrar en tu web", evidence: "Simulación" });
+    expect(blockerStrip({ kind: "bots", agents: ["Perplexity", "Claude"] })).toMatchObject({
+      title: "Perplexity y Claude no pueden leer tu web",
+      evidence: "Comprobado"
+    });
+    expect(blockerUrls(b)).toEqual([]);
+  });
+});
+
+describe("engineAccessChanges (GEO-ALERTS-1, log §440)", () => {
+  const open = { tokens: { "OAI-SearchBot": true, "ChatGPT-User": true, PerplexityBot: true, "Perplexity-User": true }, starRules: [] };
+  const closed = { tokens: { ...open.tokens, PerplexityBot: false }, starRules: [] };
+  const report = (aiBots: typeof open, server?: Record<string, "allowed" | "blocked" | "unknown">) =>
+    ({
+      ...bots(),
+      aiBots,
+      ...(server
+        ? {
+            serverProbe: {
+              measuredAt: "x",
+              baseline: "ok",
+              engines: Object.fromEntries(Object.entries(server).map(([e, state]) => [e, { token: "x", state, status: 200 }]))
+            }
+          }
+        : {})
+    }) as BotAccessReport;
+
+  it("sees a robots.txt block and its fix", () => {
+    expect(engineAccessChanges(report(open), report(closed)).blocked).toEqual([{ name: "Perplexity", by: "robots" }]);
+    expect(engineAccessChanges(report(closed), report(open)).resolved).toEqual(["Perplexity"]);
+  });
+
+  it("sees a server block only between two measured probes", () => {
+    expect(engineAccessChanges(report(open, { chatgpt: "allowed" }), report(open, { chatgpt: "blocked" })).blocked).toEqual([
+      { name: "ChatGPT", by: "server" }
+    ]);
+    // First probe ever (old snapshot): a discovery, not a change.
+    expect(engineAccessChanges(report(open), report(open, { chatgpt: "blocked" })).blocked).toEqual([]);
+    // A probe we could not run never resolves anything.
+    expect(engineAccessChanges(report(open, { chatgpt: "blocked" }), report(open, { chatgpt: "unknown" })).resolved).toEqual([]);
+    expect(engineAccessChanges(report(open, { chatgpt: "blocked" }), report(open, { chatgpt: "allowed" })).resolved).toEqual(["ChatGPT"]);
+  });
+
+  it("is empty without both sides", () => {
+    expect(engineAccessChanges(null, report(closed))).toEqual({ blocked: [], resolved: [] });
   });
 });

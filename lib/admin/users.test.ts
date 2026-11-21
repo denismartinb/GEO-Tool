@@ -19,6 +19,17 @@ function daysFromNow(n: number): string {
 
 type Row = Record<string, unknown>;
 
+/** ADMIN-GEO-SCORE-1: `run_scores` por proyecto, más reciente primero. */
+function fakeRunScores(byProject: Record<string, Row[]> = {}) {
+  return {
+    select: () => ({
+      eq: (_column: string, projectId: string) => ({
+        order: () => ({ limit: (n: number) => Promise.resolve({ data: (byProject[projectId] ?? []).slice(0, n), error: null }) })
+      })
+    })
+  };
+}
+
 function fakeListService(options: {
   profiles?: Row[];
   authUsers?: Array<{ id: string; last_sign_in_at: string | null }>;
@@ -26,9 +37,11 @@ function fakeListService(options: {
   projects?: Row[];
   scans?: Row[];
   prompts?: Row[];
+  runScores?: Record<string, Row[]>;
 }) {
   return {
     from(table: string) {
+      if (table === "run_scores") return fakeRunScores(options.runScores);
       if (table === "profiles") {
         return {
           select: () => ({
@@ -72,6 +85,30 @@ function fakeListService(options: {
 }
 
 describe("listOperatorUsers", () => {
+  // ADMIN-GEO-SCORE-1
+  it("carries each active domain's Puntuación GEO, and never turns no scan into a zero", async () => {
+    const service = fakeListService({
+      profiles: [
+        { id: "u1", email: "a@example.com", created_at: daysAgo(10), current_plan: "pro", trial_ends_at: null, stripe_subscription_id: "sub_1" }
+      ],
+      projects: [
+        { id: "p1", owner_user_id: "u1", is_archived: false, domain: "scanned.es" },
+        { id: "p2", owner_user_id: "u1", is_archived: false, domain: "fresh.es" },
+        { id: "p3", owner_user_id: "u1", is_archived: true, domain: "old.es" }
+      ],
+      runScores: {
+        p1: [{ run_id: "r1", created_at: daysAgo(1), visibility_score: 10, details_json: { geo_score: { score: 42.4 }, total_results: 60 } }],
+        p3: [{ run_id: "r0", created_at: daysAgo(30), visibility_score: 10, details_json: { geo_score: { score: 80 }, total_results: 60 } }]
+      }
+    });
+
+    const { users } = await listOperatorUsers(service as never);
+    expect(users[0].domainScores).toEqual([
+      { projectId: "p1", domain: "scanned.es", geoScore: { state: "scored", value: 42, lowConfidence: false, scoredAt: daysAgo(1) } },
+      { projectId: "p2", domain: "fresh.es", geoScore: { state: "unscored" } }
+    ]);
+  });
+
   // ADMIN-HEALTH-1 (§230): the "Error" column, end to end through the listing.
   it("marks an account whose domain's latest scan failed, and leaves a healthy one alone", async () => {
     const service = fakeListService({
@@ -227,9 +264,11 @@ function fakeDetailService(options: {
   projects?: Row[];
   scans?: Row[];
   prompts?: Row[];
+  runScores?: Record<string, Row[]>;
 }) {
   return {
     from(table: string) {
+      if (table === "run_scores") return fakeRunScores(options.runScores);
       if (table === "profiles") {
         return { select: () => ({ eq: () => ({ maybeSingle: () => Promise.resolve({ data: options.profile, error: null }) }) }) };
       }

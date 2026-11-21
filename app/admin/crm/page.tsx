@@ -6,6 +6,8 @@ import { loadCountedUsers } from "@/lib/admin/kpi/business";
 import { loadEmailSection, readResendEmails } from "@/lib/admin/kpi/email";
 import { EmailCapture } from "./email-capture";
 import { refreshAdminCrm } from "./actions";
+import { AnnouncementPanel } from "./announcement-panel";
+import { loadAnnouncementAudience } from "@/lib/admin/announcement";
 
 export const metadata: Metadata = { title: "CRM · Consola de operador" };
 
@@ -14,13 +16,15 @@ export const metadata: Metadata = { title: "CRM · Consola de operador" };
  * sent). Its own tab at Denis's request (2026-11-01), with the panel's period
  * selector and account filter. Read-only: Supabase and Resend.
  */
-export default async function AdminCrmPage({ searchParams }: { searchParams: Promise<{ periodo?: string | string[] }> }) {
+export default async function AdminCrmPage({ searchParams }: { searchParams: Promise<{ periodo?: string | string[]; anuncio?: string; enviados?: string; fallidos?: string }> }) {
   const { service } = await requireOperator("/admin/crm");
-  const period = parsePanelPeriod((await searchParams).periodo);
+  const params = await searchParams;
+  const period = parsePanelPeriod(params.periodo);
   const now = new Date();
   const window = panelWindow(period, now);
 
   const resendRead = readResendEmails(now);
+  const announcement = loadAnnouncementAudience(service, now);
   const users = await loadCountedUsers(service);
   const email = await loadEmailSection({
     service,
@@ -61,6 +65,11 @@ export default async function AdminCrmPage({ searchParams }: { searchParams: Pro
       </div>
 
       <EmailCapture email={email} periodLabel={window.label} />
+
+      <AnnouncementPanel
+        read={await announcement}
+        status={{ kind: params.anuncio, sent: params.enviados, failed: params.fallidos }}
+      />
     </main>
   );
 }

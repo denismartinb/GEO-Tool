@@ -66,7 +66,7 @@ export function BlockIssuesCard({
                 }
                 sitemap={issue.check === "sitemap_missing" ? { steps: sitemapFixSteps } : null}
                 google={
-                  withGoogle && issue.affectedLabels.length > 0 && issue.check !== "bot_blocked"
+                  withGoogle && issue.affectedLabels.length > 0 && issue.check !== "bot_blocked" && issue.check !== "bot_server_blocked"
                     ? affectedPagesWithGoogle(issue.affectedLabels, withGoogle)
                     : null
                 }

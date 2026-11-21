@@ -36,6 +36,14 @@ export function aiBotBlockedKey(snapshotId: string, agent: string): string {
   return `ai_bot_blocked:${snapshotId}:${agent}`;
 }
 
+/**
+ * GEO-ALERTS-1 (log §440): engine-level access changes, one per (audit, engine).
+ * Separate from `aiBotBlockedKey`, whose agent is a robots.txt token.
+ */
+export function engineAccessKey(change: "blocked" | "unblocked", snapshotId: string, engineName: string): string {
+  return `engine_${change}:${snapshotId}:${engineName.toLowerCase()}`;
+}
+
 export function auditCompletedKey(snapshotId: string): string {
   return `audit_completed:${snapshotId}`;
 }
