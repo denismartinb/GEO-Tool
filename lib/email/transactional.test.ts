@@ -32,6 +32,7 @@ import {
   sendTrialEndedEmail,
   sendLlmIncidentAlertEmail,
   sendNewSignupOpsAlertEmail,
+  sendFirstScanOpsAlertEmail,
   sendPaymentFailedEmail,
   sendScanHealthAlertEmail,
   sendScoreDropAlertEmail,
@@ -44,7 +45,7 @@ const CUSTOMER = "cliente@ejemplo.com";
 const OPS = "ops@genscore.es";
 
 function lastPayload() {
-  return send.mock.calls.at(-1)?.[0] as { to: string; subject: string; html: string };
+  return send.mock.calls.at(-1)?.[0] as { to: string; subject: string; html: string; tags?: { name: string; value: string }[] };
 }
 
 beforeEach(() => {
@@ -115,6 +116,38 @@ const opsAlerts: Array<[string, () => Promise<void>]> = [
         trialEndsAt: null,
         createdAt: new Date("2026-08-15T10:00:00Z")
       })
+  ],
+  [
+    "sendNewSignupOpsAlertEmail (pending)",
+    () =>
+      sendNewSignupOpsAlertEmail({
+        email: CUSTOMER,
+        userId: "u1",
+        method: "password",
+        planId: "pro",
+        trialEndsAt: null,
+        createdAt: new Date("2026-10-28T10:00:00Z"),
+        status: "pending"
+      })
+  ],
+  [
+    "sendFirstScanOpsAlertEmail",
+    async () => {
+      await sendFirstScanOpsAlertEmail({
+        domain: "ejemplo.com",
+        projectId: "p1",
+        runId: "r1",
+        ownerEmail: CUSTOMER,
+        ownerUserId: "u1",
+        planId: "pro",
+        triggerSource: "user",
+        prompts: 17,
+        samples: 1,
+        engines: ["gemini", "claude", "openai", "perplexity"],
+        internalAccount: false,
+        createdAt: new Date("2026-11-02T10:00:00Z")
+      });
+    }
   ]
 ];
 
@@ -142,6 +175,41 @@ describe("a quién va cada correo", () => {
     expect(payload.to).toBe(OPS);
     expect(payload.to).not.toBe(CUSTOMER);
     expect(payload.html).toContain(CUSTOMER);
+  });
+
+  it("el aviso de alta sin confirmar lo dice en el asunto (log §359)", async () => {
+    await opsAlerts[4][1]();
+    const payload = lastPayload();
+
+    expect(payload.to).toBe(OPS);
+    expect(payload.subject).toContain("sin confirmar");
+    expect(payload.html).toContain("pendiente de confirmar");
+  });
+
+  it("el aviso de alta lleva el dominio en el asunto y el cuerpo cuando se conoce (log §441)", async () => {
+    await sendNewSignupOpsAlertEmail({
+      email: CUSTOMER,
+      userId: "u1",
+      method: "password",
+      planId: "pro",
+      trialEndsAt: null,
+      createdAt: new Date("2026-11-02T10:00:00Z"),
+      status: "pending",
+      domain: "ejemplo.es"
+    });
+    expect(lastPayload().subject).toContain("ejemplo.es");
+    expect(lastPayload().html).toContain("Dominio indicado");
+  });
+
+  it("el aviso de primer escaneo nombra el dominio, la cuenta y las llamadas del run (log §441)", async () => {
+    await opsAlerts[5][1]();
+    const payload = lastPayload();
+
+    expect(payload.to).toBe(OPS);
+    expect(payload.subject).toContain("Primer escaneo · ejemplo.com");
+    expect(payload.html).toContain(CUSTOMER);
+    expect(payload.html).toContain("68 (17 prompts × 1 muestra × 4 motores)");
+    expect(payload.tags).toEqual([{ name: "kind", value: "ops_first_scan" }]);
   });
 
   it("los correos de cliente van a la dirección que les pasan", async () => {
@@ -475,7 +543,7 @@ describe("bienvenida", () => {
 });
 
 describe("sendEmailWithOutcome · LIFECYCLE-DEDUPE-1 (log §308)", () => {
-  const message = { to: CUSTOMER, subject: "Asunto", html: "<p>hola</p>" };
+  const message = { kind: "welcome" as const, to: CUSTOMER, subject: "Asunto", html: "<p>hola</p>" };
 
   it("tells a definitive rejection from an ambiguous failure", () => {
     expect(classifyResendError(null)).toBe("sent");
@@ -504,6 +572,13 @@ describe("sendEmailWithOutcome · LIFECYCLE-DEDUPE-1 (log §308)", () => {
     expect(await sendEmailWithOutcome(message)).toBe("ambiguous");
     clientAvailable = false;
     expect(await sendEmailWithOutcome(message)).toBe("not_sent");
+  });
+
+  it("tags every send with its kind (MAIL-METRICS-1, log §419)", async () => {
+    await sendEmailWithOutcome({ ...message, kind: "weekly_digest" });
+    expect(lastPayload().tags).toEqual([{ name: "kind", value: "weekly_digest" }]);
+    await sendTrialEndedEmail(CUSTOMER);
+    expect(lastPayload().tags).toEqual([{ name: "kind", value: "trial_ended_plain" }]);
   });
 
   it("the plain end-of-trial email carries the key it is given", async () => {

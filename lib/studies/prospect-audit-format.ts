@@ -109,12 +109,14 @@ const LABEL: Partial<Record<IssueCheckKey, { label: string; fix: string }>> = {
   open_graph: { label: "Open Graph", fix: "añadir og:title y og:description" },
   noindex: { label: "Página indexable", fix: "quitar el noindex" },
   snippet_blocked: { label: "Fragmentos permitidos", fix: "quitar nosnippet / max-snippet:0" },
+  js_required: { label: "Contenido sin JavaScript", fix: "activar el renderizado en el servidor o el prerenderizado" },
   canonical: { label: "Canonical propio", fix: "apuntar el canonical a la propia URL" },
   hreflang: { label: "Hreflang", fix: "declarar las versiones de idioma si existen" },
   list_or_table: { label: "Listas o tablas", fix: "presentar servicios o datos en listas o tablas" },
   content_length: { label: "Contenido sustancial", fix: "ampliar el texto visible" },
   freshness: { label: "Contenido actualizado", fix: "actualizar y declarar dateModified" },
   bot_blocked: { label: "Acceso de bots de IA", fix: "quitar el bloqueo en robots.txt" },
+  bot_server_blocked: { label: "Servidor abierto a los bots de IA", fix: "dejar pasar a los bots de búsqueda en el cortafuegos o Cloudflare" },
   llms_txt_missing: { label: "llms.txt", fix: "publicar un llms.txt en la raíz" },
   sitemap_missing: { label: "sitemap.xml", fix: "activar el sitemap de la plataforma" }
 };
@@ -195,7 +197,7 @@ export function formatAuditSection(audit: ProspectAudit): string {
     out.push("### Qué mejorar", "", "| Prioridad | Comprobación | Arreglo |", "|---|---|---|");
     for (const issue of audit.issues) {
       const detail =
-        issue.check === "bot_blocked"
+        issue.check === "bot_blocked" || issue.check === "bot_server_blocked"
           ? ` (${issue.affectedLabels.join(", ")})`
           : issue.applicableCount > 1
             ? ` (${issue.affectedCount} de ${issue.applicableCount} páginas)`

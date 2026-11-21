@@ -3,6 +3,8 @@ import "server-only";
 import { AUDIT_USER_AGENT, readBodyCapped } from "@/lib/web-audit/fetch-page";
 import { parseSitemap, type SitemapReport } from "@/lib/web-audit/sitemap";
 import type { SiteSeoReport } from "@/lib/web-audit/seo-health";
+import { AI_BOT_TOKENS, starGroupRules, type AiBotsFacts } from "@/lib/web-audit/ai-bots";
+import type { ServerProbeReport } from "@/lib/web-audit/server-probe";
 
 /**
  * robots.txt / llms.txt access report for the AI bots that matter (WEB-AUDIT-2).
@@ -67,6 +69,19 @@ export type BotAccessReport = {
    * migration was needed. Optional: older snapshots have none of it.
    */
   site?: SiteSeoReport;
+  /**
+   * AI-BOTS-CONSOLE-1 (log §426): every token of the plugin's six switches
+   * (and the engines' read tokens) with whether it may read the root, plus
+   * the `*` rules the generated robots.txt block has to repeat. Absent when
+   * robots.txt could not be read, and on snapshots taken before this phase.
+   */
+  aiBots?: AiBotsFacts;
+  /**
+   * GEO-ALERTS-1 (log §440): what the server answered each AI search bot,
+   * asked from our server with the bot's user-agent (a simulation). Absent on
+   * snapshots taken before this phase: never measured, never «allowed».
+   */
+  serverProbe?: ServerProbeReport;
 };
 
 type RawGroup = { agents: string[]; disallows: string[] };
@@ -212,6 +227,16 @@ export async function buildBotAccessReport(domain: string): Promise<BotAccessRep
     allowed: accessMap.get(agent) ?? true
   }));
 
+  const aiBots: AiBotsFacts | undefined =
+    robotsProbe.content !== null
+      ? {
+          tokens: Object.fromEntries(AI_BOT_TOKENS.map((t) => [t, resolveAgentTokenAccess(robotsProbe.content!, t)])),
+          starRules: starGroupRules(robotsProbe.content)
+        }
+      : robotsProbe.state === "absent"
+        ? { tokens: Object.fromEntries(AI_BOT_TOKENS.map((t) => [t, true])), starRules: [] }
+        : undefined;
+
   const llmsProbe = await fetchTextCapped(`https://${domain}/llms.txt`);
   const sitemapProbe = await fetchTextCapped(`https://${domain}/sitemap.xml`);
 
@@ -234,6 +259,7 @@ export async function buildBotAccessReport(domain: string): Promise<BotAccessRep
           : robotsProbe.state === "absent"
             ? true
             : undefined
-    }
+    },
+    ...(aiBots ? { aiBots } : {})
   };
 }

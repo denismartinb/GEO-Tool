@@ -24,7 +24,7 @@ function rival(label: string): LatestPositionEntity {
 }
 
 describe("rankLatestPositions", () => {
-  it("1. ranks 1..N with no repeats, best mean rank first", () => {
+  it("1. ranks 1..N with no repeats, highest mention rate first (log §353)", () => {
     const out = rankLatestPositions({
       entities: [brand, rival("Amazon"), rival("Google Chrome")],
       ranking: [
@@ -35,22 +35,17 @@ describe("rankLatestPositions", () => {
     });
 
     expect(out.map((r) => [r.label, r.rank])).toEqual([
-      ["Amazon", 1],
+      ["Mozilla", 1],
       ["Google Chrome", 2],
-      ["Mozilla", 3]
+      ["Amazon", 3]
     ]);
   });
 
-  it("2. breaks a tie by mention rate — the real case that made two screens disagree", () => {
-    // Both average 1,00. Ordered by position alone the winner is whoever the
-    // array happened to hold first, which is how the Overview showed Proton VPN
-    // 1º while Competidores showed Amazon 1º for the same scan.
-    // Both are above the sample floor here, so this exercises the tiebreak and
-    // only the tiebreak — the original pair (5% vs 14%) now separates one step
-    // earlier, on the floor, and would have stopped testing this.
+  it("2. breaks a mention-rate tie by mean rank", () => {
+    // Same share of answers: the one the AI names earlier is ahead.
     const out = rankLatestPositions({
       entities: [rival("Proton VPN"), rival("Amazon")],
-      ranking: [entry("Proton VPN", 1.0, 11), entry("Amazon", 1.0, 14)]
+      ranking: [entry("Proton VPN", 1.6, 14), entry("Amazon", 1.0, 14)]
     });
 
     expect(out.map((r) => r.label)).toEqual(["Amazon", "Proton VPN"]);
@@ -166,13 +161,13 @@ describe("rankLatestPositions", () => {
       competitors.map((r) => [r.label, r.rank, r.mentionRate])
     );
     expect(overview.map((r) => `${r.rank}º ${r.label}`)).toEqual([
-      "1º Amazon",
+      "1º Mozilla",
       "2º Google Chrome",
-      "3º Brave",
-      "4º Mozilla",
+      // Amazon and Brave share 14%: Amazon's better mean rank breaks the tie.
+      "3º Amazon",
+      "4º Brave",
       // Proton VPN averages 1,00 — the best mean on the board — over 5% of the
-      // answers. SAMPLE-FLOOR-1 puts it last instead of first (it used to be
-      // 2º here purely because the mention-rate tiebreak ran after position).
+      // answers, so it is last by visibility (log §353).
       "5º Proton VPN"
     ]);
   });
@@ -244,8 +239,9 @@ describe("rankLatestPositions", () => {
       ranking: [entry("SinCifras", 1.0), entry("ConCifras", 2.0, 50, false, 15)]
     });
     expect(out.map((r) => [r.label, r.qualified])).toEqual([
-      ["SinCifras", true],
-      ["ConCifras", true]
+      // Without a mention rate it sorts behind, but is not flagged.
+      ["ConCifras", true],
+      ["SinCifras", true]
     ]);
   });
 
@@ -259,8 +255,8 @@ describe("rankLatestPositions", () => {
       ranking: [entry("Redondea", 1.0, 9.6, false, 5), entry("Justo", 2.0, 40, false, 20)]
     });
     expect(out.map((r) => [r.label, r.qualified])).toEqual([
-      ["Redondea", true],
-      ["Justo", true]
+      ["Justo", true],
+      ["Redondea", true]
     ]);
 
     // Y 9,4% se pinta como "9%", que sí contradice el suelo a la vista.
@@ -272,6 +268,38 @@ describe("rankLatestPositions", () => {
       ["Justo", true],
       ["Baja", false]
     ]);
+  });
+
+  it("17. COMPETITOR-RANK-VISIBILITY-1: a brand always first when named leads no longer (log §353)", () => {
+    // The founder's test project, 2026-10-28: Verisure named in 19% of the
+    // answers but first in each, the brand in 95% at a 1,8 mean. Ordered by
+    // mean rank, Verisure headed both screens — "no tiene sentido".
+    const out = rankLatestPositions({
+      entities: [
+        { key: "b", label: "Marca", isBrand: true },
+        rival("Verisure España"),
+        rival("Digi"),
+        rival("Vodafone España"),
+        rival("Orange España")
+      ],
+      ranking: [
+        entry("Marca", 1.8, 95, true, 20),
+        entry("Verisure España", 1.0, 19, false, 4),
+        entry("Digi", 2.0, 24, false, 5),
+        entry("Vodafone España", 2.4, 48, false, 10),
+        entry("Orange España", 2.6, 43, false, 9)
+      ]
+    });
+
+    expect(out.map((r) => `${r.rank}º ${r.label}`)).toEqual([
+      "1º Marca",
+      "2º Vodafone España",
+      "3º Orange España",
+      "4º Digi",
+      "5º Verisure España"
+    ]);
+    // The real mean survives untouched for the "Puesto medio" column.
+    expect(out.at(-1)?.position).toBe(1.0);
   });
 });
 

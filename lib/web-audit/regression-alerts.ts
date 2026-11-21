@@ -1,7 +1,11 @@
 import "server-only";
 
 import { emitNotification } from "@/lib/notifications/emit";
-import { aiBotBlockedKey, auditRegressionKey } from "@/lib/notifications/dedupe-keys";
+import { aiBotBlockedKey, auditRegressionKey, engineAccessKey } from "@/lib/notifications/dedupe-keys";
+import { engineAccessChanges } from "@/lib/recommendations/citation-blockers";
+import { AI_ENGINES, ENGINE_READ_TOKENS } from "@/lib/web-audit/ai-bots";
+import { PROBED_BOTS } from "@/lib/web-audit/server-probe";
+import { sendSiteAlertEmails, type SiteAlertChange } from "@/lib/email/site-alert";
 import { dedupeMapsByScanId, parseCoverageMap, type DomainCoverageMap } from "@/lib/web-audit/coverage-map";
 import { buildCitationWindowCandidates, buildWebAuditSummary, CITATION_WINDOW_SIZE, type PromptResultLite } from "@/lib/web-audit/opportunity-matrix";
 import { detectAuditRegressions, type AuditSide } from "@/lib/web-audit/regressions";
@@ -246,9 +250,50 @@ export async function emitAuditRegressionNotifications({
     };
 
     const regressions = detectAuditRegressions(previous, current);
-    if (regressions.length === 0) return [];
-
     const emitted: string[] = [];
+
+    // GEO-ALERTS-1 (log §440): engine-level access changes, by robots.txt or
+    // by the server, both ways. The bell's «Algo ha cambiado» lane reads the
+    // `by` notice; the email («Avisos de tu web») follows a block only.
+    const access = engineAccessChanges(previousSnapshot?.bots ?? null, currentSnapshot.bots);
+    const emailChanges: SiteAlertChange[] = [];
+    if (snapshotId) {
+      for (const change of access.blocked) {
+        const dedupeKey = engineAccessKey("blocked", snapshotId, change.name);
+        await emitNotification(service, {
+          ownerUserId,
+          projectId,
+          type: "ai_bot_blocked",
+          severity: "critical",
+          dedupeKey,
+          payload: { agent: change.name, snapshotId, by: change.by }
+        });
+        emitted.push(`engine_blocked:${change.name}:${change.by}`);
+        const engine = AI_ENGINES.find((e) => e.name === change.name)?.engine;
+        const tokens =
+          change.by === "server"
+            ? PROBED_BOTS.filter((b) => b.engine === engine).map((b) => b.token)
+            : engine
+              ? ENGINE_READ_TOKENS[engine].filter((t) => t !== "Googlebot")
+              : [];
+        emailChanges.push({ engine: change.name, by: change.by, tokens, dedupeKey });
+      }
+      for (const name of access.resolved) {
+        await emitNotification(service, {
+          ownerUserId,
+          projectId,
+          type: "ai_bot_unblocked",
+          severity: "success",
+          dedupeKey: engineAccessKey("unblocked", snapshotId, name),
+          payload: { agent: name, snapshotId }
+        });
+        emitted.push(`engine_unblocked:${name}`);
+      }
+    }
+    if (emailChanges.length > 0) {
+      const mailed = await sendSiteAlertEmails({ service, ownerUserId, projectId, projectDomain, changes: emailChanges });
+      if (mailed.length > 0) emitted.push(...mailed.map((name) => `site_alert_email:${name}`));
+    }
 
     for (const regression of regressions) {
       switch (regression.kind) {
@@ -257,6 +302,16 @@ export async function emitAuditRegressionNotifications({
           // type NOTIF-SERVER phase 2 declared and never wired up; the
           // "bot_blocked" notice of the WEB-AUDIT-3 design is this one.
           if (!snapshotId) break;
+          // GEO-ALERTS-1 (log §440): an engine-level notice above already
+          // says it in the customer's words; the token one would repeat it.
+          if (
+            access.blocked.some((c) => {
+              const engine = AI_ENGINES.find((e) => e.name === c.name)?.engine;
+              return c.by === "robots" && !!engine && ENGINE_READ_TOKENS[engine].includes(regression.agent);
+            })
+          ) {
+            break;
+          }
           await emitNotification(service, {
             ownerUserId,
             projectId,

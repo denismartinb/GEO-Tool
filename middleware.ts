@@ -6,11 +6,21 @@ import {
   getProjectIdFromPathname
 } from "@/lib/active-project-cookie";
 import {
+  APP_MODE_COOKIE,
+  APP_MODE_COOKIE_MAX_AGE_S,
+  APP_MODE_COOKIE_VALUE,
+  APP_MODE_HOME,
+  appLaunchRedirect,
+  appModeSignal,
+  isAppModePathAllowed
+} from "@/lib/app-mode";
+import {
   AFFILIATE_REF_COOKIE,
   AFFILIATE_REF_COOKIE_MAX_AGE_S,
   AFFILIATE_REF_PARAM,
   resolveAffiliateCode
 } from "@/lib/affiliates/codes";
+import { REQUEST_PATH_HEADER } from "@/lib/login-redirect";
 
 /**
  * Refreshes the Supabase auth session cookie on every request.
@@ -21,9 +31,16 @@ import {
  * counterpart referenced by that file's comment.
  */
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request,
-  });
+  // LOGIN-NEXT-UTM-1: tell `requireUser` which page was asked for, so a
+  // signed-out visitor lands back on it after login. Built on every
+  // `NextResponse.next` so the refreshed session cookies are kept too.
+  const requestedPath = `${request.nextUrl.pathname}${request.nextUrl.search}`;
+  const forward = () => {
+    const forwarded = new Headers(request.headers);
+    forwarded.set(REQUEST_PATH_HEADER, requestedPath);
+    return NextResponse.next({ request: { headers: forwarded } });
+  };
+  let response = forward();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,9 +55,7 @@ export async function middleware(request: NextRequest) {
             request.cookies.set(name, value);
           });
 
-          response = NextResponse.next({
-            request,
-          });
+          response = forward();
 
           cookiesToSet.forEach(({ name, value, options }) => {
             response.cookies.set(name, value, options);
@@ -77,7 +92,12 @@ export async function middleware(request: NextRequest) {
   const activeProjectId =
     getProjectIdFromPathname(request.nextUrl.pathname) ??
     getProjectIdFromDomainsQuery(request.nextUrl.pathname, request.nextUrl.searchParams);
-  if (activeProjectId) {
+  // APP-BACK-CACHE-1 (log §402): only when it changes. A cookie written here
+  // is merged into the request's mutable cookies, so a server action posted
+  // from a project page reported "cookies changed": Next then wiped the
+  // back/forward cache and Back reloaded the previous screen (Competitors'
+  // suggestions call one on mount).
+  if (activeProjectId && request.cookies.get(ACTIVE_PROJECT_COOKIE)?.value !== activeProjectId) {
     response.cookies.set(ACTIVE_PROJECT_COOKIE, activeProjectId, {
       path: "/",
       httpOnly: true,
@@ -101,7 +121,47 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  // ANDROID-TWA-1 — la app de Android es esta web dentro de Chrome. Su
+  // `start_url` lleva `?source=twa` (o llega con referrer `android-app://`) y
+  // desde ahí la cookie `gs_app` manda: dentro de la app solo existe la consola,
+  // el acceso y lo legal; lo demás (precios, portada, blog…) vuelve a la
+  // consola, porque Google Play no admite vender ni enviar a pagar fuera. La
+  // cookie solo oculta cosas: no autoriza nada, igual que el resto de este
+  // middleware (log §381).
+  const signal = appModeSignal(request.nextUrl.searchParams, request.headers.get("referer"));
+  const inApp = signal === "enter" || (signal !== "leave" && request.cookies.get(APP_MODE_COOKIE)?.value === APP_MODE_COOKIE_VALUE);
+  // APP-LAUNCH-1 (log §389): una apertura que entra directa a la consola pasa
+  // antes por el inicio de sesión, donde sale la splash aunque haya sesión.
+  const launchTo = signal === "enter" && request.method === "GET" ? appLaunchRedirect(request.nextUrl.pathname, request.nextUrl.searchParams) : null;
+  if (launchTo) {
+    const redirect = NextResponse.redirect(new URL(launchTo, request.url));
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    redirect.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+    return redirect;
+  }
+  if (inApp && !isAppModePathAllowed(request.nextUrl.pathname)) {
+    const redirect = NextResponse.redirect(new URL(APP_MODE_HOME, request.url));
+    response.cookies.getAll().forEach((c) => redirect.cookies.set(c));
+    redirect.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+    return redirect;
+  }
+  if (signal === "enter") {
+    response.cookies.set(APP_MODE_COOKIE, APP_MODE_COOKIE_VALUE, appModeCookieOptions(request));
+  } else if (signal === "leave") {
+    response.cookies.delete(APP_MODE_COOKIE);
+  }
+
   return response;
+}
+
+function appModeCookieOptions(request: NextRequest) {
+  return {
+    path: "/",
+    httpOnly: true,
+    sameSite: "lax" as const,
+    secure: request.nextUrl.protocol === "https:",
+    maxAge: APP_MODE_COOKIE_MAX_AGE_S
+  };
 }
 
 export const config = {

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { withAnalysisProgress } from "@/lib/scan/active-run-progress";
+import { readEngineResponseCounts } from "@/lib/scan/engine-response-counts";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ const paramsSchema = z.object({ projectId: z.string().uuid() });
  * RLS-scoped via the user's own client (same trust model as every other
  * `.eq("project_id", ...)` read in this codebase) — no service-role shortcut.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ projectId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ projectId: string }> }) {
   const parsed = paramsSchema.safeParse(await params);
   if (!parsed.success) {
     return NextResponse.json({ error: "invalid_project_id" }, { status: 400 });
@@ -47,6 +48,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pro
   // the poll, so the bar keeps moving after generation is done instead of
   // sitting at 100% while extraction works.
   const withProgress = await withAnalysisProgress(supabase, parsed.data.projectId, run);
+
+  // The first-scan mission also reads answers per engine (log §355). Asked for
+  // by name so the other pollers keep their two head counts.
+  const enginesParam = new URL(request.url).searchParams.get("engines");
+  if (enginesParam) {
+    const providers = enginesParam
+      .split(",")
+      .filter((p) => ["gemini", "claude", "openai", "perplexity"].includes(p));
+    const engineCounts = await readEngineResponseCounts(supabase, parsed.data.projectId, run.id, providers);
+    return NextResponse.json({ run: { ...withProgress, engine_counts: engineCounts } });
+  }
 
   return NextResponse.json({ run: withProgress });
 }

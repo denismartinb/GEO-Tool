@@ -88,7 +88,21 @@ const MAX_FILE_BYTES = 320 * 1024;
  * Esta primera dejaba el margen a cero; se suben 64 KiB, sitio para unas cinco
  * portadas más. Cuando se agote, se sube igual y se anota aquí.
  */
-const MAX_TOTAL_BYTES = 2512 * 1024;
+/**
+ * EXT-LAUNCH-1 (2026-10-31, log §395): el margen estaba en ~21 KB y el
+ * artículo de la extensión de Chrome suma portada, imagen de cabecera y tres
+ * capturas del panel a 2x, WebP a calidad 86-90 (~230 KB entre todas; el
+ * fundador pidió que se vieran nítidas, y a 1x se veían borrosas). Se suben
+ * 384 KiB: sitio para este artículo y unas diez portadas más de la rutina.
+ */
+/**
+ * WP-LAUNCH-1 (2026-11-05, log §469): el margen estaba en ~93 KB y el artículo
+ * del plugin de WordPress suma portada, cabecera y siete capturas reales del
+ * plugin a 2x, WebP a calidad 80-82 (~570 KB entre todas). El fundador pidió
+ * las mejores ilustraciones de los dos borradores (PR #751 y #774). Se suben
+ * 640 KiB: sitio para este artículo y unas cinco portadas más de la rutina.
+ */
+const MAX_TOTAL_BYTES = 3536 * 1024;
 
 /**
  * Descarga voluntaria del informe GEO de ejemplo (PR #625).
@@ -120,7 +134,7 @@ const RASTER_EXTENSIONS_UNDER_BUDGET = [".png", ".jpg", ".jpeg"];
 const PNG_ALLOWED_BY_CONSUMER: { reason: string; matches: (path: string) => boolean }[] = [
   {
     reason: "icono de navegador/SO — el formato lo fija el sistema, no nosotros",
-    matches: (p) => /(^|\/)(favicon-\d+|apple-touch-icon|icon-\d+)\.png$/.test(p)
+    matches: (p) => /(^|\/)(favicon-\d+|apple-touch-icon|icon-(maskable-)?\d+)\.png$/.test(p)
   },
   {
     reason: "imagen Open Graph — los rastreadores sociales no aceptan WebP de forma fiable",

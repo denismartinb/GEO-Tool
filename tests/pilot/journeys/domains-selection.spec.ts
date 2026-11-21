@@ -60,10 +60,10 @@ test("seleccionar otro dominio en la rejilla propaga al sidebar sin pulsar \"Ver
 
   // --- 2 · El sidebar también cambia, SIN pulsar "Ver visión general" ------
   // Esto es el comportamiento nuevo de DOMAINS-LIVE-SELECT-1: antes, el
-  // conmutador de arriba del menú (`.proj-switch`) seguía mostrando el
+  // conmutador de arriba del menú (`.side .proj`) seguía mostrando el
   // dominio anterior hasta entrar de verdad al proyecto.
   await expect(
-    page.locator(".proj-switch .proj-name"),
+    page.locator(".ins-shell .side .proj .t b"),
     "el conmutador del sidebar no se actualizó tras seleccionar la tarjeta"
   ).toHaveText(targetName!);
 
@@ -71,7 +71,7 @@ test("seleccionar otro dominio en la rejilla propaga al sidebar sin pulsar \"Ver
   const activeId = new URL(page.url()).searchParams.get("active");
   expect(activeId, "la URL no lleva ?active= tras seleccionar").toBeTruthy();
 
-  const promptsHref = await page.locator('.nav-item[href*="/prompts"]').first().getAttribute("href");
+  const promptsHref = await page.locator('.ins-shell .side a.nav[href*="/prompts"]').first().getAttribute("href");
   expect(
     promptsHref,
     `el enlace de Prompts del sidebar no apunta al proyecto seleccionado (${activeId})`

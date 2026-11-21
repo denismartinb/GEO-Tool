@@ -15,7 +15,7 @@ type Filter = "all" | "p1" | "near";
 const FILTERS: Array<{ key: Filter; label: string }> = [
   { key: "all", label: "Todas" },
   { key: "p1", label: "Página 1" },
-  { key: "near", label: "Página 2 (puestos 11–20)" }
+  { key: "near", label: "Página 2" }
 ];
 
 const VISIBLE_ROWS = 50;

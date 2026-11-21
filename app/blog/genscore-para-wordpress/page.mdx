@@ -1,0 +1,337 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+import { WORDPRESS_PLUGIN_URL } from "@/lib/blog/wordpress-plugin";
+
+export const post = getBlogPost("genscore-para-wordpress");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿El plugin de GenScore para WordPress es gratis?",
+    answer:
+      "Sí. La revisión de tu web, los arreglos de un clic, los interruptores de bots de IA y el llms.txt funcionan sin cuenta y sin pagar. Una cuenta de GenScore añade lo que el plugin no puede medir desde tu web: en qué porcentaje de las respuestas te nombra cada motor de IA, tus rivales y el plan de tu consola."
+  },
+  {
+    question: "¿Qué arregla con un clic?",
+    answer:
+      "Lo que WordPress ya sabe hacer: descripciones, títulos, enlaces canónicos, datos estructurados (JSON-LD), una fecha de actualización visible, un párrafo de respuesta al principio, encabezados, Open Graph, hreflang y texto alternativo de imágenes y, con WooCommerce, los datos de producto, la política de devoluciones, el envío, la valoración de reseñas reales y el GTIN. Otras recomendaciones te llevan a la pantalla donde se hace o te piden un dato que solo tú sabes."
+  },
+  {
+    question: "¿El plugin usa IA para escribir los arreglos?",
+    answer:
+      "No. Cada propuesta sale de los datos que ya tienen WordPress y WooCommerce (título, extracto, primer párrafo, última edición, precio, stock, envío y reseñas), sin ningún servicio externo, y la revisas antes de publicarla. Si un dato no está en tu web, no se lo inventa."
+  },
+  {
+    question: "¿Puede romper mi web o cambiar mis textos?",
+    answer:
+      "No reescribe el contenido de tus entradas. Antes de publicar te pregunta en cuántas páginas va a hacerlo, y cada cambio se guarda con su valor anterior para que puedas deshacerlo."
+  },
+  {
+    question: "¿Funciona con Yoast SEO, Rank Math, SEOPress o All in One SEO?",
+    answer:
+      "Convive con los cuatro: lee sus descripciones y sitemaps, no añade un segundo grafo de datos estructurados si tu plugin SEO ya lo imprime y no publica llms.txt si Yoast SEO, Rank Math o All in One SEO ya lo publican. Escribir descripciones y títulos en sus propios campos solo lo hace con Yoast SEO, Rank Math y SEOPress; con All in One SEO no ofrece esos arreglos."
+  },
+  {
+    question: "¿Si bloqueo los bots de entrenamiento desaparezco de ChatGPT?",
+    answer:
+      "No. ChatGPT, Claude y Perplexity responden buscando en la web con sus bots de búsqueda. Los de entrenamiento solo deciden si tus páginas pueden usarse para entrenar modelos futuros. En ChatGPT, Claude y Meta el plugin te deja decidir cada uno por separado. Dejar entrar a un bot no garantiza que te citen."
+  },
+  {
+    question: "¿Envía datos de mi web a GenScore?",
+    answer:
+      "Sin cuenta, no. La revisión se hace en tu navegador y las notas se guardan en tu propio WordPress. Si conectas tu cuenta, el servidor de tu web solo pide a GenScore las cifras de tu dominio, y se aplica la política de privacidad de GenScore."
+  },
+  {
+    question: "¿Funciona con WooCommerce?",
+    answer:
+      "Sí. En las fichas de producto mira si un agente de compra entiende qué vendes, el precio, el stock y cómo comprar, y propone los datos de producto a partir de WooCommerce. El precio y el stock se leen en vivo al servir la página."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+GenScore ya está en WordPress. El plugin revisa tu portada y tus páginas más
+importantes como las leen ChatGPT, Gemini, Claude, Perplexity, Google y los
+agentes de compra, y te dice qué arreglar primero. Muchos arreglos se publican
+con un clic, sin tocar código; el resto te lleva a donde se hace. Gratis y sin
+cuenta.
+
+</KeyTakeaway>
+
+<p>
+  <a href={WORDPRESS_PLUGIN_URL} rel="noopener"><strong>Instala GenScore en WordPress</strong></a>: en tu escritorio, ve a Plugins, Añadir nuevo, y busca «GenScore».
+</p>
+
+## Tu web puede estar perdiendo clientes en la IA sin que lo sepas
+
+Cada vez más gente pregunta a un asistente de IA qué comprar o a quién
+contratar. Para recomendarte, el motor tiene que poder leer tu web, entender
+qué vendes y encontrar una respuesta clara. Una descripción vacía, una regla
+antigua del robots.txt o una ficha de producto sin datos pueden dificultar el
+acceso a tu web o la interpretación de sus datos. Corregirlos no garantiza que
+la IA te recomiende, pero es el punto de partida que depende solo de ti.
+
+Hasta ahora, arreglarlo pedía un auditor, una lista de tareas y alguien que
+tocara el código. Con el plugin, lo haces tú desde el escritorio de WordPress.
+
+<NumberedSection n={1} title="Mira tu web como la ve la IA, en un minuto">
+
+Instalas, abres GenScore en el menú y la revisión empieza sola. Lee hasta quince
+páginas importantes (tu portada, las de tu menú, tus productos más vendidos y
+tus últimas entradas), y te da una sola lectura: si tu web está optimizada para la IA, para Google y para los agentes
+de compra. Debajo, las recomendaciones técnicas en orden, cada una con lo que
+suma y un botón.
+
+<Figure
+  label="Figura 1."
+  caption="Captura real del plugin, sin cuenta, en una tienda de ejemplo (Café Ventura, inventada)."
+>
+  <img
+    className="art-shot art-shot-wide"
+    src="/blog/genscore-para-wordpress/sin-cuenta.webp"
+    alt="Pantalla de GenScore en WordPress sin cuenta: optimización técnica «Mejorable» con barras de IA, Google y Agentes, recomendaciones técnicas con botón «Arreglar» y la Puntuación GEO «sin medir»."
+    width={1400}
+    height={1011}
+    loading="lazy"
+  />
+</Figure>
+
+<QuickAction>Fíjate en el primer «Arreglar» de la lista: es el cambio que más sube tu nota.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Arregla con un clic, sin tocar código">
+
+Pulsas «Arreglar» y GenScore te propone el cambio página a página, sacado de
+los datos que tu WordPress ya tiene: el extracto, el primer párrafo, el título,
+el precio. El plugin no usa IA para escribir: si un dato no está en tu web, no
+se lo inventa. Marcas las páginas, editas lo que quieras y publicas. Antes de
+tocar nada te pregunta «¿Publicar en N páginas?», y después tienes «Deshacer».
+
+<Figure
+  label="Figura 2."
+  caption="Captura real: propuestas de descripción para cada página de la tienda de ejemplo, listas para revisar."
+>
+  <img
+    className="art-shot art-shot-wide"
+    src="/blog/genscore-para-wordpress/descripciones.webp"
+    alt="Ventana «Descripciones» del plugin: lista de páginas marcadas con «Propuesta lista», la descripción propuesta para la página seleccionada y el botón «Publicar en 11 páginas»."
+    width={1400}
+    height={1121}
+    loading="lazy"
+  />
+</Figure>
+
+Sirve para lo que más pesa en SEO y en IA: descripciones, títulos, enlaces
+canónicos, datos estructurados, una fecha de actualización visible, un párrafo
+que responde al principio, encabezados, Open Graph, hreflang y texto
+alternativo. Si usas Yoast SEO, Rank Math o SEOPress, las descripciones y los
+títulos van a sus propios campos. Lo que el plugin no puede arreglar solo te
+lleva a la pantalla donde se hace o te pide el dato que falta.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Y lo ves subir al momento">
+
+En cuanto publicas, GenScore vuelve a leer las páginas que has tocado. En la
+tienda de ejemplo, un solo arreglo de descripciones llevó el carril de Google
+de «Mejorable» a «Optimizada». Es la optimización técnica de tu web, no tu
+posición en Google ni en la IA: eso se mide aparte.
+
+<Figure
+  label="Figura 3."
+  caption="Capturas reales, antes y después de publicar las descripciones en la tienda de ejemplo."
+>
+  <img
+    className="art-shot art-shot-wide"
+    src="/blog/genscore-para-wordpress/antes-despues.webp"
+    alt="Dos tarjetas de optimización técnica: antes, «Mejorable» al 71% con Google al 73%; después, «Optimizada» al 79% con Google al 90%."
+    width={1400}
+    height={470}
+    loading="lazy"
+  />
+</Figure>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Abre la puerta a ChatGPT, Gemini, Claude y Perplexity">
+
+En la pestaña GEO ves qué motores pueden leer tu portada y decides, con un
+interruptor, qué bots de IA de ChatGPT, Claude, Perplexity, Gemini y Meta
+entran. En ChatGPT, Claude y Meta, la búsqueda (lo que les deja leerte y
+citarte) y el entrenamiento van por separado; cerrar el entrenamiento es
+decisión tuya y no te quita de las respuestas con búsqueda. Dejar entrar a un
+bot es una condición, no una garantía de que te citen.
+
+Los interruptores cambian el robots.txt que sirve WordPress: GenScore solo
+añade su propio bloque y nunca toca las reglas generales, Googlebot ni Bingbot.
+Si tu web tiene un fichero robots.txt en la raíz, el servidor lo sirve antes
+que WordPress; entonces el plugin te lo dice y te da las líneas para copiar.
+Y con otro interruptor publicas tu llms.txt, generado con tus páginas,
+productos y entradas, que puedes editar. Si Yoast SEO, Rank Math o All in One
+SEO ya publican uno, no lo toca.
+
+<Figure
+  label="Figura 4."
+  caption="Captura real de la pestaña GEO: quién puede leer la portada, recomendaciones y los interruptores de bots de IA."
+>
+  <img
+    className="art-shot art-shot-tall"
+    src="/blog/genscore-para-wordpress/bots.webp"
+    alt="Pestaña GEO del plugin: ChatGPT, Gemini, Claude y Perplexity pueden leer la portada, recomendaciones técnicas y la lista de bots de IA con un interruptor para cada uno."
+    width={800}
+    height={1734}
+    loading="lazy"
+  />
+</Figure>
+
+<QuickAction>Si un motor sale bloqueado y no lo decidiste tú, enciende su bot de búsqueda: es lo que le deja leerte y citarte.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Que un agente de IA pueda comprarte">
+
+Los agentes de compra leen tus fichas como datos, no como una persona. En la
+pestaña Agentes, GenScore mira si un agente entiende qué vendes, el precio, el
+stock, el botón de compra y tus devoluciones. Con WooCommerce, propone los
+datos de producto a partir de tu catálogo y los publica con un clic.
+
+<Figure
+  label="Figura 5."
+  caption="Captura real: datos de producto propuestos desde WooCommerce para la tienda de ejemplo."
+>
+  <img
+    className="art-shot art-shot-wide"
+    src="/blog/genscore-para-wordpress/agentes.webp"
+    alt="Ventana «Datos de producto» del plugin: la tienda y tres productos, con la lista de productos en JSON-LD que se publicará, con nombre, precio en euros y disponibilidad."
+    width={1400}
+    height={1121}
+    loading="lazy"
+  />
+</Figure>
+
+</NumberedSection>
+
+<NumberedSection n={6} title="Conecta tu cuenta y mide lo que dice la IA de ti">
+
+Que la IA pueda leerte no significa que te recomiende. Eso solo se sabe
+preguntando a los motores por lo que vendes, que es lo que mide GenScore. Con
+«Conectar con GenScore», la misma pantalla enseña tu Puntuación GEO, en qué
+porcentaje de las respuestas te nombra cada motor, cómo quedas frente a tus
+rivales y el plan de tu consola, cada recomendación con su botón. La conexión
+es de solo lectura y «Desconectar» la quita. Las cuentas nuevas empiezan con
+7 días de Pro, sin tarjeta.
+
+<Figure
+  label="Figura 6."
+  caption="Captura real del plugin con una cuenta conectada; las cifras de la cuenta y los rivales son inventados."
+>
+  <img
+    className="art-shot art-shot-tall"
+    src="/blog/genscore-para-wordpress/con-cuenta.webp"
+    alt="Pestaña GEO con la cuenta conectada: el plan «Para que la IA te nombre» con «Crear borrador», «Añadir preguntas» y «Arreglar», las recomendaciones de la Auditoría GEO, el porcentaje de respuestas que te nombran por motor y la comparación con los rivales."
+    width={700}
+    height={2039}
+    loading="lazy"
+  />
+</Figure>
+
+</NumberedSection>
+
+<NumberedSection n={7} title="Del plan a la página, sin empezar de cero">
+
+Si el plan te pide una comparativa con tu rival o responder a las preguntas
+que hace la gente, el plugin te deja el trabajo empezado. «Crear borrador»
+monta la página con su estructura y su tabla, y nunca lo publica: queda como
+borrador para que lo completes. Los datos de tu rival no los escribe nunca;
+deja el hueco «[Pendiente: dato, enlace y fecha]» para que pongas la fuente.
+«Añadir preguntas» lleva las preguntas del plan a la página que ya tienes.
+
+<Figure
+  label="Figura 7."
+  caption="Captura real del borrador de comparativa en el editor de WordPress, en la tienda de ejemplo."
+>
+  <img
+    className="art-shot art-shot-wide"
+    src="/blog/genscore-para-wordpress/borrador.webp"
+    alt="Editor de WordPress con el borrador «Café Ventura frente a Tostadero Alba»: tabla comparativa con el precio propio y los datos del rival como «[Pendiente: dato, enlace y fecha]», y la caja «GenScore: huecos por rellenar»."
+    width={1400}
+    height={864}
+    loading="lazy"
+  />
+</Figure>
+
+</NumberedSection>
+
+## Lo que nunca hace sin ti
+
+<Checklist
+  items={[
+    "Te enseña en cuántas páginas va a publicar antes de hacerlo.",
+    "Respeta el contenido de tus entradas: nunca lo reescribe.",
+    "Guarda cada cambio con su valor anterior: «Deshacer» lo devuelve como estaba.",
+    "Las propuestas salen de tus datos o las escribes tú: el plugin no usa IA para escribir.",
+    "Los borradores que crea quedan como borrador: nunca los publica.",
+    "Sin cuenta, el plugin no envía nada fuera de tu web."
+  ]}
+/>
+
+## Instálalo en dos minutos
+
+<Checklist
+  items={[
+    "En el escritorio de WordPress, ve a Plugins, Añadir nuevo, y busca «GenScore».",
+    "Pulsa «Instalar ahora» y después «Activar».",
+    "Abre GenScore en el menú: la revisión empieza sola.",
+    "Si ya usas GenScore, pulsa «Conectar con GenScore» para ver tus cifras."
+  ]}
+/>
+
+Requiere WordPress 6.2 o superior y las pantallas están en español. La revisión
+se hace en tu navegador y las notas se guardan en tu propio WordPress: sin
+cuenta, el plugin no envía nada a ningún sitio. Si la conectas, se aplica la
+<a href="/privacidad">política de privacidad</a> de GenScore.
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Arregla tu web para la IA desde WordPress"
+  text="Instala el plugin gratis: revisa tu web como la leen la IA, Google y los agentes de compra, y arregla lo primero con un clic."
+  cta="Instalar en WordPress"
+  href={WORDPRESS_PLUGIN_URL}
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

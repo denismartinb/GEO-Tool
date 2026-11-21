@@ -1,7 +1,7 @@
 import { resolveAssistantAccess } from "@/lib/agentic-audit/agents";
 import type { AgenticCheckError, AgenticCheckResult, AgenticProductFound } from "@/lib/agentic-audit/api-contract";
 import { isChallengeResponse } from "@/lib/agentic-audit/challenge";
-import { findProductCandidate, findSellCandidate } from "@/lib/agentic-audit/find-product";
+import { findDiscoveryCandidate, looksLikeStorefront } from "@/lib/agentic-audit/find-product";
 import { classifyOffer, extractPageSignals, type OfferReading, type PageSignals } from "@/lib/agentic-audit/html-signals";
 import { extractPageFacts } from "@/lib/agentic-audit/page-facts";
 import { buildInterop, interopProbePaths, type Probe } from "@/lib/agentic-audit/interop";
@@ -176,16 +176,16 @@ export async function runAgenticAudit(
     const search = offer === null || (atRoot && offer.kind !== "physical");
     const sitemapBody = sitemap.kind === "response" && sitemap.status >= 200 && sitemap.status < 300 ? sitemap.body : null;
     const candidate = search
-      ? (findProductCandidate({
+      ? findDiscoveryCandidate({
           origin,
           baseDomain: target.baseDomain,
           currentUrl: page.finalUrl,
           feedBody: feed?.state === "found" ? feed.body : null,
           feedPlatform: platform,
           sitemapBody,
-          pageHtml: page.body
-        }) ??
-        findSellCandidate({ origin, baseDomain: target.baseDomain, currentUrl: page.finalUrl, sitemapBody, pageHtml: page.body }))
+          pageHtml: page.body,
+          storefront: looksLikeStorefront(page.body, platform, signals.addToCart)
+        })
       : null;
     if (candidate && deadlineAt - now() >= MIN_PRODUCT_FETCH_MS) {
       const product = await deps.fetch(candidate.url, target.baseDomain, {

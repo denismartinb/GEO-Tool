@@ -1,0 +1,57 @@
+/* First scan mission (CONSOLE-INSTRUMENTO-1 F3b, log §355). Port of screens/mission.css, scoped to `.ins`. */
+/* The shell steps aside while the mission is on screen (prototype auth.css, full-screen states). */
+.ins-shell .app:has(.sc-mission){grid-template-columns:1fr}
+.ins-shell .app:has(.sc-mission) .side,.ins-shell .app:has(.sc-mission) .ins-scrim{display:none}
+.ins-shell .main:has(.sc-mission){grid-template-rows:1fr}
+.ins-shell .main:has(.sc-mission) :is(.top,.mtop){display:none}
+.ins-shell .main:has(.sc-mission) .pblur.t{top:0}
+.ins-shell .scroller:has(.sc-mission) .page{max-width:none;padding:0;min-height:100%;display:flex;flex-direction:column}
+.ins-shell .scroller:has(.sc-mission) .ins-mission{flex:1;display:flex;flex-direction:column}
+
+.ins .sc-mission{background:radial-gradient(80% 60% at 50% 0%,var(--blue-tint),transparent 70%),var(--surface)}
+.ins .sc-mission .ms-top{display:flex;align-items:center;gap:14px;height:64px;padding:0 28px;border-bottom:1px solid var(--rule-2)}
+.ins .sc-mission .ms-brand{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px;letter-spacing:-.02em}
+.ins .sc-mission .ms-brand svg{width:20px;height:21px}
+.ins .sc-mission .ms-dom{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-3);padding-left:14px;border-left:1px solid var(--rule);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ins .sc-mission .ms-dom .i{color:var(--pos)}
+.ins .sc-mission .ms-body{width:100%;max-width:760px;margin:0 auto;padding:56px 32px 96px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.ins .sc-mission .ms-ey{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);font-weight:650}
+.ins .sc-mission .ms-ey .pulse{width:7px;height:7px;border-radius:50%;background:var(--blue);animation:ins-pulse 1.6s var(--std) infinite}
+.ins .sc-mission .ms-n{white-space:nowrap;display:flex;align-items:baseline;gap:14px;margin-top:18px;font-size:120px;font-weight:300;letter-spacing:-.06em;line-height:1}
+.ins .sc-mission .ms-n .of{font-size:28px;letter-spacing:-.02em;color:var(--ink-3)}
+.ins .sc-mission .ms-u{font-size:15px;color:var(--ink-3);margin-top:6px}
+.ins .sc-mission .ms-tk{width:100%;max-width:560px;height:16px;gap:2px;margin-top:26px}
+.ins .sc-mission .ms-s{font-size:16px;color:var(--ink-2);margin-top:16px;min-height:24px}
+.ins .sc-mission .ms-pend{width:100%;margin-top:36px;padding:16px 20px 14px;border-right:1px solid var(--rule)}
+.ins .sc-mission .ms-pl{display:grid;margin-top:4px;font-size:12px;color:var(--ink-3)}
+.ins .sc-mission .ms-pl b{display:flex;justify-content:center;align-items:center;gap:6px;font-weight:550;color:var(--ink-2);font-size:12.5px}
+.ins .sc-mission .ms-pl>span>span{display:block;margin-top:2px}
+.ins .sc-mission .ms-beats{list-style:none;padding:0;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;width:100%;margin-top:28px;text-align:left}
+.ins .sc-mission .ms-beats li{display:flex;flex-direction:column;gap:7px;font-size:12px;color:var(--ink-4)}
+.ins .sc-mission .ms-beats i{display:block;height:3px;border-radius:2px;background:var(--tick-off);transition:background var(--d3) var(--std)}
+.ins .sc-mission .ms-beats li.done{color:var(--ink-3)}
+.ins .sc-mission .ms-beats li.done i{background:var(--blue)}
+.ins .sc-mission .ms-beats li.on{color:var(--ink);font-weight:600}
+.ins .sc-mission .ms-beats li.on i{background:var(--ink)}
+.ins .sc-mission .ms-end{margin-top:28px}
+.ins .sc-mission .ms-end .btn{height:48px;padding:0 22px;font-size:15px}
+.ins .sc-mission .ms-note{font-size:12.5px;color:var(--ink-3);margin-top:26px;max-width:440px}
+@media (max-width:760px){
+ .ins .sc-mission .ms-top{padding:0 12px 0 16px;gap:10px}
+ .ins .sc-mission .ms-dom{font-size:12px}
+ .ins .sc-mission .ms-dom>.i{display:none}
+ .ins .sc-mission .ms-body{padding:32px 16px 120px}
+ .ins .sc-mission .ms-n{font-size:88px;gap:10px}
+ .ins .sc-mission .ms-n .of{font-size:22px}
+ .ins .sc-mission .ms-pend{padding:10px 10px 12px}
+ .ins .sc-mission .ms-pl{font-size:11px}
+ .ins .sc-mission .ms-pl b{font-size:11.5px;flex-direction:column;gap:2px}
+ .ins .sc-mission .ms-beats{grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+ .ins .sc-mission .ms-beats li{font-size:10.5px;line-height:1.25}
+}
+.ins .sc-mission .ms-pl>span>.new{display:inline-block;margin-top:6px}
+
+/* ms-h: the phase's headline, under the counter */
+.ins .sc-mission .ms-s .ms-h{font-weight:600;color:var(--ink)}
+.ins .sc-mission .wz-brand{display:flex;align-items:center;gap:8px}
+.ins .sc-mission .ms-pl svg{display:inline-block;width:14px;height:14px;flex:none}

@@ -53,7 +53,7 @@ export const AUDIT_TICKER_LINES: readonly AuditTickerLine[] = [
   { title: "Datos en formación", detail: "Listas y tablas: lo que una IA arranca y cita entero.", check: "list_or_table" },
   { title: "Masa suficiente", detail: "Al menos 300 palabras de contenido real por página.", check: "content_length" },
   { title: "Última revisión en bitácora", detail: "Contenido de menos de 6 meses; a partir de 18 ya pesa.", check: "freshness" },
-  { title: "Control de acceso", detail: "Si dejas entrar a GPTBot, ClaudeBot, PerplexityBot, Google-Extended…", check: "bot_blocked" },
+  { title: "Control de acceso", detail: "Si dejas entrar a OAI-SearchBot, Claude-SearchBot, PerplexityBot, Google-Extended…", check: "bot_blocked" },
   { title: "Baliza para la IA", detail: "Si existe llms.txt, el índice que leen los modelos.", check: "llms_txt_missing" },
   { title: "Mapa estelar", detail: "Si existe sitemap.xml y se puede leer.", check: "sitemap_missing" }
 ];

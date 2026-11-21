@@ -11,9 +11,9 @@ const SITE_URL = "https://www.genscore.es";
 const PAGE_URL = `${SITE_URL}/comparativas/genscore-vs-otterly`;
 
 export const metadata: Metadata = contentMetadata({
-  title: "GenScore vs Otterly: comparativa de herramientas de visibilidad en IA · GenScore",
+  title: "GenScore vs Otterly: comparativa de visibilidad en IA · GenScore",
   description:
-    "GenScore frente a Otterly: precio de entrada, motores de IA cubiertos, cobertura multi-país, idioma y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
+    "GenScore frente a Otterly: precio de entrada, motores de IA, países, idioma y bucle de acción. Comparativa honesta, con lo que cada una hace mejor.",
   path: "/comparativas/genscore-vs-otterly"
 });
 

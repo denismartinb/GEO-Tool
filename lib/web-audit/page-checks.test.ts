@@ -8,7 +8,8 @@ import {
   checkStructuredData,
   buildPageCheckResult,
   buildPageCheckGuidance,
-  checkSeoPage
+  checkSeoPage,
+  isJsShell
 } from "./page-checks";
 
 const NOW = new Date("2026-07-10T00:00:00Z");
@@ -524,5 +525,38 @@ describe("checkSeoPage (Salud SEO, log §281)", () => {
     expect(without.seo?.viewportOk).toBe(false);
     expect(without.seo?.imagesMissingAlt).toBe(1);
     expect(withViewport.pageScore).toBe(without.pageScore);
+  });
+});
+
+describe("isJsShell (JS-RENDER-CHECK-1)", () => {
+  const wrap = (body: string) => `<html><head><title>Acme</title><script src="/app.js"></script></head><body>${body}</body></html>`;
+  const words = (n: number) => Array.from({ length: n }, (_, i) => `palabra${i}`).join(" ");
+
+  it("detecta una aplicación vacía con nodo de montaje", () => {
+    const html = wrap('<div id="root"></div>');
+    expect(checkCitability(html).jsShell).toBe(true);
+  });
+
+  it("detecta el aviso de noscript que pide JavaScript", () => {
+    const html = wrap("<noscript>You need to enable JavaScript to run this app.</noscript><div id=\"x\"></div>");
+    expect(checkCitability(html).jsShell).toBe(true);
+  });
+
+  it("no marca un nodo de montaje con texto ya renderizado en el servidor", () => {
+    const html = wrap(`<div id="__next"><h1>Acme</h1><p>${words(120)}</p></div>`);
+    expect(checkCitability(html).jsShell).toBe(false);
+  });
+
+  it("no marca una página corta sin señales de aplicación", () => {
+    expect(checkCitability(wrap("<h1>Acme</h1><p>Hola, somos Acme.</p>")).jsShell).toBe(false);
+  });
+
+  it("no confunde el noscript de un píxel de seguimiento con un aviso de JavaScript", () => {
+    const html = wrap('<noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-X&js=1"></iframe></noscript><p>Hola</p>');
+    expect(checkCitability(html).jsShell).toBe(false);
+  });
+
+  it("con texto suficiente nunca es una aplicación vacía", () => {
+    expect(isJsShell(wrap(`<div id="root"></div><p>${words(80)}</p>`), 80)).toBe(false);
   });
 });

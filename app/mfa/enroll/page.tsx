@@ -1,6 +1,11 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { BrandLogo } from "@/components/ui/brand-logo";
+import "@/app/ins/tokens.css";
+import "@/app/ins/components.css";
+import "@/app/ins/auth.css";
+import { AuthHead, AuthPage } from "@/components/ins/auth/page";
+import { OtpInput, SubmitButton } from "@/components/ins/auth/parts";
+import { Ic } from "@/components/ins/ic";
 import { requireOperatorCandidate } from "@/lib/admin/operator";
 import { selectTotpFactors } from "@/lib/admin/mfa-factors";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
@@ -80,111 +85,58 @@ export default async function MfaEnrollPage({
   }
 
   return (
-    <main className="auth-bg">
-      <div className="auth-card fade-in" style={{ maxWidth: 440 }}>
-        <div className="auth-logo">
-          <BrandLogo size={24} />
+    <AuthPage lit={1}>
+      <AuthHead title="Activa el doble factor">
+        /admin exige un código de un solo uso además de tu contraseña. Se configura una única vez.
+      </AuthHead>
+
+      {enrollError ? (
+        <div className="au-fail" role="alert">
+          <Ic n="warn" sm />
+          {enrollError}
         </div>
+      ) : (
+        <>
+          {params.error ? (
+            <div className="au-fail" role="alert">
+              <Ic n="warn" sm />
+              {params.error}
+            </div>
+          ) : null}
 
-        <div className="auth-h1">Activa el doble factor</div>
-        <div className="auth-sub">
-          /admin exige un código de un solo uso además de tu contraseña. Se configura una única vez.
-        </div>
-
-        {enrollError ? (
-          <p className="feedback error" style={{ marginTop: 20 }}>
-            {enrollError}
-          </p>
-        ) : (
-          <>
-            {params.error ? (
-              <p className="feedback error" style={{ marginTop: 20 }}>
-                {params.error}
-              </p>
-            ) : null}
-
-            {qrCode && secret ? (
-              <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 14 }}>
-                <p style={{ fontSize: 13.5, color: "var(--ink-3)", margin: 0 }}>
-                  1. Escanea este código con Google Authenticator, 1Password o cualquier app TOTP.
-                </p>
-                <div
-                  style={{
-                    background: "#fff",
-                    border: "1px solid var(--border)",
-                    borderRadius: 12,
-                    padding: 16,
-                    display: "flex",
-                    justifyContent: "center"
-                  }}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element -- Supabase returns a one-time SVG data URI, not a static asset. */}
-                  <img src={qrCode} alt="Código QR para activar el doble factor" width={180} height={180} />
-                </div>
-                <p style={{ fontSize: 12.5, color: "var(--ink-3)", margin: 0 }}>
-                  ¿No puedes escanear? Introduce esta clave a mano:
-                </p>
-                <code
-                  style={{
-                    fontSize: 13,
-                    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                    background: "var(--surface-2, #F4F6FA)",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    padding: "8px 10px",
-                    wordBreak: "break-all",
-                    userSelect: "all"
-                  }}
-                >
-                  {secret}
-                </code>
+          {qrCode && secret ? (
+            <>
+              <p className="au-hint">1. Escanea este código con Google Authenticator, 1Password o cualquier app TOTP.</p>
+              <div className="au-qr">
+                {/* eslint-disable-next-line @next/next/no-img-element -- Supabase returns a one-time SVG data URI, not a static asset. */}
+                <img src={qrCode} alt="Código QR para activar el doble factor" width={180} height={180} />
               </div>
-            ) : (
-              <p style={{ fontSize: 13.5, color: "var(--ink-3)", marginTop: 20 }}>
-                Ya generaste un código para esta cuenta. Introduce el código de 6 dígitos de tu app para
-                activarlo.
-              </p>
-            )}
+              <p className="au-hint">¿No puedes escanear? Introduce esta clave a mano:</p>
+              <code className="au-key">{secret}</code>
+            </>
+          ) : (
+            <p className="au-hint">
+              Ya generaste un código para esta cuenta. Introduce el código de 6 dígitos de tu app para activarlo.
+            </p>
+          )}
 
-            {factorId ? (
-              <form action={verifyEnrollment} className="auth-form" style={{ marginTop: 18 }}>
-                <input type="hidden" name="factorId" value={factorId} />
-                <div>
-                  <label className="field-label" htmlFor="code">
-                    {qrCode ? "2. Código de 6 dígitos" : "Código de 6 dígitos"}
-                  </label>
-                  <input
-                    id="code"
-                    name="code"
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]{6}"
-                    maxLength={6}
-                    required
-                    autoFocus
-                    className="field"
-                    placeholder="000000"
-                    style={{ letterSpacing: "0.3em", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
-                  />
-                </div>
-                <button type="submit" className="btn btn-primary auth-btn">
-                  Verificar y activar
-                </button>
-              </form>
-            ) : null}
+          {factorId ? (
+            <form action={verifyEnrollment} className="au-step-form">
+              <input type="hidden" name="factorId" value={factorId} />
+              {qrCode ? <p className="au-hint">2. Código de 6 dígitos</p> : null}
+              <OtpInput name="code" label="Código de 6 dígitos" />
+              <SubmitButton pendingLabel="Verificando…">Verificar y activar</SubmitButton>
+            </form>
+          ) : null}
 
-            {!qrCode && factorId ? (
-              <form action={regenerateEnrollment} style={{ marginTop: 12, textAlign: "center" }}>
-                <input type="hidden" name="factorId" value={factorId} />
-                <button type="submit" className="link-mini" style={{ background: "none", border: 0, cursor: "pointer" }}>
-                  ¿Perdiste el código? Generar uno nuevo
-                </button>
-              </form>
-            ) : null}
-          </>
-        )}
-      </div>
-    </main>
+          {!qrCode && factorId ? (
+            <form action={regenerateEnrollment} className="au-back">
+              <input type="hidden" name="factorId" value={factorId} />
+              <button type="submit">¿Perdiste el código? Generar uno nuevo</button>
+            </form>
+          ) : null}
+        </>
+      )}
+    </AuthPage>
   );
 }

@@ -32,7 +32,9 @@ const ALERT_PRIORITY: readonly NotificationType[] = [
   "ai_bot_blocked",
   "page_unreachable",
   "emerging_competitor",
-  "surfacing_dropped"
+  "surfacing_dropped",
+  // GEO-ALERTS-1 (log §440): good news, below anything that asks for action.
+  "ai_bot_unblocked"
 ];
 
 /** Types the bell and the notifications page read. Used as the query filter. */

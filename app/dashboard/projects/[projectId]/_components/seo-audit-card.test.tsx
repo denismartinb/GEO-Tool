@@ -5,9 +5,9 @@ import type { OverviewSeoSummary } from "@/lib/web-audit/overview-seo-summary";
 
 /**
  * Render tests for Visión general's Auditoría SEO card (SEARCH-SEO-1, log
- * §271). They assert content, never appearance: the counts shown are the
- * counts passed in, labels come from the shared issue labels, and the
- * founder-removed elements (projected score, CTA button) stay out.
+ * §271; «Instrumento» layout, log §352). They assert content, never appearance:
+ * the counts shown are the counts passed in, the one recommendation is the
+ * first issue of the SEO block, and what the founder removed stays out.
  */
 
 const HREF = "/dashboard/projects/p1/web-audit";
@@ -45,42 +45,40 @@ describe("SeoAuditCard", () => {
   it("shows the severity counts and pluralizes each label by its own count", () => {
     const html = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
     expect(html).toContain("Revisada el 9 oct · 10 páginas");
-    expect(html).toMatch(/<b>1<\/b><span>Crítico<\/span>/);
-    expect(html).toMatch(/<b>3<\/b><span>Avisos<\/span>/);
-    expect(html).toMatch(/<b>0<\/b><span>Mejoras<\/span>/);
+    expect(html).toMatch(/<b class="num">1<\/b>Crítico</);
+    expect(html).toMatch(/<b class="num">3<\/b>Avisos</);
+    expect(html).toMatch(/<b class="num">0<\/b>Mejoras</);
   });
 
   it("shows the Salud SEO and the mobile speed line", () => {
     const html = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
     expect(html).toContain("Salud SEO");
-    expect(html).toMatch(/<b>63<\/b><span>\/100<\/span>/);
+    expect(html).toContain("63<small>/100</small>");
     expect(html).toContain("Velocidad en móvil: <b>LCP 3,4 s</b>, mejorable");
   });
 
-  it("lists the SEO block's top issues with the screen's labels, scopes and block points, all linking to the SEO block", () => {
+  it("recommends the first issue of the SEO block with the screen's label and scope, linking to the SEO block", () => {
     const html = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
+    expect(html).toContain("Recomendaciones");
     expect(html).toContain("Página indexable");
     expect(html).toContain("6 de 10 páginas");
-    expect(html).toContain("No encontrado");
-    expect(html).toContain("LCP de 3,4 s en móvil");
-    expect(html).toContain("+9 pt");
-    expect(html).toContain("&lt;1 pt");
-    expect(html.match(new RegExp(`href="${HREF}\\?bloque=seo"`, "g"))?.length).toBe(3);
+    expect(html).not.toContain("LCP de 3,4 s en móvil");
+    expect(html.match(new RegExp(`href="${HREF}\\?bloque=seo"`, "g"))?.length).toBeGreaterThanOrEqual(1);
     expect(html).not.toContain("bloque=geo");
   });
 
   it("never shows points it does not have", () => {
     const html = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
-    // The sitemap has no weight: no badge for it.
-    expect(html.match(/ pt</g)?.length).toBe(2);
+    expect(html).not.toMatch(/\+\d+ pt/);
   });
 
-  it("leaves out the score and the speed line when they were not measured", () => {
+  it("shows a dash instead of a score, and no speed line, when they were not measured", () => {
     const html = renderToStaticMarkup(
       <SeoAuditCard summary={{ ...withIssues, saludScore: null, speed: null }} auditedAt="9 oct" href={HREF} />
     );
-    expect(html).not.toContain("Salud SEO");
-    expect(html).not.toContain("ov2-seo-speed");
+    expect(html).toContain("Salud SEO");
+    expect(html).not.toContain("/100");
+    expect(html).not.toContain("Velocidad en móvil");
   });
 
   it("keeps out what the founder removed: projected score, re-audit note and CTA button", () => {
@@ -90,7 +88,20 @@ describe("SeoAuditCard", () => {
     expect(html).not.toContain("Ver Auditoría SEO");
   });
 
-  it("says a clean site is clean instead of rendering an empty list", () => {
+  it("titles the card with Google only when the Google half has its column", () => {
+    const solo = renderToStaticMarkup(<SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} />);
+    expect(solo).toContain("<h3>Auditoría SEO</h3>");
+    const both = renderToStaticMarkup(
+      <SeoAuditCard summary={withIssues} auditedAt="9 oct" href={HREF} googleColumn googleHref="/dashboard/projects/p1/search-console">
+        <div>mitad de Google</div>
+      </SeoAuditCard>
+    );
+    expect(both).toContain("Auditoría SEO y Google");
+    expect(both).toContain("Posición en Google");
+    expect(both).toContain("mitad de Google");
+  });
+
+  it("says a clean site is clean instead of rendering an empty row", () => {
     const html = renderToStaticMarkup(
       <SeoAuditCard
         summary={{ analyzedPageCount: 4, saludScore: 100, counts: { critical: 0, warning: 0, improvement: 0 }, top: [], speed: null }}
@@ -98,9 +109,7 @@ describe("SeoAuditCard", () => {
         href={HREF}
       />
     );
-    expect(html).toContain("Sin problemas de SEO");
     expect(html).toContain("Las 4 páginas revisadas pasan todas las comprobaciones SEO.");
     expect(html).toContain("4 páginas revisadas");
-    expect(html).not.toContain("Lo primero que arreglar");
   });
 });

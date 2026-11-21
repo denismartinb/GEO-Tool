@@ -5,7 +5,7 @@ import type { TopicActionView } from "@/lib/seo-tracking/screen";
 import type { weeklySummary } from "@/lib/seo-tracking/view-model";
 import { fmtInt, fmtPosition } from "../format";
 import { SeoRivalsModal } from "./seo-rivals-modal";
-import { ActionChip, PositionCell, pathOf } from "./seo-shared";
+import { ActionChip, OpenChevron, PositionCell, pathOf } from "./seo-shared";
 import type { ReadyData, SeoView } from "./seo-tracking";
 
 export type TodoItem = { topicId: string; topicName: string; action: TopicActionView; openCount: number };
@@ -63,7 +63,7 @@ function LinkStrip({ data, ownDomain, onRivals }: { data: ReadyData; ownDomain: 
         ))}
       </div>
       <p className="sa-note" style={{ marginTop: 10, marginBottom: 0 }}>
-        Webs distintas que enlazan a cada dominio, según DataForSEO. Se actualiza una vez al mes.
+        Webs distintas que enlazan a cada dominio.
       </p>
     </div>
   );
@@ -108,6 +108,7 @@ export function SeoResumen(props: {
                     {t.topicName} · paso 1 de {t.openCount}
                   </small>
                 </span>
+                <OpenChevron />
               </button>
             ))}
           </div>

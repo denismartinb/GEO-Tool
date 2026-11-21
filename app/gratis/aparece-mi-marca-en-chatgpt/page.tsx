@@ -38,7 +38,7 @@ const PAGE_URL = `${SITE_ORIGIN}${PAGE_PATH}`;
 export const metadata: Metadata = contentMetadata({
   title: "¿Aparece tu marca en ChatGPT? Compruébalo gratis · GenScore",
   description:
-    "Comprueba gratis y sin registro si ChatGPT nombra tu marca al responder una pregunta real de tu sector, y qué competidores recomienda en tu lugar. El escaneo completo cubre además Gemini y Claude.",
+    "Comprueba gratis y sin registro si ChatGPT nombra tu marca al responder una pregunta real de tu sector y qué competidores recomienda en tu lugar.",
   path: PAGE_PATH
 });
 

@@ -4,11 +4,12 @@ import { sendNewSignupOpsAlertEmail } from "@/lib/email/transactional";
 import type { createClient } from "@/lib/supabase/server";
 
 /**
- * ADMIN-CONSOLE-1: shared by the two real signup call sites
+ * ADMIN-CONSOLE-1: shared by the real signup call sites
  * (`app/signup/actions.ts` for an immediate-session password signup,
  * `app/auth/callback/route.ts` for a confirmed-link or Google signup) so
  * the "read the plan this account actually got, then alert" logic exists
- * once. Reads `profiles` with the caller's own just-created session — RLS's
+ * once. `status: "pending"` (SIGNUP-ALERT-PENDING-1, log §359) is the
+ * password signup that still has to confirm its email. Reads `profiles` with the caller's own just-created session — RLS's
  * `profiles_select_own` (0002_v0_rls.sql) allows it, no service role needed.
  *
  * Never throws: an alert-gathering failure must not turn a real signup into
@@ -18,9 +19,27 @@ import type { createClient } from "@/lib/supabase/server";
 export async function sendNewSignupOpsAlert(
   supabase: Awaited<ReturnType<typeof createClient>>,
   user: { id: string; email: string; created_at?: string },
-  method: "password" | "google"
+  method: "password" | "google",
+  status: "active" | "pending" = "active",
+  domain: string | null = null
 ): Promise<void> {
   try {
+    // A pending signup has no session yet, so RLS would hide its profile:
+    // the alert says what plan it gets on confirming instead of reading it.
+    if (status === "pending") {
+      await sendNewSignupOpsAlertEmail({
+        email: user.email,
+        userId: user.id,
+        method,
+        planId: "pro",
+        trialEndsAt: null,
+        createdAt: user.created_at ? new Date(user.created_at) : new Date(),
+        status,
+        domain
+      });
+      return;
+    }
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("current_plan, trial_ends_at")
@@ -33,7 +52,8 @@ export async function sendNewSignupOpsAlert(
       method,
       planId: profile?.current_plan ?? "free",
       trialEndsAt: profile?.trial_ends_at ?? null,
-      createdAt: user.created_at ? new Date(user.created_at) : new Date()
+      createdAt: user.created_at ? new Date(user.created_at) : new Date(),
+      domain
     });
   } catch (error) {
     console.error("[geo:admin] failed to gather data for the new-signup ops alert", {

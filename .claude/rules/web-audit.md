@@ -86,6 +86,10 @@ cuanto haya descubrimiento de enlaces o recorrido, sí lo es.
   `llms_txt_missing`, `sitemap_missing` y `snippet_blocked`—, con tests que
   fijan que la nota real y la proyectada no se mueven. Ponderarlo es una fase
   aparte (log §131).
+  `js_required` (log §412) sigue la misma regla: la página llega vacía sin
+  JavaScript y se reporta sin puntos. Necesita las dos señales (poco texto
+  visible y un nodo de montaje vacío o un `<noscript>` que pide JavaScript);
+  relajarlo a una sola acusaría a portadas cortas que sí se leen.
 - **Una señal que sólo existe en la respuesta HTTP se lee antes del cuerpo.**
   `fetchPageSafely` descartaba las cabeceras al leer el HTML, y una
   `X-Robots-Tag: nosnippet` servida por un CDN era indetectable mirando sólo el
@@ -485,3 +489,88 @@ siquiera está dentro de él— así que las dos fórmulas de bleed ya leen el t
 verdad. Copiarlas repetiría un error ya cometido y documentado en esta misma
 pantalla: alimentar la fórmula con un tope al que `.page` nunca estuvo sujeto y
 dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
+
+### Bots de IA por motor (AI-BOTS-CONSOLE-1, log §426)
+
+- **La unidad es el motor, no el token.** `bot_blocked`, `findCitationBlockers`,
+  `aiBotsAllowed` de la extensión y la tarjeta leen `engineReadStates`
+  (`lib/web-audit/ai-bots.ts`): un motor puede leerte si todos sus bots de
+  búsqueda pueden. Un bot sólo de entrenamiento (GPTBot, ClaudeBot) cerrado es
+  decisión del cliente: nunca es problema, recomendación ni aviso.
+- **Los seis interruptores son los del plugin** (`genscore_bot_switches()`),
+  mismos ids y tokens; lo vigila `ai-bots.test.ts`. Si cambia uno, cambia el
+  otro en el mismo PR.
+- **La consola no escribe robots.txt: genera el bloque.** Un grupo «Allow»
+  repite las reglas de `*`; sin `bots.aiBots.starRules` (foto antigua o
+  robots.txt sin leer) no se ofrece «Cambiar acceso».
+- **Lo no medido no se afirma**: un motor sin ningún token medido es «Sin
+  comprobar», nunca «Puede leerla».
+- **Meta es un interruptor, no una tarjeta de motor** (log §427): no medimos
+  sus respuestas. `meta-externalagent` es de entrenamiento y nunca es un
+  problema. El plugin lo tiene desde 1.0.5; `PLUGIN_PENDING_SWITCHES` sólo
+  saca del test de paridad un interruptor que el plugin aún no publica.
+
+## Sonda del servidor (GEO-ALERTS-1, log §440)
+
+- **Cuatro peticiones a la portada del propio dominio, nunca más.** Una como
+  nosotros y una por bot de búsqueda (OAI-SearchBot, Claude-SearchBot,
+  PerplexityBot), con la guarda SSRF de `https-check.ts`: cada salto en el
+  dominio y con IP pública, redirecciones a mano y nunca el cuerpo. Seguir
+  enlaces sería un rastreador.
+- **Gemini no se prueba**: lee con Googlebot y nunca suplantamos a Googlebot.
+- **Bloqueado es 401, 403, 406, 451 o `cf-mitigated`.** 429 y 5xx son «sin
+  comprobar», y sin una respuesta 2xx a nuestra propia petición todo es «sin
+  comprobar». «Sin comprobar» nunca es un problema ni resuelve nada.
+- **Es una simulación y se dice** en toda pantalla y correo que la enseñe.
+- **`bot_server_blocked` sólo sale para motores que robots.txt deja pasar**, y
+  no puntúa: vive en `bots.serverProbe` del snapshot, sin migración.
+
+## Robots.txt y servidor por motor, y lo arreglado (EXT-1.5.0, log §446)
+
+- **Cada motor de «Quién puede leer tu web» enseña robots.txt y Servidor**, con
+  «Simulación · fecha» si hubo sonda. Gemini no tiene celda de servidor.
+- **«Arreglado desde la revisión anterior» sólo nombra comprobaciones que
+  fallaron antes y que ahora se miden y pasan** (`fixedSincePrevious`). Una que
+  ya no se mide no cuenta como arreglada.
+
+## Lo que lee la IA (AI-VIEW-CONSOLE-1, log §449)
+
+- **Sólo lo que prueba el HTML.** «Llega vacía» es `jsShell`, «Poco texto» es
+  `jsThin` y lo demás «Llega completa». Un hueco parcial en una página larga no
+  se adivina: lo mide la extensión, o un navegador en el servidor con su propio
+  Task Intake. Una foto sin `jsShell` no se declara limpia.
+- **La foto no guarda texto de la página**: recuentos, booleanos, tipos de
+  datos estructurados y `platform`. Ni titulares ni precios.
+- **`js_required` sigue sin puntos** aunque ahora falle también con `jsThin`.
+- **La solución es para todo el dominio y va plegada dentro del bloque**
+  (Denis, 2026-11-02); el Markdown es la segunda opción, en su propio
+  desplegable. Los ejemplos de código son ejemplos y lo dicen.
+
+## Lo que lee la IA con navegador (AI-READ-2, log §451)
+
+- **Cifras globales, nunca una lista ni un recuento de páginas** (Denis,
+  2026-11-02), y sin bloque de arreglo: un arreglo sólo va a Recomendaciones
+  cuando su causa es segura. Sustituye la lista y «Cómo arreglarlo» de §449.
+- **`PageAuditEntry.render` es opcional y tri-estado:** ausente (no medido),
+  `unmeasured` (no se pudo comparar, no cuenta) u `ok`. Una página sin medir
+  nunca es «llega entera».
+- **El navegador sólo abre páginas que la auditoría ya eligió y del dominio
+  del proyecto** (`isAllowedAuditHost`). No es un rastreador: nunca se siguen
+  enlaces ni se añaden páginas para medir.
+- **La medición corre al final del GET de `run-audit`**, con plazo absoluto
+  y preguntando antes de cada página si cabe; nunca en un eslabón POST de la
+  cadena. 429 o credenciales malas paran la pasada; lo no alcanzado sigue
+  pendiente.
+- **Sin variables de Cloudflare, modo HTML** (porcentaje de páginas completas
+  según `jsShell`/`jsThin`). Nunca un error ni una cifra inventada.
+- **Sólo se guardan trozos literales cortos y saneados** (`MAX_SAMPLES`, 80
+  caracteres) de páginas públicas.
+- **La tarjeta de Visión general lee `aiReadCard`**, el mismo modelo que el
+  bloque; no calcula cifras propias y no sale en modo HTML.
+
+## Cuota de Gemini en la cobertura (GEMINI-QUOTA-STOP-1, log §472)
+
+- **Un 429 corta la tanda y no cierra el tema.** Un tema que no se pudo
+  preguntar por cuota no es «No hemos podido verificar»: queda pendiente y el
+  ejecutor aparca el trabajo. Marcarlo cerraba todos los temas del escaneo sin
+  respuesta y gastaba tres llamadas por tema.

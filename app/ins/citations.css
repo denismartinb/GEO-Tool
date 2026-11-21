@@ -1,0 +1,108 @@
+/* Páginas citadas, «Instrumento» (CONSOLE-INSTRUMENTO-1 F5c, log §375). Port of the approved prototype, scoped under .ins. */
+.ins .sc-cit .lead a{cursor:pointer}
+.ins .sc-cit .pills a.chip:hover{border-color:var(--ink-4);color:var(--ink)}
+.ins .ct-k{grid-template-columns:repeat(3,1fr)}
+.ins .ct-kc{font-size:12px;color:var(--ink-3);margin-top:10px}
+.ins .ct-or{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);overflow:hidden}
+.ins .ct-ol{padding:26px 28px;border-right:1px solid var(--rule)}
+.ins .ct-ol .v{font-size:84px;font-weight:300;letter-spacing:-.05em;line-height:1}
+.ins .ct-ol p{font-size:13.5px;color:var(--ink-3);margin-top:8px;max-width:300px}
+.ins .ct-bar{display:flex;gap:3px;margin-top:34px}
+.ins .ct-bar i{display:block;height:10px;border-radius:3px;background:var(--c);transform:scaleY(0);transform-origin:bottom;transition:transform var(--d4) var(--spring) var(--bd,0ms)}
+.ins .ct-bar.on i{transform:none}
+.ins .ct-bn{font-size:12px;color:var(--ink-3);margin-top:10px}
+.ins .ct-cb{color:var(--ink);border-color:var(--ink-4)}
+.ins .ct-orr{padding:14px 22px 18px;display:flex;flex-direction:column}
+.ins .ct-og{display:grid;grid-template-columns:10px minmax(0,1fr) auto 16px;gap:14px;align-items:center;text-align:left;padding:14px 4px;border-bottom:1px solid var(--rule-2);border-radius:10px;transition:background var(--d1)}
+.ins .ct-og:hover{background:var(--surface-2)}
+.ins .ct-og>i{width:10px;height:10px;border-radius:3px}
+.ins .ct-og .t b{display:block;font-size:14.5px;font-weight:600}
+.ins .ct-og .t span{font-size:12.5px;color:var(--ink-3)}
+.ins .ct-og .p{font-size:26px;font-weight:300;letter-spacing:-.03em}
+.ins .ct-og .p small{font-size:12px;color:var(--ink-3);letter-spacing:0}
+.ins .ct-og>.i{color:var(--ink-4)}
+.ins .ct-fn{display:flex;gap:8px;align-items:flex-start;font-size:12px;color:var(--ink-3);margin-top:auto;padding-top:14px}
+.ins .ct-fn .i{flex:none;margin-top:1px}
+.ins .ct-rh h2{font-size:24px}
+.ins .ct-rh p{font-size:14px;color:var(--ink-3);margin-top:6px;max-width:620px}
+.ins .ct-rl{margin-top:16px;border-top:1px solid var(--ink)}
+.ins .ct-rr{border-bottom:1px solid var(--rule-2)}
+.ins .ct-rr>button{display:grid;grid-template-columns:22px minmax(0,1fr) 140px 16px;gap:14px;align-items:center;width:100%;text-align:left;padding:14px 4px}
+.ins .ct-rr .t b{display:block;font:500 14px var(--mono)}
+.ins .ct-rr .t span{font-size:12.5px;color:var(--ink-3)}
+.ins .ct-rr .t .e{display:inline-flex;gap:5px;vertical-align:middle;margin-left:8px}
+.ins .ct-rr .e svg{color:var(--ink)}
+.ins .ct-rr>button>.i{color:var(--ink-3);transition:transform var(--d2) var(--std)}
+.ins .ct-rr.open>button>.i{transform:rotate(180deg)}
+.ins .ct-rx{padding:6px 4px 18px 40px}
+.ins .ct-rx .lbl{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.ins .ct-rx ul{list-style:none;padding:0;margin-top:6px}
+.ins .ct-rx li{font-size:14px;color:var(--ink-2);padding:7px 0;border-bottom:1px dashed var(--rule)}
+.ins .ct-rx li:last-child{border-bottom:0}
+.ins .ct-co{display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--ink-3);margin-top:10px}
+.ins .ct-co .i{flex:none;margin-top:1px;color:var(--ink-4)}
+.ins .ct-rx .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.ins .ct-tool .seg button .num{opacity:.6;margin-left:3px}
+.ins .ct-cnt{font-size:12.5px;color:var(--ink-3);margin-top:16px}
+.ins .ct-tb{margin-top:8px}
+.ins .ct-tr{display:grid;grid-template-columns:minmax(0,1fr) 130px 150px;gap:16px;align-items:center;padding:12px 4px;border-bottom:1px solid var(--rule-2)}
+.ins .ct-tr.h{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:600;border-bottom:1px solid var(--ink);padding-top:0}
+.ins .ct-tr.h span:last-child{text-align:right}
+.ins .ct-tr .pg{display:flex;align-items:center;gap:12px;min-width:0}
+.ins .ct-tr .pg>span{min-width:0}
+.ins .ct-tr .pg b{display:block;font-size:14.5px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ins .ct-tr .pg b mark{background:var(--blue-tint);color:inherit}
+.ins .ct-tr .pg .mono{display:block;font:400 11.5px var(--mono);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ins .ct-tr .n{display:grid;grid-template-columns:1fr 30px;gap:12px;align-items:center}
+.ins .ct-tr .n b{text-align:right;font-size:17px;font-weight:400}
+@media (max-width:760px){
+ .ins .ct-k{grid-template-columns:1fr}
+ .ins .ct-k .kpi{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;align-items:center;border-right:0!important;margin-right:0!important;padding:14px 0!important;border-bottom:1px solid var(--rule)!important}
+ .ins .ct-k .kpi:last-child{border-bottom:0!important}
+ .ins .ct-k .kpi .v{grid-column:2;grid-row:1/3;margin-top:0}
+ .ins .ct-k .kpi .v b{font-size:32px}
+ .ins .ct-kc{margin-top:0}
+ .ins .ct-or{grid-template-columns:1fr}
+ .ins .ct-ol{border-right:0;border-bottom:1px solid var(--rule);padding:18px 16px}
+ .ins .ct-ol .v{font-size:60px}
+ .ins .ct-orr{padding:6px 12px 14px}
+ .ins .ct-og{gap:10px}
+ .ins .ct-rh h2{font-size:21px}
+ .ins .ct-rr>button{grid-template-columns:22px minmax(0,1fr) 16px;gap:10px}
+ .ins .ct-rr>button .tb{display:none}
+ .ins .ct-rr>button>.i{grid-column:3;grid-row:1/3}
+ .ins .ct-rx{padding-left:4px}
+ .ins .ct-tool .seg{width:100%;overflow:hidden}
+ .ins .ct-tool .seg button{flex:1;padding:5px 6px}
+ .ins .ct-tr{grid-template-columns:minmax(0,1fr) 36px;gap:10px}
+ .ins .ct-tr>span:nth-child(2){display:none}
+ .ins .ct-tr .n{grid-template-columns:1fr}
+ .ins .ct-tr .n .tb{display:none}
+}
+.ins .ct-ol{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ins .ct-dn{position:relative;width:min(100%,300px);aspect-ratio:1}
+.ins .ct-dn svg{width:100%;height:100%;transform:rotate(-90deg);overflow:visible}
+.ins .ct-dt{fill:none;stroke:var(--rule-2);stroke-width:18}
+.ins .ct-ds{fill:none;stroke:var(--c);stroke-width:18;stroke-dasharray:0 var(--C);stroke-dashoffset:var(--off);cursor:pointer;outline:none;transition:stroke-dasharray var(--d4) var(--out) var(--bd),opacity var(--d2),stroke-width var(--d2) var(--spring)}
+.ins .ct-dn.on .ct-ds{stroke-dasharray:var(--len) var(--C)}
+.ins .ct-dn.now .ct-ds{transition:opacity var(--d2),stroke-width var(--d2)}
+.ins .ct-ds:hover,.ins .ct-ds:focus-visible{stroke-width:24}
+.ins .ct-ds.dim,.ins .ct-og.dim{opacity:.35}
+.ins .ct-og{transition:background var(--d1),opacity var(--d2)}
+.ins .ct-dc{position:absolute;inset:22%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+.ins .ct-dc .v{font-size:60px;font-weight:300;letter-spacing:-.05em;line-height:1}
+.ins .ct-dc .v small{font-size:20px;color:var(--ink-3);letter-spacing:0;margin-left:2px}
+.ins .ct-ol .ct-dc p{font-size:12px;line-height:1.35;color:var(--ink-3);margin-top:6px;max-width:150px}
+.ins .ct-ol .ct-bn{text-align:center;margin-top:14px;max-width:none}
+@media(max-width:760px){
+ .ins .ct-dn{width:min(100%,230px)}
+ .ins .ct-dc .v{font-size:46px}
+ .ins .ct-ol .ct-dc p{font-size:11px;max-width:120px}
+}
+@media (prefers-reduced-motion:reduce){
+ .ins .ct-ds{transition:opacity var(--d2)}
+}
+.ins .ct-ol{justify-content:flex-start;gap:18px}
+.ins .ct-dh{align-self:flex-start;font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink)}
+.ins .ct-tr>span:nth-child(2){min-width:0}
+.ins .ct-tr>span:nth-child(2) .badge{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

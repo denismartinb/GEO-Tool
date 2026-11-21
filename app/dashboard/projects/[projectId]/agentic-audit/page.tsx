@@ -1,5 +1,8 @@
+import { Motion } from "@/components/ins/kit/motion";
+import { PageHead } from "@/components/ins/page-head";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import {
   AGENTIC_REVIEW_DAILY_LIMIT,
@@ -8,6 +11,9 @@ import {
   shouldAutoReview
 } from "@/lib/agentic-audit/console-audit";
 import type { AgenticComponentId } from "@/lib/agentic-audit/api-contract";
+import { browserCheckNotes, twoWindows } from "@/lib/agentic-audit/two-windows";
+import { browserRunConfigured } from "@/lib/web-audit/browser-run";
+import { TwoWindowsCard } from "@/components/ins/agents/two-windows";
 import { isProOrAbove, resolveSystemPlanId, SYSTEM_PLAN_COLUMNS } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
 import { projectScreenMetadata } from "@/lib/seo/console-metadata";
@@ -74,6 +80,7 @@ export default async function AgenticAuditPage({
     supabase.from("profiles").select(SYSTEM_PLAN_COLUMNS).eq("id", user.id).maybeSingle(),
     readAgenticAudits(supabase, projectId, user.id)
   ]);
+  const inApp = await isInApp();
   const canRun = isProOrAbove(resolveSystemPlanId(profile as Parameters<typeof resolveSystemPlanId>[0]));
   const now = Date.now();
   const autoReview = audits.available && shouldAutoReview(audits, now);
@@ -82,24 +89,16 @@ export default async function AgenticAuditPage({
     audits.lastAttempt?.status === "pending" &&
     now - Date.parse(audits.lastAttempt.createdAt) < AGENTIC_SCREEN_MIN_GAP_MS;
   const remaining = audits.available ? Math.max(0, AGENTIC_REVIEW_DAILY_LIMIT - audits.usedToday) : 0;
+  // AGENTS-BROWSER-1 PR 2 (log §454): only where a browser reading exists or can exist.
+  const latest = audits.available ? audits.latest?.result : undefined;
+  const withWindows =
+    latest && latest.found !== "none" && latest.pageRead && (browserRunConfigured() || latest.browser) ? latest : null;
 
   return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Auditoría agéntica</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div className="ins">
+      <Motion id={`agentic-audit:${projectId}`}>
+      <div className="page sc-ag">
+        <PageHead title="Auditoría agéntica" />
 
       <div className="ag-page">
         <div className="ag-screen">
@@ -107,14 +106,16 @@ export default async function AgenticAuditPage({
 
           {!canRun ? (
             <div className="card ag-upsell">
-              <h3>La auditoría agéntica está en Pro y Agencia</h3>
+              <h3>{inApp ? "La auditoría agéntica no está incluida en tu plan" : "La auditoría agéntica está en Pro y Agencia"}</h3>
               <p>
                 Revisa la página donde vendes como la leería un agente de IA: si puede entrar, si entiende lo que vendes, si
                 puede fiarse y si llega a comprar o reservar, con lo que más sube tu nota.
               </p>
-              <Link className="btn btn-primary" href="/dashboard/settings?openPlan=pro#plan">
-                Pasar a Pro
-              </Link>
+              {inApp ? null : (
+                <Link className="btn btn-primary" href="/dashboard/settings?openPlan=pro#plan">
+                  Pasar a Pro
+                </Link>
+              )}
             </div>
           ) : !audits.available ? (
             <div className="card">
@@ -132,6 +133,8 @@ export default async function AgenticAuditPage({
               remaining={remaining}
               refresh={autoReview}
               openOn={openOn}
+              windows={withWindows ? <TwoWindowsCard windows={twoWindows(withWindows)} /> : null}
+              checkNotes={withWindows ? browserCheckNotes(withWindows) : undefined}
             />
           ) : autoReview || inFlight ? (
             <AgenticAuditSearching projectId={projectId} />
@@ -140,6 +143,8 @@ export default async function AgenticAuditPage({
           )}
         </div>
       </div>
+      </div>
+      </Motion>
     </div>
   );
 }

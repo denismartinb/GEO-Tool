@@ -1,0 +1,55 @@
+/* Posición en Google, «Instrumento» (CONSOLE-INSTRUMENTO-1 F6b, log §364).
+   New chrome (header, lead); the Search Console and tracking blocks keep their
+   markup and read the Instrumento tokens through the mapping below. */
+.ins .sc-gsc{
+ --line:var(--rule);--line-soft:var(--rule-2);--line-strong:var(--ink-4);
+ --surface-sunk:var(--surface-2);
+ --accent:var(--blue);--accent-soft:var(--blue-tint);--accent-ink:var(--blue-ink);--accent-ring:var(--blue-soft);
+ --pos-ink:var(--pos);--pos-soft:var(--pos-tint);--neg-ink:var(--warm);--neg-soft:var(--warm-tint);
+ --warn:var(--warm);--warn-ink:var(--warm);--warn-soft:var(--warm-tint);
+ --brand-ink:var(--ink);--brand-ink-2:var(--ink-2);--brand-ink-3:var(--ink-3);--brand-ink-4:var(--ink-4);
+ --brand-blue:var(--blue);--brand-blue-soft:var(--blue-tint);--brand-neg:var(--warm);--brand-pos:var(--pos);
+ --brand-shadow-card:none;
+ font-family:var(--font);
+}
+.ins .sc-gsc .gsc-page{max-width:none;margin:0}
+.ins .sc-gsc .gsc-screen{margin-top:20px;gap:16px}
+.ins .sc-gsc .gsc-screen .card{padding:20px 22px;border-radius:20px}
+.ins .sc-gsc .sa-ch h3{font:600 17px var(--font);letter-spacing:-.01em;color:var(--ink)}
+.ins .sc-gsc .btn.gsc-on{display:inline-flex;align-items:center;gap:8px;cursor:default}
+@media (max-width:760px){
+ .ins .sc-gsc .pr-hd{flex-direction:column;align-items:flex-start;gap:12px}
+ .ins .sc-gsc .gsc-screen .card{padding:16px}
+}
+/* `.ins button` resets padding, border and colour, and out-ranks the legacy
+   `.gsc-st` pill, so the section tabs lost their padding (founder screenshot). */
+.ins .sc-gsc .gsc-st{padding:6px 12px;border:1px solid var(--line);background:var(--surface);color:var(--ink-2)}
+.ins .sc-gsc .gsc-st.gsc-st-on{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+
+/* GSC-CONNECT-CTA-1 in «Instrumento» (log §396): the invitation to connect
+   Search Console takes the card, chip and button of the kit instead of the
+   old console gradient. Same markup, same text, same link. */
+.ins .gsc-invite-slot{border:1px solid var(--rule);border-radius:18px;background:var(--surface);padding:18px 20px;gap:16px}
+.ins .gsc-invite-slot h4,.ins .gsc-invite h4{font:500 17px/1.3 var(--font);letter-spacing:-.01em;color:var(--ink);margin:0 0 4px}
+.ins .gsc-invite-slot p,.ins .gsc-invite p{font-size:14px;color:var(--ink-3)}
+.ins .gsc-invite-kinds{gap:6px;margin-top:12px}
+.ins .gsc-invite-kinds span{height:24px;display:inline-flex;align-items:center;padding:0 9px;border:1px solid var(--rule);border-radius:99px;background:none;font-size:11.5px;font-weight:600;color:var(--ink-2)}
+.ins .gsc-invite{border:1px solid var(--rule);border-radius:18px;background:var(--surface);padding:16px 18px}
+.ins .gsc-invite ul{color:var(--ink-2);font-size:13.5px}
+.ins .gsc-invite-fine{font-size:12px;color:var(--ink-3)}
+.ins .gsc-invite-btn{height:40px;min-height:40px;padding:0 16px;border-radius:99px;background:var(--ink);color:var(--surface);font:600 13.5px var(--font);gap:8px;transition:background var(--d1) var(--std)}
+.ins .gsc-invite-btn:hover{background:var(--ink-2);color:var(--surface)}
+.ins .gsc-invite-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.ins .gsc-invite-g{display:grid;place-items:center;width:20px;height:20px;border-radius:99px;background:#fff}
+@media (max-width:760px){
+ .ins .gsc-invite-slot{padding:16px}
+ .ins .gsc-invite-slot{grid-template-columns:minmax(0,1fr)}
+ .ins .gsc-invite-slot-txt{min-width:0}
+ .ins .gsc-invite-kinds{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .ins .gsc-invite-kinds::-webkit-scrollbar{display:none}
+ .ins .gsc-invite-kinds span{flex:none;white-space:nowrap}
+ .ins .gsc-invite-slot .gsc-invite-btn,.ins .gsc-invite-row .gsc-invite-btn{width:100%;height:44px;font-size:14px}
+}
+/* GSC-INVITE-FIT-1 (log §429): the button can never be wider than its panel;
+   a long label wraps inside it instead of spilling out. */
+.ins .gsc-invite-btn{max-width:100%;height:auto;white-space:normal;text-align:center;padding-top:8px;padding-bottom:8px}

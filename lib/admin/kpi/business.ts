@@ -117,6 +117,15 @@ export async function loadBusinessSections(input: {
 
 type UsersRead = { users: AdminUserRow[]; authUsersTruncated: boolean } | null;
 
+/**
+ * ADMIN-EMAIL-1 — the counted accounts (`isCountedAccount`), the same set the
+ * panel's trials and sign-ups use, for /admin/crm. Null when unreadable.
+ */
+export async function loadCountedUsers(service: ServiceClient): Promise<UsersRead> {
+  const read = await readUsers(service);
+  return read ? { users: read.users.filter(isCountedAccount), authUsersTruncated: read.authUsersTruncated } : null;
+}
+
 async function readUsers(service: ServiceClient): Promise<UsersRead> {
   try {
     const page = await listOperatorUsers(service);

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { sendWelcomeEmail } from "@/lib/email/transactional";
 import { sendNewSignupOpsAlert } from "@/lib/admin/signup-alert";
+import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { captureFunnelEvent } from "@/lib/analytics/funnel-events";
 import { AFFILIATE_REF_COOKIE, referralCodeForNewAccount } from "@/lib/affiliates/codes";
 
@@ -47,6 +48,10 @@ export async function signup(formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
+  // OPS-FIRST-SCAN-1 (log §441): only for the operator's signup alert, and
+  // only what the new-domain wizard would accept.
+  const rawDomain = cleanDomain(String(formData.get("dominio") ?? "").slice(0, 300));
+  const signupDomain = isWellFormedDomain(rawDomain) ? rawDomain : null;
 
   const parsed = signupSchema.safeParse({ email, password, confirmPassword });
   if (!parsed.success) {
@@ -96,12 +101,25 @@ export async function signup(formData: FormData) {
   }
 
   if (!data.session) {
+    // SIGNUP-ALERT-PENDING-1 (log §359): the operator hears about the signup
+    // now, not only once the confirmation link works. Supabase answers a
+    // signUp for an email that already has an account with a user that has
+    // no identities and sends no email, so that one is not a new signup.
+    if (data.user && (data.user.identities?.length ?? 0) > 0) {
+      await sendNewSignupOpsAlert(
+        supabase,
+        { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at },
+        "password",
+        "pending",
+        signupDomain
+      );
+    }
     redirect(`/signup/confirm?email=${encodeURIComponent(parsed.data.email)}`);
   }
 
   await sendWelcomeEmail(parsed.data.email);
   if (data.user) {
-    await sendNewSignupOpsAlert(supabase, { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at }, "password");
+    await sendNewSignupOpsAlert(supabase, { id: data.user.id, email: parsed.data.email, created_at: data.user.created_at }, "password", "active", signupDomain);
     await captureFunnelEvent("signup_completed", data.user.id, { method: "password" });
   }
 

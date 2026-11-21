@@ -2,6 +2,8 @@ import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { SeoExtraCheckKey } from "@/lib/web-audit/seo-health";
+import { AI_ENGINES, engineReadStates } from "@/lib/web-audit/ai-bots";
+import { PROBED_BOTS, serverStateFor } from "@/lib/web-audit/server-probe";
 
 /**
  * WEB-AUDIT-ISSUES-1 (founder-approved 2026-08-02, design artifact "Auditoría
@@ -35,12 +37,15 @@ export type IssueCheckKey =
   | "open_graph"
   | "noindex"
   | "snippet_blocked"
+  | "js_required"
   | "canonical"
   | "hreflang"
   | "list_or_table"
   | "content_length"
   | "freshness"
   | "bot_blocked"
+  /** GEO-ALERTS-1 (log §440): robots.txt lets the bot in, the server refuses it (simulation). */
+  | "bot_server_blocked"
   | "llms_txt_missing"
   | "sitemap_missing"
   /** Salud SEO only (log §281): built by `seo-health.ts`, never by `buildTechnicalIssuesReport`. */
@@ -120,7 +125,7 @@ const WEIGHT = {
   freshnessAging: 8
 } as const;
 
-export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "llms_txt_missing" | "sitemap_missing" | SeoExtraCheckKey>;
+export type PageLevelCheckKey = Exclude<IssueCheckKey, "bot_blocked" | "bot_server_blocked" | "llms_txt_missing" | "sitemap_missing" | SeoExtraCheckKey>;
 
 type PageCheckDefinition = {
   key: PageLevelCheckKey;
@@ -299,6 +304,24 @@ const PAGE_CHECKS: PageCheckDefinition[] = [
     key: "snippet_blocked",
     isMeasured: (c) => c.indexability?.snippetBlocks !== undefined,
     fails: (c) => c.indexability!.snippetBlocks!.length > 0,
+    gain: () => null,
+    weight: null,
+    hardBlock: true
+  },
+  {
+    /**
+     * JS-RENDER-CHECK-1: the served HTML is an empty shell that only fills in
+     * after a browser runs its scripts. AI crawlers do not run JavaScript, so
+     * for them the page is empty. Unscored for the same reason as
+     * `snippet_blocked` (moving `readiness_score` needs its own decision,
+     * log §131), and a hard block because an empty page can never be cited.
+     * `isMeasured` requires the new field: older snapshots are excluded,
+     * never declared clean.
+     */
+    key: "js_required",
+    isMeasured: (c) => c.citability?.jsShell !== undefined,
+    // AI-VIEW-CONSOLE-1 (log §449): also a page whose main content a script still paints.
+    fails: (c) => c.citability!.jsShell === true || c.citability!.jsThin === true,
     gain: () => null,
     weight: null,
     hardBlock: true
@@ -516,21 +539,56 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     });
   }
 
-  // Bot access — not per-page, so its applicable/affected units are tracked agents.
-  const blockedAgents = bots.bots.filter((b) => !b.allowed);
-  const allowedAgentCount = bots.bots.length - blockedAgents.length;
-  if (blockedAgents.length > 0) {
+  // Bot access — not per-page. AI-BOTS-CONSOLE-1 (log §426): the unit is the
+  // engine, not the token, and only its SEARCH tokens decide (same rule as the
+  // plugin, the extension and the agentic audit). A closed training bot
+  // (GPTBot, ClaudeBot) is the owner's call and is neither an issue nor a pass.
+  // An engine none of whose tokens was measured is left out of both lists.
+  const engineStates = engineReadStates(bots);
+  const measuredEngines = AI_ENGINES.filter((e) => engineStates[e.engine] !== null);
+  const blockedEngines = measuredEngines.filter((e) => engineStates[e.engine] === false);
+  if (blockedEngines.length > 0) {
     issues.push({
       check: "bot_blocked",
-      severity: "critical", // hard block: that whole AI engine can never read any page while it's disallowed
-      affectedCount: blockedAgents.length,
-      applicableCount: bots.bots.length,
+      severity: "critical", // hard block: that engine can never read any page while it's disallowed
+      affectedCount: blockedEngines.length,
+      applicableCount: measuredEngines.length,
       pointDelta: null, // bot access carries no readiness-score weight — see robots.ts
-      affectedLabels: blockedAgents.map((b) => b.agent)
+      affectedLabels: blockedEngines.map((e) => e.name)
     });
   }
-  if (allowedAgentCount > 0) {
-    passing.push({ check: "bot_blocked", passedCount: allowedAgentCount, applicableCount: bots.bots.length });
+  if (measuredEngines.length > blockedEngines.length) {
+    passing.push({
+      check: "bot_blocked",
+      passedCount: measuredEngines.length - blockedEngines.length,
+      applicableCount: measuredEngines.length
+    });
+  }
+
+  // GEO-ALERTS-1 (log §440): the server refuses a search bot that robots.txt
+  // lets in. Unscored like `bot_blocked`, and only engines our probe actually
+  // asked count; an engine robots.txt already closes is reported there.
+  const serverProbed = PROBED_BOTS.filter((b) => {
+    const st = serverStateFor(bots, b.engine);
+    return st === "allowed" || st === "blocked";
+  }).filter((b) => engineStates[b.engine] !== false);
+  const serverBlocked = serverProbed.filter((b) => serverStateFor(bots, b.engine) === "blocked");
+  if (serverBlocked.length > 0) {
+    issues.push({
+      check: "bot_server_blocked",
+      severity: "critical",
+      affectedCount: serverBlocked.length,
+      applicableCount: serverProbed.length,
+      pointDelta: null,
+      affectedLabels: serverBlocked.map((b) => AI_ENGINES.find((e) => e.engine === b.engine)!.name)
+    });
+  }
+  if (serverProbed.length > serverBlocked.length) {
+    passing.push({
+      check: "bot_server_blocked",
+      passedCount: serverProbed.length - serverBlocked.length,
+      applicableCount: serverProbed.length
+    });
   }
 
   // llms.txt / sitemap.xml — single project-level facts, always "warning": a
@@ -574,4 +632,15 @@ export function buildTechnicalIssuesReport(pages: PageAuditEntry[], bots: BotAcc
     actualReadinessScore !== null && projectedReadinessScore !== null ? projectedReadinessScore - actualReadinessScore : 0;
 
   return { issues, passing, analyzedPageCount, actualReadinessScore, projectedReadinessScore, totalPointPotential };
+}
+
+/** Checks failing before and passing now (log §446). Pure. */
+export function fixedSincePrevious(
+  previous: TechnicalIssuesReport | null,
+  current: TechnicalIssuesReport | null
+): IssueCheckKey[] {
+  if (!previous || !current) return [];
+  const now = new Set(current.issues.map((i) => i.check));
+  const passing = new Set(current.passing.map((p) => p.check));
+  return [...new Set(previous.issues.map((i) => i.check))].filter((c) => !now.has(c) && passing.has(c));
 }

@@ -29,6 +29,8 @@ export type DomainAuditInput = {
   domain: string;
   language: string;
   topic: string;
+  /** Only for the operator alert. */
+  projectId?: string;
 };
 
 export type DomainAuditRawResponse = {
@@ -105,7 +107,8 @@ export async function auditDomainContent(input: DomainAuditInput): Promise<Domai
       surface: "web_audit",
       provider: "gemini",
       error: toIncidentError(error),
-      domain: input.domain
+      domain: input.domain,
+      projectId: input.projectId
     });
     throw error;
   }

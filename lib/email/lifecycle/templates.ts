@@ -4,6 +4,7 @@ import {
   button,
   checklist,
   escapeHtml,
+  extensionPostscript,
   eyebrow,
   FOOTER_LINK_STYLE,
   heading,
@@ -89,7 +90,7 @@ function url(path: string, campaign: string): string {
  * signed unsubscribe link can be built — and then the email is not sent at
  * all: never a commercial email without a working way out (log §232).
  */
-function lifecycleEnvelope(userId: string): { footerHtml: string; headers: Record<string, string> } | null {
+export function lifecycleEnvelope(userId: string): { footerHtml: string; headers: Record<string, string> } | null {
   const links = buildUnsubscribeLinks(userId, "lifecycle");
   if (!links) return null;
   return {
@@ -237,6 +238,7 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
     ${versusBars(rows, "Porcentaje de respuestas en las que aparece cada marca")}
     ${comparison}
     ${button(url(`/dashboard/projects/${snap.projectId}`, "first_scan"), "Ver mi informe completo")}
+    ${extensionPostscript("first_scan")}
     `,
     {
       footerHtml: envelope.footerHtml,
@@ -245,7 +247,7 @@ export async function sendFirstScanReadyEmail(to: string, userId: string, snap: 
         : `Tu primer escaneo ha terminado. Te mencionan en el ${shareOf(snap.brandMentions, snap.answers)} de las respuestas.`
     }
   );
-  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "first_scan", to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D1 · activación. Only reaches someone with no completed scan (schedule.ts). */
@@ -295,7 +297,7 @@ export async function sendTrialD1Email(
       preheader: `Te quedan ${input.daysLeft} días de Pro. En unos minutos sabrás si la IA te recomienda.`
     }
   );
-  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "trial_d1", to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /** D3 · primera acción, with the real top recommendation, or the no-scan variant. */
@@ -329,7 +331,7 @@ export async function sendTrialD3Email(
       `,
       { footerHtml: envelope.footerHtml, preheader: `Una acción concreta para ${input.domain}. Te quedan ${input.daysLeft} días de Pro.` }
     );
-    return sendEmailWithOutcome({ to, subject: `Lo primero que cambiaríamos en ${input.domain}`, html, headers: envelope.headers }, options);
+    return sendEmailWithOutcome({ kind: "trial_d3", to, subject: `Lo primero que cambiaríamos en ${input.domain}`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -345,7 +347,7 @@ export async function sendTrialD3Email(
     `,
     { footerHtml: envelope.footerHtml, preheader: `Te quedan ${input.daysLeft} días de Pro para saber si la IA te recomienda.` }
   );
-  return sendEmailWithOutcome({ to, subject: "Tus clientes ya le preguntan a la IA por tu sector", html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "trial_d3", to, subject: "Tus clientes ya le preguntan a la IA por tu sector", html, headers: envelope.headers }, options);
 }
 
 /** Where "Ver el informe completo" lands: through /login, which forwards a signed-in reader straight on. */
@@ -486,7 +488,7 @@ export async function sendTrialD5Email(
       `,
       { footerHtml: envelope.footerHtml, preheader }
     );
-    return sendEmailWithOutcome({ to, subject: `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, headers: envelope.headers }, options);
+    return sendEmailWithOutcome({ kind: "trial_d5", to, subject: `Tu informe GEO de ${input.domain}, antes de que termine tu prueba`, html, headers: envelope.headers }, options);
   }
 
   const html = wrap(
@@ -499,7 +501,7 @@ export async function sendTrialD5Email(
     `,
     { footerHtml: envelope.footerHtml, preheader }
   );
-  return sendEmailWithOutcome({ to, subject: `Tu prueba de Pro termina el ${endDay}`, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "trial_d5", to, subject: `Tu prueba de Pro termina el ${endDay}`, html, headers: envelope.headers }, options);
 }
 
 /* ------------------------------------------- fin de prueba y recuperación */
@@ -581,7 +583,7 @@ export async function sendTrialEndedOfferEmail(
         : "Tu prueba de Pro ha terminado. Tus datos siguen intactos."
     }
   );
-  return sendEmailWithOutcome({ to, subject, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: campaign, to, subject, html, headers: envelope.headers }, options);
 }
 
 /**
@@ -688,7 +690,7 @@ export async function sendWinbackD3Email(
       preheader: `Es tu último escaneo de ${snap.domain}. Desde entonces no lo estás midiendo.`
     }
   );
-  return sendEmailWithOutcome({ to, subject: subject, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "winback_d3", to, subject: subject, html, headers: envelope.headers }, options);
 }
 
 /**
@@ -726,5 +728,5 @@ export async function sendWinbackD10Email(
       preheader: `Precio fundador para siempre: ${slots.toLowerCase()} con este precio. Es el último email que te enviamos sobre esto.`
     }
   );
-  return sendEmailWithOutcome({ to, subject: `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, headers: envelope.headers }, options);
+  return sendEmailWithOutcome({ kind: "winback_d10", to, subject: `${slots} con ${input.pro.planName} a ${promo.price} €/mes para siempre`, html, headers: envelope.headers }, options);
 }
