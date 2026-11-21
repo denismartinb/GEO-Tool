@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline, recommendationSubjects } from "@/lib/recommendations/headline";
 import "server-only";
 
 import { parseCoverageMap, COULD_NOT_VERIFY_NOTE } from "@/lib/web-audit/coverage-map";
@@ -5,7 +6,8 @@ import { buildTechnicalIssuesReport } from "@/lib/web-audit/issues";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
-import { selectPlan } from "@/lib/recommendations/plan";
+import { selectPlanWithLevers } from "@/lib/recommendations/plan-with-levers";
+import { leverFirstStep, leverTitle, themeForRec, type LeverEvidence } from "@/lib/recommendations/levers";
 import {
   comparisonFieldsFromEvidence,
   computeComparisonOverlay,
@@ -191,7 +193,8 @@ export async function loadReportInput({
   }
 
   const resultById = new Map(results.map((r) => [r.id, r]));
-  const recs = ((recRows ?? []) as RecRow[]).map((r) => ({
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
+  const recs = ((recRows ?? []) as RecRow[]).filter((r) => !isRetiredRecommendationType(r.recommendation_type)).map((r) => ({
     ...r,
     potentialPoints:
       results.length > 0
@@ -232,25 +235,54 @@ export async function loadReportInput({
   }
   // RECS-ALREADY-DONE-1 (log §339): the plan leaves out what the screen
   // shows under «Resueltas» because its page already exists.
-  const plan: ReportPlanItem[] = selectPlan(
-    recs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlayByRecId.get(r.id)))
-  ).map((r) => {
+  // WP-PLUGIN-2 (log §432, adenda «mismo plan»): the page levers collapse into one
+  // card, as on Recomendaciones and Visión general, so the report, the
+  // extension, the MCP and the WordPress plugin show the same three actions.
+  const categoryByResultId = new Map<string, string | null>(
+    results.map((r) => [r.id as string, r.prompt_id ? (categoryByPrompt.get(r.prompt_id as string) ?? null) : null])
+  );
+  const { plan: planRecs, levers } = selectPlanWithLevers({
+    recs: recs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlayByRecId.get(r.id))),
+    themeOf: (r) => themeForRec(r.evidence_json as LeverEvidence, categoryByResultId),
+    scoreRows: results,
+    domain: project.domain
+  });
+  const leverByRep = new Map(levers.map((l) => [l.representativeId, l]));
+  const recById = new Map(recs.map((r) => [r.id, r]));
+  /* The console card says «ese rival» when the name does not fit; here there is room, so name it. */
+  const namedHeadline = (h: { title: string; subject?: string | null }) =>
+    h.subject ? h.title.replace(/\bese rival\b|\besta marca\b/, h.subject) : h.title;
+  const plan: ReportPlanItem[] = planRecs.map((r) => {
     const overlay = overlayByRecId.get(r.id);
     const overlayStep = overlay ? overlayCopy(r.recommendation_type, overlay.state)?.firstStep : null;
+    const lever = leverByRep.get(r.id);
+    const members = lever ? lever.memberIds.map((id) => recById.get(id)).filter((m): m is NonNullable<typeof m> => Boolean(m)) : [r];
     const topics = new Set<string>();
-    for (const id of affectedIds(r.evidence_json)) {
+    const questions = new Set<string>();
+    for (const id of members.flatMap((m) => affectedIds(m.evidence_json))) {
+      const text = resultById.get(id)?.prompt_text_snapshot;
+      if (typeof text === "string" && text.trim()) questions.add(text.trim());
       const promptId = resultById.get(id)?.prompt_id;
       const topic = promptId ? categoryByPrompt.get(promptId)?.trim() : null;
       if (topic) topics.add(topic);
     }
     return {
-      title: r.title,
+      title: lever ? leverTitle(lever.theme) : namedHeadline(recommendationHeadline(r, overlayForHeadline(overlay))),
       description: r.description,
-      firstStep: overlayStep ?? r.evidence_json?.first_step ?? null,
-      providers: (r.evidence_json?.affected_prompt_details ?? [])
+      firstStep: lever ? leverFirstStep(lever.theme) : (overlayStep ?? r.evidence_json?.first_step ?? null),
+      providers: members
+        .flatMap((m) => m.evidence_json?.affected_prompt_details ?? [])
         .map((d) => d?.provider)
         .filter((p): p is string => typeof p === "string" && p.length > 0),
-      topics: [...topics]
+      topics: [...topics],
+      questions: [...questions],
+      type: lever ? (lever.theme.kind === "definition" ? "lever_definition" : "lever") : r.recommendation_type,
+      ...(lever ? {} : recommendationSubjects(r)),
+      // A lever's page is the first member coverage confirmed: they share one topic.
+      page:
+        members
+          .map((m) => overlayByRecId.get(m.id))
+          .find((o) => o?.state === "confirmed_surfacing_gap" && o.verifiedPage?.url)?.verifiedPage?.url ?? null
     };
   });
 

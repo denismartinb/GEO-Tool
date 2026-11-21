@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 import * as Sentry from "@sentry/nextjs";
-import { Button } from "@/components/ui/button";
-import { Icon } from "@/components/ui/icon";
+import { ErrRing } from "@/components/ins/errors/err-ring";
+import { Ic } from "@/components/ins/ic";
+import { SUPPORT_EMAIL } from "@/lib/support";
 
 export default function DashboardError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   useEffect(() => {
@@ -17,24 +18,30 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
   }, [error]);
 
   return (
-    <div className="page" style={{ display: "flex", justifyContent: "center", padding: "80px 20px" }}>
-      <div style={{
-        background: "var(--surface)", border: "1px solid var(--line)", borderRadius: "var(--r-xl)",
-        padding: "40px 36px", maxWidth: 480, width: "100%", textAlign: "center", boxShadow: "var(--sh-2)"
-      }}>
-        <div style={{
-          width: 56, height: 56, borderRadius: "999px", margin: "0 auto 20px",
-          background: "var(--neg-soft, #fdecec)", display: "grid", placeItems: "center", color: "var(--neg-ink, #c0392b)"
-        }}>
-          <Icon name="settings" size={24} />
-        </div>
-        <h2 style={{ fontSize: 18, fontWeight: 750, color: "var(--ink)", marginBottom: 10 }}>
-          Algo ha ido mal
-        </h2>
-        <p style={{ fontSize: 14, color: "var(--ink-3)", lineHeight: 1.65, marginBottom: 24 }}>
-          No hemos podido cargar esta página. Puedes reintentarlo; si el problema persiste, contacta con soporte.
+    <div className="ins">
+      <div className="page sc-err">
+        <ErrRing label="!" warm />
+        <div className="eyebrow bare">Error</div>
+        <h1>Algo ha ido mal</h1>
+        <p className="lead">
+          No hemos podido cargar esta página. Tus datos están a salvo. Prueba otra vez; si sigue fallando, escríbenos
+          {error.digest ? " y cita esta referencia." : "."}
         </p>
-        <Button onClick={() => reset()}>Reintentar</Button>
+        {error.digest ? (
+          <p className="er-ref">
+            Referencia <span className="mono">{error.digest}</span>
+          </p>
+        ) : null}
+        <div className="pills" style={{ justifyContent: "center" }}>
+          <button type="button" className="btn ink" onClick={() => reset()}>
+            <Ic n="c-refresh" sm />
+            Reintentar
+          </button>
+          <a className="btn line" href={`mailto:${SUPPORT_EMAIL}${error.digest ? `?subject=${encodeURIComponent(`Error ${error.digest}`)}` : ""}`}>
+            <Ic n="c-mail" sm />
+            Escribir a soporte
+          </a>
+        </div>
       </div>
     </div>
   );

@@ -1,0 +1,218 @@
+<title>Titulares de acción</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: una columna de lectura; arriba la regla, luego antes/después en móvil y escritorio, al final la tabla completa por tipo. */
+:root{
+  --canvas:#F3F5F8; --surface:#FFFFFF; --surface-2:#EEF2F7; --rule:#E2E7EE; --rule-2:#CED6E0;
+  --ink:#0B1426; --ink-2:#2C3A52; --ink-3:#5A6780; --ink-4:#8592A6;
+  --blue:#1E5BFF; --blue-tint:#E8EFFF; --warm:#C2410C; --warm-tint:#FDEEE6; --pos:#0F8A5F; --pos-tint:#E3F5EC;
+  --deep:#0E1A33; --deep-2:#A9B7D0;
+  --sans:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --canvas:#0A1020; --surface:#111A2E; --surface-2:#18233A; --rule:#22304A; --rule-2:#2E3E5C;
+  --ink:#EEF2F9; --ink-2:#C9D3E4; --ink-3:#97A5BE; --ink-4:#6E7D98;
+  --blue:#6E9BFF; --blue-tint:#172A52; --warm:#FB9466; --warm-tint:#3A1E12; --pos:#4ED1A0; --pos-tint:#10352A;
+  --deep:#060B17; --deep-2:#8C9BB8; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#0A1020; --surface:#111A2E; --surface-2:#18233A; --rule:#22304A; --rule-2:#2E3E5C;
+  --ink:#EEF2F9; --ink-2:#C9D3E4; --ink-3:#97A5BE; --ink-4:#6E7D98;
+  --blue:#6E9BFF; --blue-tint:#172A52; --warm:#FB9466; --warm-tint:#3A1E12; --pos:#4ED1A0; --pos-tint:#10352A;
+  --deep:#060B17; --deep-2:#8C9BB8; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.55;margin:0}
+.wrap{max-width:1080px;margin:0 auto;padding-block:40px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:48px}
+h1{font-size:clamp(28px,4vw,40px);font-weight:600;letter-spacing:-.02em;line-height:1.1;margin:0;text-wrap:balance}
+h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+.lede{color:var(--ink-3);max-width:62ch;margin:12px 0 0}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-4)}
+.sub{color:var(--ink-3);margin:0 0 20px;max-width:64ch}
+
+/* reglas */
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:24px}
+.rule{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px;display:grid;gap:6px}
+.rule b{font-weight:600}
+.rule span{color:var(--ink-3);font-size:14px}
+.rule code{font-family:var(--mono);font-size:12.5px;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+
+/* comparativa */
+.compare{display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:start}
+@media (max-width:860px){.compare{grid-template-columns:1fr}}
+.col{display:grid;gap:10px;justify-items:start;min-width:0}
+.tag{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px}
+.tag.bad{background:var(--warm-tint);color:var(--warm)}
+.tag.good{background:var(--pos-tint);color:var(--pos)}
+.phones{display:flex;gap:20px;flex-wrap:wrap}
+.phone{width:300px;max-width:100%;background:var(--surface);border:1px solid var(--rule-2);border-radius:28px;padding:14px 12px 18px;box-shadow:0 10px 30px -18px rgba(11,20,38,.35)}
+.phone .bar{height:5px;width:70px;border-radius:9px;background:var(--rule-2);margin:0 auto 12px}
+.plan{border:1px solid var(--rule);border-radius:16px;overflow:hidden;background:var(--surface)}
+.plan-h{background:var(--blue-tint);padding:16px}
+.plan-h .k{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.plan-h .n{font-size:40px;font-weight:300;letter-spacing:-.03em;line-height:1;margin-top:6px}
+.plan-h .n small{font-size:16px;color:var(--ink-3);margin-left:2px}
+.item{display:grid;grid-template-columns:24px 1fr;gap:8px;padding:14px 16px;border-top:1px solid var(--rule)}
+.item .i{font-size:12px;color:var(--ink-4);font-variant-numeric:tabular-nums;padding-top:2px}
+.item .t{font-size:15px;font-weight:500;line-height:1.35;text-wrap:pretty}
+.item .c{font-size:13px;color:var(--ink-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .m{display:flex;gap:10px;align-items:center;margin-top:6px;font-size:12.5px;color:var(--ink-3)}
+.dot{display:inline-flex;align-items:center;gap:5px}
+.dot::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--blue)}
+.pts{color:var(--blue);font-weight:600}
+.cut{font-size:15px;font-weight:500;line-height:1.35;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* escritorio */
+.desk{width:100%;background:var(--surface);border:1px solid var(--rule-2);border-radius:14px;overflow:hidden;box-shadow:0 10px 30px -18px rgba(11,20,38,.35)}
+.desk-top{display:flex;gap:6px;padding:10px 12px;border-bottom:1px solid var(--rule);background:var(--surface-2)}
+.desk-top i{width:9px;height:9px;border-radius:50%;background:var(--rule-2)}
+.desk-in{padding:18px;display:grid;gap:14px}
+.desk-in .kk{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+.dcards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:640px){.dcards{grid-template-columns:1fr}}
+.dcard{border:1px solid var(--rule);border-radius:12px;padding:14px;display:grid;gap:6px;align-content:start;min-width:0}
+.dcard .k{font-size:11.5px;color:var(--ink-4);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.dcard .t{font-size:15.5px;font-weight:600;line-height:1.3;text-wrap:balance}
+.dcard .c{font-size:13px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dcard .m{display:flex;gap:10px;align-items:center;font-size:12.5px;color:var(--ink-3);margin-top:4px}
+.dcard .btn{justify-self:start;margin-top:6px;font:inherit;font-size:13px;font-weight:600;border:1px solid var(--rule-2);background:var(--surface);color:var(--ink);border-radius:99px;padding:6px 12px}
+
+/* tabla */
+.tbl-wrap{overflow-x:auto;background:var(--surface);border:1px solid var(--rule);border-radius:14px}
+table{border-collapse:collapse;width:100%;min-width:820px;font-size:14px}
+th,td{text-align:left;vertical-align:top;padding:12px 14px;border-bottom:1px solid var(--rule)}
+th{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-4);background:var(--surface-2);position:sticky;top:0}
+tr.grp td{background:var(--surface-2);font-weight:600;font-size:13px;color:var(--ink-2);padding-block:8px}
+td.when{color:var(--ink-3);width:22%}
+td.before{color:var(--ink-3);width:27%}
+td.before s{text-decoration-color:var(--warm);text-decoration-thickness:1.5px}
+td.after{font-weight:600;width:27%}
+td.ctx{color:var(--ink-3);width:24%}
+.len{display:inline-block;font-family:var(--mono);font-size:11px;color:var(--ink-4);margin-left:6px;font-weight:400}
+.same{font-size:12px;color:var(--pos);font-weight:600;margin-left:6px}
+.note{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:18px;display:grid;gap:10px}
+.note ul{margin:0;padding-left:18px;display:grid;gap:6px;color:var(--ink-2)}
+@media (max-width:480px){.phone{width:100%}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Recomendaciones · propuesta de copy · versión 2</div>
+  <h1>Cada recomendación, una tarea que el cliente puede hacer hoy</h1>
+  <p class="lede">En la consola nueva cada recomendación es una tarjeta y una línea del plan de la semana. El titular nombra el entregable y dónde va: una FAQ, una comparativa, el robots.txt, un correo a una web concreta. Lo que no depende del cliente («sal antes que», «llega a la página 1») deja de ser una recomendación.</p>
+  <div class="rules">
+    <div class="rule"><b>Entregable + dónde</b><span>«Sube esta FAQ a /tarifas», «Quita el noindex de /ofertas». Si sabemos la página, se nombra.</span></div>
+    <div class="rule"><b>Nunca un resultado</b><span>Ni «aparece», ni «sal antes», ni «llega a la página 1». Eso lo decide la IA o Google, no el cliente.</span></div>
+    <div class="rule"><b>Sin acción concreta, no hay tarjeta</b><span>Dos tipos desaparecen. Lista abajo.</span></div>
+    <div class="rule"><b>Corto</b><span>Como mucho 48 caracteres. La pregunta, la búsqueda o las cifras van en una línea gris debajo.</span></div>
+  </div>
+</header>
+
+<section>
+  <h2>El plan de la semana en el móvil</h2>
+  <p class="sub">El mismo escaneo, con una marca de ejemplo. A la izquierda lo de hoy (tu captura), a la derecha la propuesta. «Sal antes que Cuentix» sale del plan y entra la siguiente acción concreta.</p>
+  <div class="phones">
+    <div class="col">
+      <span class="tag bad">Antes</span>
+      <div class="phone"><div class="bar"></div>
+        <div class="plan">
+          <div class="plan-h"><div class="k">Tu plan de esta semana</div><div class="n">+6<small>pt</small></div></div>
+          <div class="item"><span class="i">01</span><div><div class="cut">Consigue que te citen en "¿Cuánto cuesta un plan de telefonía móvil con datos ilimitados y ll…"</div><div class="m"><span class="dot">IA</span><span class="pts">+6 pt</span></div></div></div>
+          <div class="item"><span class="i">02</span><div><div class="t">Adelanta a Cuentix: sales después en 3 respuestas</div><div class="m"><span class="dot">IA</span><span class="pts">+1 pt</span></div></div></div>
+          <div class="item"><span class="i">03</span><div><div class="t">Responde a la imagen negativa que da la IA de ti</div><div class="m"><span class="dot">IA</span><span>Impacto alto</span></div></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="col">
+      <span class="tag good">Después</span>
+      <div class="phone"><div class="bar"></div>
+        <div class="plan">
+          <div class="plan-h"><div class="k">Tu plan de esta semana</div><div class="n">+7<small>pt</small></div></div>
+          <div class="item"><span class="i">01</span><div><div class="t">Añade un dato con fecha y fuente a /tarifas</div><div class="c">¿Cuánto cuesta un plan de telefonía móvil con datos ilimitados y llamadas?</div><div class="m"><span class="dot">IA</span><span class="pts">+6 pt</span></div></div></div>
+          <div class="item"><span class="i">02</span><div><div class="t">Sube esta FAQ a tu web</div><div class="c">Responde 6 preguntas informativas</div><div class="m"><span class="dot">IA</span><span class="pts">+1 pt</span></div></div></div>
+          <div class="item"><span class="i">03</span><div><div class="t">Publica una página que responda a las críticas</div><div class="c">La IA repite: permanencia, atención al cliente</div><div class="m"><span class="dot">IA</span><span>Impacto alto</span></div></div></div>
+        </div>
+      </div>
+      <span style="font-size:12.5px;color:var(--ink-4)">Las cifras de puntos son de ejemplo.</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Las tarjetas en el escritorio</h2>
+  <p class="sub">El titular es el encargo; el botón genera ese mismo entregable. La pregunta entera sigue en el detalle de la tarjeta, como ahora.</p>
+  <div class="desk">
+    <div class="desk-top"><i></i><i></i><i></i></div>
+    <div class="desk-in">
+      <div class="kk">Tu plan de esta semana</div>
+      <div class="dcards">
+        <div class="dcard"><span class="k">En tu web · IA</span><div class="t">Añade un dato con fecha y fuente a /tarifas</div><div class="c">¿Cuánto cuesta un plan de telefonía móvil con datos ilimitados y llamadas?</div><div class="m"><span class="pts">+6 pt</span><span>Esfuerzo bajo</span></div><button class="btn" type="button">Generar bloque citable</button></div>
+        <div class="dcard"><span class="k">En tu web · Google</span><div class="t">Enlaza /tarifas desde /blog y /ofertas</div><div class="c">Con el texto «tarifa móvil datos ilimitados» · hoy puesto 12</div><div class="m"><span>Puesto en Google</span></div><button class="btn" type="button">Ver los pasos</button></div>
+        <div class="dcard"><span class="k">En tu web · IA</span><div class="t">Sube esta FAQ a tu web</div><div class="c">Responde 6 preguntas informativas</div><div class="m"><span class="pts">+1 pt</span><span>Esfuerzo bajo</span></div><button class="btn" type="button">Generar FAQ</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Todos los titulares, antes y después</h2>
+  <p class="sub">Cuando sabemos la página (porque la auditoría de cobertura la encontró), el titular la nombra; si no, se dice «tu web». El número gris es la longitud con una ruta de ejemplo.</p>
+  <div class="tbl-wrap">
+  <table>
+    <thead><tr><th>Cuándo sale</th><th>Antes</th><th>Después</th><th>Línea de contexto</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="4">En tu web</td></tr>
+      <tr><td class="when">La IA no te nombra en las preguntas de un tema</td><td class="before"><s>Una guía que responda a tus preguntas de «Precios»</s></td><td class="after">Publica una página con tus preguntas de «Precios»<span class="len">48</span><br><span style="font-weight:400;color:var(--ink-3)">si ya existe: Añade estas preguntas a /precios</span></td><td class="ctx">4 preguntas en las que la IA no te nombra</td></tr>
+      <tr><td class="when">Lo mismo, preguntas sin tema</td><td class="before"><s>Una guía que responda a tus otras preguntas</s></td><td class="after">Publica una página con tus otras preguntas<span class="len">42</span></td><td class="ctx">3 preguntas sin tema</td></tr>
+      <tr><td class="when">Preguntas de definición</td><td class="before"><s>Define en tu web los términos que te preguntan</s></td><td class="after">Añade las definiciones al inicio de tu página<span class="len">44</span></td><td class="ctx">«qué es la portabilidad», «qué es eSIM»</td></tr>
+      <tr><td class="when">Una sola pregunta sin respuesta (Visión general, informe, campana)</td><td class="before"><s>Aparece en "¿Qué tarifa móvil tiene mejor cobertura…"</s></td><td class="after">Publica una página que responda esta pregunta<span class="len">45</span></td><td class="ctx">¿Qué tarifa móvil tiene mejor cobertura en zonas rurales?</td></tr>
+      <tr><td class="when">Te nombra pero no cita tu web</td><td class="before"><s>Consigue que te citen en "¿Cuánto cuesta un plan de telefonía móvil con datos ilimitados y ll…"</s></td><td class="after">Añade un dato con fecha y fuente a /tarifas<span class="len">43</span></td><td class="ctx">¿Cuánto cuesta un plan de telefonía móvil con datos ilimitados y llamadas?</td></tr>
+      <tr><td class="when">Un rival sale donde tú no</td><td class="before"><s>Disputa a Cuentix 3 consultas donde no apareces</s></td><td class="after">Publica tu comparativa con Cuentix<span class="len">34</span></td><td class="ctx">Cuentix sale en 3 preguntas y tú no</td></tr>
+      <tr><td class="when">Lo mismo, sin un rival concreto</td><td class="before"><s>Recorta la distancia con tus competidores</s></td><td class="after">Publica una página para tu pregunta más comercial<span class="len">48</span></td><td class="ctx">Tus rivales salen en 5 preguntas y tú no</td></tr>
+      <tr><td class="when">Preguntas de comparación sin ti</td><td class="before"><s>Publica una comparativa: 4 consultas la piden</s></td><td class="after">Publica una comparativa con tabla y tus rivales<span class="len">46</span></td><td class="ctx">4 preguntas de comparación</td></tr>
+      <tr><td class="when">Consultas informativas que rinden poco</td><td class="before"><s>Añade un bloque de preguntas y respuestas</s></td><td class="after">Sube esta FAQ a tu web<span class="len">22</span></td><td class="ctx">Responde 6 preguntas informativas</td></tr>
+      <tr><td class="when">La IA no sabe a qué te dedicas</td><td class="before"><s>Explica mejor a qué se dedica tu marca</s></td><td class="after">Reescribe la primera frase de tu portada<span class="len">40</span></td><td class="ctx">Qué haces, para quién y dónde</td></tr>
+      <tr><td class="when">La IA da datos viejos de ti</td><td class="before"><s>Actualiza los datos que la IA da por viejos</s></td><td class="after">Actualiza el dato viejo y pon fecha en la página<span class="len">48</span></td><td class="ctx">«precio desde 2022» en 2 respuestas</td></tr>
+      <tr><td class="when">La IA habla mal de ti</td><td class="before"><s>Responde a la imagen negativa que da la IA de ti</s></td><td class="after">Publica una página que responda a las críticas<span class="len">46</span></td><td class="ctx">La IA repite: permanencia, atención al cliente</td></tr>
+      <tr><td class="when">Una búsqueda de Google en la página 2</td><td class="before"><s>Lleva «tarifa móvil datos ilimitados sin permanencia» a la primera página de Google</s></td><td class="after">Enlaza /tarifas desde /blog y /ofertas<span class="len">38</span><br><span style="font-weight:400;color:var(--ink-3)">sin páginas que enlacen: Responde a esta búsqueda al inicio de /tarifas</span></td><td class="ctx">Con el texto «tarifa móvil datos ilimitados…» · hoy puesto 12</td></tr>
+      <tr><td class="when">Te ven en Google pero no entran</td><td class="before"><s>Mejora el título de /tarifas: la ven 1.240 veces y entra el 0,8%</s></td><td class="after">Reescribe el título y la descripción de /tarifas<span class="len">48</span></td><td class="ctx">Entra el 0,8% de quienes te ven</td></tr>
+
+      <tr class="grp"><td colspan="4">Ficheros de tu web (franja de prioridad)</td></tr>
+      <tr><td class="when">Tu robots.txt bloquea bots de IA</td><td class="before"><s>Tu web bloquea a GPTBot y ClaudeBot</s></td><td class="after">Permite GPTBot y ClaudeBot en tu robots.txt<span class="len">43</span></td><td class="ctx">Sin acceso no pueden leerte ni citarte</td></tr>
+      <tr><td class="when">Páginas con noindex</td><td class="before"><s>2 de tus páginas no se pueden indexar</s></td><td class="after">Quita la etiqueta noindex de 2 páginas<span class="len">38</span></td><td class="ctx">/tarifas, /ofertas</td></tr>
+      <tr><td class="when">Páginas con nosnippet</td><td class="before"><s>Una de tus páginas prohíbe mostrar fragmentos</s></td><td class="after">Quita nosnippet de /precios<span class="len">27</span></td><td class="ctx">Sin fragmento no hay cita</td></tr>
+
+      <tr class="grp"><td colspan="4">Fuera de tu web (el titular nombra a quién escribir)</td></tr>
+      <tr><td class="when">Comparadores que cita la IA</td><td class="before"><s>Entra en los 2 comparadores que cita la IA</s></td><td class="after">Escribe a guiapymes.es para que te incluya<span class="len">42</span></td><td class="ctx">También: softwarepyme.net</td></tr>
+      <tr><td class="when">Foros, vídeos y redes que cita la IA</td><td class="before"><s>Participa en las 3 comunidades que cita la IA</s></td><td class="after">Responde en el hilo de foroautonomos.es<span class="len">39</span><br><span style="font-weight:400;color:var(--ink-3)">vídeo: Comenta en el vídeo de youtube.com</span></td><td class="ctx">«¿Qué programa de facturación usáis?»</td></tr>
+      <tr><td class="when">Medios que cita la IA</td><td class="before"><s>Consigue cobertura en 2 medios que cita la IA</s></td><td class="after">Ofrece un dato propio a cincodias.elpais.com<span class="len">44</span></td><td class="ctx">También: revistaempresa.es</td></tr>
+      <tr><td class="when">Otras webs que cita la IA</td><td class="before"><s>Consigue que 3 webs que cita la IA te mencionen</s></td><td class="after">Escribe a gestoriahoy.es para que te mencione<span class="len">45</span></td><td class="ctx">También: comparasaas.es y 1 más</td></tr>
+
+      <tr class="grp"><td colspan="4">Aquí en GenScore</td></tr>
+      <tr><td class="when">Una marca que no sigues aparece a menudo</td><td class="before">Añade Kontaro a tus competidores</td><td class="after">Añade Kontaro a tus competidores<span class="same">sin cambio</span></td><td class="ctx">La IA la nombra en 4 respuestas</td></tr>
+      <tr><td class="when">Una búsqueda de Google que no vigilas en la IA</td><td class="before"><s>«qué es la portabilidad»</s></td><td class="after">Añade esta búsqueda a tus prompts<span class="len">33</span></td><td class="ctx">«qué es la portabilidad»</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<section class="note">
+  <h2>Lo que deja de existir</h2>
+  <ul>
+    <li><b>«Adelanta a Cuentix: sales después en N respuestas».</b> Te nombran, pero después de un rival. El orden lo decide la IA y no hay un entregable que lo cambie; lo único que proponía era «compara tu página con la suya». El dato sigue visible en Competidores (puesto medio).</li>
+    <li><b>«Repite lo que ya te funciona en N consultas».</b> Pedía mirar qué tienen en común tus páginas buenas. Es un análisis, no una tarea.</li>
+    <li>Las tarjetas de esos dos tipos que ya existen se ocultan al momento en el plan, Recomendaciones, Visión general, el informe y la campana. No se borra nada.</li>
+  </ul>
+</section>
+
+<section class="note">
+  <h2>Cómo lo implementaría</h2>
+  <ul>
+    <li>Un solo sitio decide el titular y la línea de contexto de cada tipo, y lo leen el plan de Visión general, las tarjetas, el informe, la campana y el resumen semanal.</li>
+    <li>Las tarjetas ya guardadas cambian al momento: el titular se calcula al pintar con lo que ya trae cada recomendación (página, pregunta, rival, fuentes), sin esperar al siguiente escaneo y sin migración.</li>
+    <li>Lo coordino con la consola nueva que se está montando, para que use estos titulares en vez de duplicarlos.</li>
+  </ul>
+</section>
+</div>

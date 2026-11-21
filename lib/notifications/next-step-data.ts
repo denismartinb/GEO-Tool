@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, overlayForHeadline, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import { computeRecommendationPotentialPoints, type ScoreInputRow } from "@/lib/scoring/run-scoring";
@@ -6,6 +7,44 @@ import { isAlreadyCovered } from "@/lib/recommendations/coverage-overlay";
 import { loadCoverageOverlays } from "@/lib/recommendations/coverage-overlay-data";
 import type { AuthenticatedContext } from "@/lib/auth";
 import type { NextStepNotice } from "@/lib/notifications/next-step";
+import { blockerTitle, findCitationBlockers, joinNames } from "@/lib/recommendations/citation-blockers";
+import type { BotAccessReport } from "@/lib/web-audit/robots";
+
+/**
+ * GEO-ALERTS-1 (log §440): an engine blocked by the server or by robots.txt
+ * outranks the plan. Only the latest audit snapshot's bots are read (RLS:
+ * the owner's own row). Page blockers (noindex, nosnippet) stay on the plan's
+ * screen; the bell names the one thing that stops a whole engine.
+ */
+async function botBlockerNotice(
+  supabase: AuthenticatedContext["supabase"],
+  project: { id: string; domain: string }
+): Promise<NextStepNotice | null> {
+  const { data } = await supabase
+    .from("web_audit_snapshots")
+    .select("bots")
+    .eq("project_id", project.id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const bots = (data as { bots?: BotAccessReport | null } | null)?.bots ?? null;
+  const blocker = findCitationBlockers({ bots, pages: null }).find((b) => b.kind === "server" || b.kind === "bots");
+  if (!blocker || (blocker.kind !== "server" && blocker.kind !== "bots")) return null;
+  const names = joinNames(blocker.agents);
+  const many = blocker.agents.length > 1;
+  const body =
+    blocker.kind === "server"
+      ? `Tu robots.txt ${many ? "los" : "lo"} permite, pero el servidor ${many ? "los" : "lo"} bloquea. Mientras siga así, ${names} no ${many ? "pueden" : "puede"} citarte.`
+      : `Es una línea de tu robots.txt. Mientras siga así, ${names} no ${many ? "pueden" : "puede"} leer ni citar tu web.`;
+  return {
+    projectId: project.id,
+    domain: project.domain,
+    recommendationId: `blocker:${blocker.kind}`,
+    title: blockerTitle(blocker),
+    potentialPoints: null,
+    blocker: { body }
+  };
+}
 
 type RecRow = {
   id: string;
@@ -42,6 +81,9 @@ export async function getNextStepNotice(
   project: { id: string; domain: string }
 ): Promise<NextStepNotice | null> {
   try {
+    const blocked = await botBlockerNotice(supabase, project);
+    if (blocked) return blocked;
+
     const { data: run } = await supabase
       .from("scan_runs")
       .select("id")
@@ -78,7 +120,10 @@ export async function getNextStepNotice(
       projectDomain: project.domain,
       recs: activeRecs
     });
-    const recs = activeRecs.filter((r) => !isAlreadyCovered(r.recommendation_type, overlays.get(r.id)));
+    // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
+    const recs = activeRecs.filter(
+      (r) => !isRetiredRecommendationType(r.recommendation_type) && !isAlreadyCovered(r.recommendation_type, overlays.get(r.id))
+    );
     if (recs.length === 0) return null;
 
     const results = ((resultRows ?? []) as ScoreInputRow[]).map((r) => ({
@@ -101,7 +146,7 @@ export async function getNextStepNotice(
       projectId: project.id,
       domain: project.domain,
       recommendationId: first.id,
-      title: first.title,
+      title: recommendationHeadline(first, overlayForHeadline(overlays.get(first.id))).title,
       potentialPoints: first.potentialPoints
     };
   } catch (error) {

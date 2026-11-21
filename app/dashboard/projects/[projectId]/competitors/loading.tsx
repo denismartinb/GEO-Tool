@@ -1,15 +1,23 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Sk, SkCard, SkHead, SkPage, SkRows } from "@/components/ins/skeleton";
 
+/** Competidores while it loads (log §399): the ranking card with its five rows. */
 export default function CompetitorsLoading() {
   return (
-    <div className="page">
-      <Skeleton width={90} height={12} style={{ marginBottom: 8 }} />
-      <Skeleton width={240} height={22} style={{ marginBottom: 24 }} />
-      <div className="card" style={{ padding: 16, display: "grid", gap: 12 }}>
-        {[0, 1, 2, 3].map((i) => (
-          <Skeleton key={i} height={64} />
-        ))}
-      </div>
-    </div>
+    <SkPage>
+      <SkHead action lead={2} />
+
+      <SkCard style={{ marginTop: 32 }}>
+        <div className="sk-h">
+          <Sk w={70} h={13} className="strong" />
+          <Sk w={130} h={11} className="sk-hide-m" />
+        </div>
+        <SkRows n={5} lead="num" />
+      </SkCard>
+
+      <SkCard style={{ marginTop: 16 }}>
+        <Sk w={150} h={14} className="strong" />
+        <Sk w="100%" h={180} style={{ borderRadius: 12 }} />
+      </SkCard>
+    </SkPage>
   );
 }

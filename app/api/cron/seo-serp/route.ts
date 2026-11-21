@@ -10,8 +10,8 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 /**
- * SEO-TRACK-1 (log §345, §346). Every 10 minutes ("*\/10 * * * *",
- * `vercel.json`): the weekly Google Top 20 of every tracked keyword, from
+ * SEO-TRACK-1 (log §345, §346). Every 10 minutes ("*\/10 * * * *", pg_cron,
+ * migration 0045, log §347): the weekly Google Top 20 of every tracked keyword, from
  * DataForSEO. Each pass takes what is still pending for the week (new
  * keywords, or all of them once a new week starts on Monday UTC); a pass with
  * nothing pending makes no provider call. Writes are idempotent per keyword

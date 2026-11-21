@@ -561,7 +561,9 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
 
   it("«Más adelante» no repite las tarjetas del plan", () => {
     const recs = [
-      baseRec({ id: "plan1", title: "Acción del plan" }),
+      // RECS-HEADLINES-1 (log §354): the headline comes from the type, so the
+      // card is found by its context line (the question it is about).
+      baseRec({ id: "plan1", evidence_json: { affected_prompts: ["Acción del plan"] } }),
       baseRec({ id: "later1", title: "Otra cosa", recommendation_type: "add_citation_block" })
     ];
     const html = renderToStaticMarkup(
@@ -570,7 +572,7 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
     expect(html).toContain("Tu plan de esta semana");
     expect(html).toContain("Más adelante");
     expect(html).not.toContain("Alta prioridad</button>");
-    expect(html.split("Acción del plan").length - 1).toBe(1);
+    expect(html.split('class="rec-context" title="Acción del plan"').length - 1).toBe(1);
     // Only the non-plan type gets a group row.
     expect(html).toContain(labelForType("add_citation_block"));
     expect(html.split('class="rec2-group"').length - 1).toBe(1);
@@ -579,8 +581,8 @@ describe("RECS-SHORT-CARD-1 — tarjeta corta y dos confianzas (log §303)", () 
 
 describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §307)", () => {
   const three = [
-    baseRec({ id: "a", title: "Primera IA" }),
-    baseRec({ id: "b", title: "Segunda IA", recommendation_type: "add_citation_block" }),
+    baseRec({ id: "a", evidence_json: { affected_prompts: ["Primera IA"] } }),
+    baseRec({ id: "b", recommendation_type: "add_citation_block", evidence_json: { affected_prompts: ["Segunda IA"] } }),
     baseRec({ id: "c", title: "Tercera IA", recommendation_type: "create_faq_section" })
   ];
 
@@ -608,9 +610,9 @@ describe("RECS-ONE-QUEUE-1 — una sola cola de IA y Google (log §307)", () => 
         googleLaterSlot={<div id="row-google">fila</div>}
       />
     );
-    const first = html.indexOf("Primera IA");
+    const first = html.indexOf(">Primera IA<");
     const slot = html.indexOf('id="slot-google"');
-    const second = html.indexOf("Segunda IA");
+    const second = html.indexOf(">Segunda IA<");
     expect(first).toBeLessThan(slot);
     expect(slot).toBeLessThan(second);
     // The second AI card is number 3 now, and the third left the plan.
@@ -675,8 +677,8 @@ describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
 
   it("pinta una tarjeta por tema y ninguna «Aparece en…» suelta", () => {
     expect(html).not.toContain("Aparece en");
-    expect(html.split("Una guía que responda a tus preguntas de «Cómo hacer»").length - 1).toBe(1);
-    expect(html).toContain("Define en tu web los términos que te preguntan");
+    expect(html.split("Publica una página sobre «Cómo hacer»").length - 1).toBe(1);
+    expect(html).toContain("Añade las definiciones al inicio de tu página");
   });
 
   it("lleva dentro sus preguntas, con su antigüedad, y una sola cifra", () => {
@@ -695,8 +697,8 @@ describe("una tarjeta por palanca (RECS-ONE-LEVER-1)", () => {
 
   it("entra en el plan con su número de puesto", () => {
     const planPart = html.slice(0, html.indexOf("Más adelante"));
-    expect(planPart).toContain("Una guía que responda a tus preguntas de «Cómo hacer»");
-    expect(planPart).not.toContain("Define en tu web");
+    expect(planPart).toContain("Publica una página sobre «Cómo hacer»");
+    expect(planPart).not.toContain("Añade las definiciones");
   });
 });
 

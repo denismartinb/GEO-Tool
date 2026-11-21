@@ -69,6 +69,24 @@ export const AGENTIC_CHECK_LIMITS: PublicCheckLimits = {
   perDomainPerDay: 5
 };
 
+/**
+ * MCP-SERVER-1 (log §418): `revisar_pagina`, the MCP tool that runs the
+ * Chrome extension's page review on the server. No LLM either: the ceiling
+ * bounds requests to third-party sites. Its callers come through Claude's and
+ * ChatGPT's servers, whose addresses many people share, so the second key is
+ * the account (or that shared address), with a higher ceiling than a browser.
+ */
+export const MCP_PAGE_CHECK_ENGINE = "mcp_page";
+
+export const MCP_PAGE_CHECK_LIMITS: PublicCheckLimits = {
+  globalPerDay: 1000,
+  perIpPerDay: 60,
+  perDomainPerDay: 20
+};
+
+/** Mirrors `lib/studies/study-api-cap.ts` (kept literal: that module is server-only). */
+const STUDY_API_ENGINE = "study_api";
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_PREFIX = "[geo:free-checker-rate-limit]";
 
@@ -94,7 +112,7 @@ export type PublicCheckLimitDeps = {
    * Qué filas cuentan. Sin valor, las del comprobador de ChatGPT (todo lo que
    * no sea agéntico); con `AGENTIC_CHECK_ENGINE`, sólo las agénticas.
    */
-  engine?: typeof AGENTIC_CHECK_ENGINE;
+  engine?: typeof AGENTIC_CHECK_ENGINE | typeof MCP_PAGE_CHECK_ENGINE;
 };
 
 /**
@@ -160,7 +178,12 @@ export async function checkPublicCheckLimits(
       .from("public_checks")
       .select("id", { count: "exact", head: true })
       .gte("created_at", windowStart);
-    query = deps.engine ? query.eq("engine", deps.engine) : query.neq("engine", AGENTIC_CHECK_ENGINE);
+    // STUDY-API-1: the internal study API keeps its own ceiling rows in this
+    // table (`lib/studies/study-api-cap.ts`); they must not eat the public
+    // checker's global ceiling or its per-domain count.
+    query = deps.engine
+      ? query.eq("engine", deps.engine)
+      : query.not("engine", "in", `(${AGENTIC_CHECK_ENGINE},${STUDY_API_ENGINE},${MCP_PAGE_CHECK_ENGINE})`);
     if (column && value !== undefined) query = query.eq(column, value);
     return query;
   };

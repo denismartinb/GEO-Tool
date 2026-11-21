@@ -15,7 +15,7 @@ export const metadata: Metadata = contentMetadata({
 
 export default function PrivacidadPage() {
   return (
-    <LegalPageShell title="Política de Privacidad" updated="9 de octubre de 2026" activeHref="/privacidad">
+    <LegalPageShell title="Política de Privacidad" updated="30 de octubre de 2026" activeHref="/privacidad">
       <h2>Responsable del tratamiento</h2>
       <p>
         El responsable del tratamiento de los datos personales recogidos a través de GenScore es{" "}
@@ -68,16 +68,65 @@ export default function PrivacidadPage() {
         antes nos pidas borrarlos.
       </p>
 
+      <h2>Extensión de Chrome</h2>
+      <p>
+        La extensión de GenScore para Chrome revisa la página que tienes abierta cuando pulsas su
+        icono o su atajo de teclado, o cada página que visitas si activas la revisión automática.
+        Esa revisión se hace en tu navegador: el contenido de la página, su robots.txt y su
+        llms.txt se leen desde tu equipo y no se envían a GenScore. El último resultado de cada
+        pestaña y tus preferencias del panel se guardan en tu navegador. Para enseñarte cómo cambia
+        una página entre visitas, la extensión guarda en tu navegador su dirección, la nota y los
+        arreglos pendientes de cada revisión (como mucho las últimas doce de 300 páginas), y nunca
+        los envía a GenScore. Para comparar lo que ves con lo que lee la IA, vuelve a pedir la página
+        abierta sin tu sesión, también desde tu equipo. El informe de una página, con su captura, se
+        prepara en tu navegador y se borra al cerrar Chrome.
+      </p>
+      <p>
+        Si has iniciado sesión en genscore.es, la extensión usa esa misma sesión para mostrarte tu
+        cuenta en solo lectura: tu email, tu plan, tus dominios y sus resultados. Cuando la página
+        abierta pertenece a uno de tus dominios, envía su dirección a GenScore para mostrarte qué
+        preguntas la citan. Estos datos se tratan para prestarte el servicio (art. 6.1.b RGPD). La
+        extensión no guarda contraseñas, no vende datos y no los usa para publicidad ni para fines
+        distintos de su función.
+      </p>
+      <p>
+        El uso de la información que trata esta extensión se rige por la Política de datos de
+        usuario de Chrome Web Store, incluidos sus requisitos de uso limitado (Limited Use).
+      </p>
+
+      <h2>Apps conectadas (Claude, ChatGPT y otros clientes MCP)</h2>
+      <p>
+        Puedes conectar tu cuenta de GenScore a Claude, ChatGPT u otra aplicación compatible con
+        el protocolo MCP. Al conectarla, una pantalla de GenScore te dice qué aplicación pide
+        acceso y a qué cuenta, y solo se conecta si pulsas Permitir. La aplicación recibe un
+        permiso de solo lectura: puede consultar tus dominios y sus resultados (Puntuación GEO,
+        recomendaciones, competidores, auditorías y, si lo has conectado, tus datos de Search
+        Console) para responder a lo que preguntas en el chat. No puede cambiar nada de tu cuenta,
+        lanzar escaneos ni ver tu facturación. GenScore no guarda tus conversaciones ni las
+        preguntas que hace la aplicación; registramos solo qué herramienta se usó, para medir el
+        uso del servicio. Estos datos se tratan para prestarte el servicio que has pedido (art.
+        6.1.b RGPD). Lo que la aplicación haga después con las respuestas se rige por la política
+        de privacidad de esa aplicación.
+      </p>
+      <p>
+        La herramienta de revisar una página funciona también sin cuenta: lee desde los servidores
+        de GenScore la página pública que indiques, su robots.txt y su llms.txt, y no sigue sus
+        enlaces. Para limitar el uso guardamos el dominio revisado y un identificador
+        cifrado de quien lo pide, nunca la dirección IP en claro. Puedes desconectar una aplicación
+        en cualquier momento en Ajustes, pestaña Cuenta, apartado Apps conectadas.
+      </p>
+
       <h2>A quién comunicamos tus datos (encargados del tratamiento)</h2>
       <p>Para prestar el servicio, algunos datos se comparten con los siguientes proveedores, que actúan como encargados del tratamiento:</p>
       <ul>
         <li><strong>Supabase</strong> (base de datos y autenticación de usuarios), infraestructura ubicada en la Unión Europea.</li>
         <li><strong>Vercel</strong> (alojamiento y ejecución de la aplicación).</li>
+        <li><strong>Cloudflare (Browser Run)</strong>: abre con un navegador las páginas públicas de tu web que ya revisa la auditoría técnica, para comparar lo que ve una persona con lo que recibe la IA. Sólo recibe la dirección de esas páginas; no recibe datos de tu cuenta. Este proveedor puede tratar datos fuera del Espacio Económico Europeo.</li>
         <li><strong>Google (Gemini API)</strong> — procesa los prompts de tu proyecto para simular y analizar respuestas de IA. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Anthropic (Claude API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>OpenAI (ChatGPT API)</strong> — procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>Perplexity (Perplexity API)</strong> — en los planes Pro y Agencia, procesa los prompts de tu proyecto como motor adicional de escaneo, con búsqueda web para obtener fuentes citadas. Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
-        <li><strong>Resend</strong> — envía los correos de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba), los avisos que tengas activados y las comunicaciones comerciales descritas arriba.</li>
+        <li><strong>Resend</strong> — envía los correos de tu cuenta (bienvenida, confirmación de plan contratado, avisos de facturación y de tu periodo de prueba), los avisos que tengas activados y las comunicaciones comerciales descritas arriba. Para saber qué correos son útiles, Resend nos indica si un correo se entregó, se abrió o se pulsó un enlace; de eso guardamos solo el tipo de correo, el evento y la fecha, nunca tu dirección ni el enlace.</li>
         <li><strong>Stripe</strong> — procesa los pagos de tu suscripción (datos de facturación y de tu tarjeta; nunca almacenamos ni vemos el número completo de tu tarjeta, lo gestiona Stripe directamente). Este proveedor está ubicado fuera del Espacio Económico Europeo.</li>
         <li><strong>PostHog</strong> (infraestructura en la Unión Europea) — analítica de producto para entender el uso de la aplicación. Las visitas se miden sin cookies y sin identificarte entre sesiones ni dispositivos. Si tienes cuenta, además registramos cuatro hitos (alta, escaneo completado, inicio de pago y pago) asociados a tu identificador interno de cuenta, nunca a tu email, para saber cuántas personas completan cada paso.</li>
         <li><strong>Sentry</strong> — monitorización de errores técnicos de la aplicación, para detectar y corregir fallos.</li>

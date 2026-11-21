@@ -58,7 +58,8 @@ describe("GooglePlanCard — la tarjeta de Google dentro del plan", () => {
     expect(html).toContain('class="rec2-rank">2<');
     expect(html).toContain("rec2-src rec2-src-g");
     expect(html).toContain("Subir a la página 1");
-    expect(html).toContain("Lleva «aparecer en chatgpt» a la primera página de Google");
+    // RECS-HEADLINES-1 (log §354): the change to make, never the place to reach.
+    expect(html).toContain("Enlaza /blog/aparecer desde tus otras páginas");
     expect(html).toContain("12º");
     expect(html).toContain("Puesto en Google");
     expect(html).not.toContain(" pt<");
@@ -84,7 +85,7 @@ describe("GooglePlanCard — la tarjeta de Google dentro del plan", () => {
 
   it("el título compara con las búsquedas de la propia web, nunca con una curva del sector", () => {
     const html = card(snippet);
-    expect(html).toContain("Mejora el título de /precios: la ven 11.240 veces y entra el 0,8%");
+    expect(html).toContain("Reescribe título y descripción de /precios");
     expect(html).toContain("Tus otras búsquedas en los puestos 4 a 10 entran alrededor del 10,0%");
     expect(planCopy(snippet as Parameters<typeof planCopy>[0]).metricLabel).toBe("Entran en Google");
   });
@@ -94,7 +95,8 @@ describe("GoogleLaterCard — la fila «Con tus datos de Google»", () => {
   it("la tarjeta de título nombra la búsqueda y su puesto", () => {
     const html = later(snippet, true);
     expect(html).toContain("Título y descripción");
-    expect(html).toContain("«precio herramienta geo»: puesto 3 y pocos clics");
+    expect(html).toContain("Reescribe título y descripción de /precios");
+    expect(html).toContain("«precio herramienta geo», puesto 3");
     expect(html).toContain("Marcar como hecho");
     expect(html).toContain('class="grec-quiet"');
   });
@@ -114,7 +116,8 @@ describe("GoogleLaterCard — la fila «Con tus datos de Google»", () => {
 
   it("si la página 1 acaba en la fila, dice desde dónde enlazar", () => {
     const html = later(push);
-    expect(html).toContain("«aparecer en chatgpt»: puesto 12");
-    expect(html).toContain("Enlaza /blog/aparecer desde tu Home y /blog/que-es-geo");
+    expect(html).toContain("«aparecer en chatgpt», puesto 12");
+    expect(html).toContain("Enlaza /blog/aparecer desde tus otras páginas");
+    expect(html).toContain("Enlázala desde tu Home y /blog/que-es-geo");
   });
 });

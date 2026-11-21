@@ -86,6 +86,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   NEXT_PUBLIC_SUPABASE_ANON_KEY: "sin esto no hay cliente de Supabase: ninguna página autenticada carga",
   SUPABASE_SERVICE_ROLE_KEY: "las tareas que saltan RLS (cron, webhooks, admin) fallan",
   NEXT_PUBLIC_SITE_URL: "las URLs absolutas caen a VERCEL_URL y luego a localhost; la auto-continuación del escaneo puede apuntar a un despliegue viejo",
+  OPENAI_APPS_CHALLENGE_TOKEN: "/.well-known/openai-apps-challenge da 404 y OpenAI no puede verificar el dominio para el directorio de ChatGPT",
+  ANDROID_SHA256_CERT_FINGERPRINTS: "la app de Android no verifica el dominio y Chrome enseña su barra de direcciones dentro de ella",
   NEXT_PUBLIC_POSTHOG_KEY: "no se envía analítica de producto",
   NEXT_PUBLIC_POSTHOG_HOST: "la analítica se envía al host por defecto (UE)",
   POSTHOG_PERSONAL_API_KEY: "/admin/panel no puede leer visitas, canales ni web vitals de PostHog",
@@ -113,6 +115,8 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   PERPLEXITY_MODEL: "se usa perplexity/sonar, fijado en código",
   PUBLIC_CHECK_IP_SALT:
     "el comprobador gratuito anónimo deja de comprobar y cae a captar el dominio — a propósito: sin sal, hashear la IP no la protege",
+  STUDY_API_SECRET: "la API interna de estudios (/api/internal/study) rechaza todo con 401: las rutinas de captación no pueden lanzar estudios",
+  STUDY_API_DAILY_CAP: "la API interna de estudios usa el techo diario por defecto de 600 llamadas fijado en código",
   LLM_SCAN_PROVIDERS: "el escaneo cae a Gemini en solitario",
   LLM_SCAN_PROVIDER: "legacy: sólo se lee si LLM_SCAN_PROVIDERS no está",
   ENABLE_SYNC_SCAN_EXECUTION: "el escaneo síncrono no se ejecuta",
@@ -125,10 +129,13 @@ export const ENV_CONSEQUENCE: Record<string, string> = {
   CRON_DIGEST_ENABLED: "interruptor del resumen por correo; apagado por defecto",
   LIFECYCLE_EMAILS_ENABLED:
     "interruptor de los correos de la prueba (primer escaneo listo, D1, D3, D5); apagado por defecto, y sin EMAIL_UNSUBSCRIBE_SECRET no se envían aunque esté encendido",
+  FEATURE_EMAILS_ENABLED:
+    "interruptor de los correos de funcionalidades (Search Console, auditoría agéntica, extensión); apagado por defecto y sólo vale con LIFECYCLE_EMAILS_ENABLED",
   AUTO_WEB_AUDIT_ENABLED: "interruptor de la auditoría automática; encendido por defecto",
   OPS_ALERT_EMAIL: "los avisos de operador no se envían a nadie",
   RESEND_API_KEY: "no se envía ningún correo transaccional",
   RESEND_FROM_EMAIL: "se usa el remitente compartido de pruebas de Resend",
+  RESEND_WEBHOOK_SECRET: "el webhook de Resend responde 503 y no se guardan entregas, aperturas ni clics",
   EMAIL_UNSUBSCRIBE_SECRET:
     "los correos no llevan enlace de baja en un clic (los avisos caen al pie de Ajustes) y los de consejos y ofertas no se envían",
   STRIPE_SECRET_KEY: "no se puede cobrar ni abrir el portal de cliente",
@@ -171,6 +178,8 @@ export const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_ANON_KEY: optionalText,
   SUPABASE_SERVICE_ROLE_KEY: optionalText,
   NEXT_PUBLIC_SITE_URL: optionalText,
+  OPENAI_APPS_CHALLENGE_TOKEN: optionalText,
+  ANDROID_SHA256_CERT_FINGERPRINTS: optionalText,
   NEXT_PUBLIC_POSTHOG_KEY: optionalText,
   NEXT_PUBLIC_POSTHOG_HOST: optionalText,
   POSTHOG_PERSONAL_API_KEY: optionalText,
@@ -198,6 +207,8 @@ export const envSchema = z.object({
   PERPLEXITY_API_KEY: optionalText,
   PERPLEXITY_MODEL: optionalText,
   PUBLIC_CHECK_IP_SALT: optionalText,
+  STUDY_API_SECRET: optionalText,
+  STUDY_API_DAILY_CAP: optionalText,
   LLM_SCAN_PROVIDERS: optionalText,
   LLM_SCAN_PROVIDER: optionalText,
 
@@ -211,11 +222,13 @@ export const envSchema = z.object({
   CRON_SCANS_ENABLED: optInFlag,
   CRON_DIGEST_ENABLED: optInFlag,
   LIFECYCLE_EMAILS_ENABLED: optInFlag,
+  FEATURE_EMAILS_ENABLED: optInFlag,
   AUTO_WEB_AUDIT_ENABLED: optOutFlag,
 
   OPS_ALERT_EMAIL: optionalText,
   RESEND_API_KEY: optionalText,
   RESEND_FROM_EMAIL: optionalText,
+  RESEND_WEBHOOK_SECRET: optionalText,
   EMAIL_UNSUBSCRIBE_SECRET: optionalText,
 
   STRIPE_SECRET_KEY: optionalText,

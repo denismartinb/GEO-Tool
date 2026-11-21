@@ -1,0 +1,179 @@
+<title>Panel en reposo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: three Chrome window corners side by side (toolbar + side panel), stacked on phones */
+:root{
+  --bg:#eef1f6; --chrome:#dfe3ea; --chrome-2:#ffffff; --chrome-ink:#5f6672;
+  --panel:#ffffff; --ink:#0b1426; --ink-2:#3b4759; --ink-3:#5f6b7e; --rule:#e3e7ee;
+  --blue:#2563eb; --blue-ink:#1b4fd6; --blue-tint:#ecf2ff; --cyan:#22c3e6;
+  --font:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0a0f1a; --chrome:#1f232b; --chrome-2:#2b3039; --chrome-ink:#aab1bd;
+  --panel:#0f1625; --ink:#eef2f8; --ink-2:#bcc6d6; --ink-3:#8c97aa; --rule:#222c3d;
+  --blue:#5b93ff; --blue-ink:#8db4ff; --blue-tint:#13224a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0a0f1a; --chrome:#1f232b; --chrome-2:#2b3039; --chrome-ink:#aab1bd;
+  --panel:#0f1625; --ink:#eef2f8; --ink-2:#bcc6d6; --ink-3:#8c97aa; --rule:#222c3d;
+  --blue:#5b93ff; --blue-ink:#8db4ff; --blue-tint:#13224a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:32px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1{font-size:22px;font-weight:700;letter-spacing:-.02em;margin:0 0 4px;text-wrap:balance}
+.sub{color:var(--ink-3);font-size:14px;margin:0 0 28px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:28px;justify-items:center}
+figure{margin:0;display:flex;flex-direction:column;gap:12px;width:100%;max-width:340px}
+figcaption{display:flex;gap:10px;align-items:baseline}
+figcaption b{font-size:15px}
+figcaption span{color:var(--ink-3);font-size:13px}
+.tag{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:7px;background:var(--blue-tint);color:var(--blue-ink);font-size:12px;font-weight:700;flex:none;transform:translateY(-1px)}
+
+/* the window corner */
+.win{width:100%;border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:0 1px 0 var(--rule),0 18px 40px -22px rgba(11,20,38,.45);border:1px solid var(--rule)}
+.tb{height:42px;background:var(--chrome);display:flex;align-items:center;gap:6px;padding:0 8px 0 10px}
+.url{flex:1;height:28px;border-radius:99px;background:var(--chrome-2);color:var(--chrome-ink);font-size:12px;display:flex;align-items:center;padding:0 12px;white-space:nowrap;overflow:hidden;min-width:0}
+.tbi{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;color:var(--chrome-ink);position:relative;flex:none}
+.tbi svg{display:block}
+.gsi{background:transparent}
+.badge{position:absolute;right:1px;bottom:2px;width:9px;height:9px;border-radius:50%;background:var(--blue);box-shadow:0 0 0 2px var(--chrome)}
+.badge::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:ping 1.8s var(--o,0s) infinite cubic-bezier(.2,.7,.3,1)}
+.avatar{width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#9aa4b3,#5f6b7e)}
+
+.panel{height:520px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:14px 16px 0;font-weight:700;font-size:15px}
+.ph .sp{flex:1}
+.enter{font-size:12.5px;font-weight:600;border:1px solid var(--rule);border-radius:99px;padding:6px 12px;color:var(--ink)}
+.body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:0 24px;text-align:center}
+.body h2{margin:0;font-size:20px;font-weight:700;letter-spacing:-.02em}
+.kbd{display:flex;gap:4px;align-items:center;color:var(--ink-3);font-size:12px}
+kbd{font-family:var(--font);font-size:11.5px;font-weight:600;color:var(--ink-2);border:1px solid var(--rule);border-bottom-width:2px;border-radius:6px;padding:2px 6px;background:var(--panel)}
+.auto{width:100%;padding:18px 16px 22px;border-top:1px solid var(--rule);display:flex;flex-direction:column;gap:8px;align-items:center}
+.rv{display:flex;align-items:center;gap:8px;width:100%;height:50px;border:0;border-radius:99px;padding:0 14px;color:#fff;font:600 13.5px/1 var(--font);white-space:nowrap;letter-spacing:-.01em;cursor:pointer;
+  background:radial-gradient(120% 160% at 0% 0%,#3b74ff 0%,rgba(59,116,255,0) 60%),linear-gradient(135deg,#1b4fd6,#0b1f5c);box-shadow:0 10px 26px -12px rgba(27,79,214,.75)}
+.rv span{flex:1;text-align:left}
+.rv:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+.tiny{margin:0;font-size:12px;color:var(--ink-3);line-height:1.45}
+.foot{display:flex;align-items:center;gap:8px;padding:0 16px 14px;font-size:12px;color:var(--ink-3)}
+.sw{width:26px;height:16px;border-radius:99px;background:var(--rule);position:relative}
+.sw::after{content:"";position:absolute;left:2px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--panel)}
+
+/* A · arrow */
+.arrowA{position:absolute;right:30px;top:4px;width:150px;height:62px;color:var(--blue);pointer-events:none}
+.arrowA path.l{stroke-dasharray:6 7;animation:dash 1.2s linear infinite}
+.arrowA g{animation:bob 1.6s ease-in-out infinite;transform-origin:center}
+.mini{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;background:var(--blue-tint);vertical-align:-8px;margin:0 2px}
+
+/* B · mini toolbar with a cursor */
+.minibar{position:relative;display:flex;align-items:center;gap:6px;width:190px;height:38px;padding:0 6px 0 10px;border-radius:12px;background:var(--chrome);}
+.minibar .u{flex:1;height:20px;border-radius:99px;background:var(--chrome-2)}
+.minibar .tbi{width:24px;height:24px}
+.minibar .hit{position:absolute;right:35px;top:7px;width:24px;height:24px;border-radius:50%;border:2px solid var(--blue);opacity:0;animation:hit 2.8s infinite}
+.cursor{position:absolute;right:20px;top:20px;width:18px;height:22px;animation:cur 2.8s infinite cubic-bezier(.4,0,.2,1)}
+.up{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--blue-ink)}
+
+/* C · beam from the top edge */
+.beam{position:absolute;right:-12px;top:-30px;width:110px;height:260px;pointer-events:none;
+  background:radial-gradient(50% 55% at 50% 0%,color-mix(in srgb,var(--blue) 30%,transparent),transparent 72%);animation:breathe 2.6s ease-in-out infinite}
+.chev{position:absolute;right:33px;top:10px;display:flex;flex-direction:column;align-items:center;color:var(--blue);pointer-events:none}
+.chev svg{display:block;margin-top:-6px;animation:rise 1.4s infinite}
+.chev svg:nth-child(2){animation-delay:.18s}.chev svg:nth-child(3){animation-delay:.36s}
+.lead{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--ink-2)}
+
+@keyframes ping{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.9);opacity:0}}
+@keyframes dash{to{stroke-dashoffset:-26}}
+@keyframes bob{0%,100%{transform:translate(0,0)}50%{transform:translate(4px,-6px)}}
+@keyframes cur{0%{transform:translate(30px,26px);opacity:0}15%{opacity:1}45%{transform:translate(0,0)}52%{transform:translate(0,0) scale(.86)}60%{transform:translate(0,0) scale(1)}85%{opacity:1}100%{transform:translate(0,0);opacity:0}}
+@keyframes hit{0%,48%{opacity:0;transform:scale(.6)}55%{opacity:1;transform:scale(1)}80%,100%{opacity:0;transform:scale(1.7)}}
+@keyframes breathe{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes rise{0%{opacity:0;transform:translateY(8px)}40%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important}.cursor{transform:none;opacity:1}.minibar .hit{opacity:1}.chev svg{opacity:1}}
+.note{max-width:62ch;color:var(--ink-3);font-size:13px;margin:32px 0 0;line-height:1.5}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs><symbol id="e-gs" viewBox="0 0 285 292"><path d="M63.50,191.00 L22.50,211.00 L21.25,213.25 L29.25,226.75 L46.00,246.50 L68.00,263.50 L80.00,270.50 L94.50,276.75 L98.00,276.75 L104.50,279.75 L109.00,279.75 L118.50,282.75 L128.00,282.75 L129.50,283.75 L152.25,283.75 L153.75,282.75 L162.25,282.75 L163.50,281.75 L163.75,276.50 L157.75,255.00 L157.75,250.50 L154.75,242.00 L154.75,237.50 L151.75,233.25 L134.75,234.00 L127.25,232.00 L121.75,232.00 L104.75,226.00 L90.25,216.75 L80.00,207.50 L67.25,191.00 L63.75,191.00 Z M157.50,124.00 L156.00,125.00 L150.50,125.00 L141.00,130.25 L138.25,133.00 L134.00,141.50 L133.00,146.50 L134.00,155.25 L137.25,162.75 L143.00,168.50 L149.50,171.75 L176.00,171.75 L177.50,172.75 L211.25,172.75 L216.00,171.75 L218.00,173.75 L218.00,177.00 L215.00,182.50 L214.00,188.00 L208.75,198.50 L201.75,207.50 L195.50,213.75 L183.50,222.75 L173.00,228.00 L165.50,230.00 L162.00,232.50 L164.00,245.25 L166.00,249.75 L167.00,258.25 L169.00,262.75 L172.00,278.25 L173.50,279.75 L178.25,279.75 L192.75,273.75 L195.25,273.75 L213.75,264.50 L235.25,246.75 L253.50,225.75 L254.00,223.25 L256.50,220.75 L257.00,218.25 L259.50,215.75 L262.75,209.25 L265.75,198.75 L268.75,194.25 L268.75,190.75 L271.75,184.25 L271.75,179.75 L274.75,172.25 L275.75,149.75 L276.75,148.25 L275.75,134.75 L276.75,132.50 L274.50,127.00 L270.25,124.00 L170.50,124.00 L169.00,125.00 L157.75,124.00 Z" transform="translate(3 3)" style="fill:var(--ink)" fill-rule="evenodd"/><path d="M23.50,70.00 L20.25,73.00 L8.00,100.50 L2.00,130.50 L2.00,157.25 L3.00,158.75 L3.00,165.25 L5.00,169.75 L9.00,189.25 L12.25,196.75 L16.50,202.75 L20.25,202.75 L29.75,197.75 L36.25,195.75 L56.75,185.50 L61.50,181.75 L60.75,170.50 L57.75,162.00 L57.75,155.50 L56.75,154.00 L56.75,136.75 L61.75,112.75 L67.75,101.25 L67.75,97.50 L63.75,94.25 L40.25,79.75 L36.75,76.25 L23.75,70.00 Z M18.50,198.00 L20.75,199.25 L18.75,201.50 L16.75,200.25 L18.25,198.00 Z M129.50,2.00 L128.00,3.00 L111.50,4.00 L104.00,7.00 L100.50,7.00 L78.50,16.00 L68.00,22.25 L52.00,34.25 L39.25,47.00 L30.25,58.00 L29.25,62.75 L46.00,75.50 L48.50,76.00 L65.00,87.50 L72.25,90.75 L74.75,89.50 L90.25,74.00 L96.25,70.00 L107.75,63.75 L121.75,58.75 L125.75,57.75 L154.00,57.75 L167.50,61.75 L171.75,60.50 L178.50,50.75 L188.00,31.25 L193.75,22.25 L195.75,17.25 L194.50,14.00 L187.25,10.00 L168.25,4.00 L152.75,3.00 L151.25,2.00 L129.75,2.00 Z" transform="translate(3 3)" style="fill:var(--blue)" fill-rule="evenodd"/><path d="M219.50,29.00 L206.00,34.25 L200.25,39.00 L194.00,48.50 L192.00,62.25 L194.00,73.25 L198.25,80.75 L204.00,87.50 L216.50,93.75 L227.25,94.75 L233.25,93.75 L240.75,90.50 L252.50,79.75 L256.75,67.25 L256.75,58.50 L253.75,47.50 L246.25,37.00 L233.25,30.00 L219.75,29.00 Z" transform="translate(3 3)" fill="#FFB020" fill-rule="evenodd"/></symbol>
+  <symbol id="puz" viewBox="0 0 24 24"><path d="M10 4.5a2 2 0 1 1 4 0V6h3a1 1 0 0 1 1 1v3h-1.5a2 2 0 1 0 0 4H18v3a1 1 0 0 1-1 1h-3v-1.5a2 2 0 1 0-4 0V18H7a1 1 0 0 1-1-1v-3h1.5a2 2 0 1 0 0-4H6V7a1 1 0 0 1 1-1h3z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="eye" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  </defs>
+</svg>
+
+<div class="wrap">
+  <h1>Panel en reposo</h1>
+  <p class="sub">Tres maneras de llevar al icono. Un solo botón: el automático.</p>
+
+  <div class="grid">
+    <!-- A -->
+    <figure>
+      <figcaption><span class="tag">A</span><b>Flecha</b><span>Señala el icono desde el panel.</span></figcaption>
+      <div class="win">
+        <div class="tb"><div class="url">alberdiderma.es</div><span class="tbi"><svg width="18" height="18"><use href="#puz"/></svg></span><span class="tbi gsi"><svg width="17" height="18"><use href="#e-gs"/></svg><i class="badge"></i></span><span class="avatar"></span></div>
+        <div class="panel">
+          <svg class="arrowA" viewBox="0 0 150 62" aria-hidden="true"><g><path class="l" d="M10 54 C 60 56, 118 46, 136 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><path d="M126 14 L137 6 L142 19" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></g></svg>
+          <div class="ph" style="padding-top:64px"><svg width="20" height="21"><use href="#e-gs"/></svg>GenScore<span class="sp"></span><span class="enter">Entrar</span></div>
+          <div class="body">
+            <h2>Pulsa <span class="mini"><svg width="16" height="17"><use href="#e-gs"/></svg></span> arriba</h2>
+            <div class="kbd">o <kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></div>
+          </div>
+          <div class="auto">
+            <button class="rv" type="button"><svg width="17" height="17"><use href="#eye"/></svg><span>Escanear automáticamente las páginas</span></button>
+            <p class="tiny">Chrome te pedirá permiso para leer las webs.</p>
+          </div>
+          <div class="foot"><i class="sw"></i>Cuenta de ejemplo</div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- B -->
+    <figure>
+      <figcaption><span class="tag">B</span><b>Barra en miniatura</b><span>Enseña el gesto.</span></figcaption>
+      <div class="win">
+        <div class="tb"><div class="url">alberdiderma.es</div><span class="tbi"><svg width="18" height="18"><use href="#puz"/></svg></span><span class="tbi gsi"><svg width="17" height="18"><use href="#e-gs"/></svg><i class="badge" style="--o:.4s"></i></span><span class="avatar"></span></div>
+        <div class="panel">
+          <div class="ph"><svg width="20" height="21"><use href="#e-gs"/></svg>GenScore<span class="sp"></span><span class="enter">Entrar</span></div>
+          <div class="body">
+            <div class="minibar" aria-hidden="true"><i class="u"></i><span class="tbi"><svg width="15" height="15"><use href="#puz"/></svg></span><span class="tbi"><svg width="14" height="15"><use href="#e-gs"/></svg></span><i class="avatar" style="width:16px;height:16px"></i><i class="hit"></i>
+              <svg class="cursor" viewBox="0 0 18 22"><path d="M1.5 1.5v16l4.3-4 3 6.6 3-1.4-3-6.4h6z" fill="var(--panel)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            </div>
+            <h2>Pulsa el icono</h2>
+            <div class="kbd">o <kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></div>
+          </div>
+          <div class="auto">
+            <button class="rv" type="button"><svg width="17" height="17"><use href="#eye"/></svg><span>Escanear automáticamente las páginas</span></button>
+            <p class="tiny">Chrome te pedirá permiso para leer las webs.</p>
+          </div>
+          <div class="foot"><i class="sw"></i>Cuenta de ejemplo</div>
+        </div>
+      </div>
+    </figure>
+
+    <!-- C -->
+    <figure>
+      <figcaption><span class="tag">C</span><b>Foco</b><span>Luz bajo el icono, casi sin texto.</span></figcaption>
+      <div class="win">
+        <div class="tb"><div class="url">alberdiderma.es</div><span class="tbi"><svg width="18" height="18"><use href="#puz"/></svg></span><span class="tbi gsi"><svg width="17" height="18"><use href="#e-gs"/></svg><i class="badge" style="--o:.8s"></i></span><span class="avatar"></span></div>
+        <div class="panel">
+          <i class="beam" aria-hidden="true"></i>
+          <div class="chev" aria-hidden="true">
+            <svg width="22" height="12" viewBox="0 0 22 12"><path d="M3 10 L11 3 L19 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12"><path d="M3 10 L11 3 L19 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="22" height="12" viewBox="0 0 22 12"><path d="M3 10 L11 3 L19 10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="ph" style="padding-top:64px"><svg width="20" height="21"><use href="#e-gs"/></svg>GenScore<span class="sp"></span><span class="enter">Entrar</span></div>
+          <div class="body">
+            <div class="lead">Pulsa el icono para escanear</div>
+            <div class="kbd"><kbd>Alt</kbd>+<kbd>Mayús</kbd>+<kbd>G</kbd></div>
+          </div>
+          <div class="auto">
+            <button class="rv" type="button"><svg width="17" height="17"><use href="#eye"/></svg><span>Escanear automáticamente las páginas</span></button>
+            <p class="tiny">Chrome te pedirá permiso para leer las webs.</p>
+          </div>
+          <div class="foot"><i class="sw"></i>Cuenta de ejemplo</div>
+        </div>
+      </div>
+    </figure>
+  </div>
+
+  <p class="note">La animación vive dentro del panel: Chrome no deja dibujar sobre su barra. Lo que sí deja es el punto azul que late en el icono, que sale en las tres.</p>
+</div>

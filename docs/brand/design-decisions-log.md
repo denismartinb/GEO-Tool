@@ -27093,3 +27093,2949 @@ tema para subir**.
 
 **Premisa.** No retira ningún camino de recuperación: la pantalla de Search
 Console sigue entera, debajo del Resumen.
+
+## 347. CRON-HOBBY-1: los crons frecuentes pasan a Supabase pg_cron al volver a Vercel Hobby (2026-10-25)
+
+**Qué pasó.** El fundador bajó la cuenta de Vercel de Pro a Hobby el
+2026-10-25. Hobby sólo admite crons que corren como mucho una vez al día, con
+±59 minutos de margen, y **rechaza el deploy** si `vercel.json` trae uno más
+frecuente. Teníamos cuatro: `scan-continue` (5 min, §262), `run-audit` (10 min,
+§261), `seo-serp` (10 min, §346) y `scan-watchdog` (15 min, §227). Los logs de
+producción los enseñaban corriendo todavía porque el deploy vigente se hizo en
+Pro, pero el siguiente merge a `main` habría fallado al construir y producción
+se habría quedado congelada.
+
+**Qué se decidió.** El fundador eligió, en tarjeta de decisión, «Quedarse en
+Hobby con pg_cron» frente a volver a Pro (recomendado: Hobby es sólo para uso
+no comercial según Vercel, y GenScore cobra) o quitar los crons sin sustituto.
+
+- Migración `0045_pg_cron_frequent_crons.sql`: `pg_cron` + `pg_net`, función
+  `internal_cron.call_route(route)` (esquema no expuesto, cerrado a `anon` y
+  `authenticated`) que hace `GET https://www.genscore.es<route>` con
+  `Authorization: Bearer <secreto>`. Los cuatro horarios son los mismos de
+  `vercel.json`, y hay un quinto trabajo que borra el historial de pg_cron
+  con más de 7 días (unas 600 filas al día; el plan gratuito de Supabase
+  tiene 500 MB).
+- El secreto vive en Supabase Vault (`genscore_cron_secret`) y tiene que ser
+  igual a `CRON_SECRET` de Vercel Production. Sin él la llamada se salta con
+  un aviso y nunca sale sin cabecera.
+- Las rutas no cambian: comprueban el mismo `Bearer CRON_SECRET` que mandaba
+  Vercel, y el monitor de Sentry del vigilante sigue funcionando porque se
+  activa con `VERCEL_ENV=production` y una petición autorizada.
+- `vercel.json` sólo guarda los diarios: `weekly-scans`, `lifecycle-emails`,
+  `weekly-digest` y `affiliate-report`. Con Hobby salen con hasta 59 minutos de
+  retraso; ninguno depende del minuto exacto (la elegibilidad del barrido se
+  ancla a la hora, §192, y el vigilante da 3 h de gracia). Sus monitores de
+  Sentry pasan a 60 min de margen.
+- `vercel-crons.test.ts` lee los dos programadores (`tests/helpers/
+  cron-schedules.ts`) y falla si vuelve un cron sub-diario a `vercel.json` o
+  si se pone en pg_cron uno diario que podía quedarse en Vercel.
+
+**Qué queda.**
+- El fundador aplica 0045 a mano y crea el secreto en Vault **antes del merge**
+  (si se mergea antes, entre el deploy y la migración no corre ninguno de los
+  cuatro).
+- Hobby vuelve a tener el tope de 100 deploys al día (CLAUDE.md, «Presupuesto
+  de builds»), 4 h de CPU activa al mes (si se pasa, pausa de 30 días) y
+  1 hora de logs. Hobby prohíbe además el uso comercial: riesgo aceptado por
+  el fundador.
+- Los logs de producción del 2026-10-25 marcan `region=iad1` aunque
+  `vercel.json` fija `dub1`. Sin confirmar si es la región de la función o la
+  de la petición; conviene mirarlo en Vercel.
+
+**Premisa.** No retira ningún camino de recuperación: los cuatro crons siguen
+corriendo con el mismo horario, sólo cambia quién los dispara. La premisa es
+que pg_cron llama a producción: lo verifican `cron.job_run_details` y
+`net._http_response` (consultas en la cabecera de la migración). Si falla
+(secreto ausente o distinto, extensión desactivada), se pierden a la vez el
+vigilante y la reanudación de escaneos, y nada lo avisa salvo el monitor de
+Sentry del vigilante («missed»), que es por eso el único que se conserva.
+
+## 348. BLOG-FRESH-1: ¿la IA prefiere el contenido reciente? (2026-10-26)
+
+**Qué.** Artículo `la-ia-prefiere-contenido-reciente` (clúster `medicion`),
+tercer post de la rutina de cada dos días, publicado como pasada de
+recuperación: la del 25 no se disparó. Fuentes: Seer Interactive, *Study:
+Content Recency's Impact on AI Visibility in 2026* (julio de 2026, 47.097
+citas de ChatGPT, Gemini y Perplexity en cuatro sectores, de marzo a junio);
+Ahrefs, *AI Assistants Prefer to Cite «Fresher» Content* (julio de 2025, 17
+millones de citas); Fang et al., Universidad de Waseda, arXiv:2509.11353
+(septiembre de 2025, fechas inyectadas en siete modelos), y Google Search
+Central (fechas de publicación y la guía de contenido útil). La idea central
+sale de Seer: el 72% de las páginas citadas parece reciente por su fecha de
+actualización, pero sólo el 42% es nuevo; lo que cuenta es mantener al día,
+no publicar más ni cambiar la fecha.
+
+**Cifras de terceros con sus defectos.** Seer da cifras distintas en el texto
+y en las tablas por sector; el artículo sólo usa las globales y las de cada
+motor, que coinciden. Ahrefs cuenta «siete plataformas» y lista seis; el
+artículo usa su tabla por plataforma, en años redondeados. Los tres estudios
+son de correlación y el artículo lo dice.
+
+**Bloque que el lector copia, atado con un test.** El JSON-LD con
+`datePublished`/`dateModified` y la línea visible viven en
+`lib/blog/article-dates-jsonld.ts`; `article-dates-jsonld.test.ts` comprueba
+que las dos fechas coinciden y que `checkFreshness`
+(`lib/web-audit/page-checks.ts`) lee la de actualización y la da por reciente.
+
+**Lo que el producto afirma, trazado.** «Contenido actualizado» de la
+Auditoría técnica lee `dateModified`/`datePublished` del JSON-LD,
+`article:modified_time` o `last-modified`; reciente hasta 180 días, aviso hasta
+540 y sin fecha marcada para añadirla (`checkFreshness`, `page-fixes`). No
+lee la fecha visible, y el artículo no dice que lo haga. Páginas citadas, como
+en §341.
+
+**Pendiente.** Refrescar cuando Seer o Ahrefs publiquen una edición nueva.
+
+## 349. CONSOLE-INSTRUMENTO-1 Fase 0: fundación del sistema «Instrumento» (2026-10-27)
+
+**Qué.** Denis aprobó (2026-10-27, tarjeta de decisión) implementar la consola
+rediseñada «Instrumento» v51 por fases, un PR por fase (F0 fundación, F1 menú y
+cabecera, F2 acceso «Bruma», F3 Visión general + misión + alta de dominio, F4
+Recomendaciones, F5 Prompts/Competidores/Páginas citadas, F6 Auditoría técnica
+y Posición en Google, F7 Comercio agéntico, F8 Perfil/plan/tour/404). Task
+Intake en `rediseno-consola/implementacion/task-intake-consola-instrumento.md`.
+Fuente de verdad: `docs/design-reference/console-instrumento-1/` (HTML v51 +
+`i-src/` + inventarios de copy). El prototipo usa la marca ficticia Nubaria:
+se mantienen los datos reales.
+
+**F0 (este PR, sin cambio visible).** Tokens y componentes compartidos
+portados de `i-src/css` a `app/ins/tokens.css` y `app/ins/components.css`,
+**acotados** a `.ins` (pantallas ya migradas) y `.ins-shell` (marco): el blog,
+la landing y las pantallas aún sin migrar no los ven. Las animaciones se
+renombran `ins-*` para no pisar las de `globals.css`. `lib/ins/theme.ts`
+fija el tema.
+
+**Decisión de Denis: modo claro por defecto.** El oscuro solo existe si la
+persona lo elige (`data-theme="dark"` en `<html>`, guardado en
+`localStorage`); nunca se sigue `prefers-color-scheme`. El selector de tema no
+se publica hasta que todas las pantallas estén migradas (F8): una pantalla
+antigua en oscuro saldría ilegible.
+
+**Pendiente / roto conocido.** Nada de la consola usa todavía `.ins`. Cada
+fase retira las hojas antiguas de las pantallas que migra.
+
+## 350. CONSOLE-INSTRUMENTO-1 Fase 1: el marco «Instrumento» sustituye al menú y la cabecera (2026-10-27)
+
+**Qué.** El marco de toda la consola (`app/dashboard/layout.tsx`) pasa a
+`components/ins/shell.tsx`: menú lateral en cuatro bloques sin título para los
+dos primeros (Visión general, Recomendaciones), «En la IA», «En Google» y
+«Comercio agéntico» con «Nuevo»; selector de dominio (`DomainSwitcherPanel`),
+cabecera con migas, búsqueda ⌘K y campana, cajón móvil con cabecera de 64 px,
+menú de ayuda (tour, videollamada, Manuales y estudios), menú de cuenta
+(perfil, notificaciones, ¿Cómo funciona?, afiliados, cerrar sesión), pila de
+avisos y paleta de comandos. Capa de popovers/diálogos/hojas inferiores propia
+(`components/ins/layer.tsx`). Solo cambia el aspecto: las consultas del layout,
+la lógica de carriles de la campana (§297) y el plan por dominio no se tocan.
+
+**Datos reales, no los de Nubaria.** El pie del menú enseña el correo (no hay
+nombre de perfil: guardarlo necesita migración y queda para F8, con aprobación).
+La puntuación y la banda de cada dominio salen de `latestScoreByProject`
+(`lib/ins/band.ts`: ≥70 Competitivo, ≥40 Emergente, resto Inicial); el límite
+del plan, de `plan.caps.projects`. El punto cálido de «Auditoría técnica» del
+prototipo no se pinta: no hay dato que lo justifique todavía.
+
+**Decisiones de implementación.**
+- El scrim del cajón es `.ins-scrim`, no `.drawer-scrim`: ese nombre ya lo usa
+  el cajón de Prompts en `globals.css` y chocaban.
+- Los resets del marco se escriben con `:where(...)` para quedar por debajo de
+  cualquier regla de componente; con `:is(...)` el reset de `button` pisaba el
+  borde de `.proj`.
+- `.fav` pasa de `console.css` a `globals.css` porque `components/ins` lo usa
+  fuera de `app/dashboard` (`tests/console-css-scope.test.ts`).
+- El piloto: `core-flow` deja de comprobar el cristal de HEADER-FLAT-1 (la
+  cabecera nueva no cambia al desplazar) y comprueba que el marco y
+  `.dash-content` existen; `domains-selection` lee el selector nuevo.
+
+**Pendiente / roto conocido.** `components/sidebar.tsx`, `workspace-topbar.tsx`,
+`console-header.tsx` y `mobile-shell.tsx` ya no se montan pero siguen en el
+repo (`tests/search-seo-nav.test.ts` lee el primero); se retiran con sus hojas
+en F8, cuando todas las pantallas estén migradas. Las pantallas aún sin migrar
+corren dentro del marco nuevo con su estilo antiguo. Premisa de recuperación:
+no se retira ningún camino (todas las entradas del menú anterior existen en el
+nuevo; «Gestionar» sigue llevando a `/dashboard/domains`).
+
+## 351. CONSOLE-INSTRUMENTO-1 Fase 2: el acceso pasa a «Bruma» (2026-10-27)
+
+**Decisión.** Inicio de sesión, alta, recuperar contraseña, confirmación de
+correo y verificación en dos pasos (MFA, desafío y alta) adoptan el acceso
+«Bruma» del prototipo aprobado: lienzo de niebla ambiente, marca, titular y
+formulario en dos pasos (correo, luego contraseña). Es la única pantalla de
+acceso (decisión de Denis, plan de 9 fases). Solo cambia el aspecto: las
+acciones de servidor (`login`, `signup`, `signInWithGoogle`, `sendOtpAction`,
+`verifyOtpAction`, `updatePasswordAction`, `verifyChallenge`,
+`verifyEnrollment`, `regenerateEnrollment`, `signOut`) y sus reglas no se
+tocan.
+
+**Cómo.** `app/ins/auth.css` (acotado a `.ins`, animaciones `ins-au*`),
+`components/ins/auth/` (`fx.ts` con el efecto de niebla portado del prototipo,
+`shell`, `page`, `parts`, `entry-form`). Las páginas de acceso viven fuera del
+layout de la consola, así que importan por su cuenta tokens, componentes y la
+hoja de acceso. La niebla es solo ambiente: no codifica ningún dato, se para al
+desmontarse y con `prefers-reduced-motion` queda quieta.
+
+**Decisiones de implementación.**
+- El paso 1 (correo) se valida en el cliente y no llama al servidor; el paso 2
+  envía la acción real. Los errores del servidor llegan por `?error=` como
+  antes y se pintan en `.au-fail`.
+- El alta lleva un `confirmPassword` oculto igual a la contraseña, porque la
+  acción lo exige y el prototipo tiene un solo campo.
+- La línea legal del alta usa la redacción del prototipo y mantiene la
+  información de EMAIL-UNSUB-1 (correos de cuenta y consejos, baja posible).
+
+**Pendiente / roto conocido.** «¿No te ha llegado?» de la confirmación enlaza
+a volver a registrarse: reenviar el correo exigiría una acción de servidor
+nueva, que necesita aprobación. MFA se verificó por código y con los mismos
+componentes; ver la pantalla real exige sesión de operador. Premisa de
+recuperación: no se retira ningún camino (olvidar contraseña, Google y volver a
+registrarse siguen en pantalla).
+
+## 352. CONSOLE-INSTRUMENTO-1 Fase 3a: Visión general pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Visión general se rehace sobre el prototipo aprobado:
+cabecera con saludo y enlaces, franja de prioridad, hoja de puntuación con
+traza, escala por bandas y evolución, KPIs, plan de acción, desglose,
+ranking y el par Comercio agéntico + Auditoría SEO (con la mitad de Google).
+Solo cambia el aspecto y la composición: consultas, umbrales de muestra,
+ventana de la puntuación, afirmación competitiva y puertas de honestidad no se
+tocan; una cifra retenida sigue retenida.
+
+**Cómo.** `app/ins/overview.css`, `components/ins/kit/` (motor, Roll, barras,
+gráficos, `PendulumWave`), `components/ins/overview/` (bloques, tarjeta de
+escaneo en vivo, bloque del plan) y `lib/ins/overview-{copy,plan}.ts`. El
+anillo del kit usa la clase `tring` porque `.ring` choca con una utilidad
+global.
+
+**Decisiones.**
+- El plan replica el de Recomendaciones (`selectPlan` sobre palancas
+  colapsadas, techo conjunto de ADR 0017); con Search Console conectado una
+  tarjeta de Google ocupa el puesto 2. El texto de cada fila es el título de
+  la recomendación o de la palanca, no el paso imperativo del prototipo.
+- Un solo sondeo por pantalla: `LiveScanCard` es dueña del `router.refresh()`.
+- Sin datos de posición, el ranking pasa a tres columnas en vez de inventarlas.
+
+**Premisa de recuperación.** Se retira `ScanReportControl` (pastilla y hoja
+inferior de estado de escaneo). Premisa: el estado del escaneo vive en la
+pastilla del marco (F1) y en `LiveScanCard`. Si el marco no la mostrase, esta
+pantalla seguiría enseñando el escaneo vivo en su tarjeta.
+
+**Pendiente / roto conocido.** Sin ticks «N de M hechas» en el plan; sin
+sparklines en los KPIs (no hay histórico real por KPI); la tarjeta SEO enseña
+solo la primera recomendación, como el prototipo; el panel de invitación a
+Google reutiliza CSS anterior; la misión del primer escaneo y el alta de
+dominio son la Fase 3b.
+
+## 353. COMPETITOR-RANK-VISIBILITY-1: la lista de competidores se ordena por mención y enseña el puesto medio real (2026-10-28)
+
+**Qué.** `rankLatestPositions` (`lib/competitors/latest-positions.ts`), que
+ordena la panorámica de Visión general y la lista «Último escaneo» de
+Competidores, pasa a ordenar por **tasa de mención** descendente; el puesto
+medio cuando aparece sólo desempata. La columna «Puesto medio» de las dos
+pantallas y el titular «Tu puesto medio cuando apareces» enseñan la media real
+con un decimal (`formatMeanPosition`, «1,4»), no el número de fila. El titular
+de la lista en Competidores pasa a «Mención y puesto medio de cada marca».
+
+**Por qué.** En el proyecto de pruebas del fundador, una marca nombrada en el
+19% de las respuestas (siempre la primera en ellas) encabezaba la lista por
+delante de la propia marca, nombrada en el 95%: «no tiene sentido; tiene que
+salir en el primer puesto» (fundador, 2026-10-28). El puesto medio sólo
+promedia las respuestas donde sale cada marca, así que no dice quién tiene más
+visibilidad. Además, la columna «Puesto medio» pintaba `rank` con «º», que era
+el puesto en la lista (1º, 2º, 3º…, igual que el número de fila), no la media.
+Opción elegida frente a una puntuación combinada (mención ponderada por
+posición): es la que se explica sola y coincide con la barra de la fila.
+
+**Supersede.** El orden por puesto medio de §15, la decisión de §177 de
+«arreglar cómo se lee, no lo que mide» y el papel de SAMPLE-FLOOR-1 (§175) en
+el orden. `qualified` sigue: marca «pocas menciones» cuando la media descansa
+en poca muestra. `mean-rank-copy.ts` lo anota en su cabecera.
+
+**Pendiente.** La consola nueva (CONSOLE-INSTRUMENTO-1 F3a, PR #681) pinta
+«Puesto medio» con `r.rank`; al rebasar sobre esta rama tiene que usar
+`formatMeanPosition(r.position)`. El gráfico «Top 5 posiciones» de Visión
+general sigue dibujando el puesto medio de las cinco primeras, ahora las
+cinco más mencionadas.
+
+## 354. RECS-HEADLINES-1: cada recomendación, una tarea del cliente (2026-10-28)
+
+**Qué.** El fundador vio en el móvil «Consigue que te citen en "¿Cuánto
+cuesta un plan de telefonía móvil con datos ilimitados y ll…"», cortado y sin
+decir qué hacer, y pidió que cada recomendación sea una tarjeta y una línea de
+un plan de cosas por hacer. Después de ver la primera propuesta añadió la
+regla de fondo: sólo existen recomendaciones con una acción concreta que el
+cliente puede hacer («sube esta FAQ a la página», «añade esta comparativa»,
+«modifica este fichero»); «sal antes que X» o «aparece en la página 1» no
+están en su mano. Propuesta aprobada en artifact (versión 2, móvil y
+escritorio) con «Adelante».
+
+**Cómo.**
+- `lib/recommendations/headline.ts` decide el titular y una línea de contexto
+  por tipo, al pintar, con lo que ya trae la fila (pregunta, rival, dominios,
+  críticas) y el veredicto de cobertura (si confirmó la página, la nombra).
+  Las filas guardadas antes leen igual que las nuevas, sin migración. El
+  `title` guardado no cambia.
+- Lo leen la tarjeta de Recomendaciones (y de Auditoría técnica, que reutiliza
+  `RecCard`), «Resueltas», Visión general, el informe, la campana, el correo
+  de fin de prueba y el resumen semanal.
+- Las palancas por tema pasan a «Publica una página sobre «Tema»» y «Añade las
+  definiciones al inicio de tu página»; Google a «Enlaza /x desde /a y /b» o
+  «Reescribe título y descripción de /x»; los bloqueos a «Permite GPTBot y
+  ClaudeBot en tu robots.txt», «Quita la etiqueta noindex de /x».
+- Retirados `increase_brand_prominence` («Adelanta a X: sales después en N
+  respuestas») y `amplify_positive_pattern` («Repite lo que ya te funciona»):
+  el motor ya no los emite y las filas guardadas se ocultan en toda vista que
+  lista tarjetas hasta que el siguiente escaneo las sustituye. El puesto
+  frente a cada rival sigue en Competidores.
+
+**Pendiente o conocido.**
+- Los recuentos de «recomendaciones activas» que se piden con `count` (resumen
+  semanal, correo de ciclo de vida, contadores de la consola) pueden contar
+  una fila retirada hasta el siguiente escaneo. Se aceptó: la cifra se corrige
+  sola en uno o dos días y no enseña la tarjeta.
+- La etiqueta de tipo («Añadir bloque de cita», «Aumentar prominencia de
+  marca») sigue sonando a interna; queda para otra fase.
+- La consola nueva (CONSOLE-INSTRUMENTO-1, PR #681) debe leer
+  `recommendationHeadline` en su plan y sus tarjetas en vez de `title`.
+- Diseño aprobado: `docs/design-reference/recs-headlines-1/`.
+
+## 355. CONSOLE-INSTRUMENTO-1 Fase 3b: la misión del primer escaneo pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla que ocupa las seis secciones durante el primer escaneo de
+un dominio deja el cohete y adopta la del prototipo aprobado: marco propio sin
+menú, contador de respuestas con su «de N», fila de puntos, un péndulo por
+motor (ambiente, nunca progreso), cinco fases y nota final. Es la misma
+pantalla en las seis secciones, como exigía ANIMATION-PARITY-1 (§168).
+
+**Cómo.** `components/ins/mission/first-scan-mission.tsx` sustituye a
+`scan-mission-rocket.tsx` (borrado, con su test de copy), `app/ins/mission.css`
+(el marco oculta el menú con `:has(.sc-mission)`), `lib/ins/mission-copy.ts` y
+`lib/scan/engine-response-counts.ts`. El sondeo `/scan-status` acepta
+`?engines=` y devuelve `engine_counts`, un recuento por motor de filas con
+respuesta; el resto de sondeos no pagan esas consultas.
+
+**Decisiones.**
+- Las cinco fases son los cinco pasos reales de `computeMissionBeat`, no un
+  reloj. El único reloj sigue siendo el que cambia de escena tras la ignición.
+- El contador son respuestas recibidas sobre lanzamientos por motores mientras
+  responden los motores, y respuestas leídas sobre las de la ejecución en
+  órbita; el rótulo cambia con la unidad. Si no se pudo contar por motor, cae a
+  lanzamientos. Nunca un número estimado.
+- El prototipo tiene «Salir» hacia Visión general, que aquí sería esta misma
+  pantalla; lleva a Ajustes. Pendiente de confirmar con el fundador.
+
+**Pendiente / roto conocido.** El cohete sigue vivo en la 404 y en la
+reentrada de Auditoría web (`ReentryMission`), con la regla
+`mission-rocket.md` reducida a eso; F6 y F8 deciden su destino. Premisa de
+recuperación: se retira el cohete como señal de estado, no un camino. Si el
+sondeo cae, la pantalla se queda en su último dato hasta que vuelva la
+conexión y el vigilante de escaneos sigue avisando al operador.
+
+
+## 356. CONSOLE-INSTRUMENTO-1 Fase 3c: el alta de dominio pasa a «Instrumento» (2026-10-28)
+
+**Qué.** El asistente de nuevo dominio (`/dashboard/projects/new`) adopta la
+pantalla `newdomain` del prototipo aprobado: marco propio sin menú, barra de
+cuatro pasos (Dominio, Competidores, Prompts, Lanzar), resumen lateral que se
+va llenando, lista de carga con los pasos reales y fila de motores del plan con
+«Nuevo» en Perplexity. En móvil el resumen se oculta y los botones ocupan el
+ancho.
+
+**Cómo.** `components/onboarding-wizard.tsx` se reescribe sobre `app/ins/newdomain.css`
+(el marco oculta el menú con `:has(.sc-newdomain)`, como la misión). Conserva
+sin cambios las acciones de servidor (`suggestProjectSetup`,
+`generateMorePrompts`, `createProject`), el dominio que llega de la portada, el
+tope de prompts del plan, los motores reales del plan y los avisos de
+sugerencia vacía (LLM-RESILIENCE-1).
+
+**Decisiones.**
+- Cuatro pasos en vez de tres: el último resume antes de crear; el botón de
+  crear sigue siendo el envío del mismo formulario.
+- Los prompts se agrupan por tema (la categoría que ya devuelve la sugerencia);
+  lo escrito a mano va en «Tuyos». Desmarcar un prompt lo excluye sin perderlo;
+  el tope del plan cuenta sólo los marcados.
+- Se conservan funciones reales que el prototipo no dibuja: editar un
+  competidor o un prompt, añadir un competidor a mano (hasta
+  `MAX_USER_COMPETITORS`, 10, no los 5 del prototipo) y «Generar N más».
+- La cifra «respuestas que leeremos» del prototipo (`prompts × motores × 2`) es
+  inventada: se sustituye por el mercado y no se muestra ninguna estimación.
+- Sin selector de idioma ni «Atrás» de navegador propio: el idioma sigue
+  saliendo de la sugerencia y se enseña en el resumen.
+- El primer dominio de la cuenta no tiene «Salir» (no hay a dónde volver); el
+  resto vuelve a `/dashboard`.
+
+**Pendiente / roto conocido.** Las clases `onb2-*` de `globals.css` y
+`domain-bar`, `country-sel` y `eng-chip` ya no las usa esta pantalla; se
+retiran en F8 junto con el resto de hojas antiguas, porque la portada comparte
+algunas. Sin premisa de recuperación retirada: ningún botón ni salida de error
+desaparece.
+
+## 357. CONSOLE-INSTRUMENTO-1 Fase 4: Recomendaciones pasa a «Instrumento» (2026-10-28)
+
+**Qué.** La pantalla de Recomendaciones se reconstruye sobre el prototipo
+aprobado (v51): cabecera con alerta de bloqueo y sus URL, cuatro pilares, plan
+de la semana como baraja de tarjetas (arrastre, flechas, ticks, deslizar para
+marcar como hecho), «Más adelante» con Pendientes/Resueltas, búsqueda, índice
+de palancas, grupos con «Ver N más» y capa «Recorrer en foco».
+
+**Cómo.** `lib/ins/recs-cards.ts` (puro) unifica recomendación suelta, palanca
+y competidor emergente en un solo modelo `InsCard`; no calcula cifras ni frases
+nuevas, sólo reordena lo que ya decidían `selectPlan`, `recommendationHeadline`,
+`effectiveFirstStep`, los puntos conjuntos y la cobertura. Componentes en
+`components/ins/recs/` y piezas reutilizables en `components/ins/kit/`
+(`Deck`, `SlideToConfirm`, `Seg`, `FocusLayer`). Las acciones de servidor
+(`rewriteRecommendationAction`, `dismissRecommendationAction`,
+`restoreRecommendationAction`, `addEmergingCompetitorAction`) no cambian. La
+tarjeta de Google ocupa el puesto 2 con el mismo reparto de §307
+(`InsGooglePlanCard`).
+
+**Decisiones.**
+- El plan se fija por visita: marcar una tarjeta como hecha no reordena la
+  baraja bajo los dedos de la persona.
+- El «Deshacer» durable vive en «Resueltas» (como en §203); no hay deshacer
+  efímero en la tarjeta activa.
+- El prototipo trae pestañas por fuente (IA/Google/Agentes) y un bloque
+  «Técnico»: no se dibujan, porque §307 decidió una sola cola y lo técnico vive
+  en Auditoría técnica. Tampoco el botón «Descargar informe» de esta pantalla
+  (sigue en Visión general, §250).
+- Se conservan funciones reales que el prototipo no dibuja: copiar el artefacto
+  generado, generar, formulario de competidor emergente, insignia de
+  «reaparece».
+
+**Pendiente / roto conocido.** `RecommendationsClient` y `GooglePlanCard`
+quedan como código muerto hasta F8, junto con las hojas antiguas. Sin premisa
+de recuperación retirada: ningún botón ni salida de error desaparece.
+
+## 358. RECS-NEGATIVE-EVIDENCE-1: la evidencia de «imagen negativa» cita frases reales (2026-10-28)
+
+**Problema.** La tarjeta «Responde a la imagen negativa que da la IA de ti»
+enseñaba en «Evidencia» el nombre de la marca repetido (p. ej. «Movistar
+Prosegur Alarmas» cuatro veces) en vez de lo que la IA dice mal. La regla leía
+`brand.evidence[0]` de la extracción, que sólo recoge dónde se nombra la marca.
+Denis (2026-10-28): las recomendaciones son lo más importante del producto y
+deben ser reales, útiles y listas para aplicar.
+
+**Decisión.**
+- `negativeExcerpts` (`recommendation-engine.ts`) toma de `raw_response_text`
+  de las respuestas con tono negativo o mixto la frase que nombra la marca o un
+  tema recurrente Y contiene una señal de queja. Una frase por respuesta, sin
+  repetir, literal, nunca parafraseada. Sin frase válida no hay citas.
+- `aggregateEvidence` deduplica citas sin distinguir mayúsculas.
+- La pantalla (`CardDetail`) descarta citas de menos de cuatro palabras y
+  repetidas, así que las tarjetas ya guardadas dejan de enseñar el nombre solo
+  sin esperar a un nuevo escaneo.
+- Sin migración ni cambio de extracción.
+
+**Pendiente.** Revisión del resto de tipos de tarjeta (evidencia y redacción)
+pedida por Denis: se hace tipo a tipo contra datos reales, sin tocar el
+esquema de extracción.
+
+## 359. SIGNUP-ALERT-PENDING-1: el aviso de alta nueva llega aunque el enlace de confirmación falle (2026-10-28)
+
+**Qué pasaba.** Denis dejó de recibir los avisos de alta nueva. El aviso
+(`sendNewSignupOpsAlertEmail`, a `OPS_ALERT_EMAIL`) sólo salía cuando la cuenta
+conseguía su primera sesión: en `signup()` si Supabase devolvía sesión (nunca,
+con «Confirm email» activo) y en `/auth/callback` al pulsar el enlace de
+confirmación. Ese enlace es PKCE: el verificador vive en una cookie del
+navegador que hizo el alta, así que abierto desde la app de correo del móvil o
+desde otro navegador falla con «PKCE code verifier not found». La cuenta queda
+confirmada en Supabase, pero la persona aterriza en `/login` con «No se pudo
+completar el inicio de sesión» y no salen ni la bienvenida, ni el aviso al
+operador, ni `signup_completed`. Ya se vio el 2026-10-09 con una prueba de
+Denis y quedó pendiente de su aprobación.
+
+**Lo que dicen los datos (PostHog, 30 días).** Altas con contraseña enviadas
+(`signup_submitted`) el 16 y el 23 de octubre sin `signup_completed`; el 23,
+la persona pulsó el enlace y acabó en ese error de `/login`. Lo mismo el 2 y el
+3 de octubre. Las altas con Google sí completan (11, 15 y 24 de octubre). No se
+pudo comprobar el buzón de `OPS_ALERT_EMAIL` ni Resend desde aquí.
+
+**Qué se decide.**
+
+1. `signup()` avisa al operador en cuanto se envía el formulario cuando la
+   cuenta tiene que confirmar el email, con asunto «Alta nueva (sin
+   confirmar)». Si confirma, llega además el aviso de cuenta activa. Supabase
+   responde a un alta con un email que ya tiene cuenta con un usuario sin
+   `identities` y no manda correo: ese caso no avisa.
+2. Ruta nueva `/auth/confirm` que canjea `token_hash` con `verifyOtp`. No
+   necesita nada guardado en el navegador, así que el enlace funciona desde
+   cualquier dispositivo. Los efectos de la primera sesión (bienvenida, aviso,
+   `signup_completed`, código de afiliado, conversión pendiente) pasan a
+   `lib/auth-first-session.ts`, compartido con `/auth/callback`, sin cambiar.
+   `/auth/callback` sigue para Google y para los enlaces ya enviados.
+3. La plantilla «Confirm signup» (`docs/email-templates/confirm-signup.html`)
+   enlaza a `https://www.genscore.es/auth/confirm?token_hash={{ .TokenHash }}&type=email`.
+
+**Pendiente, fuera del repo.** La plantilla se pega a mano en Supabase
+(Authentication → Emails → Templates → Confirm signup). Hasta que se pegue, los
+enlaces siguen siendo PKCE y sólo funcionan en el navegador del alta; el punto
+1 ya cubre el aviso igualmente. El recordatorio de confirmación
+(`lib/email/lifecycle/runner.ts`) reenvía la misma plantilla, así que se arregla
+con ella.
+
+## 360. BLOG-CONVERT-1: ¿convierte mejor el tráfico de la IA? (2026-10-30)
+
+**Qué.** Artículo `convierte-mejor-el-trafico-de-la-ia` (clúster
+`fundamentos`), cuarto post de la rutina de cada dos días. Escrito el 27 y
+aplazado a petición del fundador, que ese día ya había compartido otro
+post en redes. Iba a salir el 29, pero la pasada de ese día no se ejecutó y se
+publicó el 30, sin escribir uno nuevo. El número era §349 y pasó a §360 porque
+§349 lo tomó CONSOLE-INSTRUMENTO-1 en `main`. Pone lado a lado
+las cifras de conversión del tráfico que llega desde la IA y explica por qué
+no coinciden. Fuentes, todas leídas en origen: Adobe Digital Insights, *AI
+Traffic Trends Report* (agosto de 2026, más de un billón de visitas a webs de
+comercio de EE. UU., datos de octubre de 2024 a julio de 2026: +60% de
+conversión en comercio, +53% de ingresos por visita, −1% en viajes); Shopify,
+*AI and organic search are doing different jobs* (11 de agosto de 2026,
+segundo trimestre de 2026, sin tamaño de muestra: +197% de sesiones desde la
+IA, +80% de conversión en ficha de producto, el doble en categorías de
+especificaciones, relojes 2,4, collares 2,3 y ropa 1,6 veces); Ahrefs, Patrick
+Stox (16 de junio de 2025, una sola web, 30 días: 0,5% del tráfico, 12,1% de
+los registros, 23 veces), y Kaiser y Schulze, *Marketing Science* (2026, doi
+10.1287/mksc.2025.0489, 973 tiendas en 49 países, agosto de 2024 a julio de
+2025: la orgánica convierte un 13% más que ChatGPT, la afiliación un 86% más,
+ChatGPT por encima sólo de redes sociales de pago).
+
+**Defectos de las cifras, dichos en el artículo.** Shopify no da muestra y
+presenta sus cifras de categoría como indicios; en relojes y collares no dice
+con qué compara, aunque el contexto es la búsqueda orgánica. El 13% del estudio
+académico es una razón de probabilidades (log-odds) y en varias de sus
+comprobaciones deja de ser significativo. Ahrefs es una sola web, con un
+público de profesionales del SEO. El artículo no afirma nada sobre la
+complejidad del producto en Kaiser y Schulze: el resumen la menciona pero no
+la cifra, así que la explicación por categoría sale sólo de Shopify y Adobe.
+
+**Bloque que el lector copia.** La condición de GA4 es `GA4_AI_SOURCE_REGEX`
+(`lib/blog/ga4-source-regex.ts`), la misma de S8 y ya cubierta por su test;
+no se duplica. El consejo de crear el canal cuanto antes se apoya en lo que
+ya dice ese artículo: un grupo personalizado reagrupa también los datos
+anteriores.
+
+**Lo que el producto afirma, trazado.** GenScore no mide conversiones, y el
+artículo no lo dice. Lo que afirma: escanea las preguntas principales de
+búsqueda en ChatGPT, Gemini, Claude y, en Pro y Agencia, Perplexity (§283) y
+dice si te nombran, en qué lugar, a qué competidores y qué páginas citan; y
+«Posición en Google» enseña clics e impresiones con Search Console conectado
+(§284).
+
+**Pendiente.** Refrescar con el siguiente informe trimestral de Adobe o
+Shopify, y con la versión ampliada que Ahrefs anunció.
+
+## 361. CHROME-EXT-1 paso 02: la extensión lee la cuenta real (2026-10-30)
+
+**Qué.** Dos rutas de sólo lectura para el panel de la extensión de Chrome,
+aprobadas por el fundador en el Task Intake
+(`docs/chrome-extension/task-intake-report.md` §18):
+
+- `GET /api/ext/context`: plan efectivo, fin de la prueba, tope de dominios y
+  la lista de dominios de la cuenta.
+- `GET /api/ext/project?domain=&url=`: el proyecto que cubre ese dominio (el
+  más específico gana) con Puntuación GEO, mención por motor, rivales, Salud
+  técnica, las tres acciones del plan, la Visibilidad agéntica y, si `url` es
+  de ese proyecto, los prompts del último escaneo que la citaron.
+
+La extensión de prueba pasa a 0.6.0: con sesión en GenScore, el desplegable
+enseña los dominios reales, la visión general sale de esas rutas y «Cuenta de
+ejemplo» desaparece; sin sesión, todo sigue como en el paso 01.
+
+**Cómo se autentica.** Sin token propio. El manifiesto pide
+`host_permissions` sólo para el origen de GenScore (`config.js`, `GS_API`), y
+con eso Chrome manda la cookie de sesión de Supabase en las peticiones de la
+extensión, también siendo `SameSite=Lax` (comprobado con una extensión real
+contra un servidor local). Las rutas leen la sesión con el cliente del
+usuario (RLS), filtran los proyectos además por `owner_user_id` y responden
+401 en vez de redirigir. No hay cabeceras CORS, así que otra web no puede leer
+la respuesta. `Cache-Control: private, no-store`.
+
+**Cada cifra sale de su dueño.** `lib/ext/summary.ts` es pura y sólo elige y
+renombra campos de `buildReportModel(loadReportInput(...))`, el cargador del
+informe (que ya toma la puntuación de `resolveGeoScore`, la parte técnica de
+`buildTechnicalIssuesReport` y el plan de `selectPlan`), y de
+`overviewAgenticCard`, la tarjeta agéntica de Visión general. Las citas pasan
+por `resolveCitation`, como en Páginas citadas. Todo va en proporciones; el
+panel pinta porcentajes. El plan se lee como `/api/me` (`isTrialElapsed` +
+`resolveEffectivePlanId`): abrir el panel nunca rebaja una prueba ni manda el
+correo de fin de prueba.
+
+**Pendiente o conocido.**
+- La prueba usa la vista previa de Vercel del PR: el .zip lleva `GS_API`
+  apuntando a ella y su permiso de host. La versión de tienda (paso 03)
+  apuntará a `https://www.genscore.es`.
+- El panel no tiene delta de la puntuación ni puntos por acción: el modelo del
+  informe no los da y no se recalculan aquí.
+- Search Console y palabras vigiladas en el panel (`/api/ext/google`),
+  «Descubrir», añadir competidores y marcar acciones como hechas siguen fuera.
+- `pnpm run build` no termina en el contenedor del agente porque no llega a
+  Google Fonts; typecheck, lint y los 5.030 tests pasan. Vercel construye el
+  preview.
+
+**0.6.1: el panel abre en el proyecto de la consola (Denis, 2026-10-30).**
+Con sesión y sin página leída, el panel ya no enseña la pantalla de reposo:
+enseña la visión general del dominio que la consola tiene seleccionado y,
+encima, «Para analizar la página actual, pulsa el icono de nuevo» (o el botón
+«Analizar la página actual» si ya dio el permiso). `/api/ext/context` devuelve
+`activeDomain`, leído de la cookie `geo_active_project` con
+`resolveSelectedProject` como `/dashboard/domains`: un id ajeno o caducado cae
+al proyecto más reciente de la cuenta. El panel sigue a la consola cuando esa
+selección cambia y, si no, respeta lo que se eligió en el desplegable. En
+cuanto se lee una página, la página manda (como en la 0.5.2).
+
+**0.6.2: el aviso sólo fuera de la consola (Denis, 2026-10-30).** Mientras la
+pestaña abierta es GenScore (el origen de `GS_API`, el único cuya URL ve la
+extensión), ni el aviso ni el parpadeo del icono salen: quien acaba de entrar
+está en la consola. En cualquier otra página sí.
+
+**0.6.3: fuera de la consola, la pantalla de reposo (Denis, 2026-10-30).**
+Con sesión, el panel enseña los datos del dominio seleccionado sólo mientras
+la pestaña es la consola. En otra página vuelve la pantalla de reposo de la
+0.5 (la barra con el clic animado y «Escanear automáticamente las páginas»),
+con el título «Para analizar la página actual, pulsa el icono de nuevo».
+Elegir un dominio en el desplegable enseña sus datos también fuera de la
+consola, hasta que cambia la pestaña. Corregido de paso: el clic en un
+dominio del desplegable no hacía nada, porque `[data-pick]` faltaba en el
+selector del manejador de clics.
+
+**0.6.4 (Denis, 2026-10-30).** Sin sesión, bajo la cabecera sale «Identifícate
+en GenScore para el análisis completo», con «GenScore» en la letra del logo, y
+lleva a `/login`. Se quita del pie la línea «Revisada en tu navegador… No pasa
+por ningún servidor». En la 0.6.5 la frase pasa a la cabecera, junto al botón,
+que se llama «Login» en vez de «Entrar», para que se lea como su motivo.
+
+**0.6.6 (Denis, 2026-10-30).** En la pantalla de reposo con sesión, el
+selector de arriba ya no enseña un dominio (confundía: no es de esa página).
+Dice «Analiza la página actual · o elige uno de tus dominios», y el
+desplegable sigue listando los dominios sin ninguno marcado.
+
+## 362. CHROME-EXT-1 paso 03: versión de tienda 1.0.0 (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la ficha (`/mnt/project-files/chrome-extension/ficha-tienda-propuesta.md`) y el paso 03. La extensión pasa a 1.0.0 con nombre «GenScore: Auditoría SEO y visibilidad en IA» y el resumen de la ficha como descripción del manifiesto, apuntando a `https://www.genscore.es`.
+
+**Cambios en la extensión.**
+- **Sin «Cuenta de ejemplo».** `GS_SAMPLE = false` en `config.js`: la versión de tienda no enseña datos inventados. El modo de ejemplo sólo existe en las versiones de prueba.
+- **Las acciones del plan de la cuenta ya no tienen «Desliza para marcar como hecho».** El panel sólo lee (paso 02), así que deslizar no habría guardado nada. Se marcan en la consola, con el botón «Abrir en la consola».
+- **«Conectar con Google»** lleva a la consola en vez de a un aviso de prueba.
+- Los enlaces llevan `utm_campaign=extension`.
+
+**`/privacidad`.** Nuevo apartado «Extensión de Chrome». Cuenta tres cosas:
+- la revisión es local;
+- con sesión, el panel recibe email, plan, dominios y resultados;
+- envía la dirección de una página propia para ver qué preguntas la citan.
+
+Después del merge, a petición del fundador, el apartado añade que el uso de esa información se rige por la Política de datos de usuario de Chrome Web Store y sus requisitos de uso limitado (Limited Use), como pide la ficha de la tienda.
+
+Fecha de actualización: 30 de octubre de 2026.
+
+**Pendiente o conocido.**
+- **Ficha sólo en español en la 1.0.** La propuesta pedía también inglés, pero el panel está entero en castellano: una ficha inglesa traería instalaciones que no entienden la interfaz y reseñas malas. El inglés llega con la traducción del panel (`_locales`), en otra fase.
+- **`genscore.es/extension` no existe.** La ficha enlaza a `https://www.genscore.es` hasta que se diseñe esa página.
+- **La invitación a valorar dentro del panel no está construida.** Es una propuesta, sin aprobar.
+- **El envío a la tienda lo hace Denis** desde su cuenta de desarrollador (5 $). Si la revisión de la tienda pide cambios, vuelven a este hilo.
+
+## 373. CONSOLE-INSTRUMENTO-1 Fase 5a: Prompts pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla de Prompts se rehace sobre el prototipo v51:
+frase de cabecera con el tema fuerte y el flojo (enlaces que abren el tema),
+tira de visibilidad (conjunto y un medidor por motor del plan, «Nuevo» en
+Perplexity), pestañas Temas/Prompts con búsqueda, y el detalle de un prompt en
+una hoja lateral (panel a la derecha en escritorio, hoja inferior en móvil).
+«Añadir prompts» pasa a una hoja de tres pasos (método, detalle, revisión) con
+la barra del tope del plan. La hoja es un componente compartido
+(`components/ins/kit/sheet.tsx`, `app/ins/sheet.css`) que reutilizarán
+Competidores y Páginas citadas (F5b y F5c).
+
+**Qué no cambia.** Consultas, acciones de servidor (`generatePromptProposals`,
+`addReviewedPrompts`, `addPrompts`, `deactivatePrompt`), RLS y esquema. Cada
+cifra es un recuento de filas del último escaneo (`lib/ins/prompts-model.ts`,
+`lib/ins/prompt-detail.ts`, puros y con tests). Un prompt añadido después del
+último escaneo sale como «pendiente», nunca como «no te nombra». Los
+sentimientos siguen contándose sólo sobre respuestas que nombran la marca.
+
+**Retirado.** `prompts-client.tsx`, `add-prompts-button.tsx`,
+`delete-prompt-button.tsx`, `components/prompts/prompt-drawer.*`. Las reglas
+`.seg` pasan de `recs.css` a `components.css` (las usan varias pantallas).
+
+**Pendiente o roto conocido.** Los selectores del piloto (`.prompt-drawer`,
+`write-guard.ts`) apuntan a la hoja antigua y hay que actualizarlos antes de
+volver a lanzar el piloto de escritura. Las reglas `pr2-*`/`add-prompts-*` de
+`globals.css` y `console.css` se borran en F8. El placeholder del buscador se
+corta en 390 px (copy del prototipo, sin tocar).
+
+## 374. CONSOLE-INSTRUMENTO-1 Fase 5b: Competidores pasa a «Instrumento» (2026-10-28)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con las cifras reales, tarjeta «Ranking» (menciones, citas y puesto
+medio por marca, la tuya resaltada, aviso «pocas menciones»), «Evolución del
+puesto medio» (sólo con escaneos suficientes), presencia por motor en mapa de
+calor, terreno por tema, brecha de prompts por categoría y competidores
+sugeridos. Gestionar competidores y alias pasa a la hoja lateral compartida
+(`components/ins/kit/sheet.tsx`). Se mantiene «Editar» en la hoja aunque el
+prototipo no lo muestra, y una fila de la brecha sigue llevando a Prompts
+filtrado por competidor.
+
+**Qué no cambia.** Consultas, acciones de servidor (`createCompetitorAction`,
+`updateCompetitorAction`, `deactivateCompetitorAction`,
+`getSuggestedCompetitorsAction`, `addBrandAliasAction`,
+`removeBrandAliasAction`), RLS y esquema. El orden sigue siendo por menciones,
+con el puesto medio (sólo si es fiable) como desempate (§175, §353). El
+denominador («N respuestas · M prompts en K motores», `answerCountLabel`) sigue
+a la vista junto al ranking (TRUST-METRICS-1, §183).
+
+**Qué cambia respecto a la pantalla anterior.** La cuota de voz (barra
+apilada y delta) deja de enseñarse porque el prototipo no la pinta. Menciones y
+citas son acumuladas sobre todas las respuestas analizadas; el puesto medio sale
+del último escaneo. Modelo puro con tests: `lib/ins/competitors-model.ts`.
+
+**Retirado.** `podium-row`, `manage-competitors-panel`,
+`manage-brand-aliases-panel`, `prompt-gap-section`,
+`suggested-competitors-section`.
+
+**Pendiente o roto conocido.** Los favicons muestran imagen rota sólo en el
+arnés sin red; hay que verificarlos en el preview. Los selectores del piloto
+que apunten a los paneles antiguos se actualizan antes de volver a lanzarlo.
+
+## 375. CONSOLE-INSTRUMENTO-1 Fase 5c: Páginas citadas pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla se rehace sobre el prototipo v51: frase de
+cabecera con la cuota de citas propias y el enlace a las fuentes alcanzables,
+tres cifras (respuestas con cita, citas totales, citas a tu web), el anillo
+«De dónde salen las citas» en cuatro grupos (Tuyas, Terceros que te nombran,
+Competidores, Otros terceros) que filtran la lista al pulsarlos, «Fuentes
+alcanzables» agrupadas por web con las preguntas donde la citan, y la tabla de
+todas las páginas con pestañas, búsqueda y «Ver más» (25 en 25).
+
+**Qué no cambia.** Consultas, `aggregateCitations`, `groupOpportunitiesByDomain`,
+RLS y esquema. Las reglas de `.claude/rules/citations.md` siguen: «te nombran»
+es un hecho de la respuesta, nunca de la página (nota visible bajo el anillo);
+«Fuentes alcanzables» no exige competidor co-citado, y el competidor sale sólo
+como aviso «sin verificar en la página». Modelo puro con tests:
+`lib/ins/citations-model.ts`. Los porcentajes del anillo son cuota de páginas
+distintas y suman siempre 100 (mayor resto).
+
+**Qué cambia respecto a la pantalla anterior.** Se retiran la barra de impacto
+(favorable/adverso), el donut por tipo de fuente y la fila desplegable por
+página con la evidencia de cada respuesta, porque el prototipo no los pinta; el
+tipo de fuente (Comparador, Comunidad, Medio...) sigue visible como etiqueta de
+cada fila. El desplegable de cada fuente alcanzable conserva las preguntas. No
+se pinta «Ver la recomendación» del prototipo: no hay vínculo real entre una
+fuente y una recomendación.
+
+**Retirado.** `citations-client.tsx`.
+
+**Pendiente o roto conocido.** Los favicons se verifican en el preview (en el
+arnés sin red salen rotos). Si el fundador echa de menos la evidencia por
+página, se vuelve a ofrecer en la hoja lateral compartida, en una fase aparte.
+
+## §363 · CONSOLE-INSTRUMENTO-1 F6a: Auditoría técnica pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** La pantalla `/web-audit` adopta el aspecto del prototipo
+aprobado (v51, `i-src/screens/audit.js|css`): cabecera con eyebrow, título y
+frase, dos tarjetas de bloque (Auditoría GEO y Auditoría SEO) con la nota en un
+arco de 270 grados y un «fantasma» hasta lo que se alcanza arreglando lo que
+puntúa, línea verde «+N pt si arreglas…» que lleva a `#problemas`, y pestañas
+Problemas, Correcto y Páginas con su recuento en el control segmentado del kit.
+El arco se anima con CSS puro. Los bloques siguen siendo enlaces
+`?bloque=geo|seo`.
+
+**Qué no cambia.** `buildAuditBlock`, los pesos, la Puntuación GEO, la nota
+«Tu Puntuación GEO usa la Salud técnica», la cobertura (mapa de temas), los
+generadores de llms.txt y sitemap, el acceso de bots, la velocidad (Core Web
+Vitals) y las filas por página. Consultas, acciones, RLS y esquema, intactos.
+
+**Decisión de alcance (a revisar por el fundador).** El prototipo no pinta la
+sección de cobertura, los generadores ni las correcciones por página, pero son
+funcionalidad real. Se conservan con su marcado y se leen con los tokens de
+Instrumento mediante ajustes en `app/ins/audit.css`; no se reconstruyen fila a
+fila como el prototipo. Se retiran `BlockSwitch` y `BlockPotentialBanner`
+(su cifra pasa a la tarjeta de bloque, su nota a una línea bajo las tarjetas) y
+los contadores por gravedad de la tarjeta Problemas (el recuento vive en la
+tarjeta de bloque).
+
+**Pendiente.** Reconstruir cobertura, bots y velocidad con los componentes
+nuevos si el fundador quiere fidelidad total; F6b Posición en Google.
+
+## §364 · CONSOLE-INSTRUMENTO-1 F6b: Posición en Google pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `/search-console` adopta el marco de Instrumento: eyebrow con
+el dominio, título, botón informativo «Search Console conectado · últimos 28
+días» y frase. Es un recorte deliberado, igual que F6a (§363): los datos de
+Google, el seguimiento de palabras y todos sus bloques mantienen su marcado y
+leen los tokens de Instrumento desde `app/ins/google.css`.
+
+**Qué no cambia.** Todo lo que fijan `.claude/rules/search-console.md` y
+`seo-tracking.md`: nada de Search Console va a la base de datos, la caché de 30
+minutos, el cifrado del token, las acciones de servidor y los topes por plan.
+
+**Qué no se hizo y por qué.** El prototipo (`google.js`) redibuja el Resumen
+con una escalera de páginas de Google, las pestañas «Seguimiento de
+categorías» y «Descubrir palabras» y los estados Conectado, Sin conectar,
+Cargando y Primera foto. Reconstruirlo cambia el componente de seguimiento
+entero (`seo/*`), que hoy no se puede probar en el entorno sin datos reales de
+Google, así que queda como fase aparte con datos de ejemplo en el arnés.
+
+**Pendiente o roto conocido.** Verificar en el preview con una cuenta conectada
+que ninguna tarjeta antigua se ve rota con los tokens nuevos. Reconstruir el
+Resumen y el seguimiento sobre el prototipo si el fundador lo pide.
+
+## §365 · CONSOLE-INSTRUMENTO-1 F7: Comercio agéntico pasa a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** «Visibilidad en agentes» y «Auditoría agéntica» adoptan el
+marco de Instrumento (eyebrow con el dominio, título y frase grandes) y sus
+bloques leen los tokens nuevos desde `app/ins/agentic.css`. Mismo criterio de
+recorte que F6a y F6b (§363, §364): se renueva el marco y se conserva el
+marcado de cada bloque.
+
+**Qué no cambia.** El motor sin LLM, la selección de ficha, los cupos, las
+puertas por plan (Pro y Agencia), la tarjeta de Visión general, las acciones y
+todo lo que fija `.claude/rules/agentic-audit.md`.
+
+**No se hizo.** Rehacer el anillo, el camino del agente y las cinco tarjetas de
+componente sobre `agaudit.js` y `agents.js` del prototipo. Requiere datos de
+ejemplo en el arnés y se propone como fase aparte.
+
+**Pendiente.** Revisar en el preview con un proyecto con auditoría hecha.
+
+## §366 · CONSOLE-INSTRUMENTO-1 F8a: 404 y error de la consola pasan a «Instrumento» (2026-10-29)
+
+**Qué se decidió.** `app/dashboard/not-found.tsx` y `app/dashboard/error.tsx`
+adoptan el instrumento vacío del prototipo (`errors.js`): anillo de marcas sin
+nada que leer, eyebrow, título y frase. El error enseña como referencia el
+`digest` real de Next cuando existe (nunca una referencia inventada) y un botón
+«Escribir a soporte» con `SUPPORT_EMAIL`. Sustituye el 404 de §86 en lo visual;
+sigue sin cohete (`mission-rocket.md`).
+
+**Qué no cambia.** Los destinos («Ver mis dominios» a `/dashboard/domains`,
+«Ir al último dominio» a `/dashboard`), el aviso a Sentry del error y la
+cobertura del piloto (`core-flow.spec.ts` busca el texto «esta pantalla no existe»).
+
+**Pendiente.** F8b: Perfil y ajustes, modal «Cambiar de plan», tour, afiliados y
+la limpieza de hojas y componentes antiguos (`.nfc*` de `globals.css` queda como
+código muerto hasta entonces).
+
+## §367 · CONSOLE-INSTRUMENTO-1 F8b: la prueba de Pro terminada (2026-10-29)
+
+**Qué se decidió.** Una cuenta `free` (TRIAL-ONLY-1, §243) vive la consola con
+cuatro piezas del prototipo aprobado
+(`docs/design-reference/console-instrumento-1/prueba-caducada.html`): un aviso
+la primera vez que entra (hoja inferior en móvil), una franja fija bajo la
+cabecera, una tarjeta «Prueba terminada» en el menú y una barra inferior en
+móvil. Todas llevan a `/dashboard/settings?openPlan=pro#plan`. Sustituye a la
+banda `dmb-band` del estado `free` de `DataMaturityBanner`, que ahora no pinta
+nada para ese estado. El fundador pidió quitar del aviso la línea «Precios con
+IVA incluido. El precio fundador se mantiene mientras sigas suscrito».
+
+**Adenda (2026-10-31, fundador).** La franja y la barra inferior móvil
+duplicaban el mismo aviso. Se queda una sola pieza, la franja bajo la cabecera
+en todas las anchuras, más alta y con el contenido de la barra («Prueba
+terminada», «Solo lectura hasta que elijas plan») y el botón «Cambiar plan»;
+toda ella es un enlace. Las tarjetas Starter y Pro del aviso de primera entrada
+son seleccionables y «Elegir plan» abre el plan marcado. Superado por esta
+adenda: «una barra inferior en móvil».
+
+**Cabecera móvil (2026-10-31, fundador, opción A).** La cabecera móvil ya no
+lleva el logo G suelto: junto al selector de dominio, que ya muestra su
+favicon, salían dos G seguidas. El logo sigue arriba del menú lateral y del
+cajón. Se retira `<svg class="mk">` y sus reglas de `shell.css`.
+
+**Honestidad.** Los precios del aviso salen de `plans-data.ts`; el precio
+fundador sólo sale si `getActivePromoPlanIds()` lo confirma (cupón real con
+plazas). Sin fecha de fin de prueba: el marco no la conoce y no se inventa.
+
+**Premisa de la regla 4 del cierre de fase.** El aviso de primera entrada se
+recuerda en `localStorage` (por navegador, no por cuenta: guardarlo por cuenta
+necesita migración). Si el almacenamiento falla, el aviso no se repite. La
+franja, la tarjeta y la barra no dependen de él y nunca se pueden cerrar.
+
+**No se hizo.** La tarjeta de «Escaneos en pausa» en Visión general y el
+«Marcar como hecho» deshabilitado con su motivo en el sitio (piezas 3 y 4 del
+prototipo): pendientes. Las acciones siguen bloqueadas en servidor.
+
+## §368 · CONSOLE-INSTRUMENTO-1: «Auditoría técnica» se desdobla en dos páginas (2026-10-30)
+
+**Qué se decidió (Denis, 2026-10-30).** «Auditoría técnica» no podía vivir
+bajo «En Google», porque incluye la parte GEO. Se prueba la opción 3: una
+entrada por canal, «Tu web para la IA» bajo «En la IA» y «Tu web para Google»
+bajo «En Google». Ambas siguen en `/web-audit` y se distinguen por `?bloque=geo|seo`
+(`navHref`, `isNavActive` con el bloque, la miga y el título de pestaña salen del
+bloque). Las dos tarjetas selectoras de arriba desaparecen: cada página lleva una
+sola franja de nota (arco con potencial, recuento de problemas y «+N pt si
+arreglas…»), y el texto de cada bloque pasa a ser la frase bajo el título.
+
+**Además.** «¿Cómo funciona?» pasa a icono junto a la cuenta, en la fila inferior
+del menú, para recuperar una fila. Las tarjetas de componente de la Auditoría
+agéntica recuperan relleno y borde (el reset `.ins button` ganaba a `.ag-comp`).
+El prototipo (`i-src` + `i-consola.html`) se actualiza con las dos rutas
+(`auditgeo`, `auditseo`).
+
+**Retoques posteriores (Denis, 2026-10-30).** El bloque «+N pt si arreglas…» es
+informativo, no un enlace. Orden de «Tu web para la IA»: Problemas, Cobertura de
+dominio y el Historial de comprobaciones plegado; con nota 100 el arco entra
+completo. Frase de cabecera propia de cada bloque. Se retira la tarjeta «Cómo se
+calcula tu Salud SEO» y la pestaña «Páginas» de las dos páginas, y con ella se
+descarta el botón «Añadir página» (habría exigido migración y acción de servidor).
+En el menú, la cuenta va pegada abajo y la fila «¿Cómo funciona?» justo encima
+(sustituye al icono junto a la cuenta). Auditoría agéntica aterriza con
+«Descubrimiento» activa (`initialComponent` queda con su test, sin uso en pantalla).
+
+**Pendiente.** El nombre de las dos entradas es una prueba: Denis puede volver a
+«Auditoría técnica GEO/SEO». La nota de la fila de arriba en Visión general («Auditoría SEO»)
+sigue enlazando a `?bloque=seo`.
+
+**Premisa de retirada de camino:** se retira el selector de bloques de la página.
+La premisa es que cada bloque tiene su entrada de menú; la verifica
+`lib/ins/nav.test.ts`. Sin esas entradas la pantalla no tendría forma de cambiar de bloque.
+
+## §369 · CONSOLE-INSTRUMENTO-1 F8c: Ajustes pasa al marco «Instrumento» (2026-10-30)
+
+**Qué se decidió.** `/dashboard/settings` estrena cabecera de perfil (iniciales,
+nombre, correo, pastilla del plan y «Cerrar sesión») y tres pestañas, Plan,
+Cuenta y Notificaciones (`components/ins/settings/settings-frame.tsx`, estilos en
+`app/ins/settings.css`). Es sólo el marco, como F6b y F7: las tres secciones
+conservan su marcado, textos y acciones de servidor (`AccountSection`,
+`BillingContent`, `NotificationsSection`, `DeleteAccountButton`). Plan abre por
+defecto en cuentas administradoras; si no, Cuenta. Los paneles se ocultan, no se
+desmontan, así que un formulario a medias sobrevive al cambio de pestaña.
+«Eliminar cuenta» pasa al final de la pestaña Cuenta.
+
+**Enlaces que siguen vivos.** `#plan`, `#cuenta`, `#avisos`, `?openPlan=` y
+`?checkout=` aterrizan en la pestaña correcta (cuatro correos transaccionales los
+enlazan y no se pueden reescribir).
+
+**No se hace (necesita aprobación aparte).** Foto de perfil (almacenamiento),
+«Cargo», «Contraseña cambiada hace…» y estado de la verificación en dos pasos
+(no hay dato), tarjeta de plan nueva con cifra grande y días de prueba, y el
+modal «Cambiar de plan» del prototipo: siguen siendo el diseño anterior. El índice
+lateral `SettingsIndex` queda sin uso (limpieza final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` busca
+`.set-idx` y `h2.set-sech`, que ya no existen: hay que actualizarlo antes de
+lanzar el piloto sobre esta pantalla.
+
+## §370 · CONSOLE-INSTRUMENTO-1: «Visibilidad en agentes» se rehace sobre el prototipo (2026-10-30)
+
+**Qué se decidió.** En F7 (§365) sólo se cambió el marco de esta pantalla y el
+fundador lo vio: «todavía tiene el diseño antiguo». Se reconstruye sobre
+`i-src/screens/agents.js`: el «Cuadro claro» (dial grande con la nota, cuatro
+diales pequeños, un testigo por componente y el titular con «Ver la
+auditoría») y las dos tarjetas de abajo, «Preguntas de compra» (una fila por
+motor con tres barras finas) y «Qué hacer primero». Estados: con tienda,
+«No hemos encontrado qué vendes en tu web» y Starter con invitación a Pro.
+
+**Cómo.** `components/ins/agents/visibility-cluster.tsx` sólo dibuja: la página
+le pasa nota, objetivo (`fixbarLine`), diales y testigos ya calculados desde la
+última auditoría guardada (`componentStatus`, `componentLine`, `interopLine`).
+La ignición (aguja, testigos) suena una vez por visita y es ambiente; con
+movimiento reducido queda en el estado final. Estilos en `app/ins/agents.css`,
+portados del CSS del prototipo con prefijo `.ins`.
+
+**Lo que NO se hace.** El prototipo trae «Marcar como hecho» en «Qué hacer
+primero»: el producto no lo tiene (Fase 2c sin aprobar), así que no se pinta.
+Sin cifras inventadas: el objetivo del dial sólo sale si `fixbarLine` lo
+calcula. Se retira el «camino de un agente» y las cinco tarjetas de componente
+de la versión anterior: los diales y testigos los sustituyen y enlazan a la
+misma auditoría por componente (`?componente=`).
+
+**Premisa de retirada de camino.** Se retiran las tarjetas de componente como
+entrada a la auditoría; la premisa es que los diales y testigos enlazan a
+`?componente=<id>`. Si esa query dejara de abrir el componente, esta pantalla
+quedaría sin entrada por componente (queda «Ver la auditoría»).
+
+**Pendiente.** Comparar con el prototipo en 375, 768 y 1280 px con datos
+reales; el hueco de «Interoperabilidad» usa el icono de enlace porque el
+sprite no trae el de enchufe.
+
+## §371 · CONSOLE-INSTRUMENTO-1 F8d: Cuenta y Notificaciones por dentro (2026-10-30)
+
+**Qué se decidió.** Las pestañas Cuenta y Notificaciones de Ajustes dejan el
+marcado antiguo y adoptan las filas, campos e interruptores del prototipo
+(`perfil.css`, copiados y acotados a `.ins .sc-set` en `app/ins/settings.css`).
+Cuenta pasa a dos columnas: datos personales y acceso (contraseña) a la
+izquierda, datos de facturación a la derecha; desaparece la fila de avatar y
+nombre, que ya enseña la cabecera de perfil. Notificaciones son las filas de
+`lib/email/categories.ts` con el interruptor `pf-sw`, más la fila fija «Tu
+cuenta y facturación» y la nota de la campana.
+
+**Qué no cambia.** `saveAccount`, `changePassword` y
+`updateNotificationPreference`, sus validaciones, textos y la reversión del
+interruptor si falla. Un único «Guardar» sigue cubriendo nombre, apellidos y
+facturación. «Eliminar cuenta» (`DeleteAccountButton`) conserva su modal.
+
+**No se hace.** La pestaña Plan (tarjeta con cifra grande, días de prueba, uso
+del ciclo) y el modal «Cambiar de plan» tocan facturación y necesitan su propia
+aprobación; foto, cargo, antigüedad de la contraseña y verificación en dos
+pasos siguen sin dato (§369). `BillingDetailsFold` queda sin uso (limpieza
+final de F8).
+
+**Pendiente / roto conocido.** `tests/pilot/journeys/settings.spec.ts` sigue
+sin actualizarse (§369).
+
+**Adenda (2026-10-30, mismo PR, revisión de Denis).** La pestaña Plan pasa a la
+tarjeta del prototipo (nombre grande, cifra de precio, días de prueba en siete
+tramos, «Incluido» a la derecha, uso del ciclo y «Más opciones»); se retira la
+pastilla «Activo», «Cerrar sesión» sale de la cabecera del perfil (sigue en el
+menú) y los botones de plan y facturas pasan al kit `btn`. El contacto de
+soporte es un botón `mailto:`. Se quita la fila fija «Tu cuenta y facturación»
+de Notificaciones: no era un ajuste y un interruptor apagado engañaba. Una
+cota de 999 se pinta como «sin tope», sin barra. La foto de perfil sigue sin
+existir: subirla necesita un bucket de almacenamiento con RLS y espera
+aprobación. Premisa de la fila retirada: los correos de cuenta y facturación se
+envían siempre (`lib/email/categories.ts`).
+
+## §372 · CONSOLE-INSTRUMENTO-1 F8e: foto de perfil (2026-10-30)
+
+**Qué.** El avatar de Ajustes es un botón: un clic abre el selector estándar del
+sistema (en móvil, galería o cámara). El navegador recorta al centro y reduce a
+un JPEG de 256 px; la acción `uploadAvatar` lo guarda en el bucket privado
+`avatars` (`<id>/avatar.jpg`) y el camino queda en `profiles.avatar_path`. La
+consola lee una URL firmada de una hora (`readAvatarUrl`) y la pinta en el menú,
+la cabecera móvil y el panel de cuenta; sin foto, iniciales como siempre.
+«Quitar foto» borra el camino y el objeto. El email del perfil pasa de
+monoespaciada a la tipografía de la consola.
+
+**Por qué así.** Aprobado por Denis (2026-10-30) con tarjeta de decisión. La
+foto no cabe en `user_metadata` (viajaría en el JWT y en cada cookie). Bucket
+privado y RLS por carpeta propia; sin service role.
+
+**Pendiente.** Migración `0046_profile_avatar.sql`, que se aplica a mano antes del
+merge; sin ella `readAvatarUrl` lee «sin foto» y la subida falla con mensaje.
+Premisa: no hay otra vía de recuperación retirada.
+
+## 380. MOBILE-TABBAR-1: barra inferior flotante en la consola móvil (2026-10-30)
+
+**Qué se decidió.** Denis aprobó la maqueta `docs/design-reference/mobile-tabbar-1/consola-tab-bar.html` (variante «Flotante») y pidió el mismo frontal en la web móvil y, después, en la app de Android. Esta fase es sólo la web móvil.
+
+**Qué cambia (≤760 px).**
+- Una cápsula translúcida fija abajo con cinco pestañas: Inicio (Visión general), Plan (Recomendaciones), En la IA, Google y Agentes (con «Nuevo»). Plan lleva el recuento de recomendaciones activas.
+- Cada pestaña recuerda la última pantalla que se vio en su familia (`tabTarget`, memoria en el marco, dura la visita).
+- Las familias con varias pantallas (En la IA, Google, Agentes) muestran pastillas fijas al inicio de la página.
+- Desaparecen la hamburguesa y el cajón lateral: la cabecera móvil lleva marca, dominio, buscar, campana y cuenta. «¿Cómo funciona?» ya vivía en el menú de cuenta.
+- Respeta los márgenes del sistema (`env(safe-area-inset-*)`, la raíz ya declara `viewport-fit=cover`): la barra queda por encima de la barra de gestos y de la muesca, y la página reserva su alto.
+- Se oculta durante la misión del primer escaneo y el alta de dominio, que son de pantalla completa.
+
+**Escritorio no cambia**: menú lateral como siempre.
+
+**Datos.** `lib/ins/nav.ts` (`INS_TABS`) agrupa las mismas rutas del menú; ninguna ruta, consulta ni acción cambia. Test: cada pantalla del menú pertenece a una sola pestaña.
+
+**Pendiente o conocido.**
+- La maqueta pintaba un punto de aviso en Google y un indicador deslizante entre pestañas: no se han construido (el primero necesita un dato nuevo, el segundo es pulido).
+- Fase 2 (app de Android como TWA, sin compras dentro) va en su propio PR.
+
+## 381. ANDROID-TWA-1: app de Android como TWA, sin compras dentro (2026-10-30)
+
+**Qué se decidió.** Denis pidió el mismo frontal en todos los canales: la app de Android es la web móvil de §380 abierta en Chrome a pantalla completa (Trusted Web Activity, construida con Bubblewrap). Sin segundo frontal: cada despliegue de Vercel actualiza la app. Se descartó un WebView a pelo porque Google bloquea el acceso con Google dentro de él.
+
+**Regla de Google Play: la app no vende.** Las compras digitales dentro de la app tendrían que pasar por el cobro de Google (15 % en suscripciones). Se evita así: dentro de la app no hay precios, ni «Cambiar de plan», ni checkout de Stripe ni texto que mande a pagar fuera. Registrarse y la prueba de Pro de 7 días (sin tarjeta) sí; quien ya paga entra con su cuenta. Contratar se hace en genscore.es, fuera de la app, por los correos de fin de prueba que ya existen.
+
+**Cómo se implementa.**
+- `start_url` = `/dashboard?source=twa` (`app/manifest.ts`). El middleware lee `?source=twa` o un referrer `android-app://es.genscore.app` y guarda la cookie `gs_app` (un año, httpOnly). `?source=web` la borra, para pruebas. La cookie solo oculta: no autoriza nada.
+- Con la cookie, el middleware sirve **solo** consola, acceso, API y lo legal (lista de permitidos, `lib/app-mode.ts`); portada, `/precios`, blog, comparativas, afiliados… vuelven a `/dashboard`. Una página pública nueva queda fuera de la app salvo que alguien la añada a la lista.
+- Servidor: `createCheckoutSession` y `createPortalSession` se niegan; Ajustes no pinta la sección Plan; el aviso «Tu cuenta» de la campana no sale; el bloqueo por exceso de dominios solo ofrece retirar.
+- Cliente: el selector de dominios, la paleta ⌘K y el menú de cuenta quitan «Cambiar de plan» y «Programa de afiliados» (`ShellData.inApp`). Una regla CSS esconde cualquier enlace con `openPlan=`, `/precios` o `/pricing` dentro de la consola: red de seguridad para las pantallas de Comercio agéntico (las tarjetas «Pasar a Pro»), que otros PRs reescriben.
+- Instalable: manifiesto, iconos (192, 512 y maskable), service worker mínimo que solo guarda la pantalla `/offline.html`, y `/.well-known/assetlinks.json` leído de `ANDROID_SHA256_CERT_FINGERPRINTS`.
+- `twa/` guarda la configuración de Bubblewrap y los pasos para construir, firmar y publicar (`twa/README.md`).
+
+**Premisa que se retira (regla de cierre n.º 4).** Dentro de la app desaparece el camino «Cambiar de plan». Premisa: quien paga lo hace en la web y la cuenta es la misma. Lo verifica el correo de fin de prueba (§238, §254) y `/precios` en navegador. Si esa premisa falla (correo no entregado), el usuario de la app no tiene salida de pago desde la app: puede abrir genscore.es en el navegador. Una cuenta `free` en la app queda en solo lectura, sin explicación de cómo reactivarla: es el coste aceptado de la política de Google.
+
+**Pendiente o conocido.**
+- Hay que crear la cuenta de Play Console (25 $), generar la clave de firma y poner `ANDROID_SHA256_CERT_FINGERPRINTS` en Vercel: lo hace Denis, pasos en `twa/README.md`. Sin las huellas la app abre con la barra de Chrome.
+- Los textos de Comercio agéntico siguen diciendo «está en Pro y Agencia» sin botón. No manda a pagar, pero queda un cartel sin acción; se revisará cuando se mergee F7.
+- Las páginas públicas que no pasan por el middleware (comparativas, docs, glosario…) no se redirigen dentro de la app: solo se llega a ellas si el usuario escribe la URL.
+- La experiencia de prueba terminada (§367: franja, tarjeta del menú, barra inferior y aviso de primera entrada) apunta a elegir plan, así que dentro de la app no se pinta (`d.inApp` en `components/ins/trial-ended.tsx`). Una cuenta sin plan dentro de la app ve sus datos en solo lectura sin explicación ni camino de pago; si Denis quiere un aviso sin venta, se diseña aparte. En móvil de la web, la barra inferior de ese aviso sube sobre la barra de pestañas.
+- Notificaciones push: no existen; son la fase siguiente y lo que más aporta una app frente a la web.
+- iPhone: Apple es más exigente con apps que son solo una web; mismo planteamiento cuando haya push.
+
+## 382. APP-SPLASH-1: tres entradas animadas que aterrizan en el login de la app (2026-10-30)
+
+**Qué se decidió.** Denis aprobó las tres propuestas (D Calibre, E Compás, F Bruma) y que rote una distinta en cada apertura. Solo salen dentro de la app de Android (cookie `gs_app`, §381), en `/login` sin sesión, una vez por apertura (`sessionStorage`) y nunca dos veces seguidas la misma (`localStorage`, al azar si el navegador lo bloquea). Con `prefers-reduced-motion` no sale ninguna y se entra directo. Se saltan con un toque en cualquier parte o Esc, sin botón ni texto visible (Denis quitó «Saltar»); la capa lleva `aria-label` para lectores de pantalla. Diseño de referencia en `docs/design-reference/app-splash-1/splash-login.html`.
+
+**Cómo funciona.** Una superposición (`components/ins/auth/splash/engine.ts`) con un solo reloj en ms: SVG para la marca y su decorado y un canvas para la bruma. La G vuela hasta el sitio real de la marca del login (`.au-lock svg`, medido en vivo) y el formulario entra con la misma animación escalonada de siempre cuando la G se posa. La bruma del login real se atenúa mientras dura y vuelve con fundido. Si el JavaScript no arranca, el formulario aparece solo a los 6 s (`ins-aufail`).
+
+**La G nueva.** Geometría exacta (`g-mark.ts`): dos anillos concéntricos de un solo grosor, tres cortes paralelos iguales, barra con remate redondo y punto ámbar centrado en el anillo. Sustituye al calco con bordes dentados. **Solo la usan la splash y la marca del login dentro de la app**; `app/icon.svg` y el resto de marcas siguen igual hasta que Denis apruebe cambiarlas.
+
+**Pendiente o conocido.**
+- El tiempo hasta el formulario es de unos 3 s; un toque lo acorta. Si Denis lo quiere más corto, se recortan las colas de `LANDING_AT`/`TAIL_MS`.
+- Aún no está medida en un móvil real; solo en Chromium a 390×844.
+
+## §388 · CONSOLE-404-ROCKET-1: la 404 de la consola recupera el cohete (2026-10-31)
+
+**Qué.** La 404 de dentro de la consola (`app/dashboard/not-found.tsx`) deja el
+anillo vacío de F8a (§366) y pasa a «Fuera de trayectoria»: una ventana
+nocturna con el cohete de la 404 pública, que despega del planeta siguiendo la
+ruta hacia el destino, se desvía, y cuyo rumbo punteado pasa de largo junto al
+blanco marcado con 404. Escena en `components/ins/errors/lost-rocket.tsx`,
+estilos en `app/ins/errors.css`. Ancho, el texto va sobre la escena; por debajo
+de 1100 px, debajo de ella sobre la superficie de la consola. Texto, botones y
+destinos no cambian.
+
+**Por qué así.** Denis pidió tres opciones con el concepto «Instrumento», una
+de ellas con el cohete que le gustaba de la 404 pública, y eligió esa (A) el
+2026-10-31. Maqueta con las tres en
+`docs/design-reference/console-404-rocket-1/opciones.html`.
+
+**Cómo se mueve.** Un solo reloj: `render(t, now)` dibuja la entrada (3,2 s) y
+el ambiente (flotación, propulsores, dos capas de estrellas, blanco girando) en
+un bucle de `requestAnimationFrame` que se para fuera de pantalla y con la
+pestaña oculta. Con movimiento reducido se queda en el último fotograma. Nada
+codifica progreso.
+
+**Reglas tocadas.** `mission-rocket.md` vuelve a hablar de dos cohetes (pública
+y consola) con la misma silueta; `console-instrumento.md` sustituye «sin
+cohete» de §366. `app/dashboard/error.tsx` sigue con el anillo vacío.
+
+**Pendiente.** Nada conocido. Premisa: no se retira ninguna vía de
+recuperación; los dos botones siguen siendo los de antes.
+
+## §389 · APP-LAUNCH-1: la app abre con splash también con sesión, y guarda lo estático (2026-10-31)
+
+**Qué se decidió.** Denis aprobó el plan de «app solo consola» del hilo «Lanzar app Android con barra flotante» con un cambio: el registro y la recuperación de contraseña **sí** se hacen desde la app. Lo que cambia:
+
+1. **La splash sale una vez por apertura, también con sesión.** El `start_url` (`app/manifest.ts` y `twa/twa-manifest.json`) pasa de `/dashboard?source=twa` a `/login?source=twa`; `id` sigue en `/dashboard` porque es la identidad de la app instalada. Con sesión abierta, `/login?source=twa` ya no redirige en servidor: pinta la marca con «Abriendo tu consola…», la splash aterriza en ella, la consola se precarga mientras tanto (`router.prefetch`) y se abre en cuanto la G se posa (`continueTo`). Sin sesión, igual que §382. Una apertura que entra directa a la consola (un enlace verificado de un correo, o el `start_url` antiguo) la desvía el middleware al inicio de sesión con `next` (`appLaunchRedirect`, solo GET). Tras arrancar se quita `source` de la dirección, así que recargar no repite la splash. La primera apertura cuenta como app aunque la cookie `gs_app` aún no viaje en esa petición.
+2. **Registro y recuperar contraseña dentro de la app.** Ya estaban permitidos (§381); ahora lo fijan los tests y la regla de ruta.
+3. **Service worker con caché de lo estático** (`public/sw.js`, `gs-static-v2`): primero caché para `/_next/static/` (JS, CSS y fuentes con hash), iconos y marca, con un tope de 300 entradas; las navegaciones van siempre a la red y, sin red, enseñan `offline.html`. Nunca se guarda una página, `/api`, `_next/image` ni una carga RSC. Se registra también en las pantallas de acceso (antes solo en la consola) y solo en producción.
+4. **Precarga de las pestañas.** No hace falta código nuevo: los `Link` de la barra inferior (§380) están siempre a la vista y Next los precarga solos en producción; cada pestaña con `loading.tsx` enseña su esqueleto al instante. Forzar la precarga completa de las cinco pantallas costaría cinco renders con consultas en cada apertura, y no se hace.
+5. **Paquete Android.** Construido con Bubblewrap fuera del repositorio; la clave de firma no entra en el repositorio (ver `twa/README.md`).
+
+**Premisa.** No se retira ninguna vía de recuperación: «Ir a la consola» queda como enlace bajo «Abriendo tu consola…» por si el JavaScript no arranca, y un toque o Esc saltan la splash como en §382.
+
+**Pendiente o conocido.**
+- La cookie `gs_app` vive en el almacén de Chrome, que la TWA comparte con el navegador: quien abra la app y luego visite genscore.es en Chrome del mismo móvil verá la web en modo app (sin precios) hasta entrar con `?source=web`. Ya pasaba desde §381; no se corrige aquí.
+- La sesión también se comparte: cerrar sesión en Chrome la cierra en la app.
+- Sin medir en un móvil real; los tests cubren desvío, splash con sesión no (es interacción de navegador).
+
+## §390 · APP-TABS-INSTANT-1: las pestañas de la app se abren sin cargar (2026-10-31)
+
+**Qué se decidió.** Denis comprobó que con §389 navegar entre pestañas seguía cargando como una web: el service worker solo guarda lo estático y los `Link` de la barra solo precargaban hasta el esqueleto (`loading.tsx`), así que cada pestaña volvía a pedirse al servidor. Dos cambios:
+
+1. **Dentro de la app, precarga completa de las pestañas de `INS_TABS`** (cinco hoy; la lista se lee de ahí, no se fija) del proyecto abierto cuando la consola queda en reposo (`AppTabPrefetch`, `router.prefetch` con `kind: "full"`; la lista la da `tabPrefetchTargets`, pura y con test). Solo con la cookie `gs_app`: en la web no se gasta.
+2. **`experimental.staleTimes.dynamic = 60`** en `next.config.ts`: una pantalla de la consola vista en el último minuto se vuelve a enseñar desde la caché en memoria del enrutador, sin pedirla otra vez. Vale para todos (web y app).
+
+**Qué no cambia.** Los datos de cliente siguen sin guardarse en el dispositivo: la caché del enrutador vive en memoria de la pestaña y se pierde al cerrar la app. Una acción de servidor que revalida, el `router.refresh()` de los sondeos de escaneo y recargar siguen trayendo datos nuevos.
+
+**Coste y riesgo.** Cada apertura de la consola en la app hace hasta cuatro renders más en el servidor (con sus consultas a Supabase). Al volver a una pestaña antes de 60 s se puede ver un dato con hasta un minuto de antigüedad si nada lo ha refrescado. Si el coste en Vercel sube, se apaga quitando `AppTabPrefetch` del layout.
+
+**Pendiente.** Medido solo con tests; falta comprobarlo en el móvil.
+
+## §391 · TABS-INSTANT-WEB-1: las pestañas también son instantáneas en la web móvil (2026-10-31)
+
+**Qué se decidió.** Denis probó §390 en el móvil («mejor experiencia que la web hasta ahora») y pidió llevarlo a la web. `AppTabPrefetch` ya no se monta solo con la cookie `gs_app`: se monta siempre y decide en el cliente con `shouldPrefetchTabs` (pura, con test). En la app precarga siempre; en la web solo donde existe la barra inferior (`TAB_BAR_MEDIA_QUERY`, ≤760 px, la misma de MOBILE-TABBAR-1 §380) y nunca con ahorro de datos (`navigator.connection.saveData`) ni con conexión `slow-2g`, `2g` o `3g`.
+
+**Por qué no en escritorio.** El menú lateral ya precarga al pasar el ratón; la mejora sería pequeña y el coste en servidor, el mismo.
+
+**Coste y riesgo.** Cada entrada a la consola desde un móvil hace hasta cuatro o cinco renders más en el servidor, con sus consultas a Supabase, aunque no se abran. Con Vercel en Hobby y Supabase Free es lo que hay que vigilar. Para volver atrás sin tocar la app: que `shouldPrefetchTabs` devuelva `env.inApp`.
+
+**Pendiente.** Medir el efecto en las invocaciones de Vercel durante la primera semana.
+
+
+**Adenda a §381 (2026-10-31).** Dentro de la app (cookie `gs_app`) la pestaña «Plan» de Ajustes vuelve, solo de lectura (`components/settings/in-app-plan.tsx`): dice qué plan tiene la cuenta (o «Sin plan · solo lectura»), los días de prueba que quedan y una frase que remite a genscore.es en el navegador. Sin precios, sin «Cambiar de plan», sin checkout y **sin enlace clicable**: Denis propuso un enlace a la web, pero llevar a pagar fuera de la app arriesga el rechazo de Google Play, así que se deja como texto. Añadir el enlace es un cambio de una línea y la asume el fundador. Premisa: la app no vende; qué la verifica: `createCheckoutSession`/`createPortalSession` siguen negándose en servidor; qué se rompería si falla: el usuario vería su plan pero no podría cambiarlo desde la app.
+
+## §392 · SEO-SHEET-AFFORDANCE-1: la acción de «Qué hacer» se ve como enlace y la ficha del tema se ve como ventana (2026-10-31)
+
+**Qué.** En «Posición en Google» (`seo-resumen.tsx`, `seo-topics.tsx`):
+
+- La acción de «Qué hacer esta semana» (Resumen) y «Lo siguiente» de cada tema
+  (Temas) llevan el título en el color de enlace y un chevron a la derecha
+  (`OpenChevron`, `seo-shared.tsx`); al pasar el ratón se subraya.
+- La ficha del tema, en móvil, pasa de panel a pantalla completa a **hoja
+  inferior**: deja ver la consola atenuada arriba, esquinas superiores
+  redondeadas, asa y animación de subida. Cubre la barra de pestañas (antes la
+  barra quedaba encima, z-index 70 frente a 61). En escritorio sigue siendo un
+  panel lateral, ahora con entrada animada.
+- La X de cerrar (ficha y «Cambiar rivales») pasa a botón redondo de 36 px con
+  fondo y un icono de trazo, en vez del carácter «✕» sin caja.
+
+**Por qué.** Denis, en su iPhone (2026-10-31): la próxima acción no parecía un
+enlace en ninguna de las dos páginas, y la ficha parecía una página que había
+perdido la cabecera, con una X que casi no se veía.
+
+**Pendiente.** Verlo en el iPhone de Denis. Premisa: no se retira ninguna vía
+de recuperación; cerrar sigue siendo la X, tocar fuera y Escape.
+
+## §393 · MOBILE-NAV-TUWEB-1: pestaña «Tu web» en la barra móvil y botones fijos en lugar de pastillas (2026-10-31)
+
+**Qué se decidió.** Denis eligió la opción 4 de cuatro maquetas interactivas (https://claude.ai/artifact/Mqju7qS8moqGM6RkHW9UrH), que era su propia idea:
+- La barra inferior móvil pasa de cinco a seis pestañas: Inicio, Plan, En la IA, Buscadores, Tu web y Agentes.
+- «Tu web» reúne las dos auditorías técnicas (`/web-audit?bloque=geo|seo`), con dos botones arriba: «Para la IA» y «Para Google».
+- «Buscadores» (antes «Google», rótulo pedido por Denis, que sustituye la adenda a §380 del PR #705) se queda solo con Posición en Google, sin botones.
+- Las familias con varias pantallas (En la IA, Tu web, Agentes) llevan botones fijos de ancho repartido, nunca pastillas que se deslizan: Denis no las quiere. El rótulo corto de cada botón es `pin` en `INS_NAV` («Citadas», «Para la IA», «Para Google», «Visibilidad», «Auditoría»).
+- La Auditoría agéntica sigue en Agentes: es un concepto nuevo y Denis prefiere tenerlo unido de momento.
+
+**Por qué.** «Tu web para la IA» colgaba de la pestaña de Google, y meterla en «En la IA» dejaba cuatro pastillas que no cabían.
+
+**Qué no cambia.** Rutas, menú de escritorio, consultas y acciones.
+
+**Pendiente o conocido.** Con seis pestañas el rótulo baja a 10 px; medido en Chromium a 375 y 390 px, falta verlo en un iPhone real. Premisa: no se retira ningún camino de recuperación.
+
+## §394 · PLAN-MODAL-INSTRUMENTO-1: «Cambiar de plan» rehecho sobre el prototipo, sin paso intermedio (2026-10-31)
+
+**Qué se decidió.** La primera versión (sólo estilos sobre `.cp-*`) no servía: en móvil el modal quedaba por debajo de la barra de pestañas y el botón no se veía, «Recomendado» señalaba Pro a una cuenta Agencia (una bajada) y el diseño no era el del prototipo. Denis pidió rehacerlo para móvil con barra de pestañas y escritorio partiendo de `i-src/screens/perfil.js` (`pm-*`, carrito fijo), maqueta aprobada en el hilo (https://claude.ai/artifact/87ehqmWuRqL3evbA1dXTTh). Y quitar «Revisa el cambio»: Stripe ya tiene su página de resumen y ese paso era un clic más antes de la conversión.
+
+- El modal se monta por portal en `<body>` dentro de `.ins.pmx`, con `z-index` por encima de la barra de pestañas; en ≤760 px es una hoja inferior a casi toda la altura con el carrito fijo abajo y márgenes del sistema.
+- Tres columnas en escritorio (precio grande y fino, tachado del precio normal si hay precio fundador, filas Dominios/Prompts/Motores/Escaneo) y tarjetas compactas con fichas en móvil.
+- «Recomendado» sólo en un plan por encima del actual. El plan actual lleva «Tu plan ahora» («Tu prueba» en la prueba de Pro) y no se puede volver a elegir, salvo en la prueba, donde elegir Pro es empezar a pagarlo.
+- Agencia (también la comped) no se cambia desde aquí: los planes salen como referencia y el botón es «Hablar con nosotros» (correo a soporte).
+- Sin paso de revisión: eligiendo plan, «Ir al pago» abre el checkout de Stripe y, con suscripción de pago, «Ir al portal de Stripe» abre el portal. El resumen del carrito dice «Pasas de la prueba a / Subes a / Bajas a», el precio y «Precio fundador para siempre · Pago seguro con Stripe».
+- Las acciones de servidor (`createCheckoutSession`, `createPortalSession`, `changePlan`) no cambian. El paso de elegir dominios y «Todo listo» se conservan tal cual.
+
+**Premisa del paso retirado.** Se quita la confirmación interna antes de ir a Stripe porque Stripe Checkout y el portal enseñan su propio resumen y piden confirmar antes de cobrar o cambiar nada. La rama de confirmación de bajada a «Sin plan» ya era inalcanzable desde TRIAL-ONLY-1 (§243: `free` no se puede elegir) y sale con ella. Si un día vuelve un plan elegible que se aplique sin pasar por Stripe, necesita su propio paso de confirmación.
+
+**Qué queda pendiente o sin verificar.** Comprobado con capturas del marcado real en 390 y 1280 px fuera de la consola; en la consola lo juzga Denis en el preview. La puerta de exceso de dominios sigue con su marcado `.cp-*` y los estilos de la primera versión.
+
+## §395 · EXT-LAUNCH-1: artículo de lanzamiento de la extensión de Chrome (2026-10-31)
+
+**Qué se decidió.** Artículo `extension-de-chrome-de-genscore` (cluster
+`playbooks`), a petición de Denis, que anuncia la extensión de CHROME-EXT-1
+(§361, §362) ya en la Chrome Web Store. Cuenta lo que hace sin cuenta (nota
+SEO + IA de 0 a 100, qué motores pueden leer la página según su robots.txt,
+SEO on page, llms.txt, comercio agéntico en páginas que venden, tarjetas con
+el código, revisión automática opcional, atajo Alt + Mayús + G), lo que añade
+con cuenta (visión general del dominio en solo lectura), cómo instalarla y qué
+pasa con los datos. Todo sale del manifiesto 1.0.0, de la ficha aprobada en
+§362 y del apartado «Extensión de Chrome» de `/privacidad`; nada más.
+
+**Enlace a la tienda.** Vive en `CHROME_WEB_STORE_URL`
+(`lib/blog/chrome-extension.ts`), que leen el enlace del principio y el CTA.
+`chrome-extension.test.ts` exige que sea una ficha real
+(`chromewebstore.google.com/detail/<nombre>/<id>`) y que el MDX no escriba la
+URL a mano, y ata el nombre y el atajo al manifiesto.
+
+**Imágenes (segunda pasada, a petición de Denis: «portada más visual, menos
+texto», «imágenes nítidas», «ligero y con gancho»).** Las capturas de la ficha
+de la tienda eran 1280×800 a 1x y, recortadas al panel, se veían borrosas. Se
+sustituyen por el panel real (`docs/chrome-extension/prueba/extension/
+panel.html`, modo de demostración `window.__GS_DEMO`) pintado a 3x con una
+tienda inventada (`tienda-ejemplo.es`), guardado a 2x en WebP. La cabecera del
+artículo gana `heroImage` (`ArticleHero`, `lib/blog/posts.ts`): una ventana de
+Chrome con la ficha inventada y el panel al lado, y la portada del índice es
+esa misma escena. Sólo para pantallas nuestras, nunca un producto de terceros.
+El texto se acorta: titular «GenScore ya está en Chrome: mira cualquier web
+como la ve la IA», entradilla de una frase y tres secciones con una captura
+cada una. `.art-shot` limita las capturas del panel a su ancho real.
+Presupuesto de `public/` +384 KiB, anotado en `asset-budget.test.ts`.
+
+**Pendiente.** Que la ficha pase a «Pública» antes de difundir el artículo: si
+sigue «Oculta», el enlace funciona pero la extensión no sale en la búsqueda de
+la tienda. Premisa: no se retira ningún camino de recuperación.
+
+## §396 · CONSOLE-PAGE-TEMPLATE-1: una sola cabecera y un solo orden en todas las pantallas de la consola (2026-10-31)
+
+**Qué se decidió.** Denis pidió homogeneizar la jerarquía de las pantallas: lo importante primero, lo secundario abajo, menos scroll y menos espacio en blanco en el móvil. Lo aprobó sobre un prototipo hecho con los componentes reales (https://claude.ai/artifact/3seCp51L7QH9Pe27ZDwLSe, con Antes y Después), con una condición explícita: **sólo reordenar, quitar o compactar, nunca cambiar el diseño** (tarjetas, fondo, colores y tipos siguen igual; un primer prototipo con estilos propios se rechazó por eso).
+- Cabecera común (`components/ins/page-head.tsx`): título, la acción de la pantalla en la misma fila (en el móvil sólo el icono, con `aria-label`) y la frase con datos debajo. La frase se queda: Denis dijo que aporta calidad.
+- Fuera la línea «SECCIÓN · dominio» de las nueve pantallas: la sección y el dominio ya están en el menú y en el selector.
+- Fuera el recuento junto al título («6 competidores», «12 acciones»): Denis dijo que sobra, la pantalla ya enseña la lista.
+- Menos aire en el móvil (`app/ins/page-template.css`): el título sube (sin el margen por defecto del `h1`, `padding-top` de 14 px), y las secciones y la baraja del plan pasan de 36–44 px a 28 px.
+- Visión general: «Descargar informe» va a la fila del saludo.
+- Competidores: «Gestionar competidores» va a la fila del título y deja de empujar el ranking.
+- Recomendaciones: Presencia, Prominencia, Cuota de voz y Autoridad bajan después de las acciones.
+- Prompts: en el móvil, conjunto y motores en una sola fila (logo y porcentaje; la frase y las barras se ocultan).
+- Páginas citadas: en el móvil, las tres cifras en una fila como los pilares de Recomendaciones (sin la frase de cada una), y «¿Tus páginas se pueden citar?» baja tras «De dónde salen las citas».
+- Posición en Google: «Search Console conectado» se queda en la fila del título; en el móvil, sólo el punto verde.
+
+**Segunda pasada sobre el preview (Denis, 2026-10-31).**
+- Recomendaciones: fuera el buscador de «Más adelante» y el botón «Ver pendientes» (la capa en foco). `cardMatches` se queda en `lib/ins/recs-cards.ts`, sin uso en pantalla.
+- El selector «Palanca» (≤1000 px) pasa a un control con borde redondeado y la flecha dentro de un círculo: Denis no veía la flecha.
+- Las tarjetas del plan miden todas lo mismo: la altura de la más alta (`Deck` con `equal`; en el móvil, `align-items: stretch`).
+- La pestaña móvil «En la IA» abre por Competidores, luego Prompts y luego Citadas.
+- Prompts: fuera la línea «N de M prompts de tu plan» y la raya gruesa del primer tema bajo la barra de Temas/Prompts. El tope del plan sigue en «Añadir prompts».
+- Competidores: fuera «Ordenado por menciones · N respuestas · M prompts en K motores» en el ranking, a petición de Denis. Esto deja sin efecto, en esta pantalla, la regla de TRUST-METRICS-1 (§183) que pedía el denominador junto a los porcentajes: la frase del título sigue dando porcentajes sin él. Si vuelve, se compone con `answerCountLabel`.
+- Competidores en el móvil: el ranking se compacta, con menciones, citas y puesto medio en una sola fila bajo la marca.
+- Recomendaciones, «Más adelante»: una acción abierta se lee como un solo bloque. Lleva fondo y borde azul a la izquierda, su título se queda fijo arriba mientras se baja por el detalle, y abajo hay un «Cerrar esta acción».
+- La invitación a conectar Search Console (`GscConnectRow` y `GscConnectPanel`) pasa a la tarjeta, las pastillas y el botón negro de Instrumento (`app/ins/google.css`). El texto y el enlace no cambian.
+- Ajustes > Cuenta: la contraseña («Acceso») pasa al final, detrás de los datos de facturación.
+
+**Qué no cambia.** Consultas, acciones de servidor, cifras y menú de escritorio. Ajustes, 404 y errores conservan su cabecera.
+
+**Pendiente o conocido.** Medido en el prototipo a 390 y 1280 px; falta verlo en el preview y en un iPhone real. Premisa: no se retira ningún camino de recuperación (los botones siguen, sólo cambian de sitio).
+
+## §397 · FAVICON-NO-FLICKER-1: los favicons no parpadean al abrir menús y la cabecera móvil se alinea con el título (2026-10-31)
+
+**Qué se decidió.** Denis pidió dos cosas viendo el preview en su iPhone:
+- Que los favicons dejen de parpadear cada vez que abre el selector de dominios o la lista de competidores.
+- Que el favicon y el nombre del dominio de la cabecera móvil queden alineados con la «B» de «Buenos días», que es la alineación de todas las páginas.
+
+**Qué se hizo.**
+- `components/ui/favicon-img.tsx` recuerda en memoria de la pestaña qué iconos ya se pintaron y qué dominios no tienen icono. Al volver a montar un icono ya visto, se pide sin carga diferida y con decodificación síncrona, así que sale de la caché HTTP (una semana, `/api/favicon`) sin hueco en blanco. Un dominio sin icono enseña su letra al instante, sin esperar al `onError` del 204. No se guarda nada fuera de la pestaña.
+- La cabecera móvil (`.ins-shell .mtop`) pasa de 12 px a 19 px de margen izquierdo. Medido a 390 px, el borde del favicon cae en el mismo píxel que el trazo de la «B» del título (19 px, por el espacio lateral de la letra a 34 px). El margen derecho no cambia.
+
+- En el móvil, las pastillas de la invitación a Search Console van en una sola fila que se desliza, a petición de Denis. Las cuatro no caben a 390 px.
+
+**Qué no cambia.** La ruta `/api/favicon`, sus cabeceras de caché y el aspecto de los iconos.
+
+**Pendiente o conocido.** La primera vez que se abre un menú en una pestaña nueva el icono sigue llegando como antes; la memoria sólo ayuda a partir de la segunda. Premisa: no se retira ningún camino de recuperación.
+
+## §398 · DARK-MODE-MENU-1: el modo oscuro se publica, y se elige en el menú de cuenta (2026-10-31)
+
+**Qué.** Denis (2026-10-31): «si el modo oscuro está desarrollado, estaría bien
+ubicarlo dentro de la sección de perfil, porque en la cabecera ya va a ser
+demasiado, especialmente en móvil». No estaba publicado: §349 dejó los tokens
+oscuros en `app/ins/tokens.css` y `lib/ins/theme.ts` sin ningún selector (el
+botón de luna que se veía era de la barra de revisión del prototipo, `#thbtn`,
+no del producto). Se le enseñaron dos sitios (menú de cuenta y un bloque
+«Apariencia» en Ajustes > Cuenta) y eligió **solo el menú de cuenta**.
+
+- Fila «Modo oscuro» con interruptor (`role="switch"`) en `AccountPanel`
+  (`components/ins/menus.tsx`, `ThemeSwitchItem`), bajo Notificaciones. El
+  mismo menú sale del avatar en escritorio y en móvil. No cierra el menú, para
+  que el cambio se vea en el sitio.
+- `applyTheme` guarda la elección en `localStorage` (`gs-theme`) de ese
+  dispositivo, sin migración. `THEME_INIT_SCRIPT` corre al principio de
+  `<body>` (`app/layout.tsx`) para que no haya parpadeo; en la web pública no
+  cambia nada porque los tokens oscuros están acotados a `.ins`. Las pantallas
+  de acceso «Bruma» sí lo leen (usan `.ins` y su niebla lee los tokens).
+- `app/ins/dark.css`, importado por el marco: en oscuro mapea las variables
+  antiguas de `globals.css` (las que siguen usando los bloques heredados de
+  Posición en Google, Comercio agéntico y Auditoría técnica) a los tokens de
+  Instrumento, y corrige los tintes claros escritos a mano en `globals.css` y
+  `console.css` (pastillas de puesto, etiquetas, avisos de conectar) y las
+  líneas de los gráficos de Search Console.
+
+**Por qué ahora y no en F8.** §349 aplazaba el selector hasta migrar todas las
+pantallas; F8e cerró la última. La auditoría de colores fijos sobre los
+bloques heredados se hizo por código (todas las reglas de esos prefijos con un
+fondo claro o un texto oscuro escritos a mano), no mirando cada pantalla con
+datos reales.
+
+**Pendiente / roto conocido.** Ninguna captura en oscuro con datos reales
+antes del PR: el entorno de trabajo no tiene sesión. Se revisa en el preview.
+Las rampas de color de los gráficos (barras de Competidores, series) se
+quedan como están: se leen en los dos temas. Sin «Sistema» ni
+`prefers-color-scheme`, por la decisión de §349. Premisa: no se retira ningún
+camino de recuperación.
+
+## §399 · CONSOLE-SKELETONS-1: los esqueletos de carga pasan a «Instrumento» (2026-10-31)
+
+**Qué.** Denis vio que, en la primera carga lenta de cada pantalla, el esqueleto que sale debajo seguía siendo el del diseño antiguo y, con el modo oscuro (DARK-MODE-MENU-1, §398), salía claro. Ahora todos los `loading.tsx` de `app/dashboard` se construyen con `components/ins/skeleton.tsx` (`SkPage`, `SkHead`, `SkCard`, `SkStrip`, `SkTabs`, `SkRows`) y `app/ins/skeleton.css`, dentro de `.ins`, así que leen los tokens de Instrumento en claro y en oscuro.
+
+- Cada pantalla tiene la forma de su versión «Instrumento» y de la cabecera común de §396: título, acción en la misma fila (solo icono en el móvil) y la frase.
+- Pantallas con esqueleto propio: Visión general, Recomendaciones (plan primero y pilares al final), Prompts, Competidores, Páginas citadas, Auditoría técnica, Posición en Google, Visibilidad en agentes, Auditoría agéntica, Ajustes, depuración y escaneos. El resto de la consola (Dominios, Notificaciones…) usa el genérico de `app/dashboard/loading.tsx`.
+- Posición en Google conserva su escena de carga ambiente (§289) debajo de la cabecera y las pestañas; en oscuro la cubre `dark.css` de §398.
+- El pulso es ambiente, no progreso, y se queda quieto con `prefers-reduced-motion`.
+- Se retiran `components/ui/skeleton.tsx` y las reglas `.skel`/`.skel-card` de `globals.css`, que ya no usaba nadie.
+
+**Qué no cambia.** Consultas, acciones, pantallas cargadas y la barra inferior.
+
+**Pendiente o conocido.** Comprobado con capturas estáticas de los esqueletos a 390 y 1280 px en claro y oscuro; falta verlo en el preview. No retira ningún camino de recuperación. Lo vigila `tests/console-skeletons.test.ts`.
+
+## §400 · APP-LEGAL-1: las páginas legales no venden dentro de la app (2026-10-31)
+
+**Qué se decidió.** La prueba de la versión 1.0.2 de la app de Android en BrowserStack (Pixel 8 y Galaxy S24, Android 14) pasó arranque, ausencia de barra de dirección, registro, recuperar contraseña y reapertura, pero falló «sin precios»: Términos, Privacidad y Cookies, que se abren desde el inicio de sesión y están en la lista de permitidos de §381, pintaban la cabecera pública (franja «Pro 99 € → 69 €/mes para siempre», «Precios») y el pie público (enlace a precios y logos de pago). Google Play no lo acepta dentro de la app.
+
+Con la cookie `gs_app`, `LegalPageShell` sustituye la cabecera pública por una barra con la marca y «Volver» (a `/login`, que con sesión sigue a la consola) y no pinta el pie. La cláusula «Planes y precios» de Términos nombra la página de precios en genscore.es sin enlazarla. Fuera de la app no cambia nada. Lo vigila `components/legal-page-shell.test.tsx`.
+
+**Coste.** Las tres páginas leen la cookie, así que dejan de ser estáticas y se generan en cada visita.
+
+**Paquete Android (fuera del repo, para la siguiente sesión).** La 1.0.0 y la 1.0.1 se cerraban al abrir: con `enableSiteSettingsShortcut: false`, androidbrowserhelper desactiva `ManageDataLauncherActivity`, que no estaba declarada. La 1.0.2 (código 3) la activa y la declara como la plantilla de Bubblewrap, y compila sin minificar. Cualquier regeneración del proyecto tiene que conservar las dos cosas.
+
+**Pendiente.** Hay como un segundo en blanco entre la pantalla de arranque nativa y la animación de la splash; sin medir.
+
+## §401 · EXT-AGENTS-SERVICE-1: la extensión 1.0.1 entiende páginas que venden software o servicios (2026-11-01)
+
+**Qué.** El informe de prueba de Instinct vio que, en la portada de genscore.es, el carril Agentes de la extensión daba 15 y pedía «Pon el precio y el stock en los datos del producto». La causa: cualquier `Offer` en el JSON-LD marcaba la página como tienda, y sin `Product` todo se leía como una ficha de producto físico.
+
+- `collect.js` lee `ld.offering` (tipo, nombre, precio y moneda) del primer nodo con `offers` que no sea `Product` ni `Offer`.
+- `score.js` marca `service` cuando hay venta sin `Product` y hay `offering` o un tipo de servicio (`SoftwareApplication`, `WebApplication`, `MobileApplication`, `Service`, `ProfessionalService`, `Course`, `Event`, `FinancialProduct`). Entonces stock y devoluciones son «No aplica» y no restan, como en la Auditoría agéntica de la consola (§325). «Entiende lo que vendes» y el precio se leen de la oferta. Las tarjetas hablan de «tu plan» y su JSON-LD no lleva `availability`.
+- «Prueba gratis», «Empieza gratis», «Start free trial» y parecidos cuentan como botón para contratar. Siguen sin hacer tienda por sí solos, igual que «Reservar».
+- En una tienda con `Product` no cambia nada.
+
+- **EXT-SHOP-FIND-1 (Denis, 2026-11-01).** En una portada que no vende nada, la extensión busca la tienda en la misma web sin LLM, como `lib/agentic-audit/find-product.ts`: el catálogo público (Shopify `/products.json`, WooCommerce Store API), los enlaces de la propia página (ruta de ficha o menú «Tienda», «Productos», «Dispositivos»…) y, si no hay nada, el sitemap. Lee como mucho dos candidatas, sólo del mismo origen, y una cuenta sólo si su JSON-LD trae `Product` u oferta. Con tienda, Agentes es la nota de esa página y el panel dice «GenScore detecta tu tienda en /ruta» con un botón para abrirla; sin ella, «GenScore no detecta tu tienda ni tus productos de forma estándar». La nota SEO + IA de la portada no cambia. Sólo en la portada (`/`), para no avisar en cada artículo de un blog.
+
+**Pendiente.** Subir la 1.0.1 a la Chrome Web Store, que la revisa Google en uno o dos días y que hace Denis. No retira ningún camino de recuperación. Lo vigilan dos tests nuevos de `docs/chrome-extension/prueba/tests/score.test.cjs`.
+
+## §402 · APP-BACK-CACHE-1: volver atrás en la consola no recarga la pantalla (2026-11-01)
+
+**Qué se vio.** El segundo test de la app 1.0.2 (Pixel 8, Android 14) lo pasó todo, pero volver atrás de «En la IA» a «Plan» enseñaba entre uno y cinco segundos el esqueleto «Cargando…», mientras que tocar la pestaña lo abría al instante.
+
+**Causa, reproducida con una app mínima en Next 16.2.6.** Next guarda cada pantalla visitada para volver atrás y la vacía entera cuando una acción de servidor dice que cambió cookies. El middleware escribía la cookie del proyecto activo en cada petición de `/dashboard/projects/<id>/…`, también en los POST de las acciones, y Next mezcla lo que escribe el middleware en las cookies de la acción. Así que cualquier acción lanzada desde una pantalla de proyecto contaba como «cookies cambiadas». Competidores lanza una al abrirse (las sugerencias), por eso el fallo salía justo desde «En la IA». En la reproducción, el mismo patrón (middleware que escribe una cookie, más una acción al montar) hace que atrás vuelva a pedir la pantalla. Escribiéndola sólo cuando cambia, atrás tarda unos 15 ms, sin petición.
+
+**Qué se decidió.** El middleware sólo escribe la cookie del proyecto activo cuando cambia. No vuelve a alargar su caducidad de 30 días en cada visita: si caduca, se escribe en la siguiente navegación a un proyecto. Además, cada acción lanzada desde una pantalla de proyecto deja de pedir un repintado extra de la pantalla actual. Lo vigila `middleware.test.ts`.
+
+**Dentro de la app no se invita a pagar (§381).** «Visibilidad en agentes» y «Auditoría agéntica» sin plan dicen «no está incluida en tu plan», sin «Pasar a Pro», y la tarjeta de Visión general que sólo invitaba a Pro no sale. Fuera de la app no cambia nada.
+
+**Pendiente.** Una renovación del token de Supabase en el middleware tiene el mismo efecto, pero sólo una vez por hora como mucho. No retira ningún camino de recuperación.
+
+## §405 · EXT-LLMS-LINKS-1 + EXT-SHOP-FIND-2: la extensión 1.0.2 propone un llms.txt con los enlaces de la web y encuentra la tienda de las grandes superficies (2026-11-01)
+
+**Qué se decidió.** Dos arreglos de la extensión de Chrome, a partir de lo que vio Denis en vodafone.es y carrefour.es.
+
+- **El llms.txt propuesto deja de ser una sola línea.** Antes solo llevaba la página abierta. Ahora `collect.js` lee los enlaces del menú y del pie de la propia página (`header`, `nav`, `footer` y sus roles). Solo cuenta los del mismo origen, con su texto, y quita duplicados. También deja fuera los de cuenta, cesta y búsqueda. `score.js` los ordena en tres apartados:
+  - «Páginas principales» (máximo 12): primero un enlace por sección, para que un megamenú no llene la lista con hijos de la primera;
+  - «Más información», con los del pie (máximo 8);
+  - «Optional», con los legales (máximo 4).
+
+  El nombre sale de `og:site_name` si existe. No se inventa ninguna descripción: cada línea es un enlace con el texto que tiene en la web, y la tarjeta invita a añadir una frase. Es la misma regla de la consola (`lib/web-audit/llms-txt.ts`: nada de texto de modelo en un fichero que el cliente publica). Aquí no hacen falta marcadores porque el texto del enlace es real.
+- **La búsqueda de la tienda llega a las grandes superficies.**
+  - Las rutas de ficha reconocen también `/<id>/p` (estilo Carrefour) y `-p123.html`.
+  - El sitemap ya no es solo el primero de robots.txt: se leen todos los que nombra.
+  - Se sigue un nivel de índice de sitemaps, prefiriendo el hijo que nombra productos.
+  - Como mucho se leen cuatro ficheros de sitemap y nunca un `.gz`.
+- **Esas lecturas mandan las cookies de la propia web** (`credentials: "same-origin"`, solo mismo origen). Las tiendas grandes están detrás de un control antibots, y sin el pase del visitante responden con una página de desafío. Lo comprobamos con Carrefour: desde un navegador sin pase, sus sitemaps de catálogo devuelven 403 «Just a moment». robots.txt, llms.txt y el HEAD siguen sin cookies.
+
+**Por qué.** En vodafone.es el llms.txt propuesto tenía una sola línea. En carrefour.es, una tienda, no salía nada sobre agentes: su portada no tiene datos de producto, y su catálogo solo se ve por sitemaps de índice que no se leían. Además, las primeras capturas de Denis eran de la versión 1.0.0 de la tienda, que todavía no buscaba la tienda.
+
+**Pendiente o sin verificar.** Desde aquí no se pudo ver la portada real de Carrefour ni la de Vodafone, porque nuestro navegador recibe el desafío antibots. El caso de los sitemaps se probó con una tienda de prueba en local: índice, hijo de productos y ficha `/R-521/p`. La comprobación real la hace Denis cargando la extensión sin empaquetar. Si una tienda solo publica sitemaps `.gz`, seguirá saliendo «no detecta tu tienda».
+
+## §406 · EXT-AUDITS-1: la extensión 1.1.0 enseña las auditorías GEO, SEO y agéntica del dominio (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el artefacto el 2026-11-01 («Me gusta») y puso el texto. Con la sesión iniciada, la extensión enseña tres cosas nuevas.
+
+- **«Auditorías del dominio»**, en la visión general del dominio. Son tres tarjetas plegables y solo se abre una a la vez:
+  - Auditoría GEO, «¿Te puede citar la IA?»;
+  - Auditoría SEO, «¿Te encuentra Google?»;
+  - Auditoría agéntica, «¿Puede un agente comprar en tu web?», el texto de Denis.
+
+  Cada tarjeta lleva su nota, los tres problemas que más puntos dan con dónde fallan y sus puntos, y un botón a su pantalla de la consola.
+- **«En tu auditoría»**, al revisar una página del dominio seleccionado. Dice:
+  - si la vio el servidor;
+  - si el robots.txt deja entrar a los cuatro motores;
+  - si Google puede indexarla;
+  - qué motores la citan (de los prompts del último escaneo);
+  - sus problemas técnicos, con el bloque al que pertenecen.
+
+  Si la consola no revisa esa página, lo dice.
+- **Sin sesión**, una tarjeta «Con tu cuenta» con las tres auditorías bloqueadas y sin cifras. Lleva el texto de Denis («Auditoría técnica completa de todo tu dominio. Conoce la situación y los puntos de mejora en tiempo real.») y «Identifícate en GenScore».
+
+**En una web ajena**, también a petición de Denis:
+- La pregunta pasa a «¿Quieres añadir X a tus dominios?», con «Añadir a mis dominios». El «N de M» solo sale con un tope real (menos de 100).
+- Hay un segundo botón, «Añadir como competidor de <dominio seleccionado>». Abre Competidores con `?nuevo=<dominio>&nombre=<og:site_name>`. La hoja de gestión sale abierta con el formulario relleno, y no se guarda nada hasta pulsar «Añadir», con el mismo `createCompetitorAction` y sus comprobaciones. `readCompetitorPrefill` (`lib/competitors/prefill.ts`) ignora lo que no sea un dominio bien formado.
+
+**Cómo se calcula, sin rehacer cifras.** `/api/ext/project` añade `audits`, que construye `lib/ext/audits.ts` (puro). Cada cifra sale de su dueño:
+- Bloques GEO y SEO: `buildAuditBlock` sobre `buildTechnicalIssuesReport`, con la última instantánea de `web_audit_snapshots`, la misma que lee la Auditoría técnica. Los nombres salen de `ISSUE_CHECK_META` y el alcance, de `issueScopeLabel`.
+- «Si arreglas estos tres → N» solo sale cuando esos tres son todos los problemas con puntos del bloque. Los puntos de bloque no se suman, así que una suma parcial sería una cifra inventada.
+- Bloque agéntico: la nota de la revisión, `firstSteps` y `scoreIfChecksPass`, igual que «Visibilidad en agentes». Sigue la misma puerta que la tarjeta de Visión general: Starter, una revisión sin nada que vender o una sin nota no enseñan el bloque.
+- Los problemas de la página salen de `pageCheckStates` de esa entrada, sin puntos (los puntos por página no son los del bloque).
+
+`/api/ext/context` devuelve también el `id` de cada proyecto, para que los botones lleven a la pantalla de ese dominio. Es el propio proyecto de la cuenta, leído con el cliente del usuario.
+
+**Regla que se mantiene.** La extensión sigue siendo de solo lectura: no lanza auditorías, no llama a ningún LLM y no escribe en la cuenta. Sin migración.
+
+**Ajustes de Denis en la misma versión.** La tienda encontrada ya no sale en la portada con su ruta y un botón «Abrir»: dentro de Agentes aparece «GenScore detecta tu tienda» con un check verde, sin URL, y las tareas de esa tienda dicen «En tu tienda». Si no se encuentra, la línea «no detecta tu tienda» se queda y Agentes sigue sin nota. Una nota baja ahí sería falsa, porque no encontrarla no demuestra que un agente no pueda comprar. La frase bajo la nota usa el conector que toca: «Ningún motor de IA puede leer esta página, y Google tampoco la indexa» en vez de «…, pero Google no la indexará». Y «indexará» pasa a «indexa» en toda la extensión.
+
+**Pendiente.** Denis decide si mantiene «en tiempo real»: la auditoría se rehace después de cada escaneo (diario o cada dos días según el plan), no al instante. La versión 1.1.0 hay que subirla a la tienda. El aviso de Chrome «Ten cuidado» no depende de esto.
+
+## §407 · SHOP-DETECT-2: la consola y la extensión encuentran mejor qué vende una web (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) robustecer la detección de tiendas y servicios en la consola y en la extensión, para todos los sectores, con una batería grande de webs reales. Se montó con 130 webs en 12 grupos: retail, telcos, eléctricas, SaaS, salud, seguros y banca, viajes, formación, ocio y restauración, servicios y 6 webs de control que no venden (Wikipedia, BOE, RAE, AEMET, La Moncloa, INE). La consola se probó con su propio motor (`runAgenticAudit` con `discover`) y la extensión con `collect.js` en un Chromium real.
+
+Resultado, contando sólo las webs que se pudieron leer y venden algo:
+
+| | Antes | Después |
+|---|---|---|
+| Consola | 61 de 84 | 69 de 82 |
+| Extensión | 23 de 73 | 52 de 76 |
+| Controles con tienda inventada | 0 | 0 |
+
+Unas 40 webs no se pueden medir desde el servidor porque responden a nuestro robot con un reto (El Corte Inglés, Carrefour, MediaMarkt, Iberdrola, BBVA, Meliá…). Eso no cambia y sigue siendo `unknown` (§319). La extensión, que lee con el navegador del cliente, sí entra en muchas de ellas.
+
+**Consola, sin pedir ninguna página más.** Sigue la regla de §323: una sola página extra. Lo que cambia es cuál se elige (`findDiscoveryCandidate`).
+
+- **En una web que no es una tienda**, el enlace del menú a precios gana a una «ficha» adivinada. Peec AI salía «sin tienda» porque su sitemap tenía `/product/brand-perception` (una página de funciones) y ganaba a «Pricing».
+- **Precios por el texto del enlace o por una palabra dentro de la ruta**: «Tarifas Fibra y Móvil» → `/fibra-movil`, `/plan-de-precios`, `/tarifas-luz`, `/precios-de-tratamientos-dentales`. `PRICING_PATH` acepta ya la palabra dentro del último tramo.
+- **Seguros y contratación** (`/seguros-de-salud`, `/contratacion-seguros-salud`, `/contratar-luz`) y **hoteles** (`/hoteles/x`) cuentan como páginas de venta. Un evento va el último: «/eventos/black-friday» o un webinar salían antes que la página de precios.
+- **Escaparates sin `/p/` en la URL** (Magento y similares): el enlace de la tarjeta de producto (`product-item-link`, `data-product-id`) o el enlace justo antes de un precio. Nunca ayuda, legal, carrito o un fichero (`.pdf`).
+- **Escaparate** (`looksLikeStorefront`) es plataforma de tienda, carrito o tarjetas de producto. Los precios impresos solos no cuentan: una telco o un parque los imprimen y allí la página a juzgar es la de tarifas.
+- **Botones**: «Lo quiero», «Me interesa» y «Calcula tu seguro» cuentan como botón para contratar.
+
+**Extensión.** La búsqueda de la tienda se rehace con el mismo orden, y además:
+
+- Se busca también desde un listado de productos y desde la primera sección de la web (`/es/`, `/hogar`), no sólo desde la portada. Un listado con precios salta a su primera ficha, que es lo que lee un agente (Denis, con El Corte Inglés).
+- Una página vende también si es de precios, o si enseña un precio junto a un botón de compra en el cuerpo, aunque no lo diga en sus datos. Entonces Agentes la puntúa como servicio y «Precio en los datos» dice «Sólo en el texto». Un botón de la cabecera no cuenta, y un artículo nunca vende por esta vía.
+- Se leen dos candidatas como mucho, y la segunda es de otro tipo que la primera (una ficha y una página de precios).
+- Un listado sin ficha encontrada no dice «no detecta tu tienda».
+
+**Agotado, en las dos.** Si todas las ofertas dicen `OutOfStock`, `SoldOut` o `Discontinued`, «Avísame» es el botón correcto. En la consola, `add_to_cart` pasa a `unknown` y no resta; en la extensión, «Botón de compra claro» dice «No aplica, agotado». La extensión enseña la disponibilidad en castellano («Agotado», «Preventa», «En stock»). Lo encontró Denis en una ficha de El Corte Inglés.
+
+**Pendiente o roto conocido.** Siguen sin tienda las webs que se pintan sólo con JavaScript (Booking, Glovo, Miravia, Domino's, Amazon desde el servidor), las que venden en otro subdominio (Doctoralia Pro, que la extensión no puede leer por CORS) y algunas de formación y coches. Para la consola, ampliar a una segunda página extra mejoraría más casos, pero rompe la regla de §323 y necesita la aprobación del fundador. La batería vive en el scratchpad de esta sesión; su resumen por sector está en `/mnt/project-files/extension/bateria-deteccion-tiendas-2026-11-01.md`.
+
+## §408 · EXT-PANEL-LAYERS-1: la extensión 1.2.0 abre cada gauge en dos capas, «Tu dominio» y «Esta página» (2026-11-01)
+
+**Qué se decidió.** Denis pidió (2026-11-01) que, con sesión y en su dominio, el panel enseñe lo más interesante de GenScore sin perder la revisión de la página, y que sin sesión o en una web no analizada cada bloque invite a entrar. Vio dos artefactos: uno con pestañas, que le gustó pero perdía la primera vista, y el definitivo sobre el panel real en claro (https://claude.ai/artifact/XotXsA3T4KgSZsrAKMdgAA), que aprobó («perfecto. Me gusta mucho»).
+
+- **La primera vista no cambia**: nota grande, frase y los tres gauges. Los gauges ya se desplegaban al pulsarlos y hacen de pestañas.
+- **Un gauge abierto enseña dos capas, siempre en este orden.** «Tu dominio» lleva los datos de GenScore y «Esta página» la revisión en vivo que ve todo el mundo (`pageLane`).
+  - **IA**: los cuatro motores en una fila (`.eng1`) y el ranking frente a los rivales con el favicon de cada web (`/api/favicon`, el mismo de la consola). Si no carga, sale la letra.
+  - **Google**: lo que más resta en la Salud SEO (los problemas del bloque SEO de `audits`), la misma invitación a Search Console que en la página («Tus búsquedas de Google, tu puesto y tus clics…», nunca otra frase) y lo que ve Google en la página. Ya no sale vacío.
+  - **Agentes**: un gauge por componente y lo que lee un agente en la página.
+  - Sin página leída, «Esta página» dice que se pulse el icono en una página de la web.
+- **Sin sesión, o con sesión en una web que no analizas**, cada gauge abre primero una ilustración sin cifras: «Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu dominio» y «Conoce tu nota para agentes». El botón es «Identifícate gratis» o «Analizar <dominio>». Debajo va la revisión de la página. Agentes sale siempre en estos dos casos, para poder invitar.
+- **Las auditorías del dominio siguen debajo, a primer nivel** (§406).
+- **«Conectar» (Search Console) abre directamente el permiso de Google** (`/api/search-console/connect?projectId=`), la misma ruta que la consola (§313): comprueba que el proyecto es tuyo y vuelve a «Posición en Google». Antes llevaba a la portada de la consola (Denis, 2026-11-01). Sin proyecto, sigue yendo a la consola.
+- **`/api/ext/project` devuelve el dominio de cada rival** (`ExtRival.domain`): el del proyecto para la marca, el del competidor seguido cuyo nombre coincide, o `null`. Sin migración.
+
+**Pendiente o roto conocido.** Un rival que la IA nombra y no está entre los competidores seguidos no tiene dominio y sale con la letra. Hay que subir la 1.2.0 a la tienda (zip en `/mnt/project-files/extension/`).
+
+## §409 · EXT-GSC-1: la extensión sabe si Search Console está conectado y enseña sus cifras (2026-11-01)
+
+**Qué se decidió.** Denis vio (2026-11-01) que con Search Console ya conectado en la consola el panel seguía invitando a conectar. `/api/ext/project` devuelve ahora `searchConsole` (`lib/ext/search-console.ts`), leído con `loadSearchConsoleOverview`, lo mismo que la mitad de Google de Visión general: primero nuestra base de datos y luego Google con la caché de 30 minutos. El proyecto sale de la lista de la propia cuenta, así que sus ids ya están verificados. Si Google tarda más de 6 s, el panel no espera.
+
+- **Conectado**: en «Tu dominio» del gauge Google salen clics, puesto medio y búsquedas en la página 2 de los últimos 28 días, con «Ver Posición en Google».
+- **Sin conectar** (o un servidor sin este campo): la invitación de siempre, con un solo texto («Tus búsquedas de Google, tu puesto y tus clics…»), y «Conectar con Google» abre el permiso de Google de ese proyecto (§408).
+- **Permiso retirado**: «Volver a conectar», al mismo permiso. **Varias propiedades**: «Elegir propiedad» en Posición en Google. **Google sin responder** o sin búsquedas: lo dice, sin cifras. **Sin configurar o sin migración**: nada.
+
+**Pendiente o roto conocido.** Va en la misma 1.2.0, todavía sin subir a la tienda.
+
+## §410 · EXT-PROMO-1: genscore.es ofrece la extensión de Chrome (2026-11-01)
+
+**Qué.** Una tarjeta flotante en todo el dominio ofrece instalar la extensión de Chrome (`components/chrome-extension/chrome-extension-promo.tsx`, montada una vez en `app/layout.tsx`). Titular «Revisa cualquier web sin salir de Chrome» con el icono de Chrome, el cuerpo que escribió Denis, «Añadir a Chrome» y «Ya la tengo». Diseño en `docs/design-reference/ext-promo-1/`.
+
+**Reglas** (puras en `lib/chrome-extension/install-promo.ts`, con tests):
+- Solo Google Chrome de escritorio. Chrome en Android o iPhone no instala extensiones (Denis: «en móvil no tiene sentido»), y la app de Android es Chrome en un móvil, así que tampoco sale. Edge, Brave y Opera quedan fuera porque la tienda no es la suya.
+- Todo el dominio menos acceso, MFA, `/admin`, `/debug`, `/informe`, `/baja` y el asistente de alta de dominio; la misión del primer escaneo la oculta por CSS.
+- Aparece a los 4 s (Denis bajó de 8 a 4), una vez por visita. Abajo a la izquierda en la web pública (abajo a la derecha está la tarjeta del informe gratis) y abajo a la derecha en la consola.
+- Sale también en el blog, comparativas, glosario y docs (Denis: «¿sale en cualquier url pública? debería»), pero allí sólo una vez: a partir de entonces esas páginas son de la tarjeta del informe gratis (Denis: «que salga esta una vez en blog y luego en adelante la otra»). Para no enseñar dos tarjetas a la vez, la del informe gratis espera mientras ésta esté en pantalla y sale después si toca.
+- La X y «Añadir a Chrome» la apartan 30 días; «Ya la tengo», para siempre en ese navegador. Todo en `localStorage`, sin migración.
+- El enlace lleva `utm_source=genscore.es&utm_medium=aviso&utm_campaign=extension-chrome&utm_content=web|consola`.
+
+- La tarjeta del informe gratis pasa a salir a los 20 s en vez de 40 (Denis, 2026-11-01); la mitad de página sigue igual. Corrige el «40 s» de §252.
+
+**Límite conocido.** La web no puede saber si la extensión ya está instalada: el manifiesto 1.0.1 no expone nada a la página. Detectarlo pediría una versión nueva con un recurso accesible sólo desde genscore.es, y otra revisión de la tienda. Hasta entonces lo cubre «Ya la tengo».
+
+**Pendiente.** No retira ningún camino de recuperación.
+
+## §411 · EXT-GSC-2: el gauge de Google de la extensión enseña tendencia, evolución del puesto y búsquedas (2026-11-01)
+
+**Qué se decidió.** Con Search Console conectado, la capa «Tu dominio» del gauge de Google deja las tres cifras sueltas de §409 y enseña, con diseño aprobado por Denis en artifact:
+
+- Clics e impresiones de los últimos 28 días con su cambio frente a los 28 anteriores y una línea por día; puesto medio con lo que ha subido y dónde estaba antes.
+- «Evolución del puesto medio», con lo mejor arriba. Un día sin impresiones no tiene puesto y no se dibuja (nunca un 0).
+- «Tus búsquedas con más clics» (cuatro, con puesto y si suben, bajan o son nuevas).
+- «Casi en la página 1» (puestos 11 a 20, tres como mucho) con la nota «Las más fáciles de subir. Ya te ven, hay que optimizarlas.», texto de Denis.
+- En la capa «Esta página», si la página abierta es una de las que Google devolvió: sus clics, impresiones y puesto, y las búsquedas que la traen.
+
+El bloque «Dónde salen tus búsquedas» (reparto por tramos) del prototipo se retiró a petición de Denis.
+
+**Cómo.** `/api/ext/project` lee `loadSearchConsoleScreen` (misma entrada de caché `screen-rows` de 30 min que «Posición en Google», sin inspecciones de indexación) con un tope de 6 s; si Google tarda, el campo sale como error y el panel no pinta el bloque. `toExtSearchConsole` mantiene los campos planos de §409 (`clicks`, `position`, `nearPage1`, `empty`) para un panel antiguo y añade `trend` y `page`. Nada se guarda en nuestra base de datos (`.claude/rules/search-console.md`).
+
+**Adenda (mismo día).** Una página interna de tu dominio analizada sola («Página abierta») seguía enseñando la invitación a conectar aunque Search Console estuviera conectado. Ahora lee la misma conexión (`gscOwnPage`): conectado enseña «Esta página en Google» o, si Google no devolvió búsquedas para esa página, lo dice; mientras carga no pinta nada; sin conectar, la invitación de siempre.
+
+**Pendiente.** Subir la 1.2.0 a la tienda (Denis).
+
+## §412 · JS-RENDER-CHECK-1: la Auditoría técnica avisa si una página necesita JavaScript para verse (2026-11-01)
+
+**Qué se decidió.** Nuevo hallazgo `js_required` («Contenido visible sin JavaScript») en el bloque «Auditoría GEO». Sale de la revisión quincenal del 1-11 (Ahrefs lo añadió a su Site Audit el 24-09): los bots de los asistentes de IA leen el HTML tal como llega y no ejecutan JavaScript, así que una web hecha como aplicación de cliente les llega vacía. Denis aprobó poner en marcha lo que salió de esa revisión.
+
+**Cómo.** `isJsShell` (`lib/web-audit/page-checks.ts`) marca una página cuando se cumplen las dos cosas: menos de 50 palabras visibles en el HTML servido y una señal de que un script tiene que rellenarla (un nodo de montaje vacío, `#root`, `#__next`, `#app`, `app-root`…, o un `<noscript>` que pide activar JavaScript; los `<noscript>` de píxeles de seguimiento no cuentan). Ninguna sola basta, para no acusar a una portada corta. Se guarda en `citability.jsShell`, opcional y tri-estado: una instantánea anterior no se declara limpia. No usa ningún fetch nuevo: lee el mismo HTML que ya traía la auditoría.
+
+**Sin puntos.** Igual que `snippet_blocked` (§131): `gain` nulo, no mueve `readiness_score`, la Salud técnica ni la Puntuación GEO, y un test lo fija. Es bloqueo duro (crítico) porque una página vacía no se puede citar. Ponderarlo es una decisión aparte.
+
+**Pendiente.** No es renderizar la página: un sitio que pinta texto genérico en el servidor y el contenido real con JavaScript no se detecta. Medirlo de verdad pediría un navegador sin cabeza en la auditoría, con su propio Task Intake. No retira ningún camino de recuperación.
+
+## §413 · GSC-CONNECT-GATE-1: la invitación a conectar Search Console sólo sale con el estado real (2026-11-01)
+
+**Qué se decidió.** Lo que se aprendió de la adenda de §411 se convierte en un test (Denis: «ok al test de 4»). Invitar a conectar a quien ya está conectado es una afirmación falsa sobre su cuenta, y la extensión la hacía por pintar la invitación cada vez que no tenía estado.
+
+- `tests/gsc-connect-gate.test.ts` busca toda pantalla que pinte una invitación (`GscConnectPanel`, `GscConnectRow`, `GscConnect`) y exige que lea el estado real (`readSearchConsoleAvailability`, `loadSearchConsoleOverview` o `loadSearchConsoleScreen`) y que justo encima compruebe `"disconnected"` o `"reconnect"`. Hoy son Visión general, Recomendaciones y Posición en Google.
+- Sólo la invitación y «Posición en Google» construyen el enlace al permiso de Google (`/api/search-console/connect?`).
+- En el panel de la extensión, toda llamada a `gscInvite()` es el ejemplo sin sesión o el estado `disconnected`.
+
+**Corrección que trae.** `gscBlock()` del panel enseñaba la invitación con `!g` (proyecto cargando, con error o sin el campo). Ahora, con sesión, sin estado no pinta nada; sin sesión sigue el ejemplo.
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: la invitación sigue saliendo cuando el estado lo pide.
+
+## §414 · GSC-OVERVIEW-RICH-1 y GSC-AUDIT-PAGES-1: los datos de Google de la extensión llegan a Visión general y a Auditoría técnica (2026-11-01)
+
+**Qué se decidió.** Lo que la extensión enseña de Search Console desde §411 pasa a la consola, con diseño aprobado por Denis en artifact (móvil tal cual; en escritorio, «debe ocupar menos y no dejar ese espacio blanco a la izquierda»).
+
+- **Visión general**, mitad de Google de «Auditoría SEO y Google» (`gsc-overview-half.tsx`): clics de 28 días con su cambio y una línea por día, puesto medio con lo que ha subido, impresiones con su cambio, «Evolución del puesto» (lo mejor arriba; un día sin impresiones es un hueco, nunca un 0) y «Casi en la página 1» con las dos búsquedas de puestos 11 a 20 con más impresiones y la frase de Denis. En escritorio (≥761 px) la evolución y «Casi en la página 1» van en una fila bajo las dos mitades (`.gx-b`, `display: contents` en `.gx`), así la tarjeta es más baja y Salud SEO no deja hueco. Sale la cifra «búsquedas en página 2»: la caja la sustituye.
+- **Auditoría técnica, bloque SEO**: cada problema por páginas lleva «N clics en Google» (sólo si suman más de 0) y «Páginas afectadas» pasa a una tabla con clics, puesto y la búsqueda que más clics trae, ordenada por clics. Una página que Google no devolvió dice «Sin impresiones en 28 días» sólo si Google devolvió todas sus páginas (menos de 50 filas); si no, «Sin datos de Google», porque no podemos saberlo.
+
+**Cómo.** Las dos leen `loadSearchConsoleScreen` sin inspecciones, la misma entrada `screen-rows` de 30 min que Recomendaciones y la extensión; nada se guarda. Visión general deja `loadSearchConsoleOverview` (lo sigue usando `/admin/panel`). Auditoría técnica pinta primero la tarjeta de siempre como `fallback` de un `Suspense` y la cambia por la de Google cuando llega (`SeoIssuesWithGoogle`), así Google nunca retrasa la auditoría. `insights.pageStats` (`buildPageStats`) guarda todas las páginas que devolvió Google con su búsqueda principal; `affectedPagesWithGoogle` las cruza por `urlKey`.
+
+**Segunda pasada (Denis, 2026-11-01: «diséñalo bien con el nuevo UI de la consola» y «mal maquetado ese mejora, no declarado… no se entiende y se pega»).**
+- En Visión general, con la tarjeta a su ancho real (unos 575 px), el rótulo «Evolución del puesto / Mejor arriba» partía en dos líneas y la caja de «Casi en la página 1» se salía de la tarjeta: las columnas eran `1fr` y una búsqueda larga sin cortes empujaba. Ahora todas las pistas son `minmax(0,…)`, la búsqueda se corta con «…», y con la tarjeta estrecha (`@container`, menos de 540 px) el gráfico y la lista van uno encima del otro.
+- El gráfico sigue el estilo de `LineChart` del kit: líneas de guía con su puesto, fechas de inicio y fin, y el último día marcado con su valor. La línea es un SVG estirado con trazo que no escala, y todas las etiquetas son HTML colocadas por porcentaje, así que el texto no crece ni encoge con la tarjeta.
+- «Casi en la página 1» deja la caja azul por filas con línea, como el resto de la consola, y pierde el rótulo «Puestos 11 a 20» (la frase de Denis ya lo explica). El cambio de impresiones va junto a la cifra, como el del puesto.
+- En Auditoría técnica, la fila de un problema lleva el título sola en la primera línea; la segunda empieza por la gravedad con su punto («● Mejora», «○ Aviso», «● Crítico»), sigue el alcance y luego las etiquetas, con aire entre ellas. El punto suelto a la izquierda desaparece.
+- El alcance de «Negocio local en datos estructurados» pasa de «No declarado» a «Ninguna página lo declara».
+
+**Tercera pasada (Denis, 2026-11-01: «cambiar un poco el formato de comercio agéntico en caso de que esté conectado Search Console, para que no ocupe tanto. Y si no lo está, mejorar un poco la información/formato actual»).**
+- Con datos de Google, desde 1000 px las dos tarjetas ocupan la fila entera (`.ov-pair:has(.gx)`, sin tocar la página). Comercio agéntico pasa a ser una franja corta (anillo, los cuatro componentes en dos columnas y su recomendación a la derecha) y la tarjeta SEO de debajo tiene ancho para poner el gráfico y la lista lado a lado. Ninguna de las dos deja hueco. La tarjeta lleva la clase `ov-agc`; sus datos no cambian.
+- Conectado pero sin propiedad que cubra el dominio (`pick_property`), la mitad de Google se quedaba vacía. Ahora dice por qué («La cuenta de Google conectada no tiene X en Search Console» o «Falta elegir qué propiedad corresponde a X»), qué se verá con la propiedad, y enlaza a «Posición en Google», donde se elige o se conecta otra cuenta. No es una invitación a conectar ni lleva a la ruta de permiso.
+- La línea de velocidad decía «LCP 1,5 s , buena»: `.note` es flex y su hueco metía un espacio antes de la coma. Pasa a bloque (`.note.sp`).
+
+**Pendiente.** Nada. No retira ningún camino de recuperación: sin conexión, todo queda como antes.
+
+## §415 · LOGIN-NEXT-UTM-1: quien llega sin sesión vuelve a la página que abrió, y el login conserva las UTM (2026-11-01)
+
+**Qué se decidió.** Al abrir una pantalla de la consola sin sesión (por ejemplo, el enlace de un correo de ciclo de vida), `requireUser` ya no manda a `/login` a secas: manda a `/login?next=<la página pedida>` y, tras entrar, se aterriza en ella. Las etiquetas `utm_*` del enlace se copian también al propio login. Sale de la revisión quincenal del 1-11: en 30 días sólo se vio una visita con `utm_source=email`, porque el clic aterrizaba en un login sin etiquetas y se perdía el destino. Denis lo aprobó el 2026-11-01 («sí»), como cambio de acceso.
+
+**Cómo.** El middleware pone en la petición la cabecera `x-gs-request-path` (ruta y query) en cada `NextResponse.next`, también al refrescar las cookies de sesión. `requireUser` la lee y construye el destino con `loginRedirectPath` (`lib/login-redirect.ts`), que pasa por `safeNextPath`: sólo una ruta de este mismo sitio, nunca el propio login. La cabecera sólo elige dónde aterrizar; no autoriza nada, y falsificarla lleva como mucho a otra página de genscore.es. El login ya aceptaba `?next=` desde §254.
+
+**Pendiente.** No retira ningún camino de recuperación. Las aperturas y clics de los correos siguen sin medirse en Resend (lo activa Denis).
+
+## §416 · RECS-GUIDES-1: cada recomendación enlaza su guía del blog («Cómo hacerlo») (2026-11-01)
+
+**Qué se decidió.** Las tarjetas del plan y las filas abiertas de «Más adelante» llevan una línea «Cómo hacerlo» que abre, en una pestaña nueva, el artículo del blog que explica ese tipo de tarea. Sale de la revisión quincenal del 1-11; Denis aprobó la maqueta (https://claude.ai/artifact/V7KGvGH2GgC7AZjKtQBeqA) el mismo día.
+
+**Cómo.** `guideForType` (`lib/recommendations/guides.ts`, puro) asigna a cada tipo un artículo que ya existe y trata justo eso: citar tu web (contenido, bloque de cita, FAQ), fuentes que cita la IA (las cuatro `pursue_*`), contenido reciente, corregir lo que la IA dice mal (narrativa, claridad de marca) y elegir competidores (competidor emergente). Un tipo sin artículo, y las tarjetas de Google, no llevan línea. Las de comparativa (`add_comparison_content`, `close_competitor_gap`) no enlazan a «La IA te menciona pero recomienda a otro»: Denis preguntó al probar el preview si ayudaba a publicar la comparativa, y no, porque diagnostica en vez de enseñar a montar la página. Eligió escribir una guía práctica (esquema aprobado el mismo día) y va en este mismo PR: `como-hacer-una-comparativa-que-la-ia-cite`, siete pasos (mirar si ya existe, la pregunta, de tres a seis criterios, tabla con enlace y fecha en cada dato del competidor, conclusión que reconoce dónde gana el otro, forma citable, mantenerla) más los requisitos del art. 10 de la Ley 3/1991 de Competencia Desleal con enlace al BOE y sin asesoramiento jurídico. Sin cifras: la tabla de ejemplo usa marcas inventadas y X €/Y €. Las dos tarjetas de comparativa enlazan a ella, y el artículo de diagnóstico enlaza a la guía. El enlace lleva `?desde=recomendaciones` para medirlo en PostHog. No importa el índice del blog en el cliente; el test comprueba que cada artículo existe. Dentro de la app de Android no sale, porque el blog no se abre allí (§381).
+
+**Pendiente.** No cambia el plan, los puntos ni las acciones. No retira ningún camino de recuperación. Un artículo nuevo que encaje con un tipo sin guía (tarjetas de Google, por ejemplo) se añade al mapa.
+
+## §417 · FEATURE-EMAILS-1: tres correos, uno por cada funcionalidad que el cliente no usa (2026-11-01)
+
+**Qué se decidió.** De la revisión quincenal del 1-11 salieron tres correos, con textos y reglas aprobados por Denis el mismo día y diseño con la cabecera y el pie de siempre (`wrap`), también aprobado en artifact:
+
+- **Conecta Search Console** (`feature_gsc`): cuentas con un escaneo completado y ningún dominio conectado, de 3 a 14 días tras el alta. El botón va directo a `/api/search-console/connect` del dominio escaneado. No sale si Search Console no está configurado o su tabla no se lee, porque el botón no funcionaría.
+- **Auditoría agéntica** (`feature_agentic`): en Pro, Agencia y la prueba, a partir de 20 h después de la primera auditoría de la cuenta que encontró algo que se vende y le puso nota (la misma puerta que la tarjeta de Visión general, §340), con la nota y el primer arreglo (`firstSteps`). En Starter, la variante que invita a Pro.
+- **Extensión de Chrome** (`feature_extension`): cuentas con un escaneo completado, desde el día 7 tras el alta, también las antiguas. No sabemos si ya la tienen instalada, así que va una sola vez.
+
+**Reglas comunes.** Categoría «Consejos y ofertas», con baja en un clic; sin enlace de baja no salen. Nunca a cuentas internas o comped, en solo lectura (`free`) o de plan desconocido. Un correo de ciclo de vida cada 48 h y ninguno los lunes; los correos de funcionalidad cuentan para esas 48 h en la prueba (D1, D3) y en la recuperación (D+3, D+10). D5 sigue sin esperar. Como mucho uno por pasada, en el orden Search Console, auditoría agéntica, extensión. Cada uno una vez por cuenta (índice único de `email_sends`) y reservado antes de enviar (`sendClaimedOnce`, §308).
+
+**Cómo.** Reglas puras en `lib/email/lifecycle/feature-schedule.ts`, plantillas en `feature-templates.ts` y la pasada en `feature-runner.ts`, la última del cron diario `/api/cron/lifecycle-emails`, para que vea los envíos del día. Todo lo que lee con service role va filtrado por los mismos `owner_user_id` que eligieron al destinatario.
+
+**Interruptor y migración.** Salen apagados: hace falta `LIFECYCLE_EMAILS_ENABLED=true` y además `FEATURE_EMAILS_ENABLED=true`. Antes de encenderlo hay que aplicar a mano la migración 0047, que añade los tres tipos a `email_sends_kind_chk`. Sin ella la reserva falla y no sale nada.
+
+**Pendiente.** Sin medición propia de aperturas y clics (Resend no la tiene activada). Las UTM `utm_campaign=feature_*` son la única forma de verlo en PostHog. No retira ningún camino de recuperación.
+
+## §418 · MCP-SERVER-1: GenScore dentro de Claude y ChatGPT, de solo lectura (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el Task Intake del servidor MCP el 1-11 («sí, apruebo. Todas las fases»), con acceso para todos los planes (Starter, Pro, Agencia y la prueba; una cuenta en solo lectura recibe un aviso con enlace informativo a `/precios`). Esta es la Fase 1: el producto. Fase 0 es activar el servidor OAuth de Supabase (Denis, en el panel); Fases 2 y 3 son enviar el conector a los directorios de Claude y de ChatGPT, sólo con el servidor en producción y probado, y cada envío con su confirmación; Fase 4 (escrituras) se acota y se enseña antes de construirla.
+
+**Qué hace.** `POST /api/mcp` habla MCP por Streamable HTTP sin estado, sólo JSON (sin SSE: `GET` da 405). Siete herramientas, todas de solo lectura y sin LLM:
+
+- `revisar_pagina(url)`: abierta sin cuenta. Es la revisión de la extensión de Chrome hecha en el servidor. `lib/page-review/collect.cjs` y `score.cjs` se generan desde los ficheros de la extensión (`node scripts/sync-page-review.mjs`) y `sync.test.ts` falla si se separan. Lee el HTML que sirve la web (no lo que pinta su JavaScript) con el `fetchOnDomain` de la auditoría agéntica, con su guarda SSRF, sólo en el mismo origen y como mucho 12 peticiones por revisión. Con la cuenta conectada y una página de un dominio propio, añade «Esta página en tu dominio».
+- `listar_dominios`, `ver_dominio`, `ver_recomendaciones`, `ver_competidores`, `ver_auditorias`, `ver_posicion_google`: necesitan cuenta. Leen `loadExtProjectData` (`lib/ext/project-data.ts`), el mismo lector que ahora usa `/api/ext/project`, así que el chat, el panel y la consola enseñan las mismas cifras.
+
+**Autenticación.** El servidor de autorización es Supabase Auth (OAuth 2.1 con PKCE y registro dinámico, en beta). GenScore publica la metadata del recurso (RFC 9728) en `/.well-known/oauth-protected-resource/api/mcp`, reenvía la del servidor en `/.well-known/oauth-authorization-server` y pone la pantalla de consentimiento en `/oauth/consentir` (acceso «Bruma»). Una herramienta de cuenta sin token responde 401 con `WWW-Authenticate` y eso abre el flujo en Claude y ChatGPT. El token se usa como cliente de Supabase del propio usuario: RLS decide, nunca service role. Ajustes > Cuenta enseña «Apps conectadas» con «Desconectar» (`revokeGrant`).
+
+**Límites.** `revisar_pagina` cuenta en `public_checks` con `engine = mcp_page` (1.000 al día en total, 60 por cuenta o por IP, 20 por dominio), y esas filas no cuentan para el comprobador gratuito. La IP casi siempre es la de Claude o la de ChatGPT, por eso con cuenta la clave es el usuario. Cada llamada envía `mcp_tool_called` a PostHog (herramienta, cliente y si había cuenta; nunca la conversación ni la URL).
+
+**Sin vender.** Ningún texto de las herramientas cita precios, descuentos ni enlaces de pago: lo prohíbe el directorio de ChatGPT. Lo que no incluye un plan se dice como «no está incluida en tu plan». Lo vigila `format.test.ts`.
+
+**Premisa y lo que queda roto.** El acceso con cuenta depende del servidor OAuth de Supabase activado con la ruta de autorización `/oauth/consentir` y el registro dinámico encendido; sin eso sólo funciona `revisar_pagina`, y las herramientas de cuenta piden conectar sin poder completar el flujo. La Site URL de Supabase es producción, así que el flujo completo sólo se prueba de verdad en `www.genscore.es`, no en un preview. El modo mixto de ChatGPT (`securitySchemes` con `noauth` y `oauth2`) está por comprobar en un cliente real. Páginas que sólo pintan su contenido con JavaScript salen con menos texto que en la extensión. No retira ningún camino de recuperación.
+
+## §419 · MAIL-METRICS-1: cada correo lleva su tipo, y Resend nos cuenta qué pasó con él (2026-11-01)
+
+**Qué se decidió.** De la revisión quincenal del 1-11 («medir correos», prioridad 1 de la tanda B). Denis aprobó el plan recortado el mismo día («sí»): no hay tarjeta propia, porque la sección de correo de ADMIN-EMAIL-1 (otro hilo, misma fecha; pasa a la pestaña de operador /admin/crm en el PR #727) ya es el sitio único del correo para el operador. Este PR pone las piezas que le faltan a esa sección para ir más allá de los 30 días que guarda Resend y para nombrar cada correo por su tipo.
+
+**Cómo.**
+- **Etiqueta de tipo.** Todo envío pasa por `sendEmailWithOutcome`, que ahora exige `kind` (`lib/email/kinds.ts`) y lo manda a Resend como etiqueta `kind`. `sendEmail` lo recibe como primer argumento, así que un correo nuevo sin tipo no compila. Los nombres repiten los de `email_sends` donde existen; los avisos al operador empiezan por `ops_`.
+- **Webhook.** `/api/webhooks/resend` verifica la firma (esquema Svix, `RESEND_WEBHOOK_SECRET`, con la ventana de tiempo que rechaza reenvíos viejos) antes de leer nada. Sin secreto responde 503.
+- **Qué se guarda.** `toEmailEventRow` (`lib/email/events.ts`, pura) se queda con el id del correo en Resend, el evento (entregado, abierto, clic, rebote, queja, fallo, retrasado, suprimido), el tipo y la hora. Nunca la dirección, el asunto, el enlace, la IP ni el navegador, y nada de eso va a los logs. Una etiqueta desconocida se guarda como `null`.
+- **Tabla `email_events`** (migración 0048, a mano): única por `webhook_id` (el `svix-id`, igual en cada reintento), así que un reintento no duplica. RLS sin política y permisos retirados a `anon`/`authenticated`. Sin la tabla, el webhook responde 503 y Resend reintenta.
+- **Privacidad.** La línea de Resend en `/privacidad` dice ahora que Resend nos indica entrega, apertura y clic, y que solo guardamos tipo, evento y fecha.
+
+**Pasos de Denis.** Aplicar la 0048. En Resend: activar el seguimiento de aperturas y clics del dominio de envío y crear el webhook a `https://www.genscore.es/api/webhooks/resend` con los eventos `email.*` de entrega, apertura, clic, rebote y queja. Poner su secreto en `RESEND_WEBHOOK_SECRET` (Vercel, Production).
+
+**La pestaña CRM** (ADMIN-EMAIL-1, §420) sigue leyendo la lista de Resend, que trae el destinatario y deja fuera cuentas internas y de prueba. Lo que cambia es cómo nombra cada correo: si `email_events` tiene su etiqueta (cruzando por el id de Resend), ese tipo manda y ya no se adivina por `email_sends` a 15 minutos ni por el asunto. Sin la tabla, o para correos anteriores a la etiqueta, todo sigue como antes (`readKindsByEmailId`, `classifyEmails`).
+
+**Pendiente.** Ir más allá de los 30 días de Resend con `email_events` sola. Esa tabla no sabe a quién fue cada correo, así que no puede quitar las cuentas internas y de prueba ni contar correos por contacto. Hacerlo exige guardar también el id de cuenta del destinatario (nunca su dirección), y eso es una decisión de Denis. Las aperturas son orientativas (Apple Mail abre las imágenes por su cuenta); el clic es la cifra fiable. El píxel de apertura se activa sin una casilla de consentimiento propia; se avisa a Denis al abrir el PR. Si prefiere evitarlo, basta con dejar apagado el seguimiento de aperturas en Resend: clics, entregas y rebotes siguen igual. No retira ningún camino de recuperación.
+
+## §420 · ADMIN-EMAIL-1: pestaña «CRM» con la captación de email (2026-11-01)
+
+**Qué se decidió.** La consola de operador gana una pestaña «CRM» (`/admin/crm`, junto a «Panel» en el menú) con la sección «Captación de email» y el mismo selector de periodo que el Panel de negocio. La maqueta la ponía dentro del panel; al ver el PR, Denis pidió llevarla a su propia pestaña «CRM». Denis la pidió («cuántos contactos tenemos, evolución, cuántos unsubscribes, media de emails enviados por contacto por semana») y aprobó la maqueta el 2026-11-01 («Perfecto»), guardada en `docs/design-reference/admin-email-1/`. Las cifras de la maqueta son de ejemplo.
+
+- **Cinco tarjetas:** contactos (y altas del periodo frente al anterior), porcentaje que sigue recibiendo «Consejos, novedades y ofertas», bajas (frente al periodo anterior y sobre los entregados), emails por contacto y semana, y apertura · clics.
+- **Evolución de contactos** de los últimos 28 días, con las altas y las bajas de cada día en escala propia.
+- **Bajas por tipo de correo** (las cuatro categorías de Ajustes) y por origen (enlace del correo, un clic en el gestor de correo, Ajustes), con las re-suscripciones aparte.
+- **Correos enviados por tipo:** secuencia de la prueba, recuperación, funcionalidades, resumen semanal y «Avisos y cuenta», con enviados, entregados, abiertos, clics y rebotes.
+
+**De dónde sale cada cifra.** Un contacto es una cuenta que cuenta (`isCountedAccount`, sin propias ni de prueba): el mismo filtro que «Pruebas Pro en curso» y las altas del panel, leído con `loadCountedUsers`. Los correos a direcciones que no son contactos (las del equipo, el operador) no cuentan. Hoy ningún otro sitio guarda un email: el informe gratis y la videollamada sólo llegan al correo del operador, y el comprobador gratuito nunca escribe `public_checks.email`. Las bajas salen de `email_preference_events` (§232) y la suscripción a consejos de `profiles.notify_lifecycle`, cada lectura en su propia consulta. Los envíos salen de la lista de Resend (`emails.list`, último estado de cada correo), porque `email_sends` sólo apunta los correos de ciclo de vida. El tipo de cada correo sale de su fila de `email_sends` (misma cuenta, a menos de 15 minutos) o, en el resumen semanal, del asunto. «Emails por contacto y semana» divide los enviados entre el tiempo que cada contacto existió dentro del periodo.
+
+**Límites declarados en pantalla.** Resend guarda 30 días: con «28 días» no hay periodo anterior completo y la comparación no se pinta, y un periodo que empieza antes avisa de que se queda corto. Las aperturas y los clics no se miden hoy (§417): la tarjeta dice que el seguimiento puede estar apagado en Resend en vez de enseñar 0 %. Si la clave de Vercel es sólo de envío, Resend responde `restricted_api_key` y la sección pide una clave con acceso completo. La lectura de Resend va en la caché de 10 minutos del panel (mismo «Actualizar»); un fallo no se guarda en la caché.
+
+**De paso.** El delta de las tarjetas del panel («+71 % vs periodo anterior») se partía una palabra por línea porque compartía fila con un minigráfico de 110 px; ahora va encima del minigráfico en todas las anchuras.
+
+**Coordinación.** La revisión quincenal propuso MAIL-METRICS-1 (webhook de Resend, tabla `email_events`, migración 0048), sin aprobar todavía. Si se aprueba, su tabla alimenta esta pestaña (sustituye `readResendEmails` en `lib/admin/kpi/email.ts`) y guarda más de 30 días; no se añade otra tarjeta de correos.
+
+**Pendiente.** Activar el seguimiento de aperturas y clics en el dominio de Resend (lo hace Denis). Comprobar en producción que `RESEND_API_KEY` puede listar correos. Sin migración. No retira ningún camino de recuperación.
+
+## §421 · WP-PLUGIN-1: plugin de WordPress con la nota de la extensión (Fase 1) (2026-11-01)
+
+**Qué se decidió.** Denis aprobó el 2026-11-01 la Fase 1 de un plugin gratuito para WordPress.org como canal de captación (Task Intake y UX en artifact, enlaces en `docs/wordpress-plugin/README.md`). Pestañas Resumen · GEO · SEO · Agentes, en claro y con el estilo de la extensión, cada una partida en «Tu dominio» (con cuenta) y «Esta web» (se arregla aquí).
+
+- **La nota es la de la extensión.** La pantalla carga la portada en un iframe del mismo origen, le inyecta `collect.js` y puntúa con `score.js`, copiados byte a byte de la extensión (test). Mismas tres vías, mismos arreglos con sus puntos.
+- **Bots de IA.** Seis interruptores (búsqueda y entrenamiento de OpenAI, Anthropic, Perplexity, más Google-Extended) que se aplican en el filtro `robots_txt` con un bloque propio. Nunca tocan `*`, Googlebot ni Bingbot, ni escriben ficheros; con robots.txt físico, web no pública o subcarpeta se desactivan y se explica.
+- **llms.txt.** Generado de páginas, productos y artículos con su propio extracto, editable, y servido sólo si ni Yoast, ni Rank Math, ni AIOSEO, ni un fichero lo hacen ya.
+- **SEO de WordPress.** Visibilidad, sitemap, HTTPS, enlaces permanentes, plugin SEO, y páginas, entradas y productos sin descripción, con título repetido o con imágenes sin texto alternativo.
+- **Captación.** Sin cuenta, «Tu dominio» enseña maquetas sin cifras y «Analizar <dominio>». El enlace va a `/signup?dominio=`, y el alta guarda ese dominio en el mismo `localStorage` que el hero (`rememberPendingDomain`, mismo `isWellFormedDomain`), así que el asistente nace relleno. Todo enlace lleva `utm_source=wordpress`.
+- **Sin llamadas a genscore.es.** El plugin no envía nada a ningún sitio; el readme lo declara (normas de WordPress.org sobre servicios externos).
+
+**La cabecera lleva la marca del sitio, no la de GenScore** (Denis, 2026-11-01: el logo de GenScore junto al nombre de la web confundía): el icono del sitio de WordPress (`get_site_icon_url`) o, sin él, su inicial.
+
+**Probado** en un WordPress 7.1 local (SQLite, `php -S`): revisión, las cuatro pestañas a 1280 y 390 px, guardar robots.txt y llms.txt y leerlos servidos, widget del escritorio y `debug.log` limpio.
+
+**Pendiente.** Publicar en WordPress.org lo hace Denis tras aprobarlo: cuenta de GenScore en WordPress.org, Plugin Check y subida del zip. La Fase 2 (token por sitio y `/api/wp/project` con las cifras de la cuenta) toca auth y esquema y no está aprobada. No retira ningún camino de recuperación.
+
+**Adenda 1.0.1 (2026-11-01).** Instinct probó el zip 1.0.0 en un WordPress 7.1 con WooCommerce (PHP 8.2) y Plugin Check. Arreglado en la versión 1.0.1:
+
+- **robots.txt, apagar y volver a encender.** «Permitir» se guardaba y escribía un grupo `GPTBot` con las reglas de `*` y `Allow: /` aunque nada lo pidiera, así que el fichero no volvía a ser el original. Ahora un «Permitir» sólo escribe grupo si cambia algo: el bot estaba en un grupo de otro plugin, o `*` cierra la web entera. Si no, el texto vuelve tal cual (test de ida y vuelta en `robots-test.php`).
+- **llms.txt, «Guardar» sin cambios.** El navegador manda `\r\n`, la comparación con el texto generado fallaba y se guardaba una copia fija que dejaba de actualizarse. Se normalizan los saltos antes de comparar y guardar.
+- **Plugin Check.** La guarda de `robots.php` vuelve a ser `defined( 'ABSPATH' ) || exit;` (el test define `ABSPATH`), cada acción AJAX comprueba su nonce en la misma función que lee `$_POST`, y el nombre del readme es el de la cabecera.
+- **llms.txt** deja fuera carrito, finalizar compra y mi cuenta de WooCommerce, y no usa como descripción la plantilla de la política de privacidad de WordPress.
+- **Agentes con WooCommerce.** La portada de una tienda es un escaparate, y salía 25 puntuando el escaparate. La pantalla revisa también una ficha publicada (en stock primero) y Agentes es la nota de esa ficha, con su ruta a la vista. La Nota SEO + IA sigue siendo la de la portada.
+- **Copy.** «Con tu cuenta» deja de decir «en tiempo real».
+
+El 404 de `/llms.txt` en la consola del navegador mientras no está publicado es la propia comprobación de `collect.js`, no un fallo.
+
+**Adenda 1.0.2 (2026-11-01).** Segunda prueba de Instinct sobre la 1.0.1: robots.txt, llms.txt sin cambios, Agentes (95 sobre la ficha, antes 25) y Plugin Check con 0 errores. Quedaban:
+
+- **llms.txt seguía congelando copia en dos casos.** Un título con emoji lleva la URL codificada (`%e2%98%95`) y `sanitize_textarea_field` borraba los `%xx`, así que nunca casaba con el generado. Y un post publicado entre abrir la pantalla y guardar también rompía la comparación. Ahora el texto sólo viaja si la persona escribió en el cuadro, «Volver al generado» manda vacío, el servidor compara antes de limpiar y limpia con `wp_strip_all_tags`, que conserva los `%xx`.
+- **robots.txt:** un «Permitir» ya no reabre la web cuando `*` la cierra entera (mantenimiento). Sólo escribe grupo si el bot estaba en el grupo de otro plugin. Corrige la excepción de la 1.0.1.
+- **Plugin Check:** los tres avisos de nonce de `genscore_ajax_save_review` venían de leer `$_POST` dentro de una función anónima; se lee en el propio handler.
+- **Agentes:** el precio se pinta como `149,90 €` (formato español) en la pantalla del plugin. El dato de `score.js` no cambia; la extensión lo sigue enseñando como «149.90 EUR».
+
+**Adenda 1.0.3 (2026-11-01).** Tercera prueba de Instinct, y desde esta versión también una instalación propia (WordPress 7.1.4 + WooCommerce + Plugin Check sobre SQLite, con Playwright en 1280 y 390 px) antes de entregar el zip, para que Instinct confirme en vez de descubrir.
+
+- **llms.txt:** `render()` volvía a copiar el cuadro en cada repintado, así que tras «Volver al generado» o «Guardar» el cuadro seguía enseñando el texto viejo hasta recargar, y tocarlo congelaba una copia vieja. Ahora sólo se guarda el texto del cuadro si la persona lo editó.
+- **robots.txt:** con `*` cerrando la web y otro plugin bloqueando un bot, «Permitir» escribía un grupo propio con «Allow: /» y le abría la web. Mientras `*` cierre la web (`genscore_star_closes_site`) no se escribe ningún grupo de permitir; el grupo del otro plugin se quita igual y el bot vuelve a seguir a `*`. La pantalla lo explica en la tarjeta de bots.
+- **llms.txt, extractos:** los títulos se pegaban al párrafo anterior («extracción.Molienda…»); las etiquetas de bloque pasan a espacio antes de limpiar. Lo encontró la instalación propia.
+- **Revisar cualquier página** (lo que la extensión llama «Esta página»): selector «Página revisada» en la cabecera con páginas, productos y entradas publicadas, y «Revisar con GenScore» en las listas de WordPress. Viaja sólo el id (`?post=`); la dirección la da `get_permalink` y sólo vale si es pública y de esta web. La nota del widget del Escritorio sigue siendo la de la portada.
+
+**Adenda 1.0.4 (2026-11-01).** Denis vio en 1.0.3 que elegir a mano la «Página revisada» no es buena experiencia y eligió (tarjeta de decisión, maqueta https://claude.ai/artifact/TmBfDKoziKWZDrhXaELRbo) revisar la web entera y poner una columna en las listas.
+
+- **Revisión de la web entera:** al abrir la pantalla se leen solas las páginas importantes (`genscore_key_pages`, hasta 15: portada, lo enlazado en los menús, los cuatro productos más vendidos, las tres últimas entradas y las páginas y productos tocados hace poco), dos a la vez en un iframe oculto con el mismo `score.js`. La primera vez sale una tarjeta con un spinner pequeño y el texto de Denis, «Revisando tus páginas más importantes para calcular tu nota».
+- **La nota es la media de las páginas**; cada carril es la media de las que lo tienen. «Arregla primero» agrupa el mismo arreglo en varias páginas («En 3 de 4 productos»), con sus puntos medios, y la tarjeta «Tus páginas» las ordena de peor a mejor. Pulsar una abre su detalle (`?post=`) con «← Tu web» para volver.
+- **Se guarda cada nota en `genscore_page_scores`** (opción de la propia web, saneada, tope de 60). Guardar o borrar un post borra su nota, así que al volver sólo se lee esa página (6,6 s la primera vez con 10 páginas, 1,6 s después en la instalación propia). «Revisar todo ahora» las relee todas.
+- **Columna «GenScore» en Páginas, Entradas y Productos**, con la nota y el primer arreglo, que sólo lee lo guardado. Sustituye a la acción de fila «Revisar con GenScore» y al selector de 1.0.3.
+- **El widget del Escritorio** pasa a «Nota SEO + IA de tu web».
+- **Agentes en el detalle de una página sin tienda** sigue siendo el de la tienda de la web, como en la extensión (`score.js` usa `f.shop`); no es un fallo.
+
+**Adenda 1.0.6 (2026-11-01).** Instinct dio la 1.0.5 (interruptores de Meta, §427) por lista para subir y dejó seis mejoras, ninguna bloqueante. Todas probadas en la instalación propia (Playwright en 1280 y 390 px, Plugin Check con los experimentales sin errores):
+
+- **Meta se ve.** «Quién puede leer» suma una fila «Meta AI y Muse» bajo los cuatro motores, con «No cuenta en la nota», leída del mismo robots.txt (`meta-webindexer`) en `admin.js`, sin tocar `score.js`: la nota sigue midiendo los cuatro motores, igual que la extensión y la consola. Si robots.txt bloquea la búsqueda de Meta, la tarjeta de bots lo avisa en naranja.
+- **Notas desfasadas.** Guardar los bots o llms.txt, o cambiar «visible para los buscadores», borra todas las notas guardadas (`genscore_forget_all_scores`), porque cuentan en todas las páginas, y la pantalla relee la web entera. Tras actualizar el plugin las notas se releen una vez (`genscore_scores_version`).
+- **«Devoluciones» una sola vez.** Una página que no vende toma Agentes de la tienda que encuentra `score.js` (arreglos «shop-…»). Se guarda como prestada (`via`) con los ids normales, y la revisión de la web cuenta Agentes sólo con las páginas que venden; si ninguna vende, con una prestada. Los arreglos de Agentes dicen «En N de M páginas que venden» y sus puntos se reparten entre esas páginas, no entre todas.
+- **La portada no recibe los arreglos de producto** (nombre, precio y stock en el JSON-LD de un producto), que no van en una portada.
+- **Carrito, finalizar compra, mi cuenta y privacidad** enseñan «–» en la columna en vez de «Revisar», porque la revisión nunca los lee.
+- **«+1 punto»** en singular.
+
+**Pendiente.** La consola y la extensión no cambian: la consola ya audita el dominio entero y la extensión sigue a la pestaña abierta. No retira ningún camino de recuperación: «Revisar todo ahora» sustituye al selector.
+
+**Adenda 1.0.7 (2026-11-01): arreglos con un clic.** Denis pidió que lo que propone «Arregla primero» (y cada fila de GEO, SEO y Agentes) se pueda hacer con un clic, revisando antes lo que se va a publicar. Maqueta aprobada en `docs/design-reference/wp-plugin-fixes-1/arreglos-un-clic.html` («perfecto», tras pedir un último paso de confirmación porque publica en producción).
+
+- **«Arreglar» abre una hoja con las páginas afectadas**, todas marcadas si tienen propuesta, con buscador, filtros por tipo, «Seleccionar todas» y «Deseleccionar todas». Cada fila dice «Propuesta lista», «Ya lo tiene» o «Sin texto para proponerla», y al abrirla se ve y se edita lo que se publicará (JSON-LD validado al escribir, contadores de caracteres). En móvil es una hoja inferior.
+- **Un último paso pregunta «¿Publicar en N páginas?»** y avisa de que va a la web en producción. Sin «Sí, publicar» no se escribe nada.
+- **Siete arreglos:** JSON-LD (WebSite, Article, WebPage o Product), los datos de producto (nombre, precio, stock), descripción, título, URL canónica, «Actualizado el …» con su `dateModified`, y política de devoluciones en las fichas de WooCommerce. llms.txt y los bots de IA llevan a su tarjeta («Ir a llms.txt», «Ir a bots»), que ya los publica.
+- **Las propuestas salen de los datos de WordPress, sin IA:** extracto o contenido recortado por frase entera, título de la página con el nombre del sitio, precio y stock de WooCommerce. Una página sin texto no recibe propuesta inventada.
+- **Nunca se toca el contenido del post.** Lo publicado vive en metadatos propios (`_genscore_*`) o, con Yoast, Rank Math o SEOPress, en sus campos de descripción, título y canónica, y se imprime por filtros (`wp_head`, `pre_get_document_title`, `get_canonical_url`, `the_content` para la línea de fecha, `woocommerce_structured_data_product` para el producto). Con AIOSEO, descripción, título y canónica no se ofrecen.
+- **Todo se puede deshacer.** Cada publicación guarda un lote con el valor anterior (`genscore_fix_batches`, los 20 últimos). El aviso flotante lleva «Deshacer», el Resumen enseña «Publicado por GenScore» con un «Deshacer» por lote, y el editor de cada página tiene una caja con lo publicado. Desinstalar borra los metadatos `_genscore_*` y las opciones; los campos del plugin SEO se quedan.
+- **Aviso flotante** en cada cambio real de la web (publicar, deshacer, guardar bots o llms.txt), que se va solo a los 4,5 s (8 s con «Deshacer»).
+- **Corregido: el interruptor de llms.txt movía la página.** Cada guardado volvía a pintar la pantalla con el «Revisando» y la página saltaba arriba. Ahora se conserva el scroll y el foco al repintar, y la revisión posterior es silenciosa.
+- **La página de entradas y la tienda son listados.** WordPress no imprime su canónica, así que ahí se publica la nuestra y la hoja las marca como pendientes en vez de «Ya lo tiene» (lo encontró Denis en su web de prueba: `/blog/` seguía sin canónica tras publicar).
+- **La tienda también se arregla sola** (Denis: «en este tipo de páginas no se puede hacer para arreglar solo tambien?»). En la página de la tienda, «Datos de producto» publica una lista (`ItemList` con un `Product` y su `Offer` por producto, hasta 20) que se genera al servir la página con los datos de WooCommerce de ese momento, así que precio y stock no se quedan viejos. Se guarda sólo la marca `live`. «Devoluciones» en la tienda pide antes esa lista y se cuelga de cada oferta.
+- **«Responde en las primeras líneas» tiene arreglo** (Denis: «Dar a como hacerlo solo saca el enlace y no ayuda»). «Respuesta al principio» publica un párrafo corto justo bajo el título, en páginas, entradas, fichas (tras el título, no en la pestaña de descripción) y la tienda (`woocommerce_archive_description` o tras el bloque de título en temas de bloques). La propuesta sale del extracto o de la descripción si tienen 20 palabras o más y no repiten el arranque del contenido; en una ficha también de su descripción. Si no hay, la fila dice «Escríbelo tú» y el párrafo lo escribe la persona en la hoja (contador de palabras, mínimo 12). Nunca se inventa. Un párrafo guardado de menos de 20 palabras sigue abierto para mejorarlo.
+- **Texto de «Tus páginas»:** «Revisamos las páginas más relevantes para el análisis: tu portada, tu menú, tus productos y tus últimas entradas.» (Denis).
+- **La portada estática sale en las listas de «Arreglar».** Se excluía porque las listas reutilizaban las páginas que llms.txt deja fuera (`page_on_front` incluida). Ahora se excluyen sólo carrito, pago, cuenta y privacidad (`genscore_fix_skipped_pages`). Lo encontró Instinct en Wasmer y en su prueba local.
+- **Tras la prueba local de Instinct (primer zip 1.0.7):**
+  - El precio y el stock de una ficha salen siempre de WooCommerce al servir la página (`genscore_live_offer`; al fusionar con el bloque de WooCommerce se quitan los nuestros). Antes se quedaba el precio de cuando se publicó.
+  - Con Yoast, Rank Math o AIOSEO activos no se imprime nuestro JSON-LD de página (ya pintan su grafo) y la fila dice «Ya lo tiene». Activar o desactivar cualquier plugin vuelve a revisar la web.
+  - El control que se acaba de tocar se queda quieto en pantalla al repintar, aunque aparezca o desaparezca una fila encima (el interruptor de llms.txt saltaba unos 100 px).
+  - Guardar mientras se revisa la web relanza la revisión al terminar la pasada en curso.
+- **Probando en su web de Wasmer, Denis encontró tres callejones más:**
+  - **Respuesta corta.** Un párrafo de 16 palabras se publicaba, pero la revisión sólo da la mitad por debajo de 20 y lo seguía marcando. Ahora se exigen 20 palabras, y uno ya publicado más corto sale como «Muy corto» con su texto para ampliarlo.
+  - **Descripción de la Tienda y el Blog.** Salían «Sin texto para proponerla». Ahora la propuesta es «Tienda de <sitio>: <descripción corta del sitio>.», con datos escritos en WordPress, o el párrafo de entrada si existe. Si no hay nada, la fila se escribe a mano («Escríbelo tú», de 50 a 160 caracteres).
+  - **Fecha y párrafo en listados.** La Tienda y el Blog llevan «Actualizado el…» con la fecha de su producto o entrada más reciente, y el párrafo de entrada bajo el título (en temas clásicos y de bloques).
+  - **Revisión vieja.** Si «Arreglar» abre una lista donde todas las páginas «Ya lo tienen», la revisión era anterior al arreglo: esas páginas se vuelven a leer y la hoja lo explica. Las notas guardadas por compilaciones anteriores de la 1.0.7 se releen una vez.
+- **Funciona en cualquier WordPress.** Sólo los datos de producto, las devoluciones y la lista de la tienda necesitan WooCommerce.
+- **Sigue sin llamar a genscore.es.** Probado en la instalación propia: Playwright en 1280 y 390 px (publicar, editar, buscar, confirmar, deshacer), salida HTML de portada, página, entrada, ficha y tienda de WooCommerce, Plugin Check con los experimentales sin errores, y `tests/fixes-test.php`.
+
+**Pendiente.** No se propone texto nuevo con IA (sería la Fase 2, con llamada a genscore.es). No retira ningún camino de recuperación: «Cómo hacerlo» sigue en las filas que no tienen arreglo automático.
+
+## §422 · MCP-NEXT-STEPS-1: cada respuesta del servidor MCP termina con el siguiente paso (2026-11-01)
+
+**Qué se decidió.** Probando el conector en Claude, Denis vio que al pedir un dominio que no tenía la respuesta acababa en «no puedo añadirlo» y que el plan remitía a «las preguntas de la lista» sin enseñarlas. Pidió una batería de pruebas que afinara todas las herramientas para que ninguna respuesta acabe en un callejón. Se mantienen todas de solo lectura: el siguiente paso es un enlace a la consola, relleno cuando sabemos el dominio, y la acción la hace la persona allí.
+
+- **Dominio que no es de la cuenta:** enlace al alta ya relleno, `/dashboard/projects/new?dominio=<dominio>`. La página lo pasa al asistente (`initialDomain`) sólo si `isWellFormedDomain` lo acepta; no guarda nada. Deja de devolverse como error.
+- **`listar_dominios`:** cada dominio con su enlace, y «añadir otro» sólo si cabe en el plan; con la cuenta llena lo dice, sin enlace.
+- **`revisar_pagina` con cuenta, en una web ajena:** «Medirla como dominio tuyo» (si cabe) y «Seguirla como competidor de X» (`?nuevo=`, EXT-AUDITS-1, §406) para hasta tres dominios. Sin cuenta, dice qué añade conectarla y nunca enlaza a la consola.
+- **`ver_recomendaciones`:** cada paso enseña sus preguntas (como mucho seis). Salen de `prompt_text_snapshot` en `report-data.ts` (`ReportPlanItem.questions`), así que extensión, informe y MCP leen las mismas.
+- **`ver_posicion_google`:** sin conectar o caducado, enlace directo al permiso de Google; conectado sin propiedad, a «Posición en Google»; sin configurar, lo dice sin botón.
+- **Enlaces también en `structuredContent`:** algunos clientes (Claude Code) enseñan el objeto estructurado y no el texto.
+- **Batería:** `lib/mcp/scenarios.test.ts`, un escenario por estado (cuenta vacía, con hueco, llena, dominio ajeno, sin escaneo, plan vacío, sin auditoría, cada estado de Search Console, revisión con y sin cuenta, anti-bots), que exige el enlace o la frase del siguiente paso, sin rayas largas ni texto de venta.
+
+**Pendiente.** Repetir la batería en producción tras el merge con el propio conector. No retira ningún camino de recuperación.
+
+## §423 · MAIL-BY-KIND-1: tasas de cada tipo de correo en la pestaña CRM (2026-11-01)
+
+**Qué se decidió.** La tabla «Correos enviados por tipo» de `/admin/crm` deja de quedarse en los cinco grupos. Bajo cada grupo sale una fila por cada tipo de correo etiquetado (`kind`, §419) visto en el periodo, ordenadas de más a menos enviados: por ejemplo «Día 3» frente a «Último día», o «Search Console» frente a «Extensión de Chrome». Lo pidió Denis tras comprobar que el webhook guardaba bien los eventos. Las columnas de abiertos y clics enseñan también su porcentaje sobre los entregados, en el grupo y en cada tipo.
+
+**Cómo.** `buildSending` cuenta por tipo con el mismo recorrido que por grupo, sobre la misma lista de Resend y el mismo filtro de contactos (`groups[].kinds`). Los nombres viven en `KIND_LABEL` (`lib/admin/kpi/email-model.ts`). Los correos sin etiqueta, enviados antes del 1 de noviembre, van en una última fila «Sin tipo (enviados antes del 1 de noviembre)». Un grupo sin ningún correo etiquetado no lleva desglose, porque esa fila repetiría el grupo. Sin migración y sin datos nuevos.
+
+**Pendiente o sabido.** Las aperturas pueden venir de los gestores de correo que descargan las imágenes al recibir (en la prueba de §419 llegaron a los pocos segundos de entregarse), así que el pie de la tabla avisa de que los clics son la señal fiable. Las cifras siguen limitadas a los 30 días de Resend (§419). Los correos de operador y las respuestas a formularios siguen fuera, porque no van a ningún contacto.
+
+## §424 · RECS-FAQ-COUNT-1: el primer paso de la FAQ deja de decir «tres preguntas» (2026-11-01)
+
+**Qué se decidió.** El primer paso de la tarjeta de FAQ (`rule_faq_001`) decía «Coge las tres preguntas de la lista», con el número escrito a mano. La lista sale de los prompts informativos del escaneo y puede tener una o diez; en genscore.es tenía una, y lo vio Denis probando el conector MCP (§422). Ahora dice «Coge las preguntas de la lista». Un test impide que vuelva un número delante de «preguntas de la lista».
+
+**Pendiente.** Las recomendaciones ya guardadas conservan su `first_step` hasta el siguiente escaneo del proyecto, que las regenera. No retira ningún camino de recuperación.
+
+## §425 · MCP-ACQUISITION-1: el conector también capta (guías, «Qué es GenScore» y dirección para ChatGPT) (2026-11-01)
+
+**Qué se decidió.** Denis pidió que las respuestas del conector lleven a querer registrarse, que informe de planes, precios y ventajas, y valorar meter el blog como RAG. Eligió la opción «Las tres partes, dos direcciones»:
+
+- **`buscar_guias`** (sin cuenta): busca en los artículos del blog, los estudios y el glosario y devuelve hasta cuatro fragmentos con título, fecha, sección y enlace, para que el chat cite a GenScore. El texto sale de `lib/mcp/guides/blog-index.json`, generado del MDX por `scripts/build-guides-index.mjs`; título, fecha y tipo se leen de `BLOG_POSTS` y `getStudies`. Búsqueda por palabras (BM25 con acentos plegados y raíces cortas), sin embeddings, sin base de datos y sin coste por consulta. Con dos palabras o menos exige todas, para no traer una guía por una palabra suelta.
+- **`que_es_genscore`** (sin cuenta, sólo si la persona pregunta): qué mide GenScore. En Claude añade los planes con el precio de `SELLABLE_PLANS` (IVA incluido), el precio fundador sólo si Stripe lo confirma (`getFounderOffer`, como `/precios`), los 7 días de Pro sin tarjeta y el alta. En ChatGPT, nada de eso: un enlace informativo a `/precios`.
+- **Gancho sin cuenta**: `revisar_pagina` y `buscar_guias` terminan con una línea que dice qué mide GenScore y el alta, rellena con el dominio revisado (`/signup?dominio=`, §421). En Claude menciona la prueba gratis; en ChatGPT no.
+- **Dos direcciones**: `/api/mcp` (Claude) y `/api/mcp/chatgpt` (ChatGPT), con el mismo manejador (`lib/mcp/http.ts`) y su metadata OAuth propia. Las normas de apps de OpenAI prohíben anunciar precios, suscripciones, pruebas o promociones; las de Anthropic no, pero piden no ser publicidad, así que en Claude los precios sólo salen cuando se preguntan.
+- **UTM por conector**: todo enlace público lleva `utm_source=claude|chatgpt`, `utm_medium=mcp` y la herramienta como campaña. El evento `mcp_tool_called` de PostHog añade `connector`.
+
+**Por qué no un RAG con embeddings.** El corpus son unos 500 fragmentos en español sobre un vocabulario muy concreto (GEO, llms.txt, GPTBot, GA4). La búsqueda por palabras acierta en las preguntas de prueba, no añade proveedor, coste ni latencia, y se regenera con un script. Si algún día no basta, se mide antes de cambiarlo.
+
+**Pendiente o sabido.** Quien conectó ChatGPT a `/api/mcp` tiene que cambiar la dirección a `/api/mcp/chatgpt` (`/docs/mcp` ya lo dice). Un artículo nuevo exige regenerar el índice en el mismo PR (`blog-index.test.ts` falla si no; regla en `growth-content.md`). Las comparativas y los docs no entran todavía. La herramienta anónima «¿Me nombra ChatGPT?» (comprobador gratuito, con coste de LLM) queda para otra fase. No retira ningún camino de recuperación.
+
+## §426 · AI-BOTS-CONSOLE-1: los bots de IA de la consola, como en el plugin de WordPress (2026-11-01)
+
+**Qué se decidió.** Denis vio la pestaña GEO del plugin de WordPress (§421) y pidió llevar a la consola su forma de enseñar los bots de IA. Aprobó la maqueta (https://claude.ai/artifact/F6mePA5RMViJnzw5FqH3t6) y el cambio de qué cuenta como problema. En Auditoría técnica, bloque GEO, bajo las pestañas:
+
+- **«Quién puede leer tu web»**: una tarjeta por motor (ChatGPT, Gemini, Claude, Perplexity), «Puede leerla», «Bloqueado» o «Sin comprobar». La regla es la del plugin, la extensión y la auditoría agéntica: todos los bots de BÚSQUEDA del motor tienen que poder entrar (Gemini: Googlebot y Google-Extended).
+- **«Bots de IA»**: los seis interruptores del plugin (mismos ids y tokens que `genscore_bot_switches()`, vigilado por `ai-bots.test.ts`), por motor y uso, con estado «Abierto», «Cerrado» o «Cerrado, decisión tuya» (entrenamiento) y la nota del plugin.
+- **«Cambiar acceso»**: la consola no puede escribir robots.txt, así que los interruptores sólo generan el bloque para copiar (`buildAiBotsRobotsBlock`). Cada grupo «Allow» repite las reglas del grupo `*` (RFC 9309: un grupo con nombre ignora `*`), y nunca toca `*`, Googlebot ni Bingbot.
+- La tarjeta lateral pasa a **«Ficheros para la IA»**: llms.txt, sitemap.xml y Bing y Copilot.
+
+**Qué cuenta como problema.** Antes `bot_blocked` contaba cada token cerrado, así que cerrar GPTBot o ClaudeBot (entrenamiento) salía como problema crítico, en Recomendaciones («Permite GPTBot…», franja «Prioridad 1» de Visión general) y como aviso en la campana. Contradecía al plugin y al robots.txt que recomienda nuestro propio blog (`lib/blog/robots-ai-snippet.ts`). Ahora la unidad es el motor: `bot_blocked` sale sólo cuando un motor no puede leerte, con su nombre (`affectedLabels` = «Perplexity»); `findCitationBlockers` hace lo mismo («Abre tu robots.txt a Perplexity»); `detectNewlyBlockedBots` no avisa de un bot sólo de entrenamiento; la extensión lee `aiBotsAllowed` por motores. Un bloqueo de Googlebot también deja a Gemini sin leerte. `bot_blocked` sigue sin puntos: ninguna nota cambia.
+
+**Cómo.** `lib/web-audit/ai-bots.ts` (puro) define interruptores, motores y la lectura. La auditoría guarda en `bots.aiBots` (jsonb, sin migración) el permiso de cada token y las reglas de `*`. Una foto anterior se lee con los tokens que tenía: un motor sin ninguno medido (Claude) queda «Sin comprobar», nunca «Puede leerla», y «Cambiar acceso» no sale hasta la próxima revisión, porque sin las reglas de `*` el bloque podría abrir zonas privadas. Un robots.txt que no se pudo leer no afirma nada.
+
+**Pendiente o sabido.** El ejemplo del blog pone Google-Extended en «entrenamiento», mientras el plugin y la consola lo cuentan para las respuestas de Gemini: falta decidir cuál manda y alinear el artículo. La línea «¿Tu web es WordPress?» de la maqueta no se publica hasta que el plugin esté en WordPress.org. El lector de robots.txt sigue simplificado (sólo `Disallow: /` bloquea).
+
+## §427 · AGENTIC-SHOPPERS-1: Muse en los bots de IA y «Agentes que compran» (2026-11-01)
+
+**Qué se decidió.** Denis preguntó si podíamos detectar a los agentes personales que compran (Instinct, Muse, Dots, Tab, Perplexity, Grok Bot) para añadirlos, y que lo aprendido mejorase Visibilidad en agentes, el análisis de situación y las recomendaciones. Se revisó lo que publica cada fabricante (propuesta: https://claude.ai/artifact/KEVpHPWhUGseyHYmJXbHmv) y Denis la aprobó entera («Perfecto. Implementa»). Lo que dicen los propios fabricantes:
+
+- robots.txt decide si un agente **encuentra** una web, porque los índices de los que tiran (OAI-SearchBot, Googlebot y Google-Extended, PerplexityBot, Claude-SearchBot y ahora `meta-webindexer`) lo respetan.
+- Cuando el agente **entra** a comprar por alguien, ninguno promete leerlo: Meta dice que `meta-externalfetcher` «may bypass robots.txt rules», OpenAI que a `ChatGPT-User` «robots.txt rules may not apply» y Google que sus fetchers de usuario, `Google-Agent` incluido, «generally ignore robots.txt rules». Lo que frena una visita así es la protección anti-bots.
+- Muse (Meta) es el único de la lista con un nombre nuevo que añadir. Dots entra por los de OpenAI, ya medidos. Grok Bot, Instinct y Tab no publican cómo se identifican (Cloudflare atribuye `GrokAgent` a Grok Bot, pero xAI no lo publica), así que no reciben interruptor: el bloque no haría nada.
+
+**Qué cambia.**
+
+- **Bots de IA (Auditoría técnica):** dos interruptores nuevos de Meta, «Búsqueda de Meta AI y Muse» (`meta-webindexer`) y «Entrenamiento de modelos» (`meta-externalagent`, que entra en `TRAINING_ONLY_TOKENS`). Meta no es una tarjeta de «Quién puede leer tu web» porque no medimos sus respuestas, y `meta-externalfetcher` no es un interruptor porque Meta dice que puede saltarse el fichero. Una línea final explica que los agentes que compran no consultan robots.txt al entrar.
+- **Auditoría agéntica:** `ASSISTANT_ROBOTS_TOKENS` gana `Meta: ["meta-webindexer"]`, así que `robots_agents` mira cinco asistentes. Cambia la nota agéntica de quien cierre ese token, también en el comprobador público de `/comercio-agentico`. Las revisiones guardadas antes tienen cuatro y se leen igual. El arreglo de `robots_agents` nombra lo que hay que abrir (`robotsFix`), y si sólo falta Meta dice «Deja que Muse te encuentre: abre meta-webindexer en tu robots.txt».
+- **Visibilidad en agentes:** tarjeta «Agentes que compran» (`lib/agentic-audit/shopping-agents.ts`, puro) con seis agentes (Muse, Dots, Agente de Gemini, Comet, Instinct y Grok Bot) y «Te encuentra», «Bloqueado», «Sin comprobar» o «No se ve desde fuera». Debajo, «Para entrar», igual para todos: lo que encontró nuestro robot identificado, sin afirmar qué le pasa a un agente verificado (§319). Dos consejos sin puntos, sólo cuando sale del dato: revisar el anti-bots si hubo reto, y la red de Shopify si la tienda vende con Shopify (Instinct busca ahí desde su acuerdo del 28 de septiembre).
+- **Análisis de situación:** la luz de «Descubrimiento» se parte en dos: «Te encuentran N de M · entran sin reto / con reto anti-bots al entrar / entrada sin medir» (`discoveryLightLine`).
+
+**Lo que no se hace.** Visitas haciéndose pasar por un agente (los anti-bots verifican por firma o IP y el resultado sería falso) ni leer los logs del servidor del cliente, que sería otro producto.
+
+**Plugin 1.0.5 y extensión.** El plugin de WordPress pasa a 1.0.5 con los dos interruptores de Meta (`meta-webindexer`, `meta-externalagent`) y la línea sobre los agentes que no consultan robots.txt; `PLUGIN_PENDING_SWITCHES` queda vacío y el test de paridad vuelve a cubrir los ocho. La extensión de Chrome no cambia: `score.js` puntúa motores de IA y Meta no lo es (como en las tarjetas de la consola), y su bloque agéntico llega del servidor, así que recibe a Meta con el merge, sin zip nuevo.
+
+**Pendiente o sabido.** El guion de validación en un WordPress real con Plugin Check no se pudo pasar en esta sesión (la descarga de WordPress quedó bloqueada); se pasaron `php -l`, `node --check` y los tests de PHP. Toca pasarlo antes de subir el zip 1.0.5. Que Dots firme sus visitas (`Signature-Agent`) sale de la guía de OpenAI, que no se pudo abrir: no se usa en ningún texto. No retira ningún camino de recuperación.
+
+## §428 · MCP-PROMPTS-1: el conector enseña los prompts del dominio (2026-11-01)
+
+**Qué pasó.** Denis preguntó en Claude «qué prompts tengo configurados» y el
+conector no supo responder: ninguna herramienta los devolvía. La propuesta
+aprobada de MCP-SERVER-1 (§418) incluía los prompts entre las herramientas de
+cuenta, y se quedaron fuera de la Fase 1.
+
+**Qué se decidió.**
+
+- Herramienta nueva de cuenta, de solo lectura: `ver_prompts`. Lista los
+  prompts activos del dominio por tema y, para cada uno, qué hizo cada motor en
+  el último escaneo: te nombra (con el puesto si lo hay), solo nombra a otras
+  marcas o no nombra a ninguna.
+- Las celdas salen de la matriz del informe (`buildReportModel`, la misma regla
+  de mención que el informe y «Prompts»); la lista activa, de `project_prompts`
+  con `is_active`, como la pantalla. Se juntan en `buildExtPrompts`
+  (`lib/ext/prompts.ts`, pura) y viajan en el payload compartido
+  (`loadExtProjectData`), así que el panel de la extensión también los recibe.
+- Un prompt activo que el último escaneo no preguntó sale como «pendiente del
+  próximo escaneo», nunca como «no te nombra». Uno retirado después del
+  escaneo no sale. Si la lista activa no se puede leer, salen los del escaneo.
+- Como mucho 60 en el chat (`MAX_PROMPTS`); el resto, en la consola. Sin
+  recuentos absolutos en el texto.
+
+**Pendiente.** La ficha del directorio de Claude se envió sin esta
+herramienta en la descripción; Denis puede editarla después.
+
+## §429 · GSC-INVITE-FIT-1: «Conectar con Google» cabe en su tarjeta (2026-11-01)
+
+**Qué pasó.** Denis vio en Visión general que el botón negro «Conectar con
+Google» de la tarjeta «Auditoría SEO y Google» se salía por la derecha de su
+panel. La invitación (§313) vive en la segunda columna de la tarjeta, de unos
+230 px en un portátil, y el botón (una línea sin cortes, 16 px de relleno a cada
+lado dentro de un panel con 18 px más) no cabía. Al lado, «Comercio agéntico»
+quedaba con mucho hueco porque la tarjeta SEO era mucho más alta.
+
+**Qué se decidió.**
+
+- Sin conexión, la mitad de Google lleva la clase `gx-inv`. En escritorio la
+  columna de Google gana algo de ancho (1 : 1,3 frente a Salud SEO, cuyas cifras
+  son cortas), el panel se aprieta (14 px de relleno, título de 15,5 px) y el
+  botón ocupa el ancho del panel, con «Acceso de solo lectura» centrado debajo.
+- Si la tarjeta es estrecha (cuerpo de 440 px o menos, tablet con las dos
+  tarjetas al lado), Salud SEO va arriba y la invitación debajo, a todo el ancho.
+  El cuerpo de las dos tarjetas del par es el contenedor (`ovcard`), porque una
+  consulta de contenedor no puede cambiar su propio contenedor.
+- El botón nunca es más ancho que su panel (`max-width:100%`, en `google.css`):
+  si un texto no cabe, se corta dentro del botón en vez de salirse.
+- Mismo texto, mismo enlace y misma puerta (`disconnected`/`reconnect`): sólo
+  cambia el aspecto. La tarjeta SEO queda más baja, así que «Comercio agéntico»
+  tiene menos hueco; el que queda es el de la fila de recomendación al pie de
+  las dos tarjetas (Denis, 2026-10-27).
+
+**Pendiente o sabido.** Comprobado con las tarjetas reales renderizadas y las
+hojas de la consola a 1280, 860 y 390 px. No retira ningún camino de
+recuperación.
+
+## §430 · MCP-CHATGPT-SUBMIT-1: el conector, listo para el directorio de ChatGPT (2026-11-01)
+
+**Qué pasó.** Denis pidió preparar la subida a ChatGPT igual que la del
+directorio de Claude (§418, §425). Desde 2026 OpenAI publica las apps como
+«plugins»: un ZIP con `plugin.json` (ficha, casos de prueba, notas) y
+`mcp.json` (servidor y autenticación), verificación del dominio y revisión con
+cuenta de prueba, cinco casos positivos, tres negativos y un vídeo.
+
+**Qué se decidió.**
+
+- Sólo cambia el perfil `chatgpt` (`/api/mcp/chatgpt`); Claude sigue como se
+  aprobó. `protocolOptionsFor` (`lib/mcp/http.ts`) le pide al protocolo tres
+  cosas que la documentación de OpenAI exige o pide:
+  - Una herramienta de cuenta llamada sin token responde un error de
+    herramienta con `_meta["mcp/www_authenticate"]` (con `error` y
+    `error_description`), no un 401 HTTP. Es lo que abre el inicio de sesión
+    por herramienta en una app mixta. Un token caducado sigue siendo 401.
+  - `securitySchemes` con `scopes: ["openid", "email"]`, y la metadata del
+    recurso de ChatGPT los declara en `scopes_supported`. OpenAI necesita un
+    email verificado por UserInfo para las restricciones de dominio de los
+    espacios de trabajo; el servidor OAuth de Supabase ya publica ambos.
+  - Toda herramienta declara `outputSchema` (abierto a propósito: un esquema
+    exacto que se desfase fallaría la validación) y toda respuesta lleva
+    `structuredContent`, aunque sea `{}`.
+- `/.well-known/openai-apps-challenge` devuelve en texto plano el token de
+  `OPENAI_APPS_CHALLENGE_TOKEN`; sin la variable, 404.
+- El paquete vive en `docs/chatgpt-plugin/package/` (ficha en inglés con
+  traducción `es-ES`, categoría «Data & Analytics», `commerce: false`, sin
+  credenciales). Los pasos para Denis, en `docs/chatgpt-plugin/README.md`.
+
+**Pendiente.** Lo hace Denis: verificar la organización en OpenAI, poner
+`OPENAI_APPS_CHALLENGE_TOKEN`, subir el ZIP, grabar el vídeo de los casos de
+prueba con la cuenta soporte@genscore.es y enviar. El esquema genérico de
+Agent Plugins no admite `extensions` dentro de un servidor de `mcp.json`,
+aunque la documentación de OpenAI lo pone ahí; si la comprobación del portal
+lo rechaza, se sube sin ese bloque y la autenticación se configura en
+**Connect**. Las capturas de la ficha son opcionales y salen del chat real.
+
+## §431 · MCP-SITE-FIXES-1: /precios declara sus planes y las páginas públicas caben en el SERP (2026-11-01)
+
+**Qué pasó.** Denis probó el conector de GenScore en Claude para aplicar las
+recomendaciones de genscore.es. Las auditorías del conector daban 68 en la
+agéntica (lo que más restaba: «Declara lo que vendes con datos estructurados»,
+13 puntos) y señalaban títulos y descripciones fuera de longitud. Denis eligió
+arreglar las dos cosas, sin cambios visibles.
+
+**Qué se decidió.**
+
+- `/precios` monta `SoftwareApplicationSchema withPlanOffers`: el mismo nodo
+  (`@id` de siempre) con una `Offer` por plan con precio de lista, Starter y
+  Pro, mensual (`unitCode: MON`), IVA incluido, desde `PLANS`. Agencia no se
+  declara porque no tiene precio de lista («Plan a medida»), y el precio
+  fundador tampoco, porque es un cupón y no el precio del plan. La home y
+  `/que-es-genscore` siguen con la oferta «desde».
+- Las páginas públicas indexables pasan a 15–70 caracteres de título y
+  50–160 de descripción. Medido sobre el HTML de `next build`, eran 37 (20
+  términos del glosario, 7 comparativas, `/precios`, `/que-es-genscore`,
+  `/sobre-genscore`, `/estudios`, `/demo`, los dos `/gratis`, dos de `/docs` y
+  `/blog/sectores`); ahora no queda ninguna. Los artículos del blog ya
+  cumplían desde §265.
+- Las constantes compartidas (definición canónica, definición del GEO Score,
+  entradillas) no se tocan: son texto visible y de schema. La página pone su
+  propia descripción. El glosario gana `metaDescription` por término y
+  `glossaryTermTitle`.
+
+**Pendiente o sabido.** La 404, `forgot-password` y el error global heredan
+la descripción raíz de 171 caracteres; son `noindex` y la auditoría no las
+lee. Las otras recomendaciones del conector (enlace a cancelación y reembolso
+en `/precios`, LCP móvil de 2,7 s) quedan para otra fase: la primera toca
+texto visible congelado y la segunda hay que investigarla. Fricciones del
+conector anotadas en `/mnt/project-files/conector-mcp/`. No retira ningún
+camino de recuperación.
+
+## §432 · WP-PLUGIN-2: el plugin de WordPress, conectado a la cuenta de GenScore (2026-11-01)
+
+**Por qué.** Denis pidió una versión del plugin que se autentique en GenScore y
+saque las cifras de la consola igual que la extensión de Chrome. Aprobó el plan
+y la maqueta (`docs/design-reference/wp-plugin-account-1/maqueta.html`) el
+2026-11-01. Esto es la Fase 2 que §421 dejaba sin aprobar.
+
+**Qué se decidió.**
+
+- **La misma puerta que el conector MCP.** OAuth 2.1 con PKCE (S256) contra el
+  servidor OAuth de Supabase que ya publica `/.well-known/oauth-authorization-server`.
+  Cada WordPress se registra solo (registro dinámico, cliente público, nombre
+  «GenScore para WordPress (dominio)») con su vuelta fija en
+  `wp-admin/admin-post.php?action=genscore_oauth`. El permiso se da en
+  `/oauth/consentir`, la misma pantalla del conector, y se retira en Ajustes >
+  Apps conectadas. Sin migración ni tablas nuevas.
+- **GenScore sólo cambia en un sitio.** `/api/ext/context` y `/api/ext/project`
+  aceptan, además de la cookie de la extensión, `Authorization: Bearer`, que se
+  valida con `accountFromBearer` (RLS del propio usuario, nunca service role)
+  en `lib/ext/request-account.ts`. Una petición con cabecera se juzga sólo por
+  ella: un token malo es 401 aunque venga una cookie válida. `Vary` añade
+  `Authorization`.
+- **El token vive en la base de datos de WordPress, nunca en el navegador.**
+  Opción `genscore_account` sin autocarga; el plugin lo renueva con el refresh
+  token y, si GenScore lo rechaza, se desconecta solo y vuelve a las maquetas
+  sin cifras. Las cifras se guardan 10 minutos (transient) para no llamar a
+  GenScore en cada carga. «Desconectar» borra el token y pide la revocación si
+  el servidor la publica. Desinstalar borra todo.
+- **Las cifras son las de la extensión**, del mismo payload: Puntuación GEO,
+  menciones por motor, rivales, Salud SEO con lo que más resta, Search Console
+  (clics, impresiones, puesto, búsquedas y «Casi en la página 1»), nota para
+  agentes por componente y las tres próximas acciones. Porcentajes, nunca
+  recuentos de respuestas. Lo que no llega no se pinta.
+- **Sin ventas dentro de WordPress**: sin precios ni pago. En Agentes, si el
+  plan no la incluye, un enlace informativo a `/precios`, como en el MCP. Un
+  dominio que no está en la cuenta ofrece «Añadir» con
+  `/dashboard/projects/new?dominio=`, o «Ver tu plan» si ya no tiene hueco.
+- **Readme**: «External services» declara la conexión (qué se envía, cuándo,
+  qué se guarda, términos y privacidad de GenScore y Supabase). Nada sale de la
+  web hasta que un administrador pulsa «Conectar con GenScore».
+- Versión 1.1.0. Validado en el WordPress local (7.1 + WooCommerce) con un
+  servidor GenScore simulado: conectar, volver con el código, repetir el mismo
+  `state` (rechazado), token caducado que se renueva, token revocado que
+  desconecta, dominio fuera de la cuenta y «Desconectar», en 1280 y 390 px.
+  Plugin Check sin errores.
+
+**Pendiente o sabido.** No se ha probado contra el Supabase real: lo hace Denis
+en su web de Wasmer con su cuenta. Si el servidor OAuth de Supabase rechazara
+una dirección de vuelta con `?action=`, habría que mover la vuelta a otra
+ruta. Quien lea la base de datos de esa web puede usar el token mientras viva,
+como con cualquier plugin conectado; se mitiga con tokens cortos y la
+retirada desde Apps conectadas. El token de Supabase lleva los permisos RLS de
+la cuenta: el plugin sólo hace GET a las dos rutas de lectura. No retira ningún
+camino de recuperación.
+
+**Adenda 1.1.1 (2026-11-02).** Denis probó la conexión real en su web de
+Wasmer: OAuth, consentimiento y vuelta funcionan sin tocar Supabase. Dos
+arreglos menores: el aviso «Ya ves aquí las cifras de tu cuenta» esperaba a
+las cifras, así que salía también con un dominio que no está en la cuenta;
+ahora el aviso de conexión sale cuando llegan y, sin el dominio, pide añadirlo.
+Y la pantalla de permiso decía «Conectar GenScore para WordPress (…) con
+GenScore»: el cliente se registra como «WordPress (<dominio>)», y un cliente
+guardado con otro nombre se registra otra vez una sola vez.
+
+**Adenda 1.1.2 (2026-11-02).** Prueba de extremo a extremo de Denis con un
+escaneo real. Primero: «Salud SEO» enseñaba 47 en el plugin y 84 en la consola.
+`seoScore` de `/api/ext/project` era `model.technical.score`, el «Diagnóstico
+técnico» del desglose de la Puntuación GEO, no la nota del bloque SEO. Ahora
+`buildExtProjectSummary` recibe la nota del bloque SEO de `buildExtAudits`, la
+misma que pinta la consola. Esto arregla también la extensión (que ya lo llamaba
+«Salud SEO») sin publicar otra versión, y el MCP pasa a decir «Salud SEO de tu
+web». Segundo: la cuenta se leyó con la auditoría aún pendiente y el plugin la
+guardó diez minutos. Ahora, con `auditedAt` vacío, la respuesta se guarda un
+minuto y la pantalla vuelve a pedirla sola cada minuto (como mucho diez veces).
+Además hay un «Actualizar» junto a la fuente. Por último, Agentes y la
+Puntuación GEO usan las bandas de la consola (`agenticBand`: Falla por debajo
+de 50, Bien desde 90; Inicial, Emergente y Competitivo con cortes en 40 y 70).
+Pendiente y conocido: las «próximas acciones» del plugin, la extensión y el MCP
+salen del plan del informe (`model.plan`) y no de `buildOverviewPlan`, así que el
+orden y el título pueden diferir de Visión general. Los rivales son las marcas
+más nombradas, no sólo las que sigues; esto es a propósito y la extensión hace
+lo mismo. Las bandas de Agentes de la extensión siguen en 75 y 50 hasta su
+próxima versión.
+
+**Adenda 1.1.3 (2026-11-02).** Denis hizo la prueba completa de los
+«Arreglar» con la 1.1.1 en Wasmer, con Storefront y WooCommerce. Todo
+publica y se deshace bien. Quedaban cuatro fallos:
+
+- **El párrafo de la Tienda no contaba en Storefront.** Se pintaba en
+  `woocommerce_archive_description`, que en los temas clásicos va dentro de
+  `<header class="woocommerce-products-header">`, y la revisión (`collect.js`,
+  copia de la extensión) descarta todo `<p>` dentro de un `header`. Ahora se
+  pinta en `woocommerce_before_shop_loop`, o en `woocommerce_no_products_found`
+  si no hay productos. Los temas de bloques siguen igual. `collect.js` no se
+  toca: es la copia exacta de la extensión.
+- **Notas viejas.** Una revisión en marcha guardaba sus notas después de
+  `genscore_forget_all_scores()`. Ahora hay una generación
+  (`genscore_scores_gen`) que sube en cada borrado. La pantalla manda con cada
+  nota la generación en la que leyó la página, y `genscore_ajax_save_page` no
+  guarda una nota de una generación anterior.
+- **El interruptor rebotaba** tras «Guardar robots.txt», porque la pantalla
+  seguía leyendo el robots.txt de antes. Ahora enseña lo guardado
+  (`S.bots`) hasta que la página se vuelve a leer.
+- **«Fecha» en la Tienda.** Si la Tienda no necesita fecha, sale «No aplica»
+  (estado `na`). Si ya tiene una publicada, la hoja enseña cuál es.
+
+**Adenda «mismo plan» (2026-11-02).** Denis vio que «Tus próximas acciones»
+del plugin no tenían el mismo orden ni el mismo título que Visión general. El
+plan del informe (`loadReportInput`), del que leen la extensión, el MCP y el
+plugin, hacía `selectPlan` sobre las tarjetas sueltas. Recomendaciones y
+Visión general, en cambio, juntan desde RECS-ONE-LEVER-1 (§328) las tarjetas
+«Aparece en…» en una sola palanca por tema. La agrupación pasa a
+`selectPlanWithLevers` (`lib/recommendations/plan-with-levers.ts`), que usan
+`buildOverviewPlan` y el informe. Una palanca lleva `leverTitle` y
+`leverFirstStep`, como en su tarjeta, y suma las preguntas y los motores de
+todas sus tarjetas. Esto también corrige el informe descargable, que debía
+enseñar las acciones de Recomendaciones y llevaba sin hacerlo desde §328. La
+tarjeta de Google del puesto 2 sigue siendo sólo de la consola.
+
+**Adenda «optimización técnica» (plugin 1.2.0 y extensión 1.3.0, 2026-11-02).**
+Denis vio en una web recién creada un 100 de «Nota SEO + IA» junto a una
+Puntuación GEO de 12, los dos con forma de medidor. Se confundían: el 100 era
+lo más grande de la pantalla, y sin cuenta era lo único que se veía. Denis
+eligió la opción A de la maqueta (capturas en
+`docs/design-reference/wp-plugin-optimizacion-1/`) para la vista con sesión y
+sin ella:
+- La revisión de la página pasa a llamarse **«Optimización técnica»**.
+  Pregunta «¿Está tu web optimizada para la IA y Google?» y se pinta como una
+  barra con estado (Optimizada desde 75, Mejorable desde 50, Se frena), nunca
+  como un medidor. El cálculo (`score.js`) no cambia. Pasa igual en el plugin,
+  en la extensión, en el widget del escritorio y en `revisar_pagina` del MCP,
+  que además dice que no es la Puntuación GEO. La descripción de la
+  herramienta en el MCP no se toca para no cambiar la ficha enviada a
+  ChatGPT.
+- **El único medidor es la Puntuación GEO.** En el plugin va al lado de la
+  tarjeta anterior. Sin cuenta sale «?, sin medir», con Conectar y Analizar.
+  En la extensión, la vista de una página enlaza a la Puntuación GEO del
+  dominio. Debajo va el texto de Denis: «Una web técnicamente optimizada no
+  basta…».
+- **Con sesión, «Recomendaciones de GenScore»** en el plugin reúne el plan de
+  Visión general y los problemas que más restan en las auditorías GEO, SEO y
+  agéntica, con su nota y su «Ver». Todo sale de `/api/ext/project` sin
+  recalcular nada. La extensión ya los tenía en la vista del dominio.
+- **«ese rival» se nombra.** `recommendationHeadline` devuelve `subject`
+  cuando el nombre no cabe en la tarjeta de la consola, y el informe (y con él
+  la extensión, el MCP y el plugin) lo escribe entero. El plugin enseña las
+  preguntas de cada acción.
+- **«Fecha» con fecha.** Si el tema ya pinta la fecha, la hoja enseña la de la
+  última modificación en vez de «Ya lo tiene» a secas.
+- **robots.txt y llms.txt se piden dos veces** antes de darlos por ausentes si
+  la primera respuesta fue un tiempo agotado, un 429 o un 5xx (`collect.js` de
+  la extensión, copiado al plugin y a `lib/page-review`). Un llms.txt que
+  respondía 200 salió como ausente mientras se revisaban muchas páginas a la
+  vez.
+
+**Adenda 1.2.1 (plugin, 2026-11-02).** Prueba de Denis en su Wasmer con la
+1.2.0:
+
+- **El arco del dominio se llama «Auditoría agéntica»**, no «Agentes»: la
+  barra de la página ya tiene una fila «Agentes» y los dos números se leían
+  como lo mismo.
+- **`projectedAll` en cada bloque de `/api/ext/project`**: la nota del bloque
+  si se arreglara todo lo que puntúa, aunque haya más problemas de los tres
+  listados. Es para una cabecera («Auditoría GEO 25 → 100»). `projected` no
+  cambia y sigue siendo sólo «si arreglas estos tres», porque los puntos de
+  bloque no se suman y una suma parcial sería inventada. Sin `projectedAll`,
+  la Auditoría GEO de la cuenta de Denis (25, con más de tres problemas)
+  salía sin destino.
+- **La nota de cada página lleva %** en la lista de «Tus páginas» y en la
+  columna de las listas de WordPress, igual que el widget y la barra.
+- Pendiente sin reproducir: una vez «Cómo conservar…» salió en «Fecha» como
+  «Propuesta lista» con una nota vieja, y al revisarla volvió a «Ya lo tiene».
+  La generación `genscore_scores_gen` ya rechaza notas leídas antes de un
+  borrado general; si se repite, mirar qué guardó esa nota.
+
+**Adenda 1.3.0 (plugin, WP-PLUGIN-3, 2026-11-02).** Denis pidió que las
+recomendaciones de GenScore con la cuenta conectada salgan también en GEO, SEO
+y Agentes, y que se puedan resolver con un clic como las de la web sin cuenta.
+Maqueta aprobada con «Crear borrador» (decisión de Denis, 2026-11-02).
+
+- **Cada pestaña lleva sus «Recomendaciones de GenScore»**: GEO, el plan
+  («Para que la IA te nombre») y la Auditoría GEO; SEO, la Auditoría SEO;
+  Agentes, la Auditoría agéntica. Resumen sigue igual.
+- **`/api/ext/project` manda `check` y `urls` en cada problema de auditoría**
+  (`buildExtAudits`): la clave de la comprobación de la consola y hasta 20
+  páginas que la fallan; vacía en lo que es de todo el sitio (bots, llms.txt,
+  sitemap). El plan manda `draft` (`isDraftable`): la acción pide publicar una
+  página y trae preguntas.
+- **`check` decide la acción** (`CHECK_KIND` en `admin.js`): si WordPress lo
+  arregla, «Arreglar» abre la hoja de arreglos con las páginas de la auditoría
+  ya marcadas; bots y llms.txt llevan a su interruptor; lo demás, «Cómo
+  hacerlo» en la consola. Si la web ya no pide ese arreglo en esas páginas,
+  «Arreglado aquí» y «Lo verá el próximo escaneo de GenScore».
+- **Sin duplicados**: lo que ya ofrece una auditoría del dominio sale de la
+  tarjeta local de la pestaña, que pasa a llamarse **«Recomendaciones
+  técnicas»** (antes «Arregla primero» y «Arreglar»), a petición de Denis para
+  no confundirla con las de GenScore.
+- **«Crear borrador»** crea una entrada en borrador con las preguntas como
+  encabezados y nada más. Nunca publica. La única entrada es la posición del
+  plan; el texto sale de lo que GenScore ya mandó (`genscore_account_data`).
+  Si existe el borrador de esa pregunta, se reutiliza y el botón pasa a
+  «Abrir borrador». Desinstalar borra la lista, no los borradores.
+- La tarjeta de Agentes «Nota para agentes» pasa a «Auditoría agéntica».
+
+**Adenda 1.4.0 (plugin, WP-PLUGIN-4, 2026-11-02).** Denis pidió que cada
+recomendación tenga una solución directa en WordPress y se publique donde se
+pueda (comparativa como borrador, `<h2>`, Open Graph, hreflang y envío desde
+la hoja de páginas). Se repasaron todos los tipos en una propuesta (artifact
+SPWgjFTQUfxcxhKMxfeqFP) y Denis aprobó dos entregas: ésta y la 1.4.1.
+
+- **`/api/ext/project` manda, en cada acción del plan, `type`, `rival`,
+  `page` y `drivers`** (`toExtPlanItem`, `recommendationSubjects`). `page`
+  sólo es una URL propia http(s) y sólo cuando la cobertura confirmó la
+  página. `isDraftable` pasa a decidir por tipo: preguntas, comparativa con un
+  rival, comparativa general y respuesta a críticas.
+- **Borradores nuevos**: «Marca frente a Rival» (página) con una tabla cuya
+  columna propia sale de WooCommerce (precio desde, envío, devoluciones,
+  valoración) o queda «[Pendiente: tu dato]», y la del rival siempre
+  «[Pendiente: dato, enlace y fecha]»; las preguntas como `<h2>` y una sección
+  «Fuentes». La respuesta a críticas lleva un `<h2>` por motivo. Una caja en el
+  editor cuenta los huecos que quedan. Nunca se publica.
+- **«Añadir preguntas»**: si el plan apunta a una página tuya, la persona
+  escribe las respuestas (5 palabras o más) y salen al final de esa página, con
+  `FAQPage` si no hay plugin SEO que pinte schema. Las preguntas salen del plan
+  guardado en el servidor; el navegador sólo manda respuestas. Se deshace.
+- **Arreglos nuevos en la hoja de páginas**: al menos dos `<h2>` (una línea en
+  negrita pasa a `<h2>`, o encabezados que escribe la persona), un solo `<h1>`
+  (los del contenido se sirven como `<h2>`), Open Graph (no con plugin SEO),
+  hreflang (no con WPML, Polylang ni TranslatePress), envío (coste y gratis
+  desde de las zonas de WooCommerce del país de la tienda, plazos escritos una
+  vez), valoración media (sólo reseñas reales) y GTIN (con dígito de control).
+  Todo por filtros y `_genscore_*`, con deshacer; el contenido no se toca.
+- **«Arreglado aquí» de estos tipos** sólo sale si una publicación que aún se
+  puede deshacer cubre todas las páginas de la auditoría (`paths` en el
+  resumen de lotes), porque la revisión local no los lee.
+- **Desvíos de la propuesta**: el GTIN se guarda en `_genscore_gtin`, no en el
+  campo de WooCommerce (para poder deshacer sin tocar el producto); los huecos
+  del borrador son marcadores grises y la caja del editor, no texto amarillo;
+  el borrador de página mejorada lleva el hueco de respuesta corta y los
+  `<h2>`, sin bloque FAQ ni fecha aparte.
+- **Pendiente (1.4.1)**: texto alternativo, sitemap, viewport, noindex,
+  nosnippet, LocalBusiness, Organization, dato con fuente, cancelación, tabla
+  de especificaciones y avisos de «ir a un ajuste».
+
+**Adenda 1.4.1 (plugin, WP-PLUGIN-4, 2026-11-02).** La segunda entrega del plan
+aprobado (artifact SPWgjFTQUfxcxhKMxfeqFP), empezada con el visto bueno de
+Denis («podemos mergear y seguir con la 1.4.1») mientras Instinct probaba la
+1.4.0. Código nuevo en `includes/fixes-site.php`.
+
+- **Arreglos nuevos en la hoja de páginas**, con la misma confirmación y
+  deshacer: texto alternativo (de cada imagen sin texto: el del medio, su
+  título si no es un nombre de fichero o el título de la página; se guarda en
+  la biblioteca sólo si la imagen no tenía y se sirve con
+  `wp_content_img_tag`), noindex y fragmentos bloqueados (limpia los campos de
+  Yoast, Rank Math o SEOPress y filtra `wp_robots`; sin plugin SEO no se
+  ofrece, y con la web cerrada en Ajustes > Lectura tampoco), tabla de
+  características (atributos visibles, peso y medidas de WooCommerce, bajo la
+  descripción) y política de cancelación (página que la explica, días y país,
+  escritos una vez; se añade a los datos de la página o a la oferta si no hay
+  ya una de devoluciones).
+- **Arreglos de toda la web** (ventana propia, lote con `site_prev`): sitemap
+  (enciende el de WordPress y redirige `/sitemap.xml`; robots.txt no se toca
+  porque WordPress ya lo anuncia), viewport (sólo si el tema no la pone) y
+  quién está detrás (Organization o LocalBusiness con dirección, horario en
+  formato schema.org y perfiles; sale de WordPress y WooCommerce y la persona
+  lo revisa). Con un plugin SEO que pinta schema o publica sitemap no se
+  ofrecen: el aviso manda a sus ajustes.
+- **«Añadir dato»** en las acciones de cita con página propia: la persona
+  escribe el dato (4 palabras o más), el enlace a la fuente y la fecha (no
+  futura); sale tras la entradilla. Sin página, `isDraftable` crea un borrador
+  con sus preguntas y un hueco para el dato.
+- **«Copiar tabla y abrir»** en «Refuerza tu comparativa»: copia la tabla (la
+  columna del rival siempre «[Pendiente: dato, enlace y fecha]») y abre la
+  página en el editor.
+- **«Ir a un ajuste»** cuando WordPress lo arregla en otra pantalla: HTTPS
+  (Ajustes generales), pagos rápidos, web cerrada a buscadores (Lectura) y lo
+  que lleve el plugin SEO.
+- **`/api/ext/project`**: las URL de «Imágenes sin texto alternativo» llegaban
+  como «url · N imágenes» y se descartaban; ahora se limpian antes de filtrar.
+- **Probado** en el WordPress de pruebas con WooCommerce: cada arreglo
+  publicado, comprobado en el HTML servido y deshecho; ventanas a 1280 y 390
+  px; Plugin Check sin errores salvo la etiqueta del readme, ya corregida.
+- **Pendiente o sabido**: noindex y fragmentos no se han probado con Yoast o
+  Rank Math instalados (el entorno de pruebas no los tiene); el texto
+  alternativo sólo cubre imágenes con id de la biblioteca. No retira ningún
+  camino de recuperación.
+
+**Adenda 1.4.2 (plugin, WP-PLUGIN-4, 2026-11-02).** Lo que encontró Instinct
+probando la 1.4.0 entera en la tienda de Wasmer:
+
+- **og:description pegaba los bloques** («…en MadridEn Café Ventura…») y, al
+  publicar Open Graph, los estilos de bloque del tema pasaban de `<style>` a
+  `<link>`, porque `excerpt_remove_blocks` renderiza bloques dentro de
+  `wp_head`. Ahora `genscore_plain_text` lee el HTML guardado de cada bloque
+  con `parse_blocks` (`genscore_blocks_html`), sin renderizar nada, y vive en
+  `fixes.php` porque el `<head>` público también la usa.
+- **Valoración sin reseñas**: si ningún producto publicado tiene reseñas
+  (`_wc_review_count`), el arreglo no está disponible y la recomendación dice
+  «Sin reseñas» en lugar de «Arreglar» (antes abría una hoja que decía «Ya está
+  en todas tus páginas»).
+- **La comparativa usa el nombre de la web** (Ajustes > Generales), no la marca
+  de la cuenta («Cafe Ventura Genscore»); la marca sólo se usa si la web no
+  tiene nombre.
+- **Las celdas «[Pendiente…]» van en gris** con el color de texto en línea del
+  propio editor (`mark.has-inline-color`), así que el bloque de tabla sigue
+  siendo válido y el hueco se ve como hueco en el editor y en la página.
+- **«Añadir preguntas» no salía porque `page` llegaba vacío.** `page` sólo se
+  rellena cuando la cobertura confirma una página propia para esas preguntas
+  (`confirmed_surfacing_gap`); en la tienda de pruebas la cobertura no
+  confirma ninguna, así que vacío es lo correcto allí. Sí había un hueco: en
+  una palanca sólo se miraba la tarjeta representante; ahora vale la primera
+  de sus tarjetas con página confirmada (comparten tema). El borrador de
+  críticas sólo sale con una tarjeta `address_negative_narrative` con
+  críticas, y esa cuenta no tenía ninguna.
+- **Un título termina su frase.** La descripción propuesta para el JSON-LD de
+  la portada pegaba el H1 al párrafo siguiente («…tostado cada semana En Café
+  Ventura…»). `genscore_plain_text` cierra cada encabezado con punto si no
+  acaba ya en puntuación; lo usan descripción, Open Graph y datos
+  estructurados.
+- **Lo que encontró Instinct en la 1.4.1** (tienda de Wasmer, 2026-11-02):
+  el texto alternativo proponía el nombre del fichero cuando WordPress había
+  puesto ese nombre como título («Bolsa cafe etiopia 250g»), y en productos
+  sustituía en la biblioteca el alt que WooCommerce ya servía con el nombre
+  del producto. Ahora un título igual al fichero (`genscore_title_is_file`)
+  cede ante el título de la página, y las imágenes propias de un producto
+  (destacada y galería) no se ofrecen. A 390 px, un error de «Publicar datos»
+  no se veía porque el aviso del pie se oculta en móvil: el aviso de error sí
+  se enseña. La cancelación sólo se ofrece en productos (en una entrada era un
+  `MerchantReturnPolicy` suelto que Google no usa). La tabla de
+  características no se ofrece si WooCommerce ya la enseña en «Información
+  adicional». «Quién está detrás» ya no rellena el email con el remitente de
+  los correos de la tienda, que no siempre es público. «Añadir dato» y
+  «Copiar tabla y abrir» dependen de `page`, que en esa tienda llega vacío por
+  la misma razón que «Añadir preguntas».
+- **Segunda prueba de Instinct en la 1.4.2**: una subida duplicada
+  («bolsa-cafe-etiopia-250g-1.jpg») seguía proponiendo el nombre del fichero,
+  porque el título no lleva el «-1». `genscore_title_is_file` compara también
+  sin el número final (y sigue valiendo con el número, para nombres como
+  «cafe-2024»). En la tabla de comparativa se restituye la lectura del plan
+  que daba la marca de la cuenta cuando la web no tiene nombre.
+- **Nombre de la ficha de WordPress.org**: «GenScore: AI SEO & GEO Optimizer,
+  llms.txt, Schema & AI Bots», igual en el readme y en la cabecera `Plugin
+  Name` (Plugin Check pide que coincidan; lo vigila un test).
+- **Probado** en el WordPress de pruebas: og:description con espacios y mismo
+  recuento de `<style>`/`<link>` antes y después de publicar; «Sin reseñas» con
+  las reseñas a cero; borrador de comparativa sin avisos de bloque no válido y
+  con las celdas grises en editor y página. No retira ningún camino de
+  recuperación.
+
+## §433 · BLOG-SCHEMA-1: ¿los datos estructurados hacen que la IA te cite? (2026-11-02)
+
+**Qué.** Artículo `datos-estructurados-y-citas-de-la-ia` (clúster `playbooks`),
+pasada de la rutina «Post del blog cada 2 días» que no corrió el 31 ni el 1.
+Cubre la pieza W6 del calendario.
+
+**Por qué.** Se repite que el schema ayuda a salir en las respuestas de la IA.
+Las fuentes verificadas en origen dicen que no hay efecto medido:
+
+- Ahrefs (mayo de 2026): 1.885 páginas que añadieron JSON-LD frente a hasta
+  tres controles parecidos cada una, 30 días antes y después. Vistas creadas
+  con IA −4,6% (significativo), Modo IA +2,4% y ChatGPT +2,2% (indistinguibles
+  de cero). Límites que el propio estudio declara: tipos mezclados, 30 días,
+  sólo JSON-LD en el HTML, páginas ya muy citadas. El resumen dice 4.000
+  controles y la metodología implica unos 5.655: el artículo no da la cifra.
+- AirOps y Kevin Indig (abril de 2026): tasa de cita 38,5% con JSON-LD frente a
+  32,0% sin él, sobre 50.553 respuestas de ChatGPT. Correlación; el estudio no
+  define el denominador, así que el artículo habla de «tasa de cita».
+- Google, «AI features and your website» (actualizada 2025-12-10): ningún
+  requisito ni schema especial; los datos estructurados deben coincidir con el
+  texto visible.
+
+**Cómo.** El ejemplo de Organization vive en `lib/blog/organization-jsonld.ts` y
+su test comprueba que cada campo se ve en la página y que `checkStructuredData`
+(el lector de la Auditoría técnica) lo reconoce. El artículo dice que
+Recomendaciones trata el JSON-LD como paso opcional al final (§334), y no
+afirma nada del cálculo de la puntuación.
+
+**Pendiente o sabido.** Ninguno. No retira ningún camino de recuperación.
+
+## §434 · EXT-PANEL-COHERENCE-1: el panel de la extensión, igual con y sin sesión (2026-11-02)
+
+**Qué.** Extensión 1.4.0. El panel deja de cambiar de forma al entrar en la
+cuenta. Dos bloques fijos, con el mismo nombre en los dos estados:
+
+- **Optimización técnica**, con «Esta página | Toda la web»: cifra grande con
+  barra y estado (Se frena, Mejorable, Optimizada, nunca un medidor), los tres
+  indicadores IA, Google y Agentes, y «Recomendaciones técnicas». Sin sesión,
+  «Toda la web» sale con candado, «Sin medir» y los indicadores vacíos.
+- **Puntuación GEO** («¿Sabes si la IA recomienda tu marca?»): el único
+  medidor. Sin sesión es el mismo medidor en gris, «Sin medir», con «Analizar
+  dominio». Con sesión, la puntuación, los motores, el rival que sale más y
+  «Recomendaciones de GenScore».
+
+Sin sesión manda la página abierta (técnica arriba); con sesión, la Puntuación
+GEO va arriba porque es lo que añade la cuenta (Denis, 2026-11-02). Al entrar
+con el panel abierto, una línea dice «Has entrado. El panel se ha actualizado
+solo.» y se abre «Toda la web». La página abierta deja de ser una opción del
+selector de dominios: ahora es la pestaña del bloque técnico.
+
+Al abrir IA o Agentes salen los logos oficiales, pequeños: ChatGPT, Gemini,
+Claude, Perplexity y Meta AI («Quién puede leerla»), y los agentes de la
+consola (Muse, Dots, Agente de Gemini, Comet, Grok Bot, Instinct) con las
+reglas de `lib/agentic-audit/shopping-agents.ts`. Meta se lee del mismo
+robots.txt con `meta-webindexer` y queda fuera de la nota; Grok Bot e
+Instinct no publican identidad y salen «No se ve desde fuera». Instinct no
+tiene logo oficial: lleva su inicial.
+
+**Por qué.** Denis: «El diseño actual me gustaba bastante [...] Lo que
+necesitaba era coherencia entre el estado logado y no logado». El medidor
+grande significaba la nota técnica sin sesión y la Puntuación GEO con ella.
+Maqueta aprobada: https://claude.ai/artifact/MdXfobGpcM15FAFk3myQ92 (fuentes
+en la carpeta compartida del proyecto, `extension/maquetas-2026-11-02/v5-coherencia/`).
+Las versiones 1 a 4, con otro aspecto, se descartaron.
+
+**Cifra de «Toda la web».** Es la Salud técnica de las páginas auditadas
+(`actualReadinessScore` de `buildTechnicalIssuesReport`), nueva en
+`/api/ext/project` como `audits.readiness`. Es la misma mezcla 55/45 de IA y
+Google que la nota de la página, así que las dos pestañas miden lo mismo.
+Nunca una media de los tres bloques, que no existe en la consola. Las tarjetas
+de «Recomendaciones técnicas» de toda la web no suman «Hasta +N pt», porque
+los puntos de bloque no se suman (`lib/ext/audits.ts`), y no se marcan como
+hechas en el panel: llevan a la consola.
+
+**Se conserva.** Search Console (dentro de Google), «La citan en tus
+prompts», «En tu auditoría» de una página propia y la alerta de la página.
+**Se retira** la vista «Visión general» con medidor y los adelantos con
+candado por indicador (§408), sustituidos por el bloque con candado.
+
+**Pendiente o sabido.** Ningún camino de recuperación se retira. Denis sube
+el zip a la tienda.
+
+**Adenda (Denis, 2026-11-02, revisión en el navegador).** Sobraba aire
+encima de «Puntuación GEO» cuando es el primer bloque: el margen grande sólo
+queda cuando va tras «Optimización técnica». El aviso «Has entrado» lleva
+una X, se va solo a los 8 s y al irse recoge su altura, así que lo de debajo
+sube en vez de saltar. Los iconos de motores y agentes enseñan su nombre al
+pasar el ratón (y con el foco), con un globo propio en vez del `title` del
+navegador, que tarda en salir.
+
+**Segunda adenda (Denis, 2026-11-02).** Vuelven los adelantos de §408, sólo
+sin sesión y sólo en «Toda la web»: cada indicador con candado (IA, Google,
+Agentes) se abre como los demás y enseña su ilustración sin cifras con su
+llamada («Conoce cómo te citan los motores», «Conoce la Salud SEO de todo tu
+dominio», «Conoce tu nota para agentes»). Con ninguno abierto se ve el bloque
+común de antes. En «Esta página» no salen: ahí la extensión ya mide.
+
+**Tercera adenda (Denis, 2026-11-02).** Con sesión y en una web que no es
+tuya, el selector vuelve a nombrar la página abierta («Página abierta» encima
+de «Tus dominios»), la revisión de la página va primero y «¿Quieres añadir…
+a tus dominios?» cierra el panel. Elegir uno de tus dominios en el selector
+enseña ese dominio, y «Página abierta» vuelve a la revisión. En una web tuya
+no cambia nada: Puntuación GEO primero y el selector con el dominio.
+
+**Cuarta adenda (Denis, 2026-11-02).** «Toda la web» se leía como «todo
+internet»: la pestaña pasa a nombrar el dominio («Todo movistar.es») y, si
+pasa de 22 caracteres, dice «Todo el dominio»; la línea bajo «Sin medir»
+nombra siempre el dominio. En el panel estrecho la pestaña baja bajo el
+rótulo en vez de pisarlo. En una web ajena que ya es competidor del dominio
+elegido, «Añadir como competidor» pasa a «Ya es competidor de …» y abre
+Competidores; para saberlo, `/api/ext/project` gana `competitorDomains` (los
+dominios de los competidores activos, sólo lectura). Sin ese campo (una
+versión del servidor anterior), el panel mira los rivales que ya traía.
+
+## §435 · EXT-STORE-NAME-1: el nombre de la extensión, con lo que se busca en la tienda (2026-11-02)
+
+**Qué.** Extensión 1.4.1. Sólo cambian dos textos del `manifest.json`, que son
+los que la Chrome Web Store usa como nombre y resumen de la ficha:
+
+- Nombre: «Auditoría SEO y GEO: visibilidad en IA · GenScore» (antes
+  «GenScore: Auditoría SEO y visibilidad en IA»).
+- Resumen: «Auditoría SEO y GEO gratis: mira si ChatGPT, Gemini, Claude y
+  Perplexity pueden leer tu web, con llms.txt, robots.txt y schema.»
+
+El artículo `extension-de-chrome-de-genscore` dice que se busque por el nombre,
+así que cambia con él. La descripción larga se cambia en el formulario de la
+tienda (no vive en el repo); la propuesta está en
+`/mnt/project-files/chrome-extension/visibilidad-tienda/descripcion-es.txt`.
+
+**Por qué.** Denis buscó «seo», «visibilidad de IA» y «geo» en la tienda y no
+salía. Comprobado el 2026-11-02: la ficha es pública y está indexada, pero no
+está entre las diez primeras de «geo», «seo», «auditoría seo», «visibilidad en
+ia» ni «llms.txt». Las que ganan esas búsquedas empiezan el nombre por esas
+palabras, y el nuestro empezaba por «GenScore» y no decía «GEO». La tienda
+ordena sobre todo por valoraciones recientes e instalaciones que se quedan
+(documentación de Google), así que el nombre nos mete en la búsqueda pero no
+sustituye a las primeras reseñas.
+
+**Pendiente.**
+- Sello del dominio: la cuenta dueña de la extensión verifica genscore.es en
+  Search Console (TXT en IONOS) y lo elige como «URL oficial». Lo hace Denis.
+- «Destacado» no se puede pedir: Google cerró las candidaturas el 2026-08-20.
+- Invitación a valorar dentro del panel: propuesta, sin construir ni aprobar.
+- Ficha en inglés: sólo cuando el panel esté traducido.
+
+## §436 · EXT-REACH-1: más instalaciones y valoraciones para la extensión de Chrome (2026-11-02)
+
+**Qué se decidió.** Denis aprobó el 2-11 la maqueta de las palancas 2 y 3 del documento de visibilidad en la tienda («Sí, apruebo todo») y añadió dos peticiones: un correo de anuncio a toda la base y la tarjeta en la consola solo para quien no la vio en la web.
+
+- **Posdata en dos correos.** `extensionPostscript(campaign)` (`lib/email/transactional.ts`) pone una línea con «Añadir a Chrome» debajo del botón principal del correo de bienvenida y del de «Tu primer escaneo está listo». El enlace lleva `utm_source=email&utm_medium=posdata` y la campaña del correo. La bienvenida sigue siendo de servicio: la posdata habla de una herramienta gratuita del producto, sin precio ni descuento.
+- **Comprobador gratuito.** `CheckerExtensionLine` (`components/free-checker/checker-extension-line.tsx`) añade una línea bajo la invitación a probar Pro, sólo en Chrome de escritorio (`detectDesktopChrome`, la misma regla que la tarjeta flotante). Se pinta tras hidratar, así que en un móvil nunca aparece ni un instante. Enlace con `utm_medium=comprobador`.
+- **Tarjeta en la consola.** La tarjeta flotante de EXT-PROMO-1 (§410) ya salía en la consola. Desde ahora sale allí sólo si ese navegador nunca la vio en la web pública (`gs.chromeExt.seenOnWeb` en `localStorage`, escrita al enseñarla en la web). Límite: quien la vio en la web antes de este cambio no tiene la marca y puede verla una vez en la consola.
+- **Valorar en la tienda (extensión 1.4.2).** `rate.js` decide, puro y con tests: la tarjeta «¿Te está siendo útil?» sale una sola vez, cuando el panel ha revisado páginas en tres días distintos, y cualquiera de sus dos botones la cierra para siempre (`chrome.storage.local`, sin salir del navegador). La pregunta es neutra: no pregunta antes si gusta ni ofrece nada a cambio, porque la tienda lo prohíbe.
+- **Correo de anuncio.** `extensionLaunchEmailParts` (asunto «Nuevo: GenScore en Chrome, gratis»), con imagen del panel actual (`public/email/extension-chrome.jpg`, compuesta con la ilustración del artículo y una captura real del panel 1.4.2), tres ventajas, «Añadir a Chrome» y el enlace al artículo. Lo envía el operador desde `/admin/crm` («Anuncio: extensión de Chrome»): primero una copia a sí mismo, luego lotes de 25 con casilla de confirmación. Quién lo recibe lo decide `selectAnnouncementRecipients` (puro): toda cuenta registrada, de cualquier plan, menos las propias, internas y comped, quien se dio de baja de «consejos, novedades y ofertas», quien no confirmó su email, quien ya lo recibió y quien recibió otro correo de ciclo de vida en las últimas 48 h (espera al siguiente lote). Nunca en lunes. Reserva `feature_extension` en `email_sends`: nadie recibe a la vez este anuncio y el correo automático de la extensión (§417). Etiqueta de Resend propia, `extension_launch`. Cada lote deja constancia por correo a `OPS_ALERT_EMAIL` (`ops_announcement`), como toda escritura de `/admin`.
+
+**Por qué así.** El anuncio va con baja porque es comunicación comercial a clientes sobre un producto propio (LSSI art. 21.2). La reserva previa al envío (§308) hace que pulsar dos veces o dos operadores a la vez no dupliquen nada. No se envía por cron porque Denis quiere decidir el momento.
+
+**Pendiente.** Subir el zip 1.4.2 a la tienda (Denis), que incluye el nombre de la 1.4.1. Pulsar el envío del anuncio. Requiere la migración 0047 aplicada (si falta, la reserva falla y no sale nada). No retira ningún camino de recuperación.
+
+## §438 · SPLASH-WEB-1: la entrada de la app, corta y una vez, en el login de la web (2026-11-02)
+
+**Qué se decidió.** Denis preguntó si la splash de la app (§382) debía salir en la web al pulsar «Iniciar sesión». Se le enseñaron tres opciones animadas en móvil y escritorio (completa siempre, corta una vez, solo el logo) y aprobó la B el 2-11 («Si»).
+
+- **Primera visita de cada navegador:** entrada `breve` (`splash/engine.ts`): la G geométrica se dibuja en el centro y vuela al logo del login, como las de la app. Dura unos 1,6 s (`splashLength("breve")`) y un toque o Esc la saltan. No entra en la rotación de la app (`pickVariant` no la elige nunca). Marca `gs_splash_web_seen` en `localStorage`.
+- **Siguientes visitas:** el formulario sale al instante y sólo la G del logo se dibuja (`data-gdraw`, CSS en `app/ins/auth.css`). Cero espera.
+- **Nunca anima** con un error (`?error=`), con un enlace que ya lleva a otra pantalla (`?next=`), tras eliminar la cuenta (`?deleted=1`), tras cerrar sesión (`signOut` pasa a `/login?salida=1`) ni con «reducir movimiento». Si el `localStorage` está bloqueado, tampoco: mejor ninguna que una en cada visita.
+- **El login web lleva la G geométrica** en el logo, porque la entrada aterriza en él. Sólo en `/login`; `app/icon.svg` y el resto de marcas no cambian.
+- **La app de Android no cambia**: sigue con su splash completa (§382, §389), decidida por `gs_app`/`?source=twa`. La web no lee esa cookie, así que el cambio de §436 (APP-LINK-OUT-1, PR #750) no la afecta.
+- **Sin destello:** la decisión se toma antes de pintar. En una carga completa, un script en línea dentro de `AuthShell` marca `data-splash="run"` o `data-gdraw`; en una navegación de cliente, un `useLayoutEffect`. El atributo se escribe antes de hidratar, por eso el contenedor lleva `suppressHydrationWarning`.
+
+**Por qué así.** Quien pulsa «Iniciar sesión» en la web casi siempre ya tiene cuenta y quiere entrar. La splash completa son unos 3,2 s en cada entrada. Corta y una vez da la marca sin cobrar espera a quien vuelve.
+
+**Pendiente o conocido.** En una primera visita con un móvil lento, la pantalla queda en blanco hasta que carga el JavaScript (el formulario aparece igualmente a los 6 s si falla). No retira ningún camino de recuperación: un toque siempre lleva al formulario.
+
+## §439 · REPORT-INSTRUMENTO-1: el informe de la consola con el estilo «Instrumento» (2026-11-02)
+
+**Qué se decidió.** Denis pidió el 2-11 aplicar al informe de «Descargar informe» (`/informe/<proyecto>`, GEO-REPORT-1, §248 y §250) el aspecto de la consola nueva. Aprobó el PDF de muestra y, tras dos rondas de portadas, la **D2** («Apruebo esta versión»), y después el informe completo («Vale, aprobado este informe completo»).
+
+- **Tipografía y piezas de la consola:** Figtree 300 para las cifras y los titulares, JetBrains Mono para los rótulos, medidor de rayas (`Dial`) y barras de rayas (`Ticks`) como en Visión general, y bloques oscuros para los apartados que abren capítulo. `app/informe/[projectId]/page.tsx` carga sus dos familias porque el layout raíz carga menos pesos.
+- **Portada D2:** la Puntuación GEO manda, con el medidor grande (130 px la cifra, «de 100») y su explicación al lado. Debajo, un panel con borde: «Te nombran en X%» de las respuestas a tus preguntas principales de búsqueda y una fila por motor. Denis temía que la cifra de menciones dejara en segundo plano a la Puntuación GEO, que es alrededor de lo que gira el producto.
+- **Sin sombras en la portada.** El visor de PDF de iOS pintaba la `box-shadow` del panel como un bloque gris. La portada no lleva ninguna.
+- **Fuentes estáticas.** Chrome metía Figtree y JetBrains Mono (variables) en el PDF como fuentes Type 3, que el visor de iOS pinta letra a letra, y la portada parpadeaba al abrirse (Denis, 2-11). `app/informe/fonts/` lleva instancias estáticas por grosor, cargadas con `next/font/local`; en el PDF salen como TrueType normal.
+- **Lo que no cambia:** el modelo (`report-model.ts`), las cifras y su dueño, la paginación de la matriz y las reglas de impresión de §217–§219 (portal, `height: 100%`, `border-box`, `.gr-last`). Sólo porcentajes, como siempre.
+
+**Comprobado.** PDF generado con el arnés de siempre (datos de ejemplo de Café Ventura): 8 páginas en el escenario normal y en el `safari-like`, portada en una página en los dos.
+
+**Pendiente.** El informe de página de la extensión (1.5.0) es otro informe, local y de una página; su muestra con datos reales se envió a Denis el 2-11. No retira ningún camino de recuperación.
+
+## §440 · GEO-ALERTS-1: el servidor también puede cerrar la puerta a la IA, y lo avisamos (2026-11-02)
+
+**Qué se decidió.** Denis aprobó el 2-11 la nueva capacidad de la Auditoría GEO y, después, los avisos en Visión general, la campana y el correo de la maqueta (`/mnt/project-files/avisos-geo/maqueta-2026-11-02/`): «Apruebo los mensajes de visión general, campana y correo. Implementalos».
+
+- **Sonda del servidor (`lib/web-audit/bot-probe.ts`, `server-probe.ts`).** Tras leer robots.txt, la auditoría pide la portada una vez como nosotros (`AUDIT_USER_AGENT`) y, en paralelo, como OAI-SearchBot, Claude-SearchBot y PerplexityBot con su user-agent oficial. Bloqueado es 401, 403, 406, 451 o la cabecera `cf-mitigated`; 429 y 5xx son «sin comprobar», y si nuestra propia petición no da 2xx, todo es «sin comprobar». Gemini no se prueba: lee con Googlebot, al que nunca suplantamos. Cuatro peticiones a una URL fija del propio dominio, con la guarda SSRF de `https-check.ts` (cada salto en el dominio y con IP pública, redirecciones a mano, como mucho 3, nunca el cuerpo). Se guarda en `bots.serverProbe` del snapshot, sin migración, y no puntúa.
+- **Es una simulación y se dice.** Un cortafuegos que mira las IP del bot real puede tratarlo distinto. La tarjeta de bots dice «Tu servidor lo bloquea» con «Simulación · suele ser Cloudflare o el cortafuegos», y el correo, «Lo hemos reproducido desde nuestro servidor con el nombre del bot (simulación)».
+- **Hallazgo nuevo `bot_server_blocked`** en el bloque GEO («Tu servidor deja pasar a los bots de IA»), sólo para motores a los que robots.txt sí deja pasar (si robots ya los bloquea, el hallazgo es ese). También en el informe, la extensión y el estudio de prospectos.
+- **Una franja en Visión general (`lib/ins/geo-strip.ts`, `GeoStripAlert`).** Como mucho una, por este orden: servidor, robots.txt, noindex o nosnippet (de `findCitationBlockers`, la misma fuente que Recomendaciones), contenido que sólo aparece con JavaScript (azul), y «Resuelto» (verde, se puede cerrar, vale 7 días tras la auditoría que lo vio). Sustituye a la franja «Prioridad 1 · tu web» de §271.
+- **Campana.** «Tu siguiente paso» pasa a ser el bloqueo de bots (servidor o robots) antes que la primera acción del plan. «Algo ha cambiado» recibe avisos por motor: «Tu web ha empezado a bloquear a X» (`ai_bot_blocked` con `by`) y el tipo nuevo `ai_bot_unblocked`, «Resuelto: X ya puede leer tu web». Un aviso por token se omite si ya hay uno por motor que lo cubre.
+- **Correo «Avisos de tu web» (`lib/email/site-alert.ts`).** Sólo en una transición: el motor entraba en la auditoría anterior y en ésta no. Como mucho uno por motor y proyecto cada 30 días (`emailedAt` en el aviso, escrito después de un envío aceptado), con clave de idempotencia de Resend `site-alert/<dueño>/<aviso>`. Categoría opcional nueva con baja en un clic (`notify_site_alerts`), interruptor en Ajustes > Notificaciones. Sale sólo con `LIFECYCLE_EMAILS_ENABLED`, el mismo interruptor que los demás, y falla cerrado si falta la columna.
+- **Resumen semanal:** bloque «Tu web esta semana», sólo si algo se resolvió en la semana o sigue abierto un bloqueo.
+
+**Migración 0049, a mano** (después de 0048): `ai_bot_unblocked` en `notif_type_chk`, `profiles.notify_site_alerts` (por defecto `true`) y `site_alerts` en `email_pref_category_chk`. Hasta aplicarla, el aviso de «Resuelto» falla al insertarse (se registra), el correo nunca sale y el interruptor de Ajustes no guarda. Todo lo demás funciona sin ella.
+
+**Premisa.** No retira ningún camino de recuperación: la franja de §271 se sustituye por otra que cubre lo mismo y más. Si la sonda fallara siempre, todo quedaría «sin comprobar» y nada avisaría del servidor, pero robots.txt, noindex y nosnippet siguen igual que antes.
+
+**Pendiente.** El «+N Diagnóstico técnico» en el desglose de la puntuación de la maqueta no se construye todavía. El porcentaje de texto que llega sin JavaScript necesita pintar la página y queda para la fase de «Lo que lee la IA» (extensión 1.5.0 y consola).
+
+## §446 · EXT-1.5.0: la extensión dice qué lee la IA, cómo cambia la página y lo descarga en un informe (2026-11-02)
+
+**Qué se decidió.** Denis aprobó el 2-11 la UX de la extensión 1.5.0 (maqueta `https://claude.ai/artifact/Mxj4Cw65vv7VYmNUSzphd7`, fuentes en `/mnt/project-files/extension/maquetas-2026-11-02/v7-informe-arriba/`), el informe de página (opción A, portada clara, `informe-pagina-aprobado.pdf`) y el botón de descarga (a todo ancho, justo encima de «Recomendaciones técnicas», icono azul sólido, «Descarga el informe de esta página» y la etiqueta «Nuevo»).
+
+- **«Lo que lee la IA» (`extras.js`, `readAiView`).** Se ejecuta en la pestaña junto a `collectPageFacts` y nunca hace fallar la revisión. Vuelve a pedir la misma URL sin cookies y la lee con `DOMParser`, sin JavaScript, que es lo que recibe un bot de búsqueda de IA. Compara sus palabras con las del texto visible y da el porcentaje que llega, los bloques del contenido principal que sólo salen con JavaScript (como mucho seis, sin menú, cabecera ni pie) y la comparación «Ver lado a lado» con la forma real de los bloques. Nada sale del navegador. Con el 95% o más, la tarjeta lo da por bueno. Sin bloques perdidos en el contenido principal, dice que lo que falta está en el menú, la cabecera o el pie, o son textos cortos.
+- **`collect.js` y `score.js` no se tocan.** Se copian tal cual a `lib/page-review` y al plugin de WordPress (§418, §421). Lo nuevo vive en `extras.js`.
+- **«Desde tu última visita».** Cada revisión guarda en `chrome.storage.local` la nota y los arreglos pendientes de la página: una entrada por visita (diez minutos son la misma visita), doce entradas por página y 300 páginas como mucho. Volver a una pestaña con la misma lectura no cuenta. Con una visita anterior, el panel enseña la nota de antes y la de ahora, la línea de las visitas y lo «Arreglado» (lo que estaba pendiente y ya no). Nunca se envía a GenScore. `/privacidad` lo dice.
+- **Etiquetas de evidencia.** «Comprobado» lleva la fuente. En el aviso de robots.txt van las líneas que bloquean y sus números (`robotsEvidence`, el mismo criterio que `score.js`, con un test que los compara). En noindex o nosnippet van la etiqueta meta o la cabecera. «Simulación» va en la prueba del servidor. Bajo la Puntuación GEO, una línea dice de dónde sale: «Escaneo del … · motores · preguntas principales de búsqueda».
+- **«¿Te deja pasar el servidor?» con la cuenta.** Está en el carril IA de «Todo el dominio». `/api/ext/project` gana `audits.server` (`extServerProbe`, `lib/ext/audits.ts`): robots.txt y la respuesta de la sonda de §440 por motor. Gemini no tiene celda de servidor. Un servidor anterior no la manda y la tarjeta no sale.
+- **Informe de página (`report.html`, `report/report.js`).** El panel guarda la lectura en `chrome.storage.session` (`rep:<id>`, se conservan las dos últimas) con una captura de la pestaña revisada. La captura sólo se hace si Chrome lo permite y la pestaña sigue siendo esa; si no, la portada pone el título de la página. Después abre `report.html#<id>`. La página monta las hojas A4 midiendo cada bloque, con un salto de hoja antes de «Qué arreglar», y se guarda como PDF con el diálogo de impresión. Lleva las fuentes estáticas de §439 para que el PDF no parpadee en iOS. Todas las cifras son las del panel.
+- **Consola.** «Quién puede leer tu web» enseña en cada motor robots.txt y Servidor, con «Simulación · fecha». Auditoría técnica dice «Arreglado desde la revisión anterior: …» por bloque (`fixedSincePrevious`, sólo lo que falló antes y ahora se mide y pasa). El porcentaje de texto sin JavaScript sigue sólo en la extensión: en el servidor exige pintar la página con un navegador (§440, pendiente).
+
+**Comprobado.** La extensión se cargó en Chromium con la tienda de prueba (Café Ventura). La revisión, «Lo que lee la IA» (92%), las líneas 13 a 17 de robots.txt, «Desde tu última visita» y el informe en PDF salieron bien, en 5 hojas con la captura real. Tests: `node --test docs/chrome-extension/prueba/tests/` (evidencia, historial, informe) y vitest (`extServerProbe`, `fixedSincePrevious`, columnas de la consola).
+
+**Premisa.** No retira ningún camino de recuperación. Si `readAiView` falla (CSP, 4xx o tiempo), la tarjeta no sale y la revisión sigue igual.
+
+**Pendiente.** Subir la 1.5.0 a la tienda (Denis). La tarjeta del servidor necesita este despliegue y una auditoría con sonda (§440). El «+N Diagnóstico técnico» de §440 sigue sin construir.
+
+## §441 · OPS-FIRST-SCAN-1: aviso al operador del primer escaneo de un dominio, y el dominio en el aviso de alta (2026-11-02)
+
+**Qué.** Dos cambios en los correos de operador (`OPS_ALERT_EMAIL`, nunca al cliente):
+
+- **Aviso de alta nueva con dominio.** Si la persona llega al registro con un dominio (campo de la portada, comprobador o `/signup?dominio=`), el formulario lo lee de `localStorage` sin consumirlo (`peekPendingDomain`) y lo manda en un campo oculto `dominio`. La acción `signup` lo limpia con `cleanDomain` + `isWellFormedDomain` y lo pasa al aviso: fila «Dominio indicado» y dominio al final del asunto. El asistente sigue encontrándolo igual (se consume al leerlo allí, como antes).
+- **Aviso nuevo «Primer escaneo» (`ops_first_scan`).** `createPendingScanRunCore` llama a `sendFirstScanOpsAlert` (`lib/scan/first-scan-alert.ts`) tras crear el run y sus jobs. Sólo envía si ese run es el único `scan_runs` del proyecto. Lleva dominio, cuenta, plan, si es cuenta interna de prueba, quién lo lanzó, motores y las llamadas previstas del propio run (prompts × muestras × motores), con clave de idempotencia de Resend `ops-first-scan/<proyecto>`.
+
+**Por qué.** Petición de Denis: el aviso de alta muchas veces llega sin dominio (alta con Google, o sin escribirlo) y lo que cuesta dinero es escanear. El primer run es el momento en que un dominio empieza a gastar llamadas, y ahí el dominio siempre se conoce.
+
+**Decisiones.**
+- «Primero» = único run del proyecto. Un reintento de `reconciliation.ts` de un primer run fallido ya ve dos filas y calla. Un proyecto borrado y creado otra vez avisa de nuevo, porque vuelve a costar.
+- Nunca lanza ni bloquea el escaneo: sin canal de aviso configurado no hace ni una consulta, y cualquier fallo va a `console.error`.
+- El alta con Google sigue sin dominio en su aviso: llevarlo por la URL de vuelta de OAuth tocaría la lista de redirecciones de Supabase. Lo cubre el aviso de primer escaneo.
+
+**Pendiente o conocido.** El pilot de escritura (`mozilla.org`) también avisa la primera vez que crea su proyecto; sale marcado como «Cuenta interna de prueba: Sí».
+
+## §445 · ADMIN-GEO-SCORE-1: Puntuación GEO de cada dominio en la consola de operador (2026-11-02)
+
+**Qué se decidió.** Denis pidió ver en `/admin/users` la Puntuación GEO de cada dominio que registran y escanean los usuarios.
+
+- **Columna «Puntuación GEO»** en la tabla de usuarios: una línea por dominio activo de la cuenta, con su cifra. En la ficha, cada dominio (también los archivados) añade «Puntuación GEO N» antes del último escaneo.
+- **La cifra es la de Visión general.** `lib/admin/geo-scores.ts` lee las `GEO_SCORE_LOOKBACK_ROWS` filas más recientes de `run_scores` de cada proyecto y llama a `resolveGeoScore`, igual que la consola, el informe y los correos (TRUST-METRICS-1, §183). No se recalcula ni se usa `visibility_score`.
+- **Nada se pinta como cero.** Sin escaneos puntuados dice «sin escanear»; si la lectura falla, «sin dato». Un asterisco marca muestra pequeña (`lowConfidence`), con la fecha del último escaneo en el `title`.
+- **Una consulta por proyecto**, de ocho en ocho, con `limit` propio: es la única forma de leer las siete últimas de cada uno sin traer el historial entero de `run_scores` con su `details_json`.
+
+**Por qué así.** El operador tiene que ver el mismo número que el cliente; dos puntuaciones distintas para el mismo dominio es justo el fallo que TRUST-METRICS-1 cerró. Sólo lectura, sin migración, sin escrituras nuevas en `/admin`.
+
+**Pendiente o conocido.** Con muchos cientos de dominios activos la carga de la tabla crece con una consulta por dominio; si llega a notarse, una vista o RPC agregada (necesita migración). No retira ningún camino de recuperación.
+
+## §448 · EXT-EDGE-1: el artículo de la extensión dice que también está en Microsoft Edge (2026-11-02)
+
+**Qué:** `extension-de-chrome-de-genscore` añade el enlace a la ficha de
+Microsoft Edge Add-ons (debajo del enlace de Chrome y tras los pasos de
+instalación) y una pregunta del FAQ «¿La extensión funciona en Microsoft
+Edge?». El enlace vive en `EDGE_ADDONS_URL` (`lib/blog/chrome-extension.ts`),
+igual que el de Chrome, y `chrome-extension.test.ts` exige que el artículo lo
+lea de la constante. `dateUpdated` del post pasa a 2026-11-02.
+
+**Por qué:** petición de Denis (2026-11-02), con la ficha de Edge ya publicada.
+
+**Pendiente:** título, portada, CTA final y la tarjeta flotante de genscore.es
+siguen hablando sólo de Chrome; la tarjeta sólo sale en Chrome de escritorio
+(EXT-PROMO-1, §410).
+
+## §447 · EXT-1.5.1: la tarjeta «Lo que lee la IA» de la extensión pasa a recomendación con código y versión en Markdown (2026-11-02)
+
+**Qué se decidió.** Denis, tras probar la 1.5.0: «quita esto» (el botón «Ver lado a lado» y la nota «Haz esto: pide que esos bloques salgan en el HTML…») y «una tarjeta de recomendación debería ser sobre incluir los bloques que faltan en la página en el HTML, sugiriendo en la medida de lo posible un código (aunque sea ejemplo) a copiar». Después pidió, como segunda opción, «que se pueda descargar el .md de la página y las instrucciones de cómo subirlo».
+
+- `readAiView` (`extras.js`) guarda de cada bloque que falta su etiqueta y su texto entero (hasta 600 caracteres) y la página que ve la persona en Markdown (`md`: encabezados, párrafos, listas, enlaces y tablas del contenido principal, sin menú, cabecera ni pie; hasta 40.000 caracteres). Deja de guardar la forma de los bloques, que sólo servía a la comparación retirada.
+- `GS_X.aiFix` construye la tarjeta «Pon en el HTML lo que hoy sólo sale con JavaScript» cuando el porcentaje es menor que 95 y hay bloques que faltan: el HTML con esos textos (h1/h2, p, ul/li, y el botón como enlace con `ENLACE` por rellenar) y, como «Segunda opción», «Descargar <página>.md» con cuatro pasos (revisar, subir a la misma dirección terminada en `.md`, enlazarlo desde `llms.txt` y, opcional, `<link rel="alternate" type="text/markdown">`). Sin puntos: es la primera tarjeta de IA de «Recomendaciones técnicas» y entra también en el informe de la página.
+- La tarjeta «Lo que lee la IA» enlaza a ella con «Cómo arreglarlo».
+- La tarjeta dice que el `.md` lo leen sobre todo agentes y herramientas que siguen llms.txt, y que los bots de búsqueda leen el HTML: no sustituye al arreglo. Ningún motor ha confirmado que su bot de búsqueda pida el `.md` en vez de la página.
+
+**Privacidad.** El `.md` se genera en el navegador y sólo se descarga; no sale nada hacia GenScore.
+
+**Premisa.** No retira ningún camino de recuperación: quita un botón de comparación visual, no una salida.
+
+**Pendiente.** La consola tendrá su propio bloque «Lo que lee la IA» en Auditoría GEO con la solución para todo el dominio (maqueta en revisión). Allí el `.md` sólo puede salir de la extensión hasta que exista el navegador en el servidor (segunda fase, con su Task Intake).
+
+**Adenda 1.5.2 (Denis, 2026-11-02).** En una página con ruta larga el botón «Descargar <fichero>.md» se salía del panel y la tarjeta quedaba muy cargada. La segunda opción pasa a un desplegable cerrado («Segunda opción · Versión en Markdown de la página») y el botón dice «Descargar el .md»; el nombre completo sigue en el texto. Versión 1.5.2.
+
+**Adenda 1.5.2, recomendaciones del dominio (Denis, 2026-11-02).** Con sesión, en «Todo <dominio>», la tarjeta «Pon en el HTML lo que hoy sólo sale con JavaScript» de la página abierta va la primera de «Recomendaciones técnicas», marcada «En esta página». La auditoría del servidor sólo ve el HTML y sólo avisa cuando la página llega vacía (`js_required`, sin puntos), así que este caso nunca llegaba a las tarjetas del dominio. Que la consola lo cuente como problema del dominio es la fase del bloque «Lo que lee la IA» de Auditoría GEO.
+
+**Adenda 1.5.2, la solución dentro del bloque (Denis, 2026-11-02).** «Cómo arreglarlo» deja de saltar a la tarjeta y se despliega dentro de «Lo que lee la IA», con menos texto: una frase, el HTML para copiar, «Descargar el .md» y una nota corta de que el .md es la segunda opción. Usa los mismos datos y botones que la tarjeta (`GS_X.aiFix`), que sigue en las recomendaciones.
+
+## §449 · AI-VIEW-CONSOLE-1: «Lo que lee la IA» en Auditoría GEO, con la solución para todo el dominio (2026-11-02)
+
+**Qué.** Auditoría GEO gana el bloque «Lo que lee la IA» (`components/ins/audit/ai-view.tsx`, modelo puro `lib/web-audit/ai-view.ts`), debajo de «Quién puede leer tu web». Una cifra («3 de 5 páginas llegan completas…», con la frase de Denis), una barra por página y la lista de páginas auditadas con las palabras que llegan en el HTML y su estado: «Llega completa», «Poco texto» o «Llega vacía». Cada fila se abre y dice si el titular y las secciones están en el HTML y qué datos estructurados trae. Debajo, plegado, «Cómo arreglarlo» para todo el dominio: pasos por plataforma (WordPress, Shopify, React / Next.js, Otra, marcada según lo que detecta la auditoría), un ejemplo para copiar y, en un segundo desplegable, la opción del Markdown con las líneas para llms.txt. Diseño aprobado en `docs/design-reference/ai-view-console-1/`.
+
+**Cómo se mide (sólo HTML).** `checkCitability` guarda dos campos opcionales más en la foto, sin migración: `jsThin` (la página no está vacía, pero su contenido principal lo pinta un script: menos de 150 palabras con un nodo de montaje o el estado de un framework, o un estado de framework con 200 palabras o más y más del doble de las que enseña el HTML) y `platform` (WordPress, Shopify, Next o React por las huellas del HTML). «Llega vacía» sigue siendo `jsShell` (§412). Una foto anterior a §412 no se declara limpia: sin `jsShell` medido la página no sale.
+
+**Lo que no mide.** Un hueco parcial en una página larga (la ficha de Movistar que llegaba al 70%) sólo se ve pintando la página. Eso lo hace hoy la extensión; en la consola es la segunda fase (navegador en el servidor, con su Task Intake y el coste medido). «Llega completa» quiere decir que llega con texto y sin señales de que un script lo rellene.
+
+**Problema del dominio.** `js_required` (sin puntos, §412) pasa a fallar también con `jsThin`, y su guía dice «vacías o sin su contenido principal». La extensión, en «Todo el dominio», pone esa tarjeta justo después de la de la página abierta, aunque no tenga puntos (Denis: «y el dos también»), enlazando a `#lo-que-lee-la-ia`.
+
+**Sin texto de la página.** La foto no guarda titulares, secciones ni precios de la web: sólo recuentos, booleanos y tipos de datos estructurados. La maqueta enseñaba el texto; la implementación enseña «Está en el HTML» o «No está en el HTML».
+
+**Premisa.** No retira ningún camino de recuperación.
+
+**Pendiente.** El porcentaje exacto y el `.md` de cada página desde la consola (navegador en el servidor). Ponderar `js_required` en la nota sigue siendo una fase aparte (§131).
+
+## §451 · AI-READ-2: «Lo que lee la IA» medido con un navegador real, con cifras globales (2026-11-02)
+
+**Qué.** El bloque «Lo que lee la IA» de Auditoría GEO (§449) deja de listar páginas y pasa a cifras e ideas globales (Denis, 2026-11-02: «no mostraría el detalle de las páginas porque si no va a parecer que escaneamos muy pocas… es mejor dar datos e insights globales»). Enseña:
+
+- un anillo con el porcentaje de lo que ve una persona que llega a ChatGPT, Claude y Perplexity, pesado por lo que importa cada página (citada por la IA 3, portada 2, páginas de los temas vigilados 1,5, resto 1), con el cambio desde la medición anterior cuando al menos la mitad de las páginas la tienen;
+- cuatro baldosas por tipo de contenido (precios, preguntas frecuentes, opiniones, fichas) con el porcentaje que no llega;
+- «Lo que la IA no ve de ti»: una tarjeta por tipo que se pierde, con la consecuencia, un trozo literal que no llega, dónde pasa («En lo que vendes», «En tus artículos»…) y, en precios, «Afecta a N preguntas que vigilas» (prompts activos que `classifyPurchaseQuestion` clasifica como `price`);
+- «Dónde se pierde», por importancia y por tipo de página, con una frase sólo cuando las cifras dicen algo («Tus páginas más citadas son las que peor lee la IA»).
+
+Sin lista de páginas, sin recuento de páginas y sin bloque de arreglo: un arreglo sólo irá a Recomendaciones cuando su causa sea segura (Denis: «solo si estamos seguros de dar una recomendación… la visualizamos en la sección recomendaciones»). Diseño en `docs/design-reference/ai-read-2/bloque-auditoria-geo.html` (sólo claro, a petición de Denis).
+
+**Cómo se mide.** Cloudflare Browser Run, Quick Action `/content`, en el plan gratuito de Workers (Denis: «busca una opción sin coste», «sí acepto el plan»): 10 minutos de navegador al día y una petición cada 10 s. `lib/web-audit/browser-run.ts` pide el HTML pintado; `lib/web-audit/ai-render.ts` (puro) lo compara con el mismo HTML pedido sin JavaScript, por el método de la extensión (palabras del contenido principal pintado frente a la bolsa de palabras del HTML). Los bloques se comparan por pares de palabras seguidas, para que «24 90» sólo cuente donde está el precio. Se quitan avisos de cookies, consentimiento, modales, menú, cabecera y pie. Una página de reto, de error o casi vacía queda «sin medir» y no cuenta.
+
+**Dónde corre.** Al final del GET del cron `run-audit` (pg_cron cada 10 minutos, §347), nunca en un eslabón de la cadena: `runAiRenderPass` (`lib/web-audit/ai-render-pass.ts`) toma la foto más reciente de cada proyecto no archivado, mide primero la portada, pregunta antes de cada página si su peor caso (30 s) cabe antes de los 55 s, y se para con 429 o credenciales malas. Lo que no alcanza sigue pendiente para la siguiente pasada. Sólo se abren páginas que la auditoría técnica ya eligió, del dominio del proyecto (`isAllowedAuditHost`): no es un rastreador, Cloudflare abre una URL y no sigue enlaces.
+
+**Sin migración.** El resultado va en `web_audit_snapshots.pages` (jsonb) como `PageAuditEntry.render`, opcional: `ok` (porcentaje, recuentos por tipo, hasta seis trozos literales saneados de 80 caracteres) o `unmeasured`. La siguiente auditoría técnica lo arrastra (`carryForwardRenders`) mientras siga fresco: 7 días si se midió, 1 día si quedó sin medir. Se guardan esos trozos literales de páginas públicas del cliente; ningún texto de su cuenta.
+
+**Sin las variables.** Sin `CLOUDFLARE_ACCOUNT_ID` y `CLOUDFLARE_BROWSER_TOKEN` no se llama a nada y el bloque enseña el modo HTML: el porcentaje de páginas que llegan completas según §449 (`jsShell`/`jsThin`), sin lista. Con las variables y sin medición todavía, dice que se está midiendo.
+
+**Privacidad.** Cloudflare entra en la lista de encargados de `/privacidad`.
+
+**Superado.** De §449 quedan superados la lista de páginas y el bloque plegado «Cómo arreglarlo» de la consola (el arreglo de la extensión no cambia). `jsShell`/`jsThin`, `platform` y `js_required` siguen igual.
+
+**Premisa.** Retira de la consola «Cómo arreglarlo» de §449, un camino de ayuda, no de recuperación: la pantalla no se queda sin salida. Si Cloudflare falla, el bloque vuelve al modo HTML, que es lo que había antes.
+
+**Visión general.** Tarjeta «Lo que lee la IA» a ancho completo bajo Comercio agéntico y Auditoría SEO (`components/ins/overview/ai-read-card.tsx`, modelo `aiReadCard`), con las piezas de la tarjeta agéntica (Denis: «busca un diseño más bonito, en línea con el diseño global»; «ok implementa así»): anillo de marcas con el porcentaje, frase con el dato, barras finas por tipo de contenido (lo que llega) y la caja «Lo que más se pierde» con el tipo más perdido y su trozo literal, y la lectura de las páginas citadas si aplica. Sale sólo con medición o mientras se mide; en modo HTML no sale. Enlaza a `?bloque=geo#lo-que-lee-la-ia`. Maqueta `docs/design-reference/ai-read-2/tarjeta-vision-general.html`. La frase «Lo que más te recomienda la IA es lo que peor le llega» no se entendía y pasa a «Tus páginas más citadas son las que peor lee la IA».
+
+**Pendiente.** Aprovechar la misma medición en Auditoría agéntica y Visibilidad en agentes (precio, stock, botón y datos estructurados vistos por un navegador; muros de cookies o retos), con maqueta antes. Una tarjeta de Recomendaciones cuando sea seguro que un dato concreto (por ejemplo, los precios) debe ir en el HTML. Un grupo por clics de Google en «Dónde se pierde».
+
+## §452 MCP-CONNECTOR-TUNING-1: el conector elige bien la herramienta y el paquete de ChatGPT usa el formato de OpenAI (2026-11-03)
+
+**Origen.** Batería de 15 escenarios de Instinct (2 de noviembre) contra `/api/mcp` (Claude) y `/api/mcp/chatgpt` (ChatGPT) con la cuenta revisora. Tres desviaciones y un bloqueo de envío:
+
+- **H1.** «¿Cómo está genscore.es en la IA?» en ChatGPT acabó en `revisar_pagina` y búsqueda web en vez de las herramientas de cuenta.
+- **H2.** «Dame las recomendaciones de amazon.es» en ChatGPT: el servidor dijo bien que el dominio no estaba en la cuenta, pero el modelo lanzó por su cuenta una revisión pública de la portada que nadie pidió.
+- **H3.** La misma petición en Claude no llamó a GenScore: abrió amazon.es en el navegador y leyó «recomendaciones» como productos.
+- **H5.** `plugin.json` declaraba `tools_triggered` como arrays; la especificación de OpenAI (`developers.openai.com/plugins/deploy/submission.md`, releída el 3 de noviembre) lo define como texto separado por comas.
+
+**Decisión.** Sólo texto para el modelo y metadatos; ninguna respuesta de herramienta cambia y no hay migración.
+
+- `SERVER_INSTRUCTIONS` (`lib/mcp/protocol.ts`, las dos direcciones): «cómo está un dominio» va a las herramientas de cuenta y `revisar_pagina` es para una URL concreta; «recomendaciones» son siempre las acciones de visibilidad de `ver_recomendaciones`, nunca productos, y una petición claramente de compras no usa GenScore; tras «el dominio no está en la cuenta» se dice, se da el enlace y se puede **ofrecer** `revisar_pagina`, sin ejecutarla ni completar con otros datos salvo que la persona lo pida.
+- Descripciones (`lib/mcp/tools.ts`): `ver_dominio` es para un dominio que ya está en la cuenta; `ver_recomendaciones` fija el significado de «recomendaciones»; `revisar_pagina` dice que no sustituye al escaneo y que no se lanza sola tras un «no está en la cuenta».
+- `formatNotFound` no cambia: su texto ya era correcto, el fallo era del modelo.
+- `docs/chatgpt-plugin/package/plugin.json`: los cinco `tools_triggered` pasan a texto (`"listar_dominios, ver_dominio"`). `mcp.json` no se regenera. Lo vigila `lib/mcp/chatgpt-package.test.ts`; las instrucciones y descripciones, `app/api/mcp/route.test.ts`.
+
+**Descartado.** H4 (cómo acreditar qué herramienta se llamó) es método de prueba, no código. H6 (precios sólo en Claude) es una decisión de diseño de §425 y se mantiene.
+
+**Pendiente.** Repetir los 8 casos oficiales en chats limpios en los dos clientes tras desplegar (sección 8 del informe), más X3 en Claude y X5 sin el conector de Vercel. Si ChatGPT sigue lanzando la revisión sin pedirla, el siguiente paso es poner la oferta en la propia respuesta de `formatNotFound` (texto y `structuredContent`). La subida del ZIP («Plugin ZIP cannot be empty») sigue abierta y no forma parte de esta fase.
+
+## §453 · AGENTS-BROWSER-1: «Visibilidad en agentes» separa a los agentes que leen de los que navegan (2026-11-03)
+
+**Qué.** Denis: «a un agente tipo Grok Bot o Instinct les da igual el JavaScript. ¿La página de visibilidad agéntica no merece la pena enriquecer?». Aprobó la maqueta v3 («si», «Desarrollalo»), guardada en `docs/design-reference/agents-browser-1/maqueta-v3.html`. Este es el primero de tres PRs; Auditoría agéntica (dos ventanas) y la tarjeta de Visión general van aparte.
+
+- **Medida.** La pasada del navegador de AI-READ-2 (§451) abre también, antes que las páginas de la auditoría, la página que ya eligió la auditoría agéntica de cada proyecto: un render por proyecto y semana (un fallo se reintenta a las 24 h). `readBrowserObstacles` (`lib/agentic-audit/browser-obstacles.ts`, pura) lee de la página pintada, sin pulsar nada: si hay un aviso de cookies de una herramienta de consentimiento (o una caja «cookie» con botón de aceptar), si el precio se ve exacto, sólo «desde» o no se ve, si hay selectores del producto y si dicen qué eligen, y si el botón de compra tiene nombre, es un icono sin texto o no está. Un reto anti-bots es `blocked` y nunca cuenta en contra. Se guarda en `agentic_audits.result.browser` (jsonb, sin migración). Como cada revisión es una fila nueva, una lectura fresca de la misma URL en una fila anterior se copia sin renderizar (`pickAgenticTargets`).
+- **Pantalla.** Bajo «Agentes que compran», «Hasta dónde llega cada agente» con dos carriles: los que leen sin navegador (búsquedas de ChatGPT, Claude y Perplexity: las cuatro estaciones de la revisión de siempre) y los que navegan (Grok Bot, Instinct, el agente de ChatGPT: estaciones del navegador; «Se fía» es la de la revisión, que no depende del JavaScript). Un punto corre hasta donde llega cada uno, y cada carril tiene su freno. Debajo, «Lo que se encuentra un agente que navega»: una ventana con lo que mostró la página (nombre, precio, opciones, botón y aviso de cookies, todo leído) y marcas numeradas que remiten a las casillas Frena, Cuesta y Bien. «Qué hacer primero» añade hasta dos pasos «Para los que navegan». Todo el texto sale de `agentLanes` (`lib/agentic-audit/agent-lanes.ts`).
+- **Gemini no está en «los que leen»**: responde desde el índice de Google, y Google ejecuta el JavaScript al indexar (Denis lo preguntó; se le explicó y siguió adelante).
+- **«No les llega tu precio · Está en la ficha, pero sólo con JavaScript»** sólo sale cuando el HTML sin JavaScript no trae precio (`facts.price`) y el navegador sí lo ve.
+
+**Sin cambio de nota.** Nada de esto entra en la Visibilidad agéntica ni en la Puntuación GEO. Sin `CLOUDFLARE_*` (y sin lectura guardada) la pantalla queda como antes. Mientras no hay lectura, el carril de los que navegan dice que se está midiendo, sin cifras.
+
+**No se hace.** Ventanas emergentes (salen tarde y con CSS que no cargamos: no se puede afirmar «ninguna»), ni el «tapa más de la mitad» de la maqueta (el render no trae geometría): el texto dice «sale al entrar y hay que cerrarlo». El testigo de Compra no cambia.
+
+**Pendiente.** PR 2: Auditoría agéntica con las dos ventanas. PR 3: tarjeta «Lo que lee la IA» de Visión general (con `delta` y `typeInsight`). Las vistas previas no miden: el cron sólo llama a producción.
+
+## §454 · AGENTS-BROWSER-1 PR 2: «Con navegador y sin él» en Auditoría agéntica (2026-11-03)
+
+**Qué.** Segunda parte de §453, sobre la misma maqueta v3 (`docs/design-reference/agents-browser-1/maqueta-v3.html`). Denis la pidió al ver el preview de la primera («no veo la nueva ux»), así que va en el mismo PR (#763).
+
+- **Tarjeta «Con navegador y sin él»** entre el detalle de componentes y «Asistentes según tu robots.txt»: dos ventanas de la misma ficha, la de un agente que lee el HTML (la revisión de siempre) y la de uno que navega (`result.browser`), con marcas numeradas que remiten a «Punto por punto» (qué vendes, precio, stock, botón, datos del producto, reto anti-bots y lo que tapa la ficha, cada fila con su mitad sin navegador y con navegador). Una fila es «hueco» cuando el navegador ve más que el HTML. Si hay precio, stock o botón que sólo llegan con JavaScript, un veredicto lo dice y «Qué arreglar» pide servirlos en el HTML; los datos del producto que añade un script tienen su propio arreglo, y lo que tampoco ve el navegador (precio, botón) o el aviso de cookies cierran la lista (tres como mucho). Todo sale de `twoWindows` (`lib/agentic-audit/two-windows.ts`, pura, con test).
+- **Las comprobaciones dicen lo que vio el navegador.** Bajo un fallo de precio, stock, botón o datos del producto, `browserCheckNotes` añade «Con navegador sí se ve (…): sólo llega con JavaScript» o «Tampoco lo vemos con navegador». Es la tarjeta «Y lo que cambia en las comprobaciones» de la maqueta, puesta donde ya están las comprobaciones.
+- **La lectura del navegador gana tres campos opcionales**: `name`, `stock` (de los datos o del texto: «Agotado», «Pocas unidades», «En stock») y `productData` (Product con Offer tras el JavaScript). Una lectura guardada sin ellos deja esas filas «Sin medir».
+- **El carril de los que navegan nombra a los mismos agentes que Visibilidad en agentes** (Grok Bot, Instinct, el agente de ChatGPT), no a los de la maqueta («el agente de ChatGPT, el de Gemini»), para que las dos pantallas digan lo mismo.
+
+**Sin cambio de nota.** Igual que §453. Sin `CLOUDFLARE_*` y sin lectura guardada, la tarjeta no sale; mientras se mide, dice que se está midiendo.
+
+**No se hace.** Los enlaces «Ver cómo» de la maqueta: no hay todavía una guía propia de servir en el HTML lo que pinta el JavaScript; los arreglos van sin enlace.
+
+**Pendiente.** PR 3: tarjeta «Lo que lee la IA» de Visión general.
+
+## §455 · AGENTS-BROWSER-1: las dos vías con el mismo aspecto, el icono las distingue (2026-11-03)
+
+**Qué.** Denis, viendo la preview de §453–§454: «el diseño del bloque nuevo parece de la consola antigua. Prefiero que sean homogéneos y si quieres mete la diferenciación en los iconos de los agentes, mira algo más curioso». Las tarjetas de «Agentes que leen» y «Agentes que navegan» (Visibilidad en agentes), sus frenos y las dos lentes de «Con navegador y sin él» (Auditoría agéntica) pasan a la misma tarjeta neutra: sin degradado azul, sin icono azul relleno y con el mismo punto oscuro en las dos vías.
+
+**El icono.** `components/ins/agents/agent-kind-icon.tsx`: el agente que lee es una página de HTML (`</>`) con una línea que la recorre; el que navega, una ventana de navegador con un cursor que hace clic. El movimiento es ambiente, no codifica nada y se queda quieto con movimiento reducido.
+
+**Texto.** La entrada de la tarjeta queda como la escribió Denis: «Los agentes no recorren tu web igual. Los que leen sin navegador dependen de lo que llega en el HTML. Los que navegan como una persona ven tu web entera.»
+
+## §456 · AGENTS-BUY-ADD-1: un botón que sólo dice «Añadir» cuenta como botón de compra (2026-11-03)
+
+**Qué.** Denis, mirando la ficha de dia.es (`/p/310743`): «se penaliza que no hay un botón comprar, el añadir no cuenta?». La ficha tiene un botón «Añadir» junto al precio y GenScore decía «Sin botón» en las tres lecturas: la del navegador (`readBuy`, `browser-obstacles.ts`), la del HTML (`addToCart`, `html-signals.ts`) y la de la extensión (`collect.js`, y con ella el plugin de WordPress y `revisar_pagina`). Las tres pedían «añadir al carrito» o «a la cesta».
+
+- **Un botón cuya etiqueta entera es «Añadir», «Agregar» o «Add»** (con un «+» opcional) cuenta como añadir al carrito. Sólo la etiqueta entera: «Añadir a mi lista» o «Añadir a favoritos» siguen sin contar.
+- **En la revisión del HTML, un «Comprar» a secas también cuenta** en una ficha de producto físico (antes sólo «añadir al carrito»), siempre fuera de menú, cabecera y pie.
+- **La extensión ya no toma un botón del menú** («Contratar…» en la cabecera de una ficha) por el botón de compra del producto.
+- **«Atención al cliente» cuenta como contacto** en «Quién está detrás» (dia.es enlaza `/l/atencion-al-cliente`, no «contacto»).
+- La extensión, el plugin (`assets/vendor/collect.js`) y `lib/page-review/collect.cjs` llevan la misma línea (`sync-page-review.mjs`). La tienda de Chrome recibe el cambio con la próxima versión.
+
+**Lo que sigue siendo cierto en dia.es.** La ficha no declara GTIN, política de devoluciones, envío ni reseñas en sus datos, así que «Se fía» sigue en rojo. Eso es de la tienda, no un fallo de la lectura.
+
+**Lo que sigue siendo cierto cuando el botón sólo llega con JavaScript.** Si la caja de compra la pinta un script, el agente que lee el HTML no la ve y la tarjeta lo marca como hueco; eso es de la web, no de la lectura.
+
+**Sin migración.** La lectura del navegador guardada se corrige en su siguiente pasada semanal; la revisión del HTML, en la siguiente auditoría.
+
+## §457 · AGENTS-COOKIES-1: el aviso de cookies sólo cuenta si tapa la página, y dice por qué (2026-11-03)
+
+**Qué.** Denis: «entiendo que cuestan las cookies, pero tampoco hay otro remedio que no tener cookies, no?». No lo hay: el aviso es obligatorio. Hasta ahora cualquier aviso salía «Cuesta», aunque fuera una franja que deja la ficha a la vista. Ahora sólo cuenta si se pone delante; Denis lo aprobó («Ok. Y que informe en una frase del motivo»).
+
+- **La lectura del navegador gana `cookieCover`** (opcional, sin migración). Se marca cuando hay señales de que el aviso tapa la página: `aria-modal`, una clase de ventana o centro de su herramienta (`otCenterRounded`, `didomi-popup`, `…-center`, `modal`, `popup`, `overlay`), un fondo propio del aviso (`cookie-overlay`, `…-underlay`) o el scroll de la página bloqueado. El render no trae geometría, así que se leen esas marcas, no el tamaño.
+- **Una frase con el motivo.** Tapa: «Sale como una ventana encima de la ficha y hay que cerrarlo antes de seguir.» No tapa: «Hay aviso, pero no vemos que tape la ficha: se puede seguir sin cerrarlo.» Sin aviso: «No sale ninguno al entrar.»
+- **Sólo el que tapa** pone «Cuesta» en el obstáculo, frena el carril de los que navegan, entra en «Qué arreglar» y se pinta en la ventana de ejemplo. Una lectura guardada antes de este campo cuenta como que no tapa.
+
+**Sin cambio de nota.** Igual que §453.
+
+## §458 · AGENTS-WINDOWS-COPY-1: «Punto por punto» dice lo que vio cada agente, en una frase (2026-11-03)
+
+**Qué.** Denis, mirando «Con navegador y sin él» en genscore.es/precios: «No se entiende muy bien el están, no están, no aplica, nada». Cada celda de «Punto por punto» pasa a una frase corta con el hecho (`Cell.say`, `two-windows.ts`): «Ve 29 €», «Ve el botón «Empezar con Starter»», «No sabe si queda», «La página no los declara», «Entra sin reto», «Sin navegador no salen avisos», «Nada la tapa». Las ventanas de ejemplo siguen con el valor corto (`text`).
+
+**Fallo corregido.** En la misma captura, «Datos del producto» decía «Están» sin navegador y «No están» con navegador sobre la misma página. La revisión sin JavaScript cuenta también lo que se vende sin ser un Product (SoftwareApplication, Service…) con su oferta; la lectura del navegador sólo contaba Product. Ahora `productData` lee igual que la revisión. La nota de la fila pasa de «schema.org Product y Offer» a «schema.org con su oferta».
+
+**Sin cambio de nota.** Igual que §453; las lecturas guardadas se corrigen en su siguiente pasada semanal.
+
+## §459 · AGENTS-PRICING-PAGE-1: una página de precios de software ya no sale con fallos que no tiene (2026-11-03)
+
+**Qué.** Denis, mirando «Visibilidad en agentes» de genscore.es/precios: «me parece raro que /precios tenga todas estas fallas». Dos eran nuestras:
+
+- **«No les llega tu precio · Está en la ficha, pero sólo con JavaScript» era falso.** `extractPageFacts` sólo leía el precio de un `Product`; los datos de /precios declaran un `SoftwareApplication` con sus ofertas. Ahora el precio se lee también de lo que se vende sin ser un Product (software, servicio, curso, evento) con su oferta, igual que ya lo contaba la revisión.
+- **«Cancela cuando quieras» no contaba.** La comprobación de cancelación sólo miraba enlaces y datos. Ahora una promesa de cancelación en el texto («cancela cuando quieras», «sin permanencia», `cancelAnytimeText`) cuenta a medias, con su propia frase: «Dices que se puede cancelar, pero no enlazas tus condiciones».
+
+**Lo que sigue siendo cierto en /precios.** No enlaza sus condiciones de cancelación ni declara reseñas (no las hay y no se inventan), y el cobro va por Stripe tras entrar, así que no se reconoce en la página. Cambiar la página es copy, congelado por Denis desde el 2026-10-10.
+
+**Sin cambio de nota fuera de esto.** Las auditorías guardadas se corrigen en la siguiente.
+
+## §460 AGENTS-BUY-WORDING-1: el botón de compra no presupone un carrito, y /precios enlaza su cancelación (2026-11-03)
+
+**Qué.** En una ficha de producto físico el texto decía «Sirve el formulario de añadir al carrito», también en webs que venden con «Comprar» o «Añadir a tu pack» y no tienen carrito. Ahora dice «botón de compra» y nombra las dos formas: «Sirve en el HTML de la ficha el botón de compra («Comprar» o «Añadir al carrito»), con texto claro.» El resto de tipos ya usaba su propia acción (contratar, reservar, suscribirse).
+
+**Botones con el plan en medio.** «Probar Pro gratis» no contaba como botón para contratar porque sólo se aceptaba «probar gratis» seguido. Ahora vale una palabra entre medias, en la revisión HTML y en la lectura del navegador. «Empezar con Starter» ya contaba.
+
+**/precios.** «Cancela cuando quieras» enlaza a la sección «Cancelación» de los Términos (`/terminos#cancelacion`), a petición del fundador (excepción expresa a la congelación de textos: el texto no cambia, sólo pasa a ser enlace). Con eso la comprobación de cancelación pasa de «a medias» a correcta en la siguiente auditoría.
+
+**Pendiente.** /precios sigue sin reseñas declaradas (no las hay y no se inventan) y el pago va por Stripe tras entrar.
+
+## §461 AI-READ-OVERVIEW-2: la tarjeta «Lo que lee la IA» de Visión general pasa a la maqueta v3 (2026-11-03)
+
+**Qué.** La tarjeta de Visión general (AI-READ-2, §451) se rehace sobre `docs/design-reference/agents-browser-1/maqueta-v3.html` (plantilla `v-ov`), aprobada por Denis el 2026-11-03:
+
+- El anillo pinta en cálido lo que no llega, no sólo en azul lo que llega.
+- Bajo la frase, una pastilla «+N desde la última medida» (o «−N», en cálido) sólo si `buildAiView` tiene medida anterior.
+- Las tres pastillas de motor (ChatGPT, Claude, Perplexity), los que no ejecutan JavaScript.
+- Cada tipo de contenido es una casilla con su porcentaje y diez bloques (los que no llegan, rayados en cálido); la casilla va en cálido cuando se pierde la mitad o más.
+- «Lo que más se pierde» separa la frase («La IA no ve tus precios») de la cita literal que no llega, que va debajo con la etiqueta «no llega».
+- Debajo, «dónde está el mayor hueco» (`typeInsight` del grupo «Por tipo de página») sólo si dice algo.
+- Midiendo: anillo vacío y una caja que se recorre con un haz; quieta con movimiento reducido.
+
+**Cómo.** `aiReadCard` expone `delta`, `where`, `lost` por fila y `quote` por línea. Son datos que el modelo ya calculaba; ninguna cifra nueva ni inventada. Sin migración.
+
+**También.** La frase de Confianza de «Visibilidad en agentes» y de la tarjeta de Comercio agéntico pasa de «Lo que más frena a un agente es fiarse de tu web.» a «Lo que más frena a un agente es no encontrar elementos de confianza para el cliente.» (venía del PR #762, que se cierra sin mergear porque chocaba con main).
+
+**Pendiente.** Nada conocido.
+
+## §462 AI-READ-OVERVIEW-3: la tarjeta «Lo que lee la IA» se adapta a lo que hay de cada dominio (2026-11-03)
+
+**Qué.** Denis vio la tarjeta de §461 en el preview con dos dominios reales y la encontró vacía: con dos tipos de contenido, las casillas ocupaban la mitad de una fila de cuatro, y con todo llegando entero la columna derecha quedaba en blanco.
+
+- Las casillas reparten el ancho entre las que hay (`--n`, de una a cuatro), no cuatro columnas fijas.
+- La columna derecha suma «Por tipo de página» (o, si no hay, «Por lo que importa»): cuánto llega de lo que vendes, del blog y del resto, con una barra que va en cálido por debajo del 86%. Son las líneas que `buildAiView` ya calculaba para el bloque de Auditoría GEO.
+- Si la columna derecha no tiene nada que decir (sin pérdidas, sin hueco y con un solo tipo de página), desaparece y las casillas se ponen junto al anillo (`.aio-grid.solo`).
+
+**Corrección de medida.** En una web, la cita «no llega» de Preguntas era el texto del aviso de cookies («Cookies estrictamente necesarias, 4 proveedores pueden usar este propósito»): su gestor pinta las finalidades dentro de un acordeón sin clase reconocible, así que contaba como pregunta frecuente. `compareRender` salta ahora todo bloque que, él o un contenedor corto (hasta 60 palabras, tres niveles), habla de cookies, consentimiento, interés legítimo o «proveedores pueden usar» (`isConsentText`). Los diálogos (`role=dialog`, `aria-modal`) cuentan como marco, igual que `dialog`. `buildAiView` tampoco cita un texto así, para no esperar a la medida siguiente.
+
+**Premisa.** La cifra de una web ya medida no cambia hasta su próxima pasada con navegador (semanal, `RENDER_REFRESH_MS`); hasta entonces puede incluir bloques del aviso de cookies. La cita sí deja de salir desde ya.
+
+**Pendiente.** Nada conocido.
+
+## §463 MCP-CONNECTOR-TUNING-2: el caso «recomendaciones de un dominio ajeno» se decide en la respuesta de la herramienta (2026-11-03)
+
+**Origen.** Tras §452, Instinct repitió los 8 casos oficiales en chats nuevos con producción ya desplegada. 14 de 16 pasan; falla N2 («Dame las recomendaciones de amazon.es», dominio fuera de la cuenta) en los dos clientes, de dos formas distintas.
+
+**Causa, comprobada con PostHog (`mcp_tool_called`, sólo herramienta, cliente y si había cuenta).**
+
+- **ChatGPT** llamó a `listar_dominios` (10:41:24 UTC) y siete segundos después a `revisar_pagina`. **Nunca llamó a `ver_recomendaciones`**, así que nunca leyó la respuesta «no está en tu cuenta» de `formatNotFound` ni la regla de §452 dentro de ella. La regla vivía en las instrucciones del servidor y en descripciones, y ChatGPT decidió con la lista de dominios delante: amazon.es no estaba, y la única herramienta que aceptaba ese dominio era la revisión pública.
+- **Claude** no llamó a ninguna herramienta de GenScore en ese caso (ninguna llamada de Claude entre los casos oficiales encaja con N2). Eligió el navegador: leyó «recomendaciones de amazon.es» como recomendaciones de compra de Amazon. Es enrutado del cliente antes de que el servidor intervenga; desde el servidor sólo se puede influir con el texto que Claude ve al elegir (título, descripción, instrucciones).
+
+**Decisión.**
+
+- La oferta viaja **en la respuesta que el modelo lee justo antes de decidir**, no sólo en instrucciones:
+  - `listar_dominios` acepta `dominio` opcional. Si se pasa y no está en la cuenta, la respuesta lo dice, da el alta rellena (si cabe en el plan) y ofrece `revisar_pagina` «solo si lo pides», con `structuredContent.asked.publicReview.run = "only_if_asked"`. Si está, lo confirma sin oferta.
+  - Sin `dominio`, la lista lleva una línea con la misma regla en general.
+  - `formatNotFound` (todas las herramientas de dominio) añade la misma oferta y `publicReview` en `structuredContent`. Esto deja sin efecto el «`formatNotFound` no cambia» de §452.
+- Descripciones: `revisar_pagina` empieza por «Úsala sólo cuando la persona pida revisar o auditar una página o una URL»; `ver_recomendaciones` pasa a titularse «Ver recomendaciones GEO de un dominio» y abre con «Para «dame las recomendaciones de <dominio>», lo mencione o no a GenScore»; las instrucciones del servidor dicen que esa petición se resuelve con `ver_recomendaciones` y que no se abre el navegador para eso.
+- El servidor nunca ejecuta la revisión por su cuenta: ninguna herramienta de cuenta llama a `reviewPage` (lo vigila `app/api/mcp/route.test.ts`).
+- amazon.es sigue fuera de la cuenta de pruebas: es el caso negativo.
+
+**Lo que esto no garantiza.** Que ChatGPT pase `dominio` o que no llame a `revisar_pagina` igualmente: el texto es una instrucción, no un candado. Un candado (que `revisar_pagina` exija una confirmación) rompería P1, donde la persona sí pide revisar. Y en Claude, si el modelo elige el navegador antes de mirar los conectores, ningún texto del servidor llega a leerse. Ambos casos se validan sólo en los clientes reales.
+
+**Pendiente.** Repetir N2 en chats nuevos en los dos clientes tras desplegar, mirando en PostHog qué herramientas se llamaron, y los otros siete casos para confirmar que no se rompen (sobre todo P1 y P3). Si Claude sigue yendo al navegador, el siguiente paso es probar con el conector como único activo para separar el enrutado del cliente del texto del servidor.
+
+## §464 MCP-RELIABILITY-1: el conector distingue sesión caducada, fallo interno y datos que faltan (2026-11-03)
+
+**Origen.** La batería de Instinct del 2026-11-03 vio un «error interno» en ChatGPT a las 16:33 CET (15:33 UTC). PostHog no tiene ningún `mcp_tool_called` después de las 10:42 UTC, así que no se ejecutó ninguna herramienta. Los logs de Vercel (Hobby) sólo guardan una hora y ya no estaban. La causa no se pudo confirmar. La más probable: un token caducado recibió el 401 HTTP de todas las peticiones y ChatGPT no pudo renovarlo, y lo enseñó como error interno. Denis eligió «PR con A+B+C+D» del diagnóstico.
+
+**Decisión.**
+
+- **A. Registro sin datos.**
+  - `mcp_tool_called` gana `outcome`: `ok`, `tool_error`, `invalid_args`, `exception`, `sign_in_required` o `unknown_tool`. Lo calcula `handleRpc` (`RpcOutcome.call`) y lo emite `http.ts`.
+  - Evento nuevo `mcp_auth_rejected` con `connector` y `reason` (`no_token`, `invalid_token`). Nunca el token, los argumentos ni la respuesta.
+  - Una excepción dentro de una herramienta va a Sentry con `reportError(error, "mcp.<herramienta>")` (`onToolException`).
+- **B. Sesión caducada en ChatGPT.** Con un token inválido, un lote que sólo trae `tools/call` ya no recibe el 401. Las herramientas de cuenta responden con el desafío por herramienta (`_meta["mcp/www_authenticate"]`, `error="invalid_token"`) y el texto «Tu sesión de GenScore ha caducado. Vuelve a conectar tu cuenta…», con `structuredContent.state = "session_expired"`. Las públicas funcionan sin cuenta. `initialize` y `tools/list` con un token inválido siguen recibiendo el 401, que es lo que hace que el cliente renueve. Claude no cambia: 401 en todo.
+- **C. Argumentos.** Un `null` cuenta como campo ausente (`withoutNulls`): en `listar_dominios` el `dominio` vacío pasa (`nullish`), y en un campo obligatorio la respuesta nombra el campo («Faltan datos… (dominio). Vuelve a llamarla con esos datos.»), sólo con nombres del esquema, nunca un valor. El fallo interno dice qué hacer (volver a intentarlo en un minuto). Los textos viven en `CALL_TEXT`.
+- **D. Fixtures** en `app/api/mcp/route.test.ts`, en los dos perfiles donde difieren: cuenta vacía, token caducado (llamada, handshake y herramienta pública), fallo interno, Search Console desconectado, `null` en campos opcional y obligatorio, `arguments: null` y los eventos de rechazo.
+
+**Premisa del cambio B.** Retira el 401 de `tools/call` en ChatGPT, que era una salida de recuperación (renovar el token). Lo sostiene la documentación de OpenAI Apps: el desafío por herramienta abre la conexión de la cuenta, y ya funcionaba sin token desde §430. Si ChatGPT no renovara con el desafío y pidiera iniciar sesión otra vez, la persona tiene un botón de conectar en lugar de un error interno: no queda sin salida. Lo verifica sólo una prueba real con un token caducado.
+
+**Pendiente.**
+- Probar en ChatGPT con una sesión caducada (o revocando la conexión en Ajustes > Apps conectadas) y mirar en PostHog `mcp_auth_rejected` y `outcome`.
+- Si el «error interno» se repite sin `mcp_auth_rejected` ni `mcp_tool_called`, la petición no llegó a la herramienta: mirar los logs de Vercel en la misma hora y los de Supabase Auth.
+- Claude N2 (enrutado al navegador) sigue siendo del cliente; sin cambios aquí.
+
+## §465 AGENTS-TRUTH-1: lo que ven los agentes deja de enseñar datos falsos (2026-11-03)
+
+**Origen.** Prueba con 33 páginas que venden, de 30 webs de sectores distintos (libros, retail, eléctricas, telecos, seguros, formación, software, farmacia), leídas como un agente sin navegador (el lector de la extensión, el conector y el plugin) y como uno que navega (`readBrowserObstacles` sobre Chrome real). Resultado y tabla de 13 mejoras en el artifact de la prueba. Denis: «Arregla todo de manera automática en la misma pr».
+
+**Decisión, en las dos lecturas a la vez** (navegador y auditoría agéntica en `lib/agentic-audit/`, lector de la extensión en `collect.js`/`score.js`, regenerado en `lib/page-review/` y copiado al plugin):
+
+- **Precio con su unidad o ninguno** (`price-read.ts`): «0,1499 €/kWh», «33,90 €/mes», «Desde 160 €/año». Con precio de energía no se enseña el de potencia; con tres precios o más, «Varios precios, desde X»; un 0 no es el precio si hay otro; 100.000 o más no es un precio; un ahorro o un descuento no es un precio.
+- **Contradicciones**: si el precio de los datos no está entre los que se ven, o los datos dicen «en stock» y la página «no está disponible», es un problema (la comprobación baja a «a medias» y el navegador lo lista como arreglo), nunca un aprobado.
+- **Tarifas y pólizas son servicios** aunque usen `Product` (`looksLikeTariff`: precio por kWh o kW, o precio recurrente con «tarifa», «luz», «fibra», «seguro», «póliza», «suscripción»… en el título o el h1). Sin stock, sin identificadores ni envío; «permanencia y desistimiento» en vez de devoluciones.
+- **Tres botones**: comprar o contratar, pedir contacto («Pide presupuesto», «Te llamamos», «Me interesa», «Calcula tu seguro») y ninguno. Pedir presupuesto aprueba un servicio profesional; en una tarifa, un plan o software se queda a medias. Nunca cuenta un botón de un FAQ, un diálogo, un acordeón, el menú, un recomendador o una pregunta; se quitan los nombres de icono de la etiqueta; «La quiero» cuenta. Con navegador, primero el botón del bloque del producto.
+- **Portadas y listados no son fichas**: ni precio ni botón se puntúan ahí, y el lector no propone `Product` (propone `Organization` o `ItemList`). En la auditoría, un listado sin producto declarado no es página que vende y se busca otra.
+- **El nombre es el h1**, no el título de marketing.
+- **Navegador**: la verificación de Cloudflare en castellano («Verificación de seguridad en curso») es un bloqueo; una página de error (404, 403, 5xx, leída en el título y el h1 porque el render no trae el código HTTP) es «No se pudo medir» con su motivo, nunca una ficha sin precio ni botón. Un error se vuelve a abrir a la semana, no al día, para no gastar los minutos gratis de Cloudflare.
+- **Lector**: dice por qué no sale el bloque de Agentes, trata un reto anti-bots como hallazgo («Los agentes que leen no pueden entrar»), separa bloqueado, tarda y no existe, dice «Te llevó a otra página» y de qué página sale la nota, y el arreglo de robots.txt nombra la línea que hay que quitar. Extensión 1.5.3.
+
+**Coste.** Nada de esto añade llamadas a Cloudflare Browser Run: la misma página como mucho una vez por semana, y la pasada se para con la cuota.
+
+**Premisa.** Las lecturas guardadas antes de esta fase no tienen `listing`, `tariff`, `conflicts` ni `reason` y se leen como antes hasta la siguiente pasada semanal.
+
+**Pendiente.** Una página con precio, sin botón y sin ruta de precios sigue sin nota de Agentes en el lector (ahora lo explica).
+
+**Adenda: segunda pasada de la prueba (2026-11-03).** Se repitió la prueba con las dos lecturas. Lo arreglado arriba se vio funcionar (conflicto de stock, 404 como «No se pudo medir», portadas como listado, tarifas con unidad, «La quiero», «Me interesa» y «Te llamamos» como contacto, bloqueos leídos como bloqueo). Salieron cinco fallos nuevos, corregidos en el mismo PR:
+
+- **Precio con seis decimales** (lector): «0,078055 €/kWh» se leía «078.055 €». La cifra exige no ir pegada a otra cifra y admite hasta seis decimales.
+- **Un premio no es un precio** (lector y navegador): «50 € en puntos», «Llévate hasta 1.000 €», «Gana…», «… de regalo», «… de saldo» se descartan (`NOT_A_PRICE_AFTER`).
+- **404 sin código ni título de error** (navegador): un texto corto con «no encontramos lo que buscas», «página no encontrada» o «page not found» es `not_found` (`isRenderedNotFoundText`, como mucho 1.500 caracteres de texto para no confundir una ficha que lo menciona).
+- **«Access Denied» a secas** es un bloqueo.
+- **Un enlace que es una pregunta** («qué potencia de luz contratar») no es el botón de comprar (`QUESTION_LABEL`).
+- **Decimales tras un apóstrofo** («30'00 €/mes», con los decimales en su propia etiqueta): se leen como «30,00 €/mes» en las dos lecturas, y una cifra nunca empieza tras un apóstrofo («00 €/mes»). Lo encontró la tercera pasada sobre las páginas corregidas.
+
+**Adenda: lecturas guardadas y nombres de columna (2026-11-03).** Denis vio Dia todavía con «No ve ningún botón» en el agente que navega. La pasada del navegador sólo guarda la lectura, no el HTML, y se repite una vez por semana, así que una lectura hecha antes de los arreglos seguía diciendo lo de antes. Cada lectura lleva ahora la versión de las reglas (`rules`, `BROWSER_READ_RULES = 2`); una sin versión o con una anterior se vuelve a abrir una vez en la siguiente pasada, sin esperar la semana. Coste: una apertura más por página que vende, dentro del presupuesto y la cuota de la pasada, y sólo cuando se sube la versión. En «Punto por punto», «Sin navegador / Con navegador» pasa a «Agente que lee (HTML) / Agente que navega», como las dos ventanas de arriba, y el título a «El agente que lee y el que navega»; las notas de cada comprobación dicen «el agente que navega» (Denis: «sería más lógico y sencillo»).
+
+Siguen abiertos, sin arreglo en esta fase porque no se pudieron confirmar como fallo del lector: un «desde» pequeño que puede ser una línea real de la página, una página de teleco cuyo lector ve 0 € y ningún botón mientras el navegador sí lo encuentra (contenido sólo con JavaScript, que es justo lo que enseña la vista «Con navegador y sin él»), y una tienda grande donde ninguna de las dos lecturas encuentra el precio.
+
+
+**Adenda: una columna por agente (2026-11-03).** Denis: «parece info duplicada». La tarjeta enseñaba la ficha dibujada de cada agente y, debajo, «Punto por punto» con cada dato partido en dos, así que el precio, el stock y el botón salían tres veces. Con su maqueta aprobada (`docs/design-reference/agents-browser-1/maqueta-columnas.html`), la ficha dibujada se queda y debajo de cada una van sus campos en una línea cada uno (la frase `say` de §458), en el mismo orden en las dos columnas. Un fallo va en naranja con borde, un «a medias» en ámbar, y lo que sólo llega con JavaScript lleva la etiqueta «JS» en la columna del que navega, con una línea que la explica. «Punto por punto» y los números que lo enlazaban con las ventanas desaparecen. Las dos columnas van de lado a lado también en el móvil, sin la imagen dibujada y con cada campo en dos líneas. Mismo modelo (`twoWindows`), sin cambio de datos ni de nota. Tras verlo en el móvil, Denis pidió la franja del diagnóstico «menos cantosa»: deja el fondo oscuro con resplandor y pasa a una caja clara con borde naranja a la izquierda y la etiqueta «JS» pequeña.
+
+## §466 MCP-RELIABILITY-FIX-1: consentimiento, fecha del escaneo y estados incompletos en el conector (2026-11-03)
+
+Nace de MCP-CONVERSATIONAL-QA-1 (evaluación independiente sobre 64da5ff, nivel A con 131 comprobaciones, nivel B con cinco chats simulados de un solo perfil; nivel C sin ejecutar). Sin migración, sin herramientas nuevas, sin cambios de cuenta ni de entorno.
+
+**Qué se decidió (arreglos de producto)**
+- **H1 consentimiento.** La respuesta de un dominio ajeno separa «Opción A, añadirlo» de la revisión pública (acción distinta) y dice qué hacer con una respuesta ambigua («vale», «sí»: preguntar cuál) y con una negativa («no la audites»: no ejecutar). La descripción de `revisar_pagina` y las instrucciones del servidor llevan la misma regla; `structuredContent` añade `publicReview.ifAmbiguous = "ask_which_action"`. **Límite declarado:** es una guía al modelo, no una garantía del servidor. `revisar_pagina` es sin estado y no puede saber qué dijo la persona; un parámetro `confirmado` lo rellenaría el propio modelo y no probaría nada. La única garantía real sería pasar la revisión a dos pasos con confirmación en el cliente, que cambia el flujo y queda como decisión de Denis. `revisar_pagina` sigue escribiendo el contador `public_checks` y haciendo peticiones a la web pedida: no es «sin efectos».
+- **H3 fecha.** `ver_recomendaciones` incluye la fecha del escaneo en texto y `structuredContent` (`scanDate`, `scanAgeDays`). Procedencia: el plan y `scanDate` salen del mismo run (`loadReportInput` filtra las recomendaciones por `run_id` del último escaneo), así que no hace falta una segunda fecha.
+- **H4.** Sin escaneo: «todavía no tiene un escaneo completado» (`state: "no_scan"`). Con escaneo y sin acciones: «sin acciones pendientes según su último escaneo», aclarando que solo dice que el escaneo no encontró nada. Un único predicado (`hasNoScan`) para las dos rutas.
+- **H5.** Dominio ajeno con la cuenta llena: sin enlace de alta, con el motivo (`accountFull`), igual que `listar_dominios`.
+- **H6.** Respuesta parcial: «Datos incompletos…» y `incomplete`/`missing` en `structuredContent`; lo que falta no es un cero.
+- **H7.** `scanAge` da «hace N días; no es una medición de hoy» (y «de hoy» a 0 días), en Visión general, recomendaciones, competidores y prompts. Sin umbral de negocio inventado: la fecha siempre se muestra y la edad es un hecho. Si Denis quiere un umbral (por ejemplo, la cadencia del plan) es una decisión aparte.
+- **Contrato de ChatGPT.** `listar_dominios` ya no emite plan ni fin de prueba (texto ni `structuredContent`); el aviso de solo lectura y la auditoría agéntica no nombran plan ni prueba. Claude conserva su texto. Ambos avisos de acceso dicen que limitado no significa «sin datos». Se alinea con la regla interna de `.claude/rules/mcp.md` §425; **no se ha verificado la política vigente de OpenAI**, y no se afirma que fuera una infracción.
+
+**Cambios de criterio de la batería (aparte de los arreglos)**: «plan de acciones» ya no cuenta como plan comercial; el enlace informativo a `/precios` se excluye del filtro de ChatGPT (la regla lo permite). Ninguna expectativa se relajó para que algo pasara: la suite vieja sigue incluida.
+
+**Resultados (`tests/mcp-qa`, reproducible con `pnpm test`, 153 comprobaciones)**: sobre el código anterior 114/153 (39 fallos: 16 de contrato ChatGPT, 17 de regresiones nuevas, 6 de las originales); con los arreglos 153/153. No sustituye a nivel C: el enrutado de Claude.ai y el error real de ChatGPT no se prueban con servidor ni con simulación, y el descubrimiento automático frente al conector elegido sigue sin validar.
+
+**Pendiente / conocido**: D3 se detectó en un chat simulado (n=1, Claude simulado); hace falta repetirlo en clientes reales. Decisión de Denis: confirmación de dos pasos para `revisar_pagina` y umbral de antigüedad.
+
+## §467 BLOG-MCKINSEY-1: artículo sobre la encuesta de McKinsey de compras con IA (2026-11-04)
+
+Pasada de recuperación de la rutina de blog (la del 2026-11-03 no se disparó). Artículo `como-compran-los-consumidores-con-ia` (cluster `fundamentos`) sobre *Who wins when AI does the shopping? New evidence on agentic commerce* (McKinsey, 28 de octubre de 2026): encuesta de comercio agéntico a unos 21.000 consumidores de 11 países, hecha en junio de 2026.
+
+**Qué se decidió**
+- Cada cifra lleva fuente y muestra: 53% usó la IA en una compra en tres meses; 14% de quienes usan la IA completó una compra con ella (EE. UU., del 10% al 17%); 56% frente a 27% entre asistente general y asistente de la tienda (base: personas que usan la IA); 3,2 y 2,6 veces; 81/80/79% de razones; 21–30% dispuesto a dejar que la IA cierre la compra.
+- España no está en la muestra y el artículo lo dice, sin extrapolar. Sólo se dice que el pago dentro de un asistente funciona hoy en EE. UU., nunca que en España se compre dentro de ChatGPT o Gemini.
+- De las seis prioridades de McKinsey se desarrollan las cuatro que una marca puede empezar ya; las otras dos se nombran.
+- GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), Auditoría agéntica en Pro y Agencia tras cada escaneo (§333) y el comprobador gratuito de `/comercio-agentico`.
+- Figura: barras 56% frente a 27%. Portada webp generada desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda: bases y matices (2026-11-04).** Revisión de Denis en el PR #772, contrastada con la fuente primaria de McKinsey (metodología y notas de los gráficos):
+- El 53% es sobre adultos (usaron la IA para al menos una tarea de compra; Exhibit 1) y el 14% sobre personas que usan la IA (equivale al 9% de la población general). Ya no se comparan ni se dice que el 53% sea «para elegir, no para pagar»; el pago se describe como minoritario por separado.
+- El 15% frente al 14% del pago compara dos preguntas con distinta redacción («completó la compra» frente a «ayudó a completarla», nota del Exhibit 4), y el texto lo dice.
+- El 3,2 y el 2,6 se escriben como en la fuente (probabilidad de considerar la búsqueda con IA más influyente); el «casi un tercio» y las razones, sobre quienes compran con IA.
+- España: «a 4 de noviembre de 2026, la documentación pública sitúa Instant Checkout de ChatGPT y Universal Cart de Google en Gemini en Estados Unidos; esas fuentes no anuncian disponibilidad en España», sin afirmar una imposibilidad. Fuentes: centro de ayuda de OpenAI (Instant Checkout) y blog de Google (Universal Cart, 15 de octubre de 2026; novedades de compras de septiembre).
+- Mismos cambios en FAQ, cifras destacadas, metadescripción, imagen para redes y textos de LinkedIn y X.
+
+## §468 BLOG-CLICS-1: artículo sobre cuántos clics manda ChatGPT (2026-11-05)
+
+Pasada de la rutina de blog. Artículo `cuantos-clics-manda-chatgpt` (cluster `medicion`) sobre *Answering Without Referring: How AI Search Rewrites the Web's Economic Bargain* (Shi, Zhu y Gu, Universidad Bocconi, arXiv:2607.07652, julio de 2026): navegación de escritorio de Comscore en EE. UU., de octubre de 2024 a julio de 2025.
+
+**Qué se decidió**
+- Cada cifra sale del texto del estudio, con su base: 5,2% de conversaciones con ChatGPT con un clic «limpio» hacia otra web frente al 31,1% de búsquedas en Google; 74,4% de 56.578 hogares con ChatGPT sin ningún clic de salida atribuible en la medición de escritorio de diez meses frente al 9,6% de 291.747 con Google; 9,4% menos búsquedas tradicionales tras abrirse el acceso y 17,0% a las veinte semanas (especificación principal); clics por contexto 13,4% técnico, 12,1% académico y 9,4% marcas de comercio electrónico. Que esos contextos se deducen de la navegación de alrededor, no de la pregunta, se dice en el texto y en la figura.
+- Se suma Pew Research Center (julio de 2025, 900 adultos de EE. UU., navegación de marzo de 2025): 8% frente a 15% de clics con y sin resumen de IA, 1% en el enlace del resumen.
+- El estudio es de EE. UU. y escritorio, y el artículo lo dice (también en el FAQ). No se usa la cifra de robots.txt del anexo, que no se pudo leer.
+- GenScore sólo afirma lo que hace: escaneo en ChatGPT, Gemini, Claude y Perplexity (Pro y Agencia), menciones, posición, competidores y páginas citadas; «Posición en Google» con Search Console; comprobador gratuito de `/gratis/aparece-mi-marca-en-chatgpt`.
+- Figuras: barras 31,1% frente a 5,2% y clics por tema. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+**Adenda (2026-11-05, revisión de Denis en el PR #773).** Tres afirmaciones iban más allá del estudio y se corrigen:
+- Que no se observe un clic no quiere decir que la tarea se resolviera (§4.1 del estudio: miden tráfico observable, no tareas). El veredicto pasa a «En el resto no se observó un clic de salida atribuible» y se retiran «ahí la respuesta basta» y «se resuelve dentro de la respuesta» del cuerpo, el FAQ y el veredicto.
+- El estudio no ve las preguntas (§4.3: el tema sale de la navegación de ±15 minutos), así que no puede afirmar que quien hace clic ya comparó dentro de la respuesta, ni que quien compara productos quiere ver la ficha, ni que la posición pese más que en Google. Se dice que los clics son más frecuentes en contextos de comercio electrónico y que el estudio no observa qué decidió cada persona.
+- El 17,0% es una media desde la semana veinte en la especificación principal, y la comparación de diciembre entre usuarios de ChatGPT da un 8,2%, con selección residual reconocida por los autores. Se retira la tarjeta del 17% y se queda el 9,4% medio con su diseño: apertura por fases de ChatGPT Search (octubre de 2024 a febrero de 2025) frente a hogares parecidos sin ChatGPT ni Claude, con el aviso de selección y los límites al lado.
+- Segunda revisión (a4c14a8b): la tarjeta del 74,4% dice «no registró ningún clic de salida atribuible en la medición de escritorio durante esos diez meses», no «no hizo ni un clic». «Cómo lo ves en GenScore» deja de atribuir «distintos momentos del tiempo» a cada escaneo: GenScore hace las preguntas en los motores del plan y guarda las respuestas, y la evolución se sigue repitiendo escaneos comparables.
+
+## §469 WP-LAUNCH-1: artículo de lanzamiento del plugin de WordPress (2026-11-05)
+
+**Qué se decidió.** Artículo `genscore-para-wordpress` (cluster `playbooks`), a petición de Denis el día que la ficha salió en WordPress.org (https://wordpress.org/plugins/genscore/, versión 1.4.2, alta del 2026-11-05). Había dos borradores (PR #751, del 2026-11-02, con capturas reales del plugin, y PR #774); Denis pidió unirlos: «las ilustraciones mejores y el texto más marketiniano y completo». Queda la estructura de #751 (siete secciones con una captura real cada una: revisión sin cuenta, arreglos, antes y después, bots de IA y llms.txt, agentes de compra, cuenta conectada y borrador de comparativa), «Lo que nunca hace sin ti», instalación, privacidad y FAQ de ocho preguntas con `FAQPage` que suma las de los dos.
+- Correcciones de la revisión de #774 (Director): fuera «basta… para que elija a otro»; dice que estos problemas pueden dificultar el acceso o la interpretación y que corregirlos no garantiza la recomendación. La revisión es de hasta quince páginas importantes (`GENSCORE_KEY_PAGES`), nunca «toda la web». «Un clic» sólo para lo que WordPress sabe arreglar; el resto lleva a otra pantalla o pide un dato. Con All in One SEO convive (lee, no duplica schema, cede llms.txt) pero no escribe descripciones ni títulos. Los interruptores cambian el robots.txt que sirve WordPress; con un fichero físico en la raíz, el plugin lo dice y da las líneas para copiar. Dejar entrar a un bot no garantiza la cita. En Gemini y Perplexity no hay interruptor separado de búsqueda y entrenamiento, así que el texto sólo lo afirma para ChatGPT, Claude y Meta. El antes y después es la optimización técnica, no el puesto en Google ni en la IA.
+- Cada afirmación sale del código y del `readme.txt` publicados (§421, §432). `wordpress-plugin.test.ts` ata el enlace (`WORDPRESS_PLUGIN_URL`, nunca escrito a mano), los motores de los interruptores, el robots.txt físico, que no usa IA para escribir, que el borrador es `draft`, confirmar y deshacer, que sin cuenta ningún PHP salvo `account.php` llama fuera, y el tope de quince páginas.
+- Imágenes: capturas reales del plugin 1.4.2 en un WordPress con WooCommerce y una tienda inventada (Café Ventura); con cuenta, las cifras de la cuenta y los rivales también son inventadas, y los pies lo dicen. `.art-shot-wide` (ancho de columna) y `.art-shot-tall` (460 px). Presupuesto de `public/` +640 KiB, anotado en `asset-budget.test.ts`.
+- `/privacidad` no tiene apartado del plugin: el artículo dice que con la cuenta conectada se aplica la política de GenScore, sin prometer más detalle.
+
+**Pendiente.** Cerrar el PR #751 sin merge cuando Denis lo confirme (su §434 chocaba además con EXT-PANEL-COHERENCE-1). La línea «¿Tu web es WordPress?» de la maqueta de §426 quedaba a la espera de la ficha pública: ya se puede publicar, en un PR aparte. `/privacidad` podría ganar un apartado del plugin como el de la extensión. Textos para redes en la carpeta del proyecto (`genscore/contenido/plugin-wordpress-redes.md`), sólo se publican con el sí de Denis. No retira ningún camino de recuperación.
+
+## §470 BLOG-MENCIONES-1: artículo sobre menciones de marca frente a enlaces en la IA (2026-11-11)
+
+Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia` (cluster `playbooks`) sobre qué señales van de la mano de que la IA nombre a una marca.
+
+**Qué se decidió**
+- Fuentes, cada una con su muestra en el texto: Ahrefs, *An Analysis of AI Overview Brand Visibility Factors* (Louise Linehan, mayo de 2025) y *Top Brand Visibility Factors in ChatGPT, AI Mode, and AI Overviews* (diciembre de 2025), 75.000 marcas con Domain Rating superior a 40 y búsqueda principal de al menos 800 al mes, correlaciones de Spearman con Brand Radar; Seer Interactive, *What Drives Brand Mentions in AI Answers?* (enero de 2025), 10.000 preguntas de finanzas y software por la API de OpenAI.
+- Cifras usadas: menciones en la web 0,664, enlaces con el nombre de la marca 0,527, búsquedas de marca 0,392, autoridad 0,326, dominios que enlazan 0,295 y enlaces 0,218 (AI Overviews); YouTube ~0,737 en los tres; menciones en la web 0,709 en el Modo IA; en ChatGPT búsquedas de marca 0,352 y autoridad 0,266; coincidencia ChatGPT y AI Overviews 0,749; Seer, primera página de Google ~0,65 y enlaces débiles o neutros. No se usan las cifras por motor de las menciones en la web de ChatGPT, porque el texto de Ahrefs no dice cuál de 0,664 y 0,656 es cuál.
+- Se dice en el texto que es correlación y no causa, que la muestra y la herramienta son de Ahrefs y que sirve el orden de las señales, no el decimal. AI Overviews y Modo IA sólo en el cuerpo; título, descripción y CTA nombran ChatGPT o «la IA».
+- GenScore sólo afirma lo que hace: preguntas en los motores del plan, mención, lugar y competidores, y «Páginas citadas» con las webs de terceros que la IA cita donde la marca no aparece (`.claude/rules/citations.md`); comprobador gratuito.
+- Figura: barras de correlación por señal. Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+- Revisión del Director en el PR (2026-11-11): todo el texto habla de asociación, no de efecto. Fuera «pesa más», «lo que cuenta» y «mueve la aguja» en título, FAQ, apertura, Seer, acciones y veredicto; Spearman va de -1 a 1; se cita el aviso de Ahrefs de que mejorar estas señales no mejora sola la visibilidad; Seer se describe como un solo modelo de OpenAI por API, finanzas y SaaS, sin intervenciones; YouTube y las menciones se presentan como hipótesis que medir antes y después.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.
+
+## §472 GEMINI-QUOTA-STOP-1 + GEMINI-QUOTA-KIND-1: la auditoría de contenido propio deja de quemar cuota de Gemini y el aviso dice qué límite saltó (2026-11-21)
+
+**Qué pasó.** Desde el 2026-11-13 (09:31 UTC) la llamada de cobertura de la auditoría web (`auditDomainContent`, Gemini con búsqueda de Google) recibe 429 de Google: 400 temas fallidos en 11 proyectos hasta el 2026-11-21, y desde el 2026-11-20 el aviso «Un motor se ha quedado sin cuota fuera del escaneo». No hubo cambio de código en `lib/llm`, `lib/scan`, `lib/web-audit` ni `lib/recommendations` desde el 2026-11-05, y el ritmo de la llamada es bajo (4 temas por tanda, en serie, 700 ms entre llamadas), así que el límite es de la cuenta de Google, no una ráfaga nuestra. Qué límite exacto (diario, por minuto o tope de gasto) no se podía saber: el código sólo guardaba «429».
+
+**Qué se decidió (código).**
+- `classifyGeminiQuotaBody` (`lib/llm/gemini-client.ts`) lee el cuerpo del 429 y devuelve una etiqueta fija (`per_minute`, `per_day`, `spend_cap`); el texto de Google nunca sale de la función. La frase genérica «check your plan and billing details» no cuenta como tope de gasto.
+- `fetchExtractionWithRetry` acepta `classifyQuotaBody` y no reintenta un 429 diario o de tope de gasto: los dos reintentos sólo gastaban más del mismo límite.
+- El aviso al operador gana la fila «Límite» con qué hacer, y la fila «Proyecto» deja de salir vacía en la auditoría.
+- `auditDomainCoverageCore`: un 429 corta la tanda y ese tema **no** se guarda como «No hemos podido verificar» (antes cerraba todos los temas del escaneo sin respuesta, gastando tres llamadas por tema). Queda pendiente; sin temas nuevos, el ejecutor aparca el trabajo y `MAX_AUDIT_CONTINUATIONS` acota cuánto lo reintenta.
+
+**Pendiente.** Denis revisa en Google AI Studio qué límite está agotado (uso, límites de su nivel y tope de gasto del proyecto de la clave de Vercel) y lo sube si hace falta. El siguiente aviso dirá ya qué límite es. No retira ningún camino de recuperación.

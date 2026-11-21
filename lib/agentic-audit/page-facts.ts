@@ -78,11 +78,25 @@ function formatPrice(price: unknown, currency: unknown): string | null {
   return `${formatted} ${code.toUpperCase()}`;
 }
 
+const SOLD_TYPES = new Set([
+  "softwareapplication",
+  "webapplication",
+  "mobileapplication",
+  "service",
+  "professionalservice",
+  "financialproduct",
+  "course",
+  "event"
+]);
+
 export function extractPageFacts(html: string): AgenticPageFacts {
   const nodes = flattenNodes(parseJsonLd(html)) as JsonNode[];
   const product = nodes.find((n) => typesOf(n).some((t) => t === "product" || t === "productgroup"));
-  const offers = product
-    ? (Array.isArray(product.offers) ? product.offers : [product.offers]).filter(
+  // Log §459: what else is sold with its offer (software, a service, a course,
+  // an event) also carries the price, as the review already counts it.
+  const sold = product ?? nodes.find((n) => typesOf(n).some((t) => SOLD_TYPES.has(t)) && n.offers);
+  const offers = sold
+    ? (Array.isArray(sold.offers) ? sold.offers : [sold.offers]).filter(
         (o): o is JsonNode => typeof o === "object" && o !== null
       )
     : [];

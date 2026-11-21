@@ -187,8 +187,22 @@ runs every 15 minutes (`*/15 * * * *`). No new variables: it reuses
 the findings and writes no dedupe marker, so they go out once the channel
 works. **Not** gated on `CRON_SCANS_ENABLED`: it mostly reads and alerts; the
 only thing it can start is an auto-retry from `reconcileStuckScanRuns`,
-which any page view already does. A sub-daily schedule needs Vercel Pro (the
-account is Pro since 2026-08-04).
+which any page view already does.
+
+**Frequent crons run on Supabase pg_cron, not Vercel (CRON-HOBBY-1, log §347).**
+The account went back to Vercel Hobby on 2026-10-25, which only allows crons
+that fire at most once a day (±59 min) and rejects a deployment with anything
+more frequent. `scan-continue` (5 min), `run-audit` and `seo-serp` (10 min) and
+`scan-watchdog` (15 min) are pg_cron jobs from
+`supabase/migrations/0045_pg_cron_frequent_crons.sql`; pg_net calls
+`https://www.genscore.es/api/cron/<name>` with `Authorization: Bearer
+<CRON_SECRET>`, exactly what Vercel sent. The secret is read from **Supabase
+Vault**, name `genscore_cron_secret`, and must equal `CRON_SECRET` in Vercel
+Production; without it every call is skipped with a warning in
+`cron.job_run_details`. Rotating `CRON_SECRET` means changing both.
+`vercel.json` keeps the daily crons (`weekly-scans`, `lifecycle-emails`,
+`weekly-digest`, `affiliate-report`), and `vercel-crons.test.ts` fails if a
+sub-daily schedule comes back to it.
 
 **Scan continuation pass (SCAN-CRON-DRAIN-1, log §262).** `/api/cron/scan-continue`
 runs every 5 minutes (`*/5 * * * *`) and re-dispatches every scan run younger
@@ -234,6 +248,20 @@ paga de verdad sin duplicar clientes, price IDs y webhooks. Comparación por
 email, no por `auth.users.id` como `ADMIN_USER_IDS`: el fallo aquí es "una
 cuenta ve un muro de pago que no debería", barato de notar y corregir, no una
 brecha de acceso.
+
+### API interna de estudios (STUDY-API-1)
+
+| Variable | Required | Where | Expected shape |
+|---|---|---|---|
+| `STUDY_API_SECRET` | No, sin ella `/api/internal/study/*` responde 401 a todo | Vercel | cadena aleatoria larga, p. ej. `openssl rand -hex 32`; quien llama la envía como `Authorization: Bearer <STUDY_API_SECRET>` |
+| `STUDY_API_DAILY_CAP` | No (600 por defecto) | Vercel | entero positivo: unidades LLM por 24 h móviles |
+
+El motor de `/admin/estudio` (`lib/studies/study-engine.ts`) sin sesión de
+navegador, para las rutinas de captación. Secreto propio, nunca `CRON_SECRET`.
+El techo se cuenta en `public_checks` con `engine = 'study_api'` (una fila por
+unidad, escrita antes de gastar) y el comprobador gratuito excluye esas filas
+de sus contadores. Añadir la variable en Vercel exige desplegar un commit
+nuevo: el script de build se salta los redeploys sin cambios.
 
 ### Comprobador gratuito anónimo (FREE-CHECKER-1 Fase B)
 
@@ -346,6 +374,8 @@ toggle at `/dashboard/settings/notifications`).
 |---|---|---|---|
 | `SCAN_CONTINUE_SECRET` | **Yes** for campaigns with more active prompts than `MAX_REAL_SCAN_PROMPTS` — including every manual "Lanzar escaneo" | Vercel + local `.env.local` | random secret string; `executePendingScan` sends it as `Authorization: Bearer <SCAN_CONTINUE_SECRET>` to `/api/scan/continue` |
 | `NEXT_PUBLIC_SITE_URL` | No (falls back to `https://${VERCEL_URL}`, then `http://localhost:3000`) | Vercel | `https://<production-domain>` — set explicitly on Preview deploys if self-continuation needs to target the deploy's own URL rather than a stale `VERCEL_URL` |
+| `OPENAI_APPS_CHALLENGE_TOKEN` | No (sin ella `/.well-known/openai-apps-challenge` da 404) | Vercel | Token de verificación de dominio que da el portal de plugins de OpenAI para publicar el conector en ChatGPT. MCP-CHATGPT-SUBMIT-1, log §430, `docs/chatgpt-plugin/README.md` |
+| `ANDROID_SHA256_CERT_FINGERPRINTS` | No (sin ella `/.well-known/assetlinks.json` devuelve `[]` y la app de Android no verifica el dominio) | Vercel | Huellas SHA-256 del certificado de firma de la app (subida y Play App Signing), separadas por comas — ANDROID-TWA-1, `twa/README.md` |
 
 A project whose plan allows more active prompts than fit in one execution
 batch (`MAX_REAL_SCAN_PROMPTS=10`) has its scan split across multiple
@@ -462,6 +492,8 @@ nothing. A kind with no label simply is not sent to that platform.
 | `BING_SITE_VERIFICATION` | No | Vercel | GEO-SELF-1 Fase 1 (log §256). El token del `<meta name="msvalidate.01" ...>` de Bing Webmaster Tools, **solo el valor de `content`**. `app/layout.tsx` lo emite como `verification.other["msvalidate.01"]` sólo si existe |
 | `INDEXNOW_KEY` | No | Vercel + local (para `pnpm indexnow:ping`) | GEO-SELF-1 Fase 1 (log §256). Clave de IndexNow: 8–128 caracteres `a-z A-Z 0-9 -` (por ejemplo un UUID). Se sirve en `https://www.genscore.es/indexnow-key.txt`; sin ella, o mal formada, esa ruta da 404 y el ping no hace nada |
 | `PAGESPEED_API_KEY` | No | Vercel | SEARCH-SEO-1 Fase 2 (log §281). Clave de Google Cloud con la «PageSpeed Insights API» activada (gratis). La auditoría técnica mide con ella la velocidad de la portada (Core Web Vitals, móvil y escritorio) y la reutiliza 7 días. Sin ella no se llama a nada: no sale la tarjeta «Optimización de tu página Home» y la Salud SEO se calcula sin velocidad. Nunca se registra en logs |
+| `CLOUDFLARE_ACCOUNT_ID` | No | Vercel | AI-READ-2 (log §451). Id de la cuenta de Cloudflare (plan gratuito de Workers) que abre las páginas con Browser Run para «Lo que lee la IA». Sin esta variable o sin `CLOUDFLARE_BROWSER_TOKEN` no se llama a nada y el bloque se queda en su modo HTML |
+| `CLOUDFLARE_BROWSER_TOKEN` | No | Vercel (Sensitive) | AI-READ-2 (log §451). Token de API de Cloudflare con un único permiso: Account › Browser Rendering › Edit. Lo usa la cola del cron `run-audit` (como mucho una petición cada 10 s y 10 minutos de navegador al día en el plan gratuito; un 429 corta la pasada y se sigue en la siguiente). Nunca se registra en logs |
 | `DATAFORSEO_LOGIN` | No | Vercel | SEO-DIAG-0 (log §338). «API login» de DataForSEO (panel → API Access), no el email. Sólo lo usa `/admin/seo-diagnostico`. Sin él (o sin la contraseña) la página lo dice y no llama a nada |
 | `DATAFORSEO_PASSWORD` | No | Vercel | SEO-DIAG-0 (log §338). «API password» de DataForSEO, no la contraseña de la web. Nunca se registra en logs |
 | `GOOGLE_OAUTH_CLIENT_ID` | No | Vercel | SEARCH-SEO-1 Fase 3 (log §284). Id del cliente OAuth «GenScore» (aplicación web) del proyecto de Google Cloud `geo-tool`. Sirve para conectar Search Console en modo sólo lectura (`webmasters.readonly`). Es el mismo cliente que el login con Google de Supabase. La URI de redirección `https://www.genscore.es/api/search-console/callback` tiene que estar dada de alta en ese cliente; los previews de Vercel no pueden, así que la conexión sólo se prueba en producción. Sin ella no se ofrece la conexión |
@@ -624,8 +656,10 @@ actions.
 |---|---|---|---|
 | `RESEND_API_KEY` | No | Vercel + local `.env.local` | Resend API key (`re_...`) |
 | `RESEND_FROM_EMAIL` | No (defaults to `GenScore <onboarding@resend.dev>`, Resend's own shared test sender) | Vercel | `"GenScore <noreply@genscore.es>"` once a sending domain is verified in the Resend dashboard |
+| `RESEND_WEBHOOK_SECRET` | No (without it `/api/webhooks/resend` answers 503) | Vercel (Production) | Signing secret (`whsec_…`) of the Resend webhook pointed at `https://www.genscore.es/api/webhooks/resend` with the `email.*` delivery, open, click, bounce and complaint events. Apply migration 0048 first. MAIL-METRICS-1 (log §419) |
 | `EMAIL_UNSUBSCRIBE_SECRET` | No, but required before any "consejos y ofertas" email can go out | Vercel (Production; Preview optional) | Random string, ≥32 chars (`openssl rand -base64 32`). EMAIL-UNSUB-1 (log §232) |
 | `LIFECYCLE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the trial sequence (first scan ready, D1, D3, D5) and the post-trial one (end of trial, late version, D+3, D+10 — LIFECYCLE-WINBACK-1, log §238). Ignored while `EMAIL_UNSUBSCRIBE_SECRET` is unset. Apply migrations 0036–0038 first. LIFECYCLE-TRIAL-1 (log §233) |
+| `FEATURE_EMAILS_ENABLED` | No (off unless exactly `"true"`) | Vercel (Production) | `"true"` to send the three feature emails (Search Console, agentic audit, Chrome extension). Needs `LIFECYCLE_EMAILS_ENABLED` too. Apply migration 0047 first. FEATURE-EMAILS-1 (log §417) |
 
 Both optional by design: `lib/email/resend.ts`'s `getResendClient()` returns
 `null` when `RESEND_API_KEY` is unset, and every `lib/email/transactional.ts`

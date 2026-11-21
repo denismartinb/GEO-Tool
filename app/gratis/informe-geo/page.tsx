@@ -25,7 +25,7 @@ import { PublicFooter } from "@/components/marketing/public-footer";
 export const metadata: Metadata = contentMetadata({
   title: "Pide tu informe GEO gratis: qué dice la IA de tu marca · GenScore",
   description:
-    "Te enviamos un informe de tu marca en ChatGPT, Gemini, Claude y Perplexity: en qué preguntas apareces, a quién recomiendan en tu lugar, qué fuentes citan y qué cambiar primero. Gratis, en 48 h laborables.",
+    "Informe gratis de tu marca en ChatGPT, Gemini, Claude y Perplexity: dónde apareces, a quién recomiendan en tu lugar y qué cambiar primero.",
   path: "/gratis/informe-geo"
 });
 

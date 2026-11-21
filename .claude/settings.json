@@ -16,7 +16,10 @@
       "Bash(pnpm test *)",
       "Bash(pnpm run validate *)",
       "Bash(pnpm run lint *)",
-      "Bash(pnpm run typecheck *)"
+      "Bash(pnpm run typecheck *)",
+      "Bash(curl *https://www.genscore.es/api/internal/study/*)",
+      "Bash(curl *https://genscore.es/api/internal/study/*)"
+
     ],
     "deny": [
       "Bash(git push --force *)",

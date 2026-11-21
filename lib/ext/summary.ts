@@ -1,0 +1,239 @@
+import { resolveCitation } from "@/lib/citations/aggregate-citations";
+import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
+import type { OverviewAgenticCard } from "@/lib/agentic-audit/visibility-model";
+import type { ReportAnswer, ReportModel } from "@/lib/report/report-model";
+
+/**
+ * CHROME-EXT-1 paso 02 — what the Chrome extension's panel shows of a
+ * project (`docs/chrome-extension/task-intake-report.md` §18).
+ *
+ * Pure on purpose: every figure arrives already computed by its owner — the
+ * Puntuación GEO, engines, rivals, technical score and plan from
+ * `buildReportModel` over `loadReportInput` (the same loader as the
+ * report, which itself takes each figure from the console's owner), the
+ * agentic block from `overviewAgenticCard`. This module only picks fields
+ * and renames them for the panel. Shares stay shares in [0, 1]: the panel
+ * prints percentages, never counts (`.claude/rules/report.md`).
+ */
+
+export type ExtEngine = { provider: string; label: string; mentionShare: number };
+/** `domain` paints the rival's favicon: the project's own for the brand, a tracked competitor's when the name matches, else null (log §408). */
+export type ExtRival = { name: string; share: number; isBrand: boolean; domain: string | null };
+/**
+ * `draft` (WP-PLUGIN-3, log §432): the action is to publish a new page that
+ * answers these questions, so the WordPress plugin may offer a draft with
+ * them as headings. Never for a page that already exists, a comparison with a
+ * rival or work outside the site.
+ */
+export type ExtPlanItem = {
+  title: string;
+  firstStep: string | null;
+  engines: string[];
+  questions?: string[];
+  draft?: boolean;
+  /**
+   * WP-PLUGIN-4 (log §432 adenda 1.4.0): what the plugin needs to act on the
+   * item. `type` is the recommendation type (or «lever» / «lever_definition»),
+   * `rival` the rival a comparison names, `page` the own page coverage
+   * confirmed (http(s) only), `drivers` the criticisms the AI repeats.
+   */
+  type?: string | null;
+  rival?: string | null;
+  page?: string | null;
+  drivers?: string[];
+};
+
+/**
+ * The item asks for a new page the plugin can start as a draft: a page for
+ * questions (page levers, FAQ cards, «Publica una página…»), a comparison
+ * with a named rival or with the tracked rivals, or an answer to the
+ * criticisms the AI repeats (WP-PLUGIN-4, log §432 adenda 1.4.0). Never for a
+ * page that already exists or for work outside the site.
+ */
+export function isDraftable(p: { title: string; type?: string; questions?: string[]; rival?: string | null; drivers?: string[]; page?: string | null }): boolean {
+  const hasQuestions = Boolean(p.questions && p.questions.length > 0);
+  switch (p.type) {
+    case "lever":
+    case "create_faq_section":
+      return hasQuestions;
+    case "increase_brand_visibility":
+      return hasQuestions && p.title.startsWith("Publica una página");
+    case "close_competitor_gap":
+      return Boolean(p.rival) && p.title.startsWith("Publica");
+    case "add_comparison_content":
+      return p.title.startsWith("Publica");
+    case "address_negative_narrative":
+      return Boolean(p.drivers && p.drivers.length > 0);
+    // A fact with its source: on the page if the plan names one (the plugin
+    // adds it there), otherwise a new page for its questions (log §432 adenda 1.4.1).
+    case "add_citation_block":
+    case "improve_citation_readiness":
+      return hasQuestions && !p.page;
+    default:
+      return false;
+  }
+}
+/** One plan item as the panel, the MCP and the plugin receive it. */
+export function toExtPlanItem(
+  p: { title: string; firstStep: string | null; engineLabels: string[]; questions?: string[]; type?: string; rival?: string | null; page?: string | null; drivers?: string[] },
+  domain: string
+): ExtPlanItem {
+  const page = p.page && isOwnUrl(p.page, domain) && /^https?:\/\//i.test(p.page) ? p.page : null;
+  return {
+    title: p.title,
+    firstStep: p.firstStep,
+    engines: p.engineLabels,
+    questions: p.questions ?? [],
+    draft: isDraftable({ ...p, page }),
+    type: p.type ?? null,
+    rival: p.rival ?? null,
+    page,
+    drivers: p.drivers ?? []
+  };
+}
+
+export type ExtCitingPrompt = { text: string; engines: string[]; mentioned: boolean };
+export type ExtAgentic =
+  | { kind: "card"; score: number; headline: string; components: Array<{ name: string; points: number | null; weight: number }> }
+  | { kind: "upsell" }
+  | null;
+
+export type ExtProjectSummary = {
+  domain: string;
+  brand: string;
+  scanDate: string | null;
+  geoScore: number | null;
+  lede: string | null;
+  engines: ExtEngine[];
+  rivals: ExtRival[];
+  /** Domains of the active tracked competitors, so the panel does not offer to add one twice. */
+  competitorDomains: string[];
+  /** «Salud SEO»: the SEO block of the latest technical audit. Null without one. */
+  seoScore: number | null;
+  plan: ExtPlanItem[];
+  agentic: ExtAgentic;
+  /** Prompts of the latest scan whose answer cited the open page. Null when no url was asked for. */
+  citingPrompts: ExtCitingPrompt[] | null;
+};
+
+/** The panel's rival list: the brand plus the four most named rivals. */
+export const EXT_RIVALS = 4;
+export const EXT_PLAN_ITEMS = 3;
+
+export function toExtAgentic(card: OverviewAgenticCard): ExtAgentic {
+  if (card.kind === "upsell") return { kind: "upsell" };
+  if (card.kind !== "card") return null;
+  return {
+    kind: "card",
+    score: card.score,
+    headline: card.headline,
+    components: card.components.map((c) => ({ name: c.name, points: c.points, weight: c.weight }))
+  };
+}
+
+/** Same page, whatever the scheme, `www.`, trailing slash, query or fragment. */
+export function pageKey(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "http:" && u.protocol !== "https:") return null;
+    const path = u.pathname.replace(/\/+$/, "") || "/";
+    return `${u.hostname.replace(/^www\./, "").toLowerCase()}${path}`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Prompts whose answer cited `url`. Citations go through `resolveCitation`,
+ * the function Páginas citadas uses, so the panel and that screen agree on
+ * what counts as a cited page.
+ */
+export function findCitingPrompts(
+  answers: readonly ReportAnswer[],
+  url: string,
+  engineLabel: (provider: string) => string
+): ExtCitingPrompt[] {
+  const want = pageKey(url);
+  if (!want) return [];
+  const byPrompt = new Map<string, ExtCitingPrompt & { providers: Set<string> }>();
+  for (const a of answers) {
+    const ext = a.extracted as { citations?: unknown; brand?: { mentioned?: unknown } } | null;
+    const citations = Array.isArray(ext?.citations) ? ext.citations : [];
+    const cites = citations.some((c) => {
+      const resolved = c && typeof c === "object" ? resolveCitation(c as Parameters<typeof resolveCitation>[0]) : null;
+      return Boolean(resolved?.url) && pageKey(resolved!.url) === want;
+    });
+    if (!cites) continue;
+    const entry = byPrompt.get(a.promptId) ?? { text: a.promptText, engines: [], mentioned: false, providers: new Set<string>() };
+    if (a.provider && !entry.providers.has(a.provider)) {
+      entry.providers.add(a.provider);
+      entry.engines.push(engineLabel(a.provider));
+    }
+    if (ext?.brand?.mentioned === true) entry.mentioned = true;
+    byPrompt.set(a.promptId, entry);
+  }
+  return [...byPrompt.values()].map(({ text, engines, mentioned }) => ({ text, engines, mentioned }));
+}
+
+export function buildExtProjectSummary({
+  project,
+  model,
+  answers,
+  agentic,
+  url,
+  engineLabel,
+  competitors = [],
+  seoScore = null
+}: {
+  project: { domain: string; brand: string };
+  model: ReportModel | null;
+  answers: readonly ReportAnswer[];
+  agentic: OverviewAgenticCard;
+  url: string | null;
+  engineLabel: (provider: string) => string;
+  /** Active tracked competitors, only to find each rival's domain. */
+  competitors?: ReadonlyArray<{ name: string; domain: string | null }>;
+  /** The SEO block of the technical audit (`buildExtAudits`), the console's «Salud SEO». */
+  seoScore?: number | null;
+}): ExtProjectSummary {
+  const ownUrl = url && isOwnUrl(url, project.domain) ? url : null;
+  return {
+    domain: project.domain,
+    brand: model?.brandName ?? project.brand,
+    scanDate: model?.scanDate ?? null,
+    geoScore: model?.geoScore ?? null,
+    lede: model?.summary.lede ?? null,
+    engines: (model?.engines ?? []).map((e) => ({ provider: e.provider, label: e.label, mentionShare: e.mentionShare })),
+    rivals: pickRivals(model, project.domain, competitors),
+    competitorDomains: [...new Set(competitors.flatMap((c) => (c.domain ? [c.domain.trim().toLowerCase().replace(/^www\./, "")] : [])))],
+    // Never the report's technical score: that is the GEO Score's «Diagnóstico
+    // técnico», a different figure (log §432, adenda 1.1.2).
+    seoScore,
+    plan: (model?.plan ?? []).slice(0, EXT_PLAN_ITEMS).map((p) => toExtPlanItem(p, project.domain)),
+    agentic: toExtAgentic(agentic),
+    citingPrompts: ownUrl ? findCitingPrompts(answers, ownUrl, engineLabel) : null
+  };
+}
+
+export function isOwnUrl(url: string, domain: string): boolean {
+  try {
+    return isSameOrSubdomain(new URL(url).hostname, domain);
+  } catch {
+    return false;
+  }
+}
+
+/** The brand always stays in the list, even when it is not in the top four. */
+function pickRivals(
+  model: ReportModel | null,
+  ownDomain: string,
+  competitors: ReadonlyArray<{ name: string; domain: string | null }>
+): ExtRival[] {
+  const byName = new Map(competitors.filter((c) => c.domain).map((c) => [c.name.trim().toLowerCase(), c.domain as string]));
+  const bars = model?.competition.bars ?? [];
+  const top = bars.filter((b) => !b.isBrand).slice(0, EXT_RIVALS);
+  const brand = bars.find((b) => b.isBrand);
+  return [...top, ...(brand ? [brand] : [])]
+    .sort((a, b) => b.share - a.share)
+    .map((b) => ({ name: b.name, share: b.share, isBrand: b.isBrand, domain: b.isBrand ? ownDomain : byName.get(b.name.trim().toLowerCase()) ?? null }));
+}

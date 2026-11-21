@@ -1,6 +1,12 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { BrandLogo } from "@/components/ui/brand-logo";
+import "@/app/ins/tokens.css";
+import "@/app/ins/components.css";
+import "@/app/ins/auth.css";
+import { AuthHead, AuthPage } from "@/components/ins/auth/page";
+import { OtpInput, SubmitButton } from "@/components/ins/auth/parts";
+import { Ic } from "@/components/ins/ic";
+import { signOut } from "@/app/dashboard/actions";
 import { requireOperatorCandidate } from "@/lib/admin/operator";
 import { safeAdminNext } from "@/lib/admin/safe-next";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
@@ -32,48 +38,23 @@ export default async function MfaChallengePage({
   if (!factor) redirect("/mfa/enroll");
 
   return (
-    <main className="auth-bg">
-      <div className="auth-card fade-in" style={{ maxWidth: 400 }}>
-        <div className="auth-logo">
-          <BrandLogo size={24} />
+    <AuthPage lit={1}>
+      <AuthHead title="Verifica tu identidad">El código de 6 dígitos de tu app de autenticación.</AuthHead>
+      {params.error ? (
+        <div className="au-fail" role="alert">
+          <Ic n="warn" sm />
+          {params.error}
         </div>
-
-        <div className="auth-h1">Verifica tu identidad</div>
-        <div className="auth-sub">Introduce el código de 6 dígitos de tu app de autenticación.</div>
-
-        {params.error ? (
-          <p className="feedback error" style={{ marginTop: 20 }}>
-            {params.error}
-          </p>
-        ) : null}
-
-        <form action={verifyChallenge} className="auth-form" style={{ marginTop: 20 }}>
-          <input type="hidden" name="factorId" value={factor.id} />
-          <input type="hidden" name="next" value={next} />
-          <div>
-            <label className="field-label" htmlFor="code">
-              Código de 6 dígitos
-            </label>
-            <input
-              id="code"
-              name="code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              required
-              autoFocus
-              className="field"
-              placeholder="000000"
-              style={{ letterSpacing: "0.3em", textAlign: "center", fontVariantNumeric: "tabular-nums" }}
-            />
-          </div>
-          <button type="submit" className="btn btn-primary auth-btn">
-            Verificar
-          </button>
-        </form>
-      </div>
-    </main>
+      ) : null}
+      <form action={verifyChallenge} className="au-step-form">
+        <input type="hidden" name="factorId" value={factor.id} />
+        <input type="hidden" name="next" value={next} />
+        <OtpInput name="code" label="Código de verificación" />
+        <SubmitButton pendingLabel="Verificando…">Verificar</SubmitButton>
+      </form>
+      <form action={signOut} className="au-back">
+        <button type="submit">Usar otra cuenta</button>
+      </form>
+    </AuthPage>
   );
 }

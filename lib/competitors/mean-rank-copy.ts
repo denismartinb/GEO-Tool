@@ -29,6 +29,14 @@
  * sirve: para dejar fuera a Amazon (14%) habría que subirlo tanto que se llevaría
  * por delante a media lista. La decisión aprobada por el fundador fue arreglar
  * cómo se lee, no lo que mide.
+ *
+ * **Superseded por §353 (COMPETITOR-RANK-VISIBILITY-1, 2026-10-28).** Con el
+ * rótulo arreglado seguía sin cuadrar: en el proyecto de pruebas del fundador
+ * una marca nombrada en el 19% de las respuestas encabezaba la lista por
+ * delante de la propia marca, nombrada en el 95% («no tiene sentido», fundador).
+ * Además la columna «Puesto medio» pintaba el número de fila (1º, 2º, 3º…), no
+ * la media. Desde §353 la lista se ordena por mención y la columna enseña la
+ * media real con `formatMeanPosition`.
  */
 
 /** Cabecera de la columna, en las dos pantallas. */
@@ -42,7 +50,7 @@ export const MEAN_RANK_BRAND_HEADLINE = "Tu puesto medio cuando apareces";
  * Dos redacciones porque el bloque cambia de contenido: con historia suficiente
  * pinta una evolución, sin ella sólo la foto del último escaneo.
  */
-export const MEAN_RANK_LIST_HEADLINE = "Puesto medio cuando aparece cada marca";
+export const MEAN_RANK_LIST_HEADLINE = "Mención y puesto medio de cada marca";
 export const MEAN_RANK_TREND_HEADLINE = "Evolución del puesto medio de cada marca";
 
 /**
@@ -54,3 +62,12 @@ export const MEAN_RANK_TREND_HEADLINE = "Evolución del puesto medio de cada mar
  * rótulo "Puesto medio" (arriba) se queda: sigue siendo lo que evita leer la
  * cifra como un ranking. Lo que se retira es sólo la frase larga.
  */
+
+/**
+ * La media real del puesto cuando la marca aparece, con un decimal y coma
+ * («1,4»). Nunca un ordinal: «2º» se lee como un puesto en la lista, y la
+ * lista ya va ordenada por mención (log §353).
+ */
+export function formatMeanPosition(position: number): string {
+  return position.toLocaleString("es-ES", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+}

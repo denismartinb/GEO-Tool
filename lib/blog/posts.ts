@@ -18,6 +18,8 @@ export type BlogCluster = {
   key: "fundamentos" | "medicion" | "playbooks" | "sectores";
   title: string;
   description: string;
+  /** MCP-SITE-FIXES-1 (log §431): meta description when `description` is outside 50 to 160 characters. */
+  metaDescription?: string;
   /**
    * GROWTH-2 Fase 2.9 (B1b): longer synthesis paragraph(s) for the cluster's
    * own pillar page (/blog/<key>) — only set once a cluster has enough real
@@ -54,6 +56,8 @@ export const BLOG_CLUSTERS: BlogCluster[] = [
     key: "sectores",
     title: "GEO por sector",
     description: "GEO aplicado a ecommerce, SaaS y agencias.",
+    metaDescription:
+      "GEO aplicado a cada sector: qué preguntas hacen los clientes de ecommerce, SaaS B2B y agencias a la IA y qué palanca rinde primero en cada caso.",
     pillarIntro:
       "Las reglas del GEO son las mismas para todos, pero la pregunta que hace un comprador no se parece en nada a la que hace un comité de compra de software. Un cliente de ecommerce pregunta por una decisión con presupuesto y restricción —\"un regalo para alguien que empieza a correr, menos de 60 euros\"— y recibe dos o tres nombres. Un comprador B2B hace una secuencia larga de preguntas antes de pedir una demo, y ninguna de ellas menciona todavía a un proveedor. Medir lo mismo en los dos casos da un número que no significa nada.\n\nEsta sección traduce la metodología a cada sector: qué preguntas representan de verdad a sus clientes, qué fuentes cita el modelo en ese mercado, y cuál es la palanca que rinde primero. Empieza por ecommerce, donde la lista corta de marcas es literalmente corta y el trabajo útil está casi todo fuera de tu propia web."
   }
@@ -112,6 +116,13 @@ export type BlogPost = {
    * Rendered above `heroStat` when the post has both.
    */
   heroLogos?: { name: string; src: string; badge?: string }[][];
+  /**
+   * EXT-LAUNCH-1 (log §395): for a launch post about a GenScore screen, a
+   * picture of that screen on the dark hero, in place of a figure. Our own
+   * product only, rendered at 2x or more, with invented data said in `alt`
+   * (ADR 0028). Never a third party's product.
+   */
+  heroImage?: { src: string; alt: string; width: number; height: number };
 };
 
 export const BLOG_POSTS: BlogPost[] = [
@@ -788,6 +799,226 @@ export const BLOG_POSTS: BlogPost[] = [
       value: "30%",
       label: "de los consumidores españoles confían en que la IA haga una compra por ellos estas fiestas.",
       source: "Shopify y Sapio Research, 2.000 consumidores españoles (julio de 2026)"
+    }
+  },
+  {
+    slug: "la-ia-prefiere-contenido-reciente",
+    title: "¿La IA prefiere el contenido reciente? Lo que dicen los datos y cómo actualizar sin trampas",
+    seoTitle: "¿La IA prefiere contenido reciente? Lo que dicen los datos",
+    metaDescription:
+      "El 75% de las páginas que cita la IA se actualizó en el último año, pero solo el 42% es nuevo. Qué dicen los datos y cómo mantener tu contenido al día.",
+    description:
+      "ChatGPT, Gemini y Perplexity citan sobre todo páginas actualizadas en el último año, y la mayoría no son nuevas: son páginas antiguas puestas al día. Qué dicen los estudios de Seer Interactive, Ahrefs y la Universidad de Waseda, por qué cambiar la fecha no basta y cómo declarar la fecha de actualización para que Google y la IA la lean.",
+    datePublished: "2026-10-26",
+    coverImage: "/blog/la-ia-prefiere-contenido-reciente/cover.webp",
+    coverIcon: "calendar",
+    // BLOG-FRESH-1 (log §348). Seer Interactive, Study: Content Recency's
+    // Impact on AI Visibility in 2026 (Jul 2026); Ahrefs, AI Assistants Prefer
+    // to Cite "Fresher" Content (Jul 2025); Fang et al., Waseda University,
+    // arXiv:2509.11353 (Sep 2025); Google Search Central (publication dates,
+    // helpful content). The JSON-LD example lives in
+    // lib/blog/article-dates-jsonld.ts and is tested against checkFreshness
+    // (lib/web-audit/page-checks.ts), which backs the product claims.
+    primaryKeyword: "la ia prefiere contenido reciente",
+    cluster: "medicion",
+    heroStat: {
+      value: "75%",
+      label: "de las páginas que citan ChatGPT, Gemini y Perplexity se actualizó en el último año. Solo el 42% se publicó en ese plazo.",
+      source: "Seer Interactive, 47.097 citas en cuatro sectores (marzo a junio de 2026)"
+    }
+  },
+  {
+    slug: "convierte-mejor-el-trafico-de-la-ia",
+    title: "¿Convierte mejor el tráfico que llega desde la IA? Lo que dicen los estudios y por qué no coinciden",
+    seoTitle: "¿Convierte mejor el tráfico de la IA? Qué dicen los datos",
+    metaDescription:
+      "Adobe ve un 60% más de conversión en las visitas que llegan de la IA; otro estudio, menos que la búsqueda orgánica. Por qué no coinciden y cómo medir la tuya.",
+    description:
+      "Adobe, Shopify y Ahrefs dicen que las visitas que llegan desde ChatGPT y otros asistentes convierten más que el resto; un estudio académico sobre 973 tiendas dice que menos que la búsqueda orgánica. Qué mide cada uno, por qué no coinciden y cómo medir el tráfico de IA de tu propia web.",
+    datePublished: "2026-10-30",
+    coverImage: "/blog/convierte-mejor-el-trafico-de-la-ia/cover.webp",
+    coverIcon: "chart",
+    // BLOG-CONVERT-1 (log §360). Adobe Digital Insights, AI Traffic Trends
+    // Report (Aug 2026); Shopify, AI search category behavior (Aug 2026);
+    // Ahrefs, Does AI Search Traffic Convert Better (Jun 2025); Kaiser and
+    // Schulze, Marketing Science (2026), doi 10.1287/mksc.2025.0489. The GA4
+    // condition reuses GA4_AI_SOURCE_REGEX, already tested for the S8 post.
+    primaryKeyword: "convierte mejor el tráfico de la ia",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "60%",
+      label: "más de conversión en las visitas a tiendas online de EE. UU. que llegan desde la IA, frente al resto del tráfico.",
+      source: "Adobe Digital Insights, más de un billón de visitas a webs de comercio de EE. UU. (julio de 2026)"
+    }
+  },
+  {
+    slug: "extension-de-chrome-de-genscore",
+    title: "GenScore ya está en Chrome: mira cualquier web como la ve la IA",
+    seoTitle: "Extensión de Chrome de GenScore: SEO e IA en un clic",
+    metaDescription:
+      "Extensión gratis para Chrome: nota SEO + IA de cualquier página, qué motores de IA pueden leerla y qué cambiar primero, con el código listo. Sin cuenta.",
+    description:
+      "Un clic en cualquier página: su nota SEO + IA, qué motores de IA pueden leerla y qué cambiar primero. Gratis y sin cuenta.",
+    datePublished: "2026-10-31",
+    dateUpdated: "2026-11-02",
+    coverImage: "/blog/extension-de-chrome-de-genscore/cover.webp",
+    coverIcon: "search",
+    heroImage: {
+      src: "/blog/extension-de-chrome-de-genscore/hero.webp",
+      alt: "Ventana de Chrome con la ficha de una tienda inventada y, al lado, el panel de GenScore con la nota SEO + IA de la página y sus indicadores IA, Google y Agentes.",
+      width: 1632,
+      height: 940
+    },
+    // EXT-LAUNCH-1 (log §395): launch post for CHROME-EXT-1 (log §361, §362).
+    // Product claims trace to the store build (docs/chrome-extension/prueba/
+    // extension, 1.0.0) and the /privacidad section; every picture is the
+    // real panel rendered at 2x or more with a made-up store (ADR 0028).
+    primaryKeyword: "extensión chrome seo ia",
+    cluster: "playbooks"
+  },
+  {
+    slug: "como-hacer-una-comparativa-que-la-ia-cite",
+    title: "Cómo hacer una comparativa con tu competidor que la IA cite (y que no te meta en un lío)",
+    seoTitle: "Cómo hacer una comparativa con tu competidor que la IA cite",
+    metaDescription:
+      "Siete pasos para publicar una comparativa con tu competidor que ChatGPT, Gemini y Claude puedan citar: criterios, fuentes, conclusión y lo que dice la ley.",
+    description:
+      "Cómo montar una página que responda «¿tu marca o la otra?»: elegir la pregunta, de tres a seis criterios que decidan la compra, una tabla con fuente y fecha en cada dato del competidor, una conclusión que diga para quién es mejor cada uno y lo que pide el artículo 10 de la Ley de Competencia Desleal.",
+    datePublished: "2026-11-01",
+    coverImage: "/blog/como-hacer-una-comparativa-que-la-ia-cite/cover.webp",
+    coverIcon: "layers",
+    // RECS-GUIDES-1 (log §416): the practical guide the comparison cards
+    // (add_comparison_content, close_competitor_gap) link to. Legal section:
+    // Ley 3/1991 de Competencia Desleal, art. 9 and 10 (BOE-A-1991-628,
+    // consolidated text). Product claims: brecha de prompts in Competidores
+    // (log §374), sitemap check of own comparisons (log §330), competitor
+    // cells as link-and-date placeholders (log §331). No figures: the example
+    // table uses made-up brands and X €/Y € placeholders.
+    primaryKeyword: "comparativa con tu competidor",
+    cluster: "playbooks"
+  },
+  {
+    slug: "datos-estructurados-y-citas-de-la-ia",
+    title: "¿Los datos estructurados hacen que la IA te cite? Lo que dicen los estudios",
+    seoTitle: "¿Los datos estructurados ayudan a salir en la IA?",
+    metaDescription:
+      "Ahrefs comparó páginas que añadieron JSON-LD con otras que no: sus citas en la IA no subieron. Qué dicen los estudios, Google y para qué sí sirve el schema.",
+    description:
+      "Se repite que el schema ayuda a salir en las respuestas de la IA. Ahrefs, AirOps y la documentación de Google dicen otra cosa: qué mide cada uno, por qué no coinciden y para qué sí sirven los datos estructurados.",
+    datePublished: "2026-11-02",
+    coverImage: "/blog/datos-estructurados-y-citas-de-la-ia/cover.webp",
+    coverIcon: "fileText",
+    // BLOG-SCHEMA-1 (log §433). Ahrefs, Does schema help AI citations (May
+    // 2026, ahrefs.com/blog/schema-ai-citations); AirOps and Kevin Indig, The
+    // fan-out effect (Apr 2026); Google, AI features and your website
+    // (updated 2025-12-10). The Organization example is tested against
+    // checkStructuredData in lib/blog/organization-jsonld.test.ts.
+    primaryKeyword: "datos estructurados citas ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "4,6%",
+      label: "menos de citas en las Vistas creadas con IA de Google en las páginas que añadieron JSON-LD, frente a páginas parecidas que no lo hicieron.",
+      source: "Ahrefs, 1.885 páginas con páginas de control, 30 días antes y después (mayo de 2026)"
+    }
+  },
+  {
+    slug: "como-compran-los-consumidores-con-ia",
+    title: "¿Cuántos consumidores compran ya con la IA? Lo que dice la nueva encuesta de McKinsey",
+    seoTitle: "Compras con IA: lo que dice la encuesta de McKinsey",
+    metaDescription:
+      "El 53% de los consumidores ya usa la IA para comprar, sobre todo ChatGPT o Gemini y no el asistente de la tienda, según McKinsey. Qué significa para tu marca.",
+    description:
+      "McKinsey ha preguntado a unos 21.000 consumidores de 11 países cómo usan la IA para comprar: más de la mitad ya la usa en sus compras, pagar con ella sigue siendo minoritario y los asistentes generales le sacan ventaja al de la tienda. Qué dice la encuesta y qué hacer para entrar en la lista corta de la IA.",
+    datePublished: "2026-11-04",
+    coverImage: "/blog/como-compran-los-consumidores-con-ia/cover.webp",
+    coverIcon: "users",
+    // BLOG-MCKINSEY-1 (log §467). McKinsey, Who wins when AI does the
+    // shopping? New evidence on agentic commerce (28 Oct 2026), Agentic
+    // Commerce Consumer Survey, ~21,000 consumers in 11 markets, June 2026.
+    // Spain is not in the sample; the post says so.
+    primaryKeyword: "compras con ia",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "53%",
+      label: "de los adultos usó la IA para al menos una tarea de compra en los tres meses anteriores.",
+      source: "McKinsey, encuesta a unos 21.000 consumidores de 11 países (junio de 2026)"
+    }
+  },
+  {
+    slug: "genscore-para-wordpress",
+    title: "GenScore ya está en WordPress: arregla en un clic lo que no deja a la IA leer tu web",
+    seoTitle: "Plugin de WordPress de GenScore: SEO e IA en un clic",
+    metaDescription:
+      "Plugin gratis para WordPress y WooCommerce: revisa tu web para la IA, Google y los agentes de compra, y arregla schema, llms.txt y bots de IA en un clic.",
+    description:
+      "Revisa tu web desde el escritorio de WordPress como la leen ChatGPT, Gemini, Claude, Perplexity, Google y los agentes de compra, y arregla lo primero con un clic. Gratis y sin cuenta.",
+    datePublished: "2026-11-05",
+    coverImage: "/blog/genscore-para-wordpress/cover.webp",
+    coverIcon: "search",
+    heroImage: {
+      src: "/blog/genscore-para-wordpress/hero.webp",
+      alt: "Escritorio de WordPress con la pantalla de GenScore en una tienda inventada, Café Ventura: optimización técnica «Optimizada», recomendaciones técnicas con «Arreglar» y la Puntuación GEO de la cuenta conectada.",
+      width: 1632,
+      height: 994
+    },
+    // WP-LAUNCH-1 (log §469): launch post for the WordPress plugin (log §421,
+    // §432), published on WordPress.org on 2026-11-05 at 1.4.2. Product claims
+    // trace to the plugin code and readme in docs/wordpress-plugin/genscore;
+    // lib/blog/wordpress-plugin.test.ts ties the key ones to the code. Every
+    // picture is a real capture of the plugin on a local WordPress +
+    // WooCommerce with a made-up shop; with the account connected, the account
+    // figures are made up too (ADR 0028). Merges PR #751 into this one.
+    primaryKeyword: "plugin wordpress seo ia",
+    cluster: "playbooks"
+  },
+  {
+    slug: "cuantos-clics-manda-chatgpt",
+    title: "¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales",
+    seoTitle: "¿Cuántos clics manda ChatGPT? Lo que mide un estudio",
+    metaDescription:
+      "Solo el 5,2% de las conversaciones con ChatGPT acaba en un clic a otra web, frente al 31,1% de las búsquedas en Google. Qué significa y qué medir en su lugar.",
+    description:
+      "Un estudio de la Universidad Bocconi con datos de navegación de escritorio de Comscore en EE. UU. mide que solo el 5,2% de las conversaciones con ChatGPT acaba en un clic hacia otra web, frente al 31,1% de las búsquedas en Google. Qué significa para tu marca, en qué temas sí hay clics y por qué hay que medir si la IA te nombra, no solo las visitas.",
+    datePublished: "2026-11-05",
+    coverImage: "/blog/cuantos-clics-manda-chatgpt/cover.webp",
+    coverIcon: "trendUp",
+    // BLOG-CLICS-1 (log §468). Shi, Zhu y Gu (Universidad Bocconi), Answering
+    // Without Referring: How AI Search Rewrites the Web's Economic Bargain,
+    // arXiv:2607.07652 (julio de 2026), Comscore U.S. desktop clickstream
+    // (octubre de 2024 a julio de 2025); Pew Research Center, Google users are
+    // less likely to click on links when an AI summary appears (22-07-2025),
+    // 900 adultos de EE. UU., navegación de marzo de 2025.
+    primaryKeyword: "clics de chatgpt",
+    cluster: "medicion",
+    heroStat: {
+      value: "5,2%",
+      label: "de las conversaciones con ChatGPT acabó en un clic hacia otra web. En Google, el 31,1% de las búsquedas.",
+      source: "Universidad Bocconi, navegación de escritorio de Comscore en EE. UU. (octubre de 2024 a julio de 2025)"
+    }
+  },
+  {
+    slug: "menciones-de-marca-o-enlaces-para-la-ia",
+    title: "¿Qué se asocia más con que la IA te nombre: los enlaces o las menciones de tu marca?",
+    seoTitle: "Menciones de marca o enlaces: qué se asocia más con la IA",
+    metaDescription:
+      "En 75.000 marcas, las menciones en otras webs y en YouTube se asocian con salir en ChatGPT mucho más que los enlaces. Qué dicen los datos y qué no.",
+    description:
+      "Dos estudios de Ahrefs sobre 75.000 marcas y uno de Seer Interactive comparan qué señales van de la mano de que la IA nombre a una marca. Las menciones en otras webs y en YouTube se asocian mucho más con aparecer que los enlaces. Qué significa, qué no demuestra y qué probar para que hablen de ti donde la IA lee.",
+    datePublished: "2026-11-11",
+    coverImage: "/blog/menciones-de-marca-o-enlaces-para-la-ia/cover.webp",
+    coverIcon: "trendUp",
+    // BLOG-MENCIONES-1 (log §470). Ahrefs, An Analysis of AI Overview Brand
+    // Visibility Factors (Louise Linehan, 26-05-2025) and Top Brand Visibility
+    // Factors in ChatGPT, AI Mode, and AI Overviews (12-12-2025), 75.000 brands
+    // with DR > 40, Spearman correlations from Brand Radar; Seer Interactive,
+    // What Drives Brand Mentions in AI Answers? (07-01-2025), 10.000 finance
+    // and SaaS questions through the OpenAI API.
+    primaryKeyword: "menciones de marca ia",
+    cluster: "playbooks",
+    heroStat: {
+      value: "0,737",
+      label: "de correlación entre las menciones de una marca en YouTube y las veces que la nombra la IA. Los enlaces, una correlación muy débil.",
+      source: "Ahrefs, 75.000 marcas en ChatGPT y la IA de Google (diciembre de 2025)"
     }
   }
 ];

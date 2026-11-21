@@ -1,3 +1,4 @@
+import { isRetiredRecommendationType, recommendationHeadline } from "@/lib/recommendations/headline";
 import "server-only";
 
 import type { createServiceClient } from "@/lib/supabase/service";
@@ -6,6 +7,7 @@ import { isCompedAccountEmail } from "@/lib/billing/comped-accounts";
 import { isInternalTestAccountEmail } from "@/lib/projects/internal-test-accounts";
 import { recommendationEngineLabels } from "@/lib/recommendations/export-plan";
 import { isLifecycleEmailEnabled } from "@/lib/email/lifecycle/flag";
+import { FEATURE_KINDS } from "@/lib/email/lifecycle/feature-schedule";
 import {
   decideTrialEmail,
   decideTrialEndEmail,
@@ -62,7 +64,7 @@ export function lifecycleDeadline(startedAt: number = Date.now()): number {
 
 type RankingEntry = { name?: string; is_brand?: boolean; mention_count?: number; prompt_count?: number };
 
-function isExcludedAccount(email: string | null | undefined): boolean {
+export function isExcludedAccount(email: string | null | undefined): boolean {
   return isCompedAccountEmail(email) || isInternalTestAccountEmail(email);
 }
 
@@ -129,23 +131,29 @@ async function loadTopRecommendation(
 
   const { data: recs } = await service
     .from("recommendations")
-    .select("title, description, evidence_json")
+    .select("title, description, recommendation_type, evidence_json")
     .eq("project_id", projectId)
     .eq("run_id", latest.run_id)
     .eq("status", "active")
     .order("priority_rank", { ascending: true });
-  if (!recs || recs.length === 0) return null;
+  // RECS-HEADLINES-1 (log §354): retired types have no task to offer.
+  const live = (recs ?? []).filter((r) => !isRetiredRecommendationType(r.recommendation_type as string));
+  if (live.length === 0) return null;
 
-  const [top] = recs;
+  const [top] = live;
   return {
     recommendation: {
-      title: top.title as string,
+      title: recommendationHeadline({
+        recommendation_type: top.recommendation_type as string,
+        title: top.title as string,
+        evidence_json: top.evidence_json
+      }).title,
       description: top.description as string,
       engines: recommendationEngineLabels({ evidence_json: top.evidence_json } as Parameters<
         typeof recommendationEngineLabels
       >[0])
     },
-    others: recs.length - 1
+    others: live.length - 1
   };
 }
 
@@ -211,7 +219,7 @@ type ComposeSend = () => Promise<(options: { idempotencyKey: string }) => Promis
  *
  * `taken`: someone else holds the claim (or it could not be written), nothing sent.
  */
-async function sendClaimedOnce(
+export async function sendClaimedOnce(
   service: Service,
   ownerUserId: string,
   kind: string,
@@ -367,7 +375,8 @@ export async function runLifecycleEmails({
     }
 
     const ownSends = (sends ?? []).filter((s) => s.owner_user_id === profile.id);
-    const lastLifecycleSentAt = latestSentAt(ownSends, TRIAL_KINDS);
+    // FEATURE-EMAILS-1 (log §417): a feature email counts towards the 48 h too.
+    const lastLifecycleSentAt = latestSentAt(ownSends, [...TRIAL_KINDS, ...FEATURE_KINDS]);
 
     const ownProjects = (projects ?? []).filter((p) => p.owner_user_id === profile.id);
     const scannedProject = ownProjects.find((p) => scannedProjects.has(p.id as string));
@@ -482,7 +491,7 @@ async function composeDecision(
 
 type SendRow = { owner_user_id: string; kind: string; sent_at: string };
 
-function latestSentAt(rows: ReadonlyArray<{ kind: unknown; sent_at: unknown }>, kinds: readonly string[]): Date | null {
+export function latestSentAt(rows: ReadonlyArray<{ kind: unknown; sent_at: unknown }>, kinds: readonly string[]): Date | null {
   return rows
     .filter((row) => kinds.includes(row.kind as string))
     .reduce<Date | null>((latest, row) => {

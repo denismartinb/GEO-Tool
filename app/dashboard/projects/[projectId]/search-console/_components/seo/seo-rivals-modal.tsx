@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { setSeoRivalsAction } from "../../seo-actions";
+import { CloseIcon } from "./seo-shared";
 
 /** «Cambiar rivales» (log §346): up to the plan's cap, own domain refused by the core too. */
 export function SeoRivalsModal(props: {
@@ -48,7 +49,7 @@ export function SeoRivalsModal(props: {
         <div className="skw-mh">
           <h2 id="skw-rivals-t">Tus rivales en Google</h2>
           <button type="button" className="skw-x" onClick={props.onClose} aria-label="Cerrar">
-            ✕
+            <CloseIcon />
           </button>
         </div>
         <div className="skw-mb">

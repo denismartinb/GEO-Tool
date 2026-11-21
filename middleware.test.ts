@@ -101,6 +101,24 @@ describe("middleware · cookie del proyecto activo", () => {
     const response = await middleware(request("/dashboard/domains?active=not-a-uuid"));
     expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
   });
+
+  /**
+   * APP-BACK-CACHE-1 (log §402). Next mezcla lo que escribe el middleware en
+   * las cookies de la petición; en una acción de servidor eso cuenta como
+   * «cookies cambiadas», y el navegador tira toda la caché de atrás/adelante.
+   * Por eso sólo se escribe cuando cambia.
+   */
+  it("no la vuelve a escribir si ya apunta a ese proyecto", async () => {
+    const same = new NextRequest(
+      new Request(`https://genscore.es/dashboard/projects/${PROJECT_ID}/competitors`, {
+        method: "POST",
+        headers: { cookie: `${ACTIVE_PROJECT_COOKIE}=${PROJECT_ID}`, "next-action": "abc" }
+      })
+    );
+    const response = await middleware(same);
+    expect(response.cookies.get(ACTIVE_PROJECT_COOKIE)).toBeUndefined();
+    expect(response.headers.get("x-middleware-set-cookie")).toBeNull();
+  });
 });
 
 describe("middleware · alcance", () => {
@@ -198,5 +216,61 @@ describe("middleware · enlace de afiliado (AFFILIATES-1)", () => {
     const response = await middleware(request("/precios?ref=campamentoweb"));
     expect(response.status).toBe(200);
     expect(response.headers.get("location")).toBeNull();
+  });
+});
+
+describe("middleware · modo app (ANDROID-TWA-1)", () => {
+  function inApp(pathname: string, cookie = "gs_app=android") {
+    return new NextRequest(new Request(`https://genscore.es${pathname}`, { headers: { cookie } }));
+  }
+
+  it("?source=twa en el inicio de sesión deja la cookie y no redirige", async () => {
+    const res = await middleware(request("/login?source=twa"));
+    expect(res.status).toBe(200);
+    expect(res.cookies.get("gs_app")?.value).toBe("android");
+  });
+
+  it("una apertura que entra a la consola pasa por la splash del inicio de sesión (APP-LAUNCH-1)", async () => {
+    const res = await middleware(request("/dashboard?source=twa"));
+    expect(res.status).toBe(307);
+    expect(res.cookies.get("gs_app")?.value).toBe("android");
+    const to = new URL(res.headers.get("location")!);
+    expect(to.pathname).toBe("/login");
+    expect(to.searchParams.get("source")).toBe("twa");
+    expect(to.searchParams.get("next")).toBeNull();
+
+    const deep = await middleware(request("/dashboard/settings?source=twa&openPlan=pro"));
+    expect(new URL(deep.headers.get("location")!).searchParams.get("next")).toBe("/dashboard/settings?openPlan=pro");
+  });
+
+  it("dentro de la app, navegar por la consola no vuelve a pasar por la splash", async () => {
+    const res = await middleware(inApp("/dashboard/projects/p1"));
+    expect(res.status).toBe(200);
+  });
+
+  it("con la cookie, /precios y la portada vuelven a la consola", async () => {
+    for (const path of ["/precios", "/pricing", "/", "/blog/x"]) {
+      const res = await middleware(inApp(path));
+      expect(res.status, path).toBe(307);
+      expect(new URL(res.headers.get("location")!).pathname).toBe("/dashboard");
+    }
+  });
+
+  it("con la cookie, la consola y el acceso siguen igual", async () => {
+    for (const path of ["/dashboard/settings", "/login", "/api/me"]) {
+      const res = await middleware(inApp(path));
+      expect(res.status, path).toBe(200);
+    }
+  });
+
+  it("sin la cookie, /precios sigue siendo pública", async () => {
+    const res = await middleware(request("/precios"));
+    expect(res.status).toBe(200);
+  });
+
+  it("?source=web sale del modo app", async () => {
+    const res = await middleware(inApp("/precios?source=web"));
+    expect(res.status).toBe(200);
+    expect(res.cookies.get("gs_app")?.value ?? "").toBe("");
   });
 });

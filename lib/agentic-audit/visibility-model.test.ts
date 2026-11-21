@@ -59,6 +59,7 @@ const FULL: PageSignals = {
   anyOffer: true,
   recurringPrice: false,
   buyCta: false,
+  cancelAnytimeText: false,
   bookingWidget: null,
   paymentPlatform: null
 };

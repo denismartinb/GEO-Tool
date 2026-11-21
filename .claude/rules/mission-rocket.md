@@ -1,5 +1,25 @@
 # Mission Rocket Rules
 
+> **CONSOLE-404-ROCKET-1 (log §388):** el cohete vuelve a la consola, en su
+> 404 (`components/ins/errors/lost-rocket.tsx`). Desde aquí hay **dos cohetes
+> otra vez**, la 404 pública y la de la consola, y son el mismo cohete: si
+> tocas la silueta, la paleta o la dirección de vuelo de uno, cambia el otro en
+> el mismo PR. Las reglas de abajo sobre la 404 pública (nada significa
+> progreso, sin barra ni contador, quieto con movimiento reducido, se para
+> cuando no se ve) valen igual para la de la consola. La de la consola sí usa
+> `requestAnimationFrame` porque la estela sigue al cohete por su trayectoria;
+> por eso para el bucle fuera de pantalla y con la pestaña oculta.
+
+> **F3b (CONSOLE-INSTRUMENTO-1, log §355):** el primer escaneo dejó de usar el
+> cohete. Su pantalla es ahora `components/ins/mission/first-scan-mission.tsx`
+> (contador de respuestas, péndulos por motor y cinco fases; ver
+> `.claude/rules/console-instrumento.md`). De este documento sigue vigente lo que
+> habla de `components/not-found-mission.tsx`, de `.mrk-full` (que aún usa
+> `ReentryMission` de Auditoría web) y de `lib/scan/mission-beats.ts`, que sigue
+> decidiendo las cinco fases del escaneo. Lo escrito abajo sobre «dos cohetes» y
+> sobre `scan-mission-rocket.tsx` es histórico: ese fichero ya no existe.
+
+
 Invariantes compartidos por **las dos animaciones del cohete**:
 `components/scan-mission-rocket.tsx` (el primer escaneo), `lib/scan/mission-beats.ts`
 (su línea de tiempo) y `components/not-found-mission.tsx` (la 404 pública).

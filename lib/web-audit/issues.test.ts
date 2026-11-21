@@ -3,6 +3,7 @@ import { buildTechnicalIssuesReport, type TechnicalIssue } from "@/lib/web-audit
 import { buildPageCheckResult, type PageCheckResult } from "@/lib/web-audit/page-checks";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import { TRACKED_BOT_AGENTS, type BotAccessReport } from "@/lib/web-audit/robots";
+import { AI_BOT_TOKENS } from "@/lib/web-audit/ai-bots";
 
 function passingCheck(pageScore = 100): PageCheckResult {
   return {
@@ -238,23 +239,80 @@ describe("buildTechnicalIssuesReport — freshness", () => {
 });
 
 describe("buildTechnicalIssuesReport — bots, llms.txt, sitemap", () => {
-  it("flags a single blocked bot as critical with no point delta, and lists the rest as passing", () => {
-    const bots = botsReport({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "GPTBot" })) });
+  it("flags an engine whose search bot is blocked as critical, by engine name, with no point delta (log §426)", () => {
+    const bots = botsReport({ bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })) });
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
     const issue = findIssue(report.issues, "bot_blocked")!;
     expect(issue.severity).toBe("critical");
     expect(issue.pointDelta).toBeNull();
-    expect(issue.affectedCount).toBe(1);
-    expect(issue.applicableCount).toBe(TRACKED_BOT_AGENTS.length);
-    expect(issue.affectedLabels).toEqual(["GPTBot"]);
-    const passingBots = report.passing.find((p) => p.check === "bot_blocked")!;
-    expect(passingBots.passedCount).toBe(TRACKED_BOT_AGENTS.length - 1);
+    expect(issue.affectedLabels).toEqual(["Perplexity"]);
+    // Legacy snapshot: ChatGPT (OAI-SearchBot), Gemini (Google-Extended) and
+    // Perplexity were measured; Claude's search bots were not.
+    expect(issue.applicableCount).toBe(3);
+    expect(report.passing.find((p) => p.check === "bot_blocked")!.passedCount).toBe(2);
   });
 
-  it("produces no bot_blocked issue and a full passing entry when every tracked bot is allowed", () => {
+  it("flags a search bot the server refuses as critical, unscored, only when robots.txt lets it in (GEO-ALERTS-1, log §440)", () => {
+    const bots = botsReport({
+      bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "PerplexityBot" })),
+      serverProbe: {
+        measuredAt: "2026-11-02T00:00:00Z",
+        baseline: "ok",
+        engines: {
+          chatgpt: { token: "OAI-SearchBot", state: "blocked", status: 403 },
+          claude: { token: "Claude-SearchBot", state: "allowed", status: 200 },
+          perplexity: { token: "PerplexityBot", state: "blocked", status: 403 }
+        }
+      }
+    });
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
+    const issue = findIssue(report.issues, "bot_server_blocked")!;
+    expect(issue.severity).toBe("critical");
+    expect(issue.pointDelta).toBeNull();
+    // Perplexity is closed by robots.txt: reported there, not twice.
+    expect(issue.affectedLabels).toEqual(["ChatGPT"]);
+    expect(issue.applicableCount).toBe(2);
+    expect(report.passing.find((p) => p.check === "bot_server_blocked")!.passedCount).toBe(1);
+  });
+
+  it("has no server row on a snapshot taken before the probe existed", () => {
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
+    expect(findIssue(report.issues, "bot_server_blocked")).toBeUndefined();
+    expect(report.passing.find((p) => p.check === "bot_server_blocked")).toBeUndefined();
+  });
+
+  it("never counts a closed training bot as a problem (GPTBot, ClaudeBot)", () => {
+    const bots = botsReport({
+      bots: TRACKED_BOT_AGENTS.map((agent) => ({ agent, allowed: agent !== "GPTBot" && agent !== "ClaudeBot" }))
+    });
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], bots);
+    expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
+  });
+
+  it("reads every engine from the stored tokens when the snapshot has them", () => {
+    const tokens = Object.fromEntries(AI_BOT_TOKENS.map((t) => [t, t !== "Claude-User"]));
+    const report = buildTechnicalIssuesReport(
+      [page("https://acme.com/a", passingCheck(100))],
+      botsReport({ aiBots: { tokens, starRules: [] } })
+    );
+    const issue = findIssue(report.issues, "bot_blocked")!;
+    expect(issue.affectedLabels).toEqual(["Claude"]);
+    expect(issue.applicableCount).toBe(4);
+  });
+
+  it("produces no bot_blocked issue and a passing entry per measured engine when every bot is allowed", () => {
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
     expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
-    expect(report.passing.find((p) => p.check === "bot_blocked")?.passedCount).toBe(TRACKED_BOT_AGENTS.length);
+    expect(report.passing.find((p) => p.check === "bot_blocked")?.passedCount).toBe(3);
+  });
+
+  it("says nothing about bots when robots.txt could not be read", () => {
+    const report = buildTechnicalIssuesReport(
+      [page("https://acme.com/a", passingCheck(100))],
+      botsReport({ probes: { robots: "unknown", llmsTxt: "found", sitemap: "found" } })
+    );
+    expect(findIssue(report.issues, "bot_blocked")).toBeUndefined();
+    expect(report.passing.find((p) => p.check === "bot_blocked")).toBeUndefined();
   });
 
   it("flags missing llms.txt and sitemap.xml as warning-severity issues with no point delta", () => {
@@ -508,5 +566,39 @@ describe("buildTechnicalIssuesReport — snippet_blocked", () => {
     const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
     expect(findIssue(report.issues, "snippet_blocked")).toBeUndefined();
     expect(report.passing.map((p) => p.check)).not.toContain("snippet_blocked");
+  });
+});
+
+/**
+ * JS-RENDER-CHECK-1. Same three states as snippet_blocked: failing, measured
+ * and clean, and never measured (older snapshots are excluded).
+ */
+describe("buildTechnicalIssuesReport — js_required", () => {
+  it("marca crítico y SIN puntos cuando la página llega vacía sin JavaScript", () => {
+    const check = passingCheck(100);
+    check.citability!.jsShell = true;
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", check)], botsReport());
+    const issue = findIssue(report.issues, "js_required");
+    expect(issue).toBeDefined();
+    expect(issue!.severity).toBe("critical");
+    expect(issue!.pointDelta).toBeNull();
+  });
+
+  it("no mueve ni la nota real ni la proyectada", () => {
+    const shell = passingCheck(100);
+    shell.citability!.jsShell = true;
+    const clean = passingCheck(100);
+    clean.citability!.jsShell = false;
+    const a = buildTechnicalIssuesReport([page("https://acme.com/a", shell)], botsReport());
+    const b = buildTechnicalIssuesReport([page("https://acme.com/a", clean)], botsReport());
+    expect(a.actualReadinessScore).toBe(b.actualReadinessScore);
+    expect(a.projectedReadinessScore).toBe(b.projectedReadinessScore);
+    expect(a.totalPointPotential).toBe(b.totalPointPotential);
+  });
+
+  it("una instantánea anterior no aparece ni como fallo ni como aprobado", () => {
+    const report = buildTechnicalIssuesReport([page("https://acme.com/a", passingCheck(100))], botsReport());
+    expect(findIssue(report.issues, "js_required")).toBeUndefined();
+    expect(report.passing.map((p) => p.check)).not.toContain("js_required");
   });
 });

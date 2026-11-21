@@ -18,9 +18,26 @@ export type NextStepNotice = {
   recommendationId: string;
   title: string;
   potentialPoints: number | null;
+  /**
+   * GEO-ALERTS-1 (log §440): an AI engine that cannot enter the site (by
+   * robots.txt or by the server) is the next step before any content action,
+   * because nothing else can be cited by it until it is fixed. Same blocker
+   * and title as Recomendaciones (`findCitationBlockers`, `blockerTitle`).
+   */
+  blocker?: { body: string };
 };
 
 export function renderNextStep(notice: NextStepNotice): RenderedNotification {
+  if (notice.blocker) {
+    return {
+      title: notice.title,
+      body: notice.blocker.body,
+      targetLabel: notice.domain,
+      href: `/dashboard/projects/${notice.projectId}/web-audit?bloque=geo`,
+      icon: "robot",
+      tone: "blue"
+    };
+  }
   const points =
     typeof notice.potentialPoints === "number" && notice.potentialPoints >= MIN_VISIBLE_POINTS
       ? ` Puede sumar +${formatPoints(notice.potentialPoints)} pt a tu Puntuación GEO.`

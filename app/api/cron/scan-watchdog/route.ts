@@ -11,7 +11,8 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 /**
- * ALERTS-ALWAYS-1: every 15 minutes (`vercel.json`), reconcile stalled scans
+ * ALERTS-ALWAYS-1: every 15 minutes (pg_cron, migration 0045, log §347),
+ * reconcile stalled scans
  * across every project and email the operator about anything a customer is no
  * longer getting. See `lib/scan/watchdog.ts`.
  *

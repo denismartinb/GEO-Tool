@@ -11,6 +11,14 @@ import { isAutoWebAuditEnabled, triggerWebAuditRun } from "@/lib/web-audit/audit
 import { isAuthorizedInternalRequest } from "@/lib/api/internal-auth";
 import { withCronMonitor } from "@/lib/observability/cron-monitor";
 import { reportError } from "@/lib/observability/report-error";
+import { runAiRenderPass } from "@/lib/web-audit/ai-render-pass";
+
+/**
+ * AI-READ-2 (log §451): the browser measurement of «Lo que lee la IA» rides on
+ * the cron entry only, never on a chain link, and only with the time the
+ * audit queue left. It ends before maxDuration with margin.
+ */
+const RENDER_PASS_END_MS = 55_000;
 
 /**
  * `chainIndex` counts self-dispatches within one chain. Absent (or 0) on the
@@ -38,7 +46,7 @@ export const dynamic = "force-dynamic";
  *   2. itself, when a coverage campaign was parked mid-flight (the campaign
  *      spans many batched calls, exactly like `/api/scan/continue`
  *      (docs/adr/0014) and `/api/cron/sweep-continue` (docs/adr/0016));
- *   3. the Vercel cron below, every 10 minutes — the engine that actually
+ *   3. the cron below, every 10 minutes (pg_cron since CRON-HOBBY-1, log §347) — the engine that actually
  *      drains the queue, recovers anything whose dispatch was lost and picks
  *      up retries that have come due.
  *
@@ -51,7 +59,7 @@ export const dynamic = "force-dynamic";
  * one starts a fresh chain; the self-chain stays as an accelerator for the
  * hops Vercel does allow.
  *
- * `GET` is Vercel's cron entry point (crons are always GET); `POST` carries
+ * `GET` is the cron entry point (Vercel crons and pg_net both send GET); `POST` carries
  * `chainIndex` for the self-dispatch. Both require `CRON_SECRET` — the same
  * secret Vercel sends to `/api/cron/weekly-scans`.
  */
@@ -72,7 +80,16 @@ async function handleGet(request: Request) {
   const denied = rejectUnauthorized(request);
   if (denied) return denied;
 
-  return runWorker(0);
+  const startedAt = Date.now();
+  const response = await runWorker(0);
+  try {
+    const render = await runAiRenderPass({ service: createServiceClient(), deadlineAt: startedAt + RENDER_PASS_END_MS });
+    if (render.measured > 0 || render.agentic || render.stopped) console.info("[geo:ai-render] pass", render);
+  } catch (error) {
+    // Never fails the audit worker: the next cron firing tries again.
+    await reportError(error, "cron:run-audit:ai-render");
+  }
+  return response;
 }
 
 function rejectUnauthorized(request: Request): NextResponse | null {

@@ -125,6 +125,18 @@ igual.
   de un informe gratis, que responde al solicitante
   (`docs/brand/design-decisions-log.md` §272).
 
+## Correos de funcionalidades (FEATURE-EMAILS-1, log §417)
+
+- **Las reglas viven en `decideFeatureEmail`** (`lib/email/lifecycle/feature-schedule.ts`,
+  pura y con tests). Una regla nueva va ahí, no en la pasada.
+- **Cuentan para las 48 h de toda la secuencia** (`LIFECYCLE_SPACED_KINDS` y
+  el espaciado de la prueba). D5 sigue sin esperar.
+- **Interruptor propio** (`isFeatureEmailEnabled`): `FEATURE_EMAILS_ENABLED`
+  encima de `LIFECYCLE_EMAILS_ENABLED`. Un tipo nuevo de `email_sends` necesita
+  migración antes de encenderlo.
+- **El correo de Search Console no sale si su botón no funcionaría**
+  (sin configurar o sin tabla), como la invitación de §313.
+
 ## Sin rayas largas (COPY-SIN-RAYAS-1, log §306)
 
 En todos los textos propios del producto y de marketing no uses rayas largas
@@ -134,3 +146,47 @@ sentido. El separador de marca es " · GenScore". No uses U+2013 como inciso;
 consérvalo en rangos (L–V, 15–25%). No modifiques citas, evidencias externas,
 identificadores ni código de detección para cumplir esta regla (COPY-SIN-RAYAS-1,
 log §306).
+
+## Medición de correos (MAIL-METRICS-1, log §419)
+
+- **Todo envío lleva su tipo** (`EmailKind`, `lib/email/kinds.ts`), que va a
+  Resend como etiqueta `kind`. Un correo nuevo añade su tipo a la lista; los
+  avisos al operador empiezan por `ops_`.
+- **El webhook guarda solo id del correo, evento, tipo y hora**
+  (`toEmailEventRow`). Nunca la dirección, el asunto, el enlace, la IP ni el
+  navegador, tampoco en los logs.
+- **La firma se comprueba antes de leer el cuerpo**, y sin
+  `RESEND_WEBHOOK_SECRET` o sin la tabla (migración 0048) se responde 5xx para
+  que Resend reintente; nunca 200 sin guardar.
+
+## Extensión de Chrome (EXT-REACH-1, log §436)
+
+- **La posdata de la extensión (`extensionPostscript`) va debajo del botón
+  principal, nunca encima**, y sólo habla de una herramienta gratuita del
+  propio producto. Por eso cabe en la bienvenida, que es de servicio; con un
+  precio o un descuento dejaría de caber (regla de la oferta, arriba).
+- **El anuncio de la extensión es `lifecycle`**: lleva baja y no sale sin
+  `EMAIL_UNSUBSCRIBE_SECRET`. Reserva `feature_extension`, así que nadie
+  recibe a la vez el anuncio y el correo automático de la extensión.
+
+## Avisos de tu web (GEO-ALERTS-1, log §440)
+
+- **Sólo en una transición**: el motor entraba en la auditoría anterior y en
+  ésta no (`engineAccessChanges`). Nunca por un estado que no cambió ni por un
+  bot de entrenamiento.
+- **Como mucho uno por motor y proyecto cada 30 días.** La marca `emailedAt`
+  del aviso se escribe después de un envío aceptado, y Resend recibe la clave
+  `site-alert/<dueño>/<aviso>`.
+- **Categoría `site_alerts` con baja propia** (`notify_site_alerts`,
+  migración 0049). Se lee en su propia consulta y falla cerrado; sale sólo con
+  `isLifecycleEmailEnabled`.
+
+## Primer escaneo (OPS-FIRST-SCAN-1, log §441)
+
+- **El aviso `ops_first_scan` sale cuando el run creado es el único del
+  proyecto** (`lib/scan/first-scan-alert.ts`), con clave de idempotencia
+  `ops-first-scan/<proyecto>`. Nunca lanza ni retrasa la creación del escaneo
+  más allá del envío, y sin `OPS_ALERT_EMAIL`/`RESEND_API_KEY` no consulta nada.
+- **El dominio del aviso de alta sólo es el que la persona trajo**, validado
+  con `isWellFormedDomain` en el servidor; el formulario lo lee sin consumirlo
+  (`peekPendingDomain`) para que el asistente lo siga encontrando.

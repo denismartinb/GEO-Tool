@@ -21,17 +21,33 @@ function byVolume(a: DiscoveredKeyword, b: DiscoveredKeyword): number {
   return (b.volume ?? -1) - (a.volume ?? -1) || a.keyword.localeCompare(b.keyword, "es");
 }
 
-/** Ideas for a seed, without what the project already tracks, by volume. */
-export function shapeSeedIdeas(ideas: KeywordIdea[], tracked: Set<string>): DiscoveredKeyword[] {
+/**
+ * Ideas for a seed, without what the project already tracks, by volume.
+ *
+ * Google Ads groups close variants and hands the group's figure to each of
+ * them, so a longer phrase that contains the seed can show MORE monthly
+ * searches than the seed itself («cine y series» 110, a long title that
+ * contains it 170), which reads as nonsense. When the seed's own figure is
+ * known, those inflated variants are left out, and the seed goes first.
+ */
+export function shapeSeedIdeas(ideas: KeywordIdea[], tracked: Set<string>, seed?: string): DiscoveredKeyword[] {
+  const seedKey = (seed ? normalizeKeyword(seed) : null) ?? "";
+  const seedVolume = seedKey ? (ideas.find((idea) => normalizeKeyword(idea.keyword) === seedKey)?.volume ?? null) : null;
   const seen = new Set<string>();
   const out: DiscoveredKeyword[] = [];
   for (const idea of ideas) {
     const keyword = normalizeKeyword(idea.keyword);
     if (!keyword || tracked.has(keyword) || seen.has(keyword)) continue;
+    const inflated =
+      seedVolume !== null && keyword !== seedKey && keyword.includes(seedKey) && idea.volume !== null && idea.volume > seedVolume;
+    if (inflated) continue;
     seen.add(keyword);
     out.push({ keyword, volume: idea.volume, rival: null });
   }
-  return out.sort(byVolume).slice(0, DISCOVERY_RESULTS);
+  out.sort(byVolume);
+  const at = seedKey ? out.findIndex((item) => item.keyword === seedKey) : -1;
+  if (at > 0) out.unshift(...out.splice(at, 1));
+  return out.slice(0, DISCOVERY_RESULTS);
 }
 
 /**

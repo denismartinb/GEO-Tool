@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Motion } from "@/components/ins/kit/motion";
+import { PageHead } from "@/components/ins/page-head";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { requireActiveProject } from "@/lib/project-workspace";
@@ -238,42 +240,32 @@ export default async function SearchConsolePage({
     );
   }
 
+  /* «Instrumento» (CONSOLE-INSTRUMENTO-1 F6b, log §364): new chrome around
+     the same data, tracking and Search Console blocks. */
   return (
-    <div className="page">
-      <div className="ov-sticky-header">
-        <div className="ov-sticky-left">
-          <div>
-            <p className="kicker" style={{ marginBottom: 2 }}>Posición en Google</p>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <span style={{ fontSize: 15, fontWeight: 750, color: "var(--ink)", letterSpacing: "-.01em" }}>
-                {project.name}
-              </span>
-              <span className="badge badge-neutral" style={{ fontFamily: "var(--mono)", fontSize: 11 }}>
-                {project.domain}
-              </span>
+    <div className="ins">
+      <Motion id={`search-console:${projectId}`}>
+        <div className="page sc-gsc">
+          <PageHead
+            title="Posición en Google"
+            action={
+              state.kind === "ready" ? (
+                <span className="btn line sm gsc-on" title="Search Console conectado · últimos 28 días">
+                  <span className="gsc-live" aria-hidden="true" />
+                  <span className="ph-lbl">Search Console conectado · últimos 28 días</span>
+                </span>
+              ) : null
+            }
+            lead="En qué puesto sales en Google, para qué búsquedas y qué hacer para subir."
+          />
+          <div className="gsc-page">
+            <div className="gsc-screen">
+              <GscOutcome code={gsc} />
+              {seoContent}
             </div>
           </div>
         </div>
-        {state.kind === "ready" && (
-          <div className="ov-sticky-right">
-            <span className="gsc-chip">
-              <span className="gsc-live" aria-hidden="true" />
-              <span className="gsc-chip-full">Search Console conectado · últimos 28 días</span>
-              <span className="gsc-chip-compact">Últimos 28 días</span>
-            </span>
-          </div>
-        )}
-      </div>
-
-      <div className="gsc-page">
-        <div className="gsc-screen">
-          <div className="gsc-intro">
-            <p>En qué puesto sales en Google, para qué búsquedas y qué hacer para subir.</p>
-          </div>
-          <GscOutcome code={gsc} />
-          {seoContent}
-        </div>
-      </div>
+      </Motion>
     </div>
   );
 }
