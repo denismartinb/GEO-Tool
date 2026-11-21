@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { ExtractionError, type QuotaKind } from "@/lib/llm/extraction-errors";
 import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
 import {
   LLM_CALL_MAX_ATTEMPTS,
@@ -151,9 +151,24 @@ export async function fetchGeminiWithRetry(endpoint: string, requestBody: string
       maxDelayMs: LLM_CALL_RETRY_MAX_DELAY_MS,
       describeStatus: getGeminiApiError,
       timeoutMessage: "Gemini API request timed out.",
-      transportMessage: "Gemini request failed before reaching the provider."
+      transportMessage: "Gemini request failed before reaching the provider.",
+      classifyQuotaBody: classifyGeminiQuotaBody
     }
   );
+}
+
+/**
+ * GEMINI-QUOTA-KIND-1 (log §472): Google's 429 names the limit in
+ * `error.details[].violations[].quotaId` (e.g.
+ * `GenerateRequestsPerDayPerProjectPerModel`) or, for a project spending cap,
+ * in the message. Only a fixed label leaves this function.
+ */
+export function classifyGeminiQuotaBody(body: string): QuotaKind | undefined {
+  const text = body.toLowerCase();
+  if (/spend(ing)?[ _-]?cap|spend(ing)? limit/.test(text)) return "spend_cap";
+  if (/perday|per_day|per day/.test(text)) return "per_day";
+  if (/perminute|per_minute|per minute/.test(text)) return "per_minute";
+  return undefined;
 }
 
 /**

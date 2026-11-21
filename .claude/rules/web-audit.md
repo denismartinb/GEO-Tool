@@ -567,3 +567,10 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   caracteres) de páginas públicas.
 - **La tarjeta de Visión general lee `aiReadCard`**, el mismo modelo que el
   bloque; no calcula cifras propias y no sale en modo HTML.
+
+## Cuota de Gemini en la cobertura (GEMINI-QUOTA-STOP-1, log §472)
+
+- **Un 429 corta la tanda y no cierra el tema.** Un tema que no se pudo
+  preguntar por cuota no es «No hemos podido verificar»: queda pendiente y el
+  ejecutor aparca el trabajo. Marcarlo cerraba todos los temas del escaneo sin
+  respuesta y gastaba tres llamadas por tema.

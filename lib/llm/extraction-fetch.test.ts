@@ -43,6 +43,27 @@ describe("fetchExtractionWithRetry", () => {
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
+  // GEMINI-QUOTA-KIND-1 (log §472)
+  it("does not retry a 429 whose body says it is a daily limit", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ...response(429), text: async () => "GenerateRequestsPerDayPerProjectPerModel" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchExtractionWithRetry("https://provider.test", {}, { ...OPTIONS, classifyQuotaBody: (b: string) => (b.includes("PerDay") ? "per_day" : undefined) })
+    ).rejects.toMatchObject({ category: "quota", quotaKind: "per_day" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries a per-minute 429", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ...response(429), text: async () => "PerMinute" });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      fetchExtractionWithRetry("https://provider.test", {}, { ...OPTIONS, classifyQuotaBody: () => "per_minute" })
+    ).rejects.toMatchObject({ quotaKind: "per_minute" });
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+
   it("recovers when a transient 429 is followed by success", async () => {
     const fetchMock = vi.fn().mockResolvedValueOnce(response(429)).mockResolvedValueOnce(response(200));
     vi.stubGlobal("fetch", fetchMock);

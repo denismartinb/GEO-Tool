@@ -90,3 +90,6 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
   se cambia un modelo de verdad, con su ADR si es Gemini (log §269).
   Lo mismo vale para `singleSearch` (pedir una sola búsqueda a Gemini): es una
   prueba del comparador, no un ajuste del escaneo.
+- **Un 429 diario o de tope de gasto no se reintenta.** `classifyGeminiQuotaBody`
+  lo distingue del de por minuto con una etiqueta fija, nunca con el texto de
+  Google, y el aviso al operador dice qué límite es (log §472).
