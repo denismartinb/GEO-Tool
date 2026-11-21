@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Bricolage_Grotesque, Figtree } from "next/font/google";
+import localFont from "next/font/local";
 import { requireUser } from "@/lib/auth";
 import { getPlanForUser } from "@/lib/billing";
 import { loadReportInput } from "@/lib/report/report-data";
@@ -16,23 +16,38 @@ import { ReportToolbar } from "@/components/report/report-toolbar";
  * (sidebar, fixed header, scroll container) sits around the printed pages.
  * "Descargar informe" in Visión general and Recomendaciones opens it.
  *
- * Its own copy of the two brand fonts with the weights the approved design
- * uses (Figtree up to 800, Bricolage from 600): the root layout loads fewer,
- * and widening those would change the weight of text across the whole site.
+ * Its own copy of the console's two fonts with the weights the Instrumento
+ * look uses (Figtree from 300 for the big figures, JetBrains Mono for labels;
+ * REPORT-INSTRUMENTO-1, log §439): the root layout loads fewer, and widening
+ * those would change the weight of text across the whole site.
+ *
+ * STATIC instances, one file per weight (latin subset), never the variable
+ * font: Chrome embeds a variable font in a printed PDF as Type 3 glyphs,
+ * which the iOS PDF viewer paints stroke by stroke, so the cover flickered on
+ * open (founder, 2026-11-02). Static files embed as plain TrueType.
  */
 
-const reportDisplay = Bricolage_Grotesque({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-  variable: "--gr-font-display",
-  display: "swap"
+const reportMono = localFont({
+  src: [
+    { path: "../fonts/jbmono-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/jbmono-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/jbmono-600.woff2", weight: "600", style: "normal" }
+  ],
+  variable: "--gr-font-mono",
+  display: "block"
 });
 
-const reportBody = Figtree({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+const reportBody = localFont({
+  src: [
+    { path: "../fonts/figtree-300.woff2", weight: "300", style: "normal" },
+    { path: "../fonts/figtree-400.woff2", weight: "400", style: "normal" },
+    { path: "../fonts/figtree-500.woff2", weight: "500", style: "normal" },
+    { path: "../fonts/figtree-600.woff2", weight: "600", style: "normal" },
+    { path: "../fonts/figtree-700.woff2", weight: "700", style: "normal" },
+    { path: "../fonts/figtree-800.woff2", weight: "800", style: "normal" }
+  ],
   variable: "--gr-font-body",
-  display: "swap"
+  display: "block"
 });
 
 type Params = { params: Promise<{ projectId: string }> };
@@ -88,7 +103,7 @@ export default async function ReportPage({ params }: Params) {
   return (
     <>
       <ReportToolbar backHref={backHref} />
-      <GeoReport model={model} fontClassName={`${reportDisplay.variable} ${reportBody.variable}`} />
+      <GeoReport model={model} fontClassName={`${reportMono.variable} ${reportBody.variable}`} />
     </>
   );
 }

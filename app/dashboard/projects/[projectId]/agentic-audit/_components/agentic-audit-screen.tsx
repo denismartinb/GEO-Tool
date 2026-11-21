@@ -8,13 +8,13 @@ import {
   componentStatus,
   firstSteps,
   foundSentence,
-  initialComponent,
   notApplicableNote,
   offerLabel,
   projectedSentence,
   unmeasuredReason,
   type Tone
 } from "@/lib/agentic-audit/console-model";
+import { stepTone } from "@/lib/agentic-audit/visibility-model";
 import { AgenticLoadingScene } from "@/components/agentic/agentic-loading-scene";
 import { runAgenticAuditAction } from "../actions";
 
@@ -208,7 +208,9 @@ export function AgenticAuditScreen({
   result,
   remaining,
   refresh,
-  openOn
+  openOn,
+  windows,
+  checkNotes
 }: {
   projectId: string;
   /** «Revisada hoy a las 10:42.», formatted on the server in Europe/Madrid. */
@@ -220,9 +222,13 @@ export function AgenticAuditScreen({
   refresh: boolean;
   /** The component to open first, from a card on «Visibilidad en agentes». */
   openOn?: AgenticComponentId | "interop";
+  /** «Con navegador y sin él» (AGENTS-BROWSER-1 PR 2, log §454), rendered on the server. */
+  windows?: React.ReactNode;
+  /** What the browser saw for a failed check, by check id (`browserCheckNotes`). */
+  checkNotes?: Record<string, string>;
 }) {
   const [editing, setEditing] = useState(false);
-  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? initialComponent(result));
+  const [selected, setSelected] = useState<AgenticComponentId | "interop">(() => openOn ?? "discovery");
 
   const steps = firstSteps(result);
   const projected = projectedSentence(result, steps);
@@ -392,6 +398,7 @@ export function AgenticAuditScreen({
                     <span>
                       {check.label}
                       {check.state === "unknown" ? <small>No se pudo medir.</small> : check.fix ? <small>{check.fix}</small> : null}
+                      {checkNotes?.[check.id] ? <small className="agw-check">{checkNotes[check.id]}</small> : null}
                     </span>
                   </li>
                 ))}
@@ -400,6 +407,8 @@ export function AgenticAuditScreen({
           </>
         ) : null}
       </div>
+
+      {windows}
 
       <div className="ag-grid">
         <div className="card">
@@ -440,18 +449,30 @@ export function AgenticAuditScreen({
           </p>
         </div>
 
-        <div className="card">
-          <h2 className="ag-h">Qué hacer primero</h2>
-          {steps.length > 0 ? (
-            steps.map((step) => (
-              <div className="ag-fix" key={step.key}>
-                <b>{step.title}</b>
-                <span>{step.seen}</span>
-              </div>
-            ))
-          ) : (
-            <p className="ag-muted">No hemos encontrado nada que arreglar en lo que pudimos medir.</p>
-          )}
+        <div className="card agx-first">
+          <div className="card-h">
+            <h3>Qué hacer primero</h3>
+          </div>
+          <div className="card-b">
+            {steps.length > 0 ? (
+              <ol>
+                {steps.map((step, i) => (
+                  <li key={step.key}>
+                    <span className="n num">{i + 1}</span>
+                    <div>
+                      <div className="ch">
+                        <span className={`dot ${stepTone(result, step) === "warn" ? "warn" : ""}`} aria-hidden="true" />
+                        <span>{result.components.find((c) => c.id === step.component)?.name}</span>
+                      </div>
+                      <b>{step.title}</b>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="none">No hemos encontrado nada que arreglar en lo que pudimos medir.</p>
+            )}
+          </div>
         </div>
       </div>
     </>

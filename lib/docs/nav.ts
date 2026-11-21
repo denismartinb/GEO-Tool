@@ -63,6 +63,17 @@ export const DOCS_NAV: DocSection[] = [
     ]
   },
   {
+    title: "Integraciones",
+    pages: [
+      {
+        slug: "mcp",
+        title: "GenScore en Claude y ChatGPT",
+        description:
+          "Conecta GenScore a Claude o ChatGPT con su servidor MCP: consulta tu Puntuación GEO, recomendaciones y auditorías desde el chat, o revisa cualquier página sin cuenta."
+      }
+    ]
+  },
+  {
     title: "Planes y límites",
     pages: [
       {

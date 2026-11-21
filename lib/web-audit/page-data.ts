@@ -6,7 +6,7 @@ import { sitemapSteps, type SitemapStep } from "@/lib/web-audit/sitemap";
 import { WEB_AUDIT_JOB_TYPE, WEB_AUDIT_STALE_LOCK_MS } from "@/lib/web-audit/audit-job";
 import { isWebAuditJobDue } from "@/lib/web-audit/audit-liveness";
 import { isAutoWebAuditEnabled } from "@/lib/web-audit/audit-dispatch";
-import { buildTechnicalIssuesReport, type TechnicalIssuesReport } from "@/lib/web-audit/issues";
+import { buildTechnicalIssuesReport, fixedSincePrevious, type IssueCheckKey, type TechnicalIssuesReport } from "@/lib/web-audit/issues";
 import type { PageAuditEntry } from "@/lib/web-audit/technical-audit";
 import type { BotAccessReport } from "@/lib/web-audit/robots";
 import type { PageFixContext } from "@/lib/web-audit/page-fixes";
@@ -102,6 +102,12 @@ export type WebAuditPageData = {
   technicalSnapshot: TechnicalSnapshotRow | null;
   currentTechnicalReport: TechnicalIssuesReport | null;
   technicalScoreDelta: number | null;
+  /**
+   * EXT-1.5.0 (log §446): the checks that failed in the previous audit and
+   * pass in this one, as the extension's «Desde tu última visita» says
+   * «Arreglado: …». Empty without a previous audit.
+   */
+  technicalFixedChecks: IssueCheckKey[];
   analyzedPagesCount: number;
 
   /**
@@ -233,6 +239,7 @@ export async function loadWebAuditPageData({
     currentTechnicalReport?.actualReadinessScore != null && previousTechnicalReport?.actualReadinessScore != null
       ? currentTechnicalReport.actualReadinessScore - previousTechnicalReport.actualReadinessScore
       : null;
+  const technicalFixedChecks = fixedSincePrevious(previousTechnicalReport, currentTechnicalReport);
 
   // WEB-AUDIT-DRIVE-1: the audit job for this run, read through RLS
   // (`jobs_select_owner`) rather than the service client — this is a render
@@ -296,6 +303,7 @@ export async function loadWebAuditPageData({
     technicalSnapshot,
     currentTechnicalReport,
     technicalScoreDelta,
+    technicalFixedChecks,
     analyzedPagesCount,
     auditIsRunning,
     shouldDispatchAudit,

@@ -242,6 +242,20 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   quita esa marca, el panel vuelve a contar nuestras visitas. Una métrica que no se puede atar a una cuenta,
   como las altas por canal o «abrió precios», no se pinta: la analítica es sin
   cookies (`docs/brand/design-decisions-log.md` §304).
+- **«Captación de email» vive en `/admin/crm`: un contacto es una cuenta que
+  cuenta (`isCountedAccount`), y los envíos salen de Resend, no de
+  `email_sends`.** Esa tabla sólo apunta la secuencia de la prueba, la
+  recuperación y los correos de funcionalidad; el resumen semanal, los avisos y
+  los de cuenta no dejan fila. La lista de Resend (`emails.list`) guarda 30
+  días en todos los planes, así que un periodo que empieza antes lo dice y una
+  comparación sin periodo anterior completo no se pinta. Aperturas y clics sólo
+  se enseñan con el seguimiento demostrado (una apertura vista o el dominio de
+  Resend con `open_tracking`); sin eso, «—» y el motivo. El tipo de cada correo
+  sale de su fila de `email_sends` (misma cuenta, ±15 min, cada fila una vez) o
+  del asunto del resumen semanal; el resto es «Avisos y cuenta». Una clave de
+  Resend sólo de envío (`restricted_api_key`) se dice tal cual. Si un día los
+  eventos de Resend se guardan en una tabla, alimentan esta misma pestaña, no
+  una tarjeta nueva (`docs/brand/design-decisions-log.md` §420).
 - **`/admin/seo-diagnostico` sólo llama a DataForSEO y no escribe nada.**
   Cada paso es una llamada en vivo con `requireOperator()` como primera línea
   de la acción. Valida el dominio (`normalizeStudyDomain`), los temas
@@ -251,3 +265,37 @@ These invariants apply automatically when touching `/admin`, `/mfa/*`, or
   tarifa copiada. Si algún día guarda resultados, eso es una escritura y
   necesita su Task Intake y su correo a `OPS_ALERT_EMAIL`
   (`docs/brand/design-decisions-log.md` §338).
+
+## Correos por tipo (MAIL-METRICS-1, log §419)
+
+- **La etiqueta `kind` de `email_events` manda sobre la heurística.** Si un
+  correo de Resend tiene etiqueta, `classifyEmails` lo nombra por ella y no
+  consume una fila de `email_sends`. Sin etiqueta o sin la tabla, se sigue
+  nombrando por `email_sends` y por el asunto.
+- **Los recuentos siguen saliendo de la lista de Resend**, que trae el
+  destinatario: `email_events` no lo guarda, así que sola no puede quitar
+  cuentas internas y de prueba.
+- **El desglose por tipo sale del mismo recorrido que los grupos** (log §423):
+  mismo filtro de contactos y misma lista de Resend, así que las filas de un
+  grupo suman lo que dice el grupo. Un tipo nuevo de correo lleva su nombre en
+  `KIND_LABEL`; sin él se enseña la etiqueta tal cual. Los porcentajes de
+  abiertos y clics son sobre los entregados.
+
+## Anuncios por correo (EXT-REACH-1, log §436)
+
+- **Un anuncio a toda la base es una escritura aprobada sólo para la extensión
+  de Chrome** (Denis, 2026-11-02). Otro anuncio necesita su propia aprobación.
+- **Nada sale sin pulsar**: copia al operador, y lotes de `ANNOUNCEMENT_BATCH`
+  con casilla de confirmación. Cada lote deja constancia por correo a
+  `OPS_ALERT_EMAIL` con recuentos, nunca direcciones.
+- **Quién lo recibe es `selectAnnouncementRecipients`, puro y con tests**: sin
+  cuentas propias, internas ni comped, sin bajas de «consejos, novedades y
+  ofertas», sin emails sin confirmar, 48 h tras otro correo de ciclo de vida y
+  nunca en lunes. Cada envío reserva antes en `email_sends`
+  (`sendClaimedOnce`), así que nunca sale dos veces a la misma cuenta.
+
+- **Una puntuación que enseña `/admin` es la del producto, nunca otra.** La
+  Puntuación GEO de cada dominio sale de `resolveGeoScore` sobre
+  `GEO_SCORE_LOOKBACK_ROWS` filas de `run_scores` (`lib/admin/geo-scores.ts`),
+  igual que Visión general. «Sin escanear» y «sin dato» no son un cero
+  (`docs/brand/design-decisions-log.md` §445).

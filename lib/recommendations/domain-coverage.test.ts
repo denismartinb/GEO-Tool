@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("@/lib/llm/gemini", () => ({ auditDomainContent: vi.fn() }));
+import { ExtractionError } from "@/lib/llm/extraction-errors";
 vi.mock("@/lib/scan/citation-resolution", () => ({ resolveGroundingRedirects: vi.fn() }));
 vi.mock("@/lib/recommendations/generation-rate-limit", () => ({ checkGenerationRateLimit: vi.fn() }));
 
@@ -311,6 +312,26 @@ describe("auditDomainCoverageCore", () => {
       expect(result.coverage.topics[1].found).toBe(true);
     }
     expect(deps._service.inserted).toHaveLength(1);
+  });
+
+  // GEMINI-QUOTA-STOP-1 (log §472): from 2026-11-13 every coverage campaign
+  // hit Gemini 429s and closed every topic as «could not verify», spending
+  // three calls per topic on the way.
+  it("stops the batch on a quota error and leaves that topic and the rest eligible", async () => {
+    mockedGemini.mockRejectedValueOnce(new ExtractionError("quota", "Gemini API quota or rate limit reached.", "per_day"));
+    const deps = makeDeps({
+      prompts: [
+        { id: "p1", prompt_text: "tema uno" },
+        { id: "p2", prompt_text: "tema dos" }
+      ]
+    });
+    const result = await runFast(deps);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.status).toBe("running");
+      expect(result.coverage.topics).toHaveLength(0);
+    }
+    expect(mockedGemini).toHaveBeenCalledTimes(1);
   });
 
   it("returns success:false and inserts nothing renderable when persistence fails", async () => {

@@ -8,6 +8,8 @@
  * total until the founder gives it a weight (`docs/adr/0043`).
  */
 
+import type { AgenticBrowserRead } from "@/lib/agentic-audit/browser-obstacles";
+
 /** pass / avg / fail as in PageSpeed; `unknown` = we could not measure it, so it counts neither for nor against. */
 export type CheckState = "pass" | "avg" | "fail" | "unknown";
 
@@ -44,7 +46,8 @@ export type InteropItem = {
   detail: string;
 };
 
-export type AssistantName = "ChatGPT" | "Claude" | "Perplexity" | "Gemini";
+/** Meta (Meta AI and its shopping agent Muse) since log §427. Reviews stored before it have four. */
+export type AssistantName = "ChatGPT" | "Claude" | "Perplexity" | "Gemini" | "Meta";
 
 export type AgentAccess = {
   assistant: AssistantName;
@@ -133,6 +136,12 @@ export type AgenticCheckResult = {
   offerKind?: AgenticOfferKind;
   /** The page is a pricing or plans page (`/precios`, `/pricing`…). */
   pricingPage?: boolean;
+  /**
+   * Console only (AGENTS-BROWSER-1, log §453): the same page as a real
+   * browser painted it, written later by the AI-READ-2 pass. Absent until
+   * then, and on every result of the free checker. Never part of the score.
+   */
+  browser?: AgenticBrowserRead;
 };
 
 export type AgenticProductFound = "given" | "catalog" | "sitemap" | "home" | "none";

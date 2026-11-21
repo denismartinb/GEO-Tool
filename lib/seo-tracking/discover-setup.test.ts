@@ -18,6 +18,29 @@ describe("shapeSeedIdeas", () => {
   });
 });
 
+describe("shapeSeedIdeas with a seed", () => {
+  it("leaves out longer variants that show more searches than the seed, and puts the seed first", () => {
+    const idea = (keyword: string, volume: number | null) => ({ keyword, volume, difficulty: null, intent: null });
+    const items = shapeSeedIdeas(
+      [
+        idea("meristation noticias cine y series", 170),
+        idea("noticias de cine y series", 170),
+        idea("cine y series", 110),
+        idea("series y cine", 110),
+        idea("programación orange tv cine y series", 70)
+      ],
+      new Set(),
+      "Cine y series"
+    );
+    expect(items.map((i) => i.keyword)).toEqual(["cine y series", "series y cine", "programación orange tv cine y series"]);
+  });
+
+  it("keeps everything when the seed has no figure of its own", () => {
+    const items = shapeSeedIdeas([{ keyword: "cine y series online", volume: 50, difficulty: null, intent: null }], new Set(), "cine y series");
+    expect(items).toHaveLength(1);
+  });
+});
+
 describe("mergeRivalGaps", () => {
   it("credits each keyword to the rival that ranks best for it", () => {
     const items = mergeRivalGaps(

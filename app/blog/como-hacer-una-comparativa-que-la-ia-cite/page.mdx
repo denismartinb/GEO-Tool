@@ -1,0 +1,271 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Checklist,
+  CompareTable,
+  AuthorBio,
+  ArticleCta,
+  Figure
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("como-hacer-una-comparativa-que-la-ia-cite");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Puedo nombrar a mi competidor en mi web?",
+    answer:
+      "Sí. En España la comparación pública con un competidor, explícita o implícita, está permitida si cumple los requisitos del artículo 10 de la Ley de Competencia Desleal: productos con la misma finalidad, comparación objetiva de características esenciales, pertinentes, verificables y representativas (el precio puede ser una), y sin engañar, denigrar ni aprovecharse de la reputación del otro. Si dudas en tu caso, consulta con un profesional."
+  },
+  {
+    question: "¿Qué tiene que tener una comparativa para que la IA la cite?",
+    answer:
+      "Una respuesta directa al principio, una tabla en texto (no en imagen) con criterios concretos, cada dato del competidor con su fuente y su fecha, una conclusión que diga para quién es mejor cada opción y una fecha de actualización visible. Es el tipo de página que un motor puede resumir sin inventar nada."
+  },
+  {
+    question: "¿Tengo que reconocer en qué es mejor mi competidor?",
+    answer:
+      "Sí, conviene. Una comparativa en la que tu marca gana en todo se lee como publicidad y da poco que citar con confianza. Decir para quién es mejor el otro hace creíble el resto de la tabla y es lo que una persona que duda entre los dos quiere saber."
+  },
+  {
+    question: "¿Cada cuánto hay que actualizar una comparativa?",
+    answer:
+      "Cada vez que cambia un dato de la tabla, tuyo o del competidor: precios, planes, funciones. Y, aunque no cambie nada, revisa los enlaces y las fechas de consulta cada pocos meses. Una comparativa con datos viejos del otro es justo lo que no puede ser."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Una comparativa que la IA puede citar es una página que responde «¿tu marca
+o la otra?» en las primeras líneas, con una tabla en texto de tres a seis
+criterios que de verdad deciden la compra, cada dato del competidor con su
+enlace y su fecha, y una conclusión que dice para quién es mejor cada uno,
+también cuando es el otro. Eso es lo mismo que pide la ley española para
+comparar con un competidor: características esenciales, objetivas y
+verificables, sin engañar ni desacreditar.
+
+</KeyTakeaway>
+
+## Por qué una comparativa propia
+
+Cuando alguien pregunta a ChatGPT, Gemini, Claude o Perplexity «¿qué es
+mejor, X o Y?» o «alternativas a X», la respuesta se apoya en lo que el motor
+sabe y, cuando busca en la web, en las páginas que comparan esas dos opciones.
+Si la única comparación que existe la ha escrito tu competidor, o un
+comparador que no te conoce bien, es esa la que cuenta tu historia.
+
+Una comparativa propia no garantiza que te citen. Sí pone en la web una
+página que responde exactamente a esa pregunta, con datos que puedes
+defender, y le da al motor algo que resumir que no sea la versión del otro.
+Si todavía no sabes en qué preguntas te pasa esto, empieza por
+<a href="/blog/la-ia-te-menciona-pero-recomienda-a-otro">por qué la IA te
+menciona pero recomienda a otro</a>.
+
+## Cómo hacer la comparativa, paso a paso
+
+<NumberedSection n={1} title="Mira si ya la tienes">
+
+Antes de escribir nada, comprueba que no exista ya una página tuya que compare
+con ese competidor: busca en tu sitemap una dirección con su nombre, o con
+`vs`, `comparativa` o `alternativas`. Si existe, no hagas otra: dos páginas
+sobre lo mismo compiten entre sí y una de las dos se queda con datos viejos.
+Mejora la que tienes con los pasos de abajo.
+
+<QuickAction>Abre tu sitemap y busca el nombre del competidor. Si aparece una página de comparación, trabaja sobre esa.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Elige la pregunta que responde">
+
+Una comparativa responde una pregunta concreta de tu cliente, no «todo sobre
+nosotros y ellos». Las más habituales son tres: «¿X o Y?», «alternativas a
+Y» y «¿X o Y para [un caso concreto]?», como una empresa pequeña, un sector o
+un presupuesto. Escribe la pregunta tal como la haría tu cliente y deja que
+mande en el título, en el primer párrafo y en lo que entra en la tabla.
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Escoge de tres a seis criterios que decidan la compra">
+
+Los criterios son lo que tu cliente mira antes de elegir: precio, qué
+incluye, para qué tamaño de empresa sirve, integraciones, soporte, plazo de
+puesta en marcha. Tienen que ser **esenciales, pertinentes, verificables y
+representativos**, que es literalmente lo que pide la ley. Deja fuera los
+criterios que solo existen para que ganes tú y los adjetivos que nadie puede
+comprobar («mejor experiencia», «más intuitivo»).
+
+<QuickAction>Pregunta a dos clientes recientes qué compararon antes de elegirte. Sus respuestas son tus criterios.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={4} title="Monta la tabla con fuente y fecha en cada dato del otro">
+
+Cada celda del competidor lleva de dónde sale (un enlace a su página de
+precios, su documentación o su ficha) y cuándo lo consultaste. Si un dato no
+es público, escribe «no publicado», nunca una suposición. Tus datos, igual:
+que se puedan comprobar en tu web.
+
+<Figure
+  label="Figura 1."
+  wide
+  caption="Ejemplo inventado de tabla comparativa para un software de facturación. «Tu marca» y «El rival» no son empresas reales, y X € e Y € sustituyen a precios publicados. Lo que importa es la forma: cada dato del rival dice de dónde sale y cuándo se consultó, y lo que no es público se dice."
+>
+
+<CompareTable>
+
+| Criterio | Tu marca | El rival |
+|---|---|---|
+| **Precio del plan básico** | X € al mes, IVA incluido (tu página de precios) | Y € al mes, IVA no incluido (su página de precios, consultada el 1 de noviembre de 2026) |
+| **Facturas al mes en el plan básico** | Ilimitadas | Hasta un límite, según su página de planes (consultada el 1 de noviembre de 2026) |
+| **Factura electrónica** | Incluida | Incluida, según su centro de ayuda (consultado el 1 de noviembre de 2026) |
+| **Conexión con el banco** | Solo con algunos bancos | Con la mayoría de bancos españoles (su página de integraciones, consultada el 1 de noviembre de 2026) |
+| **Soporte** | Correo y chat en horario laboral | No publicado |
+
+</CompareTable>
+
+</Figure>
+
+</NumberedSection>
+
+<NumberedSection n={5} title="Concluye para quién es mejor cada uno">
+
+Cierra con una conclusión corta: «Tu marca es mejor opción si…» y «El rival
+es mejor opción si…». En la tabla de ejemplo, el rival gana en conexión con
+el banco, y decirlo hace creíble todo lo demás. Una comparativa en la que
+ganas en todo se lee como un anuncio, y da poco que citar con confianza.
+
+<QuickAction>Escribe una frase que empiece por «El rival es mejor opción si…». Si no se te ocurre ninguna, revisa los criterios.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={6} title="Prepara la página para que se pueda citar">
+
+La forma de la página importa tanto como el contenido:
+
+<Checklist
+  items={[
+    "Dirección y título con los dos nombres: /comparativas/tu-marca-vs-el-rival y «Tu marca o el rival: cuál elegir».",
+    "La respuesta en el primer párrafo, en dos o tres frases, antes de la tabla.",
+    "La tabla en HTML, no en imagen: una imagen no se puede leer ni citar línea a línea.",
+    "Una fecha de actualización visible, y la misma en los datos estructurados de la página.",
+    "Dos o tres preguntas frecuentes que haga de verdad quien duda entre los dos.",
+    "Enlaces a la comparativa desde tus páginas de producto y de precios, para que no quede huérfana."
+  ]}
+/>
+
+Si quieres profundizar en la fecha, lo explicamos en
+<a href="/blog/la-ia-prefiere-contenido-reciente">por qué la IA prefiere el
+contenido reciente</a>, y en la estructura de una página citable, en
+<a href="/blog/como-conseguir-que-chatgpt-te-cite">cómo conseguir que ChatGPT
+te cite</a>.
+
+</NumberedSection>
+
+<NumberedSection n={7} title="Mantenla viva">
+
+Una comparativa caduca en cuanto el otro cambia un precio. Apunta en el
+calendario una revisión cada pocos meses: vuelve a abrir cada enlace del
+rival, actualiza lo que haya cambiado, cambia la fecha de consulta y, solo
+si has cambiado algo, la fecha de actualización de la página.
+
+</NumberedSection>
+
+## Lo que no funciona
+
+<Checklist
+  tone="evitar"
+  items={[
+    "«Somos mejores que X» sin un dato detrás: no demuestra nada y es un riesgo legal.",
+    "Datos del competidor sin fuente ni fecha, o de memoria: si son falsos o están viejos, la IA los repetirá con tu nombre al lado.",
+    "Presentar tu producto como copia o réplica de una marca ajena, o colgarte de su fama: la ley lo prohíbe expresamente.",
+    "Criterios elegidos para ganar siempre, o una tabla en la que el otro no gana en nada.",
+    "La tabla como imagen, o la conclusión escondida al final de un texto largo.",
+    "Una comparativa nueva cada vez que cambia algo, en vez de actualizar la que ya existe."
+  ]}
+/>
+
+## Lo que dice la ley sobre comparar con tu competidor
+
+En España, el
+<a href="https://www.boe.es/buscar/act.php?id=BOE-A-1991-628#a10" target="_blank" rel="noopener noreferrer">artículo
+10 de la Ley 3/1991 de Competencia Desleal</a> permite la comparación pública
+con un competidor, incluida la publicidad comparativa, si cumple estos
+requisitos:
+
+- Los productos o servicios comparados tienen la misma finalidad o satisfacen
+  las mismas necesidades.
+- La comparación es objetiva y se hace sobre una o más características
+  esenciales, pertinentes, verificables y representativas, entre ellas, si
+  quieres, el precio.
+- No presentas lo tuyo como imitación o réplica de algo con marca protegida.
+- No engañas, no desacreditas al competidor y no te aprovechas de su
+  reputación, que son los actos que la misma ley prohíbe en otros artículos.
+  Una afirmación sobre el otro solo es lícita si es exacta, verdadera y
+  pertinente.
+
+Los siete pasos de arriba están pensados para cumplirlo: criterios
+esenciales, cada dato con su fuente y su fecha, y una conclusión que no
+desacredita. Esto es información general, no asesoramiento jurídico; si
+dudas en tu caso, consulta con un profesional.
+
+## Cómo te ayuda GenScore
+
+En **Competidores**, GenScore te enseña en qué preguntas principales de
+búsqueda aparece cada competidor y tú no: son las candidatas a tener
+comparativa. En **Recomendaciones**, cuando un competidor te gana en esas
+preguntas, la tarjeta te pide publicar la comparativa con él. Antes de
+hacerlo mira tu sitemap y, si ya tienes una comparativa con ese competidor,
+te propone reforzarla y la enlaza.
+
+Con «Generar comparativa», GenScore te prepara un borrador con el esquema de
+la página y una tabla corta. Las celdas del competidor no se rellenan: piden
+el dato de su web con su enlace y su fecha, y el plan incluye el paso de
+comprobarlos uno a uno. Después, cada
+escaneo vuelve a hacer las mismas preguntas a los motores para que veas si tu
+posición frente a ese competidor cambia.
+
+<Verdict title="Una comparativa que se puede citar es una comparativa honesta">
+
+Lo que hace citable una comparativa es lo mismo que la hace legal: criterios
+que importan, datos del otro con su fuente y su fecha, y una conclusión que
+dice para quién es mejor cada opción. Escríbela para quien duda entre los
+dos, no para ganar la tabla.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Descubre con qué competidor necesitas una comparativa"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: verás en qué preguntas principales de búsqueda te gana cada competidor en ChatGPT, Gemini, Claude y Perplexity, y tendrás el borrador de la comparativa listo para completar."
+/>
+
+</div>
+
+<RelatedPosts cluster="playbooks" currentSlug={post.slug} />
+
+</BlogPageShell>

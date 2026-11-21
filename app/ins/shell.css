@@ -1,0 +1,108 @@
+/* --- css/2-shell.css --- */
+/* ===== shell ===== */
+.ins-shell{position:fixed;inset:0;background:var(--canvas);z-index:0}
+.ins-shell :where(.side,.top,.mtop){color:var(--ink);font:400 15px/1.5 var(--font);-webkit-font-smoothing:antialiased}
+.ins-shell :where(.side,.top,.mtop),.ins-shell :where(.side,.top,.mtop) *{box-sizing:border-box}
+.ins-shell :where(.side,.top,.mtop) :is(button,h1,h2,h3,p,ul,ol,li,span,b,small){margin:0}
+.ins-shell :where(.side,.top,.mtop) button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+.ins-shell :where(.side,.top,.mtop) a{color:inherit;text-decoration:none}
+.ins-shell :where(.side,.top,.mtop) .i{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.ins-shell :where(.side,.top,.mtop) .i.sm{width:15px;height:15px}
+.ins-shell :where(.side,.top,.mtop) .mono{font-family:var(--mono);font-size:.92em;letter-spacing:-.01em}
+.ins-shell :where(.side,.top,.mtop) .num{font-variant-numeric:tabular-nums lining-nums}
+.ins-shell .app{position:fixed;left:16px;right:16px;top:16px;bottom:16px;background:var(--surface);border-radius:26px;box-shadow:var(--shadow);display:grid;grid-template-columns:252px 1fr;overflow:hidden;border:1px solid var(--rule-2)}
+.ins-shell .side{border-right:1px solid var(--rule-2);display:flex;flex-direction:column;padding:22px 16px 16px;gap:18px;overflow-y:auto;background:var(--surface)}
+.ins-shell .brand{display:flex;align-items:center;gap:10px;padding:0 8px;font-weight:700;font-size:17px;letter-spacing:-.02em}
+.ins-shell .brand svg{width:24px;height:25px}
+.ins-shell .proj{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--rule);border-radius:14px;text-align:left;width:100%}
+.ins-shell .proj .t{flex:1;min-width:0;line-height:1.25}
+.ins-shell .proj b{display:block;font-size:13.5px;font-weight:600}
+.ins-shell .proj span.d{font:400 11.5px var(--mono);color:var(--ink-3)}
+.ins-shell .kbtn{display:flex;align-items:center;gap:9px;width:100%;height:38px;padding:0 10px;border-radius:12px;background:var(--surface-2);color:var(--ink-3);font-size:13.5px}
+.ins-shell .kbtn kbd{margin-left:auto;font:500 11px var(--mono);border:1px solid var(--rule);border-radius:6px;padding:1px 6px;background:var(--surface);color:var(--ink-3)}
+.ins-shell .grp .lbl{font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600;padding:0 10px 6px;display:flex;align-items:center;gap:8px}
+.ins-shell .new{font:600 10px var(--font);letter-spacing:.02em;text-transform:none;color:var(--blue);background:var(--blue-tint);border-radius:99px;padding:1px 7px}
+.ins-shell .nav{position:relative;display:flex;align-items:center;gap:11px;height:36px;padding:0 10px;border-radius:10px;font-size:14px;color:var(--ink-2);transition:background var(--d1) var(--std),color var(--d1)}
+.ins-shell .nav:hover{background:var(--surface-2);color:var(--ink)}
+.ins-shell .nav .i{color:var(--ink-3)}
+.ins-shell .nav.on{color:var(--ink);font-weight:600;background:var(--surface-2)}
+.ins-shell .nav.on .i{color:var(--blue)}
+.ins-shell .nav.on::before{content:"";position:absolute;left:-16px;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--blue)}
+.ins-shell .nav .cnt{margin-left:auto;font:500 11.5px var(--font);color:var(--ink-3)}
+.ins-shell .nav .sd{margin-left:auto;width:6px;height:6px;border-radius:50%;background:var(--warm)}
+.ins-shell .side .foot{margin-top:auto;display:flex;align-items:center;gap:10px;padding:10px;border-top:1px solid var(--rule-2)}
+.ins-shell .side .foot b{font-size:13px;font-weight:600;display:block;line-height:1.2}
+.ins-shell .side .foot span{font-size:11.5px;color:var(--ink-3)}
+.ins-shell .av,.ins .av{width:32px;height:32px;border-radius:50%;flex:none;background:linear-gradient(135deg,#cfdbe4,#8fa7b8);display:grid;place-items:center;color:#0b1426;font-size:12px;font-weight:650}
+
+.ins-shell .main{position:relative;display:grid;grid-template-rows:64px 1fr;min-width:0;min-height:0}
+.ins-shell .top{display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1px solid var(--rule-2);position:relative;z-index:5;background:var(--surface)}
+.ins-shell .crumb{font-size:14px;color:var(--ink-3);display:flex;gap:8px;align-items:center;white-space:nowrap}
+.ins-shell .crumb b{color:var(--ink);font-weight:600}
+.ins-shell .top .sp{flex:1}
+.ins-shell .ibox{position:relative;height:38px;min-width:38px;padding:0 10px;border:1px solid var(--rule);border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.ins-shell .ibox .c,.ins-shell .mtop .bell .c{position:absolute;bottom:-6px;right:-6px;box-sizing:content-box;min-width:15px;height:15px;padding:0 4px;border:2px solid var(--surface);border-radius:99px;background:var(--blue);color:#fff;font:700 10.5px/15px var(--font);text-align:center}
+.ins-shell .top .kbtn{width:240px;background:var(--surface-2)}
+.ins-shell .mtop{display:none}
+.ins-shell .scroller{overflow-y:auto;overflow-x:hidden;min-height:0;scroll-behavior:smooth;overscroll-behavior:contain}
+.ins .page{max-width:1080px;margin:0 auto;padding:40px 40px 96px}
+
+/* progressive blur */
+.ins-shell .pblur{position:absolute;left:0;right:12px;pointer-events:none;z-index:4;opacity:0;transition:opacity var(--d2) var(--std)}
+.ins-shell .pblur.show{opacity:1}
+.ins-shell .pblur i{position:absolute;inset:0}
+.ins-shell .pblur.t{top:64px;height:56px}
+.ins-shell .pblur.b{bottom:0;height:72px}
+.ins-shell .pblur.t i:nth-child(1){backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);mask:linear-gradient(to top,transparent 0%,#000 30%)}
+.ins-shell .pblur.t i:nth-child(2){backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);mask:linear-gradient(to top,transparent 25%,#000 55%)}
+.ins-shell .pblur.t i:nth-child(3){backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);mask:linear-gradient(to top,transparent 50%,#000 80%)}
+.ins-shell .pblur.t i:nth-child(4){background:linear-gradient(to bottom,var(--surface) 0%,transparent 80%);opacity:.7}
+.ins-shell .pblur.b i:nth-child(1){backdrop-filter:blur(1px);-webkit-backdrop-filter:blur(1px);mask:linear-gradient(to bottom,transparent 0%,#000 30%)}
+.ins-shell .pblur.b i:nth-child(2){backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);mask:linear-gradient(to bottom,transparent 25%,#000 55%)}
+.ins-shell .pblur.b i:nth-child(3){backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);mask:linear-gradient(to bottom,transparent 50%,#000 80%)}
+.ins-shell .pblur.b i:nth-child(4){background:linear-gradient(to top,var(--surface) 0%,transparent 80%);opacity:.7}
+
+@media (max-width:1180px){.ins .page{padding:36px 28px 96px}}
+.ins .ph-soon{padding:64px 0;max-width:560px}
+.ins-shell .tabbar,.ins-shell .tabsub,.ins-shell .mtop .msearch{display:none}
+@media (max-width:760px){
+ .ins-shell .pb-btn{height:34px;width:34px;padding:0;justify-content:center;border:0;background:var(--surface-3)}
+ .ins-shell .pb-btn .lb{display:none}
+ .ins-shell .app{left:0;right:0;top:0;bottom:0;border-radius:0;border:0;grid-template-columns:1fr;box-shadow:none}
+ .ins-shell .side{display:none}
+ .ins-shell .top{display:none}
+ .ins-shell .mtop{display:flex;align-items:center;gap:8px;height:64px;padding:0 12px 0 19px;border-bottom:1px solid var(--rule-2);background:var(--surface);position:relative;z-index:5}
+ .ins-shell .mtop .msearch{display:grid;place-items:center;width:36px;height:36px;border-radius:11px;border:1px solid var(--rule);color:var(--ink-2)}
+ .ins-shell .mtop .msearch .i{width:15px;height:15px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+ .ins-shell .mtop .pj{display:flex;align-items:center;gap:4px;font-weight:650;font-size:16px;letter-spacing:-.01em;height:40px}
+ .ins-shell .side .proj{display:none}
+ .ins-shell .mtop .sp{flex:1}
+ .ins-shell .mtop .bell{position:relative;height:36px;min-width:36px;border-radius:11px;border:1px solid var(--rule);display:grid;place-items:center;font-size:13.5px;font-weight:650}
+ .ins-shell .pblur.t{top:64px}
+ .ins-shell .pblur{right:0}
+ .ins .page{padding:24px 16px calc(112px + env(safe-area-inset-bottom,0px))}
+ /* MOBILE-TABBAR-1: cápsula flotante, al alcance del pulgar y fuera de la barra de gestos */
+ .ins-shell .tabbar{display:flex;position:fixed;z-index:70;left:max(12px,env(safe-area-inset-left,0px));right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));padding:6px;gap:2px;border:1px solid var(--rule);border-radius:26px;background:color-mix(in srgb,var(--surface) 78%,transparent);backdrop-filter:blur(18px) saturate(1.6);-webkit-backdrop-filter:blur(18px) saturate(1.6);box-shadow:0 14px 34px -14px rgba(5,8,15,.4);font:400 15px/1.5 var(--font);color:var(--ink);box-sizing:border-box}
+ .ins-shell .tabbar *{box-sizing:border-box}
+ .ins-shell .tabbar a{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:52px;border-radius:18px;font-size:10px;white-space:nowrap;font-weight:550;color:var(--ink-3);text-decoration:none;-webkit-tap-highlight-color:transparent;transition:background var(--d1),color var(--d1)}
+ .ins-shell .tabbar a .i{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;transition:transform var(--d2)}
+ .ins-shell .tabbar a.on{color:var(--ink);font-weight:650;background:var(--blue-tint)}
+ .ins-shell .tabbar a.on .i{color:var(--blue)}
+ .ins-shell .tabbar a:active .i{transform:scale(.88)}
+ .ins-shell .tabbar .b{position:absolute;top:5px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:99px;background:var(--ink);color:var(--surface);font:650 10px/17px var(--font);text-align:center}
+ .ins-shell .tabbar .nw{position:absolute;top:3px;right:2px;height:15px;padding:0 5px;border-radius:99px;background:var(--blue);color:#fff;font:650 9px/15px var(--font)}
+ .ins-shell .app:has(.sc-mission,.sc-newdomain)~.tabbar{display:none}
+ /* pastillas de las pantallas de la familia, fijas al inicio de la página */
+ .ins-shell .tabsub{display:flex;position:sticky;top:0;z-index:3;gap:6px;padding:12px 16px 10px;background:var(--surface);border-bottom:1px solid var(--rule-2);font:400 15px/1.5 var(--font)}
+ .ins-shell .tabsub a{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;height:38px;padding:0 6px;border-radius:12px;border:1px solid var(--rule);background:var(--surface);font-size:13px;font-weight:600;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;-webkit-tap-highlight-color:transparent}
+ .ins-shell .tabsub a.on{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+ .ins-shell .app:has(.sc-mission,.sc-newdomain) .tabsub{display:none}
+ .ins-shell .main:has(.tabsub) .pblur.t{top:125px}
+ .ins-shell .pblur.b{bottom:0;height:110px}
+ html .ins .toasts{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+@media (prefers-reduced-motion:reduce){.ins-shell .tabbar a,.ins-shell .tabbar a .i{transition:none}}
+
+/* ANDROID-TWA-1: dentro de la app de Android nada lleva a cambiar de plan (log §381).
+   Capa de apoyo: la que manda es no pintarlo en servidor (ajustes, selector, paleta). */
+.ins-shell[data-app] a[href*="openPlan="],.ins-shell[data-app] a[href*="/precios"],.ins-shell[data-app] a[href*="/pricing"]{display:none}

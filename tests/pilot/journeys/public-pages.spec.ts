@@ -94,7 +94,21 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   "que-fuentes-cita-la-ia": "playbooks",
   // BLOG-BF-AGENTS-1 (2026-10-23, log §342).
   "black-friday-agentes-de-ia": "playbooks",
-  "la-ia-prefiere-contenido-reciente": "medicion"
+  "la-ia-prefiere-contenido-reciente": "medicion",
+  "convierte-mejor-el-trafico-de-la-ia": "fundamentos",
+  // EXT-LAUNCH-1 (2026-10-31, log §395).
+  "extension-de-chrome-de-genscore": "playbooks",
+  "como-hacer-una-comparativa-que-la-ia-cite": "playbooks",
+  // BLOG-SCHEMA-1 (2026-11-02, log §433).
+  "datos-estructurados-y-citas-de-la-ia": "playbooks",
+  // BLOG-MCKINSEY-1 (2026-11-04, log §467).
+  "como-compran-los-consumidores-con-ia": "fundamentos",
+  // WP-LAUNCH-1 (2026-11-05, log §469).
+  "genscore-para-wordpress": "playbooks",
+  // BLOG-CLICS-1 (2026-11-05, log §468).
+  "cuantos-clics-manda-chatgpt": "medicion",
+  // BLOG-MENCIONES-1 (2026-11-11, log §470).
+  "menciones-de-marca-o-enlaces-para-la-ia": "playbooks"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);

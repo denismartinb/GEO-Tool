@@ -1,0 +1,329 @@
+<title>Prueba Pro caducada</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a switchable mock of the Instrumento console (desktop frame / phone frame) showing the expired-trial experience: first-entry dialog, then the permanent pieces. */
+:root{
+  --canvas:#eceef2;--surface:#ffffff;--surface-2:#f6f7f9;--surface-3:#eff1f4;
+  --ink:#0b1426;--ink-2:#3b4759;--ink-3:#5f6b7e;--ink-4:#9aa4b3;
+  --rule:#e3e6eb;--rule-2:#eef0f3;
+  --blue:#2563eb;--blue-ink:#1b4fd6;--blue-tint:#ecf2ff;
+  --warm:#c2410c;--warm-tint:#fff3eb;--warm-rule:#fbd3bb;
+  --pos:#0f7a54;--pos-tint:#e8f6ef;
+  --scrim:rgba(11,20,38,.42);
+  --shadow:0 1px 2px rgba(11,20,38,.04),0 12px 40px -12px rgba(11,20,38,.18);
+  --font:'Figtree',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --canvas:#05080f;--surface:#0c121e;--surface-2:#111929;--surface-3:#162034;
+  --ink:#eef2f8;--ink-2:#c3ccda;--ink-3:#8f9bb0;--ink-4:#5f6b82;
+  --rule:#1e2737;--rule-2:#172031;
+  --blue:#5b8cff;--blue-ink:#8fb0ff;--blue-tint:#121f3d;
+  --warm:#ff8f57;--warm-tint:#2a170d;--warm-rule:#5a2f17;
+  --pos:#43d39a;--pos-tint:#0f2a20;
+  --scrim:rgba(0,0,0,.6);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 40px -12px rgba(0,0,0,.6);
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --canvas:#05080f;--surface:#0c121e;--surface-2:#111929;--surface-3:#162034;
+  --ink:#eef2f8;--ink-2:#c3ccda;--ink-3:#8f9bb0;--ink-4:#5f6b82;
+  --rule:#1e2737;--rule-2:#172031;
+  --blue:#5b8cff;--blue-ink:#8fb0ff;--blue-tint:#121f3d;
+  --warm:#ff8f57;--warm-tint:#2a170d;--warm-rule:#5a2f17;
+  --pos:#43d39a;--pos-tint:#0f2a20;
+  --scrim:rgba(0,0,0,.6);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 40px -12px rgba(0,0,0,.6);
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--canvas);color:var(--ink);font-family:var(--font);font-size:14px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,a:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.wrap{max-width:1120px;margin:0 auto;display:grid;gap:20px}
+.num{font-variant-numeric:tabular-nums}
+
+/* page controls */
+.head{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.head h1{font-size:28px;font-weight:600;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.head p{margin:4px 0 0;color:var(--ink-3);max-width:560px}
+.ctl{display:flex;flex-wrap:wrap;gap:10px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--rule);border-radius:999px;padding:3px}
+.seg button{padding:7px 14px;border-radius:999px;font-size:13px;font-weight:550;color:var(--ink-3)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface)}
+
+/* stage */
+.stage{display:flex;justify-content:center}
+.frame{position:relative;background:var(--surface);border:1px solid var(--rule);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;width:100%;max-width:1120px}
+.frame.is-m{max-width:390px;border-radius:34px;border-width:8px;border-color:var(--ink)}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);min-height:640px}
+.is-m .app{grid-template-columns:minmax(0,1fr);min-height:720px}
+
+/* sidebar */
+.side{border-right:1px solid var(--rule);padding:18px 14px;display:flex;flex-direction:column;gap:14px;background:var(--surface)}
+.is-m .side{display:none}
+.logo{display:flex;align-items:center;gap:8px;font-weight:650;font-size:15px;padding:0 6px}
+.logo i{width:22px;height:22px;border-radius:7px;background:var(--ink);display:block;position:relative}
+.logo i::after{content:"";position:absolute;inset:6px;border-radius:50%;border:2px solid var(--surface)}
+.proj{border:1px solid var(--rule);border-radius:14px;padding:9px 12px;display:grid}
+.proj b{font-size:13.5px;font-weight:600}.proj span{font-family:var(--mono);font-size:11px;color:var(--ink-3)}
+.nav{display:grid;gap:2px}
+.nav a{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:10px;color:var(--ink-2);font-size:13.5px;text-decoration:none}
+.nav a.on{background:var(--surface-3);color:var(--ink);font-weight:600}
+.nav small{color:var(--ink-4);font-size:12px}
+.plan-card{margin-top:auto;border:1px solid var(--warm-rule);background:var(--warm-tint);border-radius:16px;padding:14px;display:grid;gap:8px}
+.plan-card b{font-size:13.5px}
+.plan-card p{margin:0;font-size:12.5px;color:var(--ink-2)}
+
+/* main */
+.main{min-width:0;display:flex;flex-direction:column}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;border-bottom:1px solid var(--rule)}
+.is-m .top{padding:12px 16px}
+.crumb{color:var(--ink-3);font-size:13px}.crumb b{color:var(--ink);font-weight:600}
+.top .r{display:flex;gap:8px;align-items:center}
+.pill{height:34px;min-width:34px;padding:0 10px;border:1px solid var(--rule);border-radius:12px;display:grid;place-items:center;font-size:12.5px}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#c7d2e3,#8fa0b8);color:#fff;display:grid;place-items:center;font-size:12px;font-weight:650}
+.burger{display:none;width:20px;height:2px;background:var(--ink);box-shadow:0 6px 0 var(--ink),0 -6px 0 var(--ink)}
+.is-m .burger{display:block}
+.is-m .crumb .full{display:none}
+
+/* PERMANENT STRIP */
+.strip{display:flex;align-items:center;gap:14px;padding:10px 24px;background:var(--warm-tint);border-bottom:1px solid var(--warm-rule);font-size:13.5px}
+.strip .dot{flex:none;width:8px;height:8px;border-radius:50%;background:var(--warm)}
+.strip p{margin:0;flex:1;min-width:0;color:var(--ink-2)}
+.strip p b{color:var(--ink);font-weight:600}
+.is-m .strip{padding:10px 16px;flex-wrap:wrap;gap:8px 12px;align-items:flex-start}
+.is-m .strip p{flex:1 1 100%;order:2}
+.is-m .strip .dot{margin-top:7px}
+
+.btn{display:inline-flex;align-items:center;gap:8px;height:36px;padding:0 16px;border-radius:12px;font-weight:600;font-size:13.5px;white-space:nowrap}
+.btn.dark{background:var(--ink);color:var(--surface)}
+.btn.line{border:1px solid var(--rule);background:var(--surface)}
+.btn.sm{height:32px;padding:0 13px;font-size:13px}
+.btn[disabled]{color:var(--ink-4);cursor:not-allowed;background:var(--surface-2);border:1px solid var(--rule)}
+.ic{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+.page{padding:32px 28px 40px;display:grid;gap:22px;align-content:start}
+.is-m .page{padding:24px 16px 96px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.eyebrow span{font-family:var(--mono);letter-spacing:0;text-transform:none}
+.page h2{margin:6px 0 0;font-size:40px;font-weight:400;letter-spacing:-.03em;line-height:1.1}
+.is-m .page h2{font-size:32px}
+.lead{margin:0;font-size:17px;color:var(--ink-2);max-width:620px}
+.is-m .lead{font-size:15.5px}
+.cards{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}
+.is-m .cards{grid-template-columns:minmax(0,1fr)}
+.card{border:1px solid var(--rule);border-radius:20px;padding:22px;background:var(--surface);min-width:0}
+.score{display:flex;align-items:baseline;gap:6px}
+.score b{font-size:76px;font-weight:300;letter-spacing:-.05em;line-height:1}
+.is-m .score b{font-size:60px}
+.score small{color:var(--ink-3);font-size:15px}
+.tr{height:6px;border-radius:99px;background:var(--surface-3);margin-top:16px;overflow:hidden}
+.tr i{display:block;height:100%;width:25%;background:var(--blue);border-radius:inherit}
+.cap{font-size:12.5px;color:var(--ink-3);margin-top:10px}
+
+/* PERMANENT CARD in the overview: replaces the live-scan card */
+.paused{display:grid;gap:12px;align-content:start}
+.paused .tag{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--warm)}
+.paused h3{margin:0;font-size:17px;font-weight:600;letter-spacing:-.01em;line-height:1.3}
+.paused p{margin:0;color:var(--ink-3);font-size:13.5px}
+.paused .btn{justify-self:start}
+
+.rec{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 20px;align-items:center}
+.is-m .rec{grid-template-columns:minmax(0,1fr)}
+.rec h4{margin:0;font-size:15px;font-weight:600}
+.rec p{margin:2px 0 0;color:var(--ink-3);font-size:13px}
+.lockrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.why{font-size:12px;color:var(--ink-3)}
+.why a{color:var(--blue-ink);font-weight:600;text-decoration:none;border-bottom:1px solid currentColor}
+
+/* mobile sticky bar */
+.dock{display:none}
+.is-m .dock{display:flex;position:absolute;left:0;right:0;bottom:0;padding:12px 16px 16px;gap:12px;align-items:center;background:linear-gradient(to top,var(--surface) 70%,transparent)}
+.dock .t{flex:1;min-width:0;font-size:12.5px;color:var(--ink-3);line-height:1.3}
+.dock .t b{display:block;color:var(--ink);font-size:13.5px}
+
+/* FIRST ENTRY DIALOG */
+.scrim{position:absolute;inset:0;background:var(--scrim);display:grid;place-items:center;padding:20px;z-index:5;animation:fade .25s ease both}
+.is-m .scrim{place-items:end center;padding:0}
+.dlg{background:var(--surface);border-radius:26px;width:100%;max-width:560px;padding:30px;box-shadow:var(--shadow);display:grid;gap:18px;max-height:100%;overflow:auto;animation:rise .35s cubic-bezier(.2,.8,.2,1) both}
+.is-m .dlg{border-radius:26px 26px 0 0;padding:24px 20px 22px;max-width:none;gap:16px}
+.dlg h3{margin:6px 0 0;font-size:28px;font-weight:500;letter-spacing:-.025em;line-height:1.15;text-wrap:balance}
+.is-m .dlg h3{font-size:24px}
+.dlg>p{margin:0;color:var(--ink-2);font-size:15px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.is-m .two{grid-template-columns:1fr}
+.box{border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:6px;align-content:start}
+.box h5{margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);font-weight:600}
+.box ul{margin:0;padding:0;list-style:none;display:grid;gap:5px;font-size:13.5px}
+.box li{display:flex;gap:8px;align-items:flex-start}
+.box li::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;margin-top:7px;background:var(--pos)}
+.box.hold{background:var(--warm-tint);border-color:var(--warm-rule)}
+.box.hold li::before{background:var(--warm)}
+.plans{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.is-m .plans{grid-template-columns:1fr 1fr;gap:8px}
+.plan{border:1px solid var(--rule);border-radius:16px;padding:14px 16px;display:grid;gap:2px}
+.plan.rec-pro{border-color:var(--ink);box-shadow:0 0 0 1px var(--ink)}
+.plan b{font-size:14px}
+.plan .p{font-size:22px;font-weight:300;letter-spacing:-.03em}
+.plan .p s{font-size:13px;color:var(--ink-4);margin-right:6px;letter-spacing:0}
+.plan .p small{font-size:12px;color:var(--ink-3)}
+.plan span.n{font-size:12px;color:var(--ink-3)}
+.acts{display:flex;gap:10px;flex-wrap:wrap}
+.is-m .acts{flex-direction:column}
+.is-m .acts .btn{justify-content:center;height:44px}
+.fine{font-size:12px;color:var(--ink-3);margin:0}
+@keyframes fade{from{opacity:0}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+@media (prefers-reduced-motion:reduce){.scrim,.dlg{animation:none}}
+
+/* notes */
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.note{border-top:2px solid var(--ink);padding-top:10px;display:grid;gap:4px;align-content:start}
+.note b{font-size:14px}.note p{margin:0;color:var(--ink-3);font-size:13px}
+</style>
+
+<div class="wrap">
+  <div class="head">
+    <div>
+      <h1>Prueba Pro caducada</h1>
+      <p>Cómo se vive el panel cuando la prueba termina: un aviso la primera vez que entras y, después, piezas fijas que llevan a elegir plan sin estorbar la consulta de datos. Datos de ejemplo.</p>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Momento"><button id="s-first" aria-pressed="true">Primera entrada</button><button id="s-after" aria-pressed="false">Después</button></div>
+      <div class="seg" role="group" aria-label="Pantalla"><button id="d-d" aria-pressed="true">Escritorio</button><button id="d-m" aria-pressed="false">Móvil</button></div>
+    </div>
+  </div>
+
+  <div class="stage"><div class="frame" id="frame"><div class="app">
+    <aside class="side" aria-label="Menú de ejemplo">
+      <div class="logo"><i></i>GenScore</div>
+      <div class="proj"><b>Nubaria</b><span>nubaria.es</span></div>
+      <nav class="nav">
+        <a class="on" href="#" onclick="return false">Visión general</a>
+        <a href="#" onclick="return false">Recomendaciones <small class="num">8</small></a>
+        <a href="#" onclick="return false">Prompts <small class="num">17</small></a>
+        <a href="#" onclick="return false">Competidores <small class="num">4</small></a>
+        <a href="#" onclick="return false">Páginas citadas</a>
+        <a href="#" onclick="return false">Auditoría técnica</a>
+      </nav>
+      <!-- permanent piece 2: replaces the plan chip in the menu footer -->
+      <div class="plan-card" id="plancard" hidden>
+        <b>Prueba terminada</b>
+        <p>Consultas tus datos, pero no se escanea.</p>
+        <button class="btn dark sm">Elegir plan</button>
+      </div>
+    </aside>
+
+    <div class="main">
+      <div class="top">
+        <div style="display:flex;align-items:center;gap:14px"><span class="burger" aria-hidden="true"></span><span class="crumb"><span class="full">Nubaria / </span><b>Visión general</b></span></div>
+        <div class="r"><span class="pill">2</span><span class="av">LU</span></div>
+      </div>
+
+      <!-- permanent piece 1: slim strip under the header, on every screen -->
+      <div class="strip" id="strip" hidden>
+        <span class="dot" aria-hidden="true"></span>
+        <p><b>Tu prueba de Pro terminó el 22 oct.</b> Tus datos siguen aquí; los escaneos están en pausa hasta que elijas un plan.</p>
+        <button class="btn dark sm">Elegir plan</button>
+      </div>
+
+      <div class="page">
+        <div>
+          <div class="eyebrow">Visión general · <span>nubaria.es</span></div>
+          <h2>Buenos días, Lucía.</h2>
+        </div>
+        <p class="lead">Apareces en el 31% de las respuestas. Cuentix te supera con un 54%.</p>
+        <div class="cards">
+          <div class="card">
+            <div class="eyebrow">Puntuación GEO</div>
+            <div class="score"><b class="num">25</b><small>de 100</small></div>
+            <div class="tr"><i></i></div>
+            <div class="cap">Último escaneo hace 7 días</div>
+          </div>
+          <!-- permanent piece 3: this card takes the place of the live-scan card -->
+          <div class="card paused" id="pausedcard" hidden>
+            <span class="tag"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>Escaneos en pausa</span>
+            <h3>Con un plan vuelve el escaneo automático y tus recomendaciones se actualizan.</h3>
+            <p>Lo que ves es la última foto. Nada se ha borrado.</p>
+            <button class="btn dark">Reanudar con un plan</button>
+          </div>
+        </div>
+
+        <div class="card rec">
+          <div>
+            <div class="eyebrow">Tu siguiente paso</div>
+            <h4 style="margin-top:6px">Publica una página que responda «cómo emitir facturas Verifactu»</h4>
+            <p>La IA no encuentra tu respuesta en este tema.</p>
+          </div>
+          <!-- permanent piece 4: actions that need a plan say so in place -->
+          <div class="lockrow" id="lockrow">
+            <button class="btn line sm" disabled><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/></svg>Marcar como hecho</button>
+            <span class="why" id="why" hidden>Con un plan. <a href="#" onclick="return false">Elegir</a></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- permanent piece 5 (phone only): bottom bar -->
+      <div class="dock" id="dock" hidden>
+        <div class="t"><b>Prueba terminada</b>Solo lectura hasta que elijas plan</div>
+        <button class="btn dark sm">Elegir plan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- first-entry dialog -->
+  <div class="scrim" id="scrim" role="dialog" aria-modal="true" aria-labelledby="dt">
+    <div class="dlg">
+      <div>
+        <div class="eyebrow" style="color:var(--warm)">Prueba Pro terminada</div>
+        <h3 id="dt">Tu prueba de Pro ha terminado</h3>
+      </div>
+      <p>Tus datos siguen aquí y puedes consultarlos cuando quieras. Para que GenScore vuelva a escanear tu web, elige un plan.</p>
+      <div class="two">
+        <div class="box"><h5>Sigue contigo</h5><ul><li>Tus escaneos, prompts y competidores</li><li>Las recomendaciones y el informe</li><li>La auditoría técnica de tu web</li></ul></div>
+        <div class="box hold"><h5>En pausa</h5><ul><li>Escaneos nuevos, también los automáticos</li><li>Añadir dominios nuevos</li><li>Marcar recomendaciones como hechas</li></ul></div>
+      </div>
+      <div class="plans">
+        <div class="plan"><b>Starter</b><span class="p num"><s>29 €</s>20 €<small> /mes</small></span><span class="n">Precio fundador</span></div>
+        <div class="plan rec-pro"><b>Pro</b><span class="p num"><s>99 €</s>69 €<small> /mes</small></span><span class="n">Precio fundador, 4 motores</span></div>
+      </div>
+      <div class="acts">
+        <button class="btn dark" id="pick">Elegir plan</button>
+        <button class="btn line" id="later">Ahora no, ver mis datos</button>
+      </div>
+    </div>
+  </div>
+  </div></div>
+
+  <div class="notes">
+    <div class="note"><b>Aviso de primera entrada</b><p>Sale una sola vez por cuenta, al entrar con la prueba caducada. Cerrarlo no vuelve a abrirlo. En móvil es una hoja inferior.</p></div>
+    <div class="note"><b>Franja bajo la cabecera</b><p>Fija en todas las pantallas. Dice qué pasa y lleva a elegir plan. En móvil pasa a dos líneas.</p></div>
+    <div class="note"><b>Tarjeta en el menú y barra inferior</b><p>El chip del plan se convierte en «Prueba terminada». En móvil, donde no hay menú a la vista, una barra inferior hace lo mismo.</p></div>
+    <div class="note"><b>Tarjeta de escaneo en pausa y acciones bloqueadas</b><p>En Visión general sustituye a la tarjeta de escaneo en vivo. Cada acción que necesita plan lo dice ahí mismo.</p></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var frame=$('frame'),state='first';
+  function pressed(a,b,on){$(a).setAttribute('aria-pressed',on);$(b).setAttribute('aria-pressed',!on)}
+  function render(){
+    var after=state==='after';
+    $('scrim').hidden=after;
+    ['strip','plancard','pausedcard','dock','why'].forEach(function(i){$(i).hidden=false});
+    pressed('s-first','s-after',!after);
+  }
+  function device(m){frame.classList.toggle('is-m',m);pressed('d-d','d-m',!m)}
+  $('s-first').onclick=function(){state='first';render()};
+  $('s-after').onclick=function(){state='after';render()};
+  $('d-d').onclick=function(){device(false)};
+  $('d-m').onclick=function(){device(true)};
+  $('later').onclick=function(){state='after';render()};
+  $('pick').onclick=function(){state='after';render()};
+  if(window.matchMedia&&window.matchMedia('(max-width:700px)').matches)device(true);
+  render();
+})();
+</script>

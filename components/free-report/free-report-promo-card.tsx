@@ -69,6 +69,9 @@ export function FreeReportPromoCard() {
         window.innerHeight,
         document.documentElement.scrollHeight
       );
+      // EXT-PROMO-1 (log §410): while the Chrome extension card is on screen,
+      // wait, so the two corner cards never show at once.
+      if (document.querySelector(".ext-promo")) return;
       if (shouldTriggerPromo({ elapsedMs: Date.now() - startedAt, scrollFraction })) {
         done = true;
         writeStorage("session", PROMO_SHOWN_THIS_VISIT_KEY, "1");

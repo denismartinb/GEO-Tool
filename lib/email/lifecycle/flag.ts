@@ -13,3 +13,13 @@ import { isUnsubscribeConfigured } from "@/lib/email/unsubscribe";
 export function isLifecycleEmailEnabled(): boolean {
   return process.env.LIFECYCLE_EMAILS_ENABLED === "true" && isUnsubscribeConfigured();
 }
+
+/**
+ * FEATURE-EMAILS-1 (log §417). The three feature emails have their own
+ * switch on top of the lifecycle one: they ship off and the founder turns
+ * them on, after applying migration 0047, by setting
+ * `FEATURE_EMAILS_ENABLED=true` in Vercel.
+ */
+export function isFeatureEmailEnabled(): boolean {
+  return isLifecycleEmailEnabled() && process.env.FEATURE_EMAILS_ENABLED === "true";
+}

@@ -80,7 +80,7 @@ describe("TrendChart", () => {
     const html = renderToStaticMarkup(
       <TrendChart points={[point({ generatedAt: sameDay }), point({ generatedAt: sameDay })]} />
     );
-    const label = formatDate(sameDay);
+    const label = formatDate(sameDay).replace(/\s\d{4}$/, "");
     expect(html.split(label).length - 1).toBe(1);
   });
 

@@ -30,7 +30,8 @@ export function DomainOverageGate({
   cap,
   requiredRemoveCount,
   domains,
-  hasStripeSubscription
+  hasStripeSubscription,
+  canUpgrade = true
 }: {
   planId: Plan["id"];
   planName: string;
@@ -39,6 +40,8 @@ export function DomainOverageGate({
   requiredRemoveCount: number;
   domains: ActiveProjectSummary[];
   hasStripeSubscription: boolean;
+  /** ANDROID-TWA-1: `false` dentro de la app de Android, donde no se vende (log §381). */
+  canUpgrade?: boolean;
 }) {
   const router = useRouter();
   const [step, setStep] = useState<Step>("choose");
@@ -119,15 +122,17 @@ export function DomainOverageGate({
                   <span className="dog-opt-t">Retirar dominios</span>
                   <span className="dog-opt-d">Elige cuáles conservar. Los demás se eliminan de forma permanente.</span>
                 </button>
-                <button type="button" className="dog-opt" onClick={() => setStep("upgrade-pick")}>
-                  <span className="dog-opt-ic">
-                    <Icon name="arrUp" size={16} />
-                  </span>
-                  <span className="dog-opt-t">Subir de plan</span>
-                  <span className="dog-opt-d">
-                    Sube a un plan con más capacidad y conserva tus {activeCount} dominios tal cual.
-                  </span>
-                </button>
+                {canUpgrade ? (
+                  <button type="button" className="dog-opt" onClick={() => setStep("upgrade-pick")}>
+                    <span className="dog-opt-ic">
+                      <Icon name="arrUp" size={16} />
+                    </span>
+                    <span className="dog-opt-t">Subir de plan</span>
+                    <span className="dog-opt-d">
+                      Sube a un plan con más capacidad y conserva tus {activeCount} dominios tal cual.
+                    </span>
+                  </button>
+                ) : null}
               </div>
               {error && (
                 <p className="feedback error" style={{ marginTop: 14 }}>
@@ -248,11 +253,13 @@ export function DomainOverageGate({
                 <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} />
                 Entiendo que esta acción no se puede deshacer.
               </label>
-              <p style={{ marginTop: 12 }}>
-                <button type="button" className="dog-link" onClick={() => setStep("upgrade-pick")} disabled={isPending}>
-                  Prefiero subir de plan en su lugar
-                </button>
-              </p>
+              {canUpgrade ? (
+                <p style={{ marginTop: 12 }}>
+                  <button type="button" className="dog-link" onClick={() => setStep("upgrade-pick")} disabled={isPending}>
+                    Prefiero subir de plan en su lugar
+                  </button>
+                </p>
+              ) : null}
               {error && (
                 <p className="feedback error" style={{ marginTop: 14 }}>
                   {error}

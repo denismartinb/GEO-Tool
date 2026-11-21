@@ -271,9 +271,9 @@ export const GENSCORE_NOTE = {
 
 export const PAGE = {
   slug: "profound-vs-peec-ai-vs-otterly",
-  metaTitle: "Profound vs Peec AI vs Otterly: comparativa en español (2026) · GenScore",
+  metaTitle: "Profound vs Peec AI vs Otterly: comparativa 2026 · GenScore",
   metaDescription:
-    "Profound, Peec AI y Otterly comparadas fila a fila: precios y escalones, motores cubiertos, prompts, países e idiomas, citas, sentimiento, agencias y prueba gratuita. Datos fechados y con fuente.",
+    "Profound, Peec AI y Otterly fila a fila: precios, motores, prompts, países, citas, sentimiento, agencias y prueba gratuita. Datos fechados y con fuente.",
   h1: "Profound vs Peec AI vs Otterly: comparativa en español (2026)",
   dateLine: `Datos consultados el ${RESEARCH_DATE}. Cada dato lleva su fuente; los precios que el fabricante no publica proceden de terceros y son orientativos.`,
   keyTakeaway:

@@ -86,10 +86,10 @@ export async function sendDemoOpsEmail(request: DemoRequest, input: { requestedA
   if (!to) return false;
   const { subject, html } = buildDemoOpsEmail(request, input);
   // Reply-To the requester: answering this email writes to them directly.
-  return sendEmail(to, subject, html, undefined, request.email);
+  return sendEmail("ops_demo", to, subject, html, undefined, request.email);
 }
 
 export async function sendDemoConfirmationEmail(request: DemoRequest): Promise<boolean> {
   const { subject, html } = buildDemoConfirmationEmail(request);
-  return sendEmail(request.email, subject, html);
+  return sendEmail("demo_confirmation", request.email, subject, html);
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { SUPPORT_EMAIL } from "@/lib/support";
 import { Icon } from "@/components/ui/icon";
 import { Button } from "@/components/ui/button";
@@ -21,17 +22,11 @@ const METER_ROWS: Array<{ label: string; icon: string; get: (p: Plan) => string 
   { label: "Frecuencia de escaneo", icon: "refresh", get: (p) => p.meter.refresh }
 ];
 
-function PlanMeterChips({ plan }: { plan: Plan }) {
-  return (
-    <div className="cp-plan-meter">
-      {METER_ROWS.map((row) => (
-        <span key={row.label} className="cp-chip">
-          <Icon name={row.icon} size={11} />
-          {row.get(plan)}
-        </span>
-      ))}
-    </div>
-  );
+/** Mobile chips: the same four meters with their unit, so «1» reads «1 dominio». */
+function planChips(p: Plan): string[] {
+  const n = p.meter.projects;
+  const domains = /^\d+$/.test(n) ? `${n} ${n === "1" ? "dominio" : "dominios"}` : `Dominios ${n.toLowerCase()}`;
+  return [domains, `~${p.meter.prompts} prompts`, `${p.meter.engines} motores`, p.meter.refresh];
 }
 
 export function ChangePlanModal({
@@ -89,7 +84,7 @@ export function ChangePlanModal({
   const [sel, setSel] = useState<Plan["id"]>(
     overageOnly ? currentId : (initialTargetId ?? (currentId === "free" ? "pro" : currentId))
   );
-  const [step, setStep] = useState<"select" | "confirm" | "overage" | "done">(overageOnly ? "overage" : "select");
+  const [step, setStep] = useState<"select" | "overage" | "done">(overageOnly ? "overage" : "select");
   const [error, setError] = useState<string | null>(null);
   const [archiveIds, setArchiveIds] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -121,36 +116,18 @@ export function ChangePlanModal({
   // the Portal instead, which this promo cannot apply to.
   const promoShown = (planId: Plan["id"]) => !hasRealSubscription && promoPlanIds.includes(planId);
 
-  // PRICING-PROMO-1: the promo price this checkout will actually charge for
-  // `target`, or null when it doesn't apply — computed once so the move box
-  // and the footer note below can't disagree with each other.
-  const targetPromoPrice = target.promoPrice !== undefined && promoShown(target.id) ? target.promoPrice : null;
-
   const isSelfServeTarget = target.id === "starter" || target.id === "pro";
   // BILLING-STRIPE-1: a fresh Checkout Session (as opposed to the Customer
   // Portal's in-place, prorated update) is needed whenever there's no real
   // subscription yet to modify — a Free account, or a reverse-trial account
   // converting to a real paid plan for the first time (PR 3).
   const requiresCheckout = !hasRealSubscription && isSelfServeTarget;
-  const isDowngradeToFree = currentId !== "free" && target.id === "free";
   const paidToPaidBlocked = hasRealSubscription && target.id !== "free" && target.id !== currentId;
   // Agency has no self-serve Stripe price (still "hablar con ventas" per
   // PRICING-TRUTH-1) — only Starter<->Pro can be deep-linked into the
   // Portal's plan-switch flow.
   const paidToPaidSelfServe = paidToPaidBlocked && target.id !== "agency";
-  // CONSOLE-REDESIGN-1: Agency is no longer a selectable radio. It used to be
-  // one, so you could pick it and then find "Continuar" switched off with two
-  // different explanations on screen ("Disponible muy pronto" at the foot,
-  // "escríbenos a soporte" in the note) — a dead end that let someone choose
-  // something they could not have. It now renders as its own cell with a real
-  // way out (SUPPORT_EMAIL), and `sel` can never hold it.
-  const agencyPlan = PLANS.find((p) => p.id === "agency")!;
-  const selectablePlans = PLANS.filter((p) => p.id !== "agency" && p.id !== "free");
-
-  const diffs = METER_ROWS.filter((row) => row.get(current) !== row.get(target));
-
   const requiredArchiveCount = Math.max(0, activeProjects.length - target.caps.projects);
-  const hasProjectOverage = isDowngradeToFree && requiredArchiveCount > 0;
   const archiveSelectionComplete = archiveIds.size === requiredArchiveCount;
 
   useEffect(() => {
@@ -168,16 +145,6 @@ export function ChangePlanModal({
       return next;
     });
   }
-
-  const footNote = isSame ? (
-    "Selecciona un plan distinto al actual."
-  ) : paidToPaidSelfServe ? (
-    "Se gestiona en el portal seguro de Stripe."
-  ) : requiresCheckout ? (
-    "Se abre el pago seguro de Stripe."
-  ) : (
-    "Se aplica de inmediato al confirmar."
-  );
 
   const handleConfirmDowngrade = () => {
     setError(null);
@@ -217,336 +184,252 @@ export function ChangePlanModal({
     });
   };
 
-  return (
-    <div className="cp-scrim" onClick={close}>
-      <div
-        className="cp-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-label={step === "done" ? "Cambio confirmado" : "Cambiar de plan"}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="cp-head">
-          <div className="cp-head-ic">
-            <Icon name="grid" size={20} />
-          </div>
-          <div>
-            <h3>
-              {step === "done" ? "Cambio confirmado" : step === "overage" ? "Ajusta tus dominios activos" : "Cambiar de plan"}
-            </h3>
+  const RANK: Record<Plan["id"], number> = { free: 0, starter: 1, pro: 2, agency: 3 };
+  // PLAN-MODAL-INSTRUMENTO-1 (log §394): Agencia is negotiated by hand, so an
+  // Agencia account changes plan by talking to us, never from these cards.
+  const locked = currentId === "agency";
+  // The reverse trial is always Pro; a comped Agencia also has no Stripe
+  // subscription, and it is not a trial.
+  const onTrial = currentId === "pro" && !hasRealSubscription;
+  const plansShown = PLANS.filter((p) => p.id !== "free");
+  const canPick = (p: Plan) => !locked && p.id !== "agency" && !(p.id === currentId && !onTrial);
+  const badgeFor = (p: Plan) =>
+    p.id === currentId ? (onTrial ? "Tu prueba" : "Tu plan ahora") : null;
+  // «Recomendado» only ever points up: never at the plan you have or below it.
+  const recommendedFor = (p: Plan) => Boolean(p.recommended) && RANK[p.id] > RANK[currentId];
+  const shownPrice = (p: Plan) =>
+    p.promoPrice !== undefined && promoShown(p.id) ? { now: p.promoPrice, was: p.price } : { now: p.price, was: null };
+
+  const canGo = !locked && !isSame && !isPending && (requiresCheckout || paidToPaidSelfServe);
+  const goLabel = paidToPaidSelfServe
+    ? isPending
+      ? "Abriendo portal…"
+      : "Ir al portal de Stripe"
+    : isPending
+      ? "Abriendo Stripe…"
+      : "Ir al pago";
+  const moveLabel =
+    onTrial && sel === currentId
+      ? "Pasas de la prueba a"
+      : currentId === "free"
+        ? "Tu nuevo plan"
+        : RANK[sel] < RANK[currentId]
+          ? "Bajas a"
+          : "Subes a";
+  const targetShown = shownPrice(target);
+
+  const dialog = (
+    <div className="ins pmx">
+      <div className="pm-scrim" onClick={close}>
+        <div
+          className="pm-dlg"
+          role="dialog"
+          aria-modal="true"
+          aria-label={step === "done" ? "Cambio confirmado" : "Cambiar de plan"}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="pm-grab" aria-hidden="true" />
+          <div className="pm-dh">
+            <div className="pm-eb">{step === "done" ? "Cambio confirmado" : "Cambiar de plan"}</div>
+            <h2>
+              {step === "done"
+                ? "Todo listo"
+                : step === "overage"
+                  ? "Ajusta tus dominios activos"
+                  : locked
+                    ? `Tu plan ${current.name}`
+                    : currentId === "free" || onTrial
+                      ? "Elige cómo sigues"
+                      : "Cambiar de plan"}
+            </h2>
             <p>
-              {step === "select" && (
-                <>
-                  Estás en <b style={{ color: "var(--ink-2)" }}>{current.name}</b> · {planPrice(current)}
-                </>
-              )}
-              {step === "confirm" &&
-                (requiresCheckout ? "Vas a completar el pago en Stripe" : "Revisa qué cambia antes de confirmar")}
-              {step === "overage" && "Elige qué dominios mantener activos"}
-              {step === "done" && "Todo listo"}
+              {step === "overage"
+                ? "Elige qué dominios mantener activos"
+                : step === "done"
+                  ? null
+                  : locked
+                    ? "Plan a medida. Para cambiarlo, hablamos contigo."
+                    : currentId === "free"
+                      ? "Tu prueba ha terminado. Tus datos siguen aquí."
+                      : onTrial
+                        ? "Estás en la prueba de Pro."
+                        : `Estás en ${current.name} · ${planPrice(current)}`}
             </p>
+            <button type="button" className="pm-x" onClick={close} aria-label="Cerrar" disabled={isPending}>
+              <Icon name="x" size={16} />
+            </button>
           </div>
-          <button type="button" className="cp-close" onClick={close} aria-label="Cerrar" disabled={isPending}>
-            <Icon name="x" size={18} />
-          </button>
-        </div>
 
-        {step === "select" && (
-          <>
-            <div className="cp-body">
-              <div className="cp-plans" role="radiogroup" aria-label="Elegir plan">
-                {selectablePlans.map((p) => {
-                  const isCur = p.id === currentId;
-                  const isSel = p.id === sel;
-                  const flag = isCur ? "cur" : p.recommended ? "rec" : null;
-                  return (
-                    <button
-                      type="button"
-                      key={p.id}
-                      role="radio"
-                      aria-checked={isSel}
-                      className={"cp-plan" + (isSel ? " sel" : "") + (isCur ? " cur" : "") + (flag ? " has-flag" : "")}
-                      onClick={() => setSel(p.id)}
-                    >
-                      {flag && (
-                        <span className={"cp-flag " + flag}>
-                          {isCur ? (
-                            "Plan actual"
-                          ) : (
-                            <>
-                              <Icon name="spark" size={10} />
-                              Recomendado
-                            </>
-                          )}
-                        </span>
-                      )}
-                      <span className="cp-radio" />
-                      <div className="cp-plan-top">
-                        <span className="cp-plan-name">{p.name}</span>
-                        <span className="cp-plan-price">
-                          {p.priceLabel ? (
-                            p.priceLabel
-                          ) : p.promoPrice !== undefined && promoShown(p.id) ? (
-                            <>
-                              <span className="was">{money(p.price, 0)}</span>
-                              <span className="now">
-                                {money(p.promoPrice, 0)}
-                                <span className="per">/mes</span>
-                              </span>
-                            </>
-                          ) : (
-                            <>
-                              {money(p.price, 0)}
-                              <span className="per">{p.id === "free" ? "" : "/mes"}</span>
-                            </>
-                          )}
-                        </span>
-                      </div>
-                      <div className="cp-plan-tag">{p.tagline}</div>
-                      <PlanMeterChips plan={p} />
-                    </button>
-                  );
-                })}
-
-                {/* Same cell of the grid, but not a radio: Agencia has no
-                    self-serve Stripe price (PRICING-TRUTH-1), so it gets a way
-                    out instead of a selection that leads nowhere. */}
-                <div className="cp-sales">
-                  <div>
-                    <div className="cp-sales-t">{agencyPlan.name}</div>
-                    <div className="cp-sales-d">{agencyPlan.tagline}</div>
-                    <PlanMeterChips plan={agencyPlan} />
-                  </div>
-                  <a className="cp-sales-cta" href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Plan Agencia")}`}>
-                    Hablar con ventas
-                    <Icon name="arrRight" size={14} />
-                  </a>
-                </div>
-              </div>
-              {paidToPaidSelfServe && (
-                <p className="cp-pror-note" style={{ marginTop: 14 }}>
-                  <Icon name="info" size={14} />
-                  <span>
-                    Cambiar entre {current.name} y {target.name} se gestiona en el portal seguro de Stripe, donde
-                    también puedes cancelar o ver tus facturas.
-                  </span>
-                </p>
-              )}
-              {error && (
-                <p className="feedback error" style={{ marginTop: 14 }}>
-                  {error}
-                </p>
-              )}
-            </div>
-            <div className="cp-foot">
-              <div className="cp-foot-note">{footNote}</div>
-              <Button type="button" variant="ghost" onClick={close}>
-                Cancelar
-              </Button>
-              <Button
-                type="button"
-                disabled={isSame || isPending}
-                onClick={paidToPaidSelfServe ? handleGoToPortal : () => setStep("confirm")}
-              >
-                {paidToPaidSelfServe ? (isPending ? "Abriendo portal…" : "Ir al portal de Stripe") : "Continuar"}
-                <Icon name="arrRight" size={15} />
-              </Button>
-            </div>
-          </>
-        )}
-
-        {step === "confirm" && requiresCheckout && (
-          <>
-            <div className="cp-body">
-              <div className="cp-move">
-                <div className="cp-move-side">
-                  <div className="cp-move-lbl">Actual</div>
-                  <div className="cp-move-plan">
-                    {current.name} <span className="per">· gratis</span>
-                  </div>
-                </div>
-                <Icon name="arrRight" size={20} className="cp-move-arrow" />
-                <div className="cp-move-side">
-                  <div className="cp-move-lbl">Nuevo</div>
-                  <div className="cp-move-plan">
-                    {target.name}{" "}
-                    {targetPromoPrice !== null ? (
-                      <span className="cp-move-promo">
-                        <span className="was">{money(target.price, 0)}</span>
-                        <span className="now">{money(targetPromoPrice, 0)}</span>
-                        <span className="per">/mes · para siempre</span>
-                      </span>
-                    ) : (
-                      <span className="per">· {planPrice(target)}</span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="cp-pror-note" style={{ marginTop: 16 }}>
-                <Icon name="info" size={14} />
-                <span>
-                  Al continuar, Stripe te pedirá los datos de pago en una página segura fuera de GenScore. Tu plan{" "}
-                  {target.name} se activa en cuanto el pago se confirme.
-                  {targetPromoPrice !== null && (
-                    <>
-                      {" "}
-                      Precio fundador: {money(targetPromoPrice, 0)}/mes para siempre, mientras mantengas la
-                      suscripción (precio normal {planPrice(target)}).
-                    </>
-                  )}
-                </span>
-              </div>
-              {error && (
-                <p className="feedback error" style={{ marginTop: 14 }}>
-                  {error}
-                </p>
-              )}
-            </div>
-            <div className="cp-foot">
-              <div className="cp-foot-note">
-                {targetPromoPrice !== null ? (
-                  <>
-                    <b>{money(targetPromoPrice, 0)}/mes</b> · para siempre (normal {planPrice(target)})
-                  </>
-                ) : (
-                  planPrice(target)
-                )}
-              </div>
-              <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
-                <Icon name="chevLeft" size={15} />
-                Atrás
-              </Button>
-              <Button type="button" disabled={isPending} onClick={handleGoToCheckout}>
-                {isPending ? "Abriendo Stripe…" : "Ir a pagar"}
-                <Icon name="arrRight" size={15} />
-              </Button>
-            </div>
-          </>
-        )}
-
-        {step === "confirm" && !requiresCheckout && (
-          <>
-            <div className="cp-body">
-              <div className="cp-confirm-head">
-                <span className="cp-confirm-badge down">
-                  <Icon name="arrDown" size={13} />
-                  Bajada de plan
-                </span>
-              </div>
-
-              <div className="cp-move">
-                <div className="cp-move-side">
-                  <div className="cp-move-lbl">Actual</div>
-                  <div className="cp-move-plan">
-                    {current.name} <span className="per">· {planPrice(current)}</span>
-                  </div>
-                </div>
-                <Icon name="arrRight" size={20} className="cp-move-arrow" />
-                <div className="cp-move-side">
-                  <div className="cp-move-lbl">Nuevo</div>
-                  <div className="cp-move-plan">
-                    {target.name} <span className="per">· gratis</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="cp-pror-note" style={{ marginTop: 16 }}>
-                <Icon name="info" size={14} />
-                <span>
-                  El cambio a <b>{target.name}</b> se aplica de inmediato y cancela cualquier suscripción activa —
-                  no se te volverá a cobrar.
-                </span>
-              </div>
-              {diffs.length > 0 && (
-                <div className="cp-diff">
-                  <div className="cp-diff-h">
-                    <Icon name="alertCircle" size={14} />
-                    Qué se reduce al bajar a {target.name}
-                  </div>
-                  <ul className="cp-diff-list">
-                    {diffs.map((d) => (
-                      <li key={d.label}>
-                        <Icon name={d.icon} size={14} />
-                        <span className="k">{d.label}</span>
-                        <span className="from">{d.get(current)}</span>
-                        <Icon name="arrRight" size={13} />
-                        <span className="to">{d.get(target)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {hasProjectOverage && (
-                <div className="cp-diff">
-                  <div className="cp-diff-h">
-                    <Icon name="alertCircle" size={14} />
-                    Elige {requiredArchiveCount} dominio{requiredArchiveCount === 1 ? "" : "s"} para retirar (tienes{" "}
-                    {activeProjects.length}, {target.name} permite {target.caps.projects})
-                  </div>
-                  <ul className="cp-diff-list" role="group" aria-label="Dominios a retirar">
-                    {activeProjects.map((project) => {
-                      const checked = archiveIds.has(project.id);
-                      const disableUnchecked = !checked && archiveIds.size >= requiredArchiveCount;
-                      return (
-                        <li key={project.id}>
-                          <label
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 10,
-                              width: "100%",
-                              cursor: disableUnchecked ? "not-allowed" : "pointer"
-                            }}
+          {step === "select" && (
+            <>
+              <div className="pm-b">
+                <div className="pm-grid" role="radiogroup" aria-label="Elegir plan">
+                  {plansShown.map((p) => {
+                    const pick = canPick(p);
+                    const on = pick && p.id === sel;
+                    const isCur = p.id === currentId;
+                    const badge = badgeFor(p);
+                    const rec = recommendedFor(p);
+                    const pr = shownPrice(p);
+                    const isSales = p.id === "agency" && !isCur;
+                    const cls =
+                      "pm-c" +
+                      (on ? " on" : "") +
+                      (isCur ? " cur" : "") +
+                      (isSales ? " sales" : "") +
+                      (!pick && !isCur && !isSales ? " off" : "");
+                    const inner = (
+                      <>
+                        <div className="pm-top">
+                          <span className="pm-r" aria-hidden="true">
+                            {on && <Icon name="check" size={13} />}
+                          </span>
+                          <div className="pm-id">
+                            <div className="pm-nl">
+                              <b className="pm-n">{p.name}</b>
+                              {badge && <span className="pm-bd ink">{badge}</span>}
+                              {rec && (
+                                <span className="pm-bd blue">
+                                  <Icon name="spark" size={10} />
+                                  Recomendado
+                                </span>
+                              )}
+                            </div>
+                            <p className="pm-t">{p.tagline}</p>
+                          </div>
+                          <div className="pm-pr">
+                            {p.priceLabel ? (
+                              <b className="pm-ms">A medida</b>
+                            ) : (
+                              <>
+                                {pr.was !== null && <s className="num">{money(pr.was, 0)}</s>}
+                                <b className="num">{money(pr.now, 0)}</b>
+                                <span>/mes</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <p className="pm-t pm-t2" aria-hidden="true">
+                          {p.tagline}
+                        </p>
+                        <dl className="pm-m">
+                          {METER_ROWS.map((row) => (
+                            <div key={row.label}>
+                              <dt>{row.label}</dt>
+                              <dd className="num">{row.get(p)}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                        <div className="pm-chips">
+                          {planChips(p).map((c) => (
+                            <span key={c}>{c}</span>
+                          ))}
+                        </div>
+                        {isSales && !locked && (
+                          <a
+                            className="pm-link"
+                            href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Plan Agencia")}`}
                           >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={disableUnchecked}
-                              onChange={() => toggleArchiveId(project.id)}
-                            />
-                            <span className="k">{project.name}</span>
-                            <span className="from" style={{ textDecoration: "none" }}>
-                              {project.domain}
-                            </span>
-                          </label>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                  <p className="cp-pror-note" style={{ marginTop: 10 }}>
+                            Hablar con ventas
+                            <Icon name="arrRight" size={14} />
+                          </a>
+                        )}
+                      </>
+                    );
+                    return pick ? (
+                      <button
+                        type="button"
+                        key={p.id}
+                        role="radio"
+                        aria-checked={on}
+                        className={cls}
+                        onClick={() => setSel(p.id)}
+                      >
+                        {inner}
+                      </button>
+                    ) : (
+                      <div key={p.id} className={cls}>
+                        {inner}
+                      </div>
+                    );
+                  })}
+                </div>
+                {paidToPaidSelfServe && !locked && (
+                  <p className="pm-note">
                     <Icon name="info" size={14} />
                     <span>
-                      Los dominios que elijas dejan de monitorizarse y salen de tu espacio de trabajo. Para
-                      recuperar uno, vuelve a añadirlo desde &laquo;Nuevo dominio&raquo;: se reactiva con sus
-                      prompts, sus competidores y sus escaneos anteriores.
+                      Entre {current.name} y {target.name} el cambio se hace en el portal seguro de Stripe, donde también
+                      ves tus facturas.
                     </span>
                   </p>
-                </div>
-              )}
-              {error && (
-                <p className="feedback error" style={{ marginTop: 14 }}>
-                  {error}
-                </p>
-              )}
-            </div>
-            <div className="cp-foot">
-              <div className="cp-foot-note">
-                Efectivo <b>de inmediato</b>
+                )}
+                {error && <p className="feedback error pm-err">{error}</p>}
               </div>
-              <Button type="button" variant="ghost" onClick={() => setStep("select")} disabled={isPending}>
-                <Icon name="chevLeft" size={15} />
-                Atrás
-              </Button>
-              <Button
-                type="button"
-                disabled={isPending || (hasProjectOverage && !archiveSelectionComplete)}
-                onClick={handleConfirmDowngrade}
-              >
-                {isPending ? "Guardando…" : "Confirmar cambio"}
-              </Button>
-            </div>
-          </>
-        )}
+              <div className="pm-cart">
+                {locked ? (
+                  <>
+                    <div className="pm-sum">
+                      <span>Plan {current.name} · a medida</span>
+                      <b>Escríbenos y lo ajustamos contigo</b>
+                    </div>
+                    <div className="pm-btns">
+                      <button type="button" className="pm-btn ghost" onClick={close}>
+                        Cerrar
+                      </button>
+                      <a
+                        className="pm-btn ink"
+                        href={`mailto:${SUPPORT_EMAIL}?subject=${encodeURIComponent("Cambiar mi plan Agencia")}`}
+                      >
+                        Hablar con nosotros
+                        <Icon name="arrRight" size={15} />
+                      </a>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="pm-sum" aria-live="polite">
+                      {isSame ? (
+                        <>
+                          <span>Ya estás en {current.name}</span>
+                          <b className="mut">Elige otro plan para cambiar</b>
+                        </>
+                      ) : (
+                        <>
+                          <span>{moveLabel}</span>
+                          <b>
+                            {target.name} · <span className="num">{money(targetShown.now, 0)}</span>/mes
+                            {targetShown.was !== null && <s className="num">{money(targetShown.was, 0)}</s>}
+                          </b>
+                          <span className="pm-lk">
+                            <Icon name="lock" size={12} />
+                            {paidToPaidSelfServe
+                              ? "Lo confirmas en el portal seguro de Stripe"
+                              : targetShown.was !== null
+                                ? "Precio fundador para siempre · Pago seguro con Stripe"
+                                : "Pago seguro con Stripe"}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div className="pm-btns">
+                      <button type="button" className="pm-btn ghost" onClick={close} disabled={isPending}>
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="pm-btn ink"
+                        disabled={!canGo}
+                        onClick={paidToPaidSelfServe ? handleGoToPortal : handleGoToCheckout}
+                      >
+                        {!paidToPaidSelfServe && <Icon name="lock" size={14} />}
+                        {goLabel}
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
+          )}
 
         {step === "overage" && (
           <>
@@ -651,7 +534,12 @@ export function ChangePlanModal({
             </div>
           </>
         )}
+        </div>
       </div>
     </div>
   );
+
+  // Portal to <body>: inside the console the modal sat in the page's stacking
+  // context, under the mobile tab bar, which hid the footer and its button.
+  return typeof document === "undefined" ? null : createPortal(dialog, document.body);
 }

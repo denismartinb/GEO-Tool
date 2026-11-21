@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import { ConversionOnMount } from "@/components/ads/conversion-on-mount";
+import { isInApp } from "@/lib/app-mode-server";
 import { requireUser } from "@/lib/auth";
 import { getAccountRole } from "@/lib/account-role";
 import { getUsageSummary } from "@/lib/billing";
-import { getActivePromoPlanIds } from "@/lib/stripe";
 import { deriveNameFromEmail } from "@/lib/derive-name-from-email";
-import { PLANS, SELLABLE_PLANS, resolveShownPromoPrice, type Plan } from "@/app/pricing/plans-data";
+import { PLANS, SELLABLE_PLANS, type Plan } from "@/app/pricing/plans-data";
 import { AccountSection } from "@/components/settings/account-section";
 import { NotificationsSection } from "@/components/settings/notifications-section";
 import { DeleteAccountButton } from "@/components/settings/delete-account-button";
-import { SettingsIndex } from "@/components/settings/settings-index";
-import { buildSettingsIndex } from "@/lib/settings/index-entries";
+import { ConnectedApps } from "@/components/settings/connected-apps";
+import { SettingsFrame } from "@/components/ins/settings/settings-frame";
+import { InAppPlan } from "@/components/settings/in-app-plan";
 import { BillingContent } from "@/components/billing/billing-content";
 import { readBillingDetails, readCompanyDetails } from "@/lib/settings/company-details";
+import { readAvatarUrl } from "@/lib/settings/avatar";
 import { consoleMetadata } from "@/lib/seo/console-metadata";
 
 /**
@@ -36,11 +38,14 @@ export default async function SettingsPage({
 }) {
   const { supabase, user } = await requireUser();
   const role = await getAccountRole();
-  const isAdmin = role === "admin";
+  // ANDROID-TWA-1: en la app, ni plan ni facturación (log §381).
+  const inApp = await isInApp();
+  const isAdmin = role === "admin" && !inApp;
 
   const { checkout, openPlan } = await searchParams;
 
   const email = user.email ?? "";
+  const avatarUrl = await readAvatarUrl(supabase, user.id);
   const initials = email.slice(0, 2).toUpperCase();
 
   const metadata = user.user_metadata ?? {};
@@ -74,18 +79,25 @@ export default async function SettingsPage({
     .eq("id", user.id)
     .maybeSingle();
 
+  // GEO-ALERTS-1 (log §440, migration 0049): its own query for the same reason.
+  const { data: siteAlertPrefs } = await supabase
+    .from("profiles")
+    .select("notify_site_alerts")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const emailPreferences = {
     score_drop: profile?.notify_score_drop_alert ?? true,
+    site_alerts: (siteAlertPrefs as { notify_site_alerts?: boolean | null } | null)?.notify_site_alerts ?? true,
     weekly_digest: profile?.notify_weekly_digest ?? true,
     first_scan: newerPrefs?.notify_first_scan ?? true,
     lifecycle: newerPrefs?.notify_lifecycle ?? true
   };
-  const activeAlerts = Object.values(emailPreferences).filter(Boolean).length;
 
   // Only fetched for an admin: the section it feeds is admin-only, and so is
   // the plan pill in the header. A non-admin never triggers the query.
-  const usage = isAdmin ? await getUsageSummary() : null;
-  const plan = usage ? PLANS.find((candidate) => candidate.id === usage.planId) : null;
+  const usage = role === "admin" ? await getUsageSummary() : null;
+  const plan = usage && isAdmin ? PLANS.find((candidate) => candidate.id === usage.planId) : null;
 
   const trialDaysLeft = usage?.trialEndsAt
     ? Math.max(0, Math.ceil((new Date(usage.trialEndsAt).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
@@ -93,101 +105,52 @@ export default async function SettingsPage({
 
   const fullName = [firstName, lastName].filter(Boolean).join(" ");
 
-  // PRICING-PROMO-1: same struck-through/promo-price convention as "Tu plan"
-  // below (plan-billing-section.tsx) — usage.subscriptionPromo is already the
-  // real, Stripe-verified discount for this exact subscription.
-  //
-  // PROMO-CONSOLE-PARITY-1: and when there is no subscription yet (a free Pro
-  // trial), the launch price this account WOULD pay. Without it this index read
-  // the list price while `/precios` and the change-plan modal quoted the
-  // discounted one (founder, 2026-08-27). Same gate as the card —
-  // `getActivePromoPlanIds` reads the real Stripe coupons and the founder
-  // slots left, so this line can never quote a discount checkout would refuse.
-  const shownPromo = resolveShownPromoPrice({
-    plan,
-    activePromoPrice: usage?.subscriptionPromo?.promoPrice,
-    promoPlanIds: await getActivePromoPlanIds()
-  });
-  const planLabel =
-    isAdmin && plan
-      ? (plan.priceLabel ??
-        (shownPromo ? (
-          <>
-            {plan.name} ·{" "}
-            <span className="was">
-              {plan.price}&nbsp;€/{plan.period}
-            </span>{" "}
-            <span className="now">
-              {shownPromo.price}&nbsp;€/{plan.period}
-            </span>
-          </>
-        ) : (
-          `${plan.name} · ${plan.price} €/mes`
-        )))
-      : null;
-
-  const entries = buildSettingsIndex({
-    fullName,
-    email,
-    activeAlerts,
-    // Null for a non-admin — the same condition that hides the Plan section
-    // below, so the index can never advertise a section that is not there.
-    planLabel
-  });
+  const planPill = plan
+    ? {
+        text:
+          (plan.id === "free" ? "Sin plan · solo lectura" : `Plan ${plan.name}`) +
+          (trialDaysLeft !== null ? ` · ${trialDaysLeft} ${trialDaysLeft === 1 ? "día" : "días"} de prueba` : ""),
+        readOnly: plan.id === "free"
+      }
+    : null;
 
   return (
-    <div className="page set-scope">
-      <div className="set-page">
-        <div className="set-head">
-          <div>
-            <p className="set-kicker">Espacio de trabajo</p>
-            <h1 className="set-title">Ajustes</h1>
-          </div>
-          {plan && (
-            <span className="set-pill">
-              {plan.id === "free" ? "Sin plan · solo lectura" : `Plan ${plan.name}`}
-              {trialDaysLeft !== null && ` · ${trialDaysLeft} ${trialDaysLeft === 1 ? "día" : "días"} de prueba`}
-            </span>
-          )}
-        </div>
-
-        <div className="set-two">
-          <SettingsIndex entries={entries} />
-
-          <div className="set-col">
-            <h2 className="set-sech" id="cuenta">
-              Cuenta
-            </h2>
+    <div className="ins">
+      <SettingsFrame
+        name={fullName || "Tu cuenta"}
+        email={email}
+        initials={initials}
+        avatarUrl={avatarUrl}
+        planPill={planPill}
+        showPlan={role === "admin"}
+        forcePlan={Boolean(openPlan) || Boolean(checkout)}
+        plan={
+          role === "admin" && inApp && usage ? (
+            <InAppPlan usage={usage} />
+          ) : isAdmin ? (
+            <>
+              {checkout === "success" && <ConversionOnMount kind="purchase" dedupeKey="purchase" />}
+              <BillingContent
+                checkoutStatus={checkout}
+                openPlanId={SELLABLE_PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
+              />
+            </>
+          ) : null
+        }
+        account={
+          <>
             <AccountSection
               email={email}
-              initials={initials}
               firstName={firstName}
               lastName={lastName}
               company={company}
               billingDetails={billingDetails}
             />
-
-            {isAdmin && (
-              <>
-                <h2 className="set-sech sp" id="plan">
-                  Plan
-                </h2>
-                {checkout === "success" && <ConversionOnMount kind="purchase" dedupeKey="purchase" />}
-                <BillingContent
-                  checkoutStatus={checkout}
-                  openPlanId={SELLABLE_PLANS.some((p) => p.id === openPlan) ? (openPlan as Plan["id"]) : undefined}
-                />
-              </>
-            )}
-
-            <h2 className="set-sech sp" id="avisos">
-              Notificaciones
-            </h2>
-            <NotificationsSection initial={emailPreferences} />
-
-            {/* Last block on the page and deliberately not in the index: an
-                irreversible action is reached by scrolling, not by one click
-                (founder, 2026-08-06). */}
+            {/* MCP-SERVER-1 (log §418): Claude, ChatGPT… reading this account. */}
+            <ConnectedApps />
+            {/* Last block of the account tab and deliberately not a section of its
+                own: an irreversible action is reached by scrolling, not by one
+                click (founder, 2026-08-06). */}
             <div className="set-end">
               <div className="set-row-txt">
                 <div className="set-end-t">Eliminar cuenta</div>
@@ -197,9 +160,10 @@ export default async function SettingsPage({
               </div>
               <DeleteAccountButton email={email} />
             </div>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+        notifications={<NotificationsSection initial={emailPreferences} />}
+      />
     </div>
   );
 }

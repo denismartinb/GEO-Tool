@@ -80,7 +80,7 @@ export function ClicksImpressionsChart({ daily }: { daily: DailyPoint[] }) {
             const y = T + ih - (k / 4) * ih;
             return (
               <g key={k}>
-                <line x1={L} x2={W - R} y1={y} y2={y} stroke="#eef1f6" />
+                <line x1={L} x2={W - R} y1={y} y2={y} stroke="#eef1f6" className="gsc-grid" />
                 <text x={L - 8} y={y + 3.5} textAnchor="end">
                   {fmtInt((cMax * k) / 4)}
                 </text>
@@ -99,12 +99,12 @@ export function ClicksImpressionsChart({ daily }: { daily: DailyPoint[] }) {
           <path d={iline} fill="none" stroke="#7fd9e3" strokeWidth={1.6} />
           <path d={cline} fill="none" stroke="#2563eb" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
           {h === null || hover === null ? (
-            <circle cx={x(n - 1)} cy={yc(last.clicks)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+            <circle cx={x(n - 1)} cy={yc(last.clicks)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} className="gsc-ring" />
           ) : (
             <g pointerEvents="none">
-              <line x1={x(hover)} x2={x(hover)} y1={T} y2={T + ih} stroke="#98a2b3" strokeDasharray="3 3" />
-              <circle cx={x(hover)} cy={yi(h.impressions)} r={4} fill="#7fd9e3" stroke="#fff" strokeWidth={2} />
-              <circle cx={x(hover)} cy={yc(h.clicks)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+              <line x1={x(hover)} x2={x(hover)} y1={T} y2={T + ih} stroke="#98a2b3" strokeDasharray="3 3" className="gsc-cursor" />
+              <circle cx={x(hover)} cy={yi(h.impressions)} r={4} fill="#7fd9e3" stroke="#fff" strokeWidth={2} className="gsc-ring" />
+              <circle cx={x(hover)} cy={yc(h.clicks)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} className="gsc-ring" />
             </g>
           )}
           {daily.map((d, i) => (
@@ -191,7 +191,7 @@ export function NearPageOneScatter({ queries }: { queries: QueryView[] }) {
           const yy = T + ih - (k / 3) * ih;
           return (
             <g key={k}>
-              <line x1={L} x2={W - R} y1={yy} y2={yy} stroke="#eef1f6" />
+              <line x1={L} x2={W - R} y1={yy} y2={yy} stroke="#eef1f6" className="gsc-grid" />
               <text x={L - 6} y={yy + 3.5} textAnchor="end">
                 {fmtInt((iMax * k) / 3)}
               </text>
@@ -219,6 +219,7 @@ export function NearPageOneScatter({ queries }: { queries: QueryView[] }) {
             fillOpacity={q.query === hover ? 1 : q.nearPage1 ? 0.85 : 0.55}
             stroke={q.query === hover ? "#0b1220" : "#fff"}
             strokeWidth={1.5}
+            className={q.query === hover ? "gsc-bub is-h" : "gsc-bub"}
             style={{ cursor: "pointer" }}
             onMouseEnter={() => setHover(q.query)}
             onClick={() => setHover(q.query)}
@@ -284,7 +285,7 @@ export function PositionTrendChart({ daily }: { daily: DailyPoint[] }) {
       >
         {ticks.map((v) => (
           <g key={v}>
-            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#eef1f6" />
+            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="#eef1f6" className="gsc-grid" />
             <text x={L - 6} y={y(v) + 3.5} textAnchor="end">
               {v}
             </text>
@@ -297,11 +298,11 @@ export function PositionTrendChart({ daily }: { daily: DailyPoint[] }) {
         ))}
         <path d={line} fill="none" stroke="#2563eb" strokeWidth={2.6} strokeLinecap="round" strokeLinejoin="round" />
         {h === null || hover === null ? (
-          <circle cx={x(n - 1)} cy={y(last.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+          <circle cx={x(n - 1)} cy={y(last.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} className="gsc-ring" />
         ) : (
           <g pointerEvents="none">
-            <line x1={x(hover)} x2={x(hover)} y1={T} y2={T + ih} stroke="#98a2b3" strokeDasharray="3 3" />
-            <circle cx={x(hover)} cy={y(h.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} />
+            <line x1={x(hover)} x2={x(hover)} y1={T} y2={T + ih} stroke="#98a2b3" strokeDasharray="3 3" className="gsc-cursor" />
+            <circle cx={x(hover)} cy={y(h.position)} r={4.5} fill="#2563eb" stroke="#fff" strokeWidth={2} className="gsc-ring" />
           </g>
         )}
         {points.map((p, i) => (

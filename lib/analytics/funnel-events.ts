@@ -24,7 +24,14 @@ export type FunnelEvent =
   | "signup_completed"
   | "scan_completed"
   | "checkout_started"
-  | "payment_completed";
+  | "payment_completed"
+  // MCP-SERVER-1 (log §418): one call to a GenScore MCP tool. Properties are
+  // the tool name and whether an account was linked, never its arguments.
+  | "mcp_tool_called"
+  // MCP-RELIABILITY-1 (log §464): a call the server refused before any tool
+  // ran (no token for an account tool, or an invalid or expired one). Only
+  // the connector and the reason, never the token.
+  | "mcp_auth_rejected";
 
 const CAPTURE_TIMEOUT_MS = 2_000;
 

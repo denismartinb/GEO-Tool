@@ -39,8 +39,10 @@ describe("first-scan mission — the six screens agree", () => {
       // `.mrk-fill` is what turns `.page` into the flex column the mission
       // fills; without it the scene stops at its own min-height cap with grey
       // page underneath (the Prompts bug, but reachable from any of the six).
+      // Overview (F3a) returns early with a literal `page mrk-fill` while the
+      // mission shows; the other five keep the conditional class.
       expect(src, `${file} must apply mrk-fill to .page while the mission shows`).toMatch(
-        /className=\{`page[^`]*\$\{showMissionTakeover \? " mrk-fill" : ""\}/
+        /className=\{`page[^`]*\$\{showMissionTakeover \? " mrk-fill" : ""\}|className="page mrk-fill"/
       );
     }
   });
@@ -63,7 +65,7 @@ describe("first-scan mission — the six screens agree", () => {
   });
 
   it("the mission hands the screen back itself, on all six", () => {
-    const src = read("components/scan-mission-rocket.tsx");
+    const src = read("components/ins/mission/first-scan-mission.tsx");
     // Before this, only `app/dashboard/projects/[projectId]/page.tsx` mounted
     // `ScanProgressPoller`, so on the other five the mission sat on its last
     // beat until the user reloaded by hand.
@@ -97,8 +99,8 @@ describe("first-scan mission — nothing ambient decides how it renders", () => 
   });
 
   it("keeps the figure itself unbreakable", () => {
-    const src = read("components/scan-mission-rocket.tsx");
-    expect(src).toMatch(/countTitle\(beat\.done, beat\.total\)/);
-    expect(src).toContain("`${done}\\u00A0de\\u00A0${total}`");
+    // F3b (log §355): the counter and its «de N» live in one nowrap flex row.
+    const css = read("app/ins/mission.css");
+    expect(css).toMatch(/\.sc-mission \.ms-n\{[^}]*white-space:nowrap/);
   });
 });
