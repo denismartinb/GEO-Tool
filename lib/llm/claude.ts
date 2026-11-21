@@ -45,6 +45,9 @@ function getClaudeApiError(status: number): string {
 export const CLAUDE_CREDIT_EXHAUSTED_MESSAGE =
   "Claude API credit balance is too low. Top up the Anthropic account.";
 
+export const CLAUDE_USAGE_LIMIT_MESSAGE =
+  "Claude API usage limit reached. Raise the spend limit in the Anthropic Console (Settings > Limits).";
+
 /**
  * Anthropic answers an exhausted credit balance with HTTP 400 and
  * `invalid_request_error`, the same status as a wrong model id. Read as
@@ -59,6 +62,12 @@ export function classifyClaudeRejection(
   // spend the extraction budget the remaining rows need.
   if (status === 400 && /credit balance/i.test(body)) {
     return { category: "quota", message: CLAUDE_CREDIT_EXHAUSTED_MESSAGE, retryable: false };
+  }
+  // A monthly spend limit set in the Console answers the same way, with
+  // credit still in the account ("You have reached your specified API usage
+  // limits"). Same shape as the Gemini spend cap of 2026-11-13 (log §472).
+  if (status === 400 && /usage limit/i.test(body)) {
+    return { category: "quota", message: CLAUDE_USAGE_LIMIT_MESSAGE, retryable: false };
   }
   return null;
 }

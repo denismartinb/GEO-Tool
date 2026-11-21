@@ -30030,7 +30030,7 @@ Pasada de la rutina de blog. Artículo `menciones-de-marca-o-enlaces-para-la-ia`
 
 ## §471 SCAN-ALERT-ATTRIBUTION-1: avisos de escaneo con el motor real, uno por incidente, y saldo agotado de Anthropic como «quota» (2026-11-18)
 
-**Qué pasó.** El 2026-11-18 a las 06:04:09 UTC la API de Anthropic empezó a rechazar con HTTP 400 todas las llamadas. Con `SCAN_EXTRACTION_CLAUDE_MODEL` puesto (log §253), Claude extrae las respuestas de los cuatro motores, así que la extracción de todos los escaneos del barrido de las 06:00 falló a la vez. Ninguna variable de entorno había cambiado (las de Anthropic, OpenAI y Perplexity seguían como en octubre) y la extracción funcionaba un minuto antes: la causa más probable es el saldo agotado, que Anthropic devuelve como 400 `invalid_request_error`, el mismo estado que un modelo mal escrito.
+**Qué pasó.** El 2026-11-18 a las 06:04:09 UTC la API de Anthropic empezó a rechazar con HTTP 400 todas las llamadas. Con `SCAN_EXTRACTION_CLAUDE_MODEL` puesto (log §253), Claude extrae las respuestas de los cuatro motores, así que la extracción de todos los escaneos del barrido de las 06:00 falló a la vez. Ninguna variable de entorno había cambiado (las de Anthropic, OpenAI y Perplexity seguían como en octubre) y la extracción funcionaba un minuto antes: primero se pensó en el saldo agotado, pero Denis confirmó el 2026-11-21 que la cuenta tenía saldo. El modelo (`claude-haiku-5-5` en `ANTHROPIC_MODEL` y `SCAN_EXTRACTION_CLAUDE_MODEL`) es válido y el cuerpo de la petición no cambió. La causa más probable es el límite de gasto mensual de la Consola de Anthropic (Settings > Limits), que también responde 400 `invalid_request_error` («You have reached your specified API usage limits») con saldo en la cuenta: el mismo patrón que el tope de gasto de Gemini del 2026-11-13. No se puede confirmar desde el código porque el cuerpo del 400 nunca se guardó y Vercel Hobby sólo conserva 1 h de logs; desde este cambio, saldo y límite de gasto se leen como «quota» con su propio mensaje.
 
 El operador recibió muchos correos «Escaneo incompleto · perplexity: config» y «openai: config». Tres fallos del aviso:
 
@@ -30047,6 +30047,6 @@ El operador recibió muchos correos «Escaneo incompleto · perplexity: config»
 
 **Queda pendiente.**
 
-- Recargar el saldo de Anthropic (lo hace Denis) y, si se quiere, activar la recarga automática.
+- Revisar en la Consola de Anthropic el límite de gasto mensual del workspace de la clave y el uso de noviembre (lo hace Denis); si se alcanzó, subirlo. Se reinicia el día 1.
 - Las filas de hoy con `config:` no se reextraen solas (`config` no es reintentable) y no hay herramienta de reextracción; esos escaneos se recuperan con el siguiente escaneo del cron o relanzándolos a mano.
 - `job_logs` sigue sin restricción única, así que dos reclamos insertados con el mismo `created_at` exacto se desempatan por id, no por orden real. Suficiente para correos de operador.

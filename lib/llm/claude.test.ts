@@ -260,4 +260,20 @@ describe("classifyClaudeRejection (log §471)", () => {
     expect(classifyClaudeRejection(400, '{"error":{"message":"model: not found"}}')).toBeNull();
     expect(classifyClaudeRejection(401, "credit balance")).toBeNull();
   });
+
+  it("reads a Console spend limit as quota, not config", async () => {
+    const { classifyClaudeRejection, CLAUDE_USAGE_LIMIT_MESSAGE } = await import("./claude");
+    const body = JSON.stringify({
+      type: "error",
+      error: {
+        type: "invalid_request_error",
+        message: "You have reached your specified API usage limits. You will regain access on 2026-12-01 at 00:00 UTC."
+      }
+    });
+    expect(classifyClaudeRejection(400, body)).toEqual({
+      category: "quota",
+      message: CLAUDE_USAGE_LIMIT_MESSAGE,
+      retryable: false
+    });
+  });
 });
