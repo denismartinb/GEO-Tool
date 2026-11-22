@@ -30085,3 +30085,15 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - `auditDomainCoverageCore`: un 429 corta la tanda y ese tema **no** se guarda como «No hemos podido verificar» (antes cerraba todos los temas del escaneo sin respuesta, gastando tres llamadas por tema). Queda pendiente; sin temas nuevos, el ejecutor aparca el trabajo y `MAX_AUDIT_CONTINUATIONS` acota cuánto lo reintenta.
 
 **Pendiente.** Denis revisa en Google AI Studio qué límite está agotado (uso, límites de su nivel y tope de gasto del proyecto de la clave de Vercel) y lo sube si hace falta. El siguiente aviso dirá ya qué límite es. No retira ningún camino de recuperación.
+
+## §473 SEO-INDEX-1: el comprobador gratuito vuelve a salir con su contenido en el HTML del servidor (2026-11-21)
+
+**Qué pasó.** Search Console avisó de motivos nuevos de no indexación en genscore.es: canónica alternativa (6), noindex (4), redirección (3), 404 (1), robots.txt (1), «Rastreada: actualmente sin indexar» (37, al alza) y «Descubierta: actualmente sin indexar» (8). Revisión de la web en producción: las 103 URL del sitemap responden 200 con canónica propia, ninguna lleva noindex y ninguna está bajo un `Disallow`; los ~150 enlaces internos, los datos estructurados, `llms.txt`, el feed y las URL de genscore.es del código responden. Noindex son las páginas de acceso y baja (intencionado), las redirecciones son apex, http y `/pricing` (intencionado) y robots.txt sólo cierra zonas privadas.
+
+**Lo que sí estaba roto.** `/gratis/aparece-mi-marca-en-chatgpt` se prerenderizaba con el `<main>` vacío: `FreeCheckerForm` leía `?d=` con `useSearchParams`, la página lo envolvía en `<Suspense fallback={null}>` y Next sirve el `fallback` en el HTML estático. Sin H1, sin texto y sin FAQ para quien no ejecuta JavaScript (los bots de IA, y Google en su primera pasada).
+
+**Qué se decidió.**
+- El formulario lee `?d=` de `window.location` al montar y sólo rellena un campo vacío; la página deja de usar `Suspense`. El valor de `?d=` sigue sin lanzar la comprobación.
+- `tests/free-checker-ssr.test.ts` impide que vuelvan el hook o el `Suspense`.
+
+**Pendiente.** Los 37 de «Rastreada: actualmente sin indexar» no se ven sin el export de Search Console. Lo más probable por los datos públicos: las 21 fichas del glosario (unas 200 a 270 palabras cada una, varias con sólo 1 a 3 enlaces internos), las comparativas con menos enlaces y los artículos más recientes de un dominio joven. Ampliar o fusionar fichas es contenido y el copy está congelado: lo decide Denis con la lista exportada. No retira ningún camino de recuperación.

@@ -1,7 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Icon } from "@/components/ui/icon";
 import { cleanDomain, isWellFormedDomain } from "@/lib/projects/project-form";
 import { PENDING_DOMAIN_KEY } from "@/lib/onboarding/pending-domain";
@@ -71,7 +71,6 @@ export function FreeCheckerForm({
   children?: React.ReactNode;
 }) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
   /**
    * HOME-2026-08 Fase A: el hero de la portada manda aquí lo que el visitante
@@ -82,13 +81,17 @@ export function FreeCheckerForm({
    * copia—, para que un parámetro con basura no deje el campo en un estado que
    * el propio formulario rechazaría.
    *
-   * Valor inicial y no efecto: escribir el campo después del primer pintado lo
-   * pisaría si el visitante ya hubiera empezado a teclear.
+   * Se lee de `window.location` al montar y no con `useSearchParams`: ese
+   * hook obligaba a envolver el formulario en un `Suspense` sin contenido, y
+   * el HTML prerenderizado salía sin H1, sin texto y sin FAQ (y
+   * el rastreador recibía una página vacía, log §473). Sólo
+   * rellena un campo todavía vacío, para no pisar lo que ya se haya tecleado.
    */
-  const [domain, setDomain] = useState(() => {
-    const fromUrl = cleanDomain(searchParams.get("d") ?? "");
-    return isWellFormedDomain(fromUrl) ? fromUrl : "";
-  });
+  const [domain, setDomain] = useState("");
+  useEffect(() => {
+    const fromUrl = cleanDomain(new URLSearchParams(window.location.search).get("d") ?? "");
+    if (isWellFormedDomain(fromUrl)) setDomain((current) => current || fromUrl);
+  }, []);
   const [state, setState] = useState<State>({ kind: "idle" });
   const [step, setStep] = useState(0);
 
