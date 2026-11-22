@@ -90,7 +90,7 @@ describe("generateGeminiVisibilityAnswer", () => {
     expect(body.tools).toEqual([{ google_search: {} }]);
     // ADR 0042: Gemini 3 keeps its default temperature and minimal thinking,
     // and never receives thinkingBudget next to thinkingLevel (a 400).
-    expect(body.generationConfig).toEqual({ thinkingConfig: { thinkingLevel: "minimal" } });
+    expect(body.generationConfig).toEqual({ thinkingConfig: { thinkingLevel: "minimal" }, maxOutputTokens: 4096 });
   });
 
   it("keeps the ADR 0009 tuning when GEMINI_MODEL rolls back to a 2.5 model", async () => {
@@ -107,7 +107,8 @@ describe("generateGeminiVisibilityAnswer", () => {
     expect(endpoint).toContain("/gemini-2.5-flash:generateContent");
     expect(JSON.parse(init.body as string).generationConfig).toEqual({
       temperature: 0,
-      thinkingConfig: { thinkingBudget: 0 }
+      thinkingConfig: { thinkingBudget: 0 },
+      maxOutputTokens: 4096
     });
   });
 
@@ -1276,5 +1277,40 @@ describe("suggestPrompts (business-profile-driven)", () => {
     expect(promptText).toContain(financialProfile.whatItSells);
     expect(promptText).toContain(financialProfile.sector);
     expect(promptText).toContain(financialProfile.targetCustomer);
+  });
+});
+
+describe("GEMINI-COST-1: no credit (402) and output ceilings", () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+    delete process.env.GEMINI_MODEL;
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("does not retry a scan answer rejected with 402 and reports it as quota/credit", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({}, 402));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      generateGeminiVisibilityAnswer({ prompt: "best widgets", country: "ES", language: "es" })
+    ).rejects.toMatchObject({ category: "quota", quotaKind: "credit" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not retry the coverage audit call on 402", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse({}, 402));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(
+      auditDomainContent({ brand: "Acme", domain: "acme.com", language: "es", topic: "crm" })
+    ).rejects.toMatchObject({ category: "quota", quotaKind: "credit" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("caps the output of the coverage audit", async () => {
+    const fetchMock = mockFetchOnce({ candidates: [{ content: { parts: [{ text: "Nada en esta web." }] } }] });
+    vi.stubGlobal("fetch", fetchMock);
+    await auditDomainContent({ brand: "Acme", domain: "acme.com", language: "es", topic: "crm" });
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string).generationConfig.maxOutputTokens).toBe(1024);
   });
 });

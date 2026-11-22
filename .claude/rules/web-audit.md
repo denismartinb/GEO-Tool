@@ -574,3 +574,11 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   preguntar por cuota no es «No hemos podido verificar»: queda pendiente y el
   ejecutor aparca el trabajo. Marcarlo cerraba todos los temas del escaneo sin
   respuesta y gastaba tres llamadas por tema.
+
+- **Una campaña automática empieza por los temas ya verificados** del último
+  mapa de menos de una semana (`seedCoverageTopics`), aunque esté incompleto o
+  tenga temas sin verificar, y sólo busca el resto. El mapa conserva el
+  `verifiedAt` más antiguo, así que el refresco semanal completo sigue llegando
+  a su hora. Exigir el mapa entero y limpio convertía la cadencia semanal en
+  diaria en cuanto un tema fallaba (log §473). Una campaña manual nunca se
+  siembra.

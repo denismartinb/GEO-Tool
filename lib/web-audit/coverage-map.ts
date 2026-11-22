@@ -153,3 +153,39 @@ export function carryForwardCoverage(input: {
     verifiedAt
   };
 }
+
+/**
+ * GEMINI-COST-1 (log §473). The verified topics of a recent map that a new
+ * automatic campaign can start from, so it only searches the topics still
+ * missing — instead of every active prompt again.
+ *
+ * `carryForwardCoverage` reuses a map only when it is complete and has no
+ * inconclusive topic. On a large prompt set that almost never holds (one
+ * timeout among a hundred topics is enough), so the weekly cadence silently
+ * became daily and every scan re-searched the whole site: for a 100-prompt
+ * project, ~100 grounded Gemini calls a day on top of the scan itself.
+ *
+ * What it keeps from the reasons `carryForwardCoverage` refused a top-up:
+ * - nothing is restamped as fresh. The map's `verifiedAt` is the OLDEST
+ *   evidence in it (`verifiedAt` here), and the caller persists it, so the
+ *   weekly full refresh still comes on time for every topic;
+ * - an inconclusive topic is not carried: it is searched again now.
+ *
+ * Returns null when there is nothing worth keeping (evidence too old, or no
+ * verified topic for an active prompt).
+ */
+export function seedCoverageTopics(input: {
+  map: DomainCoverageMap;
+  activePromptIds: readonly string[];
+  now: number;
+}): { topics: DomainCoverageTopic[]; verifiedAt: string } | null {
+  const verifiedAt = input.map.verifiedAt ?? input.map.generatedAt;
+  const verifiedMs = Date.parse(verifiedAt);
+  if (!Number.isFinite(verifiedMs)) return null;
+  if (input.now - verifiedMs >= COVERAGE_REFRESH_INTERVAL_MS) return null;
+
+  const active = new Set(input.activePromptIds);
+  const topics = input.map.topics.filter((t) => active.has(t.promptId) && t.note !== COULD_NOT_VERIFY_NOTE);
+  if (topics.length === 0) return null;
+  return { topics, verifiedAt };
+}

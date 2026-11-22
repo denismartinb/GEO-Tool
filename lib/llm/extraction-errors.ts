@@ -42,7 +42,17 @@ export type ExtractionErrorCategory =
  * daily reset; `spend_cap` needs the operator to raise the cap. Only these
  * fixed labels travel — never the provider's own text.
  */
-export type QuotaKind = "per_minute" | "per_day" | "spend_cap";
+export type QuotaKind = "per_minute" | "per_day" | "spend_cap" | "credit";
+
+/**
+ * GEMINI-COST-1 (log §473): kinds of quota error that the next attempt cannot
+ * fix. `credit` is HTTP 402 (prepaid balance exhausted): it only heals when
+ * the operator tops up the account, so retrying it — or moving on to the next
+ * topic of an audit — only multiplies rejected calls and alerts.
+ */
+export function isLongLivedQuotaKind(kind: QuotaKind | undefined): boolean {
+  return kind === "per_day" || kind === "spend_cap" || kind === "credit";
+}
 
 export class ExtractionError extends Error {
   readonly category: ExtractionErrorCategory;
@@ -79,7 +89,10 @@ export function isRetryableExtractionCategory(category: ExtractionErrorCategory)
  * the pinned-model 404 in docs/adr/0002).
  */
 export function categorizeHttpStatus(status: number): ExtractionErrorCategory {
-  if (status === 429) return "quota";
+  // GEMINI-COST-1 (log §473): 402 Payment Required is an exhausted prepaid
+  // balance. It used to fall through to `http`, which is retried and, in the
+  // coverage audit, let the loop carry on with the next topic.
+  if (status === 429 || status === 402) return "quota";
   if (status === 401 || status === 403 || status === 400) return "config";
   return "http";
 }

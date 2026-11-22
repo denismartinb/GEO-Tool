@@ -3,6 +3,7 @@ import "server-only";
 import {
   ExtractionError,
   categorizeHttpStatus,
+  isLongLivedQuotaKind,
   isRetryableExtractionCategory,
   type ExtractionErrorCategory,
   type QuotaKind
@@ -159,8 +160,8 @@ export async function fetchExtractionWithRetry(
       if (response.ok) return response;
 
       const category: ExtractionErrorCategory = categorizeHttpStatus(response.status);
-      let quotaKind: QuotaKind | undefined;
-      if (category === "quota" && options.classifyQuotaBody) {
+      let quotaKind: QuotaKind | undefined = response.status === 402 ? "credit" : undefined;
+      if (category === "quota" && !quotaKind && options.classifyQuotaBody) {
         try {
           quotaKind = options.classifyQuotaBody(await response.text());
         } catch {
@@ -168,7 +169,7 @@ export async function fetchExtractionWithRetry(
         }
       }
       lastError = new ExtractionError(category, options.describeStatus(response.status), quotaKind);
-      const longLived = quotaKind === "per_day" || quotaKind === "spend_cap";
+      const longLived = isLongLivedQuotaKind(quotaKind);
       if (!isRetryableExtractionCategory(category) || longLived || attempt === options.maxAttempts) throw lastError;
 
       const delayMs = computeRetryDelayMs({

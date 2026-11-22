@@ -30085,3 +30085,20 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - `auditDomainCoverageCore`: un 429 corta la tanda y ese tema **no** se guarda como «No hemos podido verificar» (antes cerraba todos los temas del escaneo sin respuesta, gastando tres llamadas por tema). Queda pendiente; sin temas nuevos, el ejecutor aparca el trabajo y `MAX_AUDIT_CONTINUATIONS` acota cuánto lo reintenta.
 
 **Pendiente.** Denis revisa en Google AI Studio qué límite está agotado (uso, límites de su nivel y tope de gasto del proyecto de la clave de Vercel) y lo sube si hace falta. El siguiente aviso dirá ya qué límite es. No retira ningún camino de recuperación.
+
+## §473 GEMINI-COST-1: Gemini deja de repetir la auditoría de cobertura cada día, cada llamada tiene techo de salida y un 402 no se reintenta (2026-11-22)
+
+**Qué pasó.** El 2026-11-22 por la mañana Gemini gastó más de 5 € tras la recarga del día anterior. Revisado el código (no hay acceso a la base de datos ni a la facturación desde la sesión, y Vercel Hobby guarda una hora de registros):
+- En producción **Gemini no extrae** respuestas de ningún motor: `SCAN_EXTRACTION_CLAUDE_MODEL` está puesto desde el 2026-10-10, así que la extracción (también la de Perplexity) va a Claude Haiku. Gemini se usa en la respuesta del escaneo (con búsqueda), en la auditoría de cobertura (con búsqueda, una llamada por prompt), y en el alta, sugerencias y reescrituras (sin búsqueda, puntuales).
+- Gemini 3 cobra la búsqueda por consulta: 5.000 gratis al mes para todo Gemini 3 y luego 14 $ por 1.000 (`lib/model-compare/catalogue.ts`). Cada llamada con búsqueda lanza 2 o 3. Un proyecto de 100 prompts diario son ~100 respuestas de Gemini al día, ~250 consultas: él solo agota el tramo gratis en unas tres semanas.
+- **Amplificador encontrado:** `carryForwardCoverage` sólo reutilizaba el mapa de cobertura si estaba completo y sin ningún tema «No hemos podido verificar». Con 100 temas, uno que caduque basta para que cada escaneo diario vuelva a buscar los 100. Y hasta §472 cada 429 dejaba temas así en 11 proyectos, de modo que tras subir el tope el 2026-11-21 todos repitieron la auditoría entera en el barrido siguiente.
+- Ninguna llamada fijaba `maxOutputTokens`; el único límite era el corte de 20 s, que no para la factura en Google.
+- Un 402 (sin saldo) caía en la categoría `http`: se reintentaba tres veces y la auditoría seguía con el tema siguiente. Las peticiones rechazadas no se cobran, así que esto explica el ruido de errores, no el gasto.
+
+**Qué se decidió (código).**
+- `GEMINI_MAX_OUTPUT_TOKENS`: respuesta 4096, cobertura 1024, JSON 8192, investigación con búsqueda 4096. Techos contra bucles, no objetivos.
+- `categorizeHttpStatus(402)` → `quota` con `quotaKind: "credit"`; `isLongLivedQuotaKind` (diario, tope de gasto, sin saldo) no se reintenta en el transporte, ni en la respuesta del escaneo, ni en la segunda ronda del prompt. La auditoría ya cortaba con `quota` (§472).
+- `seedCoverageTopics`: una campaña automática empieza por los temas verificados del último mapa de menos de una semana y sólo busca los que faltan o no se pudieron verificar. El mapa guarda el `verifiedAt` más antiguo, así que nada se reestampa como fresco (lo que §253 quería evitar al rechazar el relleno parcial) y el refresco semanal completo llega igual.
+- Cada respuesta de Gemini guarda `search_queries` en `raw_response_json`, para medir el coste real en vez de suponer 2 consultas por llamada.
+
+**Pendiente.** Decidir topes de coste por plan o por dominio (p. ej. una búsqueda por llamada, medible ya en `/admin/comparar-modelos`, o prompts máximos por escaneo diario). Comprobar con la facturación de Google, una semana después del merge, que la línea de búsqueda baja. No retira ningún camino de recuperación.

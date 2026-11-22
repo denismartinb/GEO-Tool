@@ -13,6 +13,7 @@ import type { AuthenticatedContext } from "@/lib/auth";
 import { sanitizeField } from "@/lib/text/sanitize";
 import {
   carryForwardCoverage,
+  seedCoverageTopics,
   parseCoverageMap,
   NOT_COVERED_NOTE,
   COULD_NOT_VERIFY_NOTE,
@@ -569,7 +570,26 @@ export async function auditDomainCoverageCore({
     // Remaining prompts for this campaign: every active prompt not already
     // covered by an earlier batch. Recomputed fresh every call (not fixed at
     // campaign creation) so an edited prompt set self-corrects mid-campaign.
-    const alreadyCoveredTopics = resuming ? existing!.topics : [];
+    // GEMINI-COST-1 (log §473): an automatic campaign that could not carry the
+    // whole recent map (one inconclusive topic, a prompt added, an unfinished
+    // campaign of an older scan) starts from its verified topics and only
+    // searches the rest. The map keeps the oldest `verifiedAt`, so the weekly
+    // full refresh is not pushed back.
+    const seed =
+      !resuming && trigger === "automatic" && existing && !existingMatchesScan
+        ? seedCoverageTopics({ map: existing, activePromptIds: prompts.map((p) => p.id), now: Date.now() })
+        : null;
+    const alreadyCoveredTopics = resuming ? existing!.topics : (seed?.topics ?? []);
+    const campaignVerifiedAt = resuming ? existing!.verifiedAt : seed?.verifiedAt;
+    if (seed) {
+      console.info(`${LOG_PREFIX} seeded`, {
+        project_id: projectId,
+        scan_id: scanId,
+        from_scan_id: existing!.scanId,
+        seeded: seed.topics.length,
+        verified_at: seed.verifiedAt
+      });
+    }
     const coveredPromptIds = new Set(alreadyCoveredTopics.map((t) => t.promptId));
     const remainingPrompts = prompts.filter((p) => !coveredPromptIds.has(p.id));
 
@@ -719,7 +739,8 @@ export async function auditDomainCoverageCore({
     const coverage: DomainCoverageMap = {
       scanId,
       generatedAt: new Date().toISOString(),
-      topics: allTopics
+      topics: allTopics,
+      ...(campaignVerifiedAt ? { verifiedAt: campaignVerifiedAt } : {})
     };
 
     // Persist unconditionally (invariant 3): every consumed batch gets a row/
@@ -730,9 +751,12 @@ export async function auditDomainCoverageCore({
     // DOMAIN_COVERAGE_RATE_LIMIT regardless of how many chained requests it
     // takes.
     const sanitizedAt = new Date().toISOString();
+    const seededIds = new Set((seed?.topics ?? []).map((t) => t.promptId));
     const mergedRawTopics = resuming
       ? [...parsePriorRawTopics(existingRow!.raw_content), ...rawByPrompt]
-      : rawByPrompt;
+      : seed
+        ? [...parsePriorRawTopics(existingRow!.raw_content).filter((t) => seededIds.has(t.promptId)), ...rawByPrompt]
+        : rawByPrompt;
     const persistPayload = {
       recommendation_id: null,
       project_id: projectId,

@@ -60,7 +60,8 @@ const SURFACE_LABEL: Record<LlmSurface, string> = {
 const QUOTA_KIND_COPY: Record<QuotaKind, string> = {
   per_minute: "Por minuto: se recupera sola en unos minutos.",
   per_day: "Diario: se recupera con el reinicio diario del proveedor (medianoche del Pacífico).",
-  spend_cap: "Tope de gasto del proyecto: hay que subirlo en la consola del proveedor."
+  spend_cap: "Tope de gasto del proyecto: hay que subirlo en la consola del proveedor.",
+  credit: "Sin saldo prepago (402): hay que recargar la cuenta del proveedor."
 };
 
 const CATEGORY_COPY: Record<"quota" | "config", { headline: string; detail: string }> = {

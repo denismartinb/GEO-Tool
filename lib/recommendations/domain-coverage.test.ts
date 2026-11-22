@@ -5,7 +5,7 @@ import { ExtractionError } from "@/lib/llm/extraction-errors";
 vi.mock("@/lib/scan/citation-resolution", () => ({ resolveGroundingRedirects: vi.fn() }));
 vi.mock("@/lib/recommendations/generation-rate-limit", () => ({ checkGenerationRateLimit: vi.fn() }));
 
-import { auditDomainCoverageCore } from "./domain-coverage";
+import { auditDomainCoverageCore, COULD_NOT_VERIFY_NOTE } from "./domain-coverage";
 import { auditDomainContent } from "@/lib/llm/gemini";
 import { resolveGroundingRedirects } from "@/lib/scan/citation-resolution";
 import { checkGenerationRateLimit } from "@/lib/recommendations/generation-rate-limit";
@@ -417,13 +417,78 @@ describe("auditDomainCoverageCore", () => {
       expect(mockedGemini).toHaveBeenCalled();
     });
 
-    it("falls back to a real campaign when persisting the carried map fails", async () => {
+    it("falls back to a campaign seeded with the verified topics when persisting the carried map fails", async () => {
       const deps = makeDeps({
         cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(recentMap()), raw_content: "{}" },
         insertError: { message: "boom" }
       });
       await runFast({ ...deps, trigger: "automatic" } as never);
-      expect(mockedGemini).toHaveBeenCalled();
+      // GEMINI-COST-1: the only topic is already verified, so nothing is searched again.
+      expect(mockedGemini).not.toHaveBeenCalled();
+    });
+
+    describe("seeded campaign (GEMINI-COST-1)", () => {
+      const verified = (promptId: string) => ({
+        promptId,
+        topic: promptId,
+        found: true,
+        pages: [{ url: "https://acme.com/a", title: "A" }],
+        note: "n"
+      });
+
+      it("searches only the inconclusive topic and keeps the oldest verifiedAt", async () => {
+        const map = {
+          scanId: "old-scan",
+          generatedAt: new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString(),
+          topics: [verified("p1"), { promptId: "p2", topic: "p2", found: false, pages: [], note: COULD_NOT_VERIFY_NOTE }]
+        };
+        const deps = makeDeps({
+          prompts: [
+            { id: "p1", prompt_text: "uno" },
+            { id: "p2", prompt_text: "dos" }
+          ],
+          cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(map), raw_content: "{}" }
+        });
+        const result = await runFast({ ...deps, trigger: "automatic" } as never);
+        expect(mockedGemini).toHaveBeenCalledTimes(1);
+        expect(mockedGemini.mock.calls[0][0].topic).toBe("dos");
+        expect(result.success && result.status).toBe("completed");
+        const persisted = JSON.parse(deps._service.inserted[0].sanitized_content as string);
+        expect(persisted.scanId).toBe("scan-1");
+        expect(persisted.verifiedAt).toBe(map.generatedAt);
+        expect(persisted.topics.map((t: { promptId: string }) => t.promptId).sort()).toEqual(["p1", "p2"]);
+      });
+
+      it("searches only a prompt added since, starting from an unfinished campaign of an older scan", async () => {
+        const map = {
+          scanId: "old-scan",
+          generatedAt: new Date(Date.now() - 24 * 60 * 60_000).toISOString(),
+          topics: [verified("p1")]
+        };
+        const deps = makeDeps({
+          prompts: [
+            { id: "p1", prompt_text: "uno" },
+            { id: "p3", prompt_text: "tres" }
+          ],
+          cacheRow: { id: "row-old", status: "running", sanitized_content: JSON.stringify(map), raw_content: "{}" }
+        });
+        await runFast({ ...deps, trigger: "automatic" } as never);
+        expect(mockedGemini).toHaveBeenCalledTimes(1);
+        expect(mockedGemini.mock.calls[0][0].topic).toBe("tres");
+      });
+
+      it("never seeds a human-triggered campaign", async () => {
+        const map = {
+          scanId: "old-scan",
+          generatedAt: new Date(Date.now() - 24 * 60 * 60_000).toISOString(),
+          topics: [verified("p1")]
+        };
+        const deps = makeDeps({
+          cacheRow: { id: "row-old", status: "running", sanitized_content: JSON.stringify(map), raw_content: "{}" }
+        });
+        await runFast(deps);
+        expect(mockedGemini).toHaveBeenCalledTimes(1);
+      });
     });
   });
 
