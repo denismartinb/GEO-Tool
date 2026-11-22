@@ -9,6 +9,8 @@
  * pattern as lib/recommendations/generation-rate-limit.ts).
  */
 
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
+
 export type DomainCoveragePage = { url: string; title: string };
 
 export type DomainCoverageTopic = {
@@ -104,11 +106,10 @@ export function parseCoverageMap(raw: string | null): DomainCoverageMap | null {
  * Gemini 3 started billing grounding per search query
  * (`docs/llm-cost-analysis-2026-08.md`, §8 — the 2026-10 addendum).
  *
- * Seven days less a twelve-hour slack: the daily cron does not fire at the
- * exact same minute, so a strict 7 × 24 h would push the weekly refresh to
- * day 8 every other week.
+ * The same weekly interval every automatic audit uses (AUDIT-WEEKLY-1,
+ * `audit-cadence.ts`).
  */
-export const COVERAGE_REFRESH_INTERVAL_MS = 7 * 24 * 60 * 60_000 - 12 * 60 * 60_000;
+export const COVERAGE_REFRESH_INTERVAL_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 
 /**
  * Re-attaches a recent coverage map to a newer scan instead of searching the
@@ -169,10 +170,13 @@ export function carryForwardCoverage(input: {
  * - nothing is restamped as fresh. The map's `verifiedAt` is the OLDEST
  *   evidence in it (`verifiedAt` here), and the caller persists it, so the
  *   weekly full refresh still comes on time for every topic;
- * - an inconclusive topic is not carried: it is searched again now.
+ * - an inconclusive topic is kept as inconclusive until the weekly refresh
+ *   (AUDIT-WEEKLY-1, log §474): searching it again after every daily scan
+ *   made one failing topic a daily Gemini call. A topic with no row at all
+ *   (a new prompt, or one a 429 left pending) is still searched now.
  *
  * Returns null when there is nothing worth keeping (evidence too old, or no
- * verified topic for an active prompt).
+ * topic for an active prompt).
  */
 export function seedCoverageTopics(input: {
   map: DomainCoverageMap;
@@ -185,7 +189,7 @@ export function seedCoverageTopics(input: {
   if (input.now - verifiedMs >= COVERAGE_REFRESH_INTERVAL_MS) return null;
 
   const active = new Set(input.activePromptIds);
-  const topics = input.map.topics.filter((t) => active.has(t.promptId) && t.note !== COULD_NOT_VERIFY_NOTE);
+  const topics = input.map.topics.filter((t) => active.has(t.promptId));
   if (topics.length === 0) return null;
   return { topics, verifiedAt };
 }

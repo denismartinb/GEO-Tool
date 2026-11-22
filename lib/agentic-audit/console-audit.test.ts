@@ -1,3 +1,4 @@
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
@@ -7,6 +8,7 @@ import {
   AGENTIC_REVIEW_DAILY_LIMIT,
   AGENTIC_SCREEN_MIN_GAP_MS,
   AGENTIC_SCREEN_STALE_MS,
+  AGENTIC_SCHEDULED_MIN_GAP_MS,
   readAgenticAudits,
   runConsoleAgenticAuditCore,
   runScheduledAgenticAudit,
@@ -350,6 +352,15 @@ describe("automatic review (log §323)", () => {
     expect(
       shouldAutoReview({ ...base, latest: { ...latest, createdAt: yesterday }, lastAttempt: { createdAt: yesterday, status: "completed" } }, NOW)
     ).toBe(false);
+  });
+
+  it("waits a week between automatic reviews, after a scan and from the screen (AUDIT-WEEKLY-1)", () => {
+    expect(AGENTIC_SCREEN_STALE_MS).toBe(AUTOMATIC_AUDIT_INTERVAL_MS);
+    expect(AGENTIC_SCHEDULED_MIN_GAP_MS).toBe(AUTOMATIC_AUDIT_INTERVAL_MS);
+    const base = { available: true as const, latest: null, lastAttempt: null, usedToday: 0, autoToday: 0 };
+    const fiveDays = new Date(NOW - 5 * 24 * 60 * 60 * 1000).toISOString();
+    const latest = { url: "u", createdAt: fiveDays, result: {} as never };
+    expect(shouldAutoReview({ ...base, latest, lastAttempt: { createdAt: fiveDays, status: "completed" } }, NOW)).toBe(false);
   });
 
   it("starts again on every visit while the last review found nothing to sell (log §325)", () => {

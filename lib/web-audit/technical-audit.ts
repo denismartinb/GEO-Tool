@@ -19,6 +19,7 @@ import { reusablePageSpeed } from "@/lib/web-audit/seo-health";
 import { emitAuditRegressionNotifications } from "@/lib/web-audit/regression-alerts";
 import { sanitizeField } from "@/lib/text/sanitize";
 import { isPageRender, renderIsFresh, type PageRender } from "@/lib/web-audit/ai-render";
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
 
 /**
  * "Auditar salud técnica GEO" (WEB-AUDIT-2): a deterministic
@@ -108,6 +109,18 @@ const LOG_PREFIX = "[geo:technical-audit]";
 export const MAX_AUDIT_PAGES = 10;
 export const TECH_AUDIT_TOTAL_BUDGET_MS = 25_000;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
+/**
+ * AUDIT-WEEKLY-1 (log §474): the automatic audit after a scan reuses the
+ * project's latest snapshot while it is younger than a week, whatever run it
+ * belongs to. Every reader takes the latest snapshot (and the GEO Score
+ * accepts one up to TECHNICAL_SNAPSHOT_MAX_AGE_DAYS old), so nothing is
+ * copied. The manual path keeps the per-run 24 h cache.
+ */
+function isWeeklyReuse(trigger: "manual" | "automatic", createdAt: string, now: number): boolean {
+  if (trigger !== "automatic") return false;
+  const created = Date.parse(createdAt);
+  return Number.isFinite(created) && now - created < AUTOMATIC_AUDIT_INTERVAL_MS;
+}
 
 const SUPABASE_CALL_TIMEOUT_MS = 8_000;
 
@@ -383,9 +396,10 @@ export async function runTechnicalAuditCore({
       bots: BotAccessReport;
       created_at: string;
     } | null;
-    if (latestSnapshot && latestSnapshot.scan_id === scanId) {
+    if (latestSnapshot) {
       const ageMs = Date.now() - new Date(latestSnapshot.created_at).getTime();
-      if (ageMs < CACHE_FRESH_MS) {
+      const sameRunFresh = latestSnapshot.scan_id === scanId && ageMs < CACHE_FRESH_MS;
+      if (sameRunFresh || isWeeklyReuse(trigger, latestSnapshot.created_at, Date.now())) {
         return {
           success: true,
           cached: true,

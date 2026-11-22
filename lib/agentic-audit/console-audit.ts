@@ -14,6 +14,7 @@ import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
 import { cleanDomain } from "@/lib/projects/project-form";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import type { createServiceClient } from "@/lib/supabase/service";
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
 
 /**
  * AGENTIC-COMMERCE-1 Fase 2a (log §322, migration 0043): the «Auditoría
@@ -83,12 +84,20 @@ type RecentRow = { status: "pending" | "completed" | "failed"; created_at: strin
 const RECENT_COLUMNS = "status, created_at, automatic:result->automatic";
 const isAutomaticRow = (r: RecentRow) => r.automatic === true;
 
-/** The screen starts a review by itself when there is none, or the last one is older than this. */
-export const AGENTIC_SCREEN_STALE_MS = 48 * 60 * 60 * 1000;
+/**
+ * The screen starts a review by itself when there is none, or the last one is
+ * older than this: a week, like every automatic audit (AUDIT-WEEKLY-1, log
+ * §474; was 48 h).
+ */
+export const AGENTIC_SCREEN_STALE_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 /** A review started less than this ago is not started again from the screen (two tabs, a reload). */
 export const AGENTIC_SCREEN_MIN_GAP_MS = 10 * 60 * 1000;
-/** After a scan, at most one automatic review per project in this window. */
-export const AGENTIC_SCHEDULED_MIN_GAP_MS = 20 * 60 * 60 * 1000;
+/**
+ * After a scan, at most one automatic review per project in this window,
+ * counted from the last review of any outcome: a week (AUDIT-WEEKLY-1, log
+ * §474; was 20 h).
+ */
+export const AGENTIC_SCHEDULED_MIN_GAP_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 /**
  * A saved product page that answers fast with an error (404, gone) leaves
  * time to look for a new one from the home page. One that timed out does not.

@@ -436,7 +436,7 @@ describe("auditDomainCoverageCore", () => {
         note: "n"
       });
 
-      it("searches only the inconclusive topic and keeps the oldest verifiedAt", async () => {
+      it("keeps an inconclusive topic until the weekly refresh and searches only a missing one (AUDIT-WEEKLY-1)", async () => {
         const map = {
           scanId: "old-scan",
           generatedAt: new Date(Date.now() - 2 * 24 * 60 * 60_000).toISOString(),
@@ -445,18 +445,20 @@ describe("auditDomainCoverageCore", () => {
         const deps = makeDeps({
           prompts: [
             { id: "p1", prompt_text: "uno" },
-            { id: "p2", prompt_text: "dos" }
+            { id: "p2", prompt_text: "dos" },
+            { id: "p3", prompt_text: "tres" }
           ],
           cacheRow: { id: "row-old", status: "completed", sanitized_content: JSON.stringify(map), raw_content: "{}" }
         });
         const result = await runFast({ ...deps, trigger: "automatic" } as never);
         expect(mockedGemini).toHaveBeenCalledTimes(1);
-        expect(mockedGemini.mock.calls[0][0].topic).toBe("dos");
+        expect(mockedGemini.mock.calls[0][0].topic).toBe("tres");
         expect(result.success && result.status).toBe("completed");
         const persisted = JSON.parse(deps._service.inserted[0].sanitized_content as string);
         expect(persisted.scanId).toBe("scan-1");
         expect(persisted.verifiedAt).toBe(map.generatedAt);
-        expect(persisted.topics.map((t: { promptId: string }) => t.promptId).sort()).toEqual(["p1", "p2"]);
+        expect(persisted.topics.map((t: { promptId: string }) => t.promptId).sort()).toEqual(["p1", "p2", "p3"]);
+        expect(persisted.topics.find((t: { promptId: string }) => t.promptId === "p2").note).toBe(COULD_NOT_VERIFY_NOTE);
       });
 
       it("searches only a prompt added since, starting from an unfinished campaign of an older scan", async () => {

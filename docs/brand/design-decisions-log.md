@@ -30102,3 +30102,19 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - Cada respuesta de Gemini guarda `search_queries` en `raw_response_json`, para medir el coste real en vez de suponer 2 consultas por llamada.
 
 **Pendiente.** Decidir topes de coste por plan o por dominio (p. ej. una búsqueda por llamada, medible ya en `/admin/comparar-modelos`, o prompts máximos por escaneo diario). Comprobar con la facturación de Google, una semana después del merge, que la línea de búsqueda baja. No retira ningún camino de recuperación.
+
+## §474 AUDIT-WEEKLY-1: todas las auditorías automáticas, como mucho una vez por semana (2026-11-22)
+
+**Qué pidió Denis.** «Las auditorías deben ser una vez por semana», todas, también cuando un tema ha fallado o el escaneo es diario.
+
+**Cómo estaba.** Tras cada escaneo completado el trabajo `web_audit` corre tres cosas: la cobertura (Gemini con búsqueda), la auditoría técnica (fetch y robots.txt, sin LLM, más la sonda del servidor) y la revisión agéntica (unas diez peticiones a la web del cliente, sin LLM). Sólo la cobertura tenía cadencia semanal (§253, §473), y aun así un tema «No hemos podido verificar» se volvía a buscar en cada escaneo. La técnica se repetía en cada escaneo (su caché de 24 h exigía el mismo run). La agéntica, como mucho cada 20 h tras un escaneo y cada 48 h al abrir la pantalla. La medición con navegador (Cloudflare) ya era semanal para la ficha agéntica, y para las páginas de la técnica dependía de que hubiera foto nueva.
+
+**Qué se decidió (código).**
+- `AUTOMATIC_AUDIT_INTERVAL_MS` (`lib/web-audit/audit-cadence.ts`): 7 días menos 12 h de holgura, igual que §253. Lo leen las tres.
+- Cobertura: `COVERAGE_REFRESH_INTERVAL_MS` es esa constante, y `seedCoverageTopics` siembra también los temas inconclusos, que se quedan como «No hemos podido verificar» hasta el refresco semanal. Sólo se busca lo que no tiene fila: un prompt nuevo o un tema que un 429 dejó pendiente (§472).
+- Técnica: `runTechnicalAuditCore` con `trigger: "automatic"` devuelve la última foto del proyecto si tiene menos de una semana, sea del run que sea, sin pedir nada. Todos los lectores toman la foto más reciente y la Puntuación GEO acepta una de hasta 30 días (`TECHNICAL_SNAPSHOT_MAX_AGE_DAYS`), así que no se copia. La pasada de navegador sólo mide fotos sin medir, así que también pasa a semanal.
+- Agéntica: `AGENTIC_SCHEDULED_MIN_GAP_MS` (tras escanear, desde la última revisión de cualquier resultado) y `AGENTIC_SCREEN_STALE_MS` (al abrir la pantalla) pasan a esa constante.
+
+**Lo que no cambia, a propósito.** Lo que pide el cliente a mano («Elegir otra página», 5 al día). Y el relanzamiento al abrir «Auditoría agéntica» cuando la última revisión no encontró nada que vender (§325, decisión de Denis de 2026-10-18): son peticiones a su web sin coste de IA, con 10 minutos de separación y tope de 30 al día. Si Denis lo quiere también semanal, es una línea.
+
+**Consecuencia que hay que saber.** Un arreglo del cliente en su web (desbloquear un bot, quitar un `noindex`) tarda hasta una semana en verse en Auditoría técnica, la franja de Visión general y sus avisos. Y en `/debug` un escaneo sin foto técnica propia sale «Parcial». No se retira ningún camino de recuperación: la auditoría sigue corriendo sola, sólo con otra cadencia.
