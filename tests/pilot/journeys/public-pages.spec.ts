@@ -108,7 +108,9 @@ const BLOG_POSTS_BY_CLUSTER: Record<string, string> = {
   // BLOG-CLICS-1 (2026-11-05, log §468).
   "cuantos-clics-manda-chatgpt": "medicion",
   // BLOG-MENCIONES-1 (2026-11-11, log §470).
-  "menciones-de-marca-o-enlaces-para-la-ia": "playbooks"
+  "menciones-de-marca-o-enlaces-para-la-ia": "playbooks",
+  // BLOG-AGENTES-1 (2026-11-13, log §471).
+  "agentes-de-ia-que-visitan-tu-web": "medicion"
 };
 
 const BLOG_POSTS = Object.keys(BLOG_POSTS_BY_CLUSTER);
