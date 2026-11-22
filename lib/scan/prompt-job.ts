@@ -5,6 +5,7 @@ import { generateClaudeVisibilityAnswer, ClaudeConfigError } from "@/lib/llm/cla
 import { generateOpenAIVisibilityAnswer, OpenAIConfigError } from "@/lib/llm/openai";
 import { generatePerplexityVisibilityAnswer, PerplexityConfigError } from "@/lib/llm/perplexity";
 import type { GeminiVisibilityResponse } from "@/lib/llm/contracts";
+import { ExtractionError, isLongLivedQuotaKind } from "@/lib/llm/extraction-errors";
 import { delay } from "@/lib/llm/http";
 import { createServiceClient } from "@/lib/supabase/service";
 import type { LLMScanProvider } from "@/lib/scan/providers";
@@ -281,7 +282,15 @@ export async function processPromptJob({
       }
 
       if (result.kind === "retryable_error") {
-        const isLastAttempt = attempt === totalAttempts;
+        // GEMINI-COST-1 (log §474): no credit (402) or a daily / spend-cap
+        // limit will not be gone by the next round; retrying only doubles the
+        // rejected calls. The engine is dropped for this prompt.
+        const longLivedQuota =
+          result.error instanceof ExtractionError &&
+          result.error.category === "quota" &&
+          isLongLivedQuotaKind(result.error.quotaKind);
+        if (longLivedQuota) remaining.delete(result.provider);
+        const isLastAttempt = attempt === totalAttempts || longLivedQuota;
         await logJob(service, {
           jobId: job.id,
           projectId,
@@ -334,6 +343,12 @@ export async function processPromptJob({
           text: result.llmResult.text,
           total_tokens: result.llmResult.totalTokens,
           grounding_chunks: result.llmResult.groundingChunks ?? [],
+          // GEMINI-COST-1 (log §474): Gemini 3 grounding is billed per search
+          // query and the model decides how many to run. Kept so the real
+          // cost of an answer can be measured instead of assumed.
+          ...(typeof result.llmResult.searchQueries === "number"
+            ? { search_queries: result.llmResult.searchQueries }
+            : {}),
           prompt_version: PROMPT_VERSION
         },
         tokens_in: result.llmResult.tokensIn,

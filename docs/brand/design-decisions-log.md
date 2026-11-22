@@ -30097,3 +30097,44 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - `tests/free-checker-ssr.test.ts` impide que vuelvan el hook o el `Suspense`.
 
 **Pendiente.** Los 37 de «Rastreada: actualmente sin indexar» no se ven sin el export de Search Console. Lo más probable por los datos públicos: las 21 fichas del glosario (unas 200 a 270 palabras cada una, varias con sólo 1 a 3 enlaces internos), las comparativas con menos enlaces y los artículos más recientes de un dominio joven. Ampliar o fusionar fichas es contenido y el copy está congelado: lo decide Denis con la lista exportada. No retira ningún camino de recuperación.
+
+## §474 GEMINI-COST-1: Gemini deja de repetir la auditoría de cobertura cada día, cada llamada tiene techo de salida y un 402 no se reintenta (2026-11-22)
+
+**Qué pasó.** El 2026-11-22 por la mañana Gemini gastó más de 5 € tras la recarga del día anterior. Revisado el código (no hay acceso a la base de datos ni a la facturación desde la sesión, y Vercel Hobby guarda una hora de registros):
+- En producción **Gemini no extrae** respuestas de ningún motor: `SCAN_EXTRACTION_CLAUDE_MODEL` está puesto desde el 2026-10-10, así que la extracción (también la de Perplexity) va a Claude Haiku. Gemini se usa en la respuesta del escaneo (con búsqueda), en la auditoría de cobertura (con búsqueda, una llamada por prompt), y en el alta, sugerencias y reescrituras (sin búsqueda, puntuales).
+- Gemini 3 cobra la búsqueda por consulta: 5.000 gratis al mes para todo Gemini 3 y luego 14 $ por 1.000 (`lib/model-compare/catalogue.ts`). Cada llamada con búsqueda lanza 2 o 3. Un proyecto de 100 prompts diario son ~100 respuestas de Gemini al día, ~250 consultas: él solo agota el tramo gratis en unas tres semanas.
+- **Amplificador encontrado:** `carryForwardCoverage` sólo reutilizaba el mapa de cobertura si estaba completo y sin ningún tema «No hemos podido verificar». Con 100 temas, uno que caduque basta para que cada escaneo diario vuelva a buscar los 100. Y hasta §472 cada 429 dejaba temas así en 11 proyectos, de modo que tras subir el tope el 2026-11-21 todos repitieron la auditoría entera en el barrido siguiente.
+- Ninguna llamada fijaba `maxOutputTokens`; el único límite era el corte de 20 s, que no para la factura en Google.
+- Un 402 (sin saldo) caía en la categoría `http`: se reintentaba tres veces y la auditoría seguía con el tema siguiente. Las peticiones rechazadas no se cobran, así que esto explica el ruido de errores, no el gasto.
+
+**Qué se decidió (código).**
+- `GEMINI_MAX_OUTPUT_TOKENS`: respuesta 4096, cobertura 1024, JSON 8192, investigación con búsqueda 4096. Techos contra bucles, no objetivos.
+- `categorizeHttpStatus(402)` → `quota` con `quotaKind: "credit"`; `isLongLivedQuotaKind` (diario, tope de gasto, sin saldo) no se reintenta en el transporte, ni en la respuesta del escaneo, ni en la segunda ronda del prompt. La auditoría ya cortaba con `quota` (§472).
+- `seedCoverageTopics`: una campaña automática empieza por los temas verificados del último mapa de menos de una semana y sólo busca los que faltan o no se pudieron verificar. El mapa guarda el `verifiedAt` más antiguo, así que nada se reestampa como fresco (lo que §253 quería evitar al rechazar el relleno parcial) y el refresco semanal completo llega igual.
+- Cada respuesta de Gemini guarda `search_queries` en `raw_response_json`, para medir el coste real en vez de suponer 2 consultas por llamada.
+
+**Pendiente.** Decidir topes de coste por plan o por dominio (p. ej. una búsqueda por llamada, medible ya en `/admin/comparar-modelos`, o prompts máximos por escaneo diario). Comprobar con la facturación de Google, una semana después del merge, que la línea de búsqueda baja. No retira ningún camino de recuperación.
+
+## §475 AUDIT-WEEKLY-1: todas las auditorías automáticas, como mucho una vez por semana (2026-11-22)
+
+**Qué pidió Denis.** «Las auditorías deben ser una vez por semana», todas, también cuando un tema ha fallado o el escaneo es diario.
+
+**Cómo estaba.** Tras cada escaneo completado el trabajo `web_audit` corre tres cosas: la cobertura (Gemini con búsqueda), la auditoría técnica (fetch y robots.txt, sin LLM, más la sonda del servidor) y la revisión agéntica (unas diez peticiones a la web del cliente, sin LLM). Sólo la cobertura tenía cadencia semanal (§253, §474), y aun así un tema «No hemos podido verificar» se volvía a buscar en cada escaneo. La técnica se repetía en cada escaneo (su caché de 24 h exigía el mismo run). La agéntica, como mucho cada 20 h tras un escaneo y cada 48 h al abrir la pantalla. La medición con navegador (Cloudflare) ya era semanal para la ficha agéntica, y para las páginas de la técnica dependía de que hubiera foto nueva.
+
+**Qué se decidió (código).**
+- `AUTOMATIC_AUDIT_INTERVAL_MS` (`lib/web-audit/audit-cadence.ts`): 7 días menos 12 h de holgura, igual que §253. Lo leen las tres.
+- Cobertura: `COVERAGE_REFRESH_INTERVAL_MS` es esa constante, y `seedCoverageTopics` siembra también los temas inconclusos, que se quedan como «No hemos podido verificar» hasta el refresco semanal. Sólo se busca lo que no tiene fila: un prompt nuevo o un tema que un 429 dejó pendiente (§472).
+- Técnica: `runTechnicalAuditCore` con `trigger: "automatic"` devuelve la última foto del proyecto si tiene menos de una semana, sea del run que sea, sin pedir nada. Todos los lectores toman la foto más reciente y la Puntuación GEO acepta una de hasta 30 días (`TECHNICAL_SNAPSHOT_MAX_AGE_DAYS`), así que no se copia. La pasada de navegador sólo mide fotos sin medir, así que también pasa a semanal.
+- Agéntica: `AGENTIC_SCHEDULED_MIN_GAP_MS` (tras escanear, desde la última revisión de cualquier resultado) y `AGENTIC_SCREEN_STALE_MS` (al abrir la pantalla) pasan a esa constante.
+
+**Lo que no cambia, a propósito.** Lo que pide el cliente a mano («Elegir otra página», 5 al día). Y el relanzamiento al abrir «Auditoría agéntica» cuando la última revisión no encontró nada que vender (§325, decisión de Denis de 2026-10-18): son peticiones a su web sin coste de IA, con 10 minutos de separación y tope de 30 al día. Si Denis lo quiere también semanal, es una línea.
+
+**Consecuencia que hay que saber.** Un arreglo del cliente en su web (desbloquear un bot, quitar un `noindex`) tarda hasta una semana en verse en Auditoría técnica, la franja de Visión general y sus avisos. Y en `/debug` un escaneo sin foto técnica propia sale «Parcial». No se retira ningún camino de recuperación: la auditoría sigue corriendo sola, sólo con otra cadencia.
+
+**Adenda (Denis, mismo día): primero lo antes posible, luego cada semana, y sin decirlo.** «No avisemos en el frontal de que la frecuencia es semanal. Siempre prima que el cliente vea la auditoría lo antes posible. Una vez que lo tenga se repite semanal.»
+- La primera auditoría de cada tipo ya salía en el primer escaneo, y con un dominio o un prompt nuevo (sin foto, sin revisión o sin fila de cobertura no hay nada que reutilizar).
+- Cobertura: `seedCoverageTopics` deja fuera los temas «No hemos podido verificar», así que se vuelven a buscar en la siguiente auditoría automática (supersede la línea de arriba que los dejaba hasta el refresco semanal). Sólo se buscan esos y los que faltan, nunca los verificados; el coste extra se limita a los temas que fallaron y como mucho hasta el refresco semanal.
+- Agéntica: `AGENTIC_SCHEDULED_MIN_GAP_MS` cuenta desde la última revisión completada que encontró algo que vendes. Una fallida o con `found: "none"` se repite tras el siguiente escaneo (sólo peticiones a la web, sin IA; tope de 30 automáticas al día y 10 minutos de separación siguen).
+- Técnica: sin cambio, la foto existe sólo si la auditoría terminó.
+- Textos: ninguno dice la frecuencia. «tras/después de cada escaneo» se quita de la tarjeta agéntica de Visión general (Starter), del comprobador público, del vacío de «Visibilidad en agentes», de dos vacíos de Auditoría técnica («en cuanto termina el escaneo», que habla del primero) y de ocho artículos del blog («se hace sola»). Sólo quedan en `/debug` (operador).
+- `/admin`: el coste estimado cuenta como mucho 30/7 auditorías de cobertura al mes (`cost-model.ts`).

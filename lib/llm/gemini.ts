@@ -1,6 +1,6 @@
 import "server-only";
 import { extractionOutputSchema } from "@/lib/extraction/schema";
-import { ExtractionError } from "@/lib/llm/extraction-errors";
+import { ExtractionError, isLongLivedQuotaKind, type QuotaKind } from "@/lib/llm/extraction-errors";
 import { fetchExtractionWithRetry } from "@/lib/llm/extraction-fetch";
 import { delay, fetchWithTimeout } from "@/lib/llm/http";
 import {
@@ -12,7 +12,9 @@ import {
 } from "@/lib/llm/contracts";
 import {
   GEMINI_API_URL,
+  GEMINI_MAX_OUTPUT_TOKENS,
   GeminiConfigError,
+  classifyGeminiQuotaBody,
   GeminiTimeoutError,
   getGeminiApiError,
   geminiGenerationTuning,
@@ -138,7 +140,7 @@ export async function generateGeminiVisibilityAnswer(input: {
     // Temperature and thinking per model family — ADR 0042 (thinking must stay
     // minimal: with google_search grounding it is what decides whether a call
     // fits GEMINI_CALL_TIMEOUT_MS, ADR 0009 addendum 2026-06-14).
-    generationConfig: geminiGenerationTuning(model)
+    generationConfig: { ...geminiGenerationTuning(model), maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS.answer }
   });
 
   let response = await fetchWithTimeout(
@@ -151,6 +153,15 @@ export async function generateGeminiVisibilityAnswer(input: {
     GEMINI_CALL_TIMEOUT_MS,
     () => new GeminiTimeoutError()
   );
+
+  // GEMINI-COST-1 (log §474): 402 (no prepaid credit) and a daily or
+  // spend-cap 429 do not heal in 1.5 s. They are thrown as a categorized
+  // quota error, without the retry, so the prompt job skips its second round
+  // too and the operator alert names the limit.
+  const quotaKind = await readGeminiQuotaKind(response);
+  if (quotaKind && isLongLivedQuotaKind(quotaKind)) {
+    throw new ExtractionError("quota", getGeminiApiError(response.status), quotaKind);
+  }
 
   if (response.status === 429) {
     await delay(RATE_LIMIT_RETRY_DELAY_MS);
@@ -167,6 +178,10 @@ export async function generateGeminiVisibilityAnswer(input: {
   }
 
   if (!response.ok) {
+    if (response.status === 429 || response.status === 402) {
+      const retryKind = await readGeminiQuotaKind(response);
+      throw new ExtractionError("quota", getGeminiApiError(response.status), retryKind);
+    }
     throw new Error(getGeminiApiError(response.status));
   }
 
@@ -206,6 +221,21 @@ export async function generateGeminiVisibilityAnswer(input: {
     ...(groundingChunks?.length ? { groundingChunks } : {}),
     ...(Array.isArray(webSearchQueries) ? { searchQueries: webSearchQueries.length } : {})
   };
+}
+
+/**
+ * GEMINI-COST-1: which limit a rejected scan call hit, or undefined when the
+ * response is not a quota rejection. Reads a clone, so the caller can still
+ * read the body; the body is classified, never kept.
+ */
+async function readGeminiQuotaKind(response: Response): Promise<QuotaKind | undefined> {
+  if (response.status === 402) return "credit";
+  if (response.status !== 429) return undefined;
+  try {
+    return classifyGeminiQuotaBody(await response.clone().text());
+  } catch {
+    return undefined;
+  }
 }
 
 export async function extractGeminiStructuredData(input: {
@@ -272,7 +302,11 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
       body: JSON.stringify({
         contents: [{ parts: [{ text: promptBlock }] }],
         // Temperature and thinking per model family — ADR 0042.
-        generationConfig: { ...geminiGenerationTuning(model), responseMimeType: "application/json" }
+        generationConfig: {
+          ...geminiGenerationTuning(model),
+          maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS.json,
+          responseMimeType: "application/json"
+        }
       })
     },
     {
@@ -282,7 +316,8 @@ For "other_brands_mentioned": list the real, actual company or brand names that 
       maxDelayMs: EXTRACTION_RETRY_MAX_DELAY_MS,
       deadlineAt: input.deadlineAt,
       describeStatus: getGeminiApiError,
-      timeoutMessage: "Gemini extraction request timed out."
+      timeoutMessage: "Gemini extraction request timed out.",
+      classifyQuotaBody: classifyGeminiQuotaBody
     }
   );
 

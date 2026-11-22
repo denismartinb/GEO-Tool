@@ -93,3 +93,11 @@ These invariants apply automatically when touching Gemini/LLM code. Owned by the
 - **Un 429 diario o de tope de gasto no se reintenta.** `classifyGeminiQuotaBody`
   lo distingue del de por minuto con una etiqueta fija, nunca con el texto de
   Google, y el aviso al operador dice qué límite es (log §472).
+- **Toda llamada a Gemini lleva `maxOutputTokens`** (`GEMINI_MAX_OUTPUT_TOKENS`,
+  `lib/llm/gemini-client.ts`). Cortar el `fetch` por tiempo no para la
+  generación ni su factura; el techo es lo único que acota una llamada que
+  entra en bucle. Son techos, varias veces la salida típica: bajarlos cerca de
+  lo normal recortaría respuestas y cambiaría lo que mide el escaneo (log §474).
+- **Un 402 es «sin saldo» (`quota`, `credit`) y no se reintenta**, ni en el
+  transporte ni en la segunda ronda del prompt; la auditoría corta la tanda
+  igual que con un 429 (log §474).

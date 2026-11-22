@@ -1,6 +1,10 @@
 import "server-only";
 import { formatUsd, provenanceLabel, type CostProvenance } from "@/lib/admin/cost-format";
 
+
+/** AUDIT-WEEKLY-1 (log §475): one automatic audit a week at most. */
+const AUTOMATIC_AUDITS_PER_MONTH = 30 / 7;
+
 export { formatUsd, provenanceLabel };
 export type { CostProvenance };
 
@@ -104,8 +108,9 @@ export function estimateProjectMonthlyCost(input: ProjectCostInput): ProjectCost
     : 0;
 
   // La auditoría automática se dispara tras cada escaneo (AUDIT-AFTER-SCAN-1),
-  // así que su frecuencia es la misma que la del escaneo recurrente.
-  const coverageAuditsPerMonth = input.coverageAuditEnabled ? scansPerMonth : 0;
+  // pero desde AUDIT-WEEKLY-1 (log §475) corre como mucho una vez por semana:
+  // nunca más auditorías que escaneos, ni más de las semanas del mes.
+  const coverageAuditsPerMonth = input.coverageAuditEnabled ? Math.min(scansPerMonth, AUTOMATIC_AUDITS_PER_MONTH) : 0;
 
   const monthlyUsd = perScanUsd * scansPerMonth + COVERAGE_AUDIT_USD * coverageAuditsPerMonth;
 

@@ -1,3 +1,4 @@
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { createServiceClient } from "@/lib/supabase/service";
 import type { AuthenticatedContext } from "@/lib/auth";
@@ -262,6 +263,58 @@ describe("runTechnicalAuditCore", () => {
     if (!result.success) return;
     expect(result.cached).toBe(false);
     expect(mockedCheckSnapshotRateLimit).toHaveBeenCalledTimes(1);
+  });
+
+  describe("weekly reuse of the automatic audit (AUDIT-WEEKLY-1)", () => {
+    const snapshotAged = (ageMs: number) =>
+      baseTables({
+        web_audit_snapshots: {
+          select: {
+            data: {
+              scan_id: "scan-OLD",
+              readiness_score: 61,
+              pages: [],
+              bots: {},
+              created_at: new Date(Date.now() - ageMs).toISOString()
+            },
+            error: null
+          }
+        }
+      });
+    const DAY = 24 * 60 * 60_000;
+
+    it("reuses a snapshot of an older scan younger than a week, without fetching anything", async () => {
+      const tables = snapshotAged(3 * DAY);
+      const result = await runTechnicalAuditCore({
+        projectId: "project-1",
+        supabase: makeClient(tables) as unknown as Supabase,
+        service: makeClient(tables) as unknown as ServiceClient,
+        user: { id: "user-1" } as AuthenticatedContext["user"],
+        trigger: "automatic"
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.cached).toBe(true);
+      expect(result.snapshot.readinessScore).toBe(61);
+      expect(mockedFetchPageSafely).not.toHaveBeenCalled();
+      expect(mockedBuildBotAccessReport).not.toHaveBeenCalled();
+    });
+
+    it("audits again once the snapshot is a week old", async () => {
+      mockedFetchPageSafely.mockResolvedValue({ status: "skipped_offsite" });
+      mockedBuildBotAccessReport.mockResolvedValue({ robotsFound: false, bots: [], llmsTxtFound: false, llmsTxtBytes: null, sitemapFound: false });
+      const tables = snapshotAged(AUTOMATIC_AUDIT_INTERVAL_MS + 60_000);
+      const result = await runTechnicalAuditCore({
+        projectId: "project-1",
+        supabase: makeClient(tables) as unknown as Supabase,
+        service: makeClient(tables) as unknown as ServiceClient,
+        user: { id: "user-1" } as AuthenticatedContext["user"],
+        trigger: "automatic"
+      });
+      expect(result.success).toBe(true);
+      if (!result.success) return;
+      expect(result.cached).toBe(false);
+    });
   });
 
   it("marks pages as skipped_budget once the total time budget is exceeded, and still persists", async () => {

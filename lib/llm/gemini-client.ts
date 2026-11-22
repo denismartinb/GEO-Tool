@@ -43,6 +43,29 @@ const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-3.6-flash.";
 
 /**
+ * GEMINI-COST-1 (log §474): ceilings on generated tokens, per kind of call.
+ *
+ * No Gemini request set `maxOutputTokens`, so the only bound on what one call
+ * could bill was the 20 s timeout — and aborting the fetch does not stop
+ * Google generating, or billing, the rest. Gemini 3 at its default
+ * temperature can loop (ADR 0042); without a ceiling a looping call bills
+ * until the model gives up on its own. These are ceilings, several times the
+ * measured typical output (~900 tokens for a scan answer, see
+ * `lib/model-compare/catalogue.ts`), not targets: a normal answer never
+ * reaches them, so what the scan measures does not change.
+ */
+export const GEMINI_MAX_OUTPUT_TOKENS = {
+  /** Scan answer (`generateGeminiVisibilityAnswer`): a plain-text reply to a user question. */
+  answer: 4096,
+  /** Coverage audit: the prompt asks for under 500 characters. */
+  coverage: 1024,
+  /** Structured JSON: extraction, suggestions, rewrites, structured findings. */
+  json: 8192,
+  /** Grounded research in prose (step 1 of the Gemini 3 grounded flow). */
+  research: 4096
+} as const;
+
+/**
  * Hard per-call timeout shared by every direct Gemini `fetch`.
  */
 const GEMINI_CALL_TIMEOUT_MS = 20_000;
@@ -68,6 +91,7 @@ export class GeminiConfigError extends Error {}
 
 export function getGeminiApiError(status: number) {
   if (status === 429) return "Gemini API quota or rate limit reached.";
+  if (status === 402) return "Gemini API prepaid credit exhausted.";
   if (status === 400) return "Gemini API rejected the request. Check GEMINI_MODEL and request configuration.";
   return `Gemini API request failed with status ${status}.`;
 }
@@ -216,7 +240,11 @@ export async function generateGeminiJson(promptBlock: string): Promise<unknown> 
     generateContentEndpoint(apiKey),
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
-      generationConfig: { ...geminiGenerationTuning(getGeminiModel()), responseMimeType: "application/json" }
+      generationConfig: {
+        ...geminiGenerationTuning(getGeminiModel()),
+        maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS.json,
+        responseMimeType: "application/json"
+      }
     })
   );
 
@@ -294,7 +322,7 @@ export async function generateGroundedGeminiJson(promptBlock: string): Promise<u
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       tools: [{ google_search: {} }],
-      generationConfig: geminiGenerationTuning(model)
+      generationConfig: { ...geminiGenerationTuning(model), maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS.json }
     })
   );
 
@@ -320,7 +348,7 @@ async function generateGroundedGeminiText(apiKey: string, promptBlock: string): 
     JSON.stringify({
       contents: [{ parts: [{ text: promptBlock }] }],
       tools: [{ google_search: {} }],
-      generationConfig: geminiGenerationTuning(getGeminiModel())
+      generationConfig: { ...geminiGenerationTuning(getGeminiModel()), maxOutputTokens: GEMINI_MAX_OUTPUT_TOKENS.research }
     })
   );
 

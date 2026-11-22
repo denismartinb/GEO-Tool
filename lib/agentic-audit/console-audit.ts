@@ -14,6 +14,7 @@ import { isSameOrSubdomain } from "@/lib/domains/brand-domain";
 import { cleanDomain } from "@/lib/projects/project-form";
 import { feedbackErrorMessages } from "@/lib/projects/feedback-messages";
 import type { createServiceClient } from "@/lib/supabase/service";
+import { AUTOMATIC_AUDIT_INTERVAL_MS } from "@/lib/web-audit/audit-cadence";
 
 /**
  * AGENTIC-COMMERCE-1 Fase 2a (log §322, migration 0043): the «Auditoría
@@ -83,12 +84,22 @@ type RecentRow = { status: "pending" | "completed" | "failed"; created_at: strin
 const RECENT_COLUMNS = "status, created_at, automatic:result->automatic";
 const isAutomaticRow = (r: RecentRow) => r.automatic === true;
 
-/** The screen starts a review by itself when there is none, or the last one is older than this. */
-export const AGENTIC_SCREEN_STALE_MS = 48 * 60 * 60 * 1000;
+/**
+ * The screen starts a review by itself when there is none, or the last one is
+ * older than this: a week, like every automatic audit (AUDIT-WEEKLY-1, log
+ * §475; was 48 h).
+ */
+export const AGENTIC_SCREEN_STALE_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 /** A review started less than this ago is not started again from the screen (two tabs, a reload). */
 export const AGENTIC_SCREEN_MIN_GAP_MS = 10 * 60 * 1000;
-/** After a scan, at most one automatic review per project in this window. */
-export const AGENTIC_SCHEDULED_MIN_GAP_MS = 20 * 60 * 60 * 1000;
+/**
+ * After a scan, at most one automatic review per project in this window,
+ * counted from the last review that found something sold: a week
+ * (AUDIT-WEEKLY-1, log §475; was 20 h). A failed review or one that found
+ * nothing is retried on the next scan, so the first one lands as soon as it
+ * can.
+ */
+export const AGENTIC_SCHEDULED_MIN_GAP_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 /**
  * A saved product page that answers fast with an error (404, gone) leaves
  * time to look for a new one from the home page. One that timed out does not.
@@ -251,8 +262,20 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
     return fail("unavailable");
   }
   const recent = (recentRes.data ?? []) as Array<{ status: string; created_at: string; result: AgenticCheckResult | null }>;
-  if (args.minGapMs !== null && recent[0] && args.now() - Date.parse(recent[0].created_at) < args.minGapMs) {
-    return { success: true, skipped: "recent" };
+  if (args.minGapMs !== null) {
+    // Two clocks (AUDIT-WEEKLY-1, log §475): a review started minutes ago is
+    // never started again, whatever its outcome; the long gap only counts
+    // from a review that read something the customer can use. A failed first
+    // review, or one that found nothing to sell, is tried again on the next
+    // scan instead of leaving the screen empty for a week.
+    const latestAny = recent[0];
+    if (latestAny && args.now() - Date.parse(latestAny.created_at) < Math.min(args.minGapMs, AGENTIC_SCREEN_MIN_GAP_MS)) {
+      return { success: true, skipped: "recent" };
+    }
+    const lastUsable = recent.find((r) => r.status === "completed" && r.result && r.result.found !== "none");
+    if (lastUsable && args.now() - Date.parse(lastUsable.created_at) < args.minGapMs) {
+      return { success: true, skipped: "recent" };
+    }
   }
   const today = (countRes.data ?? []) as RecentRow[];
   if (automatic) {

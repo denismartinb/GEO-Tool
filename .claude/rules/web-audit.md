@@ -574,3 +574,29 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   preguntar por cuota no es «No hemos podido verificar»: queda pendiente y el
   ejecutor aparca el trabajo. Marcarlo cerraba todos los temas del escaneo sin
   respuesta y gastaba tres llamadas por tema.
+
+- **Una campaña automática empieza por los temas ya verificados** del último
+  mapa de menos de una semana (`seedCoverageTopics`), aunque esté incompleto o
+  tenga temas sin verificar, y sólo busca el resto. El mapa conserva el
+  `verifiedAt` más antiguo, así que el refresco semanal completo sigue llegando
+  a su hora. Exigir el mapa entero y limpio convertía la cadencia semanal en
+  diaria en cuanto un tema fallaba (log §474). Una campaña manual nunca se
+  siembra.
+
+## Una vez por semana (AUDIT-WEEKLY-1, log §475)
+
+- **Toda auditoría automática corre como mucho una vez por semana por
+  proyecto**, con `AUTOMATIC_AUDIT_INTERVAL_MS` (`audit-cadence.ts`):
+  cobertura, técnica y revisión agéntica. Una auditoría nueva del trabajo
+  `web_audit` lee esa constante, no una propia.
+- **La técnica reutiliza la última foto del proyecto** si tiene menos de una
+  semana, sea del run que sea, y no la copia: los lectores toman la más
+  reciente. La caché de 24 h por run sigue sólo para la vía manual.
+- **La primera auditoría sale lo antes posible; lo semanal es el refresco**
+  (Denis, adenda de §475). Un tema «No hemos podido verificar» se vuelve a
+  buscar en la siguiente auditoría automática, igual que un tema sin fila; los
+  verificados nunca. La revisión agéntica cuenta la semana sólo desde una
+  revisión que encontró algo que vendes: una fallida o sin nada se repite tras
+  el siguiente escaneo.
+- **Ningún texto para el cliente dice con qué frecuencia se audita** (ni
+  «semanal» ni «tras cada escaneo»). Se dice que corre sola.

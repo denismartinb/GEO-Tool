@@ -138,7 +138,7 @@ export function AgenticResultView({
             <span className="ca-res-total-k">Visibilidad agéntica</span>
             <span className="ca-res-total-v">{result.score} de 100</span>
             <p className="ca-res-lead">
-              Una primera lectura de alto nivel: cómo ve un agente esta página. La auditoría de la consola la repite sola tras cada escaneo.
+              Una primera lectura de alto nivel: cómo ve un agente esta página. La auditoría de la consola la repite sola.
             </p>
           </div>
         </div>
