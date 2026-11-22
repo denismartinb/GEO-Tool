@@ -97,7 +97,7 @@ describe("summary", () => {
     expect(visibilityHeadline(full)).toBe("Un agente puede recorrer tu web hasta comprar.");
     expect(visibilityHeadline(weak)).toMatch(/^Lo que más frena a un agente es /);
     expect(visibilityDetail(weak)).toMatch(/: .+\.$/);
-    expect(visibilityHeadline(null)).toBe("La auditoría agéntica revisa tu web sola tras cada escaneo.");
+    expect(visibilityHeadline(null)).toBe("La auditoría agéntica revisa tu web sola.");
     expect(visibilityHeadline({ ...weak, found: "none" })).toBe("No hemos encontrado qué vendes en tu web.");
   });
 

@@ -94,8 +94,10 @@ export const AGENTIC_SCREEN_STALE_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 export const AGENTIC_SCREEN_MIN_GAP_MS = 10 * 60 * 1000;
 /**
  * After a scan, at most one automatic review per project in this window,
- * counted from the last review of any outcome: a week (AUDIT-WEEKLY-1, log
- * §475; was 20 h).
+ * counted from the last review that found something sold: a week
+ * (AUDIT-WEEKLY-1, log §475; was 20 h). A failed review or one that found
+ * nothing is retried on the next scan, so the first one lands as soon as it
+ * can.
  */
 export const AGENTIC_SCHEDULED_MIN_GAP_MS = AUTOMATIC_AUDIT_INTERVAL_MS;
 /**
@@ -260,8 +262,20 @@ async function performReview(args: ReviewArgs): Promise<ConsoleAgenticAuditResul
     return fail("unavailable");
   }
   const recent = (recentRes.data ?? []) as Array<{ status: string; created_at: string; result: AgenticCheckResult | null }>;
-  if (args.minGapMs !== null && recent[0] && args.now() - Date.parse(recent[0].created_at) < args.minGapMs) {
-    return { success: true, skipped: "recent" };
+  if (args.minGapMs !== null) {
+    // Two clocks (AUDIT-WEEKLY-1, log §475): a review started minutes ago is
+    // never started again, whatever its outcome; the long gap only counts
+    // from a review that read something the customer can use. A failed first
+    // review, or one that found nothing to sell, is tried again on the next
+    // scan instead of leaving the screen empty for a week.
+    const latestAny = recent[0];
+    if (latestAny && args.now() - Date.parse(latestAny.created_at) < Math.min(args.minGapMs, AGENTIC_SCREEN_MIN_GAP_MS)) {
+      return { success: true, skipped: "recent" };
+    }
+    const lastUsable = recent.find((r) => r.status === "completed" && r.result && r.result.found !== "none");
+    if (lastUsable && args.now() - Date.parse(lastUsable.created_at) < args.minGapMs) {
+      return { success: true, skipped: "recent" };
+    }
   }
   const today = (countRes.data ?? []) as RecentRow[];
   if (automatic) {

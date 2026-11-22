@@ -133,7 +133,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
             {!hasCompletedScan ? (
               <div className="empty-s">
                 <b>Todavía no hay ningún escaneo completado</b>
-                <p>Revisamos tu web automáticamente después de cada escaneo. Lanza el primero desde la visión general.</p>
+                <p>Revisamos tu web automáticamente en cuanto termina el escaneo. Lanza el primero desde la visión general.</p>
                 <Link href={`/dashboard/projects/${projectId}`} className="btn line sm">
                   Ir a la visión general <Ic n="chevr" sm />
                 </Link>
@@ -144,7 +144,7 @@ export default async function WebAuditPage({ params, searchParams }: PageProps) 
             ) : !technicalSnapshot || !currentTechnicalReport ? (
               <div className="empty-s">
                 <b>Todavía no hemos revisado tu web</b>
-                <p>La revisión técnica corre sola después de cada escaneo. Vuelve en unos minutos.</p>
+                <p>La revisión técnica corre sola en cuanto termina el escaneo. Vuelve en unos minutos.</p>
               </div>
             ) : (
               (() => {

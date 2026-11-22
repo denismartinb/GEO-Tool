@@ -51,7 +51,7 @@ export function AgenticOverviewCardView({ projectId, card }: { projectId: string
             ¿Puede un agente de IA comprar en tu web?
           </p>
           <p>
-            Con Pro, GenScore revisa tu web tras cada escaneo y te dice si un agente de IA puede encontrarte, entenderte y
+            Con Pro, GenScore revisa tu web de forma automática y te dice si un agente de IA puede encontrarte, entenderte y
             llegar a comprar, y qué arreglar primero.
           </p>
           <Link className="btn blue" href="/dashboard/settings?openPlan=pro#plan">

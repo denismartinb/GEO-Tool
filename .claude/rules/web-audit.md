@@ -592,6 +592,11 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
 - **La técnica reutiliza la última foto del proyecto** si tiene menos de una
   semana, sea del run que sea, y no la copia: los lectores toman la más
   reciente. La caché de 24 h por run sigue sólo para la vía manual.
-- **Un tema inconcluso se queda inconcluso hasta el refresco semanal**
-  (supersede la línea de §474 que lo volvía a buscar). Sólo se busca lo que no
-  tiene fila.
+- **La primera auditoría sale lo antes posible; lo semanal es el refresco**
+  (Denis, adenda de §475). Un tema «No hemos podido verificar» se vuelve a
+  buscar en la siguiente auditoría automática, igual que un tema sin fila; los
+  verificados nunca. La revisión agéntica cuenta la semana sólo desde una
+  revisión que encontró algo que vendes: una fallida o sin nada se repite tras
+  el siguiente escaneo.
+- **Ningún texto para el cliente dice con qué frecuencia se audita** (ni
+  «semanal» ni «tras cada escaneo»). Se dice que corre sola.

@@ -312,8 +312,10 @@ describe("automatic review (log §323)", () => {
     expect(s.requested).toEqual([]);
   });
 
-  it("after a scan, checks the plan with the server's ids and runs at most once in 20 hours", async () => {
-    const fresh = setup({ recent: [{ status: "completed", created_at: "2026-10-17T00:00:00Z", result: null }] });
+  it("after a scan, checks the plan with the server's ids and runs at most once a week after a usable review", async () => {
+    const fresh = setup({
+      recent: [{ status: "completed", created_at: "2026-10-14T00:00:00Z", result: { url: "https://tienda.es/p/zapatilla", pageKind: "product", found: "sitemap" } as never }]
+    });
     const skipped = await runScheduledAgenticAudit({
       service: fresh.deps.service,
       projectId: PROJECT,
@@ -335,6 +337,25 @@ describe("automatic review (log §323)", () => {
     });
     expect(refused).toEqual({ success: false, error: "skipped_plan" });
     expect(starter.requested).toEqual([]);
+  });
+
+  it("after a scan, retries a first review that failed or found nothing instead of waiting a week (AUDIT-WEEKLY-1)", async () => {
+    for (const row of [
+      { status: "failed", created_at: "2026-10-15T06:00:00Z", result: null },
+      { status: "completed", created_at: "2026-10-15T06:00:00Z", result: { url: "https://tienda.es/", pageKind: "home", found: "none" } as never }
+    ]) {
+      const s = setup({ recent: [row] });
+      const result = await runScheduledAgenticAudit({
+        service: s.deps.service,
+        projectId: PROJECT,
+        ownerUserId: "u1",
+        projectDomain: "tienda.es",
+        audit: s.deps.audit,
+        now: s.deps.now
+      });
+      expect(result).not.toEqual({ success: true, skipped: "recent" });
+      expect(s.serviceCalls.some(([m]) => m === "insert")).toBe(true);
+    }
   });
 
   it("starts from the screen only when there is no review, or it is stale, and never twice in a row", () => {

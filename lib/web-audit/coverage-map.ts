@@ -170,10 +170,11 @@ export function carryForwardCoverage(input: {
  * - nothing is restamped as fresh. The map's `verifiedAt` is the OLDEST
  *   evidence in it (`verifiedAt` here), and the caller persists it, so the
  *   weekly full refresh still comes on time for every topic;
- * - an inconclusive topic is kept as inconclusive until the weekly refresh
- *   (AUDIT-WEEKLY-1, log §475): searching it again after every daily scan
- *   made one failing topic a daily Gemini call. A topic with no row at all
- *   (a new prompt, or one a 429 left pending) is still searched now.
+ * - an inconclusive topic is searched again on the next automatic audit,
+ *   like a topic with no row (a new prompt, or one a 429 left pending): the
+ *   first audit has to end complete as soon as it can (Denis, 2026-11-22,
+ *   AUDIT-WEEKLY-1, log §475). Only the topics still missing are searched,
+ *   never the verified ones, and the full refresh stays weekly.
  *
  * Returns null when there is nothing worth keeping (evidence too old, or no
  * topic for an active prompt).
@@ -189,7 +190,7 @@ export function seedCoverageTopics(input: {
   if (input.now - verifiedMs >= COVERAGE_REFRESH_INTERVAL_MS) return null;
 
   const active = new Set(input.activePromptIds);
-  const topics = input.map.topics.filter((t) => active.has(t.promptId));
+  const topics = input.map.topics.filter((t) => active.has(t.promptId) && t.note !== COULD_NOT_VERIFY_NOTE);
   if (topics.length === 0) return null;
   return { topics, verifiedAt };
 }

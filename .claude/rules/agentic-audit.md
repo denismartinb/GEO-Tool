@@ -108,7 +108,9 @@ regla es trazable a `docs/adr/0043-agentic-visibility-score.md` o a
 
 - **Nadie pega una URL para empezar.** La revisión corre sola tras cada
   escaneo (`runScheduledAgenticAudit`, desde `audit-job-runner.ts`, como
-  mucho una vez por semana por proyecto) y al abrir la pantalla sin revisión o
+  mucho una vez por semana por proyecto, contada desde la última revisión que
+  encontró algo; una fallida o sin nada se repite tras el siguiente escaneo,
+  adenda de §475) y al abrir la pantalla sin revisión o
   con una de más de una semana (`shouldAutoReview`, AUDIT-WEEKLY-1, log §475;
   antes 20 h y 48 h). No hay «Revisar ahora»; «Elegir otra
   página» sí, con su tope de 5 al día.

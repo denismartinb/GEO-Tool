@@ -84,7 +84,7 @@ const HOLDS_BACK: Record<AgenticComponentId, string> = {
  * an agent back. Template over the stored review, never a promise.
  */
 export function visibilityHeadline(result: AgenticCheckResult | null): string {
-  if (!result) return "La auditoría agéntica revisa tu web sola tras cada escaneo.";
+  if (!result) return "La auditoría agéntica revisa tu web sola.";
   if (result.found === "none") return "No hemos encontrado qué vendes en tu web.";
   const measured = result.components.filter((c) => c.score !== null);
   if (measured.length === 0) return "Tu web no dejó leer la página a nuestro robot.";
