@@ -43,7 +43,7 @@ const DEFAULT_GEMINI_MODEL = "gemini-3.6-flash";
 const GEMINI_MODEL_ERROR = "Invalid GEMINI_MODEL. Use a valid Gemini model id such as gemini-3.6-flash.";
 
 /**
- * GEMINI-COST-1 (log §473): ceilings on generated tokens, per kind of call.
+ * GEMINI-COST-1 (log §474): ceilings on generated tokens, per kind of call.
  *
  * No Gemini request set `maxOutputTokens`, so the only bound on what one call
  * could bill was the 20 s timeout — and aborting the fetch does not stop

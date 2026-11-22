@@ -282,7 +282,7 @@ export async function processPromptJob({
       }
 
       if (result.kind === "retryable_error") {
-        // GEMINI-COST-1 (log §473): no credit (402) or a daily / spend-cap
+        // GEMINI-COST-1 (log §474): no credit (402) or a daily / spend-cap
         // limit will not be gone by the next round; retrying only doubles the
         // rejected calls. The engine is dropped for this prompt.
         const longLivedQuota =
@@ -343,7 +343,7 @@ export async function processPromptJob({
           text: result.llmResult.text,
           total_tokens: result.llmResult.totalTokens,
           grounding_chunks: result.llmResult.groundingChunks ?? [],
-          // GEMINI-COST-1 (log §473): Gemini 3 grounding is billed per search
+          // GEMINI-COST-1 (log §474): Gemini 3 grounding is billed per search
           // query and the model decides how many to run. Kept so the real
           // cost of an answer can be measured instead of assumed.
           ...(typeof result.llmResult.searchQueries === "number"

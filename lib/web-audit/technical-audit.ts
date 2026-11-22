@@ -110,7 +110,7 @@ export const MAX_AUDIT_PAGES = 10;
 export const TECH_AUDIT_TOTAL_BUDGET_MS = 25_000;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
 /**
- * AUDIT-WEEKLY-1 (log §474): the automatic audit after a scan reuses the
+ * AUDIT-WEEKLY-1 (log §475): the automatic audit after a scan reuses the
  * project's latest snapshot while it is younger than a week, whatever run it
  * belongs to. Every reader takes the latest snapshot (and the GEO Score
  * accepts one up to TECHNICAL_SNAPSHOT_MAX_AGE_DAYS old), so nothing is

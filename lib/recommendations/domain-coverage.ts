@@ -570,7 +570,7 @@ export async function auditDomainCoverageCore({
     // Remaining prompts for this campaign: every active prompt not already
     // covered by an earlier batch. Recomputed fresh every call (not fixed at
     // campaign creation) so an edited prompt set self-corrects mid-campaign.
-    // GEMINI-COST-1 (log §473): an automatic campaign that could not carry the
+    // GEMINI-COST-1 (log §474): an automatic campaign that could not carry the
     // whole recent map (one inconclusive topic, a prompt added, an unfinished
     // campaign of an older scan) starts from its verified topics and only
     // searches the rest. The map keeps the oldest `verifiedAt`, so the weekly

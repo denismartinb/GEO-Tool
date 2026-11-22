@@ -30086,7 +30086,19 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 
 **Pendiente.** Denis revisa en Google AI Studio qué límite está agotado (uso, límites de su nivel y tope de gasto del proyecto de la clave de Vercel) y lo sube si hace falta. El siguiente aviso dirá ya qué límite es. No retira ningún camino de recuperación.
 
-## §473 GEMINI-COST-1: Gemini deja de repetir la auditoría de cobertura cada día, cada llamada tiene techo de salida y un 402 no se reintenta (2026-11-22)
+## §473 SEO-INDEX-1: el comprobador gratuito vuelve a salir con su contenido en el HTML del servidor (2026-11-21)
+
+**Qué pasó.** Search Console avisó de motivos nuevos de no indexación en genscore.es: canónica alternativa (6), noindex (4), redirección (3), 404 (1), robots.txt (1), «Rastreada: actualmente sin indexar» (37, al alza) y «Descubierta: actualmente sin indexar» (8). Revisión de la web en producción: las 103 URL del sitemap responden 200 con canónica propia, ninguna lleva noindex y ninguna está bajo un `Disallow`; los ~150 enlaces internos, los datos estructurados, `llms.txt`, el feed y las URL de genscore.es del código responden. Noindex son las páginas de acceso y baja (intencionado), las redirecciones son apex, http y `/pricing` (intencionado) y robots.txt sólo cierra zonas privadas.
+
+**Lo que sí estaba roto.** `/gratis/aparece-mi-marca-en-chatgpt` se prerenderizaba con el `<main>` vacío: `FreeCheckerForm` leía `?d=` con `useSearchParams`, la página lo envolvía en `<Suspense fallback={null}>` y Next sirve el `fallback` en el HTML estático. Sin H1, sin texto y sin FAQ para quien no ejecuta JavaScript (los bots de IA, y Google en su primera pasada).
+
+**Qué se decidió.**
+- El formulario lee `?d=` de `window.location` al montar y sólo rellena un campo vacío; la página deja de usar `Suspense`. El valor de `?d=` sigue sin lanzar la comprobación.
+- `tests/free-checker-ssr.test.ts` impide que vuelvan el hook o el `Suspense`.
+
+**Pendiente.** Los 37 de «Rastreada: actualmente sin indexar» no se ven sin el export de Search Console. Lo más probable por los datos públicos: las 21 fichas del glosario (unas 200 a 270 palabras cada una, varias con sólo 1 a 3 enlaces internos), las comparativas con menos enlaces y los artículos más recientes de un dominio joven. Ampliar o fusionar fichas es contenido y el copy está congelado: lo decide Denis con la lista exportada. No retira ningún camino de recuperación.
+
+## §474 GEMINI-COST-1: Gemini deja de repetir la auditoría de cobertura cada día, cada llamada tiene techo de salida y un 402 no se reintenta (2026-11-22)
 
 **Qué pasó.** El 2026-11-22 por la mañana Gemini gastó más de 5 € tras la recarga del día anterior. Revisado el código (no hay acceso a la base de datos ni a la facturación desde la sesión, y Vercel Hobby guarda una hora de registros):
 - En producción **Gemini no extrae** respuestas de ningún motor: `SCAN_EXTRACTION_CLAUDE_MODEL` está puesto desde el 2026-10-10, así que la extracción (también la de Perplexity) va a Claude Haiku. Gemini se usa en la respuesta del escaneo (con búsqueda), en la auditoría de cobertura (con búsqueda, una llamada por prompt), y en el alta, sugerencias y reescrituras (sin búsqueda, puntuales).
@@ -30103,11 +30115,11 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 
 **Pendiente.** Decidir topes de coste por plan o por dominio (p. ej. una búsqueda por llamada, medible ya en `/admin/comparar-modelos`, o prompts máximos por escaneo diario). Comprobar con la facturación de Google, una semana después del merge, que la línea de búsqueda baja. No retira ningún camino de recuperación.
 
-## §474 AUDIT-WEEKLY-1: todas las auditorías automáticas, como mucho una vez por semana (2026-11-22)
+## §475 AUDIT-WEEKLY-1: todas las auditorías automáticas, como mucho una vez por semana (2026-11-22)
 
 **Qué pidió Denis.** «Las auditorías deben ser una vez por semana», todas, también cuando un tema ha fallado o el escaneo es diario.
 
-**Cómo estaba.** Tras cada escaneo completado el trabajo `web_audit` corre tres cosas: la cobertura (Gemini con búsqueda), la auditoría técnica (fetch y robots.txt, sin LLM, más la sonda del servidor) y la revisión agéntica (unas diez peticiones a la web del cliente, sin LLM). Sólo la cobertura tenía cadencia semanal (§253, §473), y aun así un tema «No hemos podido verificar» se volvía a buscar en cada escaneo. La técnica se repetía en cada escaneo (su caché de 24 h exigía el mismo run). La agéntica, como mucho cada 20 h tras un escaneo y cada 48 h al abrir la pantalla. La medición con navegador (Cloudflare) ya era semanal para la ficha agéntica, y para las páginas de la técnica dependía de que hubiera foto nueva.
+**Cómo estaba.** Tras cada escaneo completado el trabajo `web_audit` corre tres cosas: la cobertura (Gemini con búsqueda), la auditoría técnica (fetch y robots.txt, sin LLM, más la sonda del servidor) y la revisión agéntica (unas diez peticiones a la web del cliente, sin LLM). Sólo la cobertura tenía cadencia semanal (§253, §474), y aun así un tema «No hemos podido verificar» se volvía a buscar en cada escaneo. La técnica se repetía en cada escaneo (su caché de 24 h exigía el mismo run). La agéntica, como mucho cada 20 h tras un escaneo y cada 48 h al abrir la pantalla. La medición con navegador (Cloudflare) ya era semanal para la ficha agéntica, y para las páginas de la técnica dependía de que hubiera foto nueva.
 
 **Qué se decidió (código).**
 - `AUTOMATIC_AUDIT_INTERVAL_MS` (`lib/web-audit/audit-cadence.ts`): 7 días menos 12 h de holgura, igual que §253. Lo leen las tres.

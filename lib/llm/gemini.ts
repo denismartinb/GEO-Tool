@@ -154,7 +154,7 @@ export async function generateGeminiVisibilityAnswer(input: {
     () => new GeminiTimeoutError()
   );
 
-  // GEMINI-COST-1 (log §473): 402 (no prepaid credit) and a daily or
+  // GEMINI-COST-1 (log §474): 402 (no prepaid credit) and a daily or
   // spend-cap 429 do not heal in 1.5 s. They are thrown as a categorized
   // quota error, without the retry, so the prompt job skips its second round
   // too and the operator alert names the limit.

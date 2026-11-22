@@ -580,10 +580,10 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   tenga temas sin verificar, y sólo busca el resto. El mapa conserva el
   `verifiedAt` más antiguo, así que el refresco semanal completo sigue llegando
   a su hora. Exigir el mapa entero y limpio convertía la cadencia semanal en
-  diaria en cuanto un tema fallaba (log §473). Una campaña manual nunca se
+  diaria en cuanto un tema fallaba (log §474). Una campaña manual nunca se
   siembra.
 
-## Una vez por semana (AUDIT-WEEKLY-1, log §474)
+## Una vez por semana (AUDIT-WEEKLY-1, log §475)
 
 - **Toda auditoría automática corre como mucho una vez por semana por
   proyecto**, con `AUTOMATIC_AUDIT_INTERVAL_MS` (`audit-cadence.ts`):
@@ -593,5 +593,5 @@ dejar la escena 20px corta por los dos lados (`app/console.css`, log §178).
   semana, sea del run que sea, y no la copia: los lectores toman la más
   reciente. La caché de 24 h por run sigue sólo para la vía manual.
 - **Un tema inconcluso se queda inconcluso hasta el refresco semanal**
-  (supersede la línea de §473 que lo volvía a buscar). Sólo se busca lo que no
+  (supersede la línea de §474 que lo volvía a buscar). Sólo se busca lo que no
   tiene fila.

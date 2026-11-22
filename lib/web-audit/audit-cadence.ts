@@ -1,5 +1,5 @@
 /**
- * AUDIT-WEEKLY-1 (log §474). Every automatic audit runs at most once a week
+ * AUDIT-WEEKLY-1 (log §475). Every automatic audit runs at most once a week
  * per project: coverage (Gemini), technical health and the agentic review.
  *
  * Founder, 2026-11-22: «las auditorías deben ser una vez por semana». What

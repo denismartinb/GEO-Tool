@@ -156,7 +156,7 @@ export function carryForwardCoverage(input: {
 }
 
 /**
- * GEMINI-COST-1 (log §473). The verified topics of a recent map that a new
+ * GEMINI-COST-1 (log §474). The verified topics of a recent map that a new
  * automatic campaign can start from, so it only searches the topics still
  * missing — instead of every active prompt again.
  *
@@ -171,7 +171,7 @@ export function carryForwardCoverage(input: {
  *   evidence in it (`verifiedAt` here), and the caller persists it, so the
  *   weekly full refresh still comes on time for every topic;
  * - an inconclusive topic is kept as inconclusive until the weekly refresh
- *   (AUDIT-WEEKLY-1, log §474): searching it again after every daily scan
+ *   (AUDIT-WEEKLY-1, log §475): searching it again after every daily scan
  *   made one failing topic a daily Gemini call. A topic with no row at all
  *   (a new prompt, or one a 429 left pending) is still searched now.
  *
