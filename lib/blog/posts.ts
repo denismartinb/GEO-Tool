@@ -1044,6 +1044,30 @@ export const BLOG_POSTS: BlogPost[] = [
       label: "de peticiones diarias de agentes de IA en un año. Casi todo lo que miran son fichas de producto.",
       source: "Cloudflare, The Internet has a second audience (30 de septiembre de 2026), datos de su red, por la que pasa más del 20% de la web"
     }
+  },
+  {
+    slug: "la-ia-en-las-compras-de-navidad",
+    title: "¿Cuánto pesa ya la IA en las compras de Navidad? Lo que prevé Adobe",
+    seoTitle: "La IA en las compras de Navidad: lo que prevé Adobe",
+    metaDescription:
+      "Adobe prevé un 130% más de visitas a tiendas desde la IA esta Navidad, con el mayor salto antes del Black Friday. Qué dicen los datos y qué revisar.",
+    description:
+      "Adobe prevé que el tráfico que llega a las tiendas online de EE. UU. desde la IA crezca un 130% en la campaña de Navidad de 2026, tras multiplicarse casi por ocho en 2025, con el mayor salto la víspera del Black Friday. Qué significa el 20% de Salesforce y qué revisar antes de las ofertas.",
+    datePublished: "2026-11-23",
+    coverImage: "/blog/la-ia-en-las-compras-de-navidad/cover.webp",
+    coverIcon: "calendar",
+    // BLOG-NAVIDAD-1 (log §476). Adobe, holiday forecast (28-09-2026, Adobe
+    // Analytics, >1T US retail visits, 100M SKUs, survey of 5,000 consumers
+    // July 2026); Adobe, 2025 holiday results (07-01-2026, AI traffic
+    // +693.4%); Salesforce, 2025 holiday data (08-01-2026, 1.5B shoppers,
+    // 89+ countries, $262B AI and agents, undefined attribution).
+    primaryKeyword: "ia compras navidad",
+    cluster: "fundamentos",
+    heroStat: {
+      value: "+130%",
+      label: "de visitas a tiendas online desde la IA esta Navidad. El mayor salto, la víspera del Black Friday.",
+      source: "Adobe, previsión del 28 de septiembre de 2026 para EE. UU., más de un billón de visitas a webs de comercio"
+    }
   }
 ];
 

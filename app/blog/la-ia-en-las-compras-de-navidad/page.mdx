@@ -1,0 +1,243 @@
+import { BlogPageShell } from "@/components/blog/blog-page-shell";
+import { ArticleSchema } from "@/components/blog/article-schema";
+import { BreadcrumbSchema } from "@/components/seo/breadcrumb-schema";
+import { FaqPageSchema } from "@/components/seo/faq-page-schema";
+import { RelatedPosts } from "@/components/blog/related-posts";
+import { ArticleHero } from "@/components/blog/article-hero";
+import {
+  KeyTakeaway,
+  Verdict,
+  NumberedSection,
+  QuickAction,
+  Stat,
+  StatGrid,
+  AuthorBio,
+  ArticleCta,
+  Figure,
+  BarChart
+} from "@/components/blog/article";
+import { getBlogPost, blogPostBreadcrumbSchema, blogPostMetadata } from "@/lib/blog/posts";
+
+export const post = getBlogPost("la-ia-en-las-compras-de-navidad");
+
+export const metadata = blogPostMetadata(post);
+
+export const faqItems = [
+  {
+    question: "¿Cuánto crecerá el tráfico que llega a las tiendas desde la IA esta Navidad?",
+    answer:
+      "Adobe prevé que las visitas a tiendas online de EE. UU. que llegan desde la IA crezcan un 130% en la campaña de Navidad de 2026 (del 1 de noviembre al 31 de diciembre), frente a la de 2025. Su previsión se basa en más de un billón de visitas a webs de comercio de EE. UU. y cuenta como tráfico de IA las visitas de personas que pulsan un enlace en un asistente."
+  },
+  {
+    question: "¿Por qué el crecimiento es menor que el del año pasado?",
+    answer:
+      "Porque la base es mayor. En la campaña de 2025, Adobe midió un crecimiento del 693,4% del tráfico de la IA a tiendas de EE. UU., partiendo de muy poco, y avisó de que el número de usuarios seguía siendo modesto. Un 130% sobre esa base nueva significa más del doble de visitas en un solo año."
+  },
+  {
+    question: "¿Qué día de la campaña usa más la gente la IA para comprar?",
+    answer:
+      "En la previsión de Adobe para EE. UU., el mayor salto llega el día de Acción de Gracias, la víspera del Black Friday: un 159% más de tráfico desde la IA que el año anterior. El Black Friday crece un 95% y el Cyber Monday un 88%. Es un patrón de investigación antes de las ofertas."
+  },
+  {
+    question: "¿Es verdad que la IA influye en el 20% de las ventas de Navidad?",
+    answer:
+      "Lo dice Salesforce para la campaña de 2025: 262.000 millones de dólares de ventas online en el mundo, en torno al 20%, impulsados por la IA y los agentes. Pero esa cifra mezcla los asistentes como ChatGPT con las recomendaciones y los agentes que las propias tiendas tienen en su web, y Salesforce no explica cómo atribuye la influencia. No es la cuota de ChatGPT."
+  }
+];
+
+<ArticleSchema title={post.title} description={post.description} slug={post.slug} datePublished={post.datePublished} dateUpdated={post.dateUpdated} coverImage={post.coverImage} />
+
+<BreadcrumbSchema items={blogPostBreadcrumbSchema(post)} />
+
+<FaqPageSchema items={faqItems} />
+
+<BlogPageShell hero={<ArticleHero post={post} />}>
+
+<div className="blog-body">
+
+<KeyTakeaway>
+
+Adobe prevé que las visitas a tiendas online de EE. UU. que llegan desde la IA
+crezcan un 130% esta Navidad, después de multiplicarse casi por ocho el año
+pasado. El mayor salto llega antes de las ofertas, la víspera del Black Friday:
+la gente pregunta a la IA qué comprar y después va a la tienda. Si tu marca no
+sale en esa respuesta, no llegas a la lista corta del día de las rebajas.
+
+</KeyTakeaway>
+
+## Lo que prevé Adobe para esta campaña
+
+El 28 de septiembre de 2026, Adobe publicó su
+<a href="https://news.adobe.com/news/2026/09/adobe-us-holiday-shopping-season-to-hit-record" target="_blank" rel="noopener noreferrer">previsión para la campaña de Navidad en EE. UU.</a>,
+del 1 de noviembre al 31 de diciembre. La hace con Adobe Analytics, a partir de
+más de un billón de visitas a webs de comercio de EE. UU., 100 millones de
+productos y 18 categorías. Prevé un gasto online récord de 275.100 millones de
+dólares, un 6,7% más que en 2025.
+
+La cifra que nos importa es otra: Adobe espera que el tráfico que llega a esas
+tiendas desde la IA crezca un **130%** frente a la campaña anterior. Cuenta como
+tráfico de IA las visitas de personas que pulsan un enlace en un asistente o en
+un navegador con IA, no las visitas de bots.
+
+<StatGrid label="La IA en la campaña de Navidad, según Adobe y Salesforce">
+  <Stat value="+130%" label="de visitas a tiendas online de EE. UU. desde la IA en la campaña de Navidad de 2026, frente a 2025 (previsión)." source="Adobe, previsión del 28 de septiembre de 2026, más de un billón de visitas a webs de comercio de EE. UU." />
+  <Stat value="+693%" label="creció ese mismo tráfico en la campaña de 2025, partiendo de una base todavía modesta." source="Adobe, resultados de la campaña 2025 (7 de enero de 2026), del 1 de noviembre al 31 de diciembre de 2025" tone="cyan" />
+  <Stat value="77%" label="de quienes ya han usado la IA para comprar online dice que compra con más confianza; el 69%, que devuelve menos." source="Adobe, encuesta a 5.000 consumidores, julio de 2026" />
+</StatGrid>
+
+## El año pasado se multiplicó casi por ocho
+
+En la campaña de 2025, según los
+<a href="https://news.adobe.com/news/2026/01/adobe-holiday-shopping-season" target="_blank" rel="noopener noreferrer">resultados que Adobe publicó el 7 de enero de 2026</a>,
+el tráfico de la IA a tiendas de EE. UU. creció un 693,4%, y el Cyber Monday,
+un 670%. La propia Adobe avisó de que el número de personas que compraba así
+seguía siendo modesto: crecer casi un 700% es fácil cuando se parte de muy poco.
+
+Por eso el 130% de este año no es un frenazo. Es más del doble de visitas sobre
+una base que ya no es pequeña. Las categorías donde más se usó la IA en 2025
+fueron videojuegos, juguetes, electrodomésticos, electrónica y cuidado
+personal: compras en las que se comparan modelos y especificaciones.
+
+## La IA se usa antes de las ofertas
+
+Lo más útil de la previsión es el reparto por días. El mayor salto no llega el
+Black Friday sino la víspera, el día de Acción de Gracias:
+
+<Figure
+  label="Figura 1."
+  caption="Crecimiento previsto de las visitas a tiendas online de EE. UU. que llegan desde la IA, frente al mismo día de 2025. Fuente: Adobe, previsión de la campaña de Navidad de 2026 (28 de septiembre de 2026), Adobe Analytics, más de un billón de visitas a webs de comercio de EE. UU."
+>
+
+<BarChart
+  title="Cuánto crece el tráfico desde la IA cada día clave"
+  rows={[
+    { label: "Acción de Gracias (víspera del Black Friday)", value: 159, display: "+159%", highlight: true },
+    { label: "Toda la campaña (noviembre y diciembre)", value: 130, display: "+130%" },
+    { label: "Black Friday", value: 95, display: "+95%" },
+    { label: "Cyber Monday", value: 88, display: "+88%" }
+  ]}
+/>
+
+</Figure>
+
+Nuestra lectura, que Adobe no hace: la gente usa la IA para decidir qué comprar
+antes de que empiecen las rebajas, y el día de las ofertas va directa a la
+tienda que ya ha elegido. Encaja con lo que vio McKinsey en su encuesta a
+consumidores, que contamos en
+<a href="/blog/como-compran-los-consumidores-con-ia">cómo compran los consumidores con IA</a>:
+la IA decide la lista corta, y la compra se cierra después.
+
+## Qué significa el 20% de Salesforce
+
+Salesforce publicó el 8 de enero de 2026 sus
+<a href="https://www.salesforce.com/news/stories/2025-holiday-shopping-data/" target="_blank" rel="noopener noreferrer">datos de la campaña de 2025</a>,
+con la actividad de más de 1.500 millones de compradores en más de 89 países:
+la IA y los agentes impulsaron 262.000 millones de dólares de ventas online en
+el mundo, en torno al 20% de todas las ventas online.
+
+Es una cifra que se cita mucho y conviene leer bien. Junta a los asistentes de
+IA con las recomendaciones personalizadas y los agentes que las propias tiendas
+tienen en su web, y Salesforce no explica cómo decide que una venta fue
+«impulsada». No es la parte de las compras que empieza en ChatGPT.
+
+Hay dos datos del mismo informe más concretos:
+
+- La parte del tráfico que llega desde buscadores de IA como ChatGPT o
+  Perplexity **se duplicó** frente al año anterior, en el mundo y en EE. UU.
+- Quien llegaba a una tienda desde uno de esos buscadores **convertía nueve
+  veces más** que quien llegaba desde redes sociales. La comparación es con
+  redes sociales, no con todo el tráfico. Cuánto convierte la IA frente al
+  resto depende mucho del estudio, como contamos en
+  <a href="/blog/convierte-mejor-el-trafico-de-la-ia">esta otra guía</a>.
+
+| Fuente | Qué mide | Muestra | Dato |
+| --- | --- | --- | --- |
+| **Adobe 2026** | Visitas desde la IA a tiendas de EE. UU. (previsión) | Más de un billón de visitas | +130% frente a 2025 |
+| **Adobe 2025** | Visitas desde la IA a tiendas de EE. UU. | Más de un billón de visitas | +693,4% frente a 2024 |
+| **Salesforce 2025** | Ventas impulsadas por la IA y los agentes, incluidos los de las tiendas | Más de 1.500 millones de compradores, 89 países | 262.000 millones de dólares, un 20% |
+
+Adobe y Salesforce no miden lo mismo, así que sus cifras no se suman ni se
+comparan entre sí. Lo que coincide es la dirección.
+
+## Qué hacer antes del Black Friday
+
+Este año el Black Friday cae el 27 de noviembre y el Cyber Monday, el 30. Si el
+patrón de Adobe se repite, las preguntas que deciden tus ventas se hacen esta
+semana.
+
+<NumberedSection n={1} title="Pregunta a la IA lo que preguntaría tu cliente">
+
+Escribe en ChatGPT, Gemini, Claude y Perplexity las preguntas de regalo y de
+comparación de tu categoría: «qué auriculares regalar por menos de 100 euros»,
+«qué robot aspirador comprar este Black Friday». Mira si te nombran, a quién
+nombran en tu lugar y qué páginas citan. Una sola respuesta no basta, porque
+la lista cambia de una vez a otra, como explicamos en
+<a href="/blog/la-ia-no-repite-la-misma-lista-de-marcas">esta guía</a>.
+
+<QuickAction>Anota diez preguntas de regalo de tu categoría y repítelas en cada asistente antes del jueves.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={2} title="Que tus ofertas se lean en el HTML">
+
+Si la IA va a citar tu página de ofertas o tu ficha, el precio rebajado, el
+stock y las condiciones de envío y devolución tienen que estar en el HTML y en
+los datos estructurados, no solo en un banner o después de ejecutar
+JavaScript. Las seis comprobaciones están en
+<a href="/blog/black-friday-agentes-de-ia">qué revisar en tu tienda antes del Black Friday</a>.
+
+<QuickAction>Abre tu página de ofertas con el JavaScript desactivado y comprueba que se ven los precios rebajados.</QuickAction>
+
+</NumberedSection>
+
+<NumberedSection n={3} title="Mide la IA aparte en tu analítica">
+
+Separa en GA4 las visitas que llegan desde ChatGPT, Perplexity, Gemini y los
+demás asistentes, y compáralas día a día con las de la semana anterior. Así
+sabrás si tu campaña sigue el mismo patrón que Adobe ve en EE. UU. Cómo
+montarlo, en
+<a href="/blog/como-medir-trafico-chatgpt-ga4">cómo medir en GA4 el tráfico de ChatGPT</a>.
+
+</NumberedSection>
+
+## Cómo lo ves en GenScore
+
+GenScore pregunta a ChatGPT, Gemini y Claude (y a Perplexity en Pro y Agencia)
+las preguntas principales de búsqueda de tu sector, múltiples veces en cada
+motor y en distintos momentos del tiempo, y te dice si te nombran, a qué
+competidores nombran y qué páginas citan. Puedes añadir tus propias preguntas
+de regalo y de comparación desde **Prompts**.
+
+En Pro y Agencia, **Visibilidad en agentes** separa las preguntas de compra
+(dónde comprar, qué precio, qué elegir) y te dice en cuántas te nombran, en
+cuántas citan tu web y en cuántas mandan a un marketplace. La **Auditoría
+agéntica** revisa sola si la página donde vendes enseña el
+precio, el stock y el botón de compra. Sin cuenta, el
+<a href="/comercio-agentico">comprobador de comercio agéntico</a> revisa gratis
+una página de tu tienda.
+
+<Verdict title="La lista se decide antes de las ofertas">
+
+La IA ya es un canal que crece más deprisa que el resto en la campaña de
+Navidad, y se usa sobre todo para decidir qué comprar antes de que empiecen las
+rebajas. Esta semana es el momento de comprobar si te nombra, qué páginas tuyas
+cita y si en esas páginas se lee la oferta.
+
+</Verdict>
+
+<AuthorBio>
+
+Escribimos sobre visibilidad de marca en motores de IA a partir de los escaneos reales que ejecuta nuestra propia herramienta. Cuando no tenemos evidencia de algo, lo decimos.
+
+</AuthorBio>
+
+<ArticleCta
+  title="Mira si la IA te nombra en las preguntas de regalo de tu sector"
+  text="Prueba GenScore Pro 7 días, sin tarjeta: preguntamos a ChatGPT, Gemini, Claude y Perplexity lo que preguntan tus clientes y te decimos a quién recomiendan."
+/>
+
+</div>
+
+<RelatedPosts cluster="fundamentos" currentSlug={post.slug} />
+
+</BlogPageShell>

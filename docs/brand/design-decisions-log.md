@@ -30138,3 +30138,17 @@ Pasada de la rutina de blog. Artículo `agentes-de-ia-que-visitan-tu-web` (clust
 - Técnica: sin cambio, la foto existe sólo si la auditoría terminó.
 - Textos: ninguno dice la frecuencia. «tras/después de cada escaneo» se quita de la tarjeta agéntica de Visión general (Starter), del comprobador público, del vacío de «Visibilidad en agentes», de dos vacíos de Auditoría técnica («en cuanto termina el escaneo», que habla del primero) y de ocho artículos del blog («se hace sola»). Sólo quedan en `/debug` (operador).
 - `/admin`: el coste estimado cuenta como mucho 30/7 auditorías de cobertura al mes (`cost-model.ts`).
+
+## §476 BLOG-NAVIDAD-1: artículo sobre cuánto pesa la IA en las compras de Navidad (2026-11-23)
+
+Pasada de la rutina de blog. Artículo `la-ia-en-las-compras-de-navidad` (cluster `fundamentos`) sobre la previsión de Adobe para la campaña de Navidad de 2026 y los datos de la de 2025, publicado la semana del Black Friday (27 de noviembre).
+
+**Qué se decidió**
+- Fuentes, cada una con su muestra en el texto: Adobe, previsión de la campaña de Navidad en EE. UU. (28-09-2026; Adobe Analytics, más de un billón de visitas a webs de comercio de EE. UU., 100 millones de productos, 18 categorías; encuesta a 5.000 consumidores de julio de 2026); Adobe, resultados de la campaña de 2025 (07-01-2026, misma base); Salesforce, datos de la campaña de 2025 (08-01-2026, más de 1.500 millones de compradores en más de 89 países).
+- Cifras usadas: +130% de tráfico desde la IA a tiendas de EE. UU. en 2026 (previsión), +159% Acción de Gracias, +95% Black Friday, +88% Cyber Monday, gasto online de 275.100 millones (+6,7%), 77% más confianza y 69% menos devoluciones entre quienes ya compran con IA (Adobe 2026); +693,4% en la campaña y +670% el Cyber Monday de 2025, «base de usuarios todavía modesta», categorías donde más se usó (Adobe 2025); 262.000 millones y en torno al 20% de ventas impulsadas por la IA y los agentes, cuota de tráfico desde buscadores de IA duplicada, conversión nueve veces la de redes sociales (Salesforce).
+- Se dice que Adobe cuenta como tráfico de IA los clics de personas en un asistente, no bots; que el 20% de Salesforce mezcla asistentes con las recomendaciones y agentes de las propias tiendas y no explica cómo atribuye, así que no es la cuota de ChatGPT; que el «nueve veces» es frente a redes sociales, no frente a todo el tráfico; y que Adobe y Salesforce no se suman ni se comparan.
+- La lectura «se usa la IA para decidir antes de las ofertas» se marca como nuestra, no de Adobe. No se afirma nada de España salvo las fechas del Black Friday y el Cyber Monday; no se dice que en España se compre dentro de un asistente.
+- GenScore sólo afirma lo que hace: preguntas principales de búsqueda en los cuatro motores (Perplexity en Pro y Agencia, §283), preguntas propias desde Prompts (§305), «Preguntas de compra» de Visibilidad en agentes (§332), la Auditoría agéntica se hace sola (sin decir cada cuánto, §475) y el comprobador gratuito de `/comercio-agentico`.
+- Figura: barras del crecimiento previsto por día clave (Adobe). Portada webp desde SVG; imagen social y textos de LinkedIn y X en `/mnt/project-files/contenido/blog/`.
+
+**Pendiente**: nada en el producto. Publicación en redes, sólo con el «sí, publica» de Denis.

@@ -193,7 +193,8 @@ abajo. Cuando esta cola se vacía, el agente pide un brief nuevo a
 | A9 | ¿Cuántos consumidores compran ya con la IA? Lo que dice la nueva encuesta de McKinsey (BLOG-MCKINSEY-1, log §467; pasada de recuperación del 03) — slug `como-compran-los-consumidores-con-ia` | `fundamentos` | ✅ Publicado (2026-11-04) | #772 |
 | A10 | ¿Cuántos clics manda ChatGPT a tu web? Lo que mide un estudio con datos de navegación reales (BLOG-CLICS-1, log §468) — slug `cuantos-clics-manda-chatgpt` | `medicion` | ✅ Publicado (2026-11-05) | #773 |
 | A11 | ¿Qué se asocia más con que la IA te nombre: los enlaces o las menciones de tu marca? (BLOG-MENCIONES-1, log §470) — slug `menciones-de-marca-o-enlaces-para-la-ia` | `playbooks` | ✅ Publicado (2026-11-11) | #775 |
-| A12 | ¿Cuántos agentes de IA entran ya en tu web y qué hacen allí? (BLOG-AGENTES-1, log §471) — slug `agentes-de-ia-que-visitan-tu-web` | `medicion` | En PR (2026-11-13) | — |
+| A12 | ¿Cuántos agentes de IA entran ya en tu web y qué hacen allí? (BLOG-AGENTES-1, log §471) — slug `agentes-de-ia-que-visitan-tu-web` | `medicion` | ✅ Publicado (2026-11-21) | #776 |
+| A13 | ¿Cuánto pesa ya la IA en las compras de Navidad? Lo que prevé Adobe (BLOG-NAVIDAD-1, log §476) — slug `la-ia-en-las-compras-de-navidad` | `fundamentos` | En PR (2026-11-23) | — |
 
 **Nota sobre el cluster `sectores`:** estaba vacío y el índice de `/blog` lo
 mostraba como "Próximamente" — por eso sus tres piezas van primero en la cola,
