@@ -129,7 +129,9 @@ const BLOG_SLUGS = [
   // BLOG-MENCIONES-1 (2026-11-11, log §470).
   "menciones-de-marca-o-enlaces-para-la-ia",
   // BLOG-AGENTES-1 (2026-11-13, log §471).
-  "agentes-de-ia-que-visitan-tu-web"
+  "agentes-de-ia-que-visitan-tu-web",
+  // BLOG-NAVIDAD-1 (2026-11-23, log §476).
+  "la-ia-en-las-compras-de-navidad"
 ];
 
 // GROWTH-2 Fase 2.5: /blog and each /blog/<slug> get their own render
